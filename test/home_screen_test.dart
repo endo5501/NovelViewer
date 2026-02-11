@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/app.dart';
+import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
+import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 
 void main() {
   group('HomeScreen 3-column layout', () {
@@ -43,6 +46,60 @@ void main() {
         ).first,
       );
       expect(rightColumn.width, isNotNull);
+    });
+  });
+
+  group('HomeScreen keyboard shortcuts', () {
+    testWidgets('Ctrl+F sets searchQueryProvider from selectedTextProvider',
+        (WidgetTester tester) async {
+      late ProviderContainer container;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            fileContentProvider
+                .overrideWith((ref) async => 'テスト小説の内容です。'),
+          ],
+          child: Builder(
+            builder: (context) {
+              return const ProviderScope(child: NovelViewerApp());
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(NovelViewerApp).last);
+      container = ProviderScope.containerOf(element);
+
+      container.read(selectedTextProvider.notifier).setText('太郎');
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+      await tester.pump();
+
+      expect(container.read(searchQueryProvider), '太郎');
+    });
+
+    testWidgets('Ctrl+F does nothing when no text is selected',
+        (WidgetTester tester) async {
+      late ProviderContainer container;
+
+      await tester.pumpWidget(
+        const ProviderScope(child: NovelViewerApp()),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(NovelViewerApp));
+      container = ProviderScope.containerOf(element);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+      await tester.pump();
+
+      expect(container.read(searchQueryProvider), isNull);
     });
   });
 }

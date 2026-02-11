@@ -64,5 +64,23 @@ void main() {
 
       expect(find.byType(SelectableText), findsOneWidget);
     });
+
+    testWidgets('has onSelectionChanged callback wired up',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            fileContentProvider
+                .overrideWith((ref) async => 'テスト小説の内容です。'),
+          ],
+          child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final selectableText =
+          tester.widget<SelectableText>(find.byType(SelectableText));
+      expect(selectableText.onSelectionChanged, isNotNull);
+    });
   });
 }
