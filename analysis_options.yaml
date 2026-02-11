@@ -7,3 +7,10 @@ analyzer:
 
 linter:
   rules:
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_final_locals: true
+    avoid_print: true
+    prefer_single_quotes: true
+    sort_child_properties_last: true
+    use_build_context_synchronously: true

@@ -8,12 +8,6 @@ class KakuyomuSite implements NovelSite {
     '.work-title',
   ];
 
-  static final _episodeTitleSelectors = [
-    '.widget-episodeTitle',
-    'h1',
-    '.episode-title',
-  ];
-
   static final _bodySelectors = [
     '.widget-episodeBody__content',
     '.widget-episodeBody',

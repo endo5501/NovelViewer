@@ -10,7 +10,7 @@ void main() {
     testWidgets('shows prompt text and no folder picker when no directory set',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        ProviderScope(
+        const ProviderScope(
           child: MaterialApp(home: Scaffold(body: FileBrowserPanel())),
         ),
       );
@@ -23,8 +23,8 @@ void main() {
     testWidgets('shows file list when directory is selected',
         (WidgetTester tester) async {
       final testFiles = [
-        FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt'),
-        FileEntry(name: '002_chapter2.txt', path: '/test/002_chapter2.txt'),
+        const FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt'),
+        const FileEntry(name: '002_chapter2.txt', path: '/test/002_chapter2.txt'),
       ];
 
       await tester.pumpWidget(
@@ -37,7 +37,7 @@ void main() {
               return _TestCurrentDirectoryNotifier('/test');
             }),
           ],
-          child: MaterialApp(home: Scaffold(body: FileBrowserPanel())),
+          child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -58,7 +58,7 @@ void main() {
               return _TestCurrentDirectoryNotifier('/test');
             }),
           ],
-          child: MaterialApp(home: Scaffold(body: FileBrowserPanel())),
+          child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -68,7 +68,7 @@ void main() {
 
     testWidgets('shows subdirectories', (WidgetTester tester) async {
       final testDirs = [
-        DirectoryEntry(name: 'novel1', path: '/test/novel1'),
+        const DirectoryEntry(name: 'novel1', path: '/test/novel1'),
       ];
 
       await tester.pumpWidget(
@@ -81,7 +81,7 @@ void main() {
               return _TestCurrentDirectoryNotifier('/test');
             }),
           ],
-          child: MaterialApp(home: Scaffold(body: FileBrowserPanel())),
+          child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -91,14 +91,14 @@ void main() {
     });
 
     testWidgets('highlights selected file', (WidgetTester tester) async {
-      final testFile =
+      const testFile =
           FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt');
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             directoryContentsProvider.overrideWith((ref) async {
-              return DirectoryContents(
+              return const DirectoryContents(
                   files: [testFile], subdirectories: []);
             }),
             currentDirectoryProvider.overrideWith(() {
@@ -108,7 +108,7 @@ void main() {
               return _TestSelectedFileNotifier(testFile);
             }),
           ],
-          child: MaterialApp(home: Scaffold(body: FileBrowserPanel())),
+          child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -124,21 +124,21 @@ void main() {
     });
 
     testWidgets('tapping file selects it', (WidgetTester tester) async {
-      final testFile =
+      const testFile =
           FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt');
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             directoryContentsProvider.overrideWith((ref) async {
-              return DirectoryContents(
+              return const DirectoryContents(
                   files: [testFile], subdirectories: []);
             }),
             currentDirectoryProvider.overrideWith(() {
               return _TestCurrentDirectoryNotifier('/test');
             }),
           ],
-          child: MaterialApp(home: Scaffold(body: FileBrowserPanel())),
+          child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
