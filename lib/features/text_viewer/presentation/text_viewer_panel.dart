@@ -24,6 +24,13 @@ class TextViewerPanel extends ConsumerWidget {
           child: SelectableText(
             content,
             style: Theme.of(context).textTheme.bodyMedium,
+            onSelectionChanged: (selection, cause) {
+              final selectedText =
+                  selection.textInside(content);
+              ref.read(selectedTextProvider.notifier).setText(
+                    selectedText.isEmpty ? null : selectedText,
+                  );
+            },
           ),
         );
       },
