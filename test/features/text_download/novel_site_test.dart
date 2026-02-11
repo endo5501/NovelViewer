@@ -43,7 +43,7 @@ void main() {
     });
 
     test('creates empty NovelIndex', () {
-      final index = NovelIndex(
+      const index = NovelIndex(
         title: '空の小説',
         episodes: [],
       );

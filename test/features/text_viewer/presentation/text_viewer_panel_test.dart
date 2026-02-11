@@ -9,7 +9,7 @@ void main() {
     testWidgets('shows placeholder when no file is selected',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        ProviderScope(
+        const ProviderScope(
           child: MaterialApp(home: Scaffold(body: TextViewerPanel())),
         ),
       );
@@ -26,7 +26,7 @@ void main() {
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
-          child: MaterialApp(home: Scaffold(body: TextViewerPanel())),
+          child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -42,7 +42,7 @@ void main() {
           overrides: [
             fileContentProvider.overrideWith((ref) async => longText),
           ],
-          child: MaterialApp(home: Scaffold(body: TextViewerPanel())),
+          child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -57,7 +57,7 @@ void main() {
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
-          child: MaterialApp(home: Scaffold(body: TextViewerPanel())),
+          child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
         ),
       );
       await tester.pumpAndSettle();

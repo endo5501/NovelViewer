@@ -25,20 +25,20 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Row(
+      body: const Row(
         children: [
           SizedBox(
             width: 250,
-            child: FileBrowserPanel(key: const Key('left_column')),
+            child: FileBrowserPanel(key: Key('left_column')),
           ),
-          const VerticalDivider(width: 1),
+          VerticalDivider(width: 1),
           Expanded(
-            child: TextViewerPanel(key: const Key('center_column')),
+            child: TextViewerPanel(key: Key('center_column')),
           ),
-          const VerticalDivider(width: 1),
+          VerticalDivider(width: 1),
           SizedBox(
             width: 300,
-            child: SearchSummaryPanel(key: const Key('right_column')),
+            child: SearchSummaryPanel(key: Key('right_column')),
           ),
         ],
       ),

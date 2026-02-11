@@ -39,9 +39,9 @@ void main() {
   group('sortByNumericPrefix', () {
     test('sorts files by numeric prefix in ascending order', () {
       final files = [
-        FileEntry(name: '010_chapter10.txt', path: '/test/010_chapter10.txt'),
-        FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt'),
-        FileEntry(name: '002_chapter2.txt', path: '/test/002_chapter2.txt'),
+        const FileEntry(name: '010_chapter10.txt', path: '/test/010_chapter10.txt'),
+        const FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt'),
+        const FileEntry(name: '002_chapter2.txt', path: '/test/002_chapter2.txt'),
       ];
 
       final sorted = service.sortByNumericPrefix(files);
@@ -55,9 +55,9 @@ void main() {
 
     test('places files without numeric prefix after numbered files', () {
       final files = [
-        FileEntry(name: 'readme.txt', path: '/test/readme.txt'),
-        FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt'),
-        FileEntry(name: '002_chapter2.txt', path: '/test/002_chapter2.txt'),
+        const FileEntry(name: 'readme.txt', path: '/test/readme.txt'),
+        const FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt'),
+        const FileEntry(name: '002_chapter2.txt', path: '/test/002_chapter2.txt'),
       ];
 
       final sorted = service.sortByNumericPrefix(files);
@@ -71,8 +71,8 @@ void main() {
 
     test('sorts non-numeric files alphabetically', () {
       final files = [
-        FileEntry(name: 'zebra.txt', path: '/test/zebra.txt'),
-        FileEntry(name: 'apple.txt', path: '/test/apple.txt'),
+        const FileEntry(name: 'zebra.txt', path: '/test/zebra.txt'),
+        const FileEntry(name: 'apple.txt', path: '/test/apple.txt'),
       ];
 
       final sorted = service.sortByNumericPrefix(files);

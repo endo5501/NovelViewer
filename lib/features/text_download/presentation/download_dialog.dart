@@ -145,9 +145,9 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
   List<Widget> _buildActions(DownloadState state) {
     if (state.status == DownloadStatus.downloading) {
       return [
-        TextButton(
+        const TextButton(
           onPressed: null,
-          child: const Text('ダウンロード中...'),
+          child: Text('ダウンロード中...'),
         ),
       ];
     }

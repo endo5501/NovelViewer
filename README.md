@@ -46,3 +46,14 @@ fvm flutter test
 # 特定のテストファイルを実行
 fvm flutter test test/features/text_download/narou_site_test.dart
 ```
+
+## リンター
+
+`flutter_lints` パッケージによる静的解析を導入しています。コード修正後はリンターを実行して問題がないことを確認してください。
+
+```bash
+# 静的解析を実行
+fvm flutter analyze
+```
+
+リントルールは `analysis_options.yaml` で設定されています。
