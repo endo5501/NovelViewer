@@ -37,6 +37,8 @@ dependencies:
   flutter_riverpod: ^3.2.1
   file_picker: ^10.3.10
   path: ^1.9.1
+  http: ^1.2.0
+  html: ^0.15.5
 
 dev_dependencies:
   flutter_test:

@@ -1,0 +1,109 @@
+import 'package:html/parser.dart' as html_parser;
+import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
+
+class KakuyomuSite implements NovelSite {
+  static final _titleSelectors = [
+    '#workTitle',
+    'h1',
+    '.work-title',
+  ];
+
+  static final _episodeTitleSelectors = [
+    '.widget-episodeTitle',
+    'h1',
+    '.episode-title',
+  ];
+
+  static final _bodySelectors = [
+    '.widget-episodeBody__content',
+    '.widget-episodeBody',
+  ];
+
+  @override
+  bool canHandle(Uri url) {
+    return url.host.contains('kakuyomu.jp');
+  }
+
+  @override
+  NovelIndex parseIndex(String html, Uri baseUrl) {
+    final document = html_parser.parse(html);
+
+    String title = '';
+    for (final selector in _titleSelectors) {
+      final element = document.querySelector(selector);
+      if (element != null && element.text.trim().isNotEmpty) {
+        title = element.text.trim();
+        break;
+      }
+    }
+
+    final episodes = <Episode>[];
+    final links = document.querySelectorAll('a[href*="/episodes/"]');
+    for (final (i, link) in links.indexed) {
+      final href = link.attributes['href'];
+      if (href == null) continue;
+      final resolvedUrl = baseUrl.resolve(href);
+      episodes.add(Episode(
+        index: i + 1,
+        title: link.text.trim(),
+        url: resolvedUrl,
+      ));
+    }
+
+    return NovelIndex(title: title, episodes: episodes);
+  }
+
+  @override
+  String parseEpisode(String html) {
+    final document = html_parser.parse(html);
+
+    for (final selector in _bodySelectors) {
+      final element = document.querySelector(selector);
+      if (element != null) {
+        final blocks = element.querySelectorAll('p');
+        if (blocks.isNotEmpty) {
+          final buffer = StringBuffer();
+          for (final block in blocks) {
+            final text = _blockToText(block);
+            if (text.isNotEmpty) {
+              if (buffer.isNotEmpty) buffer.write('\n\n');
+              buffer.write(text);
+            }
+          }
+          return buffer.toString();
+        }
+        return _blockToText(element);
+      }
+    }
+
+    return '';
+  }
+
+  String _blockToText(dynamic element) {
+    final buffer = StringBuffer();
+    for (final node in element.nodes) {
+      if (node.nodeType == 3) {
+        buffer.write(node.text);
+      } else if (node.nodeType == 1) {
+        final tagName = node.localName?.toLowerCase() ?? '';
+        if (tagName == 'br') {
+          buffer.write('\n');
+        } else if (tagName == 'ruby') {
+          buffer.write(node.outerHtml);
+        } else {
+          buffer.write(_blockToText(node));
+        }
+      }
+    }
+    return buffer.toString().trim();
+  }
+
+  Uri normalizeUrl(Uri url) {
+    final path = url.path;
+    final match = RegExp(r'/works/(\d+)').firstMatch(path);
+    if (match != null) {
+      return Uri.parse('https://${url.host}/works/${match.group(1)}');
+    }
+    return url;
+  }
+}

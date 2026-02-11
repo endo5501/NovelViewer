@@ -1,0 +1,106 @@
+## Context
+
+NovelViewerはFlutter + Riverpodで構築された3カラムレイアウトのWeb小説ビューアである。現在、左カラムのファイルブラウザでローカルディレクトリを選択し、中央カラムでテキストを閲覧する機能を持つ。
+
+既存のDownloadNovelツール（Python製）は、なろう・カクヨムのURLを受け取り、各エピソードのHTMLを解析してテキストを抽出し、ローカルディレクトリに保存する。本設計では、DownloadNovelの解析ロジックを参考に、Dart/Flutterでネイティブにダウンロード機能を実装する。
+
+## Goals / Non-Goals
+
+**Goals:**
+- アプリ内UIからWeb小説のURLを指定してダウンロードを開始できる
+- Dart/Flutter内でHTTP取得・HTML解析・テキスト抽出を完結させる（外部ツール不要）
+- ダウンロード中の進捗をユーザに表示する
+- ダウンロード完了後にファイルブラウザが自動更新される
+- なろう・カクヨムのHTML解析はDownloadNovelの実装を参考に効率的に実装する
+
+**Non-Goals:**
+- なろう・カクヨム以外のサイトへの対応（将来の拡張として設計は考慮する）
+- ダウンロード履歴の永続化管理
+- バックグラウンドダウンロード（アプリフォアグラウンド時のみ）
+
+## Decisions
+
+### 1. ダウンロード実装方式: Dartネイティブ実装
+
+`http`パッケージでHTTPリクエストを行い、`html`パッケージ（dart用HTML parser）でHTML解析を行う。サイトごとのパーサーをDownloadNovelの実装を参考に実装する。
+
+**理由:**
+- Python環境への依存がなくなり、ユーザの環境構築が不要になる
+- Flutter/Dartのエコシステム内で完結し、配布が容易になる
+- DownloadNovelの解析ロジック（CSSセレクタ、HTML構造解析）を参考にすることで効率的に実装できる
+- 将来のモバイル（iPad/Android）展開時にもそのまま利用可能
+
+**参考にするDownloadNovelの実装:**
+- `sites/narou.py`: なろうのインデックスページ解析（タイトル抽出、エピソードURL取得）、エピソード本文抽出
+- `sites/kakuyomu.py`: カクヨムのインデックスページ解析、エピソード本文抽出
+- `utils.py`: HTMLブロックのテキスト変換、ファイル名サニタイズ、ルビ処理
+
+### 2. サイトパーサーのアーキテクチャ: Strategy パターン
+
+サイトごとのパーサーを共通インターフェース（`NovelSite`）で抽象化し、URLのホスト名からパーサーを自動選択する。
+
+```dart
+abstract class NovelSite {
+  bool canHandle(Uri url);
+  Future<NovelIndex> fetchIndex(Uri url);
+  Future<Episode> fetchEpisode(Uri url);
+}
+```
+
+**理由:**
+- 新規サイト対応時にパーサー追加だけで済む
+- DownloadNovelも同様の構造（`sites/`ディレクトリに各サイトのパーサー）を持っている
+
+### 3. UI配置: ダウンロードダイアログ（モーダル）
+
+AppBarにダウンロードボタンを追加し、押下時にダウンロードダイアログを表示する。ダイアログにはURL入力フィールド、出力先ディレクトリ選択、進捗表示を含む。
+
+**理由:**
+- ダウンロードは間欠的な操作であり、常設パネルは不要
+- モーダルダイアログにすることで、ダウンロード中の状態が明確になる
+- 既存のSettingsDialogパターンに合わせた実装ができる
+
+### 4. 進捗表示: エピソード単位のコールバック
+
+各エピソードのダウンロード完了ごとにコールバックで進捗を通知する。総エピソード数はインデックスページ解析時に判明するため、「N/M エピソード完了」の形式で表示できる。
+
+### 5. 出力形式: テキストファイル（.txt）
+
+DownloadNovelはMarkdown(.md)で出力するが、NovelViewerのfile-browserは.txtを対象としているため、プレーンテキスト(.txt)形式で保存する。ルビ情報はHTMLタグ形式で保持し、テキストビューアでの表示時に解釈する。
+
+ファイル命名規則はDownloadNovelと同様:
+- `{0埋め番号}_{エピソードタイトル}.txt`（例: `001_プロローグ.txt`）
+- ディレクトリ名: `{小説タイトル}/`
+
+### 6. ファイルブラウザの自動リフレッシュ: provider invalidate
+
+ダウンロード完了後、`directoryContentsProvider`を`ref.invalidate()`で再評価させる。ダウンロード先ディレクトリが現在のファイルブラウザのディレクトリと一致する場合、自動的にリフレッシュされる。異なるディレクトリの場合は、`currentDirectoryProvider`を更新して遷移する。
+
+### 7. モジュール構成: features/text_download
+
+既存のfeatureモジュールパターン（data / providers / presentation）に従い、`lib/features/text_download/` 配下に配置する。
+
+```
+lib/features/text_download/
+├── data/
+│   ├── download_service.dart       # ダウンロード制御（進捗管理、ファイル保存）
+│   └── sites/
+│       ├── novel_site.dart         # 共通インターフェース
+│       ├── narou_site.dart         # なろうパーサー
+│       └── kakuyomu_site.dart      # カクヨムパーサー
+├── providers/
+│   └── text_download_providers.dart  # ダウンロード状態管理
+└── presentation/
+    └── download_dialog.dart         # ダウンロードUI
+```
+
+### 8. リクエスト間隔制御
+
+サーバへの負荷軽減のため、エピソードごとのリクエスト間に遅延（デフォルト0.7秒、DownloadNovelと同等）を設ける。
+
+## Risks / Trade-offs
+
+- **サイトHTML構造の変更**: なろう・カクヨムのHTML構造が変更された場合、パーサーの修正が必要 → 複数のCSSセレクタをフォールバックとして用意する（DownloadNovelと同様の手法）
+- **アクセス制限**: 短時間に大量のリクエストを送るとサイト側からブロックされる可能性 → リクエスト間隔制御で対処。User-Agentヘッダも適切に設定する。
+- **Dartの`html`パッケージの機能差**: PythonのBeautifulSoup/lxmlと比べてDartのHTMLパーサーの機能が限定的な可能性 → CSSセレクタベースの基本的なクエリは`html`パッケージで対応可能。不足があれば`universal_html`等の代替を検討。
+- **ファイル拡張子の差異**: DownloadNovelは.md出力だが本実装は.txt出力とする → file-browserとの整合性を優先。将来的にfile-browserの対象拡張子を拡張する可能性もあり。
