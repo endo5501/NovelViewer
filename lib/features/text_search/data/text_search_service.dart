@@ -12,10 +12,12 @@ class TextSearchService {
     if (query.isEmpty) return [];
 
     final dir = Directory(directoryPath);
-    final entities = await dir.list().toList();
-    final txtFiles = entities
-        .whereType<File>()
-        .where((f) => p.extension(f.path).toLowerCase() == '.txt')
+    final txtFiles = await dir
+        .list()
+        .where((entity) =>
+            entity is File &&
+            p.extension(entity.path).toLowerCase() == '.txt')
+        .cast<File>()
         .toList();
 
     final results = <SearchResult>[];
@@ -24,16 +26,16 @@ class TextSearchService {
     for (final file in txtFiles) {
       final content = await file.readAsString();
       final lines = content.split('\n');
-      final matches = <SearchMatch>[];
 
-      for (var i = 0; i < lines.length; i++) {
-        if (lines[i].toLowerCase().contains(queryLower)) {
-          matches.add(SearchMatch(
-            lineNumber: i + 1,
-            contextText: lines[i],
-          ));
-        }
-      }
+      final matches = lines
+          .asMap()
+          .entries
+          .where((entry) => entry.value.toLowerCase().contains(queryLower))
+          .map((entry) => SearchMatch(
+                lineNumber: entry.key + 1,
+                contextText: entry.value,
+              ))
+          .toList();
 
       if (matches.isNotEmpty) {
         results.add(SearchResult(

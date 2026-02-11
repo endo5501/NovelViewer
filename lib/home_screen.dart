@@ -20,9 +20,9 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Shortcuts(
       shortcuts: {
-        SingleActivator(LogicalKeyboardKey.keyF, control: true):
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true):
             const _SearchIntent(),
-        SingleActivator(LogicalKeyboardKey.keyF, meta: true):
+        const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
             const _SearchIntent(),
       },
       child: Actions(
@@ -30,7 +30,7 @@ class HomeScreen extends ConsumerWidget {
           _SearchIntent: CallbackAction<_SearchIntent>(
             onInvoke: (_) {
               final selectedText = ref.read(selectedTextProvider);
-              if (selectedText != null && selectedText.isNotEmpty) {
+              if (selectedText?.isNotEmpty ?? false) {
                 ref.read(searchQueryProvider.notifier).setQuery(selectedText);
               }
               return null;
