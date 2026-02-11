@@ -19,3 +19,15 @@ class SearchResult {
     required this.matches,
   });
 }
+
+class SelectedSearchMatch {
+  final String filePath;
+  final int lineNumber;
+  final String query;
+
+  const SelectedSearchMatch({
+    required this.filePath,
+    required this.lineNumber,
+    required this.query,
+  });
+}

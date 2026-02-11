@@ -43,17 +43,18 @@ class _SearchResultFileGroup extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final fileEntry = FileEntry(
+      name: result.fileName,
+      path: result.filePath,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         InkWell(
           onTap: () {
-            ref.read(selectedFileProvider.notifier).selectFile(
-                  FileEntry(
-                    name: result.fileName,
-                    path: result.filePath,
-                  ),
-                );
+            ref.read(selectedFileProvider.notifier).selectFile(fileEntry);
+            ref.read(selectedSearchMatchProvider.notifier).clear();
           },
           child: Padding(
             padding:
@@ -67,14 +68,27 @@ class _SearchResultFileGroup extends ConsumerWidget {
             ),
           ),
         ),
-        ...result.matches.map((match) => Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 2.0),
-              child: Text(
-                'L${match.lineNumber}: ${match.contextText}',
-                style: Theme.of(context).textTheme.bodySmall,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+        ...result.matches.map((match) => InkWell(
+              onTap: () {
+                ref.read(selectedFileProvider.notifier).selectFile(fileEntry);
+                final query = ref.read(searchQueryProvider);
+                if (query != null) {
+                  ref.read(selectedSearchMatchProvider.notifier).select(
+                        filePath: result.filePath,
+                        lineNumber: match.lineNumber,
+                        query: query,
+                      );
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12.0, vertical: 2.0),
+                child: Text(
+                  'L${match.lineNumber}: ${match.contextText}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             )),
         const Divider(height: 8),
