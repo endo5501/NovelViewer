@@ -1,15 +1,4 @@
-## ADDED Requirements
-
-### Requirement: Directory selection
-The user SHALL be able to select a root directory containing novel text files using a directory picker dialog.
-
-#### Scenario: User selects a directory
-- **WHEN** the user clicks the directory selection button
-- **THEN** a native directory picker dialog is displayed and the selected directory becomes the active root
-
-#### Scenario: User cancels directory selection
-- **WHEN** the user opens the directory picker and cancels without selecting
-- **THEN** the current directory selection remains unchanged
+## Requirements
 
 ### Requirement: File listing
 The system SHALL list all text files in the selected directory, displayed as a scrollable list in the left column.
@@ -54,3 +43,10 @@ The system SHALL display subdirectories in the file list, allowing the user to n
 #### Scenario: User navigates back to parent directory
 - **WHEN** the user is inside a subdirectory
 - **THEN** a navigation option to return to the parent directory is available
+
+### Requirement: Automatic refresh after download
+The file browser SHALL automatically refresh its file listing when a download operation completes.
+
+#### Scenario: Download completes
+- **WHEN** a download completes
+- **THEN** the file listing is automatically refreshed to include the newly downloaded files
