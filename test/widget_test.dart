@@ -14,7 +14,7 @@ void main() {
     expect(find.text('NovelViewer'), findsOneWidget);
     // Settings icon
     expect(find.byIcon(Icons.settings), findsOneWidget);
-    // Left column has folder open button
-    expect(find.byIcon(Icons.folder_open), findsOneWidget);
+    // Folder open button should not be present (default directory is used)
+    expect(find.byIcon(Icons.folder_open), findsNothing);
   });
 }

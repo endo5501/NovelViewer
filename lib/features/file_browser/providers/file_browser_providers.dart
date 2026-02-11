@@ -6,8 +6,12 @@ final fileSystemServiceProvider = Provider<FileSystemService>((ref) {
 });
 
 class CurrentDirectoryNotifier extends Notifier<String?> {
+  final String? _initialPath;
+
+  CurrentDirectoryNotifier([this._initialPath]);
+
   @override
-  String? build() => null;
+  String? build() => _initialPath;
 
   void setDirectory(String path) => state = path;
 }

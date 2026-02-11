@@ -1,4 +1,3 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -23,14 +22,7 @@ class DownloadDialog extends ConsumerStatefulWidget {
 class _DownloadDialogState extends ConsumerState<DownloadDialog> {
   final _urlController = TextEditingController();
   final _registry = NovelSiteRegistry();
-  String? _outputPath;
   String? _urlError;
-
-  @override
-  void initState() {
-    super.initState();
-    _outputPath = ref.read(currentDirectoryProvider);
-  }
 
   @override
   void dispose() {
@@ -59,26 +51,20 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
 
   bool get _canStartDownload {
     final url = _urlController.text;
-    if (url.isEmpty || _outputPath == null) return false;
+    if (url.isEmpty) return false;
     final uri = Uri.tryParse(url);
     if (uri == null) return false;
+    final outputPath = ref.read(currentDirectoryProvider);
+    if (outputPath == null) return false;
     return _registry.findSite(uri) != null;
-  }
-
-  Future<void> _selectOutputDirectory() async {
-    final result = await FilePicker.platform.getDirectoryPath();
-    if (result != null) {
-      setState(() {
-        _outputPath = result;
-      });
-    }
   }
 
   void _startDownload() {
     final uri = Uri.parse(_urlController.text);
+    final outputPath = ref.read(currentDirectoryProvider)!;
     ref.read(downloadProvider.notifier).startDownload(
           url: uri,
-          outputPath: _outputPath!,
+          outputPath: outputPath,
         );
   }
 
@@ -103,31 +89,6 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
                 enabled: downloadState.status != DownloadStatus.downloading,
               ),
               onChanged: _validateUrl,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _outputPath ?? '出力先を選択してください',
-                    style: TextStyle(
-                      color: _outputPath == null
-                          ? Theme.of(context).hintColor
-                          : null,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.folder_open),
-                  onPressed:
-                      downloadState.status != DownloadStatus.downloading
-                          ? _selectOutputDirectory
-                          : null,
-                  tooltip: '出力先フォルダを選択',
-                ),
-              ],
             ),
             const SizedBox(height: 16),
             _buildStatusArea(downloadState),
@@ -195,7 +156,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
       return [
         TextButton(
           onPressed: () {
-            _refreshFileBrowser(state.outputPath);
+            ref.invalidate(directoryContentsProvider);
             ref.read(downloadProvider.notifier).reset();
             Navigator.of(context).pop();
           },
@@ -217,15 +178,5 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
         child: const Text('ダウンロード開始'),
       ),
     ];
-  }
-
-  void _refreshFileBrowser(String? outputPath) {
-    if (outputPath == null) return;
-    final currentDir = ref.read(currentDirectoryProvider);
-    if (currentDir == outputPath || currentDir?.startsWith(outputPath) == true) {
-      ref.invalidate(directoryContentsProvider);
-    } else {
-      ref.read(currentDirectoryProvider.notifier).setDirectory(outputPath);
-    }
   }
 }

@@ -5,7 +5,7 @@ The system SHALL provide a download dialog accessible from the AppBar, allowing 
 
 #### Scenario: User opens download dialog
 - **WHEN** the user clicks the download button in the AppBar
-- **THEN** a modal dialog is displayed with a URL input field, an output directory selector, and a download start button
+- **THEN** a modal dialog is displayed with a URL input field and a download start button
 
 #### Scenario: User closes download dialog
 - **WHEN** the user closes the download dialog without starting a download
@@ -30,20 +30,27 @@ The system SHALL validate that the entered URL belongs to a supported Web novel 
 - **WHEN** the URL input field is empty
 - **THEN** the download button is disabled
 
-### Requirement: Output directory selection
-The system SHALL allow the user to select an output directory for downloaded files, defaulting to the current file browser directory if one is selected.
+### Requirement: Default library directory
+The system SHALL automatically create and use a default library directory (`~/Documents/NovelViewer/`) as the download destination and initial file browser directory.
 
-#### Scenario: Default output directory
-- **WHEN** the download dialog is opened and a directory is selected in the file browser
-- **THEN** the output directory field is pre-filled with the current file browser directory
+#### Scenario: App starts for the first time
+- **WHEN** the application starts and the default library directory does not exist
+- **THEN** the directory is created automatically and set as the current file browser directory
 
-#### Scenario: User selects a different output directory
-- **WHEN** the user clicks the directory selection button in the download dialog
-- **THEN** a native directory picker is displayed and the selected directory becomes the output target
+#### Scenario: App starts with existing library directory
+- **WHEN** the application starts and the default library directory already exists
+- **THEN** the existing directory is used as the current file browser directory
 
-#### Scenario: No directory selected in file browser
-- **WHEN** the download dialog is opened and no directory is selected in the file browser
-- **THEN** the output directory field is empty and the user MUST select a directory before downloading
+#### Scenario: Download destination
+- **WHEN** a download is started
+- **THEN** the downloaded files are saved under the current file browser directory
+
+### Requirement: macOS network access
+The macOS application SHALL have the `com.apple.security.network.client` entitlement enabled to allow outbound HTTP connections for downloading novel pages.
+
+#### Scenario: App makes HTTP requests on macOS
+- **WHEN** the application attempts to fetch a web page from a supported novel site
+- **THEN** the request succeeds because the network client entitlement is configured in both Debug and Release entitlements
 
 ### Requirement: Novel index fetching
 The system SHALL fetch the novel's index page and extract the novel title and episode list.

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
-import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 
 void main() {
   Widget createTestApp() {
     return ProviderScope(
+      overrides: [
+        currentDirectoryProvider
+            .overrideWith(() => CurrentDirectoryNotifier('/tmp/test_novels')),
+      ],
       child: MaterialApp(
         home: Builder(
           builder: (context) => Scaffold(
@@ -31,6 +35,14 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
       expect(find.text('ダウンロード開始'), findsOneWidget);
       expect(find.text('キャンセル'), findsOneWidget);
+    });
+
+    testWidgets('does not show output directory selector', (tester) async {
+      await tester.pumpWidget(createTestApp());
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.folder_open), findsNothing);
     });
 
     testWidgets('download button is disabled when URL is empty',

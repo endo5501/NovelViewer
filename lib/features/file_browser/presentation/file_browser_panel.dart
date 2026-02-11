@@ -1,4 +1,3 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
@@ -30,19 +29,12 @@ class FileBrowserPanel extends ConsumerWidget {
       padding: const EdgeInsets.all(8.0),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.folder_open),
-            onPressed: () => _selectDirectory(ref),
-            tooltip: 'フォルダを開く',
-          ),
-          if (currentDir != null) ...[
-            const SizedBox(width: 4),
+          if (currentDir != null)
             IconButton(
               icon: const Icon(Icons.arrow_upward),
               onPressed: () => _navigateToParent(ref, currentDir),
               tooltip: '親フォルダへ',
             ),
-          ],
         ],
       ),
     );
@@ -94,14 +86,6 @@ class FileBrowserPanel extends ConsumerWidget {
         return ListView(children: items);
       },
     );
-  }
-
-  Future<void> _selectDirectory(WidgetRef ref) async {
-    final result = await FilePicker.platform.getDirectoryPath();
-    if (result != null) {
-      ref.read(currentDirectoryProvider.notifier).setDirectory(result);
-      ref.read(selectedFileProvider.notifier).clear();
-    }
   }
 
   void _navigateToParent(WidgetRef ref, String currentDir) {

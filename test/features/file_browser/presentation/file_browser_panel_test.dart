@@ -7,7 +7,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 
 void main() {
   group('FileBrowserPanel', () {
-    testWidgets('shows directory selection button when no directory selected',
+    testWidgets('shows prompt text and no folder picker when no directory set',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -16,7 +16,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.folder_open), findsOneWidget);
+      expect(find.text('フォルダを選択してください'), findsOneWidget);
+      expect(find.byIcon(Icons.folder_open), findsNothing);
     });
 
     testWidgets('shows file list when directory is selected',
