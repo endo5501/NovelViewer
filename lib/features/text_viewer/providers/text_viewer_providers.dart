@@ -6,6 +6,16 @@ final textFileReaderProvider = Provider<TextFileReader>((ref) {
   return TextFileReader();
 });
 
+class SelectedTextNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void setText(String? text) => state = text;
+}
+
+final selectedTextProvider =
+    NotifierProvider<SelectedTextNotifier, String?>(SelectedTextNotifier.new);
+
 final fileContentProvider = FutureProvider<String?>((ref) async {
   final selectedFile = ref.watch(selectedFileProvider);
   if (selectedFile == null) return null;
