@@ -119,5 +119,96 @@ void main() {
       expect(result, isNotNull);
       expect(result!, isEmpty);
     });
+
+    test('results are sorted by numeric prefix', () async {
+      await createFile('10_chapter.txt', '太郎が走った');
+      await createFile('2_chapter.txt', '太郎が歩いた');
+      await createFile('1_chapter.txt', '太郎が言った');
+
+      final container = ProviderContainer(
+        overrides: [
+          currentDirectoryProvider.overrideWith(() {
+            return CurrentDirectoryNotifier(tempDir.path);
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(searchQueryProvider.notifier).setQuery('太郎');
+
+      final result = await container.read(searchResultsProvider.future);
+
+      expect(result, isNotNull);
+      expect(result!, hasLength(3));
+      expect(result[0].fileName, '1_chapter.txt');
+      expect(result[1].fileName, '2_chapter.txt');
+      expect(result[2].fileName, '10_chapter.txt');
+    });
+
+    test('non-numeric files sorted alphabetically after numeric files',
+        () async {
+      await createFile('appendix.txt', '太郎の補足');
+      await createFile('2_chapter.txt', '太郎が歩いた');
+      await createFile('1_chapter.txt', '太郎が言った');
+
+      final container = ProviderContainer(
+        overrides: [
+          currentDirectoryProvider.overrideWith(() {
+            return CurrentDirectoryNotifier(tempDir.path);
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(searchQueryProvider.notifier).setQuery('太郎');
+
+      final result = await container.read(searchResultsProvider.future);
+
+      expect(result, isNotNull);
+      expect(result!, hasLength(3));
+      expect(result[0].fileName, '1_chapter.txt');
+      expect(result[1].fileName, '2_chapter.txt');
+      expect(result[2].fileName, 'appendix.txt');
+    });
+  });
+
+  group('selectedSearchMatchProvider', () {
+    test('initial value is null', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(selectedSearchMatchProvider), isNull);
+    });
+
+    test('can set selected search match', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(selectedSearchMatchProvider.notifier).select(
+            filePath: '/path/to/file.txt',
+            lineNumber: 42,
+            query: '太郎',
+          );
+
+      final match = container.read(selectedSearchMatchProvider);
+      expect(match, isNotNull);
+      expect(match!.filePath, '/path/to/file.txt');
+      expect(match.lineNumber, 42);
+      expect(match.query, '太郎');
+    });
+
+    test('can clear selected search match', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(selectedSearchMatchProvider.notifier).select(
+            filePath: '/path/to/file.txt',
+            lineNumber: 42,
+            query: '太郎',
+          );
+      container.read(selectedSearchMatchProvider.notifier).clear();
+
+      expect(container.read(selectedSearchMatchProvider), isNull);
+    });
   });
 }

@@ -121,6 +121,86 @@ void main() {
       expect(find.textContaining('L3'), findsOneWidget);
     });
 
+    testWidgets('clicking match line updates selectedSearchMatchProvider',
+        (WidgetTester tester) async {
+      final results = [
+        const SearchResult(
+          fileName: '001.txt',
+          filePath: '/path/to/001.txt',
+          matches: [
+            SearchMatch(lineNumber: 3, contextText: '太郎が走った'),
+          ],
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            searchResultsProvider.overrideWith((ref) async => results),
+            searchQueryProvider.overrideWith(() {
+              final notifier = SearchQueryNotifier();
+              return notifier;
+            }),
+          ],
+          child: const MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Set search query first
+      final element = tester.element(find.byType(SearchResultsPanel));
+      final container = ProviderScope.containerOf(element);
+      container.read(searchQueryProvider.notifier).setQuery('太郎');
+
+      await tester.tap(find.textContaining('L3: 太郎が走った'));
+      await tester.pump();
+
+      final match = container.read(selectedSearchMatchProvider);
+      expect(match, isNotNull);
+      expect(match!.filePath, '/path/to/001.txt');
+      expect(match.lineNumber, 3);
+      expect(match.query, '太郎');
+    });
+
+    testWidgets('clicking match line also updates selectedFileProvider',
+        (WidgetTester tester) async {
+      final results = [
+        const SearchResult(
+          fileName: '001.txt',
+          filePath: '/path/to/001.txt',
+          matches: [
+            SearchMatch(lineNumber: 3, contextText: '太郎が走った'),
+          ],
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            searchResultsProvider.overrideWith((ref) async => results),
+            searchQueryProvider.overrideWith(() {
+              final notifier = SearchQueryNotifier();
+              return notifier;
+            }),
+          ],
+          child: const MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(SearchResultsPanel));
+      final container = ProviderScope.containerOf(element);
+      container.read(searchQueryProvider.notifier).setQuery('太郎');
+
+      await tester.tap(find.textContaining('L3: 太郎が走った'));
+      await tester.pump();
+
+      final selectedFile = container.read(selectedFileProvider);
+      expect(selectedFile, isNotNull);
+      expect(selectedFile!.name, '001.txt');
+      expect(selectedFile.path, '/path/to/001.txt');
+    });
+
     testWidgets('clicking file name updates selectedFileProvider',
         (WidgetTester tester) async {
       final results = [
@@ -153,6 +233,49 @@ void main() {
       expect(selectedFile, isNotNull);
       expect(selectedFile!.name, '001.txt');
       expect(selectedFile.path, '/path/to/001.txt');
+    });
+
+    testWidgets(
+        'clicking file name clears selectedSearchMatchProvider',
+        (WidgetTester tester) async {
+      final results = [
+        const SearchResult(
+          fileName: '001.txt',
+          filePath: '/path/to/001.txt',
+          matches: [
+            SearchMatch(lineNumber: 3, contextText: '太郎が走った'),
+          ],
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            searchResultsProvider.overrideWith((ref) async => results),
+            selectedSearchMatchProvider.overrideWith(() {
+              return SelectedSearchMatchNotifier();
+            }),
+          ],
+          child: const MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(SearchResultsPanel));
+      final container = ProviderScope.containerOf(element);
+
+      // Set a search match first
+      container.read(selectedSearchMatchProvider.notifier).select(
+            filePath: '/path/to/001.txt',
+            lineNumber: 3,
+            query: '太郎',
+          );
+
+      // Click file name header
+      await tester.tap(find.text('001.txt'));
+      await tester.pump();
+
+      expect(container.read(selectedSearchMatchProvider), isNull);
     });
   });
 }

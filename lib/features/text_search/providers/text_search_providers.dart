@@ -25,5 +25,59 @@ final searchResultsProvider =
   if (query == null || directory == null) return null;
 
   final service = ref.watch(textSearchServiceProvider);
-  return service.search(directory, query);
+  final results = await service.search(directory, query);
+  return _sortByNumericPrefix(results);
 });
+
+class SelectedSearchMatchNotifier extends Notifier<SelectedSearchMatch?> {
+  @override
+  SelectedSearchMatch? build() => null;
+
+  void select({
+    required String filePath,
+    required int lineNumber,
+    required String query,
+  }) {
+    state = SelectedSearchMatch(
+      filePath: filePath,
+      lineNumber: lineNumber,
+      query: query,
+    );
+  }
+
+  void clear() => state = null;
+}
+
+final selectedSearchMatchProvider =
+    NotifierProvider<SelectedSearchMatchNotifier, SelectedSearchMatch?>(
+        SelectedSearchMatchNotifier.new);
+
+List<SearchResult> _sortByNumericPrefix(List<SearchResult> results) {
+  final numericPrefixRegExp = RegExp(r'^(\d+)');
+
+  int? extractNumericPrefix(String fileName) {
+    final match = numericPrefixRegExp.firstMatch(fileName);
+    return match != null ? int.parse(match.group(1)!) : null;
+  }
+
+  final numbered = <(SearchResult, int)>[];
+  final nonNumbered = <SearchResult>[];
+
+  for (final result in results) {
+    final number = extractNumericPrefix(result.fileName);
+    if (number != null) {
+      numbered.add((result, number));
+    } else {
+      nonNumbered.add(result);
+    }
+  }
+
+  numbered.sort((a, b) {
+    final byNum = a.$2.compareTo(b.$2);
+    if (byNum != 0) return byNum;
+    return a.$1.fileName.compareTo(b.$1.fileName);
+  });
+  nonNumbered.sort((a, b) => a.fileName.compareTo(b.fileName));
+
+  return [...numbered.map((e) => e.$1), ...nonNumbered];
+}
