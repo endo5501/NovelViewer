@@ -53,32 +53,26 @@ class KakuyomuSite implements NovelSite {
 
     for (final selector in _bodySelectors) {
       final element = document.querySelector(selector);
-      if (element != null) {
-        final blocks = element.querySelectorAll('p');
-        if (blocks.isNotEmpty) {
-          final buffer = StringBuffer();
-          for (final block in blocks) {
-            final text = _blockToText(block);
-            if (text.isNotEmpty) {
-              if (buffer.isNotEmpty) buffer.write('\n\n');
-              buffer.write(text);
-            }
-          }
-          return buffer.toString();
-        }
-        return _blockToText(element);
-      }
+      if (element == null) continue;
+
+      final blocks = element.querySelectorAll('p');
+      if (blocks.isEmpty) return _blockToText(element);
+
+      return blocks.map(_blockToText).join('\n');
     }
 
     return '';
   }
 
-  String _blockToText(dynamic element) {
+  static String _blockToText(dynamic element) {
+    const textNodeType = 3;
+    const elementNodeType = 1;
+
     final buffer = StringBuffer();
     for (final node in element.nodes) {
-      if (node.nodeType == 3) {
+      if (node.nodeType == textNodeType) {
         buffer.write(node.text);
-      } else if (node.nodeType == 1) {
+      } else if (node.nodeType == elementNodeType) {
         final tagName = node.localName?.toLowerCase() ?? '';
         if (tagName == 'br') {
           buffer.write('\n');

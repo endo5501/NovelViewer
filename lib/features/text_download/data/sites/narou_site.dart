@@ -70,41 +70,31 @@ class NarouSite implements NovelSite {
 
     for (final selector in _bodySelectors) {
       final elements = document.querySelectorAll(selector);
-      if (elements.isNotEmpty) {
-        final buffer = StringBuffer();
-        for (final element in elements) {
-          final blocks = element.querySelectorAll('p, div');
-          if (blocks.isNotEmpty) {
-            for (final block in blocks) {
-              final text = _blockToText(block);
-              if (text.isNotEmpty) {
-                if (buffer.isNotEmpty) buffer.write('\n\n');
-                buffer.write(text);
-              }
-            }
-          } else {
-            final text = _blockToText(element);
-            if (text.isNotEmpty) {
-              if (buffer.isNotEmpty) buffer.write('\n\n');
-              buffer.write(text);
-            }
-          }
-        }
-        return buffer.toString();
-      }
+      if (elements.isEmpty) continue;
+
+      final texts = elements.expand((element) {
+        final blocks = element.children.where((child) {
+          final tag = child.localName?.toLowerCase();
+          return tag == 'p' || tag == 'div';
+        }).toList();
+        return (blocks.isEmpty ? [element] : blocks).map(_blockToText);
+      });
+
+      return texts.join('\n');
     }
 
     return '';
   }
 
-  String _blockToText(dynamic element) {
+  static String _blockToText(dynamic element) {
+    const textNodeType = 3;
+    const elementNodeType = 1;
+
     final buffer = StringBuffer();
     for (final node in element.nodes) {
-      if (node.nodeType == 3) {
-        // Text node
+      if (node.nodeType == textNodeType) {
         buffer.write(node.text);
-      } else if (node.nodeType == 1) {
-        // Element node
+      } else if (node.nodeType == elementNodeType) {
         final tagName = node.localName?.toLowerCase() ?? '';
         if (tagName == 'br') {
           buffer.write('\n');
