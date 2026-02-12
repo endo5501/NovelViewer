@@ -2,16 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/app.dart';
+import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 
 void main() {
+  late SharedPreferences prefs;
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
+  });
   group('HomeScreen 3-column layout', () {
     testWidgets('displays three columns separated by vertical dividers',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NovelViewerApp()),
+        ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: const NovelViewerApp(),
+        ),
       );
 
       expect(find.byKey(const Key('left_column')), findsOneWidget);
@@ -22,7 +33,10 @@ void main() {
 
     testWidgets('left column has fixed width', (WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NovelViewerApp()),
+        ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: const NovelViewerApp(),
+        ),
       );
 
       final leftColumn = tester.widget<SizedBox>(
@@ -36,7 +50,10 @@ void main() {
 
     testWidgets('right column has fixed width', (WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: NovelViewerApp()),
+        ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: const NovelViewerApp(),
+        ),
       );
 
       final rightColumn = tester.widget<SizedBox>(
@@ -57,12 +74,16 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
           child: Builder(
             builder: (context) {
-              return const ProviderScope(child: NovelViewerApp());
+              return ProviderScope(
+                overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+                child: const NovelViewerApp(),
+              );
             },
           ),
         ),
@@ -87,7 +108,10 @@ void main() {
       late ProviderContainer container;
 
       await tester.pumpWidget(
-        const ProviderScope(child: NovelViewerApp()),
+        ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: const NovelViewerApp(),
+        ),
       );
       await tester.pumpAndSettle();
 
