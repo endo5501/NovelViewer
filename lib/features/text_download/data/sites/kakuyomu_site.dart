@@ -59,8 +59,8 @@ class KakuyomuSite implements NovelSite {
           final buffer = StringBuffer();
           for (final block in blocks) {
             final text = _blockToText(block);
+            if (buffer.isNotEmpty) buffer.write('\n');
             if (text.isNotEmpty) {
-              if (buffer.isNotEmpty) buffer.write('\n\n');
               buffer.write(text);
             }
           }

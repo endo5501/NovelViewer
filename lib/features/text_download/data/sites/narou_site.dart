@@ -77,15 +77,15 @@ class NarouSite implements NovelSite {
           if (blocks.isNotEmpty) {
             for (final block in blocks) {
               final text = _blockToText(block);
+              if (buffer.isNotEmpty) buffer.write('\n');
               if (text.isNotEmpty) {
-                if (buffer.isNotEmpty) buffer.write('\n\n');
                 buffer.write(text);
               }
             }
           } else {
             final text = _blockToText(element);
+            if (buffer.isNotEmpty) buffer.write('\n');
             if (text.isNotEmpty) {
-              if (buffer.isNotEmpty) buffer.write('\n\n');
               buffer.write(text);
             }
           }
