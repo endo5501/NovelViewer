@@ -73,7 +73,10 @@ class NarouSite implements NovelSite {
       if (elements.isEmpty) continue;
 
       final texts = elements.expand((element) {
-        final blocks = element.querySelectorAll('p, div');
+        final blocks = element.children.where((child) {
+          final tag = child.localName?.toLowerCase();
+          return tag == 'p' || tag == 'div';
+        }).toList();
         return (blocks.isEmpty ? [element] : blocks).map(_blockToText);
       });
 
