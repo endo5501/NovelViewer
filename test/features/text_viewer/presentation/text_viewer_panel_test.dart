@@ -5,6 +5,8 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
+import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
+import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 
 void main() {
@@ -158,8 +160,8 @@ void main() {
 
       final selectableText =
           tester.widget<SelectableText>(find.byType(SelectableText));
-      // Should be plain text (no children spans) since filePaths don't match
-      expect(selectableText.textSpan!.text, '太郎が走った。');
+      // Should be plain text (no highlight) since filePaths don't match
+      expect(selectableText.textSpan!.toPlainText(), '太郎が走った。');
     });
 
     testWidgets('no highlights when no search match is selected',
@@ -273,51 +275,50 @@ void main() {
     });
   });
 
-  group('buildHighlightedTextSpan', () {
-    test('returns single span when no query provided', () {
-      final span = buildHighlightedTextSpan(
-        'テスト文章です',
-        null,
-        const TextStyle(),
-      );
+  group('buildRubyTextSpans', () {
+    test('returns plain text span when no query provided', () {
+      final segments = [const PlainTextSegment('テスト文章です')];
+      final span = buildRubyTextSpans(segments, const TextStyle(), null);
 
-      expect(span.children, isNull);
-      expect(span.text, 'テスト文章です');
+      expect(span.children, hasLength(1));
+      expect(span.children!.first.toPlainText(), 'テスト文章です');
     });
 
-    test('highlights all occurrences of query', () {
-      final span = buildHighlightedTextSpan(
-        '太郎が走った。太郎が言った。',
-        '太郎',
-        const TextStyle(),
-      );
+    test('highlights all occurrences of query in plain text', () {
+      final segments = [
+        const PlainTextSegment('太郎が走った。太郎が言った。'),
+      ];
+      final span =
+          buildRubyTextSpans(segments, const TextStyle(), '太郎');
 
       expect(span.children, isNotNull);
-      expect(span.children!, hasLength(5));
-      expect(span.children![0].toPlainText(), '');
-      expect(span.children![1].toPlainText(), '太郎');
-      expect(span.children![2].toPlainText(), 'が走った。');
-      expect(span.children![3].toPlainText(), '太郎');
-      expect(span.children![4].toPlainText(), 'が言った。');
+      // Should contain highlighted and non-highlighted spans
+      final plainTexts =
+          span.children!.whereType<TextSpan>().toList();
+      final highlighted = plainTexts
+          .where((s) => s.style?.backgroundColor != null)
+          .toList();
+      expect(highlighted, hasLength(2));
+      expect(highlighted[0].text, '太郎');
+      expect(highlighted[1].text, '太郎');
     });
 
     test('highlight spans have background color', () {
-      final span = buildHighlightedTextSpan(
-        '太郎が走った',
-        '太郎',
-        const TextStyle(),
-      );
+      final segments = [const PlainTextSegment('太郎が走った')];
+      final span =
+          buildRubyTextSpans(segments, const TextStyle(), '太郎');
 
-      final highlightSpan = span.children![1] as TextSpan;
-      expect(highlightSpan.style?.backgroundColor, isNotNull);
+      final highlighted = span.children!
+          .whereType<TextSpan>()
+          .where((s) => s.style?.backgroundColor != null)
+          .toList();
+      expect(highlighted, hasLength(1));
     });
 
     test('is case-insensitive for ASCII', () {
-      final span = buildHighlightedTextSpan(
-        'Hello world HELLO',
-        'hello',
-        const TextStyle(),
-      );
+      final segments = [const PlainTextSegment('Hello world HELLO')];
+      final span =
+          buildRubyTextSpans(segments, const TextStyle(), 'hello');
 
       expect(span.children, isNotNull);
       final highlightedParts = span.children!
@@ -328,14 +329,11 @@ void main() {
     });
 
     test('returns plain text when query not found', () {
-      final span = buildHighlightedTextSpan(
-        'テスト文章です',
-        '存在しない',
-        const TextStyle(),
-      );
+      final segments = [const PlainTextSegment('テスト文章です')];
+      final span =
+          buildRubyTextSpans(segments, const TextStyle(), '存在しない');
 
-      expect(span.text, 'テスト文章です');
-      expect(span.children, isNull);
+      expect(span.toPlainText(), 'テスト文章です');
     });
   });
 }

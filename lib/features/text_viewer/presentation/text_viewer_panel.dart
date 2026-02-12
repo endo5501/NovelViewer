@@ -3,46 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
+import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
+import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
-
-TextSpan buildHighlightedTextSpan(
-  String content,
-  String? query,
-  TextStyle? baseStyle,
-) {
-  if (query == null || query.isEmpty) {
-    return TextSpan(text: content, style: baseStyle);
-  }
-
-  final queryLower = query.toLowerCase();
-  final contentLower = content.toLowerCase();
-  final spans = <TextSpan>[];
-  final highlightStyle = baseStyle?.copyWith(backgroundColor: Colors.yellow) ??
-      const TextStyle(backgroundColor: Colors.yellow);
-  var start = 0;
-
-  while (true) {
-    final index = contentLower.indexOf(queryLower, start);
-    if (index == -1) break;
-
-    spans.add(TextSpan(
-      text: content.substring(start, index),
-      style: baseStyle,
-    ));
-    spans.add(TextSpan(
-      text: content.substring(index, index + query.length),
-      style: highlightStyle,
-    ));
-    start = index + query.length;
-  }
-
-  if (spans.isEmpty) {
-    return TextSpan(text: content, style: baseStyle);
-  }
-
-  spans.add(TextSpan(text: content.substring(start), style: baseStyle));
-  return TextSpan(children: spans);
-}
 
 class TextViewerPanel extends ConsumerStatefulWidget {
   const TextViewerPanel({super.key});
@@ -99,10 +62,11 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
         }
 
         final textStyle = Theme.of(context).textTheme.bodyMedium;
-        final textSpan = buildHighlightedTextSpan(
-          content,
-          activeMatch?.query,
+        final segments = parseRubyText(content);
+        final textSpan = buildRubyTextSpans(
+          segments,
           textStyle,
+          activeMatch?.query,
         );
 
         final scrollKey = activeMatch == null
@@ -123,7 +87,14 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
           child: SelectableText.rich(
             textSpan,
             onSelectionChanged: (selection, cause) {
-              final selectedText = selection.textInside(content);
+              final start = selection.start < selection.end
+                  ? selection.start
+                  : selection.end;
+              final end = selection.start < selection.end
+                  ? selection.end
+                  : selection.start;
+              final selectedText =
+                  extractSelectedText(start, end, segments);
               ref
                   .read(selectedTextProvider.notifier)
                   .setText(selectedText.isEmpty ? null : selectedText);
