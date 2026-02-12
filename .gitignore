@@ -32,3 +32,6 @@ migrate_working_dir/
 .pub/
 /build/
 pubspec.lock
+
+# coverage
+coverage
