@@ -137,6 +137,58 @@ void main() {
       expect(text, contains('一行目\n二行目'));
     });
 
+    test('joins paragraphs with single newline', () {
+      const html = '''
+<html>
+<body>
+  <div class="widget-episodeBody__content">
+    <p>第一段落です。</p>
+    <p>第二段落です。</p>
+    <p>第三段落です。</p>
+  </div>
+</body>
+</html>
+''';
+      final text = site.parseEpisode(html);
+
+      expect(text, equals('第一段落です。\n第二段落です。\n第三段落です。'));
+    });
+
+    test('preserves blank lines from empty p tags with br', () {
+      const html = '''
+<html>
+<body>
+  <div class="widget-episodeBody__content">
+    <p>場面Aの最後。</p>
+    <p><br /></p>
+    <p>場面Bの最初。</p>
+  </div>
+</body>
+</html>
+''';
+      final text = site.parseEpisode(html);
+
+      expect(text, equals('場面Aの最後。\n\n場面Bの最初。'));
+    });
+
+    test('preserves multiple consecutive blank lines', () {
+      const html = '''
+<html>
+<body>
+  <div class="widget-episodeBody__content">
+    <p>場面A。</p>
+    <p><br /></p>
+    <p><br /></p>
+    <p>場面B。</p>
+  </div>
+</body>
+</html>
+''';
+      final text = site.parseEpisode(html);
+
+      expect(text, equals('場面A。\n\n\n場面B。'));
+    });
+
     test('returns empty string when no body found', () {
       const html = '''
 <html>
