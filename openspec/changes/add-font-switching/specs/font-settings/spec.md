@@ -61,7 +61,11 @@ The system SHALL manage font size and font family settings via separate Riverpod
 
 #### Scenario: Vertical text pagination recalculates on font size change
 - **WHEN** the font size setting is changed while viewing text in vertical mode
-- **THEN** the vertical text viewer recalculates page layout and re-paginates content with the new font size
+- **THEN** the vertical text viewer recalculates page layout and re-paginates content using actual font metrics measured via TextPainter, so that column widths and character heights match the rendered output
+
+#### Scenario: Vertical text pagination recalculates on font family change
+- **WHEN** the font family setting is changed while viewing text in vertical mode
+- **THEN** the vertical text viewer recalculates page layout and re-paginates content using actual font metrics of the new font family, so that column widths and character heights match the rendered output
 
 ### Requirement: Font settings apply to both display modes
 The system SHALL apply font size and font family settings to both horizontal and vertical text display modes. Ruby (furigana) text size SHALL scale proportionally with the base font size, maintaining the existing 0.5x ratio.

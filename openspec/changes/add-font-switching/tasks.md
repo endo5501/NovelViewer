@@ -28,9 +28,23 @@
 - [x] 5.3 縦書きモードのbaseStyleにフォント設定を反映（`VerticalTextViewer`に渡すbaseStyle）
 - [x] 5.4 テキスト表示のウィジェットテストを作成（フォントサイズ・フォント種別がTextStyleに反映されることの検証）
 
-## 6. 最終確認
+## 6. 最終確認（初回実装）
 
 - [x] 6.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
 - [x] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
 - [x] 6.3 `fvm flutter analyze`でリントを実行
 - [x] 6.4 `fvm flutter test`でテストを実行
+
+## 7. 縦書きページネーションのフォントメトリクス実測対応
+
+- [ ] 7.1 `_paginateLines()`のTextPainter実測化に対するテストを作成。フォントサイズを大きく変更（例: 32.0）した際に、縦書き表示で`VerticalTextPage`の`Wrap`がオーバーフローせず正しくページ分割されることを検証するウィジェットテストを書く
+- [ ] 7.2 `_paginateLines()`の`charHeight`と`columnWidth`の計算を、`fontSize`からの推定値ではなく`TextPainter`で代表文字（'あ'）を実測した値に置き換える。`charHeight = painter.height`、`columnWidth = painter.width + _kRunSpacing`とする
+- [ ] 7.3 フォント種別変更時（例: `hiraginoMincho`）に縦書きページネーションが正しく再計算されることを確認するウィジェットテストを作成
+- [ ] 7.4 既存の縦書き関連テストが全て通ることを`fvm flutter test`で確認
+
+## 8. 最終確認
+
+- [ ] 8.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
+- [ ] 8.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [ ] 8.3 `fvm flutter analyze`でリントを実行
+- [ ] 8.4 `fvm flutter test`でテストを実行

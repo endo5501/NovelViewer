@@ -75,10 +75,38 @@ fontSizeProvider + fontFamilyProvider
 
 **理由**: 設定画面が一箇所に集約され、ユーザーが設定項目を見つけやすい。新しいダイアログやタブは現時点では不要。
 
+### 6. 縦書きページネーションの文字寸法計算: TextPainterによる実測
+
+**問題**: フォントサイズ・フォント種別を変更すると、縦書きモードで以下の不具合が発生する。
+1. テキストが左パネルまでオーバーフローする
+2. カラム内の改行位置が正しく更新されない
+
+**原因**: `_paginateLines()`で使用するカラム幅（`columnWidth = fontSize + _kRunSpacing`）と文字高さ（`charHeight = fontSize * _kTextHeight`）が推定値であり、実際のレンダリング寸法と一致しない。フォントメトリクス（グリフ幅、行高さ）はフォント種別やサイズによって異なるため、推定値ベースの計算では`maxColumnsPerPage`や`charsPerColumn`が実際のレンダリング結果と乖離する。結果として`Wrap`ウィジェットが想定と異なるカラムブレイクを発生させる。
+
+**決定**: `TextPainter`で代表文字（'あ'）を実測し、その結果をページネーション計算に使用する。
+
+```
+// Before (推定値)
+final charHeight = fontSize * _kTextHeight;
+final columnWidth = fontSize + _kRunSpacing;
+
+// After (実測値)
+final painter = TextPainter(
+  text: TextSpan(text: 'あ', style: baseStyle?.copyWith(height: _kTextHeight)),
+  textDirection: TextDirection.ltr,
+)..layout();
+final charHeight = painter.height;
+final columnWidth = painter.width + _kRunSpacing;
+```
+
+**理由**: CJK文字のグリフ寸法はフォントごとに異なり、`fontSize`は論理サイズであって実際のレンダリング寸法ではない。`TextPainter.layout()`により現在のフォント設定での実寸法を取得でき、ページネーション計算と`Wrap`ウィジェットのレンダリングが一致する。
+
+**代替案**: 安全マージンを加算（`fontSize * 1.2`等） → フォントごとの差を吸収しきれず、余白が大きくなりすぎるケースもある。実測が最も正確かつ汎用的。
+
 ## Risks / Trade-offs
 
 - **[フォントの可用性]** macOS以外のプラットフォーム（将来対応する場合）では指定フォントが存在しない可能性がある → `FontFamily.system`がデフォルトのため、フォールバックは安全。将来のクロスプラットフォーム対応時にプラットフォーム別フォントリストを検討する。
 
-- **[レイアウト再計算コスト]** フォントサイズ変更時に縦書きページネーション全体の再計算が走る → 既存の`didUpdateWidget`で対応済み。極端に大きなテキストでのパフォーマンスは許容範囲内と想定（必要に応じてプロファイリング）。
+- **[レイアウト再計算コスト]** フォントサイズ変更時に縦書きページネーション全体の再計算が走る → 既存の`didUpdateWidget`で対応済み。`TextPainter`による計測はページネーション呼び出し毎に1回のみで軽量。極端に大きなテキストでのパフォーマンスは許容範囲内と想定（必要に応じてプロファイリング）。
 
 - **[設定ダイアログの肥大化]** 設定項目が増えると1画面に収まらなくなる → 現時点では3項目（表示モード、フォントサイズ、フォント種別）のため問題なし。将来的に設定がさらに増えた場合はタブ化やセクション分けを検討する。
