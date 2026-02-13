@@ -23,6 +23,16 @@ class VerticalCharEntry {
         isRuby = true;
 }
 
+class VerticalHitRegion {
+  const VerticalHitRegion({
+    required this.charIndex,
+    required this.rect,
+  });
+
+  final int charIndex;
+  final Rect rect;
+}
+
 List<VerticalCharEntry> buildVerticalCharEntries(List<TextSegment> segments) {
   final entries = <VerticalCharEntry>[];
   for (final segment in segments) {
@@ -78,6 +88,46 @@ int? hitTestCharIndex({
   if (rowIndex < 0 || rowIndex >= columns[columnIndex].length) return null;
 
   return columns[columnIndex][rowIndex];
+}
+
+int? hitTestCharIndexFromRegions({
+  required Offset localPosition,
+  required List<VerticalHitRegion> hitRegions,
+  bool snapToNearest = false,
+}) {
+  if (localPosition.dx < 0 || localPosition.dy < 0) return null;
+  if (hitRegions.isEmpty) return null;
+
+  for (final region in hitRegions) {
+    if (region.rect.contains(localPosition)) {
+      return region.charIndex;
+    }
+  }
+
+  if (!snapToNearest) return null;
+
+  VerticalHitRegion? nearest;
+  var nearestDistanceSquared = double.infinity;
+  for (final region in hitRegions) {
+    final dx = localPosition.dx < region.rect.left
+        ? region.rect.left - localPosition.dx
+        : localPosition.dx > region.rect.right
+            ? localPosition.dx - region.rect.right
+            : 0.0;
+    final dy = localPosition.dy < region.rect.top
+        ? region.rect.top - localPosition.dy
+        : localPosition.dy > region.rect.bottom
+            ? localPosition.dy - region.rect.bottom
+            : 0.0;
+
+    final distanceSquared = (dx * dx) + (dy * dy);
+    if (distanceSquared < nearestDistanceSquared) {
+      nearestDistanceSquared = distanceSquared;
+      nearest = region;
+    }
+  }
+
+  return nearest?.charIndex;
 }
 
 String extractVerticalSelectedText(

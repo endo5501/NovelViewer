@@ -37,6 +37,9 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
 
   late List<VerticalCharEntry> _charEntries;
   late List<List<int>> _columns;
+  final Map<int, GlobalKey> _entryKeys = {};
+  List<VerticalHitRegion> _hitRegions = const [];
+  bool _hitRegionUpdateScheduled = false;
 
   @override
   void initState() {
@@ -50,12 +53,24 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     if (oldWidget.segments != widget.segments) {
       _rebuildEntries();
       _clearInternalSelection();
+      return;
+    }
+    if (oldWidget.baseStyle != widget.baseStyle) {
+      _scheduleHitRegionRebuild();
     }
   }
 
   void _rebuildEntries() {
     _charEntries = buildVerticalCharEntries(widget.segments);
     _columns = buildColumnStructure(_charEntries);
+    _entryKeys.clear();
+    for (final column in _columns) {
+      for (final index in column) {
+        _entryKeys[index] = GlobalKey(debugLabel: 'vertical_char_$index');
+      }
+    }
+    _hitRegions = const [];
+    _scheduleHitRegionRebuild();
   }
 
   int? get _effectiveStart => widget.selectionStart ?? _selectionStart;
@@ -67,14 +82,26 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         ? _computeHighlights(widget.query!)
         : const <int>{};
 
-    final children = [
-      for (var i = 0; i < _charEntries.length; i++)
-        _buildCharWidget(
-          _charEntries[i],
-          isHighlighted: highlights.contains(i),
-          isSelected: _isInSelection(i),
-        ),
-    ];
+    final children = <Widget>[];
+    for (var i = 0; i < _charEntries.length; i++) {
+      final entry = _charEntries[i];
+      final child = _buildCharWidget(
+        entry,
+        isHighlighted: highlights.contains(i),
+        isSelected: _isInSelection(i),
+      );
+      if (entry.isNewline) {
+        children.add(child);
+        continue;
+      }
+      final key = _entryKeys[i];
+      if (key == null) {
+        children.add(child);
+        continue;
+      }
+      children.add(KeyedSubtree(key: key, child: child));
+    }
+    _scheduleHitRegionRebuild();
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -101,13 +128,8 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     return index >= start && index < end;
   }
 
-  double _getRenderedWidth() {
-    final box = context.findRenderObject() as RenderBox?;
-    return box?.size.width ?? 0;
-  }
-
   void _onPanStart(DragStartDetails details) {
-    final index = _hitTest(details.localPosition, _getRenderedWidth());
+    final index = _hitTest(details.localPosition);
     if (index != null) {
       setState(() {
         _anchorIndex = index;
@@ -118,7 +140,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
-    final index = _hitTest(details.localPosition, _getRenderedWidth());
+    final index = _hitTest(details.localPosition, snapToNearest: true);
     final anchor = _anchorIndex;
     if (index != null && anchor != null) {
       setState(() {
@@ -161,15 +183,61 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     widget.onSelectionChanged?.call(text.isEmpty ? null : text);
   }
 
-  int? _hitTest(Offset localPosition, double availableWidth) {
-    return hitTestCharIndex(
+  int? _hitTest(Offset localPosition, {bool snapToNearest = false}) {
+    if (_hitRegions.isEmpty) {
+      _rebuildHitRegions();
+    }
+    return hitTestCharIndexFromRegions(
       localPosition: localPosition,
-      availableWidth: availableWidth,
-      fontSize: widget.baseStyle?.fontSize ?? _kDefaultFontSize,
-      runSpacing: _kRunSpacing,
-      textHeight: _kTextHeight,
-      columns: _columns,
+      hitRegions: _hitRegions,
+      snapToNearest: snapToNearest,
     );
+  }
+
+  void _scheduleHitRegionRebuild() {
+    if (_hitRegionUpdateScheduled) return;
+    _hitRegionUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _hitRegionUpdateScheduled = false;
+      if (!mounted) return;
+      _rebuildHitRegions();
+    });
+  }
+
+  void _rebuildHitRegions() {
+    final pageRenderObject = context.findRenderObject();
+    if (pageRenderObject is! RenderBox || !pageRenderObject.hasSize) return;
+
+    final regions = <VerticalHitRegion>[];
+    for (final column in _columns) {
+      for (final index in column) {
+        final renderObject = _entryKeys[index]?.currentContext?.findRenderObject();
+        if (renderObject is! RenderBox || !renderObject.hasSize) continue;
+        final topLeft = renderObject.localToGlobal(
+          Offset.zero,
+          ancestor: pageRenderObject,
+        );
+        var rect = topLeft & renderObject.size;
+        if (_charEntries[index].isRuby) {
+          final rubyFontSize =
+              (widget.baseStyle?.fontSize ?? _kDefaultFontSize) * 0.5;
+          rect = Rect.fromLTRB(
+            rect.left,
+            rect.top,
+            rect.right + rubyFontSize + 2,
+            rect.bottom,
+          );
+        }
+        regions.add(
+          VerticalHitRegion(
+            charIndex: index,
+            rect: rect,
+          ),
+        );
+      }
+    }
+
+    _hitRegions = regions;
   }
 
   Widget _buildCharWidget(

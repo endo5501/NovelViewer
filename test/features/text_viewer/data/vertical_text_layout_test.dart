@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_text_layout.dart';
@@ -241,6 +243,48 @@ void main() {
         columns: unevenColumns,
       );
       expect(result, isNull);
+    });
+  });
+
+  group('hitTestCharIndexFromRegions', () {
+    final hitRegions = [
+      const VerticalHitRegion(
+        charIndex: 0,
+        rect: Rect.fromLTWH(80, 0, 12, 16),
+      ),
+      const VerticalHitRegion(
+        charIndex: 1,
+        rect: Rect.fromLTWH(80, 16, 12, 16),
+      ),
+      const VerticalHitRegion(
+        charIndex: 4,
+        rect: Rect.fromLTWH(60, 0, 12, 16),
+      ),
+    ];
+
+    test('hits by actual region bounds', () {
+      final result = hitTestCharIndexFromRegions(
+        localPosition: const Offset(81, 1),
+        hitRegions: hitRegions,
+      );
+      expect(result, 0);
+    });
+
+    test('returns null in spacing when snapToNearest is false', () {
+      final result = hitTestCharIndexFromRegions(
+        localPosition: const Offset(74, 1),
+        hitRegions: hitRegions,
+      );
+      expect(result, isNull);
+    });
+
+    test('snaps to nearest region when enabled', () {
+      final result = hitTestCharIndexFromRegions(
+        localPosition: const Offset(74, 1),
+        hitRegions: hitRegions,
+        snapToNearest: true,
+      );
+      expect(result, 4);
     });
   });
 
