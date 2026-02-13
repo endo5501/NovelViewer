@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,5 +29,44 @@ class DisplayModeNotifier extends Notifier<TextDisplayMode> {
     final repository = ref.read(settingsRepositoryProvider);
     await repository.setDisplayMode(mode);
     state = mode;
+  }
+}
+
+final fontSizeProvider = NotifierProvider<FontSizeNotifier, double>(
+  FontSizeNotifier.new,
+);
+
+class FontSizeNotifier extends Notifier<double> {
+  @override
+  double build() {
+    final repository = ref.watch(settingsRepositoryProvider);
+    return repository.getFontSize();
+  }
+
+  void previewFontSize(double size) {
+    state = size.clamp(SettingsRepository.minFontSize, SettingsRepository.maxFontSize);
+  }
+
+  Future<void> persistFontSize() async {
+    final repository = ref.read(settingsRepositoryProvider);
+    await repository.setFontSize(state);
+  }
+}
+
+final fontFamilyProvider = NotifierProvider<FontFamilyNotifier, FontFamily>(
+  FontFamilyNotifier.new,
+);
+
+class FontFamilyNotifier extends Notifier<FontFamily> {
+  @override
+  FontFamily build() {
+    final repository = ref.watch(settingsRepositoryProvider);
+    return repository.getFontFamily();
+  }
+
+  Future<void> setFontFamily(FontFamily family) async {
+    final repository = ref.read(settingsRepositoryProvider);
+    await repository.setFontFamily(family);
+    state = family;
   }
 }
