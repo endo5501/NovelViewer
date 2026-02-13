@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_char_map.dart';
+import 'package:novel_viewer/features/text_viewer/data/vertical_text_layout.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_ruby_text_widget.dart';
 
-class VerticalTextPage extends StatelessWidget {
+class VerticalTextPage extends StatefulWidget {
   const VerticalTextPage({
     super.key,
     required this.segments,
@@ -11,6 +12,7 @@ class VerticalTextPage extends StatelessWidget {
     this.query,
     this.selectionStart,
     this.selectionEnd,
+    this.onSelectionChanged,
   });
 
   final List<TextSegment> segments;
@@ -18,60 +20,161 @@ class VerticalTextPage extends StatelessWidget {
   final String? query;
   final int? selectionStart;
   final int? selectionEnd;
+  final ValueChanged<String?>? onSelectionChanged;
+
+  @override
+  State<VerticalTextPage> createState() => _VerticalTextPageState();
+}
+
+const _kRunSpacing = 4.0;
+const _kTextHeight = 1.1;
+const _kDefaultFontSize = 14.0;
+
+class _VerticalTextPageState extends State<VerticalTextPage> {
+  int? _anchorIndex;
+  int? _selectionStart;
+  int? _selectionEnd;
+
+  late List<VerticalCharEntry> _charEntries;
+  late List<List<int>> _columns;
+
+  @override
+  void initState() {
+    super.initState();
+    _rebuildEntries();
+  }
+
+  @override
+  void didUpdateWidget(VerticalTextPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.segments != widget.segments) {
+      _rebuildEntries();
+      _clearInternalSelection();
+    }
+  }
+
+  void _rebuildEntries() {
+    _charEntries = buildVerticalCharEntries(widget.segments);
+    _columns = buildColumnStructure(_charEntries);
+  }
+
+  int? get _effectiveStart => widget.selectionStart ?? _selectionStart;
+  int? get _effectiveEnd => widget.selectionEnd ?? _selectionEnd;
 
   @override
   Widget build(BuildContext context) {
-    final children = _buildCharacterWidgets();
-
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Wrap(
-        direction: Axis.vertical,
-        spacing: 0.0,
-        runSpacing: 4.0,
-        children: children,
-      ),
-    );
-  }
-
-  List<Widget> _buildCharacterWidgets() {
-    final charEntries = _buildCharEntries();
-    final highlights = (query?.isNotEmpty ?? false)
-        ? _computeHighlights(charEntries, query!)
+    final highlights = (widget.query?.isNotEmpty ?? false)
+        ? _computeHighlights(widget.query!)
         : const <int>{};
 
-    return [
-      for (var i = 0; i < charEntries.length; i++)
+    final children = [
+      for (var i = 0; i < _charEntries.length; i++)
         _buildCharWidget(
-          charEntries[i],
+          _charEntries[i],
           isHighlighted: highlights.contains(i),
           isSelected: _isInSelection(i),
         ),
     ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onPanStart: (details) =>
+              _onPanStart(details, constraints.maxWidth),
+          onPanUpdate: (details) =>
+              _onPanUpdate(details, constraints.maxWidth),
+          onPanEnd: _onPanEnd,
+          onTap: _onTap,
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Wrap(
+              direction: Axis.vertical,
+              spacing: 0.0,
+              runSpacing: _kRunSpacing,
+              children: children,
+            ),
+          ),
+        );
+      },
+    );
   }
 
   bool _isInSelection(int index) {
-    final start = selectionStart;
-    final end = selectionEnd;
+    final start = _effectiveStart;
+    final end = _effectiveEnd;
     if (start == null || end == null) return false;
     return index >= start && index < end;
   }
 
-  List<_CharEntry> _buildCharEntries() {
-    final entries = <_CharEntry>[];
-    for (final segment in segments) {
-      switch (segment) {
-        case PlainTextSegment(:final text):
-          _addPlainTextEntries(entries, text);
-        case RubyTextSegment(:final base, :final rubyText):
-          entries.add(_CharEntry.ruby(base, rubyText));
-      }
+  void _onPanStart(DragStartDetails details, double availableWidth) {
+    final index = _hitTest(details.localPosition, availableWidth);
+    if (index != null) {
+      setState(() {
+        _anchorIndex = index;
+        _selectionStart = index;
+        _selectionEnd = index + 1;
+      });
     }
-    return entries;
+  }
+
+  void _onPanUpdate(DragUpdateDetails details, double availableWidth) {
+    final index = _hitTest(details.localPosition, availableWidth);
+    if (index != null && _anchorIndex != null) {
+      final anchor = _anchorIndex!;
+      setState(() {
+        if (index >= anchor) {
+          _selectionStart = anchor;
+          _selectionEnd = index + 1;
+        } else {
+          _selectionStart = index;
+          _selectionEnd = anchor + 1;
+        }
+      });
+    }
+  }
+
+  void _onPanEnd(DragEndDetails details) {
+    _notifySelectionChanged();
+  }
+
+  void _onTap() {
+    _clearInternalSelection();
+    widget.onSelectionChanged?.call(null);
+  }
+
+  void _clearInternalSelection() {
+    setState(() {
+      _anchorIndex = null;
+      _selectionStart = null;
+      _selectionEnd = null;
+    });
+  }
+
+  void _notifySelectionChanged() {
+    final start = _effectiveStart;
+    final end = _effectiveEnd;
+    if (start == null || end == null || start >= end) {
+      widget.onSelectionChanged?.call(null);
+      return;
+    }
+    final text = extractVerticalSelectedText(_charEntries, start, end);
+    widget.onSelectionChanged?.call(text.isEmpty ? null : text);
+  }
+
+  int? _hitTest(Offset localPosition, double availableWidth) {
+    return hitTestCharIndex(
+      localPosition: localPosition,
+      availableWidth: availableWidth,
+      fontSize: widget.baseStyle?.fontSize ?? _kDefaultFontSize,
+      runSpacing: _kRunSpacing,
+      textHeight: _kTextHeight,
+      columns: _columns,
+    );
   }
 
   Widget _buildCharWidget(
-    _CharEntry entry, {
+    VerticalCharEntry entry, {
     required bool isHighlighted,
     required bool isSelected,
   }) {
@@ -83,7 +186,7 @@ class VerticalTextPage extends StatelessWidget {
       return VerticalRubyTextWidget(
         base: entry.text,
         rubyText: entry.rubyText!,
-        baseStyle: baseStyle,
+        baseStyle: widget.baseStyle,
         highlighted: isHighlighted,
         selected: isSelected,
       );
@@ -102,7 +205,6 @@ class VerticalTextPage extends StatelessWidget {
     required bool isHighlighted,
     required bool isSelected,
   }) {
-    // Search highlight (yellow) takes precedence over selection (blue)
     final Color? backgroundColor;
     if (isHighlighted) {
       backgroundColor = Colors.yellow;
@@ -111,30 +213,18 @@ class VerticalTextPage extends StatelessWidget {
     } else {
       backgroundColor = null;
     }
-    return baseStyle?.copyWith(backgroundColor: backgroundColor, height: 1.1) ??
-        TextStyle(backgroundColor: backgroundColor, height: 1.1);
+    return widget.baseStyle
+            ?.copyWith(backgroundColor: backgroundColor, height: _kTextHeight) ??
+        TextStyle(backgroundColor: backgroundColor, height: _kTextHeight);
   }
 
-  void _addPlainTextEntries(List<_CharEntry> entries, String text) {
-    final runes = text.runes.toList();
-    for (final rune in runes) {
-      final char = String.fromCharCode(rune);
-      if (char == '\n') {
-        entries.add(_CharEntry.newline());
-      } else {
-        entries.add(_CharEntry.plain(char));
-      }
-    }
-  }
-
-  Set<int> _computeHighlights(List<_CharEntry> entries, String query) {
+  Set<int> _computeHighlights(String query) {
     final queryLower = query.toLowerCase();
-    final indexMap = <int, int>{}; // buffer position -> entry index
+    final indexMap = <int, int>{};
     final buffer = StringBuffer();
 
-    // Build searchable text with index mapping
-    for (var i = 0; i < entries.length; i++) {
-      final entry = entries[i];
+    for (var i = 0; i < _charEntries.length; i++) {
+      final entry = _charEntries[i];
       if (entry.isNewline) continue;
 
       final startPos = buffer.length;
@@ -144,7 +234,6 @@ class VerticalTextPage extends StatelessWidget {
       }
     }
 
-    // Find all matches and collect highlighted indices
     final highlights = <int>{};
     final searchText = buffer.toString().toLowerCase();
 
@@ -159,26 +248,4 @@ class VerticalTextPage extends StatelessWidget {
 
     return highlights;
   }
-}
-
-class _CharEntry {
-  final String text;
-  final String? rubyText;
-  final bool isNewline;
-  final bool isRuby;
-
-  _CharEntry.plain(this.text)
-      : rubyText = null,
-        isNewline = false,
-        isRuby = false;
-
-  _CharEntry.newline()
-      : text = '\n',
-        rubyText = null,
-        isNewline = true,
-        isRuby = false;
-
-  _CharEntry.ruby(this.text, this.rubyText)
-      : isNewline = false,
-        isRuby = true;
 }

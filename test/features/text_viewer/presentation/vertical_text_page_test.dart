@@ -8,15 +8,21 @@ Widget _buildTestWidget({
   String? query,
   int? selectionStart,
   int? selectionEnd,
+  ValueChanged<String?>? onSelectionChanged,
 }) {
   return MaterialApp(
     home: Scaffold(
-      body: VerticalTextPage(
-        segments: segments,
-        baseStyle: const TextStyle(fontSize: 14.0),
-        query: query,
-        selectionStart: selectionStart,
-        selectionEnd: selectionEnd,
+      body: SizedBox(
+        width: 200,
+        height: 300,
+        child: VerticalTextPage(
+          segments: segments,
+          baseStyle: const TextStyle(fontSize: 14.0),
+          query: query,
+          selectionStart: selectionStart,
+          selectionEnd: selectionEnd,
+          onSelectionChanged: onSelectionChanged,
+        ),
       ),
     ),
   );
@@ -71,6 +77,44 @@ void main() {
       expect(iText.style?.backgroundColor, Colors.yellow);
       // 'う': selected only → blue
       expect(uText.style?.backgroundColor, selectionColor);
+    });
+  });
+
+  group('VerticalTextPage gesture interaction', () {
+    testWidgets('GestureDetector is present in widget tree', (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あいう')],
+      ));
+      expect(find.byType(GestureDetector), findsOneWidget);
+    });
+
+    testWidgets('tap calls onSelectionChanged with null', (tester) async {
+      bool callbackCalled = false;
+      String? notifiedText = 'initial';
+
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あいう')],
+        onSelectionChanged: (text) {
+          callbackCalled = true;
+          notifiedText = text;
+        },
+      ));
+
+      await tester.tap(find.byType(GestureDetector));
+      await tester.pump();
+
+      expect(callbackCalled, isTrue);
+      expect(notifiedText, isNull);
+    });
+
+    testWidgets('onSelectionChanged parameter is accepted', (tester) async {
+      // Verify the widget accepts the callback without error
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あいう')],
+        onSelectionChanged: (text) {},
+      ));
+
+      expect(find.byType(VerticalTextPage), findsOneWidget);
     });
   });
 }
