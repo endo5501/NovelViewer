@@ -1,4 +1,3 @@
-import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_text_layout.dart';
@@ -125,7 +124,7 @@ void main() {
       // Column 0 is at right edge: x from availableWidth-columnWidth to availableWidth
       // Row 0: y from 0 to charHeight
       final result = hitTestCharIndex(
-        localPosition: Offset(availableWidth - 1, 1),
+        localPosition: const Offset(99, 1),
         availableWidth: availableWidth,
         fontSize: fontSize,
         runSpacing: runSpacing,
@@ -138,7 +137,7 @@ void main() {
     test('hits second row in first column', () {
       // charHeight = 15.4, so y=16 is in row 1
       final result = hitTestCharIndex(
-        localPosition: Offset(availableWidth - 1, 16),
+        localPosition: const Offset(99, 16),
         availableWidth: availableWidth,
         fontSize: fontSize,
         runSpacing: runSpacing,
@@ -153,7 +152,7 @@ void main() {
       // columnWidth = 18
       // x = availableWidth - 18 - 1 = 81
       final result = hitTestCharIndex(
-        localPosition: Offset(availableWidth - 18 - 1, 1),
+        localPosition: const Offset(81, 1),
         availableWidth: availableWidth,
         fontSize: fontSize,
         runSpacing: runSpacing,
@@ -177,7 +176,7 @@ void main() {
 
     test('returns null for negative y', () {
       final result = hitTestCharIndex(
-        localPosition: Offset(availableWidth - 1, -1),
+        localPosition: const Offset(99, -1),
         availableWidth: availableWidth,
         fontSize: fontSize,
         runSpacing: runSpacing,
@@ -204,7 +203,7 @@ void main() {
     test('returns null for y beyond column length', () {
       // charHeight = 15.4, 3 chars → max y = 46.2
       final result = hitTestCharIndex(
-        localPosition: Offset(availableWidth - 1, 50),
+        localPosition: const Offset(99, 50),
         availableWidth: availableWidth,
         fontSize: fontSize,
         runSpacing: runSpacing,
@@ -234,7 +233,7 @@ void main() {
       ];
       // Hit row 2 in column 1 (only 1 char) → null
       final result = hitTestCharIndex(
-        localPosition: Offset(availableWidth - 18 - 1, 32),
+        localPosition: const Offset(81, 32),
         availableWidth: availableWidth,
         fontSize: fontSize,
         runSpacing: runSpacing,

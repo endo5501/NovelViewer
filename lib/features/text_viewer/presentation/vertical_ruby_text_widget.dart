@@ -43,7 +43,7 @@ class VerticalRubyTextWidget extends StatelessWidget {
     if (highlighted) {
       bgColor = Colors.yellow;
     } else if (selected) {
-      bgColor = Colors.blue.withOpacity(0.3);
+      bgColor = Colors.blue.withValues(alpha: 0.3);
     } else {
       bgColor = null;
     }

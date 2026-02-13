@@ -208,7 +208,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     final backgroundColor = isHighlighted
         ? Colors.yellow
         : isSelected
-            ? Colors.blue.withOpacity(0.3)
+            ? Colors.blue.withValues(alpha: 0.3)
             : null;
 
     return widget.baseStyle

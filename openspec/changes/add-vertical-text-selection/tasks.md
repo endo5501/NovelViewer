@@ -36,7 +36,7 @@
 
 ## 7. 最終確認
 
-- [ ] 7.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
-- [ ] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 7.3 `fvm flutter analyze`でリントを実行
-- [ ] 7.4 `fvm flutter test`でテストを実行
+- [x] 7.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
+- [x] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 7.3 `fvm flutter analyze`でリントを実行
+- [x] 7.4 `fvm flutter test`でテストを実行

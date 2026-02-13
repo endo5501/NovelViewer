@@ -41,7 +41,7 @@ void main() {
       final iText = tester.widget<Text>(find.text('い'));
       final uText = tester.widget<Text>(find.text('う'));
 
-      final expectedColor = Colors.blue.withOpacity(0.3);
+      final expectedColor = Colors.blue.withValues(alpha: 0.3);
       expect(aText.style?.backgroundColor, expectedColor);
       expect(iText.style?.backgroundColor, expectedColor);
       expect(uText.style?.backgroundColor, isNull);
@@ -70,7 +70,7 @@ void main() {
       final iText = tester.widget<Text>(find.text('い'));
       final uText = tester.widget<Text>(find.text('う'));
 
-      final selectionColor = Colors.blue.withOpacity(0.3);
+      final selectionColor = Colors.blue.withValues(alpha: 0.3);
       // 'あ': selected only → blue
       expect(aText.style?.backgroundColor, selectionColor);
       // 'い': search highlighted + selected → yellow wins
