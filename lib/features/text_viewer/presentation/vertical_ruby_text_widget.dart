@@ -18,48 +18,65 @@ class VerticalRubyTextWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fontSize = baseStyle?.fontSize ?? 14.0;
-    final backgroundColor = highlighted ? Colors.yellow : null;
+    final rubyFontSize = fontSize * 0.5;
 
     final baseChars = base.runes
         .map((r) => mapToVerticalChar(String.fromCharCode(r)))
         .toList();
-    final rubyChars = rubyText.runes
-        .map((r) => String.fromCharCode(r))
-        .toList();
+    final rubyChars =
+        rubyText.runes.map((r) => String.fromCharCode(r)).toList();
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Stack(
+      clipBehavior: Clip.none,
       children: [
-        // Ruby text (right side in RTL context)
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final char in rubyChars)
-              Text(
-                char,
-                style: baseStyle?.copyWith(
-                  fontSize: fontSize * 0.5,
-                  height: 1.0,
-                ),
-              ),
-          ],
-        ),
-        // Base text
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final char in baseChars)
-              Text(
-                char,
-                style: baseStyle?.copyWith(
-                  height: 1.0,
-                  backgroundColor: backgroundColor,
-                ) ?? TextStyle(height: 1.0, backgroundColor: backgroundColor),
-              ),
-          ],
-        ),
+        _buildBaseText(baseChars),
+        _buildRubyText(rubyChars, rubyFontSize),
       ],
     );
+  }
+
+  Widget _buildBaseText(List<String> baseChars) {
+    final style = _createTextStyle(
+      fontSize: baseStyle?.fontSize,
+      backgroundColor: highlighted ? Colors.yellow : null,
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final char in baseChars) Text(char, style: style),
+      ],
+    );
+  }
+
+  Widget _buildRubyText(List<String> rubyChars, double rubyFontSize) {
+    final style = _createTextStyle(fontSize: rubyFontSize);
+
+    return Positioned(
+      right: -(rubyFontSize + 2),
+      top: 0,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final char in rubyChars) Text(char, style: style),
+        ],
+      ),
+    );
+  }
+
+  TextStyle _createTextStyle({
+    double? fontSize,
+    Color? backgroundColor,
+  }) {
+    return baseStyle?.copyWith(
+          fontSize: fontSize,
+          height: 1.1,
+          backgroundColor: backgroundColor,
+        ) ??
+        TextStyle(
+          fontSize: fontSize,
+          height: 1.1,
+          backgroundColor: backgroundColor,
+        );
   }
 }

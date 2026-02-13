@@ -21,8 +21,16 @@ class VerticalTextViewer extends StatefulWidget {
   State<VerticalTextViewer> createState() => _VerticalTextViewerState();
 }
 
+// Layout constants
+const _kHorizontalPadding = 32.0;
+const _kVerticalPadding = 62.0;
+const _kRunSpacing = 4.0;
+const _kTextHeight = 1.1;
+const _kDefaultFontSize = 14.0;
+
 class _VerticalTextViewerState extends State<VerticalTextViewer> {
   int _currentPage = 0;
+  int _pageCount = 1;
   final FocusNode _focusNode = FocusNode();
 
   // Split segments into lines for pagination
@@ -64,8 +72,22 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
         onTap: () => _focusNode.requestFocus(),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final pages = _paginateLines(constraints);
+            final result = _paginateLines(constraints);
+            final pages = result.pages;
+            _pageCount = pages.length;
             final totalPages = pages.length;
+
+            if (result.targetPage != null &&
+                result.targetPage != _currentPage) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                setState(() {
+                  _currentPage = result.targetPage!;
+                  _targetLine = null;
+                });
+              });
+            }
+
             final safePage = totalPages == 0
                 ? 0
                 : _currentPage.clamp(0, totalPages - 1);
@@ -121,19 +143,15 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
   }
 
   void _nextPage() {
-    // In the current LayoutBuilder we don't have the page count cached,
-    // but we can safely increment and let build() clamp it.
     setState(() {
-      _currentPage++;
+      _currentPage = (_currentPage + 1).clamp(0, (_pageCount - 1).clamp(0, _pageCount));
     });
   }
 
   void _previousPage() {
-    if (_currentPage > 0) {
-      setState(() {
-        _currentPage--;
-      });
-    }
+    setState(() {
+      _currentPage = (_currentPage - 1).clamp(0, (_pageCount - 1).clamp(0, _pageCount));
+    });
   }
 
   void _navigateToLine(int lineNumber) {
@@ -148,75 +166,212 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
 
   int? _targetLine;
 
+  _PaginationResult _paginateLines(BoxConstraints constraints) {
+    final fontSize = widget.baseStyle?.fontSize ?? _kDefaultFontSize;
+    final charHeight = fontSize * _kTextHeight;
+    final columnWidth = fontSize + _kRunSpacing;
+    final availableWidth = constraints.maxWidth - _kHorizontalPadding;
+    final availableHeight = constraints.maxHeight - _kVerticalPadding;
+
+    final maxColumnsPerPage =
+        availableWidth > 0 ? (availableWidth / columnWidth).floor() : 1;
+    final charsPerColumn =
+        availableHeight > 0 ? (availableHeight / charHeight).floor() : 1;
+
+    if (maxColumnsPerPage <= 0 || charsPerColumn <= 0) {
+      return _PaginationResult([widget.segments], null);
+    }
+
+    final columns = <List<TextSegment>>[];
+    final lineStartColumns = _buildColumns(charsPerColumn, columns);
+    final pages = _groupColumnsIntoPages(columns, maxColumnsPerPage);
+    final targetPage = _findTargetPage(lineStartColumns, maxColumnsPerPage, pages);
+
+    final result = pages.isEmpty
+        ? _PaginationResult([widget.segments], null)
+        : _PaginationResult(pages, targetPage);
+
+    return result;
+  }
+
   List<List<TextSegment>> _splitIntoLines(List<TextSegment> segments) {
     final lines = <List<TextSegment>>[[]];
 
     for (final segment in segments) {
-      switch (segment) {
-        case PlainTextSegment(:final text):
-          final parts = text.split('\n');
-          for (var i = 0; i < parts.length; i++) {
-            if (i > 0) {
-              lines.add([]);
-            }
-            if (parts[i].isNotEmpty) {
-              lines.last.add(PlainTextSegment(parts[i]));
-            }
-          }
-        case RubyTextSegment():
-          lines.last.add(segment);
+      if (segment case PlainTextSegment(:final text)) {
+        _addPlainTextLines(text, lines);
+      } else {
+        lines.last.add(segment);
       }
     }
 
     return lines;
   }
 
-  List<List<TextSegment>> _paginateLines(BoxConstraints constraints) {
-    final fontSize = widget.baseStyle?.fontSize ?? 14.0;
-    final availableWidth = constraints.maxWidth - 32.0;
-
-    final columnsPerPage = _calculateColumnsPerPage(
-      availableWidth,
-      fontSize + 8.0, // character width + run spacing
-    );
-
-    if (columnsPerPage <= 0) {
-      return [widget.segments];
-    }
-
-    final pages = [
-      for (var i = 0; i < _lines.length; i += columnsPerPage)
-        _buildPageSegments(i, columnsPerPage),
-    ];
-
-    _updateCurrentPageForTarget(columnsPerPage, pages.length);
-
-    return pages.isEmpty ? [widget.segments] : pages;
-  }
-
-  int _calculateColumnsPerPage(double availableWidth, double columnWidth) {
-    return availableWidth > 0 ? (availableWidth / columnWidth).floor() : 1;
-  }
-
-  List<TextSegment> _buildPageSegments(int startIndex, int columnsPerPage) {
-    final end = (startIndex + columnsPerPage).clamp(0, _lines.length);
-    final pageLines = _lines.sublist(startIndex, end);
-
-    return [
-      for (var j = 0; j < pageLines.length; j++) ...[
-        if (j > 0) const PlainTextSegment('\n'),
-        ...pageLines[j],
-      ],
-    ];
-  }
-
-  void _updateCurrentPageForTarget(int columnsPerPage, int totalPages) {
-    if (_targetLine != null) {
-      final targetPage = (_targetLine! - 1) ~/ columnsPerPage;
-      if (targetPage >= 0 && targetPage < totalPages) {
-        _currentPage = targetPage;
+  void _addPlainTextLines(String text, List<List<TextSegment>> lines) {
+    final parts = text.split('\n');
+    for (var i = 0; i < parts.length; i++) {
+      if (i > 0) lines.add([]);
+      if (parts[i].isNotEmpty) {
+        lines.last.add(PlainTextSegment(parts[i]));
       }
-      _targetLine = null;
     }
   }
+
+
+  List<int> _buildColumns(int charsPerColumn, List<List<TextSegment>> columns) {
+    final lineStartColumns = <int>[];
+    for (final line in _lines) {
+      lineStartColumns.add(columns.length);
+      _splitLineIntoColumns(line, charsPerColumn, columns);
+    }
+    return lineStartColumns;
+  }
+
+  List<List<TextSegment>> _groupColumnsIntoPages(
+    List<List<TextSegment>> columns,
+    int maxColumnsPerPage,
+  ) {
+    final pages = <List<TextSegment>>[];
+    for (var i = 0; i < columns.length; i += maxColumnsPerPage) {
+      final end = (i + maxColumnsPerPage).clamp(0, columns.length);
+      final pageSegments = <TextSegment>[];
+      for (var j = i; j < end; j++) {
+        if (j > i) pageSegments.add(const PlainTextSegment('\n'));
+        pageSegments.addAll(columns[j]);
+      }
+      pages.add(pageSegments);
+    }
+    return pages;
+  }
+
+  int? _findTargetPage(
+    List<int> lineStartColumns,
+    int maxColumnsPerPage,
+    List<List<TextSegment>> pages,
+  ) {
+    final targetLine = _targetLine;
+    if (targetLine == null) return null;
+
+    final targetLineIndex = (targetLine - 1).clamp(0, _lines.length - 1);
+    if (targetLineIndex >= lineStartColumns.length) return null;
+
+    final colIndex = lineStartColumns[targetLineIndex];
+    final targetPage = colIndex ~/ maxColumnsPerPage;
+    if (targetPage >= 0 && targetPage < pages.length) {
+      return targetPage;
+    }
+    return null;
+  }
+
+  void _splitLineIntoColumns(
+    List<TextSegment> line,
+    int charsPerColumn,
+    List<List<TextSegment>> columns,
+  ) {
+    if (line.isEmpty) {
+      columns.add([]);
+      return;
+    }
+
+    var currentColumn = <TextSegment>[];
+    var currentCount = 0;
+
+    for (final segment in line) {
+      if (segment case PlainTextSegment(:final text)) {
+        _addPlainTextToColumns(
+          text,
+          charsPerColumn,
+          currentColumn,
+          currentCount,
+          columns,
+          (col, count) {
+            currentColumn = col;
+            currentCount = count;
+          },
+        );
+      } else if (segment case RubyTextSegment(:final base)) {
+        final updated = _addRubyTextToColumns(
+          segment,
+          base,
+          charsPerColumn,
+          currentColumn,
+          currentCount,
+          columns,
+        );
+        currentColumn = updated.$1;
+        currentCount = updated.$2;
+      }
+    }
+
+    if (currentColumn.isNotEmpty) {
+      columns.add(currentColumn);
+    }
+  }
+
+  void _addPlainTextToColumns(
+    String text,
+    int charsPerColumn,
+    List<TextSegment> currentColumn,
+    int currentCount,
+    List<List<TextSegment>> columns,
+    void Function(List<TextSegment>, int) updateState,
+  ) {
+    final runes = text.runes.toList();
+    var start = 0;
+
+    while (start < runes.length) {
+      final remaining = charsPerColumn - currentCount;
+      final chunkEnd = (start + remaining).clamp(0, runes.length);
+      final chunk = String.fromCharCodes(runes.sublist(start, chunkEnd));
+
+      if (chunk.isNotEmpty) {
+        currentColumn.add(PlainTextSegment(chunk));
+      }
+
+      currentCount += chunkEnd - start;
+      start = chunkEnd;
+
+      if (currentCount >= charsPerColumn) {
+        columns.add(currentColumn);
+        currentColumn = <TextSegment>[];
+        currentCount = 0;
+      }
+    }
+
+    updateState(currentColumn, currentCount);
+  }
+
+  (List<TextSegment>, int) _addRubyTextToColumns(
+    RubyTextSegment segment,
+    String base,
+    int charsPerColumn,
+    List<TextSegment> currentColumn,
+    int currentCount,
+    List<List<TextSegment>> columns,
+  ) {
+    final rubyChars = base.runes.length;
+
+    if (currentCount + rubyChars > charsPerColumn && currentColumn.isNotEmpty) {
+      columns.add(currentColumn);
+      currentColumn = <TextSegment>[];
+      currentCount = 0;
+    }
+
+    currentColumn.add(segment);
+    currentCount += rubyChars;
+
+    if (currentCount >= charsPerColumn) {
+      columns.add(currentColumn);
+      return (<TextSegment>[], 0);
+    }
+
+    return (currentColumn, currentCount);
+  }
+}
+
+class _PaginationResult {
+  const _PaginationResult(this.pages, this.targetPage);
+  final List<List<TextSegment>> pages;
+  final int? targetPage;
 }

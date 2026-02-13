@@ -3,44 +3,109 @@ import 'package:novel_viewer/features/text_viewer/data/vertical_char_map.dart';
 
 void main() {
   group('mapToVerticalChar', () {
-    test('maps period to vertical form', () {
+    test('maps space to ideographic space', () {
+      expect(mapToVerticalChar(' '), '\u3000');
+    });
+
+    test('maps arrows with 90° rotation', () {
+      expect(mapToVerticalChar('↑'), '→');
+      expect(mapToVerticalChar('↓'), '←');
+      expect(mapToVerticalChar('←'), '↑');
+      expect(mapToVerticalChar('→'), '↓');
+    });
+
+    test('maps punctuation to vertical form', () {
       expect(mapToVerticalChar('。'), '︒');
-    });
-
-    test('maps comma to vertical form', () {
       expect(mapToVerticalChar('、'), '︑');
+      expect(mapToVerticalChar(','), '︐');
+      expect(mapToVerticalChar('､'), '︑');
     });
 
-    test('maps opening corner bracket to vertical form', () {
-      expect(mapToVerticalChar('「'), '﹁');
+    test('maps long vowel marks and dashes to vertical bar', () {
+      expect(mapToVerticalChar('ー'), '丨');
+      expect(mapToVerticalChar('ｰ'), '丨');
+      expect(mapToVerticalChar('-'), '丨');
+      expect(mapToVerticalChar('_'), '丨');
+      expect(mapToVerticalChar('−'), '丨'); // U+2212 minus sign
+      expect(mapToVerticalChar('－'), '丨');
+      expect(mapToVerticalChar('─'), '丨');
+      expect(mapToVerticalChar('—'), '丨');
     });
 
-    test('maps closing corner bracket to vertical form', () {
-      expect(mapToVerticalChar('」'), '﹂');
+    test('maps wave dashes to vertical bar', () {
+      expect(mapToVerticalChar('〜'), '丨');
+      expect(mapToVerticalChar('～'), '丨');
     });
 
-    test('maps opening double corner bracket to vertical form', () {
-      expect(mapToVerticalChar('『'), '﹃');
+    test('maps slash to vertical form', () {
+      expect(mapToVerticalChar('／'), '＼');
     });
 
-    test('maps closing double corner bracket to vertical form', () {
-      expect(mapToVerticalChar('』'), '﹄');
-    });
-
-    test('maps opening parenthesis to vertical form', () {
-      expect(mapToVerticalChar('（'), '︵');
-    });
-
-    test('maps closing parenthesis to vertical form', () {
-      expect(mapToVerticalChar('）'), '︶');
-    });
-
-    test('maps ellipsis to vertical form', () {
+    test('maps ellipsis and two-dot leader to vertical form', () {
       expect(mapToVerticalChar('…'), '︙');
+      expect(mapToVerticalChar('‥'), '︰');
     });
 
-    test('maps em dash to vertical form', () {
-      expect(mapToVerticalChar('—'), '︱');
+    test('maps colons and semicolons to vertical form', () {
+      expect(mapToVerticalChar('：'), '︓');
+      expect(mapToVerticalChar(':'), '︓');
+      expect(mapToVerticalChar('；'), '︔');
+      expect(mapToVerticalChar(';'), '︔');
+    });
+
+    test('maps equals to vertical form', () {
+      expect(mapToVerticalChar('＝'), '॥');
+      expect(mapToVerticalChar('='), '॥');
+    });
+
+    test('maps corner brackets to vertical form', () {
+      expect(mapToVerticalChar('「'), '﹁');
+      expect(mapToVerticalChar('」'), '﹂');
+      expect(mapToVerticalChar('『'), '﹃');
+      expect(mapToVerticalChar('』'), '﹄');
+      expect(mapToVerticalChar('｢'), '﹁');
+      expect(mapToVerticalChar('｣'), '﹂');
+    });
+
+    test('maps parentheses to vertical form', () {
+      expect(mapToVerticalChar('（'), '︵');
+      expect(mapToVerticalChar('）'), '︶');
+      expect(mapToVerticalChar('('), '︵');
+      expect(mapToVerticalChar(')'), '︶');
+    });
+
+    test('maps square brackets to vertical form', () {
+      expect(mapToVerticalChar('［'), '﹇');
+      expect(mapToVerticalChar('］'), '﹈');
+      expect(mapToVerticalChar('['), '﹇');
+      expect(mapToVerticalChar(']'), '﹈');
+    });
+
+    test('maps curly brackets to vertical form', () {
+      expect(mapToVerticalChar('｛'), '︷');
+      expect(mapToVerticalChar('｝'), '︸');
+      expect(mapToVerticalChar('{'), '︷');
+      expect(mapToVerticalChar('}'), '︸');
+    });
+
+    test('maps angle brackets to vertical form', () {
+      expect(mapToVerticalChar('＜'), '︿');
+      expect(mapToVerticalChar('＞'), '﹀');
+      expect(mapToVerticalChar('<'), '︿');
+      expect(mapToVerticalChar('>'), '﹀');
+      expect(mapToVerticalChar('〈'), '︿');
+      expect(mapToVerticalChar('〉'), '﹀');
+      expect(mapToVerticalChar('《'), '︽');
+      expect(mapToVerticalChar('》'), '︾');
+    });
+
+    test('maps lenticular and tortoise shell brackets to vertical form', () {
+      expect(mapToVerticalChar('【'), '︻');
+      expect(mapToVerticalChar('】'), '︼');
+      expect(mapToVerticalChar('〔'), '︹');
+      expect(mapToVerticalChar('〕'), '︺');
+      expect(mapToVerticalChar('〖'), '︗');
+      expect(mapToVerticalChar('〗'), '︘');
     });
 
     test('returns unmapped characters unchanged', () {

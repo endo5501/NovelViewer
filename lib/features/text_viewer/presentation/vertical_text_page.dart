@@ -23,7 +23,7 @@ class VerticalTextPage extends StatelessWidget {
       textDirection: TextDirection.rtl,
       child: Wrap(
         direction: Axis.vertical,
-        spacing: 2.0,
+        spacing: 0.0,
         runSpacing: 4.0,
         children: children,
       ),
@@ -69,12 +69,16 @@ class VerticalTextPage extends StatelessWidget {
       );
     }
 
-    final style = isHighlighted
-        ? baseStyle?.copyWith(backgroundColor: Colors.yellow) ??
-            const TextStyle(backgroundColor: Color(0xFFFFFF00))
-        : baseStyle;
+    return Text(
+      mapToVerticalChar(entry.text),
+      style: _createTextStyle(isHighlighted),
+    );
+  }
 
-    return Text(mapToVerticalChar(entry.text), style: style);
+  TextStyle _createTextStyle(bool isHighlighted) {
+    final backgroundColor = isHighlighted ? Colors.yellow : null;
+    return baseStyle?.copyWith(backgroundColor: backgroundColor, height: 1.1) ??
+        TextStyle(backgroundColor: backgroundColor, height: 1.1);
   }
 
   void _addPlainTextEntries(List<_CharEntry> entries, String text) {
