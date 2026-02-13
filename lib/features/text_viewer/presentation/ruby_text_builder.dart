@@ -81,7 +81,7 @@ TextSpan buildRubyTextSpans(
     }
   }
 
-  return TextSpan(children: spans);
+  return TextSpan(style: baseStyle, children: spans);
 }
 
 List<TextSpan> _buildHighlightedPlainSpans(

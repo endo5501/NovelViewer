@@ -49,6 +49,8 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
     final selectedFile = ref.watch(selectedFileProvider);
     final searchMatch = ref.watch(selectedSearchMatchProvider);
     final displayMode = ref.watch(displayModeProvider);
+    final fontSize = ref.watch(fontSizeProvider);
+    final fontFamily = ref.watch(fontFamilyProvider);
 
     final activeMatch = searchMatch != null &&
             selectedFile?.path == searchMatch.filePath
@@ -65,7 +67,10 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
           );
         }
 
-        final textStyle = Theme.of(context).textTheme.bodyMedium;
+        final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: fontSize,
+              fontFamily: fontFamily.fontFamilyName,
+            );
         final segments = parseRubyText(content);
 
         if (displayMode == TextDisplayMode.vertical) {

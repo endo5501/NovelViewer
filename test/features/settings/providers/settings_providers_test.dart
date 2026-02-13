@@ -1,0 +1,84 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:novel_viewer/features/settings/data/font_family.dart';
+import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+
+void main() {
+  late SharedPreferences prefs;
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
+  });
+
+  ProviderContainer createContainer() {
+    return ProviderContainer(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+    );
+  }
+
+  group('fontSizeProvider', () {
+    test('initial value is default font size (14.0)', () {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(fontSizeProvider), 14.0);
+    });
+
+    test('initial value loads from SharedPreferences', () async {
+      await prefs.setDouble('font_size', 20.0);
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(fontSizeProvider), 20.0);
+    });
+
+    test('previewFontSize updates state without persisting', () {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      container.read(fontSizeProvider.notifier).previewFontSize(24.0);
+      expect(container.read(fontSizeProvider), 24.0);
+      expect(prefs.getDouble('font_size'), isNull);
+    });
+
+    test('persistFontSize saves current state to SharedPreferences', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      container.read(fontSizeProvider.notifier).previewFontSize(24.0);
+      await container.read(fontSizeProvider.notifier).persistFontSize();
+      expect(container.read(fontSizeProvider), 24.0);
+      expect(prefs.getDouble('font_size'), 24.0);
+    });
+  });
+
+  group('fontFamilyProvider', () {
+    test('initial value is FontFamily.system', () {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(fontFamilyProvider), FontFamily.system);
+    });
+
+    test('initial value loads from SharedPreferences', () async {
+      await prefs.setString('font_family', 'hiraginoMincho');
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(fontFamilyProvider), FontFamily.hiraginoMincho);
+    });
+
+    test('setFontFamily updates state and persists', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(fontFamilyProvider.notifier)
+          .setFontFamily(FontFamily.yuGothic);
+      expect(container.read(fontFamilyProvider), FontFamily.yuGothic);
+      expect(prefs.getString('font_family'), 'yuGothic');
+    });
+  });
+}
