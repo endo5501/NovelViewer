@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Vertical text rendering
-The system SHALL render text content in vertical writing mode (top-to-bottom, right-to-left columns) using a Wrap widget with vertical axis direction and RTL text direction. Each character SHALL be rendered individually as a separate widget within the Wrap layout.
+The system SHALL render text content in vertical writing mode (top-to-bottom, right-to-left columns) using a Wrap widget with vertical axis direction and RTL text direction. Each character SHALL be rendered individually as a separate widget within the Wrap layout. Characters SHALL be rendered with compact vertical spacing by setting the TextStyle `height` property to approximately 1.1 and minimizing the Wrap `spacing` to avoid excessive gaps between characters.
 
 #### Scenario: Text is displayed vertically
 - **WHEN** the display mode is set to vertical
@@ -16,42 +16,69 @@ The system SHALL render text content in vertical writing mode (top-to-bottom, ri
 - **THEN** the remaining characters wrap to a new column to the left
 
 ### Requirement: Vertical character mapping
-The system SHALL replace horizontal-specific punctuation and brackets with their vertical writing equivalents when rendering in vertical mode.
+The system SHALL replace horizontal-specific characters with their vertical writing equivalents when rendering in vertical mode. The mapping SHALL cover the full set defined in the Qiita reference article's VerticalRotated class, plus NovelViewer-specific additions.
 
-#### Scenario: Period is mapped to vertical form
-- **WHEN** the character "。" is encountered in vertical mode
-- **THEN** it is rendered as "︒" (vertical ideographic full stop)
+#### Scenario: Punctuation is mapped to vertical form
+- **WHEN** punctuation characters `。`, `、`, `,`, `､` are encountered in vertical mode
+- **THEN** they are rendered as `︒`, `︑`, `︐`, `︑` respectively
 
-#### Scenario: Comma is mapped to vertical form
-- **WHEN** the character "、" is encountered in vertical mode
-- **THEN** it is rendered as "︑" (vertical ideographic comma)
+#### Scenario: Long vowel marks and dashes are mapped to vertical bar
+- **WHEN** any of `ー`, `ｰ`, `-`, `_`, `−`, `－`, `─`, `—` are encountered in vertical mode
+- **THEN** they are rendered as `丨` (CJK unified ideograph U+4E28)
 
-#### Scenario: Opening bracket is mapped to vertical form
-- **WHEN** the character "「" is encountered in vertical mode
-- **THEN** it is rendered as "﹁" (vertical left corner bracket)
+#### Scenario: Wave dashes are mapped to vertical form
+- **WHEN** `〜` or `～` are encountered in vertical mode
+- **THEN** they are rendered as `丨`
 
-#### Scenario: Closing bracket is mapped to vertical form
-- **WHEN** the character "」" is encountered in vertical mode
-- **THEN** it is rendered as "﹂" (vertical right corner bracket)
+#### Scenario: Arrows are rotated 90 degrees
+- **WHEN** arrow characters `↑`, `↓`, `←`, `→` are encountered in vertical mode
+- **THEN** they are rendered as `→`, `←`, `↑`, `↓` respectively (rotated 90° clockwise)
 
-#### Scenario: Parentheses are mapped to vertical form
-- **WHEN** the characters "（" or "）" are encountered in vertical mode
-- **THEN** they are rendered as "︵" or "︶" respectively (vertical parentheses)
+#### Scenario: Brackets are mapped to vertical forms
+- **WHEN** bracket characters are encountered in vertical mode
+- **THEN** they are mapped as follows:
+  - Corner brackets: `「」｢｣` → `﹁﹂`, `『』` → `﹃﹄`
+  - Parentheses: `（）()` → `︵︶`
+  - Square brackets: `［］[]` → `﹇﹈`
+  - Curly brackets: `｛｝{}` → `︷︸`
+  - Lenticular brackets: `【】` → `︻︼`, `〖〗` → `︗︘`
+  - Angle brackets: `＜＞<>` → `︿﹀`, `〈〉` → `︿﹀`, `《》` → `︽︾`
+  - Tortoise shell brackets: `〔〕` → `︹︺`
 
-#### Scenario: Ellipsis is mapped to vertical form
-- **WHEN** the character "…" is encountered in vertical mode
-- **THEN** it is rendered as "︙" (vertical ellipsis)
+#### Scenario: Colons and semicolons are mapped to vertical form
+- **WHEN** `：`, `:`, `；`, or `;` are encountered in vertical mode
+- **THEN** they are rendered as `︓`, `︓`, `︔`, `︔` respectively
+
+#### Scenario: Equals signs are mapped to vertical form
+- **WHEN** `＝` or `=` are encountered in vertical mode
+- **THEN** they are rendered as `॥`
+
+#### Scenario: Ellipsis and two-dot leader are mapped to vertical form
+- **WHEN** `…` or `‥` are encountered in vertical mode
+- **THEN** they are rendered as `︙` or `︰` respectively
+
+#### Scenario: Slash is mapped to vertical form
+- **WHEN** `／` is encountered in vertical mode
+- **THEN** it is rendered as `＼`
+
+#### Scenario: Space is mapped to ideographic space
+- **WHEN** a half-width space `' '` is encountered in vertical mode
+- **THEN** it is rendered as a full-width ideographic space `'　'`
 
 #### Scenario: Unmapped characters remain unchanged
 - **WHEN** a character without a vertical mapping is encountered in vertical mode
 - **THEN** the character is rendered as-is without transformation
 
 ### Requirement: Vertical text pagination
-The system SHALL display vertical text in pages rather than as a scrollable area. Page boundaries SHALL be calculated dynamically based on the available display area dimensions and character/column sizing.
+The system SHALL display vertical text in pages rather than as a scrollable area. Page boundaries SHALL be calculated dynamically based on both the available width and height of the display area. The pagination SHALL account for the fact that a single logical line (newline-separated text) may occupy multiple visual columns when its character count exceeds the available vertical height.
 
 #### Scenario: Text is split into pages
 - **WHEN** the text content exceeds the available display area in vertical mode
-- **THEN** the text is divided into pages, each fitting within the display area
+- **THEN** the text is divided into pages, each fitting within the display area without overflowing
+
+#### Scenario: Long line spans multiple visual columns
+- **WHEN** a single logical line contains more characters than can fit in the available vertical height
+- **THEN** the pagination accounts for the multiple visual columns that line will occupy, preventing horizontal overflow
 
 #### Scenario: Page boundary adjusts to window size
 - **WHEN** the application window is resized while in vertical display mode

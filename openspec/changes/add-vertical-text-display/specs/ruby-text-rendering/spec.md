@@ -9,7 +9,7 @@ The system SHALL render ruby-annotated text with the ruby annotation (furigana) 
 
 #### Scenario: Ruby annotation displayed to the right of base text in vertical mode
 - **WHEN** a ruby segment with base "漢字" and ruby "かんじ" is rendered in vertical mode
-- **THEN** "かんじ" is displayed to the right of "漢字" with a smaller font size
+- **THEN** "かんじ" is displayed to the right of "漢字" with a smaller font size, using a Stack-based overlay so that the ruby text does not affect the column width in the Wrap layout
 
 #### Scenario: Ruby text rendered inline with surrounding text in horizontal mode
 - **WHEN** ruby segments appear between plain text segments in horizontal mode
@@ -17,7 +17,7 @@ The system SHALL render ruby-annotated text with the ruby annotation (furigana) 
 
 #### Scenario: Ruby text rendered inline with surrounding characters in vertical mode
 - **WHEN** ruby segments appear between plain text segments in vertical mode
-- **THEN** the ruby-annotated text flows inline with the surrounding characters in the vertical column
+- **THEN** the ruby-annotated text flows inline with the surrounding characters in the vertical column, with the base text aligned to the same column width as plain characters
 
 #### Scenario: Plain text segments rendered normally
 - **WHEN** a plain text segment is rendered
