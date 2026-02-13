@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Vertical text selection by drag
-The system SHALL allow the user to select text in vertical display mode by click-and-drag gesture. The selection SHALL follow the vertical reading direction (top-to-bottom within a column, right-to-left across columns). The selection range SHALL be determined by mapping the pointer position to character indices using the layout constants (font size, text height, column width, run spacing).
+The system SHALL allow the user to select text in vertical display mode by click-and-drag gesture. The selection SHALL follow the vertical reading direction (top-to-bottom within a column, right-to-left across columns). The selection range SHALL be determined by mapping the pointer position to character indices using actual rendered widget rectangles collected via `GlobalKey` and `RenderBox`. During drag updates, the system SHALL snap to the nearest character region when the pointer is between characters.
 
 #### Scenario: User selects text by dragging in vertical mode
 - **WHEN** the user clicks and drags over characters in vertical display mode

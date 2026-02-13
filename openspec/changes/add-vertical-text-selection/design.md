@@ -42,15 +42,14 @@
 
 ### Decision 2: 座標→文字インデックスの位置計算方式
 
-ページネーション計算で使用している同じレイアウト定数（`_kRunSpacing`, `_kTextHeight`, `fontSize`）を用いて、ポインタ座標から文字インデックスを算出する。
+各文字ウィジェットに `GlobalKey` を割り当て、レンダリング後に `RenderBox.localToGlobal` で実際の描画矩形（`Rect`）を収集する。ポインタ座標と各矩形の `contains` 判定でヒットテストを行う。
 
-```
-columnIndex = (availableWidth - localX) / columnWidth   // RTL: 右から左
-rowIndex    = localY / charHeight
-charIndex   = columnIndex * charsPerColumn + rowIndex
-```
+- `VerticalHitRegion`: 文字インデックスと実際の描画矩形を保持するデータクラス
+- `hitTestCharIndexFromRegions`: 矩形リストに対するヒットテスト関数。`snapToNearest` オプションでドラッグ中は最近接の文字にスナップ
+- `addPostFrameCallback` でレイアウト完了後に矩形情報を収集
+- ルビ付き文字は `RenderBox` のサイズにルビフォントサイズ分を加算して矩形を拡張
 
-**理由:** `GlobalKey` を全文字に割り当てる方式はメモリ・パフォーマンスの問題があるが、レイアウトが固定グリッドであるため位置計算で正確に特定可能。ページネーション計算と同じ定数を使うため整合性が保たれる。
+**経緯:** 当初はレイアウト定数（`_kRunSpacing`, `_kTextHeight`, `fontSize`）による数式ベースの座標計算を採用したが、実装・検証の結果、`Wrap` の実際のレンダリング位置と数式の計算値にずれが生じ、カーソル位置と選択文字が一致しない問題が発生した。`GlobalKey` + `RenderBox` による実際の描画矩形ベースの方式に変更することで、正確なヒットテストを実現した。
 
 ### Decision 3: 選択状態の管理場所
 
@@ -82,8 +81,8 @@ charIndex   = columnIndex * charsPerColumn + rowIndex
 
 ## Risks / Trade-offs
 
-**[リスク] 位置計算の精度** — ルビ付き文字は通常文字より高さが異なる可能性がある
-→ 緩和策: ルビウィジェットは `Stack` でオーバーレイされているため、ベーステキスト部分の高さは通常文字と同じ。`_kTextHeight` ベースの計算で十分な精度を確保できる
+**[リスク → 顕在化・対応済] 位置計算の精度** — 当初の数式ベースの位置計算では、`Wrap` の実際のレンダリング位置とのずれにより選択精度が不十分だった
+→ 対応: `GlobalKey` + `RenderBox` による実際の描画矩形ベースのヒットテストに変更（Decision 2 参照）。ルビ付き文字は矩形をルビフォントサイズ分拡張して対応
 
 **[リスク] ページ切り替え時の選択状態** — ページを移動すると選択が無効になる
 → 緩和策: ページ切り替え時に選択をクリアする。これは横書きモードでスクロール時に選択が維持されない場合と同等の挙動
