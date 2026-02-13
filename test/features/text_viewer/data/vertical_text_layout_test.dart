@@ -244,4 +244,64 @@ void main() {
       expect(result, isNull);
     });
   });
+
+  group('extractVerticalSelectedText', () {
+    test('extracts plain text from range', () {
+      final entries = [
+        VerticalCharEntry.plain('あ'),
+        VerticalCharEntry.plain('い'),
+        VerticalCharEntry.plain('う'),
+        VerticalCharEntry.plain('え'),
+      ];
+      expect(extractVerticalSelectedText(entries, 1, 3), 'いう');
+    });
+
+    test('extracts ruby base text', () {
+      final entries = [
+        VerticalCharEntry.plain('あ'),
+        VerticalCharEntry.ruby('漢字', 'かんじ'),
+        VerticalCharEntry.plain('い'),
+      ];
+      expect(extractVerticalSelectedText(entries, 0, 3), 'あ漢字い');
+    });
+
+    test('includes newlines in extraction', () {
+      final entries = [
+        VerticalCharEntry.plain('あ'),
+        VerticalCharEntry.newline(),
+        VerticalCharEntry.plain('い'),
+      ];
+      expect(extractVerticalSelectedText(entries, 0, 3), 'あ\nい');
+    });
+
+    test('returns empty string when start >= end', () {
+      final entries = [
+        VerticalCharEntry.plain('あ'),
+        VerticalCharEntry.plain('い'),
+      ];
+      expect(extractVerticalSelectedText(entries, 2, 1), '');
+      expect(extractVerticalSelectedText(entries, 1, 1), '');
+    });
+
+    test('clamps indices to valid range', () {
+      final entries = [
+        VerticalCharEntry.plain('あ'),
+        VerticalCharEntry.plain('い'),
+      ];
+      expect(extractVerticalSelectedText(entries, -1, 5), 'あい');
+    });
+
+    test('extracts single character', () {
+      final entries = [
+        VerticalCharEntry.plain('あ'),
+        VerticalCharEntry.plain('い'),
+        VerticalCharEntry.plain('う'),
+      ];
+      expect(extractVerticalSelectedText(entries, 1, 2), 'い');
+    });
+
+    test('returns empty for empty entries', () {
+      expect(extractVerticalSelectedText([], 0, 1), '');
+    });
+  });
 }
