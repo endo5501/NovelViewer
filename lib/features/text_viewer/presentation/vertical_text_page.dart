@@ -76,27 +76,21 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onPanStart: (details) =>
-              _onPanStart(details, constraints.maxWidth),
-          onPanUpdate: (details) =>
-              _onPanUpdate(details, constraints.maxWidth),
-          onPanEnd: _onPanEnd,
-          onTap: _onTap,
-          child: Directionality(
-            textDirection: TextDirection.rtl,
-            child: Wrap(
-              direction: Axis.vertical,
-              spacing: 0.0,
-              runSpacing: _kRunSpacing,
-              children: children,
-            ),
-          ),
-        );
-      },
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanStart: _onPanStart,
+      onPanUpdate: _onPanUpdate,
+      onPanEnd: _onPanEnd,
+      onTap: _onTap,
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Wrap(
+          direction: Axis.vertical,
+          spacing: 0.0,
+          runSpacing: _kRunSpacing,
+          children: children,
+        ),
+      ),
     );
   }
 
@@ -107,8 +101,13 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     return index >= start && index < end;
   }
 
-  void _onPanStart(DragStartDetails details, double availableWidth) {
-    final index = _hitTest(details.localPosition, availableWidth);
+  double _getRenderedWidth() {
+    final box = context.findRenderObject() as RenderBox?;
+    return box?.size.width ?? 0;
+  }
+
+  void _onPanStart(DragStartDetails details) {
+    final index = _hitTest(details.localPosition, _getRenderedWidth());
     if (index != null) {
       setState(() {
         _anchorIndex = index;
@@ -118,8 +117,8 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     }
   }
 
-  void _onPanUpdate(DragUpdateDetails details, double availableWidth) {
-    final index = _hitTest(details.localPosition, availableWidth);
+  void _onPanUpdate(DragUpdateDetails details) {
+    final index = _hitTest(details.localPosition, _getRenderedWidth());
     final anchor = _anchorIndex;
     if (index != null && anchor != null) {
       setState(() {
