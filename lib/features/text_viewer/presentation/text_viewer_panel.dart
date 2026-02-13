@@ -74,6 +74,9 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
             baseStyle: textStyle,
             query: activeMatch?.query,
             targetLineNumber: activeMatch?.lineNumber,
+            onSelectionChanged: (text) {
+              ref.read(selectedTextProvider.notifier).setText(text);
+            },
           );
         }
 
