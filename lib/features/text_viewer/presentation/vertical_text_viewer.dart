@@ -10,12 +10,14 @@ class VerticalTextViewer extends StatefulWidget {
     required this.baseStyle,
     this.query,
     this.targetLineNumber,
+    this.onSelectionChanged,
   });
 
   final List<TextSegment> segments;
   final TextStyle? baseStyle;
   final String? query;
   final int? targetLineNumber;
+  final ValueChanged<String?>? onSelectionChanged;
 
   @override
   State<VerticalTextViewer> createState() => _VerticalTextViewerState();
@@ -68,8 +70,8 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
       focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: _handleKeyEvent,
-      child: GestureDetector(
-        onTap: () => _focusNode.requestFocus(),
+      child: Listener(
+        onPointerDown: (_) => _focusNode.requestFocus(),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final result = _paginateLines(constraints);
@@ -106,6 +108,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
                         segments: currentSegments,
                         baseStyle: widget.baseStyle,
                         query: widget.query,
+                        onSelectionChanged: widget.onSelectionChanged,
                       ),
                     ),
                   ),
@@ -146,12 +149,14 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
     setState(() {
       _currentPage = (_currentPage + 1).clamp(0, (_pageCount - 1).clamp(0, _pageCount));
     });
+    widget.onSelectionChanged?.call(null);
   }
 
   void _previousPage() {
     setState(() {
       _currentPage = (_currentPage - 1).clamp(0, (_pageCount - 1).clamp(0, _pageCount));
     });
+    widget.onSelectionChanged?.call(null);
   }
 
   void _navigateToLine(int lineNumber) {
