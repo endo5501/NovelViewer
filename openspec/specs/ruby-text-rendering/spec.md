@@ -35,31 +35,39 @@ The system SHALL provide a plain text representation from parsed segments by con
 - **THEN** the plain text output is "これは漢字です"
 
 ### Requirement: Ruby text visual rendering
-The system SHALL render ruby-annotated text with the ruby annotation (furigana) displayed above the base text in a smaller font size.
+The system SHALL render ruby-annotated text with the ruby annotation (furigana) positioned according to the current display mode. In horizontal mode, the ruby annotation SHALL be displayed above the base text. In vertical mode, the ruby annotation SHALL be displayed to the right of the base text. In both modes, the ruby text SHALL use a smaller font size.
 
-#### Scenario: Ruby annotation displayed above base text
-- **WHEN** a ruby segment with base "漢字" and ruby "かんじ" is rendered
+#### Scenario: Ruby annotation displayed above base text in horizontal mode
+- **WHEN** a ruby segment with base "漢字" and ruby "かんじ" is rendered in horizontal mode
 - **THEN** "かんじ" is displayed above "漢字" with a smaller font size
 
-#### Scenario: Ruby text rendered inline with surrounding text
-- **WHEN** ruby segments appear between plain text segments
+#### Scenario: Ruby annotation displayed to the right of base text in vertical mode
+- **WHEN** a ruby segment with base "漢字" and ruby "かんじ" is rendered in vertical mode
+- **THEN** "かんじ" is displayed to the right of "漢字" with a smaller font size, using a Stack-based overlay so that the ruby text does not affect the column width in the Wrap layout
+
+#### Scenario: Ruby text rendered inline with surrounding text in horizontal mode
+- **WHEN** ruby segments appear between plain text segments in horizontal mode
 - **THEN** the ruby-annotated text flows inline with the surrounding plain text without breaking the line flow
+
+#### Scenario: Ruby text rendered inline with surrounding characters in vertical mode
+- **WHEN** ruby segments appear between plain text segments in vertical mode
+- **THEN** the ruby-annotated text flows inline with the surrounding characters in the vertical column, with the base text aligned to the same column width as plain characters
 
 #### Scenario: Plain text segments rendered normally
 - **WHEN** a plain text segment is rendered
 - **THEN** it is displayed with the standard text style, identical to the current rendering behavior
 
 ### Requirement: Search highlight with ruby text
-The system SHALL support search query highlighting on ruby-aware content, highlighting matches in the base text of ruby segments and in plain text segments.
+The system SHALL support search query highlighting on ruby-aware content in both horizontal and vertical display modes, highlighting matches in the base text of ruby segments and in plain text segments.
+
+#### Scenario: Highlight match in ruby base text in horizontal mode
+- **WHEN** the search query is "漢字" and a ruby segment has base text "漢字" in horizontal mode
+- **THEN** the base text "漢字" in the ruby segment is highlighted with a distinct background color
+
+#### Scenario: Highlight match in ruby base text in vertical mode
+- **WHEN** the search query is "漢字" and a ruby segment has base text "漢字" in vertical mode
+- **THEN** the base text "漢字" in the ruby segment is highlighted with a distinct background color
 
 #### Scenario: Highlight match in plain text segment
 - **WHEN** the search query is "冒険" and a plain text segment contains "冒険"
-- **THEN** the matching text is highlighted with a distinct background color
-
-#### Scenario: Highlight match in ruby base text
-- **WHEN** the search query is "漢字" and a ruby segment has base text "漢字"
-- **THEN** the base text "漢字" in the ruby segment is highlighted with a distinct background color
-
-#### Scenario: Highlight match spanning plain text only
-- **WHEN** the search query spans only plain text portions of the content
-- **THEN** the highlight is applied correctly without affecting ruby annotations
+- **THEN** the matching text is highlighted with a distinct background color in both display modes
