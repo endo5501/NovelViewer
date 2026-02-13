@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
@@ -10,12 +12,21 @@ import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 
 void main() {
+  late SharedPreferences prefs;
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
+  });
   group('TextViewerPanel', () {
     testWidgets('shows placeholder when no file is selected',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: Scaffold(body: TextViewerPanel())),
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+          child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -28,6 +39,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
@@ -45,6 +57,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
             fileContentProvider.overrideWith((ref) async => longText),
           ],
           child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
@@ -59,6 +72,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
@@ -75,6 +89,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
@@ -94,6 +109,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
             fileContentProvider.overrideWith(
                 (ref) async => '太郎が走った。次郎が歩いた。太郎が言った。'),
             selectedSearchMatchProvider.overrideWith(() {
@@ -131,6 +147,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
             fileContentProvider
                 .overrideWith((ref) async => '太郎が走った。'),
             selectedSearchMatchProvider.overrideWith(() {
@@ -169,6 +186,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
@@ -188,6 +206,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
             fileContentProvider.overrideWith((ref) async => longText),
             selectedSearchMatchProvider.overrideWith(() {
               return SelectedSearchMatchNotifier();
@@ -232,6 +251,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
             fileContentProvider.overrideWith((ref) async => longText),
             selectedSearchMatchProvider.overrideWith(() {
               return SelectedSearchMatchNotifier();
