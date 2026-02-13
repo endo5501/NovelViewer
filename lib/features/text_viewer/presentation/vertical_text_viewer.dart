@@ -38,6 +38,10 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
   // Split segments into lines for pagination
   List<List<TextSegment>> _lines = [];
 
+  // Cache TextPainter for character metrics
+  TextPainter? _cachedPainter;
+  TextStyle? _cachedStyle;
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +65,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
   @override
   void dispose() {
     _focusNode.dispose();
+    _cachedPainter?.dispose();
     super.dispose();
   }
 
@@ -145,23 +150,17 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
     return KeyEventResult.ignored;
   }
 
-  void _nextPage() {
+  void _changePage(int delta) {
     if (_pageCount > 0) {
       setState(() {
-        _currentPage = (_currentPage + 1).clamp(0, _pageCount - 1);
+        _currentPage = (_currentPage + delta).clamp(0, _pageCount - 1);
       });
       widget.onSelectionChanged?.call(null);
     }
   }
 
-  void _previousPage() {
-    if (_pageCount > 0) {
-      setState(() {
-        _currentPage = (_currentPage - 1).clamp(0, _pageCount - 1);
-      });
-      widget.onSelectionChanged?.call(null);
-    }
-  }
+  void _nextPage() => _changePage(1);
+  void _previousPage() => _changePage(-1);
 
   void _navigateToLine(int lineNumber) {
     // Estimate which page contains the target line.
@@ -176,9 +175,21 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
   int? _targetLine;
 
   _PaginationResult _paginateLines(BoxConstraints constraints) {
-    final fontSize = widget.baseStyle?.fontSize ?? _kDefaultFontSize;
-    final charHeight = fontSize * _kTextHeight;
-    final columnWidth = fontSize + _kRunSpacing;
+    final style = widget.baseStyle?.copyWith(height: _kTextHeight) ??
+        const TextStyle(fontSize: _kDefaultFontSize, height: _kTextHeight);
+
+    // Reuse cached painter if style hasn't changed
+    if (_cachedPainter == null || _cachedStyle != style) {
+      _cachedPainter?.dispose();
+      _cachedPainter = TextPainter(
+        text: TextSpan(text: 'あ', style: style),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      _cachedStyle = style;
+    }
+
+    final charHeight = _cachedPainter!.height;
+    final columnWidth = _cachedPainter!.width + _kRunSpacing;
     final availableWidth = constraints.maxWidth - _kHorizontalPadding;
     final availableHeight = constraints.maxHeight - _kVerticalPadding;
 
