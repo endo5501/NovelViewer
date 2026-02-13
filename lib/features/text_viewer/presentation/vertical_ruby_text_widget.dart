@@ -8,12 +8,14 @@ class VerticalRubyTextWidget extends StatelessWidget {
     required this.rubyText,
     required this.baseStyle,
     this.highlighted = false,
+    this.selected = false,
   });
 
   final String base;
   final String rubyText;
   final TextStyle? baseStyle;
   final bool highlighted;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -36,9 +38,18 @@ class VerticalRubyTextWidget extends StatelessWidget {
   }
 
   Widget _buildBaseText(List<String> baseChars) {
+    // Search highlight (yellow) takes precedence over selection (blue)
+    final Color? bgColor;
+    if (highlighted) {
+      bgColor = Colors.yellow;
+    } else if (selected) {
+      bgColor = Colors.blue.withOpacity(0.3);
+    } else {
+      bgColor = null;
+    }
     final style = _createTextStyle(
       fontSize: baseStyle?.fontSize,
-      backgroundColor: highlighted ? Colors.yellow : null,
+      backgroundColor: bgColor,
     );
 
     return Column(

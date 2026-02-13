@@ -9,11 +9,15 @@ class VerticalTextPage extends StatelessWidget {
     required this.segments,
     required this.baseStyle,
     this.query,
+    this.selectionStart,
+    this.selectionEnd,
   });
 
   final List<TextSegment> segments;
   final TextStyle? baseStyle;
   final String? query;
+  final int? selectionStart;
+  final int? selectionEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -38,8 +42,19 @@ class VerticalTextPage extends StatelessWidget {
 
     return [
       for (var i = 0; i < charEntries.length; i++)
-        _buildCharWidget(charEntries[i], highlights.contains(i)),
+        _buildCharWidget(
+          charEntries[i],
+          isHighlighted: highlights.contains(i),
+          isSelected: _isInSelection(i),
+        ),
     ];
+  }
+
+  bool _isInSelection(int index) {
+    final start = selectionStart;
+    final end = selectionEnd;
+    if (start == null || end == null) return false;
+    return index >= start && index < end;
   }
 
   List<_CharEntry> _buildCharEntries() {
@@ -55,7 +70,11 @@ class VerticalTextPage extends StatelessWidget {
     return entries;
   }
 
-  Widget _buildCharWidget(_CharEntry entry, bool isHighlighted) {
+  Widget _buildCharWidget(
+    _CharEntry entry, {
+    required bool isHighlighted,
+    required bool isSelected,
+  }) {
     if (entry.isNewline) {
       return const SizedBox(width: 0, height: double.infinity);
     }
@@ -66,17 +85,32 @@ class VerticalTextPage extends StatelessWidget {
         rubyText: entry.rubyText!,
         baseStyle: baseStyle,
         highlighted: isHighlighted,
+        selected: isSelected,
       );
     }
 
     return Text(
       mapToVerticalChar(entry.text),
-      style: _createTextStyle(isHighlighted),
+      style: _createTextStyle(
+        isHighlighted: isHighlighted,
+        isSelected: isSelected,
+      ),
     );
   }
 
-  TextStyle _createTextStyle(bool isHighlighted) {
-    final backgroundColor = isHighlighted ? Colors.yellow : null;
+  TextStyle _createTextStyle({
+    required bool isHighlighted,
+    required bool isSelected,
+  }) {
+    // Search highlight (yellow) takes precedence over selection (blue)
+    final Color? backgroundColor;
+    if (isHighlighted) {
+      backgroundColor = Colors.yellow;
+    } else if (isSelected) {
+      backgroundColor = Colors.blue.withOpacity(0.3);
+    } else {
+      backgroundColor = null;
+    }
     return baseStyle?.copyWith(backgroundColor: backgroundColor, height: 1.1) ??
         TextStyle(backgroundColor: backgroundColor, height: 1.1);
   }
