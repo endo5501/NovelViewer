@@ -10,12 +10,14 @@ class VerticalTextViewer extends StatefulWidget {
     required this.baseStyle,
     this.query,
     this.targetLineNumber,
+    this.onSelectionChanged,
   });
 
   final List<TextSegment> segments;
   final TextStyle? baseStyle;
   final String? query;
   final int? targetLineNumber;
+  final ValueChanged<String?>? onSelectionChanged;
 
   @override
   State<VerticalTextViewer> createState() => _VerticalTextViewerState();
@@ -68,8 +70,8 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
       focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: _handleKeyEvent,
-      child: GestureDetector(
-        onTap: () => _focusNode.requestFocus(),
+      child: Listener(
+        onPointerDown: (_) => _focusNode.requestFocus(),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final result = _paginateLines(constraints);
@@ -106,6 +108,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
                         segments: currentSegments,
                         baseStyle: widget.baseStyle,
                         query: widget.query,
+                        onSelectionChanged: widget.onSelectionChanged,
                       ),
                     ),
                   ),
@@ -143,15 +146,21 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
   }
 
   void _nextPage() {
-    setState(() {
-      _currentPage = (_currentPage + 1).clamp(0, (_pageCount - 1).clamp(0, _pageCount));
-    });
+    if (_pageCount > 0) {
+      setState(() {
+        _currentPage = (_currentPage + 1).clamp(0, _pageCount - 1);
+      });
+      widget.onSelectionChanged?.call(null);
+    }
   }
 
   void _previousPage() {
-    setState(() {
-      _currentPage = (_currentPage - 1).clamp(0, (_pageCount - 1).clamp(0, _pageCount));
-    });
+    if (_pageCount > 0) {
+      setState(() {
+        _currentPage = (_currentPage - 1).clamp(0, _pageCount - 1);
+      });
+      widget.onSelectionChanged?.call(null);
+    }
   }
 
   void _navigateToLine(int lineNumber) {
@@ -187,11 +196,9 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
     final pages = _groupColumnsIntoPages(columns, maxColumnsPerPage);
     final targetPage = _findTargetPage(lineStartColumns, maxColumnsPerPage, pages);
 
-    final result = pages.isEmpty
+    return pages.isEmpty
         ? _PaginationResult([widget.segments], null)
         : _PaginationResult(pages, targetPage);
-
-    return result;
   }
 
   List<List<TextSegment>> _splitIntoLines(List<TextSegment> segments) {
@@ -279,19 +286,15 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
 
     for (final segment in line) {
       if (segment case PlainTextSegment(:final text)) {
-        _addPlainTextToColumns(
+        (currentColumn, currentCount) = _addPlainTextToColumns(
           text,
           charsPerColumn,
           currentColumn,
           currentCount,
           columns,
-          (col, count) {
-            currentColumn = col;
-            currentCount = count;
-          },
         );
       } else if (segment case RubyTextSegment(:final base)) {
-        final updated = _addRubyTextToColumns(
+        (currentColumn, currentCount) = _addRubyTextToColumns(
           segment,
           base,
           charsPerColumn,
@@ -299,8 +302,6 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
           currentCount,
           columns,
         );
-        currentColumn = updated.$1;
-        currentCount = updated.$2;
       }
     }
 
@@ -309,13 +310,12 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
     }
   }
 
-  void _addPlainTextToColumns(
+  (List<TextSegment>, int) _addPlainTextToColumns(
     String text,
     int charsPerColumn,
     List<TextSegment> currentColumn,
     int currentCount,
     List<List<TextSegment>> columns,
-    void Function(List<TextSegment>, int) updateState,
   ) {
     final runes = text.runes.toList();
     var start = 0;
@@ -339,7 +339,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
       }
     }
 
-    updateState(currentColumn, currentCount);
+    return (currentColumn, currentCount);
   }
 
   (List<TextSegment>, int) _addRubyTextToColumns(

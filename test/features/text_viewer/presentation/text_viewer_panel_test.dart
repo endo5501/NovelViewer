@@ -6,8 +6,10 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
+import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
+import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 
@@ -292,6 +294,41 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(scrollView.controller!.offset, greaterThan(firstOffset));
+    });
+
+    testWidgets(
+        'vertical mode VerticalTextViewer has onSelectionChanged wired up',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            fileContentProvider
+                .overrideWith((ref) async => 'テスト小説の内容です。'),
+            displayModeProvider.overrideWith(() {
+              final notifier = DisplayModeNotifier();
+              return notifier;
+            }),
+          ],
+          child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Set display mode to vertical
+      final element = tester.element(find.byType(TextViewerPanel));
+      final container = ProviderScope.containerOf(element);
+      await container
+          .read(displayModeProvider.notifier)
+          .setMode(TextDisplayMode.vertical);
+      await tester.pumpAndSettle();
+
+      // VerticalTextViewer should be present with onSelectionChanged
+      expect(find.byType(VerticalTextViewer), findsOneWidget);
+      final viewer = tester.widget<VerticalTextViewer>(
+        find.byType(VerticalTextViewer),
+      );
+      expect(viewer.onSelectionChanged, isNotNull);
     });
   });
 
