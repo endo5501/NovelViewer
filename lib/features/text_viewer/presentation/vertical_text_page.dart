@@ -120,8 +120,8 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
 
   void _onPanUpdate(DragUpdateDetails details, double availableWidth) {
     final index = _hitTest(details.localPosition, availableWidth);
-    if (index != null && _anchorIndex != null) {
-      final anchor = _anchorIndex!;
+    final anchor = _anchorIndex;
+    if (index != null && anchor != null) {
       setState(() {
         if (index >= anchor) {
           _selectionStart = anchor;
@@ -205,14 +205,12 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     required bool isHighlighted,
     required bool isSelected,
   }) {
-    final Color? backgroundColor;
-    if (isHighlighted) {
-      backgroundColor = Colors.yellow;
-    } else if (isSelected) {
-      backgroundColor = Colors.blue.withOpacity(0.3);
-    } else {
-      backgroundColor = null;
-    }
+    final backgroundColor = isHighlighted
+        ? Colors.yellow
+        : isSelected
+            ? Colors.blue.withOpacity(0.3)
+            : null;
+
     return widget.baseStyle
             ?.copyWith(backgroundColor: backgroundColor, height: _kTextHeight) ??
         TextStyle(backgroundColor: backgroundColor, height: _kTextHeight);

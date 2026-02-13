@@ -90,14 +90,8 @@ String extractVerticalSelectedText(
   final start = startIndex.clamp(0, entries.length);
   final end = endIndex.clamp(0, entries.length);
 
-  final buffer = StringBuffer();
-  for (var i = start; i < end; i++) {
-    final entry = entries[i];
-    if (entry.isNewline) {
-      buffer.write('\n');
-    } else {
-      buffer.write(entry.text);
-    }
-  }
-  return buffer.toString();
+  return entries
+      .sublist(start, end)
+      .map((e) => e.isNewline ? '\n' : e.text)
+      .join();
 }
