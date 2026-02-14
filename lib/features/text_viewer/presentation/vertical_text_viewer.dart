@@ -26,7 +26,9 @@ class VerticalTextViewer extends StatefulWidget {
 // Layout constants
 const _kHorizontalPadding = 32.0;
 const _kVerticalPadding = 62.0;
-const _kRunSpacing = 4.0;
+// Effective visual gap between columns is 2 * _kRunSpacing due to sentinel
+// SizedBoxes in the Wrap creating an extra run between each column pair.
+const _kRunSpacing = 2.0;
 const _kTextHeight = 1.1;
 const _kDefaultFontSize = 14.0;
 
