@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/text_download/data/download_service.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 
@@ -44,7 +46,7 @@ class DownloadNotifier extends Notifier<DownloadState> {
     required Uri url,
     required String outputPath,
   }) async {
-    final registry = NovelSiteRegistry();
+    final registry = ref.read(novelSiteRegistryProvider);
     final site = registry.findSite(url);
     if (site == null) {
       state = const DownloadState(
@@ -59,9 +61,9 @@ class DownloadNotifier extends Notifier<DownloadState> {
       outputPath: outputPath,
     );
 
+    final service = DownloadService();
     try {
-      final service = DownloadService();
-      await service.downloadNovel(
+      final result = await service.downloadNovel(
         site: site,
         url: url,
         outputPath: outputPath,
@@ -72,7 +74,18 @@ class DownloadNotifier extends Notifier<DownloadState> {
           );
         },
       );
-      service.dispose();
+
+      final repository = ref.read(novelRepositoryProvider);
+      await repository.upsert(NovelMetadata(
+        siteType: result.siteType,
+        novelId: result.novelId,
+        title: result.title,
+        url: result.url.toString(),
+        folderName: result.folderName,
+        episodeCount: result.episodeCount,
+        downloadedAt: DateTime.now(),
+      ));
+      ref.invalidate(allNovelsProvider);
 
       state = state.copyWith(status: DownloadStatus.completed);
     } catch (e) {
@@ -80,6 +93,8 @@ class DownloadNotifier extends Notifier<DownloadState> {
         status: DownloadStatus.error,
         errorMessage: e.toString(),
       );
+    } finally {
+      service.dispose();
     }
   }
 

@@ -104,6 +104,34 @@ void main() {
     });
   });
 
+  group('siteType', () {
+    test('returns narou', () {
+      expect(site.siteType, 'narou');
+    });
+  });
+
+  group('extractNovelId', () {
+    test('extracts ncode from standard URL', () {
+      final url = Uri.parse('https://ncode.syosetu.com/n9669bk/');
+      expect(site.extractNovelId(url), 'n9669bk');
+    });
+
+    test('extracts ncode from URL with episode path', () {
+      final url = Uri.parse('https://ncode.syosetu.com/n9669bk/1/');
+      expect(site.extractNovelId(url), 'n9669bk');
+    });
+
+    test('extracts ncode from novel18 URL', () {
+      final url = Uri.parse('https://novel18.syosetu.com/n1234ab/');
+      expect(site.extractNovelId(url), 'n1234ab');
+    });
+
+    test('throws ArgumentError for URL without ncode', () {
+      final url = Uri.parse('https://syosetu.com/');
+      expect(() => site.extractNovelId(url), throwsArgumentError);
+    });
+  });
+
   group('parseEpisode', () {
     test('extracts body text from episode page', () {
       const html = '''

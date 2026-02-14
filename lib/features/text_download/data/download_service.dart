@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 
+typedef ProgressCallback = void Function(int current, int total);
+
 final _invalidChars = RegExp(r'[\\/:*?"<>|]');
 final _multipleSpaces = RegExp(r'\s+');
 
@@ -20,7 +22,23 @@ String formatEpisodeFileName(int index, String title, int totalEpisodes) {
   return '${paddedIndex}_$safeTitle.txt';
 }
 
-typedef ProgressCallback = void Function(int current, int total);
+class DownloadResult {
+  final String siteType;
+  final String novelId;
+  final String title;
+  final String folderName;
+  final int episodeCount;
+  final Uri url;
+
+  const DownloadResult({
+    required this.siteType,
+    required this.novelId,
+    required this.title,
+    required this.folderName,
+    required this.episodeCount,
+    required this.url,
+  });
+}
 
 class DownloadService {
   final http.Client _client;
@@ -51,12 +69,16 @@ class DownloadService {
 
   Future<Directory> createNovelDirectory(
     String parentPath,
-    String novelTitle,
+    String folderName,
   ) async {
-    final dirName = safeName(novelTitle);
-    final dir = Directory('$parentPath/$dirName');
+    final dir = Directory('$parentPath/$folderName');
     await dir.create(recursive: true);
     return dir;
+  }
+
+  String buildFolderName(NovelSite site, Uri url) {
+    final novelId = site.extractNovelId(url);
+    return '${site.siteType}_$novelId';
   }
 
   Future<void> saveEpisode({
@@ -71,17 +93,20 @@ class DownloadService {
     await file.writeAsString(content);
   }
 
-  Future<void> downloadNovel({
+  Future<DownloadResult> downloadNovel({
     required NovelSite site,
     required Uri url,
     required String outputPath,
     ProgressCallback? onProgress,
   }) async {
+    final folderName = buildFolderName(site, url);
+    final novelId = site.extractNovelId(url);
     final indexHtml = await fetchPage(url);
     final novelIndex = site.parseIndex(indexHtml, url);
 
-    final dir = await createNovelDirectory(outputPath, novelIndex.title);
+    final dir = await createNovelDirectory(outputPath, folderName);
     final total = novelIndex.episodes.length;
+    var downloadedCount = 0;
 
     for (final (i, episode) in novelIndex.episodes.indexed) {
       try {
@@ -98,11 +123,21 @@ class DownloadService {
           content: content,
           totalEpisodes: total,
         );
+        downloadedCount++;
       } catch (e) {
         // Skip failed episodes and continue
       }
       onProgress?.call(i + 1, total);
     }
+
+    return DownloadResult(
+      siteType: site.siteType,
+      novelId: novelId,
+      title: novelIndex.title,
+      folderName: folderName,
+      episodeCount: downloadedCount,
+      url: url,
+    );
   }
 
   void dispose() {
