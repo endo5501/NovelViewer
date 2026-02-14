@@ -1,78 +1,27 @@
-## ADDED Requirements
-
-### Requirement: Download dialog
-The system SHALL provide a download dialog accessible from the AppBar, allowing the user to initiate novel downloads from supported Web novel sites.
-
-#### Scenario: User opens download dialog
-- **WHEN** the user clicks the download button in the AppBar
-- **THEN** a modal dialog is displayed with a URL input field and a download start button
-
-#### Scenario: User closes download dialog
-- **WHEN** the user closes the download dialog without starting a download
-- **THEN** the dialog is dismissed and no download is initiated
-
-### Requirement: URL validation
-The system SHALL validate that the entered URL belongs to a supported Web novel site before starting a download.
-
-#### Scenario: Valid narou URL is entered
-- **WHEN** the user enters a URL containing `syosetu.com` (e.g., `https://ncode.syosetu.com/n9669bk/`)
-- **THEN** the URL is accepted and the download button becomes enabled
-
-#### Scenario: Valid kakuyomu URL is entered
-- **WHEN** the user enters a URL containing `kakuyomu.jp` (e.g., `https://kakuyomu.jp/works/1177354054881162325`)
-- **THEN** the URL is accepted and the download button becomes enabled
-
-#### Scenario: Unsupported URL is entered
-- **WHEN** the user enters a URL that does not match any supported site
-- **THEN** an error message is displayed indicating the site is not supported, and the download button remains disabled
-
-#### Scenario: Empty URL
-- **WHEN** the URL input field is empty
-- **THEN** the download button is disabled
-
-### Requirement: Default library directory
-The system SHALL automatically create and use a default library directory (`~/Documents/NovelViewer/`) as the download destination and initial file browser directory.
-
-#### Scenario: App starts for the first time
-- **WHEN** the application starts and the default library directory does not exist
-- **THEN** the directory is created automatically and set as the current file browser directory
-
-#### Scenario: App starts with existing library directory
-- **WHEN** the application starts and the default library directory already exists
-- **THEN** the existing directory is used as the current file browser directory
-
-#### Scenario: Download destination
-- **WHEN** a download is started
-- **THEN** the downloaded files are saved under the current file browser directory
-
-### Requirement: macOS network access
-The macOS application SHALL have the `com.apple.security.network.client` entitlement enabled to allow outbound HTTP connections for downloading novel pages.
-
-#### Scenario: App makes HTTP requests on macOS
-- **WHEN** the application attempts to fetch a web page from a supported novel site
-- **THEN** the request succeeds because the network client entitlement is configured in both Debug and Release entitlements
-
-### Requirement: Novel index fetching
-The system SHALL fetch the novel's index page and extract the novel title and episode list.
-
-#### Scenario: Narou novel index is fetched
-- **WHEN** a download is started with a valid narou URL
-- **THEN** the system fetches the index page and extracts the novel title and the list of episode URLs
-
-#### Scenario: Kakuyomu novel index is fetched
-- **WHEN** a download is started with a valid kakuyomu URL
-- **THEN** the system fetches the index page and extracts the novel title and the list of episode URLs
-
-#### Scenario: Index page fetch fails
-- **WHEN** the system fails to fetch the index page (network error, HTTP error)
-- **THEN** an error message is displayed in the download dialog and the download is aborted
+## MODIFIED Requirements
 
 ### Requirement: Episode download
-The system SHALL download each episode's HTML page, extract the body text, and save it as a text file.
+The system SHALL download each episode's HTML page, extract the body text, and save it as a text file. Before downloading, the system SHALL check the episode cache and skip episodes that have not been modified since the last download.
 
-#### Scenario: Episode is downloaded and saved
-- **WHEN** an episode page is fetched successfully
-- **THEN** the body text is extracted from the HTML and saved as a `.txt` file in the output directory
+#### Scenario: New episode is downloaded
+- **WHEN** an episode URL is not found in the episode cache
+- **THEN** the system downloads the episode, saves it as a `.txt` file, and stores its metadata in the episode cache
+
+#### Scenario: Cached episode is checked for updates via HEAD request
+- **WHEN** an episode URL exists in the episode cache
+- **THEN** the system sends a HEAD request to the episode URL and compares the `Last-Modified` header with the cached value
+
+#### Scenario: Cached episode has been updated
+- **WHEN** the HEAD request returns a `Last-Modified` value newer than the cached value
+- **THEN** the system downloads the episode content, overwrites the existing `.txt` file, and updates the cache record
+
+#### Scenario: Cached episode has not been updated
+- **WHEN** the HEAD request returns a `Last-Modified` value equal to or older than the cached value
+- **THEN** the system skips the download and increments the skipped episodes count
+
+#### Scenario: Server does not return Last-Modified header
+- **WHEN** the HEAD request does not include a `Last-Modified` header for a cached episode
+- **THEN** the system skips the download (treats as unchanged) and increments the skipped episodes count
 
 #### Scenario: Episode download fails
 - **WHEN** an individual episode fails to download
@@ -94,68 +43,32 @@ The system SHALL download each episode's HTML page, extract the body text, and s
 - **WHEN** the episode HTML contains multiple consecutive empty `<p>` tags
 - **THEN** the extracted text SHALL preserve each empty `<p>` as a separate blank line, maintaining the original spacing
 
-### Requirement: File naming convention
-Downloaded files SHALL follow a consistent naming convention with zero-padded numeric prefixes.
-
-#### Scenario: Episode files are named with numeric prefix
-- **WHEN** episodes are saved to disk
-- **THEN** each file is named `{zero-padded index}_{episode title}.txt` (e.g., `001_プロローグ.txt`, `002_第一章.txt`)
-
-#### Scenario: Novel directory is created using ID-based folder name
-- **WHEN** a download is started
-- **THEN** a subdirectory named `{site_type}_{novel_id}` is created inside the output directory, and all episode files are saved within it
-
-#### Scenario: File name contains invalid characters
-- **WHEN** an episode title contains characters invalid for file names (e.g., `\/:*?"<>|`)
-- **THEN** the invalid characters are replaced with `_`
-
-### Requirement: Novel metadata registration on download
-The download service SHALL register novel metadata in the database upon successful download completion.
-
-#### Scenario: New novel download registers metadata
-- **WHEN** a novel download completes successfully
-- **THEN** the system registers the novel's site type, novel ID, title, source URL, ID-based folder name, and episode count in the metadata database
-
-#### Scenario: Re-download of existing novel updates metadata
-- **WHEN** a novel that already exists in the database is downloaded again
-- **THEN** the existing metadata record is updated with the current title, episode count, and updated timestamp
-
-### Requirement: Novel ID extraction during download
-The download service SHALL extract the site-specific novel ID from the URL before starting the download process.
-
-#### Scenario: Novel ID is extracted for folder creation
-- **WHEN** a download is initiated with a supported URL
-- **THEN** the system extracts the novel ID via the site parser and uses it to construct the ID-based folder name
-
-#### Scenario: Novel ID extraction fails
-- **WHEN** the novel ID cannot be extracted from the URL
-- **THEN** the download is aborted and an error message is displayed
-
 ### Requirement: Download progress display
-The system SHALL display download progress during the download operation.
+The system SHALL display download progress during the download operation, including the number of skipped episodes.
 
 #### Scenario: Progress is shown during download
 - **WHEN** episodes are being downloaded
-- **THEN** the dialog displays progress as "N/M episodes completed" where N is the current count and M is the total
+- **THEN** the dialog displays progress as "N/M" where N is the current processing count and M is the total episode count
+
+#### Scenario: Skipped episodes count is shown
+- **WHEN** episodes are skipped due to cache hits during download
+- **THEN** the dialog displays the skipped count alongside the progress (e.g., "5/100 (スキップ: 90件)")
 
 #### Scenario: Download completes successfully
-- **WHEN** all episodes have been downloaded
-- **THEN** the dialog displays a completion message with the total number of downloaded episodes
+- **WHEN** all episodes have been processed (downloaded or skipped)
+- **THEN** the dialog displays a completion message with the total number of downloaded episodes and skipped episodes
 
-### Requirement: Request rate limiting
-The system SHALL enforce a delay between HTTP requests to avoid overloading the target server.
+### Requirement: HEAD request for update detection
+The system SHALL support sending HTTP HEAD requests to check for episode updates without downloading the full content.
 
-#### Scenario: Delay between episode requests
-- **WHEN** multiple episodes are downloaded sequentially
-- **THEN** the system waits at least 0.7 seconds between each HTTP request
+#### Scenario: HEAD request is sent with User-Agent
+- **WHEN** a HEAD request is sent to check for episode updates
+- **THEN** the request includes the same User-Agent header used for GET requests
 
-### Requirement: Site parser extensibility
-The system SHALL use a common interface for site-specific parsers, allowing new site support to be added by implementing the interface.
+#### Scenario: HEAD request respects rate limiting
+- **WHEN** multiple HEAD requests are sent sequentially
+- **THEN** the system waits at least 0.7 seconds between each request, consistent with the existing rate limiting for GET requests
 
-#### Scenario: URL is routed to the correct parser
-- **WHEN** a download URL is submitted
-- **THEN** the system identifies the target site from the URL host and selects the appropriate parser
-
-#### Scenario: No parser matches the URL
-- **WHEN** a URL does not match any registered parser
-- **THEN** the system reports that the site is not supported
+#### Scenario: HEAD request fails
+- **WHEN** a HEAD request fails due to network error or HTTP error
+- **THEN** the system treats the episode as unchanged and skips the download
