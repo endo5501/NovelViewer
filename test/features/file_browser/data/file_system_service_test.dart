@@ -96,6 +96,20 @@ void main() {
       expect(dirs.map((d) => d.name), containsAll(['novel1', 'novel2']));
     });
 
+    test('DirectoryEntry displayName defaults to name', () {
+      const entry = DirectoryEntry(name: 'narou_n1234', path: '/test/narou_n1234');
+      expect(entry.displayName, 'narou_n1234');
+    });
+
+    test('DirectoryEntry displayName can be overridden', () {
+      const entry = DirectoryEntry(
+        name: 'narou_n1234',
+        path: '/test/narou_n1234',
+        displayName: 'テスト小説',
+      );
+      expect(entry.displayName, 'テスト小説');
+    });
+
     test('returns empty list when no subdirectories exist', () async {
       File('${tempDir.path}/file.txt').writeAsStringSync('content');
 

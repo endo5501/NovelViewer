@@ -43,6 +43,31 @@ void main() {
     });
   });
 
+  group('siteType', () {
+    test('returns kakuyomu', () {
+      expect(site.siteType, 'kakuyomu');
+    });
+  });
+
+  group('extractNovelId', () {
+    test('extracts work ID from standard URL', () {
+      final url =
+          Uri.parse('https://kakuyomu.jp/works/1177354054881162325');
+      expect(site.extractNovelId(url), '1177354054881162325');
+    });
+
+    test('extracts work ID from URL with episode path', () {
+      final url = Uri.parse(
+          'https://kakuyomu.jp/works/1177354054881162325/episodes/999');
+      expect(site.extractNovelId(url), '1177354054881162325');
+    });
+
+    test('throws ArgumentError for URL without work ID', () {
+      final url = Uri.parse('https://kakuyomu.jp/');
+      expect(() => site.extractNovelId(url), throwsArgumentError);
+    });
+  });
+
   group('parseIndex', () {
     test('extracts title and episodes from index page', () {
       const html = '''

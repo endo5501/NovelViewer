@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_download/data/download_service.dart';
+import 'package:novel_viewer/features/text_download/data/sites/narou_site.dart';
+import 'package:novel_viewer/features/text_download/data/sites/kakuyomu_site.dart';
 
 void main() {
   group('safeName', () {
@@ -62,33 +64,40 @@ void main() {
       tempDir.deleteSync(recursive: true);
     });
 
-    test('createNovelDirectory creates directory with novel title', () async {
+    test('createNovelDirectory creates directory with given folder name', () async {
       final service = DownloadService();
       final dir = await service.createNovelDirectory(
         tempDir.path,
-        'テスト小説',
+        'narou_n1234ab',
       );
 
       expect(dir.existsSync(), isTrue);
-      expect(dir.path, contains('テスト小説'));
+      expect(dir.path, contains('narou_n1234ab'));
     });
 
-    test('createNovelDirectory sanitizes directory name', () async {
+    test('buildFolderName returns site_type + novel_id for narou', () {
       final service = DownloadService();
-      final dir = await service.createNovelDirectory(
-        tempDir.path,
-        'テスト/小説',
-      );
+      final site = NarouSite();
+      final url = Uri.parse('https://ncode.syosetu.com/n9669bk/');
+      expect(service.buildFolderName(site, url), 'narou_n9669bk');
+    });
 
-      expect(dir.existsSync(), isTrue);
-      expect(dir.path, contains('テスト_小説'));
+    test('buildFolderName returns site_type + novel_id for kakuyomu', () {
+      final service = DownloadService();
+      final site = KakuyomuSite();
+      final url =
+          Uri.parse('https://kakuyomu.jp/works/1177354054881162325');
+      expect(
+        service.buildFolderName(site, url),
+        'kakuyomu_1177354054881162325',
+      );
     });
 
     test('saveEpisode writes text file with correct name', () async {
       final service = DownloadService();
       final dir = await service.createNovelDirectory(
         tempDir.path,
-        'テスト小説',
+        'narou_n1234ab',
       );
 
       await service.saveEpisode(

@@ -57,7 +57,7 @@ class FileBrowserPanel extends ConsumerWidget {
           items.add(
             ListTile(
               leading: const Icon(Icons.folder),
-              title: Text(dir.name),
+              title: Text(dir.displayName),
               onTap: () {
                 ref
                     .read(currentDirectoryProvider.notifier)

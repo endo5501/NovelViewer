@@ -2,6 +2,18 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 
 class KakuyomuSite implements NovelSite {
+  @override
+  String get siteType => 'kakuyomu';
+
+  @override
+  String extractNovelId(Uri url) {
+    final match = RegExp(r'/works/(\d+)').firstMatch(url.path);
+    if (match == null) {
+      throw ArgumentError('Cannot extract novel ID from URL: $url');
+    }
+    return match.group(1)!;
+  }
+
   static final _titleSelectors = [
     '#workTitle',
     'h1',

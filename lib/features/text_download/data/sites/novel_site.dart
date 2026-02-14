@@ -24,7 +24,9 @@ class NovelIndex {
 }
 
 abstract class NovelSite {
+  String get siteType;
   bool canHandle(Uri url);
+  String extractNovelId(Uri url);
   NovelIndex parseIndex(String html, Uri baseUrl);
   String parseEpisode(String html);
 }

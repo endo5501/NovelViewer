@@ -11,8 +11,13 @@ class FileEntry {
 class DirectoryEntry {
   final String name;
   final String path;
+  final String displayName;
 
-  const DirectoryEntry({required this.name, required this.path});
+  const DirectoryEntry({
+    required this.name,
+    required this.path,
+    String? displayName,
+  }) : displayName = displayName ?? name;
 }
 
 class FileSystemService {
@@ -28,27 +33,27 @@ class FileSystemService {
   }
 
   List<FileEntry> sortByNumericPrefix(List<FileEntry> files) {
-    final numbered = <FileEntry>[];
-    final nonNumbered = <FileEntry>[];
+    final numericPattern = RegExp(r'^(\d+)');
 
-    for (final file in files) {
-      final match = RegExp(r'^(\d+)').firstMatch(file.name);
-      if (match != null) {
-        numbered.add(file);
-      } else {
-        nonNumbered.add(file);
-      }
+    int? extractNumber(String name) {
+      final match = numericPattern.firstMatch(name);
+      return match != null ? int.parse(match.group(1)!) : null;
     }
 
-    numbered.sort((a, b) {
-      final numA = int.parse(RegExp(r'^(\d+)').firstMatch(a.name)!.group(1)!);
-      final numB = int.parse(RegExp(r'^(\d+)').firstMatch(b.name)!.group(1)!);
-      return numA.compareTo(numB);
-    });
+    final sorted = files.toList()
+      ..sort((a, b) {
+        final numA = extractNumber(a.name);
+        final numB = extractNumber(b.name);
 
-    nonNumbered.sort((a, b) => a.name.compareTo(b.name));
+        if (numA != null && numB != null) {
+          return numA.compareTo(numB);
+        }
+        if (numA != null) return -1;
+        if (numB != null) return 1;
+        return a.name.compareTo(b.name);
+      });
 
-    return [...numbered, ...nonNumbered];
+    return sorted;
   }
 
   Future<List<DirectoryEntry>> listSubdirectories(String directoryPath) async {

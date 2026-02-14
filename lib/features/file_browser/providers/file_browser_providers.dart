@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 
 final fileSystemServiceProvider = Provider<FileSystemService>((ref) {
   return FileSystemService();
@@ -20,6 +21,10 @@ final currentDirectoryProvider =
     NotifierProvider<CurrentDirectoryNotifier, String?>(
         CurrentDirectoryNotifier.new);
 
+final libraryPathProvider = Provider<String?>((ref) {
+  throw UnimplementedError('libraryPathProvider must be overridden at startup');
+});
+
 final directoryContentsProvider =
     FutureProvider<DirectoryContents>((ref) async {
   final dirPath = ref.watch(currentDirectoryProvider);
@@ -30,7 +35,25 @@ final directoryContentsProvider =
   final service = ref.watch(fileSystemServiceProvider);
   final files = await service.listTextFiles(dirPath);
   final sortedFiles = service.sortByNumericPrefix(files);
-  final subdirectories = await service.listSubdirectories(dirPath);
+  var subdirectories = await service.listSubdirectories(dirPath);
+
+  final libraryPath = ref.watch(libraryPathProvider);
+  final isLibraryRoot = libraryPath != null && dirPath == libraryPath;
+
+  if (isLibraryRoot) {
+    final novels = await ref.watch(allNovelsProvider.future);
+    final folderToTitle = {
+      for (final novel in novels) novel.folderName: novel.title,
+    };
+
+    subdirectories = subdirectories
+        .map((dir) => DirectoryEntry(
+              name: dir.name,
+              path: dir.path,
+              displayName: folderToTitle[dir.name],
+            ))
+        .toList();
+  }
 
   return DirectoryContents(
     files: sortedFiles,
