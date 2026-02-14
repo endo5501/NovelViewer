@@ -105,15 +105,17 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
             return Column(
               children: [
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Align(
-                      alignment: Alignment.topRight,
-                      child: VerticalTextPage(
-                        segments: currentSegments,
-                        baseStyle: widget.baseStyle,
-                        query: widget.query,
-                        onSelectionChanged: widget.onSelectionChanged,
+                  child: ClipRect(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: VerticalTextPage(
+                          segments: currentSegments,
+                          baseStyle: widget.baseStyle,
+                          query: widget.query,
+                          onSelectionChanged: widget.onSelectionChanged,
+                        ),
                       ),
                     ),
                   ),
@@ -189,12 +191,17 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
     }
 
     final charHeight = _cachedPainter!.height;
-    final columnWidth = _cachedPainter!.width + _kRunSpacing;
+    final charWidth = _cachedPainter!.width;
     final availableWidth = constraints.maxWidth - _kHorizontalPadding;
     final availableHeight = constraints.maxHeight - _kVerticalPadding;
 
-    final maxColumnsPerPage =
-        availableWidth > 0 ? (availableWidth / columnWidth).floor() : 1;
+    // Account for Wrap sentinel SizedBoxes that cause double runSpacing
+    // between columns. For n columns: actual width = n*charWidth + (2n-2)*runSpacing
+    // Solving for n: n <= (availableWidth + 2*runSpacing) / (charWidth + 2*runSpacing)
+    final effectiveColumnWidth = charWidth + 2 * _kRunSpacing;
+    final maxColumnsPerPage = availableWidth > 0
+        ? ((availableWidth + 2 * _kRunSpacing) / effectiveColumnWidth).floor()
+        : 1;
     final charsPerColumn =
         availableHeight > 0 ? (availableHeight / charHeight).floor() : 1;
 
