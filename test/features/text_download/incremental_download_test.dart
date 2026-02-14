@@ -48,6 +48,51 @@ class _FakeSite implements NovelSite {
   String parseEpisode(String html) => html;
 }
 
+class _ShortStorySite implements NovelSite {
+  @override
+  String get siteType => 'test';
+
+  @override
+  bool canHandle(Uri url) => true;
+
+  @override
+  String extractNovelId(Uri url) => 'short1';
+
+  @override
+  NovelIndex parseIndex(String html, Uri baseUrl) {
+    return const NovelIndex(
+      title: '短編テスト小説',
+      episodes: [],
+      bodyContent: '短編の本文です。',
+    );
+  }
+
+  @override
+  String parseEpisode(String html) => html;
+}
+
+class _EmptyNovelSite implements NovelSite {
+  @override
+  String get siteType => 'test';
+
+  @override
+  bool canHandle(Uri url) => true;
+
+  @override
+  String extractNovelId(Uri url) => 'empty1';
+
+  @override
+  NovelIndex parseIndex(String html, Uri baseUrl) {
+    return const NovelIndex(
+      title: '空の小説',
+      episodes: [],
+    );
+  }
+
+  @override
+  String parseEpisode(String html) => html;
+}
+
 void main() {
   late Directory tempDir;
   late Directory novelDir;
@@ -423,6 +468,170 @@ void main() {
       expect(progressCalls[1], (2, 3, 2));
       // Episode 3: downloaded (new)
       expect(progressCalls[2], (3, 3, 2));
+    });
+  });
+
+  group('Short story download', () {
+    test('downloads short story with episodeCount=1', () async {
+      final mockClient = MockClient((request) async {
+        if (request.method == 'GET') {
+          return http.Response('index html', 200, headers: {
+            'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
+          });
+        }
+        return http.Response('', 200);
+      });
+
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      final result = await service.downloadNovel(
+        site: _ShortStorySite(),
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+        episodeCacheRepository: cacheRepo,
+      );
+
+      expect(result.episodeCount, 1);
+      expect(result.skippedCount, 0);
+      expect(result.title, '短編テスト小説');
+      expect(result.folderName, 'test_short1');
+
+      // Verify file was saved
+      final file = File('${tempDir.path}/test_short1/1_短編テスト小説.txt');
+      expect(file.existsSync(), isTrue);
+      expect(await file.readAsString(), '短編の本文です。');
+    });
+
+    test('saves short story to episode cache with index page URL', () async {
+      final mockClient = MockClient((request) async {
+        if (request.method == 'GET') {
+          return http.Response('index html', 200, headers: {
+            'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
+          });
+        }
+        return http.Response('', 200);
+      });
+
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      await service.downloadNovel(
+        site: _ShortStorySite(),
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+        episodeCacheRepository: cacheRepo,
+      );
+
+      final cached = await cacheRepo.getAllAsMap();
+      expect(cached, hasLength(1));
+      expect(cached['https://example.com/index'], isNotNull);
+      expect(cached['https://example.com/index']!.title, '短編テスト小説');
+      expect(cached['https://example.com/index']!.episodeIndex, 1);
+    });
+
+    test('skips short story re-download when cache is valid', () async {
+      // Pre-populate cache for the short story
+      final novelDir = Directory('${tempDir.path}/test_short1');
+      await novelDir.create(recursive: true);
+      await cacheRepo.upsert(EpisodeCache(
+        url: 'https://example.com/index',
+        episodeIndex: 1,
+        title: '短編テスト小説',
+        lastModified: 'Thu, 01 Jan 2025 00:00:00 GMT',
+        downloadedAt: DateTime.utc(2025, 1, 1),
+      ));
+      File('${novelDir.path}/1_短編テスト小説.txt')
+          .writeAsStringSync('cached content');
+
+      final headRequests = <String>[];
+
+      final mockClient = MockClient((request) async {
+        if (request.method == 'HEAD') {
+          headRequests.add(request.url.toString());
+          return http.Response('', 200, headers: {
+            'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
+          });
+        }
+        if (request.method == 'GET') {
+          return http.Response('index html', 200);
+        }
+        return http.Response('', 200);
+      });
+
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      final result = await service.downloadNovel(
+        site: _ShortStorySite(),
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+        episodeCacheRepository: cacheRepo,
+      );
+
+      expect(result.episodeCount, 1);
+      expect(result.skippedCount, 1);
+      expect(headRequests, contains('https://example.com/index'));
+    });
+
+    test('returns episodeCount=0 for empty novel (no episodes, no body)', () async {
+      final mockClient = MockClient((request) async {
+        if (request.method == 'GET') {
+          return http.Response('index html', 200);
+        }
+        return http.Response('', 200);
+      });
+
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      final result = await service.downloadNovel(
+        site: _EmptyNovelSite(),
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+      );
+
+      expect(result.episodeCount, 0);
+      expect(result.skippedCount, 0);
+      expect(result.title, '空の小説');
+    });
+
+    test('reports progress 1/1 for short story download', () async {
+      final mockClient = MockClient((request) async {
+        if (request.method == 'GET') {
+          return http.Response('index html', 200, headers: {
+            'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
+          });
+        }
+        return http.Response('', 200);
+      });
+
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      final progressCalls = <(int, int, int)>[];
+
+      await service.downloadNovel(
+        site: _ShortStorySite(),
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+        onProgress: (current, total, skipped) {
+          progressCalls.add((current, total, skipped));
+        },
+      );
+
+      expect(progressCalls, hasLength(1));
+      expect(progressCalls[0], (1, 1, 0));
     });
   });
 }

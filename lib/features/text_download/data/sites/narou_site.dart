@@ -73,7 +73,15 @@ class NarouSite implements NovelSite {
       }
     }
 
-    return NovelIndex(title: title, episodes: episodes);
+    String? bodyContent;
+    if (episodes.isEmpty) {
+      final text = parseEpisode(html);
+      if (text.isNotEmpty) {
+        bodyContent = text;
+      }
+    }
+
+    return NovelIndex(title: title, episodes: episodes, bodyContent: bodyContent);
   }
 
   @override
