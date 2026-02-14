@@ -1,9 +1,11 @@
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:novel_viewer/features/episode_cache/data/episode_cache_repository.dart';
+import 'package:novel_viewer/features/episode_cache/domain/episode_cache.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 
-typedef ProgressCallback = void Function(int current, int total);
+typedef ProgressCallback = void Function(int current, int total, int skipped);
 
 final _invalidChars = RegExp(r'[\\/:*?"<>|]');
 final _multipleSpaces = RegExp(r'\s+');
@@ -28,6 +30,7 @@ class DownloadResult {
   final String title;
   final String folderName;
   final int episodeCount;
+  final int skippedCount;
   final Uri url;
 
   const DownloadResult({
@@ -36,6 +39,7 @@ class DownloadResult {
     required this.title,
     required this.folderName,
     required this.episodeCount,
+    this.skippedCount = 0,
     required this.url,
   });
 }
@@ -53,7 +57,20 @@ class DownloadService {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-  Future<String> fetchPage(Uri url) async {
+  Future<Map<String, String>?> fetchHead(Uri url) async {
+    try {
+      final response = await _client.head(
+        url,
+        headers: {'User-Agent': _userAgent},
+      );
+      if (response.statusCode != 200) return null;
+      return response.headers;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<http.Response> _fetchPageResponse(Uri url) async {
     final response = await _client.get(
       url,
       headers: {'User-Agent': _userAgent},
@@ -64,6 +81,11 @@ class DownloadService {
         uri: url,
       );
     }
+    return response;
+  }
+
+  Future<String> fetchPage(Uri url) async {
+    final response = await _fetchPageResponse(url);
     return response.body;
   }
 
@@ -93,10 +115,17 @@ class DownloadService {
     await file.writeAsString(content);
   }
 
+  bool _shouldDownload(String? cachedLastModified, String? serverLastModified) {
+    if (serverLastModified == null) return false;
+    if (cachedLastModified == null) return true;
+    return serverLastModified != cachedLastModified;
+  }
+
   Future<DownloadResult> downloadNovel({
     required NovelSite site,
     required Uri url,
     required String outputPath,
+    EpisodeCacheRepository? episodeCacheRepository,
     ProgressCallback? onProgress,
   }) async {
     final folderName = buildFolderName(site, url);
@@ -106,15 +135,38 @@ class DownloadService {
 
     final dir = await createNovelDirectory(outputPath, folderName);
     final total = novelIndex.episodes.length;
-    var downloadedCount = 0;
+    var skippedCount = 0;
+
+    final cache = episodeCacheRepository != null
+        ? await episodeCacheRepository.getAllAsMap()
+        : <String, EpisodeCache>{};
 
     for (final (i, episode) in novelIndex.episodes.indexed) {
       try {
         if (i > 0) {
           await Future.delayed(requestDelay);
         }
-        final episodeHtml = await fetchPage(episode.url);
-        final content = site.parseEpisode(episodeHtml);
+
+        final urlStr = episode.url.toString();
+        final cached = cache[urlStr];
+
+        if (cached != null) {
+          final fileName = formatEpisodeFileName(episode.index, episode.title, total);
+          final localFile = File('${dir.path}/$fileName');
+          if (localFile.existsSync()) {
+            final headers = await fetchHead(episode.url);
+            final serverLastModified = headers?['last-modified'];
+            if (!_shouldDownload(cached.lastModified, serverLastModified)) {
+              skippedCount++;
+              onProgress?.call(i + 1, total, skippedCount);
+              continue;
+            }
+          }
+        }
+
+        final response = await _fetchPageResponse(episode.url);
+        final content = site.parseEpisode(response.body);
+        final lastModified = response.headers['last-modified'];
 
         await saveEpisode(
           directory: dir,
@@ -123,11 +175,19 @@ class DownloadService {
           content: content,
           totalEpisodes: total,
         );
-        downloadedCount++;
+        if (episodeCacheRepository != null) {
+          await episodeCacheRepository.upsert(EpisodeCache(
+            url: urlStr,
+            episodeIndex: episode.index,
+            title: episode.title,
+            lastModified: lastModified,
+            downloadedAt: DateTime.now(),
+          ));
+        }
       } catch (e) {
         // Skip failed episodes and continue
       }
-      onProgress?.call(i + 1, total);
+      onProgress?.call(i + 1, total, skippedCount);
     }
 
     return DownloadResult(
@@ -135,7 +195,8 @@ class DownloadService {
       novelId: novelId,
       title: novelIndex.title,
       folderName: folderName,
-      episodeCount: downloadedCount,
+      episodeCount: total,
+      skippedCount: skippedCount,
       url: url,
     );
   }
