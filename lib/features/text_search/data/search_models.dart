@@ -1,10 +1,12 @@
 class SearchMatch {
   final int lineNumber;
   final String contextText;
+  final String? extendedContext;
 
   const SearchMatch({
     required this.lineNumber,
     required this.contextText,
+    this.extendedContext,
   });
 }
 

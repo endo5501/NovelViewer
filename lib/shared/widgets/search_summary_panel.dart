@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_panel.dart';
 import 'package:novel_viewer/features/text_search/presentation/search_results_panel.dart';
 
 class SearchSummaryPanel extends ConsumerWidget {
@@ -7,19 +8,14 @@ class SearchSummaryPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
+    return const Column(
       children: [
         Expanded(
-          key: const Key('llm_summary_section'),
-          child: Center(
-            child: Text(
-              'LLM要約',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
+          key: Key('llm_summary_section'),
+          child: LlmSummaryPanel(),
         ),
-        const Divider(height: 1),
-        const Expanded(
+        Divider(height: 1),
+        Expanded(
           flex: 2,
           key: Key('search_results_section'),
           child: SearchResultsPanel(),
