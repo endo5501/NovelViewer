@@ -160,6 +160,67 @@ void main() {
       expect(index.episodes.length, 2);
       expect(index.bodyContent, isNull);
     });
+
+    test('extracts revision date as updatedAt when episode has been revised', () {
+      const html = '''
+<html>
+<body>
+  <h1 class="p-novel__title">テスト小説</h1>
+  <div class="p-eplist__sublist">
+    <a href="/n9669bk/1/" class="p-eplist__subtitle">プロローグ</a>
+    <div class="p-eplist__update">
+      2012/11/22 17:00
+      <span title="2013/11/27 13:06 改稿">（<u>改</u>）</span>
+    </div>
+  </div>
+</body>
+</html>
+''';
+      final baseUrl = Uri.parse('https://ncode.syosetu.com/n9669bk/');
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.episodes.length, 1);
+      expect(index.episodes[0].updatedAt, '2013/11/27 13:06');
+    });
+
+    test('extracts publish date as updatedAt when episode has no revision', () {
+      const html = '''
+<html>
+<body>
+  <h1 class="p-novel__title">テスト小説</h1>
+  <div class="p-eplist__sublist">
+    <a href="/n9669bk/1/" class="p-eplist__subtitle">第一話</a>
+    <div class="p-eplist__update">
+      2012/11/22 17:00
+    </div>
+  </div>
+</body>
+</html>
+''';
+      final baseUrl = Uri.parse('https://ncode.syosetu.com/n9669bk/');
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.episodes.length, 1);
+      expect(index.episodes[0].updatedAt, '2012/11/22 17:00');
+    });
+
+    test('sets updatedAt to null when no update date element exists', () {
+      const html = '''
+<html>
+<body>
+  <h1 class="p-novel__title">テスト小説</h1>
+  <div class="p-eplist">
+    <a href="/n9669bk/1/" class="p-eplist__subtitle">第一話</a>
+  </div>
+</body>
+</html>
+''';
+      final baseUrl = Uri.parse('https://ncode.syosetu.com/n9669bk/');
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.episodes.length, 1);
+      expect(index.episodes[0].updatedAt, isNull);
+    });
   });
 
   group('siteType', () {

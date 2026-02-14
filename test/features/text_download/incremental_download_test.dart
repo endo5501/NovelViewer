@@ -11,6 +11,10 @@ import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class _FakeSite implements NovelSite {
+  final List<Episode>? customEpisodes;
+
+  _FakeSite({this.customEpisodes});
+
   @override
   String get siteType => 'test';
 
@@ -24,21 +28,24 @@ class _FakeSite implements NovelSite {
   NovelIndex parseIndex(String html, Uri baseUrl) {
     return NovelIndex(
       title: 'テスト小説',
-      episodes: [
+      episodes: customEpisodes ?? [
         Episode(
           index: 1,
           title: '第一話',
           url: Uri.parse('https://example.com/1'),
+          updatedAt: '2025/01/01 00:00',
         ),
         Episode(
           index: 2,
           title: '第二話',
           url: Uri.parse('https://example.com/2'),
+          updatedAt: '2025/01/01 00:00',
         ),
         Episode(
           index: 3,
           title: '第三話',
           url: Uri.parse('https://example.com/3'),
+          updatedAt: '2025/01/01 00:00',
         ),
       ],
     );
@@ -119,17 +126,15 @@ void main() {
 
   group('Incremental download', () {
     test('downloads all episodes when cache is empty (new novel)', () async {
-      final requestedUrls = <String>[];
+      final getRequests = <String>[];
 
       final mockClient = MockClient((request) async {
-        requestedUrls.add(request.url.toString());
         if (request.method == 'GET') {
+          getRequests.add(request.url.toString());
           if (request.url.toString() == 'https://example.com/index') {
             return http.Response('index html', 200);
           }
-          return http.Response('episode content', 200, headers: {
-            'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
-          });
+          return http.Response('episode content', 200);
         }
         return http.Response('', 200);
       });
@@ -150,11 +155,11 @@ void main() {
       expect(result.skippedCount, 0);
 
       // All 3 episodes should have been fetched via GET
-      final getRequests = requestedUrls.where((u) => u != 'https://example.com/index').toList();
-      expect(getRequests, hasLength(3));
+      final episodeGets = getRequests.where((u) => u != 'https://example.com/index').toList();
+      expect(episodeGets, hasLength(3));
     });
 
-    test('skips cached episodes when Last-Modified has not changed', () async {
+    test('skips cached episodes when updatedAt has not changed', () async {
       // Pre-populate cache and create local files for all 3 episodes
       final titles = ['第一話', '第二話', '第三話'];
       for (var i = 1; i <= 3; i++) {
@@ -163,23 +168,16 @@ void main() {
           url: 'https://example.com/$i',
           episodeIndex: i,
           title: title,
-          lastModified: 'Thu, 01 Jan 2025 00:00:00 GMT',
+          lastModified: '2025/01/01 00:00',
           downloadedAt: DateTime.utc(2025, 1, 1),
         ));
         final fileName = formatEpisodeFileName(i, title, 3);
         File('${novelDir.path}/$fileName').writeAsStringSync('cached content');
       }
 
-      final headRequests = <String>[];
       final getRequests = <String>[];
 
       final mockClient = MockClient((request) async {
-        if (request.method == 'HEAD') {
-          headRequests.add(request.url.toString());
-          return http.Response('', 200, headers: {
-            'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
-          });
-        }
         if (request.method == 'GET') {
           getRequests.add(request.url.toString());
           if (request.url.toString() == 'https://example.com/index') {
@@ -204,18 +202,17 @@ void main() {
 
       expect(result.skippedCount, 3);
       expect(result.episodeCount, 3);
-      expect(headRequests, hasLength(3));
-      // No episode GET requests (only index page)
+      // No HEAD requests should be sent - only index page GET
       expect(getRequests, equals(['https://example.com/index']));
     });
 
-    test('downloads episode when Last-Modified is newer', () async {
-      // Pre-populate cache with old Last-Modified and create local files
+    test('downloads episode when updatedAt differs from cached value', () async {
+      // Pre-populate cache with old dates and create local files
       await cacheRepo.upsert(EpisodeCache(
         url: 'https://example.com/1',
         episodeIndex: 1,
         title: '第一話',
-        lastModified: 'Thu, 01 Jan 2025 00:00:00 GMT',
+        lastModified: '2024/12/01 00:00',
         downloadedAt: DateTime.utc(2025, 1, 1),
       ));
       File('${novelDir.path}/${formatEpisodeFileName(1, '第一話', 3)}')
@@ -224,32 +221,18 @@ void main() {
         url: 'https://example.com/2',
         episodeIndex: 2,
         title: '第二話',
-        lastModified: 'Thu, 01 Jan 2025 00:00:00 GMT',
+        lastModified: '2025/01/01 00:00',
         downloadedAt: DateTime.utc(2025, 1, 1),
       ));
       File('${novelDir.path}/${formatEpisodeFileName(2, '第二話', 3)}')
           .writeAsStringSync('old content');
 
       final mockClient = MockClient((request) async {
-        if (request.method == 'HEAD') {
-          if (request.url.toString() == 'https://example.com/1') {
-            // Updated
-            return http.Response('', 200, headers: {
-              'last-modified': 'Fri, 01 Feb 2025 00:00:00 GMT',
-            });
-          }
-          // Not updated
-          return http.Response('', 200, headers: {
-            'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
-          });
-        }
         if (request.method == 'GET') {
           if (request.url.toString() == 'https://example.com/index') {
             return http.Response('index html', 200);
           }
-          return http.Response('updated content', 200, headers: {
-            'last-modified': 'Fri, 01 Feb 2025 00:00:00 GMT',
-          });
+          return http.Response('updated content', 200);
         }
         return http.Response('', 200);
       });
@@ -259,6 +242,10 @@ void main() {
         requestDelay: Duration.zero,
       );
 
+      // Episodes have updatedAt='2025/01/01 00:00'
+      // Episode 1 cache has '2024/12/01 00:00' → should re-download
+      // Episode 2 cache has '2025/01/01 00:00' → should skip
+      // Episode 3 not in cache → should download
       final result = await service.downloadNovel(
         site: _FakeSite(),
         url: Uri.parse('https://example.com/index'),
@@ -266,105 +253,65 @@ void main() {
         episodeCacheRepository: cacheRepo,
       );
 
-      // Episode 1 updated, Episode 2 skipped, Episode 3 new
       expect(result.episodeCount, 3);
       expect(result.skippedCount, 1);
     });
 
-    test('skips cached episode when server does not return Last-Modified', () async {
+    test('downloads episode when updatedAt is null (always download)', () async {
+      // Pre-populate cache and create local file
       await cacheRepo.upsert(EpisodeCache(
         url: 'https://example.com/1',
         episodeIndex: 1,
         title: '第一話',
-        lastModified: 'Thu, 01 Jan 2025 00:00:00 GMT',
+        lastModified: '2025/01/01 00:00',
         downloadedAt: DateTime.utc(2025, 1, 1),
       ));
-      File('${novelDir.path}/${formatEpisodeFileName(1, '第一話', 3)}')
+      File('${novelDir.path}/${formatEpisodeFileName(1, '第一話', 1)}')
           .writeAsStringSync('cached content');
 
       final mockClient = MockClient((request) async {
-        if (request.method == 'HEAD') {
-          // No Last-Modified header
-          return http.Response('', 200, headers: {
-            'content-type': 'text/html',
-          });
+        if (request.method == 'GET') {
+          if (request.url.toString() == 'https://example.com/index') {
+            return http.Response('index html', 200);
+          }
+          return http.Response('new content', 200);
         }
+        return http.Response('', 200);
+      });
+
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      // Episode with updatedAt=null should always be downloaded
+      final site = _FakeSite(customEpisodes: [
+        Episode(
+          index: 1,
+          title: '第一話',
+          url: Uri.parse('https://example.com/1'),
+          updatedAt: null,
+        ),
+      ]);
+
+      final result = await service.downloadNovel(
+        site: site,
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+        episodeCacheRepository: cacheRepo,
+      );
+
+      expect(result.episodeCount, 1);
+      expect(result.skippedCount, 0);
+    });
+
+    test('saves updatedAt as lastModified in cache after download', () async {
+      final mockClient = MockClient((request) async {
         if (request.method == 'GET') {
           if (request.url.toString() == 'https://example.com/index') {
             return http.Response('index html', 200);
           }
           return http.Response('episode content', 200);
-        }
-        return http.Response('', 200);
-      });
-
-      final service = DownloadService(
-        client: mockClient,
-        requestDelay: Duration.zero,
-      );
-
-      final result = await service.downloadNovel(
-        site: _FakeSite(),
-        url: Uri.parse('https://example.com/index'),
-        outputPath: tempDir.path,
-        episodeCacheRepository: cacheRepo,
-      );
-
-      // Episode 1 skipped (no Last-Modified), Episodes 2&3 new
-      expect(result.skippedCount, 1);
-      expect(result.episodeCount, 3);
-    });
-
-    test('skips cached episode when HEAD request fails', () async {
-      await cacheRepo.upsert(EpisodeCache(
-        url: 'https://example.com/1',
-        episodeIndex: 1,
-        title: '第一話',
-        lastModified: 'Thu, 01 Jan 2025 00:00:00 GMT',
-        downloadedAt: DateTime.utc(2025, 1, 1),
-      ));
-      File('${novelDir.path}/${formatEpisodeFileName(1, '第一話', 3)}')
-          .writeAsStringSync('cached content');
-
-      final mockClient = MockClient((request) async {
-        if (request.method == 'HEAD') {
-          return http.Response('', 500);
-        }
-        if (request.method == 'GET') {
-          if (request.url.toString() == 'https://example.com/index') {
-            return http.Response('index html', 200);
-          }
-          return http.Response('episode content', 200);
-        }
-        return http.Response('', 200);
-      });
-
-      final service = DownloadService(
-        client: mockClient,
-        requestDelay: Duration.zero,
-      );
-
-      final result = await service.downloadNovel(
-        site: _FakeSite(),
-        url: Uri.parse('https://example.com/index'),
-        outputPath: tempDir.path,
-        episodeCacheRepository: cacheRepo,
-      );
-
-      // Episode 1 skipped (HEAD failed), Episodes 2&3 new
-      expect(result.skippedCount, 1);
-      expect(result.episodeCount, 3);
-    });
-
-    test('saves cache entry after successful download', () async {
-      final mockClient = MockClient((request) async {
-        if (request.method == 'GET') {
-          if (request.url.toString() == 'https://example.com/index') {
-            return http.Response('index html', 200);
-          }
-          return http.Response('episode content', 200, headers: {
-            'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
-          });
         }
         return http.Response('', 200);
       });
@@ -384,7 +331,7 @@ void main() {
       final cached = await cacheRepo.getAllAsMap();
       expect(cached, hasLength(3));
       expect(cached['https://example.com/1']!.title, '第一話');
-      expect(cached['https://example.com/1']!.lastModified, 'Thu, 01 Jan 2025 00:00:00 GMT');
+      expect(cached['https://example.com/1']!.lastModified, '2025/01/01 00:00');
     });
 
     test('works without cache repository (backward compatible)', () async {
@@ -422,7 +369,7 @@ void main() {
           url: 'https://example.com/$i',
           episodeIndex: i,
           title: title,
-          lastModified: 'Thu, 01 Jan 2025 00:00:00 GMT',
+          lastModified: '2025/01/01 00:00',
           downloadedAt: DateTime.utc(2025, 1, 1),
         ));
         final fileName = formatEpisodeFileName(i, title, 3);
@@ -430,11 +377,6 @@ void main() {
       }
 
       final mockClient = MockClient((request) async {
-        if (request.method == 'HEAD') {
-          return http.Response('', 200, headers: {
-            'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
-          });
-        }
         if (request.method == 'GET') {
           if (request.url.toString() == 'https://example.com/index') {
             return http.Response('index html', 200);
@@ -468,6 +410,97 @@ void main() {
       expect(progressCalls[1], (2, 3, 2));
       // Episode 3: downloaded (new)
       expect(progressCalls[2], (3, 3, 2));
+    });
+
+    test('does not apply delay when episode is skipped', () async {
+      // Pre-populate cache and create local files for all 3 episodes
+      final titles = ['第一話', '第二話', '第三話'];
+      for (var i = 1; i <= 3; i++) {
+        final title = titles[i - 1];
+        await cacheRepo.upsert(EpisodeCache(
+          url: 'https://example.com/$i',
+          episodeIndex: i,
+          title: title,
+          lastModified: '2025/01/01 00:00',
+          downloadedAt: DateTime.utc(2025, 1, 1),
+        ));
+        final fileName = formatEpisodeFileName(i, title, 3);
+        File('${novelDir.path}/$fileName').writeAsStringSync('cached content');
+      }
+
+      final mockClient = MockClient((request) async {
+        if (request.method == 'GET') {
+          return http.Response('index html', 200);
+        }
+        return http.Response('', 200);
+      });
+
+      // Use a long delay to make the test timing-sensitive
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: const Duration(seconds: 2),
+      );
+
+      final stopwatch = Stopwatch()..start();
+
+      await service.downloadNovel(
+        site: _FakeSite(),
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+        episodeCacheRepository: cacheRepo,
+      );
+
+      stopwatch.stop();
+
+      // All 3 episodes are skipped, so no delay should be applied
+      // If delays were applied, it would take at least 4 seconds (2s * 2 delays)
+      expect(stopwatch.elapsedMilliseconds, lessThan(2000));
+    });
+
+    test('applies delay only before actual downloads', () async {
+      // Episode 1: new (download), Episode 2: cached (skip), Episode 3: new (download)
+      // Delay should be applied once: before episode 3's GET (not before skip)
+      await cacheRepo.upsert(EpisodeCache(
+        url: 'https://example.com/2',
+        episodeIndex: 2,
+        title: '第二話',
+        lastModified: '2025/01/01 00:00',
+        downloadedAt: DateTime.utc(2025, 1, 1),
+      ));
+      final fileName = formatEpisodeFileName(2, '第二話', 3);
+      File('${novelDir.path}/$fileName').writeAsStringSync('cached content');
+
+      final mockClient = MockClient((request) async {
+        if (request.method == 'GET') {
+          if (request.url.toString() == 'https://example.com/index') {
+            return http.Response('index html', 200);
+          }
+          return http.Response('episode content', 200);
+        }
+        return http.Response('', 200);
+      });
+
+      // Use a long delay
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: const Duration(seconds: 2),
+      );
+
+      final stopwatch = Stopwatch()..start();
+
+      await service.downloadNovel(
+        site: _FakeSite(),
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+        episodeCacheRepository: cacheRepo,
+      );
+
+      stopwatch.stop();
+
+      // 1 delay between ep1 download and ep3 download (~2s)
+      // NOT 2 delays (~4s) - the skip doesn't add a delay
+      expect(stopwatch.elapsedMilliseconds, greaterThan(1500));
+      expect(stopwatch.elapsedMilliseconds, lessThan(4000));
     });
   });
 
@@ -548,17 +581,11 @@ void main() {
       File('${novelDir.path}/1_短編テスト小説.txt')
           .writeAsStringSync('cached content');
 
-      final headRequests = <String>[];
-
       final mockClient = MockClient((request) async {
-        if (request.method == 'HEAD') {
-          headRequests.add(request.url.toString());
-          return http.Response('', 200, headers: {
+        if (request.method == 'GET') {
+          return http.Response('index html', 200, headers: {
             'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
           });
-        }
-        if (request.method == 'GET') {
-          return http.Response('index html', 200);
         }
         return http.Response('', 200);
       });
@@ -577,7 +604,6 @@ void main() {
 
       expect(result.episodeCount, 1);
       expect(result.skippedCount, 1);
-      expect(headRequests, contains('https://example.com/index'));
     });
 
     test('returns episodeCount=0 for empty novel (no episodes, no body)', () async {

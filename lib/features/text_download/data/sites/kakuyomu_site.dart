@@ -49,10 +49,13 @@ class KakuyomuSite implements NovelSite {
       final href = link.attributes['href'];
       if (href == null) continue;
       final resolvedUrl = baseUrl.resolve(href);
+      final timeElement = link.querySelector('time');
+      final updatedAt = timeElement?.attributes['datetime'];
       episodes.add(Episode(
         index: i + 1,
         title: link.text.trim(),
         url: resolvedUrl,
+        updatedAt: updatedAt,
       ));
     }
 
@@ -68,34 +71,12 @@ class KakuyomuSite implements NovelSite {
       if (element == null) continue;
 
       final blocks = element.querySelectorAll('p');
-      if (blocks.isEmpty) return _blockToText(element);
+      if (blocks.isEmpty) return blockToText(element);
 
-      return blocks.map(_blockToText).join('\n');
+      return blocks.map(blockToText).join('\n');
     }
 
     return '';
-  }
-
-  static String _blockToText(dynamic element) {
-    const textNodeType = 3;
-    const elementNodeType = 1;
-
-    final buffer = StringBuffer();
-    for (final node in element.nodes) {
-      if (node.nodeType == textNodeType) {
-        buffer.write(node.text);
-      } else if (node.nodeType == elementNodeType) {
-        final tagName = node.localName?.toLowerCase() ?? '';
-        if (tagName == 'br') {
-          buffer.write('\n');
-        } else if (tagName == 'ruby') {
-          buffer.write(node.outerHtml);
-        } else {
-          buffer.write(_blockToText(node));
-        }
-      }
-    }
-    return buffer.toString().trim();
   }
 
   Uri normalizeUrl(Uri url) {

@@ -57,19 +57,6 @@ class DownloadService {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-  Future<Map<String, String>?> fetchHead(Uri url) async {
-    try {
-      final response = await _client.head(
-        url,
-        headers: {'User-Agent': _userAgent},
-      );
-      if (response.statusCode != 200) return null;
-      return response.headers;
-    } catch (_) {
-      return null;
-    }
-  }
-
   Future<http.Response> _fetchPageResponse(Uri url) async {
     final response = await _client.get(
       url,
@@ -115,10 +102,9 @@ class DownloadService {
     await file.writeAsString(content);
   }
 
-  bool _shouldDownload(String? cachedLastModified, String? serverLastModified) {
-    if (serverLastModified == null) return false;
-    if (cachedLastModified == null) return true;
-    return serverLastModified != cachedLastModified;
+  bool _shouldDownload(String? cachedLastModified, String? updatedAt) {
+    if (cachedLastModified == null || updatedAt == null) return true;
+    return updatedAt != cachedLastModified;
   }
 
   Future<DownloadResult> downloadNovel({
@@ -177,20 +163,32 @@ class DownloadService {
         ? await episodeCacheRepository.getAllAsMap()
         : <String, EpisodeCache>{};
 
-    final skipped = await _downloadSingleEpisode(
+    // Check if we can skip this short story
+    final canSkip = _canSkipEpisode(
       url: url,
       index: 1,
       title: novelIndex.title,
-      content: novelIndex.bodyContent!,
-      contentLastModified: indexLastModified,
+      updatedAt: indexLastModified,
       totalEpisodes: 1,
       dir: dir,
-      episodeCacheRepository: episodeCacheRepository,
-      fetchContent: null,
       cache: cache,
     );
 
-    final skippedCount = skipped ? 1 : 0;
+    final skippedCount = canSkip ? 1 : 0;
+
+    if (!canSkip) {
+      await _saveAndCacheEpisode(
+        url: url,
+        index: 1,
+        title: novelIndex.title,
+        content: novelIndex.bodyContent!,
+        updatedAt: indexLastModified,
+        totalEpisodes: 1,
+        dir: dir,
+        episodeCacheRepository: episodeCacheRepository,
+      );
+    }
+
     onProgress?.call(1, 1, skippedCount);
 
     return DownloadResult(
@@ -220,31 +218,43 @@ class DownloadService {
         : <String, EpisodeCache>{};
 
     var skippedCount = 0;
+    var hadPriorRequest = false;
 
     for (final (i, episode) in novelIndex.episodes.indexed) {
-      if (i > 0) {
-        await Future.delayed(requestDelay);
-      }
+      // Check skip condition first (local only, no network)
+      final canSkip = _canSkipEpisode(
+        url: episode.url,
+        index: episode.index,
+        title: episode.title,
+        updatedAt: episode.updatedAt,
+        totalEpisodes: total,
+        dir: dir,
+        cache: cache,
+      );
 
-      try {
-        final skipped = await _downloadSingleEpisode(
-          url: episode.url,
-          index: episode.index,
-          title: episode.title,
-          content: null,
-          totalEpisodes: total,
-          dir: dir,
-          episodeCacheRepository: episodeCacheRepository,
-          fetchContent: () async {
-            final response = await _fetchPageResponse(episode.url);
-            return (site.parseEpisode(response.body), response.headers['last-modified']);
-          },
-          cache: cache,
-        );
-
-        if (skipped) skippedCount++;
-      } catch (e) {
-        // Skip failed episodes and continue
+      if (canSkip) {
+        skippedCount++;
+      } else {
+        if (hadPriorRequest) {
+          await Future.delayed(requestDelay);
+        }
+        try {
+          final response = await _fetchPageResponse(episode.url);
+          final content = site.parseEpisode(response.body);
+          await _saveAndCacheEpisode(
+            url: episode.url,
+            index: episode.index,
+            title: episode.title,
+            content: content,
+            updatedAt: episode.updatedAt,
+            totalEpisodes: total,
+            dir: dir,
+            episodeCacheRepository: episodeCacheRepository,
+          );
+        } catch (e) {
+          // Skip failed episodes and continue
+        }
+        hadPriorRequest = true;
       }
 
       onProgress?.call(i + 1, total, skippedCount);
@@ -261,67 +271,47 @@ class DownloadService {
     );
   }
 
-  Future<bool> _downloadSingleEpisode({
+  bool _canSkipEpisode({
     required Uri url,
     required int index,
     required String title,
-    required String? content,
-    String? contentLastModified,
+    String? updatedAt,
+    required int totalEpisodes,
+    required Directory dir,
+    Map<String, EpisodeCache>? cache,
+  }) {
+    final cached = cache?[url.toString()];
+    if (cached == null) return false;
+    final fileName = formatEpisodeFileName(index, title, totalEpisodes);
+    final localFile = File('${dir.path}/$fileName');
+    if (!localFile.existsSync()) return false;
+    return !_shouldDownload(cached.lastModified, updatedAt);
+  }
+
+  Future<void> _saveAndCacheEpisode({
+    required Uri url,
+    required int index,
+    required String title,
+    required String content,
+    String? updatedAt,
     required int totalEpisodes,
     required Directory dir,
     EpisodeCacheRepository? episodeCacheRepository,
-    required Future<(String, String?)> Function()? fetchContent,
-    Map<String, EpisodeCache>? cache,
   }) async {
-    final urlStr = url.toString();
-    final cached = cache?[urlStr];
-
-    // Check if episode can be skipped
-    if (cached != null) {
-      final fileName = formatEpisodeFileName(index, title, totalEpisodes);
-      final localFile = File('${dir.path}/$fileName');
-      if (localFile.existsSync()) {
-        final headers = await fetchHead(url);
-        final serverLastModified = headers?['last-modified'];
-        if (!_shouldDownload(cached.lastModified, serverLastModified)) {
-          return true; // Skipped
-        }
-      }
-    }
-
-    // Fetch content if not provided
-    String episodeContent;
-    String? lastModified;
-    if (content != null) {
-      episodeContent = content;
-      lastModified = contentLastModified;
-    } else if (fetchContent != null) {
-      (episodeContent, lastModified) = await fetchContent();
-    } else {
-      throw ArgumentError('Either content or fetchContent must be provided');
-    }
-
-    // Save episode
     await saveEpisode(
       directory: dir,
       index: index,
       title: title,
-      content: episodeContent,
+      content: content,
       totalEpisodes: totalEpisodes,
     );
-
-    // Update cache
-    if (episodeCacheRepository != null) {
-      await episodeCacheRepository.upsert(EpisodeCache(
-        url: urlStr,
-        episodeIndex: index,
-        title: title,
-        lastModified: lastModified,
-        downloadedAt: DateTime.now(),
-      ));
-    }
-
-    return false; // Not skipped
+    await episodeCacheRepository?.upsert(EpisodeCache(
+      url: url.toString(),
+      episodeIndex: index,
+      title: title,
+      lastModified: updatedAt,
+      downloadedAt: DateTime.now(),
+    ));
   }
 
   void dispose() {

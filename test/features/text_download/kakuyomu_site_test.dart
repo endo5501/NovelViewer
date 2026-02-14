@@ -96,6 +96,46 @@ void main() {
       expect(index.episodes[2].title, '第3話 終わり');
     });
 
+    test('extracts updatedAt from time element dateTime attribute', () {
+      const html = '''
+<html>
+<body>
+  <h1 id="workTitle">カクヨムテスト小説</h1>
+  <a href="/works/123/episodes/1">
+    <div>第1話 始まり</div>
+    <time dateTime="2022-06-02T05:58:54.000Z">2022年6月2日</time>
+  </a>
+  <a href="/works/123/episodes/2">
+    <div>第2話 中盤</div>
+    <time dateTime="2023-01-15T10:30:00.000Z">2023年1月15日</time>
+  </a>
+</body>
+</html>
+''';
+      final baseUrl = Uri.parse('https://kakuyomu.jp/works/123');
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.episodes.length, 2);
+      expect(index.episodes[0].updatedAt, '2022-06-02T05:58:54.000Z');
+      expect(index.episodes[1].updatedAt, '2023-01-15T10:30:00.000Z');
+    });
+
+    test('sets updatedAt to null when no time element exists', () {
+      const html = '''
+<html>
+<body>
+  <h1 id="workTitle">カクヨムテスト小説</h1>
+  <a href="/works/123/episodes/1">第1話 始まり</a>
+</body>
+</html>
+''';
+      final baseUrl = Uri.parse('https://kakuyomu.jp/works/123');
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.episodes.length, 1);
+      expect(index.episodes[0].updatedAt, isNull);
+    });
+
     test('uses fallback title selector', () {
       const html = '''
 <html>
