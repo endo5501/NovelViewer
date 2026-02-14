@@ -15,22 +15,22 @@
 
 ## 4. 幅ベース貪欲詰めへの変更（問題2: 空カラムによる幅の過大見積もり）
 
-- [ ] 4.1 空カラムを含むテキストで、固定列数分割が過剰な左側空白を生むことを検証する失敗テストを作成する（TDD: Red）
-- [ ] 4.2 `_groupColumnsIntoPages`を幅ベースの貪欲詰めアルゴリズムに変更する。各カラムの実幅（非空=charWidth, 空=0）とsentinel runSpacingを積算し、availableWidthを超えない範囲で詰める
-- [ ] 4.3 `_paginateLines`から`_groupColumnsIntoPages`に`charWidth`, `runSpacing`, `availableWidth`を渡すようにシグネチャを更新する
-- [ ] 4.4 `_findTargetPage`を固定`maxColumnsPerPage`除算から、各ページのカラム範囲（start/end）を用いた探索方式に変更する
-- [ ] 4.5 4.1で作成した失敗テストがパスすることを確認する（TDD: Green）
+- [x] 4.1 空カラムを含むテキストで、固定列数分割が過剰な左側空白を生むことを検証する失敗テストを作成する（TDD: Red）
+- [x] 4.2 `_groupColumnsIntoPages`を幅ベースの貪欲詰めアルゴリズムに変更する。各カラムの実幅（非空=charWidth, 空=0）とsentinel runSpacingを積算し、availableWidthを超えない範囲で詰める
+- [x] 4.3 `_paginateLines`から`_groupColumnsIntoPages`に`charWidth`, `runSpacing`, `availableWidth`を渡すようにシグネチャを更新する
+- [x] 4.4 `_findTargetPage`を固定`maxColumnsPerPage`除算から、各ページのカラム範囲（start/end）を用いた探索方式に変更する
+- [x] 4.5 4.1で作成した失敗テストがパスすることを確認する（TDD: Green）
 
 ## 5. 回帰テスト（問題2）
 
-- [ ] 5.1 空カラムなしのテキストで既存動作（オーバーフローなし）が維持されることを確認する
-- [ ] 5.2 空カラムを含むテキストで、1ページあたりのカラム数が増加し左側空白が削減されることを確認するテストを追加する
-- [ ] 5.3 `targetLineNumber`によるページジャンプが空カラムを含むテキストでも正しく動作することを確認するテストを追加する
-- [ ] 5.4 既存の全テストがパスすることを確認する
+- [x] 5.1 空カラムなしのテキストで既存動作（オーバーフローなし）が維持されることを確認する
+- [x] 5.2 空カラムを含むテキストで、1ページあたりのカラム数が増加し左側空白が削減されることを確認するテストを追加する
+- [x] 5.3 `targetLineNumber`によるページジャンプが空カラムを含むテキストでも正しく動作することを確認するテストを追加する
+- [x] 5.4 既存の全テストがパスすることを確認する
 
 ## 6. 最終確認
 
-- [ ] 6.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
-- [ ] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 6.3 `fvm flutter analyze`でリントを実行
-- [ ] 6.4 `fvm flutter test`でテストを実行
+- [x] 6.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
+- [x] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 6.3 `fvm flutter analyze`でリントを実行
+- [x] 6.4 `fvm flutter test`でテストを実行

@@ -197,28 +197,25 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
     final availableWidth = constraints.maxWidth - _kHorizontalPadding;
     final availableHeight = constraints.maxHeight - _kVerticalPadding;
 
-    // Account for Wrap sentinel SizedBoxes that cause double runSpacing
-    // between columns. For n columns: actual width = n*charWidth + (2n-2)*runSpacing
-    // Solving for n: n <= (availableWidth + 2*runSpacing) / (charWidth + 2*runSpacing)
-    final effectiveColumnWidth = charWidth + 2 * _kRunSpacing;
-    final maxColumnsPerPage = availableWidth > 0
-        ? ((availableWidth + 2 * _kRunSpacing) / effectiveColumnWidth).floor()
-        : 1;
     final charsPerColumn =
         availableHeight > 0 ? (availableHeight / charHeight).floor() : 1;
 
-    if (maxColumnsPerPage <= 0 || charsPerColumn <= 0) {
+    if (availableWidth <= 0 || charsPerColumn <= 0) {
       return _PaginationResult([widget.segments], null);
     }
 
     final columns = <List<TextSegment>>[];
     final lineStartColumns = _buildColumns(charsPerColumn, columns);
-    final pages = _groupColumnsIntoPages(columns, maxColumnsPerPage);
-    final targetPage = _findTargetPage(lineStartColumns, maxColumnsPerPage, pages);
+    final (pages, pageStarts) =
+        _groupColumnsIntoPages(columns, charWidth, availableWidth);
 
-    return pages.isEmpty
-        ? _PaginationResult([widget.segments], null)
-        : _PaginationResult(pages, targetPage);
+    if (pages.isEmpty) {
+      return _PaginationResult([widget.segments], null);
+    }
+
+    final targetPage =
+        _findTargetPage(lineStartColumns, pageStarts, pages.length);
+    return _PaginationResult(pages, targetPage);
   }
 
   List<List<TextSegment>> _splitIntoLines(List<TextSegment> segments) {
@@ -255,38 +252,78 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
     return lineStartColumns;
   }
 
-  List<List<TextSegment>> _groupColumnsIntoPages(
+  /// Groups columns into pages using width-based greedy packing.
+  /// Empty columns (from blank lines) occupy zero character width in the Wrap,
+  /// so we accumulate actual rendered width rather than using a fixed count.
+  (List<List<TextSegment>>, List<int>) _groupColumnsIntoPages(
     List<List<TextSegment>> columns,
-    int maxColumnsPerPage,
+    double charWidth,
+    double availableWidth,
   ) {
     final pages = <List<TextSegment>>[];
-    for (var i = 0; i < columns.length; i += maxColumnsPerPage) {
-      final end = (i + maxColumnsPerPage).clamp(0, columns.length);
+    final pageStarts = <int>[];
+    var start = 0;
+
+    while (start < columns.length) {
+      pageStarts.add(start);
+      var end = start;
+      var runCount = 0;
+      var textWidth = 0.0;
+
+      while (end < columns.length) {
+        final hasText = columns[end].isNotEmpty;
+        var runs = runCount;
+        var width = textWidth;
+
+        // Sentinel run between adjacent columns
+        if (end > start) runs += 1;
+        // Character run for non-empty columns
+        if (hasText) {
+          runs += 1;
+          width += charWidth;
+        }
+
+        final totalWidth = width + (runs > 1 ? (runs - 1) * _kRunSpacing : 0.0);
+
+        if (end > start && totalWidth > availableWidth) break;
+
+        runCount = runs;
+        textWidth = width;
+        end++;
+      }
+
+      // Ensure at least 1 column per page
+      if (end == start) end = start + 1;
+
       final pageSegments = <TextSegment>[];
-      for (var j = i; j < end; j++) {
-        if (j > i) pageSegments.add(const PlainTextSegment('\n'));
+      for (var j = start; j < end; j++) {
+        if (j > start) pageSegments.add(const PlainTextSegment('\n'));
         pageSegments.addAll(columns[j]);
       }
       pages.add(pageSegments);
+      start = end;
     }
-    return pages;
+
+    return (pages, pageStarts);
   }
 
   int? _findTargetPage(
     List<int> lineStartColumns,
-    int maxColumnsPerPage,
-    List<List<TextSegment>> pages,
+    List<int> pageStarts,
+    int totalPages,
   ) {
-    final targetLine = _targetLine;
-    if (targetLine == null) return null;
+    if (_targetLine == null) return null;
 
-    final targetLineIndex = (targetLine - 1).clamp(0, _lines.length - 1);
+    final targetLineIndex = (_targetLine! - 1).clamp(0, _lines.length - 1);
     if (targetLineIndex >= lineStartColumns.length) return null;
 
     final colIndex = lineStartColumns[targetLineIndex];
-    final targetPage = colIndex ~/ maxColumnsPerPage;
-    if (targetPage >= 0 && targetPage < pages.length) {
-      return targetPage;
+
+    // Find which page contains this column using page start boundaries
+    for (var i = pageStarts.length - 1; i >= 0; i--) {
+      if (colIndex >= pageStarts[i]) {
+        return i < totalPages ? i : null;
+      }
     }
     return null;
   }
