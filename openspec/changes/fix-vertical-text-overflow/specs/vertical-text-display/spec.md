@@ -33,8 +33,22 @@ The system SHALL display vertical text in pages rather than as a scrollable area
 
 #### Scenario: Column count accounts for sentinel runSpacing
 - **WHEN** the pagination calculates the maximum number of columns per page
-- **THEN** the calculation SHALL use the formula `n = floor((availableWidth + 2 * runSpacing) / (charWidth + 2 * runSpacing))` to account for the double runSpacing caused by column-break sentinel widgets in the Wrap layout
+- **THEN** the calculation SHALL account for the double runSpacing caused by column-break sentinel widgets in the Wrap layout
 
 #### Scenario: Display area is clipped to prevent overflow
 - **WHEN** the vertical text page is rendered
 - **THEN** the display area SHALL be clipped so that any content exceeding the boundaries is not visible to the user
+
+#### Scenario: Empty columns from blank lines do not waste horizontal space
+- **WHEN** the text contains blank lines (paragraph separators) that produce empty columns
+- **THEN** the pagination SHALL account for the fact that empty columns occupy zero character width in the Wrap layout, packing more columns per page to minimize unused horizontal space
+- **AND** the actual rendered width of all columns on a page SHALL be less than or equal to the available display width
+
+#### Scenario: Width-based greedy packing for page boundaries
+- **WHEN** the pagination groups columns into pages
+- **THEN** the pagination SHALL use a width-based greedy packing algorithm that accumulates the actual rendered width of each column (charWidth for non-empty columns, zero for empty columns) plus sentinel runSpacing gaps, rather than a fixed column count per page
+- **AND** each page SHALL contain as many columns as can fit within the available width
+
+#### Scenario: Page navigation with blank lines remains accurate
+- **WHEN** the user navigates to a specific line number in text containing blank lines
+- **THEN** the viewer SHALL correctly identify which page contains the target line, accounting for variable column counts per page due to width-based packing
