@@ -99,6 +99,9 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     );
   }
 
+  String _skipSuffix(int skipped) =>
+      skipped > 0 ? ' (スキップ: $skipped件)' : '';
+
   Widget _buildStatusArea(DownloadState state) {
     switch (state.status) {
       case DownloadStatus.idle:
@@ -113,7 +116,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
             LinearProgressIndicator(value: progress),
             const SizedBox(height: 8),
             Text(
-              'ダウンロード中: ${state.currentEpisode}/${state.totalEpisodes} エピソード',
+              'ダウンロード中: ${state.currentEpisode}/${state.totalEpisodes} エピソード${_skipSuffix(state.skippedEpisodes)}',
             ),
           ],
         );
@@ -123,7 +126,8 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
             const Icon(Icons.check_circle, color: Colors.green),
             const SizedBox(width: 8),
             Text(
-                'ダウンロード完了: ${state.totalEpisodes} エピソード'),
+              'ダウンロード完了: ${state.totalEpisodes} エピソード${_skipSuffix(state.skippedEpisodes)}',
+            ),
           ],
         );
       case DownloadStatus.error:

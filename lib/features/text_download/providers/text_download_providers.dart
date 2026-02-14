@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/episode_cache/data/episode_cache_database.dart';
+import 'package:novel_viewer/features/episode_cache/data/episode_cache_repository.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/text_download/data/download_service.dart';
@@ -10,6 +12,7 @@ class DownloadState {
   final DownloadStatus status;
   final int currentEpisode;
   final int totalEpisodes;
+  final int skippedEpisodes;
   final String? errorMessage;
   final String? outputPath;
 
@@ -17,6 +20,7 @@ class DownloadState {
     this.status = DownloadStatus.idle,
     this.currentEpisode = 0,
     this.totalEpisodes = 0,
+    this.skippedEpisodes = 0,
     this.errorMessage,
     this.outputPath,
   });
@@ -25,6 +29,7 @@ class DownloadState {
     DownloadStatus? status,
     int? currentEpisode,
     int? totalEpisodes,
+    int? skippedEpisodes,
     String? errorMessage,
     String? outputPath,
   }) {
@@ -32,6 +37,7 @@ class DownloadState {
       status: status ?? this.status,
       currentEpisode: currentEpisode ?? this.currentEpisode,
       totalEpisodes: totalEpisodes ?? this.totalEpisodes,
+      skippedEpisodes: skippedEpisodes ?? this.skippedEpisodes,
       errorMessage: errorMessage ?? this.errorMessage,
       outputPath: outputPath ?? this.outputPath,
     );
@@ -62,15 +68,23 @@ class DownloadNotifier extends Notifier<DownloadState> {
     );
 
     final service = DownloadService();
+    final folderName = service.buildFolderName(site, url);
+    final novelDirPath = '$outputPath/$folderName';
+
+    final cacheDb = EpisodeCacheDatabase(novelDirPath);
+    final cacheRepo = EpisodeCacheRepository(cacheDb);
+
     try {
       final result = await service.downloadNovel(
         site: site,
         url: url,
         outputPath: outputPath,
-        onProgress: (current, total) {
+        episodeCacheRepository: cacheRepo,
+        onProgress: (current, total, skipped) {
           state = state.copyWith(
             currentEpisode: current,
             totalEpisodes: total,
+            skippedEpisodes: skipped,
           );
         },
       );
@@ -94,6 +108,7 @@ class DownloadNotifier extends Notifier<DownloadState> {
         errorMessage: e.toString(),
       );
     } finally {
+      await cacheDb.close();
       service.dispose();
     }
   }
