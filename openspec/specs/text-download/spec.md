@@ -1,27 +1,27 @@
 ## MODIFIED Requirements
 
 ### Requirement: Episode download
-The system SHALL download each episode's HTML page, extract the body text, and save it as a text file. Before downloading, the system SHALL check the episode cache and skip episodes that have not been modified since the last download.
+The system SHALL download each episode's HTML page, extract the body text, and save it as a text file. Before downloading, the system SHALL compare the episode's update date from the index page with the cached value and skip episodes that have not been modified since the last download.
 
 #### Scenario: New episode is downloaded
 - **WHEN** an episode URL is not found in the episode cache
-- **THEN** the system downloads the episode, saves it as a `.txt` file, and stores its metadata in the episode cache
+- **THEN** the system downloads the episode, saves it as a `.txt` file, and stores its metadata (including the index page update date) in the episode cache
 
-#### Scenario: Cached episode is checked for updates via HEAD request
-- **WHEN** an episode URL exists in the episode cache
-- **THEN** the system sends a HEAD request to the episode URL and compares the `Last-Modified` header with the cached value
+#### Scenario: Cached episode is checked for updates via index page date
+- **WHEN** an episode URL exists in the episode cache and the local file exists
+- **THEN** the system compares the episode's `updatedAt` value from the index page with the cached `lastModified` value, without sending any additional network requests
 
 #### Scenario: Cached episode has been updated
-- **WHEN** the HEAD request returns a `Last-Modified` value newer than the cached value
-- **THEN** the system downloads the episode content, overwrites the existing `.txt` file, and updates the cache record
+- **WHEN** the episode's `updatedAt` value from the index page differs from the cached `lastModified` value
+- **THEN** the system downloads the episode content, overwrites the existing `.txt` file, and updates the cache record with the new `updatedAt` value
 
 #### Scenario: Cached episode has not been updated
-- **WHEN** the HEAD request returns a `Last-Modified` value equal to or older than the cached value
+- **WHEN** the episode's `updatedAt` value from the index page equals the cached `lastModified` value
 - **THEN** the system skips the download and increments the skipped episodes count
 
-#### Scenario: Server does not return Last-Modified header
-- **WHEN** the HEAD request does not include a `Last-Modified` header for a cached episode
-- **THEN** the system skips the download (treats as unchanged) and increments the skipped episodes count
+#### Scenario: Episode updatedAt is not available from index page
+- **WHEN** the index page does not provide an update date for an episode (updatedAt is null)
+- **THEN** the system downloads the episode (treats as potentially changed)
 
 #### Scenario: Episode download fails
 - **WHEN** an individual episode fails to download
@@ -58,20 +58,42 @@ The system SHALL display download progress during the download operation, includ
 - **WHEN** all episodes have been processed (downloaded or skipped)
 - **THEN** the dialog displays a completion message with the total number of downloaded episodes and skipped episodes
 
-### Requirement: HEAD request for update detection
-The system SHALL support sending HTTP HEAD requests to check for episode updates without downloading the full content.
+### Requirement: Index page episode date extraction for Narou
+The system SHALL extract the update date for each episode from the Narou index page during parsing.
 
-#### Scenario: HEAD request is sent with User-Agent
-- **WHEN** a HEAD request is sent to check for episode updates
-- **THEN** the request includes the same User-Agent header used for GET requests
+#### Scenario: Episode with revision date
+- **WHEN** the index page contains `<div class="p-eplist__update">` with a `<span title="YYYY/MM/DD HH:MM 改稿">` element
+- **THEN** the system extracts the revision date from the `title` attribute and stores it as the episode's `updatedAt`
 
-#### Scenario: HEAD request respects rate limiting
-- **WHEN** multiple HEAD requests are sent sequentially
-- **THEN** the system waits at least 0.7 seconds between each request, consistent with the existing rate limiting for GET requests
+#### Scenario: Episode without revision date
+- **WHEN** the index page contains `<div class="p-eplist__update">` without a revision `<span>`
+- **THEN** the system extracts the publish date text from the `p-eplist__update` div and stores it as the episode's `updatedAt`
 
-#### Scenario: HEAD request fails
-- **WHEN** a HEAD request fails due to network error or HTTP error
-- **THEN** the system treats the episode as unchanged and skips the download
+#### Scenario: Episode without update date element
+- **WHEN** the index page does not contain a `p-eplist__update` element for an episode
+- **THEN** the episode's `updatedAt` SHALL be null
+
+### Requirement: Index page episode date extraction for Kakuyomu
+The system SHALL extract the publish date for each episode from the Kakuyomu index page during parsing.
+
+#### Scenario: Episode with time element
+- **WHEN** the index page contains a `<time dateTime="...">` element within or near the episode link
+- **THEN** the system extracts the `dateTime` attribute value and stores it as the episode's `updatedAt`
+
+#### Scenario: Episode without time element
+- **WHEN** the index page does not contain a `<time>` element for an episode
+- **THEN** the episode's `updatedAt` SHALL be null
+
+### Requirement: Rate limiting applies only to actual downloads
+The system SHALL apply the rate limiting delay (700ms) only before episodes that require an actual GET request, not before skipped episodes.
+
+#### Scenario: Skipped episode does not trigger delay
+- **WHEN** an episode is skipped because it has not been updated
+- **THEN** no delay is applied before processing the next episode
+
+#### Scenario: Downloaded episode triggers delay
+- **WHEN** an episode requires downloading (new or updated)
+- **THEN** the system waits at least 700ms before the next GET request
 
 ### Requirement: Short story download
 The system SHALL support downloading short stories (single-page novels) from Narou. When the index page contains no episode links but contains body text, the system SHALL treat it as a short story and extract the body content directly from the index page HTML.
@@ -102,7 +124,7 @@ The system SHALL support downloading short stories (single-page novels) from Nar
 
 #### Scenario: Short story re-download with cache
 - **WHEN** a short story is re-downloaded and the episode cache contains an entry for the index page URL
-- **THEN** the system SHALL check for updates via HEAD request using the same logic as multi-episode novels
+- **THEN** the system SHALL compare the index response's `Last-Modified` header with the cached value to determine if re-download is needed
 
 #### Scenario: Short story text extraction preserves formatting
 - **WHEN** the short story body text is extracted from the index page
