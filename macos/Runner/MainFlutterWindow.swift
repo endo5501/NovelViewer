@@ -11,5 +11,10 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     super.awakeFromNib()
+
+    DispatchQueue.main.async { [weak self] in
+      guard let self, !self.isZoomed else { return }
+      self.zoom(nil)
+    }
   }
 }
