@@ -51,6 +51,27 @@ void main() {
       expect(index.title, '空の小説');
       expect(index.episodes, isEmpty);
     });
+
+    test('bodyContent defaults to null', () {
+      const index = NovelIndex(
+        title: 'テスト小説',
+        episodes: [],
+      );
+
+      expect(index.bodyContent, isNull);
+    });
+
+    test('creates NovelIndex with bodyContent for short story', () {
+      const index = NovelIndex(
+        title: '短編小説',
+        episodes: [],
+        bodyContent: '短編の本文テキスト',
+      );
+
+      expect(index.title, '短編小説');
+      expect(index.episodes, isEmpty);
+      expect(index.bodyContent, '短編の本文テキスト');
+    });
   });
 
   group('NovelSiteRegistry', () {

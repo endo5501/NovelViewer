@@ -16,10 +16,12 @@ class Episode {
 class NovelIndex {
   final String title;
   final List<Episode> episodes;
+  final String? bodyContent;
 
   const NovelIndex({
     required this.title,
     required this.episodes,
+    this.bodyContent,
   });
 }
 

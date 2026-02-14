@@ -102,6 +102,64 @@ void main() {
       expect(index.title, 'タイトルのみ');
       expect(index.episodes, isEmpty);
     });
+
+    test('extracts bodyContent for short story (no episode links, body text present)', () {
+      const html = '''
+<html>
+<body>
+  <h1 class="p-novel__title">短編小説タイトル</h1>
+  <div class="js-novel-text p-novel__text">
+    <p>短編の本文です。</p>
+    <p>二段落目です。</p>
+  </div>
+</body>
+</html>
+''';
+      final baseUrl = Uri.parse('https://ncode.syosetu.com/n5983ls/');
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.title, '短編小説タイトル');
+      expect(index.episodes, isEmpty);
+      expect(index.bodyContent, isNotNull);
+      expect(index.bodyContent, contains('短編の本文です。'));
+      expect(index.bodyContent, contains('二段落目です。'));
+    });
+
+    test('returns null bodyContent when no episodes and no body text', () {
+      const html = '''
+<html>
+<body>
+  <h1 class="p-novel__title">タイトルのみ</h1>
+</body>
+</html>
+''';
+      final baseUrl = Uri.parse('https://ncode.syosetu.com/n9669bk/');
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.title, 'タイトルのみ');
+      expect(index.episodes, isEmpty);
+      expect(index.bodyContent, isNull);
+    });
+
+    test('returns null bodyContent for multi-episode novel', () {
+      const html = '''
+<html>
+<body>
+  <h1 class="p-novel__title">長編小説</h1>
+  <div class="p-eplist">
+    <a href="/n9669bk/1/" class="p-eplist__subtitle">第一話</a>
+    <a href="/n9669bk/2/" class="p-eplist__subtitle">第二話</a>
+  </div>
+</body>
+</html>
+''';
+      final baseUrl = Uri.parse('https://ncode.syosetu.com/n9669bk/');
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.title, '長編小説');
+      expect(index.episodes.length, 2);
+      expect(index.bodyContent, isNull);
+    });
   });
 
   group('siteType', () {
