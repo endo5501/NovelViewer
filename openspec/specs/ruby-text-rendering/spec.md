@@ -35,7 +35,7 @@ The system SHALL provide a plain text representation from parsed segments by con
 - **THEN** the plain text output is "これは漢字です"
 
 ### Requirement: Ruby text visual rendering
-The system SHALL render ruby-annotated text with the ruby annotation (furigana) positioned according to the current display mode. In horizontal mode, the ruby annotation SHALL be displayed above the base text. In vertical mode, the ruby annotation SHALL be displayed to the right of the base text. In both modes, the ruby text SHALL use a smaller font size.
+The system SHALL render ruby-annotated text with the ruby annotation (furigana) positioned according to the current display mode. In horizontal mode, the ruby annotation SHALL be displayed above the base text. In vertical mode, the ruby annotation SHALL be displayed to the right of the base text. In both modes, the ruby text SHALL use a smaller font size. In vertical mode, the ruby text characters SHALL be mapped through the vertical character map (`verticalCharMap`) in the same manner as the base text characters, so that punctuation, brackets, dashes, and other mapped characters in ruby annotations are correctly transformed for vertical display.
 
 #### Scenario: Ruby annotation displayed above base text in horizontal mode
 - **WHEN** a ruby segment with base "漢字" and ruby "かんじ" is rendered in horizontal mode
@@ -56,6 +56,14 @@ The system SHALL render ruby-annotated text with the ruby annotation (furigana) 
 #### Scenario: Plain text segments rendered normally
 - **WHEN** a plain text segment is rendered
 - **THEN** it is displayed with the standard text style, identical to the current rendering behavior
+
+#### Scenario: Ruby text characters are mapped for vertical display
+- **WHEN** a ruby segment with ruby text containing verticalCharMap-mapped characters (e.g., brackets "（）", dashes "ー", punctuation "。") is rendered in vertical mode
+- **THEN** the ruby text characters SHALL be transformed through the vertical character map, producing their vertical equivalents (e.g., "（" → "︵", "ー" → "丨", "。" → "︒")
+
+#### Scenario: Ruby text with unmapped characters remains unchanged in vertical mode
+- **WHEN** a ruby segment with ruby text containing only hiragana or katakana (e.g., "かんじ") is rendered in vertical mode
+- **THEN** the ruby text characters remain unchanged since they have no vertical character map entries
 
 ### Requirement: Search highlight with ruby text
 The system SHALL support search query highlighting on ruby-aware content in both horizontal and vertical display modes, highlighting matches in the base text of ruby segments and in plain text segments.
