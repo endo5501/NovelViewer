@@ -168,5 +168,66 @@ void main() {
 
       expect(result, isNull);
     });
+
+    test('deleteByFolderName removes all summaries for a folder', () async {
+      await repository.saveSummary(
+        folderName: 'my_novel',
+        word: 'アリス',
+        summaryType: SummaryType.spoiler,
+        summary: '要約1',
+      );
+      await repository.saveSummary(
+        folderName: 'my_novel',
+        word: 'ボブ',
+        summaryType: SummaryType.noSpoiler,
+        summary: '要約2',
+      );
+      await repository.saveSummary(
+        folderName: 'other_novel',
+        word: 'キャラ',
+        summaryType: SummaryType.spoiler,
+        summary: '他の要約',
+      );
+
+      await repository.deleteByFolderName('my_novel');
+
+      final alice = await repository.findSummary(
+        folderName: 'my_novel',
+        word: 'アリス',
+        summaryType: SummaryType.spoiler,
+      );
+      final bob = await repository.findSummary(
+        folderName: 'my_novel',
+        word: 'ボブ',
+        summaryType: SummaryType.noSpoiler,
+      );
+      final other = await repository.findSummary(
+        folderName: 'other_novel',
+        word: 'キャラ',
+        summaryType: SummaryType.spoiler,
+      );
+
+      expect(alice, isNull);
+      expect(bob, isNull);
+      expect(other, isNotNull);
+    });
+
+    test('deleteByFolderName does nothing for non-existent folder', () async {
+      await repository.saveSummary(
+        folderName: 'my_novel',
+        word: 'アリス',
+        summaryType: SummaryType.spoiler,
+        summary: '要約',
+      );
+
+      await repository.deleteByFolderName('nonexistent');
+
+      final result = await repository.findSummary(
+        folderName: 'my_novel',
+        word: 'アリス',
+        summaryType: SummaryType.spoiler,
+      );
+      expect(result, isNotNull);
+    });
   });
 }
