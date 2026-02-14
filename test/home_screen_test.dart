@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/app.dart';
+import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
@@ -63,6 +64,46 @@ void main() {
         ).first,
       );
       expect(rightColumn.width, isNotNull);
+    });
+  });
+
+  group('HomeScreen AppBar title', () {
+    testWidgets('shows NovelViewer when no novel is selected',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            selectedNovelTitleProvider
+                .overrideWith((ref) async => null),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final appBar = tester.widget<AppBar>(find.byType(AppBar));
+      final titleWidget = appBar.title as Text;
+      expect(titleWidget.data, 'NovelViewer');
+    });
+
+    testWidgets('shows novel title when a novel is selected',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            selectedNovelTitleProvider
+                .overrideWith((ref) async => '異世界転生物語'),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final appBar = tester.widget<AppBar>(find.byType(AppBar));
+      final titleWidget = appBar.title as Text;
+      expect(titleWidget.data, '異世界転生物語');
     });
   });
 
