@@ -55,21 +55,44 @@ class NarouSite implements NovelSite {
     }
 
     final episodes = <Episode>[];
-    for (final selector in _episodeLinkSelectors) {
-      final links = document.querySelectorAll(selector);
-      if (links.isNotEmpty) {
-        for (final (i, link) in links.indexed) {
-          final href = link.attributes['href'] ??
-              link.querySelector('a')?.attributes['href'];
-          if (href == null) continue;
-          final resolvedUrl = baseUrl.resolve(href);
-          episodes.add(Episode(
-            index: i + 1,
-            title: link.text.trim(),
-            url: resolvedUrl,
-          ));
+
+    // Try container-based parsing first (extracts both link and update date)
+    final containers = document.querySelectorAll('.p-eplist__sublist');
+    if (containers.isNotEmpty) {
+      for (final (i, container) in containers.indexed) {
+        final link = container.querySelector('.p-eplist__subtitle') ??
+            container.querySelector('a');
+        if (link == null) continue;
+        final href = link.attributes['href'] ??
+            link.querySelector('a')?.attributes['href'];
+        if (href == null) continue;
+        final resolvedUrl = baseUrl.resolve(href);
+        final updatedAt = _extractUpdateDate(container);
+        episodes.add(Episode(
+          index: i + 1,
+          title: link.text.trim(),
+          url: resolvedUrl,
+          updatedAt: updatedAt,
+        ));
+      }
+    } else {
+      // Fallback to link-only selectors (no update date available)
+      for (final selector in _episodeLinkSelectors) {
+        final links = document.querySelectorAll(selector);
+        if (links.isNotEmpty) {
+          for (final (i, link) in links.indexed) {
+            final href = link.attributes['href'] ??
+                link.querySelector('a')?.attributes['href'];
+            if (href == null) continue;
+            final resolvedUrl = baseUrl.resolve(href);
+            episodes.add(Episode(
+              index: i + 1,
+              title: link.text.trim(),
+              url: resolvedUrl,
+            ));
+          }
+          break;
         }
-        break;
       }
     }
 
@@ -97,7 +120,7 @@ class NarouSite implements NovelSite {
           final tag = child.localName?.toLowerCase();
           return tag == 'p' || tag == 'div';
         }).toList();
-        return (blocks.isEmpty ? [element] : blocks).map(_blockToText);
+        return (blocks.isEmpty ? [element] : blocks).map(blockToText);
       });
 
       return texts.join('\n');
@@ -106,26 +129,26 @@ class NarouSite implements NovelSite {
     return '';
   }
 
-  static String _blockToText(dynamic element) {
-    const textNodeType = 3;
-    const elementNodeType = 1;
+  static final _datePattern = RegExp(r'(\d{4}/\d{2}/\d{2} \d{2}:\d{2})');
 
-    final buffer = StringBuffer();
-    for (final node in element.nodes) {
-      if (node.nodeType == textNodeType) {
-        buffer.write(node.text);
-      } else if (node.nodeType == elementNodeType) {
-        final tagName = node.localName?.toLowerCase() ?? '';
-        if (tagName == 'br') {
-          buffer.write('\n');
-        } else if (tagName == 'ruby') {
-          buffer.write(node.outerHtml);
-        } else {
-          buffer.write(_blockToText(node));
-        }
+  static String? _extractUpdateDate(dynamic container) {
+    final updateDiv = container.querySelector('.p-eplist__update');
+    if (updateDiv == null) return null;
+
+    // Check for revision date in <span title="YYYY/MM/DD HH:MM 改稿">
+    final revisionSpan = updateDiv.querySelector('span[title]');
+    if (revisionSpan != null) {
+      final title = revisionSpan.attributes['title'] as String?;
+      if (title != null) {
+        final match = _datePattern.firstMatch(title);
+        if (match != null) return match.group(1);
       }
     }
-    return buffer.toString().trim();
+
+    // Fall back to publish date text
+    final text = updateDiv.text.trim();
+    final match = _datePattern.firstMatch(text);
+    return match?.group(1);
   }
 
   Uri normalizeUrl(Uri url) {

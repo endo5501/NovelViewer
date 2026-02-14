@@ -1,15 +1,40 @@
 import 'package:novel_viewer/features/text_download/data/sites/narou_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/kakuyomu_site.dart';
 
+/// Converts an HTML element to plain text, preserving `<br>` as newlines and `<ruby>` as HTML.
+String blockToText(dynamic element) {
+  const textNodeType = 3;
+  const elementNodeType = 1;
+
+  final buffer = StringBuffer();
+  for (final node in element.nodes) {
+    if (node.nodeType == textNodeType) {
+      buffer.write(node.text);
+    } else if (node.nodeType == elementNodeType) {
+      final tagName = node.localName?.toLowerCase() ?? '';
+      if (tagName == 'br') {
+        buffer.write('\n');
+      } else if (tagName == 'ruby') {
+        buffer.write(node.outerHtml);
+      } else {
+        buffer.write(blockToText(node));
+      }
+    }
+  }
+  return buffer.toString().trim();
+}
+
 class Episode {
   final int index;
   final String title;
   final Uri url;
+  final String? updatedAt;
 
   const Episode({
     required this.index,
     required this.title,
     required this.url,
+    this.updatedAt,
   });
 }
 
