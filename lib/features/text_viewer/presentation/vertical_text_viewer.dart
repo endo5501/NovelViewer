@@ -46,9 +46,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
   TextStyle? _cachedStyle;
 
   // Swipe tracking
-  int? _swipePointerId;
-  Offset? _swipeStartPosition;
-  Duration? _swipeStartTimeStamp;
+  _SwipeState? _swipeState;
 
   @override
   void initState() {
@@ -87,6 +85,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
         behavior: HitTestBehavior.opaque,
         onPointerDown: _handlePointerDown,
         onPointerUp: _handlePointerUp,
+        onPointerCancel: _handlePointerCancel,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final result = _paginateLines(constraints);
@@ -164,35 +163,34 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
 
   void _handlePointerDown(PointerDownEvent event) {
     _focusNode.requestFocus();
-    _swipePointerId = event.pointer;
-    _swipeStartPosition = event.position;
-    _swipeStartTimeStamp = event.timeStamp;
+    if (_swipeState != null) return;
+    _swipeState = _SwipeState(
+      pointerId: event.pointer,
+      startPosition: event.position,
+      startTimeStamp: event.timeStamp,
+    );
+  }
+
+  void _handlePointerCancel(PointerCancelEvent event) {
+    final state = _swipeState;
+    if (state != null && event.pointer == state.pointerId) {
+      _swipeState = null;
+    }
   }
 
   void _handlePointerUp(PointerUpEvent event) {
-    if (event.pointer != _swipePointerId) return;
-    final startPosition = _swipeStartPosition;
-    final startTimeStamp = _swipeStartTimeStamp;
-    _swipePointerId = null;
-    _swipeStartPosition = null;
-    _swipeStartTimeStamp = null;
+    final state = _swipeState;
+    if (state == null || event.pointer != state.pointerId) return;
+    _swipeState = null;
 
-    if (startPosition == null || startTimeStamp == null) return;
-
-    final duration = event.timeStamp - startTimeStamp;
     final direction = detectSwipe(
-      startPosition: startPosition,
+      startPosition: state.startPosition,
       endPosition: event.position,
-      duration: duration,
+      duration: event.timeStamp - state.startTimeStamp,
     );
 
     if (direction == null) return;
-
-    if (direction == SwipeDirection.left) {
-      _nextPage();
-    } else {
-      _previousPage();
-    }
+    direction == SwipeDirection.left ? _nextPage() : _previousPage();
   }
 
   void _changePage(int delta) {
@@ -472,4 +470,15 @@ class _PaginationResult {
   const _PaginationResult(this.pages, this.targetPage);
   final List<List<TextSegment>> pages;
   final int? targetPage;
+}
+
+class _SwipeState {
+  const _SwipeState({
+    required this.pointerId,
+    required this.startPosition,
+    required this.startTimeStamp,
+  });
+  final int pointerId;
+  final Offset startPosition;
+  final Duration startTimeStamp;
 }

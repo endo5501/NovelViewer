@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 

@@ -23,7 +23,7 @@ SwipeDirection? detectSwipe({
   required Offset endPosition,
   required Duration duration,
 }) {
-  if (duration == Duration.zero) return null;
+  if (duration <= Duration.zero) return null;
 
   final dx = endPosition.dx - startPosition.dx;
   final dy = endPosition.dy - startPosition.dy;
@@ -33,7 +33,10 @@ SwipeDirection? detectSwipe({
   if (absDx <= kSwipeMinDistance) return null;
   if (absDx <= absDy) return null;
 
-  final velocity = absDx / (duration.inMilliseconds / 1000.0);
+  final seconds = duration.inMicroseconds / Duration.microsecondsPerSecond;
+  if (seconds <= 0) return null;
+
+  final velocity = absDx / seconds;
   if (velocity <= kSwipeMinVelocity) return null;
 
   return dx < 0 ? SwipeDirection.left : SwipeDirection.right;
