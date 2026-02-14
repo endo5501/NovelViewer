@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -69,6 +70,55 @@ void main() {
         await repo.setFontFamily(family);
         expect(repo.getFontFamily(), family);
       }
+    });
+  });
+
+  group('SettingsRepository - LLM config', () {
+    test('getLlmConfig returns default none config when no value stored', () {
+      final repo = SettingsRepository(prefs);
+      final config = repo.getLlmConfig();
+      expect(config.provider, LlmProvider.none);
+      expect(config.baseUrl, '');
+      expect(config.apiKey, '');
+      expect(config.model, '');
+    });
+
+    test('setLlmConfig and getLlmConfig round-trip for OpenAI', () async {
+      final repo = SettingsRepository(prefs);
+      const config = LlmConfig(
+        provider: LlmProvider.openai,
+        baseUrl: 'https://api.openai.com/v1',
+        apiKey: 'sk-test',
+        model: 'gpt-4o-mini',
+      );
+      await repo.setLlmConfig(config);
+      final loaded = repo.getLlmConfig();
+      expect(loaded.provider, LlmProvider.openai);
+      expect(loaded.baseUrl, 'https://api.openai.com/v1');
+      expect(loaded.apiKey, 'sk-test');
+      expect(loaded.model, 'gpt-4o-mini');
+    });
+
+    test('setLlmConfig and getLlmConfig round-trip for Ollama', () async {
+      final repo = SettingsRepository(prefs);
+      const config = LlmConfig(
+        provider: LlmProvider.ollama,
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+      );
+      await repo.setLlmConfig(config);
+      final loaded = repo.getLlmConfig();
+      expect(loaded.provider, LlmProvider.ollama);
+      expect(loaded.baseUrl, 'http://localhost:11434');
+      expect(loaded.apiKey, '');
+      expect(loaded.model, 'llama3');
+    });
+
+    test('getLlmConfig returns none for invalid provider value', () async {
+      await prefs.setString('llm_provider', 'invalid');
+      final repo = SettingsRepository(prefs);
+      final config = repo.getLlmConfig();
+      expect(config.provider, LlmProvider.none);
     });
   });
 }

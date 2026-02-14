@@ -3,7 +3,7 @@ import 'package:path/path.dart' as p;
 
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 2;
 
   Database? _database;
 
@@ -20,6 +20,7 @@ class NovelDatabase {
       path,
       version: _databaseVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -40,6 +41,32 @@ class NovelDatabase {
     await db.execute('''
       CREATE UNIQUE INDEX idx_novels_site_novel
       ON novels(site_type, novel_id)
+    ''');
+    await _createWordSummariesTable(db);
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _createWordSummariesTable(db);
+    }
+  }
+
+  static Future<void> _createWordSummariesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE word_summaries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        folder_name TEXT NOT NULL,
+        word TEXT NOT NULL,
+        summary_type TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        source_file TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE UNIQUE INDEX idx_word_summaries_unique
+      ON word_summaries(folder_name, word, summary_type)
     ''');
   }
 
