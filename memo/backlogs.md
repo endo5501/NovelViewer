@@ -31,7 +31,7 @@
   ウィジェットは選択機能を持たないため、範囲選択ができない
 - [x] 特定のファイルを縦書き表示すると、左辺カラムにテキストがはみ出る
 /Users/endo5501/Library/Containers/com.endo5501.novelViewer/Data/Documents/NovelViewer/narou_n8281jr/088_【88 ここまでのまとめ】.txt
-- [ ] 縦書き表示時、ルビの文字は90度回転していない
+- [x] 縦書き表示時、ルビの文字は90度回転していない
 - [ ] 縦書き表示時、"っ"や"ぁ"などの小文字の位置が下側にあるのは違和感がある
 参考：<https://crd.ndl.go.jp/reference/entry/index.php?page=ref_view&id=1000038524> <https://ameblo.jp/ikuyokaiyu/entry-12672819156.html>
 - [x] なろう小説で複数のページを持つ長編小説はダウンロードできるが、1ページのみの短編小説はダウンロードできない. 
