@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 
@@ -44,6 +45,11 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
   TextPainter? _cachedPainter;
   TextStyle? _cachedStyle;
 
+  // Swipe tracking
+  int? _swipePointerId;
+  Offset? _swipeStartPosition;
+  Duration? _swipeStartTimeStamp;
+
   @override
   void initState() {
     super.initState();
@@ -78,7 +84,9 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
       autofocus: true,
       onKeyEvent: _handleKeyEvent,
       child: Listener(
-        onPointerDown: (_) => _focusNode.requestFocus(),
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: _handlePointerDown,
+        onPointerUp: _handlePointerUp,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final result = _paginateLines(constraints);
@@ -152,6 +160,39 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
     }
 
     return KeyEventResult.ignored;
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    _focusNode.requestFocus();
+    _swipePointerId = event.pointer;
+    _swipeStartPosition = event.position;
+    _swipeStartTimeStamp = event.timeStamp;
+  }
+
+  void _handlePointerUp(PointerUpEvent event) {
+    if (event.pointer != _swipePointerId) return;
+    final startPosition = _swipeStartPosition;
+    final startTimeStamp = _swipeStartTimeStamp;
+    _swipePointerId = null;
+    _swipeStartPosition = null;
+    _swipeStartTimeStamp = null;
+
+    if (startPosition == null || startTimeStamp == null) return;
+
+    final duration = event.timeStamp - startTimeStamp;
+    final direction = detectSwipe(
+      startPosition: startPosition,
+      endPosition: event.position,
+      duration: duration,
+    );
+
+    if (direction == null) return;
+
+    if (direction == SwipeDirection.left) {
+      _nextPage();
+    } else {
+      _previousPage();
+    }
   }
 
   void _changePage(int delta) {

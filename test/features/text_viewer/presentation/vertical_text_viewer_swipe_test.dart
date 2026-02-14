@@ -34,44 +34,45 @@ int? _extractCurrentPage(WidgetTester tester) {
   return int.tryParse(parts[0].trim());
 }
 
-/// Simulate a fast horizontal swipe using pointer events
+/// Simulate a horizontal swipe using timed drag.
 Future<void> _simulateSwipe(
   WidgetTester tester, {
   required Offset start,
   required Offset end,
   Duration duration = const Duration(milliseconds: 100),
 }) async {
-  final gesture = await tester.startGesture(start);
-  await tester.pump(duration);
-  await gesture.moveTo(end);
-  await gesture.up();
-  await tester.pump();
+  await tester.timedDragFrom(start, end - start, duration);
+  await tester.pumpAndSettle();
 }
 
 void main() {
-  // Create multi-page content for swipe tests
+  // Create multi-page content for swipe tests.
+  // Use wider viewport (200px) so swipe gestures stay within widget bounds.
   List<TextSegment> multiPageSegments() =>
       [PlainTextSegment('あ' * 500)];
+
+  const testWidth = 200.0;
+  const testHeight = 400.0;
 
   group('VerticalTextViewer swipe page navigation', () {
     testWidgets('left swipe advances to next page', (tester) async {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
-          width: 100,
-          height: 400,
+          width: testWidth,
+          height: testHeight,
         ),
       );
 
       // Verify we start on page 1
       expect(_extractCurrentPage(tester), 1);
 
-      // Simulate left swipe (start right, end left)
+      // Simulate left swipe (start right, end left) within widget bounds
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(50, 0),
-        end: center + const Offset(-50, 0),
+        start: center + const Offset(40, 0),
+        end: center + const Offset(-40, 0),
       );
 
       // Should advance to page 2
@@ -82,8 +83,8 @@ void main() {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
-          width: 100,
-          height: 400,
+          width: testWidth,
+          height: testHeight,
         ),
       );
 
@@ -96,8 +97,8 @@ void main() {
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(-50, 0),
-        end: center + const Offset(50, 0),
+        start: center + const Offset(-40, 0),
+        end: center + const Offset(40, 0),
       );
 
       // Should return to page 1
@@ -110,8 +111,8 @@ void main() {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
-          width: 100,
-          height: 400,
+          width: testWidth,
+          height: testHeight,
         ),
       );
 
@@ -121,8 +122,8 @@ void main() {
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(-50, 0),
-        end: center + const Offset(50, 0),
+        start: center + const Offset(-40, 0),
+        end: center + const Offset(40, 0),
       );
 
       // Should remain on page 1
@@ -130,14 +131,14 @@ void main() {
     });
 
     testWidgets('left swipe on last page has no effect', (tester) async {
-      // Use content that fits in exactly 2 pages with small viewport
+      // Use content that fits in a few pages with small viewport
       final segments = [PlainTextSegment('あ' * 60)];
 
       await tester.pumpWidget(
         _buildTestWidget(
           segments: segments,
-          width: 50,
-          height: 400,
+          width: 80,
+          height: testHeight,
         ),
       );
 
@@ -157,8 +158,8 @@ void main() {
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(50, 0),
-        end: center + const Offset(-50, 0),
+        start: center + const Offset(30, 0),
+        end: center + const Offset(-30, 0),
       );
 
       // Should remain on last page
@@ -172,8 +173,8 @@ void main() {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
-          width: 100,
-          height: 400,
+          width: testWidth,
+          height: testHeight,
         ),
       );
 
@@ -183,8 +184,8 @@ void main() {
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(50, 0),
-        end: center + const Offset(-50, 0),
+        start: center + const Offset(40, 0),
+        end: center + const Offset(-40, 0),
         duration: const Duration(milliseconds: 1000),
       );
 
@@ -197,14 +198,14 @@ void main() {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
-          width: 100,
-          height: 400,
+          width: testWidth,
+          height: testHeight,
         ),
       );
 
       expect(_extractCurrentPage(tester), 1);
 
-      // Simulate short movement (less than 50px)
+      // Simulate short movement (less than 50px total displacement)
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
@@ -221,8 +222,8 @@ void main() {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
-          width: 100,
-          height: 400,
+          width: testWidth,
+          height: testHeight,
         ),
       );
 
@@ -248,8 +249,8 @@ void main() {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
-          width: 100,
-          height: 400,
+          width: testWidth,
+          height: testHeight,
           onSelectionChanged: (text) => notifications.add(text),
         ),
       );
@@ -258,8 +259,8 @@ void main() {
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(50, 0),
-        end: center + const Offset(-50, 0),
+        start: center + const Offset(40, 0),
+        end: center + const Offset(-40, 0),
       );
 
       // onSelectionChanged should have been called with null
@@ -273,8 +274,8 @@ void main() {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
-          width: 100,
-          height: 400,
+          width: testWidth,
+          height: testHeight,
         ),
       );
 
