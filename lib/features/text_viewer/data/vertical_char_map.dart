@@ -22,7 +22,11 @@ const verticalCharMap = <String, String>{
   '−': '丨', // minus sign U+2212
   '－': '丨', // fullwidth hyphen-minus
   '─': '丨', // box drawings light horizontal
-  '—': '丨', // em dash
+  '—': '丨', // em dash (U+2014)
+  '―': '丨', // zenkaku-dash (U+2015)
+  '‐': '丨', // another hyphen-minus (U+2010)
+  '‑': '丨', // another hyphen-minus (U+2011)
+  '–': '丨', // EN dash(U+2013)
 
   // 波線
   '〜': '丨', // wave dash
