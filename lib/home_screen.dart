@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/presentation/file_browser_panel.dart';
+import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
@@ -41,7 +42,10 @@ class HomeScreen extends ConsumerWidget {
           autofocus: true,
           child: Scaffold(
             appBar: AppBar(
-              title: const Text('NovelViewer'),
+              title: Text(
+                ref.watch(selectedNovelTitleProvider).value ??
+                    'NovelViewer',
+              ),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.download),

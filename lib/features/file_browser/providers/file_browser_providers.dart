@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:path/path.dart' as p;
 
 final fileSystemServiceProvider = Provider<FileSystemService>((ref) {
   return FileSystemService();
@@ -59,6 +60,25 @@ final directoryContentsProvider =
     files: sortedFiles,
     subdirectories: subdirectories,
   );
+});
+
+final selectedNovelTitleProvider = FutureProvider<String?>((ref) async {
+  final currentDir = ref.watch(currentDirectoryProvider);
+  final libraryPath = ref.watch(libraryPathProvider);
+
+  if (currentDir == null || libraryPath == null) return null;
+  if (p.equals(currentDir, libraryPath)) return null;
+  if (!p.isWithin(libraryPath, currentDir)) return null;
+
+  final relativePath = p.relative(currentDir, from: libraryPath);
+  final folderName = p.split(relativePath).first;
+
+  final novels = await ref.watch(allNovelsProvider.future);
+  final titleByFolder = {
+    for (final novel in novels) novel.folderName: novel.title,
+  };
+
+  return titleByFolder[folderName] ?? folderName;
 });
 
 class SelectedFileNotifier extends Notifier<FileEntry?> {
