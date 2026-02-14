@@ -22,42 +22,35 @@ class VerticalRubyTextWidget extends StatelessWidget {
     final fontSize = baseStyle?.fontSize ?? 14.0;
     final rubyFontSize = fontSize * 0.5;
 
-    final baseChars = base.runes
-        .map((r) => mapToVerticalChar(String.fromCharCode(r)))
-        .toList();
-    final rubyChars =
-        rubyText.runes.map((r) => String.fromCharCode(r)).toList();
-
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        _buildBaseText(baseChars),
-        _buildRubyText(rubyChars, rubyFontSize),
+        _buildBaseText(_toVerticalChars(base)),
+        _buildRubyText(_toVerticalChars(rubyText), rubyFontSize),
       ],
     );
   }
 
+  List<String> _toVerticalChars(String text) {
+    return text.runes
+        .map((r) => mapToVerticalChar(String.fromCharCode(r)))
+        .toList();
+  }
+
   Widget _buildBaseText(List<String> baseChars) {
     // Search highlight (yellow) takes precedence over selection (blue)
-    final Color? bgColor;
-    if (highlighted) {
-      bgColor = Colors.yellow;
-    } else if (selected) {
-      bgColor = Colors.blue.withValues(alpha: 0.3);
-    } else {
-      bgColor = null;
-    }
+    final bgColor = highlighted
+        ? Colors.yellow
+        : selected
+            ? Colors.blue.withValues(alpha: 0.3)
+            : null;
+
     final style = _createTextStyle(
       fontSize: baseStyle?.fontSize,
       backgroundColor: bgColor,
     );
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final char in baseChars) Text(char, style: style),
-      ],
-    );
+    return _buildVerticalText(baseChars, style);
   }
 
   Widget _buildRubyText(List<String> rubyChars, double rubyFontSize) {
@@ -66,12 +59,16 @@ class VerticalRubyTextWidget extends StatelessWidget {
     return Positioned(
       right: -(rubyFontSize + 2),
       top: 0,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final char in rubyChars) Text(char, style: style),
-        ],
-      ),
+      child: _buildVerticalText(rubyChars, style),
+    );
+  }
+
+  Widget _buildVerticalText(List<String> chars, TextStyle? style) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final char in chars) Text(char, style: style),
+      ],
     );
   }
 
