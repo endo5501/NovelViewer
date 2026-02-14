@@ -147,4 +147,39 @@ void main() {
       expect(found, isNull);
     });
   });
+
+  group('deleteByFolderName', () {
+    test('deletes novel matching folder name', () async {
+      await repository.upsert(createMetadata());
+
+      await repository.deleteByFolderName('narou_n1234ab');
+
+      final all = await repository.findAll();
+      expect(all, isEmpty);
+    });
+
+    test('does not affect other novels', () async {
+      await repository.upsert(createMetadata());
+      await repository.upsert(createMetadata(
+        novelId: 'n5678cd',
+        title: '別の小説',
+        folderName: 'narou_n5678cd',
+      ));
+
+      await repository.deleteByFolderName('narou_n1234ab');
+
+      final all = await repository.findAll();
+      expect(all.length, 1);
+      expect(all.first.title, '別の小説');
+    });
+
+    test('does nothing for non-existent folder name', () async {
+      await repository.upsert(createMetadata());
+
+      await repository.deleteByFolderName('nonexistent');
+
+      final all = await repository.findAll();
+      expect(all.length, 1);
+    });
+  });
 }

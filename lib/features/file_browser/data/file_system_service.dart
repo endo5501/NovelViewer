@@ -65,4 +65,9 @@ class FileSystemService {
         .map((d) => DirectoryEntry(name: p.basename(d.path), path: d.path))
         .toList();
   }
+
+  Future<void> deleteDirectory(String path) async {
+    final dir = Directory(path);
+    await dir.delete(recursive: true);
+  }
 }

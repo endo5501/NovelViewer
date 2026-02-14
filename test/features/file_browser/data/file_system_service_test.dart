@@ -118,4 +118,33 @@ void main() {
       expect(dirs, isEmpty);
     });
   });
+
+  group('deleteDirectory', () {
+    test('deletes directory and all contents recursively', () async {
+      final novelDir = Directory('${tempDir.path}/narou_n1234');
+      novelDir.createSync();
+      File('${novelDir.path}/001_chapter1.txt').writeAsStringSync('content1');
+      File('${novelDir.path}/002_chapter2.txt').writeAsStringSync('content2');
+
+      await service.deleteDirectory(novelDir.path);
+
+      expect(novelDir.existsSync(), false);
+    });
+
+    test('deletes empty directory', () async {
+      final emptyDir = Directory('${tempDir.path}/empty');
+      emptyDir.createSync();
+
+      await service.deleteDirectory(emptyDir.path);
+
+      expect(emptyDir.existsSync(), false);
+    });
+
+    test('throws when directory does not exist', () async {
+      expect(
+        () => service.deleteDirectory('${tempDir.path}/nonexistent'),
+        throwsA(isA<FileSystemException>()),
+      );
+    });
+  });
 }

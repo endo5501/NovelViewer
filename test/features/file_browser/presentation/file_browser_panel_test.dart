@@ -36,6 +36,7 @@ void main() {
             currentDirectoryProvider.overrideWith(() {
               return _TestCurrentDirectoryNotifier('/test');
             }),
+            libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
         ),
@@ -57,6 +58,7 @@ void main() {
             currentDirectoryProvider.overrideWith(() {
               return _TestCurrentDirectoryNotifier('/test');
             }),
+            libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
         ),
@@ -80,6 +82,7 @@ void main() {
             currentDirectoryProvider.overrideWith(() {
               return _TestCurrentDirectoryNotifier('/test');
             }),
+            libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
         ),
@@ -107,6 +110,7 @@ void main() {
             selectedFileProvider.overrideWith(() {
               return _TestSelectedFileNotifier(testFile);
             }),
+            libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
         ),
@@ -137,6 +141,7 @@ void main() {
             currentDirectoryProvider.overrideWith(() {
               return _TestCurrentDirectoryNotifier('/test');
             }),
+            libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
         ),

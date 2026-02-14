@@ -60,4 +60,13 @@ class NovelRepository {
         where: 'site_type = ? AND novel_id = ?',
         whereArgs: [siteType, novelId],
       );
+
+  Future<void> deleteByFolderName(String folderName) async {
+    final db = await _novelDatabase.database;
+    await db.delete(
+      'novels',
+      where: 'folder_name = ?',
+      whereArgs: [folderName],
+    );
+  }
 }
