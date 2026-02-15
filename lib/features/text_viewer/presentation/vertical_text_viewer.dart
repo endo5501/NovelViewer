@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
+import 'package:novel_viewer/features/text_viewer/data/column_splitter.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 
@@ -259,7 +260,13 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
     final lineStartColumns = <int>[];
     for (final line in _lines) {
       lineStartColumns.add(columns.length);
-      _splitLineIntoColumns(line, charsPerColumn, columns);
+      if (line.isEmpty) {
+        columns.add([]);
+      } else {
+        final entries = flattenSegments(line);
+        final entryColumns = splitWithKinsoku(entries, charsPerColumn);
+        columns.addAll(buildColumnsFromEntries(entryColumns));
+      }
     }
     return lineStartColumns;
   }
@@ -340,103 +347,6 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
     return null;
   }
 
-  void _splitLineIntoColumns(
-    List<TextSegment> line,
-    int charsPerColumn,
-    List<List<TextSegment>> columns,
-  ) {
-    if (line.isEmpty) {
-      columns.add([]);
-      return;
-    }
-
-    var currentColumn = <TextSegment>[];
-    var currentCount = 0;
-
-    for (final segment in line) {
-      if (segment case PlainTextSegment(:final text)) {
-        (currentColumn, currentCount) = _addPlainTextToColumns(
-          text,
-          charsPerColumn,
-          currentColumn,
-          currentCount,
-          columns,
-        );
-      } else if (segment case RubyTextSegment(:final base)) {
-        (currentColumn, currentCount) = _addRubyTextToColumns(
-          segment,
-          base,
-          charsPerColumn,
-          currentColumn,
-          currentCount,
-          columns,
-        );
-      }
-    }
-
-    if (currentColumn.isNotEmpty) {
-      columns.add(currentColumn);
-    }
-  }
-
-  (List<TextSegment>, int) _addPlainTextToColumns(
-    String text,
-    int charsPerColumn,
-    List<TextSegment> currentColumn,
-    int currentCount,
-    List<List<TextSegment>> columns,
-  ) {
-    final runes = text.runes.toList();
-    var start = 0;
-
-    while (start < runes.length) {
-      final remaining = charsPerColumn - currentCount;
-      final chunkEnd = (start + remaining).clamp(0, runes.length);
-      final chunk = String.fromCharCodes(runes.sublist(start, chunkEnd));
-
-      if (chunk.isNotEmpty) {
-        currentColumn.add(PlainTextSegment(chunk));
-      }
-
-      currentCount += chunkEnd - start;
-      start = chunkEnd;
-
-      if (currentCount >= charsPerColumn) {
-        columns.add(currentColumn);
-        currentColumn = <TextSegment>[];
-        currentCount = 0;
-      }
-    }
-
-    return (currentColumn, currentCount);
-  }
-
-  (List<TextSegment>, int) _addRubyTextToColumns(
-    RubyTextSegment segment,
-    String base,
-    int charsPerColumn,
-    List<TextSegment> currentColumn,
-    int currentCount,
-    List<List<TextSegment>> columns,
-  ) {
-    final rubyChars = base.runes.length;
-
-    if (currentCount + rubyChars > charsPerColumn && currentColumn.isNotEmpty) {
-      columns.add(currentColumn);
-      currentColumn = <TextSegment>[];
-      currentCount = 0;
-    }
-
-    currentColumn.add(segment);
-    currentCount += rubyChars;
-
-    if (currentCount >= charsPerColumn) {
-      columns.add(currentColumn);
-      return (<TextSegment>[], 0);
-    }
-
-    return (currentColumn, currentCount);
-  }
 }
 
 class _PaginationResult {
