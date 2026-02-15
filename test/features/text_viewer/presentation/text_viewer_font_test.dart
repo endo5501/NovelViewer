@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
@@ -102,7 +103,7 @@ void main() {
       final viewer = tester.widget<VerticalTextViewer>(
         find.byType(VerticalTextViewer),
       );
-      expect(viewer.baseStyle?.fontFamily, 'Yu Gothic');
+      expect(viewer.baseStyle?.fontFamily, FontFamily.yuGothic.effectiveFontFamilyName);
     });
 
     testWidgets('system font family preserves theme default fontFamily',

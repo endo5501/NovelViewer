@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,27 +23,39 @@ void main() {
       );
     });
 
-    test('returns parent for Windows path', () {
-      expect(
-        getParentDirectory(r'C:\Users\name\novels\book1'),
-        equals(r'C:\Users\name\novels'),
-      );
-    });
+    test(
+      'returns parent for Windows path',
+      () {
+        expect(
+          getParentDirectory(r'C:\Users\name\novels\book1'),
+          equals(r'C:\Users\name\novels'),
+        );
+      },
+      skip: !Platform.isWindows ? 'Windows-only path test' : null,
+    );
 
-    test('returns parent for nested Windows path', () {
-      expect(
-        getParentDirectory(r'C:\Users'),
-        equals(r'C:\'),
-      );
-    });
+    test(
+      'returns parent for nested Windows path',
+      () {
+        expect(
+          getParentDirectory(r'C:\Users'),
+          equals(r'C:\'),
+        );
+      },
+      skip: !Platform.isWindows ? 'Windows-only path test' : null,
+    );
 
     test('returns null for Unix root', () {
       expect(getParentDirectory('/'), isNull);
     });
 
-    test('returns null for Windows root', () {
-      expect(getParentDirectory(r'C:\'), isNull);
-    });
+    test(
+      'returns null for Windows root',
+      () {
+        expect(getParentDirectory(r'C:\'), isNull);
+      },
+      skip: !Platform.isWindows ? 'Windows-only path test' : null,
+    );
   });
 
   group('FileBrowserPanel', () {
