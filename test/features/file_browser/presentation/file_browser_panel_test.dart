@@ -6,6 +6,44 @@ import 'package:novel_viewer/features/file_browser/presentation/file_browser_pan
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 
 void main() {
+  group('getParentDirectory', () {
+    test('returns parent for Unix path', () {
+      expect(
+        getParentDirectory('/home/user/novels/book1'),
+        equals('/home/user/novels'),
+      );
+    });
+
+    test('returns parent for nested Unix path', () {
+      expect(
+        getParentDirectory('/home/user'),
+        equals('/home'),
+      );
+    });
+
+    test('returns parent for Windows path', () {
+      expect(
+        getParentDirectory(r'C:\Users\name\novels\book1'),
+        equals(r'C:\Users\name\novels'),
+      );
+    });
+
+    test('returns parent for nested Windows path', () {
+      expect(
+        getParentDirectory(r'C:\Users'),
+        equals(r'C:\'),
+      );
+    });
+
+    test('returns null for Unix root', () {
+      expect(getParentDirectory('/'), isNull);
+    });
+
+    test('returns null for Windows root', () {
+      expect(getParentDirectory(r'C:\'), isNull);
+    });
+  });
+
   group('FileBrowserPanel', () {
     testWidgets('shows prompt text and no folder picker when no directory set',
         (WidgetTester tester) async {

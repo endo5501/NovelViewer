@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_delete/providers/novel_delete_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+
+/// Returns the parent directory of [currentDir], or null if already at root.
+String? getParentDirectory(String currentDir) {
+  final parent = p.dirname(currentDir);
+  if (parent == currentDir) return null;
+  return parent;
+}
 
 class FileBrowserPanel extends ConsumerWidget {
   const FileBrowserPanel({super.key});
@@ -174,8 +182,8 @@ class FileBrowserPanel extends ConsumerWidget {
   }
 
   void _navigateToParent(WidgetRef ref, String currentDir) {
-    final parent = currentDir.substring(0, currentDir.lastIndexOf('/'));
-    if (parent.isNotEmpty) {
+    final parent = getParentDirectory(currentDir);
+    if (parent != null) {
       ref.read(currentDirectoryProvider.notifier).setDirectory(parent);
       ref.read(selectedFileProvider.notifier).clear();
     }
