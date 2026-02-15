@@ -64,14 +64,14 @@ void main() {
       expect(find.text('システムデフォルト'), findsOneWidget);
     });
 
-    testWidgets('dropdown shows all font families', (tester) async {
+    testWidgets('dropdown shows available font families', (tester) async {
       await tester.pumpWidget(buildTestWidget());
 
       // Tap to open dropdown
       await tester.tap(find.byType(DropdownButton<FontFamily>));
       await tester.pumpAndSettle();
 
-      for (final family in FontFamily.values) {
+      for (final family in FontFamily.availableFonts) {
         expect(find.text(family.displayName), findsWidgets);
       }
     });
@@ -82,10 +82,12 @@ void main() {
       await tester.tap(find.byType(DropdownButton<FontFamily>));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('ヒラギノ明朝').last);
+      // Select the last available font (platform-safe)
+      final lastFont = FontFamily.availableFonts.last;
+      await tester.tap(find.text(lastFont.displayName).last);
       await tester.pumpAndSettle();
 
-      expect(find.text('ヒラギノ明朝'), findsOneWidget);
+      expect(find.text(lastFont.displayName), findsOneWidget);
     });
   });
 }

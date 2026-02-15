@@ -69,7 +69,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
 
         final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: fontSize,
-              fontFamily: fontFamily.fontFamilyName,
+              fontFamily: fontFamily.effectiveFontFamilyName,
             );
         final segments = parseRubyText(content);
 

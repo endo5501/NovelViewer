@@ -119,7 +119,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                           .setFontFamily(value);
                     }
                   },
-                  items: FontFamily.values.map((family) {
+                  items: FontFamily.availableFonts.map((family) {
                     return DropdownMenuItem<FontFamily>(
                       value: family,
                       child: Text(family.displayName),
