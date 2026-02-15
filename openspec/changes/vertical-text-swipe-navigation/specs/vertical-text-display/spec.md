@@ -1,22 +1,22 @@
 ## ADDED Requirements
 
 ### Requirement: Swipe gesture page navigation
-The system SHALL support horizontal swipe gestures to navigate between pages in vertical display mode. Swipe detection SHALL be implemented within `VerticalTextPage`'s `GestureDetector` (`onPan*` handlers), sharing the same gesture recognizer that handles text selection. The system SHALL use a gesture mode (`undecided`/`selecting`/`swiping`) to early-classify the user's intent based on the initial drag direction. On `onPanDown`, the system SHALL capture the true pointer-down position and reset the gesture mode to `undecided`. On `onPanStart`, the system SHALL record the anchor character index but SHALL NOT start visual text selection (deferred selection). On `onPanUpdate`, once the displacement from the start position exceeds 10 pixels (`_kGestureDecisionThreshold`), the system SHALL classify the gesture: if `|dx| > |dy|` the mode becomes `swiping` (no selection visual updates); otherwise the mode becomes `selecting` (deferred selection begins). On `onPanEnd`, if the mode is `swiping` or `undecided`, the system SHALL use `detectSwipeFromDrag` to determine if the gesture constitutes a swipe based on displacement and velocity from `DragEndDetails`; if the mode is `selecting`, the system SHALL notify the text selection result without attempting swipe detection. When velocity is available (fling detected, > 200 px/s), a swipe SHALL be recognized if absolute horizontal displacement exceeds 50 pixels (`kSwipeMinDistance`). When velocity is unavailable (desktop scenario where user stops before releasing, velocity ≈ 0), a swipe SHALL be recognized if absolute horizontal displacement exceeds 80 pixels (`kSwipeMinDistanceWithoutFling`). In both cases, the absolute horizontal displacement SHALL exceed the absolute vertical displacement. When a swipe is detected, the system SHALL clear any active text selection and invoke the `onSwipe` callback. `VerticalTextViewer` SHALL pass an `onSwipe` callback to `VerticalTextPage` to handle page navigation. Swipe detection thresholds SHALL be defined as named constants to facilitate future tuning.
+The system SHALL support horizontal swipe gestures to navigate between pages in vertical display mode. Swipe detection SHALL be implemented within `VerticalTextPage`'s `GestureDetector` (`onPan*` handlers), sharing the same gesture recognizer that handles text selection. The system SHALL use a gesture mode (`undecided`/`selecting`/`swiping`) to early-classify the user's intent based on the initial drag direction. On `onPanDown`, the system SHALL capture the true pointer-down position and reset the gesture mode to `undecided`. On `onPanStart`, the system SHALL record the anchor character index but SHALL NOT start visual text selection (deferred selection). On `onPanUpdate`, once the displacement from the start position exceeds 10 pixels (`_kGestureDecisionThreshold`), the system SHALL classify the gesture: if `|dx| > |dy|` the mode becomes `swiping` (no selection visual updates); otherwise the mode becomes `selecting` (deferred selection begins). On `onPanEnd`, if the mode is `swiping` or `undecided`, the system SHALL use `detectSwipeFromDrag` to determine if the gesture constitutes a swipe based on displacement and velocity from `DragEndDetails`; if the mode is `selecting`, the system SHALL notify the text selection result without attempting swipe detection. When velocity is available (fling detected, > 200 px/s), a swipe SHALL be recognized if absolute horizontal displacement exceeds 50 pixels (`kSwipeMinDistance`). When velocity is unavailable (desktop scenario where user stops before releasing, velocity ≈ 0), a swipe SHALL be recognized if absolute horizontal displacement exceeds 80 pixels (`kSwipeMinDistanceWithoutFling`). In both cases, the absolute horizontal displacement SHALL exceed the absolute vertical displacement. When a swipe is detected, the system SHALL clear any active text selection and invoke the `onSwipe` callback. `VerticalTextViewer` SHALL pass an `onSwipe` callback to `VerticalTextPage` to handle page navigation. The swipe direction-to-page mapping SHALL follow the "content dragging" metaphor consistent with horizontal mode scrolling: a right swipe (finger moves left-to-right, dx > 0) SHALL advance to the next page, and a left swipe (finger moves right-to-left, dx < 0) SHALL return to the previous page. This mirrors horizontal mode where swiping up reveals content below; in vertical text mode, swiping right reveals content to the left (the reading direction). Swipe detection thresholds SHALL be defined as named constants to facilitate future tuning.
 
-#### Scenario: Left swipe advances to next page
-- **WHEN** the user performs a left swipe (negative horizontal displacement) that meets all swipe criteria in vertical mode
-- **THEN** the display advances to the next page
+#### Scenario: Right swipe advances to next page
+- **WHEN** the user performs a right swipe (positive horizontal displacement, finger moves left-to-right) that meets all swipe criteria in vertical mode
+- **THEN** the display advances to the next page (content dragging metaphor: drag content rightward to reveal next content on the left)
 
-#### Scenario: Right swipe returns to previous page
-- **WHEN** the user performs a right swipe (positive horizontal displacement) that meets all swipe criteria in vertical mode
+#### Scenario: Left swipe returns to previous page
+- **WHEN** the user performs a left swipe (negative horizontal displacement, finger moves right-to-left) that meets all swipe criteria in vertical mode
 - **THEN** the display returns to the previous page
 
-#### Scenario: Left swipe on last page has no effect
-- **WHEN** the user performs a left swipe on the last page in vertical mode
+#### Scenario: Right swipe on last page has no effect
+- **WHEN** the user performs a right swipe on the last page in vertical mode
 - **THEN** the display remains on the last page
 
-#### Scenario: Right swipe on first page has no effect
-- **WHEN** the user performs a right swipe on the first page in vertical mode
+#### Scenario: Left swipe on first page has no effect
+- **WHEN** the user performs a left swipe on the first page in vertical mode
 - **THEN** the display remains on the first page
 
 #### Scenario: Slow horizontal drag is not recognized as swipe

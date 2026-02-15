@@ -42,9 +42,16 @@
 - [x] 5.7 `_onPanEnd`を修正: `swiping`/`undecided`→スワイプ判定、`selecting`→選択通知
 - [x] 5.8 テストを実行し、全テストがパスすることを確認
 
-## 6. 最終確認
+## 7. スワイプ方向の修正（コンテンツドラッグメタファ）
 
-- [x] 6.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
-- [x] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [x] 6.3 `fvm flutter analyze`でリントを実行
-- [x] 6.4 `fvm flutter test`でテストを実行
+- [ ] 7.1 既存テストのスワイプ方向マッピングを修正（右スワイプ→次ページ、左スワイプ→前ページ）
+- [ ] 7.2 テストを実行し、方向変更に関するテストが失敗することを確認
+- [ ] 7.3 `_handleSwipe`のマッピングを反転（`SwipeDirection.right`→`_nextPage()`、`SwipeDirection.left`→`_previousPage()`）
+- [ ] 7.4 テストを実行し、全テストがパスすることを確認
+
+## 8. 最終確認
+
+- [ ] 8.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
+- [ ] 8.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [ ] 8.3 `fvm flutter analyze`でリントを実行
+- [ ] 8.4 `fvm flutter test`でテストを実行
