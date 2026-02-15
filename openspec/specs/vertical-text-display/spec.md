@@ -11,6 +11,10 @@ The system SHALL render text content in vertical writing mode (top-to-bottom, ri
 - **WHEN** the text content contains newline characters in vertical mode
 - **THEN** a new column starts at the position of each newline, with subsequent text continuing from the top of the new column
 
+#### Scenario: Empty line creates a visible empty column
+- **WHEN** the text content contains consecutive newline characters (blank line) in vertical mode
+- **THEN** an empty column SHALL be rendered with the same width as a text column (one character width), creating visible space between adjacent text columns
+
 #### Scenario: Column overflow wraps to next column
 - **WHEN** a column of text exceeds the available vertical height
 - **THEN** the remaining characters wrap to a new column to the left
@@ -169,23 +173,18 @@ The system SHALL display vertical text in pages rather than as a scrollable area
 - **WHEN** the vertical text page is rendered
 - **THEN** the display area SHALL be clipped so that any content exceeding the boundaries is not visible to the user
 
-#### Scenario: Empty columns from blank lines do not waste horizontal space
+#### Scenario: Empty columns from blank lines occupy full column width
 - **WHEN** the text contains blank lines (paragraph separators) that produce empty columns
-- **THEN** the pagination SHALL account for the fact that empty columns occupy zero character width in the Wrap layout, packing more columns per page to minimize unused horizontal space
+- **THEN** the pagination SHALL treat empty columns with the same width as non-empty columns (one character width), so that blank lines are visually represented as empty space between text columns
 - **AND** the actual rendered width of all columns on a page SHALL be less than or equal to the available display width
-
-#### Scenario: Width-based greedy packing for page boundaries
-- **WHEN** the pagination groups columns into pages
-- **THEN** the pagination SHALL use a width-based greedy packing algorithm that accumulates the actual rendered width of each column (charWidth for non-empty columns, zero for empty columns) plus sentinel runSpacing gaps, rather than a fixed column count per page
-- **AND** each page SHALL contain as many columns as can fit within the available width
 
 #### Scenario: Page navigation with blank lines remains accurate
 - **WHEN** the user navigates to a specific line number in text containing blank lines
-- **THEN** the viewer SHALL correctly identify which page contains the target line, accounting for variable column counts per page due to width-based packing
+- **THEN** the viewer SHALL correctly identify which page contains the target line, accounting for the columns per page
 
 #### Scenario: Columns with kinsoku adjustment fit within page width
 - **WHEN** the pagination groups columns into pages and some columns have variable character counts due to kinsoku processing
-- **THEN** the width-based greedy packing SHALL use the actual character count of each column for width calculation, ensuring columns fit within the available page width
+- **THEN** the pagination SHALL use the actual character count of each column for width calculation, ensuring columns fit within the available page width
 
 ### Requirement: Arrow key page navigation
 The system SHALL support left and right arrow key presses to navigate between pages in vertical display mode. The left arrow key SHALL advance to the next page and the right arrow key SHALL go to the previous page, matching the right-to-left reading direction of vertical Japanese text.
