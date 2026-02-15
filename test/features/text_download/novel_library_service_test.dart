@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_download/data/novel_library_service.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   group('NovelLibraryService', () {
@@ -19,7 +20,7 @@ void main() {
       final service = NovelLibraryService(basePath: tempDir.path);
       final path = service.libraryPath;
 
-      expect(path, '${tempDir.path}/NovelViewer');
+      expect(path, p.join(tempDir.path, 'NovelViewer'));
     });
 
     test('ensureLibraryDirectory creates directory if not exists', () async {
@@ -27,7 +28,7 @@ void main() {
       final dir = await service.ensureLibraryDirectory();
 
       expect(dir.existsSync(), isTrue);
-      expect(dir.path, '${tempDir.path}/NovelViewer');
+      expect(dir.path, p.join(tempDir.path, 'NovelViewer'));
     });
 
     test('ensureLibraryDirectory succeeds if directory already exists',
