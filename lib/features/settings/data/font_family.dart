@@ -37,9 +37,15 @@ enum FontFamily {
   final String? fontFamilyName;
   final bool macOSOnly;
 
+  static const _windowsFontNames = {
+    'YuMincho': 'Yu Mincho',
+    'YuGothic': 'Yu Gothic',
+  };
+
   String? get effectiveFontFamilyName {
-    if (this == FontFamily.system && Platform.isWindows) {
-      return 'YuMincho';
+    if (Platform.isWindows) {
+      if (this == FontFamily.system) return 'Yu Mincho';
+      return _windowsFontNames[fontFamilyName] ?? fontFamilyName;
     }
     return fontFamilyName;
   }

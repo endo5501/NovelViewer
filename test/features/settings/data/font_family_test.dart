@@ -57,8 +57,17 @@ void main() {
 
   group('FontFamily.effectiveFontFamilyName', () {
     if (Platform.isWindows) {
-      test('system default returns YuMincho on Windows', () {
-        expect(FontFamily.system.effectiveFontFamilyName, 'YuMincho');
+      test('system default returns Yu Mincho on Windows', () {
+        expect(FontFamily.system.effectiveFontFamilyName, 'Yu Mincho');
+      });
+
+      test('maps font names to Windows format on Windows', () {
+        expect(FontFamily.yumincho.effectiveFontFamilyName, 'Yu Mincho');
+        expect(FontFamily.yuGothic.effectiveFontFamilyName, 'Yu Gothic');
+        expect(FontFamily.hiraginoMincho.effectiveFontFamilyName,
+            'Hiragino Mincho ProN');
+        expect(FontFamily.hiraginoKaku.effectiveFontFamilyName,
+            'Hiragino Kaku Gothic ProN');
       });
     }
 
@@ -66,16 +75,16 @@ void main() {
       test('system default returns null on macOS', () {
         expect(FontFamily.system.effectiveFontFamilyName, isNull);
       });
-    }
 
-    test('explicit font selection is not affected by fallback', () {
-      expect(FontFamily.yumincho.effectiveFontFamilyName, 'YuMincho');
-      expect(FontFamily.yuGothic.effectiveFontFamilyName, 'YuGothic');
-      expect(FontFamily.hiraginoMincho.effectiveFontFamilyName,
-          'Hiragino Mincho ProN');
-      expect(FontFamily.hiraginoKaku.effectiveFontFamilyName,
-          'Hiragino Kaku Gothic ProN');
-    });
+      test('returns fontFamilyName as-is on macOS', () {
+        expect(FontFamily.yumincho.effectiveFontFamilyName, 'YuMincho');
+        expect(FontFamily.yuGothic.effectiveFontFamilyName, 'YuGothic');
+        expect(FontFamily.hiraginoMincho.effectiveFontFamilyName,
+            'Hiragino Mincho ProN');
+        expect(FontFamily.hiraginoKaku.effectiveFontFamilyName,
+            'Hiragino Kaku Gothic ProN');
+      });
+    }
   });
 
   group('FontFamily.availableFonts', () {
