@@ -158,21 +158,34 @@ void main() {
       }
     });
 
-    testWidgets('newline characters are not wrapped in SizedBox',
+    testWidgets(
+        'blank line sentinel has full column width, separator sentinel has zero width',
         (tester) async {
+      const fontSize = 14.0;
+      // 'あ\n\nい' produces: column 'あ', empty column (blank line), column 'い'
       await tester.pumpWidget(_buildTestWidget(
-        segments: const [PlainTextSegment('あ\nい')],
+        segments: const [PlainTextSegment('あ\n\nい')],
       ));
 
       // Both characters should still render
       expect(find.text('あ'), findsOneWidget);
       expect(find.text('い'), findsOneWidget);
 
-      // The SizedBox with width=0 and height=infinity is the newline sentinel
-      final sentinelFinder = find.byWidgetPredicate(
+      // The blank line sentinel should have width=fontSize (visible empty column)
+      final blankLineSentinel = find.byWidgetPredicate(
+        (w) =>
+            w is SizedBox && w.width == fontSize && w.height == double.infinity,
+      );
+      expect(blankLineSentinel, findsOneWidget,
+          reason:
+              'Blank line sentinel should have width equal to fontSize ($fontSize)');
+
+      // The column separator sentinel should have width=0
+      final separatorSentinel = find.byWidgetPredicate(
         (w) => w is SizedBox && w.width == 0 && w.height == double.infinity,
       );
-      expect(sentinelFinder, findsOneWidget);
+      expect(separatorSentinel, findsOneWidget,
+          reason: 'Column separator sentinel should have width 0');
     });
   });
 
