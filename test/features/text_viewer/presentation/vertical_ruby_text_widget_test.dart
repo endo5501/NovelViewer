@@ -29,7 +29,7 @@ Widget _buildTestWidget({
 void main() {
   group('VerticalRubyTextWidget character centering', () {
     testWidgets(
-        'base characters are wrapped in fixed-width SizedBox with Center',
+        'base characters are wrapped in fixed-width SizedBox with center alignment',
         (tester) async {
       const fontSize = 14.0;
       await tester.pumpWidget(_buildTestWidget(
@@ -41,10 +41,12 @@ void main() {
         final textFinder = find.text(char);
         expect(textFinder, findsOneWidget);
 
+        final textWidget = tester.widget<Text>(textFinder);
         expect(
-          find.ancestor(of: textFinder, matching: find.byType(Center)),
-          findsWidgets,
-          reason: 'Base char "$char" should be wrapped in a Center widget',
+          textWidget.textAlign,
+          TextAlign.center,
+          reason:
+              'Base char "$char" should have textAlign: TextAlign.center',
         );
 
         final sizedBoxFinder = find.ancestor(
@@ -63,7 +65,7 @@ void main() {
     });
 
     testWidgets(
-        'ruby characters are wrapped in fixed-width SizedBox with Center',
+        'ruby characters are wrapped in fixed-width SizedBox with center alignment',
         (tester) async {
       const fontSize = 14.0;
       const rubyFontSize = fontSize * 0.5;
@@ -76,10 +78,12 @@ void main() {
         final textFinder = find.text(char);
         expect(textFinder, findsOneWidget);
 
+        final textWidget = tester.widget<Text>(textFinder);
         expect(
-          find.ancestor(of: textFinder, matching: find.byType(Center)),
-          findsWidgets,
-          reason: 'Ruby char "$char" should be wrapped in a Center widget',
+          textWidget.textAlign,
+          TextAlign.center,
+          reason:
+              'Ruby char "$char" should have textAlign: TextAlign.center',
         );
 
         final sizedBoxFinder = find.ancestor(

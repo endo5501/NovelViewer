@@ -122,7 +122,8 @@ void main() {
   });
 
   group('VerticalTextPage character centering', () {
-    testWidgets('each character is wrapped in fixed-width SizedBox with Center',
+    testWidgets(
+        'each character is wrapped in fixed-width SizedBox with center alignment',
         (tester) async {
       const fontSize = 14.0;
       await tester.pumpWidget(_buildTestWidget(
@@ -133,11 +134,12 @@ void main() {
         final textFinder = find.text(char);
         expect(textFinder, findsOneWidget);
 
-        // Text should have a Center ancestor
+        // Text should use textAlign: TextAlign.center
+        final textWidget = tester.widget<Text>(textFinder);
         expect(
-          find.ancestor(of: textFinder, matching: find.byType(Center)),
-          findsWidgets,
-          reason: '"$char" should be wrapped in a Center widget',
+          textWidget.textAlign,
+          TextAlign.center,
+          reason: '"$char" should have textAlign: TextAlign.center',
         );
 
         // Text should have a SizedBox ancestor with width = fontSize
