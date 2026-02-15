@@ -38,7 +38,7 @@
 例:<https://ncode.syosetu.com/n5983ls/>
 - [ ] カクヨムで、全編のダウンロードが出来ない. 
 例:<https://kakuyomu.jp/works/16818792437310915979>
-- [ ] 縦書き表示時、`。`や`、`などの句読点が行末に来たときでも構わずに改行してしまう
+- [x] 縦書き表示時、`。`や`、`などの句読点が行末に来たときでも構わずに改行してしまう
 参考：<https://www.lowcost-print.com/column/%E3%80%90%E7%A6%81%E5%89%87%E5%87%A6%E7%90%86%E3%80%91%E8%A1%8C%E9%A0%AD%E3%81%AE%E5%8F%A5%E8%AA%AD%E7%82%B9%E3%82%92%E8%A1%8C%E6%9C%AB%E3%81%AB%E7%A7%BB%E5%8B%95%E3%81%99%E3%82%8B%E6%96%B9%E6%B3%95/> <https://note.com/ichi_branch/n/n51cf1a9ab4a7>
 
 ## Refactor
