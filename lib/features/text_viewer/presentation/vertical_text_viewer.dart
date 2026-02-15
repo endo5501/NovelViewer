@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
+
 
 class VerticalTextViewer extends StatefulWidget {
   const VerticalTextViewer({
@@ -78,7 +80,8 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
       autofocus: true,
       onKeyEvent: _handleKeyEvent,
       child: Listener(
-        onPointerDown: (_) => _focusNode.requestFocus(),
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: _handlePointerDown,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final result = _paginateLines(constraints);
@@ -117,6 +120,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
                           baseStyle: widget.baseStyle,
                           query: widget.query,
                           onSelectionChanged: widget.onSelectionChanged,
+                          onSwipe: _handleSwipe,
                         ),
                       ),
                     ),
@@ -152,6 +156,14 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
     }
 
     return KeyEventResult.ignored;
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    _focusNode.requestFocus();
+  }
+
+  void _handleSwipe(SwipeDirection direction) {
+    direction == SwipeDirection.right ? _nextPage() : _previousPage();
   }
 
   void _changePage(int delta) {
