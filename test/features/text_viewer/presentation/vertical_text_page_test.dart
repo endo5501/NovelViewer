@@ -121,6 +121,59 @@ void main() {
     });
   });
 
+  group('VerticalTextPage character centering', () {
+    testWidgets('each character is wrapped in fixed-width SizedBox with Center',
+        (tester) async {
+      const fontSize = 14.0;
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あい')],
+      ));
+
+      for (final char in ['あ', 'い']) {
+        final textFinder = find.text(char);
+        expect(textFinder, findsOneWidget);
+
+        // Text should have a Center ancestor
+        expect(
+          find.ancestor(of: textFinder, matching: find.byType(Center)),
+          findsWidgets,
+          reason: '"$char" should be wrapped in a Center widget',
+        );
+
+        // Text should have a SizedBox ancestor with width = fontSize
+        final sizedBoxFinder = find.ancestor(
+          of: textFinder,
+          matching: find.byWidgetPredicate(
+            (w) => w is SizedBox && w.width == fontSize,
+          ),
+        );
+        expect(
+          sizedBoxFinder,
+          findsWidgets,
+          reason:
+              '"$char" should be wrapped in a SizedBox with width=$fontSize',
+        );
+      }
+    });
+
+    testWidgets('newline characters are not wrapped in SizedBox',
+        (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あ\nい')],
+      ));
+
+      // Both characters should still render
+      expect(find.text('あ'), findsOneWidget);
+      expect(find.text('い'), findsOneWidget);
+
+      // The SizedBox with width=0 and height=infinity is the newline sentinel
+      final sentinelFinder = find.byWidgetPredicate(
+        (w) => w is SizedBox && w.width == 0 && w.height == double.infinity,
+      );
+      expect(sentinelFinder, findsOneWidget);
+    });
+  });
+
   group('VerticalTextPage gesture mode classification', () {
     testWidgets(
         'horizontal drag does not notify selection (enters swiping mode)',

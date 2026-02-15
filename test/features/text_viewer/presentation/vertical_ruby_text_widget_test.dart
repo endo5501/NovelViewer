@@ -27,6 +27,77 @@ Widget _buildTestWidget({
 }
 
 void main() {
+  group('VerticalRubyTextWidget character centering', () {
+    testWidgets(
+        'base characters are wrapped in fixed-width SizedBox with Center',
+        (tester) async {
+      const fontSize = 14.0;
+      await tester.pumpWidget(_buildTestWidget(
+        base: '漢字',
+        rubyText: 'かんじ',
+      ));
+
+      for (final char in ['漢', '字']) {
+        final textFinder = find.text(char);
+        expect(textFinder, findsOneWidget);
+
+        expect(
+          find.ancestor(of: textFinder, matching: find.byType(Center)),
+          findsWidgets,
+          reason: 'Base char "$char" should be wrapped in a Center widget',
+        );
+
+        final sizedBoxFinder = find.ancestor(
+          of: textFinder,
+          matching: find.byWidgetPredicate(
+            (w) => w is SizedBox && w.width == fontSize,
+          ),
+        );
+        expect(
+          sizedBoxFinder,
+          findsWidgets,
+          reason:
+              'Base char "$char" should be wrapped in a SizedBox with width=$fontSize',
+        );
+      }
+    });
+
+    testWidgets(
+        'ruby characters are wrapped in fixed-width SizedBox with Center',
+        (tester) async {
+      const fontSize = 14.0;
+      const rubyFontSize = fontSize * 0.5;
+      await tester.pumpWidget(_buildTestWidget(
+        base: '漢字',
+        rubyText: 'かんじ',
+      ));
+
+      for (final char in ['か', 'ん', 'じ']) {
+        final textFinder = find.text(char);
+        expect(textFinder, findsOneWidget);
+
+        expect(
+          find.ancestor(of: textFinder, matching: find.byType(Center)),
+          findsWidgets,
+          reason: 'Ruby char "$char" should be wrapped in a Center widget',
+        );
+
+        final sizedBoxFinder = find.ancestor(
+          of: textFinder,
+          matching: find.byWidgetPredicate(
+            (w) => w is SizedBox && w.width == rubyFontSize,
+          ),
+        );
+        expect(
+          sizedBoxFinder,
+          findsWidgets,
+          reason:
+              'Ruby char "$char" should be wrapped in a SizedBox with width=$rubyFontSize',
+        );
+      }
+    });
+  });
+
   group('VerticalRubyTextWidget vertical character mapping for ruby text', () {
     testWidgets('ruby text with brackets is mapped to vertical equivalents',
         (tester) async {
