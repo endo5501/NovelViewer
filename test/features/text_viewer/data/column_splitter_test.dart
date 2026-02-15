@@ -133,6 +133,51 @@ void main() {
       expect(columns[0].last.isRuby, isTrue);
     });
 
+    test('連続する行頭禁則文字が全て前のカラムに含まれる', () {
+      // 'あいうえ。」かきく' (9文字) を charsPerColumn=4 で分割
+      // '。」' が連続する行頭禁則文字 → 両方を前カラムに含める
+      final entries = flattenSegments(
+        [const PlainTextSegment('あいうえ。」かきく')],
+      );
+      final columns = splitWithKinsoku(entries, 4);
+
+      expect(columns.length, 2);
+      expect(_columnText(columns[0]), 'あいうえ。」');
+      expect(_columnText(columns[1]), 'かきく');
+    });
+
+    test('3文字連続する行頭禁則文字が全て前のカラムに含まれる', () {
+      // 'あいうえ！？」かき' (9文字) を charsPerColumn=4 で分割
+      // '！？」' が連続する行頭禁則文字 → 全て前カラムに含める
+      final entries = flattenSegments(
+        [const PlainTextSegment('あいうえ！？」かき')],
+      );
+      final columns = splitWithKinsoku(entries, 4);
+
+      expect(columns.length, 2);
+      expect(_columnText(columns[0]), 'あいうえ！？」');
+      expect(_columnText(columns[1]), 'かき');
+    });
+
+    test('カラム超過時に連続する行頭禁則文字が全て前のカラムに含まれる', () {
+      // Case 1 (wouldExceed) で連続禁則が発生するケース
+      // 'あいう漢字。」か' where 漢字 is Ruby (charCount=2)
+      // After 'あいう' (3 chars), Ruby (2 chars) would exceed 4
+      // → finalize [あいう], then Ruby + 。」 in next, then か
+      final entries = flattenSegments(<TextSegment>[
+        const PlainTextSegment('あいう'),
+        const RubyTextSegment(base: '漢字', rubyText: 'かんじ'),
+        const PlainTextSegment('。」かきくけ'),
+      ]);
+      final columns = splitWithKinsoku(entries, 4);
+
+      // [あいう], [漢字。」], [かきくけ]
+      expect(columns.length, 3);
+      expect(_columnText(columns[0]), 'あいう');
+      expect(_columnText(columns[1]), '漢字。」');
+      expect(_columnText(columns[2]), 'かきくけ');
+    });
+
     test('空のエントリリストは空のカラムリストを返す', () {
       final columns = splitWithKinsoku([], 4);
       expect(columns, isEmpty);

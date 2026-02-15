@@ -78,10 +78,10 @@ List<List<FlatCharEntry>> splitWithKinsoku(
         continue;
       }
 
-      // Apply line-head kinsoku: pull forbidden character into current column
-      if (entry.firstChar.isLineHeadForbidden) {
-        currentColumn.add(entry);
-        currentCount += entry.charCount;
+      // Apply line-head kinsoku: pull consecutive forbidden characters
+      while (i < entries.length && entries[i].firstChar.isLineHeadForbidden) {
+        currentColumn.add(entries[i]);
+        currentCount += entries[i].charCount;
         i++;
       }
 
@@ -104,10 +104,10 @@ List<List<FlatCharEntry>> splitWithKinsoku(
         continue;
       }
 
-      // Apply line-head kinsoku
-      if (nextEntry.firstChar.isLineHeadForbidden) {
-        currentColumn.add(nextEntry);
-        currentCount += nextEntry.charCount;
+      // Apply line-head kinsoku: pull consecutive forbidden characters
+      while (i < entries.length && entries[i].firstChar.isLineHeadForbidden) {
+        currentColumn.add(entries[i]);
+        currentCount += entries[i].charCount;
         i++;
       }
 
