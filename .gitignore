@@ -36,3 +36,4 @@ pubspec.lock
 # coverage
 coverage
 /tmp
+/.claude/settings.local.json
