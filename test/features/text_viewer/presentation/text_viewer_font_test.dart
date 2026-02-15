@@ -102,7 +102,7 @@ void main() {
       final viewer = tester.widget<VerticalTextViewer>(
         find.byType(VerticalTextViewer),
       );
-      expect(viewer.baseStyle?.fontFamily, 'YuGothic');
+      expect(viewer.baseStyle?.fontFamily, 'Yu Gothic');
     });
 
     testWidgets('system font family preserves theme default fontFamily',
