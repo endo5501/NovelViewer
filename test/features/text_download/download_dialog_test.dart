@@ -3,11 +3,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
+import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
+
+class FakeDownloadNotifier extends DownloadNotifier {
+  @override
+  Future<void> startDownload(
+      {required Uri url, required String outputPath}) async {
+    state = DownloadState(
+      status: DownloadStatus.completed,
+      outputPath: outputPath,
+      totalEpisodes: 1,
+    );
+  }
+}
 
 void main() {
   Widget createTestApp() {
     return ProviderScope(
       overrides: [
+        libraryPathProvider.overrideWithValue('/tmp/test_novels'),
         currentDirectoryProvider
             .overrideWith(() => CurrentDirectoryNotifier('/tmp/test_novels')),
       ],
@@ -111,6 +125,48 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('小説ダウンロード'), findsNothing);
+    });
+
+    testWidgets(
+        'uses library root path for download even when inside a novel folder',
+        (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            libraryPathProvider.overrideWithValue('/tmp/test_novels'),
+            currentDirectoryProvider.overrideWith(
+                () => CurrentDirectoryNotifier('/tmp/test_novels/narou_12345')),
+            downloadProvider.overrideWith(() => FakeDownloadNotifier()),
+          ],
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => DownloadDialog.show(context),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextField),
+        'https://ncode.syosetu.com/n9669bk/',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'ダウンロード開始'));
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+          tester.element(find.byType(AlertDialog)));
+      final state = container.read(downloadProvider);
+      expect(state.outputPath, '/tmp/test_novels');
     });
   });
 }
