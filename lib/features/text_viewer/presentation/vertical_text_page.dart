@@ -53,6 +53,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
 
   late List<VerticalCharEntry> _charEntries;
   late List<List<int>> _columns;
+  Set<int> _emptyColumnNewlines = const {};
   final Map<int, GlobalKey> _entryKeys = {};
   List<VerticalHitRegion> _hitRegions = const [];
   bool _hitRegionUpdateScheduled = false;
@@ -79,6 +80,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   void _rebuildEntries() {
     _charEntries = buildVerticalCharEntries(widget.segments);
     _columns = buildColumnStructure(_charEntries);
+    _emptyColumnNewlines = _computeEmptyColumnNewlines();
     _entryKeys.clear();
     for (final column in _columns) {
       for (final index in column) {
@@ -87,6 +89,21 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     }
     _hitRegions = const [];
     _scheduleHitRegionRebuild();
+  }
+
+  /// Identifies newline entry indices that start empty columns (blank lines).
+  Set<int> _computeEmptyColumnNewlines() {
+    final result = <int>{};
+    var columnIndex = 0;
+    for (var i = 0; i < _charEntries.length; i++) {
+      if (_charEntries[i].isNewline) {
+        columnIndex++;
+        if (columnIndex < _columns.length && _columns[columnIndex].isEmpty) {
+          result.add(i);
+        }
+      }
+    }
+    return result;
   }
 
   int? get _effectiveStart => widget.selectionStart ?? _selectionStart;
@@ -98,18 +115,26 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         ? _computeHighlights(widget.query!)
         : const <int>{};
 
+    final fontSize = widget.baseStyle?.fontSize ?? _kDefaultFontSize;
     final children = <Widget>[];
+
+    // Leading empty column has no preceding newline, so add an explicit spacer
+    if (_columns.isNotEmpty && _columns.first.isEmpty) {
+      children.add(SizedBox(width: fontSize, height: double.infinity));
+    }
+
     for (var i = 0; i < _charEntries.length; i++) {
       final entry = _charEntries[i];
+      if (entry.isNewline) {
+        final width = _emptyColumnNewlines.contains(i) ? fontSize : 0.0;
+        children.add(SizedBox(width: width, height: double.infinity));
+        continue;
+      }
       final child = _buildCharWidget(
         entry,
         isHighlighted: highlights.contains(i),
         isSelected: _isInSelection(i),
       );
-      if (entry.isNewline) {
-        children.add(child);
-        continue;
-      }
       final key = _entryKeys[i];
       if (key == null) {
         children.add(child);
@@ -339,10 +364,6 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     required bool isHighlighted,
     required bool isSelected,
   }) {
-    if (entry.isNewline) {
-      return const SizedBox(width: 0, height: double.infinity);
-    }
-
     if (entry.isRuby) {
       return VerticalRubyTextWidget(
         base: entry.text,

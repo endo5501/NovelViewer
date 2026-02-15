@@ -274,8 +274,11 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
   }
 
   /// Groups columns into pages using width-based greedy packing.
-  /// Empty columns (from blank lines) occupy zero character width in the Wrap,
-  /// so we accumulate actual rendered width rather than using a fixed count.
+  /// Empty columns (from blank lines) occupy the same visual width as text
+  /// columns, matching horizontal mode where blank lines take full line height.
+  /// In the Wrap layout, an empty column's sentinel newline is rendered with
+  /// charWidth, so it acts as a visible spacer without needing a separate
+  /// character run.
   (List<List<TextSegment>>, List<int>) _groupColumnsIntoPages(
     List<List<TextSegment>> columns,
     double charWidth,
@@ -296,13 +299,12 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
         var runs = runCount;
         var width = textWidth;
 
+        // All columns occupy charWidth (empty columns via sentinel, text via character run)
+        width += charWidth;
         // Sentinel run between adjacent columns
         if (end > start) runs += 1;
-        // Character run for non-empty columns
-        if (hasText) {
-          runs += 1;
-          width += charWidth;
-        }
+        // Text columns add an extra run for characters
+        if (hasText) runs += 1;
 
         final totalWidth = width + (runs > 1 ? (runs - 1) * _kRunSpacing : 0.0);
 

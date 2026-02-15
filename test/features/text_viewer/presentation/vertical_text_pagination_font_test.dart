@@ -231,6 +231,77 @@ void main() {
     });
   });
 
+  group('Vertical text pagination empty columns take full width', () {
+    testWidgets(
+        'blank lines increase page count proportionally',
+        (tester) async {
+      // 20 content lines, no blanks → 20 columns
+      final textNoBlanks = List.generate(20, (_) => 'あ' * 5).join('\n');
+
+      // 20 content lines with blank line between each → 39 columns total
+      final lines = <String>[];
+      for (var i = 0; i < 20; i++) {
+        lines.add('あ' * 5);
+        if (i < 19) lines.add('');
+      }
+      final textWithBlanks = lines.join('\n');
+
+      const containerWidth = 300.0;
+
+      // Render without blank lines
+      await tester.pumpWidget(_buildTestWidget(
+        segments: [PlainTextSegment(textNoBlanks)],
+        width: containerWidth,
+        height: 400,
+        baseStyle: const TextStyle(fontSize: 14.0),
+      ));
+      final pagesNoBlanks = _extractTotalPages(tester)!;
+
+      // Render with blank lines
+      await tester.pumpWidget(_buildTestWidget(
+        segments: [PlainTextSegment(textWithBlanks)],
+        width: containerWidth,
+        height: 400,
+        baseStyle: const TextStyle(fontSize: 14.0),
+      ));
+      final pagesWithBlanks = _extractTotalPages(tester)!;
+
+      // With blank lines taking full column width, page count should
+      // be roughly proportional to total columns (39 vs 20 ≈ 1.95x).
+      // If empty columns were zero-width, pages would be nearly equal.
+      expect(pagesWithBlanks, greaterThanOrEqualTo((pagesNoBlanks * 1.5).floor()),
+          reason:
+              'Blank lines should occupy full column width and increase '
+              'page count significantly (with=$pagesWithBlanks, without=$pagesNoBlanks)');
+    });
+
+    testWidgets(
+        'empty columns are not packed more densely than text columns',
+        (tester) async {
+      // Create text where content and blank lines alternate.
+      // If empty columns take full width, each page should have
+      // approximately the same number of total columns regardless
+      // of whether they're empty or not.
+      final lines = <String>[];
+      for (var i = 0; i < 40; i++) {
+        lines.add('あ' * 5);
+        lines.add('');
+      }
+      final text = lines.join('\n');
+      final segments = [PlainTextSegment(text)];
+      const containerWidth = 300.0;
+
+      await tester.pumpWidget(_buildTestWidget(
+        segments: segments,
+        width: containerWidth,
+        height: 400,
+        baseStyle: const TextStyle(fontSize: 14.0),
+      ));
+
+      _expectNoChildOverflow(tester, containerWidth);
+    });
+  });
+
   group('Vertical text pagination empty columns edge cases', () {
     testWidgets(
         'all empty columns does not crash and stays bounded',
