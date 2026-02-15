@@ -46,11 +46,11 @@ class NovelLibraryService {
 
     final oldPath =
         currentPath.replaceFirst(_newBundleId, _oldBundleId);
-    final oldLibraryDir = Directory('$oldPath/$_libraryDirName');
+    final oldLibraryDir = Directory(p.join(oldPath, _libraryDirName));
 
     if (!oldLibraryDir.existsSync()) return;
 
-    final newLibraryDir = Directory('$currentPath/$_libraryDirName');
+    final newLibraryDir = Directory(p.join(currentPath, _libraryDirName));
     await newLibraryDir.create(recursive: true);
 
     try {

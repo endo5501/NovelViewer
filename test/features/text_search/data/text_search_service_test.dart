@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   late TextSearchService service;
@@ -19,7 +20,7 @@ void main() {
   });
 
   Future<void> createFile(String name, String content) async {
-    final file = File('${tempDir.path}/$name');
+    final file = File(p.join(tempDir.path, name));
     await file.writeAsString(content);
   }
 
@@ -107,7 +108,7 @@ void main() {
       final results = await service.search(tempDir.path, '太郎');
 
       expect(results, hasLength(1));
-      expect(results[0].filePath, '${tempDir.path}/001.txt');
+      expect(results[0].filePath, p.join(tempDir.path, '001.txt'));
     });
   });
 
