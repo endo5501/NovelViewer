@@ -28,7 +28,7 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
 
       expect(find.text('フォントサイズ'), findsOneWidget);
-      expect(find.byType(Slider), findsOneWidget);
+      expect(find.byType(Slider), findsNWidgets(2));
     });
 
     testWidgets('displays current font size value', (tester) async {
@@ -40,13 +40,39 @@ void main() {
     testWidgets('slider updates font size', (tester) async {
       await tester.pumpWidget(buildTestWidget());
 
-      final slider = find.byType(Slider);
-      // Drag slider to roughly the middle (range 10-32, midpoint ~21)
-      await tester.drag(slider, const Offset(50, 0));
+      final sliders = find.byType(Slider);
+      // First slider is font size
+      await tester.drag(sliders.first, const Offset(50, 0));
       await tester.pumpAndSettle();
 
       // Font size should have changed from default
       expect(find.text('14.0'), findsNothing);
+    });
+  });
+
+  group('SettingsDialog - column spacing slider', () {
+    testWidgets('displays column spacing slider', (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+
+      expect(find.text('列間隔'), findsOneWidget);
+    });
+
+    testWidgets('displays current column spacing value', (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+
+      expect(find.text('8.0'), findsOneWidget);
+    });
+
+    testWidgets('slider updates column spacing', (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+
+      final sliders = find.byType(Slider);
+      // Second slider is column spacing
+      await tester.drag(sliders.at(1), const Offset(50, 0));
+      await tester.pumpAndSettle();
+
+      // Column spacing should have changed from default
+      expect(find.text('8.0'), findsNothing);
     });
   });
 

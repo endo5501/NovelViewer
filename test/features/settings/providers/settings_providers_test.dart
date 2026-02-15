@@ -54,6 +54,45 @@ void main() {
     });
   });
 
+  group('columnSpacingProvider', () {
+    test('initial value is default column spacing (8.0)', () {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(columnSpacingProvider), 8.0);
+    });
+
+    test('initial value loads from SharedPreferences', () async {
+      await prefs.setDouble('column_spacing', 16.0);
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(columnSpacingProvider), 16.0);
+    });
+
+    test('previewColumnSpacing updates state without persisting', () {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      container.read(columnSpacingProvider.notifier).previewColumnSpacing(12.0);
+      expect(container.read(columnSpacingProvider), 12.0);
+      expect(prefs.getDouble('column_spacing'), isNull);
+    });
+
+    test('persistColumnSpacing saves current state to SharedPreferences',
+        () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      container.read(columnSpacingProvider.notifier).previewColumnSpacing(12.0);
+      await container
+          .read(columnSpacingProvider.notifier)
+          .persistColumnSpacing();
+      expect(container.read(columnSpacingProvider), 12.0);
+      expect(prefs.getDouble('column_spacing'), 12.0);
+    });
+  });
+
   group('fontFamilyProvider', () {
     test('initial value is FontFamily.system', () {
       final container = createContainer();

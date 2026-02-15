@@ -7,6 +7,7 @@ class SettingsRepository {
   static const _displayModeKey = 'text_display_mode';
   static const _fontSizeKey = 'font_size';
   static const _fontFamilyKey = 'font_family';
+  static const _columnSpacingKey = 'column_spacing';
   static const _llmProviderKey = 'llm_provider';
   static const _llmBaseUrlKey = 'llm_base_url';
   static const _llmApiKeyKey = 'llm_api_key';
@@ -15,6 +16,10 @@ class SettingsRepository {
   static const defaultFontSize = 14.0;
   static const minFontSize = 10.0;
   static const maxFontSize = 32.0;
+
+  static const defaultColumnSpacing = 8.0;
+  static const minColumnSpacing = 0.0;
+  static const maxColumnSpacing = 24.0;
 
   final SharedPreferences _prefs;
 
@@ -51,6 +56,16 @@ class SettingsRepository {
 
   Future<void> setFontFamily(FontFamily family) async {
     await _prefs.setString(_fontFamilyKey, family.name);
+  }
+
+  double getColumnSpacing() {
+    final value = _prefs.getDouble(_columnSpacingKey) ?? defaultColumnSpacing;
+    return value.clamp(minColumnSpacing, maxColumnSpacing);
+  }
+
+  Future<void> setColumnSpacing(double spacing) async {
+    await _prefs.setDouble(
+        _columnSpacingKey, spacing.clamp(minColumnSpacing, maxColumnSpacing));
   }
 
   LlmConfig getLlmConfig() {

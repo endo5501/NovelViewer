@@ -14,13 +14,15 @@ class VerticalTextViewer extends StatefulWidget {
     this.query,
     this.targetLineNumber,
     this.onSelectionChanged,
-  });
+    this.columnSpacing = 8.0,
+  }) : assert(columnSpacing >= 0);
 
   final List<TextSegment> segments;
   final TextStyle? baseStyle;
   final String? query;
   final int? targetLineNumber;
   final ValueChanged<String?>? onSelectionChanged;
+  final double columnSpacing;
 
   @override
   State<VerticalTextViewer> createState() => _VerticalTextViewerState();
@@ -29,9 +31,6 @@ class VerticalTextViewer extends StatefulWidget {
 // Layout constants
 const _kHorizontalPadding = 32.0;
 const _kVerticalPadding = 62.0;
-// Effective visual gap between columns is 2 * _kRunSpacing due to sentinel
-// SizedBoxes in the Wrap creating an extra run between each column pair.
-const _kRunSpacing = 2.0;
 const _kTextHeight = 1.1;
 const _kDefaultFontSize = 14.0;
 
@@ -122,6 +121,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
                           query: widget.query,
                           onSelectionChanged: widget.onSelectionChanged,
                           onSwipe: _handleSwipe,
+                          columnSpacing: widget.columnSpacing,
                         ),
                       ),
                     ),
@@ -306,7 +306,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
         // Text columns add an extra run for characters
         if (hasText) runs += 1;
 
-        final totalWidth = width + (runs > 1 ? (runs - 1) * _kRunSpacing : 0.0);
+        final totalWidth = width + (runs > 1 ? (runs - 1) * widget.columnSpacing : 0.0);
 
         if (end > start && totalWidth > availableWidth) break;
 
