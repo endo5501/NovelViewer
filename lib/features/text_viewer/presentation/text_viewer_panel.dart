@@ -74,11 +74,13 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
         final segments = parseRubyText(content);
 
         if (displayMode == TextDisplayMode.vertical) {
+          final columnSpacing = ref.watch(columnSpacingProvider);
           return VerticalTextViewer(
             segments: segments,
             baseStyle: textStyle,
             query: activeMatch?.query,
             targetLineNumber: activeMatch?.lineNumber,
+            columnSpacing: columnSpacing,
             onSelectionChanged: (text) {
               ref.read(selectedTextProvider.notifier).setText(text);
             },

@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Text display mode setting
 The system SHALL provide a setting to switch between horizontal (yokogaki) and vertical (tategaki) text display modes. The default display mode SHALL be horizontal. The settings dialog SHALL also include font size, font family, and column spacing controls below the display mode toggle.
@@ -51,6 +51,8 @@ The system SHALL manage the display mode setting and column spacing setting via 
 #### Scenario: Setting is accessible from any widget
 - **WHEN** any widget in the application reads the display mode or column spacing provider
 - **THEN** it receives the current value
+
+## ADDED Requirements
 
 ### Requirement: Column spacing setting
 The system SHALL provide a column spacing setting that controls the gap between columns in vertical text mode. The setting value SHALL represent the Wrap widget's `runSpacing` parameter. The default value SHALL be `8.0`. The minimum value SHALL be `0.0` and the maximum value SHALL be `24.0`. The slider SHALL use `1.0` step increments (24 divisions). The column spacing provider SHALL follow the same preview-then-persist pattern as the font size provider: `previewColumnSpacing()` for real-time updates during slider drag, and `persistColumnSpacing()` for saving when the drag ends.

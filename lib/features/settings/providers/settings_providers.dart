@@ -53,6 +53,28 @@ class FontSizeNotifier extends Notifier<double> {
   }
 }
 
+final columnSpacingProvider = NotifierProvider<ColumnSpacingNotifier, double>(
+  ColumnSpacingNotifier.new,
+);
+
+class ColumnSpacingNotifier extends Notifier<double> {
+  @override
+  double build() {
+    final repository = ref.watch(settingsRepositoryProvider);
+    return repository.getColumnSpacing();
+  }
+
+  void previewColumnSpacing(double spacing) {
+    state = spacing.clamp(
+        SettingsRepository.minColumnSpacing, SettingsRepository.maxColumnSpacing);
+  }
+
+  Future<void> persistColumnSpacing() async {
+    final repository = ref.read(settingsRepositoryProvider);
+    await repository.setColumnSpacing(state);
+  }
+}
+
 final fontFamilyProvider = NotifierProvider<FontFamilyNotifier, FontFamily>(
   FontFamilyNotifier.new,
 );

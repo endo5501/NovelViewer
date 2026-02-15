@@ -11,6 +11,7 @@ Widget _buildTestWidget({
   int? selectionEnd,
   ValueChanged<String?>? onSelectionChanged,
   ValueChanged<SwipeDirection>? onSwipe,
+  double? columnSpacing,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -25,6 +26,7 @@ Widget _buildTestWidget({
           selectionEnd: selectionEnd,
           onSelectionChanged: onSelectionChanged,
           onSwipe: onSwipe,
+          columnSpacing: columnSpacing ?? 8.0,
         ),
       ),
     ),
@@ -186,6 +188,28 @@ void main() {
       );
       expect(separatorSentinel, findsOneWidget,
           reason: 'Column separator sentinel should have width 0');
+    });
+  });
+
+  group('VerticalTextPage columnSpacing parameter', () {
+    testWidgets('Wrap uses provided columnSpacing as runSpacing',
+        (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あい')],
+        columnSpacing: 12.0,
+      ));
+
+      final wrap = tester.widget<Wrap>(find.byType(Wrap));
+      expect(wrap.runSpacing, 12.0);
+    });
+
+    testWidgets('default columnSpacing is 8.0', (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あい')],
+      ));
+
+      final wrap = tester.widget<Wrap>(find.byType(Wrap));
+      expect(wrap.runSpacing, 8.0);
     });
   });
 

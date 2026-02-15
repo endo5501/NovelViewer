@@ -15,7 +15,8 @@ class VerticalTextPage extends StatefulWidget {
     this.selectionEnd,
     this.onSelectionChanged,
     this.onSwipe,
-  });
+    this.columnSpacing = 8.0,
+  }) : assert(columnSpacing >= 0);
 
   final List<TextSegment> segments;
   final TextStyle? baseStyle;
@@ -24,14 +25,12 @@ class VerticalTextPage extends StatefulWidget {
   final int? selectionEnd;
   final ValueChanged<String?>? onSelectionChanged;
   final ValueChanged<SwipeDirection>? onSwipe;
+  final double columnSpacing;
 
   @override
   State<VerticalTextPage> createState() => _VerticalTextPageState();
 }
 
-// Effective visual gap between columns is 2 * _kRunSpacing due to sentinel
-// SizedBoxes in the Wrap creating an extra run between each column pair.
-const _kRunSpacing = 2.0;
 const _kTextHeight = 1.1;
 const _kDefaultFontSize = 14.0;
 
@@ -156,7 +155,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         child: Wrap(
           direction: Axis.vertical,
           spacing: 0.0,
-          runSpacing: _kRunSpacing,
+          runSpacing: widget.columnSpacing,
           children: children,
         ),
       ),

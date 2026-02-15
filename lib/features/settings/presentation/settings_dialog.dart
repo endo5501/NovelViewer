@@ -65,6 +65,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
     final displayMode = ref.watch(displayModeProvider);
     final fontSize = ref.watch(fontSizeProvider);
     final fontFamily = ref.watch(fontFamilyProvider);
+    final columnSpacing = ref.watch(columnSpacingProvider);
 
     return AlertDialog(
       title: const Text('設定'),
@@ -126,6 +127,29 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                     );
                   }).toList(),
                 ),
+              ),
+              ListTile(
+                title: const Text('列間隔'),
+                subtitle: Slider(
+                  value: columnSpacing,
+                  min: SettingsRepository.minColumnSpacing,
+                  max: SettingsRepository.maxColumnSpacing,
+                  divisions: (SettingsRepository.maxColumnSpacing -
+                          SettingsRepository.minColumnSpacing)
+                      .toInt(),
+                  label: columnSpacing.toStringAsFixed(1),
+                  onChanged: (value) {
+                    ref
+                        .read(columnSpacingProvider.notifier)
+                        .previewColumnSpacing(value);
+                  },
+                  onChangeEnd: (_) {
+                    ref
+                        .read(columnSpacingProvider.notifier)
+                        .persistColumnSpacing();
+                  },
+                ),
+                trailing: Text(columnSpacing.toStringAsFixed(1)),
               ),
               const Divider(),
               ListTile(

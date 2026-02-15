@@ -73,6 +73,40 @@ void main() {
     });
   });
 
+  group('SettingsRepository - column spacing', () {
+    test('getColumnSpacing returns default 8.0 when no value stored', () {
+      final repo = SettingsRepository(prefs);
+      expect(repo.getColumnSpacing(), 8.0);
+    });
+
+    test('setColumnSpacing and getColumnSpacing round-trip', () async {
+      final repo = SettingsRepository(prefs);
+      await repo.setColumnSpacing(12.0);
+      expect(repo.getColumnSpacing(), 12.0);
+    });
+
+    test('getColumnSpacing clamps value below minimum to 0.0', () async {
+      await prefs.setDouble('column_spacing', -5.0);
+      final repo = SettingsRepository(prefs);
+      expect(repo.getColumnSpacing(), 0.0);
+    });
+
+    test('getColumnSpacing clamps value above maximum to 24.0', () async {
+      await prefs.setDouble('column_spacing', 50.0);
+      final repo = SettingsRepository(prefs);
+      expect(repo.getColumnSpacing(), 24.0);
+    });
+
+    test('setColumnSpacing clamps value to valid range', () async {
+      final repo = SettingsRepository(prefs);
+      await repo.setColumnSpacing(-1.0);
+      expect(repo.getColumnSpacing(), 0.0);
+
+      await repo.setColumnSpacing(30.0);
+      expect(repo.getColumnSpacing(), 24.0);
+    });
+  });
+
   group('SettingsRepository - LLM config', () {
     test('getLlmConfig returns default none config when no value stored', () {
       final repo = SettingsRepository(prefs);

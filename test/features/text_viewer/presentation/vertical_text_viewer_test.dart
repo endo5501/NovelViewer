@@ -9,6 +9,7 @@ Widget _buildTestWidget({
   double width = 300,
   double height = 400,
   ValueChanged<String?>? onSelectionChanged,
+  double columnSpacing = 8.0,
 }) {
   return MaterialApp(
     home: Center(
@@ -18,6 +19,7 @@ Widget _buildTestWidget({
           segments: segments,
           baseStyle: const TextStyle(fontSize: 14.0),
           onSelectionChanged: onSelectionChanged,
+          columnSpacing: columnSpacing,
         ),
       ),
     ),
@@ -65,6 +67,42 @@ void main() {
 
       // Should paginate and show indicator
       expect(find.textContaining('/'), findsOneWidget);
+    });
+  });
+
+  group('VerticalTextViewer columnSpacing', () {
+    testWidgets('larger columnSpacing results in more pages', (tester) async {
+      final longText = 'あ' * 500;
+      final segments = [PlainTextSegment(longText)];
+
+      // Render with small spacing
+      await tester.pumpWidget(_buildTestWidget(
+        segments: segments,
+        width: 200,
+        height: 400,
+        columnSpacing: 2.0,
+      ));
+      final smallSpacingIndicator =
+          tester.widget<Text>(find.textContaining('/'));
+      final smallSpacingPages = smallSpacingIndicator.data!;
+
+      // Render with large spacing
+      await tester.pumpWidget(_buildTestWidget(
+        segments: segments,
+        width: 200,
+        height: 400,
+        columnSpacing: 20.0,
+      ));
+      final largeSpacingIndicator =
+          tester.widget<Text>(find.textContaining('/'));
+      final largeSpacingPages = largeSpacingIndicator.data!;
+
+      // More spacing = fewer columns per page = more pages
+      final smallTotal =
+          int.parse(smallSpacingPages.split('/').last.trim());
+      final largeTotal =
+          int.parse(largeSpacingPages.split('/').last.trim());
+      expect(largeTotal, greaterThan(smallTotal));
     });
   });
 
