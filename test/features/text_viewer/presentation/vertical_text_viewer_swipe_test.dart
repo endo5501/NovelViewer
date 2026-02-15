@@ -55,7 +55,7 @@ void main() {
   const testHeight = 400.0;
 
   group('VerticalTextViewer swipe page navigation', () {
-    testWidgets('left swipe advances to next page', (tester) async {
+    testWidgets('right swipe advances to next page', (tester) async {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
@@ -67,19 +67,20 @@ void main() {
       // Verify we start on page 1
       expect(_extractCurrentPage(tester), 1);
 
-      // Simulate left swipe (start right, end left) within widget bounds
+      // Simulate right swipe (start left, end right) within widget bounds
+      // Content dragging metaphor: drag right to reveal next content on the left
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(40, 0),
-        end: center + const Offset(-40, 0),
+        start: center + const Offset(-40, 0),
+        end: center + const Offset(40, 0),
       );
 
       // Should advance to page 2
       expect(_extractCurrentPage(tester), 2);
     });
 
-    testWidgets('right swipe returns to previous page', (tester) async {
+    testWidgets('left swipe returns to previous page', (tester) async {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
@@ -93,12 +94,12 @@ void main() {
       await tester.pump();
       expect(_extractCurrentPage(tester), 2);
 
-      // Simulate right swipe (start left, end right)
+      // Simulate left swipe (start right, end left)
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(-40, 0),
-        end: center + const Offset(40, 0),
+        start: center + const Offset(40, 0),
+        end: center + const Offset(-40, 0),
       );
 
       // Should return to page 1
@@ -107,7 +108,7 @@ void main() {
   });
 
   group('VerticalTextViewer swipe boundary conditions', () {
-    testWidgets('right swipe on first page has no effect', (tester) async {
+    testWidgets('left swipe on first page has no effect', (tester) async {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
@@ -118,19 +119,19 @@ void main() {
 
       expect(_extractCurrentPage(tester), 1);
 
-      // Simulate right swipe on first page
+      // Simulate left swipe on first page (previous page, but already at first)
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(-40, 0),
-        end: center + const Offset(40, 0),
+        start: center + const Offset(40, 0),
+        end: center + const Offset(-40, 0),
       );
 
       // Should remain on page 1
       expect(_extractCurrentPage(tester), 1);
     });
 
-    testWidgets('left swipe on last page has no effect', (tester) async {
+    testWidgets('right swipe on last page has no effect', (tester) async {
       // Use content that fits in a few pages with small viewport
       final segments = [PlainTextSegment('あ' * 60)];
 
@@ -154,12 +155,12 @@ void main() {
       }
       expect(_extractCurrentPage(tester), totalPages);
 
-      // Simulate left swipe on last page
+      // Simulate right swipe on last page (next page, but already at last)
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(30, 0),
-        end: center + const Offset(-30, 0),
+        start: center + const Offset(-30, 0),
+        end: center + const Offset(30, 0),
       );
 
       // Should remain on last page
@@ -180,12 +181,12 @@ void main() {
 
       expect(_extractCurrentPage(tester), 1);
 
-      // Simulate slow drag (long duration)
+      // Simulate slow right swipe (long duration) - would go to next page if recognized
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(40, 0),
-        end: center + const Offset(-40, 0),
+        start: center + const Offset(-40, 0),
+        end: center + const Offset(40, 0),
         duration: const Duration(milliseconds: 1000),
       );
 
@@ -205,12 +206,12 @@ void main() {
 
       expect(_extractCurrentPage(tester), 1);
 
-      // Simulate short movement (less than 50px total displacement)
+      // Simulate short right swipe (less than 50px) - would go to next page if recognized
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(10, 0),
-        end: center + const Offset(-10, 0),
+        start: center + const Offset(-10, 0),
+        end: center + const Offset(10, 0),
       );
 
       // Should remain on page 1
@@ -229,12 +230,12 @@ void main() {
 
       expect(_extractCurrentPage(tester), 1);
 
-      // Simulate vertical drag (dy > dx)
+      // Simulate vertical drag (dy > dx) - would go to next page if recognized as right swipe
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(30, 50),
-        end: center + const Offset(-30, -50),
+        start: center + const Offset(-30, 50),
+        end: center + const Offset(30, -50),
       );
 
       // Should remain on page 1
@@ -255,12 +256,12 @@ void main() {
         ),
       );
 
-      // Simulate left swipe
+      // Simulate right swipe (next page)
       final center = tester.getCenter(find.byType(VerticalTextViewer));
       await _simulateSwipe(
         tester,
-        start: center + const Offset(40, 0),
-        end: center + const Offset(-40, 0),
+        start: center + const Offset(-40, 0),
+        end: center + const Offset(40, 0),
       );
 
       // onSelectionChanged should have been called with null
@@ -281,10 +282,10 @@ void main() {
 
       expect(_extractCurrentPage(tester), 1);
 
-      // Simulate desktop-like gesture: drag then pause before releasing
+      // Simulate desktop-like gesture: right swipe (next page) then pause before releasing
       final center = tester.getCenter(find.byType(VerticalTextViewer));
-      final gesture = await tester.startGesture(center + const Offset(45, 0));
-      await gesture.moveTo(center + const Offset(-45, 0));
+      final gesture = await tester.startGesture(center + const Offset(-45, 0));
+      await gesture.moveTo(center + const Offset(45, 0));
       // Pause before release - velocity drops to near zero
       await tester.pump(const Duration(milliseconds: 300));
       await gesture.up();

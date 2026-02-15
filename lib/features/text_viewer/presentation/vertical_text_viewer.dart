@@ -163,7 +163,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
   }
 
   void _handleSwipe(SwipeDirection direction) {
-    direction == SwipeDirection.left ? _nextPage() : _previousPage();
+    direction == SwipeDirection.right ? _nextPage() : _previousPage();
   }
 
   void _changePage(int delta) {
