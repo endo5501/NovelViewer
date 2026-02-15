@@ -25,7 +25,7 @@ class VerticalRubyTextWidget extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        _buildBaseText(_toVerticalChars(base)),
+        _buildBaseText(_toVerticalChars(base), fontSize),
         _buildRubyText(_toVerticalChars(rubyText), rubyFontSize),
       ],
     );
@@ -37,7 +37,7 @@ class VerticalRubyTextWidget extends StatelessWidget {
         .toList();
   }
 
-  Widget _buildBaseText(List<String> baseChars) {
+  Widget _buildBaseText(List<String> baseChars, double charWidth) {
     // Search highlight (yellow) takes precedence over selection (blue)
     final bgColor = highlighted
         ? Colors.yellow
@@ -50,7 +50,7 @@ class VerticalRubyTextWidget extends StatelessWidget {
       backgroundColor: bgColor,
     );
 
-    return _buildVerticalText(baseChars, style);
+    return _buildVerticalText(baseChars, style, charWidth);
   }
 
   Widget _buildRubyText(List<String> rubyChars, double rubyFontSize) {
@@ -59,15 +59,20 @@ class VerticalRubyTextWidget extends StatelessWidget {
     return Positioned(
       right: -(rubyFontSize + 2),
       top: 0,
-      child: _buildVerticalText(rubyChars, style),
+      child: _buildVerticalText(rubyChars, style, rubyFontSize),
     );
   }
 
-  Widget _buildVerticalText(List<String> chars, TextStyle? style) {
+  Widget _buildVerticalText(
+      List<String> chars, TextStyle? style, double charWidth) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (final char in chars) Text(char, style: style),
+        for (final char in chars)
+          SizedBox(
+            width: charWidth,
+            child: Text(char, textAlign: TextAlign.center, style: style),
+          ),
       ],
     );
   }

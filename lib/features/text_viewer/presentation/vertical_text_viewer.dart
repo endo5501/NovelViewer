@@ -206,7 +206,9 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
     }
 
     final charHeight = _cachedPainter!.height;
-    final charWidth = _cachedPainter!.width;
+    // Use fontSize (not TextPainter.width) because each character is rendered
+    // inside a SizedBox(width: fontSize) in VerticalTextPage.
+    final charWidth = style.fontSize ?? _kDefaultFontSize;
     final availableWidth = constraints.maxWidth - _kHorizontalPadding;
     final availableHeight = constraints.maxHeight - _kVerticalPadding;
 

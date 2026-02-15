@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Vertical text rendering
-The system SHALL render text content in vertical writing mode (top-to-bottom, right-to-left columns) using a Wrap widget with vertical axis direction and RTL text direction. Each character SHALL be rendered individually as a separate widget within the Wrap layout. Characters SHALL be rendered with compact vertical spacing by setting the TextStyle `height` property to approximately 1.1 and minimizing the Wrap `spacing` to avoid excessive gaps between characters. The Wrap widget SHALL be wrapped in a GestureDetector to support text selection via drag gestures. The `VerticalTextPage` SHALL accept an `onSelectionChanged` callback. Each character widget SHALL be assigned a `GlobalKey` to enable post-layout collection of actual rendered rectangles for accurate hit testing.
+The system SHALL render text content in vertical writing mode (top-to-bottom, right-to-left columns) using a Wrap widget with vertical axis direction and RTL text direction. Each character SHALL be rendered individually as a separate widget within the Wrap layout. Each character widget SHALL be wrapped in a fixed-width container (`SizedBox`) with width equal to the current font size, and the character SHALL be horizontally centered within that container using a `Center` widget. This ensures consistent column alignment regardless of platform-specific font metrics differences. Characters SHALL be rendered with compact vertical spacing by setting the TextStyle `height` property to approximately 1.1 and minimizing the Wrap `spacing` to avoid excessive gaps between characters. The Wrap widget SHALL be wrapped in a GestureDetector to support text selection via drag gestures. The `VerticalTextPage` SHALL accept an `onSelectionChanged` callback. Each character widget SHALL be assigned a `GlobalKey` to enable post-layout collection of actual rendered rectangles for accurate hit testing.
 
 #### Scenario: Text is displayed vertically
 - **WHEN** the display mode is set to vertical
@@ -18,6 +18,18 @@ The system SHALL render text content in vertical writing mode (top-to-bottom, ri
 #### Scenario: GestureDetector wraps the vertical text layout
 - **WHEN** the vertical text page is rendered
 - **THEN** a GestureDetector is present as a parent of the Wrap widget to capture pan gestures for text selection
+
+#### Scenario: Characters are horizontally centered in fixed-width containers
+- **WHEN** any character is rendered in vertical text mode
+- **THEN** the character SHALL be placed inside a SizedBox with width equal to the current font size, and the character SHALL be horizontally centered within that SizedBox
+
+#### Scenario: Column alignment is consistent across platforms
+- **WHEN** vertical text is rendered on different platforms (macOS, Windows)
+- **THEN** characters within each column SHALL be aligned vertically in a straight line regardless of individual character width differences in the platform's font
+
+#### Scenario: Ruby base and annotation characters use fixed-width containers
+- **WHEN** ruby text (base and annotation) is rendered in vertical mode
+- **THEN** each base character SHALL be wrapped in a SizedBox with width equal to the base font size, and each ruby annotation character SHALL be wrapped in a SizedBox with width equal to the ruby font size, both horizontally centered
 
 ### Requirement: Vertical character mapping
 The system SHALL replace horizontal-specific characters with their vertical writing equivalents when rendering in vertical mode. The mapping SHALL cover the full set defined in the Qiita reference article's VerticalRotated class, plus NovelViewer-specific additions.

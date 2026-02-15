@@ -353,11 +353,16 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       );
     }
 
-    return Text(
-      mapToVerticalChar(entry.text),
-      style: _createTextStyle(
-        isHighlighted: isHighlighted,
-        isSelected: isSelected,
+    final fontSize = widget.baseStyle?.fontSize ?? _kDefaultFontSize;
+    return SizedBox(
+      width: fontSize,
+      child: Text(
+        mapToVerticalChar(entry.text),
+        textAlign: TextAlign.center,
+        style: _createTextStyle(
+          isHighlighted: isHighlighted,
+          isSelected: isSelected,
+        ),
       ),
     );
   }
