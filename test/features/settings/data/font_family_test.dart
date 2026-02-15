@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 
@@ -38,5 +40,70 @@ void main() {
       expect(FontFamily.yuGothic.fontFamilyName, 'YuGothic');
       expect(FontFamily.yuGothic.displayName, '游ゴシック');
     });
+  });
+
+  group('FontFamily.macOSOnly', () {
+    test('hiragino fonts are macOS-only', () {
+      expect(FontFamily.hiraginoMincho.macOSOnly, isTrue);
+      expect(FontFamily.hiraginoKaku.macOSOnly, isTrue);
+    });
+
+    test('system, yumincho, yuGothic are cross-platform', () {
+      expect(FontFamily.system.macOSOnly, isFalse);
+      expect(FontFamily.yumincho.macOSOnly, isFalse);
+      expect(FontFamily.yuGothic.macOSOnly, isFalse);
+    });
+  });
+
+  group('FontFamily.effectiveFontFamilyName', () {
+    if (Platform.isWindows) {
+      test('system default returns Yu Mincho on Windows', () {
+        expect(FontFamily.system.effectiveFontFamilyName, 'Yu Mincho');
+      });
+
+      test('maps font names to Windows format on Windows', () {
+        expect(FontFamily.yumincho.effectiveFontFamilyName, 'Yu Mincho');
+        expect(FontFamily.yuGothic.effectiveFontFamilyName, 'Yu Gothic');
+        expect(FontFamily.hiraginoMincho.effectiveFontFamilyName,
+            'Hiragino Mincho ProN');
+        expect(FontFamily.hiraginoKaku.effectiveFontFamilyName,
+            'Hiragino Kaku Gothic ProN');
+      });
+    }
+
+    if (Platform.isMacOS) {
+      test('system default returns null on macOS', () {
+        expect(FontFamily.system.effectiveFontFamilyName, isNull);
+      });
+
+      test('returns fontFamilyName as-is on macOS', () {
+        expect(FontFamily.yumincho.effectiveFontFamilyName, 'YuMincho');
+        expect(FontFamily.yuGothic.effectiveFontFamilyName, 'YuGothic');
+        expect(FontFamily.hiraginoMincho.effectiveFontFamilyName,
+            'Hiragino Mincho ProN');
+        expect(FontFamily.hiraginoKaku.effectiveFontFamilyName,
+            'Hiragino Kaku Gothic ProN');
+      });
+    }
+  });
+
+  group('FontFamily.availableFonts', () {
+    if (Platform.isWindows) {
+      test('excludes macOS-only fonts on Windows', () {
+        final available = FontFamily.availableFonts;
+        expect(available, contains(FontFamily.system));
+        expect(available, contains(FontFamily.yumincho));
+        expect(available, contains(FontFamily.yuGothic));
+        expect(available, isNot(contains(FontFamily.hiraginoMincho)));
+        expect(available, isNot(contains(FontFamily.hiraginoKaku)));
+      });
+    }
+
+    if (Platform.isMacOS) {
+      test('includes all fonts on macOS', () {
+        final available = FontFamily.availableFonts;
+        expect(available, hasLength(5));
+      });
+    }
   });
 }
