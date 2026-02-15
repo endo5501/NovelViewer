@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_char_map.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_text_layout.dart';
@@ -13,6 +14,7 @@ class VerticalTextPage extends StatefulWidget {
     this.selectionStart,
     this.selectionEnd,
     this.onSelectionChanged,
+    this.onSwipe,
   });
 
   final List<TextSegment> segments;
@@ -21,6 +23,7 @@ class VerticalTextPage extends StatefulWidget {
   final int? selectionStart;
   final int? selectionEnd;
   final ValueChanged<String?>? onSelectionChanged;
+  final ValueChanged<SwipeDirection>? onSwipe;
 
   @override
   State<VerticalTextPage> createState() => _VerticalTextPageState();
@@ -32,10 +35,21 @@ const _kRunSpacing = 2.0;
 const _kTextHeight = 1.1;
 const _kDefaultFontSize = 14.0;
 
+/// Gesture mode for distinguishing between text selection and page swiping.
+enum _GestureMode { undecided, selecting, swiping }
+
+/// Minimum displacement in pixels before the gesture mode is decided.
+const _kGestureDecisionThreshold = 10.0;
+
 class _VerticalTextPageState extends State<VerticalTextPage> {
   int? _anchorIndex;
   int? _selectionStart;
   int? _selectionEnd;
+
+  // Swipe tracking
+  Offset? _panStartGlobalPosition;
+  Offset? _panLastGlobalPosition;
+  _GestureMode _gestureMode = _GestureMode.undecided;
 
   late List<VerticalCharEntry> _charEntries;
   late List<List<int>> _columns;
@@ -107,6 +121,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
+      onPanDown: _onPanDown,
       onPanStart: _onPanStart,
       onPanUpdate: _onPanUpdate,
       onPanEnd: _onPanEnd,
@@ -130,35 +145,112 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     return index >= start && index < end;
   }
 
+  void _onPanDown(DragDownDetails details) {
+    _panStartGlobalPosition = details.globalPosition;
+    _panLastGlobalPosition = details.globalPosition;
+    _gestureMode = _GestureMode.undecided;
+  }
+
   void _onPanStart(DragStartDetails details) {
-    final index = _hitTest(details.localPosition);
-    if (index != null) {
-      setState(() {
-        _anchorIndex = index;
-        _selectionStart = index;
-        _selectionEnd = index + 1;
-      });
+    _anchorIndex = _hitTest(details.localPosition);
+    _tryDecideGestureMode(details.globalPosition);
+  }
+
+  /// Attempts to decide the gesture mode based on displacement from start.
+  /// Returns true if the mode was decided, false if still undecided.
+  bool _tryDecideGestureMode(Offset currentPosition) {
+    final startPos = _panStartGlobalPosition;
+    if (startPos == null) return false;
+
+    final displacement = currentPosition - startPos;
+    if (displacement.distance < _kGestureDecisionThreshold) return false;
+
+    final isHorizontalDominant = displacement.dx.abs() > displacement.dy.abs();
+    _gestureMode = isHorizontalDominant
+        ? _GestureMode.swiping
+        : _GestureMode.selecting;
+
+    if (_gestureMode == _GestureMode.selecting) {
+      _startSelection();
     }
+    return true;
+  }
+
+  /// Initializes selection state when entering selecting mode.
+  void _startSelection() {
+    final anchor = _anchorIndex;
+    if (anchor == null) return;
+
+    setState(() {
+      _selectionStart = anchor;
+      _selectionEnd = anchor + 1;
+    });
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
-    final index = _hitTest(details.localPosition, snapToNearest: true);
-    final anchor = _anchorIndex;
-    if (index != null && anchor != null) {
-      setState(() {
-        if (index >= anchor) {
-          _selectionStart = anchor;
-          _selectionEnd = index + 1;
-        } else {
-          _selectionStart = index;
-          _selectionEnd = anchor + 1;
-        }
-      });
+    _panLastGlobalPosition = details.globalPosition;
+
+    switch (_gestureMode) {
+      case _GestureMode.undecided:
+        _handleUndecidedUpdate(details);
+      case _GestureMode.selecting:
+        _handleSelectingUpdate(details);
+      case _GestureMode.swiping:
+        break;
     }
   }
 
+  void _handleUndecidedUpdate(DragUpdateDetails details) {
+    if (_tryDecideGestureMode(details.globalPosition) &&
+        _gestureMode == _GestureMode.selecting) {
+      _handleSelectingUpdate(details);
+    }
+  }
+
+  void _handleSelectingUpdate(DragUpdateDetails details) {
+    final index = _hitTest(details.localPosition, snapToNearest: true);
+    final anchor = _anchorIndex;
+    if (index == null || anchor == null) return;
+
+    final (start, end) = index >= anchor
+        ? (anchor, index + 1)
+        : (index, anchor + 1);
+
+    setState(() {
+      _selectionStart = start;
+      _selectionEnd = end;
+    });
+  }
+
   void _onPanEnd(DragEndDetails details) {
-    _notifySelectionChanged();
+    switch (_gestureMode) {
+      case _GestureMode.swiping:
+      case _GestureMode.undecided:
+        _handleSwipeEnd(details);
+      case _GestureMode.selecting:
+        _notifySelectionChanged();
+    }
+    _gestureMode = _GestureMode.undecided;
+  }
+
+  void _handleSwipeEnd(DragEndDetails details) {
+    final startPos = _panStartGlobalPosition;
+    final endPos = details.globalPosition != Offset.zero
+        ? details.globalPosition
+        : _panLastGlobalPosition;
+
+    final direction = (startPos != null && endPos != null)
+        ? detectSwipeFromDrag(
+            startPosition: startPos,
+            endPosition: endPos,
+            velocity: details.velocity,
+          )
+        : null;
+
+    _clearInternalSelection();
+    if (direction != null) {
+      widget.onSwipe?.call(direction);
+    }
   }
 
   void _onTap() {

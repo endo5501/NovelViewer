@@ -268,6 +268,32 @@ void main() {
     });
   });
 
+  group('VerticalTextViewer desktop-like swipe', () {
+    testWidgets('drag with pause before release still triggers swipe',
+        (tester) async {
+      await tester.pumpWidget(
+        _buildTestWidget(
+          segments: multiPageSegments(),
+          width: testWidth,
+          height: testHeight,
+        ),
+      );
+
+      expect(_extractCurrentPage(tester), 1);
+
+      // Simulate desktop-like gesture: drag then pause before releasing
+      final center = tester.getCenter(find.byType(VerticalTextViewer));
+      final gesture = await tester.startGesture(center + const Offset(45, 0));
+      await gesture.moveTo(center + const Offset(-45, 0));
+      // Pause before release - velocity drops to near zero
+      await tester.pump(const Duration(milliseconds: 300));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(_extractCurrentPage(tester), 2);
+    });
+  });
+
   group('VerticalTextViewer arrow key navigation with swipe', () {
     testWidgets('arrow keys still work after swipe implementation',
         (tester) async {

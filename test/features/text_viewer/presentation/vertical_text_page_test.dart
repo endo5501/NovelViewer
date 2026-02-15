@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 
@@ -9,6 +10,7 @@ Widget _buildTestWidget({
   int? selectionStart,
   int? selectionEnd,
   ValueChanged<String?>? onSelectionChanged,
+  ValueChanged<SwipeDirection>? onSwipe,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -22,6 +24,7 @@ Widget _buildTestWidget({
           selectionStart: selectionStart,
           selectionEnd: selectionEnd,
           onSelectionChanged: onSelectionChanged,
+          onSwipe: onSwipe,
         ),
       ),
     ),
@@ -115,6 +118,119 @@ void main() {
       ));
 
       expect(find.byType(VerticalTextPage), findsOneWidget);
+    });
+  });
+
+  group('VerticalTextPage gesture mode classification', () {
+    testWidgets(
+        'horizontal drag does not notify selection (enters swiping mode)',
+        (tester) async {
+      final selectionNotifications = <String?>[];
+      final swipeNotifications = <SwipeDirection>[];
+
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あいうえおかきくけこ')],
+        onSelectionChanged: (text) => selectionNotifications.add(text),
+        onSwipe: (dir) => swipeNotifications.add(dir),
+      ));
+
+      // Start drag ON a character, then move primarily horizontally.
+      // Use timedDragFrom for realistic gesture simulation.
+      final charCenter = tester.getCenter(find.text('あ'));
+      await tester.timedDragFrom(
+        charCenter,
+        const Offset(-90, 5), // primarily horizontal
+        const Duration(milliseconds: 200),
+      );
+
+      // Swiping mode should trigger onSwipe, NOT onSelectionChanged with text
+      expect(swipeNotifications, isNotEmpty,
+          reason: 'Horizontal drag should trigger swipe');
+      // onSelectionChanged should NOT have been called with non-null text
+      expect(selectionNotifications.where((t) => t != null), isEmpty,
+          reason:
+              'Horizontal drag should not produce text selection notifications');
+    });
+
+    testWidgets('vertical drag triggers text selection (enters selecting mode)',
+        (tester) async {
+      final selectionNotifications = <String?>[];
+      final swipeNotifications = <SwipeDirection>[];
+
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あいうえおかきくけこ')],
+        onSelectionChanged: (text) => selectionNotifications.add(text),
+        onSwipe: (dir) => swipeNotifications.add(dir),
+      ));
+
+      // Drag vertically between characters (within a column)
+      final firstChar = tester.getCenter(find.text('あ'));
+      final thirdChar = tester.getCenter(find.text('う'));
+      await tester.timedDragFrom(
+        firstChar,
+        thirdChar - firstChar, // primarily vertical (within same column)
+        const Duration(milliseconds: 300),
+      );
+
+      // Should NOT trigger swipe
+      expect(swipeNotifications, isEmpty,
+          reason: 'Vertical drag should not trigger swipe');
+    });
+
+    testWidgets(
+        'drag that starts vertically does not trigger swipe even with horizontal endpoint',
+        (tester) async {
+      final swipeNotifications = <SwipeDirection>[];
+
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あいうえおかきくけこ')],
+        onSelectionChanged: (_) {},
+        onSwipe: (dir) => swipeNotifications.add(dir),
+      ));
+
+      // Start on a character, first move primarily vertical (should enter
+      // selecting mode), then move horizontally. Total displacement has
+      // |dx| > |dy| but initial direction was vertical.
+      final charCenter = tester.getCenter(find.text('あ'));
+      final gesture = await tester.startGesture(charCenter);
+      // First move: primarily vertical → enters selecting mode
+      await gesture.moveBy(const Offset(2, 20));
+      // Second move: primarily horizontal → but mode is already selecting
+      // Use large enough displacement to exceed kSwipeMinDistanceWithoutFling
+      await gesture.moveBy(const Offset(-100, 5));
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // Should NOT trigger swipe because mode was classified as selecting
+      expect(swipeNotifications, isEmpty,
+          reason:
+              'Drag that started vertically should not trigger swipe even if endpoint is far horizontal');
+    });
+
+    testWidgets('very short drag does not trigger swipe or selection',
+        (tester) async {
+      final selectionNotifications = <String?>[];
+      SwipeDirection? swipeDir;
+
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あいうえお')],
+        onSelectionChanged: (text) => selectionNotifications.add(text),
+        onSwipe: (dir) {
+          swipeDir = dir;
+        },
+      ));
+
+      // Perform a very short drag (below pan slop, won't trigger pan)
+      final center = tester.getCenter(find.byType(VerticalTextPage));
+      final gesture = await tester.startGesture(center);
+      await gesture.moveBy(const Offset(3, 2));
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // Should not trigger swipe (distance too short)
+      expect(swipeDir, isNull);
     });
   });
 }

@@ -4,6 +4,7 @@ import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 
+
 class VerticalTextViewer extends StatefulWidget {
   const VerticalTextViewer({
     super.key,
@@ -45,9 +46,6 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
   TextPainter? _cachedPainter;
   TextStyle? _cachedStyle;
 
-  // Swipe tracking
-  _SwipeState? _swipeState;
-
   @override
   void initState() {
     super.initState();
@@ -84,8 +82,6 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
       child: Listener(
         behavior: HitTestBehavior.opaque,
         onPointerDown: _handlePointerDown,
-        onPointerUp: _handlePointerUp,
-        onPointerCancel: _handlePointerCancel,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final result = _paginateLines(constraints);
@@ -124,6 +120,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
                           baseStyle: widget.baseStyle,
                           query: widget.query,
                           onSelectionChanged: widget.onSelectionChanged,
+                          onSwipe: _handleSwipe,
                         ),
                       ),
                     ),
@@ -163,33 +160,9 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
 
   void _handlePointerDown(PointerDownEvent event) {
     _focusNode.requestFocus();
-    if (_swipeState != null) return;
-    _swipeState = _SwipeState(
-      pointerId: event.pointer,
-      startPosition: event.position,
-      startTimeStamp: event.timeStamp,
-    );
   }
 
-  void _handlePointerCancel(PointerCancelEvent event) {
-    final state = _swipeState;
-    if (state != null && event.pointer == state.pointerId) {
-      _swipeState = null;
-    }
-  }
-
-  void _handlePointerUp(PointerUpEvent event) {
-    final state = _swipeState;
-    if (state == null || event.pointer != state.pointerId) return;
-    _swipeState = null;
-
-    final direction = detectSwipe(
-      startPosition: state.startPosition,
-      endPosition: event.position,
-      duration: event.timeStamp - state.startTimeStamp,
-    );
-
-    if (direction == null) return;
+  void _handleSwipe(SwipeDirection direction) {
     direction == SwipeDirection.left ? _nextPage() : _previousPage();
   }
 
@@ -470,15 +443,4 @@ class _PaginationResult {
   const _PaginationResult(this.pages, this.targetPage);
   final List<List<TextSegment>> pages;
   final int? targetPage;
-}
-
-class _SwipeState {
-  const _SwipeState({
-    required this.pointerId,
-    required this.startPosition,
-    required this.startTimeStamp,
-  });
-  final int pointerId;
-  final Offset startPosition;
-  final Duration startTimeStamp;
 }
