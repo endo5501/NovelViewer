@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Vertical text rendering
-The system SHALL render text content in vertical writing mode (top-to-bottom, right-to-left columns) using a Wrap widget with vertical axis direction and RTL text direction. Each character SHALL be rendered individually as a separate widget within the Wrap layout. Each character widget SHALL be wrapped in a fixed-width container (`SizedBox`) with width equal to the current font size, and the character SHALL be horizontally centered within that container using a `Center` widget. This ensures consistent column alignment regardless of platform-specific font metrics differences. Characters SHALL be rendered with compact vertical spacing by setting the TextStyle `height` property to approximately 1.1 and minimizing the Wrap `spacing` to avoid excessive gaps between characters. The Wrap widget SHALL be wrapped in a GestureDetector to support text selection via drag gestures. The `VerticalTextPage` SHALL accept an `onSelectionChanged` callback. Each character widget SHALL be assigned a `GlobalKey` to enable post-layout collection of actual rendered rectangles for accurate hit testing.
+The system SHALL render text content in vertical writing mode (top-to-bottom, right-to-left columns) using a Wrap widget with vertical axis direction and RTL text direction. Each character SHALL be rendered individually as a separate widget within the Wrap layout. Each character widget SHALL be wrapped in a fixed-width container (`SizedBox`) with width equal to the current font size, and the character SHALL be horizontally centered within that container using a `Center` widget. This ensures consistent column alignment regardless of platform-specific font metrics differences. Characters SHALL be rendered with compact vertical spacing by setting the TextStyle `height` property to approximately 1.1 and minimizing the Wrap `spacing` to avoid excessive gaps between characters. The Wrap widget's `runSpacing` SHALL use the column spacing value from the settings (default `8.0`) instead of a hardcoded constant. The `VerticalTextPage` SHALL accept a `columnSpacing` parameter to control the `runSpacing` value. The Wrap widget SHALL be wrapped in a GestureDetector to support text selection via drag gestures. The `VerticalTextPage` SHALL accept an `onSelectionChanged` callback. Each character widget SHALL be assigned a `GlobalKey` to enable post-layout collection of actual rendered rectangles for accurate hit testing.
 
 #### Scenario: Text is displayed vertically
 - **WHEN** the display mode is set to vertical
@@ -34,6 +34,14 @@ The system SHALL render text content in vertical writing mode (top-to-bottom, ri
 #### Scenario: Ruby base and annotation characters use fixed-width containers
 - **WHEN** ruby text (base and annotation) is rendered in vertical mode
 - **THEN** each base character SHALL be wrapped in a SizedBox with width equal to the base font size, and each ruby annotation character SHALL be wrapped in a SizedBox with width equal to the ruby font size, both horizontally centered
+
+#### Scenario: Column spacing uses configurable value
+- **WHEN** the vertical text page is rendered with a `columnSpacing` parameter
+- **THEN** the Wrap widget's `runSpacing` SHALL be set to the provided `columnSpacing` value
+
+#### Scenario: Default column spacing
+- **WHEN** the vertical text page is rendered without an explicit `columnSpacing` parameter
+- **THEN** the Wrap widget's `runSpacing` SHALL use the default value of `8.0`
 
 ### Requirement: Vertical character mapping
 The system SHALL replace horizontal-specific characters with their vertical writing equivalents when rendering in vertical mode. The mapping SHALL cover the full set defined in the Qiita reference article's VerticalRotated class, plus NovelViewer-specific additions.
@@ -135,7 +143,7 @@ RubyTextSegment SHALL be treated as an indivisible unit during kinsoku processin
 - **THEN** no adjustment SHALL be made because no subsequent column exists within the same line
 
 ### Requirement: Vertical text pagination
-The system SHALL display vertical text in pages rather than as a scrollable area. Page boundaries SHALL be calculated dynamically based on both the available width and height of the display area. The pagination SHALL account for the fact that a single logical line (newline-separated text) may occupy multiple visual columns when its character count exceeds the available vertical height. Character dimensions (width and height) used for pagination calculations SHALL be measured from actual font metrics using TextPainter with a representative CJK character, rather than estimated from fontSize alone, to ensure pagination matches the Wrap widget's rendering across all font families and sizes. The maximum columns per page calculation SHALL account for the Wrap widget's runSpacing being applied on both sides of column-break sentinel widgets, resulting in an effective inter-column spacing of `2 * runSpacing` rather than `1 * runSpacing`. The vertical text display area SHALL be clipped to prevent any overflow from becoming visible beyond the display boundaries. Column character counts SHALL NOT exceed `charsPerColumn` but MAY be shorter (typically by 1 character) due to kinsoku push-out adjustments.
+The system SHALL display vertical text in pages rather than as a scrollable area. Page boundaries SHALL be calculated dynamically based on both the available width and height of the display area. The pagination SHALL account for the fact that a single logical line (newline-separated text) may occupy multiple visual columns when its character count exceeds the available vertical height. Character dimensions (width and height) used for pagination calculations SHALL be measured from actual font metrics using TextPainter with a representative CJK character, rather than estimated from fontSize alone, to ensure pagination matches the Wrap widget's rendering across all font families and sizes. The maximum columns per page calculation SHALL account for the Wrap widget's runSpacing being applied on both sides of column-break sentinel widgets, resulting in an effective inter-column spacing of `2 * runSpacing` rather than `1 * runSpacing`. The `VerticalTextViewer` SHALL accept a `columnSpacing` parameter and use it in pagination calculations instead of a hardcoded constant. The vertical text display area SHALL be clipped to prevent any overflow from becoming visible beyond the display boundaries. Column character counts SHALL NOT exceed `charsPerColumn` but MAY be shorter (typically by 1 character) due to kinsoku push-out adjustments.
 
 #### Scenario: Text is split into pages
 - **WHEN** the text content exceeds the available display area in vertical mode
@@ -185,6 +193,14 @@ The system SHALL display vertical text in pages rather than as a scrollable area
 #### Scenario: Columns with kinsoku adjustment fit within page width
 - **WHEN** the pagination groups columns into pages and some columns have variable character counts due to kinsoku processing
 - **THEN** the pagination SHALL use the actual character count of each column for width calculation, ensuring columns fit within the available page width
+
+#### Scenario: Pagination uses configurable column spacing
+- **WHEN** the `VerticalTextViewer` is rendered with a `columnSpacing` parameter
+- **THEN** the pagination calculation SHALL use the provided `columnSpacing` value instead of a hardcoded constant
+
+#### Scenario: Column spacing change triggers re-pagination
+- **WHEN** the column spacing setting is changed while vertical text is displayed
+- **THEN** the pagination SHALL be recalculated with the new column spacing value and the display SHALL update accordingly
 
 ### Requirement: Arrow key page navigation
 The system SHALL support left and right arrow key presses to navigate between pages in vertical display mode. The left arrow key SHALL advance to the next page and the right arrow key SHALL go to the previous page, matching the right-to-left reading direction of vertical Japanese text.
