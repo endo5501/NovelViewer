@@ -78,11 +78,11 @@ List<List<FlatCharEntry>> splitWithKinsoku(
         continue;
       }
 
-      // Apply line-head kinsoku: pull consecutive forbidden characters
-      while (i < entries.length && entries[i].firstChar.isLineHeadForbidden) {
-        currentColumn.add(entries[i]);
-        currentCount += entries[i].charCount;
-        i++;
+      // Apply line-head kinsoku: push last char to next column
+      // so forbidden char becomes 2nd char, not 1st
+      if (entry.firstChar.isLineHeadForbidden && currentColumn.length > 1) {
+        moveLastEntryToNext();
+        continue;
       }
 
       finalizeColumn();
@@ -96,19 +96,18 @@ List<List<FlatCharEntry>> splitWithKinsoku(
 
     // Case 2: Column is exactly full or over the limit
     if (currentCount >= charsPerColumn && hasNext) {
-      final nextEntry = entries[i];
-
       // Apply line-end kinsoku
       if (currentColumn.last.lastChar.isLineEndForbidden) {
         moveLastEntryToNext();
         continue;
       }
 
-      // Apply line-head kinsoku: pull consecutive forbidden characters
-      while (i < entries.length && entries[i].firstChar.isLineHeadForbidden) {
-        currentColumn.add(entries[i]);
-        currentCount += entries[i].charCount;
-        i++;
+      // Apply line-head kinsoku: push last char to next column
+      // so forbidden char becomes 2nd char, not 1st
+      if (i < entries.length && entries[i].firstChar.isLineHeadForbidden &&
+          currentColumn.length > 1) {
+        moveLastEntryToNext();
+        continue;
       }
 
       finalizeColumn();

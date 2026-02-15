@@ -65,17 +65,19 @@ void main() {
       expect(_columnText(columns[1]), 'おかきく');
     });
 
-    test('行頭禁則文字がカラム先頭に来ない（前のカラムに含まれる）', () {
+    test('行頭禁則文字がカラム先頭に来ない（末尾文字を次カラムに押し出し）', () {
       // 'あいうえ。かきく' (8文字) を charsPerColumn=4 で分割
-      // '。' が5文字目 = 2番目カラムの先頭に来るはず → 前カラムに含める
+      // '。' が5文字目 = 2番目カラムの先頭に来るはず → 末尾の'え'を押し出し
+      // 結果: 'あいう'(3), 'え。かき'(4), 'く'(1)
       final entries = flattenSegments(
         [const PlainTextSegment('あいうえ。かきく')],
       );
       final columns = splitWithKinsoku(entries, 4);
 
-      expect(columns.length, 2);
-      expect(_columnText(columns[0]), 'あいうえ。');
-      expect(_columnText(columns[1]), 'かきく');
+      expect(columns.length, 3);
+      expect(_columnText(columns[0]), 'あいう');
+      expect(_columnText(columns[1]), 'え。かき');
+      expect(_columnText(columns[2]), 'く');
     });
 
     test('行末禁則文字がカラム末尾に来ない（次のカラムに移動される）', () {
@@ -118,45 +120,51 @@ void main() {
       expect(_columnText(columns[0]), 'あいう「');
     });
 
-    test('RubyTextSegmentの先頭文字が行頭禁則文字の場合、ルビ全体が前のカラムに含まれる', () {
+    test('RubyTextSegmentの先頭文字が行頭禁則文字の場合、末尾文字を押し出してルビはカラム先頭に来ない', () {
       // 'あいうえ' + Ruby('。X', 'まるえっくす') を charsPerColumn=4 で分割
-      // Ruby の先頭文字 '。' が行頭禁則 → ルビ全体を前カラムに
+      // Ruby の先頭文字 '。' が行頭禁則 → 末尾の'え'を次カラムに押し出し
+      // 結果: 'あいう'(3), 'え'+Ruby('。X')(3)
       final entries = flattenSegments(<TextSegment>[
         const PlainTextSegment('あいうえ'),
         const RubyTextSegment(base: '。X', rubyText: 'まるえっくす'),
       ]);
       final columns = splitWithKinsoku(entries, 4);
 
-      // 全て1カラムに含まれる（4 plain entries + 1 ruby entry = 5 entries）
-      expect(columns.length, 1);
-      expect(columns[0].length, 5);
-      expect(columns[0].last.isRuby, isTrue);
+      expect(columns.length, 2);
+      expect(columns[0].length, 3); // あいう
+      expect(columns[1].length, 2); // え + Ruby(。X)
+      expect(columns[1][0].firstChar, 'え');
+      expect(columns[1][1].isRuby, isTrue);
     });
 
-    test('連続する行頭禁則文字が全て前のカラムに含まれる', () {
+    test('連続する行頭禁則文字がカラム先頭に来ない（押し出しで解決）', () {
       // 'あいうえ。」かきく' (9文字) を charsPerColumn=4 で分割
-      // '。」' が連続する行頭禁則文字 → 両方を前カラムに含める
+      // '。」' が連続する行頭禁則文字 → 末尾の'え'を押し出し
+      // 結果: 'あいう'(3), 'え。」か'(4), 'きく'(2)
       final entries = flattenSegments(
         [const PlainTextSegment('あいうえ。」かきく')],
       );
       final columns = splitWithKinsoku(entries, 4);
 
-      expect(columns.length, 2);
-      expect(_columnText(columns[0]), 'あいうえ。」');
-      expect(_columnText(columns[1]), 'かきく');
+      expect(columns.length, 3);
+      expect(_columnText(columns[0]), 'あいう');
+      expect(_columnText(columns[1]), 'え。」か');
+      expect(_columnText(columns[2]), 'きく');
     });
 
-    test('3文字連続する行頭禁則文字が全て前のカラムに含まれる', () {
+    test('3文字連続する行頭禁則文字がカラム先頭に来ない（押し出しで解決）', () {
       // 'あいうえ！？」かき' (9文字) を charsPerColumn=4 で分割
-      // '！？」' が連続する行頭禁則文字 → 全て前カラムに含める
+      // '！？」' が連続する行頭禁則文字 → 末尾の'え'を押し出し
+      // 結果: 'あいう'(3), 'え！？」'(4), 'かき'(2)
       final entries = flattenSegments(
         [const PlainTextSegment('あいうえ！？」かき')],
       );
       final columns = splitWithKinsoku(entries, 4);
 
-      expect(columns.length, 2);
-      expect(_columnText(columns[0]), 'あいうえ！？」');
-      expect(_columnText(columns[1]), 'かき');
+      expect(columns.length, 3);
+      expect(_columnText(columns[0]), 'あいう');
+      expect(_columnText(columns[1]), 'え！？」');
+      expect(_columnText(columns[2]), 'かき');
     });
 
     test('カラム超過時に連続する行頭禁則文字が全て前のカラムに含まれる', () {
@@ -222,16 +230,17 @@ void main() {
 
     test('禁則処理後のカラム分割結果を正しくセグメント化する', () {
       // 'あいうえ。かきく' を charsPerColumn=4 で分割
-      // → ['あいうえ。', 'かきく']
+      // → ['あいう', 'え。かき', 'く'] (押し出し方式)
       final entries = flattenSegments(
         [const PlainTextSegment('あいうえ。かきく')],
       );
       final columnEntries = splitWithKinsoku(entries, 4);
       final segments = buildColumnsFromEntries(columnEntries);
 
-      expect(segments.length, 2);
-      expect((segments[0][0] as PlainTextSegment).text, 'あいうえ。');
-      expect((segments[1][0] as PlainTextSegment).text, 'かきく');
+      expect(segments.length, 3);
+      expect((segments[0][0] as PlainTextSegment).text, 'あいう');
+      expect((segments[1][0] as PlainTextSegment).text, 'え。かき');
+      expect((segments[2][0] as PlainTextSegment).text, 'く');
     });
   });
 }

@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Kinsoku processing for column splitting
-The system SHALL apply Japanese line-breaking rules (禁則処理) when splitting text into vertical columns. Line-head forbidden characters (行頭禁則文字) SHALL NOT appear as the first character of a column. Line-end forbidden characters (行末禁則文字) SHALL NOT appear as the last character of a column. The system SHALL use the "push-out" (追い出し) method to resolve violations: a line-head forbidden character at the start of a new column SHALL be moved to the end of the previous column, and a line-end forbidden character at the end of a column SHALL be moved to the start of the next column. The adjustment SHALL be limited to at most 1 character per column boundary. Kinsoku character sets and判定 functions SHALL be defined in a separate data-layer module (`kinsoku.dart`) alongside other character-processing utilities.
+The system SHALL apply Japanese line-breaking rules (禁則処理) when splitting text into vertical columns. Line-head forbidden characters (行頭禁則文字) SHALL NOT appear as the first character of a column. Line-end forbidden characters (行末禁則文字) SHALL NOT appear as the last character of a column. The system SHALL use the "push-out" (追い出し) method to resolve violations: when a line-head forbidden character would appear at the start of a new column, the last character of the current column SHALL be moved to the start of the next column (making the current column one character shorter), so the forbidden character becomes the second character of the next column rather than the first. When a line-end forbidden character appears at the end of a column, it SHALL be moved to the start of the next column. All columns SHALL have at most `charsPerColumn` characters to ensure compatibility with the Wrap widget's vertical height constraint. Kinsoku character sets and判定 functions SHALL be defined in a separate data-layer module (`kinsoku.dart`) alongside other character-processing utilities.
 
 Line-head forbidden characters (行頭禁則文字):
 - Punctuation: `。、，．,.`
@@ -17,13 +17,17 @@ Line-end forbidden characters (行末禁則文字):
 
 RubyTextSegment SHALL be treated as an indivisible unit during kinsoku processing. The first base character of a RubyTextSegment SHALL be used for line-head forbidden character check, and the last base character SHALL be used for line-end forbidden character check.
 
-#### Scenario: Line-head forbidden character is pushed to previous column
+#### Scenario: Line-head forbidden character triggers push-out of last column character
 - **WHEN** a column split would place a line-head forbidden character (e.g., `。`, `、`, `）`, `」`) as the first character of a new column
-- **THEN** the system SHALL include that character at the end of the previous column, making the previous column one character longer than `charsPerColumn`
+- **THEN** the system SHALL move the last character of the current column to the start of the next column, making the current column one character shorter than `charsPerColumn`, so the forbidden character becomes the second character of the next column
 
 #### Scenario: Line-end forbidden character is pushed to next column
 - **WHEN** a column is filled to `charsPerColumn` and the last character is a line-end forbidden character (e.g., `（`, `「`, `『`)
 - **THEN** the system SHALL move that character to the start of the next column, making the current column one character shorter than `charsPerColumn`
+
+#### Scenario: Consecutive line-head forbidden characters are handled by push-out
+- **WHEN** a column split would place multiple consecutive line-head forbidden characters (e.g., `。」` or `！？」`) at the start of a new column
+- **THEN** the system SHALL push the last character of the current column to the next column, and the consecutive forbidden characters SHALL naturally follow as non-first characters in the next column
 
 #### Scenario: No kinsoku violation at column boundary
 - **WHEN** a column split occurs and neither the next character is line-head forbidden nor the last character is line-end forbidden
@@ -31,7 +35,7 @@ RubyTextSegment SHALL be treated as an indivisible unit during kinsoku processin
 
 #### Scenario: Kinsoku with RubyTextSegment
 - **WHEN** a RubyTextSegment would begin a new column and the first base character of that segment is a line-head forbidden character
-- **THEN** the entire RubyTextSegment SHALL be moved to the end of the previous column
+- **THEN** the last character of the current column SHALL be moved to the start of the next column, so the RubyTextSegment becomes the second entry of the next column
 
 #### Scenario: First column is not affected by kinsoku
 - **WHEN** the first character of the first column in a line is a line-head forbidden character
@@ -44,7 +48,7 @@ RubyTextSegment SHALL be treated as an indivisible unit during kinsoku processin
 ## MODIFIED Requirements
 
 ### Requirement: Vertical text pagination
-The system SHALL display vertical text in pages rather than as a scrollable area. Page boundaries SHALL be calculated dynamically based on both the available width and height of the display area. The pagination SHALL account for the fact that a single logical line (newline-separated text) may occupy multiple visual columns when its character count exceeds the available vertical height. Character dimensions (width and height) used for pagination calculations SHALL be measured from actual font metrics using TextPainter with a representative CJK character, rather than estimated from fontSize alone, to ensure pagination matches the Wrap widget's rendering across all font families and sizes. The maximum columns per page calculation SHALL account for the Wrap widget's runSpacing being applied on both sides of column-break sentinel widgets, resulting in an effective inter-column spacing of `2 * runSpacing` rather than `1 * runSpacing`. The vertical text display area SHALL be clipped to prevent any overflow from becoming visible beyond the display boundaries. Column character counts MAY vary by ±1 from the calculated `charsPerColumn` due to kinsoku processing adjustments.
+The system SHALL display vertical text in pages rather than as a scrollable area. Page boundaries SHALL be calculated dynamically based on both the available width and height of the display area. The pagination SHALL account for the fact that a single logical line (newline-separated text) may occupy multiple visual columns when its character count exceeds the available vertical height. Character dimensions (width and height) used for pagination calculations SHALL be measured from actual font metrics using TextPainter with a representative CJK character, rather than estimated from fontSize alone, to ensure pagination matches the Wrap widget's rendering across all font families and sizes. The maximum columns per page calculation SHALL account for the Wrap widget's runSpacing being applied on both sides of column-break sentinel widgets, resulting in an effective inter-column spacing of `2 * runSpacing` rather than `1 * runSpacing`. The vertical text display area SHALL be clipped to prevent any overflow from becoming visible beyond the display boundaries. Column character counts SHALL NOT exceed `charsPerColumn` but MAY be shorter (typically by 1 character) due to kinsoku push-out adjustments.
 
 #### Scenario: Text is split into pages
 - **WHEN** the text content exceeds the available display area in vertical mode
@@ -97,5 +101,5 @@ The system SHALL display vertical text in pages rather than as a scrollable area
 - **THEN** the viewer SHALL correctly identify which page contains the target line, accounting for variable column counts per page due to width-based packing
 
 #### Scenario: Columns with kinsoku adjustment fit within page width
-- **WHEN** the pagination groups columns into pages and some columns have ±1 character adjustment due to kinsoku processing
+- **WHEN** the pagination groups columns into pages and some columns have variable character counts due to kinsoku processing
 - **THEN** the width-based greedy packing SHALL use the actual character count of each column for width calculation, ensuring columns fit within the available page width
