@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/text_download/presentation/download_dialog
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
+import 'package:novel_viewer/shared/providers/layout_providers.dart';
 import 'package:novel_viewer/shared/widgets/search_summary_panel.dart';
 
 class _SearchIntent extends Intent {
@@ -48,6 +49,20 @@ class HomeScreen extends ConsumerWidget {
               ),
               actions: [
                 IconButton(
+                  key: const Key('toggle_right_column_button'),
+                  icon: Icon(
+                    ref.watch(rightColumnVisibleProvider)
+                        ? Icons.vertical_split
+                        : Icons.view_sidebar,
+                  ),
+                  onPressed: () => ref
+                      .read(rightColumnVisibleProvider.notifier)
+                      .toggle(),
+                  tooltip: ref.watch(rightColumnVisibleProvider)
+                      ? '右カラムを非表示'
+                      : '右カラムを表示',
+                ),
+                IconButton(
                   icon: const Icon(Icons.download),
                   onPressed: () => DownloadDialog.show(context),
                   tooltip: '小説ダウンロード',
@@ -58,21 +73,23 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            body: const Row(
+            body: Row(
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 250,
                   child: FileBrowserPanel(key: Key('left_column')),
                 ),
-                VerticalDivider(width: 1),
-                Expanded(
+                const VerticalDivider(width: 1),
+                const Expanded(
                   child: TextViewerPanel(key: Key('center_column')),
                 ),
-                VerticalDivider(width: 1),
-                SizedBox(
-                  width: 300,
-                  child: SearchSummaryPanel(key: Key('right_column')),
-                ),
+                if (ref.watch(rightColumnVisibleProvider)) ...[
+                  const VerticalDivider(width: 1),
+                  const SizedBox(
+                    width: 300,
+                    child: SearchSummaryPanel(key: Key('right_column')),
+                  ),
+                ],
               ],
             ),
           ),
