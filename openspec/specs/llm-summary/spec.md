@@ -27,22 +27,22 @@ Each tab SHALL contain an "解析開始" button that triggers LLM analysis when 
 - **THEN** the system sends a request to the configured LLM with the constructed prompt and displays a loading indicator
 
 ### Requirement: Spoiler summary uses all files
-The "ネタバレあり" summary SHALL use search results from all text files in the document folder as context for LLM analysis.
+The "ネタバレあり" summary SHALL use search results from all text files in the document folder as context, passing them to the multi-stage pipeline.
 
 #### Scenario: Generate spoiler summary from all files
 - **WHEN** the user triggers analysis on the "ネタバレあり" tab for the word "アリス"
-- **THEN** the system searches all text files in the current directory for "アリス", collects surrounding context from all matches, and sends them to the LLM for summarization
+- **THEN** the system searches all text files in the current directory for "アリス", collects surrounding context from all matches, and passes them to the pipeline for chunked processing and summary generation
 
 ### Requirement: No-spoiler summary uses files up to current position
-The "ネタバレなし" summary SHALL use search results only from text files up to and including the currently viewed file, based on numeric filename prefix ordering.
+The "ネタバレなし" summary SHALL use search results only from text files up to and including the currently viewed file, based on numeric filename prefix ordering, passing them to the multi-stage pipeline.
 
 #### Scenario: Generate no-spoiler summary limited to current file position
 - **WHEN** the user is viewing file "040_chapter.txt" and triggers analysis on the "ネタバレなし" tab for the word "アリス"
-- **THEN** the system searches only files with numeric prefix <= 40 (e.g., "001_chapter.txt" through "040_chapter.txt") and uses only those results as context for LLM summarization
+- **THEN** the system searches only files with numeric prefix <= 40 and passes only those results to the pipeline for chunked processing and summary generation
 
 #### Scenario: No-spoiler excludes later files
 - **WHEN** the user is viewing file "040_chapter.txt" and files "050_chapter.txt" and "060_chapter.txt" also contain the search term
-- **THEN** those later files are excluded from the context sent to the LLM
+- **THEN** those later files are excluded from the contexts passed to the pipeline
 
 ### Requirement: LLM summary display states
 The LLM summary panel SHALL display appropriate content based on the current state.
@@ -68,19 +68,15 @@ The LLM summary panel SHALL display appropriate content based on the current sta
 - **THEN** the panel displays an error message and the "解析開始" button is re-enabled for retry
 
 ### Requirement: Prompt construction for word summary
-The system SHALL construct LLM prompts using XML-tagged structure with the selected word and surrounding context from search results.
+The system SHALL construct LLM prompts using the multi-stage pipeline instead of a single prompt, removing the 10-entry context limit and processing all matched contexts through chunked fact extraction and aggregation.
 
-#### Scenario: Build prompt with search context
-- **WHEN** the system builds a prompt for the word "聖印" with 3 matching contexts found
-- **THEN** the prompt includes the word wrapped in a `<term>` tag and the context texts wrapped in a `<context>` tag, requesting a JSON response with a "summary" field
+#### Scenario: Build prompt via pipeline for many contexts
+- **WHEN** the system builds a summary for the word "聖印" with 100 matching contexts found
+- **THEN** the system passes all 100 contexts to the pipeline for chunked fact extraction and final summary generation, instead of limiting to 10 entries
 
-#### Scenario: Build no-spoiler prompt with restriction
-- **WHEN** the system builds a no-spoiler prompt
-- **THEN** the prompt includes an additional instruction to explain based only on the provided context without including future plot developments
-
-#### Scenario: Limit context to maximum entries
-- **WHEN** search results yield more than 10 matching contexts
-- **THEN** the prompt includes at most 10 context entries to stay within LLM token limits
+#### Scenario: Build prompt via pipeline for few contexts
+- **WHEN** the system builds a summary for the word "聖印" with 3 matching contexts found
+- **THEN** the system passes all 3 contexts to the pipeline, which creates a single chunk and generates the summary in minimal stages
 
 ### Requirement: LLM response parsing
 The system SHALL parse the LLM response as JSON to extract the summary text.
