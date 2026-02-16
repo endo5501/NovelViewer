@@ -3,50 +3,62 @@ import 'package:novel_viewer/features/llm_summary/data/llm_prompt_builder.dart';
 
 void main() {
   group('LlmPromptBuilder', () {
-    test('buildSpoilerPrompt contains term and context', () {
-      final prompt = LlmPromptBuilder.buildSpoilerPrompt(
-        word: 'アリス',
-        contexts: ['アリスは冒険に出た。', 'アリスが戻ってきた。'],
-      );
+    group('buildFactExtractionPrompt', () {
+      test('contains term and context', () {
+        final prompt = LlmPromptBuilder.buildFactExtractionPrompt(
+          word: 'アリス',
+          contextChunk: 'アリスは冒険に出た。\n---\nアリスが戻ってきた。',
+        );
 
-      expect(prompt, contains('<term>アリス</term>'));
-      expect(prompt, contains('<context>'));
-      expect(prompt, contains('アリスは冒険に出た。'));
-      expect(prompt, contains('アリスが戻ってきた。'));
-      expect(prompt, contains('{"summary":'));
+        expect(prompt, contains('<term>アリス</term>'));
+        expect(prompt, contains('<context>'));
+        expect(prompt, contains('アリスは冒険に出た。'));
+        expect(prompt, contains('アリスが戻ってきた。'));
+        expect(prompt, contains('{"facts":'));
+      });
+
+      test('instructs to extract facts as bulleted list', () {
+        final prompt = LlmPromptBuilder.buildFactExtractionPrompt(
+          word: 'テスト',
+          contextChunk: 'テストの文脈',
+        );
+
+        expect(prompt, contains('箇条書き'));
+      });
+
+      test('handles empty context', () {
+        final prompt = LlmPromptBuilder.buildFactExtractionPrompt(
+          word: 'アリス',
+          contextChunk: '',
+        );
+
+        expect(prompt, contains('<term>アリス</term>'));
+        expect(prompt, contains('<context>'));
+      });
     });
 
-    test('buildNoSpoilerPrompt contains no-spoiler instruction', () {
-      final prompt = LlmPromptBuilder.buildNoSpoilerPrompt(
-        word: 'アリス',
-        contexts: ['アリスが登場した。'],
-      );
+    group('buildFinalSummaryPrompt', () {
+      test('contains term and facts', () {
+        final prompt = LlmPromptBuilder.buildFinalSummaryPrompt(
+          word: '聖印',
+          facts: '- 騎士に与えられる印章\n- 神聖な力を持つ',
+        );
 
-      expect(prompt, contains('<term>アリス</term>'));
-      expect(prompt, contains('ネタバレ'));
-    });
+        expect(prompt, contains('<term>聖印</term>'));
+        expect(prompt, contains('<facts>'));
+        expect(prompt, contains('騎士に与えられる印章'));
+        expect(prompt, contains('神聖な力を持つ'));
+        expect(prompt, contains('{"summary":'));
+      });
 
-    test('limits context to maximum 10 entries', () {
-      final contexts = List.generate(15, (i) => 'コンテキスト$i');
+      test('instructs to generate 1-2 sentence summary', () {
+        final prompt = LlmPromptBuilder.buildFinalSummaryPrompt(
+          word: 'テスト',
+          facts: '- 事実1',
+        );
 
-      final prompt = LlmPromptBuilder.buildSpoilerPrompt(
-        word: 'テスト',
-        contexts: contexts,
-      );
-
-      expect(prompt, contains('コンテキスト0'));
-      expect(prompt, contains('コンテキスト9'));
-      expect(prompt, isNot(contains('コンテキスト10')));
-    });
-
-    test('handles empty context list', () {
-      final prompt = LlmPromptBuilder.buildSpoilerPrompt(
-        word: 'アリス',
-        contexts: [],
-      );
-
-      expect(prompt, contains('<term>アリス</term>'));
-      expect(prompt, contains('<context>'));
+        expect(prompt, contains('1〜2文'));
+      });
     });
   });
 }

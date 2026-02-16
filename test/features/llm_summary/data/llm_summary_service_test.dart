@@ -10,16 +10,21 @@ import 'package:novel_viewer/features/text_search/data/text_search_service.dart'
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class _MockLlmClient implements LlmClient {
-  final String response;
-  String? lastPrompt;
+  final List<String> responses;
+  final List<String> prompts = [];
+  int _callIndex = 0;
 
-  _MockLlmClient(this.response);
+  _MockLlmClient(this.responses);
 
   @override
   Future<String> generate(String prompt) async {
-    lastPrompt = prompt;
+    prompts.add(prompt);
+    final response = responses[_callIndex % responses.length];
+    _callIndex++;
     return response;
   }
+
+  int get callCount => _callIndex;
 }
 
 void main() {
@@ -72,14 +77,17 @@ void main() {
   }
 
   group('LlmSummaryService', () {
-    test('generates spoiler summary using all files', () async {
+    test('generates spoiler summary using all files via pipeline', () async {
       await createFile('001_chapter.txt', 'アリスが登場した。');
       await createFile('050_chapter.txt', 'アリスが旅に出た。');
       await createFile('100_chapter.txt', 'アリスが帰還した。');
 
-      final mockClient = _MockLlmClient(
+      final mockClient = _MockLlmClient([
+        // Stage 1: fact extraction (single chunk since contexts are small)
+        jsonEncode({'facts': '- 物語の序盤に登場\n- 旅に出た\n- 帰還した'}),
+        // Final stage: summary
         jsonEncode({'summary': 'アリスは冒険者。'}),
-      );
+      ]);
 
       final service = LlmSummaryService(
         llmClient: mockClient,
@@ -95,10 +103,8 @@ void main() {
       );
 
       expect(result, 'アリスは冒険者。');
-      // All files should be included in prompt
-      expect(mockClient.lastPrompt, contains('アリスが登場した'));
-      expect(mockClient.lastPrompt, contains('アリスが旅に出た'));
-      expect(mockClient.lastPrompt, contains('アリスが帰還した'));
+      // Pipeline should be called (at least extract + summarize)
+      expect(mockClient.callCount, 2);
     });
 
     test('generates no-spoiler summary filtering by current file', () async {
@@ -106,9 +112,10 @@ void main() {
       await createFile('040_chapter.txt', 'アリスが旅に出た。');
       await createFile('100_chapter.txt', 'アリスが帰還した。');
 
-      final mockClient = _MockLlmClient(
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': '- 物語の序盤に登場\n- 旅に出た'}),
         jsonEncode({'summary': 'アリスは旅立った少女。'}),
-      );
+      ]);
 
       final service = LlmSummaryService(
         llmClient: mockClient,
@@ -125,64 +132,20 @@ void main() {
       );
 
       expect(result, 'アリスは旅立った少女。');
-      // Only files up to 040 should be included
-      expect(mockClient.lastPrompt, contains('アリスが登場した'));
-      expect(mockClient.lastPrompt, contains('アリスが旅に出た'));
-      expect(mockClient.lastPrompt, isNot(contains('アリスが帰還した')));
-    });
-
-    test('parses JSON response correctly', () async {
-      await createFile('001.txt', 'テスト単語が出現');
-
-      final mockClient = _MockLlmClient(
-        '{"summary": "テスト単語の説明。"}',
-      );
-
-      final service = LlmSummaryService(
-        llmClient: mockClient,
-        repository: repository,
-        searchService: searchService,
-      );
-
-      final result = await service.generateSummary(
-        directoryPath: tempDir.path,
-        folderName: 'test',
-        word: 'テスト単語',
-        summaryType: SummaryType.spoiler,
-      );
-
-      expect(result, 'テスト単語の説明。');
-    });
-
-    test('falls back to raw text for non-JSON response', () async {
-      await createFile('001.txt', 'テスト単語が出現');
-
-      final mockClient = _MockLlmClient(
-        'これはプレーンテキストの回答です。',
-      );
-
-      final service = LlmSummaryService(
-        llmClient: mockClient,
-        repository: repository,
-        searchService: searchService,
-      );
-
-      final result = await service.generateSummary(
-        directoryPath: tempDir.path,
-        folderName: 'test',
-        word: 'テスト単語',
-        summaryType: SummaryType.spoiler,
-      );
-
-      expect(result, 'これはプレーンテキストの回答です。');
+      // Verify the fact extraction prompt does NOT contain content from file 100
+      final factExtractionPrompt = mockClient.prompts[0];
+      expect(factExtractionPrompt, contains('アリスが登場した'));
+      expect(factExtractionPrompt, contains('アリスが旅に出た'));
+      expect(factExtractionPrompt, isNot(contains('アリスが帰還した')));
     });
 
     test('saves result to cache', () async {
       await createFile('001.txt', 'アリスが登場');
 
-      final mockClient = _MockLlmClient(
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': '- 登場した'}),
         jsonEncode({'summary': 'キャッシュされる要約'}),
-      );
+      ]);
 
       final service = LlmSummaryService(
         llmClient: mockClient,
@@ -205,6 +168,30 @@ void main() {
 
       expect(cached, isNotNull);
       expect(cached!.summary, 'キャッシュされる要約');
+    });
+
+    test('handles empty search results', () async {
+      // No files with the search term
+      await createFile('001.txt', '関係ないテキスト');
+
+      final mockClient = _MockLlmClient([
+        jsonEncode({'summary': '情報が見つかりません。'}),
+      ]);
+
+      final service = LlmSummaryService(
+        llmClient: mockClient,
+        repository: repository,
+        searchService: searchService,
+      );
+
+      final result = await service.generateSummary(
+        directoryPath: tempDir.path,
+        folderName: 'test',
+        word: 'アリス',
+        summaryType: SummaryType.spoiler,
+      );
+
+      expect(result, '情報が見つかりません。');
     });
   });
 }

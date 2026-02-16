@@ -1,9 +1,8 @@
-import 'dart:convert';
-
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
-import 'package:novel_viewer/features/llm_summary/data/llm_prompt_builder.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 
 class LlmSummaryService {
@@ -29,31 +28,16 @@ class LlmSummaryService {
       word,
     );
 
-    var contexts = searchResults
-        .expand((r) => r.matches.map((m) => m.extendedContext ?? m.contextText))
-        .toList();
+    final filteredResults = _filterResultsIfNeeded(
+      searchResults,
+      summaryType,
+      currentFileName,
+    );
 
-    if (summaryType == SummaryType.noSpoiler && currentFileName != null) {
-      final currentNum = _extractNumericPrefix(currentFileName);
-      if (currentNum != null) {
-        final filteredResults = searchResults.where((r) {
-          final num = _extractNumericPrefix(r.fileName);
-          return num != null && num <= currentNum;
-        }).toList();
-        contexts = filteredResults
-            .expand(
-                (r) => r.matches.map((m) => m.extendedContext ?? m.contextText))
-            .toList();
-      }
-    }
+    final contexts = _extractContexts(filteredResults);
 
-    final prompt = summaryType == SummaryType.spoiler
-        ? LlmPromptBuilder.buildSpoilerPrompt(word: word, contexts: contexts)
-        : LlmPromptBuilder.buildNoSpoilerPrompt(
-            word: word, contexts: contexts);
-
-    final response = await llmClient.generate(prompt);
-    final summary = _parseResponse(response);
+    final pipeline = LlmSummaryPipeline(llmClient: llmClient);
+    final summary = await pipeline.generate(word: word, contexts: contexts);
 
     await repository.saveSummary(
       folderName: folderName,
@@ -66,14 +50,30 @@ class LlmSummaryService {
     return summary;
   }
 
-  String _parseResponse(String response) {
-    try {
-      final json = jsonDecode(response) as Map<String, dynamic>;
-      if (json.containsKey('summary')) {
-        return json['summary'] as String;
-      }
-    } catch (_) {}
-    return response;
+  List<SearchResult> _filterResultsIfNeeded(
+    List<SearchResult> results,
+    SummaryType summaryType,
+    String? currentFileName,
+  ) {
+    if (summaryType != SummaryType.noSpoiler) return results;
+    if (currentFileName == null) return const [];
+
+    final currentNum = _extractNumericPrefix(currentFileName);
+    if (currentNum == null) {
+      return results.where((r) => r.fileName == currentFileName).toList();
+    }
+
+    return results.where((r) {
+      final num = _extractNumericPrefix(r.fileName);
+      return num != null && num <= currentNum;
+    }).toList();
+  }
+
+  List<String> _extractContexts(List<SearchResult> results) {
+    return results
+        .expand(
+            (r) => r.matches.map((m) => m.extendedContext ?? m.contextText))
+        .toList();
   }
 
   static int? _extractNumericPrefix(String fileName) {
