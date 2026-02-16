@@ -12,7 +12,7 @@ The system SHALL always save downloaded novels to the library root directory, re
 - **THEN** the novel is saved to the library root directory, not inside the currently viewed novel folder
 
 ### Requirement: Episode download
-The system SHALL download each episode's HTML page, extract the body text, and save it as a text file. Before downloading, the system SHALL compare the episode's update date from the index page with the cached value and skip episodes that have not been modified since the last download.
+The system SHALL download each episode's HTML page, extract the body text, and save it as a text file. Before downloading, the system SHALL compare the episode's update date from the index page with the cached value and skip episodes that have not been modified since the last download. When the novel's index spans multiple pages, the system SHALL fetch all index pages, merge the episode lists with continuous numbering, and then download all episodes.
 
 #### Scenario: New episode is downloaded
 - **WHEN** an episode URL is not found in the episode cache
@@ -53,6 +53,18 @@ The system SHALL download each episode's HTML page, extract the body text, and s
 #### Scenario: Multiple consecutive blank lines are preserved
 - **WHEN** the episode HTML contains multiple consecutive empty `<p>` tags
 - **THEN** the extracted text SHALL preserve each empty `<p>` as a separate blank line, maintaining the original spacing
+
+#### Scenario: Multi-page index is fetched and merged
+- **WHEN** the initial index page has a non-null `nextPageUrl` in the parsed `NovelIndex`
+- **THEN** the system SHALL fetch subsequent index pages following the `nextPageUrl` chain, merge all episodes into a single list with continuous numbering starting from 1, and apply rate limiting (700ms) between each index page fetch
+
+#### Scenario: Progress reflects total episodes across all pages
+- **WHEN** a multi-page novel is being downloaded
+- **THEN** the progress callback SHALL report the total episode count as the sum of episodes from all index pages, and the current count SHALL reflect the overall position across all pages
+
+#### Scenario: URL with page parameter downloads all pages
+- **WHEN** the user provides a URL with a `?p=N` page parameter (e.g., `https://ncode.syosetu.com/n8281jr/?p=2`)
+- **THEN** the system SHALL normalize the URL to remove the page parameter and download all pages starting from page 1
 
 ### Requirement: Download progress display
 The system SHALL display download progress during the download operation, including the number of skipped episodes.
