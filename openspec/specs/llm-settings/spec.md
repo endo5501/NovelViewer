@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: LLM provider selection in settings
-The settings dialog SHALL include an LLM configuration section where the user can select between "OpenAI互換API" and "Ollama" as the LLM provider.
+The settings dialog SHALL include an LLM configuration section where the user can select between "OpenAI互換API" and "Ollama" as the LLM provider. The LLM configuration section SHALL be accessible via scrolling when the settings dialog content exceeds the visible area.
 
 #### Scenario: Display LLM provider dropdown
 - **WHEN** the user opens the settings dialog
@@ -14,6 +14,10 @@ The settings dialog SHALL include an LLM configuration section where the user ca
 #### Scenario: Select Ollama provider
 - **WHEN** the user selects "Ollama" from the provider dropdown
 - **THEN** the Ollama-specific configuration fields (endpoint URL, model name) are displayed
+
+#### Scenario: LLM dropdown accessible via scrolling
+- **WHEN** the settings dialog contains more content than the visible area
+- **THEN** the user SHALL be able to scroll to the LLM provider dropdown and interact with it
 
 ### Requirement: OpenAI-compatible API configuration
 The system SHALL allow the user to configure OpenAI-compatible API connection settings: endpoint URL, API key, and model name.
