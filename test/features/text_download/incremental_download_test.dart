@@ -25,6 +25,9 @@ class _FakeSite implements NovelSite {
   String extractNovelId(Uri url) => 'novel1';
 
   @override
+  Uri normalizeUrl(Uri url) => url;
+
+  @override
   NovelIndex parseIndex(String html, Uri baseUrl) {
     return NovelIndex(
       title: 'テスト小説',
@@ -66,11 +69,110 @@ class _ShortStorySite implements NovelSite {
   String extractNovelId(Uri url) => 'short1';
 
   @override
+  Uri normalizeUrl(Uri url) => url;
+
+  @override
   NovelIndex parseIndex(String html, Uri baseUrl) {
     return const NovelIndex(
       title: '短編テスト小説',
       episodes: [],
       bodyContent: '短編の本文です。',
+    );
+  }
+
+  @override
+  String parseEpisode(String html) => html;
+}
+
+class _MultiPageSite implements NovelSite {
+  final int totalPages;
+  final int episodesPerPage;
+
+  _MultiPageSite({this.totalPages = 2, this.episodesPerPage = 3});
+
+  @override
+  String get siteType => 'test';
+
+  @override
+  bool canHandle(Uri url) => true;
+
+  @override
+  String extractNovelId(Uri url) => 'novel1';
+
+  @override
+  Uri normalizeUrl(Uri url) {
+    // Strip ?p=N query parameter
+    if (url.queryParameters.containsKey('p')) {
+      return url.replace(queryParameters: {});
+    }
+    return url;
+  }
+
+  @override
+  NovelIndex parseIndex(String html, Uri baseUrl) {
+    // Determine current page from URL query parameter
+    final pageParam = baseUrl.queryParameters['p'];
+    final currentPage = pageParam != null ? int.parse(pageParam) : 1;
+
+    final episodes = <Episode>[];
+    for (var i = 1; i <= episodesPerPage; i++) {
+      final localIndex = i;
+      episodes.add(Episode(
+        index: localIndex,
+        title: 'ページ$currentPage第$i話',
+        url: Uri.parse('https://example.com/p$currentPage/$i'),
+        updatedAt: '2025/01/01 00:00',
+      ));
+    }
+
+    Uri? nextPageUrl;
+    if (currentPage < totalPages) {
+      nextPageUrl = Uri.parse(
+        'https://example.com/index?p=${currentPage + 1}',
+      );
+    }
+
+    return NovelIndex(
+      title: 'マルチページ小説',
+      episodes: episodes,
+      nextPageUrl: nextPageUrl,
+    );
+  }
+
+  @override
+  String parseEpisode(String html) => html;
+}
+
+class _InfinitePageSite implements NovelSite {
+  @override
+  String get siteType => 'test';
+
+  @override
+  bool canHandle(Uri url) => true;
+
+  @override
+  String extractNovelId(Uri url) => 'novel1';
+
+  @override
+  Uri normalizeUrl(Uri url) => url;
+
+  @override
+  NovelIndex parseIndex(String html, Uri baseUrl) {
+    final pageParam = baseUrl.queryParameters['p'];
+    final currentPage = pageParam != null ? int.parse(pageParam) : 1;
+
+    return NovelIndex(
+      title: '無限ページ小説',
+      episodes: [
+        Episode(
+          index: 1,
+          title: 'ページ$currentPage第1話',
+          url: Uri.parse('https://example.com/p$currentPage/1'),
+        ),
+      ],
+      nextPageUrl: Uri.parse(
+        'https://example.com/index?p=${currentPage + 1}',
+      ),
     );
   }
 
@@ -87,6 +189,9 @@ class _EmptyNovelSite implements NovelSite {
 
   @override
   String extractNovelId(Uri url) => 'empty1';
+
+  @override
+  Uri normalizeUrl(Uri url) => url;
 
   @override
   NovelIndex parseIndex(String html, Uri baseUrl) {
@@ -658,6 +763,149 @@ void main() {
 
       expect(progressCalls, hasLength(1));
       expect(progressCalls[0], (1, 1, 0));
+    });
+  });
+
+  group('Multi-page download', () {
+    test('fetches all pages and merges episodes with continuous numbering (2 pages)', () async {
+      final getRequests = <String>[];
+
+      final mockClient = MockClient((request) async {
+        getRequests.add(request.url.toString());
+        return http.Response('episode content', 200);
+      });
+
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      final result = await service.downloadNovel(
+        site: _MultiPageSite(totalPages: 2, episodesPerPage: 3),
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+      );
+
+      // 2 pages * 3 episodes = 6 total episodes
+      expect(result.episodeCount, 6);
+
+      // Verify files have continuous numbering
+      final dir = Directory('${tempDir.path}/test_novel1');
+      final files = dir.listSync().whereType<File>().toList();
+      files.sort((a, b) => a.path.compareTo(b.path));
+      expect(files.length, 6);
+
+      // Check that file names use continuous numbering (1-6)
+      expect(files[0].path, contains('1_'));
+      expect(files[5].path, contains('6_'));
+    });
+
+    test('fetches all pages and merges episodes with continuous numbering (3 pages)', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response('episode content', 200);
+      });
+
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      final result = await service.downloadNovel(
+        site: _MultiPageSite(totalPages: 3, episodesPerPage: 2),
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+      );
+
+      // 3 pages * 2 episodes = 6 total episodes
+      expect(result.episodeCount, 6);
+
+      final dir = Directory('${tempDir.path}/test_novel1');
+      final files = dir.listSync().whereType<File>().toList();
+      expect(files.length, 6);
+    });
+
+    test('enforces maximum page limit (100 pages)', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response('episode content', 200);
+      });
+
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      // _InfinitePageSite always returns a nextPageUrl
+      final result = await service.downloadNovel(
+        site: _InfinitePageSite(),
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+      );
+
+      // Should stop at 100 pages * 1 episode per page = 100 episodes
+      expect(result.episodeCount, 100);
+    });
+
+    test('normalizes URL with page parameter and downloads all pages', () async {
+      final getRequests = <String>[];
+
+      final mockClient = MockClient((request) async {
+        getRequests.add(request.url.toString());
+        return http.Response('episode content', 200);
+      });
+
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      // Use a site that supports normalizeUrl
+      final site = _MultiPageSite(totalPages: 2, episodesPerPage: 2);
+
+      final result = await service.downloadNovel(
+        site: site,
+        url: Uri.parse('https://example.com/index?p=2'),
+        outputPath: tempDir.path,
+      );
+
+      // Should still get all pages (4 episodes total)
+      expect(result.episodeCount, 4);
+
+      // First request should be to the base URL (normalized, no ?p=)
+      // But since _MultiPageSite doesn't implement normalizeUrl on the interface,
+      // the DownloadService needs to handle this via site-specific normalizeUrl
+      // For now, verify all episodes are downloaded
+      final dir = Directory('${tempDir.path}/test_novel1');
+      final files = dir.listSync().whereType<File>().toList();
+      expect(files.length, 4);
+    });
+
+    test('reports progress with total episodes across all pages', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response('episode content', 200);
+      });
+
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      final progressCalls = <(int, int, int)>[];
+
+      await service.downloadNovel(
+        site: _MultiPageSite(totalPages: 2, episodesPerPage: 2),
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+        onProgress: (current, total, skipped) {
+          progressCalls.add((current, total, skipped));
+        },
+      );
+
+      // 4 total episodes across 2 pages
+      expect(progressCalls, hasLength(4));
+      expect(progressCalls[0], (1, 4, 0));
+      expect(progressCalls[1], (2, 4, 0));
+      expect(progressCalls[2], (3, 4, 0));
+      expect(progressCalls[3], (4, 4, 0));
     });
   });
 }

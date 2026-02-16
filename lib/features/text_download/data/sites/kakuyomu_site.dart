@@ -79,6 +79,7 @@ class KakuyomuSite implements NovelSite {
     return '';
   }
 
+  @override
   Uri normalizeUrl(Uri url) {
     final path = url.path;
     final match = RegExp(r'/works/(\d+)').firstMatch(path);

@@ -7,6 +7,8 @@ import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 
 typedef ProgressCallback = void Function(int current, int total, int skipped);
 
+const _maxIndexPages = 100;
+
 final _invalidChars = RegExp(r'[\\/:*?"<>|]');
 final _multipleSpaces = RegExp(r'\s+');
 
@@ -114,10 +116,11 @@ class DownloadService {
     EpisodeCacheRepository? episodeCacheRepository,
     ProgressCallback? onProgress,
   }) async {
-    final folderName = buildFolderName(site, url);
-    final novelId = site.extractNovelId(url);
-    final indexResponse = await _fetchPageResponse(url);
-    final novelIndex = site.parseIndex(indexResponse.body, url);
+    final normalizedUrl = site.normalizeUrl(url);
+    final folderName = buildFolderName(site, normalizedUrl);
+    final novelId = site.extractNovelId(normalizedUrl);
+    final indexResponse = await _fetchPageResponse(normalizedUrl);
+    final novelIndex = site.parseIndex(indexResponse.body, normalizedUrl);
 
     final dir = await createNovelDirectory(outputPath, folderName);
 
@@ -125,7 +128,7 @@ class DownloadService {
     if (novelIndex.episodes.isEmpty && novelIndex.bodyContent != null) {
       return _downloadShortStory(
         site: site,
-        url: url,
+        url: normalizedUrl,
         novelId: novelId,
         novelIndex: novelIndex,
         folderName: folderName,
@@ -136,15 +139,74 @@ class DownloadService {
       );
     }
 
+    final mergedIndex = await _collectPagedIndex(
+      site: site,
+      firstIndex: novelIndex,
+      firstUrl: normalizedUrl,
+    );
+
     return _downloadEpisodes(
       site: site,
-      url: url,
+      url: normalizedUrl,
       novelId: novelId,
-      novelIndex: novelIndex,
+      novelIndex: mergedIndex,
       folderName: folderName,
       dir: dir,
       episodeCacheRepository: episodeCacheRepository,
       onProgress: onProgress,
+    );
+  }
+
+  Future<NovelIndex> _collectPagedIndex({
+    required NovelSite site,
+    required NovelIndex firstIndex,
+    required Uri firstUrl,
+  }) async {
+    final episodes = <Episode>[];
+    final seenEpisodeUrls = <String>{};
+    final visitedIndexUrls = <String>{firstUrl.toString()};
+
+    void addEpisodes(Iterable<Episode> items) {
+      for (final e in items) {
+        if (seenEpisodeUrls.add(e.url.toString())) episodes.add(e);
+      }
+    }
+
+    addEpisodes(firstIndex.episodes);
+
+    var next = firstIndex.nextPageUrl;
+    var pageCount = 1;
+
+    while (next != null && pageCount < _maxIndexPages) {
+      final key = next.toString();
+      if (!visitedIndexUrls.add(key)) break;
+
+      await Future.delayed(requestDelay);
+      try {
+        final res = await _fetchPageResponse(next);
+        final idx = site.parseIndex(res.body, next);
+        addEpisodes(idx.episodes);
+        next = idx.nextPageUrl;
+        pageCount++;
+      } catch (_) {
+        break;
+      }
+    }
+
+    final reindexed = [
+      for (final (i, e) in episodes.indexed)
+        Episode(
+          index: i + 1,
+          title: e.title,
+          url: e.url,
+          updatedAt: e.updatedAt,
+        ),
+    ];
+
+    return NovelIndex(
+      title: firstIndex.title,
+      episodes: reindexed,
+      bodyContent: firstIndex.bodyContent,
     );
   }
 

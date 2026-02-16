@@ -1,7 +1,25 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_download/data/sites/narou_site.dart';
+import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 
 void main() {
+  group('NovelIndex nextPageUrl', () {
+    test('defaults to null when not specified', () {
+      const index = NovelIndex(title: 'テスト', episodes: []);
+      expect(index.nextPageUrl, isNull);
+    });
+
+    test('stores non-null nextPageUrl', () {
+      final nextUrl = Uri.parse('https://ncode.syosetu.com/n8281jr/?p=2');
+      final index = NovelIndex(
+        title: 'テスト',
+        episodes: const [],
+        nextPageUrl: nextUrl,
+      );
+      expect(index.nextPageUrl, nextUrl);
+    });
+  });
+
   late NarouSite site;
 
   setUp(() {
@@ -42,6 +60,18 @@ void main() {
       final url = Uri.parse('https://ncode.syosetu.com/n9669bk/');
       final normalized = site.normalizeUrl(url);
       expect(normalized.toString(), 'https://ncode.syosetu.com/n9669bk/');
+    });
+
+    test('strips page parameter from URL', () {
+      final url = Uri.parse('https://ncode.syosetu.com/n8281jr/?p=2');
+      final normalized = site.normalizeUrl(url);
+      expect(normalized.toString(), 'https://ncode.syosetu.com/n8281jr/');
+    });
+
+    test('strips page parameter from URL with p=3', () {
+      final url = Uri.parse('https://ncode.syosetu.com/n8281jr/?p=3');
+      final normalized = site.normalizeUrl(url);
+      expect(normalized.toString(), 'https://ncode.syosetu.com/n8281jr/');
     });
   });
 
@@ -220,6 +250,67 @@ void main() {
 
       expect(index.episodes.length, 1);
       expect(index.episodes[0].updatedAt, isNull);
+    });
+
+    test('detects next page URL from pagination link', () {
+      const html = '''
+<html>
+<body>
+  <h1 class="p-novel__title">長編小説</h1>
+  <div class="p-eplist">
+    <a href="/n8281jr/1/" class="p-eplist__subtitle">第一話</a>
+    <a href="/n8281jr/2/" class="p-eplist__subtitle">第二話</a>
+  </div>
+  <div>
+    最初へ 前へ <a href="/n8281jr/?p=2">次へ</a> <a href="/n8281jr/?p=2">最後へ</a>
+  </div>
+</body>
+</html>
+''';
+      final baseUrl = Uri.parse('https://ncode.syosetu.com/n8281jr/');
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.nextPageUrl, isNotNull);
+      expect(index.nextPageUrl.toString(),
+          'https://ncode.syosetu.com/n8281jr/?p=2');
+    });
+
+    test('sets nextPageUrl to null on last page (no next link)', () {
+      const html = '''
+<html>
+<body>
+  <h1 class="p-novel__title">長編小説</h1>
+  <div class="p-eplist">
+    <a href="/n8281jr/101/" class="p-eplist__subtitle">第百一話</a>
+  </div>
+  <div>
+    <a href="/n8281jr/">最初へ</a> <a href="/n8281jr/?p=1">前へ</a> 次へ 最後へ
+  </div>
+</body>
+</html>
+''';
+      final baseUrl = Uri.parse('https://ncode.syosetu.com/n8281jr/?p=2');
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.nextPageUrl, isNull);
+    });
+
+    test('sets nextPageUrl to null when no pagination exists', () {
+      const html = '''
+<html>
+<body>
+  <h1 class="p-novel__title">短い小説</h1>
+  <div class="p-eplist">
+    <a href="/n9669bk/1/" class="p-eplist__subtitle">第一話</a>
+    <a href="/n9669bk/2/" class="p-eplist__subtitle">第二話</a>
+  </div>
+</body>
+</html>
+''';
+      final baseUrl = Uri.parse('https://ncode.syosetu.com/n9669bk/');
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.nextPageUrl, isNull);
     });
   });
 

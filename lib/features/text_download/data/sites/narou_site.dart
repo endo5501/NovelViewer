@@ -104,7 +104,22 @@ class NarouSite implements NovelSite {
       }
     }
 
-    return NovelIndex(title: title, episodes: episodes, bodyContent: bodyContent);
+    // Detect pagination: look for "次へ" link with ?p= parameter
+    Uri? nextPageUrl;
+    final nextLink = document.querySelectorAll('a[href*="?p="]').cast<dynamic>().firstWhere(
+      (link) => link.text.trim() == '次へ',
+      orElse: () => null,
+    );
+    if (nextLink != null) {
+      nextPageUrl = baseUrl.resolve(nextLink.attributes['href']!);
+    }
+
+    return NovelIndex(
+      title: title,
+      episodes: episodes,
+      bodyContent: bodyContent,
+      nextPageUrl: nextPageUrl,
+    );
   }
 
   @override
@@ -151,6 +166,7 @@ class NarouSite implements NovelSite {
     return match?.group(1);
   }
 
+  @override
   Uri normalizeUrl(Uri url) {
     final path = url.path;
     final match = RegExp(r'/(n\w+)').firstMatch(path);
