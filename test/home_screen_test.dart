@@ -21,7 +21,10 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
           child: const NovelViewerApp(),
         ),
       );
@@ -35,7 +38,10 @@ void main() {
     testWidgets('left column has fixed width', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
           child: const NovelViewerApp(),
         ),
       );
@@ -52,7 +58,10 @@ void main() {
     testWidgets('right column has fixed width', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
           child: const NovelViewerApp(),
         ),
       );
@@ -74,6 +83,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
             selectedNovelTitleProvider
                 .overrideWith((ref) async => null),
           ],
@@ -93,6 +103,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
             selectedNovelTitleProvider
                 .overrideWith((ref) async => '異世界転生物語'),
           ],
@@ -114,7 +125,10 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
           child: const NovelViewerApp(),
         ),
       );
@@ -126,7 +140,10 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
           child: const NovelViewerApp(),
         ),
       );
@@ -148,7 +165,10 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
           child: const NovelViewerApp(),
         ),
       );
@@ -165,7 +185,10 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
           child: const NovelViewerApp(),
         ),
       );
@@ -193,13 +216,17 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
           child: Builder(
             builder: (context) {
               return ProviderScope(
-                overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+                overrides: [
+                  sharedPreferencesProvider.overrideWithValue(prefs),
+                  libraryPathProvider.overrideWithValue('/library'),
+                ],
                 child: const NovelViewerApp(),
               );
             },
@@ -227,7 +254,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
           child: const NovelViewerApp(),
         ),
       );

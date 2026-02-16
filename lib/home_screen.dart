@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:novel_viewer/features/file_browser/presentation/file_browser_panel.dart';
+import 'package:novel_viewer/features/bookmark/presentation/left_column_panel.dart';
+import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
@@ -15,8 +16,46 @@ class _SearchIntent extends Intent {
   const _SearchIntent();
 }
 
+class _BookmarkIntent extends Intent {
+  const _BookmarkIntent();
+}
+
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
+
+  Widget _buildBookmarkButton(WidgetRef ref) {
+    final novelId = ref.watch(currentNovelIdProvider);
+    final selectedFile = ref.watch(selectedFileProvider);
+    final isEnabled = novelId != null && selectedFile != null;
+    final isBookmarked = ref.watch(isBookmarkedProvider).value ?? false;
+
+    return IconButton(
+      key: const Key('bookmark_button'),
+      icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border),
+      onPressed: isEnabled ? () => _toggleBookmark(ref) : null,
+      tooltip: isBookmarked ? 'ブックマーク解除' : 'ブックマーク登録',
+    );
+  }
+
+  Future<void> _toggleBookmark(WidgetRef ref) async {
+    final novelId = ref.read(currentNovelIdProvider);
+    final selectedFile = ref.read(selectedFileProvider);
+    if (novelId == null || selectedFile == null) return;
+
+    final isBookmarked = ref.read(isBookmarkedProvider).value ?? false;
+    final repository = ref.read(bookmarkRepositoryProvider);
+
+    await toggleBookmark(
+      repository,
+      novelId: novelId,
+      fileName: selectedFile.name,
+      filePath: selectedFile.path,
+      isCurrentlyBookmarked: isBookmarked,
+    );
+
+    ref.invalidate(isBookmarkedProvider);
+    ref.invalidate(bookmarksForNovelProvider(novelId));
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -26,6 +65,10 @@ class HomeScreen extends ConsumerWidget {
             const _SearchIntent(),
         const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
             const _SearchIntent(),
+        const SingleActivator(LogicalKeyboardKey.keyB, control: true):
+            const _BookmarkIntent(),
+        const SingleActivator(LogicalKeyboardKey.keyB, meta: true):
+            const _BookmarkIntent(),
       },
       child: Actions(
         actions: {
@@ -35,6 +78,12 @@ class HomeScreen extends ConsumerWidget {
               if (selectedText?.isNotEmpty ?? false) {
                 ref.read(searchQueryProvider.notifier).setQuery(selectedText);
               }
+              return null;
+            },
+          ),
+          _BookmarkIntent: CallbackAction<_BookmarkIntent>(
+            onInvoke: (_) {
+              _toggleBookmark(ref);
               return null;
             },
           ),
@@ -48,6 +97,7 @@ class HomeScreen extends ConsumerWidget {
                     'NovelViewer',
               ),
               actions: [
+                _buildBookmarkButton(ref),
                 IconButton(
                   key: const Key('toggle_right_column_button'),
                   icon: Icon(
@@ -77,7 +127,7 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 const SizedBox(
                   width: 250,
-                  child: FileBrowserPanel(key: Key('left_column')),
+                  child: LeftColumnPanel(key: Key('left_column')),
                 ),
                 const VerticalDivider(width: 1),
                 const Expanded(
