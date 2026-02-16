@@ -42,11 +42,13 @@ class NovelIndex {
   final String title;
   final List<Episode> episodes;
   final String? bodyContent;
+  final Uri? nextPageUrl;
 
   const NovelIndex({
     required this.title,
     required this.episodes,
     this.bodyContent,
+    this.nextPageUrl,
   });
 }
 
@@ -54,6 +56,7 @@ abstract class NovelSite {
   String get siteType;
   bool canHandle(Uri url);
   String extractNovelId(Uri url);
+  Uri normalizeUrl(Uri url) => url;
   NovelIndex parseIndex(String html, Uri baseUrl);
   String parseEpisode(String html);
 }
