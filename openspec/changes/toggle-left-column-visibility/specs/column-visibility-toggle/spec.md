@@ -16,7 +16,7 @@ The application SHALL display a toggle button in the AppBar that controls the vi
 - **THEN** the toggle button SHALL display a sidebar icon (Icons.view_sidebar)
 
 ### Requirement: Right column visibility state management
-The application SHALL manage the right column visibility state using a Riverpod StateProvider.
+The application SHALL manage the right column visibility state using a Riverpod NotifierProvider.
 
 #### Scenario: Right column is visible by default
 - **WHEN** the application launches

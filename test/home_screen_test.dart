@@ -107,6 +107,83 @@ void main() {
     });
   });
 
+  group('HomeScreen right column toggle', () {
+    const toggleButtonKey = Key('toggle_right_column_button');
+
+    testWidgets('toggle button is displayed in AppBar',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: const NovelViewerApp(),
+        ),
+      );
+
+      expect(find.byKey(toggleButtonKey), findsOneWidget);
+    });
+
+    testWidgets('clicking toggle hides right column and divider',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: const NovelViewerApp(),
+        ),
+      );
+
+      // Initially right column is visible
+      expect(find.byKey(const Key('right_column')), findsOneWidget);
+      expect(find.byType(VerticalDivider), findsNWidgets(2));
+
+      // Click toggle button
+      await tester.tap(find.byKey(toggleButtonKey));
+      await tester.pump();
+
+      // Right column and its divider should be hidden
+      expect(find.byKey(const Key('right_column')), findsNothing);
+      expect(find.byType(VerticalDivider), findsNWidgets(1));
+    });
+
+    testWidgets('icon changes to view_sidebar when right column is hidden',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: const NovelViewerApp(),
+        ),
+      );
+
+      // Click toggle to hide
+      await tester.tap(find.byKey(toggleButtonKey));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.view_sidebar), findsOneWidget);
+      expect(find.byIcon(Icons.vertical_split), findsNothing);
+    });
+
+    testWidgets('clicking toggle again shows right column',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: const NovelViewerApp(),
+        ),
+      );
+
+      // Hide
+      await tester.tap(find.byKey(toggleButtonKey));
+      await tester.pump();
+
+      // Show again
+      await tester.tap(find.byKey(toggleButtonKey));
+      await tester.pump();
+
+      expect(find.byKey(const Key('right_column')), findsOneWidget);
+      expect(find.byType(VerticalDivider), findsNWidgets(2));
+      expect(find.byIcon(Icons.vertical_split), findsOneWidget);
+    });
+  });
+
   group('HomeScreen keyboard shortcuts', () {
     testWidgets('Ctrl+F sets searchQueryProvider from selectedTextProvider',
         (WidgetTester tester) async {

@@ -21,11 +21,11 @@
 
 ## Decisions
 
-### 1. 状態管理: Riverpod StateProvider を使用
+### 1. 状態管理: Riverpod NotifierProvider を使用
 
-右カラムの表示・非表示状態を `StateProvider<bool>` で管理する。
+右カラムの表示・非表示状態を `NotifierProvider<RightColumnVisibleNotifier, bool>` で管理する。`toggle()` メソッドで状態を反転させる。
 
-**理由**: プロジェクト全体で Riverpod を使用しており、単純な bool 値の管理には `StateProvider` が最適。`StateNotifierProvider` や `NotifierProvider` は過剰。
+**理由**: Riverpod 3.x では `StateProvider` が削除されており、`NotifierProvider` が単純な状態管理の標準パターン。プロジェクト全体で `Notifier` ベースの Provider を使用しており一貫性がある。
 
 **代替案**:
 - `StatefulWidget` に変換 → プロジェクトの方針と合わない。他のウィジェットから状態を参照できない
