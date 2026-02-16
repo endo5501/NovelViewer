@@ -7,8 +7,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('SettingsDialog LLM settings', () {
-    testWidgets('displays LLM provider dropdown', (tester) async {
-      SharedPreferences.setMockInitialValues({});
+    // Common test labels
+    const labelEndpointUrl = 'エンドポイントURL';
+    const labelApiKey = 'APIキー';
+    const labelModel = 'モデル名';
+    const labelProvider = 'LLMプロバイダ';
+    const labelUnset = '未設定';
+    const providerOllama = 'Ollama';
+
+    // Helper function to reduce boilerplate setup
+    Future<void> pumpSettingsDialog(
+      WidgetTester tester, {
+      Map<String, Object> prefsValues = const {},
+    }) async {
+      SharedPreferences.setMockInitialValues(prefsValues);
       final prefs = await SharedPreferences.getInstance();
 
       await tester.pumpWidget(
@@ -17,79 +29,66 @@ void main() {
           child: const MaterialApp(home: Scaffold(body: SettingsDialog())),
         ),
       );
+    }
 
-      expect(find.text('LLMプロバイダ'), findsOneWidget);
-      expect(find.text('未設定'), findsOneWidget);
+    testWidgets('displays LLM provider dropdown', (tester) async {
+      await pumpSettingsDialog(tester);
+
+      expect(find.text(labelProvider), findsOneWidget);
+      expect(find.text(labelUnset), findsOneWidget);
     });
 
     testWidgets('shows OpenAI fields when OpenAI provider selected',
         (tester) async {
-      SharedPreferences.setMockInitialValues({
-        'llm_provider': 'openai',
-        'llm_base_url': 'https://api.openai.com/v1',
-        'llm_api_key': 'sk-test',
-        'llm_model': 'gpt-4o-mini',
-      });
-      final prefs = await SharedPreferences.getInstance();
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-          child: const MaterialApp(home: Scaffold(body: SettingsDialog())),
-        ),
+      await pumpSettingsDialog(
+        tester,
+        prefsValues: {
+          'llm_provider': 'openai',
+          'llm_base_url': 'https://api.openai.com/v1',
+          'llm_api_key': 'sk-test',
+          'llm_model': 'gpt-4o-mini',
+        },
       );
 
-      expect(find.text('エンドポイントURL'), findsOneWidget);
-      expect(find.text('APIキー'), findsOneWidget);
-      expect(find.text('モデル名'), findsOneWidget);
+      expect(find.text(labelEndpointUrl), findsOneWidget);
+      expect(find.text(labelApiKey), findsOneWidget);
+      expect(find.text(labelModel), findsOneWidget);
     });
 
     testWidgets('shows Ollama fields when Ollama provider selected',
         (tester) async {
-      SharedPreferences.setMockInitialValues({
-        'llm_provider': 'ollama',
-        'llm_base_url': 'http://localhost:11434',
-        'llm_api_key': '',
-        'llm_model': 'llama3',
-      });
-      final prefs = await SharedPreferences.getInstance();
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-          child: const MaterialApp(home: Scaffold(body: SettingsDialog())),
-        ),
+      await pumpSettingsDialog(
+        tester,
+        prefsValues: {
+          'llm_provider': 'ollama',
+          'llm_base_url': 'http://localhost:11434',
+          'llm_api_key': '',
+          'llm_model': 'llama3',
+        },
       );
 
-      expect(find.text('エンドポイントURL'), findsOneWidget);
-      expect(find.text('モデル名'), findsOneWidget);
+      expect(find.text(labelEndpointUrl), findsOneWidget);
+      expect(find.text(labelModel), findsOneWidget);
       // Ollama doesn't show API key field
-      expect(find.text('APIキー'), findsNothing);
+      expect(find.text(labelApiKey), findsNothing);
     });
 
     testWidgets('changing provider updates displayed fields', (tester) async {
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-          child: const MaterialApp(home: Scaffold(body: SettingsDialog())),
-        ),
-      );
+      await pumpSettingsDialog(tester);
 
       // Initially "未設定" - no fields shown
-      expect(find.text('エンドポイントURL'), findsNothing);
+      expect(find.text(labelEndpointUrl), findsNothing);
 
       // Open dropdown and select Ollama
-      await tester.tap(find.text('未設定'));
+      await tester.ensureVisible(find.text(labelUnset));
+      await tester.tap(find.text(labelUnset));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Ollama').last);
+      await tester.tap(find.text(providerOllama).last);
       await tester.pumpAndSettle();
 
       // Now Ollama fields should be shown
-      expect(find.text('エンドポイントURL'), findsOneWidget);
-      expect(find.text('モデル名'), findsOneWidget);
+      expect(find.text(labelEndpointUrl), findsOneWidget);
+      expect(find.text(labelModel), findsOneWidget);
     });
   });
 }
