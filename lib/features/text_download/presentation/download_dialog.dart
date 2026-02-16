@@ -54,14 +54,14 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     if (url.isEmpty) return false;
     final uri = Uri.tryParse(url);
     if (uri == null) return false;
-    final outputPath = ref.read(currentDirectoryProvider);
+    final outputPath = ref.read(libraryPathProvider);
     if (outputPath == null) return false;
     return _registry.findSite(uri) != null;
   }
 
   void _startDownload() {
     final uri = Uri.parse(_urlController.text);
-    final outputPath = ref.read(currentDirectoryProvider)!;
+    final outputPath = ref.read(libraryPathProvider)!;
     ref.read(downloadProvider.notifier).startDownload(
           url: uri,
           outputPath: outputPath,
