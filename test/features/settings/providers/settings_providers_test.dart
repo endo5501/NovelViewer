@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -90,6 +91,48 @@ void main() {
           .persistColumnSpacing();
       expect(container.read(columnSpacingProvider), 12.0);
       expect(prefs.getDouble('column_spacing'), 12.0);
+    });
+  });
+
+  group('themeModeProvider', () {
+    test('initial value is ThemeMode.light', () {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(themeModeProvider), ThemeMode.light);
+    });
+
+    test('initial value loads from SharedPreferences', () async {
+      await prefs.setString('theme_mode', 'dark');
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(themeModeProvider), ThemeMode.dark);
+    });
+
+    test('setThemeMode updates state and persists', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(themeModeProvider.notifier)
+          .setThemeMode(ThemeMode.dark);
+      expect(container.read(themeModeProvider), ThemeMode.dark);
+      expect(prefs.getString('theme_mode'), 'dark');
+    });
+
+    test('setThemeMode can toggle back to light', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(themeModeProvider.notifier)
+          .setThemeMode(ThemeMode.dark);
+      await container
+          .read(themeModeProvider.notifier)
+          .setThemeMode(ThemeMode.light);
+      expect(container.read(themeModeProvider), ThemeMode.light);
+      expect(prefs.getString('theme_mode'), 'light');
     });
   });
 

@@ -76,6 +76,39 @@ void main() {
     });
   });
 
+  group('SettingsDialog - dark mode toggle', () {
+    testWidgets('displays dark mode toggle', (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+
+      expect(find.text('ダークモード'), findsOneWidget);
+    });
+
+    testWidgets('dark mode toggle is off by default', (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+
+      final switchTiles = find.byType(SwitchListTile);
+      // Find the dark mode switch (second SwitchListTile after vertical display)
+      final darkModeSwitch =
+          tester.widget<SwitchListTile>(switchTiles.at(1));
+      expect(darkModeSwitch.value, isFalse);
+    });
+
+    testWidgets('toggling dark mode updates theme mode', (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+
+      // Tap the dark mode toggle
+      final darkModeSwitch = find.byType(SwitchListTile).at(1);
+      await tester.tap(darkModeSwitch);
+      await tester.pumpAndSettle();
+
+      // Verify it's now on
+      final updatedSwitch =
+          tester.widget<SwitchListTile>(find.byType(SwitchListTile).at(1));
+      expect(updatedSwitch.value, isTrue);
+      expect(prefs.getString('theme_mode'), 'dark');
+    });
+  });
+
   group('SettingsDialog - font family dropdown', () {
     testWidgets('displays font family dropdown', (tester) async {
       await tester.pumpWidget(buildTestWidget());

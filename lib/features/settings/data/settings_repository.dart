@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
@@ -8,6 +9,7 @@ class SettingsRepository {
   static const _fontSizeKey = 'font_size';
   static const _fontFamilyKey = 'font_family';
   static const _columnSpacingKey = 'column_spacing';
+  static const _themeModeKey = 'theme_mode';
   static const _llmProviderKey = 'llm_provider';
   static const _llmBaseUrlKey = 'llm_base_url';
   static const _llmApiKeyKey = 'llm_api_key';
@@ -66,6 +68,15 @@ class SettingsRepository {
   Future<void> setColumnSpacing(double spacing) async {
     await _prefs.setDouble(
         _columnSpacingKey, spacing.clamp(minColumnSpacing, maxColumnSpacing));
+  }
+
+  ThemeMode getThemeMode() {
+    final value = _prefs.getString(_themeModeKey);
+    return value == ThemeMode.dark.name ? ThemeMode.dark : ThemeMode.light;
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    await _prefs.setString(_themeModeKey, mode.name);
   }
 
   LlmConfig getLlmConfig() {

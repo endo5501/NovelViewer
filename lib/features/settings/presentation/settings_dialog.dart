@@ -63,6 +63,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
   @override
   Widget build(BuildContext context) {
     final displayMode = ref.watch(displayModeProvider);
+    final themeMode = ref.watch(themeModeProvider);
     final fontSize = ref.watch(fontSizeProvider);
     final fontFamily = ref.watch(fontFamilyProvider);
     final columnSpacing = ref.watch(columnSpacingProvider);
@@ -87,6 +88,18 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                         value
                             ? TextDisplayMode.vertical
                             : TextDisplayMode.horizontal,
+                      );
+                },
+              ),
+              SwitchListTile(
+                title: const Text('ダークモード'),
+                subtitle: Text(
+                  themeMode == ThemeMode.dark ? 'ダーク' : 'ライト',
+                ),
+                value: themeMode == ThemeMode.dark,
+                onChanged: (value) {
+                  ref.read(themeModeProvider.notifier).setThemeMode(
+                        value ? ThemeMode.dark : ThemeMode.light,
                       );
                 },
               ),
