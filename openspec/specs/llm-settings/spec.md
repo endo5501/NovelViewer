@@ -35,7 +35,7 @@ The system SHALL allow the user to configure OpenAI-compatible API connection se
 - **THEN** the value is persisted and used as the model parameter in LLM requests
 
 ### Requirement: Ollama configuration
-The system SHALL allow the user to configure Ollama connection settings: endpoint URL and model name. The endpoint URL SHALL default to "http://localhost:11434".
+The system SHALL allow the user to configure Ollama connection settings: endpoint URL and model name. The endpoint URL SHALL default to "http://localhost:11434". The model name SHALL be selected from a dropdown populated by fetching the installed model list from the Ollama server, instead of manual text input.
 
 #### Scenario: Configure Ollama with default URL
 - **WHEN** the user selects Ollama and does not modify the endpoint URL
@@ -45,8 +45,8 @@ The system SHALL allow the user to configure Ollama connection settings: endpoin
 - **WHEN** the user enters "http://192.168.1.100:11434" as the Ollama endpoint URL
 - **THEN** the value is persisted and used for subsequent LLM requests
 
-#### Scenario: Configure Ollama model name
-- **WHEN** the user enters a model name in the Ollama model field
+#### Scenario: Configure Ollama model via dropdown
+- **WHEN** the user selects a model name from the Ollama model dropdown
 - **THEN** the value is persisted and used as the model parameter in LLM requests
 
 ### Requirement: LLM settings persistence
