@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 
@@ -5,7 +7,10 @@ class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
   static const _databaseVersion = 3;
 
+  final String? _dbDirPath;
   Database? _database;
+
+  NovelDatabase({String? dbDirPath}) : _dbDirPath = dbDirPath;
 
   Future<Database> get database async {
     final db = _database;
@@ -14,7 +19,7 @@ class NovelDatabase {
   }
 
   Future<Database> _open() async {
-    final dbPath = await getDatabasesPath();
+    final dbPath = await _resolveDatabaseDirPath();
     final path = p.join(dbPath, _databaseName);
     return openDatabase(
       path,
@@ -22,6 +27,13 @@ class NovelDatabase {
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
+  }
+
+  Future<String> _resolveDatabaseDirPath() async {
+    final dirPath = _dbDirPath;
+    if (dirPath != null) return dirPath;
+    if (Platform.isWindows) return p.dirname(Platform.resolvedExecutable);
+    return getDatabasesPath();
   }
 
   Future<void> _onCreate(Database db, int version) async {

@@ -12,18 +12,14 @@ class NovelLibraryService {
   static const _oldBundleId = 'com.example.novelViewer';
   static const _newBundleId = 'com.endo5501.novelViewer';
 
-  String get libraryPath {
-    final basePath = _basePath;
-    if (basePath == null) {
-      throw StateError('basePath not set. Use resolveLibraryPath() first.');
-    }
-    return p.join(basePath, _libraryDirName);
-  }
-
   Future<String> resolveLibraryPath() async {
     final basePath = _basePath;
     if (basePath != null) {
       return p.join(basePath, _libraryDirName);
+    }
+    if (Platform.isWindows) {
+      final exeDir = p.dirname(Platform.resolvedExecutable);
+      return p.join(exeDir, _libraryDirName);
     }
     final documentsDir = await getApplicationDocumentsDirectory();
     return p.join(documentsDir.path, _libraryDirName);
@@ -39,6 +35,7 @@ class NovelLibraryService {
   }
 
   Future<void> migrateFromOldBundleId() async {
+    if (Platform.isWindows) return;
     final documentsDir = await getApplicationDocumentsDirectory();
     final currentPath = documentsDir.path;
 
