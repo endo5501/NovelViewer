@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
@@ -125,6 +126,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
       child: Listener(
         behavior: HitTestBehavior.opaque,
         onPointerDown: _handlePointerDown,
+        onPointerSignal: _handlePointerSignal,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final result = _paginateLines(constraints);
@@ -248,6 +250,19 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
 
   void _handlePointerDown(PointerDownEvent event) {
     _focusNode.requestFocus();
+  }
+
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    if (_animationController.isAnimating) return;
+
+    _focusNode.requestFocus();
+
+    if (event.scrollDelta.dy > 0) {
+      _nextPage();
+    } else if (event.scrollDelta.dy < 0) {
+      _previousPage();
+    }
   }
 
   void _handleSwipe(SwipeDirection direction) {
