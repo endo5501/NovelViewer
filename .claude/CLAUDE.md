@@ -8,7 +8,13 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `fvm flutter test` - テスト実行
  - `fvm flutter analyze` - リント実行
  - `fvm flutter pub get` - 依存パッケージ取得
-  
+
+## 必須ルール(MUST)
+
+1. TDD厳守: テストファースト開発を必ず実施→ `/test-driven-development` スキルを使用
+2. 開発計画: proposal作成時、 `/brainstorming` スキルで計画を明確にする
+3. デバッグ: デバッグ時、 `/systematic-debugging` スキルを使用
+
 ## tasks.md作成時の注意
 
 OpenSpecのスキルでtasks.mdを作成する際、最終確認のため以下の項目を追加してください
