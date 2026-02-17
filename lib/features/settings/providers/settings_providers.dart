@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
@@ -7,6 +8,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError('Must be overridden in ProviderScope');
+});
+
+final httpClientProvider = Provider<http.Client>((ref) {
+  final client = http.Client();
+  ref.onDispose(client.close);
+  return client;
 });
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
@@ -63,7 +70,7 @@ class FontSizeNotifier extends Notifier<double> {
   }
 
   void previewFontSize(double size) {
-    state = size.clamp(SettingsRepository.minFontSize, SettingsRepository.maxFontSize);
+    state = size;
   }
 
   Future<void> persistFontSize() async {
@@ -84,8 +91,7 @@ class ColumnSpacingNotifier extends Notifier<double> {
   }
 
   void previewColumnSpacing(double spacing) {
-    state = spacing.clamp(
-        SettingsRepository.minColumnSpacing, SettingsRepository.maxColumnSpacing);
+    state = spacing;
   }
 
   Future<void> persistColumnSpacing() async {

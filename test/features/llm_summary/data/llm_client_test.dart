@@ -48,6 +48,62 @@ void main() {
         throwsException,
       );
     });
+
+    group('fetchModels', () {
+      test('returns model names from server response', () async {
+        final mockClient = MockClient((request) async {
+          expect(request.url.toString(), 'http://localhost:11434/api/tags');
+          expect(request.method, 'GET');
+          return http.Response(
+            jsonEncode({
+              'models': [
+                {'name': 'gemma3', 'size': 3338801804},
+                {'name': 'qwen3:8b', 'size': 5000000000},
+                {'name': 'llama3.1:latest', 'size': 4000000000},
+              ],
+            }),
+            200,
+          );
+        });
+
+        final result = await OllamaClient.fetchModels(
+          baseUrl: 'http://localhost:11434',
+          httpClient: mockClient,
+        );
+
+        expect(result, ['gemma3', 'qwen3:8b', 'llama3.1:latest']);
+      });
+
+      test('returns empty list when no models installed', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'models': []}),
+            200,
+          );
+        });
+
+        final result = await OllamaClient.fetchModels(
+          baseUrl: 'http://localhost:11434',
+          httpClient: mockClient,
+        );
+
+        expect(result, isEmpty);
+      });
+
+      test('throws on non-200 response', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('Server Error', 500);
+        });
+
+        expect(
+          () => OllamaClient.fetchModels(
+            baseUrl: 'http://localhost:11434',
+            httpClient: mockClient,
+          ),
+          throwsException,
+        );
+      });
+    });
   });
 
   group('OpenAiCompatibleClient', () {

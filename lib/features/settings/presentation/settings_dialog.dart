@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/llm_summary/data/ollama_client.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
@@ -26,6 +27,12 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
   late TextEditingController _apiKeyController;
   late TextEditingController _modelController;
 
+  List<String> _ollamaModels = [];
+  bool _ollamaModelsLoading = false;
+  String? _ollamaModelsError;
+  String? _selectedOllamaModel;
+  int _fetchGeneration = 0;
+
   @override
   void initState() {
     super.initState();
@@ -39,14 +46,61 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
     );
     _apiKeyController = TextEditingController(text: config.apiKey);
     _modelController = TextEditingController(text: config.model);
+    _selectedOllamaModel = config.model.isEmpty ? null : config.model;
+
+    if (_llmProvider == LlmProvider.ollama) {
+      _fetchOllamaModels();
+    }
   }
 
   @override
   void dispose() {
+    _fetchGeneration++;
     _baseUrlController.dispose();
     _apiKeyController.dispose();
     _modelController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchOllamaModels() async {
+    final generation = ++_fetchGeneration;
+
+    setState(() {
+      _ollamaModelsLoading = true;
+      _ollamaModelsError = null;
+    });
+
+    try {
+      final httpClient = ref.read(httpClientProvider);
+      final models = await OllamaClient.fetchModels(
+        baseUrl: _baseUrlController.text,
+        httpClient: httpClient,
+      );
+
+      if (!mounted || generation != _fetchGeneration) return;
+
+      final shouldClearSelection = _selectedOllamaModel != null &&
+          !models.contains(_selectedOllamaModel);
+
+      setState(() {
+        _ollamaModels = models;
+        _ollamaModelsLoading = false;
+        if (shouldClearSelection) {
+          _selectedOllamaModel = null;
+          _modelController.text = '';
+        }
+      });
+
+      if (shouldClearSelection) {
+        _saveLlmConfig();
+      }
+    } catch (e) {
+      if (!mounted || generation != _fetchGeneration) return;
+      setState(() {
+        _ollamaModelsLoading = false;
+        _ollamaModelsError = 'モデル一覧の取得エラー: $e';
+      });
+    }
   }
 
   Future<void> _saveLlmConfig() async {
@@ -180,6 +234,9 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                       }
                     });
                     _saveLlmConfig();
+                    if (value == LlmProvider.ollama) {
+                      _fetchOllamaModels();
+                    }
                   },
                   items: const [
                     DropdownMenuItem(
@@ -208,7 +265,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                     onChanged: (_) => _saveLlmConfig(),
                   ),
                 ),
-                if (_llmProvider == LlmProvider.openai)
+                if (_llmProvider == LlmProvider.openai) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: TextField(
@@ -220,16 +277,19 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                       onChanged: (_) => _saveLlmConfig(),
                     ),
                   ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: TextField(
-                    controller: _modelController,
-                    decoration: const InputDecoration(
-                      labelText: 'モデル名',
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextField(
+                      controller: _modelController,
+                      decoration: const InputDecoration(
+                        labelText: 'モデル名',
+                      ),
+                      onChanged: (_) => _saveLlmConfig(),
                     ),
-                    onChanged: (_) => _saveLlmConfig(),
                   ),
-                ),
+                ],
+                if (_llmProvider == LlmProvider.ollama)
+                  _buildOllamaModelSelector(),
               ],
             ],
           ),
@@ -241,6 +301,77 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
           child: const Text('閉じる'),
         ),
       ],
+    );
+  }
+
+  Widget _buildOllamaModelSelector() {
+    if (_ollamaModelsLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 8),
+            Text('モデル一覧を取得中...'),
+          ],
+        ),
+      );
+    }
+
+    if (_ollamaModelsError != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                _ollamaModelsError!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _fetchOllamaModels,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: DropdownButton<String>(
+              value: _selectedOllamaModel,
+              isExpanded: true,
+              hint: const Text('モデルを選択'),
+              onChanged: (value) {
+                setState(() {
+                  _selectedOllamaModel = value;
+                  _modelController.text = value ?? '';
+                });
+                _saveLlmConfig();
+              },
+              items: _ollamaModels.map((model) {
+                return DropdownMenuItem<String>(
+                  value: model,
+                  child: Text(model),
+                );
+              }).toList(),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchOllamaModels,
+          ),
+        ],
+      ),
     );
   }
 }
