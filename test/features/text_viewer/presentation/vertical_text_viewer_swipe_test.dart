@@ -91,7 +91,7 @@ void main() {
 
       // First navigate to page 2 using arrow key
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(_extractCurrentPage(tester), 2);
 
       // Simulate left swipe (start right, end left)
@@ -151,7 +151,7 @@ void main() {
 
       for (var i = 1; i < totalPages; i++) {
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-        await tester.pump();
+        await tester.pumpAndSettle();
       }
       expect(_extractCurrentPage(tester), totalPages);
 
@@ -310,12 +310,12 @@ void main() {
 
       // Left arrow advances to next page
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(_extractCurrentPage(tester), 2);
 
       // Right arrow returns to previous page
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(_extractCurrentPage(tester), 1);
     });
   });
