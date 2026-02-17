@@ -34,7 +34,12 @@ const _kVerticalPadding = 62.0;
 const _kTextHeight = 1.1;
 const _kDefaultFontSize = 14.0;
 
-class _VerticalTextViewerState extends State<VerticalTextViewer> {
+// Page transition animation constants
+const _kPageTransitionDuration = Duration(milliseconds: 250);
+const _kPageTransitionCurve = Curves.easeInOut;
+
+class _VerticalTextViewerState extends State<VerticalTextViewer>
+    with SingleTickerProviderStateMixin {
   int _currentPage = 0;
   int _pageCount = 1;
   final FocusNode _focusNode = FocusNode();
@@ -46,11 +51,27 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
   TextPainter? _cachedPainter;
   TextStyle? _cachedStyle;
 
+  // Page transition animation state
+  late final AnimationController _animationController;
+  late final CurvedAnimation _curvedAnimation;
+  List<TextSegment>? _outgoingSegments;
+  int _slideDirection = 1; // +1 = right (next), -1 = left (previous)
+  List<TextSegment> _currentPageSegments = const [];
+  BoxConstraints? _lastConstraints;
+
   @override
   void initState() {
     super.initState();
     _lines = _splitIntoLines(widget.segments);
     _targetLine = widget.targetLineNumber;
+    _animationController = AnimationController(
+      vsync: this,
+      duration: _kPageTransitionDuration,
+    )..addStatusListener(_onAnimationStatus);
+    _curvedAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: _kPageTransitionCurve,
+    );
   }
 
   @override
@@ -59,6 +80,10 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
     if (oldWidget.segments != widget.segments) {
       _lines = _splitIntoLines(widget.segments);
       _currentPage = 0;
+      if (_animationController.isAnimating) {
+        _animationController.stop();
+        _outgoingSegments = null;
+      }
     }
     if (widget.targetLineNumber != null &&
         widget.targetLineNumber != oldWidget.targetLineNumber) {
@@ -68,9 +93,27 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
 
   @override
   void dispose() {
+    _curvedAnimation.dispose();
+    _animationController.dispose();
     _focusNode.dispose();
     _cachedPainter?.dispose();
     super.dispose();
+  }
+
+  void _onAnimationStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      setState(() {
+        _outgoingSegments = null;
+      });
+    }
+  }
+
+  Animation<Offset> _createSlideAnimation(
+    Animation<double> parent, {
+    required Offset begin,
+    required Offset end,
+  }) {
+    return Tween<Offset>(begin: begin, end: end).animate(parent);
   }
 
   @override
@@ -100,12 +143,66 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
               });
             }
 
+            // Cancel animation on layout change
+            if (_lastConstraints != constraints && _animationController.isAnimating) {
+              _animationController.stop();
+              _outgoingSegments = null;
+            }
+            _lastConstraints = constraints;
+
             final safePage = totalPages == 0
                 ? 0
                 : _currentPage.clamp(0, totalPages - 1);
 
             final currentSegments =
                 totalPages > 0 ? pages[safePage] : <TextSegment>[];
+            _currentPageSegments = currentSegments;
+
+            final incomingPage = Align(
+              alignment: Alignment.topRight,
+              child: VerticalTextPage(
+                segments: currentSegments,
+                baseStyle: widget.baseStyle,
+                query: widget.query,
+                onSelectionChanged: widget.onSelectionChanged,
+                onSwipe: _handleSwipe,
+                columnSpacing: widget.columnSpacing,
+              ),
+            );
+
+            final Widget pageContent;
+            if (_outgoingSegments != null) {
+              pageContent = Stack(
+                children: [
+                  SlideTransition(
+                    position: _createSlideAnimation(
+                      _curvedAnimation,
+                      begin: Offset.zero,
+                      end: Offset(_slideDirection.toDouble(), 0),
+                    ),
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: VerticalTextPage(
+                        segments: _outgoingSegments!,
+                        baseStyle: widget.baseStyle,
+                        query: widget.query,
+                        columnSpacing: widget.columnSpacing,
+                      ),
+                    ),
+                  ),
+                  SlideTransition(
+                    position: _createSlideAnimation(
+                      _curvedAnimation,
+                      begin: Offset(-_slideDirection.toDouble(), 0),
+                      end: Offset.zero,
+                    ),
+                    child: incomingPage,
+                  ),
+                ],
+              );
+            } else {
+              pageContent = incomingPage;
+            }
 
             return Column(
               children: [
@@ -113,17 +210,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
                   child: ClipRect(
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: Align(
-                        alignment: Alignment.topRight,
-                        child: VerticalTextPage(
-                          segments: currentSegments,
-                          baseStyle: widget.baseStyle,
-                          query: widget.query,
-                          onSelectionChanged: widget.onSelectionChanged,
-                          onSwipe: _handleSwipe,
-                          columnSpacing: widget.columnSpacing,
-                        ),
-                      ),
+                      child: pageContent,
                     ),
                   ),
                 ),
@@ -168,12 +255,21 @@ class _VerticalTextViewerState extends State<VerticalTextViewer> {
   }
 
   void _changePage(int delta) {
-    if (_pageCount > 0) {
-      setState(() {
-        _currentPage = (_currentPage + delta).clamp(0, _pageCount - 1);
-      });
-      widget.onSelectionChanged?.call(null);
-    }
+    if (_pageCount <= 0) return;
+
+    final newPage = (_currentPage + delta).clamp(0, _pageCount - 1);
+    if (newPage == _currentPage) return;
+
+    setState(() {
+      _outgoingSegments = _currentPageSegments;
+      _slideDirection = delta.sign;
+      _currentPage = newPage;
+    });
+
+    _animationController
+      ..reset()
+      ..forward();
+    widget.onSelectionChanged?.call(null);
   }
 
   void _nextPage() => _changePage(1);

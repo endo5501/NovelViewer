@@ -203,23 +203,23 @@ The system SHALL display vertical text in pages rather than as a scrollable area
 - **THEN** the pagination SHALL be recalculated with the new column spacing value and the display SHALL update accordingly
 
 ### Requirement: Arrow key page navigation
-The system SHALL support left and right arrow key presses to navigate between pages in vertical display mode. The left arrow key SHALL advance to the next page and the right arrow key SHALL go to the previous page, matching the right-to-left reading direction of vertical Japanese text.
+The system SHALL support left and right arrow key presses to navigate between pages in vertical display mode. The left arrow key SHALL advance to the next page and the right arrow key SHALL go to the previous page, matching the right-to-left reading direction of vertical Japanese text. Page transitions SHALL be accompanied by a slide animation as defined in the page-transition-animation capability.
 
 #### Scenario: Left arrow advances to next page
 - **WHEN** the user presses the left arrow key in vertical mode
-- **THEN** the display advances to the next page
+- **THEN** the display advances to the next page with a slide animation (current page slides right, new page slides in from the left)
 
 #### Scenario: Right arrow returns to previous page
 - **WHEN** the user presses the right arrow key in vertical mode
-- **THEN** the display returns to the previous page
+- **THEN** the display returns to the previous page with a slide animation (current page slides left, new page slides in from the right)
 
 #### Scenario: Left arrow on last page has no effect
 - **WHEN** the user presses the left arrow key while on the last page
-- **THEN** the display remains on the last page
+- **THEN** the display remains on the last page without any animation
 
 #### Scenario: Right arrow on first page has no effect
 - **WHEN** the user presses the right arrow key while on the first page
-- **THEN** the display remains on the first page
+- **THEN** the display remains on the first page without any animation
 
 ### Requirement: Search highlight in vertical mode
 The system SHALL highlight search query matches in vertical text mode by applying a distinct background color to matching characters.
@@ -233,23 +233,23 @@ The system SHALL highlight search query matches in vertical text mode by applyin
 - **THEN** the matching characters in both columns are highlighted
 
 ### Requirement: Swipe gesture page navigation
-The system SHALL support horizontal swipe gestures to navigate between pages in vertical display mode. Swipe detection SHALL be implemented within `VerticalTextPage`'s `GestureDetector` (`onPan*` handlers), sharing the same gesture recognizer that handles text selection. The system SHALL use a gesture mode (`undecided`/`selecting`/`swiping`) to early-classify the user's intent based on the initial drag direction. On `onPanDown`, the system SHALL capture the true pointer-down position and reset the gesture mode to `undecided`. On `onPanStart`, the system SHALL record the anchor character index but SHALL NOT start visual text selection (deferred selection). On `onPanUpdate`, once the displacement from the start position exceeds 10 pixels (`_kGestureDecisionThreshold`), the system SHALL classify the gesture: if `|dx| > |dy|` the mode becomes `swiping` (no selection visual updates); otherwise the mode becomes `selecting` (deferred selection begins). On `onPanEnd`, if the mode is `swiping` or `undecided`, the system SHALL use `detectSwipeFromDrag` to determine if the gesture constitutes a swipe based on displacement and velocity from `DragEndDetails`; if the mode is `selecting`, the system SHALL notify the text selection result without attempting swipe detection. When velocity is available (fling detected, > 200 px/s), a swipe SHALL be recognized if absolute horizontal displacement exceeds 50 pixels (`kSwipeMinDistance`). When velocity is unavailable (desktop scenario where user stops before releasing, velocity ≈ 0), a swipe SHALL be recognized if absolute horizontal displacement exceeds 80 pixels (`kSwipeMinDistanceWithoutFling`). In both cases, the absolute horizontal displacement SHALL exceed the absolute vertical displacement. When a swipe is detected, the system SHALL clear any active text selection and invoke the `onSwipe` callback. `VerticalTextViewer` SHALL pass an `onSwipe` callback to `VerticalTextPage` to handle page navigation. The swipe direction-to-page mapping SHALL follow the "content dragging" metaphor consistent with horizontal mode scrolling: a right swipe (finger moves left-to-right, dx > 0) SHALL advance to the next page, and a left swipe (finger moves right-to-left, dx < 0) SHALL return to the previous page. This mirrors horizontal mode where swiping up reveals content below; in vertical text mode, swiping right reveals content to the left (the reading direction). Swipe detection thresholds SHALL be defined as named constants to facilitate future tuning.
+The system SHALL support horizontal swipe gestures to navigate between pages in vertical display mode. Swipe detection SHALL be implemented within `VerticalTextPage`'s `GestureDetector` (`onPan*` handlers), sharing the same gesture recognizer that handles text selection. The system SHALL use a gesture mode (`undecided`/`selecting`/`swiping`) to early-classify the user's intent based on the initial drag direction. On `onPanDown`, the system SHALL capture the true pointer-down position and reset the gesture mode to `undecided`. On `onPanStart`, the system SHALL record the anchor character index but SHALL NOT start visual text selection (deferred selection). On `onPanUpdate`, once the displacement from the start position exceeds 10 pixels (`_kGestureDecisionThreshold`), the system SHALL classify the gesture: if `|dx| > |dy|` the mode becomes `swiping` (no selection visual updates); otherwise the mode becomes `selecting` (deferred selection begins). On `onPanEnd`, if the mode is `swiping` or `undecided`, the system SHALL use `detectSwipeFromDrag` to determine if the gesture constitutes a swipe based on displacement and velocity from `DragEndDetails`; if the mode is `selecting`, the system SHALL notify the text selection result without attempting swipe detection. When velocity is available (fling detected, > 200 px/s), a swipe SHALL be recognized if absolute horizontal displacement exceeds 50 pixels (`kSwipeMinDistance`). When velocity is unavailable (desktop scenario where user stops before releasing, velocity ≈ 0), a swipe SHALL be recognized if absolute horizontal displacement exceeds 80 pixels (`kSwipeMinDistanceWithoutFling`). In both cases, the absolute horizontal displacement SHALL exceed the absolute vertical displacement. When a swipe is detected, the system SHALL clear any active text selection and invoke the `onSwipe` callback. `VerticalTextViewer` SHALL pass an `onSwipe` callback to `VerticalTextPage` to handle page navigation. The swipe direction-to-page mapping SHALL follow the "content dragging" metaphor consistent with horizontal mode scrolling: a right swipe (finger moves left-to-right, dx > 0) SHALL advance to the next page, and a left swipe (finger moves right-to-left, dx < 0) SHALL return to the previous page. This mirrors horizontal mode where swiping up reveals content below; in vertical text mode, swiping right reveals content to the left (the reading direction). Swipe detection thresholds SHALL be defined as named constants to facilitate future tuning. Page transitions triggered by swipe SHALL be accompanied by a slide animation as defined in the page-transition-animation capability.
 
 #### Scenario: Right swipe advances to next page
 - **WHEN** the user performs a right swipe (positive horizontal displacement, finger moves left-to-right) that meets all swipe criteria in vertical mode
-- **THEN** the display advances to the next page (content dragging metaphor: drag content rightward to reveal next content on the left)
+- **THEN** the display advances to the next page with a slide animation (content dragging metaphor: drag content rightward to reveal next content on the left)
 
 #### Scenario: Left swipe returns to previous page
 - **WHEN** the user performs a left swipe (negative horizontal displacement, finger moves right-to-left) that meets all swipe criteria in vertical mode
-- **THEN** the display returns to the previous page
+- **THEN** the display returns to the previous page with a slide animation
 
 #### Scenario: Right swipe on last page has no effect
 - **WHEN** the user performs a right swipe on the last page in vertical mode
-- **THEN** the display remains on the last page
+- **THEN** the display remains on the last page without any animation
 
 #### Scenario: Left swipe on first page has no effect
 - **WHEN** the user performs a left swipe on the first page in vertical mode
-- **THEN** the display remains on the first page
+- **THEN** the display remains on the first page without any animation
 
 #### Scenario: Slow horizontal drag is not recognized as swipe
 - **WHEN** the user performs a horizontal drag with velocity below 200 pixels per second and distance below 80 pixels
@@ -285,4 +285,4 @@ The system SHALL support horizontal swipe gestures to navigate between pages in 
 
 #### Scenario: Arrow key navigation continues to work alongside swipe
 - **WHEN** the user presses left or right arrow keys in vertical mode with swipe support enabled
-- **THEN** the arrow key page navigation works identically to the existing behavior
+- **THEN** the arrow key page navigation works identically with slide animation
