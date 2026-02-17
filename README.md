@@ -25,7 +25,7 @@ Web小説サイトから小説をダウンロードし、ローカルで閲覧�
 ```bash
 ollama pull qwen3:8b
 ```
-1. NovelVeiwerの設定画面にてLLMプロバイダを`Ollama`、エンドポイントURLに`http://localhost:11334`、モデル名にダウンロードしたモデル名(上記の場合、`qwen3:8b`)を設定
+3. NovelVeiwerの設定画面にてLLMプロバイダを`Ollama`、エンドポイントURLに`http://localhost:11334`、モデル名にダウンロードしたモデル名(上記の場合、`qwen3:8b`)を設定
 
 ## 開発
 
