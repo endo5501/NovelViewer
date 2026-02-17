@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
@@ -12,6 +13,24 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
   return SettingsRepository(prefs);
 });
+
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
+);
+
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() {
+    final repository = ref.watch(settingsRepositoryProvider);
+    return repository.getThemeMode();
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    final repository = ref.read(settingsRepositoryProvider);
+    await repository.setThemeMode(mode);
+    state = mode;
+  }
+}
 
 final displayModeProvider =
     NotifierProvider<DisplayModeNotifier, TextDisplayMode>(

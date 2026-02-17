@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
@@ -104,6 +105,38 @@ void main() {
 
       await repo.setColumnSpacing(30.0);
       expect(repo.getColumnSpacing(), 24.0);
+    });
+  });
+
+  group('SettingsRepository - theme mode', () {
+    test('getThemeMode returns ThemeMode.light when no value stored', () {
+      final repo = SettingsRepository(prefs);
+      expect(repo.getThemeMode(), ThemeMode.light);
+    });
+
+    test('setThemeMode and getThemeMode round-trip for dark', () async {
+      final repo = SettingsRepository(prefs);
+      await repo.setThemeMode(ThemeMode.dark);
+      expect(repo.getThemeMode(), ThemeMode.dark);
+    });
+
+    test('setThemeMode and getThemeMode round-trip for light', () async {
+      final repo = SettingsRepository(prefs);
+      await repo.setThemeMode(ThemeMode.dark);
+      await repo.setThemeMode(ThemeMode.light);
+      expect(repo.getThemeMode(), ThemeMode.light);
+    });
+
+    test('getThemeMode returns light for invalid stored value', () async {
+      await prefs.setString('theme_mode', 'invalid');
+      final repo = SettingsRepository(prefs);
+      expect(repo.getThemeMode(), ThemeMode.light);
+    });
+
+    test('getThemeMode returns light when system is stored', () async {
+      await prefs.setString('theme_mode', 'system');
+      final repo = SettingsRepository(prefs);
+      expect(repo.getThemeMode(), ThemeMode.light);
     });
   });
 
