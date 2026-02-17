@@ -16,9 +16,10 @@ void main() {
       tempDir.deleteSync(recursive: true);
     });
 
-    test('getLibraryPath returns path under given base directory', () {
+    test('resolveLibraryPath returns path under given base directory',
+        () async {
       final service = NovelLibraryService(basePath: tempDir.path);
-      final path = service.libraryPath;
+      final path = await service.resolveLibraryPath();
 
       expect(path, p.join(tempDir.path, 'NovelViewer'));
     });
@@ -30,6 +31,18 @@ void main() {
       expect(dir.existsSync(), isTrue);
       expect(dir.path, p.join(tempDir.path, 'NovelViewer'));
     });
+
+    test(
+      'resolveLibraryPath returns exe-based path on Windows when no basePath',
+      () async {
+        final service = NovelLibraryService();
+        final path = await service.resolveLibraryPath();
+
+        final expectedBase = p.dirname(Platform.resolvedExecutable);
+        expect(path, p.join(expectedBase, 'NovelViewer'));
+      },
+      skip: !Platform.isWindows ? 'Windows-only test' : null,
+    );
 
     test('ensureLibraryDirectory succeeds if directory already exists',
         () async {
