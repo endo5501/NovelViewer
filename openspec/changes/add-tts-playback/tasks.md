@@ -33,10 +33,10 @@
 
 ## 6. TTS 設定
 
-- [ ] 6.1 `SettingsRepository` に TTS 設定（モデルディレクトリパス、WAV ファイルパス）の読み書きメソッドのテストを作成する
-- [ ] 6.2 `SettingsRepository` に `getTtsModelDir()`, `setTtsModelDir()`, `getTtsRefWavPath()`, `setTtsRefWavPath()` を追加する
-- [ ] 6.3 TTS 設定用の Riverpod Provider（`ttsModelDirProvider`, `ttsRefWavPathProvider`）のテストを作成する
-- [ ] 6.4 TTS 設定用の Riverpod Provider を `lib/features/tts/providers/` に実装する
+- [x] 6.1 `SettingsRepository` に TTS 設定（モデルディレクトリパス、WAV ファイルパス）の読み書きメソッドのテストを作成する
+- [x] 6.2 `SettingsRepository` に `getTtsModelDir()`, `setTtsModelDir()`, `getTtsRefWavPath()`, `setTtsRefWavPath()` を追加する
+- [x] 6.3 TTS 設定用の Riverpod Provider（`ttsModelDirProvider`, `ttsRefWavPathProvider`）のテストを作成する
+- [x] 6.4 TTS 設定用の Riverpod Provider を `lib/features/tts/providers/` に実装する
 - [ ] 6.5 設定ダイアログのタブ化テストを作成する。「一般」タブに既存設定、「読み上げ」タブにTTS設定が表示されることを検証する
 - [ ] 6.6 `SettingsDialog` を `TabBar` + `TabBarView` に変更し、既存設定を「一般」タブに移動する
 - [ ] 6.7 「読み上げ」タブに TTS 設定 UI（モデルディレクトリパス、WAV ファイルパス）を追加する。`file_picker` パッケージでフォルダ/ファイル選択ダイアログを提供する

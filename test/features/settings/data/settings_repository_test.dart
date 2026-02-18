@@ -188,4 +188,43 @@ void main() {
       expect(config.provider, LlmProvider.none);
     });
   });
+
+  group('SettingsRepository - TTS settings', () {
+    test('getTtsModelDir returns empty string when no value stored', () {
+      final repo = SettingsRepository(prefs);
+      expect(repo.getTtsModelDir(), '');
+    });
+
+    test('setTtsModelDir and getTtsModelDir round-trip', () async {
+      final repo = SettingsRepository(prefs);
+      await repo.setTtsModelDir('/path/to/models');
+      expect(repo.getTtsModelDir(), '/path/to/models');
+    });
+
+    test('getTtsRefWavPath returns empty string when no value stored', () {
+      final repo = SettingsRepository(prefs);
+      expect(repo.getTtsRefWavPath(), '');
+    });
+
+    test('setTtsRefWavPath and getTtsRefWavPath round-trip', () async {
+      final repo = SettingsRepository(prefs);
+      await repo.setTtsRefWavPath('/path/to/ref.wav');
+      expect(repo.getTtsRefWavPath(), '/path/to/ref.wav');
+    });
+
+    test('clearing TTS model dir sets empty string', () async {
+      final repo = SettingsRepository(prefs);
+      await repo.setTtsModelDir('/path/to/models');
+      await repo.setTtsModelDir('');
+      expect(repo.getTtsModelDir(), '');
+    });
+
+    test('TTS settings persist independently', () async {
+      final repo = SettingsRepository(prefs);
+      await repo.setTtsModelDir('/models');
+      await repo.setTtsRefWavPath('/ref.wav');
+      expect(repo.getTtsModelDir(), '/models');
+      expect(repo.getTtsRefWavPath(), '/ref.wav');
+    });
+  });
 }
