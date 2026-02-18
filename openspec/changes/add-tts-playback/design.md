@@ -156,6 +156,27 @@ final ttsPlaybackStateProvider = StateProvider<TtsPlaybackState>((ref) => TtsPla
 
 **横書きモード**: 同様にカーソル位置/選択範囲の開始位置、またはスクロール位置から。
 
+### 11. UI ボタンと再生パイプラインの接続
+
+**決定**: `TtsPlaybackController` のインスタンスを `_TextViewerPanelState` のフィールドとして保持する。再生ボタン押下時にコントローラを生成・起動し、停止ボタン押下時やユーザーページ操作時にコントローラの `stop()` を呼び出す。
+
+**具象アダプタクラス**:
+- `JustAudioPlayer implements TtsAudioPlayer` — `just_audio` パッケージの `AudioPlayer` をラップし、`playerStateStream` で再生完了イベントを通知する
+- `WavWriterAdapter implements TtsWavWriter` — 既存の `WavWriter` 静的メソッドに委譲する
+- `FileCleanerImpl implements TtsFileCleaner` — `dart:io` の `File.delete()` を使用する
+
+これらのアダプタクラスは `lib/features/tts/data/` に配置する。
+
+**一時ディレクトリ**: `path_provider` の `getTemporaryDirectory()` で取得する。
+
+**コントローラのライフサイクル**:
+1. 再生ボタン押下 → `TtsPlaybackController` を生成、`start()` を呼び出す
+2. 停止ボタン押下 / ユーザーページ操作 → コントローラの `stop()` を呼び出し、フィールドを `null` にする
+3. Widget dispose 時 → アクティブなコントローラがあれば `stop()` を呼び出す
+
+**代替案**:
+- Riverpod Provider でコントローラを管理: コントローラが `ProviderContainer` に依存しており、Provider ライフサイクルとの整合が煩雑。Widget state で直接管理する方がシンプル。
+
 ## Risks / Trade-offs
 
 **[TTS 生成速度]** → qwen3-tts.cpp は 7 秒の音声に約 29 秒かかる（CPU）。macOS では Metal/CoreML で高速化されるが、Windows では CPU のみ。先読み生成で体感待ちを軽減するが、初回再生までに数十秒の待ちが発生する可能性がある。→ 生成中はローディングインジケータを表示し、ユーザーに待ち時間を示す。

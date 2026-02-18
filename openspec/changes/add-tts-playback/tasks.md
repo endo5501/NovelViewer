@@ -80,9 +80,17 @@
 - [x] 11.1 再生開始位置決定ロジックのテストを作成する。選択テキストあり → 選択開始位置の文から、選択なし → 表示先頭の文からの2パターンを検証する
 - [x] 11.2 再生開始位置決定ロジックを `TtsPlaybackController` に実装する。`selectedTextProvider` と現在の表示位置（ページ番号 / スクロール位置）から開始文を決定する
 
-## 12. 最終確認
+## 12. UI ボタンと再生パイプラインの接続
 
-- [x] 12.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
-- [x] 12.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [x] 12.3 `fvm flutter analyze`でリントを実行
-- [x] 12.4 `fvm flutter test`でテストを実行
+- [ ] 12.1 具象アダプタクラス（`JustAudioPlayer`, `WavWriterAdapter`, `FileCleanerImpl`）のテストを作成する
+- [ ] 12.2 具象アダプタクラスを `lib/features/tts/data/` に実装する
+- [ ] 12.3 `TextViewerPanel` のボタン接続テストを作成する。再生ボタン押下で `TtsPlaybackController.start()` が呼ばれること、停止ボタン押下で `stop()` が呼ばれることを検証する
+- [ ] 12.4 `TextViewerPanel` の再生/停止ボタンに `TtsPlaybackController` を接続する。`_stopTts()` もコントローラの `stop()` を呼ぶよう修正する
+- [ ] 12.5 Widget dispose 時にアクティブなコントローラを停止する処理を追加する
+
+## 13. 最終確認
+
+- [ ] 13.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
+- [ ] 13.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [ ] 13.3 `fvm flutter analyze`でリントを実行
+- [ ] 13.4 `fvm flutter test`でテストを実行

@@ -158,3 +158,41 @@ The system SHALL expose TTS playback state via Riverpod providers. The state SHA
 #### Scenario: State transitions to stopped on stop
 - **WHEN** playback is stopped (by user action or end of text)
 - **THEN** the TTS playback state changes to "stopped" and the highlight range is cleared
+
+### Requirement: Concrete playback adapter implementations
+The system SHALL provide concrete implementations of the `TtsAudioPlayer`, `TtsWavWriter`, and `TtsFileCleaner` abstractions defined in `TtsPlaybackController`. These adapters bridge the controller to platform-specific audio playback, WAV file writing, and file cleanup capabilities.
+
+#### Scenario: JustAudioPlayer wraps just_audio for playback
+- **WHEN** `TtsPlaybackController` calls `setFilePath()` and `play()` on the audio player
+- **THEN** the `JustAudioPlayer` adapter delegates to `just_audio`'s `AudioPlayer`, setting the audio source and starting playback
+
+#### Scenario: JustAudioPlayer reports playback completion
+- **WHEN** `just_audio`'s `AudioPlayer` finishes playing a file
+- **THEN** the `JustAudioPlayer` adapter emits `TtsPlayerState.completed` on its `playerStateStream`
+
+#### Scenario: WavWriterAdapter delegates to WavWriter
+- **WHEN** `TtsPlaybackController` calls `write()` with audio data
+- **THEN** the `WavWriterAdapter` delegates to the existing `WavWriter.write()` static method
+
+#### Scenario: FileCleanerImpl deletes temporary files
+- **WHEN** `TtsPlaybackController` calls `deleteFile()` during cleanup
+- **THEN** the `FileCleanerImpl` deletes the file using `dart:io` File operations
+
+### Requirement: Playback controller lifecycle in text viewer
+The text viewer panel SHALL manage the `TtsPlaybackController` lifecycle. A controller instance SHALL be created when the user presses play and destroyed when playback stops. The `_stopTts()` method SHALL stop both the controller and reset the provider state.
+
+#### Scenario: Play button creates controller and starts playback
+- **WHEN** the user presses the play button
+- **THEN** a new `TtsPlaybackController` is created with concrete adapters, and `start()` is called with the current text content, model directory, optional reference WAV, and the determined start offset
+
+#### Scenario: Stop button stops controller
+- **WHEN** the user presses the stop button during playback
+- **THEN** the controller's `stop()` is called, resources are cleaned up, and the controller reference is released
+
+#### Scenario: User page navigation stops controller
+- **WHEN** the user navigates pages or scrolls during TTS playback
+- **THEN** the controller's `stop()` is called via `_stopTts()`, same as pressing the stop button
+
+#### Scenario: Widget dispose stops active playback
+- **WHEN** the `TextViewerPanel` is disposed while TTS is playing
+- **THEN** the controller's `stop()` is called to clean up resources
