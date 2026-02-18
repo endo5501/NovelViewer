@@ -13,10 +13,7 @@ class TtsPlaybackStateNotifier extends Notifier<TtsPlaybackState> {
   @override
   TtsPlaybackState build() => TtsPlaybackState.stopped;
 
-  // ignore: use_setters_to_change_properties
-  void set(TtsPlaybackState value) {
-    state = value;
-  }
+  void set(TtsPlaybackState value) => state = value;
 }
 
 final ttsHighlightRangeProvider =
@@ -28,8 +25,5 @@ class TtsHighlightRangeNotifier extends Notifier<TextRange?> {
   @override
   TextRange? build() => null;
 
-  // ignore: use_setters_to_change_properties
-  void set(TextRange? value) {
-    state = value;
-  }
+  void set(TextRange? value) => state = value;
 }

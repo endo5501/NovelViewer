@@ -121,14 +121,6 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
     }
   }
 
-  Animation<Offset> _createSlideAnimation(
-    Animation<double> parent, {
-    required Offset begin,
-    required Offset end,
-  }) {
-    return Tween<Offset>(begin: begin, end: end).animate(parent);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Focus(
@@ -143,8 +135,8 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
           builder: (context, constraints) {
             final result = _paginateLines(constraints);
             final pages = result.pages;
-            _pageCount = pages.length;
             final totalPages = pages.length;
+            _pageCount = totalPages;
 
             if (result.targetPage != null &&
                 result.targetPage != _currentPage) {
@@ -203,14 +195,18 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
 
             final Widget pageContent;
             if (_outgoingSegments != null) {
+              final slideOut = Tween<Offset>(
+                begin: Offset.zero,
+                end: Offset(_slideDirection.toDouble(), 0),
+              ).animate(_curvedAnimation);
+              final slideIn = Tween<Offset>(
+                begin: Offset(-_slideDirection.toDouble(), 0),
+                end: Offset.zero,
+              ).animate(_curvedAnimation);
               pageContent = Stack(
                 children: [
                   SlideTransition(
-                    position: _createSlideAnimation(
-                      _curvedAnimation,
-                      begin: Offset.zero,
-                      end: Offset(_slideDirection.toDouble(), 0),
-                    ),
+                    position: slideOut,
                     child: Align(
                       alignment: Alignment.topRight,
                       child: VerticalTextPage(
@@ -222,11 +218,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
                     ),
                   ),
                   SlideTransition(
-                    position: _createSlideAnimation(
-                      _curvedAnimation,
-                      begin: Offset(-_slideDirection.toDouble(), 0),
-                      end: Offset.zero,
-                    ),
+                    position: slideIn,
                     child: incomingPage,
                   ),
                 ],

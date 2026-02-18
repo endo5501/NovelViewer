@@ -1,4 +1,4 @@
-import 'dart:ui' show TextRange;
+import 'dart:math' show min, max;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,6 +68,20 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
     }
   }
 
+  Widget _withTtsButton(Widget child, String ttsModelDir, TtsPlaybackState ttsState) {
+    if (ttsModelDir.isEmpty) return child;
+    return Stack(
+      children: [
+        child,
+        Positioned(
+          right: 8,
+          bottom: 8,
+          child: _buildTtsButton(ttsState),
+        ),
+      ],
+    );
+  }
+
   void _scrollToTtsHighlight(
       String content, TextRange range, TextStyle? textStyle) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -80,9 +94,8 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
 
       final fontSize = textStyle?.fontSize ?? 14.0;
       final lineHeight = (textStyle?.height ?? 1.5) * fontSize;
-      final targetOffset = lineNumber * lineHeight;
       final maxOffset = _scrollController.position.maxScrollExtent;
-      final clampedOffset = targetOffset.clamp(0.0, maxOffset);
+      final clampedOffset = (lineNumber * lineHeight).clamp(0.0, maxOffset);
 
       _isTtsScrolling = true;
       _scrollController.animateTo(
@@ -100,9 +113,8 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
 
     final fontSize = textStyle?.fontSize ?? 14.0;
     final lineHeight = (textStyle?.height ?? 1.5) * fontSize;
-    final targetOffset = (match.lineNumber - 1) * lineHeight;
     final maxOffset = _scrollController.position.maxScrollExtent;
-    final clampedOffset = targetOffset.clamp(0.0, maxOffset);
+    final clampedOffset = ((match.lineNumber - 1) * lineHeight).clamp(0.0, maxOffset);
 
     _scrollController.animateTo(
       clampedOffset,
@@ -147,32 +159,26 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
 
         if (displayMode == TextDisplayMode.vertical) {
           final columnSpacing = ref.watch(columnSpacingProvider);
-          return Stack(
-            children: [
-              VerticalTextViewer(
-                segments: segments,
-                baseStyle: textStyle,
-                query: activeMatch?.query,
-                targetLineNumber: activeMatch?.lineNumber,
-                ttsHighlightStart: ttsHighlightRange?.start,
-                ttsHighlightEnd: ttsHighlightRange?.end,
-                columnSpacing: columnSpacing,
-                onSelectionChanged: (text) {
-                  ref.read(selectedTextProvider.notifier).setText(text);
-                },
-                onUserPageChange: () {
-                  if (ttsState == TtsPlaybackState.playing) {
-                    _stopTts();
-                  }
-                },
-              ),
-              if (ttsModelDir.isNotEmpty)
-                Positioned(
-                  right: 8,
-                  bottom: 8,
-                  child: _buildTtsButton(ttsState),
-                ),
-            ],
+          return _withTtsButton(
+            VerticalTextViewer(
+              segments: segments,
+              baseStyle: textStyle,
+              query: activeMatch?.query,
+              targetLineNumber: activeMatch?.lineNumber,
+              ttsHighlightStart: ttsHighlightRange?.start,
+              ttsHighlightEnd: ttsHighlightRange?.end,
+              columnSpacing: columnSpacing,
+              onSelectionChanged: (text) {
+                ref.read(selectedTextProvider.notifier).setText(text);
+              },
+              onUserPageChange: () {
+                if (ttsState == TtsPlaybackState.playing) {
+                  _stopTts();
+                }
+              },
+            ),
+            ttsModelDir,
+            ttsState,
           );
         }
 
@@ -197,50 +203,39 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
 
         // Auto-scroll for TTS highlight
         if (ttsHighlightRange != null) {
-          _scrollToTtsHighlight(
-              content, ttsHighlightRange, textStyle);
+          _scrollToTtsHighlight(content, ttsHighlightRange, textStyle);
         }
 
-        return Stack(
-          children: [
-            NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (!_isTtsScrolling &&
-                    notification is ScrollStartNotification &&
-                    notification.dragDetails != null &&
-                    ttsState == TtsPlaybackState.playing) {
-                  _stopTts();
-                }
-                return false;
-              },
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16.0),
-                child: SelectableText.rich(
-                  textSpan,
-                  onSelectionChanged: (selection, cause) {
-                    final start = selection.start < selection.end
-                        ? selection.start
-                        : selection.end;
-                    final end = selection.start > selection.end
-                        ? selection.start
-                        : selection.end;
-                    final selectedText =
-                        extractSelectedText(start, end, segments);
-                    ref.read(selectedTextProvider.notifier).setText(
-                          selectedText.isEmpty ? null : selectedText,
-                        );
-                  },
-                ),
+        return _withTtsButton(
+          NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (!_isTtsScrolling &&
+                  notification is ScrollStartNotification &&
+                  notification.dragDetails != null &&
+                  ttsState == TtsPlaybackState.playing) {
+                _stopTts();
+              }
+              return false;
+            },
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16.0),
+              child: SelectableText.rich(
+                textSpan,
+                onSelectionChanged: (selection, cause) {
+                  final start = min(selection.start, selection.end);
+                  final end = max(selection.start, selection.end);
+                  final selectedText =
+                      extractSelectedText(start, end, segments);
+                  ref.read(selectedTextProvider.notifier).setText(
+                        selectedText.isEmpty ? null : selectedText,
+                      );
+                },
               ),
             ),
-            if (ttsModelDir.isNotEmpty)
-              Positioned(
-                right: 8,
-                bottom: 8,
-                child: _buildTtsButton(ttsState),
-              ),
-          ],
+          ),
+          ttsModelDir,
+          ttsState,
         );
       },
     );

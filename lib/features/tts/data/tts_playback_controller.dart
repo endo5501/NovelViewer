@@ -113,13 +113,9 @@ class TtsPlaybackController {
     }
 
     // Find starting segment based on offset
-    _currentSegmentIndex = 0;
-    for (int i = 0; i < _segments.length; i++) {
-      if (_segments[i].offset + _segments[i].length > startOffset) {
-        _currentSegmentIndex = i;
-        break;
-      }
-    }
+    _currentSegmentIndex = _segments.indexWhere(
+      (s) => s.offset + s.length > startOffset,
+    ).clamp(0, _segments.length - 1);
 
     // Spawn isolate and load model
     await _ttsIsolate.spawn();
@@ -247,10 +243,7 @@ class TtsPlaybackController {
     }
   }
 
-  void _handleError(String message) {
-    // On error, stop playback and reset state
-    stop();
-  }
+  void _handleError(String message) => stop();
 
   /// Stop TTS playback and clean up resources.
   Future<void> stop() async {
