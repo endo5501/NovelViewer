@@ -40,6 +40,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
 
   Future<void> _startTts(String content) async {
     final session = ++_ttsSession;
+    final container = ProviderScope.containerOf(context);
 
     // Stop any existing controller first
     final old = _ttsController;
@@ -51,7 +52,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
     TtsPlaybackController? controller;
     try {
       final factory = ref.read(ttsControllerFactoryProvider);
-      controller = await factory(ProviderScope.containerOf(context));
+      controller = await factory(container);
 
       if (!mounted || session != _ttsSession) {
         await controller.stop();
