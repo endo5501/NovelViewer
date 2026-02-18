@@ -9,10 +9,10 @@
 
 ## 2. Dart FFI バインディング
 
-- [ ] 2.1 `lib/features/tts/data/` ディレクトリを作成し、FFI バインディングクラス `TtsNativeBindings` のテストを作成する。共有ライブラリのロード、各 C API 関数のバインディング存在確認をテストする
-- [ ] 2.2 `TtsNativeBindings` クラスを実装する。プラットフォームに応じて `.dylib` / `.dll` をロードし、全 C API 関数の FFI バインディングを定義する
-- [ ] 2.3 FFI バインディングの上位ラッパー `TtsEngine` クラスのテストを作成する。`loadModel()`, `synthesize()`, `synthesizeWithVoice()`, `dispose()` の Dart フレンドリーな API をテストする
-- [ ] 2.4 `TtsEngine` クラスを実装する。FFI の生ポインタ操作を隠蔽し、`Float32List` や `String` を返す Dart API を提供する
+- [x] 2.1 `lib/features/tts/data/` ディレクトリを作成し、FFI バインディングクラス `TtsNativeBindings` のテストを作成する。共有ライブラリのロード、各 C API 関数のバインディング存在確認をテストする
+- [x] 2.2 `TtsNativeBindings` クラスを実装する。プラットフォームに応じて `.dylib` / `.dll` をロードし、全 C API 関数の FFI バインディングを定義する
+- [x] 2.3 FFI バインディングの上位ラッパー `TtsEngine` クラスのテストを作成する。`loadModel()`, `synthesize()`, `synthesizeWithVoice()`, `dispose()` の Dart フレンドリーな API をテストする
+- [x] 2.4 `TtsEngine` クラスを実装する。FFI の生ポインタ操作を隠蔽し、`Float32List` や `String` を返す Dart API を提供する
 
 ## 3. テキスト分割
 
