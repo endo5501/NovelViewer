@@ -113,9 +113,10 @@ class TtsPlaybackController {
     }
 
     // Find starting segment based on offset
-    _currentSegmentIndex = _segments.indexWhere(
+    final idx = _segments.indexWhere(
       (s) => s.offset + s.length > startOffset,
-    ).clamp(0, _segments.length - 1);
+    );
+    _currentSegmentIndex = idx >= 0 ? idx : _segments.length - 1;
 
     // Spawn isolate and load model
     await _ttsIsolate.spawn();
@@ -246,7 +247,10 @@ class TtsPlaybackController {
   void _handleError(String message) => stop();
 
   /// Stop TTS playback and clean up resources.
+  ///
+  /// Safe to call multiple times (idempotent).
   Future<void> stop() async {
+    if (_stopped) return;
     _stopped = true;
     _prefetchedAudio = null;
     _isPrefetching = false;
