@@ -59,7 +59,9 @@ class WavWriter {
       offset += 2;
     }
 
-    await File(path).writeAsBytes(buffer.buffer.asUint8List());
+    final file = File(path);
+    await file.parent.create(recursive: true);
+    await file.writeAsBytes(buffer.buffer.asUint8List());
   }
 
   static void _writeString(ByteData buffer, int offset, String str) {
