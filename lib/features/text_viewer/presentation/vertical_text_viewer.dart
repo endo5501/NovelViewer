@@ -14,7 +14,10 @@ class VerticalTextViewer extends StatefulWidget {
     required this.baseStyle,
     this.query,
     this.targetLineNumber,
+    this.ttsHighlightStart,
+    this.ttsHighlightEnd,
     this.onSelectionChanged,
+    this.onUserPageChange,
     this.columnSpacing = 8.0,
   }) : assert(columnSpacing >= 0);
 
@@ -22,7 +25,10 @@ class VerticalTextViewer extends StatefulWidget {
   final TextStyle? baseStyle;
   final String? query;
   final int? targetLineNumber;
+  final int? ttsHighlightStart;
+  final int? ttsHighlightEnd;
   final ValueChanged<String?>? onSelectionChanged;
+  final VoidCallback? onUserPageChange;
   final double columnSpacing;
 
   @override
@@ -90,7 +96,13 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
         widget.targetLineNumber != oldWidget.targetLineNumber) {
       _navigateToLine(widget.targetLineNumber!);
     }
+    if (widget.ttsHighlightStart != null &&
+        widget.ttsHighlightStart != oldWidget.ttsHighlightStart) {
+      _pendingTtsOffset = widget.ttsHighlightStart;
+    }
   }
+
+  int? _pendingTtsOffset;
 
   @override
   void dispose() {
@@ -109,14 +121,6 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
     }
   }
 
-  Animation<Offset> _createSlideAnimation(
-    Animation<double> parent, {
-    required Offset begin,
-    required Offset end,
-  }) {
-    return Tween<Offset>(begin: begin, end: end).animate(parent);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Focus(
@@ -131,8 +135,8 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
           builder: (context, constraints) {
             final result = _paginateLines(constraints);
             final pages = result.pages;
-            _pageCount = pages.length;
             final totalPages = pages.length;
+            _pageCount = totalPages;
 
             if (result.targetPage != null &&
                 result.targetPage != _currentPage) {
@@ -160,12 +164,29 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
                 totalPages > 0 ? pages[safePage] : <TextSegment>[];
             _currentPageSegments = currentSegments;
 
+            // Auto-navigate to TTS highlight page
+            if (_pendingTtsOffset != null && totalPages > 1) {
+              final ttsPage = _findPageForOffset(
+                  _pendingTtsOffset!, result.charOffsetPerPage);
+              if (ttsPage != null && ttsPage != safePage) {
+                _pendingTtsOffset = null;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  _goToPage(ttsPage);
+                });
+              } else {
+                _pendingTtsOffset = null;
+              }
+            }
+
             final incomingPage = Align(
               alignment: Alignment.topRight,
               child: VerticalTextPage(
                 segments: currentSegments,
                 baseStyle: widget.baseStyle,
                 query: widget.query,
+                ttsHighlightStart: widget.ttsHighlightStart,
+                ttsHighlightEnd: widget.ttsHighlightEnd,
                 onSelectionChanged: widget.onSelectionChanged,
                 onSwipe: _handleSwipe,
                 columnSpacing: widget.columnSpacing,
@@ -174,14 +195,18 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
 
             final Widget pageContent;
             if (_outgoingSegments != null) {
+              final slideOut = Tween<Offset>(
+                begin: Offset.zero,
+                end: Offset(_slideDirection.toDouble(), 0),
+              ).animate(_curvedAnimation);
+              final slideIn = Tween<Offset>(
+                begin: Offset(-_slideDirection.toDouble(), 0),
+                end: Offset.zero,
+              ).animate(_curvedAnimation);
               pageContent = Stack(
                 children: [
                   SlideTransition(
-                    position: _createSlideAnimation(
-                      _curvedAnimation,
-                      begin: Offset.zero,
-                      end: Offset(_slideDirection.toDouble(), 0),
-                    ),
+                    position: slideOut,
                     child: Align(
                       alignment: Alignment.topRight,
                       child: VerticalTextPage(
@@ -193,11 +218,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
                     ),
                   ),
                   SlideTransition(
-                    position: _createSlideAnimation(
-                      _curvedAnimation,
-                      begin: Offset(-_slideDirection.toDouble(), 0),
-                      end: Offset.zero,
-                    ),
+                    position: slideIn,
                     child: incomingPage,
                   ),
                 ],
@@ -285,10 +306,31 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
       ..reset()
       ..forward();
     widget.onSelectionChanged?.call(null);
+    widget.onUserPageChange?.call();
   }
 
   void _nextPage() => _changePage(1);
   void _previousPage() => _changePage(-1);
+
+  void _goToPage(int page) {
+    if (page == _currentPage || page < 0 || page >= _pageCount) return;
+    final delta = page - _currentPage;
+    setState(() {
+      _outgoingSegments = _currentPageSegments;
+      _slideDirection = delta.sign;
+      _currentPage = page;
+    });
+    _animationController
+      ..reset()
+      ..forward();
+  }
+
+  int? _findPageForOffset(int offset, List<int> charOffsetPerPage) {
+    for (var i = charOffsetPerPage.length - 1; i >= 0; i--) {
+      if (offset >= charOffsetPerPage[i]) return i;
+    }
+    return null;
+  }
 
   void _navigateToLine(int lineNumber) {
     // Estimate which page contains the target line.
@@ -327,7 +369,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
         availableHeight > 0 ? (availableHeight / charHeight).floor() : 1;
 
     if (availableWidth <= 0 || charsPerColumn <= 0) {
-      return _PaginationResult([widget.segments], null);
+      return _PaginationResult([widget.segments], null, const [0]);
     }
 
     final columns = <List<TextSegment>>[];
@@ -336,12 +378,32 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
         _groupColumnsIntoPages(columns, charWidth, availableWidth);
 
     if (pages.isEmpty) {
-      return _PaginationResult([widget.segments], null);
+      return _PaginationResult([widget.segments], null, const [0]);
     }
+
+    // Compute character offset per page for TTS auto-navigation
+    final charOffsetPerPage = _computeCharOffsetPerPage(pages);
 
     final targetPage =
         _findTargetPage(lineStartColumns, pageStarts, pages.length);
-    return _PaginationResult(pages, targetPage);
+    return _PaginationResult(pages, targetPage, charOffsetPerPage);
+  }
+
+  List<int> _computeCharOffsetPerPage(List<List<TextSegment>> pages) {
+    final offsets = <int>[];
+    var offset = 0;
+    for (final page in pages) {
+      offsets.add(offset);
+      for (final segment in page) {
+        switch (segment) {
+          case PlainTextSegment(:final text):
+            offset += text.length;
+          case RubyTextSegment(:final base):
+            offset += base.length;
+        }
+      }
+    }
+    return offsets;
   }
 
   List<List<TextSegment>> _splitIntoLines(List<TextSegment> segments) {
@@ -465,7 +527,8 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
 }
 
 class _PaginationResult {
-  const _PaginationResult(this.pages, this.targetPage);
+  const _PaginationResult(this.pages, this.targetPage, this.charOffsetPerPage);
   final List<List<TextSegment>> pages;
   final int? targetPage;
+  final List<int> charOffsetPerPage;
 }

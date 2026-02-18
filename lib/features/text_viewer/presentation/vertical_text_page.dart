@@ -13,6 +13,8 @@ class VerticalTextPage extends StatefulWidget {
     this.query,
     this.selectionStart,
     this.selectionEnd,
+    this.ttsHighlightStart,
+    this.ttsHighlightEnd,
     this.onSelectionChanged,
     this.onSwipe,
     this.columnSpacing = 8.0,
@@ -23,6 +25,8 @@ class VerticalTextPage extends StatefulWidget {
   final String? query;
   final int? selectionStart;
   final int? selectionEnd;
+  final int? ttsHighlightStart;
+  final int? ttsHighlightEnd;
   final ValueChanged<String?>? onSelectionChanged;
   final ValueChanged<SwipeDirection>? onSwipe;
   final double columnSpacing;
@@ -113,6 +117,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     final highlights = (widget.query?.isNotEmpty ?? false)
         ? _computeHighlights(widget.query!)
         : const <int>{};
+    final ttsHighlights = _computeTtsHighlights();
 
     final fontSize = widget.baseStyle?.fontSize ?? _kDefaultFontSize;
     final children = <Widget>[];
@@ -133,6 +138,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         entry,
         isHighlighted: highlights.contains(i),
         isSelected: _isInSelection(i),
+        isTtsHighlighted: ttsHighlights.contains(i),
       );
       final key = _entryKeys[i];
       if (key == null) {
@@ -362,6 +368,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     VerticalCharEntry entry, {
     required bool isHighlighted,
     required bool isSelected,
+    bool isTtsHighlighted = false,
   }) {
     if (entry.isRuby) {
       return VerticalRubyTextWidget(
@@ -382,6 +389,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         style: _createTextStyle(
           isHighlighted: isHighlighted,
           isSelected: isSelected,
+          isTtsHighlighted: isTtsHighlighted,
         ),
       ),
     );
@@ -390,16 +398,47 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   TextStyle _createTextStyle({
     required bool isHighlighted,
     required bool isSelected,
+    bool isTtsHighlighted = false,
   }) {
+    // Priority: search highlight (yellow) > TTS highlight (green) > selection (blue)
     final backgroundColor = isHighlighted
         ? Colors.yellow
-        : isSelected
-            ? Colors.blue.withValues(alpha: 0.3)
-            : null;
+        : isTtsHighlighted
+            ? Colors.green.withValues(alpha: 0.3)
+            : isSelected
+                ? Colors.blue.withValues(alpha: 0.3)
+                : null;
 
     return widget.baseStyle
             ?.copyWith(backgroundColor: backgroundColor, height: _kTextHeight) ??
         TextStyle(backgroundColor: backgroundColor, height: _kTextHeight);
+  }
+
+  Set<int> _computeTtsHighlights() {
+    final start = widget.ttsHighlightStart;
+    final end = widget.ttsHighlightEnd;
+    if (start == null || end == null) return const {};
+
+    final result = <int>{};
+    var plainTextOffset = 0;
+
+    for (var i = 0; i < _charEntries.length; i++) {
+      final entry = _charEntries[i];
+      if (entry.isNewline) {
+        plainTextOffset++;
+        continue;
+      }
+
+      final charLen = entry.text.length;
+      final charEnd = plainTextOffset + charLen;
+
+      if (charEnd > start && plainTextOffset < end) {
+        result.add(i);
+      }
+      plainTextOffset = charEnd;
+    }
+
+    return result;
   }
 
   Set<int> _computeHighlights(String query) {

@@ -14,6 +14,8 @@ class SettingsRepository {
   static const _llmBaseUrlKey = 'llm_base_url';
   static const _llmApiKeyKey = 'llm_api_key';
   static const _llmModelKey = 'llm_model';
+  static const _ttsModelDirKey = 'tts_model_dir';
+  static const _ttsRefWavPathKey = 'tts_ref_wav_path';
 
   static const defaultFontSize = 14.0;
   static const minFontSize = 10.0;
@@ -98,5 +100,21 @@ class SettingsRepository {
     await _prefs.setString(_llmBaseUrlKey, config.baseUrl);
     await _prefs.setString(_llmApiKeyKey, config.apiKey);
     await _prefs.setString(_llmModelKey, config.model);
+  }
+
+  String getTtsModelDir() {
+    return _prefs.getString(_ttsModelDirKey) ?? '';
+  }
+
+  Future<void> setTtsModelDir(String path) async {
+    await _prefs.setString(_ttsModelDirKey, path);
+  }
+
+  String getTtsRefWavPath() {
+    return _prefs.getString(_ttsRefWavPathKey) ?? '';
+  }
+
+  Future<void> setTtsRefWavPath(String path) async {
+    await _prefs.setString(_ttsRefWavPathKey, path);
   }
 }
