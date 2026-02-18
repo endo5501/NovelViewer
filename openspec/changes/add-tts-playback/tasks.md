@@ -16,14 +16,14 @@
 
 ## 3. テキスト分割
 
-- [ ] 3.1 `lib/features/tts/data/text_segmenter.dart` のテストを作成する。句点分割、括弧考慮、改行分割、空セグメント除外、ルビタグ除去、オフセット追跡をテストする
-- [ ] 3.2 `TextSegmenter` クラスを実装する。`splitIntoSentences(String text)` メソッドで `List<TextSegment>` を返す（`TextSegment` は `text`, `offset`, `length` を持つ）
+- [x] 3.1 `lib/features/tts/data/text_segmenter.dart` のテストを作成する。句点分割、括弧考慮、改行分割、空セグメント除外、ルビタグ除去、オフセット追跡をテストする
+- [x] 3.2 `TextSegmenter` クラスを実装する。`splitIntoSentences(String text)` メソッドで `List<TextSegment>` を返す（`TextSegment` は `text`, `offset`, `length` を持つ）
 
 ## 4. 音声ファイル管理
 
-- [ ] 4.1 `lib/features/tts/data/wav_writer.dart` のテストを作成する。Float32List から WAV ファイル（24kHz, mono, 16-bit PCM）への変換を検証する
-- [ ] 4.2 `WavWriter` クラスを実装する。WAV ヘッダ生成と float→16-bit PCM 変換を行い、一時ファイルに書き出す
-- [ ] 4.3 pubspec.yaml に `just_audio` パッケージを追加する
+- [x] 4.1 `lib/features/tts/data/wav_writer.dart` のテストを作成する。Float32List から WAV ファイル（24kHz, mono, 16-bit PCM）への変換を検証する
+- [x] 4.2 `WavWriter` クラスを実装する。WAV ヘッダ生成と float→16-bit PCM 変換を行い、一時ファイルに書き出す
+- [x] 4.3 pubspec.yaml に `just_audio` パッケージを追加する
 
 ## 5. TTS Isolate
 
