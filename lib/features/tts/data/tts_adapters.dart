@@ -23,24 +23,16 @@ class JustAudioPlayer implements TtsAudioPlayer {
       });
 
   @override
-  Future<void> setFilePath(String path) async {
-    await _player.setFilePath(path);
-  }
+  Future<void> setFilePath(String path) => _player.setFilePath(path);
 
   @override
-  Future<void> play() async {
-    await _player.play();
-  }
+  Future<void> play() => _player.play();
 
   @override
-  Future<void> stop() async {
-    await _player.stop();
-  }
+  Future<void> stop() => _player.stop();
 
   @override
-  Future<void> dispose() async {
-    await _player.dispose();
-  }
+  Future<void> dispose() => _player.dispose();
 }
 
 /// Concrete [TtsWavWriter] that delegates to [WavWriter.write].
@@ -50,9 +42,8 @@ class WavWriterAdapter implements TtsWavWriter {
     required String path,
     required Float32List audio,
     required int sampleRate,
-  }) async {
-    await WavWriter.write(path: path, audio: audio, sampleRate: sampleRate);
-  }
+  }) =>
+      WavWriter.write(path: path, audio: audio, sampleRate: sampleRate);
 }
 
 /// Concrete [TtsFileCleaner] that deletes files using [dart:io].

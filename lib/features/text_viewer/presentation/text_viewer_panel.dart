@@ -64,10 +64,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
       await _ttsController!.stop();
       _ttsController = null;
     } else {
-      // Fallback: reset provider state when no controller exists
-      ref
-          .read(ttsPlaybackStateProvider.notifier)
-          .set(TtsPlaybackState.stopped);
+      ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.stopped);
       ref.read(ttsHighlightRangeProvider.notifier).set(null);
     }
   }
@@ -88,16 +85,12 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
         );
       case TtsPlaybackState.playing:
         return FloatingActionButton.small(
-          onPressed: () {
-            _stopTts();
-          },
+          onPressed: _stopTts,
           child: const Icon(Icons.stop),
         );
       case TtsPlaybackState.stopped:
         return FloatingActionButton.small(
-          onPressed: () {
-            _startTts(content);
-          },
+          onPressed: () => _startTts(content),
           child: const Icon(Icons.play_arrow),
         );
     }
