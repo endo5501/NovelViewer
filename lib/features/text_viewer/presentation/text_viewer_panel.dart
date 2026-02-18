@@ -27,9 +27,11 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
   String? _lastScrollKey;
   bool _isTtsScrolling = false;
   TtsPlaybackController? _ttsController;
+  int _ttsSession = 0;
 
   @override
   void dispose() {
+    _ttsSession++;
     _ttsController?.stop();
     _ttsController = null;
     _scrollController.dispose();
@@ -37,34 +39,65 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
   }
 
   Future<void> _startTts(String content) async {
-    final factory = ref.read(ttsControllerFactoryProvider);
-    _ttsController = await factory(
-      ProviderScope.containerOf(context),
-    );
+    final session = ++_ttsSession;
 
-    final modelDir = ref.read(ttsModelDirProvider);
-    final refWavPath = ref.read(ttsRefWavPathProvider);
-    final selectedText = ref.read(selectedTextProvider);
+    // Stop any existing controller first
+    final old = _ttsController;
+    _ttsController = null;
+    if (old != null) {
+      await old.stop();
+    }
 
-    final startOffset = determineStartOffset(
-      text: content,
-      selectedText: selectedText,
-    );
+    TtsPlaybackController? controller;
+    try {
+      final factory = ref.read(ttsControllerFactoryProvider);
+      controller = await factory(ProviderScope.containerOf(context));
 
-    await _ttsController!.start(
-      text: content,
-      modelDir: modelDir,
-      startOffset: startOffset,
-      refWavPath: refWavPath.isNotEmpty ? refWavPath : null,
-    );
+      if (!mounted || session != _ttsSession) {
+        await controller.stop();
+        return;
+      }
+
+      _ttsController = controller;
+
+      final modelDir = ref.read(ttsModelDirProvider);
+      final refWavPath = ref.read(ttsRefWavPathProvider);
+      final selectedText = ref.read(selectedTextProvider);
+
+      final startOffset = determineStartOffset(
+        text: content,
+        selectedText: selectedText,
+      );
+
+      await controller.start(
+        text: content,
+        modelDir: modelDir,
+        startOffset: startOffset,
+        refWavPath: refWavPath.isNotEmpty ? refWavPath : null,
+      );
+    } catch (e) {
+      if (controller != null) {
+        await controller.stop();
+        if (identical(_ttsController, controller)) _ttsController = null;
+      }
+      ref
+          .read(ttsPlaybackStateProvider.notifier)
+          .set(TtsPlaybackState.stopped);
+      ref.read(ttsHighlightRangeProvider.notifier).set(null);
+    }
   }
 
   Future<void> _stopTts() async {
-    if (_ttsController != null) {
-      await _ttsController!.stop();
-      _ttsController = null;
+    _ttsSession++;
+    final controller = _ttsController;
+    _ttsController = null;
+
+    if (controller != null) {
+      await controller.stop();
     } else {
-      ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.stopped);
+      ref
+          .read(ttsPlaybackStateProvider.notifier)
+          .set(TtsPlaybackState.stopped);
       ref.read(ttsHighlightRangeProvider.notifier).set(null);
     }
   }
@@ -72,15 +105,12 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
   Widget _buildTtsButton(TtsPlaybackState ttsState, String content) {
     switch (ttsState) {
       case TtsPlaybackState.loading:
-        return const SizedBox(
-          width: 48,
-          height: 48,
-          child: Center(
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
+        return FloatingActionButton.small(
+          onPressed: _stopTts,
+          child: const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
           ),
         );
       case TtsPlaybackState.playing:

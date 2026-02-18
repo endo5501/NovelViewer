@@ -262,6 +262,7 @@ class TtsPlaybackController {
 
     _ttsIsolate.dispose();
     await _audioPlayer.stop();
+    await _audioPlayer.dispose();
 
     // Reset state
     ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.stopped);
