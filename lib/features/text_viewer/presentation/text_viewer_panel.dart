@@ -9,6 +9,8 @@ import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 
 class TextViewerPanel extends ConsumerStatefulWidget {
   const TextViewerPanel({super.key});
@@ -25,6 +27,37 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Widget _buildTtsButton(TtsPlaybackState ttsState) {
+    switch (ttsState) {
+      case TtsPlaybackState.loading:
+        return const SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        );
+      case TtsPlaybackState.playing:
+        return FloatingActionButton.small(
+          onPressed: () {
+            // TODO: stop TTS playback
+          },
+          child: const Icon(Icons.stop),
+        );
+      case TtsPlaybackState.stopped:
+        return FloatingActionButton.small(
+          onPressed: () {
+            // TODO: start TTS playback
+          },
+          child: const Icon(Icons.play_arrow),
+        );
+    }
   }
 
   void _scrollToLine(SelectedSearchMatch match, TextStyle? textStyle) {
@@ -67,6 +100,9 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
           );
         }
 
+        final ttsModelDir = ref.watch(ttsModelDirProvider);
+        final ttsState = ref.watch(ttsPlaybackStateProvider);
+
         final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: fontSize,
               fontFamily: fontFamily.effectiveFontFamilyName,
@@ -75,15 +111,25 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
 
         if (displayMode == TextDisplayMode.vertical) {
           final columnSpacing = ref.watch(columnSpacingProvider);
-          return VerticalTextViewer(
-            segments: segments,
-            baseStyle: textStyle,
-            query: activeMatch?.query,
-            targetLineNumber: activeMatch?.lineNumber,
-            columnSpacing: columnSpacing,
-            onSelectionChanged: (text) {
-              ref.read(selectedTextProvider.notifier).setText(text);
-            },
+          return Stack(
+            children: [
+              VerticalTextViewer(
+                segments: segments,
+                baseStyle: textStyle,
+                query: activeMatch?.query,
+                targetLineNumber: activeMatch?.lineNumber,
+                columnSpacing: columnSpacing,
+                onSelectionChanged: (text) {
+                  ref.read(selectedTextProvider.notifier).setText(text);
+                },
+              ),
+              if (ttsModelDir.isNotEmpty)
+                Positioned(
+                  right: 8,
+                  bottom: 8,
+                  child: _buildTtsButton(ttsState),
+                ),
+            ],
           );
         }
 
@@ -105,24 +151,35 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
           }
         }
 
-        return SingleChildScrollView(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(16.0),
-          child: SelectableText.rich(
-            textSpan,
-            onSelectionChanged: (selection, cause) {
-              final start = selection.start < selection.end
-                  ? selection.start
-                  : selection.end;
-              final end = selection.start > selection.end
-                  ? selection.start
-                  : selection.end;
-              final selectedText = extractSelectedText(start, end, segments);
-              ref.read(selectedTextProvider.notifier).setText(
-                    selectedText.isEmpty ? null : selectedText,
-                  );
-            },
-          ),
+        return Stack(
+          children: [
+            SingleChildScrollView(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16.0),
+              child: SelectableText.rich(
+                textSpan,
+                onSelectionChanged: (selection, cause) {
+                  final start = selection.start < selection.end
+                      ? selection.start
+                      : selection.end;
+                  final end = selection.start > selection.end
+                      ? selection.start
+                      : selection.end;
+                  final selectedText =
+                      extractSelectedText(start, end, segments);
+                  ref.read(selectedTextProvider.notifier).setText(
+                        selectedText.isEmpty ? null : selectedText,
+                      );
+                },
+              ),
+            ),
+            if (ttsModelDir.isNotEmpty)
+              Positioned(
+                right: 8,
+                bottom: 8,
+                child: _buildTtsButton(ttsState),
+              ),
+          ],
         );
       },
     );
