@@ -7,14 +7,14 @@ void main() {
   group('VerticalTextViewer - TTS auto page', () {
     testWidgets('passes TTS highlight to VerticalTextPage', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: SizedBox(
               width: 300,
               height: 400,
               child: VerticalTextViewer(
-                segments: const [PlainTextSegment('あいうえお')],
-                baseStyle: const TextStyle(fontSize: 14),
+                segments: [PlainTextSegment('あいうえお')],
+                baseStyle: TextStyle(fontSize: 14),
                 ttsHighlightStart: 0,
                 ttsHighlightEnd: 3,
               ),

@@ -82,7 +82,7 @@
 
 ## 12. 最終確認
 
-- [ ] 12.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
-- [ ] 12.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 12.3 `fvm flutter analyze`でリントを実行
-- [ ] 12.4 `fvm flutter test`でテストを実行
+- [x] 12.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
+- [x] 12.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 12.3 `fvm flutter analyze`でリントを実行
+- [x] 12.4 `fvm flutter test`でテストを実行

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
@@ -20,7 +18,7 @@ void main() {
       final highlighted = children
           .where((s) =>
               s.style?.backgroundColor != null &&
-              s.style!.backgroundColor!.value == Colors.green.withValues(alpha: 0.3).value)
+              s.style!.backgroundColor!.toARGB32() == Colors.green.withValues(alpha: 0.3).toARGB32())
           .toList();
       expect(highlighted, isNotEmpty);
       expect(highlighted.first.text, 'はじめの文。');
@@ -38,7 +36,7 @@ void main() {
       final highlighted = children
           .where((s) =>
               s.style?.backgroundColor != null &&
-              s.style!.backgroundColor!.value == Colors.green.withValues(alpha: 0.3).value)
+              s.style!.backgroundColor!.toARGB32() == Colors.green.withValues(alpha: 0.3).toARGB32())
           .toList();
       expect(highlighted, isEmpty);
     });
@@ -56,7 +54,7 @@ void main() {
       final highlighted = children
           .where((s) =>
               s.style?.backgroundColor != null &&
-              s.style!.backgroundColor!.value == Colors.green.withValues(alpha: 0.3).value)
+              s.style!.backgroundColor!.toARGB32() == Colors.green.withValues(alpha: 0.3).toARGB32())
           .toList();
       expect(highlighted, hasLength(1));
       expect(highlighted.first.text, 'えおかき');

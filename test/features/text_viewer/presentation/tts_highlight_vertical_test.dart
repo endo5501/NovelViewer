@@ -8,14 +8,14 @@ void main() {
     testWidgets('applies green highlight to characters in TTS range',
         (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: SizedBox(
               width: 300,
               height: 400,
               child: VerticalTextPage(
-                segments: const [PlainTextSegment('あいうえお')],
-                baseStyle: const TextStyle(fontSize: 14),
+                segments: [PlainTextSegment('あいうえお')],
+                baseStyle: TextStyle(fontSize: 14),
                 ttsHighlightStart: 0,
                 ttsHighlightEnd: 3,
               ),
@@ -31,22 +31,22 @@ void main() {
       final greenTexts = texts
           .where((t) =>
               t.style?.backgroundColor != null &&
-              t.style!.backgroundColor!.value ==
-                  Colors.green.withValues(alpha: 0.3).value)
+              t.style!.backgroundColor!.toARGB32() ==
+                  Colors.green.withValues(alpha: 0.3).toARGB32())
           .toList();
       expect(greenTexts.length, 3);
     });
 
     testWidgets('no TTS highlight when range is null', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: SizedBox(
               width: 300,
               height: 400,
               child: VerticalTextPage(
-                segments: const [PlainTextSegment('あいうえお')],
-                baseStyle: const TextStyle(fontSize: 14),
+                segments: [PlainTextSegment('あいうえお')],
+                baseStyle: TextStyle(fontSize: 14),
               ),
             ),
           ),
@@ -58,8 +58,8 @@ void main() {
       final greenTexts = texts
           .where((t) =>
               t.style?.backgroundColor != null &&
-              t.style!.backgroundColor!.value ==
-                  Colors.green.withValues(alpha: 0.3).value)
+              t.style!.backgroundColor!.toARGB32() ==
+                  Colors.green.withValues(alpha: 0.3).toARGB32())
           .toList();
       expect(greenTexts, isEmpty);
     });
@@ -67,14 +67,14 @@ void main() {
     testWidgets('search highlight takes priority over TTS highlight',
         (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: SizedBox(
               width: 300,
               height: 400,
               child: VerticalTextPage(
-                segments: const [PlainTextSegment('あいうえお')],
-                baseStyle: const TextStyle(fontSize: 14),
+                segments: [PlainTextSegment('あいうえお')],
+                baseStyle: TextStyle(fontSize: 14),
                 query: 'あ',
                 ttsHighlightStart: 0,
                 ttsHighlightEnd: 3,
@@ -98,8 +98,8 @@ void main() {
       final greenTexts = texts
           .where((t) =>
               t.style?.backgroundColor != null &&
-              t.style!.backgroundColor!.value ==
-                  Colors.green.withValues(alpha: 0.3).value)
+              t.style!.backgroundColor!.toARGB32() ==
+                  Colors.green.withValues(alpha: 0.3).toARGB32())
           .toList();
       expect(greenTexts.length, 2);
     });

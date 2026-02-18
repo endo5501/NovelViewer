@@ -1,5 +1,3 @@
-import 'dart:ui' show TextRange;
-
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 

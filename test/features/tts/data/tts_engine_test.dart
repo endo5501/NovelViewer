@@ -1,7 +1,5 @@
-import 'dart:ffi';
 import 'dart:typed_data';
 
-import 'package:ffi/ffi.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine.dart';
 
@@ -17,7 +15,7 @@ void main() {
     });
 
     test('TtsEngineException contains error message', () {
-      final exception = TtsEngineException('model load failed');
+      const exception = TtsEngineException('model load failed');
       expect(exception.message, 'model load failed');
       expect(exception.toString(), contains('model load failed'));
     });
