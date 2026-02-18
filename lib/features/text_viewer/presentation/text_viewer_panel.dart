@@ -24,11 +24,17 @@ class TextViewerPanel extends ConsumerStatefulWidget {
 class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
   final ScrollController _scrollController = ScrollController();
   String? _lastScrollKey;
+  bool _isTtsScrolling = false;
 
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _stopTts() {
+    ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.stopped);
+    ref.read(ttsHighlightRangeProvider.notifier).set(null);
   }
 
   Widget _buildTtsButton(TtsPlaybackState ttsState) {
@@ -78,11 +84,14 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
       final maxOffset = _scrollController.position.maxScrollExtent;
       final clampedOffset = targetOffset.clamp(0.0, maxOffset);
 
+      _isTtsScrolling = true;
       _scrollController.animateTo(
         clampedOffset,
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
-      );
+      ).then((_) {
+        _isTtsScrolling = false;
+      });
     });
   }
 
@@ -151,6 +160,11 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
                 onSelectionChanged: (text) {
                   ref.read(selectedTextProvider.notifier).setText(text);
                 },
+                onUserPageChange: () {
+                  if (ttsState == TtsPlaybackState.playing) {
+                    _stopTts();
+                  }
+                },
               ),
               if (ttsModelDir.isNotEmpty)
                 Positioned(
@@ -189,24 +203,35 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
 
         return Stack(
           children: [
-            SingleChildScrollView(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16.0),
-              child: SelectableText.rich(
-                textSpan,
-                onSelectionChanged: (selection, cause) {
-                  final start = selection.start < selection.end
-                      ? selection.start
-                      : selection.end;
-                  final end = selection.start > selection.end
-                      ? selection.start
-                      : selection.end;
-                  final selectedText =
-                      extractSelectedText(start, end, segments);
-                  ref.read(selectedTextProvider.notifier).setText(
-                        selectedText.isEmpty ? null : selectedText,
-                      );
-                },
+            NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (!_isTtsScrolling &&
+                    notification is ScrollStartNotification &&
+                    notification.dragDetails != null &&
+                    ttsState == TtsPlaybackState.playing) {
+                  _stopTts();
+                }
+                return false;
+              },
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16.0),
+                child: SelectableText.rich(
+                  textSpan,
+                  onSelectionChanged: (selection, cause) {
+                    final start = selection.start < selection.end
+                        ? selection.start
+                        : selection.end;
+                    final end = selection.start > selection.end
+                        ? selection.start
+                        : selection.end;
+                    final selectedText =
+                        extractSelectedText(start, end, segments);
+                    ref.read(selectedTextProvider.notifier).setText(
+                          selectedText.isEmpty ? null : selectedText,
+                        );
+                  },
+                ),
               ),
             ),
             if (ttsModelDir.isNotEmpty)

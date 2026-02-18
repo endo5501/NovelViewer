@@ -17,6 +17,7 @@ class VerticalTextViewer extends StatefulWidget {
     this.ttsHighlightStart,
     this.ttsHighlightEnd,
     this.onSelectionChanged,
+    this.onUserPageChange,
     this.columnSpacing = 8.0,
   }) : assert(columnSpacing >= 0);
 
@@ -27,6 +28,7 @@ class VerticalTextViewer extends StatefulWidget {
   final int? ttsHighlightStart;
   final int? ttsHighlightEnd;
   final ValueChanged<String?>? onSelectionChanged;
+  final VoidCallback? onUserPageChange;
   final double columnSpacing;
 
   @override
@@ -312,6 +314,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
       ..reset()
       ..forward();
     widget.onSelectionChanged?.call(null);
+    widget.onUserPageChange?.call();
   }
 
   void _nextPage() => _changePage(1);
