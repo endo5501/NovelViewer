@@ -27,9 +27,9 @@
 
 ## 5. TTS Isolate
 
-- [ ] 5.1 `lib/features/tts/data/tts_isolate.dart` のテストを作成する。Isolate でのモデルロード、合成リクエスト送信、結果受信、エラーハンドリングをテストする
-- [ ] 5.2 `TtsIsolate` クラスを実装する。バックグラウンド Isolate を起動し、`SendPort`/`ReceivePort` でメイン Isolate と通信する。モデルロードと合成を Isolate 内で実行する
-- [ ] 5.3 Isolate 間のオーディオデータ転送に `TransferableTypedData` を使用してコピーを回避する
+- [x] 5.1 `lib/features/tts/data/tts_isolate.dart` のテストを作成する。Isolate でのモデルロード、合成リクエスト送信、結果受信、エラーハンドリングをテストする
+- [x] 5.2 `TtsIsolate` クラスを実装する。バックグラウンド Isolate を起動し、`SendPort`/`ReceivePort` でメイン Isolate と通信する。モデルロードと合成を Isolate 内で実行する
+- [x] 5.3 Isolate 間のオーディオデータ転送に `TransferableTypedData` を使用してコピーを回避する
 
 ## 6. TTS 設定
 
