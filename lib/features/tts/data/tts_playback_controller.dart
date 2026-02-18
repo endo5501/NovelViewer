@@ -34,6 +34,23 @@ abstract class TtsFileCleaner {
   Future<void> deleteFile(String path);
 }
 
+/// Determines the starting character offset for TTS playback.
+///
+/// If [selectedText] is non-null, non-empty, and found in [text],
+/// returns the offset of its first occurrence.
+/// Otherwise, returns [viewStartCharOffset] (defaults to 0).
+int determineStartOffset({
+  required String text,
+  String? selectedText,
+  int viewStartCharOffset = 0,
+}) {
+  if (selectedText != null && selectedText.isNotEmpty) {
+    final index = text.indexOf(selectedText);
+    if (index >= 0) return index;
+  }
+  return viewStartCharOffset;
+}
+
 /// Orchestrates the TTS playback pipeline:
 /// text segmentation → TTS synthesis → WAV writing → audio playback → highlight update.
 class TtsPlaybackController {
