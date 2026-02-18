@@ -67,7 +67,9 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
 
       final sliders = find.byType(Slider);
-      // Second slider is column spacing
+      // Second slider is column spacing - ensure it's visible first
+      await tester.ensureVisible(sliders.at(1));
+      await tester.pumpAndSettle();
       await tester.drag(sliders.at(1), const Offset(50, 0));
       await tester.pumpAndSettle();
 

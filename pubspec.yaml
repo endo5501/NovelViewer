@@ -44,6 +44,7 @@ dependencies:
   sqflite_common_ffi: ^2.3.4+5
   ffi: ^2.1.0
   just_audio: ^0.9.40
+  file_picker: ^8.0.0
 
 dev_dependencies:
   flutter_test:
