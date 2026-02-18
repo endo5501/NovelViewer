@@ -1,3 +1,5 @@
+import 'dart:ui' show TextRange;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -60,6 +62,30 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
     }
   }
 
+  void _scrollToTtsHighlight(
+      String content, TextRange range, TextStyle? textStyle) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+
+      // Count newlines before the TTS highlight start to estimate the line number
+      final textBefore = content.substring(
+          0, range.start.clamp(0, content.length));
+      final lineNumber = '\n'.allMatches(textBefore).length;
+
+      final fontSize = textStyle?.fontSize ?? 14.0;
+      final lineHeight = (textStyle?.height ?? 1.5) * fontSize;
+      final targetOffset = lineNumber * lineHeight;
+      final maxOffset = _scrollController.position.maxScrollExtent;
+      final clampedOffset = targetOffset.clamp(0.0, maxOffset);
+
+      _scrollController.animateTo(
+        clampedOffset,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
   void _scrollToLine(SelectedSearchMatch match, TextStyle? textStyle) {
     if (!mounted || !_scrollController.hasClients) return;
 
@@ -102,6 +128,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
 
         final ttsModelDir = ref.watch(ttsModelDirProvider);
         final ttsState = ref.watch(ttsPlaybackStateProvider);
+        final ttsHighlightRange = ref.watch(ttsHighlightRangeProvider);
 
         final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: fontSize,
@@ -118,6 +145,8 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
                 baseStyle: textStyle,
                 query: activeMatch?.query,
                 targetLineNumber: activeMatch?.lineNumber,
+                ttsHighlightStart: ttsHighlightRange?.start,
+                ttsHighlightEnd: ttsHighlightRange?.end,
                 columnSpacing: columnSpacing,
                 onSelectionChanged: (text) {
                   ref.read(selectedTextProvider.notifier).setText(text);
@@ -138,6 +167,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
           segments,
           textStyle,
           activeMatch?.query,
+          ttsHighlightRange: ttsHighlightRange,
         );
 
         if (activeMatch != null) {
@@ -149,6 +179,12 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
               _scrollToLine(activeMatch, textStyle);
             });
           }
+        }
+
+        // Auto-scroll for TTS highlight
+        if (ttsHighlightRange != null) {
+          _scrollToTtsHighlight(
+              content, ttsHighlightRange, textStyle);
         }
 
         return Stack(
