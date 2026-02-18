@@ -1,11 +1,11 @@
 ## 1. サブモジュール追加とビルド基盤
 
-- [ ] 1.1 qwen3-tts.cpp を git サブモジュールとして `third_party/qwen3-tts.cpp` に追加し、再帰的にサブモジュール（GGML）を初期化する
-- [ ] 1.2 qwen3-tts.cpp の C API ラッパー（`qwen3_tts_c_api.h` / `qwen3_tts_c_api.cpp`）を `third_party/qwen3-tts.cpp/src/` に作成する。C API は `qwen3_tts_init`, `qwen3_tts_is_loaded`, `qwen3_tts_free`, `qwen3_tts_synthesize`, `qwen3_tts_synthesize_with_voice`, `qwen3_tts_get_audio`, `qwen3_tts_get_audio_length`, `qwen3_tts_get_sample_rate`, `qwen3_tts_get_error` を公開する
-- [ ] 1.3 qwen3-tts.cpp の CMakeLists.txt に共有ライブラリターゲット `qwen3_tts_ffi` (SHARED) を追加する。C API ラッパーをソースに含め、既存の静的ライブラリ群をリンクする
-- [ ] 1.4 macOS 向けビルドスクリプトを作成する。GGML を Metal 有効でビルドし、共有ライブラリをビルドして `macos/Frameworks/` にコピーする。Xcode プロジェクトに Embed Frameworks を設定する
-- [ ] 1.5 Windows 向けビルドスクリプトを作成する。GGML を CPU バックエンドでビルドし、共有ライブラリをビルドして実行ファイルディレクトリにコピーする
-- [ ] 1.6 macOS でビルドが成功し、共有ライブラリが正しくバンドルされることを確認する
+- [x] 1.1 qwen3-tts.cpp を git サブモジュールとして `third_party/qwen3-tts.cpp` に追加し、再帰的にサブモジュール（GGML）を初期化する
+- [x] 1.2 qwen3-tts.cpp の C API ラッパー（`qwen3_tts_c_api.h` / `qwen3_tts_c_api.cpp`）を `third_party/qwen3-tts.cpp/src/` に作成する。C API は `qwen3_tts_init`, `qwen3_tts_is_loaded`, `qwen3_tts_free`, `qwen3_tts_synthesize`, `qwen3_tts_synthesize_with_voice`, `qwen3_tts_get_audio`, `qwen3_tts_get_audio_length`, `qwen3_tts_get_sample_rate`, `qwen3_tts_get_error` を公開する
+- [x] 1.3 qwen3-tts.cpp の CMakeLists.txt に共有ライブラリターゲット `qwen3_tts_ffi` (SHARED) を追加する。C API ラッパーをソースに含め、既存の静的ライブラリ群をリンクする
+- [x] 1.4 macOS 向けビルドスクリプトを作成する。GGML を Metal 有効でビルドし、共有ライブラリをビルドして `macos/Frameworks/` にコピーする。Xcode プロジェクトに Embed Frameworks を設定する
+- [x] 1.5 Windows 向けビルドスクリプトを作成する。GGML を CPU バックエンドでビルドし、共有ライブラリをビルドして実行ファイルディレクトリにコピーする
+- [x] 1.6 macOS でビルドが成功し、共有ライブラリが正しくバンドルされることを確認する
 
 ## 2. Dart FFI バインディング
 
