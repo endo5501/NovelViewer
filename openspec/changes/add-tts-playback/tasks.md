@@ -44,12 +44,12 @@
 
 ## 7. 再生パイプラインとステート管理
 
-- [ ] 7.1 TTS 再生状態の Riverpod Provider（`ttsPlaybackStateProvider`, `ttsHighlightRangeProvider`）のテストを作成する
-- [ ] 7.2 TTS 再生状態の Provider を実装する。状態は `stopped`, `loading`, `playing` の 3 値、ハイライト範囲は `TextRange?` で管理する
-- [ ] 7.3 再生パイプライン `TtsPlaybackController` のテストを作成する。再生開始（選択位置 / 表示先頭）、順次再生、先読み、停止、エラーハンドリングをテストする
-- [ ] 7.4 `TtsPlaybackController` を実装する。テキスト分割 → Isolate で生成 → WAV 書き出し → just_audio で再生 → ハイライト更新の一連のフローを管理する
-- [ ] 7.5 先読み生成を実装する。現在の文を再生中に次の文の音声を TTS Isolate で事前生成する
-- [ ] 7.6 再生完了・停止時に一時 WAV ファイルをクリーンアップする処理を実装する
+- [x] 7.1 TTS 再生状態の Riverpod Provider（`ttsPlaybackStateProvider`, `ttsHighlightRangeProvider`）のテストを作成する
+- [x] 7.2 TTS 再生状態の Provider を実装する。状態は `stopped`, `loading`, `playing` の 3 値、ハイライト範囲は `TextRange?` で管理する
+- [x] 7.3 再生パイプライン `TtsPlaybackController` のテストを作成する。再生開始（選択位置 / 表示先頭）、順次再生、先読み、停止、エラーハンドリングをテストする
+- [x] 7.4 `TtsPlaybackController` を実装する。テキスト分割 → Isolate で生成 → WAV 書き出し → just_audio で再生 → ハイライト更新の一連のフローを管理する
+- [x] 7.5 先読み生成を実装する。現在の文を再生中に次の文の音声を TTS Isolate で事前生成する
+- [x] 7.6 再生完了・停止時に一時 WAV ファイルをクリーンアップする処理を実装する
 
 ## 8. テキストビューア統合
 
