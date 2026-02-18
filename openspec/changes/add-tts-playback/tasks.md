@@ -82,11 +82,11 @@
 
 ## 12. UI ボタンと再生パイプラインの接続
 
-- [ ] 12.1 具象アダプタクラス（`JustAudioPlayer`, `WavWriterAdapter`, `FileCleanerImpl`）のテストを作成する
-- [ ] 12.2 具象アダプタクラスを `lib/features/tts/data/` に実装する
-- [ ] 12.3 `TextViewerPanel` のボタン接続テストを作成する。再生ボタン押下で `TtsPlaybackController.start()` が呼ばれること、停止ボタン押下で `stop()` が呼ばれることを検証する
-- [ ] 12.4 `TextViewerPanel` の再生/停止ボタンに `TtsPlaybackController` を接続する。`_stopTts()` もコントローラの `stop()` を呼ぶよう修正する
-- [ ] 12.5 Widget dispose 時にアクティブなコントローラを停止する処理を追加する
+- [x] 12.1 具象アダプタクラス（`JustAudioPlayer`, `WavWriterAdapter`, `FileCleanerImpl`）のテストを作成する
+- [x] 12.2 具象アダプタクラスを `lib/features/tts/data/` に実装する
+- [x] 12.3 `TextViewerPanel` のボタン接続テストを作成する。再生ボタン押下で `TtsPlaybackController.start()` が呼ばれること、停止ボタン押下で `stop()` が呼ばれることを検証する
+- [x] 12.4 `TextViewerPanel` の再生/停止ボタンに `TtsPlaybackController` を接続する。`_stopTts()` もコントローラの `stop()` を呼ぶよう修正する
+- [x] 12.5 Widget dispose 時にアクティブなコントローラを停止する処理を追加する
 
 ## 13. 最終確認
 

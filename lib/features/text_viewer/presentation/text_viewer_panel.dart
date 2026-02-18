@@ -11,6 +11,7 @@ import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
+import 'package:novel_viewer/features/tts/data/tts_playback_controller.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 
@@ -25,19 +26,53 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
   final ScrollController _scrollController = ScrollController();
   String? _lastScrollKey;
   bool _isTtsScrolling = false;
+  TtsPlaybackController? _ttsController;
 
   @override
   void dispose() {
+    _ttsController?.stop();
+    _ttsController = null;
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _stopTts() {
-    ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.stopped);
-    ref.read(ttsHighlightRangeProvider.notifier).set(null);
+  Future<void> _startTts(String content) async {
+    final factory = ref.read(ttsControllerFactoryProvider);
+    _ttsController = await factory(
+      ProviderScope.containerOf(context),
+    );
+
+    final modelDir = ref.read(ttsModelDirProvider);
+    final refWavPath = ref.read(ttsRefWavPathProvider);
+    final selectedText = ref.read(selectedTextProvider);
+
+    final startOffset = determineStartOffset(
+      text: content,
+      selectedText: selectedText,
+    );
+
+    await _ttsController!.start(
+      text: content,
+      modelDir: modelDir,
+      startOffset: startOffset,
+      refWavPath: refWavPath.isNotEmpty ? refWavPath : null,
+    );
   }
 
-  Widget _buildTtsButton(TtsPlaybackState ttsState) {
+  Future<void> _stopTts() async {
+    if (_ttsController != null) {
+      await _ttsController!.stop();
+      _ttsController = null;
+    } else {
+      // Fallback: reset provider state when no controller exists
+      ref
+          .read(ttsPlaybackStateProvider.notifier)
+          .set(TtsPlaybackState.stopped);
+      ref.read(ttsHighlightRangeProvider.notifier).set(null);
+    }
+  }
+
+  Widget _buildTtsButton(TtsPlaybackState ttsState, String content) {
     switch (ttsState) {
       case TtsPlaybackState.loading:
         return const SizedBox(
@@ -54,21 +89,21 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
       case TtsPlaybackState.playing:
         return FloatingActionButton.small(
           onPressed: () {
-            // TODO: stop TTS playback
+            _stopTts();
           },
           child: const Icon(Icons.stop),
         );
       case TtsPlaybackState.stopped:
         return FloatingActionButton.small(
           onPressed: () {
-            // TODO: start TTS playback
+            _startTts(content);
           },
           child: const Icon(Icons.play_arrow),
         );
     }
   }
 
-  Widget _withTtsButton(Widget child, String ttsModelDir, TtsPlaybackState ttsState) {
+  Widget _withTtsButton(Widget child, String ttsModelDir, TtsPlaybackState ttsState, String content) {
     if (ttsModelDir.isEmpty) return child;
     return Stack(
       children: [
@@ -76,7 +111,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
         Positioned(
           right: 8,
           bottom: 8,
-          child: _buildTtsButton(ttsState),
+          child: _buildTtsButton(ttsState, content),
         ),
       ],
     );
@@ -179,6 +214,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
             ),
             ttsModelDir,
             ttsState,
+            content,
           );
         }
 
@@ -236,6 +272,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
           ),
           ttsModelDir,
           ttsState,
+          content,
         );
       },
     );
