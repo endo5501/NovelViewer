@@ -3,6 +3,7 @@ import 'package:novel_viewer/features/episode_cache/data/episode_cache_database.
 import 'package:novel_viewer/features/episode_cache/data/episode_cache_repository.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_download/data/download_service.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 
@@ -110,6 +111,45 @@ class DownloadNotifier extends Notifier<DownloadState> {
     } finally {
       await cacheDb.close();
       service.dispose();
+    }
+  }
+
+  Future<void> refreshNovel(String folderName) async {
+    if (state.status == DownloadStatus.downloading) {
+      return;
+    }
+
+    state = const DownloadState(status: DownloadStatus.downloading);
+
+    try {
+      final repository = ref.read(novelRepositoryProvider);
+      final metadata = await repository.findByFolderName(folderName);
+      if (metadata == null) {
+        state = const DownloadState(
+          status: DownloadStatus.error,
+          errorMessage: '小説のメタデータが見つかりません',
+        );
+        return;
+      }
+
+      final libraryPath = ref.read(libraryPathProvider);
+      if (libraryPath == null) {
+        state = const DownloadState(
+          status: DownloadStatus.error,
+          errorMessage: 'ライブラリパスが設定されていません',
+        );
+        return;
+      }
+
+      await startDownload(
+        url: Uri.parse(metadata.url),
+        outputPath: libraryPath,
+      );
+    } catch (e) {
+      state = DownloadState(
+        status: DownloadStatus.error,
+        errorMessage: '更新に失敗しました: $e',
+      );
     }
   }
 

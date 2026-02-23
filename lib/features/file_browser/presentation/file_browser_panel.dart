@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_delete/providers/novel_delete_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 
 /// Returns the parent directory of [currentDir], or null if already at root.
 String? getParentDirectory(String currentDir) {
@@ -131,15 +132,44 @@ class FileBrowserPanel extends ConsumerWidget {
       ),
       items: [
         const PopupMenuItem<String>(
+          value: 'refresh',
+          child: Text('更新'),
+        ),
+        const PopupMenuItem<String>(
           value: 'delete',
           child: Text('削除', style: TextStyle(color: Colors.red)),
         ),
       ],
     ).then((value) {
-      if (value == 'delete' && context.mounted) {
+      if (!context.mounted) return;
+      if (value == 'refresh') {
+        _startRefresh(context, ref, dir);
+      } else if (value == 'delete') {
         _showDeleteConfirmation(context, ref, dir);
       }
     });
+  }
+
+  void _startRefresh(
+    BuildContext context,
+    WidgetRef ref,
+    DirectoryEntry dir,
+  ) {
+    final downloadState = ref.read(downloadProvider);
+    if (downloadState.status == DownloadStatus.downloading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ダウンロード中です。完了後に再度お試しください')),
+      );
+      return;
+    }
+
+    ref.read(downloadProvider.notifier).refreshNovel(dir.name);
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _RefreshProgressDialog(novelTitle: dir.displayName),
+    );
   }
 
   void _showDeleteConfirmation(
@@ -186,6 +216,72 @@ class FileBrowserPanel extends ConsumerWidget {
     if (parent != null) {
       ref.read(currentDirectoryProvider.notifier).setDirectory(parent);
       ref.read(selectedFileProvider.notifier).clear();
+    }
+  }
+}
+
+class _RefreshProgressDialog extends ConsumerWidget {
+  final String novelTitle;
+
+  const _RefreshProgressDialog({required this.novelTitle});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final downloadState = ref.watch(downloadProvider);
+
+    return AlertDialog(
+      title: Text('「$novelTitle」を更新中'),
+      content: _buildContent(downloadState),
+      actions: [
+        if (downloadState.status == DownloadStatus.completed ||
+            downloadState.status == DownloadStatus.error)
+          TextButton(
+            onPressed: () {
+              if (downloadState.status == DownloadStatus.completed) {
+                ref.invalidate(allNovelsProvider);
+                ref.invalidate(directoryContentsProvider);
+              }
+              ref.read(downloadProvider.notifier).reset();
+              Navigator.of(context).pop();
+            },
+            child: const Text('閉じる'),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildContent(DownloadState state) {
+    String episodeSummary(DownloadState s) {
+      if (s.totalEpisodes <= 0) return '';
+      final skipped =
+          s.skippedEpisodes > 0 ? '（${s.skippedEpisodes} スキップ）' : '';
+      return '${s.totalEpisodes} エピソード$skipped';
+    }
+
+    switch (state.status) {
+      case DownloadStatus.idle:
+      case DownloadStatus.downloading:
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const LinearProgressIndicator(),
+            const SizedBox(height: 16),
+            if (state.totalEpisodes > 0)
+              Text(
+                '${state.currentEpisode} / ${episodeSummary(state)}',
+              ),
+          ],
+        );
+      case DownloadStatus.completed:
+        final summary = episodeSummary(state);
+        return Text(
+          '更新が完了しました。${summary.isNotEmpty ? '\n$summary' : ''}',
+        );
+      case DownloadStatus.error:
+        return Text(
+          'エラー: ${state.errorMessage ?? "不明なエラー"}',
+          style: const TextStyle(color: Colors.red),
+        );
     }
   }
 }
