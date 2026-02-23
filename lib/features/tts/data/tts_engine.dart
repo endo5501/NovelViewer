@@ -28,10 +28,17 @@ class TtsEngine {
 
   factory TtsEngine.open() => TtsEngine(TtsNativeBindings.open());
 
+  static const int languageJapanese = 2058;
+
   final TtsNativeBindings _bindings;
   Pointer<Void> _ctx = nullptr;
 
   bool get isLoaded => _ctx != nullptr && _bindings.isLoaded(_ctx) != 0;
+
+  void setLanguage(int languageId) {
+    _ensureLoaded();
+    _bindings.setLanguage(_ctx, languageId);
+  }
 
   void loadModel(String modelDir, {int nThreads = 4}) {
     if (_ctx != nullptr) {

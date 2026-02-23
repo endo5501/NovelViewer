@@ -9,9 +9,14 @@ import 'tts_engine.dart';
 sealed class TtsIsolateMessage {}
 
 class LoadModelMessage extends TtsIsolateMessage {
-  LoadModelMessage({required this.modelDir, this.nThreads = 4});
+  LoadModelMessage({
+    required this.modelDir,
+    this.nThreads = 4,
+    this.languageId = TtsEngine.languageJapanese,
+  });
   final String modelDir;
   final int nThreads;
+  final int languageId;
 }
 
 class SynthesizeMessage extends TtsIsolateMessage {
@@ -76,8 +81,8 @@ class TtsIsolate {
     _sendPort = await completer.future;
   }
 
-  void loadModel(String modelDir, {int nThreads = 4}) {
-    _sendPort?.send(LoadModelMessage(modelDir: modelDir, nThreads: nThreads));
+  void loadModel(String modelDir, {int nThreads = 4, int languageId = TtsEngine.languageJapanese}) {
+    _sendPort?.send(LoadModelMessage(modelDir: modelDir, nThreads: nThreads, languageId: languageId));
   }
 
   void synthesize(String text, {String? refWavPath}) {
@@ -121,11 +126,16 @@ class TtsIsolate {
 
     receivePort.listen((message) {
       if (message is LoadModelMessage) {
+        TtsEngine? next;
         try {
-          engine = TtsEngine.open();
-          engine!.loadModel(message.modelDir, nThreads: message.nThreads);
+          next = TtsEngine.open();
+          next.loadModel(message.modelDir, nThreads: message.nThreads);
+          next.setLanguage(message.languageId);
+          engine?.dispose();
+          engine = next;
           mainSendPort.send(ModelLoadedResponse(success: true));
         } catch (e) {
+          next?.dispose();
           mainSendPort.send(
             ModelLoadedResponse(success: false, error: e.toString()),
           );

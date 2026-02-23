@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/tts/data/tts_engine.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 
 void main() {
@@ -9,6 +10,19 @@ void main() {
       final msg = LoadModelMessage(modelDir: '/path/to/models', nThreads: 8);
       expect(msg.modelDir, '/path/to/models');
       expect(msg.nThreads, 8);
+    });
+
+    test('LoadModelMessage holds languageId with explicit value', () {
+      final msg = LoadModelMessage(
+        modelDir: '/path/to/models',
+        languageId: 2050,
+      );
+      expect(msg.languageId, 2050);
+    });
+
+    test('LoadModelMessage defaults languageId to Japanese', () {
+      final msg = LoadModelMessage(modelDir: '/path/to/models');
+      expect(msg.languageId, TtsEngine.languageJapanese);
     });
 
     test('SynthesizeMessage holds text', () {

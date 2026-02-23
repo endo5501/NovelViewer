@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/tts/data/tts_engine.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_playback_controller.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
@@ -25,7 +26,7 @@ class _FakeTtsIsolate implements TtsIsolate {
   Future<void> spawn() async {}
 
   @override
-  void loadModel(String modelDir, {int nThreads = 4}) {
+  void loadModel(String modelDir, {int nThreads = 4, int languageId = TtsEngine.languageJapanese}) {
     Future.microtask(() {
       _responseController.add(ModelLoadedResponse(success: true));
     });
