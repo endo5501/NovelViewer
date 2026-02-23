@@ -53,7 +53,7 @@ class FakeTtsIsolate implements TtsIsolate {
   }
 
   @override
-  void dispose() {
+  Future<void> dispose() async {
     disposed = true;
     _responseController.close();
   }

@@ -51,6 +51,9 @@ class TtsIsolate {
   ReceivePort? _receivePort;
   final _responseController = StreamController<TtsIsolateResponse>.broadcast();
 
+  /// Timeout for graceful shutdown before force-killing the isolate.
+  static const _disposeTimeout = Duration(seconds: 2);
+
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
 
   Future<void> spawn() async {
@@ -81,9 +84,26 @@ class TtsIsolate {
     _sendPort?.send(SynthesizeMessage(text: text, refWavPath: refWavPath));
   }
 
-  void dispose() {
-    _sendPort?.send(DisposeMessage());
-    _isolate?.kill(priority: Isolate.immediate);
+  Future<void> dispose() async {
+    final isolate = _isolate;
+    if (isolate != null) {
+      // Listen for isolate exit to know when it has terminated
+      final exitPort = ReceivePort();
+      isolate.addOnExitListener(exitPort.sendPort);
+
+      // Send DisposeMessage so the isolate can clean up native resources
+      _sendPort?.send(DisposeMessage());
+
+      // Wait for isolate to exit gracefully, or force-kill on timeout
+      try {
+        await exitPort.first.timeout(_disposeTimeout);
+      } on TimeoutException {
+        isolate.kill(priority: Isolate.immediate);
+      } finally {
+        exitPort.close();
+      }
+    }
+
     _isolate = null;
     _receivePort?.close();
     _receivePort = null;
