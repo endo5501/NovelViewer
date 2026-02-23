@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/tts/data/tts_engine.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 
 void main() {
@@ -9,6 +10,19 @@ void main() {
       final msg = LoadModelMessage(modelDir: '/path/to/models', nThreads: 8);
       expect(msg.modelDir, '/path/to/models');
       expect(msg.nThreads, 8);
+    });
+
+    test('LoadModelMessage holds languageId with explicit value', () {
+      final msg = LoadModelMessage(
+        modelDir: '/path/to/models',
+        languageId: 2050,
+      );
+      expect(msg.languageId, 2050);
+    });
+
+    test('LoadModelMessage defaults languageId to Japanese', () {
+      final msg = LoadModelMessage(modelDir: '/path/to/models');
+      expect(msg.languageId, TtsEngine.languageJapanese);
     });
 
     test('SynthesizeMessage holds text', () {
@@ -67,6 +81,42 @@ void main() {
       );
       expect(response.audio, isNull);
       expect(response.error, 'synthesis failed');
+    });
+  });
+
+  group('TtsIsolate - graceful shutdown', () {
+    test('dispose returns Future<void>', () {
+      final ttsIsolate = TtsIsolate();
+      // dispose() must return Future<void> (not void)
+      final result = ttsIsolate.dispose();
+      expect(result, isA<Future<void>>());
+    });
+
+    test('spawn and dispose completes gracefully', () async {
+      final ttsIsolate = TtsIsolate();
+      await ttsIsolate.spawn();
+      // Should complete without error (isolate processes DisposeMessage and exits)
+      await ttsIsolate.dispose();
+    });
+
+    test('dispose without spawn completes safely', () async {
+      final ttsIsolate = TtsIsolate();
+      await ttsIsolate.dispose();
+    });
+
+    test('double dispose is safe', () async {
+      final ttsIsolate = TtsIsolate();
+      await ttsIsolate.spawn();
+      await ttsIsolate.dispose();
+      await ttsIsolate.dispose();
+    });
+
+    test('dispose completes within timeout', () async {
+      final ttsIsolate = TtsIsolate();
+      await ttsIsolate.spawn();
+
+      // Dispose should complete well within the 2 second timeout
+      await ttsIsolate.dispose().timeout(const Duration(seconds: 3));
     });
   });
 }

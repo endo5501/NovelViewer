@@ -207,11 +207,11 @@ class TtsPlaybackController {
     // Set state to playing
     ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.playing);
 
-    // Play the audio
+    // Play the audio (fire-and-forget; completion detected via playerStateStream)
     await _audioPlayer.setFilePath(filePath);
-    await _audioPlayer.play();
+    unawaited(_audioPlayer.play().catchError((_) => _handleError('Playback failed')));
 
-    // Start prefetching next segment
+    // Start prefetching next segment immediately (don't wait for play to finish)
     _startPrefetch(refWavPath);
   }
 
@@ -239,8 +239,15 @@ class TtsPlaybackController {
       _prefetchedAudio = null;
       _writeAndPlay(audio, sampleRate, refWavPath);
     } else {
-      // Synthesize next segment (no prefetch available)
-      _synthesizeCurrentSegment(refWavPath);
+      // Prefetch not ready; show loading state while waiting for synthesis
+      ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.loading);
+      if (_isPrefetching) {
+        // Synthesis request already in-flight from prefetch; let it arrive as current segment
+        _isPrefetching = false;
+      } else {
+        // No prefetch in-flight; request synthesis now
+        _synthesizeCurrentSegment(refWavPath);
+      }
     }
   }
 
@@ -260,8 +267,8 @@ class TtsPlaybackController {
     await _playerSubscription?.cancel();
     _playerSubscription = null;
 
-    _ttsIsolate.dispose();
     await _audioPlayer.stop();
+    await _ttsIsolate.dispose();
     await _audioPlayer.dispose();
 
     // Reset state

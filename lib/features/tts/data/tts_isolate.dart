@@ -9,9 +9,14 @@ import 'tts_engine.dart';
 sealed class TtsIsolateMessage {}
 
 class LoadModelMessage extends TtsIsolateMessage {
-  LoadModelMessage({required this.modelDir, this.nThreads = 4});
+  LoadModelMessage({
+    required this.modelDir,
+    this.nThreads = 4,
+    this.languageId = TtsEngine.languageJapanese,
+  });
   final String modelDir;
   final int nThreads;
+  final int languageId;
 }
 
 class SynthesizeMessage extends TtsIsolateMessage {
@@ -51,6 +56,9 @@ class TtsIsolate {
   ReceivePort? _receivePort;
   final _responseController = StreamController<TtsIsolateResponse>.broadcast();
 
+  /// Timeout for graceful shutdown before force-killing the isolate.
+  static const _disposeTimeout = Duration(seconds: 2);
+
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
 
   Future<void> spawn() async {
@@ -73,22 +81,41 @@ class TtsIsolate {
     _sendPort = await completer.future;
   }
 
-  void loadModel(String modelDir, {int nThreads = 4}) {
-    _sendPort?.send(LoadModelMessage(modelDir: modelDir, nThreads: nThreads));
+  void loadModel(String modelDir, {int nThreads = 4, int languageId = TtsEngine.languageJapanese}) {
+    _sendPort?.send(LoadModelMessage(modelDir: modelDir, nThreads: nThreads, languageId: languageId));
   }
 
   void synthesize(String text, {String? refWavPath}) {
     _sendPort?.send(SynthesizeMessage(text: text, refWavPath: refWavPath));
   }
 
-  void dispose() {
-    _sendPort?.send(DisposeMessage());
-    _isolate?.kill(priority: Isolate.immediate);
+  Future<void> dispose() async {
+    final isolate = _isolate;
+    if (isolate != null) {
+      // Listen for isolate exit to know when it has terminated
+      final exitPort = ReceivePort();
+      isolate.addOnExitListener(exitPort.sendPort);
+
+      // Send DisposeMessage so the isolate can clean up native resources
+      _sendPort?.send(DisposeMessage());
+
+      // Wait for isolate to exit gracefully, or force-kill on timeout
+      try {
+        await exitPort.first.timeout(_disposeTimeout);
+      } on TimeoutException {
+        isolate.kill(priority: Isolate.immediate);
+      } finally {
+        exitPort.close();
+      }
+    }
+
     _isolate = null;
     _receivePort?.close();
     _receivePort = null;
     _sendPort = null;
-    _responseController.close();
+    if (!_responseController.isClosed) {
+      _responseController.close();
+    }
   }
 
   static void _isolateEntryPoint(SendPort mainSendPort) {
@@ -99,11 +126,16 @@ class TtsIsolate {
 
     receivePort.listen((message) {
       if (message is LoadModelMessage) {
+        TtsEngine? next;
         try {
-          engine = TtsEngine.open();
-          engine!.loadModel(message.modelDir, nThreads: message.nThreads);
+          next = TtsEngine.open();
+          next.loadModel(message.modelDir, nThreads: message.nThreads);
+          next.setLanguage(message.languageId);
+          engine?.dispose();
+          engine = next;
           mainSendPort.send(ModelLoadedResponse(success: true));
         } catch (e) {
+          next?.dispose();
           mainSendPort.send(
             ModelLoadedResponse(success: false, error: e.toString()),
           );

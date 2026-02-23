@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/tts/data/tts_engine.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_playback_controller.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
@@ -27,7 +28,7 @@ class FakeTtsIsolate implements TtsIsolate {
   }
 
   @override
-  void loadModel(String modelDir, {int nThreads = 4}) {
+  void loadModel(String modelDir, {int nThreads = 4, int languageId = TtsEngine.languageJapanese}) {
     loadedModelDir = modelDir;
     // Simulate async response
     Future.microtask(() {
@@ -53,7 +54,7 @@ class FakeTtsIsolate implements TtsIsolate {
   }
 
   @override
-  void dispose() {
+  Future<void> dispose() async {
     disposed = true;
     _responseController.close();
   }
@@ -125,6 +126,117 @@ class FakeFileCleaner implements TtsFileCleaner {
   @override
   Future<void> deleteFile(String path) async {
     deletedFiles.add(path);
+  }
+}
+
+/// Audio player where play() blocks until emitCompleted() is called,
+/// simulating just_audio's real behavior.
+class BlockingFakeAudioPlayer implements TtsAudioPlayer {
+  final _stateController = StreamController<TtsPlayerState>.broadcast();
+  Completer<void>? _playCompleter;
+  String? currentFilePath;
+  final playedFiles = <String>[];
+  bool disposed = false;
+
+  @override
+  Stream<TtsPlayerState> get playerStateStream => _stateController.stream;
+
+  @override
+  Future<void> setFilePath(String path) async {
+    currentFilePath = path;
+  }
+
+  @override
+  Future<void> play() {
+    playedFiles.add(currentFilePath!);
+    _playCompleter = Completer<void>();
+    return _playCompleter!.future;
+  }
+
+  @override
+  Future<void> stop() async {
+    _playCompleter?.complete();
+    _playCompleter = null;
+  }
+
+  @override
+  Future<void> dispose() async {
+    disposed = true;
+    _playCompleter?.complete();
+    await _stateController.close();
+  }
+
+  void emitCompleted() {
+    _stateController.add(TtsPlayerState.completed);
+    _playCompleter?.complete();
+    _playCompleter = null;
+  }
+}
+
+/// TtsIsolate where synthesize() does not auto-respond.
+/// Call [completeSynthesis] to manually deliver results.
+class DelayedFakeTtsIsolate implements TtsIsolate {
+  final _responseController = StreamController<TtsIsolateResponse>.broadcast();
+  bool spawned = false;
+  bool disposed = false;
+  final synthesizeRequests = <String>[];
+
+  @override
+  Stream<TtsIsolateResponse> get responses => _responseController.stream;
+
+  @override
+  Future<void> spawn() async {
+    spawned = true;
+  }
+
+  @override
+  void loadModel(String modelDir, {int nThreads = 4, int languageId = TtsEngine.languageJapanese}) {
+    Future.microtask(() {
+      _responseController.add(ModelLoadedResponse(success: true));
+    });
+  }
+
+  @override
+  void synthesize(String text, {String? refWavPath}) {
+    synthesizeRequests.add(text);
+    // Do NOT auto-respond; caller must call completeSynthesis().
+  }
+
+  void completeSynthesis() {
+    _responseController.add(SynthesisResultResponse(
+      audio: Float32List.fromList([0.1, 0.2, 0.3]),
+      sampleRate: 24000,
+    ));
+  }
+
+  @override
+  Future<void> dispose() async {
+    disposed = true;
+    _responseController.close();
+  }
+}
+
+/// Audio player where play() fails with an error.
+class ErrorOnPlayAudioPlayer implements TtsAudioPlayer {
+  final _stateController = StreamController<TtsPlayerState>.broadcast();
+  bool disposed = false;
+
+  @override
+  Stream<TtsPlayerState> get playerStateStream => _stateController.stream;
+
+  @override
+  Future<void> setFilePath(String path) async {}
+
+  @override
+  Future<void> play() => Future.error(Exception('Playback error'));
+
+  @override
+  Future<void> stop() async {}
+
+  @override
+  Future<void> dispose() async {
+    disposed = true;
+    await _stateController.close();
   }
 }
 
@@ -383,6 +495,249 @@ void main() {
       await Future.delayed(Duration.zero);
       await Future.delayed(Duration.zero);
 
+      expect(
+        container.read(ttsPlaybackStateProvider),
+        TtsPlaybackState.stopped,
+      );
+    });
+  });
+
+  group('TtsPlaybackController - blocking play sequential playback', () {
+    // These tests use BlockingFakeAudioPlayer which simulates just_audio's
+    // real behavior where play() blocks until playback completes.
+
+    late BlockingFakeAudioPlayer blockingPlayer;
+    late FakeTtsIsolate blockingIsolate;
+    late TtsPlaybackController blockingController;
+
+    setUp(() {
+      blockingPlayer = BlockingFakeAudioPlayer();
+      blockingIsolate = FakeTtsIsolate();
+      blockingController = TtsPlaybackController(
+        ref: container,
+        ttsIsolate: blockingIsolate,
+        audioPlayer: blockingPlayer,
+        wavWriter: fakeWavWriter,
+        fileCleaner: fakeCleaner,
+        tempDirPath: '/tmp/tts_test',
+      );
+    });
+
+    Future<void> pumpEventQueue({int times = 10}) async {
+      for (var i = 0; i < times; i++) {
+        await Future.delayed(Duration.zero);
+      }
+    }
+
+    test('second segment plays after first completes with blocking play',
+        () async {
+      await blockingController.start(
+        text: 'はじめの文。次の文。',
+        modelDir: '/models',
+      );
+
+      await pumpEventQueue();
+
+      // First segment should be playing
+      expect(blockingPlayer.playedFiles, hasLength(1));
+      expect(blockingPlayer.playedFiles[0], contains('tts_segment_0'));
+
+      // Simulate first segment completion
+      blockingPlayer.emitCompleted();
+      await pumpEventQueue();
+
+      // Second segment should now be playing with correct file
+      expect(blockingPlayer.playedFiles, hasLength(2));
+      expect(blockingPlayer.playedFiles[1], contains('tts_segment_1'));
+
+      // Highlight should be on second segment ("次の文。" starts at offset 6)
+      final range = container.read(ttsHighlightRangeProvider);
+      expect(range, isNotNull);
+      expect(range!.start, 6);
+
+      await blockingController.stop();
+      await pumpEventQueue();
+    });
+
+    test('three segments play in correct sequence with blocking play',
+        () async {
+      await blockingController.start(
+        text: 'はじめの文。次の文。最後の文。',
+        modelDir: '/models',
+      );
+
+      await pumpEventQueue();
+
+      // First segment playing
+      expect(blockingPlayer.playedFiles, hasLength(1));
+
+      // Complete first segment
+      blockingPlayer.emitCompleted();
+      await pumpEventQueue();
+
+      // Second segment playing
+      expect(blockingPlayer.playedFiles, hasLength(2));
+
+      // Complete second segment
+      blockingPlayer.emitCompleted();
+      await pumpEventQueue();
+
+      // Third segment playing
+      expect(blockingPlayer.playedFiles, hasLength(3));
+      expect(blockingPlayer.playedFiles[2], contains('tts_segment_2'));
+
+      // Highlight on third segment
+      final range = container.read(ttsHighlightRangeProvider);
+      expect(range, isNotNull);
+      expect(range!.start, 10); // "はじめの文。次の文。" = 10 chars
+
+      await blockingController.stop();
+      await pumpEventQueue();
+    });
+
+    test('prefetch starts before play completes', () async {
+      await blockingController.start(
+        text: 'はじめの文。次の文。',
+        modelDir: '/models',
+      );
+
+      await pumpEventQueue();
+
+      // First segment is playing (play() is blocking)
+      expect(blockingPlayer.playedFiles, hasLength(1));
+
+      // With fix: prefetch should have started for next segment immediately
+      // With bug: only 1 synthesis request (no prefetch while play blocks)
+      expect(blockingIsolate.synthesizeRequests, hasLength(2));
+      expect(blockingIsolate.synthesizeRequests[0], 'はじめの文。');
+      expect(blockingIsolate.synthesizeRequests[1], '次の文。');
+
+      await blockingController.stop();
+      await pumpEventQueue();
+    });
+
+    test('playback completes and stops after last segment', () async {
+      await blockingController.start(
+        text: 'はじめの文。次の文。',
+        modelDir: '/models',
+      );
+
+      await pumpEventQueue();
+
+      // Complete first segment
+      blockingPlayer.emitCompleted();
+      await pumpEventQueue();
+
+      // Complete second (last) segment
+      blockingPlayer.emitCompleted();
+      await pumpEventQueue();
+
+      // Should be stopped
+      expect(
+        container.read(ttsPlaybackStateProvider),
+        TtsPlaybackState.stopped,
+      );
+      expect(container.read(ttsHighlightRangeProvider), isNull);
+    });
+  });
+
+  group('TtsPlaybackController - slow prefetch fallback', () {
+    late BlockingFakeAudioPlayer blockingPlayer;
+    late DelayedFakeTtsIsolate delayedIsolate;
+    late TtsPlaybackController delayedController;
+
+    setUp(() {
+      blockingPlayer = BlockingFakeAudioPlayer();
+      delayedIsolate = DelayedFakeTtsIsolate();
+      delayedController = TtsPlaybackController(
+        ref: container,
+        ttsIsolate: delayedIsolate,
+        audioPlayer: blockingPlayer,
+        wavWriter: fakeWavWriter,
+        fileCleaner: fakeCleaner,
+        tempDirPath: '/tmp/tts_test',
+      );
+    });
+
+    Future<void> pumpEventQueue({int times = 10}) async {
+      for (var i = 0; i < times; i++) {
+        await Future.delayed(Duration.zero);
+      }
+    }
+
+    test('sets loading state when prefetch is not ready', () async {
+      // Start playback with 2 sentences
+      await delayedController.start(
+        text: 'はじめの文。次の文。',
+        modelDir: '/models',
+      );
+      await pumpEventQueue();
+
+      // Model loaded; first segment synthesis requested
+      expect(delayedIsolate.synthesizeRequests, hasLength(1));
+
+      // Complete first segment synthesis → triggers _writeAndPlay → play + prefetch
+      delayedIsolate.completeSynthesis();
+      await pumpEventQueue();
+
+      // First segment is playing, prefetch requested for second segment
+      expect(blockingPlayer.playedFiles, hasLength(1));
+      expect(delayedIsolate.synthesizeRequests, hasLength(2));
+      expect(
+        container.read(ttsPlaybackStateProvider),
+        TtsPlaybackState.playing,
+      );
+
+      // Complete first segment playback BEFORE prefetch completes
+      // (prefetch synthesis not yet delivered)
+      blockingPlayer.emitCompleted();
+      await pumpEventQueue();
+
+      // State should be loading since prefetch audio is not available
+      expect(
+        container.read(ttsPlaybackStateProvider),
+        TtsPlaybackState.loading,
+      );
+
+      // Now deliver the second segment synthesis result
+      delayedIsolate.completeSynthesis();
+      await pumpEventQueue();
+
+      // Second segment should now be playing
+      expect(blockingPlayer.playedFiles, hasLength(2));
+      expect(
+        container.read(ttsPlaybackStateProvider),
+        TtsPlaybackState.playing,
+      );
+
+      await delayedController.stop();
+      await pumpEventQueue();
+    });
+  });
+
+  group('TtsPlaybackController - play error handling', () {
+    test('handles play() error gracefully', () async {
+      final errorPlayer = ErrorOnPlayAudioPlayer();
+      final errorController = TtsPlaybackController(
+        ref: container,
+        ttsIsolate: fakeIsolate,
+        audioPlayer: errorPlayer,
+        wavWriter: fakeWavWriter,
+        fileCleaner: fakeCleaner,
+        tempDirPath: '/tmp/tts_test',
+      );
+
+      await errorController.start(
+        text: 'テスト。',
+        modelDir: '/models',
+      );
+
+      // Wait for pipeline: model load → synthesis → writeAndPlay → play error
+      for (var i = 0; i < 10; i++) {
+        await Future.delayed(Duration.zero);
+      }
+
+      // Should have stopped gracefully instead of unhandled error
       expect(
         container.read(ttsPlaybackStateProvider),
         TtsPlaybackState.stopped,

@@ -12,6 +12,9 @@ typedef _QTtsIsLoadedDart = int Function(Pointer<Void>);
 typedef _QTtsFreeC = Void Function(Pointer<Void>);
 typedef _QTtsFreeDart = void Function(Pointer<Void>);
 
+typedef _QTtsSetLanguageC = Void Function(Pointer<Void>, Int32);
+typedef _QTtsSetLanguageDart = void Function(Pointer<Void>, int);
+
 typedef _QTtsSynthesizeC = Int32 Function(Pointer<Void>, Pointer<Utf8>);
 typedef _QTtsSynthesizeDart = int Function(Pointer<Void>, Pointer<Utf8>);
 
@@ -65,6 +68,11 @@ class TtsNativeBindings {
 
   late final free = _library.lookupFunction<_QTtsFreeC, _QTtsFreeDart>(
     'qwen3_tts_free',
+  );
+
+  late final setLanguage =
+      _library.lookupFunction<_QTtsSetLanguageC, _QTtsSetLanguageDart>(
+    'qwen3_tts_set_language',
   );
 
   late final synthesize =
