@@ -69,4 +69,40 @@ void main() {
       expect(response.error, 'synthesis failed');
     });
   });
+
+  group('TtsIsolate - graceful shutdown', () {
+    test('dispose returns Future<void>', () {
+      final ttsIsolate = TtsIsolate();
+      // dispose() must return Future<void> (not void)
+      final result = ttsIsolate.dispose();
+      expect(result, isA<Future<void>>());
+    });
+
+    test('spawn and dispose completes gracefully', () async {
+      final ttsIsolate = TtsIsolate();
+      await ttsIsolate.spawn();
+      // Should complete without error (isolate processes DisposeMessage and exits)
+      await ttsIsolate.dispose();
+    });
+
+    test('dispose without spawn completes safely', () async {
+      final ttsIsolate = TtsIsolate();
+      await ttsIsolate.dispose();
+    });
+
+    test('double dispose is safe', () async {
+      final ttsIsolate = TtsIsolate();
+      await ttsIsolate.spawn();
+      await ttsIsolate.dispose();
+      await ttsIsolate.dispose();
+    });
+
+    test('dispose completes within timeout', () async {
+      final ttsIsolate = TtsIsolate();
+      await ttsIsolate.spawn();
+
+      // Dispose should complete well within the 2 second timeout
+      await ttsIsolate.dispose().timeout(const Duration(seconds: 3));
+    });
+  });
 }
