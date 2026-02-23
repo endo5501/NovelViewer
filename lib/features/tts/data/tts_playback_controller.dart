@@ -207,11 +207,11 @@ class TtsPlaybackController {
     // Set state to playing
     ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.playing);
 
-    // Play the audio
+    // Play the audio (fire-and-forget; completion detected via playerStateStream)
     await _audioPlayer.setFilePath(filePath);
-    await _audioPlayer.play();
+    unawaited(_audioPlayer.play().catchError((_) => _handleError('Playback failed')));
 
-    // Start prefetching next segment
+    // Start prefetching next segment immediately (don't wait for play to finish)
     _startPrefetch(refWavPath);
   }
 
