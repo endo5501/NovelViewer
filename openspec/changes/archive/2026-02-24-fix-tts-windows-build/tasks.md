@@ -8,9 +8,9 @@
 ## 2. サブモジュールの変更をコミット
 
 - [x] 2.1 `third_party/qwen3-tts.cpp`サブモジュール内で変更をコミット
-- [ ] 2.2 親リポジトリでサブモジュール参照を更新してコミット
+- [x] 2.2 親リポジトリでサブモジュール参照を更新してコミット
 
 ## 3. 最終確認
 
-- [ ] 3.1 `fvm flutter analyze`でリントを実行
-- [ ] 3.2 `fvm flutter test`でテストを実行
+- [x] 3.1 `fvm flutter analyze`でリントを実行
+- [x] 3.2 `fvm flutter test`でテストを実行
