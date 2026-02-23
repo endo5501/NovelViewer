@@ -239,8 +239,15 @@ class TtsPlaybackController {
       _prefetchedAudio = null;
       _writeAndPlay(audio, sampleRate, refWavPath);
     } else {
-      // Synthesize next segment (no prefetch available)
-      _synthesizeCurrentSegment(refWavPath);
+      // Prefetch not ready; show loading state while waiting for synthesis
+      ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.loading);
+      if (_isPrefetching) {
+        // Synthesis request already in-flight from prefetch; let it arrive as current segment
+        _isPrefetching = false;
+      } else {
+        // No prefetch in-flight; request synthesis now
+        _synthesizeCurrentSegment(refWavPath);
+      }
     }
   }
 

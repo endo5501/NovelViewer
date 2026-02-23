@@ -172,6 +172,49 @@ class BlockingFakeAudioPlayer implements TtsAudioPlayer {
   }
 }
 
+/// TtsIsolate where synthesize() does not auto-respond.
+/// Call [completeSynthesis] to manually deliver results.
+class DelayedFakeTtsIsolate implements TtsIsolate {
+  final _responseController = StreamController<TtsIsolateResponse>.broadcast();
+  bool spawned = false;
+  bool disposed = false;
+  final synthesizeRequests = <String>[];
+
+  @override
+  Stream<TtsIsolateResponse> get responses => _responseController.stream;
+
+  @override
+  Future<void> spawn() async {
+    spawned = true;
+  }
+
+  @override
+  void loadModel(String modelDir, {int nThreads = 4}) {
+    Future.microtask(() {
+      _responseController.add(ModelLoadedResponse(success: true));
+    });
+  }
+
+  @override
+  void synthesize(String text, {String? refWavPath}) {
+    synthesizeRequests.add(text);
+    // Do NOT auto-respond; caller must call completeSynthesis().
+  }
+
+  void completeSynthesis() {
+    _responseController.add(SynthesisResultResponse(
+      audio: Float32List.fromList([0.1, 0.2, 0.3]),
+      sampleRate: 24000,
+    ));
+  }
+
+  @override
+  Future<void> dispose() async {
+    disposed = true;
+    _responseController.close();
+  }
+}
+
 /// Audio player where play() fails with an error.
 class ErrorOnPlayAudioPlayer implements TtsAudioPlayer {
   final _stateController = StreamController<TtsPlayerState>.broadcast();
@@ -594,6 +637,80 @@ void main() {
         TtsPlaybackState.stopped,
       );
       expect(container.read(ttsHighlightRangeProvider), isNull);
+    });
+  });
+
+  group('TtsPlaybackController - slow prefetch fallback', () {
+    late BlockingFakeAudioPlayer blockingPlayer;
+    late DelayedFakeTtsIsolate delayedIsolate;
+    late TtsPlaybackController delayedController;
+
+    setUp(() {
+      blockingPlayer = BlockingFakeAudioPlayer();
+      delayedIsolate = DelayedFakeTtsIsolate();
+      delayedController = TtsPlaybackController(
+        ref: container,
+        ttsIsolate: delayedIsolate,
+        audioPlayer: blockingPlayer,
+        wavWriter: fakeWavWriter,
+        fileCleaner: fakeCleaner,
+        tempDirPath: '/tmp/tts_test',
+      );
+    });
+
+    Future<void> pumpEventQueue({int times = 10}) async {
+      for (var i = 0; i < times; i++) {
+        await Future.delayed(Duration.zero);
+      }
+    }
+
+    test('sets loading state when prefetch is not ready', () async {
+      // Start playback with 2 sentences
+      await delayedController.start(
+        text: 'はじめの文。次の文。',
+        modelDir: '/models',
+      );
+      await pumpEventQueue();
+
+      // Model loaded; first segment synthesis requested
+      expect(delayedIsolate.synthesizeRequests, hasLength(1));
+
+      // Complete first segment synthesis → triggers _writeAndPlay → play + prefetch
+      delayedIsolate.completeSynthesis();
+      await pumpEventQueue();
+
+      // First segment is playing, prefetch requested for second segment
+      expect(blockingPlayer.playedFiles, hasLength(1));
+      expect(delayedIsolate.synthesizeRequests, hasLength(2));
+      expect(
+        container.read(ttsPlaybackStateProvider),
+        TtsPlaybackState.playing,
+      );
+
+      // Complete first segment playback BEFORE prefetch completes
+      // (prefetch synthesis not yet delivered)
+      blockingPlayer.emitCompleted();
+      await pumpEventQueue();
+
+      // State should be loading since prefetch audio is not available
+      expect(
+        container.read(ttsPlaybackStateProvider),
+        TtsPlaybackState.loading,
+      );
+
+      // Now deliver the second segment synthesis result
+      delayedIsolate.completeSynthesis();
+      await pumpEventQueue();
+
+      // Second segment should now be playing
+      expect(blockingPlayer.playedFiles, hasLength(2));
+      expect(
+        container.read(ttsPlaybackStateProvider),
+        TtsPlaybackState.playing,
+      );
+
+      await delayedController.stop();
+      await pumpEventQueue();
     });
   });
 
