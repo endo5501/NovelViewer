@@ -108,7 +108,9 @@ class TtsIsolate {
     _receivePort?.close();
     _receivePort = null;
     _sendPort = null;
-    _responseController.close();
+    if (!_responseController.isClosed) {
+      _responseController.close();
+    }
   }
 
   static void _isolateEntryPoint(SendPort mainSendPort) {

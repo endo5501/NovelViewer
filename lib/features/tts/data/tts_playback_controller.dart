@@ -260,8 +260,8 @@ class TtsPlaybackController {
     await _playerSubscription?.cancel();
     _playerSubscription = null;
 
-    await _ttsIsolate.dispose();
     await _audioPlayer.stop();
+    await _ttsIsolate.dispose();
     await _audioPlayer.dispose();
 
     // Reset state
