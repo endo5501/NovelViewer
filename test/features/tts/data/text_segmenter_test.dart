@@ -126,6 +126,80 @@ void main() {
     });
   });
 
+  group('TextSegmenter - ruby tag with rb element', () {
+    test('strips ruby tags with rb element', () {
+      final segments = segmenter.splitIntoSentences(
+        '<ruby><rb>漢字</rb><rt>かんじ</rt></ruby>を読む。',
+      );
+
+      expect(segments.length, 1);
+      expect(segments[0].text, '漢字を読む。');
+      expect(segments[0].offset, 0);
+      expect(segments[0].length, 6);
+    });
+
+    test('strips ruby tags with rb and rp elements', () {
+      final segments = segmenter.splitIntoSentences(
+        '<ruby><rb>漢字</rb><rp>(</rp><rt>かんじ</rt><rp>)</rp></ruby>を読む。',
+      );
+
+      expect(segments.length, 1);
+      expect(segments[0].text, '漢字を読む。');
+      expect(segments[0].offset, 0);
+      expect(segments[0].length, 6);
+    });
+
+    test('produces same plain text as parseRubyText for rb format', () {
+      const input = '<ruby><rb>東京</rb><rt>とうきょう</rt></ruby>の<ruby>空<rt>そら</rt></ruby>。';
+      final segments = segmenter.splitIntoSentences(input);
+
+      // The concatenated segment text should match what parseRubyText would produce
+      final plainText = segments.map((s) => s.text).join();
+      expect(plainText, '東京の空。');
+    });
+  });
+
+  group('TextSegmenter - trim offset correction', () {
+    test('adjusts offset for leading whitespace at newline split', () {
+      final segments = segmenter.splitIntoSentences('テスト。\n　第二章\n次の行。');
+
+      expect(segments.length, 3);
+      expect(segments[0].text, 'テスト。');
+      expect(segments[0].offset, 0);
+
+      // '　第二章' has leading full-width space, trim should adjust offset
+      expect(segments[1].text, '第二章');
+      expect(segments[1].offset, 6); // position of '第', not '　'
+      expect(segments[1].length, 3);
+
+      expect(segments[2].text, '次の行。');
+      expect(segments[2].offset, 10);
+    });
+
+    test('adjusts offset for trailing whitespace at remaining text', () {
+      final segments = segmenter.splitIntoSentences('テスト。\n　章末　');
+
+      expect(segments.length, 2);
+      expect(segments[1].text, '章末');
+      expect(segments[1].offset, 6); // after leading full-width space
+      expect(segments[1].length, 2);
+    });
+  });
+
+  group('TextSegmenter - sentence ender trim', () {
+    test('trims leading whitespace in sentence ender path after newline', () {
+      // After newline, leading whitespace before sentence with punctuation
+      final segments = segmenter.splitIntoSentences('前文。\n　後文。');
+
+      expect(segments.length, 2);
+      expect(segments[0].text, '前文。');
+      // '　後文。' has leading full-width space; offset should skip it
+      expect(segments[1].text, '後文。');
+      expect(segments[1].offset, 5); // position of '後', not '　'
+      expect(segments[1].length, 3);
+    });
+  });
+
   group('TextSegmenter - edge cases', () {
     test('returns empty list for empty string', () {
       final segments = segmenter.splitIntoSentences('');

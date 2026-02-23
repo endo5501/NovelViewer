@@ -6,6 +6,24 @@ import 'package:novel_viewer/features/text_viewer/data/column_splitter.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 
+@visibleForTesting
+List<int> computeCharOffsetPerPage(
+  List<List<TextSegment>> columns,
+  List<int> pageStarts,
+) {
+  final cumulative = <int>[0];
+  var total = 0;
+  for (final col in columns) {
+    for (final seg in col) {
+      total += switch (seg) {
+        PlainTextSegment(:final text) => text.length,
+        RubyTextSegment(:final base) => base.length,
+      };
+    }
+    cumulative.add(total);
+  }
+  return pageStarts.map((start) => cumulative[start]).toList();
+}
 
 class VerticalTextViewer extends StatefulWidget {
   const VerticalTextViewer({
@@ -94,7 +112,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
     }
     if (widget.targetLineNumber != null &&
         widget.targetLineNumber != oldWidget.targetLineNumber) {
-      _navigateToLine(widget.targetLineNumber!);
+      setState(() { _targetLine = widget.targetLineNumber; });
     }
     if (widget.ttsHighlightStart != null &&
         widget.ttsHighlightStart != oldWidget.ttsHighlightStart) {
@@ -179,6 +197,8 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
               }
             }
 
+            final pageTextOffset = result.charOffsetPerPage[safePage];
+
             final incomingPage = Align(
               alignment: Alignment.topRight,
               child: VerticalTextPage(
@@ -187,6 +207,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
                 query: widget.query,
                 ttsHighlightStart: widget.ttsHighlightStart,
                 ttsHighlightEnd: widget.ttsHighlightEnd,
+                pageStartTextOffset: pageTextOffset,
                 onSelectionChanged: widget.onSelectionChanged,
                 onSwipe: _handleSwipe,
                 columnSpacing: widget.columnSpacing,
@@ -290,7 +311,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
     direction == SwipeDirection.right ? _nextPage() : _previousPage();
   }
 
-  void _changePage(int delta) {
+  void _changePage(int delta, {bool userInitiated = true}) {
     if (_pageCount <= 0) return;
 
     final newPage = (_currentPage + delta).clamp(0, _pageCount - 1);
@@ -306,40 +327,20 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
       ..reset()
       ..forward();
     widget.onSelectionChanged?.call(null);
-    widget.onUserPageChange?.call();
+    if (userInitiated) widget.onUserPageChange?.call();
   }
 
   void _nextPage() => _changePage(1);
   void _previousPage() => _changePage(-1);
 
-  void _goToPage(int page) {
-    if (page == _currentPage || page < 0 || page >= _pageCount) return;
-    final delta = page - _currentPage;
-    setState(() {
-      _outgoingSegments = _currentPageSegments;
-      _slideDirection = delta.sign;
-      _currentPage = page;
-    });
-    _animationController
-      ..reset()
-      ..forward();
-  }
+  void _goToPage(int page) =>
+      _changePage(page - _currentPage, userInitiated: false);
 
   int? _findPageForOffset(int offset, List<int> charOffsetPerPage) {
     for (var i = charOffsetPerPage.length - 1; i >= 0; i--) {
       if (offset >= charOffsetPerPage[i]) return i;
     }
     return null;
-  }
-
-  void _navigateToLine(int lineNumber) {
-    // Estimate which page contains the target line.
-    // This is approximate since actual page sizes depend on layout,
-    // but we can use the line-based pagination as a heuristic.
-    // For simplicity, we rebuild and let LayoutBuilder handle it.
-    setState(() {
-      _targetLine = lineNumber;
-    });
   }
 
   int? _targetLine;
@@ -382,28 +383,11 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
     }
 
     // Compute character offset per page for TTS auto-navigation
-    final charOffsetPerPage = _computeCharOffsetPerPage(pages);
+    final charOffsetPerPage = computeCharOffsetPerPage(columns, pageStarts);
 
     final targetPage =
         _findTargetPage(lineStartColumns, pageStarts, pages.length);
     return _PaginationResult(pages, targetPage, charOffsetPerPage);
-  }
-
-  List<int> _computeCharOffsetPerPage(List<List<TextSegment>> pages) {
-    final offsets = <int>[];
-    var offset = 0;
-    for (final page in pages) {
-      offsets.add(offset);
-      for (final segment in page) {
-        switch (segment) {
-          case PlainTextSegment(:final text):
-            offset += text.length;
-          case RubyTextSegment(:final base):
-            offset += base.length;
-        }
-      }
-    }
-    return offsets;
   }
 
   List<List<TextSegment>> _splitIntoLines(List<TextSegment> segments) {

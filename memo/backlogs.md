@@ -25,6 +25,8 @@
 - [ ] 独自アイコンの設定
 - [ ] ブックマーク機能
 
+- [ ] 同一内容の別ファイルを切り替えたときにページ位置が引き継がれる問題の修正。`ParsedSegmentsCache` が content ベースのキャッシュを使い、`VerticalTextViewer.didUpdateWidget` は segments 参照が同一ならページリセットしないため、「別ファイルだが文字列が同じ」ケースで前ファイルのページ位置が残る。対処案: `VerticalTextViewer` に `key: ValueKey(selectedFile?.path)` を付与してファイル切替時に State をリセットする
+
 ## Bugs
 
 - [x] 縦書きモードで範囲選択ができない。

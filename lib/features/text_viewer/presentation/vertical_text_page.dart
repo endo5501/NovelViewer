@@ -15,6 +15,7 @@ class VerticalTextPage extends StatefulWidget {
     this.selectionEnd,
     this.ttsHighlightStart,
     this.ttsHighlightEnd,
+    this.pageStartTextOffset = 0,
     this.onSelectionChanged,
     this.onSwipe,
     this.columnSpacing = 8.0,
@@ -27,6 +28,7 @@ class VerticalTextPage extends StatefulWidget {
   final int? selectionEnd;
   final int? ttsHighlightStart;
   final int? ttsHighlightEnd;
+  final int pageStartTextOffset;
   final ValueChanged<String?>? onSelectionChanged;
   final ValueChanged<SwipeDirection>? onSwipe;
   final double columnSpacing;
@@ -415,24 +417,26 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   }
 
   Set<int> _computeTtsHighlights() {
-    final start = widget.ttsHighlightStart;
-    final end = widget.ttsHighlightEnd;
-    if (start == null || end == null) return const {};
+    final globalStart = widget.ttsHighlightStart;
+    final globalEnd = widget.ttsHighlightEnd;
+    if (globalStart == null || globalEnd == null) return const {};
+
+    // Convert global TTS range to page-local range
+    final pageOffset = widget.pageStartTextOffset;
+    final localStart = globalStart - pageOffset;
+    final localEnd = globalEnd - pageOffset;
 
     final result = <int>{};
     var plainTextOffset = 0;
 
     for (var i = 0; i < _charEntries.length; i++) {
       final entry = _charEntries[i];
-      if (entry.isNewline) {
-        plainTextOffset++;
-        continue;
-      }
+      // Skip synthetic newlines (column separators) — they don't exist in source text
+      if (entry.isNewline) continue;
 
-      final charLen = entry.text.length;
-      final charEnd = plainTextOffset + charLen;
+      final charEnd = plainTextOffset + entry.text.length;
 
-      if (charEnd > start && plainTextOffset < end) {
+      if (charEnd > localStart && plainTextOffset < localEnd) {
         result.add(i);
       }
       plainTextOffset = charEnd;
