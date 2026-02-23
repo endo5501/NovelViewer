@@ -5,7 +5,7 @@ The system SHALL split novel text into sentence-level segments for TTS processin
 
 #### Scenario: Split text at sentence-ending punctuation
 - **WHEN** text "今日は天気です。明日も晴れるでしょう。" is segmented
-- **THEN** two segments are produced: "今日は天気です。" (offset 0, length 9) and "明日も晴れるでしょう。" (offset 9, length 11)
+- **THEN** two segments are produced: "今日は天気です。" (offset 0, length 8) and "明日も晴れるでしょう。" (offset 8, length 11)
 
 #### Scenario: Split at closing bracket after punctuation
 - **WHEN** text "「走れ！」彼は叫んだ。" is segmented
