@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -211,6 +212,50 @@ void main() {
         ),
       );
       expect(listTile.selected, isTrue);
+    });
+
+    testWidgets('context menu shows refresh and delete options at library root',
+        (WidgetTester tester) async {
+      const testDir = DirectoryEntry(
+        name: 'narou_n1234ab',
+        path: '/library/narou_n1234ab',
+        displayName: 'テスト小説',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return const DirectoryContents(
+                  files: [], subdirectories: [testDir]);
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/library');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Right-click on the directory tile
+      final folderTile = find.text('テスト小説');
+      expect(folderTile, findsOneWidget);
+
+      final center = tester.getCenter(folderTile);
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kSecondaryMouseButton,
+      );
+      await gesture.addPointer(location: center);
+      await gesture.down(center);
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // Verify both menu items are shown
+      expect(find.text('更新'), findsOneWidget);
+      expect(find.text('削除'), findsOneWidget);
     });
   });
 }
