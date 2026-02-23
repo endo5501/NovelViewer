@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: TTS shared library build
-The system SHALL include qwen3-tts.cpp as a git submodule and build it as a shared library (`.dylib` on macOS, `.dll` on Windows). The shared library SHALL expose a C API that wraps the C++ `Qwen3TTS` class. The GGML dependency SHALL be built as part of the qwen3-tts.cpp submodule build process. The CMakeLists.txt SHALL include MSVC-specific compiler settings to ensure correct compilation on Windows: `/utf-8` for UTF-8 source file encoding, `_USE_MATH_DEFINES` for POSIX math constants, and `_CRT_SECURE_NO_WARNINGS` for CRT deprecation warnings.
+The system SHALL include qwen3-tts.cpp as a git submodule and build it as a shared library (`.dylib` on macOS, `.dll` on Windows). The shared library SHALL expose a C API that wraps the C++ `Qwen3TTS` class. The GGML dependency SHALL be built as part of the qwen3-tts.cpp submodule build process. The CMakeLists.txt SHALL include MSVC-specific compiler settings to ensure correct compilation on Windows: `/utf-8` for UTF-8 source file encoding, `_USE_MATH_DEFINES` for POSIX math constants, and `_CRT_SECURE_NO_WARNINGS` for CRT deprecation warnings. The source code SHALL include Windows platform support for process memory tracking using `GetProcessMemoryInfo` from the Windows API, with `NOMINMAX` defined to prevent `min`/`max` macro conflicts.
 
 #### Scenario: Build shared library on macOS
 - **WHEN** the Flutter app is built for macOS
@@ -18,3 +18,11 @@ The system SHALL include qwen3-tts.cpp as a git submodule and build it as a shar
 #### Scenario: MSVC resolves POSIX math constants
 - **WHEN** `audio_tokenizer_encoder.cpp` using `M_PI` is compiled with MSVC
 - **THEN** the compilation succeeds without C2065 errors for `M_PI`
+
+#### Scenario: Windows process memory tracking
+- **WHEN** `qwen3_tts.cpp` is compiled on Windows with MSVC
+- **THEN** the process memory snapshot function uses `GetProcessMemoryInfo` from `psapi.h` instead of POSIX `getrusage`, and compiles without C1083 errors for `sys/resource.h`
+
+#### Scenario: No min/max macro conflicts on Windows
+- **WHEN** `qwen3_tts.cpp` includes `<windows.h>` and uses `std::min`/`std::max`
+- **THEN** the compilation succeeds without C2589 errors due to `NOMINMAX` being defined before the Windows header include
