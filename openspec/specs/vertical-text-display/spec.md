@@ -143,7 +143,7 @@ RubyTextSegment SHALL be treated as an indivisible unit during kinsoku processin
 - **THEN** no adjustment SHALL be made because no subsequent column exists within the same line
 
 ### Requirement: Vertical text pagination
-The system SHALL display vertical text in pages rather than as a scrollable area. Page boundaries SHALL be calculated dynamically based on both the available width and height of the display area. The pagination SHALL account for the fact that a single logical line (newline-separated text) may occupy multiple visual columns when its character count exceeds the available vertical height. Character dimensions (width and height) used for pagination calculations SHALL be measured from actual font metrics using TextPainter with a representative CJK character, rather than estimated from fontSize alone, to ensure pagination matches the Wrap widget's rendering across all font families and sizes. The maximum columns per page calculation SHALL account for the Wrap widget's runSpacing being applied on both sides of column-break sentinel widgets, resulting in an effective inter-column spacing of `2 * runSpacing` rather than `1 * runSpacing`. The `VerticalTextViewer` SHALL accept a `columnSpacing` parameter and use it in pagination calculations instead of a hardcoded constant. The vertical text display area SHALL be clipped to prevent any overflow from becoming visible beyond the display boundaries. Column character counts SHALL NOT exceed `charsPerColumn` but MAY be shorter (typically by 1 character) due to kinsoku push-out adjustments.
+The system SHALL display vertical text in pages rather than as a scrollable area. Page boundaries SHALL be calculated dynamically based on both the available width and height of the display area. The pagination SHALL account for the fact that a single logical line (newline-separated text) may occupy multiple visual columns when its character count exceeds the available vertical height. Character dimensions (width and height) used for pagination calculations SHALL be measured from actual font metrics using TextPainter with a representative CJK character, rather than estimated from fontSize alone, to ensure pagination matches the Wrap widget's rendering across all font families and sizes. The maximum columns per page calculation SHALL account for the Wrap widget's runSpacing being applied on both sides of column-break sentinel widgets, resulting in an effective inter-column spacing of `2 * runSpacing` rather than `1 * runSpacing`. The `VerticalTextViewer` SHALL accept a `columnSpacing` parameter and use it in pagination calculations instead of a hardcoded constant. The vertical text display area SHALL be clipped to prevent any overflow from becoming visible beyond the display boundaries. Column character counts SHALL NOT exceed `charsPerColumn` but MAY be shorter (typically by 1 character) due to kinsoku push-out adjustments. The pagination SHALL compute a global text offset for each page based on the original text line structure. The per-page text offset SHALL count only actual text characters (PlainTextSegment.text.length and RubyTextSegment.base.length) and original newlines between lines, and SHALL NOT include synthetic newline separators inserted between wrapped columns of the same line. The computed per-page text offset SHALL be passed to each VerticalTextPage as a `pageStartTextOffset` property. When the VerticalTextViewer receives updated widget properties that do not change the segments list (reference equality), it SHALL NOT reset the current page number.
 
 #### Scenario: Text is split into pages
 - **WHEN** the text content exceeds the available display area in vertical mode
@@ -201,6 +201,18 @@ The system SHALL display vertical text in pages rather than as a scrollable area
 #### Scenario: Column spacing change triggers re-pagination
 - **WHEN** the column spacing setting is changed while vertical text is displayed
 - **THEN** the pagination SHALL be recalculated with the new column spacing value and the display SHALL update accordingly
+
+#### Scenario: Per-page text offset excludes synthetic newlines
+- **WHEN** a single logical line wraps into 3 visual columns on page 1 with 2 synthetic newline separators
+- **THEN** the text offset for page 2 SHALL equal the total text character count of page 1's original content (excluding the 2 synthetic newlines), not the page segment character count
+
+#### Scenario: Per-page text offset is passed to VerticalTextPage
+- **WHEN** a VerticalTextPage is rendered for page N
+- **THEN** the page SHALL receive a `pageStartTextOffset` property equal to the sum of text characters on all preceding pages (excluding synthetic column-separator newlines)
+
+#### Scenario: Page number is preserved across non-segment widget updates
+- **WHEN** the VerticalTextViewer receives an update where only `ttsHighlightStart` or `ttsHighlightEnd` changed but the segments reference is identical
+- **THEN** the current page number SHALL NOT be reset to 0
 
 ### Requirement: Arrow key page navigation
 The system SHALL support left and right arrow key presses to navigate between pages in vertical display mode. The left arrow key SHALL advance to the next page and the right arrow key SHALL go to the previous page, matching the right-to-left reading direction of vertical Japanese text. Page transitions SHALL be accompanied by a slide animation as defined in the page-transition-animation capability.
@@ -321,3 +333,26 @@ The system SHALL support mouse wheel (scroll) events to navigate between pages i
 #### Scenario: Non-scroll pointer signals are ignored
 - **WHEN** a pointer signal event other than `PointerScrollEvent` is received (e.g., `PointerScaleEvent`)
 - **THEN** the event SHALL be ignored and no page transition SHALL occur
+
+### Requirement: TTS highlight offset mapping in vertical pages
+The VerticalTextPage SHALL correctly compute TTS highlights for any page by converting global TTS text offsets to page-local offsets using the `pageStartTextOffset` property. The TTS highlight computation SHALL count only actual text characters (excluding synthetic newline column separators) when tracking the local text offset, ensuring the highlight position remains accurate regardless of column wrapping.
+
+#### Scenario: TTS highlight on page 1 with no column wrapping
+- **WHEN** TTS plays a sentence with TextRange(0, 10) and the text is on page 1 (pageStartTextOffset=0) with no column wrapping
+- **THEN** characters at local text offsets 0-9 SHALL be highlighted with green background
+
+#### Scenario: TTS highlight on page 1 with column wrapping
+- **WHEN** TTS plays a sentence with TextRange(12, 17) on page 1 where a long line wraps into multiple columns with synthetic newline separators between them
+- **THEN** the highlight SHALL correctly identify characters at text offset 12-16, and synthetic newline entries SHALL NOT cause the highlight to drift
+
+#### Scenario: TTS highlight on page 2
+- **WHEN** TTS plays a sentence with TextRange(200, 210) and the viewer is on page 2 with pageStartTextOffset=180
+- **THEN** characters at local text offsets 20-29 (200-180 to 210-180) SHALL be highlighted
+
+#### Scenario: TTS highlight range outside current page
+- **WHEN** TTS plays a sentence with TextRange(50, 60) but the viewer is on page 3 with pageStartTextOffset=300
+- **THEN** no characters SHALL be highlighted on this page
+
+#### Scenario: TTS highlight with Ruby text on wrapped columns
+- **WHEN** TTS plays a sentence that spans Ruby text entries across wrapped columns with synthetic newline separators
+- **THEN** the Ruby text base characters within the TTS range SHALL be correctly identified for highlighting, and synthetic newlines SHALL not shift the offset calculation

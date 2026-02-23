@@ -12,8 +12,7 @@ class TextSegment {
 
 class TextSegmenter {
   static final _rubyTagPattern = RegExp(
-    r'<ruby>(.*?)<rp>.*?</rp><rt>.*?</rt><rp>.*?</rp></ruby>'
-    r'|<ruby>(.*?)<rt>.*?</rt></ruby>',
+    r'<ruby>(?:<rb>)?(.*?)(?:</rb>)?(?:<rp>.*?</rp>)?<rt>.*?</rt>(?:<rp>.*?</rp>)?</ruby>',
   );
 
   static const _sentenceEnders = {'。', '！', '？'};
@@ -27,14 +26,7 @@ class TextSegmenter {
     var i = 0;
     while (i < stripped.length) {
       if (stripped[i] == '\n') {
-        final chunk = stripped.substring(currentStart, i).trim();
-        if (chunk.isNotEmpty) {
-          segments.add(TextSegment(
-            text: chunk,
-            offset: currentStart,
-            length: chunk.length,
-          ));
-        }
+        _addTrimmedSegment(segments, stripped, currentStart, i);
         currentStart = i + 1;
         i++;
         continue;
@@ -42,19 +34,11 @@ class TextSegmenter {
 
       if (_sentenceEnders.contains(stripped[i])) {
         var end = i + 1;
-        // Include closing brackets that immediately follow
         while (end < stripped.length &&
             _closingBrackets.contains(stripped[end])) {
           end++;
         }
-        final chunk = stripped.substring(currentStart, end);
-        if (chunk.isNotEmpty) {
-          segments.add(TextSegment(
-            text: chunk,
-            offset: currentStart,
-            length: chunk.length,
-          ));
-        }
+        _addTrimmedSegment(segments, stripped, currentStart, end);
         currentStart = end;
         i = end;
         continue;
@@ -63,25 +47,34 @@ class TextSegmenter {
       i++;
     }
 
-    // Remaining text after the last split point
-    if (currentStart < stripped.length) {
-      final chunk = stripped.substring(currentStart).trim();
-      if (chunk.isNotEmpty) {
-        segments.add(TextSegment(
-          text: chunk,
-          offset: currentStart,
-          length: chunk.length,
-        ));
-      }
-    }
+    _addTrimmedSegment(segments, stripped, currentStart, stripped.length);
 
     return segments;
   }
 
+  void _addTrimmedSegment(
+    List<TextSegment> segments,
+    String text,
+    int start,
+    int end,
+  ) {
+    if (start >= end) return;
+    final raw = text.substring(start, end);
+    final trimmedLeft = raw.trimLeft();
+    final leadingSpaces = raw.length - trimmedLeft.length;
+    final chunk = trimmedLeft.trimRight();
+    if (chunk.isNotEmpty) {
+      segments.add(TextSegment(
+        text: chunk,
+        offset: start + leadingSpaces,
+        length: chunk.length,
+      ));
+    }
+  }
+
   String _stripRubyTags(String text) {
     return text.replaceAllMapped(_rubyTagPattern, (match) {
-      // Return the base text (first or second capture group)
-      return match.group(1) ?? match.group(2) ?? '';
+      return match.group(1) ?? '';
     });
   }
 }
