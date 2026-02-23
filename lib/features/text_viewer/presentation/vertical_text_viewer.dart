@@ -10,17 +10,24 @@ import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_pag
 List<int> computeCharOffsetPerPage(
   List<List<TextSegment>> columns,
   List<int> pageStarts,
+  List<int> lineStartColumns,
 ) {
-  final cumulative = <int>[0];
+  final lineStartSet = lineStartColumns.skip(1).toSet();
+  final cumulative = <int>[];
   var total = 0;
-  for (final col in columns) {
-    for (final seg in col) {
+  for (var colIdx = 0; colIdx < columns.length; colIdx++) {
+    // Count original newline before this column (if it starts a new line)
+    if (lineStartSet.contains(colIdx)) {
+      total += 1;
+    }
+    // Record offset at the start of this column
+    cumulative.add(total);
+    for (final seg in columns[colIdx]) {
       total += switch (seg) {
         PlainTextSegment(:final text) => text.length,
         RubyTextSegment(:final base) => base.length,
       };
     }
-    cumulative.add(total);
   }
   return pageStarts.map((start) => cumulative[start]).toList();
 }
@@ -198,6 +205,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
             }
 
             final pageTextOffset = result.charOffsetPerPage[safePage];
+            final lineBreakIndices = result.lineBreakIndicesPerPage[safePage];
 
             final incomingPage = Align(
               alignment: Alignment.topRight,
@@ -208,6 +216,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
                 ttsHighlightStart: widget.ttsHighlightStart,
                 ttsHighlightEnd: widget.ttsHighlightEnd,
                 pageStartTextOffset: pageTextOffset,
+                lineBreakEntryIndices: lineBreakIndices,
                 onSelectionChanged: widget.onSelectionChanged,
                 onSwipe: _handleSwipe,
                 columnSpacing: widget.columnSpacing,
@@ -370,24 +379,25 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
         availableHeight > 0 ? (availableHeight / charHeight).floor() : 1;
 
     if (availableWidth <= 0 || charsPerColumn <= 0) {
-      return _PaginationResult([widget.segments], null, const [0]);
+      return _PaginationResult([widget.segments], null, const [0], const [{}]);
     }
 
     final columns = <List<TextSegment>>[];
     final lineStartColumns = _buildColumns(charsPerColumn, columns);
-    final (pages, pageStarts) =
-        _groupColumnsIntoPages(columns, charWidth, availableWidth);
+    final lineStartSet = lineStartColumns.skip(1).toSet();
+    final (pages, pageStarts, lineBreakIndicesPerPage) =
+        _groupColumnsIntoPages(columns, charWidth, availableWidth, lineStartSet);
 
     if (pages.isEmpty) {
-      return _PaginationResult([widget.segments], null, const [0]);
+      return _PaginationResult([widget.segments], null, const [0], const [{}]);
     }
 
     // Compute character offset per page for TTS auto-navigation
-    final charOffsetPerPage = computeCharOffsetPerPage(columns, pageStarts);
+    final charOffsetPerPage = computeCharOffsetPerPage(columns, pageStarts, lineStartColumns);
 
     final targetPage =
         _findTargetPage(lineStartColumns, pageStarts, pages.length);
-    return _PaginationResult(pages, targetPage, charOffsetPerPage);
+    return _PaginationResult(pages, targetPage, charOffsetPerPage, lineBreakIndicesPerPage);
   }
 
   List<List<TextSegment>> _splitIntoLines(List<TextSegment> segments) {
@@ -436,13 +446,15 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
   /// In the Wrap layout, an empty column's sentinel newline is rendered with
   /// charWidth, so it acts as a visible spacer without needing a separate
   /// character run.
-  (List<List<TextSegment>>, List<int>) _groupColumnsIntoPages(
+  (List<List<TextSegment>>, List<int>, List<Set<int>>) _groupColumnsIntoPages(
     List<List<TextSegment>> columns,
     double charWidth,
     double availableWidth,
+    Set<int> lineStartSet,
   ) {
     final pages = <List<TextSegment>>[];
     final pageStarts = <int>[];
+    final lineBreakIndicesPerPage = <Set<int>>[];
     var start = 0;
 
     while (start < columns.length) {
@@ -476,15 +488,30 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
       if (end == start) end = start + 1;
 
       final pageSegments = <TextSegment>[];
+      final lineBreakIndices = <int>{};
+      var entryIndex = 0;
       for (var j = start; j < end; j++) {
-        if (j > start) pageSegments.add(const PlainTextSegment('\n'));
+        if (j > start) {
+          if (lineStartSet.contains(j)) {
+            lineBreakIndices.add(entryIndex);
+          }
+          pageSegments.add(const PlainTextSegment('\n'));
+          entryIndex += 1;
+        }
+        for (final seg in columns[j]) {
+          entryIndex += switch (seg) {
+            PlainTextSegment(:final text) => text.runes.length,
+            RubyTextSegment() => 1,
+          };
+        }
         pageSegments.addAll(columns[j]);
       }
       pages.add(pageSegments);
+      lineBreakIndicesPerPage.add(lineBreakIndices);
       start = end;
     }
 
-    return (pages, pageStarts);
+    return (pages, pageStarts, lineBreakIndicesPerPage);
   }
 
   int? _findTargetPage(
@@ -511,8 +538,9 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
 }
 
 class _PaginationResult {
-  const _PaginationResult(this.pages, this.targetPage, this.charOffsetPerPage);
+  const _PaginationResult(this.pages, this.targetPage, this.charOffsetPerPage, this.lineBreakIndicesPerPage);
   final List<List<TextSegment>> pages;
   final int? targetPage;
   final List<int> charOffsetPerPage;
+  final List<Set<int>> lineBreakIndicesPerPage;
 }

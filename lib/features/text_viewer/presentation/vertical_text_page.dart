@@ -16,6 +16,7 @@ class VerticalTextPage extends StatefulWidget {
     this.ttsHighlightStart,
     this.ttsHighlightEnd,
     this.pageStartTextOffset = 0,
+    this.lineBreakEntryIndices = const {},
     this.onSelectionChanged,
     this.onSwipe,
     this.columnSpacing = 8.0,
@@ -29,6 +30,7 @@ class VerticalTextPage extends StatefulWidget {
   final int? ttsHighlightStart;
   final int? ttsHighlightEnd;
   final int pageStartTextOffset;
+  final Set<int> lineBreakEntryIndices;
   final ValueChanged<String?>? onSelectionChanged;
   final ValueChanged<SwipeDirection>? onSwipe;
   final double columnSpacing;
@@ -431,8 +433,13 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
 
     for (var i = 0; i < _charEntries.length; i++) {
       final entry = _charEntries[i];
-      // Skip synthetic newlines (column separators) — they don't exist in source text
-      if (entry.isNewline) continue;
+      if (entry.isNewline) {
+        // Line-break newlines count as 1 char in the original text offset
+        if (widget.lineBreakEntryIndices.contains(i)) {
+          plainTextOffset += 1;
+        }
+        continue;
+      }
 
       final charEnd = plainTextOffset + entry.text.length;
 
