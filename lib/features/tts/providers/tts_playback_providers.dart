@@ -31,7 +31,7 @@ Future<TtsPlaybackController> _defaultControllerFactory(
   );
 }
 
-enum TtsPlaybackState { stopped, loading, playing }
+enum TtsPlaybackState { stopped, loading, playing, paused }
 
 final ttsPlaybackStateProvider =
     NotifierProvider<TtsPlaybackStateNotifier, TtsPlaybackState>(

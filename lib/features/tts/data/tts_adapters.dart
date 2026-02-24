@@ -29,6 +29,9 @@ class JustAudioPlayer implements TtsAudioPlayer {
   Future<void> play() => _player.play();
 
   @override
+  Future<void> pause() => _player.pause();
+
+  @override
   Future<void> stop() => _player.stop();
 
   @override

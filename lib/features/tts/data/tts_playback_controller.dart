@@ -13,6 +13,7 @@ abstract class TtsAudioPlayer {
   Stream<TtsPlayerState> get playerStateStream;
   Future<void> setFilePath(String path);
   Future<void> play();
+  Future<void> pause();
   Future<void> stop();
   Future<void> dispose();
 }
