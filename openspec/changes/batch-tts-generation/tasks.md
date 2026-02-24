@@ -1,9 +1,9 @@
 ## 1. TTS Audio Database（データ層）
 
-- [ ] 1.1 `TtsAudioDatabase` クラスを作成（`EpisodeCacheDatabase` パターンに倣い、`tts_audio.db` の初期化・オープン・クローズ）
-- [ ] 1.2 `tts_episodes` テーブル作成（id, file_name, sample_rate, status, ref_wav_path, created_at, updated_at）
-- [ ] 1.3 `tts_segments` テーブル作成（id, episode_id, segment_index, text, text_offset, text_length, audio_data BLOB, sample_count, ref_wav_path, created_at）＋ユニークインデックス＋外部キー CASCADE
-- [ ] 1.4 `TtsAudioRepository` クラスを作成（createEpisode, insertSegment, findEpisodeByFileName, getSegments, findSegmentByOffset, getSegmentCount, deleteEpisode）
+- [x] 1.1 `TtsAudioDatabase` クラスを作成（`EpisodeCacheDatabase` パターンに倣い、`tts_audio.db` の初期化・オープン・クローズ）
+- [x] 1.2 `tts_episodes` テーブル作成（id, file_name, sample_rate, status, ref_wav_path, created_at, updated_at）
+- [x] 1.3 `tts_segments` テーブル作成（id, episode_id, segment_index, text, text_offset, text_length, audio_data BLOB, sample_count, ref_wav_path, created_at）＋ユニークインデックス＋外部キー CASCADE
+- [x] 1.4 `TtsAudioRepository` クラスを作成（createEpisode, insertSegment, findEpisodeByFileName, getSegments, findSegmentByOffset, getSegmentCount, deleteEpisode）
 
 ## 2. TTS Batch Generation（生成コントローラ）
 
