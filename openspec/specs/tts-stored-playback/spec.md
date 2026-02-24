@@ -1,5 +1,3 @@
-## ADDED Requirements
-
 ### Requirement: Playback controls for stored audio
 The system SHALL display playback controls when completed TTS audio exists for the current episode. Controls SHALL include: a play button, a delete button. During playback, controls SHALL change to: a pause button, a stop button.
 
@@ -16,15 +14,11 @@ The system SHALL display playback controls when completed TTS audio exists for t
 - **THEN** a play (resume) button and a stop button are displayed
 
 ### Requirement: Sequential segment playback from database
-The system SHALL play stored audio by retrieving WAV BLOBs from the `tts_segments` table in segment_index order. For each segment, the system SHALL write the WAV BLOB to a temporary file and play it using the audio player. The next segment's BLOB SHALL be pre-loaded from the database during playback of the current segment to minimize gaps.
+The system SHALL play stored audio by retrieving WAV BLOBs from the `tts_segments` table in segment_index order. For each segment, the system SHALL write the WAV BLOB to a temporary file and play it using the audio player. When the current segment finishes, the next segment is loaded and played. Database reads are sufficiently fast (single-digit milliseconds on SSD) that pre-loading is unnecessary.
 
 #### Scenario: Play all segments in order
 - **WHEN** playback starts for an episode with 15 segments
 - **THEN** segments are played sequentially from segment 0 to segment 14
-
-#### Scenario: Pre-load next segment during playback
-- **WHEN** segment N is playing
-- **THEN** segment N+1's WAV BLOB is loaded from the database and written to a temporary file
 
 #### Scenario: Playback reaches end of segments
 - **WHEN** the last segment finishes playing
