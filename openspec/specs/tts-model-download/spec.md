@@ -16,19 +16,23 @@ The download SHALL use HTTP streaming (`StreamedResponse`) to write directly to 
 - **THEN** the file content is streamed directly to disk using `StreamedResponse` without buffering the entire file in memory
 
 ### Requirement: Models directory path resolution
-The models directory SHALL be located at the same level as the NovelViewer library directory. The path SHALL be resolved by taking the parent directory of the library path (provided by `libraryPathProvider`) and appending `models`. If the `models` directory does not exist, it SHALL be created automatically before downloading.
+The models directory SHALL be located at the same level as the NovelViewer library directory. The path SHALL be resolved by taking the parent directory of the library path (provided by `libraryPathProvider`) and appending `models` using the platform's native path joining mechanism (`path` package `p.join`). The resulting path SHALL use the platform-native path separator (`/` on macOS/Linux, `\` on Windows). If the `models` directory does not exist, it SHALL be created automatically before downloading.
 
 #### Scenario: Resolve models directory on macOS
 - **WHEN** the library path is `~/Documents/NovelViewer`
-- **THEN** the models directory is `~/Documents/models`
+- **THEN** the models directory is `~/Documents/models` (using `/` separator)
 
 #### Scenario: Resolve models directory on Windows
-- **WHEN** the library path is `{exeDir}/NovelViewer`
-- **THEN** the models directory is `{exeDir}/models`
+- **WHEN** the library path is `C:\Users\test\NovelViewer`
+- **THEN** the models directory is `C:\Users\test\models` (using `\` separator)
 
 #### Scenario: Create models directory if not exists
 - **WHEN** a download is initiated and the models directory does not exist
 - **THEN** the system creates the `models` directory (including any intermediate directories) before downloading
+
+#### Scenario: Tests use platform-native path construction
+- **WHEN** tests verify path resolution or compare paths
+- **THEN** tests SHALL construct expected paths using `p.join()` from the `path` package instead of hardcoding path separators
 
 ### Requirement: Download progress tracking
 The system SHALL track and report download progress during file download. Progress SHALL be calculated from the `Content-Length` HTTP response header and the bytes received so far. The progress SHALL include the current file name being downloaded and a progress ratio (0.0 to 1.0).

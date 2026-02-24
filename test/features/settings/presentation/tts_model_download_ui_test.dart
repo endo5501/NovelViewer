@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
@@ -69,7 +70,7 @@ void main() {
       await navigateToTtsTab(tester);
 
       expect(find.text('モデルダウンロード済み'), findsOneWidget);
-      expect(find.text('${tempDir.path}/models'), findsOneWidget);
+      expect(find.text(p.join(tempDir.path, 'models')), findsOneWidget);
     });
 
     testWidgets('starts download when button is pressed', (tester) async {
@@ -131,10 +132,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // Model directory text field should be auto-filled
+      final expectedPath = p.join(tempDir.path, 'models');
       final textField = tester.widget<TextField>(
-        find.widgetWithText(TextField, '${tempDir.path}/models'),
+        find.widgetWithText(TextField, expectedPath),
       );
-      expect(textField.controller?.text, '${tempDir.path}/models');
+      expect(textField.controller?.text, expectedPath);
     });
   });
 }
