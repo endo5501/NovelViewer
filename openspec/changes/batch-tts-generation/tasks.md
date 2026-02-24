@@ -7,11 +7,11 @@
 
 ## 2. TTS Batch Generation（生成コントローラ）
 
-- [ ] 2.1 `TtsGenerationController` クラスを作成（テキスト分割→Isolate合成→WAVバイト変換→DB保存の逐次パイプライン）
-- [ ] 2.2 生成進捗の通知機能を実装（Riverpodプロバイダ: current/total）
-- [ ] 2.3 キャンセル機能を実装（Isolate停止、エピソード＋セグメント削除）
-- [ ] 2.4 既存データ削除→再生成のフローを実装
-- [ ] 2.5 合成エラー時のクリーンアップ処理を実装
+- [x] 2.1 `TtsGenerationController` クラスを作成（テキスト分割→Isolate合成→WAVバイト変換→DB保存の逐次パイプライン）
+- [x] 2.2 生成進捗の通知機能を実装（Riverpodプロバイダ: current/total）
+- [x] 2.3 キャンセル機能を実装（Isolate停止、エピソード＋セグメント削除）
+- [x] 2.4 既存データ削除→再生成のフローを実装
+- [x] 2.5 合成エラー時のクリーンアップ処理を実装
 
 ## 3. TTS Stored Playback（再生コントローラ）
 
