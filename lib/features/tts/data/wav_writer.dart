@@ -2,11 +2,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 class WavWriter {
-  static Future<void> write({
-    required String path,
+  static Uint8List toBytes({
     required Float32List audio,
     required int sampleRate,
-  }) async {
+  }) {
     const channels = 1;
     const bitsPerSample = 16;
     const bytesPerSample = bitsPerSample ~/ 8;
@@ -59,9 +58,18 @@ class WavWriter {
       offset += 2;
     }
 
+    return buffer.buffer.asUint8List();
+  }
+
+  static Future<void> write({
+    required String path,
+    required Float32List audio,
+    required int sampleRate,
+  }) async {
+    final bytes = toBytes(audio: audio, sampleRate: sampleRate);
     final file = File(path);
     await file.parent.create(recursive: true);
-    await file.writeAsBytes(buffer.buffer.asUint8List());
+    await file.writeAsBytes(bytes);
   }
 
   static void _writeString(ByteData buffer, int offset, String str) {

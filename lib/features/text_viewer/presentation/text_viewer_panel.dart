@@ -2,6 +2,7 @@ import 'dart:math' show min, max;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
@@ -12,7 +13,12 @@ import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
-import 'package:novel_viewer/features/tts/data/tts_playback_controller.dart';
+import 'package:novel_viewer/features/tts/data/tts_adapters.dart';
+import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
+import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
+import 'package:novel_viewer/features/tts/data/tts_generation_controller.dart';
+import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
+import 'package:novel_viewer/features/tts/data/tts_stored_player_controller.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 
@@ -28,108 +34,287 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
   final ParsedSegmentsCache _segmentsCache = ParsedSegmentsCache();
   String? _lastScrollKey;
   bool _isTtsScrolling = false;
-  TtsPlaybackController? _ttsController;
-  int _ttsSession = 0;
+
+  TtsGenerationController? _generationController;
+  TtsStoredPlayerController? _playerController;
+  TtsAudioDatabase? _playbackDb;
+  String? _lastCheckedFileKey;
 
   @override
   void dispose() {
-    _ttsSession++;
-    _ttsController?.stop();
-    _ttsController = null;
+    _generationController?.cancel();
+    _generationController = null;
+    _playerController?.stop();
+    _playerController = null;
+    _playbackDb?.close();
+    _playbackDb = null;
     _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _startTts(String content) async {
-    final session = ++_ttsSession;
-    final container = ProviderScope.containerOf(context);
+  String? _currentNovelFolderPath() {
+    return ref.read(currentDirectoryProvider);
+  }
 
-    // Stop any existing controller first
-    final old = _ttsController;
-    _ttsController = null;
-    if (old != null) {
-      await old.stop();
+  String? _currentFileName() {
+    return ref.read(selectedFileProvider)?.name;
+  }
+
+  Future<void> _checkAudioState() async {
+    final folderPath = _currentNovelFolderPath();
+    final fileName = _currentFileName();
+    final selectedPath = ref.read(selectedFileProvider)?.path;
+    if (folderPath == null || fileName == null || selectedPath == null) {
+      ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
+      return;
     }
 
-    TtsPlaybackController? controller;
+    if (_lastCheckedFileKey == selectedPath) return;
+    _lastCheckedFileKey = selectedPath;
+
+    final db = TtsAudioDatabase(folderPath);
+    final repo = TtsAudioRepository(db);
     try {
-      final factory = ref.read(ttsControllerFactoryProvider);
-      controller = await factory(container);
-
-      if (!mounted || session != _ttsSession) {
-        await controller.stop();
-        return;
+      final episode = await repo.findEpisodeByFileName(fileName);
+      if (episode != null && episode['status'] == 'completed') {
+        ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.ready);
+      } else {
+        ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
       }
-
-      _ttsController = controller;
-
-      final modelDir = ref.read(ttsModelDirProvider);
-      final refWavPath = ref.read(ttsRefWavPathProvider);
-      final selectedText = ref.read(selectedTextProvider);
-
-      final startOffset = determineStartOffset(
-        text: content,
-        selectedText: selectedText,
-      );
-
-      await controller.start(
-        text: content,
-        modelDir: modelDir,
-        startOffset: startOffset,
-        refWavPath: refWavPath.isNotEmpty ? refWavPath : null,
-      );
-    } catch (e) {
-      if (controller != null) {
-        await controller.stop();
-        if (identical(_ttsController, controller)) _ttsController = null;
-      }
-      ref
-          .read(ttsPlaybackStateProvider.notifier)
-          .set(TtsPlaybackState.stopped);
-      ref.read(ttsHighlightRangeProvider.notifier).set(null);
+    } finally {
+      await db.close();
     }
   }
 
-  Future<void> _stopTts() async {
-    _ttsSession++;
-    final controller = _ttsController;
-    _ttsController = null;
+  Future<void> _startGeneration(String content) async {
+    final folderPath = _currentNovelFolderPath();
+    final fileName = _currentFileName();
+    final modelDir = ref.read(ttsModelDirProvider);
+    final refWavPath = ref.read(ttsRefWavPathProvider);
 
-    if (controller != null) {
-      await controller.stop();
-    } else {
-      ref
-          .read(ttsPlaybackStateProvider.notifier)
-          .set(TtsPlaybackState.stopped);
-      ref.read(ttsHighlightRangeProvider.notifier).set(null);
+    if (folderPath == null || fileName == null || modelDir.isEmpty) return;
+
+    ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.generating);
+    ref.read(ttsGenerationProgressProvider.notifier)
+        .set(const TtsGenerationProgress(current: 0, total: 0));
+
+    final db = TtsAudioDatabase(folderPath);
+    final repo = TtsAudioRepository(db);
+    final isolate = TtsIsolate();
+
+    final controller = TtsGenerationController(
+      ttsIsolate: isolate,
+      repository: repo,
+    );
+    _generationController = controller;
+
+    controller.onProgress = (current, total) {
+      if (!mounted) return;
+      ref.read(ttsGenerationProgressProvider.notifier)
+          .set(TtsGenerationProgress(current: current, total: total));
+    };
+
+    controller.onError = (error) {
+      if (!mounted) return;
+      ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
+    };
+
+    await controller.start(
+      text: content,
+      fileName: fileName,
+      modelDir: modelDir,
+      sampleRate: 24000,
+      refWavPath: refWavPath.isNotEmpty ? refWavPath : null,
+    );
+
+    _generationController = null;
+    await db.close();
+
+    if (!mounted) return;
+
+    final audioState = ref.read(ttsAudioStateProvider);
+    if (audioState == TtsAudioState.generating) {
+      ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.ready);
     }
   }
 
-  Widget _buildTtsButton(TtsPlaybackState ttsState, String content) {
-    switch (ttsState) {
-      case TtsPlaybackState.loading:
+  Future<void> _cancelGeneration() async {
+    await _generationController?.cancel();
+    _generationController = null;
+
+    if (!mounted) return;
+    ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
+    _lastCheckedFileKey = null;
+  }
+
+  Future<void> _startPlayback(String content) async {
+    final folderPath = _currentNovelFolderPath();
+    final fileName = _currentFileName();
+    if (folderPath == null || fileName == null) return;
+
+    final container = ProviderScope.containerOf(context);
+    final db = TtsAudioDatabase(folderPath);
+    final repo = TtsAudioRepository(db);
+    final episode = await repo.findEpisodeByFileName(fileName);
+    if (episode == null) {
+      await db.close();
+      return;
+    }
+
+    _playbackDb = db;
+    final tempDir = await getTemporaryDirectory();
+
+    final controller = TtsStoredPlayerController(
+      ref: container,
+      audioPlayer: JustAudioPlayer(),
+      repository: repo,
+      tempDirPath: tempDir.path,
+    );
+    _playerController = controller;
+
+    final selectedText = ref.read(selectedTextProvider);
+    int? startOffset;
+    if (selectedText != null && selectedText.isNotEmpty) {
+      final index = content.indexOf(selectedText);
+      if (index >= 0) startOffset = index;
+    }
+
+    await controller.start(
+      episodeId: episode['id'] as int,
+      startOffset: startOffset,
+    );
+  }
+
+  Future<void> _pausePlayback() async {
+    await _playerController?.pause();
+  }
+
+  Future<void> _resumePlayback() async {
+    await _playerController?.resume();
+  }
+
+  Future<void> _stopPlayback() async {
+    await _playerController?.stop();
+    _playerController = null;
+    await _playbackDb?.close();
+    _playbackDb = null;
+  }
+
+  Future<void> _deleteAudio() async {
+    final folderPath = _currentNovelFolderPath();
+    final fileName = _currentFileName();
+    if (folderPath == null || fileName == null) return;
+
+    final db = TtsAudioDatabase(folderPath);
+    final repo = TtsAudioRepository(db);
+    final episode = await repo.findEpisodeByFileName(fileName);
+    if (episode != null) {
+      await repo.deleteEpisode(episode['id'] as int);
+    }
+    await db.close();
+
+    if (!mounted) return;
+    ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
+    _lastCheckedFileKey = null;
+  }
+
+  Widget _buildTtsControls(
+      TtsAudioState audioState, TtsPlaybackState playbackState, String content) {
+    switch (audioState) {
+      case TtsAudioState.none:
         return FloatingActionButton.small(
-          onPressed: _stopTts,
-          child: const SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+          onPressed: () => _startGeneration(content),
+          tooltip: '読み上げ音声生成',
+          child: const Icon(Icons.record_voice_over),
         );
-      case TtsPlaybackState.playing:
-        return FloatingActionButton.small(
-          onPressed: _stopTts,
-          child: const Icon(Icons.stop),
+      case TtsAudioState.generating:
+        final progress = ref.watch(ttsGenerationProgressProvider);
+        final fraction =
+            progress.total > 0 ? progress.current / progress.total : 0.0;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 120,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  LinearProgressIndicator(value: fraction),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${progress.current}/${progress.total}文',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            FloatingActionButton.small(
+              onPressed: _cancelGeneration,
+              tooltip: 'キャンセル',
+              child: const Icon(Icons.close),
+            ),
+          ],
         );
-      case TtsPlaybackState.stopped:
-        return FloatingActionButton.small(
-          onPressed: () => _startTts(content),
-          child: const Icon(Icons.play_arrow),
-        );
+      case TtsAudioState.ready:
+        if (playbackState == TtsPlaybackState.playing) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton.small(
+                onPressed: _pausePlayback,
+                tooltip: '一時停止',
+                child: const Icon(Icons.pause),
+              ),
+              const SizedBox(width: 8),
+              FloatingActionButton.small(
+                onPressed: _stopPlayback,
+                tooltip: '停止',
+                child: const Icon(Icons.stop),
+              ),
+            ],
+          );
+        } else if (playbackState == TtsPlaybackState.paused) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton.small(
+                onPressed: _resumePlayback,
+                tooltip: '再開',
+                child: const Icon(Icons.play_arrow),
+              ),
+              const SizedBox(width: 8),
+              FloatingActionButton.small(
+                onPressed: _stopPlayback,
+                tooltip: '停止',
+                child: const Icon(Icons.stop),
+              ),
+            ],
+          );
+        } else {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton.small(
+                onPressed: () => _startPlayback(content),
+                tooltip: '再生',
+                child: const Icon(Icons.play_arrow),
+              ),
+              const SizedBox(width: 8),
+              FloatingActionButton.small(
+                onPressed: _deleteAudio,
+                tooltip: '音声データ削除',
+                child: const Icon(Icons.delete_outline),
+              ),
+            ],
+          );
+        }
     }
   }
 
-  Widget _withTtsButton(Widget child, String ttsModelDir, TtsPlaybackState ttsState, String content) {
+  Widget _withTtsControls(Widget child, String ttsModelDir,
+      TtsAudioState audioState, TtsPlaybackState playbackState, String content) {
     if (ttsModelDir.isEmpty) return child;
     return Stack(
       children: [
@@ -137,7 +322,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
         Positioned(
           right: 8,
           bottom: 8,
-          child: _buildTtsButton(ttsState, content),
+          child: _buildTtsControls(audioState, playbackState, content),
         ),
       ],
     );
@@ -148,7 +333,6 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
 
-      // Count newlines before the TTS highlight start to estimate the line number
       final textBefore = content.substring(
           0, range.start.clamp(0, content.length));
       final lineNumber = '\n'.allMatches(textBefore).length;
@@ -209,8 +393,14 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
         }
 
         final ttsModelDir = ref.watch(ttsModelDirProvider);
-        final ttsState = ref.watch(ttsPlaybackStateProvider);
+        final audioState = ref.watch(ttsAudioStateProvider);
+        final playbackState = ref.watch(ttsPlaybackStateProvider);
         final ttsHighlightRange = ref.watch(ttsHighlightRangeProvider);
+
+        // Check audio state when file changes (deferred to avoid modifying providers during build)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _checkAudioState();
+        });
 
         final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: fontSize,
@@ -220,7 +410,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
 
         if (displayMode == TextDisplayMode.vertical) {
           final columnSpacing = ref.watch(columnSpacingProvider);
-          return _withTtsButton(
+          return _withTtsControls(
             VerticalTextViewer(
               segments: segments,
               baseStyle: textStyle,
@@ -232,19 +422,15 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
               onSelectionChanged: (text) {
                 ref.read(selectedTextProvider.notifier).setText(text);
               },
-              onUserPageChange: () {
-                if (ttsState == TtsPlaybackState.playing) {
-                  _stopTts();
-                }
-              },
             ),
             ttsModelDir,
-            ttsState,
+            audioState,
+            playbackState,
             content,
           );
         }
 
-        // Horizontal mode (existing behavior)
+        // Horizontal mode
         final textSpan = buildRubyTextSpans(
           segments,
           textStyle,
@@ -268,14 +454,14 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
           _scrollToTtsHighlight(content, ttsHighlightRange, textStyle);
         }
 
-        return _withTtsButton(
+        return _withTtsControls(
           NotificationListener<ScrollNotification>(
             onNotification: (notification) {
               if (!_isTtsScrolling &&
                   notification is ScrollStartNotification &&
                   notification.dragDetails != null &&
-                  ttsState == TtsPlaybackState.playing) {
-                _stopTts();
+                  playbackState == TtsPlaybackState.playing) {
+                _stopPlayback();
               }
               return false;
             },
@@ -297,7 +483,8 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
             ),
           ),
           ttsModelDir,
-          ttsState,
+          audioState,
+          playbackState,
           content,
         );
       },

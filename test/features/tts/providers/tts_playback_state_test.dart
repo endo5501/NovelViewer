@@ -5,12 +5,79 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 
 void main() {
+  group('TtsAudioState', () {
+    test('has three values: none, generating, ready', () {
+      expect(TtsAudioState.values.length, 3);
+      expect(TtsAudioState.none, isNotNull);
+      expect(TtsAudioState.generating, isNotNull);
+      expect(TtsAudioState.ready, isNotNull);
+    });
+  });
+
+  group('ttsAudioStateProvider', () {
+    test('initial state is none', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(ttsAudioStateProvider), TtsAudioState.none);
+    });
+
+    test('can transition to generating', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(ttsAudioStateProvider.notifier).set(
+          TtsAudioState.generating);
+      expect(
+          container.read(ttsAudioStateProvider), TtsAudioState.generating);
+    });
+
+    test('can transition to ready', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(ttsAudioStateProvider.notifier).set(
+          TtsAudioState.ready);
+      expect(
+          container.read(ttsAudioStateProvider), TtsAudioState.ready);
+    });
+  });
+
+  group('TtsGenerationProgress', () {
+    test('zero constant has 0/0', () {
+      expect(TtsGenerationProgress.zero.current, 0);
+      expect(TtsGenerationProgress.zero.total, 0);
+    });
+  });
+
+  group('ttsGenerationProgressProvider', () {
+    test('initial state is zero', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final progress = container.read(ttsGenerationProgressProvider);
+      expect(progress.current, 0);
+      expect(progress.total, 0);
+    });
+
+    test('can update progress', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(ttsGenerationProgressProvider.notifier).set(
+          const TtsGenerationProgress(current: 5, total: 10));
+      final progress = container.read(ttsGenerationProgressProvider);
+      expect(progress.current, 5);
+      expect(progress.total, 10);
+    });
+  });
+
   group('TtsPlaybackState', () {
-    test('has three values: stopped, loading, playing', () {
+    test('has three values: stopped, playing, paused', () {
       expect(TtsPlaybackState.values.length, 3);
       expect(TtsPlaybackState.stopped, isNotNull);
-      expect(TtsPlaybackState.loading, isNotNull);
       expect(TtsPlaybackState.playing, isNotNull);
+      expect(TtsPlaybackState.paused, isNotNull);
     });
   });
 
@@ -22,16 +89,6 @@ void main() {
       expect(container.read(ttsPlaybackStateProvider), TtsPlaybackState.stopped);
     });
 
-    test('can transition to loading', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      container.read(ttsPlaybackStateProvider.notifier).set(
-          TtsPlaybackState.loading);
-      expect(
-          container.read(ttsPlaybackStateProvider), TtsPlaybackState.loading);
-    });
-
     test('can transition to playing', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
@@ -40,6 +97,16 @@ void main() {
           TtsPlaybackState.playing);
       expect(
           container.read(ttsPlaybackStateProvider), TtsPlaybackState.playing);
+    });
+
+    test('can transition to paused', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(ttsPlaybackStateProvider.notifier).set(
+          TtsPlaybackState.paused);
+      expect(
+          container.read(ttsPlaybackStateProvider), TtsPlaybackState.paused);
     });
 
     test('can transition back to stopped', () {
