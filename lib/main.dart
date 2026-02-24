@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:novel_viewer/app.dart';
@@ -13,6 +14,10 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (Platform.isWindows) {
+    JustAudioMediaKit.ensureInitialized();
+  }
 
   if (Platform.isLinux || Platform.isMacOS || Platform.isWindows) {
     sqfliteFfiInit();
