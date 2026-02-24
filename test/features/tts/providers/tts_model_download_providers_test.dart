@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
@@ -38,7 +39,7 @@ void main() {
       addTearDown(container.dispose);
 
       final modelsPath = container.read(modelsDirectoryPathProvider);
-      expect(modelsPath, '${tempDir.path}/models');
+      expect(modelsPath, p.join(tempDir.path, 'models'));
     });
 
     test('returns null when library path is null', () {
@@ -115,7 +116,7 @@ void main() {
 
       // Model dir should be auto-set
       final modelDir = container.read(ttsModelDirProvider);
-      expect(modelDir, '${tempDir.path}/models');
+      expect(modelDir, p.join(tempDir.path, 'models'));
     });
 
     test('download transitions to error with user-friendly message on HTTP error',
@@ -180,7 +181,7 @@ void main() {
       final state = container.read(ttsModelDownloadProvider);
       expect(state, isA<TtsModelDownloadCompleted>());
       final completed = state as TtsModelDownloadCompleted;
-      expect(completed.modelsDir, '${tempDir.path}/models');
+      expect(completed.modelsDir, p.join(tempDir.path, 'models'));
     });
   });
 }

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_download_service.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   late Directory tempDir;
@@ -23,7 +24,7 @@ void main() {
       final result = TtsModelDownloadService.resolveModelsDir(
         '/Users/test/Documents/NovelViewer',
       );
-      expect(result, '/Users/test/Documents/models');
+      expect(result, p.join('/Users/test/Documents', 'models'));
     });
 
     test('handles Windows-style paths', () {
