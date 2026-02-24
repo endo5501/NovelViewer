@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 
 class SettingsDialog extends ConsumerStatefulWidget {
@@ -132,6 +133,12 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String>(ttsModelDirProvider, (previous, next) {
+      if (_ttsModelDirController.text != next) {
+        _ttsModelDirController.text = next;
+      }
+    });
+
     return AlertDialog(
       title: const Text('設定'),
       content: SizedBox(
@@ -342,6 +349,74 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
     );
   }
 
+  Widget _buildModelDownloadSection() {
+    final downloadState = ref.watch(ttsModelDownloadProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: switch (downloadState) {
+        TtsModelDownloadIdle() => ElevatedButton.icon(
+            onPressed: () {
+              ref.read(ttsModelDownloadProvider.notifier).startDownload();
+            },
+            icon: const Icon(Icons.download),
+            label: const Text('モデルデータダウンロード'),
+          ),
+        TtsModelDownloadDownloading(:final currentFile, :final progress) =>
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (currentFile.isNotEmpty)
+                Text(currentFile, style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 4),
+              LinearProgressIndicator(value: progress),
+              if (progress != null)
+                Text(
+                  '${(progress * 100).toStringAsFixed(0)}%',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+            ],
+          ),
+        TtsModelDownloadCompleted(:final modelsDir) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.check_circle,
+                      color: Theme.of(context).colorScheme.primary, size: 20),
+                  const SizedBox(width: 8),
+                  const Text('モデルダウンロード済み'),
+                ],
+              ),
+              if (modelsDir != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  modelsDir,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ],
+          ),
+        TtsModelDownloadError(:final message) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'エラー: $message',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(ttsModelDownloadProvider.notifier).startDownload();
+                },
+                child: const Text('再試行'),
+              ),
+            ],
+          ),
+      },
+    );
+  }
+
   Widget _buildTtsTab() {
     return SingleChildScrollView(
       child: Column(
@@ -349,6 +424,10 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 16),
+          _buildModelDownloadSection(),
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
@@ -409,11 +488,10 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
       type: FileType.custom,
       allowedExtensions: ['wav'],
     );
-    if (result != null && result.files.single.path != null) {
-      _ttsRefWavPathController.text = result.files.single.path!;
-      ref
-          .read(ttsRefWavPathProvider.notifier)
-          .setTtsRefWavPath(result.files.single.path!);
+    final path = result?.files.single.path;
+    if (path != null) {
+      _ttsRefWavPathController.text = path;
+      ref.read(ttsRefWavPathProvider.notifier).setTtsRefWavPath(path);
     }
   }
 

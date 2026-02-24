@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,6 +33,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             if (httpClient != null)
               httpClientProvider.overrideWithValue(httpClient),
           ],
@@ -52,6 +54,7 @@ void main() {
       final scope = ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
           httpClientProvider.overrideWithValue(httpClient),
         ],
         child: const MaterialApp(home: Scaffold(body: SettingsDialog())),
