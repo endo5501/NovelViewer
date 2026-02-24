@@ -26,32 +26,32 @@
 
 ## 4. 状態管理プロバイダ（Provider層）
 
-- [ ] 4.1 `TtsAudioState` (none/generating/ready) のプロバイダを新設
-- [ ] 4.2 `TtsGenerationProgress` (current/total) のプロバイダを新設
-- [ ] 4.3 `TtsPlaybackState` を変更（loading を削除、paused を追加: stopped/playing/paused）
-- [ ] 4.4 `TtsAudioDatabase` / `TtsAudioRepository` のプロバイダを作成（小説フォルダパス連動）
-- [ ] 4.5 `TtsGenerationController` / `TtsStoredPlayerController` のファクトリプロバイダを作成
+- [x] 4.1 `TtsAudioState` (none/generating/ready) のプロバイダを新設
+- [x] 4.2 `TtsGenerationProgress` (current/total) のプロバイダを新設
+- [x] 4.3 `TtsPlaybackState` を変更（loading を削除、paused を追加: stopped/playing/paused）
+- [x] 4.4 `TtsAudioDatabase` / `TtsAudioRepository` のプロバイダを作成（小説フォルダパス連動）
+- [x] 4.5 `TtsGenerationController` / `TtsStoredPlayerController` のファクトリプロバイダを作成
 
 ## 5. UI変更（TextViewerPanel）
 
-- [ ] 5.1 状態に応じたボタン表示切り替えを実装（none→生成ボタン、generating→進捗バー＋キャンセル、ready→再生＋削除、playing→一時停止＋停止、paused→再開＋停止）
-- [ ] 5.2 進捗バーUIを実装（LinearProgressIndicator + "N/M文" テキスト）
-- [ ] 5.3 削除ボタンの処理を実装（エピソード音声データの削除）
-- [ ] 5.4 エピソード切り替え時の生成停止/再生停止を実装
-- [ ] 5.5 エピソード表示時の音声状態初期チェック（DBからstatus確認→プロバイダ更新）
+- [x] 5.1 状態に応じたボタン表示切り替えを実装（none→生成ボタン、generating→進捗バー＋キャンセル、ready→再生＋削除、playing→一時停止＋停止、paused→再開＋停止）
+- [x] 5.2 進捗バーUIを実装（LinearProgressIndicator + "N/M文" テキスト）
+- [x] 5.3 削除ボタンの処理を実装（エピソード音声データの削除）
+- [x] 5.4 エピソード切り替え時の生成停止/再生停止を実装
+- [x] 5.5 エピソード表示時の音声状態初期チェック（DBからstatus確認→プロバイダ更新）
 
 ## 6. 旧コード削除
 
-- [ ] 6.1 `TtsPlaybackController` クラスを削除
-- [ ] 6.2 `TtsFileCleaner` 抽象と `FileCleanerImpl` を削除
-- [ ] 6.3 `WavWriterAdapter` を削除
-- [ ] 6.4 `ttsControllerFactoryProvider` を削除
-- [ ] 6.5 旧 `TtsPlaybackController` 関連のテストを削除
-- [ ] 6.6 ページ内操作（矢印キー、スワイプ、マウスホイール）での再生停止ロジックを削除（同一エピソード内では停止しない）
+- [x] 6.1 `TtsPlaybackController` クラスを削除
+- [x] 6.2 `TtsFileCleaner` 抽象と `FileCleanerImpl` を削除
+- [x] 6.3 `WavWriterAdapter` を削除
+- [x] 6.4 `ttsControllerFactoryProvider` を削除
+- [x] 6.5 旧 `TtsPlaybackController` 関連のテストを削除
+- [x] 6.6 ページ内操作（矢印キー、スワイプ、マウスホイール）での再生停止ロジックを削除（同一エピソード内では停止しない）
 
 ## 7. 最終確認
 
-- [ ] 7.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
-- [ ] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 7.3 `fvm flutter analyze`でリントを実行
-- [ ] 7.4 `fvm flutter test`でテストを実行
+- [x] 7.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
+- [x] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 7.3 `fvm flutter analyze`でリントを実行
+- [x] 7.4 `fvm flutter test`でテストを実行

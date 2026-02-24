@@ -42,7 +42,6 @@ class VerticalTextViewer extends StatefulWidget {
     this.ttsHighlightStart,
     this.ttsHighlightEnd,
     this.onSelectionChanged,
-    this.onUserPageChange,
     this.columnSpacing = 8.0,
   }) : assert(columnSpacing >= 0);
 
@@ -53,7 +52,6 @@ class VerticalTextViewer extends StatefulWidget {
   final int? ttsHighlightStart;
   final int? ttsHighlightEnd;
   final ValueChanged<String?>? onSelectionChanged;
-  final VoidCallback? onUserPageChange;
   final double columnSpacing;
 
   @override
@@ -320,7 +318,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
     direction == SwipeDirection.right ? _nextPage() : _previousPage();
   }
 
-  void _changePage(int delta, {bool userInitiated = true}) {
+  void _changePage(int delta) {
     if (_pageCount <= 0) return;
 
     final newPage = (_currentPage + delta).clamp(0, _pageCount - 1);
@@ -336,14 +334,13 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
       ..reset()
       ..forward();
     widget.onSelectionChanged?.call(null);
-    if (userInitiated) widget.onUserPageChange?.call();
   }
 
   void _nextPage() => _changePage(1);
   void _previousPage() => _changePage(-1);
 
   void _goToPage(int page) =>
-      _changePage(page - _currentPage, userInitiated: false);
+      _changePage(page - _currentPage);
 
   int? _findPageForOffset(int offset, List<int> charOffsetPerPage) {
     for (var i = charOffsetPerPage.length - 1; i >= 0; i--) {

@@ -1,37 +1,48 @@
 import 'dart:ui';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 
-import '../data/tts_adapters.dart';
-import '../data/tts_isolate.dart';
-import '../data/tts_playback_controller.dart';
+// --- Audio generation state ---
 
-/// Factory function type for creating [TtsPlaybackController] instances.
-typedef TtsControllerFactory = Future<TtsPlaybackController> Function(
-  ProviderContainer container,
+enum TtsAudioState { none, generating, ready }
+
+final ttsAudioStateProvider =
+    NotifierProvider<TtsAudioStateNotifier, TtsAudioState>(
+  TtsAudioStateNotifier.new,
 );
 
-/// Provider for [TtsControllerFactory], enabling test overrides.
-final ttsControllerFactoryProvider = Provider<TtsControllerFactory>(
-  (ref) => _defaultControllerFactory,
-);
+class TtsAudioStateNotifier extends Notifier<TtsAudioState> {
+  @override
+  TtsAudioState build() => TtsAudioState.none;
 
-Future<TtsPlaybackController> _defaultControllerFactory(
-  ProviderContainer container,
-) async {
-  final tempDir = await getTemporaryDirectory();
-  return TtsPlaybackController(
-    ref: container,
-    ttsIsolate: TtsIsolate(),
-    audioPlayer: JustAudioPlayer(),
-    wavWriter: WavWriterAdapter(),
-    fileCleaner: FileCleanerImpl(),
-    tempDirPath: tempDir.path,
-  );
+  void set(TtsAudioState value) => state = value;
 }
 
-enum TtsPlaybackState { stopped, loading, playing, paused }
+// --- Generation progress ---
+
+class TtsGenerationProgress {
+  const TtsGenerationProgress({required this.current, required this.total});
+  final int current;
+  final int total;
+
+  static const zero = TtsGenerationProgress(current: 0, total: 0);
+}
+
+final ttsGenerationProgressProvider =
+    NotifierProvider<TtsGenerationProgressNotifier, TtsGenerationProgress>(
+  TtsGenerationProgressNotifier.new,
+);
+
+class TtsGenerationProgressNotifier extends Notifier<TtsGenerationProgress> {
+  @override
+  TtsGenerationProgress build() => TtsGenerationProgress.zero;
+
+  void set(TtsGenerationProgress value) => state = value;
+}
+
+// --- Playback state ---
+
+enum TtsPlaybackState { stopped, playing, paused }
 
 final ttsPlaybackStateProvider =
     NotifierProvider<TtsPlaybackStateNotifier, TtsPlaybackState>(
@@ -44,6 +55,8 @@ class TtsPlaybackStateNotifier extends Notifier<TtsPlaybackState> {
 
   void set(TtsPlaybackState value) => state = value;
 }
+
+// --- Highlight range ---
 
 final ttsHighlightRangeProvider =
     NotifierProvider<TtsHighlightRangeNotifier, TextRange?>(

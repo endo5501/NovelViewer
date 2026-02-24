@@ -40,18 +40,15 @@ class TtsStoredPlayerController {
     if (_segments.isEmpty) return;
 
     // Determine starting segment
+    _currentSegmentIndex = 0;
     if (startOffset != null) {
       final segment =
           await _repository.findSegmentByOffset(episodeId, startOffset);
       if (segment != null) {
-        _currentSegmentIndex = _segments.indexWhere(
+        final found = _segments.indexWhere(
             (s) => s['segment_index'] == segment['segment_index']);
-        if (_currentSegmentIndex < 0) _currentSegmentIndex = 0;
-      } else {
-        _currentSegmentIndex = 0;
+        if (found >= 0) _currentSegmentIndex = found;
       }
-    } else {
-      _currentSegmentIndex = 0;
     }
 
     // Listen for playback completion

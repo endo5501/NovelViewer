@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
@@ -86,8 +85,7 @@ class TtsGenerationController {
       if (_cancelled) break;
 
       if (result == null) {
-        // Error occurred - clean up
-        await _cleanupOnError();
+        await _cleanup();
         return;
       }
 
@@ -133,31 +131,33 @@ class TtsGenerationController {
     sub = _ttsIsolate.responses.listen((response) {
       if (response is SynthesisResultResponse && !completer.isCompleted) {
         completer.complete(response);
-        sub.cancel();
       }
     });
 
     _ttsIsolate.synthesize(text, refWavPath: refWavPath);
 
-    final result = await completer.future;
-    _activeSynthesisCompleter = null;
+    try {
+      final result = await completer.future;
 
-    if (_cancelled) return null;
+      if (_cancelled) return null;
 
-    if (result.error != null || result.audio == null) {
-      onError?.call('Synthesis failed: ${result.error}');
-      return null;
+      if (result.error != null || result.audio == null) {
+        onError?.call('Synthesis failed: ${result.error}');
+        return null;
+      }
+
+      return result;
+    } finally {
+      _activeSynthesisCompleter = null;
+      await sub.cancel();
     }
-
-    return result;
   }
 
   Future<void> cancel() async {
     _cancelled = true;
-    // Unblock any pending synthesis
-    if (_activeSynthesisCompleter != null &&
-        !_activeSynthesisCompleter!.isCompleted) {
-      _activeSynthesisCompleter!.complete(SynthesisResultResponse(
+    final completer = _activeSynthesisCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete(SynthesisResultResponse(
         audio: null,
         sampleRate: 0,
         error: 'Cancelled',
@@ -176,7 +176,4 @@ class TtsGenerationController {
     await _ttsIsolate.dispose();
   }
 
-  Future<void> _cleanupOnError() async {
-    await _cleanup();
-  }
 }
