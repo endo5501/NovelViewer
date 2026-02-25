@@ -9,20 +9,30 @@ The system SHALL create a `tts_audio.db` SQLite database in each novel folder wh
 - **WHEN** TTS audio storage is accessed for a novel folder that already contains `tts_audio.db`
 - **THEN** the existing database is opened without modification
 
+## Requirements
+
 ### Requirement: TTS episodes table schema
-The `tts_episodes` table SHALL store per-episode audio generation state with the following columns: `id` (INTEGER PRIMARY KEY AUTOINCREMENT), `file_name` (TEXT NOT NULL UNIQUE — the episode file name e.g. "0001_プロローグ.txt"), `sample_rate` (INTEGER NOT NULL — audio sample rate e.g. 24000), `status` (TEXT NOT NULL — "generating" or "completed"), `ref_wav_path` (TEXT — voice cloning reference WAV path, nullable), `created_at` (TEXT NOT NULL), `updated_at` (TEXT NOT NULL).
+The `tts_episodes` table SHALL store per-episode audio generation state with the following columns: `id` (INTEGER PRIMARY KEY AUTOINCREMENT), `file_name` (TEXT NOT NULL UNIQUE — the episode file name e.g. "0001_プロローグ.txt"), `sample_rate` (INTEGER NOT NULL — audio sample rate e.g. 24000), `status` (TEXT NOT NULL — "generating", "partial", or "completed"), `ref_wav_path` (TEXT — voice cloning reference WAV path, nullable), `text_hash` (TEXT — SHA-256 hash of the episode text content, nullable for backward compatibility), `created_at` (TEXT NOT NULL), `updated_at` (TEXT NOT NULL).
 
 #### Scenario: Insert episode record when generation starts
-- **WHEN** audio generation starts for episode "0001_プロローグ.txt"
-- **THEN** a record is inserted with status "generating", the configured sample_rate, and current timestamp
+- **WHEN** audio generation starts for episode "0001_プロローグ.txt" with text content hash "abc123..."
+- **THEN** a record is inserted with status "generating", the configured sample_rate, text_hash, and current timestamp
 
 #### Scenario: Update episode status on generation complete
 - **WHEN** all segments for an episode have been generated
 - **THEN** the episode status is updated to "completed" and `updated_at` is set to the current timestamp
 
+#### Scenario: Update episode status to partial on stop
+- **WHEN** generation is stopped before all segments are generated
+- **THEN** the episode status is updated to "partial" and `updated_at` is set to the current timestamp
+
 #### Scenario: file_name uniqueness enforced
 - **WHEN** an attempt is made to insert a duplicate file_name
 - **THEN** the operation fails with a uniqueness constraint violation
+
+#### Scenario: Migrate existing database to add text_hash column
+- **WHEN** an existing `tts_audio.db` database without the `text_hash` column is opened
+- **THEN** the `text_hash` column is added via `ALTER TABLE` with NULL default, and existing episodes continue to function (NULL text_hash triggers regeneration on next access)
 
 ### Requirement: TTS segments table schema
 The `tts_segments` table SHALL store per-sentence audio data with the following columns: `id` (INTEGER PRIMARY KEY AUTOINCREMENT), `episode_id` (INTEGER NOT NULL — foreign key to tts_episodes), `segment_index` (INTEGER NOT NULL — 0-based sentence order), `text` (TEXT NOT NULL — the sentence text), `text_offset` (INTEGER NOT NULL — position in original text), `text_length` (INTEGER NOT NULL — length in original text), `audio_data` (BLOB NOT NULL — WAV file bytes with header), `sample_count` (INTEGER NOT NULL — number of audio samples), `ref_wav_path` (TEXT — voice cloning reference for this segment, nullable), `created_at` (TEXT NOT NULL). A unique index SHALL exist on `(episode_id, segment_index)`. A foreign key constraint on `episode_id` SHALL reference `tts_episodes(id)` with CASCADE delete.
@@ -40,7 +50,7 @@ The `tts_segments` table SHALL store per-sentence audio data with the following 
 - **THEN** they are returned ordered by `segment_index` ascending
 
 ### Requirement: TTS audio repository CRUD operations
-The system SHALL provide a `TtsAudioRepository` class with methods to: create an episode record, insert segment records, query episode status by file_name, retrieve all segments for an episode ordered by segment_index, find a segment by text_offset, and delete an episode (cascading to segments).
+The system SHALL provide a `TtsAudioRepository` class with methods to: create an episode record (with text_hash), insert segment records, query episode status by file_name, retrieve all segments for an episode ordered by segment_index, find a segment by text_offset, get the count of stored segments for an episode, and delete an episode (cascading to segments).
 
 #### Scenario: Check if episode has audio
 - **WHEN** `findEpisodeByFileName("0001_プロローグ.txt")` is called
@@ -58,9 +68,13 @@ The system SHALL provide a `TtsAudioRepository` class with methods to: create an
 - **WHEN** `deleteEpisode(episodeId)` is called
 - **THEN** the episode record and all associated segments are deleted from the database
 
-#### Scenario: Get segment count for progress tracking
-- **WHEN** `getSegmentCount(episodeId)` is called during generation
-- **THEN** the number of currently saved segments for that episode is returned
+#### Scenario: Get segment count for resume detection
+- **WHEN** `getSegmentCount(episodeId)` is called for an episode with 5 stored segments
+- **THEN** the count 5 is returned
+
+#### Scenario: Create episode with text hash
+- **WHEN** `createEpisode()` is called with fileName, sampleRate, status, and textHash
+- **THEN** a new episode record is created with the provided text_hash value
 
 ### Requirement: TTS audio database closure
 The system SHALL close the `tts_audio.db` database connection when the novel folder is no longer active (e.g., user navigates away from the novel).

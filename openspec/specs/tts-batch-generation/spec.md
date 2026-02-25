@@ -13,8 +13,10 @@ The system SHALL provide a "読み上げ音声生成" button in the text viewer 
 - **WHEN** the user presses the "読み上げ音声生成" button
 - **THEN** batch audio generation begins for all sentences in the current episode
 
+## Requirements
+
 ### Requirement: Batch generation pipeline
-The system SHALL generate audio for all sentences in the episode text sequentially using the TTS Isolate. For each sentence, the system SHALL: synthesize audio via `TtsIsolate`, convert the Float32List result to WAV bytes using `WavWriter`, and save the WAV BLOB to the `tts_segments` table. An episode record with status "generating" SHALL be created before generation begins. The episode status SHALL be updated to "completed" when all segments have been generated.
+The system SHALL generate audio for all sentences in the episode text sequentially using the TTS Isolate. For each sentence, the system SHALL: synthesize audio via `TtsIsolate`, convert the Float32List result to WAV bytes using `WavWriter`, and save the WAV BLOB to the `tts_segments` table. An episode record with status "generating" SHALL be created before generation begins. The episode status SHALL be updated to "completed" when all segments have been generated. The system SHALL support starting generation from a specified segment index, skipping already-generated segments. After each segment is stored, the system SHALL invoke an `onSegmentStored` callback with the segment index to notify consumers.
 
 #### Scenario: Generate all sentences sequentially
 - **WHEN** batch generation starts for an episode with 15 sentences
@@ -30,7 +32,15 @@ The system SHALL generate audio for all sentences in the episode text sequential
 
 #### Scenario: Synthesis error during generation
 - **WHEN** TTS synthesis fails for a sentence during batch generation
-- **THEN** generation stops, the episode record and any partial segments are deleted, and an error is reported
+- **THEN** generation stops, the episode status is updated to "partial", generated segments are preserved, and an error is reported
+
+#### Scenario: Resume generation from segment index
+- **WHEN** generation starts with startSegmentIndex=5 for an episode with 15 sentences
+- **THEN** the system skips segments 0-4 and begins generating from segment 5
+
+#### Scenario: Segment stored notification
+- **WHEN** segment 3 is successfully generated and stored in the database
+- **THEN** the onSegmentStored callback is invoked with segmentIndex=3
 
 ### Requirement: Generation progress tracking
 The system SHALL expose generation progress via a Riverpod provider. Progress SHALL include the current segment index and total segment count. The UI SHALL display a progress bar and text showing "N/M文" during generation. The system SHALL also notify the UI of the current segment's text position (offset and length) at the start of each segment's synthesis via a separate callback, enabling text highlight and page navigation.
@@ -48,22 +58,26 @@ The system SHALL expose generation progress via a Riverpod provider. Progress SH
 - **THEN** the onSegmentStart callback is invoked with textOffset=120 and textLength=25 before synthesis begins
 
 ### Requirement: Generation cancellation
-The system SHALL support cancelling batch generation. When cancelled, the system SHALL stop the TTS Isolate, delete the episode record and all partial segments from the database, and return to the "no audio" state.
+The system SHALL support cancelling batch generation. When cancelled, the system SHALL stop the TTS Isolate and update the episode status to "partial". Generated segments SHALL be preserved in the database. The system SHALL NOT delete the episode record or segments on cancellation.
 
 #### Scenario: Cancel button displayed during generation
 - **WHEN** batch generation is in progress
 - **THEN** a cancel button is displayed alongside the progress bar
 
-#### Scenario: Cancel stops generation and cleans up
-- **WHEN** the user presses the cancel button during generation
-- **THEN** the TTS Isolate is stopped, the episode and all segments are deleted from the database, and the UI returns to showing the "読み上げ音声生成" button
+#### Scenario: Cancel stops generation and preserves data
+- **WHEN** the user presses the cancel button during generation after 5 of 15 segments have been generated
+- **THEN** the TTS Isolate is stopped, the episode status is set to "partial", and all 5 generated segments remain in the database
 
 ### Requirement: Delete existing audio before regeneration
-The system SHALL delete any existing audio data for the episode before starting a new batch generation. This ensures a clean start without leftover data from previous generations.
+The system SHALL delete existing audio data for the episode only when the text content has changed (detected via text hash mismatch). If the text has not changed and a partial or completed episode exists, the system SHALL reuse existing data.
 
-#### Scenario: Existing audio cleared on new generation
-- **WHEN** the user presses "読み上げ音声生成" for an episode that already has audio data
+#### Scenario: Existing audio cleared when text changed
+- **WHEN** generation is requested for an episode whose stored text_hash does not match the current text
 - **THEN** the existing episode record and all segments are deleted before new generation begins
+
+#### Scenario: Existing audio preserved when text unchanged
+- **WHEN** generation is requested for an episode whose stored text_hash matches the current text
+- **THEN** the existing episode data is reused and generation resumes from the first missing segment
 
 ### Requirement: Text highlight during batch generation
 The system SHALL highlight the currently processing sentence on the text viewer during batch TTS audio generation. The highlight SHALL be updated at the start of each segment's synthesis (before synthesis begins), using the existing `ttsHighlightRangeProvider`. The highlight range SHALL be set based on the segment's text offset and text length.
@@ -96,8 +110,8 @@ The system SHALL automatically navigate to the page containing the currently hig
 - **THEN** the viewer scrolls to make the highlighted text visible
 
 ### Requirement: Generation stops on page navigation
-The system SHALL stop batch generation and clean up when the user navigates away from the current episode. Partial data SHALL be deleted.
+The system SHALL stop batch generation when the user navigates away from the current episode. Generated segments SHALL be preserved and the episode status SHALL be updated to "partial".
 
 #### Scenario: Navigate away during generation
-- **WHEN** the user selects a different episode while generation is in progress
-- **THEN** generation is cancelled, partial data is deleted, and the TTS Isolate is stopped
+- **WHEN** the user selects a different episode while generation is in progress with 8 of 15 segments generated
+- **THEN** generation is cancelled, the episode status is set to "partial", and all 8 generated segments remain in the database
