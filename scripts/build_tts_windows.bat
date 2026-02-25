@@ -6,12 +6,13 @@ set PROJECT_ROOT=%SCRIPT_DIR%..
 set TTS_DIR=%PROJECT_ROOT%\third_party\qwen3-tts.cpp
 set GGML_DIR=%TTS_DIR%\ggml
 
-echo === Building GGML (CPU backend) ===
+echo === Building GGML (CPU + Vulkan backend) ===
 if not exist "%GGML_DIR%\build" mkdir "%GGML_DIR%\build"
 cmake -S "%GGML_DIR%" -B "%GGML_DIR%\build" ^
     -DCMAKE_BUILD_TYPE=Release ^
     -DBUILD_SHARED_LIBS=OFF ^
-    -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON ^
+    -DGGML_VULKAN=ON
 cmake --build "%GGML_DIR%\build" --config Release
 
 echo === Building qwen3_tts_ffi shared library ===
