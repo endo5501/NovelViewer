@@ -160,6 +160,88 @@ void main() {
       expect(progressUpdates, contains((3, 3)));
     });
 
+    test('calls onSegmentStart before synthesis with correct offset and length',
+        () async {
+      final isolate = FakeTtsIsolate();
+      final controller = TtsGenerationController(
+        ttsIsolate: isolate,
+        repository: repository,
+      );
+
+      final segmentStartCalls = <(int, int)>[];
+      controller.onSegmentStart = (textOffset, textLength) {
+        segmentStartCalls.add((textOffset, textLength));
+      };
+
+      await controller.start(
+        text: '今日は天気です。明日も晴れるでしょう。',
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+      );
+
+      // '今日は天気です。' starts at offset 0, length 8
+      // '明日も晴れるでしょう。' starts at offset 8, length 11
+      expect(segmentStartCalls, hasLength(2));
+      expect(segmentStartCalls[0], (0, 8));
+      expect(segmentStartCalls[1], (8, 11));
+    });
+
+    test('calls onSegmentStart before synthesize request', () async {
+      final isolate = FakeTtsIsolate();
+      final controller = TtsGenerationController(
+        ttsIsolate: isolate,
+        repository: repository,
+      );
+
+      final synthCountAtSegmentStart = <int>[];
+      controller.onSegmentStart = (offset, length) {
+        synthCountAtSegmentStart.add(isolate.synthesizeRequests.length);
+      };
+
+      await controller.start(
+        text: '文1。文2。',
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+      );
+
+      // At each onSegmentStart call, the synthesize request count should be
+      // equal to the number of previously completed segments (0, then 1)
+      expect(synthCountAtSegmentStart, [0, 1]);
+    });
+
+    test('calls onSegmentStart before onProgress for each segment', () async {
+      final isolate = FakeTtsIsolate();
+      final controller = TtsGenerationController(
+        ttsIsolate: isolate,
+        repository: repository,
+      );
+
+      final callOrder = <String>[];
+      controller.onSegmentStart = (textOffset, textLength) {
+        callOrder.add('segmentStart:$textOffset');
+      };
+      controller.onProgress = (current, total) {
+        callOrder.add('progress:$current');
+      };
+
+      await controller.start(
+        text: '文1。文2。',
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+      );
+
+      // onSegmentStart should come before onProgress for each segment
+      expect(callOrder, [
+        'segmentStart:0',
+        'progress:1',
+        'segmentStart:3',
+        'progress:2',
+      ]);
+    });
+
     test('can be cancelled during generation', () async {
       // Use an isolate that waits for explicit synthesis responses
       final synthesizeRequestedCompleter = Completer<void>();
