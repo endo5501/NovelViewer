@@ -21,6 +21,9 @@ class TtsGenerationController {
   StreamSubscription<TtsIsolateResponse>? _subscription;
   Completer<SynthesisResultResponse>? _activeSynthesisCompleter;
 
+  /// Called when a segment synthesis starts: (textOffset, textLength).
+  void Function(int textOffset, int textLength)? onSegmentStart;
+
   /// Called when a segment is generated: (current, total).
   void Function(int current, int total)? onProgress;
 
@@ -80,6 +83,7 @@ class TtsGenerationController {
       if (_cancelled) break;
 
       final segment = segments[i];
+      onSegmentStart?.call(segment.offset, segment.length);
       final result = await _synthesizeSegment(segment.text, refWavPath);
 
       if (_cancelled) break;

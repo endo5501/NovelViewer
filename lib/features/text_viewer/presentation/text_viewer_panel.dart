@@ -108,6 +108,12 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
     );
     _generationController = controller;
 
+    controller.onSegmentStart = (textOffset, textLength) {
+      if (!mounted) return;
+      ref.read(ttsHighlightRangeProvider.notifier)
+          .set(TextRange(start: textOffset, end: textOffset + textLength));
+    };
+
     controller.onProgress = (current, total) {
       if (!mounted) return;
       ref.read(ttsGenerationProgressProvider.notifier)
@@ -132,6 +138,8 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
 
     if (!mounted) return;
 
+    ref.read(ttsHighlightRangeProvider.notifier).set(null);
+
     final audioState = ref.read(ttsAudioStateProvider);
     if (audioState == TtsAudioState.generating) {
       ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.ready);
@@ -143,6 +151,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
     _generationController = null;
 
     if (!mounted) return;
+    ref.read(ttsHighlightRangeProvider.notifier).set(null);
     ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
     _lastCheckedFileKey = null;
   }
