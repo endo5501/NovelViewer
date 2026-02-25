@@ -220,10 +220,16 @@ class TtsStreamingController {
         TextRange(start: textOffset, end: textOffset + textLength),
       );
 
-      // Play segment - subscribe to stream BEFORE play() to avoid missing
-      // the completed event (just_audio's play() future resolves on completion)
+      // Play segment
+      // IMPORTANT: setFilePath must come BEFORE subscribing to playerStateStream.
+      // just_audio's playerStateStream is a BehaviorSubject that replays the
+      // latest value. After a segment completes, the replayed state is
+      // 'completed', which would immediately trigger the completer and skip
+      // the segment. setFilePath resets processingState to 'ready'.
       ref.read(ttsPlaybackStateProvider.notifier).set(
           TtsPlaybackState.playing);
+      await _audioPlayer.setFilePath(filePath);
+
       final playCompleter = Completer<void>();
       _activePlayCompleter = playCompleter;
       late StreamSubscription<TtsPlayerState> playSub;
@@ -233,7 +239,6 @@ class TtsStreamingController {
         }
       });
 
-      await _audioPlayer.setFilePath(filePath);
       unawaited(_audioPlayer.play().catchError((e, st) {
         if (!playCompleter.isCompleted) playCompleter.completeError(e, st);
       }));

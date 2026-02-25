@@ -160,6 +160,83 @@ class _ManualAudioPlayer implements TtsAudioPlayer {
   }
 }
 
+/// Fake audio player that simulates just_audio's BehaviorSubject behavior:
+/// new subscribers to playerStateStream immediately receive the latest state.
+/// This is critical for catching bugs where a stale 'completed' state from
+/// a previous segment causes the next segment to be skipped.
+class _BehaviorSubjectAudioPlayer implements TtsAudioPlayer {
+  TtsPlayerState _lastState = TtsPlayerState.stopped;
+  final _emitCallbacks = <void Function(TtsPlayerState)>[];
+  String? currentFilePath;
+  bool isPlaying = false;
+  bool isDisposed = false;
+  final playedFiles = <String>[];
+
+  void _emit(TtsPlayerState state) {
+    _lastState = state;
+    for (final cb in List.of(_emitCallbacks)) {
+      cb(state);
+    }
+  }
+
+  @override
+  Stream<TtsPlayerState> get playerStateStream {
+    // Use sync controller to simulate BehaviorSubject's synchronous replay
+    final controller = StreamController<TtsPlayerState>(sync: true);
+    controller.add(_lastState); // Delivered synchronously on listen
+    void cb(TtsPlayerState state) {
+      if (!controller.isClosed) controller.add(state);
+    }
+    _emitCallbacks.add(cb);
+    controller.onCancel = () {
+      _emitCallbacks.remove(cb);
+      controller.close();
+    };
+    return controller.stream;
+  }
+
+  @override
+  Future<void> setFilePath(String path) async {
+    currentFilePath = path;
+    // Simulate just_audio: setFilePath resets processingState to ready
+    // but playing stays the same. Adapter maps ready+playing to 'playing'.
+    if (_lastState == TtsPlayerState.completed) {
+      _emit(TtsPlayerState.playing);
+    }
+  }
+
+  @override
+  Future<void> play() async {
+    isPlaying = true;
+    playedFiles.add(currentFilePath!);
+    _emit(TtsPlayerState.playing);
+    Future.delayed(const Duration(milliseconds: 10), () {
+      if (isPlaying && !isDisposed) {
+        isPlaying = false;
+        _emit(TtsPlayerState.completed);
+      }
+    });
+  }
+
+  @override
+  Future<void> pause() async {
+    isPlaying = false;
+    _emit(TtsPlayerState.paused);
+  }
+
+  @override
+  Future<void> stop() async {
+    isPlaying = false;
+    _emit(TtsPlayerState.stopped);
+  }
+
+  @override
+  Future<void> dispose() async {
+    isDisposed = true;
+    _emitCallbacks.clear();
+  }
+}
+
 Uint8List _makeWavBytes() {
   return WavWriter.toBytes(
     audio: Float32List.fromList([0.1, 0.2, 0.3, 0.4, 0.5]),
@@ -487,6 +564,36 @@ void main() {
       // Stop to finish the test cleanly
       await controller.stop();
       await future;
+    });
+
+    test('plays all segments without skipping with BehaviorSubject stream',
+        () async {
+      // This test verifies the fix for a bug where just_audio's
+      // BehaviorSubject-backed playerStateStream replays the 'completed' state
+      // from the previous segment, causing every other segment to be skipped.
+      final isolate = _FakeTtsIsolate();
+      final player = _BehaviorSubjectAudioPlayer();
+      final controller = TtsStreamingController(
+        ref: container,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+      );
+
+      await controller.start(
+        text: '文1。文2。文3。文4。',
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+      );
+
+      // All 4 segments must be played - no skipping
+      expect(player.playedFiles, hasLength(4));
+
+      final episode =
+          await repository.findEpisodeByFileName('0001_テスト.txt');
+      expect(episode!['status'], 'completed');
     });
 
     test('stop clears highlight and sets stopped state', () async {
