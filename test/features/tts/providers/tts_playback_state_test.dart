@@ -73,11 +73,12 @@ void main() {
   });
 
   group('TtsPlaybackState', () {
-    test('has three values: stopped, playing, paused', () {
-      expect(TtsPlaybackState.values.length, 3);
+    test('has four values: stopped, playing, paused, waiting', () {
+      expect(TtsPlaybackState.values.length, 4);
       expect(TtsPlaybackState.stopped, isNotNull);
       expect(TtsPlaybackState.playing, isNotNull);
       expect(TtsPlaybackState.paused, isNotNull);
+      expect(TtsPlaybackState.waiting, isNotNull);
     });
   });
 

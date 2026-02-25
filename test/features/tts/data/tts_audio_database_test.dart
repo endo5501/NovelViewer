@@ -218,6 +218,91 @@ void main() {
       await db2.close();
     });
 
+    test('creates tts_episodes table with text_hash column', () async {
+      final db = TtsAudioDatabase(tempDir.path);
+      final database = await db.database;
+
+      final columns = await database.rawQuery(
+        "PRAGMA table_info('tts_episodes')",
+      );
+      final columnNames = columns.map((c) => c['name'] as String).toList();
+      expect(columnNames, contains('text_hash'));
+
+      await db.close();
+    });
+
+    test('migrates existing database to add text_hash column', () async {
+      // Create a v1 database without text_hash
+      final dbPath = '${tempDir.path}/tts_audio.db';
+      final oldDb = await openDatabase(
+        dbPath,
+        version: 1,
+        onCreate: (db, version) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+          await db.execute('''
+            CREATE TABLE tts_episodes (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              file_name TEXT NOT NULL UNIQUE,
+              sample_rate INTEGER NOT NULL,
+              status TEXT NOT NULL,
+              ref_wav_path TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE tts_segments (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              episode_id INTEGER NOT NULL,
+              segment_index INTEGER NOT NULL,
+              text TEXT NOT NULL,
+              text_offset INTEGER NOT NULL,
+              text_length INTEGER NOT NULL,
+              audio_data BLOB NOT NULL,
+              sample_count INTEGER NOT NULL,
+              ref_wav_path TEXT,
+              created_at TEXT NOT NULL,
+              FOREIGN KEY (episode_id) REFERENCES tts_episodes(id) ON DELETE CASCADE
+            )
+          ''');
+          await db.execute('''
+            CREATE UNIQUE INDEX idx_segments_episode_index
+            ON tts_segments(episode_id, segment_index)
+          ''');
+        },
+      );
+
+      // Insert an episode without text_hash
+      await oldDb.insert('tts_episodes', {
+        'file_name': '0001_プロローグ.txt',
+        'sample_rate': 24000,
+        'status': 'completed',
+        'ref_wav_path': null,
+        'created_at': '2026-01-01T00:00:00.000Z',
+        'updated_at': '2026-01-01T00:00:00.000Z',
+      });
+      await oldDb.close();
+
+      // Open with TtsAudioDatabase which should migrate
+      final db = TtsAudioDatabase(tempDir.path);
+      final database = await db.database;
+
+      // Verify text_hash column exists
+      final columns = await database.rawQuery(
+        "PRAGMA table_info('tts_episodes')",
+      );
+      final columnNames = columns.map((c) => c['name'] as String).toList();
+      expect(columnNames, contains('text_hash'));
+
+      // Verify existing data is preserved with null text_hash
+      final episodes = await database.query('tts_episodes');
+      expect(episodes, hasLength(1));
+      expect(episodes.first['file_name'], '0001_プロローグ.txt');
+      expect(episodes.first['text_hash'], isNull);
+
+      await db.close();
+    });
+
     test('handles corrupted database by recreating', () async {
       final dbFile = File('${tempDir.path}/tts_audio.db');
       await dbFile.writeAsString('corrupted data');

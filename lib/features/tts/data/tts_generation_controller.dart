@@ -27,6 +27,9 @@ class TtsGenerationController {
   /// Called when a segment is generated: (current, total).
   void Function(int current, int total)? onProgress;
 
+  /// Called when a segment is stored in the database: (segmentIndex).
+  void Function(int segmentIndex)? onSegmentStored;
+
   /// Called when an error occurs.
   void Function(String error)? onError;
 
@@ -36,26 +39,38 @@ class TtsGenerationController {
     required String modelDir,
     required int sampleRate,
     String? refWavPath,
+    int startSegmentIndex = 0,
+    int? existingEpisodeId,
   }) async {
     _cancelled = false;
 
-    // Delete existing data for this file
-    final existing = await _repository.findEpisodeByFileName(fileName);
-    if (existing != null) {
-      await _repository.deleteEpisode(existing['id'] as int);
+    if (existingEpisodeId != null) {
+      // Resume mode: use existing episode
+      _currentEpisodeId = existingEpisodeId;
+      await _repository.updateEpisodeStatus(existingEpisodeId, 'generating');
+    } else {
+      // Fresh mode: delete existing and create new
+      final existing = await _repository.findEpisodeByFileName(fileName);
+      if (existing != null) {
+        await _repository.deleteEpisode(existing['id'] as int);
+      }
+
+      _currentEpisodeId = await _repository.createEpisode(
+        fileName: fileName,
+        sampleRate: sampleRate,
+        status: 'generating',
+        refWavPath: refWavPath,
+      );
     }
 
     // Split text into segments
     final segments = _textSegmenter.splitIntoSentences(text);
-    if (segments.isEmpty) return;
-
-    // Create episode record
-    _currentEpisodeId = await _repository.createEpisode(
-      fileName: fileName,
-      sampleRate: sampleRate,
-      status: 'generating',
-      refWavPath: refWavPath,
-    );
+    if (segments.isEmpty) {
+      if (_currentEpisodeId != null) {
+        await _repository.updateEpisodeStatus(_currentEpisodeId!, 'completed');
+      }
+      return;
+    }
 
     // Spawn isolate and load model
     await _ttsIsolate.spawn();
@@ -74,12 +89,15 @@ class TtsGenerationController {
     final modelLoaded = await modelCompleter.future;
 
     if (!modelLoaded || _cancelled) {
-      await _cleanup();
+      if (_currentEpisodeId != null) {
+        await _repository.updateEpisodeStatus(_currentEpisodeId!, 'partial');
+      }
+      await _cleanupResources();
       return;
     }
 
     // Generate each segment sequentially
-    for (var i = 0; i < segments.length; i++) {
+    for (var i = startSegmentIndex; i < segments.length; i++) {
       if (_cancelled) break;
 
       final segment = segments[i];
@@ -89,7 +107,11 @@ class TtsGenerationController {
       if (_cancelled) break;
 
       if (result == null) {
-        await _cleanup();
+        if (_currentEpisodeId != null) {
+          await _repository.updateEpisodeStatus(
+              _currentEpisodeId!, 'partial');
+        }
+        await _cleanupResources();
         return;
       }
 
@@ -110,11 +132,12 @@ class TtsGenerationController {
         refWavPath: refWavPath,
       );
 
+      onSegmentStored?.call(i);
       onProgress?.call(i + 1, segments.length);
     }
 
     if (_cancelled) {
-      await _cleanup();
+      // cancel() already handled status update
       return;
     }
 
@@ -167,14 +190,13 @@ class TtsGenerationController {
         error: 'Cancelled',
       ));
     }
-    await _cleanup();
+    if (_currentEpisodeId != null) {
+      await _repository.updateEpisodeStatus(_currentEpisodeId!, 'partial');
+    }
+    await _cleanupResources();
   }
 
-  Future<void> _cleanup() async {
-    if (_currentEpisodeId != null) {
-      await _repository.deleteEpisode(_currentEpisodeId!);
-      _currentEpisodeId = null;
-    }
+  Future<void> _cleanupResources() async {
     await _subscription?.cancel();
     _subscription = null;
     await _ttsIsolate.dispose();

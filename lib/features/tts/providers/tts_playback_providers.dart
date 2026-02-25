@@ -42,7 +42,7 @@ class TtsGenerationProgressNotifier extends Notifier<TtsGenerationProgress> {
 
 // --- Playback state ---
 
-enum TtsPlaybackState { stopped, playing, paused }
+enum TtsPlaybackState { stopped, playing, paused, waiting }
 
 final ttsPlaybackStateProvider =
     NotifierProvider<TtsPlaybackStateNotifier, TtsPlaybackState>(

@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 
 class TtsAudioDatabase {
   static const _databaseName = 'tts_audio.db';
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 2;
 
   final String _folderPath;
   Database? _database;
@@ -25,6 +25,7 @@ class TtsAudioDatabase {
         path,
         version: _databaseVersion,
         onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
         onConfigure: _onConfigure,
       );
     } catch (_) {
@@ -36,6 +37,7 @@ class TtsAudioDatabase {
         path,
         version: _databaseVersion,
         onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
         onConfigure: _onConfigure,
       );
     }
@@ -51,8 +53,9 @@ class TtsAudioDatabase {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         file_name TEXT NOT NULL UNIQUE,
         sample_rate INTEGER NOT NULL,
-        status TEXT NOT NULL,
+        status TEXT NOT NULL, -- 'generating', 'partial', 'completed'
         ref_wav_path TEXT,
+        text_hash TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -78,6 +81,12 @@ class TtsAudioDatabase {
       CREATE UNIQUE INDEX idx_segments_episode_index
       ON tts_segments(episode_id, segment_index)
     ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE tts_episodes ADD COLUMN text_hash TEXT');
+    }
   }
 
   Future<void> close() async {
