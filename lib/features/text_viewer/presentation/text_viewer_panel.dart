@@ -1,4 +1,5 @@
 import 'dart:math' show min, max;
+import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,7 +29,8 @@ class TextViewerPanel extends ConsumerStatefulWidget {
   ConsumerState<TextViewerPanel> createState() => _TextViewerPanelState();
 }
 
-class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
+class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
+    with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   final ParsedSegmentsCache _segmentsCache = ParsedSegmentsCache();
   String? _lastScrollKey;
@@ -39,13 +41,31 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel> {
   String? _lastCheckedFileKey;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _streamingController?.stop();
     _streamingController = null;
     _streamingDb?.close();
     _streamingDb = null;
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Clean up TTS native resources before app exit to prevent crash.
+  ///
+  /// The TTS engine uses Metal GPU resources via ggml. If the process exits
+  /// while Metal initialization is still running on a background thread,
+  /// the C++ static destructors race with the init thread and abort.
+  @override
+  Future<AppExitResponse> didRequestAppExit() async {
+    await _stopStreaming();
+    return AppExitResponse.exit;
   }
 
   String? _currentNovelFolderPath() {
