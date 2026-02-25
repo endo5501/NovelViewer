@@ -273,12 +273,60 @@ void main() {
 
       await future;
 
-      // Episode should be deleted
+      // Episode should be preserved with 'partial' status
       final episode =
           await repository.findEpisodeByFileName('0001_テスト.txt');
-      expect(episode, isNull);
+      expect(episode, isNotNull);
+      expect(episode!['status'], 'partial');
 
       expect(cancelIsolate.disposed, isTrue);
+    });
+
+    test('cancel preserves generated segments with partial status', () async {
+      // Use an isolate that generates one segment then stalls
+      int synthesizeCount = 0;
+      final firstSegmentDone = Completer<void>();
+      final stallIsolate = _StallingFakeTtsIsolate(
+        onSynthesizeRequested: (text) {
+          synthesizeCount++;
+          if (synthesizeCount == 1) {
+            // Complete first synthesis
+            return true;
+          }
+          // Stall on second synthesis
+          if (!firstSegmentDone.isCompleted) {
+            firstSegmentDone.complete();
+          }
+          return false;
+        },
+      );
+
+      final controller = TtsGenerationController(
+        ttsIsolate: stallIsolate,
+        repository: repository,
+      );
+
+      final future = controller.start(
+        text: '文1。文2。文3。',
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+      );
+
+      await firstSegmentDone.future;
+      await controller.cancel();
+      await future;
+
+      // Episode should exist with 'partial' status
+      final episode =
+          await repository.findEpisodeByFileName('0001_テスト.txt');
+      expect(episode, isNotNull);
+      expect(episode!['status'], 'partial');
+
+      // First segment should be preserved
+      final segments = await repository.getSegments(episode['id'] as int);
+      expect(segments, hasLength(1));
+      expect(segments[0]['text'], '文1。');
     });
 
     test('deletes existing data before regeneration', () async {
@@ -341,13 +389,83 @@ void main() {
         sampleRate: 24000,
       );
 
-      // Episode should be cleaned up
+      // Episode should be preserved with 'partial' status
       final episode =
           await repository.findEpisodeByFileName('0001_テスト.txt');
-      expect(episode, isNull);
+      expect(episode, isNotNull);
+      expect(episode!['status'], 'partial');
 
       expect(reportedError, contains('Engine crash'));
       expect(isolate.disposed, isTrue);
+    });
+
+    test('calls onSegmentStored after each segment is saved', () async {
+      final isolate = FakeTtsIsolate();
+      final controller = TtsGenerationController(
+        ttsIsolate: isolate,
+        repository: repository,
+      );
+
+      final storedIndices = <int>[];
+      controller.onSegmentStored = (segmentIndex) {
+        storedIndices.add(segmentIndex);
+      };
+
+      await controller.start(
+        text: '文1。文2。文3。',
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+      );
+
+      expect(storedIndices, [0, 1, 2]);
+    });
+
+    test('starts generation from specified segment index', () async {
+      final isolate = FakeTtsIsolate();
+      final controller = TtsGenerationController(
+        ttsIsolate: isolate,
+        repository: repository,
+      );
+
+      // Pre-create episode with 1 existing segment
+      final episodeId = await repository.createEpisode(
+        fileName: '0001_テスト.txt',
+        sampleRate: 24000,
+        status: 'partial',
+      );
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 0,
+        text: '文1。',
+        textOffset: 0,
+        textLength: 3,
+        audioData: Uint8List(10),
+        sampleCount: 100,
+      );
+
+      await controller.start(
+        text: '文1。文2。文3。',
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+        startSegmentIndex: 1,
+        existingEpisodeId: episodeId,
+      );
+
+      // Should only synthesize segments 1 and 2 (skip 0)
+      expect(isolate.synthesizeRequests, hasLength(2));
+      expect(isolate.synthesizeRequests[0], '文2。');
+      expect(isolate.synthesizeRequests[1], '文3。');
+
+      // Episode should be completed
+      final episode =
+          await repository.findEpisodeByFileName('0001_テスト.txt');
+      expect(episode!['status'], 'completed');
+
+      // All 3 segments should exist
+      final segments = await repository.getSegments(episodeId);
+      expect(segments, hasLength(3));
     });
 
     test('handles model load failure', () async {
@@ -496,5 +614,52 @@ class _TrackingFakeTtsIsolate implements TtsIsolate {
   @override
   Future<void> dispose() async {
     _responseController.close();
+  }
+}
+
+/// A fake isolate that completes some synthesis requests and stalls on others.
+/// The callback returns true to complete, false to stall.
+class _StallingFakeTtsIsolate implements TtsIsolate {
+  _StallingFakeTtsIsolate({required this.onSynthesizeRequested});
+
+  final bool Function(String text) onSynthesizeRequested;
+  final _responseController =
+      StreamController<TtsIsolateResponse>.broadcast();
+  bool disposed = false;
+
+  @override
+  Stream<TtsIsolateResponse> get responses => _responseController.stream;
+
+  @override
+  Future<void> spawn() async {}
+
+  @override
+  void loadModel(String modelDir,
+      {int nThreads = 4, int languageId = TtsEngine.languageJapanese}) {
+    Future.microtask(() {
+      _responseController.add(ModelLoadedResponse(success: true));
+    });
+  }
+
+  @override
+  void synthesize(String text, {String? refWavPath}) {
+    final shouldComplete = onSynthesizeRequested(text);
+    if (shouldComplete) {
+      Future.microtask(() {
+        _responseController.add(SynthesisResultResponse(
+          audio: Float32List.fromList([0.1, 0.2, 0.3]),
+          sampleRate: 24000,
+        ));
+      });
+    }
+    // If shouldComplete is false, don't respond (stall)
+  }
+
+  @override
+  Future<void> dispose() async {
+    disposed = true;
+    if (!_responseController.isClosed) {
+      _responseController.close();
+    }
   }
 }

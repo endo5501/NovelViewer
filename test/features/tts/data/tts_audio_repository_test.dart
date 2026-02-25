@@ -55,9 +55,50 @@ void main() {
         expect(episode['status'], 'generating');
         expect(episode['ref_wav_path'], '/path/to/ref.wav');
       });
+
+      test('creates episode with text_hash', () async {
+        await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'generating',
+          textHash: 'abc123hash',
+        );
+
+        final episode =
+            await repository.findEpisodeByFileName('0001_プロローグ.txt');
+        expect(episode, isNotNull);
+        expect(episode!['text_hash'], 'abc123hash');
+      });
+
+      test('creates episode with null text_hash when not provided', () async {
+        await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'generating',
+        );
+
+        final episode =
+            await repository.findEpisodeByFileName('0001_プロローグ.txt');
+        expect(episode, isNotNull);
+        expect(episode!['text_hash'], isNull);
+      });
     });
 
     group('updateEpisodeStatus', () {
+      test('updates status to partial', () async {
+        final id = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'generating',
+        );
+
+        await repository.updateEpisodeStatus(id, 'partial');
+
+        final episode =
+            await repository.findEpisodeByFileName('0001_プロローグ.txt');
+        expect(episode!['status'], 'partial');
+      });
+
       test('updates status to completed', () async {
         final id = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',

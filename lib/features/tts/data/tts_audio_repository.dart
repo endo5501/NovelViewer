@@ -12,6 +12,7 @@ class TtsAudioRepository {
     required int sampleRate,
     required String status,
     String? refWavPath,
+    String? textHash,
   }) async {
     final db = await _database.database;
     final now = DateTime.now().toUtc().toIso8601String();
@@ -20,6 +21,7 @@ class TtsAudioRepository {
       'sample_rate': sampleRate,
       'status': status,
       'ref_wav_path': refWavPath,
+      'text_hash': textHash,
       'created_at': now,
       'updated_at': now,
     });
@@ -81,6 +83,18 @@ class TtsAudioRepository {
       whereArgs: [episodeId],
       orderBy: 'segment_index ASC',
     );
+  }
+
+  Future<Map<String, Object?>> getSegmentByIndex(
+      int episodeId, int segmentIndex) async {
+    final db = await _database.database;
+    final rows = await db.query(
+      'tts_segments',
+      where: 'episode_id = ? AND segment_index = ?',
+      whereArgs: [episodeId, segmentIndex],
+      limit: 1,
+    );
+    return rows.first;
   }
 
   Future<Map<String, Object?>?> findSegmentByOffset(
