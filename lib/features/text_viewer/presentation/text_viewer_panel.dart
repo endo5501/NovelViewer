@@ -81,11 +81,20 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     final fileName = _currentFileName();
     final selectedPath = ref.read(selectedFileProvider)?.path;
     if (folderPath == null || fileName == null || selectedPath == null) {
+      if (_streamingController != null) {
+        await _stopStreaming();
+      }
       ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
       return;
     }
 
     if (_lastCheckedFileKey == selectedPath) return;
+
+    // File changed - stop any active streaming before checking new file
+    if (_streamingController != null) {
+      await _stopStreaming();
+    }
+
     _lastCheckedFileKey = selectedPath;
 
     final db = TtsAudioDatabase(folderPath);
@@ -173,6 +182,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     _streamingDb = null;
 
     if (!mounted) return;
+    ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
     _lastCheckedFileKey = null;
   }
 

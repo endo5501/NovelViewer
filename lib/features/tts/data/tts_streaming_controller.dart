@@ -303,6 +303,8 @@ class TtsStreamingController {
 
     ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.stopped);
     ref.read(ttsHighlightRangeProvider.notifier).set(null);
+    ref.read(ttsGenerationProgressProvider.notifier)
+        .set(TtsGenerationProgress.zero);
 
     await _cleanupFiles();
   }

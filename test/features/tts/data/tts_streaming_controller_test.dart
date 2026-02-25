@@ -622,6 +622,40 @@ void main() {
           container.read(ttsPlaybackStateProvider), TtsPlaybackState.stopped);
       expect(container.read(ttsHighlightRangeProvider), isNull);
     });
+
+    test('stop resets generation progress provider', () async {
+      final isolate = _FakeTtsIsolate();
+      final player = _ManualAudioPlayer();
+      final controller = TtsStreamingController(
+        ref: container,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+      );
+
+      final future = controller.start(
+        text: '文1。文2。文3。',
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+      );
+
+      // Wait for playback to start (generation sets progress)
+      await _pumpUntil(() => player.isPlaying);
+
+      // Verify progress was set during generation
+      final progressBefore = container.read(ttsGenerationProgressProvider);
+      expect(progressBefore.total, greaterThan(0));
+
+      await controller.stop();
+      await future;
+
+      // Generation progress should be reset to zero
+      final progressAfter = container.read(ttsGenerationProgressProvider);
+      expect(progressAfter.current, 0);
+      expect(progressAfter.total, 0);
+    });
   });
 }
 
