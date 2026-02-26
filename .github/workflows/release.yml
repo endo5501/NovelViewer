@@ -27,7 +27,7 @@ jobs:
           $ver = (Invoke-RestMethod "https://vulkan.lunarg.com/sdk/latest/windows.json").windows
           echo "Vulkan SDK version: $ver"
           curl.exe -o "$env:RUNNER_TEMP/VulkanSDK-Installer.exe" -L `
-            "https://sdk.lunarg.com/sdk/download/$ver/windows/VulkanSDK-$ver-Installer.exe"
+            "https://sdk.lunarg.com/sdk/download/$ver/windows/vulkan_sdk.exe"
           & "$env:RUNNER_TEMP/VulkanSDK-Installer.exe" --accept-licenses `
             --default-answer --confirm-command install
           Add-Content $env:GITHUB_ENV "VULKAN_SDK=C:\VulkanSDK\$ver"
