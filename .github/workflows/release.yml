@@ -24,7 +24,7 @@ jobs:
       - name: Install Vulkan SDK
         shell: pwsh
         run: |
-          $ver = (Invoke-RestMethod "https://vulkan.lunarg.com/sdk/latest/windows.json")
+          $ver = (Invoke-RestMethod "https://vulkan.lunarg.com/sdk/latest/windows.json").windows
           echo "Vulkan SDK version: $ver"
           curl.exe -o "$env:RUNNER_TEMP/VulkanSDK-Installer.exe" -L `
             "https://sdk.lunarg.com/sdk/download/$ver/windows/VulkanSDK-$ver-Installer.exe"
