@@ -18,6 +18,20 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Vulkan SDK
+        shell: pwsh
+        env:
+          VULKAN_VERSION: 1.4.304.1
+        run: |
+          curl.exe -o "$env:RUNNER_TEMP/VulkanSDK-Installer.exe" -L `
+            "https://sdk.lunarg.com/sdk/download/$env:VULKAN_VERSION/windows/vulkansdk-windows-X64-$env:VULKAN_VERSION.exe"
+          & "$env:RUNNER_TEMP/VulkanSDK-Installer.exe" --accept-licenses `
+            --default-answer --confirm-command install
+          Add-Content $env:GITHUB_ENV "VULKAN_SDK=C:\VulkanSDK\$env:VULKAN_VERSION"
+          Add-Content $env:GITHUB_PATH "C:\VulkanSDK\$env:VULKAN_VERSION\bin"
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -33,6 +47,10 @@ jobs:
 
       - name: Run tests
         run: flutter test
+
+      - name: Build TTS DLL
+        shell: cmd
+        run: scripts\build_tts_windows.bat
 
       - name: Build Windows release
         run: flutter build windows --release
