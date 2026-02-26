@@ -54,23 +54,23 @@ void main() {
       expect(container.read(ttsRefWavPathProvider), '');
     });
 
-    test('initial value loads from SharedPreferences', () async {
-      await prefs.setString('tts_ref_wav_path', '/path/to/ref.wav');
+    test('initial value loads file name from SharedPreferences', () async {
+      await prefs.setString('tts_ref_wav_path', 'narrator.mp3');
       final container = createContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(ttsRefWavPathProvider), '/path/to/ref.wav');
+      expect(container.read(ttsRefWavPathProvider), 'narrator.mp3');
     });
 
-    test('setTtsRefWavPath updates state and persists', () async {
+    test('setTtsRefWavPath stores file name and persists', () async {
       final container = createContainer();
       addTearDown(container.dispose);
 
       await container
           .read(ttsRefWavPathProvider.notifier)
-          .setTtsRefWavPath('/new/ref.wav');
-      expect(container.read(ttsRefWavPathProvider), '/new/ref.wav');
-      expect(prefs.getString('tts_ref_wav_path'), '/new/ref.wav');
+          .setTtsRefWavPath('voice_sample.wav');
+      expect(container.read(ttsRefWavPathProvider), 'voice_sample.wav');
+      expect(prefs.getString('tts_ref_wav_path'), 'voice_sample.wav');
     });
   });
 }

@@ -52,7 +52,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('モデルディレクトリ'), findsOneWidget);
-      expect(find.text('リファレンスWAVファイル'), findsOneWidget);
+      expect(find.text('リファレンス音声ファイル'), findsOneWidget);
     });
 
     testWidgets('switching tabs hides other tab content', (tester) async {
@@ -67,24 +67,18 @@ void main() {
       expect(find.text('ダークモード'), findsNothing);
     });
 
-    testWidgets('TTS tab shows folder picker button for model dir',
+    testWidgets('TTS tab shows folder picker and voice reference controls',
         (tester) async {
       await tester.pumpWidget(buildTestWidget());
 
       await tester.tap(find.text('読み上げ'));
       await tester.pumpAndSettle();
 
-      // Should have folder/file picker buttons
-      expect(find.byIcon(Icons.folder_open), findsOneWidget);
-    });
-
-    testWidgets('TTS tab shows file picker button for WAV', (tester) async {
-      await tester.pumpWidget(buildTestWidget());
-
-      await tester.tap(find.text('読み上げ'));
-      await tester.pumpAndSettle();
-
-      expect(find.byIcon(Icons.audio_file), findsOneWidget);
+      // Model dir folder picker + voices folder open button
+      expect(find.byIcon(Icons.folder_open), findsNWidgets(2));
+      // Voice reference dropdown and refresh button
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
+      expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
     });
   });
 }

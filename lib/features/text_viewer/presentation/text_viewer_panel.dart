@@ -68,18 +68,11 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     return AppExitResponse.exit;
   }
 
-  String? _currentNovelFolderPath() {
-    return ref.read(currentDirectoryProvider);
-  }
-
-  String? _currentFileName() {
-    return ref.read(selectedFileProvider)?.name;
-  }
-
   Future<void> _checkAudioState() async {
-    final folderPath = _currentNovelFolderPath();
-    final fileName = _currentFileName();
-    final selectedPath = ref.read(selectedFileProvider)?.path;
+    final folderPath = ref.read(currentDirectoryProvider);
+    final selectedFile = ref.read(selectedFileProvider);
+    final fileName = selectedFile?.name;
+    final selectedPath = selectedFile?.path;
     if (folderPath == null || fileName == null || selectedPath == null) {
       if (_streamingController != null) {
         await _stopStreaming();
@@ -113,10 +106,14 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
   }
 
   Future<void> _startStreaming(String content) async {
-    final folderPath = _currentNovelFolderPath();
-    final fileName = _currentFileName();
+    final folderPath = ref.read(currentDirectoryProvider);
+    final fileName = ref.read(selectedFileProvider)?.name;
     final modelDir = ref.read(ttsModelDirProvider);
-    final refWavPath = ref.read(ttsRefWavPathProvider);
+    final refWavFileName = ref.read(ttsRefWavPathProvider);
+    final voiceService = ref.read(voiceReferenceServiceProvider);
+    final refWavPath = refWavFileName.isNotEmpty && voiceService != null
+        ? voiceService.resolveVoiceFilePath(refWavFileName)
+        : null;
 
     if (folderPath == null || fileName == null || modelDir.isEmpty) return;
 
@@ -153,7 +150,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
         fileName: fileName,
         modelDir: modelDir,
         sampleRate: 24000,
-        refWavPath: refWavPath.isNotEmpty ? refWavPath : null,
+        refWavPath: refWavPath,
         startOffset: startOffset,
       );
 
@@ -195,8 +192,8 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
   }
 
   Future<void> _deleteAudio() async {
-    final folderPath = _currentNovelFolderPath();
-    final fileName = _currentFileName();
+    final folderPath = ref.read(currentDirectoryProvider);
+    final fileName = ref.read(selectedFileProvider)?.name;
     if (folderPath == null || fileName == null) return;
 
     final db = TtsAudioDatabase(folderPath);

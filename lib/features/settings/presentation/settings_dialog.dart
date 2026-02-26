@@ -32,7 +32,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   late TextEditingController _apiKeyController;
   late TextEditingController _modelController;
   late TextEditingController _ttsModelDirController;
-  late TextEditingController _ttsRefWavPathController;
+  List<String> _voiceFiles = [];
 
   List<String> _ollamaModels = [];
   bool _ollamaModelsLoading = false;
@@ -59,8 +59,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
 
     _ttsModelDirController =
         TextEditingController(text: repo.getTtsModelDir());
-    _ttsRefWavPathController =
-        TextEditingController(text: repo.getTtsRefWavPath());
+    _loadVoiceFiles();
 
     if (_llmProvider == LlmProvider.ollama) {
       _fetchOllamaModels();
@@ -75,7 +74,6 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
     _apiKeyController.dispose();
     _modelController.dispose();
     _ttsModelDirController.dispose();
-    _ttsRefWavPathController.dispose();
     super.dispose();
   }
 
@@ -450,22 +448,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TextField(
-              controller: _ttsRefWavPathController,
-              decoration: InputDecoration(
-                labelText: 'リファレンスWAVファイル',
-                hintText: '音声クローン用のWAVファイル（任意）',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.audio_file),
-                  onPressed: _pickTtsRefWavFile,
-                ),
-              ),
-              onChanged: (value) {
-                ref
-                    .read(ttsRefWavPathProvider.notifier)
-                    .setTtsRefWavPath(value);
-              },
-            ),
+            child: _buildVoiceReferenceSelector(),
           ),
         ],
       ),
@@ -482,17 +465,69 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
     }
   }
 
-  Future<void> _pickTtsRefWavFile() async {
-    final result = await FilePicker.platform.pickFiles(
-      dialogTitle: 'リファレンスWAVファイルを選択',
-      type: FileType.custom,
-      allowedExtensions: ['wav'],
-    );
-    final path = result?.files.single.path;
-    if (path != null) {
-      _ttsRefWavPathController.text = path;
-      ref.read(ttsRefWavPathProvider.notifier).setTtsRefWavPath(path);
+  Future<void> _loadVoiceFiles() async {
+    final service = ref.read(voiceReferenceServiceProvider);
+    if (service == null) return;
+    final files = await service.listVoiceFiles();
+    if (mounted) {
+      setState(() {
+        _voiceFiles = files;
+      });
     }
+  }
+
+  Widget _buildVoiceReferenceSelector() {
+    final currentFileName = ref.watch(ttsRefWavPathProvider);
+    final hasFiles = _voiceFiles.isNotEmpty;
+
+    // If saved file no longer exists in the list, treat as unselected
+    final effectiveValue =
+        _voiceFiles.contains(currentFileName) ? currentFileName : '';
+
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            // ignore: deprecated_member_use
+            value: effectiveValue,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: 'リファレンス音声ファイル',
+              hintText: hasFiles
+                  ? null
+                  : 'voicesフォルダに音声ファイルを配置してください',
+            ),
+            items: [
+              const DropdownMenuItem(
+                value: '',
+                child: Text('なし（デフォルト音声）'),
+              ),
+              ..._voiceFiles.map(
+                (file) => DropdownMenuItem(value: file, child: Text(file)),
+              ),
+            ],
+            onChanged: (value) {
+              ref
+                  .read(ttsRefWavPathProvider.notifier)
+                  .setTtsRefWavPath(value ?? '');
+            },
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: 'ファイル一覧を更新',
+          onPressed: _loadVoiceFiles,
+        ),
+        IconButton(
+          icon: const Icon(Icons.folder_open),
+          tooltip: 'voicesフォルダを開く',
+          onPressed: () {
+            final service = ref.read(voiceReferenceServiceProvider);
+            service?.openVoicesDirectory();
+          },
+        ),
+      ],
+    );
   }
 
   Widget _buildOllamaModelSelector() {
