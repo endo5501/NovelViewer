@@ -34,43 +34,73 @@ The TTS settings tab SHALL include a field for specifying the directory path con
 - **WHEN** the user sets a model directory path and restarts the application
 - **THEN** the previously configured path is restored in the TTS settings
 
-### Requirement: Voice cloning WAV file setting
-The TTS settings tab SHALL include a field for specifying a WAV file path to be used as the voice cloning reference. The field SHALL display the current path in a text field with a file picker button. The path SHALL be persisted using SharedPreferences. When no WAV file is configured, TTS SHALL use default voice synthesis without cloning.
+### Requirement: Voice cloning reference audio file setting
+The TTS settings tab SHALL include a dropdown selector for choosing a voice cloning reference audio file from the `voices` directory. The dropdown SHALL list all supported audio files (`.wav`, `.mp3`) found in the `voices` directory. The selected file name SHALL be persisted using SharedPreferences. When no file is selected, TTS SHALL use default voice synthesis without cloning. The system SHALL provide a button to open the `voices` directory in the platform file manager, and a refresh button to rescan the directory.
 
-#### Scenario: Set WAV file via file picker
-- **WHEN** the user clicks the file picker button next to the WAV file field
-- **THEN** a native file selection dialog opens (filtered to .wav files), and the selected path is displayed in the text field and persisted
+#### Scenario: Display voice reference dropdown with available files
+- **WHEN** the user opens the TTS settings tab and the `voices` directory contains audio files
+- **THEN** a dropdown selector displays "なし（デフォルト音声）" as the first option followed by available audio file names sorted alphabetically
 
-#### Scenario: Display current WAV file path
-- **WHEN** the user opens the TTS settings tab with a previously configured WAV path
-- **THEN** the text field displays the persisted path
+#### Scenario: Select a voice reference file from dropdown
+- **WHEN** the user selects a file name from the voice reference dropdown
+- **THEN** the file name is persisted and used as the voice cloning reference for TTS synthesis
 
-#### Scenario: TTS without voice cloning when no WAV configured
-- **WHEN** no WAV file path is configured and the user starts TTS playback
-- **THEN** TTS uses default voice synthesis (without voice cloning)
+#### Scenario: Select no voice reference (default voice)
+- **WHEN** the user selects "なし（デフォルト音声）" from the dropdown
+- **THEN** the setting is cleared and TTS uses default voice synthesis without cloning
 
-#### Scenario: TTS with voice cloning when WAV configured
-- **WHEN** a valid WAV file path is configured and the user starts TTS playback
-- **THEN** TTS uses the specified WAV file as the voice cloning reference
+#### Scenario: Display dropdown when voices directory is empty
+- **WHEN** the user opens the TTS settings tab and the `voices` directory contains no supported audio files
+- **THEN** the dropdown is disabled with hint text indicating that audio files should be placed in the `voices` folder
 
-#### Scenario: WAV file path persists across app restarts
-- **WHEN** the user sets a WAV file path and restarts the application
-- **THEN** the previously configured path is restored in the TTS settings
+#### Scenario: Restore previously selected voice reference
+- **WHEN** the user opens the TTS settings tab with a previously saved voice reference file name
+- **AND** the file still exists in the `voices` directory
+- **THEN** the dropdown shows the previously selected file as the current selection
+
+#### Scenario: Previously selected file no longer exists
+- **WHEN** the user opens the TTS settings tab with a previously saved voice reference file name
+- **AND** the file no longer exists in the `voices` directory
+- **THEN** the dropdown shows "なし（デフォルト音声）" as the current selection
+
+#### Scenario: Open voices directory from settings
+- **WHEN** the user clicks the folder open button next to the voice reference dropdown
+- **THEN** the `voices` directory is opened in the platform's native file manager
+
+#### Scenario: Refresh voice file list
+- **WHEN** the user clicks the refresh button next to the voice reference dropdown
+- **THEN** the `voices` directory is rescanned and the dropdown options are updated
+
+#### Scenario: TTS with voice cloning when file selected
+- **WHEN** a valid voice reference file is selected and the user starts TTS playback
+- **THEN** TTS uses the resolved full path of the selected file as the voice cloning reference
+
+#### Scenario: Voice reference setting persists across app restarts
+- **WHEN** the user selects a voice reference file and restarts the application
+- **THEN** the previously selected file name is restored in the TTS settings
 
 ### Requirement: TTS settings persistence
-All TTS settings (model directory path, WAV file path) SHALL be persisted using SharedPreferences and restored when the application starts.
+All TTS settings (model directory path, voice reference file name) SHALL be persisted using SharedPreferences and restored when the application starts. The voice reference SHALL be stored as a file name only (e.g., `narrator.mp3`). The full path SHALL be resolved at runtime by joining the voices directory path with the stored file name.
 
 #### Scenario: Persist all TTS settings
-- **WHEN** the user configures model directory and WAV file paths
+- **WHEN** the user configures model directory and voice reference file
 - **THEN** both values are saved to SharedPreferences
 
 #### Scenario: Restore TTS settings on startup
 - **WHEN** the application starts with previously saved TTS settings
-- **THEN** the TTS model directory and WAV file paths are available to the TTS engine
+- **THEN** the TTS model directory and voice reference file name are available to the TTS engine
 
 #### Scenario: Default state with no TTS configuration
 - **WHEN** the application starts for the first time with no TTS settings saved
-- **THEN** both model directory and WAV file paths are empty and TTS functionality is unavailable
+- **THEN** both model directory and voice reference file name are empty and TTS functionality is unavailable
+
+#### Scenario: Save voice reference as file name
+- **WHEN** the user selects `narrator.mp3` from the dropdown
+- **THEN** the string `narrator.mp3` is persisted in SharedPreferences
+
+#### Scenario: Load file name setting and resolve to full path
+- **WHEN** the stored setting value is `narrator.mp3`
+- **THEN** the system resolves it to `{LibraryParentDir}/voices/narrator.mp3` for synthesis
 
 ### Requirement: TTS model download section in settings
 The TTS settings tab SHALL include a model download section positioned above the existing model directory and WAV file path fields. The section SHALL display different content based on the current download state.
