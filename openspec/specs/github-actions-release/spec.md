@@ -25,7 +25,7 @@ GitHub Actionsワークフローは、`v*` パターンに一致するタグがp
 
 #### Scenario: ZIP contains all required files
 - **WHEN** ZIPファイルが作成される
-- **THEN** ZIPには `novel_viewer.exe`、`flutter_windows.dll`、`sqlite3.dll`、`data/` ディレクトリが含まれる
+- **THEN** ZIPには `novel_viewer.exe`、`flutter_windows.dll`、`sqlite3.dll`、`qwen3_tts_ffi.dll`、`data/` ディレクトリが含まれる
 
 ### Requirement: Automatic upload to GitHub Releases
 ZIPファイルは `softprops/action-gh-release` を使用してGitHub Releasesに自動アップロードされなければならない（SHALL）。
