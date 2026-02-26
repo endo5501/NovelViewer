@@ -160,6 +160,14 @@ class _ManualAudioPlayer implements TtsAudioPlayer {
   }
 }
 
+/// Fake audio player that throws on dispose to simulate cleanup failures.
+class _ThrowingDisposeAudioPlayer extends _ManualAudioPlayer {
+  @override
+  Future<void> dispose() async {
+    throw Exception('dispose failed: DB closed');
+  }
+}
+
 /// Fake audio player that simulates just_audio's BehaviorSubject behavior:
 /// new subscribers to playerStateStream immediately receive the latest state.
 /// This is critical for catching bugs where a stale 'completed' state from
@@ -621,6 +629,42 @@ void main() {
       expect(
           container.read(ttsPlaybackStateProvider), TtsPlaybackState.stopped);
       expect(container.read(ttsHighlightRangeProvider), isNull);
+    });
+
+    test('stop clears all state even when audioPlayer.dispose throws',
+        () async {
+      final isolate = _FakeTtsIsolate();
+      final player = _ThrowingDisposeAudioPlayer();
+      final controller = TtsStreamingController(
+        ref: container,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+      );
+
+      final future = controller.start(
+        text: '文1。',
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+      );
+
+      await _pumpUntil(() => player.isPlaying);
+
+      // Verify highlight is set before stop
+      expect(container.read(ttsHighlightRangeProvider), isNotNull);
+
+      // stop() should not throw even when dispose fails
+      await controller.stop();
+      await future;
+
+      // All state must be cleared despite the exception
+      expect(
+          container.read(ttsPlaybackStateProvider), TtsPlaybackState.stopped);
+      expect(container.read(ttsHighlightRangeProvider), isNull);
+      expect(container.read(ttsGenerationProgressProvider).current, 0);
+      expect(container.read(ttsGenerationProgressProvider).total, 0);
     });
 
     test('stop resets generation progress provider', () async {

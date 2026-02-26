@@ -173,14 +173,23 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
   }
 
   Future<void> _stopStreaming() async {
-    await _streamingController?.stop();
-    _streamingController = null;
-    await _streamingDb?.close();
-    _streamingDb = null;
+    try {
+      await _streamingController?.stop();
+    } finally {
+      _streamingController = null;
+      await _streamingDb?.close();
+      _streamingDb = null;
 
-    if (!mounted) return;
-    ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
-    _lastCheckedFileKey = null;
+      if (!mounted) return;
+      // Defensively clear all TTS state regardless of stop() success
+      ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
+      ref.read(ttsPlaybackStateProvider.notifier).set(
+          TtsPlaybackState.stopped);
+      ref.read(ttsHighlightRangeProvider.notifier).set(null);
+      ref.read(ttsGenerationProgressProvider.notifier)
+          .set(TtsGenerationProgress.zero);
+      _lastCheckedFileKey = null;
+    }
   }
 
   Future<void> _pausePlayback() async {

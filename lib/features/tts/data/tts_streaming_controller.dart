@@ -293,18 +293,23 @@ class TtsStreamingController {
     }
     _activePlayCompleter = null;
 
-    // Stop generation
-    await _generationController?.cancel();
-    _generationController = null;
+    try {
+      // Stop generation
+      await _generationController?.cancel();
+      _generationController = null;
 
-    // Stop playback
-    await _audioPlayer.stop();
-    await _audioPlayer.dispose();
-
-    ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.stopped);
-    ref.read(ttsHighlightRangeProvider.notifier).set(null);
-    ref.read(ttsGenerationProgressProvider.notifier)
-        .set(TtsGenerationProgress.zero);
+      // Stop playback
+      await _audioPlayer.stop();
+      await _audioPlayer.dispose();
+    } catch (_) {
+      // Ignore cleanup errors (e.g. DB closed by concurrent finally block)
+    } finally {
+      // Always clear state even if cleanup throws
+      ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.stopped);
+      ref.read(ttsHighlightRangeProvider.notifier).set(null);
+      ref.read(ttsGenerationProgressProvider.notifier)
+          .set(TtsGenerationProgress.zero);
+    }
 
     await _cleanupFiles();
   }

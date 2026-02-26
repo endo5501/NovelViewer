@@ -92,3 +92,5 @@ C++側の`load_audio_file`はWAV形式（PCM 16/32bit、IEEE Float 32bit）の�
 **[voicesフォルダの手動管理]** → ユーザーが手動で`voices`フォルダにファイルを配置する必要がある。アプリ内にフォルダを開くボタンを設け、ファイル配置を容易にする
 
 **[ファイル一覧の更新タイミング]** → 設定画面を開いた時点でスキャンする。アプリ起動中にファイルを追加した場合は、設定画面を再度開く必要がある。リフレッシュボタンでの再スキャンも提供する
+
+**[TTS停止時のstate競合（実装中に発見・修正）]** → `_startStreaming()`のfinallyブロックによるDB closeと`stop()`内の`cancel()`が並行実行される際、`cancel()`のDB操作が例外を発生させ、`stop()`のstate クリーンアップ（ハイライト解除等）に到達しない競合条件が発覚。対策として`stop()`にtry-catch-finallyを追加し例外発生時もstateを確実にリセット。加えて`_stopStreaming()`でも`stop()`の成否に関わらず全TTS state（highlight, playbackState, generationProgress, audioState）を直接クリアする二重防御を実装
