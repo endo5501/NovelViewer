@@ -32,8 +32,10 @@ class TtsEditController {
 
   bool _cancelled = false;
   int? _episodeId;
+  String? _fileName;
   int _sampleRate = 24000;
   StreamSubscription<TtsIsolateResponse>? _subscription;
+  Completer<void>? _activePlayCompleter;
   final _writtenFiles = <String>[];
 
   void Function(int segmentIndex)? onSegmentGenerated;
@@ -46,6 +48,7 @@ class TtsEditController {
     required int sampleRate,
   }) async {
     _sampleRate = sampleRate;
+    _fileName = fileName;
 
     final originalSegments = _textSegmenter.splitIntoSentences(text);
 
@@ -65,10 +68,11 @@ class TtsEditController {
 
   Future<void> updateSegmentText(int segmentIndex, String newText) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return;
-    if (_episodeId == null) return;
 
     final segment = _segments[segmentIndex];
     segment.text = newText;
+
+    await _ensureEpisodeExists();
 
     if (segment.dbRecordExists) {
       await _repository.updateSegmentText(_episodeId!, segmentIndex, newText);
@@ -88,10 +92,11 @@ class TtsEditController {
   Future<void> updateSegmentRefWavPath(
       int segmentIndex, String? refWavPath) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return;
-    if (_episodeId == null) return;
 
     final segment = _segments[segmentIndex];
     segment.refWavPath = refWavPath;
+
+    await _ensureEpisodeExists();
 
     if (segment.dbRecordExists) {
       await _repository.updateSegmentRefWavPath(
@@ -111,12 +116,23 @@ class TtsEditController {
 
   Future<void> updateSegmentMemo(int segmentIndex, String? memo) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return;
-    if (_episodeId == null) return;
 
     final segment = _segments[segmentIndex];
     segment.memo = memo;
 
+    await _ensureEpisodeExists();
+
     if (segment.dbRecordExists) {
+      await _repository.updateSegmentMemo(_episodeId!, segmentIndex, memo);
+    } else {
+      await _repository.insertSegment(
+        episodeId: _episodeId!,
+        segmentIndex: segmentIndex,
+        text: segment.text,
+        textOffset: segment.textOffset,
+        textLength: segment.textLength,
+      );
+      segment.dbRecordExists = true;
       await _repository.updateSegmentMemo(_episodeId!, segmentIndex, memo);
     }
   }
@@ -159,7 +175,7 @@ class TtsEditController {
       sampleRate: result.sampleRate,
     );
 
-    await _ensureEpisodeExists(segment);
+    await _ensureEpisodeExists();
 
     if (segment.dbRecordExists) {
       await _repository.updateSegmentAudio(
@@ -231,6 +247,7 @@ class TtsEditController {
     await _audioPlayer.setFilePath(filePath);
 
     final playCompleter = Completer<void>();
+    _activePlayCompleter = playCompleter;
     late StreamSubscription<TtsPlayerState> playSub;
     playSub = _audioPlayer.playerStateStream.listen((state) {
       if (state == TtsPlayerState.completed && !playCompleter.isCompleted) {
@@ -240,20 +257,27 @@ class TtsEditController {
 
     await _audioPlayer.play();
     await playCompleter.future;
+    _activePlayCompleter = null;
     await playSub.cancel();
   }
 
-  Future<void> playAll() async {
+  Future<void> playAll({void Function(int)? onSegmentStart}) async {
     _cancelled = false;
     for (var i = 0; i < _segments.length; i++) {
       if (_cancelled) break;
       if (!_segments[i].hasAudio) continue;
+      onSegmentStart?.call(i);
       await playSegment(i);
     }
   }
 
   Future<void> stopPlayback() async {
     _cancelled = true;
+    final completer = _activePlayCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
+    }
+    _activePlayCompleter = null;
     await _audioPlayer.stop();
   }
 
@@ -306,13 +330,11 @@ class TtsEditController {
     await _cleanupFiles();
   }
 
-  Future<void> _ensureEpisodeExists(TtsEditSegment segment) async {
+  Future<void> _ensureEpisodeExists() async {
     if (_episodeId != null) return;
 
-    // This shouldn't normally happen since loadSegments should set _episodeId
-    // But if no episode exists yet, create one
     _episodeId = await _repository.createEpisode(
-      fileName: 'unknown',
+      fileName: _fileName ?? 'unknown',
       sampleRate: _sampleRate,
       status: 'partial',
     );

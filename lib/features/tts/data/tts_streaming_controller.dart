@@ -85,21 +85,31 @@ class TtsStreamingController {
     }
 
     // Start playback with on-demand generation
-    await _startPlayback(
-      episodeId: episodeId,
-      segments: segments,
-      dbSegmentMap: dbSegmentMap,
-      modelDir: modelDir,
-      sampleRate: sampleRate,
-      refWavPath: refWavPath,
-      startOffset: startOffset,
-    );
+    try {
+      await _startPlayback(
+        episodeId: episodeId,
+        segments: segments,
+        dbSegmentMap: dbSegmentMap,
+        modelDir: modelDir,
+        sampleRate: sampleRate,
+        refWavPath: refWavPath,
+        startOffset: startOffset,
+      );
 
-    // Update episode status
-    if (_stopped) {
-      await _repository.updateEpisodeStatus(episodeId, 'partial');
-    } else {
-      await _repository.updateEpisodeStatus(episodeId, 'completed');
+      // Update episode status
+      if (_stopped) {
+        await _repository.updateEpisodeStatus(episodeId, 'partial');
+      } else {
+        await _repository.updateEpisodeStatus(episodeId, 'completed');
+      }
+    } finally {
+      // Clean up isolate resources on natural completion
+      await _subscription?.cancel();
+      _subscription = null;
+      if (_modelLoaded) {
+        await _ttsIsolate.dispose();
+        _modelLoaded = false;
+      }
     }
   }
 

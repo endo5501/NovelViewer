@@ -219,12 +219,12 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final controller = _controller;
     if (controller == null) return;
 
-    for (var i = 0; i < controller.segments.length; i++) {
-      if (!controller.segments[i].hasAudio) continue;
-      ref.read(ttsEditPlaybackIndexProvider.notifier).set(i);
-      await controller.playSegment(i);
-      if (!mounted) return;
-    }
+    await controller.playAll(onSegmentStart: (i) {
+      if (mounted) {
+        ref.read(ttsEditPlaybackIndexProvider.notifier).set(i);
+      }
+    });
+    if (!mounted) return;
     ref.read(ttsEditPlaybackIndexProvider.notifier).set(null);
   }
 
