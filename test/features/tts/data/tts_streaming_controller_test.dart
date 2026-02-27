@@ -23,6 +23,7 @@ class _FakeTtsIsolate implements TtsIsolate {
   bool spawned = false;
   bool disposed = false;
   final synthesizeRequests = <String>[];
+  final synthesizeRefWavPaths = <String?>[];
 
   @override
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
@@ -43,6 +44,7 @@ class _FakeTtsIsolate implements TtsIsolate {
   @override
   void synthesize(String text, {String? refWavPath}) {
     synthesizeRequests.add(text);
+    synthesizeRefWavPaths.add(refWavPath);
     Future.microtask(() {
       _responseController.add(SynthesisResultResponse(
         audio: Float32List.fromList([0.1, 0.2, 0.3]),
@@ -665,6 +667,168 @@ void main() {
       expect(container.read(ttsHighlightRangeProvider), isNull);
       expect(container.read(ttsGenerationProgressProvider).current, 0);
       expect(container.read(ttsGenerationProgressProvider).total, 0);
+    });
+
+    test('plays mixed generation state: some segments have audio, some do not',
+        () async {
+      // Simulate edit screen scenario: segment 0 and 2 have audio, 1 does not
+      const text = '文1。文2。文3。';
+      final episodeId = await repository.createEpisode(
+        fileName: '0001_テスト.txt',
+        sampleRate: 24000,
+        status: 'partial',
+        textHash: _computeTextHash(text),
+      );
+      // Segment 0: has audio
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 0,
+        text: '文1。',
+        textOffset: 0,
+        textLength: 3,
+        audioData: _makeWavBytes(),
+        sampleCount: 5,
+      );
+      // Segment 1: edited text, no audio (from edit screen)
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 1,
+        text: '編集済み文2。',
+        textOffset: 3,
+        textLength: 3,
+      );
+      // Segment 2: has audio
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 2,
+        text: '文3。',
+        textOffset: 6,
+        textLength: 3,
+        audioData: _makeWavBytes(),
+        sampleCount: 5,
+      );
+
+      final isolate = _FakeTtsIsolate();
+      final player = _AutoCompleteAudioPlayer();
+      final controller = TtsStreamingController(
+        ref: container,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+      );
+
+      await controller.start(
+        text: text,
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+      );
+
+      // Should have synthesized only segment 1 (the one without audio)
+      expect(isolate.synthesizeRequests, hasLength(1));
+      expect(isolate.synthesizeRequests[0], '編集済み文2。');
+
+      // All 3 segments should have been played
+      expect(player.playedFiles, hasLength(3));
+
+      // Episode should be completed
+      final episode =
+          await repository.findEpisodeByFileName('0001_テスト.txt');
+      expect(episode!['status'], 'completed');
+    });
+
+    test('on-demand generation uses DB text for edited segments', () async {
+      const text = '山奥の一軒家。散歩に出かけよう。';
+      final episodeId = await repository.createEpisode(
+        fileName: '0001_テスト.txt',
+        sampleRate: 24000,
+        status: 'partial',
+        textHash: _computeTextHash(text),
+      );
+      // Segment 0: edited text, no audio
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 0,
+        text: '山奥のいっけんや。',
+        textOffset: 0,
+        textLength: 6,
+      );
+      // Segment 1: no DB record at all
+
+      final isolate = _FakeTtsIsolate();
+      final player = _AutoCompleteAudioPlayer();
+      final controller = TtsStreamingController(
+        ref: container,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+      );
+
+      await controller.start(
+        text: text,
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+      );
+
+      // Both segments should be synthesized
+      expect(isolate.synthesizeRequests, hasLength(2));
+      // Segment 0: should use the edited text from DB
+      expect(isolate.synthesizeRequests[0], '山奥のいっけんや。');
+      // Segment 1: should use original text from TextSegmenter
+      expect(isolate.synthesizeRequests[1], '散歩に出かけよう。');
+
+      // Both should have been played
+      expect(player.playedFiles, hasLength(2));
+    });
+
+    test('on-demand generation uses per-segment ref_wav_path', () async {
+      const text = '文1。文2。';
+      final episodeId = await repository.createEpisode(
+        fileName: '0001_テスト.txt',
+        sampleRate: 24000,
+        status: 'partial',
+        textHash: _computeTextHash(text),
+      );
+      // Segment 0: no audio, has per-segment ref_wav_path
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 0,
+        text: '文1。',
+        textOffset: 0,
+        textLength: 3,
+        refWavPath: '/voices/custom_voice.wav',
+      );
+      // Segment 1: no DB record, should use global ref_wav_path
+
+      final isolate = _FakeTtsIsolate();
+      final player = _AutoCompleteAudioPlayer();
+      final controller = TtsStreamingController(
+        ref: container,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+      );
+
+      await controller.start(
+        text: text,
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+        refWavPath: '/voices/global_voice.wav',
+      );
+
+      // Both should be synthesized
+      expect(isolate.synthesizeRequests, hasLength(2));
+      // Segment 0: should use per-segment ref_wav_path
+      expect(isolate.synthesizeRefWavPaths[0], '/voices/custom_voice.wav');
+      // Segment 1: should use global ref_wav_path
+      expect(isolate.synthesizeRefWavPaths[1], '/voices/global_voice.wav');
+      // Verify playback happened
+      expect(player.playedFiles, hasLength(2));
     });
 
     test('stop resets generation progress provider', () async {
