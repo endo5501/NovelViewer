@@ -12,9 +12,9 @@
 
 ## 3. TtsEditSegmentモデル
 
-- [ ] 3.1 `TtsEditSegment`データクラスを作成: `segmentIndex`, `originalText`, `text`, `textOffset`, `textLength`, `hasAudio`, `refWavPath`, `memo`, `dbRecordExists`フィールドを持つ
-- [ ] 3.2 セグメントマージロジックのテストを作成: TextSegmenter出力とDB既存レコードをsegment_indexで照合し`List<TtsEditSegment>`を生成するロジック
-- [ ] 3.3 セグメントマージロジックを実装
+- [x] 3.1 `TtsEditSegment`データクラスを作成: `segmentIndex`, `originalText`, `text`, `textOffset`, `textLength`, `hasAudio`, `refWavPath`, `memo`, `dbRecordExists`フィールドを持つ
+- [x] 3.2 セグメントマージロジックのテストを作成: TextSegmenter出力とDB既存レコードをsegment_indexで照合し`List<TtsEditSegment>`を生成するロジック
+- [x] 3.3 セグメントマージロジックを実装
 
 ## 4. TtsEditController
 
