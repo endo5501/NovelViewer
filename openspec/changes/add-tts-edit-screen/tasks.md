@@ -1,8 +1,8 @@
 ## 1. DBスキーマ変更とマイグレーション
 
-- [ ] 1.1 `TtsAudioDatabase`のマイグレーション（version 2 → 3）のテストを作成: `tts_segments`テーブル再作成（`audio_data`/`sample_count`をnullable化、`memo`カラム追加）、既存データの保持を検証
-- [ ] 1.2 `TtsAudioDatabase._onUpgrade`にversion 3マイグレーションを実装: テーブル再作成方式（新テーブル作成→データコピー→旧テーブル削除→リネーム→インデックス再作成）
-- [ ] 1.3 `TtsAudioDatabase._onCreate`のスキーマを更新: `audio_data BLOB`（nullable）、`sample_count INTEGER`（nullable）、`memo TEXT`（nullable）
+- [x] 1.1 `TtsAudioDatabase`のマイグレーション（version 2 → 3）のテストを作成: `tts_segments`テーブル再作成（`audio_data`/`sample_count`をnullable化、`memo`カラム追加）、既存データの保持を検証
+- [x] 1.2 `TtsAudioDatabase._onUpgrade`にversion 3マイグレーションを実装: テーブル再作成方式（新テーブル作成→データコピー→旧テーブル削除→リネーム→インデックス再作成）
+- [x] 1.3 `TtsAudioDatabase._onCreate`のスキーマを更新: `audio_data BLOB`（nullable）、`sample_count INTEGER`（nullable）、`memo TEXT`（nullable）
 
 ## 2. リポジトリCRUD拡張
 

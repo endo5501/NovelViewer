@@ -303,6 +303,220 @@ void main() {
       await db.close();
     });
 
+    test('creates tts_segments table with memo column', () async {
+      final db = TtsAudioDatabase(tempDir.path);
+      final database = await db.database;
+
+      final columns = await database.rawQuery(
+        "PRAGMA table_info('tts_segments')",
+      );
+      final columnNames = columns.map((c) => c['name'] as String).toList();
+      expect(columnNames, contains('memo'));
+
+      await db.close();
+    });
+
+    test('tts_segments audio_data and sample_count are nullable', () async {
+      final db = TtsAudioDatabase(tempDir.path);
+      final database = await db.database;
+
+      final columns = await database.rawQuery(
+        "PRAGMA table_info('tts_segments')",
+      );
+
+      final audioDataCol = columns.firstWhere(
+        (c) => c['name'] == 'audio_data',
+      );
+      final sampleCountCol = columns.firstWhere(
+        (c) => c['name'] == 'sample_count',
+      );
+      // notnull == 0 means nullable
+      expect(audioDataCol['notnull'], 0);
+      expect(sampleCountCol['notnull'], 0);
+
+      await db.close();
+    });
+
+    test('allows inserting segment without audio_data', () async {
+      final db = TtsAudioDatabase(tempDir.path);
+      final database = await db.database;
+
+      final episodeId = await database.insert('tts_episodes', {
+        'file_name': '0001_プロローグ.txt',
+        'sample_rate': 24000,
+        'status': 'generating',
+        'ref_wav_path': null,
+        'created_at': '2026-01-01T00:00:00.000Z',
+        'updated_at': '2026-01-01T00:00:00.000Z',
+      });
+
+      await database.insert('tts_segments', {
+        'episode_id': episodeId,
+        'segment_index': 0,
+        'text': 'テスト文。',
+        'text_offset': 0,
+        'text_length': 5,
+        'audio_data': null,
+        'sample_count': null,
+        'ref_wav_path': null,
+        'memo': 'テストメモ',
+        'created_at': '2026-01-01T00:00:00.000Z',
+      });
+
+      final segments = await database.query(
+        'tts_segments',
+        where: 'episode_id = ?',
+        whereArgs: [episodeId],
+      );
+      expect(segments, hasLength(1));
+      expect(segments.first['audio_data'], isNull);
+      expect(segments.first['sample_count'], isNull);
+      expect(segments.first['memo'], 'テストメモ');
+
+      await db.close();
+    });
+
+    test('migrates v2 database to v3 preserving data', () async {
+      // Create a v2 database (with text_hash but NOT NULL audio_data)
+      final dbPath = '${tempDir.path}/tts_audio.db';
+      final oldDb = await openDatabase(
+        dbPath,
+        version: 2,
+        onCreate: (db, version) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+          await db.execute('''
+            CREATE TABLE tts_episodes (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              file_name TEXT NOT NULL UNIQUE,
+              sample_rate INTEGER NOT NULL,
+              status TEXT NOT NULL,
+              ref_wav_path TEXT,
+              text_hash TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE tts_segments (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              episode_id INTEGER NOT NULL,
+              segment_index INTEGER NOT NULL,
+              text TEXT NOT NULL,
+              text_offset INTEGER NOT NULL,
+              text_length INTEGER NOT NULL,
+              audio_data BLOB NOT NULL,
+              sample_count INTEGER NOT NULL,
+              ref_wav_path TEXT,
+              created_at TEXT NOT NULL,
+              FOREIGN KEY (episode_id) REFERENCES tts_episodes(id) ON DELETE CASCADE
+            )
+          ''');
+          await db.execute('''
+            CREATE UNIQUE INDEX idx_segments_episode_index
+            ON tts_segments(episode_id, segment_index)
+          ''');
+        },
+      );
+
+      // Insert test data
+      final episodeId = await oldDb.insert('tts_episodes', {
+        'file_name': '0001_プロローグ.txt',
+        'sample_rate': 24000,
+        'status': 'completed',
+        'ref_wav_path': '/path/to/ref.wav',
+        'text_hash': 'abc123',
+        'created_at': '2026-01-01T00:00:00.000Z',
+        'updated_at': '2026-01-01T00:00:00.000Z',
+      });
+
+      final audioData = Uint8List.fromList([1, 2, 3, 4, 5]);
+      await oldDb.insert('tts_segments', {
+        'episode_id': episodeId,
+        'segment_index': 0,
+        'text': 'テスト文。',
+        'text_offset': 0,
+        'text_length': 5,
+        'audio_data': audioData,
+        'sample_count': 100,
+        'ref_wav_path': '/path/to/ref.wav',
+        'created_at': '2026-01-01T00:00:00.000Z',
+      });
+
+      await oldDb.insert('tts_segments', {
+        'episode_id': episodeId,
+        'segment_index': 1,
+        'text': '二番目の文。',
+        'text_offset': 5,
+        'text_length': 6,
+        'audio_data': Uint8List.fromList([6, 7, 8]),
+        'sample_count': 200,
+        'ref_wav_path': null,
+        'created_at': '2026-01-01T00:00:00.000Z',
+      });
+
+      await oldDb.close();
+
+      // Open with TtsAudioDatabase which should migrate to v3
+      final db = TtsAudioDatabase(tempDir.path);
+      final database = await db.database;
+
+      // Verify memo column exists
+      final columns = await database.rawQuery(
+        "PRAGMA table_info('tts_segments')",
+      );
+      final columnNames = columns.map((c) => c['name'] as String).toList();
+      expect(columnNames, contains('memo'));
+
+      // Verify audio_data is now nullable
+      final audioDataCol = columns.firstWhere(
+        (c) => c['name'] == 'audio_data',
+      );
+      expect(audioDataCol['notnull'], 0);
+
+      // Verify sample_count is now nullable
+      final sampleCountCol = columns.firstWhere(
+        (c) => c['name'] == 'sample_count',
+      );
+      expect(sampleCountCol['notnull'], 0);
+
+      // Verify existing data is preserved
+      final episodes = await database.query('tts_episodes');
+      expect(episodes, hasLength(1));
+      expect(episodes.first['file_name'], '0001_プロローグ.txt');
+      expect(episodes.first['text_hash'], 'abc123');
+
+      final segments = await database.query(
+        'tts_segments',
+        orderBy: 'segment_index ASC',
+      );
+      expect(segments, hasLength(2));
+      expect(segments[0]['text'], 'テスト文。');
+      expect(segments[0]['audio_data'], audioData);
+      expect(segments[0]['sample_count'], 100);
+      expect(segments[0]['ref_wav_path'], '/path/to/ref.wav');
+      expect(segments[0]['memo'], isNull);
+      expect(segments[1]['text'], '二番目の文。');
+      expect(segments[1]['segment_index'], 1);
+
+      // Verify unique index still works
+      expect(
+        () async => await database.insert('tts_segments', {
+          'episode_id': episodeId,
+          'segment_index': 0,
+          'text': '重複テスト。',
+          'text_offset': 0,
+          'text_length': 6,
+          'audio_data': null,
+          'sample_count': null,
+          'ref_wav_path': null,
+          'created_at': '2026-01-01T00:00:00.000Z',
+        }),
+        throwsA(isA<Exception>()),
+      );
+
+      await db.close();
+    });
+
     test('handles corrupted database by recreating', () async {
       final dbFile = File('${tempDir.path}/tts_audio.db');
       await dbFile.writeAsString('corrupted data');
