@@ -34,6 +34,44 @@ class VoiceReferenceService {
     return p.join(voicesDirPath, p.basename(fileName));
   }
 
+  Future<String> addVoiceFile(String sourcePath) async {
+    final ext = p.extension(sourcePath).toLowerCase();
+    if (!_supportedExtensions.contains(ext)) {
+      throw ArgumentError('Unsupported file type: $ext. Only .wav and .mp3 are supported.');
+    }
+    await ensureVoicesDir();
+    final fileName = p.basename(sourcePath);
+    final destPath = p.join(voicesDirPath, fileName);
+    if (File(destPath).existsSync()) {
+      throw StateError('A file named "$fileName" already exists in the voices directory.');
+    }
+    await File(sourcePath).copy(destPath);
+    return fileName;
+  }
+
+  Future<void> renameVoiceFile(String oldName, String newName) async {
+    _validateFileName(oldName);
+    _validateFileName(newName);
+    final oldPath = p.join(voicesDirPath, oldName);
+    if (!File(oldPath).existsSync()) {
+      throw StateError('File "$oldName" does not exist in the voices directory.');
+    }
+    final newPath = p.join(voicesDirPath, newName);
+    if (File(newPath).existsSync()) {
+      throw StateError('A file named "$newName" already exists in the voices directory.');
+    }
+    await File(oldPath).rename(newPath);
+  }
+
+  static void _validateFileName(String name) {
+    if (name.isEmpty) {
+      throw ArgumentError('File name is empty.');
+    }
+    if (p.basename(name) != name) {
+      throw ArgumentError('Invalid file name: $name');
+    }
+  }
+
   Future<void> openVoicesDirectory() async {
     await ensureVoicesDir();
     final (String command, List<String> args) = switch (true) {

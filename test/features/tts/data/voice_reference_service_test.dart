@@ -105,4 +105,134 @@ void main() {
       expect(service.resolveVoiceFilePath('narrator.mp3'), expected);
     });
   });
+
+  group('addVoiceFile', () {
+    late Directory sourceDir;
+
+    setUp(() {
+      sourceDir = Directory(p.join(tempDir.path, 'source'));
+      sourceDir.createSync();
+    });
+
+    test('copies a supported wav file to voices directory', () async {
+      final sourceFile = File(p.join(sourceDir.path, 'test_voice.wav'));
+      sourceFile.writeAsStringSync('wav content');
+
+      final result = await service.addVoiceFile(sourceFile.path);
+
+      expect(result, 'test_voice.wav');
+      final copiedFile = File(p.join(service.voicesDirPath, 'test_voice.wav'));
+      expect(copiedFile.existsSync(), isTrue);
+      expect(copiedFile.readAsStringSync(), 'wav content');
+    });
+
+    test('copies a supported mp3 file to voices directory', () async {
+      final sourceFile = File(p.join(sourceDir.path, 'test_voice.mp3'));
+      sourceFile.writeAsStringSync('mp3 content');
+
+      final result = await service.addVoiceFile(sourceFile.path);
+
+      expect(result, 'test_voice.mp3');
+      final copiedFile = File(p.join(service.voicesDirPath, 'test_voice.mp3'));
+      expect(copiedFile.existsSync(), isTrue);
+    });
+
+    test('rejects unsupported file extension', () async {
+      final sourceFile = File(p.join(sourceDir.path, 'readme.txt'));
+      sourceFile.writeAsStringSync('text');
+
+      expect(
+        () => service.addVoiceFile(sourceFile.path),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('rejects duplicate file name', () async {
+      final voicesDir = Directory(service.voicesDirPath);
+      voicesDir.createSync();
+      File(p.join(voicesDir.path, 'existing.wav')).writeAsStringSync('old');
+
+      final sourceFile = File(p.join(sourceDir.path, 'existing.wav'));
+      sourceFile.writeAsStringSync('new');
+
+      expect(
+        () => service.addVoiceFile(sourceFile.path),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('auto-creates voices directory if it does not exist', () async {
+      expect(Directory(service.voicesDirPath).existsSync(), isFalse);
+
+      final sourceFile = File(p.join(sourceDir.path, 'voice.wav'));
+      sourceFile.writeAsStringSync('content');
+
+      await service.addVoiceFile(sourceFile.path);
+
+      expect(Directory(service.voicesDirPath).existsSync(), isTrue);
+      expect(
+          File(p.join(service.voicesDirPath, 'voice.wav')).existsSync(), isTrue);
+    });
+  });
+
+  group('renameVoiceFile', () {
+    test('renames a voice file with a valid new name', () async {
+      final voicesDir = Directory(service.voicesDirPath);
+      voicesDir.createSync();
+      File(p.join(voicesDir.path, 'old_name.wav')).writeAsStringSync('content');
+
+      await service.renameVoiceFile('old_name.wav', 'new_name.wav');
+
+      expect(
+          File(p.join(voicesDir.path, 'old_name.wav')).existsSync(), isFalse);
+      expect(
+          File(p.join(voicesDir.path, 'new_name.wav')).existsSync(), isTrue);
+      expect(File(p.join(voicesDir.path, 'new_name.wav')).readAsStringSync(),
+          'content');
+    });
+
+    test('rejects rename to an existing name', () async {
+      final voicesDir = Directory(service.voicesDirPath);
+      voicesDir.createSync();
+      File(p.join(voicesDir.path, 'file_a.wav')).writeAsStringSync('a');
+      File(p.join(voicesDir.path, 'file_b.wav')).writeAsStringSync('b');
+
+      expect(
+        () => service.renameVoiceFile('file_a.wav', 'file_b.wav'),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('rejects rename of a non-existent file', () async {
+      final voicesDir = Directory(service.voicesDirPath);
+      voicesDir.createSync();
+
+      expect(
+        () => service.renameVoiceFile('nonexistent.wav', 'new_name.wav'),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('rejects path traversal in oldName', () async {
+      final voicesDir = Directory(service.voicesDirPath);
+      voicesDir.createSync();
+      File(p.join(voicesDir.path, 'a.wav')).writeAsStringSync('');
+
+      expect(
+        () => service.renameVoiceFile('../a.wav', 'b.wav'),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('rejects path traversal in newName', () async {
+      final voicesDir = Directory(service.voicesDirPath);
+      voicesDir.createSync();
+      File(p.join(voicesDir.path, 'a.wav')).writeAsStringSync('');
+
+      expect(
+        () => service.renameVoiceFile('a.wav', '../b.wav'),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+  });
 }
