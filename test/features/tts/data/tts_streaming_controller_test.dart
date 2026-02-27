@@ -831,6 +831,111 @@ void main() {
       expect(player.playedFiles, hasLength(2));
     });
 
+    test('start from text offset plays from the matching segment', () async {
+      const text = '文1。文2。文3。';
+      final episodeId = await repository.createEpisode(
+        fileName: '0001_テスト.txt',
+        sampleRate: 24000,
+        status: 'completed',
+        textHash: _computeTextHash(text),
+      );
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 0,
+        text: '文1。',
+        textOffset: 0,
+        textLength: 3,
+        audioData: _makeWavBytes(),
+        sampleCount: 5,
+      );
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 1,
+        text: '文2。',
+        textOffset: 3,
+        textLength: 3,
+        audioData: _makeWavBytes(),
+        sampleCount: 5,
+      );
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 2,
+        text: '文3。',
+        textOffset: 6,
+        textLength: 3,
+        audioData: _makeWavBytes(),
+        sampleCount: 5,
+      );
+
+      final isolate = _FakeTtsIsolate();
+      final player = _AutoCompleteAudioPlayer();
+      final controller = TtsStreamingController(
+        ref: container,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+      );
+
+      await controller.start(
+        text: text,
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+        startOffset: 4, // Should match segment 1 (text_offset=3)
+      );
+
+      // Should play segments 1 and 2 (skipping segment 0)
+      expect(player.playedFiles, hasLength(2));
+      // No generation needed
+      expect(isolate.synthesizeRequests, isEmpty);
+    });
+
+    test('on-demand generation treats empty ref_wav_path as no reference',
+        () async {
+      const text = '文1。文2。';
+      final episodeId = await repository.createEpisode(
+        fileName: '0001_テスト.txt',
+        sampleRate: 24000,
+        status: 'partial',
+        textHash: _computeTextHash(text),
+      );
+      // Segment 0: has empty ref_wav_path (user chose "なし")
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 0,
+        text: '文1。',
+        textOffset: 0,
+        textLength: 3,
+        refWavPath: '',
+      );
+      // Segment 1: no DB record, should use global ref_wav_path
+
+      final isolate = _FakeTtsIsolate();
+      final player = _AutoCompleteAudioPlayer();
+      final controller = TtsStreamingController(
+        ref: container,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+      );
+
+      await controller.start(
+        text: text,
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+        refWavPath: '/voices/global.wav',
+      );
+
+      expect(isolate.synthesizeRequests, hasLength(2));
+      // Segment 0: empty ref_wav_path should become null (no reference)
+      expect(isolate.synthesizeRefWavPaths[0], isNull);
+      // Segment 1: should use global ref_wav_path
+      expect(isolate.synthesizeRefWavPaths[1], '/voices/global.wav');
+    });
+
     test('stop resets generation progress provider', () async {
       final isolate = _FakeTtsIsolate();
       final player = _ManualAudioPlayer();

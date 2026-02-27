@@ -218,7 +218,10 @@ class TtsEditController {
 
       final segmentIndex = ungenerated[idx];
       final segment = _segments[segmentIndex];
-      final refWavPath = segment.refWavPath ?? globalRefWavPath;
+      final segmentRef = segment.refWavPath;
+      final refWavPath = segmentRef != null
+          ? (segmentRef.isEmpty ? null : segmentRef)
+          : globalRefWavPath;
 
       final success = await generateSegment(
         segmentIndex: segmentIndex,

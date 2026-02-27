@@ -135,6 +135,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     if (voiceService == null) return null;
 
     if (segmentRefWavPath != null) {
+      if (segmentRefWavPath.isEmpty) return null; // "なし" - no reference audio
       return voiceService.resolveVoiceFilePath(segmentRefWavPath);
     }
 
@@ -505,11 +506,15 @@ class _TtsEditSegmentRowState extends State<_TtsEditSegmentRow> {
   @override
   Widget build(BuildContext context) {
     final refWavPath = widget.segment.refWavPath;
-    // If set but file no longer exists, show as null
-    final effectiveRefValue =
-        (refWavPath != null && !widget.voiceFiles.contains(refWavPath))
-            ? null
-            : refWavPath;
+    // Map ref_wav_path to dropdown value:
+    //   null → null (設定値), '' → '' (なし), known file → file, missing file → '' (なし)
+    final effectiveRefValue = refWavPath == null
+        ? null
+        : refWavPath.isEmpty
+            ? ''
+            : widget.voiceFiles.contains(refWavPath)
+                ? refWavPath
+                : '';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -564,6 +569,10 @@ class _TtsEditSegmentRowState extends State<_TtsEditSegmentRow> {
                 const DropdownMenuItem<String?>(
                   value: null,
                   child: Text('設定値', style: TextStyle(fontSize: 12)),
+                ),
+                const DropdownMenuItem<String?>(
+                  value: '',
+                  child: Text('なし', style: TextStyle(fontSize: 12)),
                 ),
                 ...widget.voiceFiles.map(
                   (file) => DropdownMenuItem<String?>(

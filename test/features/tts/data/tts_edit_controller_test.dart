@@ -741,6 +741,74 @@ void main() {
         final count = await repository.getSegmentCount(episodeId);
         expect(count, 0);
       });
+
+      test('resets an unedited segment with no DB record', () async {
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '山奥の一軒家',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        expect(controller.segments[0].dbRecordExists, false);
+        expect(controller.segments[0].text, '山奥の一軒家');
+
+        // Reset should be a no-op but not throw
+        await controller.resetSegment(0);
+
+        expect(controller.segments[0].text, '山奥の一軒家');
+        expect(controller.segments[0].hasAudio, false);
+        expect(controller.segments[0].refWavPath, isNull);
+        expect(controller.segments[0].memo, isNull);
+        expect(controller.segments[0].dbRecordExists, false);
+      });
+    });
+
+    group('generateAllUngenerated with empty ref_wav_path', () {
+      test('treats empty ref_wav_path as no reference audio', () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '文1。文2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Set segment 0 ref_wav_path to empty string ("なし")
+        controller.segments[0].refWavPath = '';
+
+        await controller.generateAllUngenerated(
+          modelDir: '/models',
+          globalRefWavPath: '/voices/global.wav',
+        );
+
+        expect(isolate.synthesizeRequests, hasLength(2));
+        // Segment 0: empty ref should be treated as null
+        expect(isolate.synthesizeRequests[0].$2, isNull);
+        // Segment 1: null ref should fall back to global
+        expect(isolate.synthesizeRequests[1].$2, '/voices/global.wav');
+      });
     });
 
     group('resetAll', () {

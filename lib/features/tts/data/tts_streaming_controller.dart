@@ -215,8 +215,10 @@ class TtsStreamingController {
         // Use edited text from DB if available, otherwise original
         final synthText =
             dbRow?['text'] as String? ?? segments[i].text;
-        final synthRefWavPath =
-            dbRow?['ref_wav_path'] as String? ?? refWavPath;
+        final dbRefWavPath = dbRow?['ref_wav_path'] as String?;
+        final synthRefWavPath = dbRefWavPath != null
+            ? (dbRefWavPath.isEmpty ? null : dbRefWavPath)
+            : refWavPath;
 
         final result = await _synthesize(synthText, synthRefWavPath);
         if (result == null || _stopped) break;
