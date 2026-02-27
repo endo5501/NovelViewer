@@ -56,8 +56,8 @@ class TtsAudioRepository {
     required String text,
     required int textOffset,
     required int textLength,
-    required Uint8List audioData,
-    required int sampleCount,
+    Uint8List? audioData,
+    int? sampleCount,
     String? refWavPath,
   }) async {
     final db = await _database.database;
@@ -114,6 +114,68 @@ class TtsAudioRepository {
     final db = await _database.database;
     final result = await db.rawQuery(
       'SELECT COUNT(*) as count FROM tts_segments WHERE episode_id = ?',
+      [episodeId],
+    );
+    return result.first['count'] as int;
+  }
+
+  Future<void> updateSegmentText(
+      int episodeId, int segmentIndex, String newText) async {
+    final db = await _database.database;
+    await db.update(
+      'tts_segments',
+      {'text': newText, 'audio_data': null, 'sample_count': null},
+      where: 'episode_id = ? AND segment_index = ?',
+      whereArgs: [episodeId, segmentIndex],
+    );
+  }
+
+  Future<void> updateSegmentAudio(
+      int episodeId, int segmentIndex, Uint8List audioData, int sampleCount) async {
+    final db = await _database.database;
+    await db.update(
+      'tts_segments',
+      {'audio_data': audioData, 'sample_count': sampleCount},
+      where: 'episode_id = ? AND segment_index = ?',
+      whereArgs: [episodeId, segmentIndex],
+    );
+  }
+
+  Future<void> updateSegmentRefWavPath(
+      int episodeId, int segmentIndex, String? refWavPath) async {
+    final db = await _database.database;
+    await db.update(
+      'tts_segments',
+      {'ref_wav_path': refWavPath},
+      where: 'episode_id = ? AND segment_index = ?',
+      whereArgs: [episodeId, segmentIndex],
+    );
+  }
+
+  Future<void> updateSegmentMemo(
+      int episodeId, int segmentIndex, String? memo) async {
+    final db = await _database.database;
+    await db.update(
+      'tts_segments',
+      {'memo': memo},
+      where: 'episode_id = ? AND segment_index = ?',
+      whereArgs: [episodeId, segmentIndex],
+    );
+  }
+
+  Future<void> deleteSegment(int episodeId, int segmentIndex) async {
+    final db = await _database.database;
+    await db.delete(
+      'tts_segments',
+      where: 'episode_id = ? AND segment_index = ?',
+      whereArgs: [episodeId, segmentIndex],
+    );
+  }
+
+  Future<int> getGeneratedSegmentCount(int episodeId) async {
+    final db = await _database.database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM tts_segments WHERE episode_id = ? AND audio_data IS NOT NULL',
       [episodeId],
     );
     return result.first['count'] as int;

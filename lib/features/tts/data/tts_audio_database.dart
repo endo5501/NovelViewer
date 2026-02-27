@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 
 class TtsAudioDatabase {
   static const _databaseName = 'tts_audio.db';
-  static const _databaseVersion = 2;
+  static const _databaseVersion = 3;
 
   final String _folderPath;
   Database? _database;
@@ -69,9 +69,10 @@ class TtsAudioDatabase {
         text TEXT NOT NULL,
         text_offset INTEGER NOT NULL,
         text_length INTEGER NOT NULL,
-        audio_data BLOB NOT NULL,
-        sample_count INTEGER NOT NULL,
+        audio_data BLOB,
+        sample_count INTEGER,
         ref_wav_path TEXT,
+        memo TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY (episode_id) REFERENCES tts_episodes(id) ON DELETE CASCADE
       )
@@ -86,6 +87,39 @@ class TtsAudioDatabase {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('ALTER TABLE tts_episodes ADD COLUMN text_hash TEXT');
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE tts_segments_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          episode_id INTEGER NOT NULL,
+          segment_index INTEGER NOT NULL,
+          text TEXT NOT NULL,
+          text_offset INTEGER NOT NULL,
+          text_length INTEGER NOT NULL,
+          audio_data BLOB,
+          sample_count INTEGER,
+          ref_wav_path TEXT,
+          memo TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (episode_id) REFERENCES tts_episodes(id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('''
+        INSERT INTO tts_segments_new
+          (id, episode_id, segment_index, text, text_offset, text_length,
+           audio_data, sample_count, ref_wav_path, created_at)
+        SELECT id, episode_id, segment_index, text, text_offset, text_length,
+               audio_data, sample_count, ref_wav_path, created_at
+        FROM tts_segments
+      ''');
+      await db.execute('DROP TABLE tts_segments');
+      await db.execute(
+          'ALTER TABLE tts_segments_new RENAME TO tts_segments');
+      await db.execute('''
+        CREATE UNIQUE INDEX idx_segments_episode_index
+        ON tts_segments(episode_id, segment_index)
+      ''');
     }
   }
 
