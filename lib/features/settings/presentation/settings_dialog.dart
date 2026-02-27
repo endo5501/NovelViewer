@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/data/ollama_client.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
@@ -33,6 +37,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   late TextEditingController _modelController;
   late TextEditingController _ttsModelDirController;
   List<String> _voiceFiles = [];
+  bool _isDragging = false;
 
   List<String> _ollamaModels = [];
   bool _ollamaModelsLoading = false;
@@ -484,50 +489,151 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
     final effectiveValue =
         _voiceFiles.contains(currentFileName) ? currentFileName : '';
 
-    return Row(
-      children: [
-        Expanded(
-          child: DropdownButtonFormField<String>(
-            // ignore: deprecated_member_use
-            value: effectiveValue,
-            isExpanded: true,
-            decoration: InputDecoration(
-              labelText: 'リファレンス音声ファイル',
-              hintText: hasFiles
-                  ? null
-                  : 'voicesフォルダに音声ファイルを配置してください',
+    return DropTarget(
+      onDragEntered: (_) => setState(() => _isDragging = true),
+      onDragExited: (_) => setState(() => _isDragging = false),
+      onDragDone: (details) async {
+        setState(() => _isDragging = false);
+        await _handleFileDrop(details);
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          border: _isDragging
+              ? Border.all(
+                  color: Theme.of(context).colorScheme.primary, width: 2)
+              : null,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: _isDragging ? const EdgeInsets.all(8) : null,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    // ignore: deprecated_member_use
+                    value: effectiveValue,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'リファレンス音声ファイル',
+                      hintText: hasFiles
+                          ? null
+                          : 'voicesフォルダに音声ファイルを配置してください',
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: '',
+                        child: Text('なし（デフォルト音声）'),
+                      ),
+                      ..._voiceFiles.map(
+                        (file) =>
+                            DropdownMenuItem(value: file, child: Text(file)),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      ref
+                          .read(ttsRefWavPathProvider.notifier)
+                          .setTtsRefWavPath(value ?? '');
+                    },
+                  ),
+                ),
+                if (effectiveValue.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    tooltip: 'ファイル名を変更',
+                    onPressed: () =>
+                        _showRenameDialog(effectiveValue),
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'ファイル一覧を更新',
+                  onPressed: _loadVoiceFiles,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.folder_open),
+                  tooltip: 'voicesフォルダを開く',
+                  onPressed: () {
+                    final service = ref.read(voiceReferenceServiceProvider);
+                    service?.openVoicesDirectory();
+                  },
+                ),
+              ],
             ),
-            items: [
-              const DropdownMenuItem(
-                value: '',
-                child: Text('なし（デフォルト音声）'),
+            if (_isDragging)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text('音声ファイルをここにドロップ'),
               ),
-              ..._voiceFiles.map(
-                (file) => DropdownMenuItem(value: file, child: Text(file)),
-              ),
-            ],
-            onChanged: (value) {
-              ref
-                  .read(ttsRefWavPathProvider.notifier)
-                  .setTtsRefWavPath(value ?? '');
-            },
-          ),
+          ],
         ),
-        IconButton(
-          icon: const Icon(Icons.refresh),
-          tooltip: 'ファイル一覧を更新',
-          onPressed: _loadVoiceFiles,
-        ),
-        IconButton(
-          icon: const Icon(Icons.folder_open),
-          tooltip: 'voicesフォルダを開く',
-          onPressed: () {
-            final service = ref.read(voiceReferenceServiceProvider);
-            service?.openVoicesDirectory();
-          },
-        ),
-      ],
+      ),
     );
+  }
+
+  Future<void> _handleFileDrop(DropDoneDetails details) async {
+    final service = ref.read(voiceReferenceServiceProvider);
+    if (service == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('先にライブラリを選択してください')),
+        );
+      }
+      return;
+    }
+
+    final errors = <String>[];
+    for (final xFile in details.files) {
+      try {
+        await service.addVoiceFile(xFile.path);
+      } on ArgumentError catch (e) {
+        errors.add('${e.message}');
+      } on StateError catch (e) {
+        errors.add(e.message);
+      } on FileSystemException catch (e) {
+        errors.add('ファイル操作エラー: ${e.osError?.message ?? e.message}');
+      }
+    }
+
+    await _loadVoiceFiles();
+
+    if (errors.isNotEmpty && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errors.join('\n'))),
+      );
+    }
+  }
+
+  Future<void> _showRenameDialog(String currentFileName) async {
+    final service = ref.read(voiceReferenceServiceProvider);
+    if (service == null) return;
+
+    final ext = p.extension(currentFileName);
+    final nameWithoutExt = p.basenameWithoutExtension(currentFileName);
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => _RenameDialog(
+        initialName: nameWithoutExt,
+        extension: ext,
+        existingFiles: _voiceFiles,
+        currentFileName: currentFileName,
+      ),
+    );
+
+    if (result != null && result != currentFileName) {
+      try {
+        await service.renameVoiceFile(currentFileName, result);
+        ref.read(ttsRefWavPathProvider.notifier).setTtsRefWavPath(result);
+        await _loadVoiceFiles();
+      } on StateError catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.message)),
+          );
+        }
+      }
+    }
   }
 
   Widget _buildOllamaModelSelector() {
@@ -598,6 +704,96 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RenameDialog extends StatefulWidget {
+  final String initialName;
+  final String extension;
+  final List<String> existingFiles;
+  final String currentFileName;
+
+  const _RenameDialog({
+    required this.initialName,
+    required this.extension,
+    required this.existingFiles,
+    required this.currentFileName,
+  });
+
+  @override
+  State<_RenameDialog> createState() => _RenameDialogState();
+}
+
+class _RenameDialogState extends State<_RenameDialog> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+    _controller.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String get _newFileName => '${_controller.text}${widget.extension}';
+
+  String? get _errorText {
+    if (_controller.text.isEmpty) return null;
+    if (_newFileName != widget.currentFileName &&
+        widget.existingFiles.contains(_newFileName)) {
+      return '同名のファイルが既に存在します';
+    }
+    return null;
+  }
+
+  bool get _canConfirm =>
+      _controller.text.isNotEmpty &&
+      _errorText == null &&
+      _newFileName != widget.currentFileName;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('ファイル名の変更'),
+      content: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _controller,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'ファイル名',
+                errorText: _errorText,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 8, top: 16),
+            child: Text(
+              widget.extension,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('キャンセル'),
+        ),
+        TextButton(
+          onPressed: _canConfirm
+              ? () => Navigator.of(context).pop(_newFileName)
+              : null,
+          child: const Text('変更'),
+        ),
+      ],
     );
   }
 }

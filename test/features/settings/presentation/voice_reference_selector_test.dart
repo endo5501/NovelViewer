@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -146,6 +147,136 @@ void main() {
       await navigateToTtsTab(tester);
 
       expect(find.text('なし（デフォルト音声）'), findsOneWidget);
+    });
+  });
+
+  group('Drop zone', () {
+    testWidgets('voice reference selector is wrapped in DropTarget',
+        (tester) async {
+      await navigateToTtsTab(tester);
+
+      expect(find.byType(DropTarget), findsOneWidget);
+    });
+  });
+
+  group('Rename button', () {
+    testWidgets('rename button is hidden when no file is selected',
+        (tester) async {
+      final voicesDir = Directory(p.join(tempDir.path, 'voices'));
+      voicesDir.createSync();
+
+      await navigateToTtsTab(tester);
+
+      expect(find.byTooltip('ファイル名を変更'), findsNothing);
+    });
+
+    testWidgets('rename button is shown when a file is selected',
+        (tester) async {
+      final voicesDir = Directory(p.join(tempDir.path, 'voices'));
+      voicesDir.createSync();
+      File(p.join(voicesDir.path, 'my_voice.wav')).writeAsStringSync('');
+
+      await prefs.setString('tts_ref_wav_path', 'my_voice.wav');
+
+      await navigateToTtsTab(tester);
+
+      expect(find.byTooltip('ファイル名を変更'), findsOneWidget);
+    });
+  });
+
+  group('Rename dialog', () {
+    Future<void> openRenameDialog(WidgetTester tester) async {
+      final voicesDir = Directory(p.join(tempDir.path, 'voices'));
+      voicesDir.createSync();
+      File(p.join(voicesDir.path, 'my_voice.wav')).writeAsStringSync('');
+      await prefs.setString('tts_ref_wav_path', 'my_voice.wav');
+
+      await navigateToTtsTab(tester);
+      await tester.tap(find.byTooltip('ファイル名を変更'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('rename dialog shows current file name without extension',
+        (tester) async {
+      await openRenameDialog(tester);
+
+      expect(find.text('ファイル名の変更'), findsOneWidget);
+      // Text field should contain the name without extension
+      final textField = tester.widget<TextField>(find.byType(TextField).last);
+      expect(textField.controller?.text, 'my_voice');
+      // Extension label should be visible
+      expect(find.text('.wav'), findsOneWidget);
+    });
+
+    testWidgets('rename dialog cancel does not rename file',
+        (tester) async {
+      await openRenameDialog(tester);
+
+      await tester.tap(find.text('キャンセル'));
+      await tester.pumpAndSettle();
+
+      // Dialog should be closed
+      expect(find.text('ファイル名の変更'), findsNothing);
+      // File should still exist with original name
+      final voicesDir = Directory(p.join(tempDir.path, 'voices'));
+      expect(File(p.join(voicesDir.path, 'my_voice.wav')).existsSync(), isTrue);
+    });
+
+    testWidgets('rename dialog confirms and renames file',
+        (tester) async {
+      await openRenameDialog(tester);
+
+      // Clear and type new name
+      final textField = find.byType(TextField).last;
+      await tester.enterText(textField, 'renamed_voice');
+      await tester.pumpAndSettle();
+
+      await tester.runAsync(() async {
+        await tester.tap(find.text('変更'));
+        await tester.pump();
+        await Future.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pumpAndSettle();
+
+      // File should be renamed
+      final voicesDir = Directory(p.join(tempDir.path, 'voices'));
+      expect(File(p.join(voicesDir.path, 'my_voice.wav')).existsSync(), isFalse);
+      expect(
+          File(p.join(voicesDir.path, 'renamed_voice.wav')).existsSync(), isTrue);
+      // Setting should be updated
+      expect(prefs.getString('tts_ref_wav_path'), 'renamed_voice.wav');
+    });
+
+    testWidgets('rename dialog disables confirm when name already exists',
+        (tester) async {
+      final voicesDir = Directory(p.join(tempDir.path, 'voices'));
+      voicesDir.createSync();
+      File(p.join(voicesDir.path, 'existing.wav')).writeAsStringSync('');
+
+      await openRenameDialog(tester);
+
+      // Type a name that already exists (without extension)
+      final textField = find.byType(TextField).last;
+      await tester.enterText(textField, 'existing');
+      await tester.pumpAndSettle();
+
+      // Error message should be visible
+      expect(find.text('同名のファイルが既に存在します'), findsOneWidget);
+    });
+
+    testWidgets('rename dialog disables confirm when name is empty',
+        (tester) async {
+      await openRenameDialog(tester);
+
+      // Clear the text field
+      final textField = find.byType(TextField).last;
+      await tester.enterText(textField, '');
+      await tester.pumpAndSettle();
+
+      // Confirm button should be disabled (find it and check onPressed)
+      final confirmButton = tester.widget<TextButton>(
+          find.widgetWithText(TextButton, '変更'));
+      expect(confirmButton.onPressed, isNull);
     });
   });
 }
