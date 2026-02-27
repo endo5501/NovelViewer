@@ -64,6 +64,64 @@ class TtsEditController {
     );
   }
 
+  Future<void> updateSegmentText(int segmentIndex, String newText) async {
+    if (segmentIndex < 0 || segmentIndex >= _segments.length) return;
+    if (_episodeId == null) return;
+
+    final segment = _segments[segmentIndex];
+    segment.text = newText;
+
+    if (segment.dbRecordExists) {
+      await _repository.updateSegmentText(_episodeId!, segmentIndex, newText);
+    } else {
+      await _repository.insertSegment(
+        episodeId: _episodeId!,
+        segmentIndex: segmentIndex,
+        text: newText,
+        textOffset: segment.textOffset,
+        textLength: segment.textLength,
+      );
+      segment.dbRecordExists = true;
+    }
+    segment.hasAudio = false;
+  }
+
+  Future<void> updateSegmentRefWavPath(
+      int segmentIndex, String? refWavPath) async {
+    if (segmentIndex < 0 || segmentIndex >= _segments.length) return;
+    if (_episodeId == null) return;
+
+    final segment = _segments[segmentIndex];
+    segment.refWavPath = refWavPath;
+
+    if (segment.dbRecordExists) {
+      await _repository.updateSegmentRefWavPath(
+          _episodeId!, segmentIndex, refWavPath);
+    } else {
+      await _repository.insertSegment(
+        episodeId: _episodeId!,
+        segmentIndex: segmentIndex,
+        text: segment.text,
+        textOffset: segment.textOffset,
+        textLength: segment.textLength,
+        refWavPath: refWavPath,
+      );
+      segment.dbRecordExists = true;
+    }
+  }
+
+  Future<void> updateSegmentMemo(int segmentIndex, String? memo) async {
+    if (segmentIndex < 0 || segmentIndex >= _segments.length) return;
+    if (_episodeId == null) return;
+
+    final segment = _segments[segmentIndex];
+    segment.memo = memo;
+
+    if (segment.dbRecordExists) {
+      await _repository.updateSegmentMemo(_episodeId!, segmentIndex, memo);
+    }
+  }
+
   Future<bool> _ensureModelLoaded(String modelDir) async {
     if (_modelLoaded) return true;
 

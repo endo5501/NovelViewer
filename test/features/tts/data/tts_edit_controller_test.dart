@@ -538,6 +538,162 @@ void main() {
       });
     });
 
+    group('updateSegmentText', () {
+      test('creates DB record and clears audio for new segment', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '山奥の一軒家',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        expect(controller.segments[0].dbRecordExists, false);
+
+        await controller.updateSegmentText(0, '山奥のいっけんや');
+
+        expect(controller.segments[0].text, '山奥のいっけんや');
+        expect(controller.segments[0].hasAudio, false);
+        expect(controller.segments[0].dbRecordExists, true);
+
+        final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(dbSegment['text'], '山奥のいっけんや');
+        expect(dbSegment['audio_data'], isNull);
+      });
+
+      test('updates existing DB record and deletes audio', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'completed',
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: '原文テキスト。',
+          textOffset: 0,
+          textLength: 7,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '原文テキスト。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        expect(controller.segments[0].hasAudio, true);
+
+        await controller.updateSegmentText(0, '編集済み。');
+
+        expect(controller.segments[0].text, '編集済み。');
+        expect(controller.segments[0].hasAudio, false);
+
+        final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(dbSegment['text'], '編集済み。');
+        expect(dbSegment['audio_data'], isNull);
+      });
+    });
+
+    group('updateSegmentRefWavPath', () {
+      test('updates ref_wav_path in DB', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト。',
+          textOffset: 0,
+          textLength: 4,
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: 'テスト。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.updateSegmentRefWavPath(0, '/voices/male.wav');
+
+        expect(controller.segments[0].refWavPath, '/voices/male.wav');
+        final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(dbSegment['ref_wav_path'], '/voices/male.wav');
+      });
+    });
+
+    group('updateSegmentMemo', () {
+      test('updates memo in DB', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト。',
+          textOffset: 0,
+          textLength: 4,
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: 'テスト。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.updateSegmentMemo(0, '感情的に読む');
+
+        expect(controller.segments[0].memo, '感情的に読む');
+        final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(dbSegment['memo'], '感情的に読む');
+      });
+    });
+
     group('resetSegment', () {
       test('restores original text and deletes DB record', () async {
         final episodeId = await repository.createEpisode(
