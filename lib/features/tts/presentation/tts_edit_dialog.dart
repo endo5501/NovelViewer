@@ -462,13 +462,11 @@ class _TtsEditSegmentRowState extends State<_TtsEditSegmentRow> {
   @override
   void didUpdateWidget(_TtsEditSegmentRow oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.segment.text != widget.segment.text &&
-        _textController.text != widget.segment.text) {
+    if (_textController.text != widget.segment.text) {
       _textController.text = widget.segment.text;
     }
     final newMemo = widget.segment.memo ?? '';
-    if (oldWidget.segment.memo != widget.segment.memo &&
-        _memoController.text != newMemo) {
+    if (_memoController.text != newMemo) {
       _memoController.text = newMemo;
     }
   }

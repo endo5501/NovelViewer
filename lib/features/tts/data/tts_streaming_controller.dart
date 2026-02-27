@@ -69,16 +69,13 @@ class TtsStreamingController {
       }
     }
 
-    if (episodeId == null) {
-      // Create new episode
-      episodeId = await _repository.createEpisode(
-        fileName: fileName,
-        sampleRate: sampleRate,
-        status: 'generating',
-        refWavPath: refWavPath,
-        textHash: textHash,
-      );
-    }
+    episodeId ??= await _repository.createEpisode(
+      fileName: fileName,
+      sampleRate: sampleRate,
+      status: 'generating',
+      refWavPath: refWavPath,
+      textHash: textHash,
+    );
 
     // Load existing segments into a map for quick lookup
     final dbSegments = await _repository.getSegments(episodeId);
@@ -193,7 +190,7 @@ class TtsStreamingController {
 
       if (hasAudio) {
         // Play existing audio
-        audioData = Uint8List.fromList(dbRow!['audio_data'] as List<int>);
+        audioData = Uint8List.fromList(dbRow['audio_data'] as List<int>);
         textOffset = dbRow['text_offset'] as int;
         textLength = dbRow['text_length'] as int;
       } else {

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
