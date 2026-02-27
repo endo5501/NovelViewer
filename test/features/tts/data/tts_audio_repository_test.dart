@@ -341,5 +341,242 @@ void main() {
         expect(segments, isEmpty);
       });
     });
+
+    group('insertSegment with nullable audio', () {
+      test('inserts a segment without audio_data', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'generating',
+        );
+
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト文。',
+          textOffset: 0,
+          textLength: 5,
+        );
+
+        final segments = await repository.getSegments(episodeId);
+        expect(segments, hasLength(1));
+        expect(segments.first['text'], 'テスト文。');
+        expect(segments.first['audio_data'], isNull);
+        expect(segments.first['sample_count'], isNull);
+      });
+    });
+
+    group('updateSegmentText', () {
+      test('updates text and clears audio_data', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'completed',
+        );
+
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: '山奥の一軒家',
+          textOffset: 0,
+          textLength: 6,
+          audioData: Uint8List.fromList([1, 2, 3]),
+          sampleCount: 100,
+        );
+
+        await repository.updateSegmentText(episodeId, 0, '山奥のいっけんや');
+
+        final segment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(segment['text'], '山奥のいっけんや');
+        expect(segment['audio_data'], isNull);
+        expect(segment['sample_count'], isNull);
+      });
+
+      test('updates text of segment without audio', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'generating',
+        );
+
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'オリジナル',
+          textOffset: 0,
+          textLength: 5,
+        );
+
+        await repository.updateSegmentText(episodeId, 0, '編集済み');
+
+        final segment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(segment['text'], '編集済み');
+        expect(segment['audio_data'], isNull);
+      });
+    });
+
+    group('updateSegmentAudio', () {
+      test('updates audio_data and sample_count', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'generating',
+        );
+
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト文。',
+          textOffset: 0,
+          textLength: 5,
+        );
+
+        final newAudio = Uint8List.fromList([10, 20, 30]);
+        await repository.updateSegmentAudio(episodeId, 0, newAudio, 300);
+
+        final segment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(segment['audio_data'], newAudio);
+        expect(segment['sample_count'], 300);
+      });
+    });
+
+    group('updateSegmentRefWavPath', () {
+      test('updates ref_wav_path', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'generating',
+        );
+
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト文。',
+          textOffset: 0,
+          textLength: 5,
+        );
+
+        await repository.updateSegmentRefWavPath(
+            episodeId, 0, '/path/to/voice.wav');
+
+        final segment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(segment['ref_wav_path'], '/path/to/voice.wav');
+      });
+    });
+
+    group('updateSegmentMemo', () {
+      test('updates memo', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'generating',
+        );
+
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト文。',
+          textOffset: 0,
+          textLength: 5,
+        );
+
+        await repository.updateSegmentMemo(episodeId, 0, '感情的に読む');
+
+        final segment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(segment['memo'], '感情的に読む');
+      });
+    });
+
+    group('deleteSegment', () {
+      test('deletes only the specified segment', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'completed',
+        );
+
+        for (var i = 0; i < 3; i++) {
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: i,
+            text: 'テスト$i。',
+            textOffset: i * 5,
+            textLength: 4,
+            audioData: Uint8List(4),
+            sampleCount: 100,
+          );
+        }
+
+        await repository.deleteSegment(episodeId, 1);
+
+        final segments = await repository.getSegments(episodeId);
+        expect(segments, hasLength(2));
+        expect(segments[0]['segment_index'], 0);
+        expect(segments[1]['segment_index'], 2);
+      });
+    });
+
+    group('getGeneratedSegmentCount', () {
+      test('returns count of segments with audio_data', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        // Segment with audio
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト0。',
+          textOffset: 0,
+          textLength: 5,
+          audioData: Uint8List(4),
+          sampleCount: 100,
+        );
+
+        // Segment without audio
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 1,
+          text: 'テスト1。',
+          textOffset: 5,
+          textLength: 5,
+        );
+
+        // Segment with audio
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 2,
+          text: 'テスト2。',
+          textOffset: 10,
+          textLength: 5,
+          audioData: Uint8List(4),
+          sampleCount: 100,
+        );
+
+        final count = await repository.getGeneratedSegmentCount(episodeId);
+        expect(count, 2);
+      });
+
+      test('returns 0 when no segments have audio', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'generating',
+        );
+
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト。',
+          textOffset: 0,
+          textLength: 4,
+        );
+
+        final count = await repository.getGeneratedSegmentCount(episodeId);
+        expect(count, 0);
+      });
+    });
   });
 }

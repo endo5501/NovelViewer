@@ -6,9 +6,9 @@
 
 ## 2. リポジトリCRUD拡張
 
-- [ ] 2.1 `TtsAudioRepository`の新規メソッドのテストを作成: `updateSegmentText`, `updateSegmentAudio`, `updateSegmentRefWavPath`, `updateSegmentMemo`, `deleteSegment`, `getGeneratedSegmentCount`
-- [ ] 2.2 `TtsAudioRepository`に新規メソッドを実装
-- [ ] 2.3 既存の`insertSegment`メソッドを`audio_data`/`sample_count`がnullableな引数を受け付けるように修正（テスト更新含む）
+- [x] 2.1 `TtsAudioRepository`の新規メソッドのテストを作成: `updateSegmentText`, `updateSegmentAudio`, `updateSegmentRefWavPath`, `updateSegmentMemo`, `deleteSegment`, `getGeneratedSegmentCount`
+- [x] 2.2 `TtsAudioRepository`に新規メソッドを実装
+- [x] 2.3 既存の`insertSegment`メソッドを`audio_data`/`sample_count`がnullableな引数を受け付けるように修正（テスト更新含む）
 
 ## 3. TtsEditSegmentモデル
 
