@@ -18,11 +18,11 @@
 
 ## 4. TtsEditController
 
-- [ ] 4.1 `TtsEditController`の単一セグメント生成（`generateSegment`）のテストを作成
-- [ ] 4.2 `TtsEditController`の一括生成（`generateAllUngenerated`）のテストを作成
-- [ ] 4.3 `TtsEditController`のプレビュー再生（`playSegment`, `playAll`）のテストを作成
-- [ ] 4.4 `TtsEditController`のリセット（`resetSegment`, `resetAll`）のテストを作成
-- [ ] 4.5 `TtsEditController`を実装: TtsIsolateのライフサイクル管理（初回生成時ロード、ダイアログ閉鎖時破棄）、単一セグメント生成、一括生成、プレビュー再生、リセット
+- [x] 4.1 `TtsEditController`の単一セグメント生成（`generateSegment`）のテストを作成
+- [x] 4.2 `TtsEditController`の一括生成（`generateAllUngenerated`）のテストを作成
+- [x] 4.3 `TtsEditController`のプレビュー再生（`playSegment`, `playAll`）のテストを作成
+- [x] 4.4 `TtsEditController`のリセット（`resetSegment`, `resetAll`）のテストを作成
+- [x] 4.5 `TtsEditController`を実装: TtsIsolateのライフサイクル管理（初回生成時ロード、ダイアログ閉鎖時破棄）、単一セグメント生成、一括生成、プレビュー再生、リセット
 
 ## 5. 編集画面プロバイダー
 
