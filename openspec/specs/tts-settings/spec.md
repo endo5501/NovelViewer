@@ -35,7 +35,7 @@ The TTS settings tab SHALL include a field for specifying the directory path con
 - **THEN** the previously configured path is restored in the TTS settings
 
 ### Requirement: Voice cloning reference audio file setting
-The TTS settings tab SHALL include a dropdown selector for choosing a voice cloning reference audio file from the `voices` directory. The dropdown SHALL list all supported audio files (`.wav`, `.mp3`) found in the `voices` directory. The selected file name SHALL be persisted using SharedPreferences. When no file is selected, TTS SHALL use default voice synthesis without cloning. The system SHALL provide a button to open the `voices` directory in the platform file manager, and a refresh button to rescan the directory.
+The TTS settings tab SHALL include a dropdown selector for choosing a voice cloning reference audio file from the `voices` directory. The dropdown SHALL list all supported audio files (`.wav`, `.mp3`) found in the `voices` directory. The selected file name SHALL be persisted using SharedPreferences. When no file is selected, TTS SHALL use default voice synthesis without cloning. The system SHALL provide a button to open the `voices` directory in the platform file manager, a refresh button to rescan the directory, and a rename button for the currently selected file. The voice reference selector area SHALL be wrapped in a drop zone that accepts audio files dragged from the platform's native file manager.
 
 #### Scenario: Display voice reference dropdown with available files
 - **WHEN** the user opens the TTS settings tab and the `voices` directory contains audio files
@@ -70,6 +70,18 @@ The TTS settings tab SHALL include a dropdown selector for choosing a voice clon
 #### Scenario: Refresh voice file list
 - **WHEN** the user clicks the refresh button next to the voice reference dropdown
 - **THEN** the `voices` directory is rescanned and the dropdown options are updated
+
+#### Scenario: Display rename button for selected file
+- **WHEN** a voice reference file (not default) is selected in the dropdown
+- **THEN** a rename button (edit icon) is displayed in the button row
+
+#### Scenario: Hide rename button for default selection
+- **WHEN** "なし（デフォルト音声）" is selected in the dropdown
+- **THEN** the rename button is not displayed
+
+#### Scenario: Drop zone wraps the voice reference selector
+- **WHEN** the user views the TTS settings tab
+- **THEN** the voice reference selector area is wrapped in a drop zone that accepts file drops from the native file manager
 
 #### Scenario: TTS with voice cloning when file selected
 - **WHEN** a valid voice reference file is selected and the user starts TTS playback
