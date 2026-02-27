@@ -19,6 +19,7 @@ import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_streaming_controller.dart';
+import 'package:novel_viewer/features/tts/presentation/tts_edit_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 
@@ -219,6 +220,25 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     _lastCheckedFileKey = null;
   }
 
+  Future<void> _openEditDialog(String content) async {
+    final folderPath = ref.read(currentDirectoryProvider);
+    final fileName = ref.read(selectedFileProvider)?.name;
+    if (folderPath == null || fileName == null) return;
+
+    await TtsEditDialog.show(
+      context,
+      folderPath: folderPath,
+      fileName: fileName,
+      content: content,
+    );
+
+    // Refresh audio state after dialog closes
+    _lastCheckedFileKey = null;
+    if (mounted) {
+      _checkAudioState();
+    }
+  }
+
   Widget _buildGenerationProgress(double fraction, TtsGenerationProgress progress) {
     return SizedBox(
       width: 120,
@@ -254,10 +274,21 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
 
     switch (audioState) {
       case TtsAudioState.none:
-        return FloatingActionButton.small(
-          onPressed: () => _startStreaming(content),
-          tooltip: '読み上げ音声生成',
-          child: const Icon(Icons.record_voice_over),
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FloatingActionButton.small(
+              onPressed: () => _openEditDialog(content),
+              tooltip: '読み上げ編集',
+              child: const Icon(Icons.edit_note),
+            ),
+            const SizedBox(width: 8),
+            FloatingActionButton.small(
+              onPressed: () => _startStreaming(content),
+              tooltip: '読み上げ音声生成',
+              child: const Icon(Icons.record_voice_over),
+            ),
+          ],
         );
 
       case TtsAudioState.generating:
@@ -360,6 +391,12 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              FloatingActionButton.small(
+                onPressed: () => _openEditDialog(content),
+                tooltip: '読み上げ編集',
+                child: const Icon(Icons.edit_note),
+              ),
+              const SizedBox(width: 8),
               FloatingActionButton.small(
                 onPressed: () => _startStreaming(content),
                 tooltip: '再生',

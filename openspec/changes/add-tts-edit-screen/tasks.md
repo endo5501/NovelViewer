@@ -39,8 +39,8 @@
 
 ## 7. TTSコントロールへの導線追加
 
-- [ ] 7.1 `TextViewerPanel`のTTSコントロール部分に編集ボタンを追加するテストを作成
-- [ ] 7.2 `TextViewerPanel._buildTtsControls`に編集ボタンを追加: TTSモデル設定済み＋エピソード選択中の場合のみ表示、クリックで`TtsEditDialog`を開く
+- [x] 7.1 `TextViewerPanel`のTTSコントロール部分に編集ボタンを追加するテストを作成
+- [x] 7.2 `TextViewerPanel._buildTtsControls`に編集ボタンを追加: TTSモデル設定済み＋エピソード選択中の場合のみ表示、クリックで`TtsEditDialog`を開く
 
 ## 8. TtsStreamingController変更（オンデマンド生成対応）
 
