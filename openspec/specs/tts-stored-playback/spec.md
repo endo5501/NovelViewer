@@ -61,7 +61,7 @@ The system SHALL support pausing and resuming audio playback. Pause SHALL stop a
 - **THEN** audio resumes from the paused position and the state changes to "playing"
 
 ### Requirement: Stop playback
-The system SHALL support stopping playback. Stop SHALL halt audio, reset the playback position to the beginning, clear the highlight, and clean up temporary files.
+The system SHALL support stopping playback. Stop SHALL halt audio, reset the playback position to the beginning, clear the highlight, and clean up temporary files. Temporary file cleanup SHALL complete before the playback state transitions to "stopped". Cleanup SHALL be resilient to files that have already been deleted by external processes.
 
 #### Scenario: Stop during playback
 - **WHEN** the user presses the stop button while audio is playing
@@ -70,6 +70,14 @@ The system SHALL support stopping playback. Stop SHALL halt audio, reset the pla
 #### Scenario: Stop during pause
 - **WHEN** the user presses the stop button while audio is paused
 - **THEN** audio stops, playback position resets, highlight is cleared, and temporary files are cleaned up
+
+#### Scenario: Cleanup completes before state transition
+- **WHEN** playback stops (by user action or end of segments)
+- **THEN** temporary file cleanup completes before `TtsPlaybackState` transitions to `stopped`
+
+#### Scenario: Cleanup handles already-deleted files
+- **WHEN** playback stops and some temporary files have already been deleted by external processes
+- **THEN** cleanup completes without error, remaining files are deleted
 
 ### Requirement: Text position-based playback start
 The system SHALL support starting playback from a specific text position. When text is selected, playback SHALL start from the segment containing the selection start offset. The segment SHALL be identified by querying the database for the segment with the largest `text_offset` <= the selection offset.
