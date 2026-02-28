@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/presentation/file_browser_panel.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 
 void main() {
   group('getParentDirectory', () {
@@ -212,6 +213,94 @@ void main() {
         ),
       );
       expect(listTile.selected, isTrue);
+    });
+
+    testWidgets('shows green check icon for completed TTS status',
+        (WidgetTester tester) async {
+      const testFile =
+          FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return const DirectoryContents(
+                files: [testFile],
+                subdirectories: [],
+                ttsStatuses: {'001_chapter1.txt': TtsEpisodeStatus.completed},
+              );
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/test');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      final icon = tester.widget<Icon>(find.byIcon(Icons.check_circle));
+      expect(icon.color, Colors.green);
+    });
+
+    testWidgets('shows orange pie chart icon for partial TTS status',
+        (WidgetTester tester) async {
+      const testFile =
+          FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return const DirectoryContents(
+                files: [testFile],
+                subdirectories: [],
+                ttsStatuses: {'001_chapter1.txt': TtsEpisodeStatus.partial},
+              );
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/test');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.pie_chart), findsOneWidget);
+      final icon = tester.widget<Icon>(find.byIcon(Icons.pie_chart));
+      expect(icon.color, Colors.orange);
+    });
+
+    testWidgets('shows no trailing icon for none TTS status',
+        (WidgetTester tester) async {
+      const testFile =
+          FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return const DirectoryContents(
+                files: [testFile],
+                subdirectories: [],
+              );
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/test');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.check_circle), findsNothing);
+      expect(find.byIcon(Icons.pie_chart), findsNothing);
     });
 
     testWidgets('context menu shows refresh and delete options at library root',
