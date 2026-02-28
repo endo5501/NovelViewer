@@ -83,13 +83,13 @@ void main() {
   });
 
   group('TextSegmenter - ruby tag stripping', () {
-    test('strips ruby tags and uses base text only', () {
+    test('strips ruby tags and uses ruby text for reading', () {
       final segments = segmenter.splitIntoSentences(
         '<ruby>漢字<rp>(</rp><rt>かんじ</rt><rp>)</rp></ruby>を読む。',
       );
 
       expect(segments.length, 1);
-      expect(segments[0].text, '漢字を読む。');
+      expect(segments[0].text, 'かんじを読む。');
     });
 
     test('strips multiple ruby tags', () {
@@ -98,7 +98,7 @@ void main() {
       );
 
       expect(segments.length, 1);
-      expect(segments[0].text, '東京の空。');
+      expect(segments[0].text, 'とうきょうのそら。');
     });
   });
 
@@ -133,9 +133,9 @@ void main() {
       );
 
       expect(segments.length, 1);
-      expect(segments[0].text, '漢字を読む。');
+      expect(segments[0].text, 'かんじを読む。');
       expect(segments[0].offset, 0);
-      expect(segments[0].length, 6);
+      expect(segments[0].length, 6); // base text length: 漢字を読む。
     });
 
     test('strips ruby tags with rb and rp elements', () {
@@ -144,18 +144,17 @@ void main() {
       );
 
       expect(segments.length, 1);
-      expect(segments[0].text, '漢字を読む。');
+      expect(segments[0].text, 'かんじを読む。');
       expect(segments[0].offset, 0);
-      expect(segments[0].length, 6);
+      expect(segments[0].length, 6); // base text length: 漢字を読む。
     });
 
-    test('produces same plain text as parseRubyText for rb format', () {
+    test('produces same ruby text for rb format', () {
       const input = '<ruby><rb>東京</rb><rt>とうきょう</rt></ruby>の<ruby>空<rt>そら</rt></ruby>。';
       final segments = segmenter.splitIntoSentences(input);
 
-      // The concatenated segment text should match what parseRubyText would produce
       final plainText = segments.map((s) => s.text).join();
-      expect(plainText, '東京の空。');
+      expect(plainText, 'とうきょうのそら。');
     });
   });
 
@@ -197,6 +196,50 @@ void main() {
       expect(segments[1].text, '後文。');
       expect(segments[1].offset, 5); // position of '後', not '　'
       expect(segments[1].length, 3);
+    });
+  });
+
+  group('TextSegmenter - ruby text with base text offsets', () {
+    test('offset and length use base text coordinates', () {
+      final segments = segmenter.splitIntoSentences(
+        '<ruby>魔法杖職人<rt>ワンドメーカー</rt></ruby>は言った。次の文。',
+      );
+
+      expect(segments.length, 2);
+      // text uses ruby text (furigana) for TTS
+      expect(segments[0].text, 'ワンドメーカーは言った。');
+      // offset/length use base text coordinates for UI highlight
+      expect(segments[0].offset, 0);
+      expect(segments[0].length, 10); // base: 魔法杖職人は言った。
+      expect(segments[1].text, '次の文。');
+      expect(segments[1].offset, 10);
+      expect(segments[1].length, 4);
+    });
+
+    test('falls back to base text when rt is empty', () {
+      final segments = segmenter.splitIntoSentences(
+        '<ruby>漢字<rt></rt></ruby>を読む。',
+      );
+
+      expect(segments.length, 1);
+      expect(segments[0].text, '漢字を読む。');
+    });
+
+    test('falls back to base text when rt is whitespace-only', () {
+      final segments = segmenter.splitIntoSentences(
+        '<ruby>漢字<rt> </rt></ruby>を読む。',
+      );
+
+      expect(segments.length, 1);
+      expect(segments[0].text, '漢字を読む。');
+    });
+
+    test('handles punctuation inside rt without crashing', () {
+      final segments = segmenter.splitIntoSentences(
+        '<ruby>漢字<rt>かんじ。</rt></ruby>を読む。',
+      );
+
+      expect(segments, isNotEmpty);
     });
   });
 
