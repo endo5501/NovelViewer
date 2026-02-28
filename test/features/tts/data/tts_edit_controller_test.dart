@@ -22,6 +22,12 @@ class FakeTtsIsolate implements TtsIsolate {
   bool disposed = false;
   final synthesizeRequests = <(String text, String? refWavPath)>[];
 
+  /// When set, synthesize will not auto-respond.
+  Completer<void>? synthesizeGate;
+
+  /// When true, loadModel will not auto-respond.
+  bool blockModelLoad = false;
+
   @override
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
 
@@ -33,22 +39,38 @@ class FakeTtsIsolate implements TtsIsolate {
   @override
   void loadModel(String modelDir,
       {int nThreads = 4, int languageId = TtsEngine.languageJapanese}) {
+    if (blockModelLoad) return;
     Future.microtask(() {
-      _responseController.add(
-        ModelLoadedResponse(success: modelLoadSuccess),
-      );
+      if (!_responseController.isClosed) {
+        _responseController.add(
+          ModelLoadedResponse(success: modelLoadSuccess),
+        );
+      }
     });
   }
 
   @override
   void synthesize(String text, {String? refWavPath}) {
     synthesizeRequests.add((text, refWavPath));
+    if (synthesizeGate != null) {
+      // Don't auto-respond; wait for gate to be completed externally
+      return;
+    }
     Future.microtask(() {
-      _responseController.add(SynthesisResultResponse(
-        audio: Float32List.fromList([0.1, 0.2, 0.3]),
-        sampleRate: 24000,
-      ));
+      if (!_responseController.isClosed) {
+        _responseController.add(SynthesisResultResponse(
+          audio: Float32List.fromList([0.1, 0.2, 0.3]),
+          sampleRate: 24000,
+        ));
+      }
     });
+  }
+
+  void completeSynthesis() {
+    _responseController.add(SynthesisResultResponse(
+      audio: Float32List.fromList([0.1, 0.2, 0.3]),
+      sampleRate: 24000,
+    ));
   }
 
   @override
@@ -387,6 +409,43 @@ void main() {
         expect(isolate.synthesizeRequests, hasLength(1));
         expect(controller.segments[1].hasAudio, true);
         expect(progressUpdates, [(1, 1)]);
+      });
+
+      test('calls onSegmentStart before each segment generation', () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '文1。文2。文3。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Mark segment 1 as already having audio
+        controller.segments[1].hasAudio = true;
+
+        final startedSegments = <int>[];
+        await controller.generateAllUngenerated(
+          modelDir: '/models',
+          onSegmentStart: (index) {
+            startedSegments.add(index);
+          },
+        );
+
+        // Segments 0 and 2 should be generated (1 already has audio)
+        expect(startedSegments, [0, 2]);
       });
 
       test('does nothing when all segments have audio', () async {
@@ -860,6 +919,255 @@ void main() {
 
         final count = await repository.getSegmentCount(episodeId);
         expect(count, 0);
+      });
+    });
+
+    group('cancel', () {
+      test('cancel disposes TtsIsolate when model is loaded', () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: 'テスト。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Load model by generating
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/models',
+        );
+
+        expect(controller.modelLoaded, true);
+        expect(isolate.disposed, false);
+
+        await controller.cancel();
+
+        expect(isolate.disposed, true);
+        expect(controller.modelLoaded, false);
+      });
+
+      test('can generate again after cancel', () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate1 = FakeTtsIsolate();
+        final isolate2 = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate1,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          ttsIsolateFactory: () => isolate2,
+        );
+
+        await controller.loadSegments(
+          text: '文1。文2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/models',
+        );
+
+        await controller.cancel();
+        expect(isolate1.disposed, true);
+        expect(controller.modelLoaded, false);
+
+        // Generate again after cancel - should use new isolate
+        final result = await controller.generateSegment(
+          segmentIndex: 1,
+          modelDir: '/models',
+        );
+
+        expect(result, true);
+        expect(isolate2.spawned, true);
+        expect(controller.segments[1].hasAudio, true);
+      });
+
+      test('cancel is safe when model not loaded', () async {
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: 'テスト。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // cancel without ever loading model
+        await controller.cancel();
+
+        expect(isolate.disposed, false);
+      });
+    });
+
+    group('cancel during model load', () {
+      test('cancel during model load does not hang', () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        // Create isolate that never responds to loadModel
+        final isolate = FakeTtsIsolate();
+        isolate.blockModelLoad = true;
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: 'テスト。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Start generation - will block on model loading
+        var generateCompleted = false;
+        final generateFuture = controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/models',
+        ).then((result) {
+          generateCompleted = true;
+          return result;
+        });
+
+        // Let event loop process until spawn is called
+        await Future.delayed(Duration.zero);
+        await Future.delayed(Duration.zero);
+        expect(isolate.spawned, true);
+        expect(generateCompleted, false);
+
+        // Cancel while model is loading
+        await controller.cancel();
+
+        // generateSegment should now complete (return false)
+        final result = await generateFuture;
+        expect(generateCompleted, true);
+        expect(result, false);
+      });
+
+      test('cancel disposes spawned isolate even when model not loaded',
+          () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        isolate.blockModelLoad = true;
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: 'テスト。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Start generation to trigger spawn
+        unawaited(controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/models',
+        ));
+        await Future.delayed(Duration.zero);
+        await Future.delayed(Duration.zero);
+        expect(isolate.spawned, true);
+        expect(controller.modelLoaded, false);
+
+        // Cancel should dispose the spawned but not-loaded isolate
+        await controller.cancel();
+
+        expect(isolate.disposed, true);
+      });
+    });
+
+    group('cancel during synthesis', () {
+      test('cancel during _synthesize resolves generateAllUngenerated immediately',
+          () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        isolate.synthesizeGate = Completer<void>();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '文1。文2。文3。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Start generateAllUngenerated - will block on first synthesize
+        var generateCompleted = false;
+        final generateFuture = controller.generateAllUngenerated(
+          modelDir: '/models',
+        ).then((_) {
+          generateCompleted = true;
+        });
+
+        // Let the event loop process until synthesize is called
+        await Future.delayed(Duration.zero);
+        await Future.delayed(Duration.zero);
+        expect(isolate.synthesizeRequests, hasLength(1));
+        expect(generateCompleted, false);
+
+        // Cancel while synthesize is pending
+        await controller.cancel();
+
+        // generateAllUngenerated should now complete
+        await generateFuture;
+        expect(generateCompleted, true);
+
+        // Only first segment was attempted, none completed
+        expect(controller.segments[0].hasAudio, false);
+        expect(controller.segments[1].hasAudio, false);
+        expect(controller.segments[2].hasAudio, false);
       });
     });
 
