@@ -222,6 +222,7 @@ class TtsEditController {
   Future<void> generateAllUngenerated({
     required String modelDir,
     String? globalRefWavPath,
+    String Function(String fileName)? resolveRefWavPath,
     void Function(int segmentIndex)? onSegmentStart,
   }) async {
     _cancelled = false;
@@ -241,11 +242,11 @@ class TtsEditController {
       onSegmentStart?.call(segmentIndex);
       final segment = _segments[segmentIndex];
       final segmentRef = segment.refWavPath;
-      // null → fall back to global, '' → no reference audio ("なし"), path → use as-is
+      // null → fall back to global, '' → no reference audio ("なし"), path → resolve via callback
       final refWavPath = switch (segmentRef) {
         null => globalRefWavPath,
         '' => null,
-        _ => segmentRef,
+        _ => resolveRefWavPath != null ? resolveRefWavPath(segmentRef) : segmentRef,
       };
 
       final success = await generateSegment(

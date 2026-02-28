@@ -192,6 +192,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     await controller.generateAllUngenerated(
       modelDir: modelDir,
       globalRefWavPath: globalRefWavPath,
+      resolveRefWavPath: voiceService?.resolveVoiceFilePath,
       onSegmentStart: (index) {
         if (mounted) {
           ref.read(ttsEditGeneratingIndexProvider.notifier).set(index);
