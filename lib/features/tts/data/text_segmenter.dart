@@ -12,14 +12,34 @@ class TextSegment {
 
 class TextSegmenter {
   static final _rubyTagPattern = RegExp(
-    r'<ruby>(?:<rb>)?(.*?)(?:</rb>)?(?:<rp>.*?</rp>)?<rt>.*?</rt>(?:<rp>.*?</rp>)?</ruby>',
+    r'<ruby>(?:<rb>)?(.*?)(?:</rb>)?(?:<rp>.*?</rp>)?<rt>(.*?)</rt>(?:<rp>.*?</rp>)?</ruby>',
   );
 
   static const _sentenceEnders = {'。', '！', '？'};
   static const _closingBrackets = {'」', '』', '）'};
 
   List<TextSegment> splitIntoSentences(String text) {
-    final stripped = _stripRubyTags(text);
+    final spokenText = _stripRubyTags(text, useRubyText: true);
+    final displayText = _stripRubyTags(text, useRubyText: false);
+
+    final spokenSegments = _splitText(spokenText);
+    final displaySegments = _splitText(displayText);
+
+    if (spokenSegments.length != displaySegments.length) {
+      return displaySegments;
+    }
+
+    return [
+      for (var i = 0; i < spokenSegments.length; i++)
+        TextSegment(
+          text: spokenSegments[i].text,
+          offset: displaySegments[i].offset,
+          length: displaySegments[i].length,
+        ),
+    ];
+  }
+
+  List<TextSegment> _splitText(String stripped) {
     final segments = <TextSegment>[];
     var currentStart = 0;
 
@@ -72,8 +92,12 @@ class TextSegmenter {
     }
   }
 
-  String _stripRubyTags(String text) {
+  String _stripRubyTags(String text, {bool useRubyText = false}) {
     return text.replaceAllMapped(_rubyTagPattern, (match) {
+      if (useRubyText) {
+        final ruby = match.group(2) ?? '';
+        return ruby.trim().isEmpty ? (match.group(1) ?? '') : ruby;
+      }
       return match.group(1) ?? '';
     });
   }
