@@ -75,10 +75,6 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
       ref.read(ttsEditGeneratingIndexProvider.notifier).set(null);
     };
 
-    controller.onProgress = (current, total) {
-      if (!mounted) return;
-    };
-
     controller.onError = (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -196,6 +192,11 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     await controller.generateAllUngenerated(
       modelDir: modelDir,
       globalRefWavPath: globalRefWavPath,
+      onSegmentStart: (index) {
+        if (mounted) {
+          ref.read(ttsEditGeneratingIndexProvider.notifier).set(index);
+        }
+      },
     );
 
     if (!mounted) return;
@@ -227,6 +228,14 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     });
     if (!mounted) return;
     ref.read(ttsEditPlaybackIndexProvider.notifier).set(null);
+  }
+
+  Future<void> _cancelGeneration() async {
+    await _controller?.cancel();
+    if (!mounted) return;
+    ref.read(ttsEditGenerationStateProvider.notifier).set(TtsEditGenerationState.idle);
+    ref.read(ttsEditGeneratingIndexProvider.notifier).set(null);
+    ref.read(ttsEditSegmentsProvider.notifier).set(List.of(_controller?.segments ?? []));
   }
 
   Future<void> _stopPlayback() async {
@@ -358,11 +367,18 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
             label: const Text('停止'),
           ),
         const SizedBox(width: 8),
-        TextButton.icon(
-          onPressed: isGenerating ? null : _generateAll,
-          icon: const Icon(Icons.auto_fix_high, size: 18),
-          label: const Text('全生成'),
-        ),
+        if (isGenerating)
+          TextButton.icon(
+            onPressed: _cancelGeneration,
+            icon: const Icon(Icons.stop, size: 18),
+            label: const Text('中断'),
+          )
+        else
+          TextButton.icon(
+            onPressed: _generateAll,
+            icon: const Icon(Icons.auto_fix_high, size: 18),
+            label: const Text('全生成'),
+          ),
         const SizedBox(width: 8),
         TextButton.icon(
           onPressed: isGenerating
@@ -393,26 +409,6 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
           icon: const Icon(Icons.delete_sweep, size: 18),
           label: const Text('全消去'),
         ),
-        if (isGenerating) ...[
-          const Spacer(),
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-          const SizedBox(width: 8),
-          TextButton(
-            onPressed: () async {
-              await _controller?.cancel();
-              if (!mounted) return;
-              ref
-                  .read(ttsEditGenerationStateProvider.notifier)
-                  .set(TtsEditGenerationState.idle);
-              ref.read(ttsEditGeneratingIndexProvider.notifier).set(null);
-            },
-            child: const Text('中断'),
-          ),
-        ],
       ],
     );
   }

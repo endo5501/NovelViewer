@@ -8,17 +8,24 @@ import 'tts_isolate.dart';
 import 'tts_playback_controller.dart';
 import 'wav_writer.dart';
 
+class _CancelledException implements Exception {
+  const _CancelledException();
+}
+
 class TtsEditController {
   TtsEditController({
     required TtsIsolate ttsIsolate,
     required TtsAudioPlayer audioPlayer,
     required TtsAudioRepository repository,
     required this.tempDirPath,
+    TtsIsolate Function()? ttsIsolateFactory,
   })  : _ttsIsolate = ttsIsolate,
         _audioPlayer = audioPlayer,
-        _repository = repository;
+        _repository = repository,
+        _ttsIsolateFactory = ttsIsolateFactory ?? TtsIsolate.new;
 
-  final TtsIsolate _ttsIsolate;
+  TtsIsolate _ttsIsolate;
+  final TtsIsolate Function() _ttsIsolateFactory;
   final TtsAudioPlayer _audioPlayer;
   final TtsAudioRepository _repository;
   final String tempDirPath;
@@ -31,11 +38,14 @@ class TtsEditController {
   bool get modelLoaded => _modelLoaded;
 
   bool _cancelled = false;
+  bool _isolateSpawned = false;
   int? _episodeId;
   String? _fileName;
   int _sampleRate = 24000;
   StreamSubscription<TtsIsolateResponse>? _subscription;
   Completer<void>? _activePlayCompleter;
+  Completer<SynthesisResultResponse>? _activeSynthesisCompleter;
+  Completer<bool>? _activeModelLoadCompleter;
   final _writtenFiles = <String>[];
 
   void Function(int segmentIndex)? onSegmentGenerated;
@@ -141,8 +151,11 @@ class TtsEditController {
     if (_modelLoaded) return true;
 
     await _ttsIsolate.spawn();
+    _isolateSpawned = true;
 
     final completer = Completer<bool>();
+    _activeModelLoadCompleter = completer;
+
     _subscription = _ttsIsolate.responses.listen((response) {
       if (response is ModelLoadedResponse && !completer.isCompleted) {
         completer.complete(response.success);
@@ -153,8 +166,15 @@ class TtsEditController {
     });
 
     _ttsIsolate.loadModel(modelDir);
-    _modelLoaded = await completer.future;
-    return _modelLoaded;
+
+    try {
+      _modelLoaded = await completer.future;
+      return _modelLoaded;
+    } on _CancelledException {
+      return false;
+    } finally {
+      _activeModelLoadCompleter = null;
+    }
   }
 
   Future<bool> generateSegment({
@@ -202,6 +222,7 @@ class TtsEditController {
   Future<void> generateAllUngenerated({
     required String modelDir,
     String? globalRefWavPath,
+    void Function(int segmentIndex)? onSegmentStart,
   }) async {
     _cancelled = false;
     final ungenerated = <int>[];
@@ -217,11 +238,15 @@ class TtsEditController {
       if (_cancelled) break;
 
       final segmentIndex = ungenerated[idx];
+      onSegmentStart?.call(segmentIndex);
       final segment = _segments[segmentIndex];
       final segmentRef = segment.refWavPath;
-      final refWavPath = segmentRef != null
-          ? (segmentRef.isEmpty ? null : segmentRef)
-          : globalRefWavPath;
+      // null → fall back to global, '' → no reference audio ("なし"), path → use as-is
+      final refWavPath = switch (segmentRef) {
+        null => globalRefWavPath,
+        '' => null,
+        _ => segmentRef,
+      };
 
       final success = await generateSegment(
         segmentIndex: segmentIndex,
@@ -321,16 +346,30 @@ class TtsEditController {
 
   Future<void> cancel() async {
     _cancelled = true;
+    if (!(_activeModelLoadCompleter?.isCompleted ?? true)) {
+      _activeModelLoadCompleter!.completeError(const _CancelledException());
+    }
+    if (!(_activeSynthesisCompleter?.isCompleted ?? true)) {
+      _activeSynthesisCompleter!.completeError(const _CancelledException());
+    }
+    await _teardownIsolate(recreate: true);
   }
 
   Future<void> dispose() async {
     _cancelled = true;
+    await _teardownIsolate(recreate: false);
+    await _cleanupFiles();
+  }
+
+  Future<void> _teardownIsolate({required bool recreate}) async {
     await _subscription?.cancel();
     _subscription = null;
-    if (_modelLoaded) {
+    if (_isolateSpawned || _modelLoaded) {
       await _ttsIsolate.dispose();
+      if (recreate) _ttsIsolate = _ttsIsolateFactory();
     }
-    await _cleanupFiles();
+    _isolateSpawned = false;
+    _modelLoaded = false;
   }
 
   Future<void> _ensureEpisodeExists() async {
@@ -346,6 +385,7 @@ class TtsEditController {
   Future<SynthesisResultResponse?> _synthesize(
       String text, String? refWavPath) async {
     final completer = Completer<SynthesisResultResponse>();
+    _activeSynthesisCompleter = completer;
 
     late StreamSubscription<TtsIsolateResponse> sub;
     sub = _ttsIsolate.responses.listen((response) {
@@ -365,7 +405,10 @@ class TtsEditController {
       }
 
       return result;
+    } on _CancelledException {
+      return null;
     } finally {
+      _activeSynthesisCompleter = null;
       await sub.cancel();
     }
   }
