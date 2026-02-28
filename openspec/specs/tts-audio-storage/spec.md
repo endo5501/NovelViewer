@@ -58,7 +58,7 @@ The `tts_segments` table SHALL store per-sentence audio data with the following 
 - **THEN** the `tts_segments` table is recreated with `audio_data` and `sample_count` as nullable columns and `memo` column added, all existing data is preserved, and the unique index is recreated
 
 ### Requirement: TTS audio repository CRUD operations
-The system SHALL provide a `TtsAudioRepository` class with methods to: create an episode record (with text_hash), insert segment records (with or without audio_data), update a segment's text (setting audio_data and sample_count to NULL), update a segment's audio_data and sample_count, update a segment's ref_wav_path, update a segment's memo, query episode status by file_name, retrieve all segments for an episode ordered by segment_index, find a segment by text_offset, get the count of stored segments for an episode, get the count of segments with non-NULL audio_data for an episode, delete a single segment by episode_id and segment_index, and delete an episode (cascading to segments).
+The system SHALL provide a `TtsAudioRepository` class with methods to: create an episode record (with text_hash), insert segment records (with or without audio_data), update a segment's text (setting audio_data and sample_count to NULL), update a segment's audio_data and sample_count, update a segment's ref_wav_path, update a segment's memo, query episode status by file_name, retrieve all segments for an episode ordered by segment_index, find a segment by text_offset, get the count of stored segments for an episode, get the count of segments with non-NULL audio_data for an episode, delete a single segment by episode_id and segment_index, delete an episode (cascading to segments), and retrieve all episode statuses as a map of file_name to TtsEpisodeStatus.
 
 #### Scenario: Check if episode has audio
 - **WHEN** `findEpisodeByFileName("0001_プロローグ.txt")` is called
@@ -111,6 +111,10 @@ The system SHALL provide a `TtsAudioRepository` class with methods to: create an
 #### Scenario: Get count of generated segments
 - **WHEN** `getGeneratedSegmentCount(episodeId)` is called for an episode with 10 segments total, 7 having audio_data
 - **THEN** the count 7 is returned
+
+#### Scenario: Get all episode statuses
+- **WHEN** `getAllEpisodeStatuses()` is called on a repository with episodes in various states
+- **THEN** a `Map<String, TtsEpisodeStatus>` is returned mapping each episode's file_name to its status
 
 ### Requirement: TTS audio database closure
 The system SHALL close the `tts_audio.db` database connection when the novel folder is no longer active (e.g., user navigates away from the novel).
