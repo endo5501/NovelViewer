@@ -123,17 +123,20 @@ class TtsStoredPlayerController {
     await _audioPlayer.stop();
     await _audioPlayer.dispose();
 
-    ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.stopped);
-    ref.read(ttsHighlightRangeProvider.notifier).set(null);
-
-    await _cleanupFiles();
+    try {
+      await _cleanupFiles();
+    } finally {
+      ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.stopped);
+      ref.read(ttsHighlightRangeProvider.notifier).set(null);
+    }
   }
 
   Future<void> _cleanupFiles() async {
     for (final path in _writtenFiles) {
-      final file = File(path);
-      if (await file.exists()) {
-        await file.delete();
+      try {
+        await File(path).delete();
+      } on PathNotFoundException {
+        // File or parent directory already deleted
       }
     }
     _writtenFiles.clear();

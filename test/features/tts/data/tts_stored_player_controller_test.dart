@@ -291,6 +291,41 @@ void main() {
       expect(remainingTempFiles, isEmpty);
     });
 
+    test('temp files are cleaned up before state transitions to stopped', () async {
+      final episodeId = await createTestEpisode(segmentCount: 1);
+      final player = FakeAudioPlayer();
+      final controller = TtsStoredPlayerController(
+        ref: container,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+      );
+
+      // Track whether temp files exist at the exact moment state becomes stopped
+      bool? tempFilesExistWhenStopped;
+      container.listen(ttsPlaybackStateProvider, (prev, next) {
+        if (next == TtsPlaybackState.stopped) {
+          final wavFiles = tempDir
+              .listSync()
+              .whereType<File>()
+              .where((f) => f.path.endsWith('.wav'));
+          tempFilesExistWhenStopped = wavFiles.isNotEmpty;
+        }
+      });
+
+      await controller.start(episodeId: episodeId);
+
+      // Simulate completion so stop() is called internally via _onSegmentCompleted
+      player.simulateCompletion();
+      await _pumpUntil(
+          () => container.read(ttsPlaybackStateProvider) == TtsPlaybackState.stopped);
+
+      // Listener should have fired
+      expect(tempFilesExistWhenStopped, isNotNull);
+      // Files should have been cleaned up BEFORE state transitioned to stopped
+      expect(tempFilesExistWhenStopped, isFalse);
+    });
+
     test('stop during pause works correctly', () async {
       final episodeId = await createTestEpisode();
       final player = FakeAudioPlayer();
