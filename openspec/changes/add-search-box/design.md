@@ -44,10 +44,11 @@
 
 **選択**: 以下の新しいProviderを追加する
 
-- `searchBoxVisibleProvider` (`StateProvider<bool>`) — 検索ボックスの表示/非表示状態
-- `searchBoxFocusNodeProvider` (`Provider<FocusNode>`) — 検索ボックスへのフォーカス制御
+- `searchBoxVisibleProvider` (`NotifierProvider<SearchBoxVisibleNotifier, bool>`) — 検索ボックスの表示/非表示状態（`show()`/`hide()`メソッドで制御）
 
-**理由**: 検索ボックスの表示状態をProviderで管理することで、`home_screen.dart`のショートカットハンドラから表示制御でき、`SearchResultsPanel`がその状態を監視して描画を切り替えられる。
+FocusNodeは`SearchResultsPanel`のウィジェット内でローカルに管理し、`ref.listenManual`で`searchBoxVisibleProvider`の変更を監視してフォーカス制御を行う。
+
+**理由**: 検索ボックスの表示状態をProviderで管理することで、`home_screen.dart`のショートカットハンドラから表示制御でき、`SearchResultsPanel`がその状態を監視して描画を切り替えられる。FocusNodeはウィジェットのライフサイクルに密結合しているため、Provider化せずローカル管理とした。
 
 ### 4. 検索の実行タイミング
 

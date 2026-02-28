@@ -358,6 +358,37 @@ void main() {
       expect(container.read(searchQueryProvider), isNull);
     });
 
+    testWidgets('external hide clears TextField text for next show',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(SearchResultsPanel));
+      final container = ProviderScope.containerOf(element);
+
+      // Show search box and enter text
+      container.read(searchBoxVisibleProvider.notifier).show();
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), '太郎');
+      await tester.pump();
+
+      // Externally hide (simulates global Escape from HomeScreen)
+      container.read(searchBoxVisibleProvider.notifier).hide();
+      await tester.pump();
+
+      // Show again
+      container.read(searchBoxVisibleProvider.notifier).show();
+      await tester.pump();
+
+      // TextField should be empty
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.controller!.text, isEmpty);
+    });
+
     testWidgets(
         'clicking file name clears selectedSearchMatchProvider',
         (WidgetTester tester) async {

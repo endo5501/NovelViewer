@@ -36,6 +36,8 @@ class _SearchResultsPanelState extends ConsumerState<SearchResultsPanel> {
             _focusNode.requestFocus();
           }
         });
+      } else if (!next) {
+        _controller.clear();
       }
     });
   }
