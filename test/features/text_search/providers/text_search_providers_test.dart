@@ -172,6 +172,34 @@ void main() {
     });
   });
 
+  group('searchBoxVisibleProvider', () {
+    test('initial value is false', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(searchBoxVisibleProvider), isFalse);
+    });
+
+    test('show() sets to true', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(searchBoxVisibleProvider.notifier).show();
+
+      expect(container.read(searchBoxVisibleProvider), isTrue);
+    });
+
+    test('hide() sets back to false', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(searchBoxVisibleProvider.notifier).show();
+      container.read(searchBoxVisibleProvider.notifier).hide();
+
+      expect(container.read(searchBoxVisibleProvider), isFalse);
+    });
+  });
+
   group('selectedSearchMatchProvider', () {
     test('initial value is null', () {
       final container = ProviderContainer();

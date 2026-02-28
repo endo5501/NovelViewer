@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/text_search/data/search_models.dart';
@@ -233,6 +234,159 @@ void main() {
       expect(selectedFile, isNotNull);
       expect(selectedFile!.name, '001.txt');
       expect(selectedFile.path, '/path/to/001.txt');
+    });
+
+    testWidgets('shows search box when searchBoxVisibleProvider is true',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(SearchResultsPanel));
+      final container = ProviderScope.containerOf(element);
+      container.read(searchBoxVisibleProvider.notifier).show();
+      await tester.pump();
+
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('hides search box when searchBoxVisibleProvider is false',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsNothing);
+    });
+
+    testWidgets('search box onSubmitted sets searchQueryProvider',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(SearchResultsPanel));
+      final container = ProviderScope.containerOf(element);
+      container.read(searchBoxVisibleProvider.notifier).show();
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), '太郎');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(container.read(searchQueryProvider), '太郎');
+    });
+
+    testWidgets('search box onSubmitted with empty string clears query',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(SearchResultsPanel));
+      final container = ProviderScope.containerOf(element);
+
+      // Set a query first
+      container.read(searchQueryProvider.notifier).setQuery('太郎');
+      container.read(searchBoxVisibleProvider.notifier).show();
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), '');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(container.read(searchQueryProvider), isNull);
+    });
+
+    testWidgets('search box onSubmitted with whitespace-only string clears query',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(SearchResultsPanel));
+      final container = ProviderScope.containerOf(element);
+      container.read(searchBoxVisibleProvider.notifier).show();
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), '   ');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(container.read(searchQueryProvider), isNull);
+    });
+
+    testWidgets('Escape key hides search box and clears query',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(SearchResultsPanel));
+      final container = ProviderScope.containerOf(element);
+
+      // Set a query and show search box
+      container.read(searchQueryProvider.notifier).setQuery('太郎');
+      container.read(searchBoxVisibleProvider.notifier).show();
+      await tester.pump();
+
+      // Focus the text field and press Escape
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+
+      expect(container.read(searchBoxVisibleProvider), isFalse);
+      expect(container.read(searchQueryProvider), isNull);
+    });
+
+    testWidgets('external hide clears TextField text for next show',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(SearchResultsPanel));
+      final container = ProviderScope.containerOf(element);
+
+      // Show search box and enter text
+      container.read(searchBoxVisibleProvider.notifier).show();
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), '太郎');
+      await tester.pump();
+
+      // Externally hide (simulates global Escape from HomeScreen)
+      container.read(searchBoxVisibleProvider.notifier).hide();
+      await tester.pump();
+
+      // Show again
+      container.read(searchBoxVisibleProvider.notifier).show();
+      await tester.pump();
+
+      // TextField should be empty
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.controller!.text, isEmpty);
     });
 
     testWidgets(

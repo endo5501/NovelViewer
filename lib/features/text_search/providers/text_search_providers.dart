@@ -3,6 +3,20 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 
+class SearchBoxVisibleNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void show() => state = true;
+
+  void hide() => state = false;
+}
+
+final searchBoxVisibleProvider =
+    NotifierProvider<SearchBoxVisibleNotifier, bool>(
+  SearchBoxVisibleNotifier.new,
+);
+
 class SearchQueryNotifier extends Notifier<String?> {
   @override
   String? build() => null;
