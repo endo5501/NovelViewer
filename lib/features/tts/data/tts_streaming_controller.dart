@@ -21,7 +21,7 @@ class TtsStreamingController {
     required TtsAudioPlayer audioPlayer,
     required TtsAudioRepository repository,
     required this.tempDirPath,
-    Duration bufferDrainDelay = const Duration(milliseconds: 800),
+    Duration bufferDrainDelay = const Duration(milliseconds: 500),
   })  : _ttsIsolate = ttsIsolate,
         _audioPlayer = audioPlayer,
         _repository = repository,

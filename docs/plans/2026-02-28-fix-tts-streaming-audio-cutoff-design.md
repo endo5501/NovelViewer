@@ -10,7 +10,7 @@ The actual root cause is a timing mismatch across the audio stack:
 
 1. mpv's `eof-reached` fires when the **decoder** finishes reading the file
 2. This propagates through media_kit → just_audio_media_kit → just_audio as a `completed` state
-3. However, WASAPI (Windows audio output) still has buffered samples (~200-800ms) to play
+3. However, WASAPI (Windows audio output) still has buffered samples (~200-500ms) to play
 4. Any player operation (`stop()`, `setFilePath()` for next segment) at this point kills the remaining buffered audio
 
 Additionally, `just_audio`'s `play()` has a guard: `if (playing) return;` (line 939). After segment completion, `playing` stays `true`, so subsequent `play()` calls are no-ops unless `stop()` or `pause()` is called to reset the flag.
@@ -27,7 +27,7 @@ The initial fix called `stop()` between segments. However, `stop()` in just_audi
 
 Use `pause()` (not `stop()`) after a buffer drain delay:
 
-1. After `completed` state is received, wait for the WASAPI buffer to drain (800ms delay)
+1. After `completed` state is received, wait for the WASAPI buffer to drain (500ms delay)
 2. Call `pause()` to reset `_playing` to `false` without destroying the platform
 3. Proceed with `setFilePath()` for the next segment (no auto-play since `_playing` is `false`)
 4. Call `play()` which now works correctly (sends a real play request)
@@ -38,7 +38,7 @@ Use `pause()` (not `stop()`) after a buffer drain delay:
 
 ### TtsStreamingController
 
-- Added `bufferDrainDelay` constructor parameter (default 800ms, injectable as `Duration.zero` for tests)
+- Added `bufferDrainDelay` constructor parameter (default 500ms, injectable as `Duration.zero` for tests)
 - After `playCompleter.future` resolves and `playSub` is cancelled:
   1. Wait `_bufferDrainDelay` for audio output buffer to drain
   2. Call `await _audioPlayer.pause()` to reset `_playing` flag

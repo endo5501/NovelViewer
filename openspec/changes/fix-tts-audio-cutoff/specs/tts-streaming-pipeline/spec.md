@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Audio buffer drain between segments
-The system SHALL wait for the audio output device to finish draining its buffer after each segment's playback completes before proceeding to the next segment. The wait duration SHALL be configurable via a `bufferDrainDelay` constructor parameter on `TtsStreamingController`, with a default value suitable for Windows WASAPI (800ms). After the buffer drain delay, the system SHALL call `pause()` on the audio player to reset the internal `playing` flag to `false`. The system SHALL NOT call `stop()` between segments, as `stop()` destroys the underlying platform player and kills any remaining audio in the output buffer.
+The system SHALL wait for the audio output device to finish draining its buffer after each segment's playback completes before proceeding to the next segment. The wait duration SHALL be configurable via a `bufferDrainDelay` constructor parameter on `TtsStreamingController`, with a default value suitable for Windows WASAPI (500ms). After the buffer drain delay, the system SHALL call `pause()` on the audio player to reset the internal `playing` flag to `false`. The system SHALL NOT call `stop()` between segments, as `stop()` destroys the underlying platform player and kills any remaining audio in the output buffer.
 
 #### Scenario: Buffer drain delay prevents audio cutoff
 - **WHEN** segment N finishes playback (completed state is received) and segment N+1 is ready
