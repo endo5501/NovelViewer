@@ -49,7 +49,7 @@
 
 **理由:** 処理順序の修正（Decision 1）で現在のテスト問題は解決するが、ファイルシステム操作には本質的にTOCTOU（Time-of-check to time-of-use）レースが存在する。`file.exists()` が `true` を返した後でも、外部プロセスや OS によってファイルが削除される可能性がある。防御的なエラーハンドリングにより、このクラスのエラーを根本的に排除できる。
 
-**代替案:** `exists()` チェックを削除して常に try-catch にする方法もあるが、`exists()` チェックは意図を明確にするため残す。
+simplify レビューにより `exists()` チェックを除去し、直接 `delete()` + try-catch とした。`exists()` と `delete()` の間にTOCTOU レースが存在するため、`exists()` チェックは防御にならず冗長である。
 
 ## Risks / Trade-offs
 
