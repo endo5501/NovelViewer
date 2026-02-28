@@ -1034,6 +1034,142 @@ void main() {
         final count = await repository.getSegmentCount(episodeId);
         expect(count, 0);
       });
+
+      test('deletes episode record when all segments are reset', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'completed',
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'セグメント0。',
+          textOffset: 0,
+          textLength: 6,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 1,
+          text: 'セグメント1。',
+          textOffset: 7,
+          textLength: 6,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: 'セグメント0。セグメント1。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.resetAll();
+
+        // Episode record should be deleted when no segments remain
+        final episode = await repository.findEpisodeByFileName('test.txt');
+        expect(episode, isNull);
+      });
+    });
+
+    group('resetSegment episode status update', () {
+      test('deletes episode when last audio segment is reset', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'セグメント0。',
+          textOffset: 0,
+          textLength: 6,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: 'セグメント0。セグメント1。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.resetSegment(0);
+
+        // Episode record should be deleted when no segments remain
+        final episode = await repository.findEpisodeByFileName('test.txt');
+        expect(episode, isNull);
+      });
+
+      test('keeps episode with partial status when some segments remain',
+          () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'completed',
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'セグメント0。',
+          textOffset: 0,
+          textLength: 6,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 1,
+          text: 'セグメント1。',
+          textOffset: 7,
+          textLength: 6,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: 'セグメント0。セグメント1。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.resetSegment(0);
+
+        // Episode should remain with partial status
+        final episode = await repository.findEpisodeByFileName('test.txt');
+        expect(episode, isNotNull);
+        expect(episode!['status'], 'partial');
+      });
     });
 
     group('cancel', () {

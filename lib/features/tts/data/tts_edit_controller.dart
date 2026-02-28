@@ -324,6 +324,8 @@ class TtsEditController {
     segment.refWavPath = null;
     segment.memo = null;
     segment.dbRecordExists = false;
+
+    await _updateEpisodeStatusAfterReset();
   }
 
   Future<void> resetAll() async {
@@ -343,6 +345,8 @@ class TtsEditController {
       segment.memo = null;
       segment.dbRecordExists = false;
     }
+
+    await _updateEpisodeStatusAfterReset();
   }
 
   Future<void> cancel() async {
@@ -371,6 +375,20 @@ class TtsEditController {
     }
     _isolateSpawned = false;
     _modelLoaded = false;
+  }
+
+  Future<void> _updateEpisodeStatusAfterReset() async {
+    if (_episodeId == null) return;
+
+    final hasAnyDbRecord = _segments.any((s) => s.dbRecordExists);
+    if (!hasAnyDbRecord) {
+      await _repository.deleteEpisode(_episodeId!);
+      _episodeId = null;
+    } else {
+      final allHaveAudio = _segments.every((s) => s.hasAudio);
+      final status = allHaveAudio ? 'completed' : 'partial';
+      await _repository.updateEpisodeStatus(_episodeId!, status);
+    }
   }
 
   Future<void> _ensureEpisodeExists() async {

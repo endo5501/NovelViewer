@@ -516,6 +516,59 @@ void main() {
       });
     });
 
+    group('TtsEpisodeStatus.fromDbStatus', () {
+      test('maps "completed" to completed', () {
+        expect(TtsEpisodeStatus.fromDbStatus('completed'),
+            TtsEpisodeStatus.completed);
+      });
+
+      test('maps "partial" to partial', () {
+        expect(TtsEpisodeStatus.fromDbStatus('partial'),
+            TtsEpisodeStatus.partial);
+      });
+
+      test('maps "generating" to partial', () {
+        expect(TtsEpisodeStatus.fromDbStatus('generating'),
+            TtsEpisodeStatus.partial);
+      });
+
+      test('maps null to none', () {
+        expect(TtsEpisodeStatus.fromDbStatus(null), TtsEpisodeStatus.none);
+      });
+    });
+
+    group('getAllEpisodeStatuses', () {
+      test('returns map with mixed statuses', () async {
+        await repository.createEpisode(
+          fileName: '0001_chapter1.txt',
+          sampleRate: 24000,
+          status: 'completed',
+        );
+        await repository.createEpisode(
+          fileName: '0002_chapter2.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+        await repository.createEpisode(
+          fileName: '0003_chapter3.txt',
+          sampleRate: 24000,
+          status: 'generating',
+        );
+
+        final statuses = await repository.getAllEpisodeStatuses();
+
+        expect(statuses, hasLength(3));
+        expect(statuses['0001_chapter1.txt'], TtsEpisodeStatus.completed);
+        expect(statuses['0002_chapter2.txt'], TtsEpisodeStatus.partial);
+        expect(statuses['0003_chapter3.txt'], TtsEpisodeStatus.partial);
+      });
+
+      test('returns empty map for empty database', () async {
+        final statuses = await repository.getAllEpisodeStatuses();
+        expect(statuses, isEmpty);
+      });
+    });
+
     group('getGeneratedSegmentCount', () {
       test('returns count of segments with audio_data', () async {
         final episodeId = await repository.createEpisode(

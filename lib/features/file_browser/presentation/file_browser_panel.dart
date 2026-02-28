@@ -6,6 +6,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/novel_delete/providers/novel_delete_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
+import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 
 /// Returns the parent directory of [currentDir], or null if already at root.
 String? getParentDirectory(String currentDir) {
@@ -75,14 +76,25 @@ class FileBrowserPanel extends ConsumerWidget {
             (dir) => _buildDirectoryTile(context, ref, dir, isAtLibraryRoot),
           ),
           ...contents.files.map(
-            (file) => ListTile(
-              leading: const Icon(Icons.description),
-              title: Text(file.name),
-              selected: selectedFile?.path == file.path,
-              onTap: () {
-                ref.read(selectedFileProvider.notifier).selectFile(file);
-              },
-            ),
+            (file) {
+              final ttsStatus = contents.ttsStatuses[file.name] ??
+                  TtsEpisodeStatus.none;
+              return ListTile(
+                leading: const Icon(Icons.description),
+                title: Text(file.name),
+                trailing: switch (ttsStatus) {
+                  TtsEpisodeStatus.completed =>
+                    const Icon(Icons.check_circle, color: Colors.green),
+                  TtsEpisodeStatus.partial =>
+                    const Icon(Icons.pie_chart, color: Colors.orange),
+                  TtsEpisodeStatus.none => null,
+                },
+                selected: selectedFile?.path == file.path,
+                onTap: () {
+                  ref.read(selectedFileProvider.notifier).selectFile(file);
+                },
+              );
+            },
           ),
         ];
 

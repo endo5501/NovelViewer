@@ -2,6 +2,24 @@ import 'dart:typed_data';
 
 import 'tts_audio_database.dart';
 
+enum TtsEpisodeStatus {
+  none,
+  partial,
+  completed;
+
+  static TtsEpisodeStatus fromDbStatus(String? status) {
+    switch (status) {
+      case 'completed':
+        return TtsEpisodeStatus.completed;
+      case 'partial':
+      case 'generating':
+        return TtsEpisodeStatus.partial;
+      default:
+        return TtsEpisodeStatus.none;
+    }
+  }
+}
+
 class TtsAudioRepository {
   final TtsAudioDatabase _database;
 
@@ -179,6 +197,19 @@ class TtsAudioRepository {
       [episodeId],
     );
     return result.first['count'] as int;
+  }
+
+  Future<Map<String, TtsEpisodeStatus>> getAllEpisodeStatuses() async {
+    final db = await _database.database;
+    final rows = await db.query(
+      'tts_episodes',
+      columns: ['file_name', 'status'],
+    );
+    return {
+      for (final row in rows)
+        row['file_name'] as String:
+            TtsEpisodeStatus.fromDbStatus(row['status'] as String?),
+    };
   }
 
   Future<void> deleteEpisode(int episodeId) async {

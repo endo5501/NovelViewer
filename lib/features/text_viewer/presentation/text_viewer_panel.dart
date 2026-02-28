@@ -161,9 +161,11 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
       if (audioState == TtsAudioState.generating) {
         ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.ready);
       }
+      ref.invalidate(directoryContentsProvider);
     } catch (_) {
       if (mounted) {
         ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
+        ref.invalidate(directoryContentsProvider);
       }
     } finally {
       _streamingController = null;
@@ -209,14 +211,18 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
 
     final db = TtsAudioDatabase(folderPath);
     final repo = TtsAudioRepository(db);
-    final episode = await repo.findEpisodeByFileName(fileName);
-    if (episode != null) {
-      await repo.deleteEpisode(episode['id'] as int);
+    try {
+      final episode = await repo.findEpisodeByFileName(fileName);
+      if (episode != null) {
+        await repo.deleteEpisode(episode['id'] as int);
+      }
+    } finally {
+      await db.close();
     }
-    await db.close();
 
     if (!mounted) return;
     ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
+    ref.invalidate(directoryContentsProvider);
     _lastCheckedFileKey = null;
   }
 
@@ -232,9 +238,10 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
       content: content,
     );
 
-    // Refresh audio state after dialog closes
+    // Refresh audio state and file browser TTS icons after dialog closes
     _lastCheckedFileKey = null;
     if (mounted) {
+      ref.invalidate(directoryContentsProvider);
       _checkAudioState();
     }
   }
