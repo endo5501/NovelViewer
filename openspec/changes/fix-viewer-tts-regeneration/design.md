@@ -2,18 +2,23 @@
 
 `TtsStreamingController`（閲覧画面）と`TtsEditController`（編集画面）は同じ`tts_episodes`/`tts_segments`テーブルを共有している。`TtsStreamingController.start()`はエピソードの`text_hash`を検証し、不一致または`null`の場合はエピソード全体を削除して再作成する。
 
-現在`TtsEditController._ensureEpisodeExists()`はエピソード作成時に`text_hash`を設定していない。そのため、編集画面で作成されたエピソードは`text_hash = NULL`を持ち、閲覧画面のハッシュ検証で常に不一致と判定されてエピソードが削除される。
+DBの`ref_wav_path`カラムの保存ルールは以下の通り:
+- `NULL` → グローバル設定を使用（「設定値」）
+- `''` → リファレンスなし（「なし」）
+- `filename.wav` → 特定のボイスファイル（ファイル名のみ）
+
+編集画面はこのルールに従ってファイル名のみを保存するが、ストリーミングコントローラはフルパスを保存していた。また、DBから読んだファイル名をフルパスに解決せずに合成に渡していた。
 
 ## Goals / Non-Goals
 
 **Goals:**
 - 編集画面で作成されたエピソードが閲覧画面のハッシュ検証を通過し、既存の生成済み音声が保持されるようにする
-- `TtsStreamingController`の既存ロジックに変更を加えずに問題を解決する
+- `ref_wav_path`の保存ルール（ファイル名のみ）を閲覧画面のストリーミングコントローラでも統一する
+- DBから読んだ`ref_wav_path`（ファイル名）を合成前にフルパスに解決する
 
 **Non-Goals:**
 - `TtsStreamingController`のハッシュ検証ロジック自体の変更
 - 編集画面と閲覧画面のTTS生成フローの統合・リファクタリング
-- 既存の`text_hash = NULL`のエピソードのマイグレーション（次回閲覧画面アクセス時に自動修正される）
 
 ## Decisions
 
@@ -23,17 +28,25 @@
 
 **理由**: `loadSegments()`は`text`パラメータを受け取る唯一のエントリポイントであり、`TtsStreamingController`と同じ`sha256.convert(utf8.encode(text))`を使用することでハッシュの一貫性が保証される。
 
-**代替案**:
-- `_ensureEpisodeExists()`にtextパラメータを追加する → 呼び出し元すべてにtextの受け渡しが必要になり、変更範囲が広がる
-- `TtsStreamingController`側でtext_hash=nullを許容する → ストリーミング側にnull処理の複雑さが加わり、テキスト変更時の検出が不正確になる
-
 ### 2. 既存エピソードにもtext_hashを設定する
 
 **選択**: `loadSegments()`で既存エピソードを見つけた場合、そのエピソードの`text_hash`が`null`であれば更新する。
 
-**理由**: この修正以前に編集画面で作成されたエピソード（`text_hash = NULL`）も、次回`loadSegments()`が呼ばれた際に修正される。閲覧画面で先にアクセスされた場合はエピソードが再作成されるが、データ損失は一度限りであり許容範囲。
+**理由**: この修正以前に編集画面で作成されたエピソード（`text_hash = NULL`）も、次回`loadSegments()`が呼ばれた際に修正される。
+
+### 3. `ref_wav_path`のパス解決にコールバックを使用する
+
+**選択**: `TtsStreamingController.start()`に`String Function(String)? resolveRefWavPath`コールバックを追加し、DBから読んだファイル名をフルパスに解決する。`TtsEditController.generateAllUngenerated()`と同じパターン。
+
+**理由**: ストリーミングコントローラは`VoiceReferenceService`に依存しないため、呼び出し元（`text_viewer_panel.dart`）がパス解決を提供する。既存の`TtsEditController`と同じコールバックパターンを使うことで一貫性を保つ。
+
+### 4. 新規セグメント挿入時にref_wav_pathをNULLで保存する
+
+**選択**: `_startPlayback`の`insertSegment`呼び出しで`refWavPath`を渡さない（NULL）。
+
+**理由**: ストリーミングコントローラがグローバル設定で生成したセグメントは「設定値」であるべき。フルパスを保存すると編集画面でファイル名リストと照合できず「なし」と表示される。`NULL`は「設定値」を意味し、DB保存ルールに準拠する。
 
 ## Risks / Trade-offs
 
-- **既存エピソードの一度限りのデータ損失**: この修正以前に編集画面で作成された`text_hash = NULL`のエピソードが、修正後に閲覧画面から先にアクセスされた場合は再作成される → 編集画面を先に開けば`text_hash`が設定されて回避可能。頻度が低く許容範囲。
-- **ハッシュ計算のオーバーヘッド**: `loadSegments()`呼び出しごとにSHA-256計算が行われる → テキストサイズに対して無視できるレベル。
+- **既存エピソードの一度限りのデータ損失**: この修正以前に編集画面で作成された`text_hash = NULL`のエピソードが、修正後に閲覧画面から先にアクセスされた場合は再作成される → 編集画面を先に開けば回避可能。頻度が低く許容範囲。
+- **既存のフルパス保存データ**: 修正前にストリーミングコントローラが保存したフルパスは編集画面で「なし」と表示される → 再生成すれば修正される。

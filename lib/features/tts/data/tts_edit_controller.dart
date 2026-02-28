@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+
+import 'package:crypto/crypto.dart';
 
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
@@ -41,6 +44,7 @@ class TtsEditController {
   bool _isolateSpawned = false;
   int? _episodeId;
   String? _fileName;
+  String? _textHash;
   int _sampleRate = 24000;
   StreamSubscription<TtsIsolateResponse>? _subscription;
   Completer<void>? _activePlayCompleter;
@@ -59,6 +63,7 @@ class TtsEditController {
   }) async {
     _sampleRate = sampleRate;
     _fileName = fileName;
+    _textHash = sha256.convert(utf8.encode(text)).toString();
 
     final originalSegments = _textSegmenter.splitIntoSentences(text);
 
@@ -68,6 +73,12 @@ class TtsEditController {
     if (episode != null) {
       _episodeId = episode['id'] as int;
       dbSegments = await _repository.getSegments(_episodeId!);
+
+      // Backfill text_hash for episodes created before this fix
+      final storedHash = episode['text_hash'] as String?;
+      if (storedHash == null) {
+        await _repository.updateEpisodeTextHash(_episodeId!, _textHash!);
+      }
     }
 
     _segments = TtsEditSegment.mergeSegments(
@@ -398,6 +409,7 @@ class TtsEditController {
       fileName: _fileName ?? 'unknown',
       sampleRate: _sampleRate,
       status: 'partial',
+      textHash: _textHash,
     );
   }
 

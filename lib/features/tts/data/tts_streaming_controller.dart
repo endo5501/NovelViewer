@@ -45,6 +45,7 @@ class TtsStreamingController {
     required int sampleRate,
     String? refWavPath,
     int? startOffset,
+    String Function(String fileName)? resolveRefWavPath,
   }) async {
     _stopped = false;
     _modelLoaded = false;
@@ -94,6 +95,7 @@ class TtsStreamingController {
         sampleRate: sampleRate,
         refWavPath: refWavPath,
         startOffset: startOffset,
+        resolveRefWavPath: resolveRefWavPath,
       );
 
       // Update episode status
@@ -162,6 +164,7 @@ class TtsStreamingController {
     required int sampleRate,
     required String? refWavPath,
     int? startOffset,
+    String Function(String fileName)? resolveRefWavPath,
   }) async {
     // Determine starting segment
     int startIndex = 0;
@@ -217,7 +220,11 @@ class TtsStreamingController {
             dbRow?['text'] as String? ?? segments[i].text;
         final dbRefWavPath = dbRow?['ref_wav_path'] as String?;
         final synthRefWavPath = dbRefWavPath != null
-            ? (dbRefWavPath.isEmpty ? null : dbRefWavPath)
+            ? (dbRefWavPath.isEmpty
+                ? null
+                : resolveRefWavPath != null
+                    ? resolveRefWavPath(dbRefWavPath)
+                    : dbRefWavPath)
             : refWavPath;
 
         final result = await _synthesize(synthText, synthRefWavPath);
@@ -244,7 +251,6 @@ class TtsStreamingController {
             textLength: textLength,
             audioData: wavBytes,
             sampleCount: result.audio!.length,
-            refWavPath: refWavPath,
           );
         }
 
