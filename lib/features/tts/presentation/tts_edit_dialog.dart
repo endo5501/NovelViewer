@@ -561,7 +561,6 @@ class _TtsEditSegmentRowState extends State<_TtsEditSegmentRow> {
                     EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 border: OutlineInputBorder(),
               ),
-              style: const TextStyle(fontSize: 12),
               items: [
                 const DropdownMenuItem<String?>(
                   value: null,
