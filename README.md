@@ -17,7 +17,9 @@ Web小説サイトから小説をダウンロードし、ローカルで閲覧�
 (Ollama / OpenAI互換APIに対応)
 - **音声読み上げ**: 指定したリファレンス音声を使った読み上げ/読み上げテキストの編集
 
-![画面](images/view.png)
+![閲覧画面](images/view1.png)
+
+![編集画面](images/view2.png)
 
 ### LLM(Ollama)設定
 
