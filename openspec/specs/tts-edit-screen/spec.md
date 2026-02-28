@@ -75,7 +75,7 @@ Each segment SHALL have an editable memo text field. Memo content SHALL be persi
 - **THEN** the memo is persisted to the segment's DB record
 
 ### Requirement: Segment preview playback
-The system SHALL allow playing a single segment's audio via the play button on each row. The play button SHALL only be enabled when the segment has generated audio (audio_data is not NULL).
+The system SHALL allow playing a single segment's audio via the play button on each row. The play button SHALL only be enabled when the segment has generated audio (audio_data is not NULL). After playback completes, the system SHALL call `pause()` on the audio player to reset the internal `playing` flag. The system SHALL NOT call `stop()` after segment playback, as `stop()` destroys the underlying platform player and kills any remaining audio in the output buffer.
 
 #### Scenario: Play a generated segment
 - **WHEN** the user clicks the play button on a segment with generated audio
@@ -84,6 +84,14 @@ The system SHALL allow playing a single segment's audio via the play button on e
 #### Scenario: Play button disabled for ungenerated segment
 - **WHEN** a segment has no generated audio (audio_data is NULL)
 - **THEN** the play button is disabled
+
+#### Scenario: pause() called after segment playback completes
+- **WHEN** a segment finishes playing in the edit dialog
+- **THEN** the system calls `pause()` on the audio player, resetting the `playing` flag so that the next `play()` call functions correctly
+
+#### Scenario: stop() not called after segment playback
+- **WHEN** a segment finishes playing in the edit dialog
+- **THEN** the system SHALL NOT call `stop()` after playback, preserving the underlying platform player
 
 ### Requirement: Single segment regeneration
 The system SHALL allow regenerating a single segment's audio via the regenerate button. Regeneration SHALL use the segment's current text and ref_wav_path (resolving "設定値" to the actual global setting). The TTS model SHALL be loaded on the first regeneration request within the dialog session and kept loaded until the dialog is closed. During generation, the segment status SHALL show "生成中".
@@ -116,15 +124,19 @@ The system SHALL allow resetting a segment via the reset button. Resetting SHALL
 - **THEN** the segment's DB record is deleted (if it existed) and the segment shows original text with "未生成" status
 
 ### Requirement: Play all segments
-The system SHALL provide a "全再生" button in the dialog toolbar that plays all segments in order as a preview. Only segments with generated audio SHALL be played. Segments without audio SHALL be skipped.
+The system SHALL provide a "全再生" button in the dialog toolbar that plays all segments in order as a preview. Only segments with generated audio SHALL be played. Segments without audio SHALL be skipped. Between segments, the system SHALL use `pause()` (not `stop()`) to reset the audio player's `playing` flag, ensuring each subsequent `play()` call functions correctly.
 
 #### Scenario: Play all with all segments generated
 - **WHEN** the user clicks "全再生" and all segments have generated audio
-- **THEN** all segments play in order from segment 0 to the last segment
+- **THEN** all segments play in order from segment 0 to the last segment, with `pause()` called between each segment transition
 
 #### Scenario: Play all with some segments ungenerated
 - **WHEN** the user clicks "全再生" and segments 0, 2, 3 have audio but segment 1 does not
 - **THEN** segments 0, 2, 3 are played in order, segment 1 is skipped
+
+#### Scenario: Play all transitions cleanly between segments
+- **WHEN** segment N completes during "全再生" playback
+- **THEN** the system calls `pause()` to reset the `playing` flag, then loads and plays segment N+1 without audio cutoff or skipping
 
 ### Requirement: Generate all ungenerated segments
 The system SHALL provide a "全生成" button in the dialog toolbar that generates audio for all segments that currently have no audio_data. Generation SHALL proceed sequentially from the first ungenerated segment. The TTS model SHALL be loaded if not already loaded. Before generating each segment, the system SHALL notify the UI of the segment index being processed so that the per-segment progress indicator can be updated. For each segment, the system SHALL resolve the segment's ref_wav_path to a full filesystem path before passing it to the TTS engine. The resolution SHALL use the same voice file path resolution mechanism used by single-segment regeneration (resolving filename-only values to absolute paths via the voices directory).
