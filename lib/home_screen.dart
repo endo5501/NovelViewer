@@ -16,18 +16,45 @@ class _SearchIntent extends Intent {
   const _SearchIntent();
 }
 
-class _DismissSearchIntent extends Intent {
-  const _DismissSearchIntent();
-}
-
 class _BookmarkIntent extends Intent {
   const _BookmarkIntent();
 }
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
-  Widget _buildBookmarkButton(WidgetRef ref) {
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_handleEscapeKey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleEscapeKey);
+    super.dispose();
+  }
+
+  bool _handleEscapeKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    if (event.logicalKey != LogicalKeyboardKey.escape) return false;
+
+    final isSearchActive =
+        ref.read(searchBoxVisibleProvider) ||
+        ref.read(searchQueryProvider) != null;
+    if (!isSearchActive) return false;
+
+    ref.read(searchBoxVisibleProvider.notifier).hide();
+    ref.read(searchQueryProvider.notifier).setQuery(null);
+    return true;
+  }
+
+  Widget _buildBookmarkButton() {
     final novelId = ref.watch(currentNovelIdProvider);
     final selectedFile = ref.watch(selectedFileProvider);
     final isEnabled = novelId != null && selectedFile != null;
@@ -36,12 +63,12 @@ class HomeScreen extends ConsumerWidget {
     return IconButton(
       key: const Key('bookmark_button'),
       icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border),
-      onPressed: isEnabled ? () => _toggleBookmark(ref) : null,
+      onPressed: isEnabled ? () => _toggleBookmark() : null,
       tooltip: isBookmarked ? 'ブックマーク解除' : 'ブックマーク登録',
     );
   }
 
-  Future<void> _toggleBookmark(WidgetRef ref) async {
+  Future<void> _toggleBookmark() async {
     final novelId = ref.read(currentNovelIdProvider);
     final selectedFile = ref.read(selectedFileProvider);
     if (novelId == null || selectedFile == null) return;
@@ -62,15 +89,13 @@ class HomeScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Shortcuts(
       shortcuts: {
         const SingleActivator(LogicalKeyboardKey.keyF, control: true):
             const _SearchIntent(),
         const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
             const _SearchIntent(),
-        const SingleActivator(LogicalKeyboardKey.escape):
-            const _DismissSearchIntent(),
         const SingleActivator(LogicalKeyboardKey.keyB, control: true):
             const _BookmarkIntent(),
         const SingleActivator(LogicalKeyboardKey.keyB, meta: true):
@@ -92,21 +117,9 @@ class HomeScreen extends ConsumerWidget {
               return null;
             },
           ),
-          _DismissSearchIntent: CallbackAction<_DismissSearchIntent>(
-            onInvoke: (_) {
-              final isSearchActive =
-                  ref.read(searchBoxVisibleProvider) ||
-                  ref.read(searchQueryProvider) != null;
-              if (isSearchActive) {
-                ref.read(searchBoxVisibleProvider.notifier).hide();
-                ref.read(searchQueryProvider.notifier).setQuery(null);
-              }
-              return null;
-            },
-          ),
           _BookmarkIntent: CallbackAction<_BookmarkIntent>(
             onInvoke: (_) {
-              _toggleBookmark(ref);
+              _toggleBookmark();
               return null;
             },
           ),
@@ -120,7 +133,7 @@ class HomeScreen extends ConsumerWidget {
                     'NovelViewer',
               ),
               actions: [
-                _buildBookmarkButton(ref),
+                _buildBookmarkButton(),
                 IconButton(
                   key: const Key('toggle_right_column_button'),
                   icon: Icon(
