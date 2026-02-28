@@ -21,15 +21,18 @@ class TtsStreamingController {
     required TtsAudioPlayer audioPlayer,
     required TtsAudioRepository repository,
     required this.tempDirPath,
+    Duration bufferDrainDelay = const Duration(milliseconds: 800),
   })  : _ttsIsolate = ttsIsolate,
         _audioPlayer = audioPlayer,
-        _repository = repository;
+        _repository = repository,
+        _bufferDrainDelay = bufferDrainDelay;
 
   final ProviderContainer ref;
   final TtsIsolate _ttsIsolate;
   final TtsAudioPlayer _audioPlayer;
   final TtsAudioRepository _repository;
   final String tempDirPath;
+  final Duration _bufferDrainDelay;
   final _textSegmenter = TextSegmenter();
 
   bool _stopped = false;
@@ -302,12 +305,20 @@ class TtsStreamingController {
       _activePlayCompleter = null;
       await playSub.cancel();
 
-      // Reset playing state so the next play() sends a real platform request.
-      // Without this, just_audio's play() returns immediately (no-op) because
-      // playing remains true after completion, and setFilePath auto-plays
-      // via media_kit before the previous audio buffer is fully flushed.
-      if (!_stopped) {
-        await _audioPlayer.stop();
+      // Wait for audio output buffer to drain before loading next segment.
+      // eof-reached fires when the decoder finishes, but the audio device
+      // (e.g. WASAPI on Windows) may still have buffered samples to play.
+      // After draining, pause() resets just_audio's _playing flag to false
+      // so that the next play() call is not a no-op.
+      // pause() is used instead of stop() because stop() destroys the
+      // platform (MediaKitPlayer), which kills buffered audio.
+      // Skip the delay for the last segment — no next segment to protect.
+      final hasNextSegment = i < segments.length - 1;
+      if (!_stopped && hasNextSegment) {
+        await Future<void>.delayed(_bufferDrainDelay);
+        if (!_stopped) {
+          await _audioPlayer.pause();
+        }
       }
 
       if (_stopped) break;

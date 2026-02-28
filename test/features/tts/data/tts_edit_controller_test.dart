@@ -650,7 +650,7 @@ void main() {
     });
 
     group('playAll with realistic player', () {
-      test('plays all segments when stop is called between segments', () async {
+      test('plays all segments when pause is called between segments', () async {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
