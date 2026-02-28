@@ -299,6 +299,7 @@ class TtsEditController {
     await playCompleter.future;
     _activePlayCompleter = null;
     await playSub.cancel();
+    await _audioPlayer.stop();
   }
 
   Future<void> playAll({void Function(int)? onSegmentStart}) async {
