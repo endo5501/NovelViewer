@@ -15,6 +15,7 @@ Web小説サイトから小説をダウンロードし、ローカルで閲覧�
 - **ブックマーク**: ブックマークの登録・解除 
 - **LLM要約**: 指定した単語をネタばれあり/なしを指定して確認可能  
 (Ollama / OpenAI互換APIに対応)
+- **音声読み上げ**: 指定したリファレンス音声を使った読み上げ/読み上げテキストの編集
 
 ![画面](images/view.png)
 
@@ -33,12 +34,14 @@ ollama pull qwen3:8b
 
 - [FVM](https://fvm.app/) (Flutter Version Management)
 - Flutter stable channel（FVM経由で管理）
+- Visual Studio 2022 (Windows)
+- Vulkan SDK (Windows)
 
 ### セットアップ
 
 ```bash
 # リポジトリをクローン
-git clone git@github.com:endo5501/NovelViewer.git
+git clone --recursive git@github.com:endo5501/NovelViewer.git
 cd NovelViewer
 
 # Flutter SDKのセットアップ（FVM経由）
@@ -71,9 +74,11 @@ npm i -g @openai/codex
 fvm flutter run -d macos
 
 # macOS向けReleaseビルド
+scripts/build_tts_macos.sh
 fvm flutter build macos
 
 # Windows向けReleaseビルド
+scripts/build_tts_windows.bat
 fvm flutter build windows
 ```
 
@@ -115,3 +120,4 @@ git push origin v1.0.0
 - **設定永続化**: SharedPreferences
 - **HTTP通信**: http パッケージ
 - **HTMLパース**: html パッケージ
+- **音声読み上げ**: qwen3-tts.cpp
