@@ -77,6 +77,11 @@ class HomeScreen extends ConsumerWidget {
               final selectedText = ref.read(selectedTextProvider);
               if (selectedText?.isNotEmpty ?? false) {
                 ref.read(searchQueryProvider.notifier).setQuery(selectedText);
+              } else {
+                ref.read(searchBoxVisibleProvider.notifier).show();
+              }
+              if (!ref.read(rightColumnVisibleProvider)) {
+                ref.read(rightColumnVisibleProvider.notifier).toggle();
               }
               return null;
             },

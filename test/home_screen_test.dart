@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
+import 'package:novel_viewer/shared/providers/layout_providers.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -248,7 +249,7 @@ void main() {
       expect(container.read(searchQueryProvider), '太郎');
     });
 
-    testWidgets('Ctrl+F does nothing when no text is selected',
+    testWidgets('Ctrl+F shows search box when no text is selected',
         (WidgetTester tester) async {
       late ProviderContainer container;
 
@@ -266,12 +267,46 @@ void main() {
       final element = tester.element(find.byType(NovelViewerApp));
       container = ProviderScope.containerOf(element);
 
+      expect(container.read(searchBoxVisibleProvider), isFalse);
+
       await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
       await tester.pump();
 
+      expect(container.read(searchBoxVisibleProvider), isTrue);
       expect(container.read(searchQueryProvider), isNull);
+    });
+
+    testWidgets('Ctrl+F auto-shows right column when hidden',
+        (WidgetTester tester) async {
+      late ProviderContainer container;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(NovelViewerApp));
+      container = ProviderScope.containerOf(element);
+
+      // Hide right column first
+      container.read(rightColumnVisibleProvider.notifier).toggle();
+      expect(container.read(rightColumnVisibleProvider), isFalse);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+      await tester.pump();
+
+      expect(container.read(rightColumnVisibleProvider), isTrue);
+      expect(container.read(searchBoxVisibleProvider), isTrue);
     });
   });
 }

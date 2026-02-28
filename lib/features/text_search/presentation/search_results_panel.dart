@@ -1,37 +1,109 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 
-class SearchResultsPanel extends ConsumerWidget {
+class SearchResultsPanel extends ConsumerStatefulWidget {
   const SearchResultsPanel({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SearchResultsPanel> createState() =>
+      _SearchResultsPanelState();
+}
+
+class _SearchResultsPanelState extends ConsumerState<SearchResultsPanel> {
+  final _focusNode = FocusNode();
+  final _controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.onKeyEvent = (node, event) {
+      if (event is KeyDownEvent &&
+          event.logicalKey == LogicalKeyboardKey.escape) {
+        _onEscape();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    };
+    ref.listenManual(searchBoxVisibleProvider, (previous, next) {
+      if (next && !_focusNode.hasFocus) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !_focusNode.hasFocus) {
+            _focusNode.requestFocus();
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onSubmitted(String value) {
+    final trimmed = value.trim();
+    ref.read(searchQueryProvider.notifier).setQuery(trimmed.isEmpty ? null : trimmed);
+  }
+
+  void _onEscape() {
+    ref.read(searchBoxVisibleProvider.notifier).hide();
+    ref.read(searchQueryProvider.notifier).setQuery(null);
+    _controller.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isSearchBoxVisible = ref.watch(searchBoxVisibleProvider);
     final resultsAsync = ref.watch(searchResultsProvider);
 
-    return resultsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('エラー: $error')),
-      data: (results) {
-        if (results == null) {
-          return const Center(child: Text('検索語を入力してください'));
-        }
+    return Column(
+      children: [
+        if (isSearchBoxVisible)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              decoration: const InputDecoration(
+                hintText: '検索...',
+                prefixIcon: Icon(Icons.search),
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: _onSubmitted,
+            ),
+          ),
+        Expanded(
+          child: resultsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => Center(child: Text('エラー: $error')),
+            data: (results) {
+              if (results == null) {
+                return const Center(child: Text('検索語を入力してください'));
+              }
 
-        if (results.isEmpty) {
-          return const Center(child: Text('検索結果がありません'));
-        }
+              if (results.isEmpty) {
+                return const Center(child: Text('検索結果がありません'));
+              }
 
-        return ListView.builder(
-          itemCount: results.length,
-          itemBuilder: (context, index) {
-            final result = results[index];
-            return _SearchResultFileGroup(result: result);
-          },
-        );
-      },
+              return ListView.builder(
+                itemCount: results.length,
+                itemBuilder: (context, index) {
+                  final result = results[index];
+                  return _SearchResultFileGroup(result: result);
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
