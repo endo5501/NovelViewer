@@ -870,6 +870,120 @@ void main() {
       });
     });
 
+    group('generateAllUngenerated with resolveRefWavPath callback', () {
+      test('resolves per-segment refWavPath via callback', () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '文1。文2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Set segment 0 to a specific reference audio filename
+        controller.segments[0].refWavPath = 'custom_voice.wav';
+
+        await controller.generateAllUngenerated(
+          modelDir: '/models',
+          globalRefWavPath: '/voices/global.wav',
+          resolveRefWavPath: (fileName) => '/voices/$fileName',
+        );
+
+        expect(isolate.synthesizeRequests, hasLength(2));
+        // Segment 0: per-segment ref resolved via callback
+        expect(
+            isolate.synthesizeRequests[0].$2, '/voices/custom_voice.wav');
+        // Segment 1: null ref falls back to global
+        expect(isolate.synthesizeRequests[1].$2, '/voices/global.wav');
+      });
+
+      test('passes filename as-is when resolveRefWavPath is null', () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '文1。文2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        controller.segments[0].refWavPath = 'custom_voice.wav';
+
+        await controller.generateAllUngenerated(
+          modelDir: '/models',
+          globalRefWavPath: '/voices/global.wav',
+        );
+
+        expect(isolate.synthesizeRequests, hasLength(2));
+        // Segment 0: filename passed as-is (backward compatibility)
+        expect(isolate.synthesizeRequests[0].$2, 'custom_voice.wav');
+        // Segment 1: null ref falls back to global
+        expect(isolate.synthesizeRequests[1].$2, '/voices/global.wav');
+      });
+
+      test('treats empty refWavPath as null even with callback', () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '文1。文2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        controller.segments[0].refWavPath = '';
+
+        await controller.generateAllUngenerated(
+          modelDir: '/models',
+          globalRefWavPath: '/voices/global.wav',
+          resolveRefWavPath: (fileName) => '/voices/$fileName',
+        );
+
+        expect(isolate.synthesizeRequests, hasLength(2));
+        // Segment 0: empty string treated as null (no reference audio)
+        expect(isolate.synthesizeRequests[0].$2, isNull);
+        // Segment 1: null ref falls back to global
+        expect(isolate.synthesizeRequests[1].$2, '/voices/global.wav');
+      });
+    });
+
     group('resetAll', () {
       test('resets all segments to original state', () async {
         final episodeId = await repository.createEpisode(
