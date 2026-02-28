@@ -16,6 +16,10 @@ class _SearchIntent extends Intent {
   const _SearchIntent();
 }
 
+class _DismissSearchIntent extends Intent {
+  const _DismissSearchIntent();
+}
+
 class _BookmarkIntent extends Intent {
   const _BookmarkIntent();
 }
@@ -65,6 +69,8 @@ class HomeScreen extends ConsumerWidget {
             const _SearchIntent(),
         const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
             const _SearchIntent(),
+        const SingleActivator(LogicalKeyboardKey.escape):
+            const _DismissSearchIntent(),
         const SingleActivator(LogicalKeyboardKey.keyB, control: true):
             const _BookmarkIntent(),
         const SingleActivator(LogicalKeyboardKey.keyB, meta: true):
@@ -82,6 +88,18 @@ class HomeScreen extends ConsumerWidget {
               }
               if (!ref.read(rightColumnVisibleProvider)) {
                 ref.read(rightColumnVisibleProvider.notifier).toggle();
+              }
+              return null;
+            },
+          ),
+          _DismissSearchIntent: CallbackAction<_DismissSearchIntent>(
+            onInvoke: (_) {
+              final isSearchActive =
+                  ref.read(searchBoxVisibleProvider) ||
+                  ref.read(searchQueryProvider) != null;
+              if (isSearchActive) {
+                ref.read(searchBoxVisibleProvider.notifier).hide();
+                ref.read(searchQueryProvider.notifier).setQuery(null);
               }
               return null;
             },
