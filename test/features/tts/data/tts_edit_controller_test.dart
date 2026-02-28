@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
@@ -1473,6 +1475,154 @@ void main() {
         await controller.dispose();
 
         expect(isolate.disposed, false);
+      });
+    });
+
+    group('text hash storage', () {
+      test('stores text_hash when episode is created via segment operation',
+          () async {
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        const text = '今日は天気です。散歩に出かけよう。';
+        final expectedHash =
+            sha256.convert(utf8.encode(text)).toString();
+
+        await controller.loadSegments(
+          text: text,
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Trigger episode creation via segment ref_wav_path update
+        await controller.updateSegmentRefWavPath(0, 'voice.wav');
+
+        final episode =
+            await repository.findEpisodeByFileName('test.txt');
+        expect(episode, isNotNull);
+        expect(episode!['text_hash'], expectedHash);
+
+        await controller.dispose();
+      });
+
+      test('updates text_hash when existing episode has null text_hash',
+          () async {
+        // Create episode without text_hash (simulating pre-fix state)
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        const text = '今日は天気です。散歩に出かけよう。';
+        final expectedHash =
+            sha256.convert(utf8.encode(text)).toString();
+
+        await controller.loadSegments(
+          text: text,
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        final episode =
+            await repository.findEpisodeByFileName('test.txt');
+        expect(episode, isNotNull);
+        expect(episode!['text_hash'], expectedHash);
+
+        await controller.dispose();
+      });
+
+      test('preserves existing non-null text_hash on loadSegments',
+          () async {
+        const existingHash = 'existing_hash_value';
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+          textHash: existingHash,
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '今日は天気です。散歩に出かけよう。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        final episode =
+            await repository.findEpisodeByFileName('test.txt');
+        expect(episode, isNotNull);
+        expect(episode!['text_hash'], existingHash);
+
+        await controller.dispose();
+      });
+
+      test(
+          'edit-created episode is reused by streaming controller '
+          'with matching text', () async {
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        const text = '今日は天気です。散歩に出かけよう。';
+
+        await controller.loadSegments(
+          text: text,
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Generate a segment to trigger episode creation with audio
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/model',
+        );
+
+        await controller.dispose();
+
+        // Verify episode exists with correct text_hash
+        final episode =
+            await repository.findEpisodeByFileName('test.txt');
+        expect(episode, isNotNull);
+
+        final textHash =
+            sha256.convert(utf8.encode(text)).toString();
+        final storedHash = episode!['text_hash'] as String?;
+        expect(storedHash, textHash);
+
+        // Verify the streaming controller would reuse it (hash matches)
+        final episodeId = episode['id'] as int;
+        final segments = await repository.getSegments(episodeId);
+        expect(segments, hasLength(1));
+        expect(segments[0]['audio_data'], isNotNull);
       });
     });
   });

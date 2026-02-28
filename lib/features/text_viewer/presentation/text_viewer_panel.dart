@@ -153,6 +153,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
         sampleRate: 24000,
         refWavPath: refWavPath,
         startOffset: startOffset,
+        resolveRefWavPath: voiceService?.resolveVoiceFilePath,
       );
 
       if (!mounted) return;

@@ -831,6 +831,86 @@ void main() {
       expect(player.playedFiles, hasLength(2));
     });
 
+    test('on-demand generation resolves ref_wav_path via callback', () async {
+      const text = '文1。文2。';
+      final episodeId = await repository.createEpisode(
+        fileName: '0001_テスト.txt',
+        sampleRate: 24000,
+        status: 'partial',
+        textHash: _computeTextHash(text),
+      );
+      // Segment 0: no audio, has per-segment ref_wav_path (filename only)
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 0,
+        text: '文1。',
+        textOffset: 0,
+        textLength: 3,
+        refWavPath: 'custom_voice.wav',
+      );
+
+      final isolate = _FakeTtsIsolate();
+      final player = _AutoCompleteAudioPlayer();
+      final controller = TtsStreamingController(
+        ref: container,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+      );
+
+      await controller.start(
+        text: text,
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+        refWavPath: '/full/path/to/voices/global_voice.wav',
+        resolveRefWavPath: (fileName) => '/full/path/to/voices/$fileName',
+      );
+
+      expect(isolate.synthesizeRequests, hasLength(2));
+      // Segment 0: filename resolved to full path via callback
+      expect(isolate.synthesizeRefWavPaths[0],
+          '/full/path/to/voices/custom_voice.wav');
+      // Segment 1: no DB record, uses global ref_wav_path
+      expect(isolate.synthesizeRefWavPaths[1],
+          '/full/path/to/voices/global_voice.wav');
+    });
+
+    test('on-demand generation stores NULL ref_wav_path for new segments',
+        () async {
+      const text = '文1。文2。';
+
+      final isolate = _FakeTtsIsolate();
+      final player = _AutoCompleteAudioPlayer();
+      final controller = TtsStreamingController(
+        ref: container,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+      );
+
+      await controller.start(
+        text: text,
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+        refWavPath: '/full/path/to/voices/global_voice.wav',
+      );
+
+      // Check that inserted segments have ref_wav_path = NULL
+      final episode =
+          await repository.findEpisodeByFileName('0001_テスト.txt');
+      final segments = await repository.getSegments(episode!['id'] as int);
+      expect(segments, hasLength(2));
+      for (final segment in segments) {
+        expect(segment['ref_wav_path'], isNull,
+            reason: 'New segments should store NULL ref_wav_path, '
+                'not the global full path');
+      }
+    });
+
     test('start from text offset plays from the matching segment', () async {
       const text = '文1。文2。文3。';
       final episodeId = await repository.createEpisode(

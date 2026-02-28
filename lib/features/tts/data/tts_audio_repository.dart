@@ -56,6 +56,17 @@ class TtsAudioRepository {
     );
   }
 
+  Future<void> updateEpisodeTextHash(int episodeId, String textHash) async {
+    final db = await _database.database;
+    final now = DateTime.now().toUtc().toIso8601String();
+    await db.update(
+      'tts_episodes',
+      {'text_hash': textHash, 'updated_at': now},
+      where: 'id = ?',
+      whereArgs: [episodeId],
+    );
+  }
+
   Future<Map<String, Object?>?> findEpisodeByFileName(
       String fileName) async {
     final db = await _database.database;
