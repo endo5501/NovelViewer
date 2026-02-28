@@ -545,6 +545,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
           textStyle,
           activeMatch?.query,
           ttsHighlightRange: ttsHighlightRange,
+          brightness: Theme.of(context).brightness,
         );
 
         if (activeMatch != null) {

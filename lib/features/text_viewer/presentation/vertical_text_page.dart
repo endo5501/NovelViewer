@@ -3,6 +3,7 @@ import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_char_map.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_text_layout.dart';
+import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_ruby_text_widget.dart';
 
 class VerticalTextPage extends StatefulWidget {
@@ -404,18 +405,33 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     required bool isSelected,
     bool isTtsHighlighted = false,
   }) {
-    // Priority: search highlight (yellow) > TTS highlight (green) > selection (blue)
-    final backgroundColor = isHighlighted
-        ? Colors.yellow
-        : isTtsHighlighted
-            ? Colors.green.withValues(alpha: 0.3)
-            : isSelected
-                ? Colors.blue.withValues(alpha: 0.3)
-                : null;
+    // Priority: search highlight (yellow/amber) > TTS highlight (green) > selection (blue)
+    final brightness = Theme.of(context).brightness;
+    final Color? backgroundColor;
+    final Color? foregroundColor;
+    if (isHighlighted) {
+      backgroundColor = searchHighlightBackground(brightness);
+      foregroundColor = searchHighlightForeground(brightness);
+    } else if (isTtsHighlighted) {
+      backgroundColor = Colors.green.withValues(alpha: 0.3);
+      foregroundColor = null;
+    } else if (isSelected) {
+      backgroundColor = Colors.blue.withValues(alpha: 0.3);
+      foregroundColor = null;
+    } else {
+      backgroundColor = null;
+      foregroundColor = null;
+    }
 
     return widget.baseStyle
-            ?.copyWith(backgroundColor: backgroundColor, height: _kTextHeight) ??
-        TextStyle(backgroundColor: backgroundColor, height: _kTextHeight);
+            ?.copyWith(
+                backgroundColor: backgroundColor,
+                color: foregroundColor,
+                height: _kTextHeight) ??
+        TextStyle(
+            backgroundColor: backgroundColor,
+            color: foregroundColor,
+            height: _kTextHeight);
   }
 
   Set<int> _computeTtsHighlights() {
