@@ -23,9 +23,16 @@
 - [x] 4.1 TTS 生成完了時（`TextViewerPanel` 内の該当箇所）に `ref.invalidate(directoryContentsProvider)` を呼び出してファイルブラウザのTTS状態を更新する
 - [x] 4.2 TTS 編集ダイアログ閉じた時にも `directoryContentsProvider` を invalidate してアイコンを更新する
 
-## 5. 最終確認
+## 5. バグ修正: 編集ダイアログ内リセット時のエピソード status 同期
 
-- [x] 5.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
-- [x] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [x] 5.3 `fvm flutter analyze`でリントを実行
-- [x] 5.4 `fvm flutter test`でテストを実行
+- [x] 5.1 `TtsEditController.resetSegment()` / `resetAll()` 後にエピソードの `status` を更新する `_updateEpisodeStatusAfterReset()` メソッドを追加。DBレコードなし→エピソード削除、一部音声あり→`partial`、全音声あり→`completed`
+- [x] 5.2 `resetAll` で全セグメント削除後にエピソードレコードが消えるテストを追加
+- [x] 5.3 `resetSegment` で最後のセグメントをリセット→エピソード削除のテストを追加
+- [x] 5.4 `resetSegment` で一部リセット→status が `partial` に更新されるテストを追加
+
+## 6. 最終確認
+
+- [x] 6.1 code-simplifierエージェントを使用してコードをよりシンプルにできないか確認
+- [x] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 6.3 `fvm flutter analyze`でリントを実行
+- [x] 6.4 `fvm flutter test`でテストを実行

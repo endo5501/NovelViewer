@@ -60,9 +60,17 @@ The `DirectoryContents` class SHALL include a `ttsStatuses` field of type `Map<S
 - **WHEN** the library root directory is displayed in the file browser
 - **THEN** `DirectoryContents.ttsStatuses` is an empty map
 
-### Requirement: TTS status refresh after generation
-The file browser SHALL refresh its TTS status display when TTS audio generation completes for an episode. The refresh SHALL be triggered by invalidating the `directoryContentsProvider`.
+### Requirement: TTS status refresh after state changes
+The file browser SHALL refresh its TTS status display when TTS audio state changes occur. The refresh SHALL be triggered by invalidating the `directoryContentsProvider`. State changes include: TTS generation completion, TTS audio data deletion, and TTS edit dialog closure.
 
 #### Scenario: Status updates after TTS generation completes
 - **WHEN** TTS audio generation completes for an episode and the `directoryContentsProvider` is invalidated
 - **THEN** the file browser re-fetches directory contents including updated TTS statuses and displays the new status icon
+
+#### Scenario: Status reverts to none after TTS audio deletion
+- **WHEN** a user deletes TTS audio data for an episode via the text viewer panel and the `directoryContentsProvider` is invalidated
+- **THEN** the file browser re-fetches directory contents and the episode's TTS status icon is removed (status `none`)
+
+#### Scenario: Status updates after TTS edit dialog closes
+- **WHEN** a user closes the TTS edit dialog (where segments may have been added, deleted, or regenerated) and the `directoryContentsProvider` is invalidated
+- **THEN** the file browser re-fetches directory contents including updated TTS statuses reflecting any changes made in the edit dialog

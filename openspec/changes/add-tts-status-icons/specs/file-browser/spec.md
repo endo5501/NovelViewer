@@ -22,3 +22,7 @@ The system SHALL list all text files in the selected directory, displayed as a s
 #### Scenario: Episode with no TTS shows no trailing icon
 - **WHEN** a directory contains an episode file with no TTS data
 - **THEN** the file's `ListTile` does not display a trailing icon
+
+#### Scenario: Trailing icon removed after TTS audio deletion
+- **WHEN** a user deletes TTS audio data for an episode and returns to the file browser
+- **THEN** the episode's `ListTile` no longer displays a trailing TTS status icon

@@ -50,7 +50,7 @@ DB の status 文字列（`generating`, `partial`, `completed`）をアプリ層
 
 `directoryContentsProvider` 内で `tts_audio.db` のファイル存在チェックを行い、存在する場合のみDBを開いて状態を取得する。存在しない場合は空マップを返す。
 
-**理由**: TTS機能を一度も使用していないフォルダでDB作成や接続を行うのは不要。`File.existsSync()` でチェックし、フォールバックする。
+**理由**: TTS機能を一度も使用していないフォルダでDB作成や接続を行うのは不要。`await File().exists()` で非同期チェックし、フォールバックする。
 
 ### Decision 5: アイコンデザイン
 
@@ -64,9 +64,25 @@ DB の status 文字列（`generating`, `partial`, `completed`）をアプリ層
 
 ### Decision 6: 状態更新のタイミング
 
-TTS生成完了後に `directoryContentsProvider` を `ref.invalidate()` で再取得させる。TextViewerPanel内のTTS生成処理完了時にinvalidateを呼ぶ。
+以下のイベント発生時に `directoryContentsProvider` を `ref.invalidate()` で再取得させる:
 
-**理由**: リアルタイム更新は Non-Goal であり、生成完了時の再取得で十分。既存の `ref.invalidate()` パターンを流用しシンプルに保つ。
+1. **TTS生成完了時** — `TextViewerPanel._startStreaming` の成功・失敗パス両方でinvalidateを呼ぶ
+2. **音声データ削除時** — `TextViewerPanel._deleteAudio` でエピソードのTTSデータを削除した後にinvalidateを呼ぶ。削除によりDBからレコードが消えるため、ファイルブラウザのアイコンが `none`（非表示）に戻る
+3. **TTS編集ダイアログ閉じた時** — `TextViewerPanel._openEditDialog` でダイアログ close 後にinvalidateを呼ぶ。編集ダイアログ内でセグメント追加・削除・再生成が行われた可能性があるため
+
+**理由**: リアルタイム更新は Non-Goal であり、上記イベント時の再取得で十分。既存の `ref.invalidate()` パターンを流用しシンプルに保つ。
+
+### Decision 7: 編集ダイアログ内リセット時のエピソード status 同期
+
+`TtsEditController.resetSegment()` / `resetAll()` でセグメントを削除した後、エピソードの `status` カラムを実態に合わせて更新する。`_updateEpisodeStatusAfterReset()` メソッドで以下の判定を行う:
+
+- DBレコードを持つセグメントが0個 → エピソードレコード自体を `deleteEpisode()` で削除（`none` に相当）
+- 一部のセグメントのみ音声あり → `status` を `partial` に更新
+- 全セグメントが音声あり → `status` を `completed` に維持
+
+判定にはインメモリの `_segments` リストを使用する。DBの `getSegmentCount()` ではなくインメモリを参照する理由は、DBには「存在するセグメント」しか記録されないため、テキスト分割による全セグメント数を把握できないため。
+
+**理由**: リセット操作がセグメントのみ削除しエピソード status を更新しないと、ファイルブラウザのアイコンが古い状態（`partial` / `completed`）のまま残るバグが発生する。
 
 ## Risks / Trade-offs
 
