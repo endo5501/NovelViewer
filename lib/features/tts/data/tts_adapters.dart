@@ -8,15 +8,17 @@ class JustAudioPlayer implements TtsAudioPlayer {
 
   @override
   Stream<TtsPlayerState> get playerStateStream =>
-      _player.playerStateStream.map((state) {
-        if (state.processingState == just_audio.ProcessingState.completed) {
-          return TtsPlayerState.completed;
-        }
-        if (state.playing) {
-          return TtsPlayerState.playing;
-        }
-        return TtsPlayerState.stopped;
-      });
+      _player.playerStateStream.map(_mapState);
+
+  TtsPlayerState _mapState(just_audio.PlayerState state) {
+    if (state.processingState == just_audio.ProcessingState.completed) {
+      return TtsPlayerState.completed;
+    }
+    if (state.playing) {
+      return TtsPlayerState.playing;
+    }
+    return TtsPlayerState.stopped;
+  }
 
   @override
   Future<void> setFilePath(String path) => _player.setFilePath(path);

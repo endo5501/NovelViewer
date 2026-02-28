@@ -299,6 +299,9 @@ class TtsEditController {
     await playCompleter.future;
     _activePlayCompleter = null;
     await playSub.cancel();
+    // Use pause() instead of stop() to reset _playing flag without
+    // destroying the platform (which would kill buffered audio output).
+    await _audioPlayer.pause();
   }
 
   Future<void> playAll({void Function(int)? onSegmentStart}) async {

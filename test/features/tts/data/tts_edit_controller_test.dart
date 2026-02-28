@@ -125,6 +125,56 @@ class FakeAudioPlayer implements TtsAudioPlayer {
   }
 }
 
+/// Fake player that simulates just_audio's play() guard behavior.
+/// play() is a no-op when isPlaying is already true, and isPlaying
+/// stays true after completion (matching just_audio 0.9.46).
+class RealisticFakeAudioPlayer implements TtsAudioPlayer {
+  final _stateController = StreamController<TtsPlayerState>.broadcast();
+  String? currentFilePath;
+  bool isDisposed = false;
+  bool isPlaying = false;
+  final playedFiles = <String>[];
+
+  @override
+  Stream<TtsPlayerState> get playerStateStream => _stateController.stream;
+
+  @override
+  Future<void> setFilePath(String path) async {
+    currentFilePath = path;
+  }
+
+  @override
+  Future<void> play() async {
+    if (isPlaying) return;
+    isPlaying = true;
+    playedFiles.add(currentFilePath!);
+    _stateController.add(TtsPlayerState.playing);
+    Future.microtask(() {
+      if (isPlaying && !isDisposed) {
+        _stateController.add(TtsPlayerState.completed);
+      }
+    });
+  }
+
+  @override
+  Future<void> pause() async {
+    isPlaying = false;
+    _stateController.add(TtsPlayerState.paused);
+  }
+
+  @override
+  Future<void> stop() async {
+    isPlaying = false;
+    _stateController.add(TtsPlayerState.stopped);
+  }
+
+  @override
+  Future<void> dispose() async {
+    isDisposed = true;
+    _stateController.close();
+  }
+}
+
 Uint8List _makeWavBytes() {
   return WavWriter.toBytes(
     audio: Float32List.fromList([0.1, 0.2, 0.3, 0.4, 0.5]),
@@ -596,6 +646,62 @@ void main() {
         // Player should have received file paths for segments 0 and 2
         // (we can only verify the last one set)
         expect(player.currentFilePath, contains('tts_edit_preview_2.wav'));
+      });
+    });
+
+    group('playAll with realistic player', () {
+      test('plays all segments when pause is called between segments', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'completed',
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'セグメント0。',
+          textOffset: 0,
+          textLength: 6,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 1,
+          text: 'セグメント1。',
+          textOffset: 6,
+          textLength: 6,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 2,
+          text: 'セグメント2。',
+          textOffset: 12,
+          textLength: 6,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = RealisticFakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: 'セグメント0。セグメント1。セグメント2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.playAll();
+
+        expect(player.playedFiles, hasLength(3));
       });
     });
 

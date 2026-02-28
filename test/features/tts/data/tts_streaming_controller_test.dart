@@ -217,12 +217,16 @@ class _BehaviorSubjectAudioPlayer implements TtsAudioPlayer {
 
   @override
   Future<void> play() async {
+    // Simulate just_audio: play() is a no-op when playing is already true.
+    // In just_audio 0.9.46, line 939: if (playing) return;
+    if (isPlaying) return;
     isPlaying = true;
     playedFiles.add(currentFilePath!);
     _emit(TtsPlayerState.playing);
     Future.delayed(const Duration(milliseconds: 10), () {
       if (isPlaying && !isDisposed) {
-        isPlaying = false;
+        // Note: in just_audio, playing stays true after completion.
+        // stop() must be called to reset playing to false.
         _emit(TtsPlayerState.completed);
       }
     });
@@ -292,6 +296,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       await controller.start(
@@ -355,6 +360,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       await controller.start(
@@ -400,6 +406,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       await controller.start(
@@ -451,6 +458,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       await controller.start(
@@ -479,6 +487,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       // Start generation+playback in the background
@@ -518,6 +527,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       final future = controller.start(
@@ -555,6 +565,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       final future = controller.start(
@@ -589,6 +600,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       await controller.start(
@@ -615,6 +627,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       final future = controller.start(
@@ -643,6 +656,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       final future = controller.start(
@@ -716,6 +730,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       await controller.start(
@@ -764,6 +779,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       await controller.start(
@@ -811,6 +827,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       await controller.start(
@@ -857,6 +874,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       await controller.start(
@@ -889,6 +907,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       await controller.start(
@@ -955,6 +974,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       await controller.start(
@@ -999,6 +1019,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       await controller.start(
@@ -1025,6 +1046,7 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
       final future = controller.start(
