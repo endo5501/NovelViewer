@@ -302,6 +302,14 @@ class TtsStreamingController {
       _activePlayCompleter = null;
       await playSub.cancel();
 
+      // Reset playing state so the next play() sends a real platform request.
+      // Without this, just_audio's play() returns immediately (no-op) because
+      // playing remains true after completion, and setFilePath auto-plays
+      // via media_kit before the previous audio buffer is fully flushed.
+      if (!_stopped) {
+        await _audioPlayer.stop();
+      }
+
       if (_stopped) break;
     }
 
