@@ -1,7 +1,7 @@
 ## Requirements
 
 ### Requirement: Unified streaming start
-The system SHALL provide a single entry point `TtsStreamingController.start()` that automatically determines the appropriate mode based on existing data. If no episode exists, it SHALL start fresh generation with immediate playback. If an episode exists with matching text_hash, it SHALL begin playing segments using existing audio where available and generating audio on-demand for segments without audio_data. The controller SHALL accept text, fileName, modelDir, sampleRate, and optional refWavPath and startOffset parameters.
+The system SHALL provide a single entry point `TtsStreamingController.start()` that automatically determines the appropriate mode based on existing data. If no episode exists, it SHALL start fresh generation with immediate playback. If an episode exists with matching text_hash, it SHALL begin playing segments using existing audio where available and generating audio on-demand for segments without audio_data. The controller SHALL accept text, fileName, modelDir, sampleRate, optional refWavPath, optional startOffset, and optional resolveRefWavPath callback parameters. The resolveRefWavPath callback SHALL be used to resolve per-segment ref_wav_path filenames from the database to absolute filesystem paths before passing them to the TTS engine.
 
 #### Scenario: Start fresh when no episode exists
 - **WHEN** `start()` is called for a fileName with no existing episode in the database
@@ -28,8 +28,16 @@ The system SHALL provide a single entry point `TtsStreamingController.start()` t
 - **THEN** the TTS engine receives "山奥のいっけんや" as input for generation
 
 #### Scenario: On-demand generation uses segment ref_wav_path
-- **WHEN** playback reaches a segment with audio_data=NULL that has a per-segment ref_wav_path set
-- **THEN** the TTS engine uses the segment's ref_wav_path for generation, not the global setting
+- **WHEN** playback reaches a segment with audio_data=NULL that has a per-segment ref_wav_path set to "narrator.wav"
+- **THEN** the TTS engine uses the resolved absolute path of "narrator.wav" for generation, not the global setting
+
+#### Scenario: On-demand generation resolves ref_wav_path filename to absolute path
+- **WHEN** playback reaches a segment with audio_data=NULL and ref_wav_path="custom_voice.wav" in the database, and a resolveRefWavPath callback is provided
+- **THEN** the system calls resolveRefWavPath("custom_voice.wav") and passes the resulting absolute path to the TTS engine
+
+#### Scenario: On-demand generation stores NULL ref_wav_path for new segments
+- **WHEN** a segment without a DB record is generated on-demand using the global reference audio
+- **THEN** the inserted segment record SHALL have ref_wav_path=NULL (indicating "use global setting"), not the resolved full path of the global reference audio
 
 ### Requirement: Text hash validation
 The system SHALL compute a SHA-256 hash of the episode text and store it in the `text_hash` column of the `tts_episodes` table. On each `start()` call, the system SHALL compare the current text hash with the stored hash. If they differ, the existing episode and all segments SHALL be deleted and generation SHALL restart from scratch.
