@@ -12,8 +12,10 @@ Widget _buildTestWidget({
   ValueChanged<String?>? onSelectionChanged,
   ValueChanged<SwipeDirection>? onSwipe,
   double? columnSpacing,
+  ThemeData? theme,
 }) {
   return MaterialApp(
+    theme: theme,
     home: Scaffold(
       body: SizedBox(
         width: 200,
@@ -82,6 +84,32 @@ void main() {
       expect(iText.style?.backgroundColor, Colors.yellow);
       // 'う': selected only → blue
       expect(uText.style?.backgroundColor, selectionColor);
+    });
+  });
+
+  group('VerticalTextPage dark mode search highlight', () {
+    testWidgets('search highlight uses amber background in dark mode',
+        (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あいう')],
+        query: 'い',
+        theme: ThemeData(brightness: Brightness.dark),
+      ));
+
+      final iText = tester.widget<Text>(find.text('い'));
+      expect(iText.style?.backgroundColor, Colors.amber.shade700);
+    });
+
+    testWidgets('search highlight uses black foreground in dark mode',
+        (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あいう')],
+        query: 'い',
+        theme: ThemeData(brightness: Brightness.dark),
+      ));
+
+      final iText = tester.widget<Text>(find.text('い'));
+      expect(iText.style?.color, Colors.black);
     });
   });
 

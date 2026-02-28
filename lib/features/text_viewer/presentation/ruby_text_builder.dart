@@ -19,6 +19,7 @@ class RubyTextWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final fontSize = baseStyle?.fontSize ?? 14.0;
     final rubyFontSize = fontSize * 0.5;
+    final brightness = Theme.of(context).brightness;
 
     final baseWidget = (query != null && query!.isNotEmpty)
         ? Text.rich(
@@ -27,6 +28,7 @@ class RubyTextWidget extends StatelessWidget {
                 base,
                 query!,
                 baseStyle?.copyWith(height: 1.0),
+                brightness: brightness,
               ),
             ),
           )
@@ -50,11 +52,18 @@ class RubyTextWidget extends StatelessWidget {
 
 final _ttsHighlightColor = Colors.green.withValues(alpha: 0.3);
 
+Color searchHighlightBackground(Brightness brightness) =>
+    brightness == Brightness.dark ? Colors.amber.shade700 : Colors.yellow;
+
+Color? searchHighlightForeground(Brightness brightness) =>
+    brightness == Brightness.dark ? Colors.black : null;
+
 TextSpan buildRubyTextSpans(
   List<TextSegment> segments,
   TextStyle? baseStyle,
   String? query, {
   TextRange? ttsHighlightRange,
+  Brightness brightness = Brightness.light,
 }) {
   if (segments.isEmpty) {
     return const TextSpan();
@@ -70,7 +79,9 @@ TextSpan buildRubyTextSpans(
       case PlainTextSegment(:final text):
         if (hasQuery) {
           spans.addAll(_buildHighlightedPlainSpans(text, query, baseStyle,
-              ttsRange: ttsHighlightRange, textOffset: plainTextOffset));
+              ttsRange: ttsHighlightRange,
+              textOffset: plainTextOffset,
+              brightness: brightness));
         } else if (hasTts) {
           spans.addAll(_buildTtsHighlightedSpans(
               text, baseStyle, ttsHighlightRange, plainTextOffset));
@@ -101,12 +112,15 @@ List<TextSpan> _buildHighlightedPlainSpans(
   TextStyle? baseStyle, {
   TextRange? ttsRange,
   int textOffset = 0,
+  Brightness brightness = Brightness.light,
 }) {
   final queryLower = query.toLowerCase();
   final textLower = text.toLowerCase();
+  final bgColor = searchHighlightBackground(brightness);
+  final fgColor = searchHighlightForeground(brightness);
   final searchHighlightStyle =
-      baseStyle?.copyWith(backgroundColor: Colors.yellow) ??
-          const TextStyle(backgroundColor: Color(0xFFFFFF00));
+      baseStyle?.copyWith(backgroundColor: bgColor, color: fgColor) ??
+          TextStyle(backgroundColor: bgColor, color: fgColor);
   final spans = <TextSpan>[];
   var start = 0;
 

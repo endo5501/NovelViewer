@@ -103,5 +103,37 @@ void main() {
           .toList();
       expect(greenTexts.length, 2);
     });
+
+    testWidgets('search highlight uses amber in dark mode',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(brightness: Brightness.dark),
+          home: const Scaffold(
+            body: SizedBox(
+              width: 300,
+              height: 400,
+              child: VerticalTextPage(
+                segments: [PlainTextSegment('あいうえお')],
+                baseStyle: TextStyle(fontSize: 14),
+                query: 'あ',
+                ttsHighlightStart: 0,
+                ttsHighlightEnd: 3,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final texts = tester.widgetList<Text>(find.byType(Text)).toList();
+      // 'あ' should have amber (dark mode search highlight)
+      final amberTexts = texts
+          .where((t) =>
+              t.style?.backgroundColor != null &&
+              t.style!.backgroundColor == Colors.amber.shade700)
+          .toList();
+      expect(amberTexts.length, 1);
+    });
   });
 }

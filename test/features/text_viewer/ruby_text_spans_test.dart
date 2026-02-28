@@ -53,7 +53,7 @@ void main() {
       expect(children.length, greaterThanOrEqualTo(1));
 
       // Find the highlighted span
-      final hasHighlight = _containsHighlight(children);
+      final hasHighlight = _containsHighlight(children, Colors.yellow);
       expect(hasHighlight, isTrue);
     });
 
@@ -87,17 +87,76 @@ void main() {
       final segments = [const PlainTextSegment('Hello World')];
       final result = buildRubyTextSpans(segments, baseStyle, 'hello');
 
-      final hasHighlight = _containsHighlight(result.children!);
+      final hasHighlight =
+          _containsHighlight(result.children!, Colors.yellow);
+      expect(hasHighlight, isTrue);
+    });
+  });
+
+  group('buildRubyTextSpans - dark mode search highlight', () {
+    test('uses amber background in dark mode', () {
+      final segments = [const PlainTextSegment('冒険の旅')];
+      final result = buildRubyTextSpans(
+        segments,
+        baseStyle,
+        '冒険',
+        brightness: Brightness.dark,
+      );
+
+      final hasHighlight =
+          _containsHighlight(result.children!, Colors.amber.shade700);
+      expect(hasHighlight, isTrue);
+    });
+
+    test('uses black foreground in dark mode', () {
+      final segments = [const PlainTextSegment('冒険の旅')];
+      final result = buildRubyTextSpans(
+        segments,
+        baseStyle,
+        '冒険',
+        brightness: Brightness.dark,
+      );
+
+      final hasForeground =
+          _containsForeground(result.children!, Colors.black);
+      expect(hasForeground, isTrue);
+    });
+
+    test('uses yellow background in light mode', () {
+      final segments = [const PlainTextSegment('冒険の旅')];
+      final result = buildRubyTextSpans(
+        segments,
+        baseStyle,
+        '冒険',
+        brightness: Brightness.light,
+      );
+
+      final hasHighlight =
+          _containsHighlight(result.children!, Colors.yellow);
       expect(hasHighlight, isTrue);
     });
   });
 }
 
-bool _containsHighlight(List<InlineSpan> spans) {
+bool _containsHighlight(List<InlineSpan> spans, Color color) {
   for (final span in spans) {
     if (span is TextSpan) {
-      if (span.style?.backgroundColor == Colors.yellow) return true;
-      if (span.children != null && _containsHighlight(span.children!)) {
+      if (span.style?.backgroundColor == color) return true;
+      if (span.children != null &&
+          _containsHighlight(span.children!, color)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool _containsForeground(List<InlineSpan> spans, Color color) {
+  for (final span in spans) {
+    if (span is TextSpan) {
+      if (span.style?.color == color) return true;
+      if (span.children != null &&
+          _containsForeground(span.children!, color)) {
         return true;
       }
     }

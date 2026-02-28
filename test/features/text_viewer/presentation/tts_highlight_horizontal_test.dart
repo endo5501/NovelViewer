@@ -81,5 +81,25 @@ void main() {
       expect(searchHighlighted, hasLength(1));
       expect(searchHighlighted.first.text, '太郎');
     });
+
+    test('search highlight uses amber in dark mode with TTS active', () {
+      final segments = [const PlainTextSegment('太郎が走った。')];
+      final span = buildRubyTextSpans(
+        segments,
+        const TextStyle(),
+        '太郎',
+        ttsHighlightRange: const TextRange(start: 0, end: 7),
+        brightness: Brightness.dark,
+      );
+
+      final children = span.children!.whereType<TextSpan>().toList();
+      final searchHighlighted = children
+          .where((s) =>
+              s.style?.backgroundColor != null &&
+              s.style!.backgroundColor == Colors.amber.shade700)
+          .toList();
+      expect(searchHighlighted, hasLength(1));
+      expect(searchHighlighted.first.text, '太郎');
+    });
   });
 }
