@@ -40,27 +40,33 @@ post_install do |installer|
     flutter_additional_macos_build_settings(target)
   end
 
-  # Embed libqwen3_tts_ffi.dylib into the app bundle
+  # Embed native dylibs into the app bundle
   project_path = File.join(__dir__, 'Runner.xcodeproj')
   project = Xcodeproj::Project.open(project_path)
   runner_target = project.targets.find { |t| t.name == 'Runner' }
   if runner_target
-    dylib_path = File.join(__dir__, 'Frameworks', 'libqwen3_tts_ffi.dylib')
-    if File.exist?(dylib_path)
-      phase_name = 'Embed TTS Library'
-      unless runner_target.shell_script_build_phases.any? { |p| p.name == phase_name }
-        phase = runner_target.new_shell_script_build_phase(phase_name)
-        phase.shell_script = <<~SH
-          DYLIB_SRC="${SRCROOT}/Frameworks/libqwen3_tts_ffi.dylib"
-          DYLIB_DST="${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}"
+    phase_name = 'Embed Native Libraries'
+    legacy_name = 'Embed TTS Library'
+
+    # Remove legacy phase if it exists (renamed in fix-macos-mp3-export)
+    legacy = runner_target.shell_script_build_phases.find { |p| p.name == legacy_name }
+    legacy&.remove_from_project
+
+    unless runner_target.shell_script_build_phases.any? { |p| p.name == phase_name }
+      phase = runner_target.new_shell_script_build_phase(phase_name)
+      phase.shell_script = <<~SH
+        DYLIB_DST="${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}"
+        mkdir -p "$DYLIB_DST"
+
+        for DYLIB_NAME in libqwen3_tts_ffi.dylib liblame_enc_ffi.dylib; do
+          DYLIB_SRC="${SRCROOT}/Frameworks/${DYLIB_NAME}"
           if [ -f "$DYLIB_SRC" ]; then
-            mkdir -p "$DYLIB_DST"
             cp "$DYLIB_SRC" "$DYLIB_DST/"
-            codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY}" "$DYLIB_DST/libqwen3_tts_ffi.dylib" || true
+            codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY}" "$DYLIB_DST/${DYLIB_NAME}" || true
           fi
-        SH
-        project.save
-      end
+        done
+      SH
     end
+    project.save
   end
 end
