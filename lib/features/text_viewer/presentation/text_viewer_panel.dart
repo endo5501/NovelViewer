@@ -20,6 +20,7 @@ import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_streaming_controller.dart';
 import 'package:novel_viewer/features/tts/presentation/tts_edit_dialog.dart';
+import 'package:novel_viewer/features/tts/providers/tts_export_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 
@@ -78,6 +79,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
       if (_streamingController != null) {
         await _stopStreaming();
       }
+      if (!mounted) return;
       ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
       return;
     }
@@ -88,6 +90,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     if (_streamingController != null) {
       await _stopStreaming();
     }
+    if (!mounted) return;
 
     _lastCheckedFileKey = selectedPath;
 
@@ -95,8 +98,11 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     final repo = TtsAudioRepository(db);
     try {
       final episode = await repo.findEpisodeByFileName(fileName);
-      final status = episode?['status'] as String?;
-      if (status == 'completed' || status == 'partial') {
+      if (!mounted) return;
+      final status =
+          TtsEpisodeStatus.fromDbStatus(episode?['status'] as String?);
+      if (status == TtsEpisodeStatus.completed ||
+          status == TtsEpisodeStatus.partial) {
         ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.ready);
       } else {
         ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
@@ -205,26 +211,69 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     await _streamingController?.resume();
   }
 
-  Future<void> _deleteAudio() async {
+  /// Opens TtsAudioDatabase for the current directory, finds the episode for
+  /// the selected file, and calls [action] with the repository and episode.
+  /// Returns null if no directory/file is selected or no episode exists.
+  Future<T?> _withEpisodeRepo<T>(
+    Future<T?> Function(
+            TtsAudioRepository repo, Map<String, Object?> episode)
+        action,
+  ) async {
     final folderPath = ref.read(currentDirectoryProvider);
     final fileName = ref.read(selectedFileProvider)?.name;
-    if (folderPath == null || fileName == null) return;
+    if (folderPath == null || fileName == null) return null;
 
     final db = TtsAudioDatabase(folderPath);
     final repo = TtsAudioRepository(db);
     try {
       final episode = await repo.findEpisodeByFileName(fileName);
-      if (episode != null) {
-        await repo.deleteEpisode(episode['id'] as int);
-      }
+      if (episode == null) return null;
+      return await action(repo, episode);
     } finally {
       await db.close();
     }
+  }
+
+  Future<void> _deleteAudio() async {
+    await _withEpisodeRepo((repo, episode) async {
+      await repo.deleteEpisode(episode['id'] as int);
+      return null;
+    });
 
     if (!mounted) return;
     ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
     ref.invalidate(directoryContentsProvider);
     _lastCheckedFileKey = null;
+  }
+
+  Future<void> _exportAudio() async {
+    final fileName = ref.read(selectedFileProvider)?.name;
+    if (fileName == null) return;
+
+    try {
+      final exported = await _withEpisodeRepo((repo, episode) async {
+        final episodeId = episode['id'] as int;
+        final sampleRate = episode['sample_rate'] as int? ?? 24000;
+
+        return exportEpisodeToMp3(
+          stateNotifier: ref.read(ttsExportStateProvider.notifier),
+          repository: repo,
+          episodeId: episodeId,
+          episodeFileName: fileName,
+          sampleRate: sampleRate,
+        );
+      });
+
+      if (!mounted || exported != true) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('MP3ファイルのエクスポートが完了しました')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('エクスポートエラー: $e')),
+      );
+    }
   }
 
   Future<void> _openEditDialog(String content) async {
@@ -396,6 +445,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
             ],
           );
         } else {
+          final exportState = ref.watch(ttsExportStateProvider);
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -410,6 +460,22 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
                 tooltip: '再生',
                 child: const Icon(Icons.play_arrow),
               ),
+              const SizedBox(width: 8),
+              if (exportState == TtsExportState.exporting)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              else
+                FloatingActionButton.small(
+                  onPressed: _exportAudio,
+                  tooltip: 'MP3エクスポート',
+                  child: const Icon(Icons.download),
+                ),
               const SizedBox(width: 8),
               FloatingActionButton.small(
                 onPressed: _deleteAudio,

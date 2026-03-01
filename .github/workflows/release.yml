@@ -42,18 +42,27 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Build TTS DLL
+        shell: cmd
+        run: scripts\build_tts_windows.bat
+
+      - name: Build LAME MP3 encoder DLL
+        shell: cmd
+        run: scripts\build_lame_windows.bat
+
       - name: Run analyzer
         run: flutter analyze
 
       - name: Run tests
         run: flutter test
 
-      - name: Build TTS DLL
-        shell: cmd
-        run: scripts\build_tts_windows.bat
-
       - name: Build Windows release
         run: flutter build windows --release
+
+      - name: Copy LAME LGPL license to release
+        shell: pwsh
+        run: |
+          Copy-Item third_party/lame/COPYING build/windows/x64/runner/Release/LAME_LICENSE_LGPL.txt
 
       - name: Create ZIP archive
         shell: pwsh
