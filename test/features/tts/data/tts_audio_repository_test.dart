@@ -342,6 +342,49 @@ void main() {
       });
     });
 
+    group('insertSegment with memo', () {
+      test('inserts a segment with memo', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'generating',
+        );
+
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト文。',
+          textOffset: 0,
+          textLength: 5,
+          memo: '怒りの口調で',
+        );
+
+        final segments = await repository.getSegments(episodeId);
+        expect(segments, hasLength(1));
+        expect(segments.first['memo'], '怒りの口調で');
+      });
+
+      test('inserts a segment without memo defaults to null', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'generating',
+        );
+
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト文。',
+          textOffset: 0,
+          textLength: 5,
+        );
+
+        final segments = await repository.getSegments(episodeId);
+        expect(segments, hasLength(1));
+        expect(segments.first['memo'], isNull);
+      });
+    });
+
     group('insertSegment with nullable audio', () {
       test('inserts a segment without audio_data', () async {
         final episodeId = await repository.createEpisode(

@@ -192,13 +192,15 @@ class TtsEditController {
     required int segmentIndex,
     required String modelDir,
     String? refWavPath,
+    String? instruct,
   }) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
 
     if (!await _ensureModelLoaded(modelDir)) return false;
 
     final segment = _segments[segmentIndex];
-    final result = await _synthesize(segment.text, refWavPath);
+    final effectiveInstruct = segment.memo ?? instruct;
+    final result = await _synthesize(segment.text, refWavPath, instruct: effectiveInstruct);
     if (result == null) return false;
 
     final wavBytes = WavWriter.toBytes(
@@ -211,6 +213,8 @@ class TtsEditController {
     if (segment.dbRecordExists) {
       await _repository.updateSegmentAudio(
           _episodeId!, segmentIndex, wavBytes, result.audio!.length);
+      await _repository.updateSegmentMemo(
+          _episodeId!, segmentIndex, effectiveInstruct);
     } else {
       await _repository.insertSegment(
         episodeId: _episodeId!,
@@ -221,9 +225,11 @@ class TtsEditController {
         audioData: wavBytes,
         sampleCount: result.audio!.length,
         refWavPath: refWavPath,
+        memo: effectiveInstruct,
       );
       segment.dbRecordExists = true;
     }
+    segment.memo = effectiveInstruct;
 
     segment.hasAudio = true;
     onSegmentGenerated?.call(segmentIndex);
@@ -233,6 +239,7 @@ class TtsEditController {
   Future<void> generateAllUngenerated({
     required String modelDir,
     String? globalRefWavPath,
+    String? instruct,
     String Function(String fileName)? resolveRefWavPath,
     void Function(int segmentIndex)? onSegmentStart,
   }) async {
@@ -264,6 +271,7 @@ class TtsEditController {
         segmentIndex: segmentIndex,
         modelDir: modelDir,
         refWavPath: refWavPath,
+        instruct: instruct,
       );
 
       if (!success) break;
@@ -417,7 +425,7 @@ class TtsEditController {
   }
 
   Future<SynthesisResultResponse?> _synthesize(
-      String text, String? refWavPath) async {
+      String text, String? refWavPath, {String? instruct}) async {
     final completer = Completer<SynthesisResultResponse>();
     _activeSynthesisCompleter = completer;
 
@@ -428,7 +436,7 @@ class TtsEditController {
       }
     });
 
-    _ttsIsolate.synthesize(text, refWavPath: refWavPath);
+    _ttsIsolate.synthesize(text, refWavPath: refWavPath, instruct: instruct);
 
     try {
       final result = await completer.future;

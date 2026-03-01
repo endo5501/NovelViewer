@@ -131,6 +131,7 @@ class TtsGenerationController {
         audioData: wavBytes,
         sampleCount: result.audio!.length,
         refWavPath: refWavPath,
+        memo: instruct,
       );
 
       onSegmentStored?.call(i);

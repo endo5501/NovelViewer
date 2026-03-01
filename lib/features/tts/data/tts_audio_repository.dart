@@ -88,6 +88,7 @@ class TtsAudioRepository {
     Uint8List? audioData,
     int? sampleCount,
     String? refWavPath,
+    String? memo,
   }) async {
     final db = await _database.database;
     final now = DateTime.now().toUtc().toIso8601String();
@@ -100,6 +101,7 @@ class TtsAudioRepository {
       'audio_data': audioData,
       'sample_count': sampleCount,
       'ref_wav_path': refWavPath,
+      'memo': memo,
       'created_at': now,
     });
   }

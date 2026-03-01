@@ -491,6 +491,51 @@ void main() {
       expect(isolate.disposed, isTrue);
     });
 
+    test('stores instruct as memo in segments', () async {
+      final isolate = FakeTtsIsolate();
+      final controller = TtsGenerationController(
+        ttsIsolate: isolate,
+        repository: repository,
+      );
+
+      await controller.start(
+        text: '文1。文2。',
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+        instruct: '楽しげな口調で',
+      );
+
+      final episode =
+          await repository.findEpisodeByFileName('0001_テスト.txt');
+      final segments = await repository.getSegments(episode!['id'] as int);
+      expect(segments, hasLength(2));
+      expect(segments[0]['memo'], '楽しげな口調で');
+      expect(segments[1]['memo'], '楽しげな口調で');
+    });
+
+    test('stores null memo when no instruct provided', () async {
+      final isolate = FakeTtsIsolate();
+      final controller = TtsGenerationController(
+        ttsIsolate: isolate,
+        repository: repository,
+      );
+
+      await controller.start(
+        text: '文1。文2。',
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+      );
+
+      final episode =
+          await repository.findEpisodeByFileName('0001_テスト.txt');
+      final segments = await repository.getSegments(episode!['id'] as int);
+      expect(segments, hasLength(2));
+      expect(segments[0]['memo'], isNull);
+      expect(segments[1]['memo'], isNull);
+    });
+
     test('passes refWavPath to isolate when provided', () async {
       final synthesizeArgs = <(String, String?)>[];
       final isolate = _TrackingFakeTtsIsolate(synthesizeArgs);

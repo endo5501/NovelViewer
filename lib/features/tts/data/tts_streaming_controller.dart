@@ -232,8 +232,10 @@ class TtsStreamingController {
                     ? resolveRefWavPath(dbRefWavPath)
                     : dbRefWavPath)
             : refWavPath;
+        final dbMemo = dbRow?['memo'] as String?;
+        final effectiveInstruct = dbMemo ?? instruct;
 
-        final result = await _synthesize(synthText, synthRefWavPath, instruct: instruct);
+        final result = await _synthesize(synthText, synthRefWavPath, instruct: effectiveInstruct);
         if (result == null || _stopped) break;
 
         final wavBytes = WavWriter.toBytes(
@@ -248,6 +250,8 @@ class TtsStreamingController {
         if (dbRow != null) {
           await _repository.updateSegmentAudio(
               episodeId, i, wavBytes, result.audio!.length);
+          await _repository.updateSegmentMemo(
+              episodeId, i, effectiveInstruct);
         } else {
           await _repository.insertSegment(
             episodeId: episodeId,
@@ -257,6 +261,7 @@ class TtsStreamingController {
             textLength: textLength,
             audioData: wavBytes,
             sampleCount: result.audio!.length,
+            memo: effectiveInstruct,
           );
         }
 

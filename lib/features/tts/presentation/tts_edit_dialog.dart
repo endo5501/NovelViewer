@@ -158,10 +158,12 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
         .set(TtsEditGenerationState.generating);
     ref.read(ttsEditGeneratingIndexProvider.notifier).set(index);
 
+    final instruct = ref.read(ttsInstructProvider);
     await controller.generateSegment(
       segmentIndex: index,
       modelDir: modelDir,
       refWavPath: refWavPath,
+      instruct: instruct.isEmpty ? null : instruct,
     );
 
     if (!mounted) return;
@@ -189,9 +191,11 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
         .read(ttsEditGenerationStateProvider.notifier)
         .set(TtsEditGenerationState.generating);
 
+    final instruct = ref.read(ttsInstructProvider);
     await controller.generateAllUngenerated(
       modelDir: modelDir,
       globalRefWavPath: globalRefWavPath,
+      instruct: instruct.isEmpty ? null : instruct,
       resolveRefWavPath: voiceService?.resolveVoiceFilePath,
       onSegmentStart: (index) {
         if (mounted) {

@@ -22,7 +22,7 @@ class FakeTtsIsolate implements TtsIsolate {
   final bool modelLoadSuccess;
   bool spawned = false;
   bool disposed = false;
-  final synthesizeRequests = <(String text, String? refWavPath)>[];
+  final synthesizeRequests = <(String text, String? refWavPath, String? instruct)>[];
 
   /// When set, synthesize will not auto-respond.
   Completer<void>? synthesizeGate;
@@ -53,7 +53,7 @@ class FakeTtsIsolate implements TtsIsolate {
 
   @override
   void synthesize(String text, {String? refWavPath, String? instruct}) {
-    synthesizeRequests.add((text, refWavPath));
+    synthesizeRequests.add((text, refWavPath, instruct));
     if (synthesizeGate != null) {
       // Don't auto-respond; wait for gate to be completed externally
       return;
@@ -1581,6 +1581,227 @@ void main() {
         await controller.dispose();
 
         expect(isolate.disposed, false);
+      });
+    });
+
+    group('memo as instruct', () {
+      test('generateSegment uses segment memo as instruct', () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '文1。文2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Set memo on segment 0
+        controller.segments[0].memo = '怒りの口調で';
+
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/models',
+          instruct: '穏やかな口調で',
+        );
+
+        // Should use segment memo, not global instruct
+        expect(isolate.synthesizeRequests, hasLength(1));
+        expect(isolate.synthesizeRequests[0].$3, '怒りの口調で');
+      });
+
+      test('generateSegment falls back to global instruct when no memo',
+          () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '文1。文2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // No memo set on segment
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/models',
+          instruct: '穏やかな口調で',
+        );
+
+        // Should use global instruct
+        expect(isolate.synthesizeRequests, hasLength(1));
+        expect(isolate.synthesizeRequests[0].$3, '穏やかな口調で');
+      });
+
+      test('generateSegment passes null instruct when no memo and no global',
+          () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '文1。文2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/models',
+        );
+
+        expect(isolate.synthesizeRequests, hasLength(1));
+        expect(isolate.synthesizeRequests[0].$3, isNull);
+      });
+
+      test('generateAllUngenerated uses per-segment memo as instruct',
+          () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '文1。文2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Segment 0: has memo
+        controller.segments[0].memo = '怒りの口調で';
+        // Segment 1: no memo, should fall back to global
+
+        await controller.generateAllUngenerated(
+          modelDir: '/models',
+          instruct: '穏やかな口調で',
+        );
+
+        expect(isolate.synthesizeRequests, hasLength(2));
+        expect(isolate.synthesizeRequests[0].$3, '怒りの口調で');
+        expect(isolate.synthesizeRequests[1].$3, '穏やかな口調で');
+      });
+
+      test('generateSegment persists effectiveInstruct as memo in DB (new segment)',
+          () async {
+        await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '文1。文2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // No memo set, global instruct used
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/models',
+          instruct: '穏やかな口調で',
+        );
+
+        final episode = await repository.findEpisodeByFileName('test.txt');
+        final segments = await repository.getSegments(episode!['id'] as int);
+        expect(segments.first['memo'], '穏やかな口調で');
+      });
+
+      test('generateSegment persists memo in DB when updating existing segment',
+          () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        // Pre-create segment with no memo
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: '文1。',
+          textOffset: 0,
+          textLength: 3,
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '文1。文2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Segment 0 exists in DB (dbRecordExists=true), no memo
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/models',
+          instruct: '穏やかな口調で',
+        );
+
+        final segments = await repository.getSegments(episodeId);
+        final seg0 = segments.firstWhere((s) => s['segment_index'] == 0);
+        expect(seg0['memo'], '穏やかな口調で');
       });
     });
 
