@@ -257,6 +257,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
 
         return exportEpisodeToMp3(
           stateNotifier: ref.read(ttsExportStateProvider.notifier),
+          progressNotifier: ref.read(ttsExportProgressProvider.notifier),
           repository: repo,
           episodeId: episodeId,
           episodeFileName: fileName,
@@ -462,12 +463,23 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
               ),
               const SizedBox(width: 8),
               if (exportState == TtsExportState.exporting)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: Consumer(
+                      builder: (context, ref, _) {
+                        final progress =
+                            ref.watch(ttsExportProgressProvider);
+                        return CircularProgressIndicator(
+                          value: progress.total > 0
+                              ? progress.current / progress.total
+                              : null,
+                          strokeWidth: 2,
+                        );
+                      },
+                    ),
                   ),
                 )
               else

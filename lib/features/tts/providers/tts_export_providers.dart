@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart'
 
 import '../data/tts_audio_export_service.dart';
 import '../data/tts_audio_repository.dart';
+import 'tts_playback_providers.dart';
 
 // --- Export state ---
 
@@ -23,6 +24,20 @@ class TtsExportStateNotifier extends Notifier<TtsExportState> {
   void set(TtsExportState value) => state = value;
 }
 
+// --- Export progress (reuses TtsGenerationProgress) ---
+
+final ttsExportProgressProvider =
+    NotifierProvider<TtsExportProgressNotifier, TtsGenerationProgress>(
+  TtsExportProgressNotifier.new,
+);
+
+class TtsExportProgressNotifier extends Notifier<TtsGenerationProgress> {
+  @override
+  TtsGenerationProgress build() => TtsGenerationProgress.zero;
+
+  void set(TtsGenerationProgress value) => state = value;
+}
+
 // --- Export action ---
 
 /// Prompts user for save location and exports episode audio to MP3.
@@ -30,6 +45,7 @@ class TtsExportStateNotifier extends Notifier<TtsExportState> {
 /// Throws on error. Caller is responsible for UI feedback.
 Future<bool> exportEpisodeToMp3({
   required TtsExportStateNotifier stateNotifier,
+  required TtsExportProgressNotifier progressNotifier,
   required TtsAudioRepository repository,
   required int episodeId,
   required String episodeFileName,
@@ -46,6 +62,7 @@ Future<bool> exportEpisodeToMp3({
   if (savePath == null) return false;
 
   stateNotifier.set(TtsExportState.exporting);
+  progressNotifier.set(TtsGenerationProgress.zero);
 
   try {
     final segments = await repository.getSegments(episodeId);
@@ -61,14 +78,19 @@ Future<bool> exportEpisodeToMp3({
       throw Exception('エクスポートする音声データがありません');
     }
 
-    await exportToMp3InIsolate(
+    await exportToMp3WithProgress(
       wavSegments: wavSegments,
       outputPath: savePath,
       sampleRate: sampleRate,
       bitrate: 128,
+      onProgress: (current, total) {
+        progressNotifier
+            .set(TtsGenerationProgress(current: current, total: total));
+      },
     );
     return true;
   } finally {
     stateNotifier.set(TtsExportState.idle);
+    progressNotifier.set(TtsGenerationProgress.zero);
   }
 }

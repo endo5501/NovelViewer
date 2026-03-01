@@ -45,48 +45,8 @@ void main() {
     });
   });
 
-  group('concatenateSegmentsPcm', () {
-    test('concatenates multiple segments in order', () {
-      final audio1 = Float32List.fromList([0.5, -0.5]);
-      final audio2 = Float32List.fromList([0.25, -0.25]);
-      final audio3 = Float32List.fromList([0.1, -0.1]);
-
-      final wav1 = WavWriter.toBytes(audio: audio1, sampleRate: 24000);
-      final wav2 = WavWriter.toBytes(audio: audio2, sampleRate: 24000);
-      final wav3 = WavWriter.toBytes(audio: audio3, sampleRate: 24000);
-
-      final segments = [wav1, wav2, wav3];
-      final result = concatenateSegmentsPcm(segments);
-
-      // 3 segments * 2 samples * 2 bytes = 12 bytes
-      expect(result.length, 12);
-      // First segment PCM
-      expect(result.sublist(0, 4), wav1.sublist(44));
-      // Second segment PCM
-      expect(result.sublist(4, 8), wav2.sublist(44));
-      // Third segment PCM
-      expect(result.sublist(8, 12), wav3.sublist(44));
-    });
-
-    test('handles single segment', () {
-      final audio = Float32List.fromList([0.5, -0.5, 0.25]);
-      final wav = WavWriter.toBytes(audio: audio, sampleRate: 24000);
-
-      final result = concatenateSegmentsPcm([wav]);
-
-      expect(result.length, 6); // 3 samples * 2 bytes
-      expect(result, wav.sublist(44));
-    });
-
-    test('handles empty segment list', () {
-      final result = concatenateSegmentsPcm([]);
-
-      expect(result.length, 0);
-    });
-  });
-
-  group('encodePcmToMp3', () {
-    test('encodes PCM data and writes valid MP3 file', () async {
+  group('encodeSegmentsToMp3', () {
+    test('encodes multiple WAV segments directly to MP3 file', () async {
       if (!Platform.isWindows) return;
 
       final dllPath =
@@ -96,47 +56,51 @@ void main() {
       final library = DynamicLibrary.open(dllPath);
       final lameBindings = LameEncBindings(library);
 
-      // Generate test audio: 1 second of 440Hz sine wave
+      // Generate test audio: 1 second of 440Hz sine wave split into 3 segments
       const sampleRate = 24000;
       const duration = 1.0;
       final numSamples = (sampleRate * duration).toInt();
       final audio = Float32List(numSamples);
       for (var i = 0; i < numSamples; i++) {
-        audio[i] = (0.5 *
-            _sin(2 * 3.14159265358979 * 440 * i / sampleRate));
+        audio[i] =
+            (0.5 * _sin(2 * 3.14159265358979 * 440 * i / sampleRate));
       }
 
-      // Create WAV segments
+      final third = numSamples ~/ 3;
       final wav1 = WavWriter.toBytes(
-        audio: audio.sublist(0, numSamples ~/ 2),
+        audio: audio.sublist(0, third),
         sampleRate: sampleRate,
       );
       final wav2 = WavWriter.toBytes(
-        audio: audio.sublist(numSamples ~/ 2),
+        audio: audio.sublist(third, third * 2),
+        sampleRate: sampleRate,
+      );
+      final wav3 = WavWriter.toBytes(
+        audio: audio.sublist(third * 2),
         sampleRate: sampleRate,
       );
 
-      // Concatenate and encode
-      final pcm = concatenateSegmentsPcm([wav1, wav2]);
-
       final outputPath =
-          '${Directory.systemTemp.path}/test_export_${DateTime.now().millisecondsSinceEpoch}.mp3';
+          '${Directory.systemTemp.path}/test_segments_${DateTime.now().millisecondsSinceEpoch}.mp3';
 
       try {
-        var progressCalled = false;
-        await encodePcmToMp3(
-          pcmData: pcm,
+        final progressUpdates = <(int, int)>[];
+        await encodeSegmentsToMp3(
+          wavSegments: [wav1, wav2, wav3],
           outputPath: outputPath,
           sampleRate: sampleRate,
           bitrate: 128,
           bindings: lameBindings,
-          onProgress: (current, total) {
-            progressCalled = true;
-            expect(current, lessThanOrEqualTo(total));
+          onSegmentProgress: (current, total) {
+            progressUpdates.add((current, total));
           },
         );
 
-        expect(progressCalled, isTrue);
+        // Verify progress was reported for each segment
+        expect(progressUpdates.length, 3);
+        expect(progressUpdates[0], (1, 3));
+        expect(progressUpdates[1], (2, 3));
+        expect(progressUpdates[2], (3, 3));
 
         // Verify the file exists and has content
         final file = File(outputPath);
@@ -145,8 +109,53 @@ void main() {
         final fileBytes = await file.readAsBytes();
         expect(fileBytes.length, greaterThan(0));
 
-        // Verify MP3 header (first 2 bytes should start with sync word 0xFF 0xFB or similar)
+        // Verify MP3 header
         expect(fileBytes[0], 0xFF);
+      } finally {
+        final file = File(outputPath);
+        if (file.existsSync()) {
+          await file.delete();
+        }
+      }
+    });
+
+    test('handles single segment', () async {
+      if (!Platform.isWindows) return;
+
+      final dllPath =
+          '${Directory.current.path}/build/windows/x64/runner/Release/lame_enc_ffi.dll';
+      if (!File(dllPath).existsSync()) return;
+
+      final library = DynamicLibrary.open(dllPath);
+      final lameBindings = LameEncBindings(library);
+
+      const sampleRate = 24000;
+      final audio = Float32List.fromList(
+          List.generate(2400, (i) => 0.5 * _sin(2 * 3.14159265358979 * 440 * i / sampleRate)));
+      final wav = WavWriter.toBytes(audio: audio, sampleRate: sampleRate);
+
+      final outputPath =
+          '${Directory.systemTemp.path}/test_single_seg_${DateTime.now().millisecondsSinceEpoch}.mp3';
+
+      try {
+        final progressUpdates = <(int, int)>[];
+        await encodeSegmentsToMp3(
+          wavSegments: [wav],
+          outputPath: outputPath,
+          sampleRate: sampleRate,
+          bitrate: 128,
+          bindings: lameBindings,
+          onSegmentProgress: (current, total) {
+            progressUpdates.add((current, total));
+          },
+        );
+
+        expect(progressUpdates.length, 1);
+        expect(progressUpdates[0], (1, 1));
+
+        final file = File(outputPath);
+        expect(file.existsSync(), isTrue);
+        expect(await file.length(), greaterThan(0));
       } finally {
         final file = File(outputPath);
         if (file.existsSync()) {

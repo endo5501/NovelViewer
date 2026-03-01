@@ -157,5 +157,28 @@ void main() {
       expect(find.byIcon(Icons.download), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
+
+    testWidgets(
+        'shows determinate progress when export progress is available',
+        (WidgetTester tester) async {
+      await setupReadyState(tester);
+
+      final element = tester.element(find.byType(TextViewerPanel));
+      final container = ProviderScope.containerOf(element);
+      container
+          .read(ttsExportStateProvider.notifier)
+          .set(TtsExportState.exporting);
+      container
+          .read(ttsExportProgressProvider.notifier)
+          .set(const TtsGenerationProgress(current: 3, total: 10));
+      await tester.pump();
+
+      final progressFinder = find.byType(CircularProgressIndicator);
+      expect(progressFinder, findsOneWidget);
+
+      final progressWidget =
+          tester.widget<CircularProgressIndicator>(progressFinder);
+      expect(progressWidget.value, closeTo(0.3, 0.01));
+    });
   });
 }
