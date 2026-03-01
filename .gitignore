@@ -36,3 +36,4 @@ migrate_working_dir/
 coverage
 /tmp
 /.claude/settings.local.json
+/third_party/lame_enc_ffi/build

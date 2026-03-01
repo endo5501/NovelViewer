@@ -77,10 +77,12 @@ fvm flutter run -d macos
 
 # macOS向けReleaseビルド
 scripts/build_tts_macos.sh
+scripts/build_lame_macos.sh
 fvm flutter build macos
 
 # Windows向けReleaseビルド
 scripts/build_tts_windows.bat
+scripts/build_lame_windows.bat
 fvm flutter build windows
 ```
 
@@ -123,3 +125,4 @@ git push origin v1.0.0
 - **HTTP通信**: http パッケージ
 - **HTMLパース**: html パッケージ
 - **音声読み上げ**: qwen3-tts.cpp
+- **MP3出力**: lame
