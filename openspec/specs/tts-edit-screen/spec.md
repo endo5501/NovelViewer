@@ -94,7 +94,7 @@ The system SHALL allow playing a single segment's audio via the play button on e
 - **THEN** the system SHALL NOT call `stop()` after playback, preserving the underlying platform player
 
 ### Requirement: Single segment regeneration
-The system SHALL allow regenerating a single segment's audio via the regenerate button. Regeneration SHALL use the segment's current text and ref_wav_path (resolving "設定値" to the actual global setting). The TTS model SHALL be loaded on the first regeneration request within the dialog session and kept loaded until the dialog is closed. During generation, the segment status SHALL show "生成中".
+The system SHALL allow regenerating a single segment's audio via the regenerate button. Regeneration SHALL use the segment's current text and ref_wav_path (resolving "設定値" to the actual global setting). The system SHALL use the segment's `memo` field as the instruct text for synthesis if it is non-null and non-empty; otherwise it SHALL fall back to the global instruct setting. The TTS model SHALL be loaded on the first regeneration request within the dialog session and kept loaded until the dialog is closed. During generation, the segment status SHALL show "生成中".
 
 #### Scenario: Regenerate a single segment
 - **WHEN** the user clicks the regenerate button on a segment
@@ -111,6 +111,18 @@ The system SHALL allow regenerating a single segment's audio via the regenerate 
 #### Scenario: Regenerate with per-segment reference audio
 - **WHEN** the user has set a specific reference audio for a segment and clicks regenerate
 - **THEN** the TTS engine uses that segment's reference audio, not the global setting
+
+#### Scenario: Regenerate uses segment memo as instruct
+- **WHEN** segment 3 has memo="囁くように" and the user clicks regenerate
+- **THEN** the TTS engine receives instruct "囁くように" for synthesis
+
+#### Scenario: Regenerate falls back to global instruct when no memo
+- **WHEN** segment 5 has memo=NULL and the global instruct setting is "穏やかな口調で", and the user clicks regenerate
+- **THEN** the TTS engine receives instruct "穏やかな口調で" for synthesis
+
+#### Scenario: Regenerate without memo or global instruct
+- **WHEN** segment 5 has memo=NULL and no global instruct is configured, and the user clicks regenerate
+- **THEN** the TTS engine receives no instruct text (backward compatible behavior)
 
 ### Requirement: Segment reset
 The system SHALL allow resetting a segment via the reset button. Resetting SHALL restore the segment's text to the original text from `TextSegmenter`, delete the audio_data (set to NULL), and clear the memo. The ref_wav_path SHALL also be reset to NULL (meaning "use global setting").
@@ -139,7 +151,7 @@ The system SHALL provide a "全再生" button in the dialog toolbar that plays a
 - **THEN** the system calls `pause()` to reset the `playing` flag, then loads and plays segment N+1 without audio cutoff or skipping
 
 ### Requirement: Generate all ungenerated segments
-The system SHALL provide a "全生成" button in the dialog toolbar that generates audio for all segments that currently have no audio_data. Generation SHALL proceed sequentially from the first ungenerated segment. The TTS model SHALL be loaded if not already loaded. Before generating each segment, the system SHALL notify the UI of the segment index being processed so that the per-segment progress indicator can be updated. For each segment, the system SHALL resolve the segment's ref_wav_path to a full filesystem path before passing it to the TTS engine. The resolution SHALL use the same voice file path resolution mechanism used by single-segment regeneration (resolving filename-only values to absolute paths via the voices directory).
+The system SHALL provide a "全生成" button in the dialog toolbar that generates audio for all segments that currently have no audio_data. Generation SHALL proceed sequentially from the first ungenerated segment. The TTS model SHALL be loaded if not already loaded. Before generating each segment, the system SHALL notify the UI of the segment index being processed so that the per-segment progress indicator can be updated. For each segment, the system SHALL resolve the segment's ref_wav_path to a full filesystem path before passing it to the TTS engine. The resolution SHALL use the same voice file path resolution mechanism used by single-segment regeneration (resolving filename-only values to absolute paths via the voices directory). For each segment, the system SHALL use the segment's `memo` field as the instruct text if non-null and non-empty; otherwise it SHALL fall back to the global instruct setting.
 
 #### Scenario: Generate all ungenerated segments
 - **WHEN** the user clicks "全生成" with segments 1 and 4 having no audio
@@ -164,6 +176,10 @@ The system SHALL provide a "全生成" button in the dialog toolbar that generat
 #### Scenario: Generate all with "なし" reference audio
 - **WHEN** the user clicks "全生成" and segment 5 has ref_wav_path="" (explicitly set to "なし")
 - **THEN** segment 5 is generated without any reference audio
+
+#### Scenario: Generate all uses per-segment memo as instruct
+- **WHEN** the user clicks "全生成" and segment 2 has memo="怒りの口調で" while segment 4 has memo=NULL, with global instruct "穏やかな口調で"
+- **THEN** segment 2 is synthesized with instruct "怒りの口調で" and segment 4 is synthesized with instruct "穏やかな口調で"
 
 ### Requirement: Generate all cancellation
 The system SHALL provide a "中断" button in the dialog toolbar during bulk generation that immediately stops the TTS generation. When the user presses "中断", the system SHALL dispose the TTS Isolate to terminate any in-progress synthesis, rather than waiting for the current segment to complete. After cancellation, segments that were fully generated before cancellation SHALL be preserved. The system SHALL allow the user to continue using the dialog (single segment generation, bulk generation, playback) after cancellation by creating a new TTS Isolate on the next generation request.

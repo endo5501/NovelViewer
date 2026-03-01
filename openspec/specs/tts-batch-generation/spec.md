@@ -16,7 +16,7 @@ The system SHALL provide a "読み上げ音声生成" button in the text viewer 
 ## Requirements
 
 ### Requirement: Batch generation pipeline
-The system SHALL generate audio for all sentences in the episode text sequentially using the TTS Isolate. For each sentence, the system SHALL: synthesize audio via `TtsIsolate`, convert the Float32List result to WAV bytes using `WavWriter`, and save the WAV BLOB to the `tts_segments` table. An episode record with status "generating" SHALL be created before generation begins. The episode status SHALL be updated to "completed" when all segments have been generated. The system SHALL support starting generation from a specified segment index, skipping already-generated segments. After each segment is stored, the system SHALL invoke an `onSegmentStored` callback with the segment index to notify consumers.
+The system SHALL generate audio for all sentences in the episode text sequentially using the TTS Isolate. For each sentence, the system SHALL: synthesize audio via `TtsIsolate`, convert the Float32List result to WAV bytes using `WavWriter`, and save the WAV BLOB to the `tts_segments` table. An episode record with status "generating" SHALL be created before generation begins. The episode status SHALL be updated to "completed" when all segments have been generated. The system SHALL support starting generation from a specified segment index, skipping already-generated segments. After each segment is stored, the system SHALL invoke an `onSegmentStored` callback with the segment index to notify consumers. The `start()` method SHALL accept an optional `instruct` parameter. When inserting new segments, the system SHALL store the `instruct` value used for synthesis in the segment's `memo` column.
 
 #### Scenario: Generate all sentences sequentially
 - **WHEN** batch generation starts for an episode with 15 sentences
@@ -41,6 +41,14 @@ The system SHALL generate audio for all sentences in the episode text sequential
 #### Scenario: Segment stored notification
 - **WHEN** segment 3 is successfully generated and stored in the database
 - **THEN** the onSegmentStored callback is invoked with segmentIndex=3
+
+#### Scenario: Instruct stored as memo in new segments
+- **WHEN** batch generation runs with `instruct: "楽しげな口調で"` and generates segment 0
+- **THEN** the inserted segment record has memo="楽しげな口調で"
+
+#### Scenario: Batch generation without instruct
+- **WHEN** batch generation runs without an instruct parameter
+- **THEN** the inserted segment records have memo=NULL
 
 ### Requirement: Generation progress tracking
 The system SHALL expose generation progress via a Riverpod provider. Progress SHALL include the current segment index and total segment count. The UI SHALL display a progress bar and text showing "N/M文" during generation. The system SHALL also notify the UI of the current segment's text position (offset and length) at the start of each segment's synthesis via a separate callback, enabling text highlight and page navigation.

@@ -1,7 +1,7 @@
 ## Requirements
 
 ### Requirement: Unified streaming start
-The system SHALL provide a single entry point `TtsStreamingController.start()` that automatically determines the appropriate mode based on existing data. If no episode exists, it SHALL start fresh generation with immediate playback. If an episode exists with matching text_hash, it SHALL begin playing segments using existing audio where available and generating audio on-demand for segments without audio_data. The controller SHALL accept text, fileName, modelDir, sampleRate, optional refWavPath, optional instruct, optional startOffset, and optional resolveRefWavPath callback parameters. The resolveRefWavPath callback SHALL be used to resolve per-segment ref_wav_path filenames from the database to absolute filesystem paths before passing them to the TTS engine. The instruct parameter SHALL be passed through to all segment synthesis calls.
+The system SHALL provide a single entry point `TtsStreamingController.start()` that automatically determines the appropriate mode based on existing data. If no episode exists, it SHALL start fresh generation with immediate playback. If an episode exists with matching text_hash, it SHALL begin playing segments using existing audio where available and generating audio on-demand for segments without audio_data. The controller SHALL accept text, fileName, modelDir, sampleRate, optional refWavPath, optional instruct, optional startOffset, and optional resolveRefWavPath callback parameters. The resolveRefWavPath callback SHALL be used to resolve per-segment ref_wav_path filenames from the database to absolute filesystem paths before passing them to the TTS engine. When generating a segment on-demand, the system SHALL use the segment's `memo` field from the database as the instruct text if it is non-null and non-empty; otherwise it SHALL fall back to the global `instruct` parameter passed to `start()`.
 
 #### Scenario: Start fresh when no episode exists
 - **WHEN** `start()` is called for a fileName with no existing episode in the database
@@ -39,13 +39,21 @@ The system SHALL provide a single entry point `TtsStreamingController.start()` t
 - **WHEN** a segment without a DB record is generated on-demand using the global reference audio
 - **THEN** the inserted segment record SHALL have ref_wav_path=NULL (indicating "use global setting"), not the resolved full path of the global reference audio
 
-#### Scenario: Instruct text passed to segment synthesis
-- **WHEN** `start()` is called with `instruct: "怒りの口調で"` and segments are generated
-- **THEN** every segment synthesis call to the TTS isolate includes the instruct text "怒りの口調で"
+#### Scenario: Segment memo overrides global instruct
+- **WHEN** `start()` is called with `instruct: "穏やかな口調で"` and segment 3 has memo="怒りの口調で" in the database
+- **THEN** segment 3 is synthesized with instruct "怒りの口調で", while other segments without memo use "穏やかな口調で"
 
-#### Scenario: Start without instruct text
-- **WHEN** `start()` is called without the instruct parameter
+#### Scenario: Segment without memo uses global instruct
+- **WHEN** `start()` is called with `instruct: "穏やかな口調で"` and segment 5 has memo=NULL in the database
+- **THEN** segment 5 is synthesized with the global instruct "穏やかな口調で"
+
+#### Scenario: Start without instruct text and no segment memo
+- **WHEN** `start()` is called without the instruct parameter and segments have no memo set
 - **THEN** segment synthesis calls do not include instruct text (backward compatible with existing behavior)
+
+#### Scenario: On-demand generation stores used instruct as memo
+- **WHEN** a segment without a DB record is generated on-demand using the global instruct "穏やかな口調で"
+- **THEN** the inserted segment record SHALL have memo="穏やかな口調で" so the instruct used is preserved
 
 ### Requirement: Text hash validation
 The system SHALL compute a SHA-256 hash of the episode text and store it in the `text_hash` column of the `tts_episodes` table. On each `start()` call, the system SHALL compare the current text hash with the stored hash. If they differ, the existing episode and all segments SHALL be deleted and generation SHALL restart from scratch.

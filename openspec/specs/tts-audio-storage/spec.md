@@ -58,7 +58,7 @@ The `tts_segments` table SHALL store per-sentence audio data with the following 
 - **THEN** the `tts_segments` table is recreated with `audio_data` and `sample_count` as nullable columns and `memo` column added, all existing data is preserved, and the unique index is recreated
 
 ### Requirement: TTS audio repository CRUD operations
-The system SHALL provide a `TtsAudioRepository` class with methods to: create an episode record (with text_hash), insert segment records (with or without audio_data), update a segment's text (setting audio_data and sample_count to NULL), update a segment's audio_data and sample_count, update a segment's ref_wav_path, update a segment's memo, query episode status by file_name, retrieve all segments for an episode ordered by segment_index, find a segment by text_offset, get the count of stored segments for an episode, get the count of segments with non-NULL audio_data for an episode, delete a single segment by episode_id and segment_index, delete an episode (cascading to segments), and retrieve all episode statuses as a map of file_name to TtsEpisodeStatus.
+The system SHALL provide a `TtsAudioRepository` class with methods to: create an episode record (with text_hash), insert segment records (with or without audio_data, with optional memo), update a segment's text (setting audio_data and sample_count to NULL), update a segment's audio_data and sample_count, update a segment's ref_wav_path, update a segment's memo, query episode status by file_name, retrieve all segments for an episode ordered by segment_index, find a segment by text_offset, get the count of stored segments for an episode, get the count of segments with non-NULL audio_data for an episode, delete a single segment by episode_id and segment_index, delete an episode (cascading to segments), and retrieve all episode statuses as a map of file_name to TtsEpisodeStatus.
 
 #### Scenario: Check if episode has audio
 - **WHEN** `findEpisodeByFileName("0001_プロローグ.txt")` is called
@@ -87,6 +87,14 @@ The system SHALL provide a `TtsAudioRepository` class with methods to: create an
 #### Scenario: Update segment text with audio invalidation
 - **WHEN** `updateSegmentText(episodeId, segmentIndex, newText)` is called for a segment with existing audio
 - **THEN** the text is updated, audio_data and sample_count are set to NULL
+
+#### Scenario: Insert segment with memo
+- **WHEN** `insertSegment()` is called with memo="怒りの口調で"
+- **THEN** a segment record is created with the memo value stored in the memo column
+
+#### Scenario: Insert segment without memo
+- **WHEN** `insertSegment()` is called without a memo parameter
+- **THEN** a segment record is created with memo=NULL
 
 #### Scenario: Insert segment without audio
 - **WHEN** `insertSegment()` is called with audio_data=NULL and sample_count=NULL
