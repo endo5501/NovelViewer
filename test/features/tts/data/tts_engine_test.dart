@@ -95,4 +95,30 @@ void main() {
       );
     });
   });
+
+  group('TtsEngine - synthesize with optional params', () {
+    test('synthesize with instruct throws when model is not loaded', () {
+      final mockBindings = MockTtsNativeBindings();
+      final engine = TtsEngine(mockBindings);
+
+      expect(
+        () => engine.synthesize('text', instruct: 'happy'),
+        throwsA(isA<TtsEngineException>()),
+      );
+    });
+
+    test('synthesize with voice and instruct throws when model is not loaded', () {
+      final mockBindings = MockTtsNativeBindings();
+      final engine = TtsEngine(mockBindings);
+
+      expect(
+        () => engine.synthesize(
+          'text',
+          refWavPath: '/path/ref.wav',
+          instruct: 'happy',
+        ),
+        throwsA(isA<TtsEngineException>()),
+      );
+    });
+  });
 }

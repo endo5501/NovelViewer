@@ -60,3 +60,18 @@ class TtsRefWavPathNotifier extends _SettingStringNotifier {
 
   Future<void> setTtsRefWavPath(String path) => _update(path);
 }
+
+final ttsInstructProvider =
+    NotifierProvider<TtsInstructNotifier, String>(TtsInstructNotifier.new);
+
+class TtsInstructNotifier extends _SettingStringNotifier {
+  @override
+  String Function(SettingsRepository) get _getter =>
+      (repo) => repo.getTtsInstruct();
+
+  @override
+  Future<void> Function(SettingsRepository, String) get _setter =>
+      (repo, value) => repo.setTtsInstruct(value);
+
+  Future<void> setTtsInstruct(String instruct) => _update(instruct);
+}

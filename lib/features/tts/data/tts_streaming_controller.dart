@@ -47,6 +47,7 @@ class TtsStreamingController {
     required String modelDir,
     required int sampleRate,
     String? refWavPath,
+    String? instruct,
     int? startOffset,
     String Function(String fileName)? resolveRefWavPath,
   }) async {
@@ -97,6 +98,7 @@ class TtsStreamingController {
         modelDir: modelDir,
         sampleRate: sampleRate,
         refWavPath: refWavPath,
+        instruct: instruct,
         startOffset: startOffset,
         resolveRefWavPath: resolveRefWavPath,
       );
@@ -136,7 +138,7 @@ class TtsStreamingController {
   }
 
   Future<SynthesisResultResponse?> _synthesize(
-      String text, String? refWavPath) async {
+      String text, String? refWavPath, {String? instruct}) async {
     final completer = Completer<SynthesisResultResponse>();
 
     late StreamSubscription<TtsIsolateResponse> sub;
@@ -146,7 +148,7 @@ class TtsStreamingController {
       }
     });
 
-    _ttsIsolate.synthesize(text, refWavPath: refWavPath);
+    _ttsIsolate.synthesize(text, refWavPath: refWavPath, instruct: instruct);
 
     try {
       final result = await completer.future;
@@ -166,6 +168,7 @@ class TtsStreamingController {
     required String modelDir,
     required int sampleRate,
     required String? refWavPath,
+    String? instruct,
     int? startOffset,
     String Function(String fileName)? resolveRefWavPath,
   }) async {
@@ -230,7 +233,7 @@ class TtsStreamingController {
                     : dbRefWavPath)
             : refWavPath;
 
-        final result = await _synthesize(synthText, synthRefWavPath);
+        final result = await _synthesize(synthText, synthRefWavPath, instruct: instruct);
         if (result == null || _stopped) break;
 
         final wavBytes = WavWriter.toBytes(

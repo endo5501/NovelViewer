@@ -57,37 +57,35 @@ class TtsEngine {
     }
   }
 
-  TtsSynthesisResult synthesize(String text) {
+  TtsSynthesisResult synthesize(String text, {String? refWavPath, String? instruct}) {
     _ensureLoaded();
 
+    // Normalize empty instruct to null
+    final effectiveInstruct = (instruct != null && instruct.isNotEmpty) ? instruct : null;
+
     final textPtr = text.toNativeUtf8();
+    final wavPtr = refWavPath?.toNativeUtf8();
+    final instructPtr = effectiveInstruct?.toNativeUtf8();
     try {
-      final result = _bindings.synthesize(_ctx, textPtr);
+      final int result;
+      if (wavPtr != null && instructPtr != null) {
+        result = _bindings.synthesizeWithVoiceAndInstruct(
+            _ctx, textPtr, wavPtr, instructPtr);
+      } else if (wavPtr != null) {
+        result = _bindings.synthesizeWithVoice(_ctx, textPtr, wavPtr);
+      } else if (instructPtr != null) {
+        result = _bindings.synthesizeWithInstruct(_ctx, textPtr, instructPtr);
+      } else {
+        result = _bindings.synthesize(_ctx, textPtr);
+      }
       if (result != 0) {
         final error = _bindings.getError(_ctx).toDartString();
         throw TtsEngineException('Synthesis failed: $error');
       }
     } finally {
       calloc.free(textPtr);
-    }
-
-    return _extractAudio();
-  }
-
-  TtsSynthesisResult synthesizeWithVoice(String text, String refWavPath) {
-    _ensureLoaded();
-
-    final textPtr = text.toNativeUtf8();
-    final wavPtr = refWavPath.toNativeUtf8();
-    try {
-      final result = _bindings.synthesizeWithVoice(_ctx, textPtr, wavPtr);
-      if (result != 0) {
-        final error = _bindings.getError(_ctx).toDartString();
-        throw TtsEngineException('Synthesis with voice failed: $error');
-      }
-    } finally {
-      calloc.free(textPtr);
-      calloc.free(wavPtr);
+      if (wavPtr != null) calloc.free(wavPtr);
+      if (instructPtr != null) calloc.free(instructPtr);
     }
 
     return _extractAudio();

@@ -16,6 +16,7 @@ class SettingsRepository {
   static const _llmModelKey = 'llm_model';
   static const _ttsModelDirKey = 'tts_model_dir';
   static const _ttsRefWavPathKey = 'tts_ref_wav_path';
+  static const _ttsInstructKey = 'tts_instruct';
 
   static const defaultFontSize = 14.0;
   static const minFontSize = 10.0;
@@ -116,5 +117,13 @@ class SettingsRepository {
 
   Future<void> setTtsRefWavPath(String path) async {
     await _prefs.setString(_ttsRefWavPathKey, path);
+  }
+
+  String getTtsInstruct() {
+    return _prefs.getString(_ttsInstructKey) ?? '';
+  }
+
+  Future<void> setTtsInstruct(String instruct) async {
+    await _prefs.setString(_ttsInstructKey, instruct);
   }
 }

@@ -115,6 +115,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     final refWavPath = refWavFileName.isNotEmpty && voiceService != null
         ? voiceService.resolveVoiceFilePath(refWavFileName)
         : null;
+    final instruct = ref.read(ttsInstructProvider);
 
     if (folderPath == null || fileName == null || modelDir.isEmpty) return;
 
@@ -154,6 +155,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
         refWavPath: refWavPath,
         startOffset: startOffset,
         resolveRefWavPath: voiceService?.resolveVoiceFilePath,
+        instruct: instruct.isEmpty ? null : instruct,
       );
 
       if (!mounted) return;

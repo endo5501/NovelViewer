@@ -73,4 +73,32 @@ void main() {
       expect(prefs.getString('tts_ref_wav_path'), 'voice_sample.wav');
     });
   });
+
+  group('ttsInstructProvider', () {
+    test('initial value is empty string', () {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(ttsInstructProvider), '');
+    });
+
+    test('initial value loads from SharedPreferences', () async {
+      await prefs.setString('tts_instruct', '優しく穏やかに話してください');
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(ttsInstructProvider), '優しく穏やかに話してください');
+    });
+
+    test('setTtsInstruct updates state and persists', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(ttsInstructProvider.notifier)
+          .setTtsInstruct('怒りの口調で');
+      expect(container.read(ttsInstructProvider), '怒りの口調で');
+      expect(prefs.getString('tts_instruct'), '怒りの口調で');
+    });
+  });
 }

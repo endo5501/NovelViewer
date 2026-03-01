@@ -39,6 +39,7 @@ class TtsGenerationController {
     required String modelDir,
     required int sampleRate,
     String? refWavPath,
+    String? instruct,
     int startSegmentIndex = 0,
     int? existingEpisodeId,
   }) async {
@@ -102,7 +103,7 @@ class TtsGenerationController {
 
       final segment = segments[i];
       onSegmentStart?.call(segment.offset, segment.length);
-      final result = await _synthesizeSegment(segment.text, refWavPath);
+      final result = await _synthesizeSegment(segment.text, refWavPath, instruct);
 
       if (_cancelled) break;
 
@@ -150,7 +151,7 @@ class TtsGenerationController {
   }
 
   Future<SynthesisResultResponse?> _synthesizeSegment(
-      String text, String? refWavPath) async {
+      String text, String? refWavPath, String? instruct) async {
     final completer = Completer<SynthesisResultResponse>();
     _activeSynthesisCompleter = completer;
 
@@ -161,7 +162,7 @@ class TtsGenerationController {
       }
     });
 
-    _ttsIsolate.synthesize(text, refWavPath: refWavPath);
+    _ttsIsolate.synthesize(text, refWavPath: refWavPath, instruct: instruct);
 
     try {
       final result = await completer.future;

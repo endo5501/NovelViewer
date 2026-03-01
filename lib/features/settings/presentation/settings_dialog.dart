@@ -36,6 +36,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   late TextEditingController _apiKeyController;
   late TextEditingController _modelController;
   late TextEditingController _ttsModelDirController;
+  late TextEditingController _ttsInstructController;
   List<String> _voiceFiles = [];
   bool _isDragging = false;
 
@@ -64,6 +65,8 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
 
     _ttsModelDirController =
         TextEditingController(text: repo.getTtsModelDir());
+    _ttsInstructController =
+        TextEditingController(text: repo.getTtsInstruct());
     _loadVoiceFiles();
 
     if (_llmProvider == LlmProvider.ollama) {
@@ -79,6 +82,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
     _apiKeyController.dispose();
     _modelController.dispose();
     _ttsModelDirController.dispose();
+    _ttsInstructController.dispose();
     super.dispose();
   }
 
@@ -454,6 +458,22 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: _buildVoiceReferenceSelector(),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              controller: _ttsInstructController,
+              decoration: const InputDecoration(
+                labelText: '発話スタイル指示',
+                hintText: '例: 優しく穏やかに話してください',
+              ),
+              onChanged: (value) {
+                ref
+                    .read(ttsInstructProvider.notifier)
+                    .setTtsInstruct(value);
+              },
+            ),
           ),
         ],
       ),

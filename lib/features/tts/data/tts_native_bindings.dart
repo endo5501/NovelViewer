@@ -29,6 +29,30 @@ typedef _QTtsSynthesizeWithVoiceDart = int Function(
   Pointer<Utf8>,
 );
 
+typedef _QTtsSynthesizeWithInstructC = Int32 Function(
+  Pointer<Void>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+);
+typedef _QTtsSynthesizeWithInstructDart = int Function(
+  Pointer<Void>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+);
+
+typedef _QTtsSynthesizeWithVoiceAndInstructC = Int32 Function(
+  Pointer<Void>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+);
+typedef _QTtsSynthesizeWithVoiceAndInstructDart = int Function(
+  Pointer<Void>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+);
+
 typedef _QTtsGetAudioC = Pointer<Float> Function(Pointer<Void>);
 typedef _QTtsGetAudioDart = Pointer<Float> Function(Pointer<Void>);
 
@@ -84,6 +108,16 @@ class TtsNativeBindings {
     _QTtsSynthesizeWithVoiceC,
     _QTtsSynthesizeWithVoiceDart
   >('qwen3_tts_synthesize_with_voice');
+
+  late final synthesizeWithInstruct = _library.lookupFunction<
+    _QTtsSynthesizeWithInstructC,
+    _QTtsSynthesizeWithInstructDart
+  >('qwen3_tts_synthesize_with_instruct');
+
+  late final synthesizeWithVoiceAndInstruct = _library.lookupFunction<
+    _QTtsSynthesizeWithVoiceAndInstructC,
+    _QTtsSynthesizeWithVoiceAndInstructDart
+  >('qwen3_tts_synthesize_with_voice_and_instruct');
 
   late final getAudio =
       _library.lookupFunction<_QTtsGetAudioC, _QTtsGetAudioDart>(

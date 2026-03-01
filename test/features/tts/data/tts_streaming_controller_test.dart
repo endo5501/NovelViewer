@@ -42,7 +42,7 @@ class _FakeTtsIsolate implements TtsIsolate {
   }
 
   @override
-  void synthesize(String text, {String? refWavPath}) {
+  void synthesize(String text, {String? refWavPath, String? instruct}) {
     synthesizeRequests.add(text);
     synthesizeRefWavPaths.add(refWavPath);
     Future.microtask(() {

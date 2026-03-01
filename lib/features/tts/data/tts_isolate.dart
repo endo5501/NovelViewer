@@ -20,9 +20,10 @@ class LoadModelMessage extends TtsIsolateMessage {
 }
 
 class SynthesizeMessage extends TtsIsolateMessage {
-  SynthesizeMessage({required this.text, this.refWavPath});
+  SynthesizeMessage({required this.text, this.refWavPath, this.instruct});
   final String text;
   final String? refWavPath;
+  final String? instruct;
 }
 
 class DisposeMessage extends TtsIsolateMessage {
@@ -85,8 +86,8 @@ class TtsIsolate {
     _sendPort?.send(LoadModelMessage(modelDir: modelDir, nThreads: nThreads, languageId: languageId));
   }
 
-  void synthesize(String text, {String? refWavPath}) {
-    _sendPort?.send(SynthesizeMessage(text: text, refWavPath: refWavPath));
+  void synthesize(String text, {String? refWavPath, String? instruct}) {
+    _sendPort?.send(SynthesizeMessage(text: text, refWavPath: refWavPath, instruct: instruct));
   }
 
   Future<void> dispose() async {
@@ -151,9 +152,11 @@ class TtsIsolate {
             return;
           }
 
-          final result = message.refWavPath != null
-              ? engine!.synthesizeWithVoice(message.text, message.refWavPath!)
-              : engine!.synthesize(message.text);
+          final result = engine!.synthesize(
+            message.text,
+            refWavPath: message.refWavPath,
+            instruct: message.instruct,
+          );
 
           // Use TransferableTypedData for zero-copy transfer
           final transferable =

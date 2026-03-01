@@ -46,7 +46,7 @@ class FakeTtsIsolate implements TtsIsolate {
   }
 
   @override
-  void synthesize(String text, {String? refWavPath}) {
+  void synthesize(String text, {String? refWavPath, String? instruct}) {
     synthesizeRequests.add(text);
     Future.microtask(() {
       if (synthesisError != null) {
@@ -564,7 +564,7 @@ class _CancellableFakeTtsIsolate implements TtsIsolate {
   }
 
   @override
-  void synthesize(String text, {String? refWavPath}) {
+  void synthesize(String text, {String? refWavPath, String? instruct}) {
     // Notify that synthesis was requested but don't respond
     onSynthesizeRequested?.call();
   }
@@ -601,7 +601,7 @@ class _TrackingFakeTtsIsolate implements TtsIsolate {
   }
 
   @override
-  void synthesize(String text, {String? refWavPath}) {
+  void synthesize(String text, {String? refWavPath, String? instruct}) {
     _calls.add((text, refWavPath));
     Future.microtask(() {
       _responseController.add(SynthesisResultResponse(
@@ -642,7 +642,7 @@ class _StallingFakeTtsIsolate implements TtsIsolate {
   }
 
   @override
-  void synthesize(String text, {String? refWavPath}) {
+  void synthesize(String text, {String? refWavPath, String? instruct}) {
     final shouldComplete = onSynthesizeRequested(text);
     if (shouldComplete) {
       Future.microtask(() {

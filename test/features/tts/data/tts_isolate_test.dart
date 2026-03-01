@@ -40,6 +40,32 @@ void main() {
       expect(msg.refWavPath, '/path/to/ref.wav');
     });
 
+    test('SynthesizeMessage holds text and instruct', () {
+      final msg = SynthesizeMessage(
+        text: 'こんにちは',
+        instruct: '怒りの口調で',
+      );
+      expect(msg.text, 'こんにちは');
+      expect(msg.instruct, '怒りの口調で');
+      expect(msg.refWavPath, isNull);
+    });
+
+    test('SynthesizeMessage holds text, wav path and instruct', () {
+      final msg = SynthesizeMessage(
+        text: 'こんにちは',
+        refWavPath: '/path/to/ref.wav',
+        instruct: '優しく話して',
+      );
+      expect(msg.text, 'こんにちは');
+      expect(msg.refWavPath, '/path/to/ref.wav');
+      expect(msg.instruct, '優しく話して');
+    });
+
+    test('SynthesizeMessage defaults instruct to null', () {
+      final msg = SynthesizeMessage(text: 'テスト');
+      expect(msg.instruct, isNull);
+    });
+
     test('DisposeMessage is a simple marker', () {
       final msg = DisposeMessage();
       expect(msg, isNotNull);

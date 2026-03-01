@@ -226,5 +226,23 @@ void main() {
       expect(repo.getTtsModelDir(), '/models');
       expect(repo.getTtsRefWavPath(), '/ref.wav');
     });
+
+    test('getTtsInstruct returns empty string when no value stored', () {
+      final repo = SettingsRepository(prefs);
+      expect(repo.getTtsInstruct(), '');
+    });
+
+    test('setTtsInstruct and getTtsInstruct round-trip', () async {
+      final repo = SettingsRepository(prefs);
+      await repo.setTtsInstruct('優しく穏やかに話してください');
+      expect(repo.getTtsInstruct(), '優しく穏やかに話してください');
+    });
+
+    test('clearing TTS instruct sets empty string', () async {
+      final repo = SettingsRepository(prefs);
+      await repo.setTtsInstruct('怒りの口調で');
+      await repo.setTtsInstruct('');
+      expect(repo.getTtsInstruct(), '');
+    });
   });
 }
