@@ -78,6 +78,16 @@ memo フィールドの値をそのまま instruct テキストとして TTS エ
 - TtsStreamingController: オンデマンド生成時に使用した instruct を memo として保存
 - TtsEditController: 既にセグメントの memo は DB に保存済みのため、insertSegment 時に反映
 
+### 6. 生成後に effectiveInstruct を memo として永続化する
+
+新規セグメント挿入時だけでなく、既存セグメントの再生成時にも `effectiveInstruct` を `updateSegmentMemo` で DB に書き戻す。これにより、どの生成経路を通っても「そのセグメントの生成に使われた instruct」が memo に記録される。
+
+**対象**:
+- TtsEditController: `generateSegment` 内で `updateSegmentAudio` の後に `updateSegmentMemo` を呼ぶ
+- TtsStreamingController: `_startPlayback` 内で既存DB行の再生成後に `updateSegmentMemo` を呼ぶ
+
+**理由**: 新規挿入時のみ memo を保存する設計だと、memo 未設定の既存セグメントをグローバル instruct で再生成した場合に、使用した instruct が記録されない。全経路で一貫して永続化することで、ユーザーが後から各セグメントの instruct を確認・編集できる。
+
 ## Risks / Trade-offs
 
 - **[バッチ生成で memo 上書き]** → バッチ生成時に既存の memo を上書きする可能性。ただし TtsGenerationController は新規エピソードを対象とするため、既存 memo との競合は発生しない。
