@@ -118,6 +118,24 @@ After a recorded file is successfully saved to the `voices/` directory, the syst
 - **AND** the recording dialog returns to the settings dialog
 - **THEN** the voice file dropdown list is refreshed and includes the newly saved file
 
+### Requirement: WAVE_FORMAT_EXTENSIBLE compatibility
+The TTS engine's WAV parser SHALL support `WAVE_FORMAT_EXTENSIBLE` (format code 0xFFFE) in addition to standard PCM (format code 1) and IEEE float (format code 3). When the format code is 0xFFFE, the parser SHALL read the actual audio format from the SubFormat GUID in the extended `fmt ` chunk header.
+
+#### Scenario: Load WAVE_FORMAT_EXTENSIBLE PCM file
+- **WHEN** the TTS engine loads a WAV file with `WAVE_FORMAT_EXTENSIBLE` format code (0xFFFE)
+- **AND** the SubFormat GUID indicates PCM (sub-format code 1)
+- **THEN** the engine decodes the audio data as PCM and processes it normally
+
+#### Scenario: Load WAVE_FORMAT_EXTENSIBLE IEEE float file
+- **WHEN** the TTS engine loads a WAV file with `WAVE_FORMAT_EXTENSIBLE` format code (0xFFFE)
+- **AND** the SubFormat GUID indicates IEEE float (sub-format code 3)
+- **THEN** the engine decodes the audio data as IEEE float and processes it normally
+
+#### Scenario: Recorded WAV used as reference audio
+- **WHEN** a user records a reference audio via the recording dialog
+- **AND** the recorded WAV file uses `WAVE_FORMAT_EXTENSIBLE` header (as produced by macOS)
+- **THEN** the TTS engine accepts the file as valid reference audio without error
+
 ### Requirement: macOS microphone entitlement
 The macOS application SHALL include the `com.apple.security.device.audio-input` entitlement and the `NSMicrophoneUsageDescription` key in `Info.plist` to enable microphone access.
 
