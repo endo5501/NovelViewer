@@ -220,7 +220,7 @@ class TtsEditController {
         textLength: segment.textLength,
         audioData: wavBytes,
         sampleCount: result.audio!.length,
-        refWavPath: refWavPath,
+        refWavPath: segment.refWavPath,
       );
       segment.dbRecordExists = true;
     }
