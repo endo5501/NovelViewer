@@ -372,6 +372,123 @@ void main() {
         expect(isolate.synthesizeRequests.first.$2, '/voices/female.wav');
       });
 
+      test('stores segment metadata refWavPath in DB, not resolved synthesis path',
+          () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '今日は天気です。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // segment.refWavPath is null (meaning "設定値")
+        expect(controller.segments[0].refWavPath, isNull);
+        expect(controller.segments[0].dbRecordExists, false);
+
+        // Generate with a resolved full path (as the UI would pass)
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/models',
+          refWavPath: '/Users/someone/voices/voice.wav',
+        );
+
+        // DB should store segment.refWavPath (null), NOT the resolved path
+        final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(dbSegment['ref_wav_path'], isNull);
+      });
+
+      test('stores explicit segment refWavPath in DB on first insert',
+          () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '今日は天気です。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Directly set refWavPath without creating a DB record
+        controller.segments[0].refWavPath = 'custom_voice.wav';
+        expect(controller.segments[0].dbRecordExists, false);
+
+        // Generate with a resolved full path (insertSegment path)
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/models',
+          refWavPath: '/Users/someone/voices/custom_voice.wav',
+        );
+
+        // DB should store the metadata value, not the resolved path
+        final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(dbSegment['ref_wav_path'], 'custom_voice.wav');
+      });
+
+      test('stores empty-string refWavPath in DB on first insert',
+          () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: '今日は天気です。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        // Set refWavPath to '' (meaning "なし")
+        controller.segments[0].refWavPath = '';
+        expect(controller.segments[0].dbRecordExists, false);
+
+        // Generate with null (resolved from '' → no reference audio)
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/models',
+          refWavPath: null,
+        );
+
+        // DB should store '' (not null), preserving "なし" setting
+        final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(dbSegment['ref_wav_path'], '');
+      });
+
       test('updates existing DB record audio on regeneration', () async {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
