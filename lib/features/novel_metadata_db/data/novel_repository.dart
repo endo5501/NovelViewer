@@ -61,6 +61,22 @@ class NovelRepository {
         whereArgs: [siteType, novelId],
       );
 
+  Future<void> updateTitle(String folderName, String newTitle) async {
+    final db = await _novelDatabase.database;
+    final count = await db.update(
+      'novels',
+      {
+        'title': newTitle,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'folder_name = ?',
+      whereArgs: [folderName],
+    );
+    if (count == 0) {
+      throw Exception('Novel not found for folder: $folderName');
+    }
+  }
+
   Future<void> deleteByFolderName(String folderName) async {
     final db = await _novelDatabase.database;
     await db.delete(

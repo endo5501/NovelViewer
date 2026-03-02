@@ -6,6 +6,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/novel_delete/providers/novel_delete_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
+import 'package:novel_viewer/features/file_browser/presentation/rename_title_dialog.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 
 /// Returns the parent directory of [currentDir], or null if already at root.
@@ -148,6 +149,10 @@ class FileBrowserPanel extends ConsumerWidget {
           child: Text('更新'),
         ),
         const PopupMenuItem<String>(
+          value: 'rename',
+          child: Text('タイトル変更'),
+        ),
+        const PopupMenuItem<String>(
           value: 'delete',
           child: Text('削除', style: TextStyle(color: Colors.red)),
         ),
@@ -156,6 +161,8 @@ class FileBrowserPanel extends ConsumerWidget {
       if (!context.mounted) return;
       if (value == 'refresh') {
         _startRefresh(context, ref, dir);
+      } else if (value == 'rename') {
+        _showRenameTitleDialog(context, ref, dir);
       } else if (value == 'delete') {
         _showDeleteConfirmation(context, ref, dir);
       }
@@ -182,6 +189,31 @@ class FileBrowserPanel extends ConsumerWidget {
       barrierDismissible: false,
       builder: (context) => _RefreshProgressDialog(novelTitle: dir.displayName),
     );
+  }
+
+  void _showRenameTitleDialog(
+    BuildContext context,
+    WidgetRef ref,
+    DirectoryEntry dir,
+  ) {
+    showDialog<String>(
+      context: context,
+      builder: (_) => RenameTitleDialog(currentTitle: dir.displayName),
+    ).then((newTitle) async {
+      if (newTitle == null || newTitle.isEmpty) return;
+      if (newTitle == dir.displayName) return;
+      try {
+        final repository = ref.read(novelRepositoryProvider);
+        await repository.updateTitle(dir.name, newTitle);
+        ref.invalidate(allNovelsProvider);
+        ref.invalidate(directoryContentsProvider);
+      } catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('タイトル変更に失敗しました: $e')),
+        );
+      }
+    });
   }
 
   void _showDeleteConfirmation(

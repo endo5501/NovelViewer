@@ -50,7 +50,7 @@ The user SHALL be able to select a file from the list by tapping on it, and the 
 - **THEN** the new file is highlighted, the previous highlight is removed, and the center column updates to show the new file's content
 
 ### Requirement: Subdirectory navigation
-The system SHALL display subdirectories in the file list, allowing the user to navigate into them to view their contents. At the library root level, subdirectories that are registered in the metadata database SHALL be displayed with their novel title instead of the folder name. Parent directory navigation SHALL work correctly on all platforms regardless of the path separator used by the operating system.
+The system SHALL display subdirectories in the file list, allowing the user to navigate into them to view their contents. At the library root level, subdirectories that are registered in the metadata database SHALL be displayed with their novel title instead of the folder name. Parent directory navigation SHALL work correctly on all platforms regardless of the path separator used by the operating system. At the library root level, right-clicking a novel folder SHALL display a context menu with "更新", "タイトル変更", and "削除" options in that order.
 
 #### Scenario: Library root shows registered novels with titles
 - **WHEN** the user is at the library root directory and subdirectories exist that are registered in the metadata database
@@ -76,6 +76,10 @@ The system SHALL display subdirectories in the file list, allowing the user to n
 #### Scenario: User is at root directory
 - **WHEN** the user is at a root directory (e.g., `/` on Unix or `C:\` on Windows)
 - **THEN** the parent navigation SHALL NOT navigate further up
+
+#### Scenario: Context menu includes rename title option
+- **WHEN** ユーザーがライブラリルートの小説フォルダを右クリックする
+- **THEN** コンテキストメニューに「更新」「タイトル変更」「削除」の3つのオプションがこの順序で表示される
 
 ### Requirement: Automatic refresh after download
 The file browser SHALL automatically refresh its file listing when a download operation completes.
