@@ -49,6 +49,7 @@ dependencies:
   file_picker: ^8.0.0
   crypto: ^3.0.7
   desktop_drop: ^0.5.0
+  record: ^6.2.0
 
 dev_dependencies:
   flutter_test:

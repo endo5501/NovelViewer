@@ -1,0 +1,382 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/tts/data/voice_recording_service.dart';
+import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
+
+class VoiceRecordingDialog extends ConsumerStatefulWidget {
+  final List<String> existingFiles;
+
+  const VoiceRecordingDialog({
+    super.key,
+    required this.existingFiles,
+  });
+
+  /// Shows the dialog and returns the saved file name, or null if cancelled.
+  static Future<String?> show(
+    BuildContext context, {
+    required List<String> existingFiles,
+  }) {
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => VoiceRecordingDialog(existingFiles: existingFiles),
+    );
+  }
+
+  @override
+  ConsumerState<VoiceRecordingDialog> createState() =>
+      _VoiceRecordingDialogState();
+}
+
+enum _RecordingState { idle, recording, recorded }
+
+class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
+  _RecordingState _state = _RecordingState.idle;
+  Timer? _timer;
+  int _elapsedSeconds = 0;
+  double _currentAmplitude = -60.0;
+  StreamSubscription<Amplitude>? _amplitudeSubscription;
+  String? _recordedFilePath;
+  late VoiceRecordingService _recordingService;
+
+  @override
+  void initState() {
+    super.initState();
+    _recordingService = VoiceRecordingService(recorder: AudioRecorder());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _amplitudeSubscription?.cancel();
+    _recordingService.dispose();
+    super.dispose();
+  }
+
+  Future<void> _startRecording() async {
+    try {
+      final hasPermission = await _recordingService.hasPermission();
+      if (!hasPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('マイクへのアクセスが許可されていません')),
+          );
+        }
+        return;
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      await _recordingService.startRecording(tempDir.path);
+    } on Exception catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('録音の開始に失敗しました: $e')),
+        );
+      }
+      return;
+    }
+
+    _amplitudeSubscription = _recordingService
+        .onAmplitudeChanged(const Duration(milliseconds: 200))
+        .listen((amp) {
+      if (mounted) {
+        setState(() {
+          _currentAmplitude = amp.current;
+        });
+      }
+    });
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() {
+          _elapsedSeconds++;
+        });
+      }
+    });
+
+    setState(() {
+      _state = _RecordingState.recording;
+      _elapsedSeconds = 0;
+    });
+  }
+
+  Future<void> _stopRecording() async {
+    _timer?.cancel();
+    _amplitudeSubscription?.cancel();
+
+    try {
+      final path = await _recordingService.stopRecording();
+
+      setState(() {
+        _state = _RecordingState.recorded;
+        _recordedFilePath = path;
+      });
+
+      if (path != null && mounted) {
+        _showSaveDialog();
+      }
+    } on Exception catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('録音の停止に失敗しました: $e')),
+        );
+        setState(() {
+          _state = _RecordingState.idle;
+        });
+      }
+    }
+  }
+
+  Future<void> _showSaveDialog() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => _SaveFileNameDialog(
+        existingFiles: widget.existingFiles,
+      ),
+    );
+
+    if (result != null && _recordedFilePath != null) {
+      final voiceService = ref.read(voiceReferenceServiceProvider);
+      if (voiceService == null) return;
+
+      try {
+        await voiceService.moveVoiceFile(_recordedFilePath!, result);
+        _recordedFilePath = null; // Prevent cleanup in dispose
+        if (mounted) {
+          Navigator.of(context).pop(result);
+        }
+      } on StateError catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('保存に失敗しました: ${e.message}')),
+          );
+          _showSaveDialog();
+        }
+      } on ArgumentError catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('保存に失敗しました: ${e.message}')),
+          );
+          _showSaveDialog();
+        }
+      } on FileSystemException catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('保存に失敗しました: ${e.message}')),
+          );
+          _showSaveDialog();
+        }
+      }
+    } else {
+      // User cancelled save - cleanup and go back to idle
+      _recordingService.cleanupTempFile();
+      _recordedFilePath = null;
+      setState(() {
+        _state = _RecordingState.idle;
+      });
+    }
+  }
+
+  Future<bool> _onWillPop() async {
+    if (_state == _RecordingState.recording) {
+      final shouldDiscard = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('録音の破棄'),
+          content: const Text('録音中です。録音を破棄してダイアログを閉じますか？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('キャンセル'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('破棄'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldDiscard == true) {
+        _timer?.cancel();
+        _amplitudeSubscription?.cancel();
+        await _recordingService.cancelRecording();
+        _recordedFilePath = null;
+        return true;
+      }
+      return false;
+    }
+
+    _recordingService.cleanupTempFile();
+    _recordedFilePath = null;
+    return true;
+  }
+
+  String _formatElapsedTime() {
+    final minutes = _elapsedSeconds ~/ 60;
+    final seconds = _elapsedSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  double _normalizeAmplitude() {
+    // dBFS ranges roughly from -60 (silence) to 0 (max)
+    const minDb = -60.0;
+    const maxDb = 0.0;
+    return ((_currentAmplitude - minDb) / (maxDb - minDb)).clamp(0.0, 1.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: _state != _RecordingState.recording,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (!didPop) {
+          final shouldClose = await _onWillPop();
+          if (shouldClose && mounted) {
+            Navigator.of(context).pop();
+          }
+        }
+      },
+      child: AlertDialog(
+        title: const Text('音声録音'),
+        content: SizedBox(
+          width: 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_state == _RecordingState.recording) ...[
+                Text(
+                  _formatElapsedTime(),
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 16),
+                LinearProgressIndicator(
+                  value: _normalizeAmplitude(),
+                ),
+                const SizedBox(height: 8),
+                const Text('録音中...'),
+              ] else ...[
+                Icon(
+                  Icons.mic,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 16),
+                const Text('録音ボタンを押して録音を開始してください'),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              final shouldClose = await _onWillPop();
+              if (shouldClose && mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text('キャンセル'),
+          ),
+          if (_state == _RecordingState.idle)
+            ElevatedButton.icon(
+              onPressed: _startRecording,
+              icon: const Icon(Icons.fiber_manual_record, color: Colors.red),
+              label: const Text('録音開始'),
+            ),
+          if (_state == _RecordingState.recording)
+            ElevatedButton.icon(
+              onPressed: _stopRecording,
+              icon: const Icon(Icons.stop),
+              label: const Text('停止'),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SaveFileNameDialog extends StatefulWidget {
+  final List<String> existingFiles;
+
+  const _SaveFileNameDialog({required this.existingFiles});
+
+  @override
+  State<_SaveFileNameDialog> createState() => _SaveFileNameDialogState();
+}
+
+class _SaveFileNameDialogState extends State<_SaveFileNameDialog> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+    _controller.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String get _fileName => '${_controller.text}.wav';
+
+  static final _invalidChars = RegExp(r'[/\\:*?"<>|]');
+
+  String? get _errorText {
+    if (_controller.text.isEmpty) return null;
+    if (_invalidChars.hasMatch(_controller.text)) {
+      return '使用できない文字が含まれています';
+    }
+    if (widget.existingFiles.contains(_fileName)) {
+      return '同名のファイルが既に存在します';
+    }
+    return null;
+  }
+
+  bool get _canSave => _controller.text.isNotEmpty && _errorText == null;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('ファイル名の入力'),
+      content: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _controller,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'ファイル名',
+                errorText: _errorText,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 8, top: 16),
+            child: Text(
+              '.wav',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('キャンセル'),
+        ),
+        TextButton(
+          onPressed: _canSave ? () => Navigator.of(context).pop(_fileName) : null,
+          child: const Text('保存'),
+        ),
+      ],
+    );
+  }
+}
