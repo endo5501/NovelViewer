@@ -236,9 +236,10 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
       canPop: _state != _RecordingState.recording,
       onPopInvokedWithResult: (didPop, _) async {
         if (!didPop) {
+          final navigator = Navigator.of(context);
           final shouldClose = await _onWillPop();
           if (shouldClose && mounted) {
-            Navigator.of(context).pop();
+            navigator.pop();
           }
         }
       },
@@ -275,9 +276,10 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
         actions: [
           TextButton(
             onPressed: () async {
+              final navigator = Navigator.of(context);
               final shouldClose = await _onWillPop();
               if (shouldClose && mounted) {
-                Navigator.of(context).pop();
+                navigator.pop();
               }
             },
             child: const Text('キャンセル'),
