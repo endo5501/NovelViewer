@@ -409,11 +409,15 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
+				"${SRCROOT}/Frameworks/libqwen3_tts_ffi.dylib",
+				"${SRCROOT}/Frameworks/liblame_enc_ffi.dylib",
 			);
 			name = "Embed Native Libraries";
 			outputFileListPaths = (
 			);
 			outputPaths = (
+				"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/libqwen3_tts_ffi.dylib",
+				"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/liblame_enc_ffi.dylib",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
