@@ -235,4 +235,73 @@ void main() {
       );
     });
   });
+
+  group('moveVoiceFile', () {
+    late Directory sourceDir;
+
+    setUp(() {
+      sourceDir = Directory(p.join(tempDir.path, 'source'));
+      sourceDir.createSync();
+    });
+
+    test('moves a wav file to voices directory', () async {
+      final sourceFile = File(p.join(sourceDir.path, 'recorded.wav'));
+      sourceFile.writeAsStringSync('wav content');
+
+      await service.moveVoiceFile(sourceFile.path, 'my-voice.wav');
+
+      final movedFile = File(p.join(service.voicesDirPath, 'my-voice.wav'));
+      expect(movedFile.existsSync(), isTrue);
+      expect(movedFile.readAsStringSync(), 'wav content');
+      expect(sourceFile.existsSync(), isFalse);
+    });
+
+    test('moves an mp3 file to voices directory', () async {
+      final sourceFile = File(p.join(sourceDir.path, 'recorded.mp3'));
+      sourceFile.writeAsStringSync('mp3 content');
+
+      await service.moveVoiceFile(sourceFile.path, 'my-voice.mp3');
+
+      final movedFile = File(p.join(service.voicesDirPath, 'my-voice.mp3'));
+      expect(movedFile.existsSync(), isTrue);
+      expect(sourceFile.existsSync(), isFalse);
+    });
+
+    test('rejects unsupported file extension', () async {
+      final sourceFile = File(p.join(sourceDir.path, 'recorded.ogg'));
+      sourceFile.writeAsStringSync('ogg content');
+
+      expect(
+        () => service.moveVoiceFile(sourceFile.path, 'my-voice.ogg'),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('rejects duplicate file name', () async {
+      final voicesDir = Directory(service.voicesDirPath);
+      voicesDir.createSync();
+      File(p.join(voicesDir.path, 'existing.wav')).writeAsStringSync('old');
+
+      final sourceFile = File(p.join(sourceDir.path, 'recorded.wav'));
+      sourceFile.writeAsStringSync('new');
+
+      expect(
+        () => service.moveVoiceFile(sourceFile.path, 'existing.wav'),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('auto-creates voices directory if it does not exist', () async {
+      expect(Directory(service.voicesDirPath).existsSync(), isFalse);
+
+      final sourceFile = File(p.join(sourceDir.path, 'recorded.wav'));
+      sourceFile.writeAsStringSync('content');
+
+      await service.moveVoiceFile(sourceFile.path, 'voice.wav');
+
+      expect(Directory(service.voicesDirPath).existsSync(), isTrue);
+      expect(
+          File(p.join(service.voicesDirPath, 'voice.wav')).existsSync(), isTrue);
+    });
+  });
 }

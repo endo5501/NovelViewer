@@ -35,16 +35,8 @@ class VoiceReferenceService {
   }
 
   Future<String> addVoiceFile(String sourcePath) async {
-    final ext = p.extension(sourcePath).toLowerCase();
-    if (!_supportedExtensions.contains(ext)) {
-      throw ArgumentError('Unsupported file type: $ext. Only .wav and .mp3 are supported.');
-    }
-    await ensureVoicesDir();
     final fileName = p.basename(sourcePath);
-    final destPath = p.join(voicesDirPath, fileName);
-    if (File(destPath).existsSync()) {
-      throw StateError('A file named "$fileName" already exists in the voices directory.');
-    }
+    final destPath = await _prepareDestination(fileName);
     await File(sourcePath).copy(destPath);
     return fileName;
   }
@@ -61,6 +53,32 @@ class VoiceReferenceService {
       throw StateError('A file named "$newName" already exists in the voices directory.');
     }
     await File(oldPath).rename(newPath);
+  }
+
+  Future<void> moveVoiceFile(String sourcePath, String targetFileName) async {
+    _validateFileName(targetFileName);
+    final destPath = await _prepareDestination(targetFileName);
+    final source = File(sourcePath);
+    try {
+      await source.rename(destPath);
+    } on FileSystemException {
+      // rename fails across volumes (EXDEV); fall back to copy+delete
+      await source.copy(destPath);
+      await source.delete();
+    }
+  }
+
+  Future<String> _prepareDestination(String fileName) async {
+    final ext = p.extension(fileName).toLowerCase();
+    if (!_supportedExtensions.contains(ext)) {
+      throw ArgumentError('Unsupported file type: $ext. Only .wav and .mp3 are supported.');
+    }
+    await ensureVoicesDir();
+    final destPath = p.join(voicesDirPath, fileName);
+    if (File(destPath).existsSync()) {
+      throw StateError('A file named "$fileName" already exists in the voices directory.');
+    }
+    return destPath;
   }
 
   static void _validateFileName(String name) {

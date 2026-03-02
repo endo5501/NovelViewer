@@ -11,6 +11,7 @@ import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/presentation/voice_recording_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 
@@ -546,6 +547,13 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
                         _showRenameDialog(effectiveValue),
                   ),
                 IconButton(
+                  icon: const Icon(Icons.mic),
+                  tooltip: '音声を録音',
+                  onPressed: ref.read(voiceReferenceServiceProvider) != null
+                      ? _showRecordingDialog
+                      : null,
+                ),
+                IconButton(
                   icon: const Icon(Icons.refresh),
                   tooltip: 'ファイル一覧を更新',
                   onPressed: _loadVoiceFiles,
@@ -601,6 +609,17 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(errors.join('\n'))),
       );
+    }
+  }
+
+  Future<void> _showRecordingDialog() async {
+    final savedFileName = await VoiceRecordingDialog.show(
+      context,
+      existingFiles: _voiceFiles,
+    );
+    if (savedFileName != null) {
+      await _loadVoiceFiles();
+      ref.read(ttsRefWavPathProvider.notifier).setTtsRefWavPath(savedFileName);
     }
   }
 
