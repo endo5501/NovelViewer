@@ -303,7 +303,7 @@ void main() {
       expect(find.byIcon(Icons.pie_chart), findsNothing);
     });
 
-    testWidgets('context menu shows refresh and delete options at library root',
+    testWidgets('context menu shows refresh, rename and delete options at library root',
         (WidgetTester tester) async {
       const testDir = DirectoryEntry(
         name: 'narou_n1234ab',
@@ -342,9 +342,58 @@ void main() {
       await gesture.up();
       await tester.pumpAndSettle();
 
-      // Verify both menu items are shown
+      // Verify all three menu items are shown
       expect(find.text('更新'), findsOneWidget);
+      expect(find.text('タイトル変更'), findsOneWidget);
       expect(find.text('削除'), findsOneWidget);
+    });
+    testWidgets('selecting rename from context menu shows rename dialog',
+        (WidgetTester tester) async {
+      const testDir = DirectoryEntry(
+        name: 'narou_n1234ab',
+        path: '/library/narou_n1234ab',
+        displayName: 'テスト小説',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return const DirectoryContents(
+                  files: [], subdirectories: [testDir]);
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/library');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(home: Scaffold(body: FileBrowserPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Right-click on the directory tile
+      final folderTile = find.text('テスト小説');
+      final center = tester.getCenter(folderTile);
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kSecondaryMouseButton,
+      );
+      await gesture.addPointer(location: center);
+      await gesture.down(center);
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // Tap rename option
+      await tester.tap(find.text('タイトル変更'));
+      await tester.pumpAndSettle();
+
+      // Verify rename dialog appears with current title prefilled
+      expect(find.text('タイトル変更'), findsOneWidget);
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.controller?.text, 'テスト小説');
+      expect(find.text('変更'), findsOneWidget);
+      expect(find.text('キャンセル'), findsOneWidget);
     });
   });
 }

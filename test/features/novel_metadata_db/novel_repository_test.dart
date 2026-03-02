@@ -182,4 +182,38 @@ void main() {
       expect(all.length, 1);
     });
   });
+
+  group('updateTitle', () {
+    test('updates title and updated_at for existing novel', () async {
+      await repository.upsert(createMetadata(title: '古いタイトル'));
+
+      await repository.updateTitle('narou_n1234ab', '新しいタイトル');
+
+      final found = await repository.findByFolderName('narou_n1234ab');
+      expect(found, isNotNull);
+      expect(found!.title, '新しいタイトル');
+      expect(found.updatedAt, isNotNull);
+    });
+
+    test('does not affect other fields', () async {
+      await repository.upsert(createMetadata(
+        title: '古いタイトル',
+        episodeCount: 10,
+      ));
+
+      await repository.updateTitle('narou_n1234ab', '新しいタイトル');
+
+      final found = await repository.findByFolderName('narou_n1234ab');
+      expect(found!.episodeCount, 10);
+      expect(found.url, 'https://ncode.syosetu.com/n1234ab/');
+      expect(found.folderName, 'narou_n1234ab');
+    });
+
+    test('throws exception for non-existent folder name', () async {
+      expect(
+        () => repository.updateTitle('nonexistent', '新しいタイトル'),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
 }
