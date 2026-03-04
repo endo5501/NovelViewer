@@ -22,9 +22,7 @@ void main() {
   });
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({
-      'tts_model_dir': '/mock/model/dir',
-    });
+    SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
     tempDir = await Directory.systemTemp.createTemp('tts_export_test_');
   });
