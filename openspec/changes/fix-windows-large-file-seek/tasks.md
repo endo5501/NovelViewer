@@ -1,17 +1,17 @@
 ## 1. C++ 修正: 64-bit ファイルシーク
 
-- [ ] 1.1 `tts_transformer.cpp` の `load_tensor_data` で `fseek` を `#ifdef _WIN32` / `_fseeki64` に差し替える
+- [x] 1.1 `tts_transformer.cpp` の `load_tensor_data` で `fseek` を `#ifdef _WIN32` / `_fseeki64` に差し替える
 
 ## 2. C++ 修正: エラーログ出力
 
-- [ ] 2.1 `qwen3_tts.cpp` の `load_models()` で `transformer_.load_model()` 失敗時に `fprintf(stderr, ...)` でエラーメッセージを出力する
-- [ ] 2.2 `qwen3_tts.cpp` の `load_models()` で `audio_decoder_.load_model()` 失敗時に `fprintf(stderr, ...)` でエラーメッセージを出力する
+- [x] 2.1 `qwen3_tts.cpp` の `load_models()` で `transformer_.load_model()` 失敗時に `fprintf(stderr, ...)` でエラーメッセージを出力する
+- [x] 2.2 `qwen3_tts.cpp` の `load_models()` で `audio_decoder_.load_model()` 失敗時に `fprintf(stderr, ...)` でエラーメッセージを出力する
 
 ## 3. DLL ビルドと配置
 
-- [ ] 3.1 `scripts/build_tts_windows.bat` を実行して `qwen3_tts_ffi.dll` を再ビルドする
-- [ ] 3.2 ビルドした DLL を `build/windows/x64/runner/Debug/` と `build/windows/x64/runner/Release/` へコピーする
-- [ ] 3.3 `third_party/qwen3-tts.cpp/build/Release/qwen3_tts_ffi.dll` もリポジトリに含める
+- [x] 3.1 `scripts/build_tts_windows.bat` を実行して `qwen3_tts_ffi.dll` を再ビルドする
+- [x] 3.2 ビルドした DLL を `build/windows/x64/runner/Debug/` と `build/windows/x64/runner/Release/` へコピーする
+- [x] 3.3 `third_party/qwen3-tts.cpp/build/Release/qwen3_tts_ffi.dll` もリポジトリに含める
 
 ## 4. 動作確認
 
