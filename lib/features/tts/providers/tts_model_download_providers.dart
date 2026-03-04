@@ -46,7 +46,7 @@ final ttsModelDownloadProvider =
 );
 
 class TtsModelDownloadNotifier extends Notifier<TtsModelDownloadState> {
-  late final TtsModelDownloadService _service;
+  late TtsModelDownloadService _service;
   String? _migratedBaseDir;
 
   @override
