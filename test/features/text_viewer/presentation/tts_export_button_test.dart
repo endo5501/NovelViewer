@@ -49,6 +49,7 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
           fileContentProvider.overrideWith((ref) async => 'テスト内容'),
           selectedFileProvider.overrideWith(() {
             final notifier = SelectedFileNotifier();
@@ -97,6 +98,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider.overrideWith((ref) async => 'テスト内容'),
           ],
           child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
@@ -113,6 +115,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider.overrideWith((ref) async => 'テスト内容'),
             selectedFileProvider.overrideWith(() {
               final notifier = SelectedFileNotifier();

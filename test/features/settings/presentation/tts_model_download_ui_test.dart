@@ -58,19 +58,21 @@ void main() {
 
     testWidgets('shows completed status when models already exist',
         (tester) async {
-      final modelsDir = Directory('${tempDir.path}/models')..createSync();
-      File('${modelsDir.path}/qwen3-tts-0.6b-f16.gguf')
+      // Models now go in size-specific subdirectory
+      final modelsDir =
+          Directory(p.join(tempDir.path, 'models', '0.6b'))
+            ..createSync(recursive: true);
+      File(p.join(modelsDir.path, 'qwen3-tts-0.6b-f16.gguf'))
           .writeAsStringSync('model');
-      File('${modelsDir.path}/qwen3-tts-tokenizer-f16.gguf')
+      File(p.join(modelsDir.path, 'qwen3-tts-tokenizer-f16.gguf'))
           .writeAsStringSync('tokenizer');
-      File('${modelsDir.path}/.tts_models_complete')
+      File(p.join(modelsDir.path, '.tts_models_complete'))
           .writeAsStringSync('done');
 
       await tester.pumpWidget(buildTestWidget());
       await navigateToTtsTab(tester);
 
       expect(find.text('モデルダウンロード済み'), findsOneWidget);
-      expect(find.text(p.join(tempDir.path, 'models')), findsOneWidget);
     });
 
     testWidgets('starts download when button is pressed', (tester) async {
@@ -113,30 +115,12 @@ void main() {
       expect(find.text('再試行'), findsOneWidget);
     });
 
-    testWidgets('auto-fills model directory after download', (tester) async {
-      final mockClient = MockClient.streaming((request, _) async {
-        return http.StreamedResponse(
-          Stream.value([1, 2, 3]),
-          200,
-          contentLength: 3,
-        );
-      });
-
-      await tester.pumpWidget(buildTestWidget(httpClient: mockClient));
+    testWidgets('displays model size selector', (tester) async {
+      await tester.pumpWidget(buildTestWidget());
       await navigateToTtsTab(tester);
 
-      await tester.runAsync(() async {
-        await tester.tap(find.text('モデルデータダウンロード'));
-        await Future.delayed(const Duration(milliseconds: 100));
-      });
-      await tester.pumpAndSettle();
-
-      // Model directory text field should be auto-filled
-      final expectedPath = p.join(tempDir.path, 'models');
-      final textField = tester.widget<TextField>(
-        find.widgetWithText(TextField, expectedPath),
-      );
-      expect(textField.controller?.text, expectedPath);
+      expect(find.text('高速 (0.6B)'), findsOneWidget);
+      expect(find.text('高精度 (1.7B)'), findsOneWidget);
     });
   });
 }

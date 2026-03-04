@@ -1,8 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 import 'package:novel_viewer/features/tts/data/voice_reference_service.dart';
+import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
 
 final voiceReferenceServiceProvider = Provider<VoiceReferenceService?>((ref) {
   final libraryPath = ref.watch(libraryPathProvider);
@@ -31,20 +34,28 @@ abstract class _SettingStringNotifier extends Notifier<String> {
   }
 }
 
-final ttsModelDirProvider =
-    NotifierProvider<TtsModelDirNotifier, String>(TtsModelDirNotifier.new);
+final ttsModelSizeProvider =
+    NotifierProvider<TtsModelSizeNotifier, TtsModelSize>(
+  TtsModelSizeNotifier.new,
+);
 
-class TtsModelDirNotifier extends _SettingStringNotifier {
+class TtsModelSizeNotifier extends Notifier<TtsModelSize> {
   @override
-  String Function(SettingsRepository) get _getter =>
-      (repo) => repo.getTtsModelDir();
+  TtsModelSize build() =>
+      ref.watch(settingsRepositoryProvider).getTtsModelSize();
 
-  @override
-  Future<void> Function(SettingsRepository, String) get _setter =>
-      (repo, value) => repo.setTtsModelDir(value);
-
-  Future<void> setTtsModelDir(String path) => _update(path);
+  Future<void> setTtsModelSize(TtsModelSize size) async {
+    await ref.read(settingsRepositoryProvider).setTtsModelSize(size);
+    state = size;
+  }
 }
+
+final ttsModelDirProvider = Provider<String>((ref) {
+  final modelsBaseDir = ref.watch(modelsDirectoryPathProvider);
+  if (modelsBaseDir == null) return '';
+  final modelSize = ref.watch(ttsModelSizeProvider);
+  return p.join(modelsBaseDir, modelSize.dirName);
+});
 
 final ttsRefWavPathProvider =
     NotifierProvider<TtsRefWavPathNotifier, String>(TtsRefWavPathNotifier.new);

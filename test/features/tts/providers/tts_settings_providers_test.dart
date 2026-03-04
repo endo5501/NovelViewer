@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 
 void main() {
@@ -18,31 +21,77 @@ void main() {
     );
   }
 
-  group('ttsModelDirProvider', () {
-    test('initial value is empty string', () {
+  group('ttsModelSizeProvider', () {
+    test('returns small by default', () {
       final container = createContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(ttsModelDirProvider), '');
+      expect(container.read(ttsModelSizeProvider), TtsModelSize.small);
     });
 
-    test('initial value loads from SharedPreferences', () async {
-      await prefs.setString('tts_model_dir', '/path/to/models');
+    test('returns persisted value', () async {
+      await prefs.setString('tts_model_size', 'large');
       final container = createContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(ttsModelDirProvider), '/path/to/models');
+      expect(container.read(ttsModelSizeProvider), TtsModelSize.large);
     });
 
-    test('setTtsModelDir updates state and persists', () async {
+    test('setTtsModelSize persists and updates state', () async {
       final container = createContainer();
       addTearDown(container.dispose);
 
       await container
-          .read(ttsModelDirProvider.notifier)
-          .setTtsModelDir('/new/path');
-      expect(container.read(ttsModelDirProvider), '/new/path');
-      expect(prefs.getString('tts_model_dir'), '/new/path');
+          .read(ttsModelSizeProvider.notifier)
+          .setTtsModelSize(TtsModelSize.large);
+
+      expect(container.read(ttsModelSizeProvider), TtsModelSize.large);
+      expect(prefs.getString('tts_model_size'), 'large');
+    });
+  });
+
+  group('ttsModelDirProvider', () {
+    test('resolves to models/0.6b for small model', () {
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue('/home/user/NovelViewer'),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(ttsModelDirProvider),
+        p.join('/home/user', 'models', '0.6b'),
+      );
+    });
+
+    test('resolves to models/1.7b for large model', () async {
+      await prefs.setString('tts_model_size', 'large');
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue('/home/user/NovelViewer'),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(ttsModelDirProvider),
+        p.join('/home/user', 'models', '1.7b'),
+      );
+    });
+
+    test('returns empty string when library path is null', () {
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue(null),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(ttsModelDirProvider), '');
     });
   });
 

@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:desktop_drop/desktop_drop.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +10,7 @@ import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 import 'package:novel_viewer/features/tts/presentation/voice_recording_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
@@ -36,7 +36,6 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   late TextEditingController _baseUrlController;
   late TextEditingController _apiKeyController;
   late TextEditingController _modelController;
-  late TextEditingController _ttsModelDirController;
   List<String> _voiceFiles = [];
   bool _isDragging = false;
 
@@ -63,8 +62,6 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
     _modelController = TextEditingController(text: config.model);
     _selectedOllamaModel = config.model.isEmpty ? null : config.model;
 
-    _ttsModelDirController =
-        TextEditingController(text: repo.getTtsModelDir());
     _loadVoiceFiles();
 
     if (_llmProvider == LlmProvider.ollama) {
@@ -79,7 +76,6 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
     _baseUrlController.dispose();
     _apiKeyController.dispose();
     _modelController.dispose();
-    _ttsModelDirController.dispose();
     super.dispose();
   }
 
@@ -137,12 +133,6 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<String>(ttsModelDirProvider, (previous, next) {
-      if (_ttsModelDirController.text != next) {
-        _ttsModelDirController.text = next;
-      }
-    });
-
     return AlertDialog(
       title: const Text('設定'),
       content: SizedBox(
@@ -421,6 +411,42 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
     );
   }
 
+  Widget _buildModelSizeSelector() {
+    final modelSize = ref.watch(ttsModelSizeProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('音声モデル', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<TtsModelSize>(
+              segments: const [
+                ButtonSegment(
+                  value: TtsModelSize.small,
+                  label: Text('高速 (0.6B)'),
+                ),
+                ButtonSegment(
+                  value: TtsModelSize.large,
+                  label: Text('高精度 (1.7B)'),
+                ),
+              ],
+              selected: {modelSize},
+              onSelectionChanged: (selected) {
+                ref
+                    .read(ttsModelSizeProvider.notifier)
+                    .setTtsModelSize(selected.first);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTtsTab() {
     return SingleChildScrollView(
       child: Column(
@@ -428,30 +454,12 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 16),
+          _buildModelSizeSelector(),
+          const SizedBox(height: 16),
           _buildModelDownloadSection(),
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TextField(
-              controller: _ttsModelDirController,
-              decoration: InputDecoration(
-                labelText: 'モデルディレクトリ',
-                hintText: 'GGUFモデルファイルを含むフォルダ',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.folder_open),
-                  onPressed: _pickTtsModelDir,
-                ),
-              ),
-              onChanged: (value) {
-                ref
-                    .read(ttsModelDirProvider.notifier)
-                    .setTtsModelDir(value);
-              },
-            ),
-          ),
-          const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: _buildVoiceReferenceSelector(),
@@ -459,16 +467,6 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
         ],
       ),
     );
-  }
-
-  Future<void> _pickTtsModelDir() async {
-    final result = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: 'TTSモデルディレクトリを選択',
-    );
-    if (result != null) {
-      _ttsModelDirController.text = result;
-      ref.read(ttsModelDirProvider.notifier).setTtsModelDir(result);
-    }
   }
 
   Future<void> _loadVoiceFiles() async {

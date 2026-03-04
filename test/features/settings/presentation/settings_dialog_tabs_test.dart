@@ -51,7 +51,7 @@ void main() {
       await tester.tap(find.text('読み上げ'));
       await tester.pumpAndSettle();
 
-      expect(find.text('モデルディレクトリ'), findsOneWidget);
+      expect(find.text('音声モデル'), findsOneWidget);
       expect(find.text('リファレンス音声ファイル'), findsOneWidget);
     });
 
@@ -67,15 +67,18 @@ void main() {
       expect(find.text('ダークモード'), findsNothing);
     });
 
-    testWidgets('TTS tab shows folder picker and voice reference controls',
+    testWidgets('TTS tab shows model selector and voice reference controls',
         (tester) async {
       await tester.pumpWidget(buildTestWidget());
 
       await tester.tap(find.text('読み上げ'));
       await tester.pumpAndSettle();
 
-      // Model dir folder picker + voices folder open button
-      expect(find.byIcon(Icons.folder_open), findsNWidgets(2));
+      // Model size selector
+      expect(find.text('高速 (0.6B)'), findsOneWidget);
+      expect(find.text('高精度 (1.7B)'), findsOneWidget);
+      // Voices folder open button only (model dir field removed)
+      expect(find.byIcon(Icons.folder_open), findsOneWidget);
       // Voice reference dropdown and refresh button
       expect(find.byIcon(Icons.refresh), findsOneWidget);
       expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
