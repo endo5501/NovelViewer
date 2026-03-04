@@ -89,6 +89,21 @@ class TtsEditController {
       originalSegments: originalSegments,
       dbSegments: dbSegments,
     );
+
+    // Apply dictionary to ungenerated segments so the edit screen shows
+    // the dictionary-converted text from the start.
+    final dict = _dictionaryRepository;
+    if (dict != null) {
+      final entries = await dict.getEntriesSortedByLength();
+      if (entries.isNotEmpty) {
+        for (final segment in _segments) {
+          if (!segment.dbRecordExists) {
+            segment.text = TtsDictionaryRepository.applyDictionaryWithEntries(
+                entries, segment.text);
+          }
+        }
+      }
+    }
   }
 
   Future<void> updateSegmentText(int segmentIndex, String newText) async {
@@ -252,6 +267,8 @@ class TtsEditController {
       segment.dbRecordExists = true;
     }
 
+    // Keep in-memory text in sync with what was stored to DB.
+    segment.text = synthText;
     segment.hasAudio = true;
     onSegmentGenerated?.call(segmentIndex);
     return true;
@@ -367,7 +384,16 @@ class TtsEditController {
       await _repository.deleteSegment(_episodeId!, segmentIndex);
     }
 
-    segment.text = segment.originalText;
+    // Restore to dictionary-converted original, so users always see the
+    // TTS-ready text rather than the raw novel text after resetting.
+    final dict = _dictionaryRepository;
+    if (dict != null) {
+      final entries = await dict.getEntriesSortedByLength();
+      segment.text = TtsDictionaryRepository.applyDictionaryWithEntries(
+          entries, segment.originalText);
+    } else {
+      segment.text = segment.originalText;
+    }
     segment.hasAudio = false;
     segment.refWavPath = null;
     segment.memo = null;
@@ -386,8 +412,15 @@ class TtsEditController {
       }
     }
 
+    // Pre-load dictionary entries once for all resets.
+    final dict = _dictionaryRepository;
+    final dictEntries = dict != null ? await dict.getEntriesSortedByLength() : null;
+
     for (final segment in _segments) {
-      segment.text = segment.originalText;
+      segment.text = dictEntries != null
+          ? TtsDictionaryRepository.applyDictionaryWithEntries(
+              dictEntries, segment.originalText)
+          : segment.originalText;
       segment.hasAudio = false;
       segment.refWavPath = null;
       segment.memo = null;

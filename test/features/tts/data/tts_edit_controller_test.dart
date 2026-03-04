@@ -314,6 +314,114 @@ void main() {
         // The stored text "えるりっくは勇者だ。" should be used as-is, not double-converted
         expect(isolate.synthesizeRequests.first.$1, 'えるりっくは勇者だ。');
       });
+
+      test('loadSegments applies dictionary to ungenerated segment text',
+          () async {
+        await dictRepository.addEntry('天鳥船', 'アメノトリフネ');
+
+        final controller = TtsEditController(
+          ttsIsolate: FakeTtsIsolate(),
+          audioPlayer: FakeAudioPlayer(),
+          repository: repository,
+          tempDirPath: tempDir.path,
+          dictionaryRepository: dictRepository,
+        );
+
+        await controller.loadSegments(
+          text: '天鳥船が飛ぶ。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        expect(controller.segments[0].text, 'アメノトリフネが飛ぶ。');
+      });
+
+      test('generateSegment updates segment.text to dictionary-converted text',
+          () async {
+        await dictRepository.addEntry('天鳥船', 'アメノトリフネ');
+
+        final isolate = FakeTtsIsolate();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: FakeAudioPlayer(),
+          repository: repository,
+          tempDirPath: tempDir.path,
+          dictionaryRepository: dictRepository,
+        );
+
+        await controller.loadSegments(
+          text: '天鳥船が飛ぶ。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/fake/model',
+        );
+
+        expect(controller.segments[0].text, 'アメノトリフネが飛ぶ。');
+      });
+
+      test('resetSegment restores dictionary-converted text, not raw text',
+          () async {
+        await dictRepository.addEntry('天鳥船', 'アメノトリフネ');
+
+        final isolate = FakeTtsIsolate();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: FakeAudioPlayer(),
+          repository: repository,
+          tempDirPath: tempDir.path,
+          dictionaryRepository: dictRepository,
+        );
+
+        await controller.loadSegments(
+          text: '天鳥船が飛ぶ。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/fake/model',
+        );
+        await controller.resetSegment(0);
+
+        expect(controller.segments[0].text, 'アメノトリフネが飛ぶ。');
+        expect(controller.segments[0].hasAudio, false);
+        expect(controller.segments[0].dbRecordExists, false);
+      });
+
+      test('resetAll restores dictionary-converted text for all segments',
+          () async {
+        await dictRepository.addEntry('天鳥船', 'アメノトリフネ');
+
+        final isolate = FakeTtsIsolate();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: FakeAudioPlayer(),
+          repository: repository,
+          tempDirPath: tempDir.path,
+          dictionaryRepository: dictRepository,
+        );
+
+        await controller.loadSegments(
+          text: '天鳥船が飛ぶ。天鳥船は速い。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/fake/model',
+        );
+        await controller.generateSegment(
+          segmentIndex: 1,
+          modelDir: '/fake/model',
+        );
+        await controller.resetAll();
+
+        expect(controller.segments[0].text, 'アメノトリフネが飛ぶ。');
+        expect(controller.segments[1].text, 'アメノトリフネは速い。');
+      });
     });
 
     group('loadSegments', () {
