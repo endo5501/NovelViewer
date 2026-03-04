@@ -18,8 +18,8 @@
 ## 3. TTS統合（辞書変換の適用）
 
 - [ ] 3.1 `TtsStreamingController.start()` に `TtsDictionaryRepository? dictionaryRepository` パラメータを追加する
-- [ ] 3.2 `TtsStreamingController` 内のTTSエンジンへテキストを渡す箇所で `dictionaryRepository?.applyDictionary(text)` を呼び出す（DBには変換前テキストを保存したまま）
-- [ ] 3.3 `TtsEditController` でのオンデマンド生成（セグメント再生成時）にも辞書変換を適用する（`dictionaryRepository` パラメータを追加）
+- [ ] 3.2 `TtsStreamingController` 内で新規セグメントを `tts_segments` に書き込む際に `dictionaryRepository?.applyDictionary(text)` を呼び出し、変換済みテキストをDBに保存する（TTSエンジンはDBから読んだ変換済みテキストをそのまま使用）
+- [ ] 3.3 `TtsEditController` での新規セグメント作成時にも同様に辞書変換を適用する（`dictionaryRepository` パラメータを追加）。既存セグメント（`tts_segments.text` が既に保存済み）の再生成では追加変換を行わない
 - [ ] 3.4 `TtsStreamingController` の統合テストに辞書変換シナリオを追加する
 
 ## 4. UI実装
