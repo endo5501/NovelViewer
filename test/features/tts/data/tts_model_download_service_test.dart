@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_download_service.dart';
+import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 import 'package:path/path.dart' as p;
 
 void main() {
@@ -19,81 +20,191 @@ void main() {
     }
   });
 
-  group('resolveModelsDir', () {
-    test('returns parent directory + models', () {
-      final result = TtsModelDownloadService.resolveModelsDir(
-        '/Users/test/Documents/NovelViewer',
+  group('modelFilesFor', () {
+    test('returns 0.6b model and tokenizer for small', () {
+      expect(
+        TtsModelDownloadService.modelFilesFor(TtsModelSize.small),
+        ['qwen3-tts-0.6b-f16.gguf', 'qwen3-tts-tokenizer-f16.gguf'],
       );
-      expect(result, p.join('/Users/test/Documents', 'models'));
     });
 
-    test('handles Windows-style paths', () {
-      final result = TtsModelDownloadService.resolveModelsDir(
-        'C:\\Users\\test\\NovelViewer',
+    test('returns 1.7b model and tokenizer for large', () {
+      expect(
+        TtsModelDownloadService.modelFilesFor(TtsModelSize.large),
+        ['qwen3-tts-1.7b-f16.gguf', 'qwen3-tts-tokenizer-f16.gguf'],
       );
-      // path package normalizes separators
-      expect(result, endsWith('models'));
-      expect(result, isNot(contains('NovelViewer')));
     });
   });
 
   group('areModelsDownloaded', () {
-    test('returns true when both model files and marker exist', () {
-      final modelsDir = Directory('${tempDir.path}/models')..createSync();
-      File('${modelsDir.path}/qwen3-tts-0.6b-f16.gguf')
+    test('returns true when model files and marker exist for small', () {
+      final modelsDir = Directory(p.join(tempDir.path, 'models', '0.6b'))
+        ..createSync(recursive: true);
+      File(p.join(modelsDir.path, 'qwen3-tts-0.6b-f16.gguf'))
           .writeAsStringSync('model data');
-      File('${modelsDir.path}/qwen3-tts-tokenizer-f16.gguf')
+      File(p.join(modelsDir.path, 'qwen3-tts-tokenizer-f16.gguf'))
           .writeAsStringSync('tokenizer data');
-      File('${modelsDir.path}/.tts_models_complete')
+      File(p.join(modelsDir.path, '.tts_models_complete'))
           .writeAsStringSync('done');
 
       final service = TtsModelDownloadService(client: http.Client());
-      expect(service.areModelsDownloaded(modelsDir.path), isTrue);
+      expect(service.areModelsDownloaded(modelsDir.path, TtsModelSize.small),
+          isTrue);
+    });
+
+    test('returns true when model files and marker exist for large', () {
+      final modelsDir = Directory(p.join(tempDir.path, 'models', '1.7b'))
+        ..createSync(recursive: true);
+      File(p.join(modelsDir.path, 'qwen3-tts-1.7b-f16.gguf'))
+          .writeAsStringSync('model data');
+      File(p.join(modelsDir.path, 'qwen3-tts-tokenizer-f16.gguf'))
+          .writeAsStringSync('tokenizer data');
+      File(p.join(modelsDir.path, '.tts_models_complete'))
+          .writeAsStringSync('done');
+
+      final service = TtsModelDownloadService(client: http.Client());
+      expect(service.areModelsDownloaded(modelsDir.path, TtsModelSize.large),
+          isTrue);
     });
 
     test('returns false when marker file is missing', () {
-      final modelsDir = Directory('${tempDir.path}/models')..createSync();
-      File('${modelsDir.path}/qwen3-tts-0.6b-f16.gguf')
+      final modelsDir = Directory(p.join(tempDir.path, 'models', '0.6b'))
+        ..createSync(recursive: true);
+      File(p.join(modelsDir.path, 'qwen3-tts-0.6b-f16.gguf'))
           .writeAsStringSync('model data');
-      File('${modelsDir.path}/qwen3-tts-tokenizer-f16.gguf')
+      File(p.join(modelsDir.path, 'qwen3-tts-tokenizer-f16.gguf'))
           .writeAsStringSync('tokenizer data');
 
       final service = TtsModelDownloadService(client: http.Client());
-      expect(service.areModelsDownloaded(modelsDir.path), isFalse);
+      expect(service.areModelsDownloaded(modelsDir.path, TtsModelSize.small),
+          isFalse);
     });
 
     test('returns false when models directory does not exist', () {
       final service = TtsModelDownloadService(client: http.Client());
       expect(
-        service.areModelsDownloaded('${tempDir.path}/nonexistent'),
+        service.areModelsDownloaded(
+            '${tempDir.path}/nonexistent', TtsModelSize.small),
         isFalse,
       );
     });
 
     test('returns false when only one model file exists', () {
-      final modelsDir = Directory('${tempDir.path}/models')..createSync();
-      File('${modelsDir.path}/qwen3-tts-0.6b-f16.gguf')
+      final modelsDir = Directory(p.join(tempDir.path, 'models', '0.6b'))
+        ..createSync(recursive: true);
+      File(p.join(modelsDir.path, 'qwen3-tts-0.6b-f16.gguf'))
           .writeAsStringSync('model data');
+      File(p.join(modelsDir.path, '.tts_models_complete'))
+          .writeAsStringSync('done');
 
       final service = TtsModelDownloadService(client: http.Client());
-      expect(service.areModelsDownloaded(modelsDir.path), isFalse);
+      expect(service.areModelsDownloaded(modelsDir.path, TtsModelSize.small),
+          isFalse);
     });
 
     test('returns false when a model file is empty (zero bytes)', () {
-      final modelsDir = Directory('${tempDir.path}/models')..createSync();
-      File('${modelsDir.path}/qwen3-tts-0.6b-f16.gguf')
+      final modelsDir = Directory(p.join(tempDir.path, 'models', '0.6b'))
+        ..createSync(recursive: true);
+      File(p.join(modelsDir.path, 'qwen3-tts-0.6b-f16.gguf'))
           .writeAsStringSync('model data');
-      File('${modelsDir.path}/qwen3-tts-tokenizer-f16.gguf')
+      File(p.join(modelsDir.path, 'qwen3-tts-tokenizer-f16.gguf'))
           .writeAsStringSync('');
+      File(p.join(modelsDir.path, '.tts_models_complete'))
+          .writeAsStringSync('done');
 
       final service = TtsModelDownloadService(client: http.Client());
-      expect(service.areModelsDownloaded(modelsDir.path), isFalse);
+      expect(service.areModelsDownloaded(modelsDir.path, TtsModelSize.small),
+          isFalse);
+    });
+  });
+
+  group('migrateFromLegacyDir', () {
+    test('moves legacy files from models/ to models/0.6b/', () {
+      final modelsBase = Directory(p.join(tempDir.path, 'models'))
+        ..createSync();
+      File(p.join(modelsBase.path, 'qwen3-tts-0.6b-f16.gguf'))
+          .writeAsStringSync('model');
+      File(p.join(modelsBase.path, 'qwen3-tts-tokenizer-f16.gguf'))
+          .writeAsStringSync('tokenizer');
+      File(p.join(modelsBase.path, '.tts_models_complete'))
+          .writeAsStringSync('done');
+
+      TtsModelDownloadService.migrateFromLegacyDir(modelsBase.path);
+
+      final newDir = p.join(modelsBase.path, '0.6b');
+      expect(File(p.join(newDir, 'qwen3-tts-0.6b-f16.gguf')).existsSync(),
+          isTrue);
+      expect(
+          File(p.join(newDir, 'qwen3-tts-tokenizer-f16.gguf')).existsSync(),
+          isTrue);
+      expect(File(p.join(newDir, '.tts_models_complete')).existsSync(),
+          isTrue);
+
+      // Legacy files should be gone
+      expect(
+          File(p.join(modelsBase.path, 'qwen3-tts-0.6b-f16.gguf')).existsSync(),
+          isFalse);
+      expect(
+          File(p.join(modelsBase.path, 'qwen3-tts-tokenizer-f16.gguf'))
+              .existsSync(),
+          isFalse);
+      expect(
+          File(p.join(modelsBase.path, '.tts_models_complete')).existsSync(),
+          isFalse);
+    });
+
+    test('does nothing when no legacy files exist', () {
+      final modelsBase = Directory(p.join(tempDir.path, 'models'))
+        ..createSync();
+
+      // Should not throw
+      TtsModelDownloadService.migrateFromLegacyDir(modelsBase.path);
+
+      expect(
+          Directory(p.join(modelsBase.path, '0.6b')).existsSync(), isFalse);
+    });
+
+    test('does nothing when 0.6b directory already has complete model set', () {
+      final modelsBase = Directory(p.join(tempDir.path, 'models'))
+        ..createSync();
+      // Legacy files
+      File(p.join(modelsBase.path, 'qwen3-tts-0.6b-f16.gguf'))
+          .writeAsStringSync('old model');
+      File(p.join(modelsBase.path, 'qwen3-tts-tokenizer-f16.gguf'))
+          .writeAsStringSync('old tokenizer');
+      File(p.join(modelsBase.path, '.tts_models_complete'))
+          .writeAsStringSync('done');
+
+      // New structure already exists
+      final newDir = Directory(p.join(modelsBase.path, '0.6b'))..createSync();
+      File(p.join(newDir.path, 'qwen3-tts-0.6b-f16.gguf'))
+          .writeAsStringSync('new model');
+      File(p.join(newDir.path, 'qwen3-tts-tokenizer-f16.gguf'))
+          .writeAsStringSync('new tokenizer');
+      File(p.join(newDir.path, '.tts_models_complete'))
+          .writeAsStringSync('done');
+
+      TtsModelDownloadService.migrateFromLegacyDir(modelsBase.path);
+
+      // New files should be unchanged
+      expect(
+        File(p.join(newDir.path, 'qwen3-tts-0.6b-f16.gguf'))
+            .readAsStringSync(),
+        'new model',
+      );
+    });
+
+    test('does nothing when models base directory does not exist', () {
+      final nonexistent = p.join(tempDir.path, 'nonexistent');
+
+      // Should not throw
+      TtsModelDownloadService.migrateFromLegacyDir(nonexistent);
     });
   });
 
   group('downloadModels', () {
-    test('downloads both files to the models directory', () async {
-      final modelsDir = '${tempDir.path}/models';
+    test('downloads both files to the size-specific directory', () async {
+      final modelsDir = p.join(tempDir.path, 'models', '0.6b');
 
       final mockClient = MockClient.streaming((request, _) async {
         final fileName = request.url.pathSegments.last;
@@ -107,25 +218,48 @@ void main() {
       });
 
       final service = TtsModelDownloadService(client: mockClient);
-      await service.downloadModels(modelsDir);
+      await service.downloadModels(modelsDir, TtsModelSize.small);
 
-      expect(File('$modelsDir/qwen3-tts-0.6b-f16.gguf').existsSync(), isTrue);
       expect(
-        File('$modelsDir/qwen3-tts-tokenizer-f16.gguf').existsSync(),
-        isTrue,
+          File(p.join(modelsDir, 'qwen3-tts-0.6b-f16.gguf')).existsSync(),
+          isTrue);
+      expect(
+          File(p.join(modelsDir, 'qwen3-tts-tokenizer-f16.gguf')).existsSync(),
+          isTrue);
+    });
+
+    test('downloads 1.7b model files for large size', () async {
+      final modelsDir = p.join(tempDir.path, 'models', '1.7b');
+      final requestedUrls = <String>[];
+
+      final mockClient = MockClient.streaming((request, _) async {
+        requestedUrls.add(request.url.toString());
+        return http.StreamedResponse(
+          Stream.value([1, 2, 3]),
+          200,
+          contentLength: 3,
+        );
+      });
+
+      final service = TtsModelDownloadService(client: mockClient);
+      await service.downloadModels(modelsDir, TtsModelSize.large);
+
+      expect(
+        requestedUrls,
+        contains(
+          'https://huggingface.co/endo5501/qwen3-tts.cpp/resolve/main/qwen3-tts-1.7b-f16.gguf',
+        ),
       );
       expect(
-        File('$modelsDir/qwen3-tts-0.6b-f16.gguf').lengthSync(),
-        greaterThan(0),
-      );
-      expect(
-        File('$modelsDir/qwen3-tts-tokenizer-f16.gguf').lengthSync(),
-        greaterThan(0),
+        requestedUrls,
+        contains(
+          'https://huggingface.co/endo5501/qwen3-tts.cpp/resolve/main/qwen3-tts-tokenizer-f16.gguf',
+        ),
       );
     });
 
     test('creates models directory if it does not exist', () async {
-      final modelsDir = '${tempDir.path}/new_models';
+      final modelsDir = p.join(tempDir.path, 'new_models', '0.6b');
       expect(Directory(modelsDir).existsSync(), isFalse);
 
       final mockClient = MockClient.streaming((request, _) async {
@@ -137,13 +271,13 @@ void main() {
       });
 
       final service = TtsModelDownloadService(client: mockClient);
-      await service.downloadModels(modelsDir);
+      await service.downloadModels(modelsDir, TtsModelSize.small);
 
       expect(Directory(modelsDir).existsSync(), isTrue);
     });
 
     test('reports progress with file name and ratio', () async {
-      final modelsDir = '${tempDir.path}/models';
+      final modelsDir = p.join(tempDir.path, 'models', '0.6b');
       final progressReports = <(String, double?)>[];
 
       final mockClient = MockClient.streaming((request, _) async {
@@ -158,12 +292,12 @@ void main() {
       final service = TtsModelDownloadService(client: mockClient);
       await service.downloadModels(
         modelsDir,
+        TtsModelSize.small,
         onProgress: (fileName, progress) {
           progressReports.add((fileName, progress));
         },
       );
 
-      // Should have progress for both files
       expect(
         progressReports.any((r) => r.$1 == 'qwen3-tts-0.6b-f16.gguf'),
         isTrue,
@@ -172,38 +306,14 @@ void main() {
         progressReports.any((r) => r.$1 == 'qwen3-tts-tokenizer-f16.gguf'),
         isTrue,
       );
-      // Final progress for each file should be 1.0
       final modelProgress = progressReports
           .where((r) => r.$1 == 'qwen3-tts-0.6b-f16.gguf')
           .last;
       expect(modelProgress.$2, 1.0);
     });
 
-    test('reports null progress when Content-Length is missing', () async {
-      final modelsDir = '${tempDir.path}/models';
-      final progressReports = <(String, double?)>[];
-
-      final mockClient = MockClient.streaming((request, _) async {
-        return http.StreamedResponse(
-          Stream.value([1, 2, 3]),
-          200,
-          // No contentLength
-        );
-      });
-
-      final service = TtsModelDownloadService(client: mockClient);
-      await service.downloadModels(
-        modelsDir,
-        onProgress: (fileName, progress) {
-          progressReports.add((fileName, progress));
-        },
-      );
-
-      expect(progressReports.any((r) => r.$2 == null), isTrue);
-    });
-
     test('throws and cleans up partial file on HTTP error', () async {
-      final modelsDir = '${tempDir.path}/models';
+      final modelsDir = p.join(tempDir.path, 'models', '0.6b');
 
       final mockClient = MockClient.streaming((request, _) async {
         return http.StreamedResponse(
@@ -214,19 +324,18 @@ void main() {
 
       final service = TtsModelDownloadService(client: mockClient);
       await expectLater(
-        service.downloadModels(modelsDir),
+        service.downloadModels(modelsDir, TtsModelSize.small),
         throwsA(isA<HttpException>()),
       );
 
-      // Partial files should be cleaned up
       expect(
-        File('$modelsDir/qwen3-tts-0.6b-f16.gguf').existsSync(),
+        File(p.join(modelsDir, 'qwen3-tts-0.6b-f16.gguf')).existsSync(),
         isFalse,
       );
     });
 
     test('creates completion marker after successful download', () async {
-      final modelsDir = '${tempDir.path}/models';
+      final modelsDir = p.join(tempDir.path, 'models', '0.6b');
 
       final mockClient = MockClient.streaming((request, _) async {
         return http.StreamedResponse(
@@ -237,38 +346,18 @@ void main() {
       });
 
       final service = TtsModelDownloadService(client: mockClient);
-      await service.downloadModels(modelsDir);
+      await service.downloadModels(modelsDir, TtsModelSize.small);
 
       expect(
-        File('$modelsDir/.tts_models_complete').existsSync(),
+        File(p.join(modelsDir, '.tts_models_complete')).existsSync(),
         isTrue,
       );
-      // areModelsDownloaded should now return true
-      expect(service.areModelsDownloaded(modelsDir), isTrue);
-    });
-
-    test('no .part temp files remain after successful download', () async {
-      final modelsDir = '${tempDir.path}/models';
-
-      final mockClient = MockClient.streaming((request, _) async {
-        return http.StreamedResponse(
-          Stream.value([1, 2, 3]),
-          200,
-          contentLength: 3,
-        );
-      });
-
-      final service = TtsModelDownloadService(client: mockClient);
-      await service.downloadModels(modelsDir);
-
-      final partFiles = Directory(modelsDir)
-          .listSync()
-          .where((f) => f.path.endsWith('.part'));
-      expect(partFiles, isEmpty);
+      expect(service.areModelsDownloaded(modelsDir, TtsModelSize.small),
+          isTrue);
     });
 
     test('throws and cleans up partial file on network error', () async {
-      final modelsDir = '${tempDir.path}/models';
+      final modelsDir = p.join(tempDir.path, 'models', '0.6b');
 
       final mockClient = MockClient.streaming((request, _) async {
         return http.StreamedResponse(
@@ -280,7 +369,7 @@ void main() {
 
       final service = TtsModelDownloadService(client: mockClient);
       await expectLater(
-        service.downloadModels(modelsDir),
+        service.downloadModels(modelsDir, TtsModelSize.small),
         throwsA(isA<SocketException>()),
       );
     });

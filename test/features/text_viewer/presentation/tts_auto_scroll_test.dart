@@ -26,8 +26,7 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             fileContentProvider.overrideWith((ref) async => longText),
-            ttsModelDirProvider
-                .overrideWith(() => _FixedStringNotifier('/models')),
+            ttsModelDirProvider.overrideWithValue('/models'),
           ],
           child: const MaterialApp(
             home: Scaffold(
@@ -57,12 +56,4 @@ void main() {
       expect(scrollView.controller!.offset, greaterThan(0.0));
     });
   });
-}
-
-class _FixedStringNotifier extends TtsModelDirNotifier {
-  _FixedStringNotifier(this._value);
-  final String _value;
-
-  @override
-  String build() => _value;
 }

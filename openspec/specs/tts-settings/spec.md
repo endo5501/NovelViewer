@@ -15,24 +15,31 @@ The settings dialog SHALL use a tabbed layout with `TabBar` and `TabBarView`. Th
 - **WHEN** the user clicks the "読み上げ" tab
 - **THEN** the TTS settings are displayed, replacing the general settings content
 
-### Requirement: TTS model directory path setting
-The TTS settings tab SHALL include a field for specifying the directory path containing GGUF model files. The field SHALL display the current path in a text field with a folder picker button. The path SHALL be persisted using SharedPreferences.
+### Requirement: TTS model size setting
+The TTS settings tab SHALL include a model size selection control (SegmentedButton) with options "高速 (0.6B)" and "高精度 (1.7B)". The selected model size SHALL be persisted using SharedPreferences with key `tts_model_size`. The default SHALL be `small`.
 
-#### Scenario: Set model directory via folder picker
-- **WHEN** the user clicks the folder picker button next to the model directory field
-- **THEN** a native folder selection dialog opens, and the selected path is displayed in the text field and persisted
+#### Scenario: Display model size selector in TTS tab
+- **WHEN** the user opens the TTS settings tab
+- **THEN** a SegmentedButton with "高速 (0.6B)" and "高精度 (1.7B)" is displayed at the top of the tab
 
-#### Scenario: Display current model directory path
-- **WHEN** the user opens the TTS settings tab with a previously configured model path
-- **THEN** the text field displays the persisted path
+#### Scenario: Change model size selection
+- **WHEN** the user taps a different model size segment
+- **THEN** the selection is updated, persisted, and the download status reflects the newly selected model
 
-#### Scenario: Clear model directory path
-- **WHEN** the user clears the model directory text field
-- **THEN** the empty path is persisted and TTS functionality is unavailable
+### Requirement: Download status display per model size
+The TTS settings tab SHALL display the download status for the currently selected model size. When the model is downloaded, it SHALL show "✅ 利用可能". When not downloaded, it SHALL show a download button. During download, it SHALL show a progress bar with file name and percentage.
 
-#### Scenario: Model directory persists across app restarts
-- **WHEN** the user sets a model directory path and restarts the application
-- **THEN** the previously configured path is restored in the TTS settings
+#### Scenario: Downloaded model shows available status
+- **WHEN** the selected model size has been downloaded
+- **THEN** the UI displays a checkmark icon with "ダウンロード済み" text
+
+#### Scenario: Undownloaded model shows download button
+- **WHEN** the selected model size has not been downloaded
+- **THEN** a "モデルデータダウンロード" button is displayed
+
+#### Scenario: Download in progress shows progress bar
+- **WHEN** a model download is in progress
+- **THEN** a progress bar is displayed with the current file name and percentage
 
 ### Requirement: Voice cloning reference audio file setting
 The TTS settings tab SHALL include a dropdown selector for choosing a voice cloning reference audio file from the `voices` directory. The dropdown SHALL list all supported audio files (`.wav`, `.mp3`) found in the `voices` directory. The selected file name SHALL be persisted using SharedPreferences. When no file is selected, TTS SHALL use default voice synthesis without cloning. The system SHALL provide a button to open the `voices` directory in the platform file manager, a refresh button to rescan the directory, and a rename button for the currently selected file. The voice reference selector area SHALL be wrapped in a drop zone that accepts audio files dragged from the platform's native file manager.
@@ -91,34 +98,26 @@ The TTS settings tab SHALL include a dropdown selector for choosing a voice clon
 - **WHEN** the user selects a voice reference file and restarts the application
 - **THEN** the previously selected file name is restored in the TTS settings
 
-### Requirement: TTS settings persistence
-All TTS settings (model directory path, voice reference file name) SHALL be persisted using SharedPreferences and restored when the application starts. The voice reference SHALL be stored as a file name only (e.g., `narrator.mp3`). The full path SHALL be resolved at runtime by joining the voices directory path with the stored file name.
+### Requirement: Updated TTS settings persistence
+All TTS settings (model size, voice reference file name) SHALL be persisted using SharedPreferences and restored when the application starts. The model size SHALL be stored as the enum name (`"small"` or `"large"`). The voice reference SHALL be stored as a file name only. The model directory path SHALL NOT be persisted; it SHALL be derived at runtime.
 
-#### Scenario: Persist all TTS settings
-- **WHEN** the user configures model directory and voice reference file
-- **THEN** both values are saved to SharedPreferences
+#### Scenario: Persist model size and voice reference
+- **WHEN** the user configures model size as "高精度 (1.7B)" and selects a voice reference file
+- **THEN** `"large"` is saved under `tts_model_size` and the voice file name is saved under `tts_ref_wav_path`
 
 #### Scenario: Restore TTS settings on startup
 - **WHEN** the application starts with previously saved TTS settings
-- **THEN** the TTS model directory and voice reference file name are available to the TTS engine
+- **THEN** the model size and voice reference file name are restored
 
 #### Scenario: Default state with no TTS configuration
-- **WHEN** the application starts for the first time with no TTS settings saved
-- **THEN** both model directory and voice reference file name are empty and TTS functionality is unavailable
-
-#### Scenario: Save voice reference as file name
-- **WHEN** the user selects `narrator.mp3` from the dropdown
-- **THEN** the string `narrator.mp3` is persisted in SharedPreferences
-
-#### Scenario: Load file name setting and resolve to full path
-- **WHEN** the stored setting value is `narrator.mp3`
-- **THEN** the system resolves it to `{LibraryParentDir}/voices/narrator.mp3` for synthesis
+- **WHEN** the application starts for the first time
+- **THEN** model size defaults to `small` and voice reference is empty
 
 ### Requirement: TTS model download section in settings
-The TTS settings tab SHALL include a model download section positioned above the existing model directory and WAV file path fields. The section SHALL display different content based on the current download state.
+The TTS settings tab SHALL include a model download section that displays different content based on the current download state for the selected model size.
 
 #### Scenario: Display download button when models not downloaded
-- **WHEN** the user opens the TTS settings tab and model files are not present in the models directory
+- **WHEN** the user opens the TTS settings tab and model files are not present for the selected model size
 - **THEN** a "モデルデータダウンロード" button is displayed
 
 #### Scenario: Display download progress during download
@@ -126,20 +125,9 @@ The TTS settings tab SHALL include a model download section positioned above the
 - **THEN** a progress bar is displayed with the current file name and progress percentage
 
 #### Scenario: Display completed status when models exist
-- **WHEN** the user opens the TTS settings tab and both model files already exist in the models directory
-- **THEN** a "モデルダウンロード済み" status message is displayed with the models directory path
+- **WHEN** the user opens the TTS settings tab and model files already exist for the selected model size
+- **THEN** a "モデルダウンロード済み" status message is displayed
 
 #### Scenario: Display error with retry option
 - **WHEN** a model download fails with an error
 - **THEN** an error message is displayed along with a retry button to attempt the download again
-
-### Requirement: Model directory auto-fill after download
-The TTS settings tab SHALL automatically update the model directory text field when a download completes successfully. The text field SHALL reflect the models directory path without requiring manual input from the user.
-
-#### Scenario: Auto-fill model directory field on download completion
-- **WHEN** both model files have been downloaded successfully
-- **THEN** the model directory text field is updated to show the models directory path and the setting is persisted
-
-#### Scenario: Model directory field remains editable after auto-fill
-- **WHEN** the model directory has been auto-filled after download
-- **THEN** the user can still manually edit the model directory text field or use the folder picker to choose a different directory

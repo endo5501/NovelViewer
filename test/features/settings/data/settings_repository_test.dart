@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
+import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -190,15 +191,21 @@ void main() {
   });
 
   group('SettingsRepository - TTS settings', () {
-    test('getTtsModelDir returns empty string when no value stored', () {
+    test('getTtsModelSize returns small when no value stored', () {
       final repo = SettingsRepository(prefs);
-      expect(repo.getTtsModelDir(), '');
+      expect(repo.getTtsModelSize(), TtsModelSize.small);
     });
 
-    test('setTtsModelDir and getTtsModelDir round-trip', () async {
+    test('setTtsModelSize and getTtsModelSize round-trip', () async {
       final repo = SettingsRepository(prefs);
-      await repo.setTtsModelDir('/path/to/models');
-      expect(repo.getTtsModelDir(), '/path/to/models');
+      await repo.setTtsModelSize(TtsModelSize.large);
+      expect(repo.getTtsModelSize(), TtsModelSize.large);
+    });
+
+    test('getTtsModelSize returns small for invalid stored value', () async {
+      await prefs.setString('tts_model_size', 'invalid');
+      final repo = SettingsRepository(prefs);
+      expect(repo.getTtsModelSize(), TtsModelSize.small);
     });
 
     test('getTtsRefWavPath returns empty string when no value stored', () {
@@ -212,18 +219,11 @@ void main() {
       expect(repo.getTtsRefWavPath(), '/path/to/ref.wav');
     });
 
-    test('clearing TTS model dir sets empty string', () async {
-      final repo = SettingsRepository(prefs);
-      await repo.setTtsModelDir('/path/to/models');
-      await repo.setTtsModelDir('');
-      expect(repo.getTtsModelDir(), '');
-    });
-
     test('TTS settings persist independently', () async {
       final repo = SettingsRepository(prefs);
-      await repo.setTtsModelDir('/models');
+      await repo.setTtsModelSize(TtsModelSize.large);
       await repo.setTtsRefWavPath('/ref.wav');
-      expect(repo.getTtsModelDir(), '/models');
+      expect(repo.getTtsModelSize(), TtsModelSize.large);
       expect(repo.getTtsRefWavPath(), '/ref.wav');
     });
   });

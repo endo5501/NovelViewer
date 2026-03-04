@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Download TTS model files from HuggingFace
 The system SHALL download GGUF model files from HuggingFace's `endo5501/qwen3-tts.cpp` repository using HTTPS streaming. The files to download SHALL depend on the selected model size:
@@ -36,21 +36,6 @@ The models base directory SHALL be located at the same level as the NovelViewer 
 - **WHEN** a download is initiated and the model subdirectory does not exist
 - **THEN** the system creates the subdirectory (including any intermediate directories) before downloading
 
-#### Scenario: Tests use platform-native path construction
-- **WHEN** tests verify path resolution or compare paths
-- **THEN** tests SHALL construct expected paths using `p.join()` from the `path` package instead of hardcoding path separators
-
-### Requirement: Download progress tracking
-The system SHALL track and report download progress during file download. Progress SHALL be calculated from the `Content-Length` HTTP response header and the bytes received so far. The progress SHALL include the current file name being downloaded and a progress ratio (0.0 to 1.0).
-
-#### Scenario: Report progress during download
-- **WHEN** a model file is being downloaded and the server provides `Content-Length`
-- **THEN** the system reports progress as a ratio of bytes received to total bytes, along with the current file name
-
-#### Scenario: Handle missing Content-Length
-- **WHEN** a model file is being downloaded and the server does not provide `Content-Length`
-- **THEN** the system reports progress as indeterminate (progress ratio is null) while still showing the current file name
-
 ### Requirement: Detect already downloaded models
 The system SHALL check whether model files already exist in the model-size-specific subdirectory. A model set is considered "already downloaded" when the completion marker file (`.tts_models_complete`) exists and all required model files exist with non-zero file size.
 
@@ -68,6 +53,17 @@ The system SHALL NOT explicitly set the TTS model directory after download. The 
 #### Scenario: Model directory auto-derived after download
 - **WHEN** a model download completes successfully
 - **THEN** the download state changes to completed and the model directory is available via the automatic resolution from model size
+
+### Requirement: Download progress tracking
+The system SHALL track and report download progress during file download. Progress SHALL be calculated from the `Content-Length` HTTP response header and the bytes received so far. The progress SHALL include the current file name being downloaded and a progress ratio (0.0 to 1.0).
+
+#### Scenario: Report progress during download
+- **WHEN** a model file is being downloaded and the server provides `Content-Length`
+- **THEN** the system reports progress as a ratio of bytes received to total bytes, along with the current file name
+
+#### Scenario: Handle missing Content-Length
+- **WHEN** a model file is being downloaded and the server does not provide `Content-Length`
+- **THEN** the system reports progress as indeterminate (progress ratio is null) while still showing the current file name
 
 ### Requirement: Download error handling
 The system SHALL handle download errors gracefully. On HTTP errors, network errors, or file system errors, the system SHALL report the error and clean up any partially downloaded files.

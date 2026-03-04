@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
+import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 
 class SettingsRepository {
   static const _displayModeKey = 'text_display_mode';
@@ -14,7 +15,7 @@ class SettingsRepository {
   static const _llmBaseUrlKey = 'llm_base_url';
   static const _llmApiKeyKey = 'llm_api_key';
   static const _llmModelKey = 'llm_model';
-  static const _ttsModelDirKey = 'tts_model_dir';
+  static const _ttsModelSizeKey = 'tts_model_size';
   static const _ttsRefWavPathKey = 'tts_ref_wav_path';
 
   static const defaultFontSize = 14.0;
@@ -102,12 +103,16 @@ class SettingsRepository {
     await _prefs.setString(_llmModelKey, config.model);
   }
 
-  String getTtsModelDir() {
-    return _prefs.getString(_ttsModelDirKey) ?? '';
+  TtsModelSize getTtsModelSize() {
+    final value = _prefs.getString(_ttsModelSizeKey);
+    return TtsModelSize.values.firstWhere(
+      (size) => size.name == value,
+      orElse: () => TtsModelSize.small,
+    );
   }
 
-  Future<void> setTtsModelDir(String path) async {
-    await _prefs.setString(_ttsModelDirKey, path);
+  Future<void> setTtsModelSize(TtsModelSize size) async {
+    await _prefs.setString(_ttsModelSizeKey, size.name);
   }
 
   String getTtsRefWavPath() {

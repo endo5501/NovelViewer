@@ -42,6 +42,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
@@ -60,6 +61,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider.overrideWith((ref) async => longText),
           ],
           child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
@@ -75,6 +77,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
@@ -92,6 +95,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
@@ -112,6 +116,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider.overrideWith(
                 (ref) async => '太郎が走った。次郎が歩いた。太郎が言った。'),
             selectedSearchMatchProvider.overrideWith(() {
@@ -150,6 +155,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider
                 .overrideWith((ref) async => '太郎が走った。'),
             selectedSearchMatchProvider.overrideWith(() {
@@ -189,6 +195,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
@@ -209,6 +216,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider.overrideWith((ref) async => longText),
             selectedSearchMatchProvider.overrideWith(() {
               return SelectedSearchMatchNotifier();
@@ -254,6 +262,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider.overrideWith((ref) async => longText),
             selectedSearchMatchProvider.overrideWith(() {
               return SelectedSearchMatchNotifier();
@@ -303,6 +312,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
             displayModeProvider.overrideWith(() {
