@@ -5,11 +5,14 @@ import 'package:path_provider/path_provider.dart';
 import '../data/tts_adapters.dart';
 import '../data/tts_audio_database.dart';
 import '../data/tts_audio_repository.dart';
+import '../data/tts_dictionary_database.dart';
+import '../data/tts_dictionary_repository.dart';
 import '../data/tts_edit_controller.dart';
 import '../data/tts_edit_segment.dart';
 import '../data/tts_isolate.dart';
 import '../providers/tts_edit_providers.dart';
 import '../providers/tts_settings_providers.dart';
+import 'tts_dictionary_dialog.dart';
 
 class TtsEditDialog extends ConsumerStatefulWidget {
   const TtsEditDialog({
@@ -47,6 +50,8 @@ class TtsEditDialog extends ConsumerStatefulWidget {
 class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   TtsEditController? _controller;
   TtsAudioDatabase? _db;
+  TtsDictionaryDatabase? _dictDb;
+  TtsDictionaryRepository? _dictRepository;
   bool _loading = true;
   List<String> _voiceFiles = [];
 
@@ -59,6 +64,8 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   Future<void> _initialize() async {
     final db = TtsAudioDatabase(widget.folderPath);
     final repo = TtsAudioRepository(db);
+    final dictDb = TtsDictionaryDatabase(widget.folderPath);
+    final dictRepo = TtsDictionaryRepository(dictDb);
     final tempDir = await getTemporaryDirectory();
 
     final controller = TtsEditController(
@@ -66,6 +73,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
       audioPlayer: JustAudioPlayer(),
       repository: repo,
       tempDirPath: tempDir.path,
+      dictionaryRepository: dictRepo,
     );
 
     controller.onSegmentGenerated = (index) {
@@ -91,6 +99,8 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     await _loadVoiceFiles();
 
     _db = db;
+    _dictDb = dictDb;
+    _dictRepository = dictRepo;
     _controller = controller;
 
     if (!mounted) return;
@@ -118,6 +128,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     _controller = null;
     await _db?.close();
     _db = null;
+    await _dictDb?.close();
+    _dictDb = null;
+    _dictRepository = null;
   }
 
   @override
@@ -356,6 +369,16 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   Widget _buildToolbar(bool isGenerating, bool isPlaying) {
     return Row(
       children: [
+        TextButton.icon(
+          onPressed: () {
+            final repo = _dictRepository;
+            if (repo == null) return;
+            TtsDictionaryDialog.show(context, repository: repo);
+          },
+          icon: const Icon(Icons.book_outlined, size: 18),
+          label: const Text('辞書'),
+        ),
+        const SizedBox(width: 8),
         TextButton.icon(
           onPressed: isGenerating ? null : _playAll,
           icon: const Icon(Icons.play_arrow, size: 18),

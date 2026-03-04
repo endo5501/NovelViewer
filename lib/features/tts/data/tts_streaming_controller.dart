@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
+import 'tts_dictionary_repository.dart';
 import 'tts_isolate.dart';
 import 'tts_playback_controller.dart';
 import 'wav_writer.dart';
@@ -22,15 +23,18 @@ class TtsStreamingController {
     required TtsAudioRepository repository,
     required this.tempDirPath,
     Duration bufferDrainDelay = const Duration(milliseconds: 500),
+    TtsDictionaryRepository? dictionaryRepository,
   })  : _ttsIsolate = ttsIsolate,
         _audioPlayer = audioPlayer,
         _repository = repository,
-        _bufferDrainDelay = bufferDrainDelay;
+        _bufferDrainDelay = bufferDrainDelay,
+        _dictionaryRepository = dictionaryRepository;
 
   final ProviderContainer ref;
   final TtsIsolate _ttsIsolate;
   final TtsAudioPlayer _audioPlayer;
   final TtsAudioRepository _repository;
+  final TtsDictionaryRepository? _dictionaryRepository;
   final String tempDirPath;
   final Duration _bufferDrainDelay;
   final _textSegmenter = TextSegmenter();
@@ -194,6 +198,12 @@ class TtsStreamingController {
           TtsGenerationProgress(current: 0, total: totalToGenerate));
     }
 
+    // Pre-load dictionary entries once to avoid N+1 DB queries in the segment loop.
+    final dict = _dictionaryRepository;
+    final dictEntries = dict != null && totalToGenerate > 0
+        ? await dict.getEntriesSortedByLength()
+        : null;
+
     for (var i = startIndex; i < segments.length; i++) {
       if (_stopped) break;
 
@@ -218,9 +228,11 @@ class TtsStreamingController {
         if (!await _ensureModelLoaded(modelDir)) break;
         if (_stopped) break;
 
-        // Use edited text from DB if available, otherwise original
-        final synthText =
-            dbRow?['text'] as String? ?? segments[i].text;
+        // Use edited text from DB if available, otherwise apply dictionary to original
+        final rawText = dbRow?['text'] as String? ?? segments[i].text;
+        final synthText = dbRow == null && dictEntries != null
+            ? TtsDictionaryRepository.applyDictionaryWithEntries(dictEntries, rawText)
+            : rawText;
         final dbRefWavPath = dbRow?['ref_wav_path'] as String?;
         final synthRefWavPath = dbRefWavPath != null
             ? (dbRefWavPath.isEmpty
@@ -249,7 +261,7 @@ class TtsStreamingController {
           await _repository.insertSegment(
             episodeId: episodeId,
             segmentIndex: i,
-            text: segments[i].text,
+            text: synthText,
             textOffset: textOffset,
             textLength: textLength,
             audioData: wavBytes,

@@ -7,6 +7,8 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
+import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
+import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_edit_controller.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
@@ -186,6 +188,8 @@ void main() {
   late Directory tempDir;
   late TtsAudioDatabase database;
   late TtsAudioRepository repository;
+  late TtsDictionaryDatabase dictDatabase;
+  late TtsDictionaryRepository dictRepository;
 
   setUpAll(() {
     sqfliteFfiInit();
@@ -196,14 +200,122 @@ void main() {
     tempDir = Directory.systemTemp.createTempSync('tts_edit_ctrl_test_');
     database = TtsAudioDatabase(tempDir.path);
     repository = TtsAudioRepository(database);
+    dictDatabase = TtsDictionaryDatabase(tempDir.path);
+    dictRepository = TtsDictionaryRepository(dictDatabase);
   });
 
   tearDown(() async {
     await database.close();
+    await dictDatabase.close();
     tempDir.deleteSync(recursive: true);
   });
 
   group('TtsEditController', () {
+    group('dictionary integration', () {
+      test('applies dictionary to new segment text before inserting to DB',
+          () async {
+        await dictRepository.addEntry('エルリック', 'えるりっく');
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          dictionaryRepository: dictRepository,
+        );
+
+        await controller.loadSegments(
+          text: 'エルリックは勇者だ。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/fake/model',
+        );
+
+        // Isolate should receive dictionary-converted text
+        expect(isolate.synthesizeRequests.first.$1, contains('えるりっく'));
+        expect(isolate.synthesizeRequests.first.$1, isNot(contains('エルリック')));
+
+        // DB should store dictionary-converted text
+        final episode = await repository.findEpisodeByFileName('test.txt');
+        final segments = await repository.getSegments(episode!['id'] as int);
+        expect((segments.first['text'] as String), contains('えるりっく'));
+      });
+
+      test('does not apply dictionary when dictionaryRepository is null',
+          () async {
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: 'エルリックは勇者だ。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/fake/model',
+        );
+
+        expect(isolate.synthesizeRequests.first.$1, contains('エルリック'));
+      });
+
+      test('does not re-apply dictionary for segments already in DB',
+          () async {
+        await dictRepository.addEntry('エルリック', 'えるりっく');
+
+        // Pre-insert a segment with already-converted text
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: 'partial',
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'えるりっくは勇者だ。',
+          textOffset: 0,
+          textLength: 9,
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          dictionaryRepository: dictRepository,
+        );
+
+        await controller.loadSegments(
+          text: 'エルリックは勇者だ。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.generateSegment(
+          segmentIndex: 0,
+          modelDir: '/fake/model',
+        );
+
+        // The stored text "えるりっくは勇者だ。" should be used as-is, not double-converted
+        expect(isolate.synthesizeRequests.first.$1, 'えるりっくは勇者だ。');
+      });
+    });
+
     group('loadSegments', () {
       test('loads segments from text when no DB records exist', () async {
         final isolate = FakeTtsIsolate();

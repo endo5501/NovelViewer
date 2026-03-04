@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
+import 'tts_dictionary_repository.dart';
 import 'tts_edit_segment.dart';
 import 'tts_isolate.dart';
 import 'tts_playback_controller.dart';
@@ -22,15 +23,18 @@ class TtsEditController {
     required TtsAudioRepository repository,
     required this.tempDirPath,
     TtsIsolate Function()? ttsIsolateFactory,
+    TtsDictionaryRepository? dictionaryRepository,
   })  : _ttsIsolate = ttsIsolate,
         _audioPlayer = audioPlayer,
         _repository = repository,
-        _ttsIsolateFactory = ttsIsolateFactory ?? TtsIsolate.new;
+        _ttsIsolateFactory = ttsIsolateFactory ?? TtsIsolate.new,
+        _dictionaryRepository = dictionaryRepository;
 
   TtsIsolate _ttsIsolate;
   final TtsIsolate Function() _ttsIsolateFactory;
   final TtsAudioPlayer _audioPlayer;
   final TtsAudioRepository _repository;
+  final TtsDictionaryRepository? _dictionaryRepository;
   final String tempDirPath;
   final _textSegmenter = TextSegmenter();
 
@@ -193,12 +197,35 @@ class TtsEditController {
     required String modelDir,
     String? refWavPath,
   }) async {
+    final dict = _dictionaryRepository;
+    final entries = dict != null
+        ? await dict.getEntriesSortedByLength()
+        : null;
+    return _generateSegmentWithEntries(
+      segmentIndex: segmentIndex,
+      modelDir: modelDir,
+      refWavPath: refWavPath,
+      dictEntries: entries,
+    );
+  }
+
+  Future<bool> _generateSegmentWithEntries({
+    required int segmentIndex,
+    required String modelDir,
+    String? refWavPath,
+    List<TtsDictionaryEntry>? dictEntries,
+  }) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
 
     if (!await _ensureModelLoaded(modelDir)) return false;
 
     final segment = _segments[segmentIndex];
-    final result = await _synthesize(segment.text, refWavPath);
+    // For new segments, apply dictionary before synthesizing and storing.
+    // For segments already in DB, use their stored text as-is (already converted).
+    final synthText = !segment.dbRecordExists && dictEntries != null
+        ? TtsDictionaryRepository.applyDictionaryWithEntries(dictEntries, segment.text)
+        : segment.text;
+    final result = await _synthesize(synthText, refWavPath);
     if (result == null) return false;
 
     final wavBytes = WavWriter.toBytes(
@@ -215,7 +242,7 @@ class TtsEditController {
       await _repository.insertSegment(
         episodeId: _episodeId!,
         segmentIndex: segmentIndex,
-        text: segment.text,
+        text: synthText,
         textOffset: segment.textOffset,
         textLength: segment.textLength,
         audioData: wavBytes,
@@ -246,6 +273,12 @@ class TtsEditController {
 
     if (ungenerated.isEmpty) return;
 
+    // Pre-load dictionary entries once to avoid N+1 DB queries in the segment loop.
+    final dictRepo = _dictionaryRepository;
+    final dictEntries = dictRepo != null
+        ? await dictRepo.getEntriesSortedByLength()
+        : null;
+
     for (var idx = 0; idx < ungenerated.length; idx++) {
       if (_cancelled) break;
 
@@ -260,10 +293,11 @@ class TtsEditController {
         _ => resolveRefWavPath != null ? resolveRefWavPath(segmentRef) : segmentRef,
       };
 
-      final success = await generateSegment(
+      final success = await _generateSegmentWithEntries(
         segmentIndex: segmentIndex,
         modelDir: modelDir,
         refWavPath: refWavPath,
+        dictEntries: dictEntries,
       );
 
       if (!success) break;
