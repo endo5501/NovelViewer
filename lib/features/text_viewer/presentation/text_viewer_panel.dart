@@ -17,6 +17,8 @@ import 'package:novel_viewer/features/text_viewer/providers/text_viewer_provider
 import 'package:novel_viewer/features/tts/data/tts_adapters.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
+import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
+import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_streaming_controller.dart';
 import 'package:novel_viewer/features/tts/presentation/tts_edit_dialog.dart';
@@ -40,6 +42,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
 
   TtsStreamingController? _streamingController;
   TtsAudioDatabase? _streamingDb;
+  TtsDictionaryDatabase? _streamingDictDb;
   String? _lastCheckedFileKey;
 
   @override
@@ -55,6 +58,8 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     _streamingController = null;
     _streamingDb?.close();
     _streamingDb = null;
+    _streamingDictDb?.close();
+    _streamingDictDb = null;
     _scrollController.dispose();
     super.dispose();
   }
@@ -130,6 +135,8 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
 
     final db = TtsAudioDatabase(folderPath);
     final repo = TtsAudioRepository(db);
+    final dictDb = TtsDictionaryDatabase(folderPath);
+    final dictRepo = TtsDictionaryRepository(dictDb);
     final isolate = TtsIsolate();
     final providerContainer = ProviderScope.containerOf(context);
     final tempDir = await getTemporaryDirectory();
@@ -140,9 +147,11 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
       audioPlayer: JustAudioPlayer(),
       repository: repo,
       tempDirPath: tempDir.path,
+      dictionaryRepository: dictRepo,
     );
     _streamingController = controller;
     _streamingDb = db;
+    _streamingDictDb = dictDb;
 
     final selectedText = ref.read(selectedTextProvider);
     int? startOffset;
@@ -178,6 +187,8 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
       _streamingController = null;
       await db.close();
       _streamingDb = null;
+      await dictDb.close();
+      _streamingDictDb = null;
       _lastCheckedFileKey = null;
     }
   }
@@ -189,6 +200,8 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
       _streamingController = null;
       await _streamingDb?.close();
       _streamingDb = null;
+      await _streamingDictDb?.close();
+      _streamingDictDb = null;
 
       // Defensively clear all TTS state regardless of stop() success
       if (mounted) {

@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
+import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
+import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_playback_controller.dart';
@@ -266,6 +268,8 @@ void main() {
   late Directory tempDir;
   late TtsAudioDatabase database;
   late TtsAudioRepository repository;
+  late TtsDictionaryDatabase dictDatabase;
+  late TtsDictionaryRepository dictRepository;
   late ProviderContainer container;
 
   setUpAll(() {
@@ -277,16 +281,125 @@ void main() {
     tempDir = Directory.systemTemp.createTempSync('tts_streaming_test_');
     database = TtsAudioDatabase(tempDir.path);
     repository = TtsAudioRepository(database);
+    dictDatabase = TtsDictionaryDatabase(tempDir.path);
+    dictRepository = TtsDictionaryRepository(dictDatabase);
     container = ProviderContainer();
   });
 
   tearDown(() async {
     container.dispose();
     await database.close();
+    await dictDatabase.close();
     tempDir.deleteSync(recursive: true);
   });
 
   group('TtsStreamingController', () {
+    group('dictionary integration', () {
+      test('converts segment text using dictionary before storing and synthesizing',
+          () async {
+        await dictRepository.addEntry('エルリック', 'えるりっく');
+
+        final isolate = _FakeTtsIsolate();
+        final player = _AutoCompleteAudioPlayer();
+        final controller = TtsStreamingController(
+          ref: container,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+          dictionaryRepository: dictRepository,
+        );
+
+        await controller.start(
+          text: 'エルリックは勇者だ。',
+          fileName: 'ep01.txt',
+          modelDir: '/fake/model',
+          sampleRate: 24000,
+        );
+
+        expect(isolate.synthesizeRequests.first, contains('えるりっく'));
+        expect(isolate.synthesizeRequests.first, isNot(contains('エルリック')));
+
+        final episode =
+            await repository.findEpisodeByFileName('ep01.txt');
+        final segments =
+            await repository.getSegments(episode!['id'] as int);
+        expect(
+          segments.any((s) => (s['text'] as String).contains('えるりっく')),
+          isTrue,
+        );
+      });
+
+      test('does not convert when dictionaryRepository is null', () async {
+        final isolate = _FakeTtsIsolate();
+        final player = _AutoCompleteAudioPlayer();
+        final controller = TtsStreamingController(
+          ref: container,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        await controller.start(
+          text: 'エルリックは勇者だ。',
+          fileName: 'ep01.txt',
+          modelDir: '/fake/model',
+          sampleRate: 24000,
+        );
+
+        expect(isolate.synthesizeRequests.first, contains('エルリック'));
+      });
+
+      test('existing DB segment text is used as-is without re-applying dictionary',
+          () async {
+        await dictRepository.addEntry('エルリック', 'えるりっく');
+
+        // First run: creates segments with converted text in DB
+        final isolate1 = _FakeTtsIsolate();
+        final player1 = _AutoCompleteAudioPlayer();
+        final controller1 = TtsStreamingController(
+          ref: container,
+          ttsIsolate: isolate1,
+          audioPlayer: player1,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+          dictionaryRepository: dictRepository,
+        );
+        await controller1.start(
+          text: 'エルリックは勇者だ。',
+          fileName: 'ep01.txt',
+          modelDir: '/fake/model',
+          sampleRate: 24000,
+        );
+
+        // Second run: same text hash, replays from DB, no new synthesis
+        final isolate2 = _FakeTtsIsolate();
+        final player2 = _AutoCompleteAudioPlayer();
+        final controller2 = TtsStreamingController(
+          ref: container,
+          ttsIsolate: isolate2,
+          audioPlayer: player2,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+          dictionaryRepository: dictRepository,
+        );
+        await controller2.start(
+          text: 'エルリックは勇者だ。',
+          fileName: 'ep01.txt',
+          modelDir: '/fake/model',
+          sampleRate: 24000,
+        );
+
+        // Second run reuses stored audio - no synthesis calls
+        expect(isolate2.synthesizeRequests, isEmpty);
+      });
+    });
+
     test('fresh start: generates and plays all segments', () async {
       final isolate = _FakeTtsIsolate();
       final player = _AutoCompleteAudioPlayer();

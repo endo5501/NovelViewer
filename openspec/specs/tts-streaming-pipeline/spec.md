@@ -1,7 +1,7 @@
 ## Requirements
 
 ### Requirement: Unified streaming start
-The system SHALL provide a single entry point `TtsStreamingController.start()` that automatically determines the appropriate mode based on existing data. If no episode exists, it SHALL start fresh generation with immediate playback. If an episode exists with matching text_hash, it SHALL begin playing segments using existing audio where available and generating audio on-demand for segments without audio_data. The controller SHALL accept text, fileName, modelDir, sampleRate, optional refWavPath, optional startOffset, and optional resolveRefWavPath callback parameters. The resolveRefWavPath callback SHALL be used to resolve per-segment ref_wav_path filenames from the database to absolute filesystem paths before passing them to the TTS engine.
+The system SHALL provide a single entry point `TtsStreamingController.start()` that automatically determines the appropriate mode based on existing data. If no episode exists, it SHALL start fresh generation with immediate playback. If an episode exists with matching text_hash, it SHALL begin playing segments using existing audio where available and generating audio on-demand for segments without audio_data. The controller SHALL accept text, fileName, modelDir, sampleRate, optional refWavPath, optional startOffset, optional resolveRefWavPath callback, and optional dictionaryRepository parameters. The resolveRefWavPath callback SHALL be used to resolve per-segment ref_wav_path filenames from the database to absolute filesystem paths before passing them to the TTS engine. When a dictionaryRepository is provided, the system SHALL apply dictionary substitution to each segment's text when writing new segment records to `tts_segments.text`, so that the stored text is already the dictionary-converted form that the TTS engine will receive.
 
 #### Scenario: Start fresh when no episode exists
 - **WHEN** `start()` is called for a fileName with no existing episode in the database
@@ -38,6 +38,18 @@ The system SHALL provide a single entry point `TtsStreamingController.start()` t
 #### Scenario: On-demand generation stores NULL ref_wav_path for new segments
 - **WHEN** a segment without a DB record is generated on-demand using the global reference audio
 - **THEN** the inserted segment record SHALL have ref_wav_path=NULL (indicating "use global setting"), not the resolved full path of the global reference audio
+
+#### Scenario: 新規セグメント作成時に辞書変換済みテキストがDBに保存される
+- **WHEN** `start()` が `dictionaryRepository` と共に呼ばれ、辞書に `{surface: "エルリック", reading: "えるりっく"}` が登録されており、「エルリック」を含むセグメントが新規作成される
+- **THEN** `tts_segments.text` には「えるりっく」に変換済みのテキストが保存され、TTSエンジンもその変換済みテキストを受け取る
+
+#### Scenario: 辞書なしで呼ばれた場合は変換を行わない
+- **WHEN** `start()` が `dictionaryRepository` なし（null）で呼ばれる
+- **THEN** セグメントテキストは変換されずにそのままDBに保存され、TTSエンジンに渡される
+
+#### Scenario: 既存セグメント（audio_data=NULL）の再生成は保存済みテキストをそのまま使用する
+- **WHEN** 既にDBに `tts_segments.text` が保存されているセグメント（audio_data=NULL）のオンデマンド生成が行われる
+- **THEN** 追加の辞書変換は行わず、DBに保存されているテキストをそのままTTSエンジンに渡す（テキストは新規作成時にすでに変換済みのため）
 
 ### Requirement: Text hash validation
 The system SHALL compute a SHA-256 hash of the episode text and store it in the `text_hash` column of the `tts_episodes` table. On each `start()` call, the system SHALL compare the current text hash with the stored hash. If they differ, the existing episode and all segments SHALL be deleted and generation SHALL restart from scratch.
