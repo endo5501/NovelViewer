@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
+import 'tts_language.dart';
 import 'tts_native_bindings.dart';
 
 class TtsSynthesisResult {
@@ -28,7 +29,8 @@ class TtsEngine {
 
   factory TtsEngine.open() => TtsEngine(TtsNativeBindings.open());
 
-  static const int languageJapanese = 2058;
+  @Deprecated('Use TtsLanguage.ja.languageId instead')
+  static const int languageJapanese = TtsLanguage.defaultLanguageId;
 
   final TtsNativeBindings _bindings;
   Pointer<Void> _ctx = nullptr;

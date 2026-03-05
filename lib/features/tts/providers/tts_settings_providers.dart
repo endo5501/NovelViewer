@@ -3,6 +3,7 @@ import 'package:path/path.dart' as p;
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 import 'package:novel_viewer/features/tts/data/voice_reference_service.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
@@ -56,6 +57,22 @@ final ttsModelDirProvider = Provider<String>((ref) {
   final modelSize = ref.watch(ttsModelSizeProvider);
   return p.join(modelsBaseDir, modelSize.dirName);
 });
+
+final ttsLanguageProvider =
+    NotifierProvider<TtsLanguageNotifier, TtsLanguage>(
+  TtsLanguageNotifier.new,
+);
+
+class TtsLanguageNotifier extends Notifier<TtsLanguage> {
+  @override
+  TtsLanguage build() =>
+      ref.watch(settingsRepositoryProvider).getTtsLanguage();
+
+  Future<void> setLanguage(TtsLanguage language) async {
+    await ref.read(settingsRepositoryProvider).setTtsLanguage(language);
+    state = language;
+  }
+}
 
 final ttsRefWavPathProvider =
     NotifierProvider<TtsRefWavPathNotifier, String>(TtsRefWavPathNotifier.new);

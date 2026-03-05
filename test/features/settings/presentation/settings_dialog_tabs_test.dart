@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/data/tts_language.dart';
+import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -82,6 +84,52 @@ void main() {
       // Voice reference dropdown and refresh button
       expect(find.byIcon(Icons.refresh), findsOneWidget);
       expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+    });
+
+    testWidgets('TTS tab shows language dropdown with default Japanese',
+        (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+
+      await tester.tap(find.text('読み上げ'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('読み上げ言語'), findsOneWidget);
+      // Japanese is the default displayed value
+      expect(find.text('日本語'), findsOneWidget);
+    });
+
+    testWidgets('language dropdown changes provider value',
+        (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+
+      await tester.tap(find.text('読み上げ'));
+      await tester.pumpAndSettle();
+
+      // Open the language dropdown
+      await tester.tap(find.text('日本語'));
+      await tester.pumpAndSettle();
+
+      // Select English
+      await tester.tap(find.text('English').last);
+      await tester.pumpAndSettle();
+
+      // Verify the provider was updated
+      final container = ProviderScope.containerOf(
+          tester.element(find.byType(SettingsDialog)));
+      expect(container.read(ttsLanguageProvider), TtsLanguage.en);
+    });
+
+    testWidgets('language dropdown is above model size selector',
+        (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+
+      await tester.tap(find.text('読み上げ'));
+      await tester.pumpAndSettle();
+
+      // Language label should be above model label
+      final languageY = tester.getTopLeft(find.text('読み上げ言語')).dy;
+      final modelY = tester.getTopLeft(find.text('音声モデル')).dy;
+      expect(languageY, lessThan(modelY));
     });
   });
 }

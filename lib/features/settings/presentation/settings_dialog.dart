@@ -10,6 +10,7 @@ import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 import 'package:novel_viewer/features/tts/presentation/voice_recording_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
@@ -447,12 +448,40 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
     );
   }
 
+  Widget _buildLanguageSelector() {
+    final language = ref.watch(ttsLanguageProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: DropdownButtonFormField<TtsLanguage>(
+        initialValue: language,
+        isExpanded: true,
+        decoration: const InputDecoration(
+          labelText: '読み上げ言語',
+        ),
+        items: TtsLanguage.values.map((lang) {
+          return DropdownMenuItem(
+            value: lang,
+            child: Text(lang.displayName),
+          );
+        }).toList(),
+        onChanged: (value) {
+          if (value != null) {
+            ref.read(ttsLanguageProvider.notifier).setLanguage(value);
+          }
+        },
+      ),
+    );
+  }
+
   Widget _buildTtsTab() {
     return SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 16),
+          _buildLanguageSelector(),
           const SizedBox(height: 16),
           _buildModelSizeSelector(),
           const SizedBox(height: 16),
