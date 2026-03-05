@@ -248,6 +248,25 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
   }
 
   Future<void> _deleteAudio() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('音声データの削除'),
+        content: const Text('音声データを削除しますか？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('削除'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirm != true) return;
+
     await _withEpisodeRepo((repo, episode) async {
       await repo.deleteEpisode(episode['id'] as int);
       return null;
