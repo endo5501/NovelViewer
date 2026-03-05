@@ -4,7 +4,12 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
 
 ## 開発コマンド
 
- - `fvm flutter build macos` - 本番ビルド
+ - `scripts/build_tts_macos.sh` - TTSエンジンビルド(mac)
+ - `scripts/build_lame_macos.sh` - LAMEビルド(mac)
+ - `fvm flutter build macos` - 本番ビルド(mac)
+ - `scripts/build_tts_windows.bat` - TTSエンジンビルド(windows)
+ - `scripts/build_lame_windows.bat` - LAMEビルド(windows)
+ - `fvm flutter build windows` - 本番ビルド(windows)
  - `fvm flutter test` - テスト実行
  - `fvm flutter analyze` - リント実行
  - `fvm flutter pub get` - 依存パッケージ取得
