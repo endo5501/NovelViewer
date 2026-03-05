@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
+import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 
 void main() {
@@ -225,6 +226,23 @@ void main() {
       await repo.setTtsRefWavPath('/ref.wav');
       expect(repo.getTtsModelSize(), TtsModelSize.large);
       expect(repo.getTtsRefWavPath(), '/ref.wav');
+    });
+
+    test('getTtsLanguage returns ja when no value stored', () {
+      final repo = SettingsRepository(prefs);
+      expect(repo.getTtsLanguage(), TtsLanguage.ja);
+    });
+
+    test('setTtsLanguage and getTtsLanguage round-trip', () async {
+      final repo = SettingsRepository(prefs);
+      await repo.setTtsLanguage(TtsLanguage.en);
+      expect(repo.getTtsLanguage(), TtsLanguage.en);
+    });
+
+    test('getTtsLanguage returns ja for invalid stored value', () async {
+      await prefs.setString('tts_language', 'invalid');
+      final repo = SettingsRepository(prefs);
+      expect(repo.getTtsLanguage(), TtsLanguage.ja);
     });
   });
 }

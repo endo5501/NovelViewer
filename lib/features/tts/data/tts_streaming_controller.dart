@@ -11,6 +11,7 @@ import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
 import 'tts_dictionary_repository.dart';
 import 'tts_isolate.dart';
+import 'tts_language.dart';
 import 'tts_playback_controller.dart';
 import 'wav_writer.dart';
 import '../providers/tts_playback_providers.dart';
@@ -52,6 +53,7 @@ class TtsStreamingController {
     required int sampleRate,
     String? refWavPath,
     int? startOffset,
+    int languageId = TtsLanguage.defaultLanguageId,
     String Function(String fileName)? resolveRefWavPath,
   }) async {
     _stopped = false;
@@ -102,6 +104,7 @@ class TtsStreamingController {
         sampleRate: sampleRate,
         refWavPath: refWavPath,
         startOffset: startOffset,
+        languageId: languageId,
         resolveRefWavPath: resolveRefWavPath,
       );
 
@@ -122,7 +125,7 @@ class TtsStreamingController {
     }
   }
 
-  Future<bool> _ensureModelLoaded(String modelDir) async {
+  Future<bool> _ensureModelLoaded(String modelDir, {int languageId = TtsLanguage.defaultLanguageId}) async {
     if (_modelLoaded) return true;
 
     await _ttsIsolate.spawn();
@@ -134,7 +137,7 @@ class TtsStreamingController {
       }
     });
 
-    _ttsIsolate.loadModel(modelDir);
+    _ttsIsolate.loadModel(modelDir, languageId: languageId);
     _modelLoaded = await completer.future;
     return _modelLoaded;
   }
@@ -171,6 +174,7 @@ class TtsStreamingController {
     required int sampleRate,
     required String? refWavPath,
     int? startOffset,
+    int languageId = TtsLanguage.defaultLanguageId,
     String Function(String fileName)? resolveRefWavPath,
   }) async {
     // Determine starting segment
@@ -225,7 +229,7 @@ class TtsStreamingController {
             .read(ttsPlaybackStateProvider.notifier)
             .set(TtsPlaybackState.waiting);
 
-        if (!await _ensureModelLoaded(modelDir)) break;
+        if (!await _ensureModelLoaded(modelDir, languageId: languageId)) break;
         if (_stopped) break;
 
         // Use edited text from DB if available, otherwise apply dictionary to original

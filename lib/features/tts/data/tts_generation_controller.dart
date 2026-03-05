@@ -3,6 +3,7 @@ import 'dart:async';
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
 import 'tts_isolate.dart';
+import 'tts_language.dart';
 import 'wav_writer.dart';
 
 class TtsGenerationController {
@@ -39,6 +40,7 @@ class TtsGenerationController {
     required String modelDir,
     required int sampleRate,
     String? refWavPath,
+    int languageId = TtsLanguage.defaultLanguageId,
     int startSegmentIndex = 0,
     int? existingEpisodeId,
   }) async {
@@ -85,7 +87,7 @@ class TtsGenerationController {
       }
     });
 
-    _ttsIsolate.loadModel(modelDir);
+    _ttsIsolate.loadModel(modelDir, languageId: languageId);
     final modelLoaded = await modelCompleter.future;
 
     if (!modelLoaded || _cancelled) {

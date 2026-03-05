@@ -3,6 +3,7 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'tts_engine.dart';
+import 'tts_language.dart';
 
 // Messages sent to the TTS isolate
 
@@ -12,7 +13,7 @@ class LoadModelMessage extends TtsIsolateMessage {
   LoadModelMessage({
     required this.modelDir,
     this.nThreads = 4,
-    this.languageId = TtsEngine.languageJapanese,
+    this.languageId = TtsLanguage.defaultLanguageId,
   });
   final String modelDir;
   final int nThreads;
@@ -81,7 +82,7 @@ class TtsIsolate {
     _sendPort = await completer.future;
   }
 
-  void loadModel(String modelDir, {int nThreads = 4, int languageId = TtsEngine.languageJapanese}) {
+  void loadModel(String modelDir, {int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId}) {
     _sendPort?.send(LoadModelMessage(modelDir: modelDir, nThreads: nThreads, languageId: languageId));
   }
 

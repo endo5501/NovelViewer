@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
+import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 
 class SettingsRepository {
@@ -17,6 +18,7 @@ class SettingsRepository {
   static const _llmModelKey = 'llm_model';
   static const _ttsModelSizeKey = 'tts_model_size';
   static const _ttsRefWavPathKey = 'tts_ref_wav_path';
+  static const _ttsLanguageKey = 'tts_language';
 
   static const defaultFontSize = 14.0;
   static const minFontSize = 10.0;
@@ -121,5 +123,17 @@ class SettingsRepository {
 
   Future<void> setTtsRefWavPath(String path) async {
     await _prefs.setString(_ttsRefWavPathKey, path);
+  }
+
+  TtsLanguage getTtsLanguage() {
+    final value = _prefs.getString(_ttsLanguageKey);
+    return TtsLanguage.values.firstWhere(
+      (lang) => lang.name == value,
+      orElse: () => TtsLanguage.ja,
+    );
+  }
+
+  Future<void> setTtsLanguage(TtsLanguage language) async {
+    await _prefs.setString(_ttsLanguageKey, language.name);
   }
 }

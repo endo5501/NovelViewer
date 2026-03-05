@@ -4,9 +4,9 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
-import 'package:novel_viewer/features/tts/data/tts_engine.dart';
 import 'package:novel_viewer/features/tts/data/tts_generation_controller.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
+import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io';
 
@@ -21,6 +21,7 @@ class FakeTtsIsolate implements TtsIsolate {
   bool spawned = false;
   bool disposed = false;
   String? loadedModelDir;
+  int? loadedLanguageId;
   final synthesizeRequests = <String>[];
 
   @override
@@ -33,8 +34,9 @@ class FakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {int nThreads = 4, int languageId = TtsEngine.languageJapanese}) {
+      {int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId}) {
     loadedModelDir = modelDir;
+    loadedLanguageId = languageId;
     Future.microtask(() {
       if (modelLoadSuccess) {
         _responseController.add(ModelLoadedResponse(success: true));
@@ -491,6 +493,41 @@ void main() {
       expect(isolate.disposed, isTrue);
     });
 
+    test('passes languageId to isolate when provided', () async {
+      final isolate = FakeTtsIsolate();
+      final controller = TtsGenerationController(
+        ttsIsolate: isolate,
+        repository: repository,
+      );
+
+      await controller.start(
+        text: 'Hello world.',
+        fileName: '0001_test.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+        languageId: TtsLanguage.en.languageId,
+      );
+
+      expect(isolate.loadedLanguageId, TtsLanguage.en.languageId);
+    });
+
+    test('uses default Japanese languageId when not specified', () async {
+      final isolate = FakeTtsIsolate();
+      final controller = TtsGenerationController(
+        ttsIsolate: isolate,
+        repository: repository,
+      );
+
+      await controller.start(
+        text: 'テスト文。',
+        fileName: '0001_テスト.txt',
+        modelDir: '/models',
+        sampleRate: 24000,
+      );
+
+      expect(isolate.loadedLanguageId, TtsLanguage.ja.languageId);
+    });
+
     test('passes refWavPath to isolate when provided', () async {
       final synthesizeArgs = <(String, String?)>[];
       final isolate = _TrackingFakeTtsIsolate(synthesizeArgs);
@@ -557,7 +594,7 @@ class _CancellableFakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {int nThreads = 4, int languageId = TtsEngine.languageJapanese}) {
+      {int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId}) {
     Future.microtask(() {
       _responseController.add(ModelLoadedResponse(success: true));
     });
@@ -594,7 +631,7 @@ class _TrackingFakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {int nThreads = 4, int languageId = TtsEngine.languageJapanese}) {
+      {int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId}) {
     Future.microtask(() {
       _responseController.add(ModelLoadedResponse(success: true));
     });
@@ -635,7 +672,7 @@ class _StallingFakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {int nThreads = 4, int languageId = TtsEngine.languageJapanese}) {
+      {int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId}) {
     Future.microtask(() {
       _responseController.add(ModelLoadedResponse(success: true));
     });

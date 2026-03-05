@@ -9,6 +9,7 @@ import 'tts_audio_repository.dart';
 import 'tts_dictionary_repository.dart';
 import 'tts_edit_segment.dart';
 import 'tts_isolate.dart';
+import 'tts_language.dart';
 import 'tts_playback_controller.dart';
 import 'wav_writer.dart';
 
@@ -177,7 +178,7 @@ class TtsEditController {
     }
   }
 
-  Future<bool> _ensureModelLoaded(String modelDir) async {
+  Future<bool> _ensureModelLoaded(String modelDir, {int languageId = TtsLanguage.defaultLanguageId}) async {
     if (_modelLoaded) return true;
 
     await _ttsIsolate.spawn();
@@ -195,7 +196,7 @@ class TtsEditController {
       }
     });
 
-    _ttsIsolate.loadModel(modelDir);
+    _ttsIsolate.loadModel(modelDir, languageId: languageId);
 
     try {
       _modelLoaded = await completer.future;
@@ -211,6 +212,7 @@ class TtsEditController {
     required int segmentIndex,
     required String modelDir,
     String? refWavPath,
+    int languageId = TtsLanguage.defaultLanguageId,
   }) async {
     final dict = _dictionaryRepository;
     final entries = dict != null
@@ -220,6 +222,7 @@ class TtsEditController {
       segmentIndex: segmentIndex,
       modelDir: modelDir,
       refWavPath: refWavPath,
+      languageId: languageId,
       dictEntries: entries,
     );
   }
@@ -228,11 +231,12 @@ class TtsEditController {
     required int segmentIndex,
     required String modelDir,
     String? refWavPath,
+    int languageId = TtsLanguage.defaultLanguageId,
     List<TtsDictionaryEntry>? dictEntries,
   }) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
 
-    if (!await _ensureModelLoaded(modelDir)) return false;
+    if (!await _ensureModelLoaded(modelDir, languageId: languageId)) return false;
 
     final segment = _segments[segmentIndex];
     // For new segments, apply dictionary before synthesizing and storing.
@@ -277,6 +281,7 @@ class TtsEditController {
   Future<void> generateAllUngenerated({
     required String modelDir,
     String? globalRefWavPath,
+    int languageId = TtsLanguage.defaultLanguageId,
     String Function(String fileName)? resolveRefWavPath,
     void Function(int segmentIndex)? onSegmentStart,
   }) async {
@@ -314,6 +319,7 @@ class TtsEditController {
         segmentIndex: segmentIndex,
         modelDir: modelDir,
         refWavPath: refWavPath,
+        languageId: languageId,
         dictEntries: dictEntries,
       );
 

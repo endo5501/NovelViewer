@@ -122,6 +122,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     final fileName = ref.read(selectedFileProvider)?.name;
     final modelDir = ref.read(ttsModelDirProvider);
     final refWavFileName = ref.read(ttsRefWavPathProvider);
+    final languageId = ref.read(ttsLanguageProvider).languageId;
     final voiceService = ref.read(voiceReferenceServiceProvider);
     final refWavPath = refWavFileName.isNotEmpty && voiceService != null
         ? voiceService.resolveVoiceFilePath(refWavFileName)
@@ -168,6 +169,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
         sampleRate: 24000,
         refWavPath: refWavPath,
         startOffset: startOffset,
+        languageId: languageId,
         resolveRefWavPath: voiceService?.resolveVoiceFilePath,
       );
 

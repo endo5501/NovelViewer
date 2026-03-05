@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 
@@ -92,6 +93,35 @@ void main() {
       addTearDown(container.dispose);
 
       expect(container.read(ttsModelDirProvider), '');
+    });
+  });
+
+  group('ttsLanguageProvider', () {
+    test('returns ja by default', () {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(ttsLanguageProvider), TtsLanguage.ja);
+    });
+
+    test('returns persisted value', () async {
+      await prefs.setString('tts_language', 'en');
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(ttsLanguageProvider), TtsLanguage.en);
+    });
+
+    test('setLanguage persists and updates state', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(ttsLanguageProvider.notifier)
+          .setLanguage(TtsLanguage.fr);
+
+      expect(container.read(ttsLanguageProvider), TtsLanguage.fr);
+      expect(prefs.getString('tts_language'), 'fr');
     });
   });
 

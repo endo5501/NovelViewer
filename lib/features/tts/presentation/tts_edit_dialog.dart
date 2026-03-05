@@ -171,10 +171,12 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
         .set(TtsEditGenerationState.generating);
     ref.read(ttsEditGeneratingIndexProvider.notifier).set(index);
 
+    final languageId = ref.read(ttsLanguageProvider).languageId;
     await controller.generateSegment(
       segmentIndex: index,
       modelDir: modelDir,
       refWavPath: refWavPath,
+      languageId: languageId,
     );
 
     if (!mounted) return;
@@ -202,9 +204,11 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
         .read(ttsEditGenerationStateProvider.notifier)
         .set(TtsEditGenerationState.generating);
 
+    final languageId = ref.read(ttsLanguageProvider).languageId;
     await controller.generateAllUngenerated(
       modelDir: modelDir,
       globalRefWavPath: globalRefWavPath,
+      languageId: languageId,
       resolveRefWavPath: voiceService?.resolveVoiceFilePath,
       onSegmentStart: (index) {
         if (mounted) {
