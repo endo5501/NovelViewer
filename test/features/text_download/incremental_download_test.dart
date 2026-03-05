@@ -28,6 +28,9 @@ class _FakeSite implements NovelSite {
   Uri normalizeUrl(Uri url) => url;
 
   @override
+  Map<String, String> requestHeaders(Uri url) => const {};
+
+  @override
   NovelIndex parseIndex(String html, Uri baseUrl) {
     return NovelIndex(
       title: 'テスト小説',
@@ -72,6 +75,9 @@ class _ShortStorySite implements NovelSite {
   Uri normalizeUrl(Uri url) => url;
 
   @override
+  Map<String, String> requestHeaders(Uri url) => const {};
+
+  @override
   NovelIndex parseIndex(String html, Uri baseUrl) {
     return const NovelIndex(
       title: '短編テスト小説',
@@ -107,6 +113,9 @@ class _MultiPageSite implements NovelSite {
     }
     return url;
   }
+
+  @override
+  Map<String, String> requestHeaders(Uri url) => const {};
 
   @override
   NovelIndex parseIndex(String html, Uri baseUrl) {
@@ -157,6 +166,9 @@ class _InfinitePageSite implements NovelSite {
   Uri normalizeUrl(Uri url) => url;
 
   @override
+  Map<String, String> requestHeaders(Uri url) => const {};
+
+  @override
   NovelIndex parseIndex(String html, Uri baseUrl) {
     final pageParam = baseUrl.queryParameters['p'];
     final currentPage = pageParam != null ? int.parse(pageParam) : 1;
@@ -192,6 +204,9 @@ class _EmptyNovelSite implements NovelSite {
 
   @override
   Uri normalizeUrl(Uri url) => url;
+
+  @override
+  Map<String, String> requestHeaders(Uri url) => const {};
 
   @override
   NovelIndex parseIndex(String html, Uri baseUrl) {

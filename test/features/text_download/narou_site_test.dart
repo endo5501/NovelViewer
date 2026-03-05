@@ -73,6 +73,18 @@ void main() {
       final normalized = site.normalizeUrl(url);
       expect(normalized.toString(), 'https://ncode.syosetu.com/n8281jr/');
     });
+
+    test('normalizes novel18 URL with episode path', () {
+      final url = Uri.parse('https://novel18.syosetu.com/n1234ab/5/');
+      final normalized = site.normalizeUrl(url);
+      expect(normalized.toString(), 'https://novel18.syosetu.com/n1234ab/');
+    });
+
+    test('preserves novel18 host in normalized URL', () {
+      final url = Uri.parse('https://novel18.syosetu.com/n1234ab/');
+      final normalized = site.normalizeUrl(url);
+      expect(normalized.host, 'novel18.syosetu.com');
+    });
   });
 
   group('parseIndex', () {
@@ -295,6 +307,28 @@ void main() {
       expect(index.nextPageUrl, isNull);
     });
 
+    test('resolves episode URLs with novel18 baseUrl', () {
+      const html = '''
+<html>
+<body>
+  <h1 class="p-novel__title">Novel18 Test</h1>
+  <div class="p-eplist">
+    <a href="/n1234ab/1/" class="p-eplist__subtitle">Episode 1</a>
+    <a href="/n1234ab/2/" class="p-eplist__subtitle">Episode 2</a>
+  </div>
+</body>
+</html>
+''';
+      final baseUrl = Uri.parse('https://novel18.syosetu.com/n1234ab/');
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.title, 'Novel18 Test');
+      expect(index.episodes.length, 2);
+      expect(index.episodes[0].url.host, 'novel18.syosetu.com');
+      expect(index.episodes[0].url.toString(),
+          'https://novel18.syosetu.com/n1234ab/1/');
+    });
+
     test('sets nextPageUrl to null when no pagination exists', () {
       const html = '''
 <html>
@@ -339,6 +373,20 @@ void main() {
     test('throws ArgumentError for URL without ncode', () {
       final url = Uri.parse('https://syosetu.com/');
       expect(() => site.extractNovelId(url), throwsArgumentError);
+    });
+  });
+
+  group('requestHeaders', () {
+    test('returns Cookie header for novel18.syosetu.com', () {
+      final url = Uri.parse('https://novel18.syosetu.com/n1234ab/');
+      final headers = site.requestHeaders(url);
+      expect(headers, {'Cookie': 'over18=yes'});
+    });
+
+    test('returns empty map for ncode.syosetu.com', () {
+      final url = Uri.parse('https://ncode.syosetu.com/n9669bk/');
+      final headers = site.requestHeaders(url);
+      expect(headers, isEmpty);
     });
   });
 

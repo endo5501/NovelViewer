@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart' as http_testing;
 import 'package:novel_viewer/features/text_download/data/download_service.dart';
 import 'package:novel_viewer/features/text_download/data/sites/narou_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/kakuyomu_site.dart';
@@ -91,6 +93,37 @@ void main() {
         service.buildFolderName(site, url),
         'kakuyomu_1177354054881162325',
       );
+    });
+
+    test('downloadNovel sends site requestHeaders with HTTP requests', () async {
+      final capturedHeaders = <Map<String, String>>[];
+      final mockClient = http_testing.MockClient((request) async {
+        capturedHeaders.add(request.headers);
+        // Return a minimal HTML page with a title and short story body
+        return http.Response(
+          '<html><body><h1 class="p-novel__title">Test</h1>'
+          '<div class="js-novel-text p-novel__text"><p>Body</p></div>'
+          '</body></html>',
+          200,
+        );
+      });
+
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+      final site = NarouSite();
+      final url = Uri.parse('https://novel18.syosetu.com/n1234ab/');
+
+      await service.downloadNovel(
+        site: site,
+        url: url,
+        outputPath: tempDir.path,
+      );
+
+      expect(capturedHeaders, isNotEmpty);
+      expect(capturedHeaders.first['Cookie'], 'over18=yes');
+      expect(capturedHeaders.first['User-Agent'], isNotNull);
     });
 
     test('saveEpisode writes text file with correct name', () async {

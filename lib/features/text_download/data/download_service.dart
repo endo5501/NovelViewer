@@ -59,10 +59,14 @@ class DownloadService {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-  Future<http.Response> _fetchPageResponse(Uri url) async {
+  Future<http.Response> _fetchPageResponse(
+    Uri url, {
+    NovelSite? site,
+  }) async {
+    final siteHeaders = site?.requestHeaders(url) ?? const <String, String>{};
     final response = await _client.get(
       url,
-      headers: {'User-Agent': _userAgent},
+      headers: {'User-Agent': _userAgent, ...siteHeaders},
     );
     if (response.statusCode != 200) {
       throw HttpException(
@@ -119,7 +123,10 @@ class DownloadService {
     final normalizedUrl = site.normalizeUrl(url);
     final folderName = buildFolderName(site, normalizedUrl);
     final novelId = site.extractNovelId(normalizedUrl);
-    final indexResponse = await _fetchPageResponse(normalizedUrl);
+    final indexResponse = await _fetchPageResponse(
+      normalizedUrl,
+      site: site,
+    );
     final novelIndex = site.parseIndex(indexResponse.body, normalizedUrl);
 
     final dir = await createNovelDirectory(outputPath, folderName);
@@ -183,7 +190,10 @@ class DownloadService {
 
       await Future.delayed(requestDelay);
       try {
-        final res = await _fetchPageResponse(next);
+        final res = await _fetchPageResponse(
+          next,
+          site: site,
+        );
         final idx = site.parseIndex(res.body, next);
         addEpisodes(idx.episodes);
         next = idx.nextPageUrl;
@@ -301,7 +311,10 @@ class DownloadService {
           await Future.delayed(requestDelay);
         }
         try {
-          final response = await _fetchPageResponse(episode.url);
+          final response = await _fetchPageResponse(
+            episode.url,
+            site: site,
+          );
           final content = site.parseEpisode(response.body);
           await _saveAndCacheEpisode(
             url: episode.url,

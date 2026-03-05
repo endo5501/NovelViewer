@@ -57,6 +57,7 @@ abstract class NovelSite {
   bool canHandle(Uri url);
   String extractNovelId(Uri url);
   Uri normalizeUrl(Uri url) => url;
+  Map<String, String> requestHeaders(Uri url) => const {};
   NovelIndex parseIndex(String html, Uri baseUrl);
   String parseEpisode(String html);
 }

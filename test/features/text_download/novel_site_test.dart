@@ -74,6 +74,15 @@ void main() {
     });
   });
 
+  group('NovelSite.requestHeaders', () {
+    test('returns empty map by default', () {
+      final registry = NovelSiteRegistry();
+      final url = Uri.parse('https://kakuyomu.jp/works/1177354054881162325');
+      final site = registry.findSite(url)!;
+      expect(site.requestHeaders(url), isEmpty);
+    });
+  });
+
   group('NovelSiteRegistry', () {
     test('resolves narou site from syosetu.com URL', () {
       final registry = NovelSiteRegistry();

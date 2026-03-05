@@ -80,6 +80,9 @@ class KakuyomuSite implements NovelSite {
   }
 
   @override
+  Map<String, String> requestHeaders(Uri url) => const {};
+
+  @override
   Uri normalizeUrl(Uri url) {
     final path = url.path;
     final match = RegExp(r'/works/(\d+)').firstMatch(path);

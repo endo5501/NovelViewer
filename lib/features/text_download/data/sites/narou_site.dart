@@ -36,9 +36,14 @@ class NarouSite implements NovelSite {
     '.index_box2 a',
   ];
 
+  static const _allowedHosts = {
+    'ncode.syosetu.com',
+    'novel18.syosetu.com',
+  };
+
   @override
   bool canHandle(Uri url) {
-    return url.host.contains('syosetu.com');
+    return _allowedHosts.contains(url.host);
   }
 
   @override
@@ -164,6 +169,14 @@ class NarouSite implements NovelSite {
     final text = updateDiv.text.trim();
     final match = _datePattern.firstMatch(text);
     return match?.group(1);
+  }
+
+  @override
+  Map<String, String> requestHeaders(Uri url) {
+    if (url.host == 'novel18.syosetu.com') {
+      return const {'Cookie': 'over18=yes'};
+    }
+    return const {};
   }
 
   @override
