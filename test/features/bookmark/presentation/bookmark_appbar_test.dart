@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
   final String? _initialValue;
@@ -54,6 +55,9 @@ void main() {
                 .overrideWithValue(const AsyncValue.data(false)),
           ],
           child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               appBar: AppBar(
                 actions: [
@@ -92,6 +96,9 @@ void main() {
                 .overrideWithValue(const AsyncValue.data(true)),
           ],
           child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               appBar: AppBar(
                 actions: [
@@ -124,6 +131,9 @@ void main() {
                 .overrideWithValue(const AsyncValue.data(false)),
           ],
           child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               appBar: AppBar(
                 actions: [
@@ -155,6 +165,9 @@ void main() {
                 .overrideWithValue(const AsyncValue.data(false)),
           ],
           child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               appBar: AppBar(
                 actions: [

@@ -1,0 +1,279 @@
+{
+  "@@locale": "ja",
+
+  "common_closeButton": "閉じる",
+  "common_cancelButton": "キャンセル",
+  "common_changeButton": "変更",
+  "common_deleteButton": "削除",
+  "common_errorPrefix": "エラー: {message}",
+  "@common_errorPrefix": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "common_fileDuplicateError": "同名のファイルが既に存在します",
+  "common_fileNameLabel": "ファイル名",
+  "common_unknownError": "不明なエラー",
+
+  "settings_title": "設定",
+  "settings_generalTabLabel": "一般",
+  "settings_ttsTabLabel": "読み上げ",
+  "settings_verticalDisplayTitle": "縦書き表示",
+  "settings_verticalDisplayVertical": "縦書き",
+  "settings_verticalDisplayHorizontal": "横書き",
+  "settings_darkModeTitle": "ダークモード",
+  "settings_darkModeDark": "ダーク",
+  "settings_darkModeLight": "ライト",
+  "settings_fontSizeTitle": "フォントサイズ",
+  "settings_fontFamilyTitle": "フォント種別",
+  "settings_columnSpacingTitle": "列間隔",
+  "settings_llmProviderTitle": "LLMプロバイダ",
+  "settings_llmProviderNone": "未設定",
+  "settings_llmProviderOpenai": "OpenAI互換API",
+  "settings_llmProviderOllama": "Ollama",
+  "settings_endpointUrlLabel": "エンドポイントURL",
+  "settings_apiKeyLabel": "APIキー",
+  "settings_modelNameLabel": "モデル名",
+  "settings_modelDataDownload": "モデルデータダウンロード",
+  "settings_modelDownloadCompleted": "モデルダウンロード済み",
+  "settings_retryButton": "再試行",
+  "settings_voiceModelTitle": "音声モデル",
+  "settings_voiceModelSmall": "高速 (0.6B)",
+  "settings_voiceModelLarge": "高精度 (1.7B)",
+  "settings_ttsLanguageLabel": "読み上げ言語",
+  "settings_referenceAudioLabel": "リファレンス音声ファイル",
+  "settings_voicesPlacementHint": "voicesフォルダに音声ファイルを配置してください",
+  "settings_referenceAudioNone": "なし（デフォルト音声）",
+  "settings_renameFileTooltip": "ファイル名を変更",
+  "settings_recordVoiceTooltip": "音声を録音",
+  "settings_refreshFileListTooltip": "ファイル一覧を更新",
+  "settings_openVoicesFolderTooltip": "voicesフォルダを開く",
+  "settings_dragAudioFilesHere": "音声ファイルをここにドロップ",
+  "settings_selectLibraryFirst": "先にライブラリを選択してください",
+  "settings_fileOperationError": "ファイル操作エラー: {message}",
+  "@settings_fileOperationError": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "settings_modelListFetching": "モデル一覧を取得中...",
+  "settings_modelListFetchError": "モデル一覧の取得エラー: {message}",
+  "@settings_modelListFetchError": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "settings_selectModelHint": "モデルを選択",
+  "settings_renameFileTitle": "ファイル名の変更",
+  "settings_languageTitle": "言語",
+
+  "voiceRecording_title": "音声録音",
+  "voiceRecording_micAccessDenied": "マイクへのアクセスが許可されていません",
+  "voiceRecording_startRecordingFailed": "録音の開始に失敗しました: {message}",
+  "@voiceRecording_startRecordingFailed": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "voiceRecording_stopRecordingFailed": "録音の停止に失敗しました: {message}",
+  "@voiceRecording_stopRecordingFailed": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "voiceRecording_saveFailed": "保存に失敗しました: {message}",
+  "@voiceRecording_saveFailed": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "voiceRecording_discardTitle": "録音の破棄",
+  "voiceRecording_discardConfirmation": "録音中です。録音を破棄してダイアログを閉じますか？",
+  "voiceRecording_discardButton": "破棄",
+  "voiceRecording_recording": "録音中...",
+  "voiceRecording_startInstructions": "録音ボタンを押して録音を開始してください",
+  "voiceRecording_startButton": "録音開始",
+  "voiceRecording_stopButton": "停止",
+  "voiceRecording_invalidCharsError": "使用できない文字が含まれています",
+  "voiceRecording_enterFileNameTitle": "ファイル名の入力",
+  "voiceRecording_saveButton": "保存",
+
+  "fileBrowser_selectFolderPrompt": "フォルダを選択してください",
+  "fileBrowser_goToParentFolder": "親フォルダへ",
+  "fileBrowser_noFilesFound": "テキストファイルが見つかりません",
+  "fileBrowser_refreshMenuItem": "更新",
+  "fileBrowser_renameMenuItem": "タイトル変更",
+  "fileBrowser_deleteMenuItem": "削除",
+  "fileBrowser_downloadInProgressWarning": "ダウンロード中です。完了後に再度お試しください",
+  "fileBrowser_renameFailed": "タイトル変更に失敗しました: {message}",
+  "@fileBrowser_renameFailed": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "fileBrowser_deleteNovelTitle": "小説を削除",
+  "fileBrowser_deleteNovelConfirmation": "「{name}」を削除しますか？\nすべてのエピソードとデータが完全に削除されます。",
+  "@fileBrowser_deleteNovelConfirmation": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "fileBrowser_deleteFailed": "削除に失敗しました: {message}",
+  "@fileBrowser_deleteFailed": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "fileBrowser_refreshProgressTitle": "「{title}」を更新中",
+  "@fileBrowser_refreshProgressTitle": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "fileBrowser_skippedEpisodesSuffix": "（{count} スキップ）",
+  "@fileBrowser_skippedEpisodesSuffix": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "fileBrowser_episodeCountFormat": "{total} エピソード{skipped}",
+  "@fileBrowser_episodeCountFormat": {
+    "placeholders": {
+      "total": { "type": "int" },
+      "skipped": { "type": "String" }
+    }
+  },
+  "fileBrowser_refreshCompleted": "更新が完了しました。{summary}",
+  "@fileBrowser_refreshCompleted": {
+    "placeholders": {
+      "summary": { "type": "String" }
+    }
+  },
+  "fileBrowser_refreshError": "エラー: {message}",
+  "@fileBrowser_refreshError": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "ttsEdit_title": "読み上げ編集",
+  "ttsEdit_dictionaryButton": "辞書",
+  "ttsEdit_playAllButton": "全再生",
+  "ttsEdit_stopButton": "停止",
+  "ttsEdit_cancelButton": "中断",
+  "ttsEdit_generateAllButton": "全生成",
+  "ttsEdit_resetAllTitle": "全消去",
+  "ttsEdit_resetAllConfirmation": "すべてのセグメントを初期状態に戻しますか？",
+  "ttsEdit_resetButton": "消去",
+  "ttsEdit_resetAllButton": "全消去",
+  "ttsEdit_generatingStatus": "生成中",
+  "ttsEdit_playingStatus": "再生中",
+  "ttsEdit_generatedStatus": "生成済み",
+  "ttsEdit_ungeneratedStatus": "未生成",
+  "ttsEdit_referenceSettingValue": "設定値",
+  "ttsEdit_referenceNone": "なし",
+  "ttsEdit_memoHint": "メモ",
+  "ttsEdit_playTooltip": "再生",
+  "ttsEdit_regenerateTooltip": "再生成",
+  "ttsEdit_resetTooltip": "リセット",
+
+  "textViewer_deleteAudioTitle": "音声データの削除",
+  "textViewer_deleteAudioConfirmation": "音声データを削除しますか？",
+  "textViewer_exportCompleted": "MP3ファイルのエクスポートが完了しました",
+  "textViewer_exportError": "エクスポートエラー: {message}",
+  "@textViewer_exportError": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "textViewer_generationProgressFormat": "{current}/{total}文",
+  "@textViewer_generationProgressFormat": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "textViewer_editTtsTooltip": "読み上げ編集",
+  "textViewer_generateTtsTooltip": "読み上げ音声生成",
+  "textViewer_pauseTooltip": "一時停止",
+  "textViewer_stopTooltip": "停止",
+  "textViewer_resumeTooltip": "再開",
+  "textViewer_cancelTooltip": "キャンセル",
+  "textViewer_playTooltip": "再生",
+  "textViewer_exportMp3Tooltip": "MP3エクスポート",
+  "textViewer_deleteAudioTooltip": "音声データ削除",
+  "textViewer_selectFilePrompt": "ファイルを選択してください",
+
+  "download_title": "小説ダウンロード",
+  "download_invalidUrlError": "有効なURLを入力してください",
+  "download_unsupportedSiteError": "サポートされていないサイトです（なろう・なろう18・カクヨムに対応）",
+  "download_skippedSuffix": "(スキップ: {count}件)",
+  "@download_skippedSuffix": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "download_progressFormat": "ダウンロード中: {current}/{total} エピソード{skipped}",
+  "@download_progressFormat": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" },
+      "skipped": { "type": "String" }
+    }
+  },
+  "download_completedFormat": "ダウンロード完了: {total} エピソード{skipped}",
+  "@download_completedFormat": {
+    "placeholders": {
+      "total": { "type": "int" },
+      "skipped": { "type": "String" }
+    }
+  },
+  "download_errorFormat": "エラー: {message}",
+  "@download_errorFormat": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "download_downloadingButton": "ダウンロード中...",
+  "download_startButton": "ダウンロード開始",
+
+  "ttsDictionary_title": "読み上げ辞書",
+  "ttsDictionary_bothFieldsRequired": "表記と読みの両方を入力してください",
+  "ttsDictionary_duplicateEntry": "同じ表記が既に登録されています",
+  "ttsDictionary_surfaceLabel": "表記",
+  "ttsDictionary_surfaceHint": "山田太郎",
+  "ttsDictionary_readingLabel": "読み",
+  "ttsDictionary_readingHint": "やまだたろう",
+  "ttsDictionary_addTooltip": "追加",
+  "ttsDictionary_emptyMessage": "辞書にエントリがありません\n上のフォームから追加してください",
+  "ttsDictionary_deleteTooltip": "削除",
+
+  "llmSummary_noSpoilerTab": "ネタバレなし",
+  "llmSummary_spoilerTab": "ネタバレあり",
+  "llmSummary_selectWordPrompt": "単語を選択してください",
+  "llmSummary_configureLlmPrompt": "設定画面でLLMを設定してください",
+  "llmSummary_referencePositionWarning": "基準位置が異なります。再解析をお勧めします。",
+  "llmSummary_analyzeButton": "解析開始",
+
+  "bookmark_selectNovelPrompt": "作品フォルダを選択してください",
+  "bookmark_noBookmarks": "ブックマークがありません",
+  "bookmark_deleteMenuItem": "削除",
+  "bookmark_fileNotFound": "ファイルが見つかりません",
+
+  "textSearch_hintText": "検索...",
+  "textSearch_enterQueryPrompt": "検索語を入力してください",
+  "textSearch_noResults": "検索結果がありません",
+
+  "renameTitle_title": "タイトル変更",
+  "renameTitle_newTitleLabel": "新しいタイトル",
+  "renameTitle_changeButton": "変更",
+
+  "homeScreen_removeBookmarkTooltip": "ブックマーク解除",
+  "homeScreen_addBookmarkTooltip": "ブックマーク登録",
+  "homeScreen_hideRightColumnTooltip": "右カラムを非表示",
+  "homeScreen_showRightColumnTooltip": "右カラムを表示",
+  "homeScreen_downloadTooltip": "小説ダウンロード",
+
+  "leftColumn_filesTab": "ファイル",
+  "leftColumn_bookmarksTab": "ブックマーク"
+}

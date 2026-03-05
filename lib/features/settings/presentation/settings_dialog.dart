@@ -15,6 +15,7 @@ import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 import 'package:novel_viewer/features/tts/presentation/voice_recording_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 class SettingsDialog extends ConsumerStatefulWidget {
   const SettingsDialog({super.key});
@@ -116,7 +117,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
       if (!mounted || generation != _fetchGeneration) return;
       setState(() {
         _ollamaModelsLoading = false;
-        _ollamaModelsError = 'モデル一覧の取得エラー: $e';
+        _ollamaModelsError = e.toString();
       });
     }
   }
@@ -134,8 +135,9 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('設定'),
+      title: Text(l10n.settings_title),
       content: SizedBox(
         width: 400,
         height: 500,
@@ -143,9 +145,9 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
           children: [
             TabBar(
               controller: _tabController,
-              tabs: const [
-                Tab(text: '一般'),
-                Tab(text: '読み上げ'),
+              tabs: [
+                Tab(text: l10n.settings_generalTabLabel),
+                Tab(text: l10n.settings_ttsTabLabel),
               ],
             ),
             Expanded(
@@ -163,13 +165,15 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('閉じる'),
+          child: Text(l10n.common_closeButton),
         ),
       ],
     );
   }
 
   Widget _buildGeneralTab() {
+    final l10n = AppLocalizations.of(context)!;
+    final locale = ref.watch(localeProvider);
     final displayMode = ref.watch(displayModeProvider);
     final themeMode = ref.watch(themeModeProvider);
     final fontSize = ref.watch(fontSizeProvider);
@@ -181,10 +185,38 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          ListTile(
+            title: Text(l10n.settings_languageTitle),
+            subtitle: DropdownButton<Locale>(
+              value: locale,
+              isExpanded: true,
+              onChanged: (value) {
+                if (value != null) {
+                  ref.read(localeProvider.notifier).setLocale(value);
+                }
+              },
+              items: const [
+                DropdownMenuItem(
+                  value: Locale('ja'),
+                  child: Text('日本語'),
+                ),
+                DropdownMenuItem(
+                  value: Locale('en'),
+                  child: Text('English'),
+                ),
+                DropdownMenuItem(
+                  value: Locale('zh'),
+                  child: Text('中文'),
+                ),
+              ],
+            ),
+          ),
           SwitchListTile(
-            title: const Text('縦書き表示'),
+            title: Text(l10n.settings_verticalDisplayTitle),
             subtitle: Text(
-              displayMode == TextDisplayMode.vertical ? '縦書き' : '横書き',
+              displayMode == TextDisplayMode.vertical
+                  ? l10n.settings_verticalDisplayVertical
+                  : l10n.settings_verticalDisplayHorizontal,
             ),
             value: displayMode == TextDisplayMode.vertical,
             onChanged: (value) {
@@ -196,9 +228,11 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
             },
           ),
           SwitchListTile(
-            title: const Text('ダークモード'),
+            title: Text(l10n.settings_darkModeTitle),
             subtitle: Text(
-              themeMode == ThemeMode.dark ? 'ダーク' : 'ライト',
+              themeMode == ThemeMode.dark
+                  ? l10n.settings_darkModeDark
+                  : l10n.settings_darkModeLight,
             ),
             value: themeMode == ThemeMode.dark,
             onChanged: (value) {
@@ -208,7 +242,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
             },
           ),
           ListTile(
-            title: const Text('フォントサイズ'),
+            title: Text(l10n.settings_fontSizeTitle),
             subtitle: Slider(
               value: fontSize,
               min: SettingsRepository.minFontSize,
@@ -227,7 +261,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
             trailing: Text(fontSize.toStringAsFixed(1)),
           ),
           ListTile(
-            title: const Text('フォント種別'),
+            title: Text(l10n.settings_fontFamilyTitle),
             subtitle: DropdownButton<FontFamily>(
               value: fontFamily,
               isExpanded: true,
@@ -245,7 +279,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
             ),
           ),
           ListTile(
-            title: const Text('列間隔'),
+            title: Text(l10n.settings_columnSpacingTitle),
             subtitle: Slider(
               value: columnSpacing,
               min: SettingsRepository.minColumnSpacing,
@@ -269,7 +303,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
           ),
           const Divider(),
           ListTile(
-            title: const Text('LLMプロバイダ'),
+            title: Text(l10n.settings_llmProviderTitle),
             subtitle: DropdownButton<LlmProvider>(
               value: _llmProvider,
               isExpanded: true,
@@ -287,18 +321,18 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
                   _fetchOllamaModels();
                 }
               },
-              items: const [
+              items: [
                 DropdownMenuItem(
                   value: LlmProvider.none,
-                  child: Text('未設定'),
+                  child: Text(l10n.settings_llmProviderNone),
                 ),
                 DropdownMenuItem(
                   value: LlmProvider.openai,
-                  child: Text('OpenAI互換API'),
+                  child: Text(l10n.settings_llmProviderOpenai),
                 ),
                 DropdownMenuItem(
                   value: LlmProvider.ollama,
-                  child: Text('Ollama'),
+                  child: Text(l10n.settings_llmProviderOllama),
                 ),
               ],
             ),
@@ -308,8 +342,8 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: TextField(
                 controller: _baseUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'エンドポイントURL',
+                decoration: InputDecoration(
+                  labelText: l10n.settings_endpointUrlLabel,
                 ),
                 onChanged: (_) => _saveLlmConfig(),
               ),
@@ -319,8 +353,8 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: TextField(
                   controller: _apiKeyController,
-                  decoration: const InputDecoration(
-                    labelText: 'APIキー',
+                  decoration: InputDecoration(
+                    labelText: l10n.settings_apiKeyLabel,
                   ),
                   obscureText: true,
                   onChanged: (_) => _saveLlmConfig(),
@@ -330,8 +364,8 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: TextField(
                   controller: _modelController,
-                  decoration: const InputDecoration(
-                    labelText: 'モデル名',
+                  decoration: InputDecoration(
+                    labelText: l10n.settings_modelNameLabel,
                   ),
                   onChanged: (_) => _saveLlmConfig(),
                 ),
@@ -345,6 +379,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   }
 
   Widget _buildModelDownloadSection() {
+    final l10n = AppLocalizations.of(context)!;
     final downloadState = ref.watch(ttsModelDownloadProvider);
 
     return Padding(
@@ -355,7 +390,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
               ref.read(ttsModelDownloadProvider.notifier).startDownload();
             },
             icon: const Icon(Icons.download),
-            label: const Text('モデルデータダウンロード'),
+            label: Text(l10n.settings_modelDataDownload),
           ),
         TtsModelDownloadDownloading(:final currentFile, :final progress) =>
           Column(
@@ -380,7 +415,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
                   Icon(Icons.check_circle,
                       color: Theme.of(context).colorScheme.primary, size: 20),
                   const SizedBox(width: 8),
-                  const Text('モデルダウンロード済み'),
+                  Text(l10n.settings_modelDownloadCompleted),
                 ],
               ),
               if (modelsDir != null) ...[
@@ -396,7 +431,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'エラー: $message',
+                l10n.common_errorPrefix(message),
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
               const SizedBox(height: 8),
@@ -404,7 +439,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
                 onPressed: () {
                   ref.read(ttsModelDownloadProvider.notifier).startDownload();
                 },
-                child: const Text('再試行'),
+                child: Text(l10n.settings_retryButton),
               ),
             ],
           ),
@@ -413,6 +448,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   }
 
   Widget _buildModelSizeSelector() {
+    final l10n = AppLocalizations.of(context)!;
     final modelSize = ref.watch(ttsModelSizeProvider);
 
     return Padding(
@@ -420,19 +456,19 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('音声モデル', style: Theme.of(context).textTheme.titleSmall),
+          Text(l10n.settings_voiceModelTitle, style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
             child: SegmentedButton<TtsModelSize>(
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: TtsModelSize.small,
-                  label: Text('高速 (0.6B)'),
+                  label: Text(l10n.settings_voiceModelSmall),
                 ),
                 ButtonSegment(
                   value: TtsModelSize.large,
-                  label: Text('高精度 (1.7B)'),
+                  label: Text(l10n.settings_voiceModelLarge),
                 ),
               ],
               selected: {modelSize},
@@ -449,6 +485,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   }
 
   Widget _buildLanguageSelector() {
+    final l10n = AppLocalizations.of(context)!;
     final language = ref.watch(ttsLanguageProvider);
 
     return Padding(
@@ -456,8 +493,8 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
       child: DropdownButtonFormField<TtsLanguage>(
         initialValue: language,
         isExpanded: true,
-        decoration: const InputDecoration(
-          labelText: '読み上げ言語',
+        decoration: InputDecoration(
+          labelText: l10n.settings_ttsLanguageLabel,
         ),
         items: TtsLanguage.values.map((lang) {
           return DropdownMenuItem(
@@ -510,6 +547,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   }
 
   Widget _buildVoiceReferenceSelector() {
+    final l10n = AppLocalizations.of(context)!;
     final currentFileName = ref.watch(ttsRefWavPathProvider);
     final hasFiles = _voiceFiles.isNotEmpty;
 
@@ -544,15 +582,15 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
                     value: effectiveValue,
                     isExpanded: true,
                     decoration: InputDecoration(
-                      labelText: 'リファレンス音声ファイル',
+                      labelText: l10n.settings_referenceAudioLabel,
                       hintText: hasFiles
                           ? null
-                          : 'voicesフォルダに音声ファイルを配置してください',
+                          : l10n.settings_voicesPlacementHint,
                     ),
                     items: [
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: '',
-                        child: Text('なし（デフォルト音声）'),
+                        child: Text(l10n.settings_referenceAudioNone),
                       ),
                       ..._voiceFiles.map(
                         (file) =>
@@ -569,25 +607,25 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
                 if (effectiveValue.isNotEmpty)
                   IconButton(
                     icon: const Icon(Icons.edit),
-                    tooltip: 'ファイル名を変更',
+                    tooltip: l10n.settings_renameFileTooltip,
                     onPressed: () =>
                         _showRenameDialog(effectiveValue),
                   ),
                 IconButton(
                   icon: const Icon(Icons.mic),
-                  tooltip: '音声を録音',
+                  tooltip: l10n.settings_recordVoiceTooltip,
                   onPressed: ref.read(voiceReferenceServiceProvider) != null
                       ? _showRecordingDialog
                       : null,
                 ),
                 IconButton(
                   icon: const Icon(Icons.refresh),
-                  tooltip: 'ファイル一覧を更新',
+                  tooltip: l10n.settings_refreshFileListTooltip,
                   onPressed: _loadVoiceFiles,
                 ),
                 IconButton(
                   icon: const Icon(Icons.folder_open),
-                  tooltip: 'voicesフォルダを開く',
+                  tooltip: l10n.settings_openVoicesFolderTooltip,
                   onPressed: () {
                     final service = ref.read(voiceReferenceServiceProvider);
                     service?.openVoicesDirectory();
@@ -596,9 +634,9 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
               ],
             ),
             if (_isDragging)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text('音声ファイルをここにドロップ'),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(l10n.settings_dragAudioFilesHere),
               ),
           ],
         ),
@@ -611,7 +649,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
     if (service == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('先にライブラリを選択してください')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.settings_selectLibraryFirst)),
         );
       }
       return;
@@ -626,7 +664,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
       } on StateError catch (e) {
         errors.add(e.message);
       } on FileSystemException catch (e) {
-        errors.add('ファイル操作エラー: ${e.osError?.message ?? e.message}');
+        errors.add(AppLocalizations.of(context)!.settings_fileOperationError(e.osError?.message ?? e.message));
       }
     }
 
@@ -683,18 +721,19 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   }
 
   Widget _buildOllamaModelSelector() {
+    final l10n = AppLocalizations.of(context)!;
     if (_ollamaModelsLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 16,
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
-            SizedBox(width: 8),
-            Text('モデル一覧を取得中...'),
+            const SizedBox(width: 8),
+            Text(l10n.settings_modelListFetching),
           ],
         ),
       );
@@ -707,7 +746,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
           children: [
             Expanded(
               child: Text(
-                _ollamaModelsError!,
+                l10n.settings_modelListFetchError(_ollamaModelsError!),
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
@@ -728,7 +767,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
             child: DropdownButton<String>(
               value: _selectedOllamaModel,
               isExpanded: true,
-              hint: const Text('モデルを選択'),
+              hint: Text(l10n.settings_selectModelHint),
               onChanged: (value) {
                 setState(() {
                   _selectedOllamaModel = value;
@@ -793,7 +832,7 @@ class _RenameDialogState extends State<_RenameDialog> {
     if (_controller.text.isEmpty) return null;
     if (_newFileName != widget.currentFileName &&
         widget.existingFiles.contains(_newFileName)) {
-      return '同名のファイルが既に存在します';
+      return AppLocalizations.of(context)!.common_fileDuplicateError;
     }
     return null;
   }
@@ -805,8 +844,9 @@ class _RenameDialogState extends State<_RenameDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('ファイル名の変更'),
+      title: Text(l10n.settings_renameFileTitle),
       content: Row(
         children: [
           Expanded(
@@ -814,7 +854,7 @@ class _RenameDialogState extends State<_RenameDialog> {
               controller: _controller,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'ファイル名',
+                labelText: l10n.common_fileNameLabel,
                 errorText: _errorText,
               ),
             ),
@@ -831,13 +871,13 @@ class _RenameDialogState extends State<_RenameDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('キャンセル'),
+          child: Text(l10n.common_cancelButton),
         ),
         TextButton(
           onPressed: _canConfirm
               ? () => Navigator.of(context).pop(_newFileName)
               : null,
-          child: const Text('変更'),
+          child: Text(l10n.common_changeButton),
         ),
       ],
     );

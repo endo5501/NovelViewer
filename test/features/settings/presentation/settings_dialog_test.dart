@@ -6,6 +6,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -21,7 +22,10 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
         libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: SettingsDialog()),
       ),
     );
@@ -132,6 +136,10 @@ void main() {
     testWidgets('dropdown shows available font families', (tester) async {
       await tester.pumpWidget(buildTestWidget());
 
+      // Ensure font family dropdown is visible by scrolling
+      await tester.ensureVisible(find.byType(DropdownButton<FontFamily>));
+      await tester.pumpAndSettle();
+
       // Tap to open dropdown
       await tester.tap(find.byType(DropdownButton<FontFamily>));
       await tester.pumpAndSettle();
@@ -143,6 +151,10 @@ void main() {
 
     testWidgets('selecting a font family updates the value', (tester) async {
       await tester.pumpWidget(buildTestWidget());
+
+      // Ensure font family dropdown is visible by scrolling
+      await tester.ensureVisible(find.byType(DropdownButton<FontFamily>));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.byType(DropdownButton<FontFamily>));
       await tester.pumpAndSettle();

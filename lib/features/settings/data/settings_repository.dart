@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 
 class SettingsRepository {
+  static const _localeKey = 'locale';
   static const _displayModeKey = 'text_display_mode';
   static const _fontSizeKey = 'font_size';
   static const _fontFamilyKey = 'font_family';
@@ -31,6 +32,22 @@ class SettingsRepository {
   final SharedPreferences _prefs;
 
   SettingsRepository(this._prefs);
+
+  static const supportedLocales = ['ja', 'en', 'zh'];
+  static const defaultLocale = 'ja';
+
+  String getLocale() {
+    final value = _prefs.getString(_localeKey);
+    if (value != null && supportedLocales.contains(value)) {
+      return value;
+    }
+    return defaultLocale;
+  }
+
+  Future<void> setLocale(String locale) async {
+    final normalized = supportedLocales.contains(locale) ? locale : defaultLocale;
+    await _prefs.setString(_localeKey, normalized);
+  }
 
   TextDisplayMode getDisplayMode() {
     final value = _prefs.getString(_displayModeKey);

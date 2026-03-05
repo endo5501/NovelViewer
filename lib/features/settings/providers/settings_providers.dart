@@ -21,6 +21,24 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepository(prefs);
 });
 
+final localeProvider = NotifierProvider<LocaleNotifier, Locale>(
+  LocaleNotifier.new,
+);
+
+class LocaleNotifier extends Notifier<Locale> {
+  @override
+  Locale build() {
+    final repository = ref.watch(settingsRepositoryProvider);
+    return Locale(repository.getLocale());
+  }
+
+  Future<void> setLocale(Locale locale) async {
+    final repository = ref.read(settingsRepositoryProvider);
+    await repository.setLocale(locale.languageCode);
+    state = Locale(repository.getLocale());
+  }
+}
+
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
   ThemeModeNotifier.new,
 );

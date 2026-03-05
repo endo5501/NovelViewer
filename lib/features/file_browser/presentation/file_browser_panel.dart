@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
@@ -29,7 +30,7 @@ class FileBrowserPanel extends ConsumerWidget {
         const Divider(height: 1),
         Expanded(
           child: currentDir == null
-              ? const Center(child: Text('フォルダを選択してください'))
+              ? Center(child: Text(AppLocalizations.of(context)!.fileBrowser_selectFolderPrompt))
               : _buildFileList(context, ref),
         ),
       ],
@@ -46,7 +47,7 @@ class FileBrowserPanel extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.arrow_upward),
               onPressed: () => _navigateToParent(ref, currentDir),
-              tooltip: '親フォルダへ',
+              tooltip: AppLocalizations.of(context)!.fileBrowser_goToParentFolder,
             ),
         ],
       ),
@@ -65,10 +66,10 @@ class FileBrowserPanel extends ConsumerWidget {
 
     return contentsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('エラー: $error')),
+      error: (error, _) => Center(child: Text(AppLocalizations.of(context)!.common_errorPrefix(error.toString()))),
       data: (contents) {
         if (contents.isEmpty) {
-          return const Center(child: Text('テキストファイルが見つかりません'));
+          return Center(child: Text(AppLocalizations.of(context)!.fileBrowser_noFilesFound));
         }
 
         final isAtLibraryRoot = _isLibraryRoot(ref);
@@ -144,17 +145,17 @@ class FileBrowserPanel extends ConsumerWidget {
         position.dy,
       ),
       items: [
-        const PopupMenuItem<String>(
+        PopupMenuItem<String>(
           value: 'refresh',
-          child: Text('更新'),
+          child: Text(AppLocalizations.of(context)!.fileBrowser_refreshMenuItem),
         ),
-        const PopupMenuItem<String>(
+        PopupMenuItem<String>(
           value: 'rename',
-          child: Text('タイトル変更'),
+          child: Text(AppLocalizations.of(context)!.fileBrowser_renameMenuItem),
         ),
-        const PopupMenuItem<String>(
+        PopupMenuItem<String>(
           value: 'delete',
-          child: Text('削除', style: TextStyle(color: Colors.red)),
+          child: Text(AppLocalizations.of(context)!.fileBrowser_deleteMenuItem, style: const TextStyle(color: Colors.red)),
         ),
       ],
     ).then((value) {
@@ -177,7 +178,7 @@ class FileBrowserPanel extends ConsumerWidget {
     final downloadState = ref.read(downloadProvider);
     if (downloadState.status == DownloadStatus.downloading) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ダウンロード中です。完了後に再度お試しください')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.fileBrowser_downloadInProgressWarning)),
       );
       return;
     }
@@ -210,7 +211,7 @@ class FileBrowserPanel extends ConsumerWidget {
       } catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('タイトル変更に失敗しました: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.fileBrowser_renameFailed(e.toString()))),
         );
       }
     });
@@ -224,17 +225,17 @@ class FileBrowserPanel extends ConsumerWidget {
     showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('小説を削除'),
-        content: Text('「${dir.displayName}」を削除しますか？\nすべてのエピソードとデータが完全に削除されます。'),
+        title: Text(AppLocalizations.of(context)!.fileBrowser_deleteNovelTitle),
+        content: Text(AppLocalizations.of(context)!.fileBrowser_deleteNovelConfirmation(dir.displayName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('キャンセル'),
+            child: Text(AppLocalizations.of(context)!.common_cancelButton),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('削除'),
+            child: Text(AppLocalizations.of(context)!.common_deleteButton),
           ),
         ],
       ),
@@ -249,7 +250,7 @@ class FileBrowserPanel extends ConsumerWidget {
       } catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('削除に失敗しました: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.fileBrowser_deleteFailed(e.toString()))),
         );
       }
     });
@@ -274,8 +275,8 @@ class _RefreshProgressDialog extends ConsumerWidget {
     final downloadState = ref.watch(downloadProvider);
 
     return AlertDialog(
-      title: Text('「$novelTitle」を更新中'),
-      content: _buildContent(downloadState),
+      title: Text(AppLocalizations.of(context)!.fileBrowser_refreshProgressTitle(novelTitle)),
+      content: _buildContent(context, downloadState),
       actions: [
         if (downloadState.status == DownloadStatus.completed ||
             downloadState.status == DownloadStatus.error)
@@ -288,18 +289,20 @@ class _RefreshProgressDialog extends ConsumerWidget {
               ref.read(downloadProvider.notifier).reset();
               Navigator.of(context).pop();
             },
-            child: const Text('閉じる'),
+            child: Text(AppLocalizations.of(context)!.common_closeButton),
           ),
       ],
     );
   }
 
-  Widget _buildContent(DownloadState state) {
+  Widget _buildContent(BuildContext context, DownloadState state) {
+    final l10n = AppLocalizations.of(context)!;
+
     String episodeSummary(DownloadState s) {
       if (s.totalEpisodes <= 0) return '';
       final skipped =
-          s.skippedEpisodes > 0 ? '（${s.skippedEpisodes} スキップ）' : '';
-      return '${s.totalEpisodes} エピソード$skipped';
+          s.skippedEpisodes > 0 ? l10n.fileBrowser_skippedEpisodesSuffix(s.skippedEpisodes) : '';
+      return l10n.fileBrowser_episodeCountFormat(s.totalEpisodes, skipped);
     }
 
     switch (state.status) {
@@ -319,11 +322,11 @@ class _RefreshProgressDialog extends ConsumerWidget {
       case DownloadStatus.completed:
         final summary = episodeSummary(state);
         return Text(
-          '更新が完了しました。${summary.isNotEmpty ? '\n$summary' : ''}',
+          l10n.fileBrowser_refreshCompleted(summary.isNotEmpty ? '\n$summary' : ''),
         );
       case DownloadStatus.error:
         return Text(
-          'エラー: ${state.errorMessage ?? "不明なエラー"}',
+          l10n.common_errorPrefix(state.errorMessage ?? l10n.common_unknownError),
           style: const TextStyle(color: Colors.red),
         );
     }

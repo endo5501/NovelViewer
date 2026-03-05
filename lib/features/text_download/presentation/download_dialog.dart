@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 class DownloadDialog extends ConsumerStatefulWidget {
   const DownloadDialog({super.key});
@@ -38,11 +39,11 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
       }
       final uri = Uri.tryParse(value);
       if (uri == null || !uri.hasScheme) {
-        _urlError = '有効なURLを入力してください';
+        _urlError = AppLocalizations.of(context)!.download_invalidUrlError;
         return;
       }
       if (_registry.findSite(uri) == null) {
-        _urlError = 'サポートされていないサイトです（なろう・なろう18・カクヨムに対応）';
+        _urlError = AppLocalizations.of(context)!.download_unsupportedSiteError;
         return;
       }
       _urlError = null;
@@ -73,7 +74,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     final downloadState = ref.watch(downloadProvider);
 
     return AlertDialog(
-      title: const Text('小説ダウンロード'),
+      title: Text(AppLocalizations.of(context)!.download_title),
       content: SizedBox(
         width: 450,
         child: Column(
@@ -99,8 +100,8 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     );
   }
 
-  String _skipSuffix(int skipped) =>
-      skipped > 0 ? ' (スキップ: $skipped件)' : '';
+  String _skipSuffix(BuildContext context, int skipped) =>
+      skipped > 0 ? ' ${AppLocalizations.of(context)!.download_skippedSuffix(skipped)}' : '';
 
   Widget _buildStatusArea(DownloadState state) {
     switch (state.status) {
@@ -116,7 +117,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
             LinearProgressIndicator(value: progress),
             const SizedBox(height: 8),
             Text(
-              'ダウンロード中: ${state.currentEpisode}/${state.totalEpisodes} エピソード${_skipSuffix(state.skippedEpisodes)}',
+              AppLocalizations.of(context)!.download_progressFormat(state.currentEpisode, state.totalEpisodes, _skipSuffix(context, state.skippedEpisodes)),
             ),
           ],
         );
@@ -126,7 +127,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
             const Icon(Icons.check_circle, color: Colors.green),
             const SizedBox(width: 8),
             Text(
-              'ダウンロード完了: ${state.totalEpisodes} エピソード${_skipSuffix(state.skippedEpisodes)}',
+              AppLocalizations.of(context)!.download_completedFormat(state.totalEpisodes, _skipSuffix(context, state.skippedEpisodes)),
             ),
           ],
         );
@@ -137,7 +138,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'エラー: ${state.errorMessage ?? "不明なエラー"}',
+                AppLocalizations.of(context)!.download_errorFormat(state.errorMessage ?? AppLocalizations.of(context)!.common_unknownError),
                 style: const TextStyle(color: Colors.red),
               ),
             ),
@@ -149,9 +150,9 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
   List<Widget> _buildActions(DownloadState state) {
     if (state.status == DownloadStatus.downloading) {
       return [
-        const TextButton(
+        TextButton(
           onPressed: null,
-          child: Text('ダウンロード中...'),
+          child: Text(AppLocalizations.of(context)!.download_downloadingButton),
         ),
       ];
     }
@@ -164,7 +165,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
             ref.read(downloadProvider.notifier).reset();
             Navigator.of(context).pop();
           },
-          child: const Text('閉じる'),
+          child: Text(AppLocalizations.of(context)!.common_closeButton),
         ),
       ];
     }
@@ -175,11 +176,11 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
           ref.read(downloadProvider.notifier).reset();
           Navigator.of(context).pop();
         },
-        child: const Text('キャンセル'),
+        child: Text(AppLocalizations.of(context)!.common_cancelButton),
       ),
       ElevatedButton(
         onPressed: _canStartDownload ? _startDownload : null,
-        child: const Text('ダウンロード開始'),
+        child: Text(AppLocalizations.of(context)!.download_startButton),
       ),
     ];
   }

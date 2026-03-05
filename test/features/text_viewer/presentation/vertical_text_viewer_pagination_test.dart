@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   group('computeCharOffsetPerPage', () {
@@ -142,6 +143,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 100,
@@ -169,6 +173,9 @@ void main() {
       // Rebuild with SAME segment reference (simulating memoized cache)
       await tester.pumpWidget(
         MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 100,

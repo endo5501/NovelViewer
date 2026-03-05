@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -22,7 +23,10 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
         libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: SettingsDialog()),
       ),
     );

@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   group('VerticalTextPage - TTS highlight', () {
     testWidgets('applies green highlight to characters in TTS range',
         (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 300,
@@ -39,7 +43,10 @@ void main() {
 
     testWidgets('no TTS highlight when range is null', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 300,
@@ -67,7 +74,10 @@ void main() {
     testWidgets('search highlight takes priority over TTS highlight',
         (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 300,
@@ -108,6 +118,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           theme: ThemeData(brightness: Brightness.dark),
           home: const Scaffold(
             body: SizedBox(

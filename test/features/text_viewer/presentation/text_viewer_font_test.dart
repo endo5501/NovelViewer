@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -30,7 +31,11 @@ void main() {
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
-          child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: TextViewerPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -53,7 +58,11 @@ void main() {
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
-          child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: TextViewerPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -76,7 +85,11 @@ void main() {
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
-          child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: TextViewerPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -100,7 +113,11 @@ void main() {
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
-          child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: TextViewerPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -122,7 +139,11 @@ void main() {
             fileContentProvider
                 .overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
-          child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: TextViewerPanel())),
         ),
       );
       await tester.pumpAndSettle();

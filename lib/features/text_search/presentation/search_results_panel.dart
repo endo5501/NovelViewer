@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_search/data/search_models.dart';
@@ -73,11 +74,11 @@ class _SearchResultsPanelState extends ConsumerState<SearchResultsPanel> {
             child: TextField(
               controller: _controller,
               focusNode: _focusNode,
-              decoration: const InputDecoration(
-                hintText: '検索...',
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context)!.textSearch_hintText,
+                prefixIcon: const Icon(Icons.search),
                 isDense: true,
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
               onSubmitted: _onSubmitted,
             ),
@@ -85,14 +86,14 @@ class _SearchResultsPanelState extends ConsumerState<SearchResultsPanel> {
         Expanded(
           child: resultsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(child: Text('エラー: $error')),
+            error: (error, _) => Center(child: Text(AppLocalizations.of(context)!.common_errorPrefix(error.toString()))),
             data: (results) {
               if (results == null) {
-                return const Center(child: Text('検索語を入力してください'));
+                return Center(child: Text(AppLocalizations.of(context)!.textSearch_enterQueryPrompt));
               }
 
               if (results.isEmpty) {
-                return const Center(child: Text('検索結果がありません'));
+                return Center(child: Text(AppLocalizations.of(context)!.textSearch_noResults));
               }
 
               return ListView.builder(

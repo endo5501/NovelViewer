@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/bookmark/presentation/left_column_panel.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
   final String? _initialValue;
@@ -21,7 +22,11 @@ void main() {
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: const MaterialApp(home: Scaffold(body: LeftColumnPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: LeftColumnPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -37,7 +42,11 @@ void main() {
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: const MaterialApp(home: Scaffold(body: LeftColumnPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: LeftColumnPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -58,7 +67,11 @@ void main() {
               return DirectoryContents.empty();
             }),
           ],
-          child: const MaterialApp(home: Scaffold(body: LeftColumnPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: LeftColumnPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -78,7 +91,11 @@ void main() {
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: const MaterialApp(home: Scaffold(body: LeftColumnPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: LeftColumnPanel())),
         ),
       );
       await tester.pumpAndSettle();

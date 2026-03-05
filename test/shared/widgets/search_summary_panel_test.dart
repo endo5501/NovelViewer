@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/shared/widgets/search_summary_panel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   group('SearchSummaryPanel', () {
@@ -19,7 +20,10 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-          child: const MaterialApp(
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: SearchSummaryPanel()),
           ),
         ),
@@ -34,7 +38,10 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-          child: const MaterialApp(
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: SearchSummaryPanel()),
           ),
         ),
@@ -51,7 +58,10 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-          child: const MaterialApp(
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: SearchSummaryPanel()),
           ),
         ),

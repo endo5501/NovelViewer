@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -36,7 +37,10 @@ void main() {
         if (httpClient != null)
           httpClientProvider.overrideWithValue(httpClient),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: SettingsDialog()),
       ),
     );

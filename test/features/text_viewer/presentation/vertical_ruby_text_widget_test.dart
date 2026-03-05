@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_ruby_text_widget.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 Widget _buildTestWidget({
   required String base,
   required String rubyText,
 }) {
   return MaterialApp(
+        locale: const Locale('ja'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: SizedBox(
         width: 200,

@@ -136,6 +136,67 @@ void main() {
     });
   });
 
+  group('localeProvider', () {
+    test('initial value is Locale("ja")', () {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(localeProvider), const Locale('ja'));
+    });
+
+    test('initial value loads from SharedPreferences', () async {
+      await prefs.setString('locale', 'en');
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(localeProvider), const Locale('en'));
+    });
+
+    test('setLocale updates state and persists', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(localeProvider.notifier)
+          .setLocale(const Locale('zh'));
+      expect(container.read(localeProvider), const Locale('zh'));
+      expect(prefs.getString('locale'), 'zh');
+    });
+
+    test('setLocale can switch back to ja', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(localeProvider.notifier)
+          .setLocale(const Locale('en'));
+      await container
+          .read(localeProvider.notifier)
+          .setLocale(const Locale('ja'));
+      expect(container.read(localeProvider), const Locale('ja'));
+      expect(prefs.getString('locale'), 'ja');
+    });
+
+    test('invalid locale falls back to ja', () async {
+      await prefs.setString('locale', 'invalid');
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(localeProvider), const Locale('ja'));
+    });
+
+    test('setLocale with unsupported language falls back to ja', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(localeProvider.notifier)
+          .setLocale(const Locale('fr'));
+      expect(container.read(localeProvider), const Locale('ja'));
+      expect(prefs.getString('locale'), 'ja');
+    });
+  });
+
   group('fontFamilyProvider', () {
     test('initial value is FontFamily.system', () {
       final container = createContainer();

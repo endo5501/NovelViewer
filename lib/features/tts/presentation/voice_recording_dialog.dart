@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/tts/data/voice_recording_service.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
@@ -64,7 +65,7 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
       if (!hasPermission) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('マイクへのアクセスが許可されていません')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.voiceRecording_micAccessDenied)),
           );
         }
         return;
@@ -75,7 +76,7 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('録音の開始に失敗しました: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.voiceRecording_startRecordingFailed(e.toString()))),
         );
       }
       return;
@@ -123,7 +124,7 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('録音の停止に失敗しました: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.voiceRecording_stopRecordingFailed(e.toString()))),
         );
         setState(() {
           _state = _RecordingState.idle;
@@ -153,21 +154,21 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
       } on StateError catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('保存に失敗しました: ${e.message}')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.voiceRecording_saveFailed(e.message))),
           );
           _showSaveDialog();
         }
       } on ArgumentError catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('保存に失敗しました: ${e.message}')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.voiceRecording_saveFailed(e.message))),
           );
           _showSaveDialog();
         }
       } on FileSystemException catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('保存に失敗しました: ${e.message}')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.voiceRecording_saveFailed(e.message))),
           );
           _showSaveDialog();
         }
@@ -187,16 +188,16 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
       final shouldDiscard = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('録音の破棄'),
-          content: const Text('録音中です。録音を破棄してダイアログを閉じますか？'),
+          title: Text(AppLocalizations.of(context)!.voiceRecording_discardTitle),
+          content: Text(AppLocalizations.of(context)!.voiceRecording_discardConfirmation),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('キャンセル'),
+              child: Text(AppLocalizations.of(context)!.common_cancelButton),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('破棄'),
+              child: Text(AppLocalizations.of(context)!.voiceRecording_discardButton),
             ),
           ],
         ),
@@ -244,7 +245,7 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
         }
       },
       child: AlertDialog(
-        title: const Text('音声録音'),
+        title: Text(AppLocalizations.of(context)!.voiceRecording_title),
         content: SizedBox(
           width: 300,
           child: Column(
@@ -260,7 +261,7 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
                   value: _normalizeAmplitude(),
                 ),
                 const SizedBox(height: 8),
-                const Text('録音中...'),
+                Text(AppLocalizations.of(context)!.voiceRecording_recording),
               ] else ...[
                 Icon(
                   Icons.mic,
@@ -268,7 +269,7 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(height: 16),
-                const Text('録音ボタンを押して録音を開始してください'),
+                Text(AppLocalizations.of(context)!.voiceRecording_startInstructions),
               ],
             ],
           ),
@@ -282,19 +283,19 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
                 navigator.pop();
               }
             },
-            child: const Text('キャンセル'),
+            child: Text(AppLocalizations.of(context)!.common_cancelButton),
           ),
           if (_state == _RecordingState.idle)
             ElevatedButton.icon(
               onPressed: _startRecording,
               icon: const Icon(Icons.fiber_manual_record, color: Colors.red),
-              label: const Text('録音開始'),
+              label: Text(AppLocalizations.of(context)!.voiceRecording_startButton),
             ),
           if (_state == _RecordingState.recording)
             ElevatedButton.icon(
               onPressed: _stopRecording,
               icon: const Icon(Icons.stop),
-              label: const Text('停止'),
+              label: Text(AppLocalizations.of(context)!.voiceRecording_stopButton),
             ),
         ],
       ),
@@ -334,10 +335,10 @@ class _SaveFileNameDialogState extends State<_SaveFileNameDialog> {
   String? get _errorText {
     if (_controller.text.isEmpty) return null;
     if (_invalidChars.hasMatch(_controller.text)) {
-      return '使用できない文字が含まれています';
+      return AppLocalizations.of(context)!.voiceRecording_invalidCharsError;
     }
     if (widget.existingFiles.contains(_fileName)) {
-      return '同名のファイルが既に存在します';
+      return AppLocalizations.of(context)!.common_fileDuplicateError;
     }
     return null;
   }
@@ -347,7 +348,7 @@ class _SaveFileNameDialogState extends State<_SaveFileNameDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('ファイル名の入力'),
+      title: Text(AppLocalizations.of(context)!.voiceRecording_enterFileNameTitle),
       content: Row(
         children: [
           Expanded(
@@ -355,7 +356,7 @@ class _SaveFileNameDialogState extends State<_SaveFileNameDialog> {
               controller: _controller,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'ファイル名',
+                labelText: AppLocalizations.of(context)!.common_fileNameLabel,
                 errorText: _errorText,
               ),
             ),
@@ -372,11 +373,11 @@ class _SaveFileNameDialogState extends State<_SaveFileNameDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('キャンセル'),
+          child: Text(AppLocalizations.of(context)!.common_cancelButton),
         ),
         TextButton(
           onPressed: _canSave ? () => Navigator.of(context).pop(_fileName) : null,
-          child: const Text('保存'),
+          child: Text(AppLocalizations.of(context)!.voiceRecording_saveButton),
         ),
       ],
     );

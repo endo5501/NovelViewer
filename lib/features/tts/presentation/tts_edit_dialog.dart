@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -320,7 +321,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final isGenerating = generationState == TtsEditGenerationState.generating;
 
     return AlertDialog(
-      title: const Text('読み上げ編集'),
+      title: Text(AppLocalizations.of(context)!.ttsEdit_title),
       content: SizedBox(
         width: 800,
         height: 600,
@@ -364,7 +365,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
             if (!context.mounted) return;
             Navigator.of(context).pop();
           },
-          child: const Text('閉じる'),
+          child: Text(AppLocalizations.of(context)!.common_closeButton),
         ),
       ],
     );
@@ -380,32 +381,32 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
             TtsDictionaryDialog.show(context, repository: repo);
           },
           icon: const Icon(Icons.book_outlined, size: 18),
-          label: const Text('辞書'),
+          label: Text(AppLocalizations.of(context)!.ttsEdit_dictionaryButton),
         ),
         const SizedBox(width: 8),
         TextButton.icon(
           onPressed: isGenerating ? null : _playAll,
           icon: const Icon(Icons.play_arrow, size: 18),
-          label: const Text('全再生'),
+          label: Text(AppLocalizations.of(context)!.ttsEdit_playAllButton),
         ),
         if (isPlaying)
           TextButton.icon(
             onPressed: _stopPlayback,
             icon: const Icon(Icons.stop, size: 18),
-            label: const Text('停止'),
+            label: Text(AppLocalizations.of(context)!.ttsEdit_stopButton),
           ),
         const SizedBox(width: 8),
         if (isGenerating)
           TextButton.icon(
             onPressed: _cancelGeneration,
             icon: const Icon(Icons.stop, size: 18),
-            label: const Text('中断'),
+            label: Text(AppLocalizations.of(context)!.ttsEdit_cancelButton),
           )
         else
           TextButton.icon(
             onPressed: _generateAll,
             icon: const Icon(Icons.auto_fix_high, size: 18),
-            label: const Text('全生成'),
+            label: Text(AppLocalizations.of(context)!.ttsEdit_generateAllButton),
           ),
         const SizedBox(width: 8),
         TextButton.icon(
@@ -415,17 +416,17 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      title: const Text('全消去'),
+                      title: Text(AppLocalizations.of(context)!.ttsEdit_resetAllTitle),
                       content:
-                          const Text('すべてのセグメントを初期状態に戻しますか？'),
+                          Text(AppLocalizations.of(context)!.ttsEdit_resetAllConfirmation),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(false),
-                          child: const Text('キャンセル'),
+                          child: Text(AppLocalizations.of(context)!.common_cancelButton),
                         ),
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(true),
-                          child: const Text('消去'),
+                          child: Text(AppLocalizations.of(context)!.ttsEdit_resetButton),
                         ),
                       ],
                     ),
@@ -435,7 +436,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
                   }
                 },
           icon: const Icon(Icons.delete_sweep, size: 18),
-          label: const Text('全消去'),
+          label: Text(AppLocalizations.of(context)!.ttsEdit_resetAllButton),
         ),
       ],
     );
@@ -521,10 +522,11 @@ class _TtsEditSegmentRowState extends State<_TtsEditSegmentRow> {
   }
 
   String _buildStatusTooltip() {
-    if (widget.isGenerating) return '生成中';
-    if (widget.isPlaying) return '再生中';
-    if (widget.segment.hasAudio) return '生成済み';
-    return '未生成';
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.isGenerating) return l10n.ttsEdit_generatingStatus;
+    if (widget.isPlaying) return l10n.ttsEdit_playingStatus;
+    if (widget.segment.hasAudio) return l10n.ttsEdit_generatedStatus;
+    return l10n.ttsEdit_ungeneratedStatus;
   }
 
   @override
@@ -589,13 +591,13 @@ class _TtsEditSegmentRowState extends State<_TtsEditSegmentRow> {
                 border: OutlineInputBorder(),
               ),
               items: [
-                const DropdownMenuItem<String?>(
+                DropdownMenuItem<String?>(
                   value: null,
-                  child: Text('設定値', style: TextStyle(fontSize: 12)),
+                  child: Text(AppLocalizations.of(context)!.ttsEdit_referenceSettingValue, style: const TextStyle(fontSize: 12)),
                 ),
-                const DropdownMenuItem<String?>(
+                DropdownMenuItem<String?>(
                   value: '',
-                  child: Text('なし', style: TextStyle(fontSize: 12)),
+                  child: Text(AppLocalizations.of(context)!.ttsEdit_referenceNone, style: const TextStyle(fontSize: 12)),
                 ),
                 ...widget.voiceFiles.map(
                   (file) => DropdownMenuItem<String?>(
@@ -617,12 +619,12 @@ class _TtsEditSegmentRowState extends State<_TtsEditSegmentRow> {
             width: 100,
             child: TextField(
               controller: _memoController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
                 contentPadding:
-                    EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                border: OutlineInputBorder(),
-                hintText: 'メモ',
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                border: const OutlineInputBorder(),
+                hintText: AppLocalizations.of(context)!.ttsEdit_memoHint,
               ),
               style: const TextStyle(fontSize: 12),
               onSubmitted: (value) =>
@@ -641,7 +643,7 @@ class _TtsEditSegmentRowState extends State<_TtsEditSegmentRow> {
               size: 20,
               color: widget.segment.hasAudio ? null : Colors.grey,
             ),
-            tooltip: '再生',
+            tooltip: AppLocalizations.of(context)!.ttsEdit_playTooltip,
             onPressed:
                 widget.segment.hasAudio && widget.enabled ? widget.onPlay : null,
             padding: EdgeInsets.zero,
@@ -649,14 +651,14 @@ class _TtsEditSegmentRowState extends State<_TtsEditSegmentRow> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh, size: 20),
-            tooltip: '再生成',
+            tooltip: AppLocalizations.of(context)!.ttsEdit_regenerateTooltip,
             onPressed: widget.enabled ? widget.onGenerate : null,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
           IconButton(
             icon: const Icon(Icons.restart_alt, size: 20),
-            tooltip: 'リセット',
+            tooltip: AppLocalizations.of(context)!.ttsEdit_resetTooltip,
             onPressed: widget.enabled ? widget.onReset : null,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),

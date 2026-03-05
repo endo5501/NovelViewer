@@ -8,14 +8,19 @@ import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/presentation/search_results_panel.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   group('SearchResultsPanel', () {
     testWidgets('shows placeholder when no search has been executed',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ProviderScope(
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -33,7 +38,11 @@ void main() {
             searchResultsProvider
                 .overrideWith((ref) => completer.future),
           ],
-          child: const MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pump();
@@ -52,7 +61,11 @@ void main() {
             searchResultsProvider
                 .overrideWith((ref) async => <SearchResult>[]),
           ],
-          child: const MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -85,7 +98,11 @@ void main() {
           overrides: [
             searchResultsProvider.overrideWith((ref) async => results),
           ],
-          child: const MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -114,7 +131,11 @@ void main() {
           overrides: [
             searchResultsProvider.overrideWith((ref) async => results),
           ],
-          child: const MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -143,7 +164,11 @@ void main() {
               return notifier;
             }),
           ],
-          child: const MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -184,7 +209,11 @@ void main() {
               return notifier;
             }),
           ],
-          child: const MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -219,7 +248,11 @@ void main() {
           overrides: [
             searchResultsProvider.overrideWith((ref) async => results),
           ],
-          child: const MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -239,8 +272,12 @@ void main() {
     testWidgets('shows search box when searchBoxVisibleProvider is true',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ProviderScope(
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -256,8 +293,12 @@ void main() {
     testWidgets('hides search box when searchBoxVisibleProvider is false',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ProviderScope(
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -268,8 +309,12 @@ void main() {
     testWidgets('search box onSubmitted sets searchQueryProvider',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ProviderScope(
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -289,8 +334,12 @@ void main() {
     testWidgets('search box onSubmitted with empty string clears query',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ProviderScope(
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -313,8 +362,12 @@ void main() {
     testWidgets('search box onSubmitted with whitespace-only string clears query',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ProviderScope(
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -334,8 +387,12 @@ void main() {
     testWidgets('Escape key hides search box and clears query',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ProviderScope(
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -361,8 +418,12 @@ void main() {
     testWidgets('external hide clears TextField text for next show',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+        ProviderScope(
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -410,7 +471,11 @@ void main() {
               return SelectedSearchMatchNotifier();
             }),
           ],
-          child: const MaterialApp(home: Scaffold(body: SearchResultsPanel())),
+          child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: SearchResultsPanel())),
         ),
       );
       await tester.pumpAndSettle();

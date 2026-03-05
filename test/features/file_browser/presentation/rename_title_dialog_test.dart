@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/presentation/rename_title_dialog.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   group('RenameTitleDialog', () {
     testWidgets('shows current title prefilled in text field',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: RenameTitleDialog(currentTitle: 'テスト小説'),
           ),
@@ -22,7 +26,10 @@ void main() {
     testWidgets('submit button is enabled when text is non-empty',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: RenameTitleDialog(currentTitle: 'テスト小説'),
           ),
@@ -39,7 +46,10 @@ void main() {
     testWidgets('submit button is disabled when text is empty',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: RenameTitleDialog(currentTitle: 'テスト小説'),
           ),
@@ -60,7 +70,10 @@ void main() {
     testWidgets('submit button is disabled when text is whitespace only',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: RenameTitleDialog(currentTitle: 'テスト小説'),
           ),
@@ -83,6 +96,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(
               body: ElevatedButton(
@@ -118,6 +134,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(
               body: ElevatedButton(
@@ -150,6 +169,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(
               body: ElevatedButton(
