@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 class FakeDownloadNotifier extends DownloadNotifier {
   @override
@@ -26,6 +27,9 @@ void main() {
             .overrideWith(() => CurrentDirectoryNotifier('/tmp/test_novels')),
       ],
       child: MaterialApp(
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
             body: ElevatedButton(
@@ -139,6 +143,9 @@ void main() {
             downloadProvider.overrideWith(() => FakeDownloadNotifier()),
           ],
           child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
             home: Builder(
               builder: (context) => Scaffold(
                 body: ElevatedButton(

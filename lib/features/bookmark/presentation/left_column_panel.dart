@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/features/bookmark/presentation/bookmark_list_panel.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/features/file_browser/presentation/file_browser_panel.dart';
 
 class LeftColumnPanel extends StatefulWidget {
@@ -31,9 +32,9 @@ class _LeftColumnPanelState extends State<LeftColumnPanel>
       children: [
         TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'ファイル'),
-            Tab(text: 'ブックマーク'),
+          tabs: [
+            Tab(text: AppLocalizations.of(context)!.leftColumn_filesTab),
+            Tab(text: AppLocalizations.of(context)!.leftColumn_bookmarksTab),
           ],
         ),
         Expanded(

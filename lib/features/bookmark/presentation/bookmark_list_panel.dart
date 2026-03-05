@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/features/bookmark/domain/bookmark.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
@@ -16,17 +17,17 @@ class BookmarkListPanel extends ConsumerWidget {
     final novelId = ref.watch(currentNovelIdProvider);
 
     if (novelId == null) {
-      return const Center(child: Text('作品フォルダを選択してください'));
+      return Center(child: Text(AppLocalizations.of(context)!.bookmark_selectNovelPrompt));
     }
 
     final bookmarksAsync = ref.watch(bookmarksForNovelProvider(novelId));
 
     return bookmarksAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('エラー: $error')),
+      error: (error, _) => Center(child: Text(AppLocalizations.of(context)!.common_errorPrefix(error.toString()))),
       data: (bookmarks) {
         if (bookmarks.isEmpty) {
-          return const Center(child: Text('ブックマークがありません'));
+          return Center(child: Text(AppLocalizations.of(context)!.bookmark_noBookmarks));
         }
 
         return ListView.builder(
@@ -71,10 +72,10 @@ class BookmarkListPanel extends ConsumerWidget {
         position.dx,
         position.dy,
       ),
-      items: const [
+      items: [
         PopupMenuItem<String>(
           value: 'delete',
-          child: Text('削除', style: TextStyle(color: Colors.red)),
+          child: Text(AppLocalizations.of(context)!.bookmark_deleteMenuItem, style: const TextStyle(color: Colors.red)),
         ),
       ],
     );
@@ -102,7 +103,7 @@ class BookmarkListPanel extends ConsumerWidget {
     final file = File(bookmark.filePath);
     if (!file.existsSync()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ファイルが見つかりません')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.bookmark_fileNotFound)),
       );
       return;
     }

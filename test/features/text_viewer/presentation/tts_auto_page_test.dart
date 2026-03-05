@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   group('VerticalTextViewer - TTS auto page', () {
     testWidgets('passes TTS highlight to VerticalTextPage', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 300,
@@ -35,6 +39,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 100, // narrow to force multiple pages
@@ -55,6 +62,9 @@ void main() {
       // Update with TTS highlight pointing to later text
       await tester.pumpWidget(
         MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 100,

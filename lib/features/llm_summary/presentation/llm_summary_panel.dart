@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
@@ -15,10 +16,10 @@ class LlmSummaryPanel extends ConsumerWidget {
       length: 2,
       child: Column(
         children: [
-          const TabBar(
+          TabBar(
             tabs: [
-              Tab(text: 'ネタバレなし'),
-              Tab(text: 'ネタバレあり'),
+              Tab(text: AppLocalizations.of(context)!.llmSummary_noSpoilerTab),
+              Tab(text: AppLocalizations.of(context)!.llmSummary_spoilerTab),
             ],
           ),
           Expanded(
@@ -92,11 +93,11 @@ class _SummaryTabContentState extends ConsumerState<_SummaryTabContent> {
     });
 
     if (selectedText == null || selectedText.isEmpty) {
-      return const Center(child: Text('単語を選択してください'));
+      return Center(child: Text(AppLocalizations.of(context)!.llmSummary_selectWordPrompt));
     }
 
     if (!llmConfig.isConfigured) {
-      return const Center(child: Text('設定画面でLLMを設定してください'));
+      return Center(child: Text(AppLocalizations.of(context)!.llmSummary_configureLlmPrompt));
     }
 
     return Padding(
@@ -122,7 +123,7 @@ class _SummaryTabContentState extends ConsumerState<_SummaryTabContent> {
 
     if (summaryState.error != null) {
       return Text(
-        'エラー: ${summaryState.error}',
+        AppLocalizations.of(context)!.common_errorPrefix(summaryState.error ?? ''),
         style: const TextStyle(color: Colors.red),
       );
     }
@@ -146,9 +147,9 @@ class _SummaryTabContentState extends ConsumerState<_SummaryTabContent> {
               color: Colors.orange.shade50,
               borderRadius: BorderRadius.circular(4),
             ),
-            child: const Text(
-              '基準位置が異なります。再解析をお勧めします。',
-              style: TextStyle(fontSize: 12, color: Colors.orange),
+            child: Text(
+              AppLocalizations.of(context)!.llmSummary_referencePositionWarning,
+              style: const TextStyle(fontSize: 12, color: Colors.orange),
             ),
           ),
         );
@@ -172,7 +173,7 @@ class _SummaryTabContentState extends ConsumerState<_SummaryTabContent> {
             : () => ref
                 .read(widget.summaryProvider.notifier)
                 .analyze(summaryType: widget.summaryType),
-        child: const Text('解析開始'),
+        child: Text(AppLocalizations.of(context)!.llmSummary_analyzeButton),
       ),
     );
   }

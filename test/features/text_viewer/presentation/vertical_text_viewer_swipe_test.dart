@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 Widget _buildTestWidget({
   required List<TextSegment> segments,
@@ -11,6 +12,9 @@ Widget _buildTestWidget({
   ValueChanged<String?>? onSelectionChanged,
 }) {
   return MaterialApp(
+        locale: const Locale('ja'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
     home: Center(
       child: ConstrainedBox(
         constraints: BoxConstraints.tightFor(width: width, height: height),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/features/bookmark/presentation/left_column_panel.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -64,7 +65,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       key: const Key('bookmark_button'),
       icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border),
       onPressed: isEnabled ? () => _toggleBookmark() : null,
-      tooltip: isBookmarked ? 'ブックマーク解除' : 'ブックマーク登録',
+      tooltip: isBookmarked ? AppLocalizations.of(context)!.homeScreen_removeBookmarkTooltip : AppLocalizations.of(context)!.homeScreen_addBookmarkTooltip,
     );
   }
 
@@ -145,13 +146,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       .read(rightColumnVisibleProvider.notifier)
                       .toggle(),
                   tooltip: ref.watch(rightColumnVisibleProvider)
-                      ? '右カラムを非表示'
-                      : '右カラムを表示',
+                      ? AppLocalizations.of(context)!.homeScreen_hideRightColumnTooltip
+                      : AppLocalizations.of(context)!.homeScreen_showRightColumnTooltip,
                 ),
                 IconButton(
                   icon: const Icon(Icons.download),
                   onPressed: () => DownloadDialog.show(context),
-                  tooltip: '小説ダウンロード',
+                  tooltip: AppLocalizations.of(context)!.homeScreen_downloadTooltip,
                 ),
                 IconButton(
                   icon: const Icon(Icons.settings),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 class RenameTitleDialog extends StatefulWidget {
   final String currentTitle;
@@ -38,24 +39,24 @@ class _RenameTitleDialogState extends State<RenameTitleDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('タイトル変更'),
+      title: Text(AppLocalizations.of(context)!.renameTitle_title),
       content: TextField(
         controller: _controller,
         autofocus: true,
-        decoration: const InputDecoration(
-          labelText: '新しいタイトル',
+        decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.renameTitle_newTitleLabel,
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('キャンセル'),
+          child: Text(AppLocalizations.of(context)!.common_cancelButton),
         ),
         TextButton(
           onPressed: _isValid
               ? () => Navigator.of(context).pop(_controller.text.trim())
               : null,
-          child: const Text('変更'),
+          child: Text(AppLocalizations.of(context)!.renameTitle_changeButton),
         ),
       ],
     );

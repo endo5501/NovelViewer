@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/presentation/rename_title_dialog.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   group('RenameTitleDialog', () {
@@ -8,6 +9,9 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: RenameTitleDialog(currentTitle: 'テスト小説'),
           ),
@@ -23,6 +27,9 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: RenameTitleDialog(currentTitle: 'テスト小説'),
           ),
@@ -40,6 +47,9 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: RenameTitleDialog(currentTitle: 'テスト小説'),
           ),
@@ -61,6 +71,9 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: RenameTitleDialog(currentTitle: 'テスト小説'),
           ),
@@ -83,6 +96,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(
               body: ElevatedButton(
@@ -118,6 +134,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(
               body: ElevatedButton(
@@ -150,6 +169,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(
               body: ElevatedButton(

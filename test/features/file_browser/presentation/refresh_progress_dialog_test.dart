@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 class _ControlledDownloadNotifier extends DownloadNotifier {
   @override
@@ -50,6 +51,9 @@ void main() {
             downloadProvider.overrideWith(() => notifier),
           ],
           child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
@@ -89,6 +93,9 @@ void main() {
             downloadProvider.overrideWith(() => notifier),
           ],
           child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
@@ -121,6 +128,9 @@ void main() {
             downloadProvider.overrideWith(() => notifier),
           ],
           child: MaterialApp(
+                locale: const Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {

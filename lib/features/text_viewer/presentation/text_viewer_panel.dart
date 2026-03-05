@@ -25,6 +25,7 @@ import 'package:novel_viewer/features/tts/presentation/tts_edit_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_export_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 class TextViewerPanel extends ConsumerStatefulWidget {
   const TextViewerPanel({super.key});
@@ -252,20 +253,23 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
   Future<void> _deleteAudio() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('音声データの削除'),
-        content: const Text('音声データを削除しますか？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('キャンセル'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('削除'),
-          ),
-        ],
-      ),
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(l10n.textViewer_deleteAudioTitle),
+          content: Text(l10n.textViewer_deleteAudioConfirmation),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(l10n.common_cancelButton),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(l10n.common_deleteButton),
+            ),
+          ],
+        );
+      },
     );
     if (!mounted || confirm != true) return;
 
@@ -301,12 +305,12 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
 
       if (!mounted || exported != true) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('MP3ファイルのエクスポートが完了しました')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.textViewer_exportCompleted)),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('エクスポートエラー: $e')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.textViewer_exportError(e.toString()))),
       );
     }
   }
@@ -341,7 +345,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
           LinearProgressIndicator(value: fraction),
           const SizedBox(height: 2),
           Text(
-            '${progress.current}/${progress.total}文',
+            AppLocalizations.of(context)!.textViewer_generationProgressFormat(progress.current, progress.total),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -371,13 +375,13 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
           children: [
             FloatingActionButton.small(
               onPressed: () => _openEditDialog(content),
-              tooltip: '読み上げ編集',
+              tooltip: AppLocalizations.of(context)!.textViewer_editTtsTooltip,
               child: const Icon(Icons.edit_note),
             ),
             const SizedBox(width: 8),
             FloatingActionButton.small(
               onPressed: () => _startStreaming(content),
-              tooltip: '読み上げ音声生成',
+              tooltip: AppLocalizations.of(context)!.textViewer_generateTtsTooltip,
               child: const Icon(Icons.record_voice_over),
             ),
           ],
@@ -398,13 +402,13 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
               const SizedBox(width: 8),
               FloatingActionButton.small(
                 onPressed: _pausePlayback,
-                tooltip: '一時停止',
+                tooltip: AppLocalizations.of(context)!.textViewer_pauseTooltip,
                 child: const Icon(Icons.pause),
               ),
               const SizedBox(width: 8),
               FloatingActionButton.small(
                 onPressed: _stopStreaming,
-                tooltip: '停止',
+                tooltip: AppLocalizations.of(context)!.textViewer_stopTooltip,
                 child: const Icon(Icons.stop),
               ),
             ],
@@ -417,13 +421,13 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
               const SizedBox(width: 8),
               FloatingActionButton.small(
                 onPressed: _resumePlayback,
-                tooltip: '再開',
+                tooltip: AppLocalizations.of(context)!.textViewer_resumeTooltip,
                 child: const Icon(Icons.play_arrow),
               ),
               const SizedBox(width: 8),
               FloatingActionButton.small(
                 onPressed: _stopStreaming,
-                tooltip: '停止',
+                tooltip: AppLocalizations.of(context)!.textViewer_stopTooltip,
                 child: const Icon(Icons.stop),
               ),
             ],
@@ -436,7 +440,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
               const SizedBox(width: 8),
               FloatingActionButton.small(
                 onPressed: _stopStreaming,
-                tooltip: 'キャンセル',
+                tooltip: AppLocalizations.of(context)!.textViewer_cancelTooltip,
                 child: const Icon(Icons.close),
               ),
             ],
@@ -451,13 +455,13 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
               if (isWaiting) _waitingSpinner,
               FloatingActionButton.small(
                 onPressed: _pausePlayback,
-                tooltip: '一時停止',
+                tooltip: AppLocalizations.of(context)!.textViewer_pauseTooltip,
                 child: const Icon(Icons.pause),
               ),
               const SizedBox(width: 8),
               FloatingActionButton.small(
                 onPressed: _stopStreaming,
-                tooltip: '停止',
+                tooltip: AppLocalizations.of(context)!.textViewer_stopTooltip,
                 child: const Icon(Icons.stop),
               ),
             ],
@@ -468,13 +472,13 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
             children: [
               FloatingActionButton.small(
                 onPressed: _resumePlayback,
-                tooltip: '再開',
+                tooltip: AppLocalizations.of(context)!.textViewer_resumeTooltip,
                 child: const Icon(Icons.play_arrow),
               ),
               const SizedBox(width: 8),
               FloatingActionButton.small(
                 onPressed: _stopStreaming,
-                tooltip: '停止',
+                tooltip: AppLocalizations.of(context)!.textViewer_stopTooltip,
                 child: const Icon(Icons.stop),
               ),
             ],
@@ -486,13 +490,13 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
             children: [
               FloatingActionButton.small(
                 onPressed: () => _openEditDialog(content),
-                tooltip: '読み上げ編集',
+                tooltip: AppLocalizations.of(context)!.textViewer_editTtsTooltip,
                 child: const Icon(Icons.edit_note),
               ),
               const SizedBox(width: 8),
               FloatingActionButton.small(
                 onPressed: () => _startStreaming(content),
-                tooltip: '再生',
+                tooltip: AppLocalizations.of(context)!.textViewer_playTooltip,
                 child: const Icon(Icons.play_arrow),
               ),
               const SizedBox(width: 8),
@@ -519,13 +523,13 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
               else
                 FloatingActionButton.small(
                   onPressed: _exportAudio,
-                  tooltip: 'MP3エクスポート',
+                  tooltip: AppLocalizations.of(context)!.textViewer_exportMp3Tooltip,
                   child: const Icon(Icons.download),
                 ),
               const SizedBox(width: 8),
               FloatingActionButton.small(
                 onPressed: _deleteAudio,
-                tooltip: '音声データ削除',
+                tooltip: AppLocalizations.of(context)!.textViewer_deleteAudioTooltip,
                 child: const Icon(Icons.delete_outline),
               ),
             ],
@@ -605,11 +609,11 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
 
     return contentAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('エラー: $error')),
+      error: (error, _) => Center(child: Text(AppLocalizations.of(context)!.common_errorPrefix(error.toString()))),
       data: (content) {
         if (content == null) {
-          return const Center(
-            child: Text('ファイルを選択してください'),
+          return Center(
+            child: Text(AppLocalizations.of(context)!.textViewer_selectFilePrompt),
           );
         }
 

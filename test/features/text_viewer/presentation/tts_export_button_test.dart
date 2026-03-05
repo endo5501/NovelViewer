@@ -12,6 +12,7 @@ import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_export_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -54,7 +55,11 @@ void main() {
             return notifier;
           }),
         ],
-        child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
+        child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: TextViewerPanel())),
       ),
     );
     await tester.pumpAndSettle();
@@ -99,7 +104,11 @@ void main() {
             libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider.overrideWith((ref) async => 'テスト内容'),
           ],
-          child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: TextViewerPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -120,7 +129,11 @@ void main() {
               return notifier;
             }),
           ],
-          child: const MaterialApp(home: Scaffold(body: TextViewerPanel())),
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: TextViewerPanel())),
         ),
       );
       await tester.pumpAndSettle();

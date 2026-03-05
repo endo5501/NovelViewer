@@ -6,6 +6,7 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_provider
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   group('LlmSummaryPanel', () {
@@ -16,7 +17,11 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-          child: const MaterialApp(home: Scaffold(body: LlmSummaryPanel())),
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: LlmSummaryPanel())),
         ),
       );
 
@@ -32,7 +37,11 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-          child: const MaterialApp(home: Scaffold(body: LlmSummaryPanel())),
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: LlmSummaryPanel())),
         ),
       );
 
@@ -52,7 +61,11 @@ void main() {
               () => _MockSelectedTextNotifier('アリス'),
             ),
           ],
-          child: const MaterialApp(home: Scaffold(body: LlmSummaryPanel())),
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: LlmSummaryPanel())),
         ),
       );
 
@@ -77,7 +90,11 @@ void main() {
               () => _MockSelectedTextNotifier('アリス'),
             ),
           ],
-          child: const MaterialApp(home: Scaffold(body: LlmSummaryPanel())),
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: LlmSummaryPanel())),
         ),
       );
 
@@ -106,7 +123,11 @@ void main() {
               ),
             ),
           ],
-          child: const MaterialApp(home: Scaffold(body: LlmSummaryPanel())),
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: LlmSummaryPanel())),
         ),
       );
 
@@ -130,7 +151,11 @@ void main() {
               () => _MockSelectedTextNotifier('アリス'),
             ),
           ],
-          child: const MaterialApp(home: Scaffold(body: LlmSummaryPanel())),
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: LlmSummaryPanel())),
         ),
       );
 

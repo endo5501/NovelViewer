@@ -9,6 +9,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   group('SettingsDialog LLM settings', () {
@@ -37,7 +38,11 @@ void main() {
             if (httpClient != null)
               httpClientProvider.overrideWithValue(httpClient),
           ],
-          child: const MaterialApp(home: Scaffold(body: SettingsDialog())),
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: SettingsDialog())),
         ),
       );
     }
@@ -57,7 +62,11 @@ void main() {
           libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
           httpClientProvider.overrideWithValue(httpClient),
         ],
-        child: const MaterialApp(home: Scaffold(body: SettingsDialog())),
+        child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: SettingsDialog())),
       );
 
       await tester.runAsync(() async {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 import '../data/tts_dictionary_repository.dart';
 
@@ -61,7 +62,7 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
     final reading = _readingController.text.trim();
 
     if (surface.isEmpty || reading.isEmpty) {
-      setState(() => _addError = '表記と読みの両方を入力してください');
+      setState(() => _addError = AppLocalizations.of(context)!.ttsDictionary_bothFieldsRequired);
       return;
     }
 
@@ -72,7 +73,7 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
       setState(() => _addError = null);
       await _loadEntries();
     } catch (e) {
-      setState(() => _addError = '同じ表記が既に登録されています');
+      setState(() => _addError = AppLocalizations.of(context)!.ttsDictionary_duplicateEntry);
     }
   }
 
@@ -84,7 +85,7 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('読み上げ辞書'),
+      title: Text(AppLocalizations.of(context)!.ttsDictionary_title),
       content: SizedBox(
         width: 480,
         height: 480,
@@ -110,7 +111,7 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('閉じる'),
+          child: Text(AppLocalizations.of(context)!.common_closeButton),
         ),
       ],
     );
@@ -122,11 +123,11 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
         Expanded(
           child: TextField(
             controller: _surfaceController,
-            decoration: const InputDecoration(
-              labelText: '表記',
-              hintText: '山田太郎',
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.ttsDictionary_surfaceLabel,
+              hintText: AppLocalizations.of(context)!.ttsDictionary_surfaceHint,
               isDense: true,
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             onSubmitted: (_) => _addEntry(),
           ),
@@ -135,11 +136,11 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
         Expanded(
           child: TextField(
             controller: _readingController,
-            decoration: const InputDecoration(
-              labelText: '読み',
-              hintText: 'やまだたろう',
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.ttsDictionary_readingLabel,
+              hintText: AppLocalizations.of(context)!.ttsDictionary_readingHint,
               isDense: true,
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             onSubmitted: (_) => _addEntry(),
           ),
@@ -148,7 +149,7 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
         IconButton.filled(
           onPressed: _addEntry,
           icon: const Icon(Icons.add),
-          tooltip: '追加',
+          tooltip: AppLocalizations.of(context)!.ttsDictionary_addTooltip,
         ),
       ],
     );
@@ -160,11 +161,11 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
     }
 
     if (_entries.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          '辞書にエントリがありません\n上のフォームから追加してください',
+          AppLocalizations.of(context)!.ttsDictionary_emptyMessage,
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey),
+          style: const TextStyle(color: Colors.grey),
         ),
       );
     }
@@ -180,7 +181,7 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
           subtitle: Text(entry.reading),
           trailing: IconButton(
             icon: const Icon(Icons.delete_outline),
-            tooltip: '削除',
+            tooltip: AppLocalizations.of(context)!.ttsDictionary_deleteTooltip,
             onPressed: () => _deleteEntry(entry.id),
           ),
         );

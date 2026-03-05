@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 Widget _buildTestWidget({
   required List<TextSegment> segments,
@@ -15,6 +16,9 @@ Widget _buildTestWidget({
   ThemeData? theme,
 }) {
   return MaterialApp(
+        locale: const Locale('ja'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
     theme: theme,
     home: Scaffold(
       body: SizedBox(

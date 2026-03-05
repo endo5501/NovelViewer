@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -29,6 +30,9 @@ void main() {
             ttsModelDirProvider.overrideWithValue('/models'),
           ],
           child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SizedBox(height: 400, child: TextViewerPanel()),
             ),
