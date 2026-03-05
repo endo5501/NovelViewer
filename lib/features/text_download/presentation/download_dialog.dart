@@ -42,7 +42,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
         return;
       }
       if (_registry.findSite(uri) == null) {
-        _urlError = 'サポートされていないサイトです（なろう、カクヨムに対応）';
+        _urlError = 'サポートされていないサイトです（なろう・なろう18・カクヨムに対応）';
         return;
       }
       _urlError = null;
@@ -84,7 +84,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
               controller: _urlController,
               decoration: InputDecoration(
                 labelText: 'URL',
-                hintText: 'https://ncode.syosetu.com/...',
+                hintText: 'https://ncode.syosetu.com/... or https://novel18.syosetu.com/...',
                 errorText: _urlError,
                 enabled: downloadState.status != DownloadStatus.downloading,
               ),

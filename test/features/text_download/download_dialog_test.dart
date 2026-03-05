@@ -82,7 +82,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('サポートされていないサイトです（なろう、カクヨムに対応）'),
+      expect(find.text('サポートされていないサイトです（なろう・なろう18・カクヨムに対応）'),
           findsOneWidget);
     });
 
