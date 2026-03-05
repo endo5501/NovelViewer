@@ -8,8 +8,8 @@ void main() {
     testWidgets('shows current title prefilled in text field',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -26,8 +26,8 @@ void main() {
     testWidgets('submit button is enabled when text is non-empty',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -46,8 +46,8 @@ void main() {
     testWidgets('submit button is disabled when text is empty',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -70,8 +70,8 @@ void main() {
     testWidgets('submit button is disabled when text is whitespace only',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(

@@ -22,11 +22,11 @@ void main() {
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: LeftColumnPanel())),
+                home: Scaffold(body: LeftColumnPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -42,11 +42,11 @@ void main() {
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: LeftColumnPanel())),
+                home: Scaffold(body: LeftColumnPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -67,11 +67,11 @@ void main() {
               return DirectoryContents.empty();
             }),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: LeftColumnPanel())),
+                home: Scaffold(body: LeftColumnPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -91,11 +91,11 @@ void main() {
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: LeftColumnPanel())),
+                home: Scaffold(body: LeftColumnPanel())),
         ),
       );
       await tester.pumpAndSettle();

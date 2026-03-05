@@ -37,8 +37,8 @@ void main() {
         if (httpClient != null)
           httpClientProvider.overrideWithValue(httpClient),
       ],
-      child: MaterialApp(
-            locale: const Locale('ja'),
+      child: const MaterialApp(
+            locale: Locale('ja'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: SettingsDialog()),

@@ -65,12 +65,12 @@ void main() {
     testWidgets('shows prompt text and no folder picker when no directory set',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        ProviderScope(
+        const ProviderScope(
           child: MaterialApp(
-                locale: const Locale('ja'),
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: FileBrowserPanel())),
+                home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -97,11 +97,11 @@ void main() {
             }),
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: FileBrowserPanel())),
+                home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -123,11 +123,11 @@ void main() {
             }),
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: FileBrowserPanel())),
+                home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -151,11 +151,11 @@ void main() {
             }),
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: FileBrowserPanel())),
+                home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -183,11 +183,11 @@ void main() {
             }),
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: FileBrowserPanel())),
+                home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -218,11 +218,11 @@ void main() {
             }),
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: FileBrowserPanel())),
+                home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -260,11 +260,11 @@ void main() {
             }),
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: FileBrowserPanel())),
+                home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -294,11 +294,11 @@ void main() {
             }),
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: FileBrowserPanel())),
+                home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -327,11 +327,11 @@ void main() {
             }),
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: FileBrowserPanel())),
+                home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -360,11 +360,11 @@ void main() {
             }),
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: FileBrowserPanel())),
+                home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -408,11 +408,11 @@ void main() {
             }),
             libraryPathProvider.overrideWithValue('/library'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: FileBrowserPanel())),
+                home: Scaffold(body: FileBrowserPanel())),
         ),
       );
       await tester.pumpAndSettle();

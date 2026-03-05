@@ -23,8 +23,8 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
         libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
       ],
-      child: MaterialApp(
-            locale: const Locale('ja'),
+      child: const MaterialApp(
+            locale: Locale('ja'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: SettingsDialog()),

@@ -55,11 +55,11 @@ void main() {
             return notifier;
           }),
         ],
-        child: MaterialApp(
-              locale: const Locale('ja'),
+        child: const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: const Scaffold(body: TextViewerPanel())),
+              home: Scaffold(body: TextViewerPanel())),
       ),
     );
     await tester.pumpAndSettle();
@@ -104,11 +104,11 @@ void main() {
             libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
             fileContentProvider.overrideWith((ref) async => 'テスト内容'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: TextViewerPanel())),
+                home: Scaffold(body: TextViewerPanel())),
         ),
       );
       await tester.pumpAndSettle();
@@ -129,11 +129,11 @@ void main() {
               return notifier;
             }),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: TextViewerPanel())),
+                home: Scaffold(body: TextViewerPanel())),
         ),
       );
       await tester.pumpAndSettle();

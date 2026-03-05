@@ -655,6 +655,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
       return;
     }
 
+    final l10n = AppLocalizations.of(context)!;
     final errors = <String>[];
     for (final xFile in details.files) {
       try {
@@ -664,7 +665,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
       } on StateError catch (e) {
         errors.add(e.message);
       } on FileSystemException catch (e) {
-        errors.add(AppLocalizations.of(context)!.settings_fileOperationError(e.osError?.message ?? e.message));
+        errors.add(l10n.settings_fileOperationError(e.osError?.message ?? e.message));
       }
     }
 

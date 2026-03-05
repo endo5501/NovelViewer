@@ -56,11 +56,11 @@ void main() {
           return notifier;
         }),
       ],
-      child: MaterialApp(
-            locale: const Locale('ja'),
+      child: const MaterialApp(
+            locale: Locale('ja'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const Scaffold(body: TextViewerPanel())),
+            home: Scaffold(body: TextViewerPanel())),
     );
   }
 

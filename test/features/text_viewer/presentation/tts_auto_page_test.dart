@@ -8,8 +8,8 @@ void main() {
   group('VerticalTextViewer - TTS auto page', () {
     testWidgets('passes TTS highlight to VerticalTextPage', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(

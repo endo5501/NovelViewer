@@ -20,8 +20,8 @@ void main() {
     testWidgets('page 1 (offset 0): highlights correct chars', (tester) async {
       // Page 1 has 'あいうえお', global TTS range 0-3
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -49,8 +49,8 @@ void main() {
       // Page 2 has 'かきくけこ', page starts at global offset 5
       // Global TTS range 5-8 → page-local 0-3
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -78,8 +78,8 @@ void main() {
       // Page 2 has 'かきくけこ' starting at offset 5
       // Global TTS range 0-3 is on page 1, not page 2
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -116,8 +116,8 @@ void main() {
         PlainTextSegment('えおか'),
       ];
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -159,8 +159,8 @@ void main() {
         PlainTextSegment('えおか'),
       ];
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -201,8 +201,8 @@ void main() {
         PlainTextSegment('う'),
       ];
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(

@@ -27,8 +27,8 @@ void main() {
             currentDirectoryProvider
                 .overrideWith(() => _TestCurrentDirectoryNotifier('/library')),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(body: BookmarkListPanel())),
@@ -50,8 +50,8 @@ void main() {
             bookmarksForNovelProvider('n1234')
                 .overrideWithValue(const AsyncValue.data([])),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(body: BookmarkListPanel())),
@@ -90,8 +90,8 @@ void main() {
             bookmarksForNovelProvider('n1234')
                 .overrideWithValue(AsyncValue.data(bookmarks)),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(body: BookmarkListPanel())),
@@ -125,8 +125,8 @@ void main() {
             bookmarksForNovelProvider('n1234')
                 .overrideWithValue(AsyncValue.data(bookmarks)),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(body: BookmarkListPanel())),
@@ -161,8 +161,8 @@ void main() {
             bookmarksForNovelProvider('n1234')
                 .overrideWithValue(AsyncValue.data(bookmarks)),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(body: BookmarkListPanel())),

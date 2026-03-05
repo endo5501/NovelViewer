@@ -29,8 +29,8 @@ void main() {
             fileContentProvider.overrideWith((ref) async => longText),
             ttsModelDirProvider.overrideWithValue('/models'),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(

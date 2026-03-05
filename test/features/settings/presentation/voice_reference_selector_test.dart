@@ -32,8 +32,8 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
         libraryPathProvider.overrideWithValue(libraryPath),
       ],
-      child: MaterialApp(
-            locale: const Locale('ja'),
+      child: const MaterialApp(
+            locale: Locale('ja'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(

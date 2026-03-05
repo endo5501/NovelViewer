@@ -38,11 +38,11 @@ void main() {
             if (httpClient != null)
               httpClientProvider.overrideWithValue(httpClient),
           ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
+          child: const MaterialApp(
+                locale: Locale('ja'),
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
-                home: const Scaffold(body: SettingsDialog())),
+                home: Scaffold(body: SettingsDialog())),
         ),
       );
     }
@@ -62,11 +62,11 @@ void main() {
           libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
           httpClientProvider.overrideWithValue(httpClient),
         ],
-        child: MaterialApp(
-              locale: const Locale('ja'),
+        child: const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: const Scaffold(body: SettingsDialog())),
+              home: Scaffold(body: SettingsDialog())),
       );
 
       await tester.runAsync(() async {

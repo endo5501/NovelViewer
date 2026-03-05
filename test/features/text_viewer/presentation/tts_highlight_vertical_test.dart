@@ -9,8 +9,8 @@ void main() {
     testWidgets('applies green highlight to characters in TTS range',
         (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -43,8 +43,8 @@ void main() {
 
     testWidgets('no TTS highlight when range is null', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -74,8 +74,8 @@ void main() {
     testWidgets('search highlight takes priority over TTS highlight',
         (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-              locale: const Locale('ja'),
+        const MaterialApp(
+              locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
