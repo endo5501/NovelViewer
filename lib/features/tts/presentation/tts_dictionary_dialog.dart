@@ -8,17 +8,23 @@ class TtsDictionaryDialog extends ConsumerStatefulWidget {
   const TtsDictionaryDialog({
     super.key,
     required this.repository,
+    this.initialSurface,
   });
 
   final TtsDictionaryRepository repository;
+  final String? initialSurface;
 
   static Future<void> show(
     BuildContext context, {
     required TtsDictionaryRepository repository,
+    String? initialSurface,
   }) {
     return showDialog(
       context: context,
-      builder: (_) => TtsDictionaryDialog(repository: repository),
+      builder: (_) => TtsDictionaryDialog(
+        repository: repository,
+        initialSurface: initialSurface,
+      ),
     );
   }
 
@@ -31,13 +37,15 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
   List<TtsDictionaryEntry> _entries = [];
   bool _loading = true;
 
-  final _surfaceController = TextEditingController();
+  late final TextEditingController _surfaceController;
   final _readingController = TextEditingController();
   String? _addError;
 
   @override
   void initState() {
     super.initState();
+    _surfaceController =
+        TextEditingController(text: widget.initialSurface ?? '');
     _loadEntries();
   }
 

@@ -143,6 +143,9 @@
   "ttsDictionary_emptyMessage": "No dictionary entries\nAdd entries using the form above",
   "ttsDictionary_deleteTooltip": "Delete",
 
+  "contextMenu_addToDictionary": "Add to Dictionary",
+  "contextMenu_copy": "Copy",
+
   "llmSummary_noSpoilerTab": "No spoilers",
   "llmSummary_spoilerTab": "With spoilers",
   "llmSummary_selectWordPrompt": "Please select a word",

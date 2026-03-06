@@ -42,6 +42,7 @@ class VerticalTextViewer extends StatefulWidget {
     this.ttsHighlightStart,
     this.ttsHighlightEnd,
     this.onSelectionChanged,
+    this.onContextMenu,
     this.columnSpacing = 8.0,
   }) : assert(columnSpacing >= 0);
 
@@ -52,6 +53,7 @@ class VerticalTextViewer extends StatefulWidget {
   final int? ttsHighlightStart;
   final int? ttsHighlightEnd;
   final ValueChanged<String?>? onSelectionChanged;
+  final void Function(Offset position, String selectedText)? onContextMenu;
   final double columnSpacing;
 
   @override
@@ -216,6 +218,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
                 pageStartTextOffset: pageTextOffset,
                 lineBreakEntryIndices: lineBreakIndices,
                 onSelectionChanged: widget.onSelectionChanged,
+                onContextMenu: widget.onContextMenu,
                 onSwipe: _handleSwipe,
                 columnSpacing: widget.columnSpacing,
               ),

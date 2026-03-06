@@ -2,6 +2,7 @@ import 'dart:math' show min, max;
 import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -21,6 +22,8 @@ import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_streaming_controller.dart';
+import 'package:novel_viewer/features/tts/presentation/dictionary_context_menu.dart';
+import 'package:novel_viewer/features/tts/presentation/tts_dictionary_dialog.dart';
 import 'package:novel_viewer/features/tts/presentation/tts_edit_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_export_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
@@ -225,6 +228,54 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
 
   Future<void> _resumePlayback() async {
     await _streamingController?.resume();
+  }
+
+  void _showVerticalContextMenu(
+      BuildContext context, Offset position, String selectedText) {
+    final l10n = AppLocalizations.of(context)!;
+    final renderObject =
+        Overlay.maybeOf(context)?.context.findRenderObject();
+    if (renderObject is! RenderBox) return;
+    final overlay = renderObject;
+    showMenu<_ContextMenuAction>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        overlay.size.width - position.dx,
+        overlay.size.height - position.dy,
+      ),
+      items: [
+        PopupMenuItem(
+          value: _ContextMenuAction.copy,
+          child: Text(l10n.contextMenu_copy),
+        ),
+        PopupMenuItem(
+          value: _ContextMenuAction.addToDictionary,
+          child: Text(l10n.contextMenu_addToDictionary),
+        ),
+      ],
+    ).then((value) {
+      if (value == null || !mounted) return;
+      switch (value) {
+        case _ContextMenuAction.copy:
+          Clipboard.setData(ClipboardData(text: selectedText));
+        case _ContextMenuAction.addToDictionary:
+          _openDictionaryDialog(selectedText);
+      }
+    });
+  }
+
+  void _openDictionaryDialog(String selectedText) {
+    final folderPath = ref.read(currentDirectoryProvider);
+    if (folderPath == null) return;
+    final dictDb = TtsDictionaryDatabase(folderPath);
+    final dictRepo = TtsDictionaryRepository(dictDb);
+    TtsDictionaryDialog.show(
+      context,
+      repository: dictRepo,
+      initialSurface: selectedText,
+    ).whenComplete(() => dictDb.close());
   }
 
   /// Opens TtsAudioDatabase for the current directory, finds the episode for
@@ -647,6 +698,9 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
               onSelectionChanged: (text) {
                 ref.read(selectedTextProvider.notifier).setText(text);
               },
+              onContextMenu: (position, selectedText) {
+                _showVerticalContextMenu(context, position, selectedText);
+              },
             ),
             ttsModelDir,
             audioState,
@@ -705,6 +759,13 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
                         selectedText.isEmpty ? null : selectedText,
                       );
                 },
+                contextMenuBuilder: (menuContext, editableTextState) {
+                  return buildDictionaryContextMenu(
+                    context,
+                    editableTextState,
+                    onAddToDictionary: _openDictionaryDialog,
+                  );
+                },
               ),
             ),
           ),
@@ -717,3 +778,5 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     );
   }
 }
+
+enum _ContextMenuAction { copy, addToDictionary }

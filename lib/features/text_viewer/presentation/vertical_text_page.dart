@@ -20,6 +20,7 @@ class VerticalTextPage extends StatefulWidget {
     this.lineBreakEntryIndices = const {},
     this.onSelectionChanged,
     this.onSwipe,
+    this.onContextMenu,
     this.columnSpacing = 8.0,
   }) : assert(columnSpacing >= 0);
 
@@ -34,6 +35,7 @@ class VerticalTextPage extends StatefulWidget {
   final Set<int> lineBreakEntryIndices;
   final ValueChanged<String?>? onSelectionChanged;
   final ValueChanged<SwipeDirection>? onSwipe;
+  final void Function(Offset position, String selectedText)? onContextMenu;
   final double columnSpacing;
 
   @override
@@ -161,6 +163,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       onPanUpdate: _onPanUpdate,
       onPanEnd: _onPanEnd,
       onTap: _onTap,
+      onSecondaryTapUp: _onSecondaryTapUp,
       child: Directionality(
         textDirection: TextDirection.rtl,
         child: Wrap(
@@ -291,6 +294,15 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   void _onTap() {
     _clearInternalSelection();
     widget.onSelectionChanged?.call(null);
+  }
+
+  void _onSecondaryTapUp(TapUpDetails details) {
+    final start = _effectiveStart;
+    final end = _effectiveEnd;
+    if (start == null || end == null || start >= end) return;
+    final text = extractVerticalSelectedText(_charEntries, start, end);
+    if (text.isEmpty) return;
+    widget.onContextMenu?.call(details.globalPosition, text);
   }
 
   void _clearInternalSelection() {

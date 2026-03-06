@@ -143,6 +143,9 @@
   "ttsDictionary_emptyMessage": "词典中没有条目\n请使用上方的表单添加",
   "ttsDictionary_deleteTooltip": "删除",
 
+  "contextMenu_addToDictionary": "添加到词典",
+  "contextMenu_copy": "复制",
+
   "llmSummary_noSpoilerTab": "无剧透",
   "llmSummary_spoilerTab": "有剧透",
   "llmSummary_selectWordPrompt": "请选择一个词语",

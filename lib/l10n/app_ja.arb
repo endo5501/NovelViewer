@@ -248,6 +248,9 @@
   "ttsDictionary_emptyMessage": "辞書にエントリがありません\n上のフォームから追加してください",
   "ttsDictionary_deleteTooltip": "削除",
 
+  "contextMenu_addToDictionary": "辞書追加",
+  "contextMenu_copy": "コピー",
+
   "llmSummary_noSpoilerTab": "ネタバレなし",
   "llmSummary_spoilerTab": "ネタバレあり",
   "llmSummary_selectWordPrompt": "単語を選択してください",
