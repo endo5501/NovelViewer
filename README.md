@@ -1,4 +1,4 @@
-# NovelViewer
+# ![](macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png) NovelViewer
 
 Web小説サイトから小説をダウンロードし、ローカルで閲覧するためのノベルビューア
 
