@@ -688,10 +688,11 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     // Reset current view line when file changes
     if (selectedFile?.path != _lastViewedFilePath) {
       _lastViewedFilePath = selectedFile?.path;
+      _lastScrollKey = null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          ref.read(currentViewLineProvider.notifier).reset();
-          _lastReportedViewLine = 0;
+          ref.read(currentViewLineProvider.notifier).set(1);
+          _lastReportedViewLine = 1;
         }
       });
     }
@@ -726,6 +727,10 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
         final bookmarkJumpLine = ref.watch(bookmarkJumpLineProvider);
         final targetLineNumber = activeMatch?.lineNumber ?? bookmarkJumpLine;
 
+        // Bookmark indicators (shared between modes)
+        final bookmarkLines =
+            ref.watch(bookmarkLineNumbersForFileProvider).value ?? [];
+
         if (displayMode == TextDisplayMode.vertical) {
           // Clear bookmark jump after consuming in vertical mode
           if (bookmarkJumpLine != null) {
@@ -743,6 +748,10 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
               ttsHighlightStart: ttsHighlightRange?.start,
               ttsHighlightEnd: ttsHighlightRange?.end,
               columnSpacing: columnSpacing,
+              bookmarkLineNumbers: bookmarkLines,
+              onPageLineChanged: (lineNumber) {
+                ref.read(currentViewLineProvider.notifier).set(lineNumber);
+              },
               onSelectionChanged: (text) {
                 ref.read(selectedTextProvider.notifier).setText(text);
               },
@@ -776,24 +785,18 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
             });
           }
         } else if (bookmarkJumpLine != null) {
-          final scrollKey = 'bookmark:${selectedFile?.path}:$bookmarkJumpLine';
-          if (scrollKey != _lastScrollKey) {
-            _lastScrollKey = scrollKey;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
               _scrollToLineNumber(bookmarkJumpLine, textStyle);
               ref.read(bookmarkJumpLineProvider.notifier).clear();
-            });
-          }
+            }
+          });
         }
 
         // Auto-scroll for TTS highlight
         if (ttsHighlightRange != null) {
           _scrollToTtsHighlight(content, ttsHighlightRange, textStyle);
         }
-
-        // Bookmark indicators
-        final bookmarkLines =
-            ref.watch(bookmarkLineNumbersForFileProvider).value ?? [];
 
         return _withTtsControls(
           NotificationListener<ScrollNotification>(
