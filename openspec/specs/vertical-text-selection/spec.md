@@ -63,3 +63,26 @@ The system SHALL clear the text selection when the user navigates to a different
 #### Scenario: Page backward clears selection
 - **WHEN** the user presses the right arrow key to go to the previous page while text is selected
 - **THEN** the selection is cleared and `selectedTextProvider` is set to null
+
+### Requirement: 縦書き表示のコンテキストメニュー
+縦書き閲覧画面でテキストを選択した状態で右クリックすると、「コピー」と「辞書追加」のメニュー項目を含むポップアップメニューを表示しなければならない。テキストが選択されていない場合はメニューを表示してはならない。
+
+#### Scenario: 縦書きでテキスト選択後に右クリックでメニューが表示される
+- **WHEN** 縦書き閲覧画面でテキストを選択した状態で右クリックする
+- **THEN** 右クリック位置に「コピー」と「辞書追加」のメニュー項目を含むポップアップメニューが表示される
+
+#### Scenario: 縦書きでテキスト未選択時に右クリックしてもメニューは表示されない
+- **WHEN** 縦書き閲覧画面でテキストが選択されていない状態で右クリックする
+- **THEN** ポップアップメニューは表示されない
+
+#### Scenario: 縦書きでコピーを選択するとクリップボードにコピーされる
+- **WHEN** ポップアップメニューの「コピー」を選択する
+- **THEN** 選択テキストがシステムクリップボードにコピーされる
+
+#### Scenario: 縦書きで辞書追加を選択するとダイアログが開く
+- **WHEN** ポップアップメニューの「辞書追加」を選択する
+- **THEN** 選択テキストが表記欄にプリセットされた辞書ダイアログが表示される
+
+#### Scenario: 縦書きで辞書ダイアログを閉じると閲覧画面に戻る
+- **WHEN** 辞書ダイアログを閉じる
+- **THEN** 閲覧画面に戻り、通常の閲覧操作を継続できる
