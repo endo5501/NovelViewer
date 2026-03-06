@@ -9,7 +9,6 @@ import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
-import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/data/parsed_segments_cache.dart';
 import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
