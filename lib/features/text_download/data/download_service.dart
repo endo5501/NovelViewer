@@ -127,7 +127,10 @@ class DownloadService {
       normalizedUrl,
       site: site,
     );
-    final novelIndex = site.parseIndex(indexResponse.body, normalizedUrl);
+    final novelIndex = site.parseIndex(
+      site.decodeBody(indexResponse),
+      normalizedUrl,
+    );
 
     final dir = await createNovelDirectory(outputPath, folderName);
 
@@ -194,7 +197,7 @@ class DownloadService {
           next,
           site: site,
         );
-        final idx = site.parseIndex(res.body, next);
+        final idx = site.parseIndex(site.decodeBody(res), next);
         addEpisodes(idx.episodes);
         next = idx.nextPageUrl;
         pageCount++;
@@ -315,7 +318,7 @@ class DownloadService {
             episode.url,
             site: site,
           );
-          final content = site.parseEpisode(response.body);
+          final content = site.parseEpisode(site.decodeBody(response));
           await _saveAndCacheEpisode(
             url: episode.url,
             index: episode.index,

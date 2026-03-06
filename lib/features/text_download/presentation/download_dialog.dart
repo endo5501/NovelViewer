@@ -85,7 +85,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
               controller: _urlController,
               decoration: InputDecoration(
                 labelText: 'URL',
-                hintText: 'https://ncode.syosetu.com/... or https://novel18.syosetu.com/...',
+                hintText: 'https://ncode.syosetu.com/... or https://www.aozora.gr.jp/...',
                 errorText: _urlError,
                 enabled: downloadState.status != DownloadStatus.downloading,
               ),

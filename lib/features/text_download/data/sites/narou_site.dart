@@ -1,7 +1,7 @@
 import 'package:html/parser.dart' as html_parser;
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 
-class NarouSite implements NovelSite {
+class NarouSite extends NovelSite {
   @override
   String get siteType => 'narou';
 

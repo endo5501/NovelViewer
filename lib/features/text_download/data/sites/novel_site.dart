@@ -1,3 +1,5 @@
+import 'package:http/http.dart' as http;
+import 'package:novel_viewer/features/text_download/data/sites/aozora_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/narou_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/kakuyomu_site.dart';
 
@@ -52,12 +54,19 @@ class NovelIndex {
   });
 }
 
+String extractParagraphText(dynamic element) {
+  final blocks = element.querySelectorAll('p');
+  if (blocks.isEmpty) return blockToText(element);
+  return blocks.map(blockToText).join('\n');
+}
+
 abstract class NovelSite {
   String get siteType;
   bool canHandle(Uri url);
   String extractNovelId(Uri url);
   Uri normalizeUrl(Uri url) => url;
   Map<String, String> requestHeaders(Uri url) => const {};
+  String decodeBody(http.Response response) => response.body;
   NovelIndex parseIndex(String html, Uri baseUrl);
   String parseEpisode(String html);
 }
@@ -66,6 +75,7 @@ class NovelSiteRegistry {
   final List<NovelSite> _sites = [
     NarouSite(),
     KakuyomuSite(),
+    AozoraSite(),
   ];
 
   NovelSite? findSite(Uri url) {

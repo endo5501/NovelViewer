@@ -805,7 +805,7 @@ abstract class AppLocalizations {
   /// No description provided for @download_unsupportedSiteError.
   ///
   /// In ja, this message translates to:
-  /// **'サポートされていないサイトです（なろう・なろう18・カクヨムに対応）'**
+  /// **'サポートされていないサイトです（なろう・なろう18・カクヨム・青空文庫に対応）'**
   String get download_unsupportedSiteError;
 
   /// No description provided for @download_skippedSuffix.

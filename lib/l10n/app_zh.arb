@@ -124,7 +124,7 @@
 
   "download_title": "下载小说",
   "download_invalidUrlError": "请输入有效的URL",
-  "download_unsupportedSiteError": "不支持的网站（支持Narou、Narou18和Kakuyomu）",
+  "download_unsupportedSiteError": "不支持的网站（支持Narou、Narou18、Kakuyomu和青空文库）",
   "download_skippedSuffix": "（跳过：{count}个）",
   "download_progressFormat": "下载中：{current}/{total} 章节{skipped}",
   "download_completedFormat": "下载完成：{total} 章节{skipped}",

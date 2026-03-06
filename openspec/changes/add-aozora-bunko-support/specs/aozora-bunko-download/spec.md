@@ -69,6 +69,17 @@ The `siteType` for Aozora Bunko SHALL be `aozora`.
 - **WHEN** an Aozora Bunko work is downloaded
 - **THEN** the download folder SHALL be named `aozora_{novelId}` (e.g., `aozora_57105_59659`)
 
+### Requirement: Aozora Bunko character encoding
+The system SHALL decode Aozora Bunko HTTP responses using Shift-JIS encoding. The `NovelSite` base class SHALL provide a `decodeBody` method that defaults to `response.body` (UTF-8), and `AozoraSite` SHALL override it to decode using Shift-JIS.
+
+#### Scenario: Shift-JIS encoded page is decoded correctly
+- **WHEN** the system fetches an Aozora Bunko HTML page encoded in Shift-JIS
+- **THEN** the system SHALL decode the response bytes using Shift-JIS and return a correctly encoded Unicode string
+
+#### Scenario: Existing sites are unaffected
+- **WHEN** the system fetches a page from Narou or Kakuyomu (UTF-8 sites)
+- **THEN** the system SHALL use the default `response.body` decoding (UTF-8)
+
 ### Requirement: Aozora Bunko request headers
 The system SHALL NOT send any special request headers for Aozora Bunko requests beyond the default User-Agent.
 
