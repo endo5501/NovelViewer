@@ -452,6 +452,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ttsDictionary_deleteTooltip => '删除';
 
   @override
+  String get contextMenu_addToDictionary => '添加到词典';
+
+  @override
+  String get contextMenu_copy => '复制';
+
+  @override
   String get llmSummary_noSpoilerTab => '无剧透';
 
   @override

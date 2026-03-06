@@ -462,6 +462,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ttsDictionary_deleteTooltip => 'Delete';
 
   @override
+  String get contextMenu_addToDictionary => 'Add to Dictionary';
+
+  @override
+  String get contextMenu_copy => 'Copy';
+
+  @override
   String get llmSummary_noSpoilerTab => 'No spoilers';
 
   @override

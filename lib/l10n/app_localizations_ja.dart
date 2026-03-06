@@ -452,6 +452,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ttsDictionary_deleteTooltip => '削除';
 
   @override
+  String get contextMenu_addToDictionary => '辞書追加';
+
+  @override
+  String get contextMenu_copy => 'コピー';
+
+  @override
   String get llmSummary_noSpoilerTab => 'ネタバレなし';
 
   @override

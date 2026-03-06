@@ -904,6 +904,18 @@ abstract class AppLocalizations {
   /// **'削除'**
   String get ttsDictionary_deleteTooltip;
 
+  /// No description provided for @contextMenu_addToDictionary.
+  ///
+  /// In ja, this message translates to:
+  /// **'辞書追加'**
+  String get contextMenu_addToDictionary;
+
+  /// No description provided for @contextMenu_copy.
+  ///
+  /// In ja, this message translates to:
+  /// **'コピー'**
+  String get contextMenu_copy;
+
   /// No description provided for @llmSummary_noSpoilerTab.
   ///
   /// In ja, this message translates to:

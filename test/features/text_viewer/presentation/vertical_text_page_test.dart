@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
@@ -12,6 +13,7 @@ Widget _buildTestWidget({
   int? selectionEnd,
   ValueChanged<String?>? onSelectionChanged,
   ValueChanged<SwipeDirection>? onSwipe,
+  void Function(Offset position, String selectedText)? onContextMenu,
   double? columnSpacing,
   ThemeData? theme,
 }) {
@@ -32,6 +34,7 @@ Widget _buildTestWidget({
           selectionEnd: selectionEnd,
           onSelectionChanged: onSelectionChanged,
           onSwipe: onSwipe,
+          onContextMenu: onContextMenu,
           columnSpacing: columnSpacing ?? 8.0,
         ),
       ),
@@ -355,6 +358,68 @@ void main() {
 
       // Should not trigger swipe (distance too short)
       expect(swipeDir, isNull);
+    });
+  });
+
+  group('VerticalTextPage context menu (right-click)', () {
+    testWidgets(
+        'onContextMenu is called with selected text on secondary tap when text is selected',
+        (tester) async {
+      String? receivedText;
+      Offset? receivedPosition;
+
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あいうえお')],
+        selectionStart: 1,
+        selectionEnd: 4,
+        onContextMenu: (position, text) {
+          receivedPosition = position;
+          receivedText = text;
+        },
+      ));
+      await tester.pump();
+
+      // Simulate a right-click (secondary tap) on the widget
+      final center = tester.getCenter(find.byType(VerticalTextPage));
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kSecondaryMouseButton,
+      );
+      await gesture.addPointer(location: center);
+      await tester.pump();
+      await gesture.down(center);
+      await gesture.up();
+      await tester.pump();
+
+      expect(receivedText, 'いうえ');
+      expect(receivedPosition, isNotNull);
+    });
+
+    testWidgets(
+        'onContextMenu is NOT called on secondary tap when no text is selected',
+        (tester) async {
+      bool called = false;
+
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あいうえお')],
+        onContextMenu: (position, text) {
+          called = true;
+        },
+      ));
+      await tester.pump();
+
+      final center = tester.getCenter(find.byType(VerticalTextPage));
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kSecondaryMouseButton,
+      );
+      await gesture.addPointer(location: center);
+      await tester.pump();
+      await gesture.down(center);
+      await gesture.up();
+      await tester.pump();
+
+      expect(called, isFalse);
     });
   });
 }

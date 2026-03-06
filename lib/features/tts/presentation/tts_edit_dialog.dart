@@ -8,6 +8,7 @@ import '../data/tts_audio_database.dart';
 import '../data/tts_audio_repository.dart';
 import '../data/tts_dictionary_database.dart';
 import '../data/tts_dictionary_repository.dart';
+import 'dictionary_context_menu.dart';
 import '../data/tts_edit_controller.dart';
 import '../data/tts_edit_segment.dart';
 import '../data/tts_isolate.dart';
@@ -351,6 +352,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
                           onGenerate: () => _generateSegment(index),
                           onReset: () => _resetSegment(index),
                           enabled: !isGenerating,
+                          dictRepository: _dictRepository,
                         );
                       },
                     ),
@@ -456,12 +458,14 @@ class _TtsEditSegmentRow extends StatefulWidget {
     required this.onGenerate,
     required this.onReset,
     required this.enabled,
+    this.dictRepository,
   });
 
   final TtsEditSegment segment;
   final bool isGenerating;
   final bool isPlaying;
   final List<String> voiceFiles;
+  final TtsDictionaryRepository? dictRepository;
   final void Function(String text) onTextEditComplete;
   final void Function(String? value) onRefWavPathChanged;
   final void Function(String? memo) onMemoEditComplete;
@@ -573,6 +577,21 @@ class _TtsEditSegmentRowState extends State<_TtsEditSegmentRow> {
               onTapOutside: (_) {
                 widget.onTextEditComplete(_textController.text);
               },
+              contextMenuBuilder: widget.dictRepository == null
+                  ? null
+                  : (menuContext, editableTextState) {
+                      return buildDictionaryContextMenu(
+                        context,
+                        editableTextState,
+                        onAddToDictionary: (selectedText) {
+                          TtsDictionaryDialog.show(
+                            context,
+                            repository: widget.dictRepository!,
+                            initialSurface: selectedText,
+                          );
+                        },
+                      );
+                    },
             ),
           ),
           const SizedBox(width: 8),
