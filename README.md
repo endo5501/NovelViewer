@@ -1,5 +1,7 @@
 # ![](macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png) NovelViewer
 
+**日本語** | [English](README_en.md) | [中文](README_zh.md)
+
 Web小説サイトから小説をダウンロードし、ローカルで閲覧するためのノベルビューア
 
 ## 対応プラットフォーム
