@@ -124,7 +124,7 @@
 
   "download_title": "Download novel",
   "download_invalidUrlError": "Please enter a valid URL",
-  "download_unsupportedSiteError": "Unsupported site (supports Narou, Narou18, and Kakuyomu)",
+  "download_unsupportedSiteError": "Unsupported site (supports Narou, Narou18, Kakuyomu, and Aozora Bunko)",
   "download_skippedSuffix": "(skipped: {count})",
   "download_progressFormat": "Downloading: {current}/{total} episodes{skipped}",
   "download_completedFormat": "Download complete: {total} episodes{skipped}",

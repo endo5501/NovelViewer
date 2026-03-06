@@ -1,11 +1,13 @@
 import 'dart:io';
 
+import 'package:euc/jis.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart' as http_testing;
 import 'package:novel_viewer/features/text_download/data/download_service.dart';
 import 'package:novel_viewer/features/text_download/data/sites/narou_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/kakuyomu_site.dart';
+import 'package:novel_viewer/features/text_download/data/sites/aozora_site.dart';
 
 void main() {
   group('safeName', () {
@@ -124,6 +126,62 @@ void main() {
       expect(capturedHeaders, isNotEmpty);
       expect(capturedHeaders.first['Cookie'], 'over18=yes');
       expect(capturedHeaders.first['User-Agent'], isNotNull);
+    });
+
+    test('buildFolderName returns site_type + novel_id for aozora', () {
+      final service = DownloadService();
+      final site = AozoraSite();
+      final url = Uri.parse(
+          'https://www.aozora.gr.jp/cards/001779/files/57105_59659.html');
+      expect(service.buildFolderName(site, url), 'aozora_57105_59659');
+    });
+
+    test('downloadNovel downloads aozora short story', () async {
+      final codec = ShiftJIS();
+      const htmlString =
+          '<html><head><title>銀河鉄道の夜 宮沢賢治</title></head>'
+          '<body><div class="main_text">'
+          '<p>ジョバンニは学校の帰り道。</p>'
+          '<p>カムパネルラが言いました。</p>'
+          '</div></body></html>';
+      final sjisBytes = codec.encode(htmlString);
+
+      final mockClient = http_testing.MockClient((request) async {
+        return http.Response.bytes(
+          sjisBytes,
+          200,
+          headers: {'content-type': 'text/html; charset=Shift_JIS'},
+        );
+      });
+
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+      final site = AozoraSite();
+      final url = Uri.parse(
+          'https://www.aozora.gr.jp/cards/000081/files/456_15050.html');
+
+      final result = await service.downloadNovel(
+        site: site,
+        url: url,
+        outputPath: tempDir.path,
+      );
+
+      expect(result.siteType, 'aozora');
+      expect(result.novelId, '456_15050');
+      expect(result.title, '銀河鉄道の夜 宮沢賢治');
+      expect(result.folderName, 'aozora_456_15050');
+      expect(result.episodeCount, 1);
+
+      final dir = Directory('${tempDir.path}/aozora_456_15050');
+      expect(dir.existsSync(), isTrue);
+
+      final files = dir.listSync().whereType<File>().toList();
+      expect(files.length, 1);
+      final content = await files.first.readAsString();
+      expect(content, contains('ジョバンニは学校の帰り道。'));
+      expect(content, contains('カムパネルラが言いました。'));
     });
 
     test('saveEpisode writes text file with correct name', () async {

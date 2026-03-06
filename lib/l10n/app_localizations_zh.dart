@@ -393,7 +393,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get download_unsupportedSiteError =>
-      '不支持的网站（支持Narou、Narou18和Kakuyomu）';
+      '不支持的网站（支持Narou、Narou18、Kakuyomu和青空文库）';
 
   @override
   String download_skippedSuffix(int count) {

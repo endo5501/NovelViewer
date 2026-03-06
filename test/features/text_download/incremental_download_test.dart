@@ -10,7 +10,7 @@ import 'package:novel_viewer/features/text_download/data/download_service.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-class _FakeSite implements NovelSite {
+class _FakeSite extends NovelSite {
   final List<Episode>? customEpisodes;
 
   _FakeSite({this.customEpisodes});
@@ -61,7 +61,7 @@ class _FakeSite implements NovelSite {
   String parseEpisode(String html) => html;
 }
 
-class _ShortStorySite implements NovelSite {
+class _ShortStorySite extends NovelSite {
   @override
   String get siteType => 'test';
 
@@ -90,7 +90,7 @@ class _ShortStorySite implements NovelSite {
   String parseEpisode(String html) => html;
 }
 
-class _MultiPageSite implements NovelSite {
+class _MultiPageSite extends NovelSite {
   final int totalPages;
   final int episodesPerPage;
 
@@ -152,7 +152,7 @@ class _MultiPageSite implements NovelSite {
   String parseEpisode(String html) => html;
 }
 
-class _InfinitePageSite implements NovelSite {
+class _InfinitePageSite extends NovelSite {
   @override
   String get siteType => 'test';
 
@@ -192,7 +192,7 @@ class _InfinitePageSite implements NovelSite {
   String parseEpisode(String html) => html;
 }
 
-class _EmptyNovelSite implements NovelSite {
+class _EmptyNovelSite extends NovelSite {
   @override
   String get siteType => 'test';
 

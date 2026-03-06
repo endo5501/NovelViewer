@@ -1,7 +1,7 @@
 import 'package:html/parser.dart' as html_parser;
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 
-class KakuyomuSite implements NovelSite {
+class KakuyomuSite extends NovelSite {
   @override
   String get siteType => 'kakuyomu';
 
@@ -70,17 +70,11 @@ class KakuyomuSite implements NovelSite {
       final element = document.querySelector(selector);
       if (element == null) continue;
 
-      final blocks = element.querySelectorAll('p');
-      if (blocks.isEmpty) return blockToText(element);
-
-      return blocks.map(blockToText).join('\n');
+      return extractParagraphText(element);
     }
 
     return '';
   }
-
-  @override
-  Map<String, String> requestHeaders(Uri url) => const {};
 
   @override
   Uri normalizeUrl(Uri url) {

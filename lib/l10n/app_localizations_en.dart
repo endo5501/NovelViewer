@@ -400,7 +400,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get download_unsupportedSiteError =>
-      'Unsupported site (supports Narou, Narou18, and Kakuyomu)';
+      'Unsupported site (supports Narou, Narou18, Kakuyomu, and Aozora Bunko)';
 
   @override
   String download_skippedSuffix(int count) {

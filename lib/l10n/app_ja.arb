@@ -206,7 +206,7 @@
 
   "download_title": "小説ダウンロード",
   "download_invalidUrlError": "有効なURLを入力してください",
-  "download_unsupportedSiteError": "サポートされていないサイトです（なろう・なろう18・カクヨムに対応）",
+  "download_unsupportedSiteError": "サポートされていないサイトです（なろう・なろう18・カクヨム・青空文庫に対応）",
   "download_skippedSuffix": "(スキップ: {count}件)",
   "@download_skippedSuffix": {
     "placeholders": {
