@@ -27,14 +27,13 @@ final bookmarksForNovelProvider =
   return repository.findByNovel(novelId);
 });
 
-final isBookmarkedProvider = FutureProvider<bool>((ref) async {
-  final novelId = ref.watch(currentNovelIdProvider);
-  final selectedFile = ref.watch(selectedFileProvider);
-
-  if (novelId == null || selectedFile == null) return false;
-
-  final repository = ref.watch(bookmarkRepositoryProvider);
-  return repository.exists(novelId: novelId, filePath: selectedFile.path);
+final isBookmarkedProvider = Provider<bool>((ref) {
+  final lineNumber = ref.watch(currentViewLineProvider);
+  final linesAsync = ref.watch(bookmarkLineNumbersForFileProvider);
+  return linesAsync.maybeWhen(
+    data: (lines) => lines.contains(lineNumber),
+    orElse: () => false,
+  );
 });
 
 Future<void> toggleBookmark(
@@ -43,14 +42,62 @@ Future<void> toggleBookmark(
   required String fileName,
   required String filePath,
   required bool isCurrentlyBookmarked,
+  int? lineNumber,
 }) async {
   if (isCurrentlyBookmarked) {
-    await repository.remove(novelId: novelId, filePath: filePath);
+    await repository.remove(
+      novelId: novelId,
+      filePath: filePath,
+      lineNumber: lineNumber,
+    );
   } else {
     await repository.add(
       novelId: novelId,
       fileName: fileName,
       filePath: filePath,
+      lineNumber: lineNumber,
     );
   }
 }
+
+class CurrentViewLineNotifier extends Notifier<int?> {
+  @override
+  int? build() => null;
+
+  void set(int? lineNumber) => state = lineNumber;
+  void reset() => state = null;
+}
+
+final currentViewLineProvider =
+    NotifierProvider<CurrentViewLineNotifier, int?>(
+        CurrentViewLineNotifier.new);
+
+class BookmarkJumpLineNotifier extends Notifier<int?> {
+  @override
+  int? build() => null;
+
+  void jump(int lineNumber) => state = lineNumber;
+  void clear() => state = null;
+}
+
+final bookmarkJumpLineProvider =
+    NotifierProvider<BookmarkJumpLineNotifier, int?>(
+        BookmarkJumpLineNotifier.new);
+
+final bookmarkLineNumbersForFileProvider =
+    FutureProvider<List<int>>((ref) async {
+  final novelId = ref.watch(currentNovelIdProvider);
+  final selectedFile = ref.watch(selectedFileProvider);
+
+  if (novelId == null || selectedFile == null) return [];
+
+  final repository = ref.watch(bookmarkRepositoryProvider);
+  final bookmarks = await repository.findByNovelAndFile(
+    novelId: novelId,
+    filePath: selectedFile.path,
+  );
+  return bookmarks
+      .where((b) => b.lineNumber != null)
+      .map((b) => b.lineNumber!)
+      .toList();
+});

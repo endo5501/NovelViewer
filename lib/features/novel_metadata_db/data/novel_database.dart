@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
-  static const _databaseVersion = 3;
+  static const _databaseVersion = 4;
 
   final String? _dbDirPath;
   Database? _database;
@@ -65,6 +65,9 @@ class NovelDatabase {
     if (oldVersion < 3) {
       await _createBookmarksTable(db);
     }
+    if (oldVersion >= 3 && oldVersion < 4) {
+      await _migrateBookmarksAddLineNumber(db);
+    }
   }
 
   static Future<void> _createWordSummariesTable(Database db) async {
@@ -93,10 +96,21 @@ class NovelDatabase {
         novel_id TEXT NOT NULL,
         file_name TEXT NOT NULL,
         file_path TEXT NOT NULL,
+        line_number INTEGER,
         created_at TEXT NOT NULL,
-        UNIQUE(novel_id, file_path)
+        UNIQUE(novel_id, file_path, line_number)
       )
     ''');
+  }
+
+  static Future<void> _migrateBookmarksAddLineNumber(Database db) async {
+    await db.execute('ALTER TABLE bookmarks RENAME TO bookmarks_old');
+    await _createBookmarksTable(db);
+    await db.execute('''
+      INSERT INTO bookmarks (id, novel_id, file_name, file_path, line_number, created_at)
+      SELECT id, novel_id, file_name, file_path, NULL, created_at FROM bookmarks_old
+    ''');
+    await db.execute('DROP TABLE bookmarks_old');
   }
 
   /// For testing: initialize with a provided database instance.

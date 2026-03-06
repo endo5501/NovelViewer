@@ -20,7 +20,7 @@ Widget buildBookmarkButton(WidgetRef ref) {
   final novelId = ref.watch(currentNovelIdProvider);
   final selectedFile = ref.watch(selectedFileProvider);
   final isEnabled = novelId != null && selectedFile != null;
-  final isBookmarked = ref.watch(isBookmarkedProvider).value ?? false;
+  final isBookmarked = ref.watch(isBookmarkedProvider);
 
   return IconButton(
     key: const Key('bookmark_button'),
@@ -51,8 +51,7 @@ void main() {
             selectedFileProvider.overrideWith(() => _TestSelectedFileNotifier(
                 const FileEntry(
                     name: '001.txt', path: '/library/n1234/001.txt'))),
-            isBookmarkedProvider
-                .overrideWithValue(const AsyncValue.data(false)),
+            isBookmarkedProvider.overrideWithValue(false),
           ],
           child: MaterialApp(
                 locale: const Locale('ja'),
@@ -92,8 +91,7 @@ void main() {
             selectedFileProvider.overrideWith(() => _TestSelectedFileNotifier(
                 const FileEntry(
                     name: '001.txt', path: '/library/n1234/001.txt'))),
-            isBookmarkedProvider
-                .overrideWithValue(const AsyncValue.data(true)),
+            isBookmarkedProvider.overrideWithValue(true),
           ],
           child: MaterialApp(
                 locale: const Locale('ja'),
@@ -127,8 +125,7 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
-            isBookmarkedProvider
-                .overrideWithValue(const AsyncValue.data(false)),
+            isBookmarkedProvider.overrideWithValue(false),
           ],
           child: MaterialApp(
                 locale: const Locale('ja'),
@@ -161,8 +158,7 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library')),
-            isBookmarkedProvider
-                .overrideWithValue(const AsyncValue.data(false)),
+            isBookmarkedProvider.overrideWithValue(false),
           ],
           child: MaterialApp(
                 locale: const Locale('ja'),

@@ -21,7 +21,7 @@ void main() {
     final db = await databaseFactoryFfi.openDatabase(
       inMemoryDatabasePath,
       options: OpenDatabaseOptions(
-        version: 3,
+        version: 4,
         onCreate: (db, version) async {
           await db.execute('''
             CREATE TABLE novels (
@@ -54,8 +54,9 @@ void main() {
               novel_id TEXT NOT NULL,
               file_name TEXT NOT NULL,
               file_path TEXT NOT NULL,
+              line_number INTEGER,
               created_at TEXT NOT NULL,
-              UNIQUE(novel_id, file_path)
+              UNIQUE(novel_id, file_path, line_number)
             )
           ''');
         },
@@ -167,7 +168,7 @@ void main() {
   });
 
   group('isBookmarkedProvider', () {
-    test('returns true when file is bookmarked', () async {
+    test('returns true when file is bookmarked with matching line', () async {
       final container = createContainer(
         libraryPath: '/library',
         currentDirectory: '/library/n1234',
@@ -179,6 +180,7 @@ void main() {
         novelId: 'n1234',
         fileName: '001_chapter1.txt',
         filePath: '/library/n1234/001_chapter1.txt',
+        lineNumber: 10,
       );
 
       container.read(selectedFileProvider.notifier).selectFile(
@@ -186,9 +188,12 @@ void main() {
                 name: '001_chapter1.txt',
                 path: '/library/n1234/001_chapter1.txt'),
           );
+      container.read(currentViewLineProvider.notifier).set(10);
 
-      final isBookmarked =
-          await container.read(isBookmarkedProvider.future);
+      // Wait for bookmarkLineNumbersForFileProvider to resolve
+      await container.read(bookmarkLineNumbersForFileProvider.future);
+
+      final isBookmarked = container.read(isBookmarkedProvider);
       expect(isBookmarked, isTrue);
     });
 
@@ -205,8 +210,9 @@ void main() {
                 path: '/library/n1234/001_chapter1.txt'),
           );
 
-      final isBookmarked =
-          await container.read(isBookmarkedProvider.future);
+      await container.read(bookmarkLineNumbersForFileProvider.future);
+
+      final isBookmarked = container.read(isBookmarkedProvider);
       expect(isBookmarked, isFalse);
     });
 
@@ -217,8 +223,9 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final isBookmarked =
-          await container.read(isBookmarkedProvider.future);
+      await container.read(bookmarkLineNumbersForFileProvider.future);
+
+      final isBookmarked = container.read(isBookmarkedProvider);
       expect(isBookmarked, isFalse);
     });
   });
@@ -275,6 +282,116 @@ void main() {
         filePath: '/library/n1234/001_chapter1.txt',
       );
       expect(exists, isFalse);
+    });
+
+    test('adds bookmark with line number', () async {
+      final container = createContainer(
+        libraryPath: '/library',
+        currentDirectory: '/library/n1234',
+      );
+      addTearDown(container.dispose);
+
+      final repository = container.read(bookmarkRepositoryProvider);
+
+      await toggleBookmark(
+        repository,
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/library/n1234/001_chapter1.txt',
+        isCurrentlyBookmarked: false,
+        lineNumber: 42,
+      );
+
+      final exists = await repository.exists(
+        novelId: 'n1234',
+        filePath: '/library/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+      expect(exists, isTrue);
+    });
+
+    test('removes bookmark with line number', () async {
+      final container = createContainer(
+        libraryPath: '/library',
+        currentDirectory: '/library/n1234',
+      );
+      addTearDown(container.dispose);
+
+      final repository = container.read(bookmarkRepositoryProvider);
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/library/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+
+      await toggleBookmark(
+        repository,
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/library/n1234/001_chapter1.txt',
+        isCurrentlyBookmarked: true,
+        lineNumber: 42,
+      );
+
+      final exists = await repository.exists(
+        novelId: 'n1234',
+        filePath: '/library/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+      expect(exists, isFalse);
+    });
+  });
+
+  group('bookmarkLineNumbersForFileProvider', () {
+    test('returns line numbers for bookmarked file', () async {
+      final container = createContainer(
+        libraryPath: '/library',
+        currentDirectory: '/library/n1234',
+      );
+      addTearDown(container.dispose);
+
+      final repository = container.read(bookmarkRepositoryProvider);
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/library/n1234/001_chapter1.txt',
+        lineNumber: 10,
+      );
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/library/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+
+      container.read(selectedFileProvider.notifier).selectFile(
+            const FileEntry(
+                name: '001_chapter1.txt',
+                path: '/library/n1234/001_chapter1.txt'),
+          );
+
+      final lineNumbers = await container
+          .read(bookmarkLineNumbersForFileProvider.future);
+      expect(lineNumbers, containsAll([10, 42]));
+    });
+
+    test('returns empty list when no bookmarks for file', () async {
+      final container = createContainer(
+        libraryPath: '/library',
+        currentDirectory: '/library/n1234',
+      );
+      addTearDown(container.dispose);
+
+      container.read(selectedFileProvider.notifier).selectFile(
+            const FileEntry(
+                name: '001_chapter1.txt',
+                path: '/library/n1234/001_chapter1.txt'),
+          );
+
+      final lineNumbers = await container
+          .read(bookmarkLineNumbersForFileProvider.future);
+      expect(lineNumbers, isEmpty);
     });
   });
 }

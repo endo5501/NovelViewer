@@ -59,7 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final novelId = ref.watch(currentNovelIdProvider);
     final selectedFile = ref.watch(selectedFileProvider);
     final isEnabled = novelId != null && selectedFile != null;
-    final isBookmarked = ref.watch(isBookmarkedProvider).value ?? false;
+    final isBookmarked = ref.watch(isBookmarkedProvider);
 
     return IconButton(
       key: const Key('bookmark_button'),
@@ -74,7 +74,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final selectedFile = ref.read(selectedFileProvider);
     if (novelId == null || selectedFile == null) return;
 
-    final isBookmarked = ref.read(isBookmarkedProvider).value ?? false;
+    final lineNumber = ref.read(currentViewLineProvider);
+    final isBookmarked = ref.read(isBookmarkedProvider);
     final repository = ref.read(bookmarkRepositoryProvider);
 
     await toggleBookmark(
@@ -83,10 +84,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       fileName: selectedFile.name,
       filePath: selectedFile.path,
       isCurrentlyBookmarked: isBookmarked,
+      lineNumber: lineNumber,
     );
 
     ref.invalidate(isBookmarkedProvider);
     ref.invalidate(bookmarksForNovelProvider(novelId));
+    ref.invalidate(bookmarkLineNumbersForFileProvider);
   }
 
   @override
