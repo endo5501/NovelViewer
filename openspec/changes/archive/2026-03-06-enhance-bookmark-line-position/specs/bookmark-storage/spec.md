@@ -1,18 +1,17 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
-### Requirement: Bookmark data persistence
+### Requirement: Database migration creates bookmarks table
 The system SHALL persist bookmark data in the existing SQLite database (`novel_metadata.db`) using a `bookmarks` table. The database version SHALL be upgraded from 3 to 4 to add the `line_number` column and update the UNIQUE constraint.
-
-#### Scenario: Database migration creates bookmarks table
-- **WHEN** the application starts with database version 2
-- **THEN** the database SHALL be upgraded to version 3 with a new `bookmarks` table containing columns: `id` (INTEGER PRIMARY KEY AUTOINCREMENT), `novel_id` (TEXT NOT NULL), `file_name` (TEXT NOT NULL), `file_path` (TEXT NOT NULL), `created_at` (TEXT NOT NULL), with a UNIQUE constraint on (`novel_id`, `file_path`)
 
 #### Scenario: Database migration adds line_number column
 - **WHEN** the application starts with database version 3
 - **THEN** the database SHALL be upgraded to version 4 by recreating the `bookmarks` table with columns: `id` (INTEGER PRIMARY KEY AUTOINCREMENT), `novel_id` (TEXT NOT NULL), `file_name` (TEXT NOT NULL), `file_path` (TEXT NOT NULL), `line_number` (INTEGER), `created_at` (TEXT NOT NULL), with a UNIQUE constraint on (`novel_id`, `file_path`, `line_number`)
 - **AND** existing bookmark data SHALL be preserved with `line_number` set to NULL
 
-#### Scenario: Fresh install creates bookmarks table
+### Requirement: Fresh install creates bookmarks table
+The system SHALL create the bookmarks table with the `line_number` column on fresh install.
+
+#### Scenario: Fresh install creates bookmarks table with line_number
 - **WHEN** the application is installed for the first time
 - **THEN** the database SHALL be created at version 4 with the `bookmarks` table including the `line_number` column and UNIQUE constraint on (`novel_id`, `file_path`, `line_number`)
 
@@ -54,10 +53,6 @@ The system SHALL provide a list of all bookmarks for a given novel, ordered by c
 - **WHEN** bookmarks are requested for novel_id "n1234" which has 3 bookmarks (including some with line numbers)
 - **THEN** all 3 bookmarks SHALL be returned with their line_number values, ordered by created_at descending
 
-#### Scenario: Novel has no bookmarks
-- **WHEN** bookmarks are requested for a novel_id that has no bookmarks
-- **THEN** an empty list SHALL be returned
-
 ### Requirement: Check bookmark existence
 The system SHALL provide a way to check whether a specific file and line combination is bookmarked within a novel.
 
@@ -67,10 +62,6 @@ The system SHALL provide a way to check whether a specific file and line combina
 
 #### Scenario: File is bookmarked at different line
 - **WHEN** a check is made for novel_id "n1234", file_path "/path/to/001_chapter1.txt", and line_number 50, but only line 42 is bookmarked
-- **THEN** the result SHALL be false
-
-#### Scenario: File is not bookmarked
-- **WHEN** a check is made for novel_id "n1234" and file_path "/path/to/002_chapter2.txt" which is not bookmarked
 - **THEN** the result SHALL be false
 
 ### Requirement: Find bookmarks for a specific file

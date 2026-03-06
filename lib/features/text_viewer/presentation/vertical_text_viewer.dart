@@ -44,6 +44,8 @@ class VerticalTextViewer extends StatefulWidget {
     this.onSelectionChanged,
     this.onContextMenu,
     this.columnSpacing = 8.0,
+    this.bookmarkLineNumbers = const [],
+    this.onPageLineChanged,
   }) : assert(columnSpacing >= 0);
 
   final List<TextSegment> segments;
@@ -55,6 +57,8 @@ class VerticalTextViewer extends StatefulWidget {
   final ValueChanged<String?>? onSelectionChanged;
   final void Function(Offset position, String selectedText)? onContextMenu;
   final double columnSpacing;
+  final List<int> bookmarkLineNumbers;
+  final ValueChanged<int>? onPageLineChanged;
 
   @override
   State<VerticalTextViewer> createState() => _VerticalTextViewerState();
@@ -74,6 +78,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
     with SingleTickerProviderStateMixin {
   int _currentPage = 0;
   int _pageCount = 1;
+  int _lastReportedLine = 0;
   final FocusNode _focusNode = FocusNode();
 
   // Split segments into lines for pagination
@@ -204,6 +209,17 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
               }
             }
 
+            // Report current page's first line number
+            if (result.firstLinePerPage.isNotEmpty) {
+              final pageLine = result.firstLinePerPage[safePage];
+              if (pageLine != _lastReportedLine) {
+                _lastReportedLine = pageLine;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) widget.onPageLineChanged?.call(pageLine);
+                });
+              }
+            }
+
             final pageTextOffset = result.charOffsetPerPage[safePage];
             final lineBreakIndices = result.lineBreakIndicesPerPage[safePage];
 
@@ -258,14 +274,26 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
               pageContent = incomingPage;
             }
 
+            final hasBookmarkOnPage = result.bookmarkPages.contains(safePage);
+
             return Column(
               children: [
                 Expanded(
-                  child: ClipRect(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: pageContent,
-                    ),
+                  child: Stack(
+                    children: [
+                      ClipRect(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: pageContent,
+                        ),
+                      ),
+                      if (hasBookmarkOnPage)
+                        const Positioned(
+                          left: 4,
+                          top: 4,
+                          child: Icon(Icons.bookmark, color: Colors.orange, size: 20),
+                        ),
+                    ],
                   ),
                 ),
                 if (totalPages > 1)
@@ -379,7 +407,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
         availableHeight > 0 ? (availableHeight / charHeight).floor() : 1;
 
     if (availableWidth <= 0 || charsPerColumn <= 0) {
-      return _PaginationResult([widget.segments], null, const [0], const [{}]);
+      return _PaginationResult([widget.segments], null, const [0], const [{}], const {}, const [1]);
     }
 
     final columns = <List<TextSegment>>[];
@@ -389,7 +417,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
         _groupColumnsIntoPages(columns, charWidth, availableWidth, lineStartSet);
 
     if (pages.isEmpty) {
-      return _PaginationResult([widget.segments], null, const [0], const [{}]);
+      return _PaginationResult([widget.segments], null, const [0], const [{}], const {}, const [1]);
     }
 
     // Compute character offset per page for TTS auto-navigation
@@ -397,7 +425,36 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
 
     final targetPage =
         _findTargetPage(lineStartColumns, pageStarts, pages.length);
-    return _PaginationResult(pages, targetPage, charOffsetPerPage, lineBreakIndicesPerPage);
+
+    // Compute which pages have bookmarks
+    final bookmarkPages = <int>{};
+    for (final lineNum in widget.bookmarkLineNumbers) {
+      final lineIndex = (lineNum - 1).clamp(0, _lines.length - 1);
+      if (lineIndex < lineStartColumns.length) {
+        final colIndex = lineStartColumns[lineIndex];
+        for (var i = pageStarts.length - 1; i >= 0; i--) {
+          if (colIndex >= pageStarts[i]) {
+            if (i < pages.length) bookmarkPages.add(i);
+            break;
+          }
+        }
+      }
+    }
+
+    // Compute first line number for each page
+    final firstLinePerPage = <int>[];
+    for (final startCol in pageStarts) {
+      var lineNum = 1; // default to first line
+      for (var i = lineStartColumns.length - 1; i >= 0; i--) {
+        if (lineStartColumns[i] <= startCol) {
+          lineNum = i + 1; // 1-based line number
+          break;
+        }
+      }
+      firstLinePerPage.add(lineNum);
+    }
+
+    return _PaginationResult(pages, targetPage, charOffsetPerPage, lineBreakIndicesPerPage, bookmarkPages, firstLinePerPage);
   }
 
   List<List<TextSegment>> _splitIntoLines(List<TextSegment> segments) {
@@ -538,9 +595,11 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
 }
 
 class _PaginationResult {
-  const _PaginationResult(this.pages, this.targetPage, this.charOffsetPerPage, this.lineBreakIndicesPerPage);
+  const _PaginationResult(this.pages, this.targetPage, this.charOffsetPerPage, this.lineBreakIndicesPerPage, this.bookmarkPages, this.firstLinePerPage);
   final List<List<TextSegment>> pages;
   final int? targetPage;
   final List<int> charOffsetPerPage;
   final List<Set<int>> lineBreakIndicesPerPage;
+  final Set<int> bookmarkPages;
+  final List<int> firstLinePerPage;
 }

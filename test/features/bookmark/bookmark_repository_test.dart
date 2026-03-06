@@ -18,7 +18,7 @@ void main() {
     final db = await databaseFactoryFfi.openDatabase(
       inMemoryDatabasePath,
       options: OpenDatabaseOptions(
-        version: 3,
+        version: 4,
         onCreate: (db, version) async {
           await db.execute('''
             CREATE TABLE novels (
@@ -51,8 +51,9 @@ void main() {
               novel_id TEXT NOT NULL,
               file_name TEXT NOT NULL,
               file_path TEXT NOT NULL,
+              line_number INTEGER,
               created_at TEXT NOT NULL,
-              UNIQUE(novel_id, file_path)
+              UNIQUE(novel_id, file_path, line_number)
             )
           ''');
         },
@@ -193,6 +194,157 @@ void main() {
     });
   });
 
+  group('add with lineNumber', () {
+    test('adds a bookmark with line number', () async {
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+
+      final bookmarks = await repository.findByNovel('n1234');
+      expect(bookmarks.length, 1);
+      expect(bookmarks.first.lineNumber, 42);
+    });
+
+    test('allows different lines in same file', () async {
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 100,
+      );
+
+      final bookmarks = await repository.findByNovel('n1234');
+      expect(bookmarks.length, 2);
+    });
+
+    test('ignores duplicate same file and line', () async {
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+
+      final bookmarks = await repository.findByNovel('n1234');
+      expect(bookmarks.length, 1);
+    });
+  });
+
+  group('remove with lineNumber', () {
+    test('removes bookmark at specific line', () async {
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 100,
+      );
+
+      await repository.remove(
+        novelId: 'n1234',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+
+      final bookmarks = await repository.findByNovel('n1234');
+      expect(bookmarks.length, 1);
+      expect(bookmarks.first.lineNumber, 100);
+    });
+  });
+
+  group('exists with lineNumber', () {
+    test('returns true for bookmarked file and line', () async {
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+
+      final result = await repository.exists(
+        novelId: 'n1234',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+      expect(result, isTrue);
+    });
+
+    test('returns false for different line', () async {
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+
+      final result = await repository.exists(
+        novelId: 'n1234',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 50,
+      );
+      expect(result, isFalse);
+    });
+  });
+
+  group('findByNovelAndFile', () {
+    test('returns bookmarks for specific file', () async {
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 10,
+      );
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 42,
+      );
+      await repository.add(
+        novelId: 'n1234',
+        fileName: '002_chapter2.txt',
+        filePath: '/path/to/n1234/002_chapter2.txt',
+        lineNumber: 5,
+      );
+
+      final bookmarks = await repository.findByNovelAndFile(
+        novelId: 'n1234',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+      );
+      expect(bookmarks.length, 2);
+      expect(bookmarks[0].lineNumber, 10);
+      expect(bookmarks[1].lineNumber, 42);
+    });
+
+    test('returns empty list for file with no bookmarks', () async {
+      final bookmarks = await repository.findByNovelAndFile(
+        novelId: 'n1234',
+        filePath: '/path/to/n1234/nonexistent.txt',
+      );
+      expect(bookmarks, isEmpty);
+    });
+  });
+
   group('Bookmark model', () {
     test('creates from map', () {
       final bookmark = Bookmark.fromMap({
@@ -208,6 +360,57 @@ void main() {
       expect(bookmark.fileName, '001_chapter1.txt');
       expect(bookmark.filePath, '/path/to/n1234/001_chapter1.txt');
       expect(bookmark.createdAt, DateTime(2026, 1, 1));
+    });
+
+    test('creates from map with line_number', () {
+      final bookmark = Bookmark.fromMap({
+        'id': 1,
+        'novel_id': 'n1234',
+        'file_name': '001_chapter1.txt',
+        'file_path': '/path/to/n1234/001_chapter1.txt',
+        'line_number': 42,
+        'created_at': '2026-01-01T00:00:00.000',
+      });
+
+      expect(bookmark.lineNumber, 42);
+    });
+
+    test('creates from map with null line_number', () {
+      final bookmark = Bookmark.fromMap({
+        'id': 1,
+        'novel_id': 'n1234',
+        'file_name': '001_chapter1.txt',
+        'file_path': '/path/to/n1234/001_chapter1.txt',
+        'line_number': null,
+        'created_at': '2026-01-01T00:00:00.000',
+      });
+
+      expect(bookmark.lineNumber, isNull);
+    });
+
+    test('toMap includes line_number', () {
+      final bookmark = Bookmark(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        lineNumber: 42,
+        createdAt: DateTime(2026, 1, 1),
+      );
+
+      final map = bookmark.toMap();
+      expect(map['line_number'], 42);
+    });
+
+    test('toMap includes null line_number', () {
+      final bookmark = Bookmark(
+        novelId: 'n1234',
+        fileName: '001_chapter1.txt',
+        filePath: '/path/to/n1234/001_chapter1.txt',
+        createdAt: DateTime(2026, 1, 1),
+      );
+
+      final map = bookmark.toMap();
+      expect(map['line_number'], isNull);
     });
   });
 }

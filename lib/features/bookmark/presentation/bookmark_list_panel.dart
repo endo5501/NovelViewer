@@ -52,7 +52,9 @@ class BookmarkListPanel extends ConsumerWidget {
       },
       child: ListTile(
         leading: const Icon(Icons.bookmark),
-        title: Text(bookmark.fileName),
+        title: Text(bookmark.lineNumber != null
+            ? '${bookmark.fileName} : L${bookmark.lineNumber}'
+            : bookmark.fileName),
         onTap: () => _openBookmark(context, ref, bookmark),
       ),
     );
@@ -90,8 +92,10 @@ class BookmarkListPanel extends ConsumerWidget {
     await repository.remove(
       novelId: bookmark.novelId,
       filePath: bookmark.filePath,
+      lineNumber: bookmark.lineNumber,
     );
     ref.invalidate(bookmarksForNovelProvider(bookmark.novelId));
+    ref.invalidate(bookmarkLineNumbersForFileProvider);
     ref.invalidate(isBookmarkedProvider);
   }
 
@@ -113,5 +117,8 @@ class BookmarkListPanel extends ConsumerWidget {
     ref.read(selectedFileProvider.notifier).selectFile(
           FileEntry(name: bookmark.fileName, path: bookmark.filePath),
         );
+    if (bookmark.lineNumber != null) {
+      ref.read(bookmarkJumpLineProvider.notifier).jump(bookmark.lineNumber!);
+    }
   }
 }

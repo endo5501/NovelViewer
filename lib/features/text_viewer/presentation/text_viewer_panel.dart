@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
-import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/data/parsed_segments_cache.dart';
 import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
@@ -42,6 +42,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
   final ScrollController _scrollController = ScrollController();
   final ParsedSegmentsCache _segmentsCache = ParsedSegmentsCache();
   String? _lastScrollKey;
+  String? _lastViewedFilePath;
   bool _isTtsScrolling = false;
 
   TtsStreamingController? _streamingController;
@@ -53,6 +54,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _scrollController.addListener(_updateCurrentViewLine);
   }
 
   @override
@@ -613,8 +615,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
           0, range.start.clamp(0, content.length));
       final lineNumber = '\n'.allMatches(textBefore).length;
 
-      final fontSize = textStyle?.fontSize ?? 14.0;
-      final lineHeight = (textStyle?.height ?? 1.5) * fontSize;
+      final lineHeight = _computeLineHeight(textStyle);
       final maxOffset = _scrollController.position.maxScrollExtent;
       final clampedOffset = (lineNumber * lineHeight).clamp(0.0, maxOffset);
 
@@ -629,13 +630,39 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     });
   }
 
-  void _scrollToLine(SelectedSearchMatch match, TextStyle? textStyle) {
+  double _computeLineHeight(TextStyle? textStyle) {
+    final fs = textStyle?.fontSize ?? 14.0;
+    return (textStyle?.height ?? 1.5) * fs;
+  }
+
+  double _lineNumberToOffset(int lineNumber, TextStyle? textStyle) {
+    return (lineNumber - 1) * _computeLineHeight(textStyle);
+  }
+
+  int _lastReportedViewLine = 0;
+
+  void _updateCurrentViewLine() {
+    if (!mounted || !_scrollController.hasClients) return;
+    final fontSize = ref.read(fontSizeProvider);
+    final fontFamily = ref.read(fontFamilyProvider);
+    final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+          fontSize: fontSize,
+          fontFamily: fontFamily.effectiveFontFamilyName,
+        );
+    final lineHeight = _computeLineHeight(textStyle);
+    if (lineHeight <= 0) return;
+    final lineNumber = (_scrollController.offset / lineHeight).floor() + 1;
+    if (lineNumber != _lastReportedViewLine) {
+      _lastReportedViewLine = lineNumber;
+      ref.read(currentViewLineProvider.notifier).set(lineNumber);
+    }
+  }
+
+  void _scrollToLineNumber(int lineNumber, TextStyle? textStyle) {
     if (!mounted || !_scrollController.hasClients) return;
 
-    final fontSize = textStyle?.fontSize ?? 14.0;
-    final lineHeight = (textStyle?.height ?? 1.5) * fontSize;
     final maxOffset = _scrollController.position.maxScrollExtent;
-    final clampedOffset = ((match.lineNumber - 1) * lineHeight).clamp(0.0, maxOffset);
+    final clampedOffset = _lineNumberToOffset(lineNumber, textStyle).clamp(0.0, maxOffset);
 
     _scrollController.animateTo(
       clampedOffset,
@@ -657,6 +684,18 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
             selectedFile?.path == searchMatch.filePath
         ? searchMatch
         : null;
+
+    // Reset current view line when file changes
+    if (selectedFile?.path != _lastViewedFilePath) {
+      _lastViewedFilePath = selectedFile?.path;
+      _lastScrollKey = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(currentViewLineProvider.notifier).set(1);
+          _lastReportedViewLine = 1;
+        }
+      });
+    }
 
     return contentAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -684,17 +723,35 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
             );
         final segments = _segmentsCache.getSegments(content);
 
+        // Handle bookmark jump
+        final bookmarkJumpLine = ref.watch(bookmarkJumpLineProvider);
+        final targetLineNumber = activeMatch?.lineNumber ?? bookmarkJumpLine;
+
+        // Bookmark indicators (shared between modes)
+        final bookmarkLines =
+            ref.watch(bookmarkLineNumbersForFileProvider).value ?? [];
+
         if (displayMode == TextDisplayMode.vertical) {
+          // Clear bookmark jump after consuming in vertical mode
+          if (bookmarkJumpLine != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) ref.read(bookmarkJumpLineProvider.notifier).clear();
+            });
+          }
           final columnSpacing = ref.watch(columnSpacingProvider);
           return _withTtsControls(
             VerticalTextViewer(
               segments: segments,
               baseStyle: textStyle,
               query: activeMatch?.query,
-              targetLineNumber: activeMatch?.lineNumber,
+              targetLineNumber: targetLineNumber,
               ttsHighlightStart: ttsHighlightRange?.start,
               ttsHighlightEnd: ttsHighlightRange?.end,
               columnSpacing: columnSpacing,
+              bookmarkLineNumbers: bookmarkLines,
+              onPageLineChanged: (lineNumber) {
+                ref.read(currentViewLineProvider.notifier).set(lineNumber);
+              },
               onSelectionChanged: (text) {
                 ref.read(selectedTextProvider.notifier).setText(text);
               },
@@ -724,9 +781,16 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
           if (scrollKey != _lastScrollKey) {
             _lastScrollKey = scrollKey;
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _scrollToLine(activeMatch, textStyle);
+              _scrollToLineNumber(activeMatch.lineNumber, textStyle);
             });
           }
+        } else if (bookmarkJumpLine != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _scrollToLineNumber(bookmarkJumpLine, textStyle);
+              ref.read(bookmarkJumpLineProvider.notifier).clear();
+            }
+          });
         }
 
         // Auto-scroll for TTS highlight
@@ -748,24 +812,42 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
             child: SingleChildScrollView(
               controller: _scrollController,
               padding: const EdgeInsets.all(16.0),
-              child: SelectableText.rich(
-                textSpan,
-                onSelectionChanged: (selection, cause) {
-                  final start = min(selection.start, selection.end);
-                  final end = max(selection.start, selection.end);
-                  final selectedText =
-                      extractSelectedText(start, end, segments);
-                  ref.read(selectedTextProvider.notifier).setText(
-                        selectedText.isEmpty ? null : selectedText,
-                      );
-                },
-                contextMenuBuilder: (menuContext, editableTextState) {
-                  return buildDictionaryContextMenu(
-                    context,
-                    editableTextState,
-                    onAddToDictionary: _openDictionaryDialog,
-                  );
-                },
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(
+                        left: bookmarkLines.isEmpty ? 0 : 20),
+                    child: SelectableText.rich(
+                      textSpan,
+                      onSelectionChanged: (selection, cause) {
+                        final start = min(selection.start, selection.end);
+                        final end = max(selection.start, selection.end);
+                        final selectedText =
+                            extractSelectedText(start, end, segments);
+                        ref.read(selectedTextProvider.notifier).setText(
+                              selectedText.isEmpty ? null : selectedText,
+                            );
+                      },
+                      contextMenuBuilder: (menuContext, editableTextState) {
+                        return buildDictionaryContextMenu(
+                          context,
+                          editableTextState,
+                          onAddToDictionary: _openDictionaryDialog,
+                        );
+                      },
+                    ),
+                  ),
+                  for (final line in bookmarkLines)
+                    Positioned(
+                      left: 0,
+                      top: _lineNumberToOffset(line, textStyle),
+                      child: Icon(
+                        Icons.bookmark,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

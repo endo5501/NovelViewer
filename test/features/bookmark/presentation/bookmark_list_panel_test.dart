@@ -104,6 +104,74 @@ void main() {
       expect(find.byIcon(Icons.bookmark), findsNWidgets(2));
     });
 
+    testWidgets('displays bookmark with line number',
+        (WidgetTester tester) async {
+      final bookmarks = [
+        Bookmark(
+          id: 1,
+          novelId: 'n1234',
+          fileName: '001_chapter1.txt',
+          filePath: '/library/n1234/001_chapter1.txt',
+          lineNumber: 42,
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            libraryPathProvider.overrideWithValue('/library'),
+            currentDirectoryProvider.overrideWith(
+                () => _TestCurrentDirectoryNotifier('/library/n1234')),
+            bookmarksForNovelProvider('n1234')
+                .overrideWithValue(AsyncValue.data(bookmarks)),
+          ],
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: BookmarkListPanel())),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.textContaining('L42'), findsOneWidget);
+    });
+
+    testWidgets('displays bookmark without line number shows only file name',
+        (WidgetTester tester) async {
+      final bookmarks = [
+        Bookmark(
+          id: 1,
+          novelId: 'n1234',
+          fileName: '001_chapter1.txt',
+          filePath: '/library/n1234/001_chapter1.txt',
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            libraryPathProvider.overrideWithValue('/library'),
+            currentDirectoryProvider.overrideWith(
+                () => _TestCurrentDirectoryNotifier('/library/n1234')),
+            bookmarksForNovelProvider('n1234')
+                .overrideWithValue(AsyncValue.data(bookmarks)),
+          ],
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: BookmarkListPanel())),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('001_chapter1.txt'), findsOneWidget);
+      expect(find.textContaining('L'), findsNothing);
+    });
+
     testWidgets('shows error when bookmarked file does not exist',
         (WidgetTester tester) async {
       final bookmarks = [

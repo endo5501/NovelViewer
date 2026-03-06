@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
+import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
@@ -444,6 +445,63 @@ void main() {
           buildRubyTextSpans(segments, const TextStyle(), '存在しない');
 
       expect(span.toPlainText(), 'テスト文章です');
+    });
+  });
+
+  group('Bookmark indicators in text viewer', () {
+    testWidgets('shows bookmark icon on bookmarked line in horizontal mode',
+        (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final longText =
+          List.generate(20, (i) => '行${i + 1}: テストテキスト').join('\n');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
+            fileContentProvider.overrideWith((ref) async => longText),
+            bookmarkLineNumbersForFileProvider
+                .overrideWithValue(const AsyncValue.data([5, 10])),
+          ],
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: TextViewerPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.bookmark), findsNWidgets(2));
+    });
+
+    testWidgets('shows no bookmark icons when no bookmarks exist',
+        (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
+            fileContentProvider
+                .overrideWith((ref) async => 'テスト小説の内容です。'),
+            bookmarkLineNumbersForFileProvider
+                .overrideWithValue(const AsyncValue.data([])),
+          ],
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: TextViewerPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.bookmark), findsNothing);
     });
   });
 }
