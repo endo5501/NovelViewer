@@ -321,18 +321,18 @@ class TtsStreamingController {
       _activePlayCompleter = null;
       await playSub.cancel();
 
-      // Wait for audio output buffer to drain before loading next segment.
-      // eof-reached fires when the decoder finishes, but the audio device
-      // (e.g. WASAPI on Windows) may still have buffered samples to play.
-      // After draining, pause() resets just_audio's _playing flag to false
-      // so that the next play() call is not a no-op.
+      // Wait for audio output buffer to drain after each segment, including
+      // the last one. eof-reached fires when the decoder finishes, but the
+      // audio device (e.g. WASAPI on Windows) may still have buffered samples
+      // to play. For intermediate segments, pause() resets just_audio's
+      // _playing flag so the next play() call is not a no-op. For the last
+      // segment, pause() is unnecessary since no subsequent play() follows.
       // pause() is used instead of stop() because stop() destroys the
       // platform (MediaKitPlayer), which kills buffered audio.
-      // Skip the delay for the last segment — no next segment to protect.
-      final hasNextSegment = i < segments.length - 1;
-      if (!_stopped && hasNextSegment) {
+      if (!_stopped) {
         await Future<void>.delayed(_bufferDrainDelay);
-        if (!_stopped) {
+        final hasNextSegment = i < segments.length - 1;
+        if (!_stopped && hasNextSegment) {
           await _audioPlayer.pause();
         }
       }

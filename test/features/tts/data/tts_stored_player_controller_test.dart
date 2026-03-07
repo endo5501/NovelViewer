@@ -343,6 +343,58 @@ void main() {
       expect(container.read(ttsPlaybackStateProvider), TtsPlaybackState.stopped);
       expect(container.read(ttsHighlightRangeProvider), isNull);
     });
+
+    test('waits for buffer drain delay before disposing after last segment',
+        () async {
+      final episodeId = await createTestEpisode(segmentCount: 1);
+      final player = FakeAudioPlayer();
+      final controller = TtsStoredPlayerController(
+        ref: container,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+        bufferDrainDelay: const Duration(milliseconds: 100),
+      );
+
+      await controller.start(episodeId: episodeId);
+      expect(player.isPlaying, isTrue);
+
+      // Simulate completion of the only (last) segment
+      player.simulateCompletion();
+
+      // Immediately after completion, player should NOT be disposed yet
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(player.isDisposed, isFalse,
+          reason: 'Player should not be disposed before buffer drain delay');
+
+      // Wait for drain delay to elapse and stop to complete
+      await _pumpUntil(() => player.isDisposed);
+      expect(container.read(ttsPlaybackStateProvider), TtsPlaybackState.stopped);
+    });
+
+    test('does not wait for drain on intermediate segments', () async {
+      final episodeId = await createTestEpisode(segmentCount: 2);
+      final player = FakeAudioPlayer();
+      final controller = TtsStoredPlayerController(
+        ref: container,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+        bufferDrainDelay: const Duration(milliseconds: 100),
+      );
+
+      await controller.start(episodeId: episodeId);
+
+      // Complete first (intermediate) segment
+      player.simulateCompletion();
+
+      // Second segment should start quickly (no 100ms drain for intermediate)
+      await _pumpUntil(() => player.isPlaying);
+      expect(player.isPlaying, isTrue);
+
+      // Clean up
+      await controller.stop();
+    });
   });
 }
 
