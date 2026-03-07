@@ -67,15 +67,19 @@ The system SHALL compute a SHA-256 hash of the episode text and store it in the 
 - **THEN** the SHA-256 hash of the full text content is stored in the episode's text_hash column
 
 ### Requirement: Audio buffer drain between segments
-The system SHALL wait for the audio output device to finish draining its buffer after each segment's playback completes before proceeding to the next segment. The wait duration SHALL be configurable via a `bufferDrainDelay` constructor parameter on `TtsStreamingController`, with a default value suitable for Windows WASAPI (500ms). After the buffer drain delay, the system SHALL call `pause()` on the audio player to reset the internal `playing` flag to `false`. The system SHALL NOT call `stop()` between segments, as `stop()` destroys the underlying platform player and kills any remaining audio in the output buffer.
+The system SHALL wait for the audio output device to finish draining its buffer after each segment's playback completes, including the last segment, before proceeding to cleanup or the next segment. The wait duration SHALL be configurable via a `bufferDrainDelay` constructor parameter on `TtsStreamingController`, with a default value suitable for Windows WASAPI (500ms). For intermediate segments, after the buffer drain delay, the system SHALL call `pause()` on the audio player to reset the internal `playing` flag to `false`. For the last segment, `pause()` is not required since no subsequent `play()` call will be made. The system SHALL NOT call `stop()` between segments, as `stop()` destroys the underlying platform player and kills any remaining audio in the output buffer. If the user stops playback during the buffer drain delay, the delay SHALL be skipped and stop SHALL proceed immediately.
 
 #### Scenario: Buffer drain delay prevents audio cutoff
 - **WHEN** segment N finishes playback (completed state is received) and segment N+1 is ready
 - **THEN** the system waits for the configured buffer drain delay before loading segment N+1, ensuring the audio output device finishes playing all buffered samples
 
 #### Scenario: pause() resets playing flag after buffer drain
-- **WHEN** the buffer drain delay completes after segment N
+- **WHEN** the buffer drain delay completes after segment N and segment N is not the last segment
 - **THEN** the system calls `pause()` on the audio player, resetting the internal `playing` flag to `false` so that the subsequent `play()` call for segment N+1 is not a no-op
+
+#### Scenario: Last segment waits for buffer drain before cleanup
+- **WHEN** the last segment finishes playback (completed state is received)
+- **THEN** the system waits for the configured buffer drain delay before disposing the audio player, ensuring the audio output device finishes playing all buffered samples
 
 #### Scenario: stop() is not called between segments
 - **WHEN** segment N completes and the system transitions to segment N+1
