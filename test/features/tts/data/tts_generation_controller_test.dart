@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_generation_controller.dart';
+import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -34,7 +35,7 @@ class FakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId}) {
+      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW}) {
     loadedModelDir = modelDir;
     loadedLanguageId = languageId;
     Future.microtask(() {
@@ -594,7 +595,7 @@ class _CancellableFakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId}) {
+      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW}) {
     Future.microtask(() {
       _responseController.add(ModelLoadedResponse(success: true));
     });
@@ -631,7 +632,7 @@ class _TrackingFakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId}) {
+      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW}) {
     Future.microtask(() {
       _responseController.add(ModelLoadedResponse(success: true));
     });
@@ -672,7 +673,7 @@ class _StallingFakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId}) {
+      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW}) {
     Future.microtask(() {
       _responseController.add(ModelLoadedResponse(success: true));
     });

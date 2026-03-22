@@ -8,6 +8,7 @@ import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
 import 'tts_dictionary_repository.dart';
 import 'tts_edit_segment.dart';
+import 'tts_engine_type.dart';
 import 'tts_isolate.dart';
 import 'tts_language.dart';
 import 'tts_playback_controller.dart';
@@ -178,7 +179,15 @@ class TtsEditController {
     }
   }
 
-  Future<bool> _ensureModelLoaded(String modelDir, {int languageId = TtsLanguage.defaultLanguageId}) async {
+  Future<bool> _ensureModelLoaded(
+    String modelDir, {
+    TtsEngineType engineType = TtsEngineType.qwen3,
+    int languageId = TtsLanguage.defaultLanguageId,
+    String? dicDir,
+    double? lengthScale,
+    double? noiseScale,
+    double? noiseW,
+  }) async {
     if (_modelLoaded) return true;
 
     await _ttsIsolate.spawn();
@@ -196,7 +205,15 @@ class TtsEditController {
       }
     });
 
-    _ttsIsolate.loadModel(modelDir, languageId: languageId);
+    _ttsIsolate.loadModel(
+      modelDir,
+      engineType: engineType,
+      languageId: languageId,
+      dicDir: dicDir,
+      lengthScale: lengthScale,
+      noiseScale: noiseScale,
+      noiseW: noiseW,
+    );
 
     try {
       _modelLoaded = await completer.future;
@@ -211,8 +228,13 @@ class TtsEditController {
   Future<bool> generateSegment({
     required int segmentIndex,
     required String modelDir,
+    TtsEngineType engineType = TtsEngineType.qwen3,
     String? refWavPath,
     int languageId = TtsLanguage.defaultLanguageId,
+    String? dicDir,
+    double? lengthScale,
+    double? noiseScale,
+    double? noiseW,
   }) async {
     final dict = _dictionaryRepository;
     final entries = dict != null
@@ -221,22 +243,32 @@ class TtsEditController {
     return _generateSegmentWithEntries(
       segmentIndex: segmentIndex,
       modelDir: modelDir,
+      engineType: engineType,
       refWavPath: refWavPath,
       languageId: languageId,
       dictEntries: entries,
+      dicDir: dicDir,
+      lengthScale: lengthScale,
+      noiseScale: noiseScale,
+      noiseW: noiseW,
     );
   }
 
   Future<bool> _generateSegmentWithEntries({
     required int segmentIndex,
     required String modelDir,
+    TtsEngineType engineType = TtsEngineType.qwen3,
     String? refWavPath,
     int languageId = TtsLanguage.defaultLanguageId,
     List<TtsDictionaryEntry>? dictEntries,
+    String? dicDir,
+    double? lengthScale,
+    double? noiseScale,
+    double? noiseW,
   }) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
 
-    if (!await _ensureModelLoaded(modelDir, languageId: languageId)) return false;
+    if (!await _ensureModelLoaded(modelDir, engineType: engineType, languageId: languageId, dicDir: dicDir, lengthScale: lengthScale, noiseScale: noiseScale, noiseW: noiseW)) return false;
 
     final segment = _segments[segmentIndex];
     // For new segments, apply dictionary before synthesizing and storing.
@@ -280,10 +312,15 @@ class TtsEditController {
 
   Future<void> generateAllUngenerated({
     required String modelDir,
+    TtsEngineType engineType = TtsEngineType.qwen3,
     String? globalRefWavPath,
     int languageId = TtsLanguage.defaultLanguageId,
     String Function(String fileName)? resolveRefWavPath,
     void Function(int segmentIndex)? onSegmentStart,
+    String? dicDir,
+    double? lengthScale,
+    double? noiseScale,
+    double? noiseW,
   }) async {
     _cancelled = false;
     final ungenerated = <int>[];
@@ -318,9 +355,14 @@ class TtsEditController {
       final success = await _generateSegmentWithEntries(
         segmentIndex: segmentIndex,
         modelDir: modelDir,
+        engineType: engineType,
         refWavPath: refWavPath,
         languageId: languageId,
         dictEntries: dictEntries,
+        dicDir: dicDir,
+        lengthScale: lengthScale,
+        noiseScale: noiseScale,
+        noiseW: noiseW,
       );
 
       if (!success) break;

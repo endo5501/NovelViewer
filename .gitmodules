@@ -4,3 +4,6 @@
 [submodule "third_party/lame"]
 	path = third_party/lame
 	url = https://github.com/lameproject/lame.git
+[submodule "third_party/piper-plus"]
+	path = third_party/piper-plus
+	url = https://github.com/endo5501/piper-plus.git

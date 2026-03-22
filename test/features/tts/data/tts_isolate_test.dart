@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine.dart';
+import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 
 void main() {
@@ -23,6 +24,27 @@ void main() {
     test('LoadModelMessage defaults languageId to Japanese', () {
       final msg = LoadModelMessage(modelDir: '/path/to/models');
       expect(msg.languageId, TtsEngine.languageJapanese);
+    });
+
+    test('LoadModelMessage defaults engineType to qwen3', () {
+      final msg = LoadModelMessage(modelDir: '/path/to/models');
+      expect(msg.engineType, TtsEngineType.qwen3);
+    });
+
+    test('LoadModelMessage holds piper engine type and params', () {
+      final msg = LoadModelMessage(
+        modelDir: '/path/to/model.onnx',
+        engineType: TtsEngineType.piper,
+        dicDir: '/path/to/dic',
+        lengthScale: 0.8,
+        noiseScale: 0.5,
+        noiseW: 0.6,
+      );
+      expect(msg.engineType, TtsEngineType.piper);
+      expect(msg.dicDir, '/path/to/dic');
+      expect(msg.lengthScale, 0.8);
+      expect(msg.noiseScale, 0.5);
+      expect(msg.noiseW, 0.6);
     });
 
     test('SynthesizeMessage holds text', () {

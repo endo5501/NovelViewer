@@ -11,6 +11,7 @@ import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine.dart';
+import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_playback_controller.dart';
 import 'package:novel_viewer/features/tts/data/tts_streaming_controller.dart';
@@ -37,7 +38,7 @@ class _FakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {int nThreads = 4, int languageId = TtsEngine.languageJapanese}) {
+      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsEngine.languageJapanese, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW}) {
     Future.microtask(() {
       _responseController.add(ModelLoadedResponse(success: true));
     });
