@@ -122,6 +122,7 @@ class _ManualAudioPlayer implements TtsAudioPlayer {
   bool isPlaying = false;
   bool isDisposed = false;
   final playedFiles = <String>[];
+  int pauseCount = 0;
 
   @override
   Stream<TtsPlayerState> get playerStateStream => _stateController.stream;
@@ -140,6 +141,7 @@ class _ManualAudioPlayer implements TtsAudioPlayer {
 
   @override
   Future<void> pause() async {
+    pauseCount++;
     isPlaying = false;
     _stateController.add(TtsPlayerState.paused);
   }
@@ -1183,6 +1185,83 @@ void main() {
       final progressAfter = container.read(ttsGenerationProgressProvider);
       expect(progressAfter.current, 0);
       expect(progressAfter.total, 0);
+    });
+  });
+
+  group('buffer drain on last segment', () {
+    test('waits for buffer drain delay before disposing after last segment',
+        () async {
+      final isolate = _FakeTtsIsolate();
+      final player = _ManualAudioPlayer();
+      final controller = TtsStreamingController(
+        ref: container,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+        bufferDrainDelay: const Duration(milliseconds: 100),
+      );
+
+      final future = controller.start(
+        text: 'テスト。',
+        fileName: 'drain_test.txt',
+        modelDir: '/fake/model',
+        sampleRate: 24000,
+      );
+
+      // Wait for segment to start playing
+      await _pumpUntil(() => player.isPlaying);
+
+      // Simulate completion of the only (last) segment
+      player.simulateCompletion();
+
+      // Immediately after completion, player should NOT be disposed yet
+      // because buffer drain delay (100ms) hasn't elapsed
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(player.isDisposed, isFalse,
+          reason: 'Player should not be disposed before buffer drain delay');
+
+      // Wait for the full drain delay + cleanup
+      await future;
+
+      // Now player should be disposed
+      expect(player.isDisposed, isTrue);
+    });
+
+    test('does not call pause() after last segment drain', () async {
+      final isolate = _FakeTtsIsolate();
+      final player = _ManualAudioPlayer();
+      final controller = TtsStreamingController(
+        ref: container,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
+      );
+
+      final future = controller.start(
+        text: 'セグメント一。セグメント二。',
+        fileName: 'no_pause_last.txt',
+        modelDir: '/fake/model',
+        sampleRate: 24000,
+      );
+
+      // Play through both segments
+      await _pumpUntil(() => player.isPlaying);
+      player.simulateCompletion(); // first segment done
+      await _pumpUntil(() => player.playedFiles.length == 2);
+
+      // After first (intermediate) segment: pause should have been called
+      expect(player.pauseCount, 1);
+
+      player.simulateCompletion(); // last segment done
+      await future;
+
+      // pause should NOT have been called again for the last segment
+      expect(player.pauseCount, 1,
+          reason: 'last segment should not call pause()');
+      expect(player.isDisposed, isTrue);
     });
   });
 }

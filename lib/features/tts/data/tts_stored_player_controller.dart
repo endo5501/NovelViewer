@@ -15,25 +15,30 @@ class TtsStoredPlayerController {
     required TtsAudioPlayer audioPlayer,
     required TtsAudioRepository repository,
     required this.tempDirPath,
+    Duration bufferDrainDelay = const Duration(milliseconds: 500),
   })  : _audioPlayer = audioPlayer,
-        _repository = repository;
+        _repository = repository,
+        _bufferDrainDelay = bufferDrainDelay;
 
   final ProviderContainer ref;
   final TtsAudioPlayer _audioPlayer;
   final TtsAudioRepository _repository;
   final String tempDirPath;
+  final Duration _bufferDrainDelay;
 
   List<Map<String, Object?>> _segments = [];
   int _currentSegmentIndex = 0;
   final _writtenFiles = <String>[];
   StreamSubscription<TtsPlayerState>? _playerSubscription;
   bool _stopped = false;
+  bool _isTransitioning = false;
 
   Future<void> start({
     required int episodeId,
     int? startOffset,
   }) async {
     _stopped = false;
+    _isTransitioning = false;
 
     // Load all segments
     _segments = await _repository.getSegments(episodeId);
@@ -92,15 +97,27 @@ class TtsStoredPlayerController {
     await _audioPlayer.play();
   }
 
-  void _onSegmentCompleted() {
-    _currentSegmentIndex++;
+  Future<void> _onSegmentCompleted() async {
+    if (_isTransitioning || _stopped) return;
+    _isTransitioning = true;
+    try {
+      _currentSegmentIndex++;
 
-    if (_currentSegmentIndex >= _segments.length) {
-      stop();
-      return;
+      if (_currentSegmentIndex >= _segments.length) {
+        // Wait for audio output buffer to drain before stopping.
+        // The completed event fires when the decoder finishes, but the audio
+        // device (e.g. WASAPI on Windows) may still have buffered samples.
+        await Future<void>.delayed(_bufferDrainDelay);
+        if (!_stopped) {
+          await stop();
+        }
+        return;
+      }
+
+      await _playCurrentSegment();
+    } finally {
+      _isTransitioning = false;
     }
-
-    _playCurrentSegment();
   }
 
   Future<void> pause() async {
