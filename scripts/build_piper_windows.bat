@@ -22,11 +22,14 @@ if not exist "%RUNNER_DIR%" mkdir "%RUNNER_DIR%"
 copy "%DLL_SRC%" "%RUNNER_DIR%\" /Y
 
 REM Copy ONNX Runtime DLL
-set ORT_DLL=%PIPER_DIR%\build\ort\lib\onnxruntime.dll
-if exist "%ORT_DLL%" (
+REM Windows cmake downloads to build/onnxruntime/onnxruntime-win-x64-<version>/lib/
+set ORT_DLL=
+for /f "delims=" %%F in ('dir /s /b "%PIPER_DIR%\build\onnxruntime.dll" 2^>nul') do set ORT_DLL=%%F
+if defined ORT_DLL (
     copy "%ORT_DLL%" "%RUNNER_DIR%\" /Y
 ) else (
-    echo Warning: onnxruntime.dll not found at %ORT_DLL%
+    echo ERROR: onnxruntime.dll not found in %PIPER_DIR%\build
+    exit /b 1
 )
 
 echo === Done ===
