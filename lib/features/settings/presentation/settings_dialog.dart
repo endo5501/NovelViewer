@@ -588,12 +588,12 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: DropdownButtonFormField<String>(
-        value: modelName,
+        initialValue: modelName,
         isExpanded: true,
         decoration: const InputDecoration(
           labelText: 'モデル',
         ),
-        items: [
+        items: const [
           DropdownMenuItem(
             value: PiperModelDownloadService.defaultModelName,
             child: Text(PiperModelDownloadService.defaultModelName),

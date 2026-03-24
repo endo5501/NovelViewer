@@ -270,7 +270,9 @@ class TtsStreamingController {
           lengthScale: lengthScale,
           noiseScale: noiseScale,
           noiseW: noiseW,
-        )) break;
+        )) {
+          break;
+        }
         if (_stopped) break;
 
         // Use edited text from DB if available, otherwise apply dictionary to original
