@@ -10,9 +10,12 @@ import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/data/piper_model_download_service.dart';
+import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 import 'package:novel_viewer/features/tts/presentation/voice_recording_dialog.dart';
+import 'package:novel_viewer/features/tts/providers/piper_model_download_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -512,23 +515,204 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   }
 
   Widget _buildTtsTab() {
+    final engineType = ref.watch(ttsEngineTypeProvider);
+
     return SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 16),
-          _buildLanguageSelector(),
+          _buildEngineSelector(),
           const SizedBox(height: 16),
-          _buildModelSizeSelector(),
-          const SizedBox(height: 16),
-          _buildModelDownloadSection(),
-          const SizedBox(height: 16),
-          const Divider(),
+          if (engineType == TtsEngineType.qwen3) ...[
+            _buildLanguageSelector(),
+            const SizedBox(height: 16),
+            _buildModelSizeSelector(),
+            const SizedBox(height: 16),
+            _buildModelDownloadSection(),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _buildVoiceReferenceSelector(),
+            ),
+          ],
+          if (engineType == TtsEngineType.piper) ...[
+            _buildPiperModelSelector(),
+            const SizedBox(height: 16),
+            _buildPiperModelDownloadSection(),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            _buildPiperSynthesisParams(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEngineSelector() {
+    final engineType = ref.watch(ttsEngineTypeProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('TTSエンジン', style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildVoiceReferenceSelector(),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<TtsEngineType>(
+              segments: TtsEngineType.values
+                  .map((e) => ButtonSegment(value: e, label: Text(e.label)))
+                  .toList(),
+              selected: {engineType},
+              onSelectionChanged: (selected) {
+                ref
+                    .read(ttsEngineTypeProvider.notifier)
+                    .setEngineType(selected.first);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPiperModelSelector() {
+    final modelName = ref.watch(piperModelNameProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: DropdownButtonFormField<String>(
+        initialValue: modelName,
+        isExpanded: true,
+        decoration: const InputDecoration(
+          labelText: 'モデル',
+        ),
+        items: const [
+          DropdownMenuItem(
+            value: PiperModelDownloadService.defaultModelName,
+            child: Text(PiperModelDownloadService.defaultModelName),
+          ),
+        ],
+        onChanged: (value) {
+          if (value != null) {
+            ref
+                .read(piperModelNameProvider.notifier)
+                .setPiperModelName(value);
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildPiperModelDownloadSection() {
+    final downloadState = ref.watch(piperModelDownloadProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: switch (downloadState) {
+        PiperModelDownloadIdle() => ElevatedButton.icon(
+            icon: const Icon(Icons.download),
+            label: const Text('モデルデータダウンロード'),
+            onPressed: () {
+              ref
+                  .read(piperModelDownloadProvider.notifier)
+                  .startDownload();
+            },
+          ),
+        PiperModelDownloadDownloading(:final currentFile, :final progress) =>
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(currentFile),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(value: progress),
+              if (progress != null)
+                Text('${(progress * 100).toStringAsFixed(1)}%'),
+            ],
+          ),
+        PiperModelDownloadCompleted(:final modelsDir) => Row(
+            children: [
+              Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'ダウンロード済み${modelsDir != null ? '\n$modelsDir' : ''}',
+                ),
+              ),
+            ],
+          ),
+        PiperModelDownloadError(:final message) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                message,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () {
+                  ref
+                      .read(piperModelDownloadProvider.notifier)
+                      .startDownload();
+                },
+                child: const Text('再試行'),
+              ),
+            ],
+          ),
+      },
+    );
+  }
+
+  Widget _buildPiperSynthesisParams() {
+    final lengthScale = ref.watch(piperLengthScaleProvider);
+    final noiseScale = ref.watch(piperNoiseScaleProvider);
+    final noiseW = ref.watch(piperNoiseWProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('速度 (lengthScale): ${lengthScale.toStringAsFixed(1)}'),
+          Slider(
+            value: lengthScale,
+            min: 0.5,
+            max: 2.0,
+            divisions: 15,
+            label: lengthScale.toStringAsFixed(1),
+            onChanged: (value) {
+              ref.read(piperLengthScaleProvider.notifier).setValue(value);
+            },
+          ),
+          const SizedBox(height: 8),
+          Text('抑揚 (noiseScale): ${noiseScale.toStringAsFixed(3)}'),
+          Slider(
+            value: noiseScale,
+            min: 0.0,
+            max: 1.0,
+            divisions: 20,
+            label: noiseScale.toStringAsFixed(3),
+            onChanged: (value) {
+              ref.read(piperNoiseScaleProvider.notifier).setValue(value);
+            },
+          ),
+          const SizedBox(height: 8),
+          Text('ノイズ (noiseW): ${noiseW.toStringAsFixed(3)}'),
+          Slider(
+            value: noiseW,
+            min: 0.0,
+            max: 1.0,
+            divisions: 20,
+            label: noiseW.toStringAsFixed(3),
+            onChanged: (value) {
+              ref.read(piperNoiseWProvider.notifier).setValue(value);
+            },
           ),
         ],
       ),

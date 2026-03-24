@@ -50,6 +50,17 @@ jobs:
         shell: cmd
         run: scripts\build_lame_windows.bat
 
+      - name: Build Piper TTS DLL
+        shell: cmd
+        run: scripts\build_piper_windows.bat
+
+      - name: Verify Piper DLLs exist
+        shell: pwsh
+        run: |
+          $runner = "build/windows/x64/runner/Release"
+          if (!(Test-Path "$runner/piper_tts_ffi.dll")) { throw "piper_tts_ffi.dll not found in $runner" }
+          if (!(Test-Path "$runner/onnxruntime.dll")) { throw "onnxruntime.dll not found in $runner" }
+
       - name: Run analyzer
         run: flutter analyze
 
@@ -63,6 +74,18 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item third_party/lame/COPYING build/windows/x64/runner/Release/LAME_LICENSE_LGPL.txt
+
+      - name: Copy Piper and ONNX Runtime licenses to release
+        shell: pwsh
+        run: |
+          Copy-Item third_party/piper-plus/LICENSE.md build/windows/x64/runner/Release/PIPER_LICENSE_MIT.txt
+          $ortRoot = Get-ChildItem third_party/piper-plus/build/onnxruntime -Directory |
+            Where-Object { $_.Name -like 'onnxruntime-win-*' } |
+            Select-Object -First 1
+          if (!$ortRoot) { throw "ONNX Runtime directory not found" }
+          $ortLicense = Join-Path $ortRoot.FullName "LICENSE"
+          if (!(Test-Path $ortLicense)) { throw "ONNX Runtime LICENSE not found at $ortLicense" }
+          Copy-Item $ortLicense build/windows/x64/runner/Release/ONNXRUNTIME_LICENSE_MIT.txt
 
       - name: Create ZIP archive
         shell: pwsh

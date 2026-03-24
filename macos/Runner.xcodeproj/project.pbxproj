@@ -411,6 +411,8 @@
 			inputPaths = (
 				"${SRCROOT}/Frameworks/libqwen3_tts_ffi.dylib",
 				"${SRCROOT}/Frameworks/liblame_enc_ffi.dylib",
+				"${SRCROOT}/Frameworks/libpiper_tts_ffi.dylib",
+				"${SRCROOT}/Frameworks/libonnxruntime.dylib",
 			);
 			name = "Embed Native Libraries";
 			outputFileListPaths = (
@@ -418,10 +420,12 @@
 			outputPaths = (
 				"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/libqwen3_tts_ffi.dylib",
 				"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/liblame_enc_ffi.dylib",
+				"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/libpiper_tts_ffi.dylib",
+				"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/libonnxruntime.dylib",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "DYLIB_DST=\"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}\"\nmkdir -p \"$DYLIB_DST\"\n\nfor DYLIB_NAME in libqwen3_tts_ffi.dylib liblame_enc_ffi.dylib; do\n  DYLIB_SRC=\"${SRCROOT}/Frameworks/${DYLIB_NAME}\"\n  if [ -f \"$DYLIB_SRC\" ]; then\n    cp \"$DYLIB_SRC\" \"$DYLIB_DST/\"\n    codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" \"$DYLIB_DST/${DYLIB_NAME}\" || true\n  fi\ndone\n";
+			shellScript = "DYLIB_DST=\"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}\"\nmkdir -p \"$DYLIB_DST\"\n\nfor DYLIB_NAME in libqwen3_tts_ffi.dylib liblame_enc_ffi.dylib libpiper_tts_ffi.dylib libonnxruntime.dylib; do\n  DYLIB_SRC=\"${SRCROOT}/Frameworks/${DYLIB_NAME}\"\n  if [ -f \"$DYLIB_SRC\" ]; then\n    cp \"$DYLIB_SRC\" \"$DYLIB_DST/\"\n    codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" \"$DYLIB_DST/${DYLIB_NAME}\" || true\n  fi\ndone\n";
 		};
 		E7186153048FE24830185DB8 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;

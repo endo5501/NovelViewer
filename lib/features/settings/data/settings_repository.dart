@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
+import 'package:novel_viewer/features/tts/data/piper_model_download_service.dart';
+import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 
@@ -20,6 +22,11 @@ class SettingsRepository {
   static const _ttsModelSizeKey = 'tts_model_size';
   static const _ttsRefWavPathKey = 'tts_ref_wav_path';
   static const _ttsLanguageKey = 'tts_language';
+  static const _ttsEngineTypeKey = 'tts_engine_type';
+  static const _piperModelNameKey = 'piper_model_name';
+  static const _piperLengthScaleKey = 'piper_length_scale';
+  static const _piperNoiseScaleKey = 'piper_noise_scale';
+  static const _piperNoiseWKey = 'piper_noise_w';
 
   static const defaultFontSize = 14.0;
   static const minFontSize = 10.0;
@@ -152,5 +159,58 @@ class SettingsRepository {
 
   Future<void> setTtsLanguage(TtsLanguage language) async {
     await _prefs.setString(_ttsLanguageKey, language.name);
+  }
+
+  // TTS engine type
+  TtsEngineType getTtsEngineType() {
+    final value = _prefs.getString(_ttsEngineTypeKey);
+    return TtsEngineType.values.firstWhere(
+      (e) => e.name == value,
+      orElse: () => TtsEngineType.qwen3,
+    );
+  }
+
+  Future<void> setTtsEngineType(TtsEngineType type) async {
+    await _prefs.setString(_ttsEngineTypeKey, type.name);
+  }
+
+  // Piper model name
+  static const _legacyPiperModelName = 'ja_JP-tsukuyomi-chan-medium';
+
+  String getPiperModelName() {
+    final value = _prefs.getString(_piperModelNameKey);
+    if (value == null || value == _legacyPiperModelName) {
+      return PiperModelDownloadService.defaultModelName;
+    }
+    return value;
+  }
+
+  Future<void> setPiperModelName(String name) async {
+    await _prefs.setString(_piperModelNameKey, name);
+  }
+
+  // Piper synthesis parameters
+  double getPiperLengthScale() {
+    return (_prefs.getDouble(_piperLengthScaleKey) ?? 1.3).clamp(0.5, 2.0);
+  }
+
+  Future<void> setPiperLengthScale(double value) async {
+    await _prefs.setDouble(_piperLengthScaleKey, value);
+  }
+
+  double getPiperNoiseScale() {
+    return (_prefs.getDouble(_piperNoiseScaleKey) ?? 0.667).clamp(0.0, 1.0);
+  }
+
+  Future<void> setPiperNoiseScale(double value) async {
+    await _prefs.setDouble(_piperNoiseScaleKey, value);
+  }
+
+  double getPiperNoiseW() {
+    return (_prefs.getDouble(_piperNoiseWKey) ?? 0.8).clamp(0.0, 1.0);
+  }
+
+  Future<void> setPiperNoiseW(double value) async {
+    await _prefs.setDouble(_piperNoiseWKey, value);
   }
 }

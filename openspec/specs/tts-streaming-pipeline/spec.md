@@ -1,7 +1,7 @@
 ## Requirements
 
 ### Requirement: Unified streaming start
-The system SHALL provide a single entry point `TtsStreamingController.start()` that automatically determines the appropriate mode based on existing data. If no episode exists, it SHALL start fresh generation with immediate playback. If an episode exists with matching text_hash, it SHALL begin playing segments using existing audio where available and generating audio on-demand for segments without audio_data. The controller SHALL accept text, fileName, modelDir, sampleRate, optional refWavPath, optional startOffset, optional resolveRefWavPath callback, and optional dictionaryRepository parameters. The resolveRefWavPath callback SHALL be used to resolve per-segment ref_wav_path filenames from the database to absolute filesystem paths before passing them to the TTS engine. When a dictionaryRepository is provided, the system SHALL apply dictionary substitution to each segment's text when writing new segment records to `tts_segments.text`, so that the stored text is already the dictionary-converted form that the TTS engine will receive.
+The system SHALL provide a single entry point `TtsStreamingController.start()` that automatically determines the appropriate mode based on existing data. If no episode exists, it SHALL start fresh generation with immediate playback. If an episode exists with matching text_hash, it SHALL begin playing segments using existing audio where available and generating audio on-demand for segments without audio_data. The controller SHALL accept text, fileName, modelDir, sampleRate, optional refWavPath, optional startOffset, optional resolveRefWavPath callback, optional dictionaryRepository parameters, and a required engineType parameter. The engineType parameter SHALL determine which TTS engine (qwen3-tts or piper-plus) the TtsIsolate uses for synthesis. When engineType is `piper`, the controller SHALL also accept a `dicDir` parameter for the OpenJTalk dictionary path and optional synthesis parameters (lengthScale, noiseScale, noiseW). The resolveRefWavPath callback SHALL be used to resolve per-segment ref_wav_path filenames from the database to absolute filesystem paths before passing them to the TTS engine. When a dictionaryRepository is provided, the system SHALL apply dictionary substitution to each segment's text when writing new segment records to `tts_segments.text`, so that the stored text is already the dictionary-converted form that the TTS engine will receive.
 
 #### Scenario: Start fresh when no episode exists
 - **WHEN** `start()` is called for a fileName with no existing episode in the database
@@ -50,6 +50,33 @@ The system SHALL provide a single entry point `TtsStreamingController.start()` t
 #### Scenario: 既存セグメント（audio_data=NULL）の再生成は保存済みテキストをそのまま使用する
 - **WHEN** 既にDBに `tts_segments.text` が保存されているセグメント（audio_data=NULL）のオンデマンド生成が行われる
 - **THEN** 追加の辞書変換は行わず、DBに保存されているテキストをそのままTTSエンジンに渡す（テキストは新規作成時にすでに変換済みのため）
+
+#### Scenario: Start with piper engine type
+- **WHEN** `start()` is called with engineType=piper, dicDir="models/piper/open_jtalk_dic", and lengthScale=0.8
+- **THEN** the TtsIsolate loads PiperTtsEngine with the specified dictionary path and applies lengthScale=0.8 before synthesis
+
+#### Scenario: Start with qwen3 engine type
+- **WHEN** `start()` is called with engineType=qwen3 and refWavPath="voice.wav"
+- **THEN** the TtsIsolate loads TtsEngine (qwen3) with voice cloning support, same as current behavior
+
+#### Scenario: Piper engine ignores refWavPath
+- **WHEN** `start()` is called with engineType=piper and refWavPath is provided
+- **THEN** the refWavPath is ignored since piper-plus does not support voice cloning
+
+### Requirement: TtsIsolate engine type dispatch
+The TtsIsolate SHALL accept a `TtsEngineType` parameter in `LoadModelMessage`. When engineType is `qwen3`, the isolate SHALL create and use `TtsEngine` (existing behavior). When engineType is `piper`, the isolate SHALL create and use `PiperTtsEngine`. The `LoadModelMessage` SHALL also accept an optional `dicDir` parameter for piper's OpenJTalk dictionary path, and optional synthesis parameters (lengthScale, noiseScale, noiseW).
+
+#### Scenario: Load qwen3 engine in isolate
+- **WHEN** a `LoadModelMessage` with engineType=qwen3 is sent to the isolate
+- **THEN** the isolate creates a `TtsEngine`, loads the model, and responds with `ModelLoadedResponse(success: true)`
+
+#### Scenario: Load piper engine in isolate
+- **WHEN** a `LoadModelMessage` with engineType=piper and dicDir="models/piper/open_jtalk_dic" is sent
+- **THEN** the isolate creates a `PiperTtsEngine`, loads the model with the dictionary path, and responds with `ModelLoadedResponse(success: true)`
+
+#### Scenario: Synthesis with piper returns compatible result
+- **WHEN** a `SynthesizeMessage` is sent to an isolate running PiperTtsEngine
+- **THEN** the isolate responds with `SynthesisResultResponse` containing Float32List audio and sampleRate, same format as qwen3
 
 ### Requirement: Text hash validation
 The system SHALL compute a SHA-256 hash of the episode text and store it in the `text_hash` column of the `tts_episodes` table. On each `start()` call, the system SHALL compare the current text hash with the stored hash. If they differ, the existing episode and all segments SHALL be deleted and generation SHALL restart from scratch.

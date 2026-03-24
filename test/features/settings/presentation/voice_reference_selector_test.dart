@@ -60,8 +60,17 @@ void main() {
     });
     await tester.pumpAndSettle();
     await tester.tap(find.text('読み上げ'));
-    await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 200)));
+    // runAsync needed because pumpAndSettle alone cannot drive
+    // _loadVoiceFiles() file-system I/O scheduled in initState.
+    await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 300)));
     await tester.pumpAndSettle();
+  }
+
+  /// Piper-plus TTS addition pushed this widget below the AlertDialog viewport;
+  /// scroll it into view before tap/interaction (find-only asserts don't need this).
+  Future<void> scrollToVoiceReferenceSelector(WidgetTester tester) async {
+    final dropdown = find.byType(DropdownButtonFormField<String>);
+    await tester.ensureVisible(dropdown);
   }
 
   group('Voice reference selector', () {
@@ -85,6 +94,7 @@ void main() {
       File(p.join(voicesDir.path, 'sample.wav')).writeAsStringSync('');
 
       await navigateToTtsTab(tester);
+      await scrollToVoiceReferenceSelector(tester);
 
       // Open dropdown - tap the current value text to open
       final dropdown = find.byType(DropdownButtonFormField<String>);
@@ -106,6 +116,7 @@ void main() {
 
     testWidgets('refresh button rescans voices directory', (tester) async {
       await navigateToTtsTab(tester);
+      await scrollToVoiceReferenceSelector(tester);
 
       // Add a file to voices dir
       final voicesDir = Directory(p.join(tempDir.path, 'voices'));
@@ -116,7 +127,7 @@ void main() {
       await tester.runAsync(() async {
         await tester.tap(find.byTooltip('ファイル一覧を更新'));
         await tester.pump();
-        await Future.delayed(const Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 300));
       });
       await tester.pumpAndSettle();
 
@@ -133,6 +144,7 @@ void main() {
       File(p.join(voicesDir.path, 'my_voice.wav')).writeAsStringSync('');
 
       await navigateToTtsTab(tester);
+      await scrollToVoiceReferenceSelector(tester);
 
       // Open dropdown and select file
       await tester.tap(find.byType(DropdownButtonFormField<String>));
@@ -196,6 +208,7 @@ void main() {
       await prefs.setString('tts_ref_wav_path', 'my_voice.wav');
 
       await navigateToTtsTab(tester);
+      await scrollToVoiceReferenceSelector(tester);
       await tester.tap(find.byTooltip('ファイル名を変更'));
       await tester.pumpAndSettle();
     }

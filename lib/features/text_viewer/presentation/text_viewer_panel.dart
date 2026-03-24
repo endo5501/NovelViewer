@@ -20,6 +20,7 @@ import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
+import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_streaming_controller.dart';
 import 'package:novel_viewer/features/tts/presentation/dictionary_context_menu.dart';
@@ -126,13 +127,40 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
   Future<void> _startStreaming(String content) async {
     final folderPath = ref.read(currentDirectoryProvider);
     final fileName = ref.read(selectedFileProvider)?.name;
-    final modelDir = ref.read(ttsModelDirProvider);
-    final refWavFileName = ref.read(ttsRefWavPathProvider);
-    final languageId = ref.read(ttsLanguageProvider).languageId;
-    final voiceService = ref.read(voiceReferenceServiceProvider);
-    final refWavPath = refWavFileName.isNotEmpty && voiceService != null
-        ? voiceService.resolveVoiceFilePath(refWavFileName)
-        : null;
+    final engineType = ref.read(ttsEngineTypeProvider);
+
+    // Engine-specific settings
+    final String modelDir;
+    final String? refWavPath;
+    final int languageId;
+    final String? dicDir;
+    final double? lengthScale;
+    final double? noiseScale;
+    final double? noiseW;
+
+    if (engineType == TtsEngineType.piper) {
+      final piperDir = ref.read(piperModelDirProvider);
+      final modelName = ref.read(piperModelNameProvider);
+      modelDir = '$piperDir/$modelName.onnx';
+      dicDir = ref.read(piperDicDirProvider);
+      lengthScale = ref.read(piperLengthScaleProvider);
+      noiseScale = ref.read(piperNoiseScaleProvider);
+      noiseW = ref.read(piperNoiseWProvider);
+      refWavPath = null;
+      languageId = 0; // unused for piper
+    } else {
+      modelDir = ref.read(ttsModelDirProvider);
+      final refWavFileName = ref.read(ttsRefWavPathProvider);
+      languageId = ref.read(ttsLanguageProvider).languageId;
+      final voiceService = ref.read(voiceReferenceServiceProvider);
+      refWavPath = refWavFileName.isNotEmpty && voiceService != null
+          ? voiceService.resolveVoiceFilePath(refWavFileName)
+          : null;
+      dicDir = null;
+      lengthScale = null;
+      noiseScale = null;
+      noiseW = null;
+    }
 
     if (folderPath == null || fileName == null || modelDir.isEmpty) return;
 
@@ -167,16 +195,23 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
       if (index >= 0) startOffset = index;
     }
 
+    final voiceService = ref.read(voiceReferenceServiceProvider);
+
     try {
       await controller.start(
         text: content,
         fileName: fileName,
         modelDir: modelDir,
-        sampleRate: 24000,
+        sampleRate: engineType == TtsEngineType.piper ? 22050 : 24000,
+        engineType: engineType,
         refWavPath: refWavPath,
         startOffset: startOffset,
         languageId: languageId,
         resolveRefWavPath: voiceService?.resolveVoiceFilePath,
+        dicDir: dicDir,
+        lengthScale: lengthScale,
+        noiseScale: noiseScale,
+        noiseW: noiseW,
       );
 
       if (!mounted) return;

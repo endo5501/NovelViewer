@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'piper_tts_engine.dart';
 import 'tts_engine.dart';
+import 'tts_engine_type.dart';
 import 'tts_language.dart';
 
 // Messages sent to the TTS isolate
@@ -12,12 +14,23 @@ sealed class TtsIsolateMessage {}
 class LoadModelMessage extends TtsIsolateMessage {
   LoadModelMessage({
     required this.modelDir,
+    this.engineType = TtsEngineType.qwen3,
     this.nThreads = 4,
     this.languageId = TtsLanguage.defaultLanguageId,
+    this.dicDir,
+    this.lengthScale,
+    this.noiseScale,
+    this.noiseW,
   });
   final String modelDir;
+  final TtsEngineType engineType;
   final int nThreads;
   final int languageId;
+  // Piper-specific
+  final String? dicDir;
+  final double? lengthScale;
+  final double? noiseScale;
+  final double? noiseW;
 }
 
 class SynthesizeMessage extends TtsIsolateMessage {
@@ -82,8 +95,26 @@ class TtsIsolate {
     _sendPort = await completer.future;
   }
 
-  void loadModel(String modelDir, {int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId}) {
-    _sendPort?.send(LoadModelMessage(modelDir: modelDir, nThreads: nThreads, languageId: languageId));
+  void loadModel(
+    String modelDir, {
+    TtsEngineType engineType = TtsEngineType.qwen3,
+    int nThreads = 4,
+    int languageId = TtsLanguage.defaultLanguageId,
+    String? dicDir,
+    double? lengthScale,
+    double? noiseScale,
+    double? noiseW,
+  }) {
+    _sendPort?.send(LoadModelMessage(
+      modelDir: modelDir,
+      engineType: engineType,
+      nThreads: nThreads,
+      languageId: languageId,
+      dicDir: dicDir,
+      lengthScale: lengthScale,
+      noiseScale: noiseScale,
+      noiseW: noiseW,
+    ));
   }
 
   void synthesize(String text, {String? refWavPath}) {
@@ -123,27 +154,78 @@ class TtsIsolate {
     final receivePort = ReceivePort();
     mainSendPort.send(receivePort.sendPort);
 
-    TtsEngine? engine;
+    TtsEngine? qwen3Engine;
+    PiperTtsEngine? piperEngine;
+    TtsEngineType? activeEngineType;
+
+    bool isEngineLoaded() {
+      switch (activeEngineType) {
+        case TtsEngineType.qwen3:
+          return qwen3Engine?.isLoaded ?? false;
+        case TtsEngineType.piper:
+          return piperEngine?.isLoaded ?? false;
+        case null:
+          return false;
+      }
+    }
+
+    TtsSynthesisResult doSynthesize(String text, String? refWavPath) {
+      switch (activeEngineType!) {
+        case TtsEngineType.qwen3:
+          return refWavPath != null
+              ? qwen3Engine!.synthesizeWithVoice(text, refWavPath)
+              : qwen3Engine!.synthesize(text);
+        case TtsEngineType.piper:
+          return piperEngine!.synthesize(text);
+      }
+    }
+
+    void disposeEngines() {
+      qwen3Engine?.dispose();
+      qwen3Engine = null;
+      piperEngine?.dispose();
+      piperEngine = null;
+      activeEngineType = null;
+    }
 
     receivePort.listen((message) {
       if (message is LoadModelMessage) {
-        TtsEngine? next;
         try {
-          next = TtsEngine.open();
-          next.loadModel(message.modelDir, nThreads: message.nThreads);
-          next.setLanguage(message.languageId);
-          engine?.dispose();
-          engine = next;
+          disposeEngines();
+
+          switch (message.engineType) {
+            case TtsEngineType.qwen3:
+              final next = TtsEngine.open();
+              next.loadModel(message.modelDir, nThreads: message.nThreads);
+              next.setLanguage(message.languageId);
+              qwen3Engine = next;
+
+            case TtsEngineType.piper:
+              final next = PiperTtsEngine.open();
+              next.loadModel(message.modelDir, dicDir: message.dicDir ?? '');
+              if (message.lengthScale != null) {
+                next.setLengthScale(message.lengthScale!);
+              }
+              if (message.noiseScale != null) {
+                next.setNoiseScale(message.noiseScale!);
+              }
+              if (message.noiseW != null) {
+                next.setNoiseW(message.noiseW!);
+              }
+              piperEngine = next;
+          }
+
+          activeEngineType = message.engineType;
           mainSendPort.send(ModelLoadedResponse(success: true));
         } catch (e) {
-          next?.dispose();
+          disposeEngines();
           mainSendPort.send(
             ModelLoadedResponse(success: false, error: e.toString()),
           );
         }
       } else if (message is SynthesizeMessage) {
         try {
-          if (engine == null || !engine!.isLoaded) {
+          if (!isEngineLoaded()) {
             mainSendPort.send(SynthesisResultResponse(
               audio: null,
               sampleRate: 0,
@@ -152,9 +234,7 @@ class TtsIsolate {
             return;
           }
 
-          final result = message.refWavPath != null
-              ? engine!.synthesizeWithVoice(message.text, message.refWavPath!)
-              : engine!.synthesize(message.text);
+          final result = doSynthesize(message.text, message.refWavPath);
 
           // Use TransferableTypedData for zero-copy transfer
           final transferable =
@@ -171,8 +251,7 @@ class TtsIsolate {
           ));
         }
       } else if (message is DisposeMessage) {
-        engine?.dispose();
-        engine = null;
+        disposeEngines();
         receivePort.close();
       }
     });

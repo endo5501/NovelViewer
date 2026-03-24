@@ -11,6 +11,7 @@ import '../data/tts_dictionary_repository.dart';
 import 'dictionary_context_menu.dart';
 import '../data/tts_edit_controller.dart';
 import '../data/tts_edit_segment.dart';
+import '../data/tts_engine_type.dart';
 import '../data/tts_isolate.dart';
 import '../providers/tts_edit_providers.dart';
 import '../providers/tts_settings_providers.dart';
@@ -162,23 +163,52 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final controller = _controller;
     if (controller == null) return;
 
-    final modelDir = ref.read(ttsModelDirProvider);
-    if (modelDir.isEmpty) return;
+    final engineType = ref.read(ttsEngineTypeProvider);
+    final String modelDir;
+    final String? refWavPath;
+    final int languageId;
+    final String? dicDir;
+    final double? lengthScale;
+    final double? noiseScale;
+    final double? noiseW;
 
-    final segment = controller.segments[index];
-    final refWavPath = _resolveRefWavPath(segment.refWavPath);
+    if (engineType == TtsEngineType.piper) {
+      final piperDir = ref.read(piperModelDirProvider);
+      final modelName = ref.read(piperModelNameProvider);
+      modelDir = '$piperDir/$modelName.onnx';
+      dicDir = ref.read(piperDicDirProvider);
+      lengthScale = ref.read(piperLengthScaleProvider);
+      noiseScale = ref.read(piperNoiseScaleProvider);
+      noiseW = ref.read(piperNoiseWProvider);
+      refWavPath = null;
+      languageId = 0;
+    } else {
+      modelDir = ref.read(ttsModelDirProvider);
+      final segment = controller.segments[index];
+      refWavPath = _resolveRefWavPath(segment.refWavPath);
+      languageId = ref.read(ttsLanguageProvider).languageId;
+      dicDir = null;
+      lengthScale = null;
+      noiseScale = null;
+      noiseW = null;
+    }
+    if (modelDir.isEmpty) return;
 
     ref
         .read(ttsEditGenerationStateProvider.notifier)
         .set(TtsEditGenerationState.generating);
     ref.read(ttsEditGeneratingIndexProvider.notifier).set(index);
 
-    final languageId = ref.read(ttsLanguageProvider).languageId;
     await controller.generateSegment(
       segmentIndex: index,
       modelDir: modelDir,
+      engineType: engineType,
       refWavPath: refWavPath,
       languageId: languageId,
+      dicDir: dicDir,
+      lengthScale: lengthScale,
+      noiseScale: noiseScale,
+      noiseW: noiseW,
     );
 
     if (!mounted) return;
@@ -192,26 +222,56 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final controller = _controller;
     if (controller == null) return;
 
-    final modelDir = ref.read(ttsModelDirProvider);
-    if (modelDir.isEmpty) return;
+    final engineType = ref.read(ttsEngineTypeProvider);
+    final String modelDir;
+    final String? globalRefWavPath;
+    final int languageId;
+    final String? dicDir;
+    final double? lengthScale;
+    final double? noiseScale;
+    final double? noiseW;
 
-    final globalRefFileName = ref.read(ttsRefWavPathProvider);
     final voiceService = ref.read(voiceReferenceServiceProvider);
-    final globalRefWavPath =
-        globalRefFileName.isNotEmpty && voiceService != null
-            ? voiceService.resolveVoiceFilePath(globalRefFileName)
-            : null;
+
+    if (engineType == TtsEngineType.piper) {
+      final piperDir = ref.read(piperModelDirProvider);
+      final modelName = ref.read(piperModelNameProvider);
+      modelDir = '$piperDir/$modelName.onnx';
+      dicDir = ref.read(piperDicDirProvider);
+      lengthScale = ref.read(piperLengthScaleProvider);
+      noiseScale = ref.read(piperNoiseScaleProvider);
+      noiseW = ref.read(piperNoiseWProvider);
+      globalRefWavPath = null;
+      languageId = 0;
+    } else {
+      modelDir = ref.read(ttsModelDirProvider);
+      final globalRefFileName = ref.read(ttsRefWavPathProvider);
+      globalRefWavPath =
+          globalRefFileName.isNotEmpty && voiceService != null
+              ? voiceService.resolveVoiceFilePath(globalRefFileName)
+              : null;
+      languageId = ref.read(ttsLanguageProvider).languageId;
+      dicDir = null;
+      lengthScale = null;
+      noiseScale = null;
+      noiseW = null;
+    }
+    if (modelDir.isEmpty) return;
 
     ref
         .read(ttsEditGenerationStateProvider.notifier)
         .set(TtsEditGenerationState.generating);
 
-    final languageId = ref.read(ttsLanguageProvider).languageId;
     await controller.generateAllUngenerated(
       modelDir: modelDir,
+      engineType: engineType,
       globalRefWavPath: globalRefWavPath,
       languageId: languageId,
       resolveRefWavPath: voiceService?.resolveVoiceFilePath,
+      dicDir: dicDir,
+      lengthScale: lengthScale,
+      noiseScale: noiseScale,
+      noiseW: noiseW,
       onSegmentStart: (index) {
         if (mounted) {
           ref.read(ttsEditGeneratingIndexProvider.notifier).set(index);

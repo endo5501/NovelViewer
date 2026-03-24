@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
 import 'tts_dictionary_repository.dart';
+import 'tts_engine_type.dart';
 import 'tts_isolate.dart';
 import 'tts_language.dart';
 import 'tts_playback_controller.dart';
@@ -51,10 +52,16 @@ class TtsStreamingController {
     required String fileName,
     required String modelDir,
     required int sampleRate,
+    TtsEngineType engineType = TtsEngineType.qwen3,
     String? refWavPath,
     int? startOffset,
     int languageId = TtsLanguage.defaultLanguageId,
     String Function(String fileName)? resolveRefWavPath,
+    // Piper-specific
+    String? dicDir,
+    double? lengthScale,
+    double? noiseScale,
+    double? noiseW,
   }) async {
     _stopped = false;
     _modelLoaded = false;
@@ -102,10 +109,15 @@ class TtsStreamingController {
         dbSegmentMap: dbSegmentMap,
         modelDir: modelDir,
         sampleRate: sampleRate,
+        engineType: engineType,
         refWavPath: refWavPath,
         startOffset: startOffset,
         languageId: languageId,
         resolveRefWavPath: resolveRefWavPath,
+        dicDir: dicDir,
+        lengthScale: lengthScale,
+        noiseScale: noiseScale,
+        noiseW: noiseW,
       );
 
       // Update episode status
@@ -125,7 +137,15 @@ class TtsStreamingController {
     }
   }
 
-  Future<bool> _ensureModelLoaded(String modelDir, {int languageId = TtsLanguage.defaultLanguageId}) async {
+  Future<bool> _ensureModelLoaded(
+    String modelDir, {
+    TtsEngineType engineType = TtsEngineType.qwen3,
+    int languageId = TtsLanguage.defaultLanguageId,
+    String? dicDir,
+    double? lengthScale,
+    double? noiseScale,
+    double? noiseW,
+  }) async {
     if (_modelLoaded) return true;
 
     await _ttsIsolate.spawn();
@@ -137,7 +157,15 @@ class TtsStreamingController {
       }
     });
 
-    _ttsIsolate.loadModel(modelDir, languageId: languageId);
+    _ttsIsolate.loadModel(
+      modelDir,
+      engineType: engineType,
+      languageId: languageId,
+      dicDir: dicDir,
+      lengthScale: lengthScale,
+      noiseScale: noiseScale,
+      noiseW: noiseW,
+    );
     _modelLoaded = await completer.future;
     return _modelLoaded;
   }
@@ -172,10 +200,15 @@ class TtsStreamingController {
     required Map<int, Map<String, Object?>> dbSegmentMap,
     required String modelDir,
     required int sampleRate,
+    TtsEngineType engineType = TtsEngineType.qwen3,
     required String? refWavPath,
     int? startOffset,
     int languageId = TtsLanguage.defaultLanguageId,
     String Function(String fileName)? resolveRefWavPath,
+    String? dicDir,
+    double? lengthScale,
+    double? noiseScale,
+    double? noiseW,
   }) async {
     // Determine starting segment
     int startIndex = 0;
@@ -229,7 +262,17 @@ class TtsStreamingController {
             .read(ttsPlaybackStateProvider.notifier)
             .set(TtsPlaybackState.waiting);
 
-        if (!await _ensureModelLoaded(modelDir, languageId: languageId)) break;
+        if (!await _ensureModelLoaded(
+          modelDir,
+          engineType: engineType,
+          languageId: languageId,
+          dicDir: dicDir,
+          lengthScale: lengthScale,
+          noiseScale: noiseScale,
+          noiseW: noiseW,
+        )) {
+          break;
+        }
         if (_stopped) break;
 
         // Use edited text from DB if available, otherwise apply dictionary to original

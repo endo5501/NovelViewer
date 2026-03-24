@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
+import 'tts_engine_type.dart';
 import 'tts_isolate.dart';
 import 'tts_language.dart';
 import 'wav_writer.dart';
@@ -39,10 +40,16 @@ class TtsGenerationController {
     required String fileName,
     required String modelDir,
     required int sampleRate,
+    TtsEngineType engineType = TtsEngineType.qwen3,
     String? refWavPath,
     int languageId = TtsLanguage.defaultLanguageId,
     int startSegmentIndex = 0,
     int? existingEpisodeId,
+    // Piper-specific
+    String? dicDir,
+    double? lengthScale,
+    double? noiseScale,
+    double? noiseW,
   }) async {
     _cancelled = false;
 
@@ -87,7 +94,15 @@ class TtsGenerationController {
       }
     });
 
-    _ttsIsolate.loadModel(modelDir, languageId: languageId);
+    _ttsIsolate.loadModel(
+      modelDir,
+      engineType: engineType,
+      languageId: languageId,
+      dicDir: dicDir,
+      lengthScale: lengthScale,
+      noiseScale: noiseScale,
+      noiseW: noiseW,
+    );
     final modelLoaded = await modelCompleter.future;
 
     if (!modelLoaded || _cancelled) {
