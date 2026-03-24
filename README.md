@@ -80,11 +80,13 @@ fvm flutter run -d macos
 # macOS向けReleaseビルド
 scripts/build_tts_macos.sh
 scripts/build_lame_macos.sh
+scripts/build_piper_macos.sh
 fvm flutter build macos
 
 # Windows向けReleaseビルド
 scripts/build_tts_windows.bat
 scripts/build_lame_windows.bat
+scripts/build_piper_windows.bat
 fvm flutter build windows
 ```
 
