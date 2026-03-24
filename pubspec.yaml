@@ -51,7 +51,7 @@ dependencies:
   media_kit_libs_windows_audio: ^1.0.9
   file_picker: ^8.0.0
   crypto: ^3.0.7
-  desktop_drop: ^0.5.0
+  desktop_drop: ^0.7.0
   record: ^6.2.0
   euc: ^1.0.6+8
 
