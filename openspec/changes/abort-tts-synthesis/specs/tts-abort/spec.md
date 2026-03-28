@@ -35,15 +35,27 @@ The C API SHALL provide functions to abort an in-progress synthesis operation fr
 - **WHEN** `qwen3_tts_abort` is called during `qwen3_tts_synthesize_with_embedding` execution
 - **THEN** the embedding synthesis terminates at the next ggml node boundary
 
-### Requirement: ggml abort callback connection
-The qwen3-tts.cpp engine SHALL connect the context's abort flag to ggml's abort callback mechanism. The abort callback SHALL be set on the CPU backend via `ggml_backend_cpu_set_abort_callback` before synthesis begins. The callback function SHALL read the atomic abort flag and return `true` when abort is requested, causing ggml to return `GGML_STATUS_ABORTED`.
+### Requirement: Abort callback and code-level abort checks
+The qwen3-tts.cpp engine SHALL connect the context's abort flag to both ggml's CPU backend abort callback and C++ code-level checks. The abort callback SHALL be set on the CPU backend via `ggml_backend_cpu_set_abort_callback` at initialization time and re-applied after lazy load/reload of components. Since GPU backends (Vulkan, Metal) do not support ggml abort callbacks, the engine SHALL also check the abort flag at the C++ code level: per-frame in `TTSTransformer::generate()` and between the generate and decode stages in `synthesize_internal()`. Each component (TTSTransformer, AudioTokenizerDecoder, AudioTokenizerEncoder) SHALL store the abort callback and provide an `is_aborted()` method. The stored callback SHALL be re-applied when a component is lazy-loaded or reloaded (e.g., in low-memory mode).
 
-#### Scenario: CPU backend abort callback is set before graph compute
-- **WHEN** `qwen3_tts_synthesize` begins execution
-- **THEN** the CPU backend's abort callback is configured to check the context's abort flag before any `ggml_backend_sched_graph_compute` calls
+#### Scenario: CPU backend abort callback is set at initialization
+- **WHEN** `qwen3_tts_init` successfully loads models
+- **THEN** the CPU backend's abort callback is configured on all loaded components to check the context's abort flag
 
-#### Scenario: ggml returns ABORTED status on abort
-- **WHEN** the abort callback returns `true` during `ggml_backend_sched_graph_compute`
+#### Scenario: Abort callback re-applied after lazy load
+- **WHEN** a component (transformer, decoder, encoder) is lazy-loaded or reloaded during synthesis
+- **THEN** the abort callback is re-applied to the newly loaded component's CPU backend
+
+#### Scenario: Abort detected per-frame in generate loop on GPU backend
+- **WHEN** `qwen3_tts_abort` is called while `TTSTransformer::generate()` is running on a Vulkan/GPU backend
+- **THEN** the `is_aborted()` check at the start of each frame iteration detects the abort flag and returns false with an error
+
+#### Scenario: Abort detected between generate and decode stages
+- **WHEN** `qwen3_tts_abort` is called after code generation completes but before vocoder decoding begins
+- **THEN** the `is_aborted()` check in `synthesize_internal()` detects the abort flag and returns without proceeding to decode
+
+#### Scenario: ggml returns ABORTED status on abort (CPU backend)
+- **WHEN** the abort callback returns `true` during `ggml_backend_sched_graph_compute` on a CPU backend
 - **THEN** the compute function returns `GGML_STATUS_ABORTED` and the synthesis function detects this and returns error
 
 ### Requirement: Dart FFI bindings for abort
