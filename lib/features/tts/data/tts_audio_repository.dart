@@ -230,5 +230,6 @@ class TtsAudioRepository {
       where: 'id = ?',
       whereArgs: [episodeId],
     );
+    await _database.reclaimSpace();
   }
 }

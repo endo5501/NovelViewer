@@ -20,8 +20,9 @@ class TtsAudioDatabase {
 
   Future<Database> _open() async {
     final path = p.join(_folderPath, _databaseName);
+    Database db;
     try {
-      return await openDatabase(
+      db = await openDatabase(
         path,
         version: _databaseVersion,
         onCreate: _onCreate,
@@ -33,7 +34,7 @@ class TtsAudioDatabase {
       if (file.existsSync()) {
         file.deleteSync();
       }
-      return await openDatabase(
+      db = await openDatabase(
         path,
         version: _databaseVersion,
         onCreate: _onCreate,
@@ -41,10 +42,31 @@ class TtsAudioDatabase {
         onConfigure: _onConfigure,
       );
     }
+    await _migrateAutoVacuum(db);
+    return db;
+  }
+
+  Future<void> _migrateAutoVacuum(Database db) async {
+    final mode = Sqflite.firstIntValue(
+          await db.rawQuery('PRAGMA auto_vacuum'),
+        ) ??
+        0;
+    // auto_vacuum: 0=NONE, 1=FULL, 2=INCREMENTAL
+    if (mode != 2) {
+      await db.execute('PRAGMA auto_vacuum = INCREMENTAL');
+      await db.execute('VACUUM');
+    }
+  }
+
+  /// Reclaims free pages from the database file.
+  Future<void> reclaimSpace() async {
+    final db = await database;
+    await db.execute('PRAGMA incremental_vacuum(0)');
   }
 
   Future<void> _onConfigure(Database db) async {
     await db.execute('PRAGMA foreign_keys = ON');
+    await db.execute('PRAGMA auto_vacuum = INCREMENTAL');
   }
 
   Future<void> _onCreate(Database db, int version) async {
