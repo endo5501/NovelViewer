@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Embedding cache directory management
-The system SHALL manage an embedding cache directory at `{LibraryParentDir}/cache/embeddings/` for storing pre-computed speaker embeddings. The system SHALL automatically create the directory if it does not exist when the cache is first accessed.
+The system SHALL manage an embedding cache directory at `{LibraryParentDir}/cache/embeddings/{modelBasename}/` for storing pre-computed speaker embeddings, where `{modelBasename}` is the base name of the model directory (e.g., `0.6b`, `1.7b`). This per-model separation prevents cross-model cache contamination when different models produce different embedding dimensions. The system SHALL automatically create the directory if it does not exist when the cache is first accessed.
 
 #### Scenario: Cache directory auto-creation
 - **WHEN** the embedding cache is accessed for the first time and the `cache/embeddings/` directory does not exist
@@ -12,11 +12,11 @@ The system SHALL manage an embedding cache directory at `{LibraryParentDir}/cach
 - **THEN** the system uses the existing directory without modification
 
 ### Requirement: Automatic embedding caching by file content hash
-The system SHALL automatically cache speaker embeddings using the SHA256 hash of the reference audio file content as the cache key. The cache file SHALL be stored at `{LibraryParentDir}/cache/embeddings/{sha256_hex}.emb` in raw binary format (float32 array, 4096 bytes for 1024 dimensions).
+The system SHALL automatically cache speaker embeddings using the SHA256 hash of the reference audio file content as the cache key. The cache file SHALL be stored at `{LibraryParentDir}/cache/embeddings/{modelBasename}/{sha256_hex}.emb` in raw binary format (float32 array). The embedding size depends on the model's `hidden_size` (e.g., 1024 floats for 0.6B, 2048 floats for 1.7B).
 
 #### Scenario: Cache miss — first use of a reference audio file
 - **WHEN** `synthesizeWithVoice` is called with a reference audio file whose SHA256 hash does not match any existing cache file
-- **THEN** the system extracts the speaker embedding via the C API, saves it to `cache/embeddings/{sha256_hex}.emb`, and uses it for synthesis
+- **THEN** the system extracts the speaker embedding via the C API, saves it to `cache/embeddings/{modelBasename}/{sha256_hex}.emb`, and uses it for synthesis
 
 #### Scenario: Cache hit — reuse of a previously used reference audio file
 - **WHEN** `synthesizeWithVoice` is called with a reference audio file whose SHA256 hash matches an existing cache file
@@ -26,8 +26,8 @@ The system SHALL automatically cache speaker embeddings using the SHA256 hash of
 - **WHEN** a reference audio file at the same path has been replaced with different content
 - **THEN** the SHA256 hash differs from the previous cache key, causing a cache miss and a new embedding extraction
 
-#### Scenario: Cache file is corrupted or invalid size
-- **WHEN** a cached embedding file exists but has an unexpected size (not 4096 bytes)
+#### Scenario: Cache file is corrupted or invalid
+- **WHEN** a cached embedding file exists but loading or synthesis with it fails (e.g., corrupted data, size mismatch after model change)
 - **THEN** the system discards the invalid cache file, re-extracts the embedding, and saves a new cache file
 
 ### Requirement: Transparent caching in TTS synthesis flow

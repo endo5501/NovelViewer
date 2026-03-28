@@ -16,12 +16,12 @@ The C API SHALL provide functions to generate audio from text. The synthesis fun
 - **THEN** the MP3 file is decoded to PCM samples, resampled to 24kHz if needed, and audio data is generated using the reference voice characteristics
 
 #### Scenario: Synthesize text with pre-extracted speaker embedding
-- **WHEN** `qwen3_tts_synthesize_with_embedding` is called with Japanese text and a valid 1024-element float32 embedding array
+- **WHEN** `qwen3_tts_synthesize_with_embedding` is called with Japanese text and a float32 embedding array matching the model's `hidden_size`
 - **THEN** audio data is generated using the provided embedding without invoking the audio encoder
 
 #### Scenario: Synthesize with invalid embedding size
-- **WHEN** `qwen3_tts_synthesize_with_embedding` is called with an embedding array that is not 1024 elements
-- **THEN** synthesis fails and `qwen3_tts_get_error` returns a descriptive error message
+- **WHEN** `qwen3_tts_synthesize_with_embedding` is called with an embedding array whose size does not match the model's `hidden_size` (e.g., 1024 for 0.6B, 2048 for 1.7B)
+- **THEN** synthesis fails and `qwen3_tts_get_error` returns a descriptive error message including expected and actual sizes
 
 #### Scenario: Synthesize with null embedding
 - **WHEN** `qwen3_tts_synthesize_with_embedding` is called with a null embedding pointer
@@ -46,11 +46,11 @@ The C API SHALL provide a function `qwen3_tts_extract_speaker_embedding` to extr
 
 #### Scenario: Extract embedding from WAV file
 - **WHEN** `qwen3_tts_extract_speaker_embedding` is called with a valid WAV reference audio file
-- **THEN** the function returns 0 (success), and the output pointer contains 1024 float32 values representing the speaker embedding
+- **THEN** the function returns 0 (success), and the output pointer contains float32 values representing the speaker embedding (dimension depends on model's encoder config)
 
 #### Scenario: Extract embedding from MP3 file
 - **WHEN** `qwen3_tts_extract_speaker_embedding` is called with a valid MP3 reference audio file
-- **THEN** the function returns 0 (success), and the output pointer contains 1024 float32 values representing the speaker embedding
+- **THEN** the function returns 0 (success), and the output pointer contains float32 values representing the speaker embedding
 
 #### Scenario: Extract embedding from invalid file
 - **WHEN** `qwen3_tts_extract_speaker_embedding` is called with a non-existent or invalid audio file
