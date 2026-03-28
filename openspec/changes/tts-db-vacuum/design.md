@@ -29,12 +29,12 @@
 
 **理由：** INCREMENTALは通常の読み書き性能に影響を与えず、回収タイミングを制御できる。
 
-### 2. onConfigureでPRAGMA設定、onUpgradeで既存DB移行
+### 2. onConfigureでPRAGMA設定、_open後に既存DB移行
 
 - `onConfigure`: `PRAGMA auto_vacuum = INCREMENTAL` を設定（新規DB作成時に反映）
-- `onUpgrade` (version 3→4): 既存DBに対して `PRAGMA auto_vacuum = INCREMENTAL` + `VACUUM` を実行して移行
+- `_migrateAutoVacuum`: DB open後に `PRAGMA auto_vacuum` を確認し、INCREMENTALでなければ `PRAGMA auto_vacuum = INCREMENTAL` + `VACUUM` を実行して移行
 
-**理由：** onConfigureはDB接続のたびに呼ばれるが、auto_vacuumのPRAGMAはDB作成時にのみ効果がある。既存DBの移行にはVACUUMが必要なので、onUpgradeで一度だけ実行する。
+**理由：** `onUpgrade` はsqfliteがトランザクション内で実行するため、`VACUUM` を呼び出せない。そのため `_open` メソッドでDB取得後にトランザクション外で移行処理を行う。`auto_vacuum` モードはDB作成後に変更するには `VACUUM` が必須であり、スキーマバージョンの変更は不要（スキーマ自体は変わらないため）。
 
 ### 3. deleteEpisode後にincremental_vacuumを実行
 

@@ -375,6 +375,34 @@ void main() {
         // File size should have decreased
         expect(sizeAfterDelete, lessThan(sizeBeforeDelete));
       });
+
+      test('no effect when episode has no audio BLOBs', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'generating',
+        );
+
+        // Insert segment without audio data
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト文。',
+          textOffset: 0,
+          textLength: 5,
+        );
+
+        // Get DB file size before deletion
+        final dbFile = File('${tempDir.path}/tts_audio.db');
+        final sizeBeforeDelete = dbFile.lengthSync();
+
+        // Delete episode (should succeed without error)
+        await repository.deleteEpisode(episodeId);
+
+        // File size should remain the same (no BLOBs to free)
+        final sizeAfterDelete = dbFile.lengthSync();
+        expect(sizeAfterDelete, lessThanOrEqualTo(sizeBeforeDelete));
+      });
     });
 
     group('insertSegment with nullable audio', () {

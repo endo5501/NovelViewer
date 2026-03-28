@@ -12,8 +12,8 @@ The system SHALL create a `tts_audio.db` SQLite database in each novel folder wh
 - **THEN** the existing database is opened without modification
 
 #### Scenario: Existing database migrated to INCREMENTAL auto_vacuum
-- **WHEN** TTS audio storage is accessed for an existing `tts_audio.db` at schema version 3 (without auto_vacuum)
-- **THEN** the database is migrated to schema version 4 by setting `PRAGMA auto_vacuum = INCREMENTAL` and executing `VACUUM` to rebuild the database with the new mode enabled
+- **WHEN** TTS audio storage is accessed for an existing `tts_audio.db` without `auto_vacuum = INCREMENTAL`
+- **THEN** the database is migrated by setting `PRAGMA auto_vacuum = INCREMENTAL` and executing `VACUUM` to rebuild the database with the new mode enabled. This migration is performed after database open (outside `onUpgrade`) because `VACUUM` cannot execute within a transaction.
 
 ## ADDED Requirements
 
