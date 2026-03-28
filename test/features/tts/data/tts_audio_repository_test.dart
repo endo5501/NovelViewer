@@ -342,6 +342,69 @@ void main() {
       });
     });
 
+    group('deleteEpisode runs incremental_vacuum', () {
+      test('reclaims disk space after deleting episode with audio', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'completed',
+        );
+
+        // Insert a segment with large audio BLOB
+        final largeAudio = Uint8List(100000); // 100KB
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト文。',
+          textOffset: 0,
+          textLength: 5,
+          audioData: largeAudio,
+          sampleCount: 50000,
+        );
+
+        // Get DB file size before deletion
+        final dbFile = File('${tempDir.path}/tts_audio.db');
+        final sizeBeforeDelete = dbFile.lengthSync();
+
+        // Delete episode (should trigger incremental_vacuum)
+        await repository.deleteEpisode(episodeId);
+
+        // Get DB file size after deletion
+        final sizeAfterDelete = dbFile.lengthSync();
+
+        // File size should have decreased
+        expect(sizeAfterDelete, lessThan(sizeBeforeDelete));
+      });
+
+      test('no effect when episode has no audio BLOBs', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: 'generating',
+        );
+
+        // Insert segment without audio data
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト文。',
+          textOffset: 0,
+          textLength: 5,
+        );
+
+        // Get DB file size before deletion
+        final dbFile = File('${tempDir.path}/tts_audio.db');
+        final sizeBeforeDelete = dbFile.lengthSync();
+
+        // Delete episode (should succeed without error)
+        await repository.deleteEpisode(episodeId);
+
+        // File size should remain the same (no BLOBs to free)
+        final sizeAfterDelete = dbFile.lengthSync();
+        expect(sizeAfterDelete, lessThanOrEqualTo(sizeBeforeDelete));
+      });
+    });
+
     group('insertSegment with nullable audio', () {
       test('inserts a segment without audio_data', () async {
         final episodeId = await repository.createEpisode(
