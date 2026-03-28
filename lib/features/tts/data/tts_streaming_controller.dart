@@ -414,6 +414,9 @@ class TtsStreamingController {
     if (_stopped) return;
     _stopped = true;
 
+    // Abort any in-progress synthesis so the worker Isolate becomes responsive
+    _ttsIsolate.abort();
+
     // Cancel active play completion wait
     final playCompleter = _activePlayCompleter;
     if (playCompleter != null && !playCompleter.isCompleted) {

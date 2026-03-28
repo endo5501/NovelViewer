@@ -93,6 +93,12 @@ typedef _QTtsLoadSpeakerEmbeddingDart = int Function(
 typedef _QTtsFreeSpeakerEmbeddingC = Void Function(Pointer<Float>);
 typedef _QTtsFreeSpeakerEmbeddingDart = void Function(Pointer<Float>);
 
+typedef _QTtsAbortC = Void Function(Pointer<Void>);
+typedef _QTtsAbortDart = void Function(Pointer<Void>);
+
+typedef _QTtsResetAbortC = Void Function(Pointer<Void>);
+typedef _QTtsResetAbortDart = void Function(Pointer<Void>);
+
 class TtsNativeBindings {
   TtsNativeBindings(DynamicLibrary library) : _library = library;
 
@@ -181,4 +187,13 @@ class TtsNativeBindings {
     _QTtsFreeSpeakerEmbeddingC,
     _QTtsFreeSpeakerEmbeddingDart
   >('qwen3_tts_free_speaker_embedding');
+
+  late final abort = _library.lookupFunction<_QTtsAbortC, _QTtsAbortDart>(
+    'qwen3_tts_abort',
+  );
+
+  late final resetAbort =
+      _library.lookupFunction<_QTtsResetAbortC, _QTtsResetAbortDart>(
+    'qwen3_tts_reset_abort',
+  );
 }

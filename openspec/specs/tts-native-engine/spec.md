@@ -28,11 +28,11 @@ The system SHALL include qwen3-tts.cpp as a git submodule and build it as a shar
 - **THEN** the compilation succeeds without C2589 errors due to `NOMINMAX` being defined before the Windows header include
 
 ### Requirement: C API for model lifecycle
-The C API SHALL provide functions to initialize and release TTS model resources. Initialization SHALL accept a model directory path and a thread count. The model directory SHALL contain the required GGUF files (transformer and vocoder). The model file detection SHALL be dynamic: the system SHALL search the model directory for files matching `qwen3-tts-*.gguf` (excluding files containing `tokenizer`) for the TTS model, and `qwen3-tts-tokenizer*.gguf` for the vocoder. The TTS model file SHALL be exactly one; if zero or multiple TTS model files are found, initialization SHALL fail with an error. The vocoder tokenizer model selection SHALL prefer the Q8_0 quantized file (`qwen3-tts-tokenizer-q8_0.gguf`) when it exists in the model directory, falling back to the F16 file (`qwen3-tts-tokenizer-f16.gguf`) otherwise.
+The C API SHALL provide functions to initialize and release TTS model resources. Initialization SHALL accept a model directory path and a thread count. The model directory SHALL contain the required GGUF files (transformer and vocoder). The model file detection SHALL be dynamic: the system SHALL search the model directory for files matching `qwen3-tts-*.gguf` (excluding files containing `tokenizer`) for the TTS model, and `qwen3-tts-tokenizer*.gguf` for the vocoder. The TTS model file SHALL be exactly one; if zero or multiple TTS model files are found, initialization SHALL fail with an error. The vocoder tokenizer model selection SHALL prefer the Q8_0 quantized file (`qwen3-tts-tokenizer-q8_0.gguf`) when it exists in the model directory, falling back to the F16 file (`qwen3-tts-tokenizer-f16.gguf`) otherwise. The `qwen3_tts_ctx` structure SHALL include a `std::atomic<bool> abort_flag` field initialized to `false`.
 
 #### Scenario: Initialize TTS model successfully
 - **WHEN** `qwen3_tts_init` is called with a valid model directory containing GGUF files and a thread count of 4
-- **THEN** a non-null context pointer is returned and the model is loaded into memory
+- **THEN** a non-null context pointer is returned and the model is loaded into memory with abort_flag initialized to false
 
 #### Scenario: Initialize with 0.6B model
 - **WHEN** `qwen3_tts_init` is called with a directory containing only `qwen3-tts-0.6b-f16.gguf` and `qwen3-tts-tokenizer-f16.gguf`
@@ -197,7 +197,7 @@ The C API SHALL provide a function to set the synthesis language on a TTS contex
 - **THEN** the function returns without error (no-op)
 
 ### Requirement: Dart FFI bindings
-The system SHALL provide Dart FFI bindings that wrap the C API functions. The bindings SHALL load the shared library from the platform-appropriate location. All FFI calls SHALL be designed to run safely within a Dart Isolate.
+The system SHALL provide Dart FFI bindings that wrap the C API functions. The bindings SHALL load the shared library from the platform-appropriate location. All FFI calls SHALL be designed to run safely within a Dart Isolate. The bindings SHALL include `abort` and `resetAbort` functions that can be safely called from any Isolate.
 
 #### Scenario: Load shared library on macOS
 - **WHEN** the Dart FFI bindings are initialized on macOS
@@ -209,7 +209,7 @@ The system SHALL provide Dart FFI bindings that wrap the C API functions. The bi
 
 #### Scenario: FFI bindings expose all C API functions
 - **WHEN** the Dart FFI binding class is instantiated
-- **THEN** all C API functions (init, is_loaded, free, synthesize, synthesize_with_voice, set_language, get_audio, get_audio_length, get_sample_rate, get_error) are available as Dart methods
+- **THEN** all C API functions (init, is_loaded, free, synthesize, synthesize_with_voice, set_language, get_audio, get_audio_length, get_sample_rate, get_error, abort, reset_abort) are available as Dart methods
 
 ### Requirement: TtsEngine language configuration
 The `TtsEngine` class SHALL provide a `setLanguage` method that accepts an integer language ID and calls the native `qwen3_tts_set_language` function. The class SHALL define a `languageJapanese` constant with value `2058`. The `setLanguage` method SHALL only be callable when the model is loaded.

@@ -201,6 +201,7 @@ class TtsGenerationController {
 
   Future<void> cancel() async {
     _cancelled = true;
+    _ttsIsolate.abort();
     final completer = _activeSynthesisCompleter;
     if (completer != null && !completer.isCompleted) {
       completer.complete(SynthesisResultResponse(

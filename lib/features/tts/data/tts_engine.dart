@@ -231,6 +231,23 @@ class TtsEngine {
     return sha256.convert(bytes).toString();
   }
 
+  int? get ctxAddress => _ctx != nullptr ? _ctx.address : null;
+
+  /// Signal the native engine to abort the current synthesis.
+  /// Thread-safe: can be called from any isolate.
+  void abort() {
+    if (_ctx != nullptr) {
+      _bindings.abort(_ctx);
+    }
+  }
+
+  /// Clear the abort flag so subsequent synthesis calls proceed normally.
+  void resetAbort() {
+    if (_ctx != nullptr) {
+      _bindings.resetAbort(_ctx);
+    }
+  }
+
   void dispose() {
     if (_ctx != nullptr) {
       _bindings.free(_ctx);

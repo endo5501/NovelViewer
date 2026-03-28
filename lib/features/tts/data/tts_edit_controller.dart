@@ -487,6 +487,7 @@ class TtsEditController {
 
   Future<void> cancel() async {
     _cancelled = true;
+    _ttsIsolate.abort();
     if (!(_activeModelLoadCompleter?.isCompleted ?? true)) {
       _activeModelLoadCompleter!.completeError(const _CancelledException());
     }
@@ -498,6 +499,7 @@ class TtsEditController {
 
   Future<void> dispose() async {
     _cancelled = true;
+    _ttsIsolate.abort();
     await _teardownIsolate(recreate: false);
     await _cleanupFiles();
   }
