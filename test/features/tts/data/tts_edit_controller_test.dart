@@ -25,6 +25,7 @@ class FakeTtsIsolate implements TtsIsolate {
   final bool modelLoadSuccess;
   bool spawned = false;
   bool disposed = false;
+  bool aborted = false;
   final synthesizeRequests = <(String text, String? refWavPath)>[];
 
   /// When set, synthesize will not auto-respond.
@@ -84,6 +85,11 @@ class FakeTtsIsolate implements TtsIsolate {
     if (!_responseController.isClosed) {
       _responseController.close();
     }
+  }
+
+  @override
+  void abort() {
+    aborted = true;
   }
 }
 
@@ -1652,6 +1658,7 @@ void main() {
 
         await controller.cancel();
 
+        expect(isolate.aborted, true);
         expect(isolate.disposed, true);
         expect(controller.modelLoaded, false);
       });

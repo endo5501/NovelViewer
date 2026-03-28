@@ -25,6 +25,7 @@ class _FakeTtsIsolate implements TtsIsolate {
       StreamController<TtsIsolateResponse>.broadcast();
   bool spawned = false;
   bool disposed = false;
+  bool aborted = false;
   final synthesizeRequests = <String>[];
   final synthesizeRefWavPaths = <String?>[];
 
@@ -62,6 +63,11 @@ class _FakeTtsIsolate implements TtsIsolate {
     if (!_responseController.isClosed) {
       _responseController.close();
     }
+  }
+
+  @override
+  void abort() {
+    aborted = true;
   }
 }
 
@@ -627,6 +633,9 @@ void main() {
       expect(episode, isNotNull);
       final status = episode!['status'] as String;
       expect(status == 'partial' || status == 'completed', isTrue);
+
+      // Abort should have been called before dispose
+      expect(isolate.aborted, isTrue);
 
       // Playback state should be stopped
       expect(

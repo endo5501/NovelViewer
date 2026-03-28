@@ -84,6 +84,19 @@ void main() {
       expect(response.error, 'model not found');
     });
 
+    test('ModelLoadedResponse holds ctxAddress for qwen3 engine', () {
+      final response = ModelLoadedResponse(
+        success: true,
+        ctxAddress: 0xDEAD,
+      );
+      expect(response.ctxAddress, 0xDEAD);
+    });
+
+    test('ModelLoadedResponse ctxAddress is null by default', () {
+      final response = ModelLoadedResponse(success: true);
+      expect(response.ctxAddress, isNull);
+    });
+
     test('SynthesisResultResponse holds audio data', () {
       final audio = Float32List.fromList([0.1, 0.2, 0.3]);
       final response = SynthesisResultResponse(

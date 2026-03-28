@@ -44,6 +44,25 @@ class MockTtsNativeBindings extends TtsNativeBindings {
   @override
   // ignore: overridden_fields
   late final void Function(Pointer<Void>) free = (Pointer<Void> ctx) {};
+
+  Pointer<Void>? lastAbortCtx;
+  int abortCallCount = 0;
+  Pointer<Void>? lastResetAbortCtx;
+  int resetAbortCallCount = 0;
+
+  @override
+  // ignore: overridden_fields
+  late final void Function(Pointer<Void>) abort = (Pointer<Void> ctx) {
+    lastAbortCtx = ctx;
+    abortCallCount++;
+  };
+
+  @override
+  // ignore: overridden_fields
+  late final void Function(Pointer<Void>) resetAbort = (Pointer<Void> ctx) {
+    lastResetAbortCtx = ctx;
+    resetAbortCallCount++;
+  };
 }
 
 void main() {
@@ -93,6 +112,62 @@ void main() {
         () => engine.setLanguage(TtsEngine.languageJapanese),
         throwsA(isA<TtsEngineException>()),
       );
+    });
+  });
+
+  group('TtsEngine - abort', () {
+    late MockTtsNativeBindings mockBindings;
+    late TtsEngine engine;
+
+    setUp(() {
+      mockBindings = MockTtsNativeBindings();
+      engine = TtsEngine(mockBindings);
+    });
+
+    test('abort calls native binding with context pointer', () {
+      final fakeCtx = Pointer<Void>.fromAddress(0x1234);
+      mockBindings.setFakeContext(fakeCtx);
+      engine.loadModel('/fake/model/dir');
+
+      engine.abort();
+
+      expect(mockBindings.abortCallCount, 1);
+      expect(mockBindings.lastAbortCtx, fakeCtx);
+    });
+
+    test('abort is no-op when model is not loaded', () {
+      engine.abort();
+
+      expect(mockBindings.abortCallCount, 0);
+    });
+
+    test('resetAbort calls native binding with context pointer', () {
+      final fakeCtx = Pointer<Void>.fromAddress(0x1234);
+      mockBindings.setFakeContext(fakeCtx);
+      engine.loadModel('/fake/model/dir');
+
+      engine.resetAbort();
+
+      expect(mockBindings.resetAbortCallCount, 1);
+      expect(mockBindings.lastResetAbortCtx, fakeCtx);
+    });
+
+    test('resetAbort is no-op when model is not loaded', () {
+      engine.resetAbort();
+
+      expect(mockBindings.resetAbortCallCount, 0);
+    });
+
+    test('ctxAddress returns pointer address when model is loaded', () {
+      final fakeCtx = Pointer<Void>.fromAddress(0x1234);
+      mockBindings.setFakeContext(fakeCtx);
+      engine.loadModel('/fake/model/dir');
+
+      expect(engine.ctxAddress, 0x1234);
+    });
+
+    test('ctxAddress returns null when model is not loaded', () {
+      expect(engine.ctxAddress, isNull);
     });
   });
 }

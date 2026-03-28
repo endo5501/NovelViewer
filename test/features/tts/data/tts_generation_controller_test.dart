@@ -21,6 +21,7 @@ class FakeTtsIsolate implements TtsIsolate {
   final String? synthesisError;
   bool spawned = false;
   bool disposed = false;
+  bool aborted = false;
   String? loadedModelDir;
   int? loadedLanguageId;
   final synthesizeRequests = <String>[];
@@ -73,6 +74,11 @@ class FakeTtsIsolate implements TtsIsolate {
     if (!_responseController.isClosed) {
       _responseController.close();
     }
+  }
+
+  @override
+  void abort() {
+    aborted = true;
   }
 }
 
@@ -282,6 +288,7 @@ void main() {
       expect(episode, isNotNull);
       expect(episode!['status'], 'partial');
 
+      expect(cancelIsolate.aborted, isTrue);
       expect(cancelIsolate.disposed, isTrue);
     });
 
@@ -586,6 +593,7 @@ class _CancellableFakeTtsIsolate implements TtsIsolate {
       StreamController<TtsIsolateResponse>.broadcast();
   final void Function()? onSynthesizeRequested;
   bool disposed = false;
+  bool aborted = false;
 
   @override
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
@@ -613,6 +621,11 @@ class _CancellableFakeTtsIsolate implements TtsIsolate {
     if (!_responseController.isClosed) {
       _responseController.close();
     }
+  }
+
+  @override
+  void abort() {
+    aborted = true;
   }
 }
 
@@ -653,6 +666,9 @@ class _TrackingFakeTtsIsolate implements TtsIsolate {
   Future<void> dispose() async {
     _responseController.close();
   }
+
+  @override
+  void abort() {}
 }
 
 /// A fake isolate that completes some synthesis requests and stalls on others.
@@ -664,6 +680,7 @@ class _StallingFakeTtsIsolate implements TtsIsolate {
   final _responseController =
       StreamController<TtsIsolateResponse>.broadcast();
   bool disposed = false;
+  bool aborted = false;
 
   @override
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
@@ -699,5 +716,10 @@ class _StallingFakeTtsIsolate implements TtsIsolate {
     if (!_responseController.isClosed) {
       _responseController.close();
     }
+  }
+
+  @override
+  void abort() {
+    aborted = true;
   }
 }

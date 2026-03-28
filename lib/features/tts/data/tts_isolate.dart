@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ffi';
 import 'dart:isolate';
 import 'dart:typed_data';
 
@@ -8,6 +9,7 @@ import 'piper_tts_engine.dart';
 import 'tts_engine.dart';
 import 'tts_engine_type.dart';
 import 'tts_language.dart';
+import 'tts_native_bindings.dart';
 
 // Messages sent to the TTS isolate
 
@@ -52,9 +54,10 @@ class DisposeMessage extends TtsIsolateMessage {
 sealed class TtsIsolateResponse {}
 
 class ModelLoadedResponse extends TtsIsolateResponse {
-  ModelLoadedResponse({required this.success, this.error});
+  ModelLoadedResponse({required this.success, this.error, this.ctxAddress});
   final bool success;
   final String? error;
+  final int? ctxAddress;
 }
 
 class SynthesisResultResponse extends TtsIsolateResponse {
@@ -73,6 +76,7 @@ class TtsIsolate {
   SendPort? _sendPort;
   ReceivePort? _receivePort;
   final _responseController = StreamController<TtsIsolateResponse>.broadcast();
+  int? _ctxAddress;
 
   /// Timeout for graceful shutdown before force-killing the isolate.
   static const _disposeTimeout = Duration(seconds: 2);
@@ -92,6 +96,9 @@ class TtsIsolate {
       if (message is SendPort) {
         completer.complete(message);
       } else if (message is TtsIsolateResponse) {
+        if (message is ModelLoadedResponse) {
+          _ctxAddress = message.ctxAddress;
+        }
         _responseController.add(message);
       }
     });
@@ -127,9 +134,27 @@ class TtsIsolate {
     _sendPort?.send(SynthesizeMessage(text: text, refWavPath: refWavPath));
   }
 
+  /// Abort any in-progress synthesis by setting the native abort flag directly.
+  /// This bypasses the worker Isolate's event loop (which is blocked during
+  /// synthesis) by calling the FFI function from the main Isolate.
+  void abort() {
+    final addr = _ctxAddress;
+    if (addr == null) return;
+    _abortBindings ??= TtsNativeBindings.open();
+    _abortBindings!.abort(Pointer<Void>.fromAddress(addr));
+  }
+
+  /// Lazily cached bindings for abort calls from the main Isolate.
+  TtsNativeBindings? _abortBindings;
+
   Future<void> dispose() async {
     final isolate = _isolate;
     if (isolate != null) {
+      // Abort any in-progress synthesis so the worker Isolate's event loop
+      // becomes responsive to DisposeMessage, enabling qwen3_tts_free().
+      abort();
+      _ctxAddress = null; // Prevent further abort calls on freed memory
+
       // Listen for isolate exit to know when it has terminated
       final exitPort = ReceivePort();
       isolate.addOnExitListener(exitPort.sendPort);
@@ -148,6 +173,7 @@ class TtsIsolate {
     }
 
     _isolate = null;
+    _ctxAddress = null;
     _receivePort?.close();
     _receivePort = null;
     _sendPort = null;
@@ -240,7 +266,10 @@ class TtsIsolate {
           } else {
             embeddingCacheDir = null;
           }
-          mainSendPort.send(ModelLoadedResponse(success: true));
+          mainSendPort.send(ModelLoadedResponse(
+            success: true,
+            ctxAddress: qwen3Engine?.ctxAddress,
+          ));
         } catch (e) {
           disposeEngines();
           mainSendPort.send(
@@ -258,6 +287,7 @@ class TtsIsolate {
             return;
           }
 
+          qwen3Engine?.resetAbort();
           final result = doSynthesize(message.text, message.refWavPath);
 
           // Use TransferableTypedData for zero-copy transfer
