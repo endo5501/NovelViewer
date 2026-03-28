@@ -38,7 +38,7 @@ class _FakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsEngine.languageJapanese, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW}) {
+      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsEngine.languageJapanese, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW, String? embeddingCacheDir}) {
     Future.microtask(() {
       _responseController.add(ModelLoadedResponse(success: true));
     });

@@ -187,6 +187,7 @@ class TtsEditController {
     double? lengthScale,
     double? noiseScale,
     double? noiseW,
+    String? embeddingCacheDir,
   }) async {
     if (_modelLoaded) return true;
 
@@ -213,6 +214,7 @@ class TtsEditController {
       lengthScale: lengthScale,
       noiseScale: noiseScale,
       noiseW: noiseW,
+      embeddingCacheDir: embeddingCacheDir,
     );
 
     try {
@@ -235,6 +237,7 @@ class TtsEditController {
     double? lengthScale,
     double? noiseScale,
     double? noiseW,
+    String? embeddingCacheDir,
   }) async {
     final dict = _dictionaryRepository;
     final entries = dict != null
@@ -251,6 +254,7 @@ class TtsEditController {
       lengthScale: lengthScale,
       noiseScale: noiseScale,
       noiseW: noiseW,
+      embeddingCacheDir: embeddingCacheDir,
     );
   }
 
@@ -265,10 +269,11 @@ class TtsEditController {
     double? lengthScale,
     double? noiseScale,
     double? noiseW,
+    String? embeddingCacheDir,
   }) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
 
-    if (!await _ensureModelLoaded(modelDir, engineType: engineType, languageId: languageId, dicDir: dicDir, lengthScale: lengthScale, noiseScale: noiseScale, noiseW: noiseW)) return false;
+    if (!await _ensureModelLoaded(modelDir, engineType: engineType, languageId: languageId, dicDir: dicDir, lengthScale: lengthScale, noiseScale: noiseScale, noiseW: noiseW, embeddingCacheDir: embeddingCacheDir)) return false;
 
     final segment = _segments[segmentIndex];
     // For new segments, apply dictionary before synthesizing and storing.
@@ -321,6 +326,7 @@ class TtsEditController {
     double? lengthScale,
     double? noiseScale,
     double? noiseW,
+    String? embeddingCacheDir,
   }) async {
     _cancelled = false;
     final ungenerated = <int>[];
@@ -363,6 +369,7 @@ class TtsEditController {
         lengthScale: lengthScale,
         noiseScale: noiseScale,
         noiseW: noiseW,
+        embeddingCacheDir: embeddingCacheDir,
       );
 
       if (!success) break;

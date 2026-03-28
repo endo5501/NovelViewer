@@ -62,6 +62,7 @@ class TtsStreamingController {
     double? lengthScale,
     double? noiseScale,
     double? noiseW,
+    String? embeddingCacheDir,
   }) async {
     _stopped = false;
     _modelLoaded = false;
@@ -118,6 +119,7 @@ class TtsStreamingController {
         lengthScale: lengthScale,
         noiseScale: noiseScale,
         noiseW: noiseW,
+        embeddingCacheDir: embeddingCacheDir,
       );
 
       // Update episode status
@@ -145,6 +147,7 @@ class TtsStreamingController {
     double? lengthScale,
     double? noiseScale,
     double? noiseW,
+    String? embeddingCacheDir,
   }) async {
     if (_modelLoaded) return true;
 
@@ -165,6 +168,7 @@ class TtsStreamingController {
       lengthScale: lengthScale,
       noiseScale: noiseScale,
       noiseW: noiseW,
+      embeddingCacheDir: embeddingCacheDir,
     );
     _modelLoaded = await completer.future;
     return _modelLoaded;
@@ -209,6 +213,7 @@ class TtsStreamingController {
     double? lengthScale,
     double? noiseScale,
     double? noiseW,
+    String? embeddingCacheDir,
   }) async {
     // Determine starting segment
     int startIndex = 0;
@@ -270,6 +275,7 @@ class TtsStreamingController {
           lengthScale: lengthScale,
           noiseScale: noiseScale,
           noiseW: noiseW,
+          embeddingCacheDir: embeddingCacheDir,
         )) {
           break;
         }

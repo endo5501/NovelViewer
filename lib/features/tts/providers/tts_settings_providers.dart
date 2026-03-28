@@ -59,6 +59,12 @@ final ttsModelDirProvider = Provider<String>((ref) {
   return p.join(modelsBaseDir, modelSize.dirName);
 });
 
+final embeddingCacheDirProvider = Provider<String?>((ref) {
+  final libraryPath = ref.watch(libraryPathProvider);
+  if (libraryPath == null) return null;
+  return p.join(p.dirname(libraryPath), 'cache', 'embeddings');
+});
+
 final ttsLanguageProvider =
     NotifierProvider<TtsLanguageNotifier, TtsLanguage>(
   TtsLanguageNotifier.new,

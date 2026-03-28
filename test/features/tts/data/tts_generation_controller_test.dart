@@ -35,7 +35,7 @@ class FakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW}) {
+      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW, String? embeddingCacheDir}) {
     loadedModelDir = modelDir;
     loadedLanguageId = languageId;
     Future.microtask(() {
@@ -595,7 +595,7 @@ class _CancellableFakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW}) {
+      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW, String? embeddingCacheDir}) {
     Future.microtask(() {
       _responseController.add(ModelLoadedResponse(success: true));
     });
@@ -632,7 +632,7 @@ class _TrackingFakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW}) {
+      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW, String? embeddingCacheDir}) {
     Future.microtask(() {
       _responseController.add(ModelLoadedResponse(success: true));
     });
@@ -673,7 +673,7 @@ class _StallingFakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW}) {
+      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW, String? embeddingCacheDir}) {
     Future.microtask(() {
       _responseController.add(ModelLoadedResponse(success: true));
     });
