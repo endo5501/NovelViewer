@@ -212,6 +212,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
         lengthScale: lengthScale,
         noiseScale: noiseScale,
         noiseW: noiseW,
+        embeddingCacheDir: ref.read(embeddingCacheDirProvider),
       );
 
       if (!mounted) return;

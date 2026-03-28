@@ -50,6 +50,7 @@ class TtsGenerationController {
     double? lengthScale,
     double? noiseScale,
     double? noiseW,
+    String? embeddingCacheDir,
   }) async {
     _cancelled = false;
 
@@ -102,6 +103,7 @@ class TtsGenerationController {
       lengthScale: lengthScale,
       noiseScale: noiseScale,
       noiseW: noiseW,
+      embeddingCacheDir: embeddingCacheDir,
     );
     final modelLoaded = await modelCompleter.future;
 

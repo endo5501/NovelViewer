@@ -1,6 +1,8 @@
 import 'dart:ffi';
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:ffi/ffi.dart';
 
 import 'tts_language.dart';
@@ -93,6 +95,140 @@ class TtsEngine {
     }
 
     return _extractAudio();
+  }
+
+  TtsSynthesisResult synthesizeWithVoiceCached(
+    String text,
+    String refWavPath, {
+    required String embeddingCacheDir,
+  }) {
+    _ensureLoaded();
+
+    final hash = _computeFileHash(refWavPath);
+    final cacheDir = Directory(embeddingCacheDir);
+    if (!cacheDir.existsSync()) {
+      cacheDir.createSync(recursive: true);
+    }
+    final cachePath = '${cacheDir.path}/$hash.emb';
+    final cacheFile = File(cachePath);
+
+    final textPtr = text.toNativeUtf8();
+    try {
+      if (cacheFile.existsSync()) {
+        try {
+          if (_synthesizeFromCachedEmbedding(textPtr, cachePath)) {
+            return _extractAudio();
+          }
+        } on TtsEngineException {
+          // Synthesis with cached embedding failed — re-extract below
+        }
+        try {
+          cacheFile.deleteSync();
+        } on FileSystemException {
+          // ignore
+        }
+      }
+
+      // Cache miss: extract, save, synthesize
+      _extractAndCacheEmbedding(textPtr, refWavPath, cachePath);
+      return _extractAudio();
+    } finally {
+      calloc.free(textPtr);
+    }
+  }
+
+  bool _synthesizeFromCachedEmbedding(
+    Pointer<Utf8> textPtr,
+    String cachePath,
+  ) {
+    final pathPtr = cachePath.toNativeUtf8();
+    final outData = calloc<Pointer<Float>>();
+    final outSize = calloc<Int32>();
+    try {
+      final loadResult =
+          _bindings.loadSpeakerEmbedding(pathPtr, outData, outSize);
+      if (loadResult != 0) return false;
+
+      final embPtr = outData.value;
+      final embSize = outSize.value;
+      try {
+        final result =
+            _bindings.synthesizeWithEmbedding(_ctx, textPtr, embPtr, embSize);
+        if (result != 0) {
+          final error = _bindings.getError(_ctx).toDartString();
+          throw TtsEngineException(
+            'Synthesis with cached embedding failed: $error',
+          );
+        }
+        return true;
+      } finally {
+        _bindings.freeSpeakerEmbedding(embPtr);
+      }
+    } finally {
+      calloc.free(pathPtr);
+      calloc.free(outData);
+      calloc.free(outSize);
+    }
+  }
+
+  void _extractAndCacheEmbedding(
+    Pointer<Utf8> textPtr,
+    String refWavPath,
+    String cachePath,
+  ) {
+    final wavPtr = refWavPath.toNativeUtf8();
+    final outData = calloc<Pointer<Float>>();
+    final outSize = calloc<Int32>();
+    try {
+      final extractResult =
+          _bindings.extractSpeakerEmbedding(_ctx, wavPtr, outData, outSize);
+      if (extractResult != 0) {
+        final error = _bindings.getError(_ctx).toDartString();
+        throw TtsEngineException(
+          'Speaker embedding extraction failed: $error',
+        );
+      }
+
+      final embPtr = outData.value;
+      final embSize = outSize.value;
+      try {
+        final cachePathPtr = cachePath.toNativeUtf8();
+        try {
+          final saveResult =
+              _bindings.saveSpeakerEmbedding(cachePathPtr, embPtr, embSize);
+          if (saveResult != 0) {
+            try {
+              File(cachePath).deleteSync();
+            } on FileSystemException {
+              // ignore
+            }
+          }
+        } finally {
+          calloc.free(cachePathPtr);
+        }
+
+        // Synthesize
+        final result =
+            _bindings.synthesizeWithEmbedding(_ctx, textPtr, embPtr, embSize);
+        if (result != 0) {
+          final error = _bindings.getError(_ctx).toDartString();
+          throw TtsEngineException(
+            'Synthesis with embedding failed: $error',
+          );
+        }
+      } finally {
+        _bindings.freeSpeakerEmbedding(embPtr);
+      }
+    } finally {
+      calloc.free(wavPtr);
+      calloc.free(outData);
+      calloc.free(outSize);
+    }
+  }
+
+  String _computeFileHash(String filePath) {
+    final bytes = File(filePath).readAsBytesSync();
+    return sha256.convert(bytes).toString();
   }
 
   void dispose() {

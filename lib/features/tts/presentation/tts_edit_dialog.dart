@@ -209,6 +209,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
       lengthScale: lengthScale,
       noiseScale: noiseScale,
       noiseW: noiseW,
+      embeddingCacheDir: ref.read(embeddingCacheDirProvider),
     );
 
     if (!mounted) return;
@@ -272,6 +273,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
       lengthScale: lengthScale,
       noiseScale: noiseScale,
       noiseW: noiseW,
+      embeddingCacheDir: ref.read(embeddingCacheDirProvider),
       onSegmentStart: (index) {
         if (mounted) {
           ref.read(ttsEditGeneratingIndexProvider.notifier).set(index);

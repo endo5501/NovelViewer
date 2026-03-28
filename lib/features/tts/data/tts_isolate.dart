@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'package:path/path.dart' as p;
+
 import 'piper_tts_engine.dart';
 import 'tts_engine.dart';
 import 'tts_engine_type.dart';
@@ -21,6 +23,7 @@ class LoadModelMessage extends TtsIsolateMessage {
     this.lengthScale,
     this.noiseScale,
     this.noiseW,
+    this.embeddingCacheDir,
   });
   final String modelDir;
   final TtsEngineType engineType;
@@ -31,6 +34,7 @@ class LoadModelMessage extends TtsIsolateMessage {
   final double? lengthScale;
   final double? noiseScale;
   final double? noiseW;
+  final String? embeddingCacheDir;
 }
 
 class SynthesizeMessage extends TtsIsolateMessage {
@@ -104,6 +108,7 @@ class TtsIsolate {
     double? lengthScale,
     double? noiseScale,
     double? noiseW,
+    String? embeddingCacheDir,
   }) {
     _sendPort?.send(LoadModelMessage(
       modelDir: modelDir,
@@ -114,6 +119,7 @@ class TtsIsolate {
       lengthScale: lengthScale,
       noiseScale: noiseScale,
       noiseW: noiseW,
+      embeddingCacheDir: embeddingCacheDir,
     ));
   }
 
@@ -157,6 +163,7 @@ class TtsIsolate {
     TtsEngine? qwen3Engine;
     PiperTtsEngine? piperEngine;
     TtsEngineType? activeEngineType;
+    String? embeddingCacheDir;
 
     bool isEngineLoaded() {
       switch (activeEngineType) {
@@ -172,6 +179,13 @@ class TtsIsolate {
     TtsSynthesisResult doSynthesize(String text, String? refWavPath) {
       switch (activeEngineType!) {
         case TtsEngineType.qwen3:
+          if (refWavPath != null && embeddingCacheDir != null) {
+            return qwen3Engine!.synthesizeWithVoiceCached(
+              text,
+              refWavPath,
+              embeddingCacheDir: embeddingCacheDir!,
+            );
+          }
           return refWavPath != null
               ? qwen3Engine!.synthesizeWithVoice(text, refWavPath)
               : qwen3Engine!.synthesize(text);
@@ -216,6 +230,16 @@ class TtsIsolate {
           }
 
           activeEngineType = message.engineType;
+          // Include model dir basename in cache path to prevent cross-model
+          // cache contamination (e.g. 0.6b vs 1.7b produce different sizes).
+          if (message.embeddingCacheDir != null) {
+            embeddingCacheDir = p.join(
+              message.embeddingCacheDir!,
+              p.basename(message.modelDir),
+            );
+          } else {
+            embeddingCacheDir = null;
+          }
           mainSendPort.send(ModelLoadedResponse(success: true));
         } catch (e) {
           disposeEngines();
