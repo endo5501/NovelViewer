@@ -13,7 +13,7 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `fvm flutter test` - テスト実行
  - `fvm flutter analyze` - リント実行
  - `fvm flutter pub get` - 依存パッケージ取得
- - `scripts/benchmark_tts.sh --model-dir <dir>` - TTSベンチマーク実行（結果はbenchmarks/に保存）
+ - `scripts/benchmark_tts.sh --model-dir <dir> --max-tokens 200` - TTSベンチマーク実行（結果はbenchmarks/に保存）
 
 ## 必須ルール(MUST)
 

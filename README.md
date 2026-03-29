@@ -98,6 +98,9 @@ fvm flutter test
 
 # 特定のテストファイルを実行
 fvm flutter test test/features/text_download/narou_site_test.dart
+
+# qwen3-tts.cppのベンチマーク実行(結果はbenchmarks/に保存)
+scripts/benchmark_tts.sh --model-dir <dir> --max-tokens 200
 ```
 
 ### リンター

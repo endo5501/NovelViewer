@@ -36,6 +36,18 @@
 - **WHEN** ベンチマークスクリプトがCLIを呼び出す
 - **THEN** `--temperature 0` が指定される
 
+### Requirement: ベンチマークスクリプトがmax-tokensとタイムアウトを制御できる
+
+0.6Bモデルなどgreedy decodingでEOSを出しにくいモデルへの対応として、`--max-tokens`で生成トークン数を制限し、`--timeout`で1回あたりのタイムアウトを設定できなければならない（MUST）。
+
+#### Scenario: max-tokens指定でベンチマーク実行
+- **WHEN** `scripts/benchmark_tts.sh --model-dir <dir> --max-tokens 200` を実行する
+- **THEN** CLIに `--max-tokens 200` が渡され、生成トークン数が制限される
+
+#### Scenario: タイムアウト指定でベンチマーク実行
+- **WHEN** `scripts/benchmark_tts.sh --model-dir <dir> --timeout 120` を実行する
+- **THEN** 各CLI実行が120秒でタイムアウトし、エラーメッセージが出力される
+
 ### Requirement: ベンチマークスクリプトはWindowsとmacOSの両方で動作する
 
 `scripts/benchmark_tts.sh` はWindowsのGit BashとmacOSのBashの両方で動作しなければならない（MUST）。OS固有の差異（CLIバイナリパス、GPUバックエンド名）は自動検出で対応する。
