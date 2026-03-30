@@ -170,4 +170,26 @@ void main() {
       expect(engine.ctxAddress, isNull);
     });
   });
+
+  group('TtsEngine - calculateMaxAudioTokens', () {
+    test('short text (10 chars) returns proportional limit', () {
+      expect(TtsEngine.calculateMaxAudioTokens(10), 200);
+    });
+
+    test('medium text (50 chars) returns proportional limit', () {
+      expect(TtsEngine.calculateMaxAudioTokens(50), 800);
+    });
+
+    test('long text (200 chars) is capped at 2048', () {
+      expect(TtsEngine.calculateMaxAudioTokens(200), 2048);
+    });
+
+    test('very short text (1 char) has minimum floor', () {
+      expect(TtsEngine.calculateMaxAudioTokens(1), 65);
+    });
+
+    test('zero length text returns minimum', () {
+      expect(TtsEngine.calculateMaxAudioTokens(0), 50);
+    });
+  });
 }

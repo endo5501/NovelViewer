@@ -34,6 +34,15 @@ class TtsEngine {
   @Deprecated('Use TtsLanguage.ja.languageId instead')
   static const int languageJapanese = TtsLanguage.defaultLanguageId;
 
+  static const int _maxAudioTokensCap = 2048;
+  static const int _tokensPerChar = 15;
+  static const int _tokensMargin = 50;
+
+  static int calculateMaxAudioTokens(int textLength) {
+    final tokens = textLength * _tokensPerChar + _tokensMargin;
+    return tokens < _maxAudioTokensCap ? tokens : _maxAudioTokensCap;
+  }
+
   final TtsNativeBindings _bindings;
   Pointer<Void> _ctx = nullptr;
 
@@ -64,9 +73,10 @@ class TtsEngine {
   TtsSynthesisResult synthesize(String text) {
     _ensureLoaded();
 
+    final maxTokens = calculateMaxAudioTokens(text.length);
     final textPtr = text.toNativeUtf8();
     try {
-      final result = _bindings.synthesize(_ctx, textPtr);
+      final result = _bindings.synthesize(_ctx, textPtr, maxTokens);
       if (result != 0) {
         final error = _bindings.getError(_ctx).toDartString();
         throw TtsEngineException('Synthesis failed: $error');
@@ -81,10 +91,12 @@ class TtsEngine {
   TtsSynthesisResult synthesizeWithVoice(String text, String refWavPath) {
     _ensureLoaded();
 
+    final maxTokens = calculateMaxAudioTokens(text.length);
     final textPtr = text.toNativeUtf8();
     final wavPtr = refWavPath.toNativeUtf8();
     try {
-      final result = _bindings.synthesizeWithVoice(_ctx, textPtr, wavPtr);
+      final result =
+          _bindings.synthesizeWithVoice(_ctx, textPtr, wavPtr, maxTokens);
       if (result != 0) {
         final error = _bindings.getError(_ctx).toDartString();
         throw TtsEngineException('Synthesis with voice failed: $error');
@@ -104,6 +116,7 @@ class TtsEngine {
   }) {
     _ensureLoaded();
 
+    final maxTokens = calculateMaxAudioTokens(text.length);
     final hash = _computeFileHash(refWavPath);
     final cacheDir = Directory(embeddingCacheDir);
     if (!cacheDir.existsSync()) {
@@ -116,7 +129,8 @@ class TtsEngine {
     try {
       if (cacheFile.existsSync()) {
         try {
-          if (_synthesizeFromCachedEmbedding(textPtr, cachePath)) {
+          if (_synthesizeFromCachedEmbedding(
+              textPtr, cachePath, maxTokens)) {
             return _extractAudio();
           }
         } on TtsEngineException {
@@ -130,7 +144,7 @@ class TtsEngine {
       }
 
       // Cache miss: extract, save, synthesize
-      _extractAndCacheEmbedding(textPtr, refWavPath, cachePath);
+      _extractAndCacheEmbedding(textPtr, refWavPath, cachePath, maxTokens);
       return _extractAudio();
     } finally {
       calloc.free(textPtr);
@@ -140,6 +154,7 @@ class TtsEngine {
   bool _synthesizeFromCachedEmbedding(
     Pointer<Utf8> textPtr,
     String cachePath,
+    int maxTokens,
   ) {
     final pathPtr = cachePath.toNativeUtf8();
     final outData = calloc<Pointer<Float>>();
@@ -152,8 +167,8 @@ class TtsEngine {
       final embPtr = outData.value;
       final embSize = outSize.value;
       try {
-        final result =
-            _bindings.synthesizeWithEmbedding(_ctx, textPtr, embPtr, embSize);
+        final result = _bindings.synthesizeWithEmbedding(
+            _ctx, textPtr, embPtr, embSize, maxTokens);
         if (result != 0) {
           final error = _bindings.getError(_ctx).toDartString();
           throw TtsEngineException(
@@ -175,6 +190,7 @@ class TtsEngine {
     Pointer<Utf8> textPtr,
     String refWavPath,
     String cachePath,
+    int maxTokens,
   ) {
     final wavPtr = refWavPath.toNativeUtf8();
     final outData = calloc<Pointer<Float>>();
@@ -208,8 +224,8 @@ class TtsEngine {
         }
 
         // Synthesize
-        final result =
-            _bindings.synthesizeWithEmbedding(_ctx, textPtr, embPtr, embSize);
+        final result = _bindings.synthesizeWithEmbedding(
+            _ctx, textPtr, embPtr, embSize, maxTokens);
         if (result != 0) {
           final error = _bindings.getError(_ctx).toDartString();
           throw TtsEngineException(

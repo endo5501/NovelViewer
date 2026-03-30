@@ -243,6 +243,82 @@ void main() {
     });
   });
 
+  group('TextSegmenter - length-based splitting', () {
+    test('does not split sentence under 200 characters', () {
+      final text = 'あ' * 150;
+      final segments = segmenter.splitIntoSentences(text);
+
+      expect(segments.length, 1);
+      expect(segments[0].text, text);
+    });
+
+    test('splits sentence over 200 characters at comma', () {
+      // 180 chars + comma + 69 chars = 250 chars total
+      final text = '${'あ' * 180}、${'い' * 69}';
+      final segments = segmenter.splitIntoSentences(text);
+
+      expect(segments.length, 2);
+      expect(segments[0].text, '${'あ' * 180}、');
+      expect(segments[1].text, 'い' * 69);
+    });
+
+    test('force-splits sentence over 200 characters with no comma', () {
+      final text = 'あ' * 300;
+      final segments = segmenter.splitIntoSentences(text);
+
+      expect(segments.length, 2);
+      expect(segments[0].text, 'あ' * 200);
+      expect(segments[1].text, 'あ' * 100);
+    });
+
+    test('splits at last comma within 200 characters when multiple commas', () {
+      // commas at 80, 160, 280 in a 400 char sentence
+      final text = '${'あ' * 80}、${'い' * 79}、${'う' * 119}、${'え' * 119}';
+      final segments = segmenter.splitIntoSentences(text);
+
+      // First split at position 161 (comma at 160+1 for the comma char)
+      // The last comma within first 200 chars is at position 161
+      expect(segments.length >= 2, isTrue);
+      // First segment should end at or before 200 characters
+      expect(segments[0].text.length, lessThanOrEqualTo(201));
+    });
+
+    test('sentence-ending punctuation takes priority over length splitting', () {
+      // Period at position 120, total 250 chars
+      final text = '${'あ' * 120}。${'い' * 129}';
+      final segments = segmenter.splitIntoSentences(text);
+
+      expect(segments.length, 2);
+      expect(segments[0].text, '${'あ' * 120}。');
+      // Second segment is 129 chars, under 200, so no further split
+      expect(segments[1].text, 'い' * 129);
+    });
+
+    test('recursively splits very long sentence (500+ chars)', () {
+      // 500 chars with commas at 150 and 320
+      final text = '${'あ' * 150}、${'い' * 169}、${'う' * 179}';
+      final segments = segmenter.splitIntoSentences(text);
+
+      // Should be split into 3 segments
+      expect(segments.length, 3);
+      for (final segment in segments) {
+        expect(segment.text.length, lessThanOrEqualTo(201));
+      }
+    });
+
+    test('ruby text with long reading preserves ruby in segments', () {
+      // Display text is short (6 chars), spoken text is long (225 chars)
+      final reading = 'あ' * 220;
+      final input = '<ruby>難読語<rt>$reading</rt></ruby>です。';
+      final segments = segmenter.splitIntoSentences(input);
+
+      // Spoken text should contain the ruby reading, not base text
+      final allText = segments.map((s) => s.text).join();
+      expect(allText, contains('あ'));
+      expect(allText, isNot(contains('難読語')));
+    });
+  });
+
   group('TextSegmenter - edge cases', () {
     test('returns empty list for empty string', () {
       final segments = segmenter.splitIntoSentences('');
