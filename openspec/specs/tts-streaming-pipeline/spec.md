@@ -204,7 +204,7 @@ The system SHALL stop the streaming pipeline when the user navigates to a differ
 - **THEN** the pipeline stops, generated segments are preserved, and the episode status is updated appropriately
 
 ### Requirement: Ruby text used for TTS synthesis
-The system SHALL use ruby text (furigana from `<rt>` elements) instead of base text when preparing text segments for TTS synthesis. When the text segmenter strips ruby HTML tags, it SHALL replace each `<ruby>` block with the content of its `<rt>` element rather than the base text. This ensures that the TTS engine receives the author-intended pronunciation.
+The system SHALL use ruby text (furigana from `<rt>` elements) instead of base text when preparing text segments for TTS synthesis. When the text segmenter strips ruby HTML tags, it SHALL replace each `<ruby>` block with the content of its `<rt>` element rather than the base text. This ensures that the TTS engine receives the author-intended pronunciation. Additionally, the text segmenter SHALL apply length-based splitting (as defined by the tts-text-length-guard capability) after sentence-ending splitting, ensuring that long sentences are further divided before TTS synthesis.
 
 #### Scenario: Ruby text extracted for single ruby tag
 - **WHEN** the text contains `<ruby>一軒家<rt>いっけんや</rt></ruby>`
@@ -229,3 +229,7 @@ The system SHALL use ruby text (furigana from `<rt>` elements) instead of base t
 #### Scenario: Text hash changes trigger regeneration
 - **WHEN** a previously generated episode's text is re-segmented with ruby text extraction
 - **THEN** the text hash differs from the stored hash and the existing audio is automatically regenerated
+
+#### Scenario: Long sentence without punctuation is split by length
+- **WHEN** the text segmenter processes a 250-character sentence with no sentence-ending punctuation but a comma at position 180
+- **THEN** the sentence is split into two segments at the comma position
