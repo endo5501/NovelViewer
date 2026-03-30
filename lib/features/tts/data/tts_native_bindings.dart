@@ -15,18 +15,28 @@ typedef _QTtsFreeDart = void Function(Pointer<Void>);
 typedef _QTtsSetLanguageC = Void Function(Pointer<Void>, Int32);
 typedef _QTtsSetLanguageDart = void Function(Pointer<Void>, int);
 
-typedef _QTtsSynthesizeC = Int32 Function(Pointer<Void>, Pointer<Utf8>);
-typedef _QTtsSynthesizeDart = int Function(Pointer<Void>, Pointer<Utf8>);
+typedef _QTtsSynthesizeC = Int32 Function(
+  Pointer<Void>,
+  Pointer<Utf8>,
+  Int32,
+);
+typedef _QTtsSynthesizeDart = int Function(
+  Pointer<Void>,
+  Pointer<Utf8>,
+  int,
+);
 
 typedef _QTtsSynthesizeWithVoiceC = Int32 Function(
   Pointer<Void>,
   Pointer<Utf8>,
   Pointer<Utf8>,
+  Int32,
 );
 typedef _QTtsSynthesizeWithVoiceDart = int Function(
   Pointer<Void>,
   Pointer<Utf8>,
   Pointer<Utf8>,
+  int,
 );
 
 typedef _QTtsGetAudioC = Pointer<Float> Function(Pointer<Void>);
@@ -47,11 +57,13 @@ typedef _QTtsSynthesizeWithEmbeddingC = Int32 Function(
   Pointer<Utf8>,
   Pointer<Float>,
   Int32,
+  Int32,
 );
 typedef _QTtsSynthesizeWithEmbeddingDart = int Function(
   Pointer<Void>,
   Pointer<Utf8>,
   Pointer<Float>,
+  int,
   int,
 );
 

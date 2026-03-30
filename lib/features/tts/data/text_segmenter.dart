@@ -17,29 +17,33 @@ class TextSegmenter {
 
   static const _sentenceEnders = {'。', '！', '？'};
   static const _closingBrackets = {'」', '』', '）'};
+  static const _maxSegmentLength = 200;
 
   List<TextSegment> splitIntoSentences(String text) {
     final spokenText = _stripRubyTags(text, useRubyText: true);
     final displayText = _stripRubyTags(text, useRubyText: false);
 
-    final spokenSegments = _splitText(spokenText);
-    final displaySegments = _splitText(displayText);
+    final spokenSegments = _splitTextBySentence(spokenText);
+    final displaySegments = _splitTextBySentence(displayText);
 
+    List<TextSegment> merged;
     if (spokenSegments.length != displaySegments.length) {
-      return displaySegments;
+      merged = displaySegments;
+    } else {
+      merged = [
+        for (var i = 0; i < spokenSegments.length; i++)
+          TextSegment(
+            text: spokenSegments[i].text,
+            offset: displaySegments[i].offset,
+            length: displaySegments[i].length,
+          ),
+      ];
     }
 
-    return [
-      for (var i = 0; i < spokenSegments.length; i++)
-        TextSegment(
-          text: spokenSegments[i].text,
-          offset: displaySegments[i].offset,
-          length: displaySegments[i].length,
-        ),
-    ];
+    return _splitLongSegments(merged);
   }
 
-  List<TextSegment> _splitText(String stripped) {
+  List<TextSegment> _splitTextBySentence(String stripped) {
     final segments = <TextSegment>[];
     var currentStart = 0;
 
@@ -70,6 +74,68 @@ class TextSegmenter {
     _addTrimmedSegment(segments, stripped, currentStart, stripped.length);
 
     return segments;
+  }
+
+  List<TextSegment> _splitLongSegments(List<TextSegment> segments) {
+    final result = <TextSegment>[];
+    for (final segment in segments) {
+      if (segment.text.length <= _maxSegmentLength) {
+        result.add(segment);
+      } else {
+        result.addAll(_splitByLength(segment));
+      }
+    }
+    return result;
+  }
+
+  List<TextSegment> _splitByLength(TextSegment segment) {
+    final result = <TextSegment>[];
+    var text = segment.text;
+    final totalTextLen = text.length;
+    final totalDisplayLen = segment.length;
+    var displayOffset = segment.offset;
+    var displayRemaining = totalDisplayLen;
+
+    while (text.length > _maxSegmentLength) {
+      final splitPos = _findSplitPosition(text);
+      final splitDisplayLen = totalTextLen == totalDisplayLen
+          ? splitPos
+          : (splitPos / totalTextLen * totalDisplayLen).round()
+              .clamp(0, displayRemaining);
+      result.add(TextSegment(
+        text: text.substring(0, splitPos),
+        offset: displayOffset,
+        length: splitDisplayLen,
+      ));
+      displayOffset += splitDisplayLen;
+      displayRemaining -= splitDisplayLen;
+      text = text.substring(splitPos).trimLeft();
+    }
+
+    if (text.isNotEmpty) {
+      result.add(TextSegment(
+        text: text,
+        offset: displayOffset,
+        length: displayRemaining,
+      ));
+    }
+
+    return result;
+  }
+
+  int _findSplitPosition(String text) {
+    // Find the last comma within the first _maxSegmentLength characters
+    var lastComma = -1;
+    for (var i = 0; i < _maxSegmentLength && i < text.length; i++) {
+      if (text[i] == '、') {
+        lastComma = i;
+      }
+    }
+    if (lastComma > 0) {
+      return lastComma + 1; // Include the comma in the first segment
+    }
+    // No comma found — force split at _maxSegmentLength
+    return _maxSegmentLength;
   }
 
   void _addTrimmedSegment(

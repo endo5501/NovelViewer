@@ -73,9 +73,10 @@ class MockEmbeddingBindings extends TtsNativeBindings {
       (Pointer<Void> ctx) => 'mock error'.toNativeUtf8();
 
   @override
-  late final int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>)
+  late final int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, int)
       synthesizeWithVoice =
-      (Pointer<Void> ctx, Pointer<Utf8> text, Pointer<Utf8> wav) {
+      (Pointer<Void> ctx, Pointer<Utf8> text, Pointer<Utf8> wav,
+          int maxTokens) {
     synthesizeWithVoiceCallCount++;
     return 0;
   };
@@ -105,12 +106,14 @@ class MockEmbeddingBindings extends TtsNativeBindings {
   };
 
   @override
-  late final int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Float>, int)
+  late final int Function(
+          Pointer<Void>, Pointer<Utf8>, Pointer<Float>, int, int)
       synthesizeWithEmbedding = (
     Pointer<Void> ctx,
     Pointer<Utf8> text,
     Pointer<Float> embData,
     int embSize,
+    int maxTokens,
   ) {
     synthesizeWithEmbeddingCallCount++;
     return synthesizeWithEmbeddingResult;

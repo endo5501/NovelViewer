@@ -61,7 +61,7 @@ Options:
   --runs <n>           Measurement runs (default: $RUNS)
   --cli <path>         Path to qwen3-tts-cli (auto-detected)
   --output-dir <dir>   Output directory for results (default: benchmarks/)
-  --max-tokens <n>     Maximum audio tokens (default: CLI default 4096)
+  --max-tokens <n>     Maximum audio tokens (default: CLI default 2048)
   --timeout <sec>      Timeout per run in seconds (default: 600)
   -h, --help           Show this help
 EOF
