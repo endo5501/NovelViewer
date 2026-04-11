@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: TTS shared library build
-The system SHALL include qwen3-tts.cpp as a git submodule and build it as a shared library (`.dylib` on macOS, `.dll` on Windows). The shared library SHALL expose a C API that wraps the C++ `Qwen3TTS` class. The GGML dependency SHALL be built as part of the qwen3-tts.cpp submodule build process. The CMakeLists.txt SHALL include MSVC-specific compiler settings to ensure correct compilation on Windows: `/utf-8` for UTF-8 source file encoding, `_USE_MATH_DEFINES` for POSIX math constants, and `_CRT_SECURE_NO_WARNINGS` for CRT deprecation warnings. The source code SHALL include Windows platform support for process memory tracking using `GetProcessMemoryInfo` from the Windows API, with `NOMINMAX` defined to prevent `min`/`max` macro conflicts.
+The system SHALL include qwen3-tts.cpp as a git submodule and build it as a shared library (`.dylib` on macOS, `.dll` on Windows). The shared library SHALL expose a C API that wraps the C++ `Qwen3TTS` class. The GGML dependency SHALL be built as part of the qwen3-tts.cpp submodule build process and SHALL use ggml v0.9.11 or later. The CMakeLists.txt SHALL include MSVC-specific compiler settings to ensure correct compilation on Windows: `/utf-8` for UTF-8 source file encoding, `_USE_MATH_DEFINES` for POSIX math constants, and `_CRT_SECURE_NO_WARNINGS` for CRT deprecation warnings. The source code SHALL include Windows platform support for process memory tracking using `GetProcessMemoryInfo` from the Windows API, with `NOMINMAX` defined to prevent `min`/`max` macro conflicts.
 
 #### Scenario: Build shared library on macOS
 - **WHEN** the Flutter app is built for macOS
@@ -10,6 +10,10 @@ The system SHALL include qwen3-tts.cpp as a git submodule and build it as a shar
 #### Scenario: Build shared library on Windows
 - **WHEN** `scripts/build_tts_windows.bat` is executed on a Windows environment with MSVC
 - **THEN** the qwen3-tts.cpp shared library (`qwen3_tts_ffi.dll`) is compiled without errors and placed in `build/windows/x64/runner/Release/`
+
+#### Scenario: GGML version is v0.9.11
+- **WHEN** the ggml submodule within qwen3-tts.cpp is checked
+- **THEN** the ggml version SHALL be v0.9.11 as reported by `GGML_VERSION_MAJOR=0`, `GGML_VERSION_MINOR=9`, `GGML_VERSION_PATCH=11` in ggml's CMakeLists.txt
 
 #### Scenario: MSVC compiles UTF-8 source files correctly
 - **WHEN** `text_tokenizer.cpp` containing UTF-8 encoded Unicode string literals is compiled with MSVC
