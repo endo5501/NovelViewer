@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:novel_viewer/shared/utils/temp_directory_utils.dart';
 
 import '../data/tts_adapters.dart';
 import '../data/tts_audio_database.dart';
@@ -69,7 +69,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final repo = TtsAudioRepository(db);
     final dictDb = TtsDictionaryDatabase(widget.folderPath);
     final dictRepo = TtsDictionaryRepository(dictDb);
-    final tempDir = await getTemporaryDirectory();
+    final tempDir = await ensureTemporaryDirectory();
 
     final controller = TtsEditController(
       ttsIsolate: TtsIsolate(),
