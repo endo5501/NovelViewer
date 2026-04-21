@@ -6,7 +6,7 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/tts/data/voice_recording_service.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:novel_viewer/shared/utils/temp_directory_utils.dart';
 import 'package:record/record.dart';
 
 class VoiceRecordingDialog extends ConsumerStatefulWidget {
@@ -71,7 +71,7 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
         return;
       }
 
-      final tempDir = await getTemporaryDirectory();
+      final tempDir = await ensureTemporaryDirectory();
       await _recordingService.startRecording(tempDir.path);
     } on Exception catch (e) {
       if (mounted) {

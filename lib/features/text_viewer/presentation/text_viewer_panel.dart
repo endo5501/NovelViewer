@@ -4,7 +4,7 @@ import 'dart:ui' show AppExitResponse;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:novel_viewer/shared/utils/temp_directory_utils.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
@@ -174,7 +174,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     final dictRepo = TtsDictionaryRepository(dictDb);
     final isolate = TtsIsolate();
     final providerContainer = ProviderScope.containerOf(context);
-    final tempDir = await getTemporaryDirectory();
+    final tempDir = await ensureTemporaryDirectory();
 
     final controller = TtsStreamingController(
       ref: providerContainer,
