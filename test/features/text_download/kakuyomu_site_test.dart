@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_download/data/sites/kakuyomu_site.dart';
 
 String _buildApolloHtml({
-  required String workId,
   required Map<String, Object?> apolloState,
   String? extraBodyHtml,
 }) {
@@ -180,7 +179,7 @@ void main() {
           },
         ],
       );
-      final html = _buildApolloHtml(workId: workId, apolloState: apollo);
+      final html = _buildApolloHtml(apolloState: apollo);
 
       final index = site.parseIndex(html, baseUrl);
 
@@ -215,7 +214,6 @@ void main() {
       const ctaHtml =
           '<a href="/works/12345/episodes/e1">1話目から読む</a>';
       final html = _buildApolloHtml(
-        workId: workId,
         apolloState: apollo,
         extraBodyHtml: ctaHtml,
       );
@@ -243,7 +241,7 @@ void main() {
           },
         ],
       );
-      final html = _buildApolloHtml(workId: workId, apolloState: apollo);
+      final html = _buildApolloHtml(apolloState: apollo);
 
       final index = site.parseIndex(html, baseUrl);
 
@@ -265,7 +263,7 @@ void main() {
           },
         ],
       );
-      final html = _buildApolloHtml(workId: workId, apolloState: apollo);
+      final html = _buildApolloHtml(apolloState: apollo);
 
       final index = site.parseIndex(html, baseUrl);
 
@@ -280,12 +278,12 @@ void main() {
           {
             'id': 'c1',
             'episodes': [
-              {'id': 'e1', 'title': '第1話'}, // no publishedAt key
+              {'id': 'e1', 'title': '第1話'},
             ],
           },
         ],
       );
-      final html = _buildApolloHtml(workId: workId, apolloState: apollo);
+      final html = _buildApolloHtml(apolloState: apollo);
 
       final index = site.parseIndex(html, baseUrl);
 
@@ -305,7 +303,7 @@ void main() {
           },
         ],
       );
-      final html = _buildApolloHtml(workId: workId, apolloState: apollo);
+      final html = _buildApolloHtml(apolloState: apollo);
 
       final index = site.parseIndex(html, baseUrl);
 
@@ -331,7 +329,6 @@ void main() {
       );
       const irrelevantHeading = '<h1 id="workTitle">DOM上の異なるタイトル</h1>';
       final html = _buildApolloHtml(
-        workId: workId,
         apolloState: apollo,
         extraBodyHtml: irrelevantHeading,
       );
@@ -375,7 +372,7 @@ void main() {
         },
         // Note: no Work:12345 entry
       };
-      final html = _buildApolloHtml(workId: workId, apolloState: apollo);
+      final html = _buildApolloHtml(apolloState: apollo);
 
       expect(() => site.parseIndex(html, baseUrl), throwsArgumentError);
     });
@@ -393,7 +390,7 @@ void main() {
           'tableOfContentsV2': <Map<String, String>>[],
         },
       };
-      final html = _buildApolloHtml(workId: workId, apolloState: apollo);
+      final html = _buildApolloHtml(apolloState: apollo);
 
       final index = site.parseIndex(html, baseUrl);
 
@@ -430,7 +427,6 @@ void main() {
 <a href="/works/12345/episodes/e2">第2話「つづき」</a>
 ''';
       final html = _buildApolloHtml(
-        workId: workId,
         apolloState: apollo,
         extraBodyHtml: ctaAndPreview,
       );

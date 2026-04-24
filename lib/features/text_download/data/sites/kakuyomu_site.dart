@@ -33,22 +33,23 @@ class KakuyomuSite extends NovelSite {
         document.querySelector('script[id="__NEXT_DATA__"]');
     if (scriptElement == null) {
       throw ArgumentError(
-          'Kakuyomu __NEXT_DATA__ script tag not found in index page');
+          'Kakuyomu __NEXT_DATA__ script tag not found in $baseUrl');
     }
 
-    final raw = scriptElement.text;
     final dynamic decoded;
     try {
-      decoded = jsonDecode(raw);
+      decoded = jsonDecode(scriptElement.text);
     } on FormatException catch (e) {
       throw ArgumentError(
-          'Failed to parse Kakuyomu __NEXT_DATA__ JSON: ${e.message}');
+          'Failed to parse Kakuyomu __NEXT_DATA__ JSON for $baseUrl: ${e.message}');
     }
 
-    final apollo = _readPath(decoded, ['props', 'pageProps', '__APOLLO_STATE__']);
+    final props = decoded is Map ? decoded['props'] : null;
+    final pageProps = props is Map ? props['pageProps'] : null;
+    final apollo = pageProps is Map ? pageProps['__APOLLO_STATE__'] : null;
     if (apollo is! Map) {
       throw ArgumentError(
-          'Kakuyomu __APOLLO_STATE__ not found in __NEXT_DATA__');
+          'Kakuyomu __APOLLO_STATE__ not found in __NEXT_DATA__ for $baseUrl');
     }
 
     final workId = extractNovelId(baseUrl);
@@ -74,8 +75,7 @@ class KakuyomuSite extends NovelSite {
         if (epId == null) continue;
         final epTitle = (ep['title'] as String?) ?? '';
         final publishedAt = ep['publishedAt'] as String?;
-        final url = Uri.parse(
-            'https://${baseUrl.host}/works/$workId/episodes/$epId');
+        final url = Uri.https(baseUrl.host, '/works/$workId/episodes/$epId');
         episodes.add(Episode(
           index: index++,
           title: epTitle,
@@ -110,15 +110,6 @@ class KakuyomuSite extends NovelSite {
       return Uri.parse('https://${url.host}/works/${match.group(1)}');
     }
     return url;
-  }
-
-  Object? _readPath(dynamic root, List<String> path) {
-    dynamic current = root;
-    for (final key in path) {
-      if (current is! Map) return null;
-      current = current[key];
-    }
-    return current;
   }
 
   Map? _resolveRef(Map apollo, dynamic ref) {
