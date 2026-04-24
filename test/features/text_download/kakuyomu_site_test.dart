@@ -440,6 +440,116 @@ void main() {
           'https://kakuyomu.jp/works/$workId/episodes/e1');
       expect(index.episodes[1].title, '第2話 つづき');
     });
+
+    test('throws ArgumentError when ROOT_QUERY is missing', () {
+      // Apollo state with Work directly accessible but no ROOT_QUERY.
+      final apollo = <String, Object?>{
+        'Work:$workId': {
+          '__typename': 'Work',
+          'id': workId,
+          'title': 'タイトル',
+          'tableOfContentsV2': <Map<String, String>>[],
+        },
+      };
+      final html = _buildApolloHtml(apolloState: apollo);
+
+      expect(() => site.parseIndex(html, baseUrl), throwsArgumentError);
+    });
+
+    test('throws ArgumentError when tableOfContentsV2 is not a List', () {
+      final apollo = <String, Object?>{
+        'ROOT_QUERY': {
+          '__typename': 'Query',
+          'work({"id":"$workId"})': {'__ref': 'Work:$workId'},
+        },
+        'Work:$workId': {
+          '__typename': 'Work',
+          'id': workId,
+          'title': 'タイトル',
+          'tableOfContentsV2': {'unexpected': 'object'},
+        },
+      };
+      final html = _buildApolloHtml(apolloState: apollo);
+
+      expect(() => site.parseIndex(html, baseUrl), throwsArgumentError);
+    });
+
+    test('throws ArgumentError when a chapter ref cannot be resolved', () {
+      final apollo = <String, Object?>{
+        'ROOT_QUERY': {
+          '__typename': 'Query',
+          'work({"id":"$workId"})': {'__ref': 'Work:$workId'},
+        },
+        'Work:$workId': {
+          '__typename': 'Work',
+          'id': workId,
+          'title': 'タイトル',
+          'tableOfContentsV2': [
+            {'__ref': 'TableOfContentsChapter:missing'},
+          ],
+        },
+      };
+      final html = _buildApolloHtml(apolloState: apollo);
+
+      expect(() => site.parseIndex(html, baseUrl), throwsArgumentError);
+    });
+
+    test('throws ArgumentError when an Episode is missing id', () {
+      final apollo = <String, Object?>{
+        'ROOT_QUERY': {
+          '__typename': 'Query',
+          'work({"id":"$workId"})': {'__ref': 'Work:$workId'},
+        },
+        'Work:$workId': {
+          '__typename': 'Work',
+          'id': workId,
+          'title': 'タイトル',
+          'tableOfContentsV2': [
+            {'__ref': 'TableOfContentsChapter:c1'},
+          ],
+        },
+        'TableOfContentsChapter:c1': {
+          '__typename': 'TableOfContentsChapter',
+          'id': 'c1',
+          'episodeUnions': [
+            {'__ref': 'Episode:e1'},
+          ],
+        },
+        'Episode:e1': {
+          '__typename': 'Episode',
+          // no 'id'
+          'title': 'タイトル無きエピソード',
+          'publishedAt': '2025-01-01T00:00:00.000Z',
+        },
+      };
+      final html = _buildApolloHtml(apolloState: apollo);
+
+      expect(() => site.parseIndex(html, baseUrl), throwsArgumentError);
+    });
+
+    test('resolves Work via ROOT_QUERY ref even when canonical key differs',
+        () {
+      // Apollo's keyFields could in principle yield a different cache key.
+      // Since we navigate via ROOT_QUERY, we should still find the work.
+      final apollo = <String, Object?>{
+        'ROOT_QUERY': {
+          '__typename': 'Query',
+          'work({"id":"$workId"})': {'__ref': 'Work:by-slug:$workId'},
+        },
+        'Work:by-slug:$workId': {
+          '__typename': 'Work',
+          'id': workId,
+          'title': 'カノニカルでないキー',
+          'tableOfContentsV2': <Map<String, String>>[],
+        },
+      };
+      final html = _buildApolloHtml(apolloState: apollo);
+
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.title, 'カノニカルでないキー');
+      expect(index.episodes, isEmpty);
+    });
   });
 
   group('parseEpisode', () {

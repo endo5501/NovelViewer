@@ -53,29 +53,56 @@ class KakuyomuSite extends NovelSite {
     }
 
     final workId = extractNovelId(baseUrl);
-    final work = apollo['Work:$workId'];
-    if (work is! Map) {
+    final root = apollo['ROOT_QUERY'];
+    if (root is! Map) {
       throw ArgumentError(
-          'Kakuyomu Work entity not found in Apollo state for id: $workId');
+          'Kakuyomu ROOT_QUERY not found in Apollo state for $baseUrl');
+    }
+    final workRefField = 'work({"id":"$workId"})';
+    final work = _resolveRef(apollo, root[workRefField]);
+    if (work == null) {
+      throw ArgumentError(
+          'Kakuyomu Work entity unresolved via $workRefField for $baseUrl');
     }
 
     final title = (work['title'] as String?) ?? '';
-    final tocList = (work['tableOfContentsV2'] as List?) ?? const [];
+    final tocRaw = work['tableOfContentsV2'];
+    if (tocRaw is! List) {
+      throw ArgumentError(
+          'Kakuyomu Work.tableOfContentsV2 is not a List for $baseUrl');
+    }
 
     final episodes = <Episode>[];
     var index = 1;
-    for (final chapterRef in tocList) {
+    for (final chapterRef in tocRaw) {
       final chapter = _resolveRef(apollo, chapterRef);
-      if (chapter == null) continue;
-      final episodeRefs = (chapter['episodeUnions'] as List?) ?? const [];
+      if (chapter == null) {
+        throw ArgumentError(
+            'Kakuyomu TableOfContentsChapter unresolved for $baseUrl');
+      }
+      final episodeRefs = chapter['episodeUnions'];
+      if (episodeRefs is! List) {
+        throw ArgumentError(
+            'Kakuyomu episodeUnions is not a List for $baseUrl');
+      }
       for (final epRef in episodeRefs) {
         final ep = _resolveRef(apollo, epRef);
-        if (ep == null) continue;
+        if (ep == null) {
+          throw ArgumentError(
+              'Kakuyomu Episode unresolved for $baseUrl');
+        }
         final epId = ep['id'] as String?;
-        if (epId == null) continue;
+        if (epId == null) {
+          throw ArgumentError(
+              'Kakuyomu Episode missing id for $baseUrl');
+        }
         final epTitle = (ep['title'] as String?) ?? '';
         final publishedAt = ep['publishedAt'] as String?;
-        final url = Uri.https(baseUrl.host, '/works/$workId/episodes/$epId');
+        final url = baseUrl.replace(
+          path: '/works/$workId/episodes/$epId',
+          query: null,
+          fragment: null,
+        );
         episodes.add(Episode(
           index: index++,
           title: epTitle,
