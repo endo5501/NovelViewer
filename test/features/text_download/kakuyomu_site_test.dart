@@ -1,5 +1,74 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_download/data/sites/kakuyomu_site.dart';
+
+String _buildApolloHtml({
+  required Map<String, Object?> apolloState,
+  String? extraBodyHtml,
+}) {
+  final encoded = jsonEncode({
+    'props': {
+      'pageProps': {
+        '__APOLLO_STATE__': apolloState,
+      },
+    },
+  });
+  final body = extraBodyHtml ?? '';
+  return '<html><head><title>test</title></head><body>$body'
+      '<script id="__NEXT_DATA__" type="application/json">$encoded</script>'
+      '</body></html>';
+}
+
+Map<String, Object?> _apolloState({
+  required String workId,
+  required String workTitle,
+  required List<Map<String, Object?>> chapters,
+  bool includeRootQuery = true,
+}) {
+  final state = <String, Object?>{};
+
+  if (includeRootQuery) {
+    state['ROOT_QUERY'] = {
+      '__typename': 'Query',
+      'work({"id":"$workId"})': {'__ref': 'Work:$workId'},
+    };
+  }
+
+  final tocRefs = <Map<String, String>>[];
+  for (final chapter in chapters) {
+    final chapterId = chapter['id'] as String;
+    final chapterKey = 'TableOfContentsChapter:$chapterId';
+    final episodes = chapter['episodes'] as List<Map<String, Object?>>;
+    final episodeRefs = <Map<String, String>>[];
+    for (final ep in episodes) {
+      final epId = ep['id'] as String;
+      final epKey = 'Episode:$epId';
+      episodeRefs.add({'__ref': epKey});
+      state[epKey] = {
+        '__typename': 'Episode',
+        'id': epId,
+        'title': ep['title'],
+        if (ep.containsKey('publishedAt')) 'publishedAt': ep['publishedAt'],
+      };
+    }
+    state[chapterKey] = {
+      '__typename': 'TableOfContentsChapter',
+      'id': chapterId,
+      'episodeUnions': episodeRefs,
+    };
+    tocRefs.add({'__ref': chapterKey});
+  }
+
+  state['Work:$workId'] = {
+    '__typename': 'Work',
+    'id': workId,
+    'title': workTitle,
+    'tableOfContentsV2': tocRefs,
+  };
+
+  return state;
+}
 
 void main() {
   late KakuyomuSite site;
@@ -68,86 +137,417 @@ void main() {
     });
   });
 
-  group('parseIndex', () {
-    test('extracts title and episodes from index page', () {
-      const html = '''
-<html>
-<head><title>Test</title></head>
-<body>
-  <h1 id="workTitle">カクヨムテスト小説</h1>
-  <div class="widget-toc">
-    <a href="/works/123/episodes/1">第1話 始まり</a>
-    <a href="/works/123/episodes/2">第2話 中盤</a>
-    <a href="/works/123/episodes/3">第3話 終わり</a>
-  </div>
-</body>
-</html>
-''';
-      final baseUrl = Uri.parse('https://kakuyomu.jp/works/123');
+  group('parseIndex (Apollo state)', () {
+    const workId = '12345';
+    final baseUrl = Uri.parse('https://kakuyomu.jp/works/$workId');
+
+    test('extracts all episodes flattened across chapters with continuous index',
+        () {
+      final apollo = _apolloState(
+        workId: workId,
+        workTitle: 'テスト小説',
+        chapters: [
+          {
+            'id': 'c1',
+            'episodes': [
+              {
+                'id': 'e1',
+                'title': '第1話 はじまり',
+                'publishedAt': '2025-01-01T00:00:00.000Z',
+              },
+              {
+                'id': 'e2',
+                'title': '第2話 つづき',
+                'publishedAt': '2025-01-02T00:00:00.000Z',
+              },
+            ],
+          },
+          {
+            'id': 'c2',
+            'episodes': [
+              {
+                'id': 'e3',
+                'title': '第3話 別章',
+                'publishedAt': '2025-01-03T00:00:00.000Z',
+              },
+              {
+                'id': 'e4',
+                'title': '第4話 終章',
+                'publishedAt': '2025-01-04T00:00:00.000Z',
+              },
+            ],
+          },
+        ],
+      );
+      final html = _buildApolloHtml(apolloState: apollo);
+
       final index = site.parseIndex(html, baseUrl);
 
-      expect(index.title, 'カクヨムテスト小説');
-      expect(index.episodes.length, 3);
-      expect(index.episodes[0].index, 1);
-      expect(index.episodes[0].title, '第1話 始まり');
+      expect(index.title, 'テスト小説');
+      expect(index.episodes, hasLength(4));
+      expect(index.episodes.map((e) => e.index), [1, 2, 3, 4]);
+      expect(index.episodes.map((e) => e.title), [
+        '第1話 はじまり',
+        '第2話 つづき',
+        '第3話 別章',
+        '第4話 終章',
+      ]);
+    });
+
+    test('Episode.title comes from Apollo title field, not DOM <a> text', () {
+      final apollo = _apolloState(
+        workId: workId,
+        workTitle: 'テスト小説',
+        chapters: [
+          {
+            'id': 'c1',
+            'episodes': [
+              {
+                'id': 'e1',
+                'title': '第1話 「実タイトル」',
+                'publishedAt': '2025-01-01T00:00:00.000Z',
+              },
+            ],
+          },
+        ],
+      );
+      const ctaHtml =
+          '<a href="/works/12345/episodes/e1">1話目から読む</a>';
+      final html = _buildApolloHtml(
+        apolloState: apollo,
+        extraBodyHtml: ctaHtml,
+      );
+
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.episodes, hasLength(1));
+      expect(index.episodes[0].title, '第1話 「実タイトル」');
+    });
+
+    test('Episode.url is composed from baseUrl host and Episode.id', () {
+      final apollo = _apolloState(
+        workId: workId,
+        workTitle: 'テスト小説',
+        chapters: [
+          {
+            'id': 'c1',
+            'episodes': [
+              {
+                'id': '999888',
+                'title': '第1話',
+                'publishedAt': '2025-01-01T00:00:00.000Z',
+              },
+            ],
+          },
+        ],
+      );
+      final html = _buildApolloHtml(apolloState: apollo);
+
+      final index = site.parseIndex(html, baseUrl);
+
       expect(index.episodes[0].url.toString(),
-          'https://kakuyomu.jp/works/123/episodes/1');
-      expect(index.episodes[2].index, 3);
-      expect(index.episodes[2].title, '第3話 終わり');
+          'https://kakuyomu.jp/works/$workId/episodes/999888');
     });
 
-    test('extracts updatedAt from time element dateTime attribute', () {
-      const html = '''
-<html>
-<body>
-  <h1 id="workTitle">カクヨムテスト小説</h1>
-  <a href="/works/123/episodes/1">
-    <div>第1話 始まり</div>
-    <time dateTime="2022-06-02T05:58:54.000Z">2022年6月2日</time>
-  </a>
-  <a href="/works/123/episodes/2">
-    <div>第2話 中盤</div>
-    <time dateTime="2023-01-15T10:30:00.000Z">2023年1月15日</time>
-  </a>
-</body>
-</html>
-''';
-      final baseUrl = Uri.parse('https://kakuyomu.jp/works/123');
+    test('Episode.updatedAt equals Apollo Episode.publishedAt', () {
+      const publishedAt = '2025-03-10T12:34:56.000Z';
+      final apollo = _apolloState(
+        workId: workId,
+        workTitle: 'タイトル',
+        chapters: [
+          {
+            'id': 'c1',
+            'episodes': [
+              {'id': 'e1', 'title': '第1話', 'publishedAt': publishedAt},
+            ],
+          },
+        ],
+      );
+      final html = _buildApolloHtml(apolloState: apollo);
+
       final index = site.parseIndex(html, baseUrl);
 
-      expect(index.episodes.length, 2);
-      expect(index.episodes[0].updatedAt, '2022-06-02T05:58:54.000Z');
-      expect(index.episodes[1].updatedAt, '2023-01-15T10:30:00.000Z');
+      expect(index.episodes[0].updatedAt, publishedAt);
     });
 
-    test('sets updatedAt to null when no time element exists', () {
-      const html = '''
-<html>
-<body>
-  <h1 id="workTitle">カクヨムテスト小説</h1>
-  <a href="/works/123/episodes/1">第1話 始まり</a>
-</body>
-</html>
-''';
-      final baseUrl = Uri.parse('https://kakuyomu.jp/works/123');
+    test('Episode.updatedAt is null when publishedAt missing', () {
+      final apollo = _apolloState(
+        workId: workId,
+        workTitle: 'タイトル',
+        chapters: [
+          {
+            'id': 'c1',
+            'episodes': [
+              {'id': 'e1', 'title': '第1話'},
+            ],
+          },
+        ],
+      );
+      final html = _buildApolloHtml(apolloState: apollo);
+
       final index = site.parseIndex(html, baseUrl);
 
-      expect(index.episodes.length, 1);
       expect(index.episodes[0].updatedAt, isNull);
     });
 
-    test('uses fallback title selector', () {
-      const html = '''
-<html>
-<body>
-  <h1>フォールバックタイトル</h1>
-</body>
-</html>
-''';
-      final baseUrl = Uri.parse('https://kakuyomu.jp/works/123');
+    test('Episode.updatedAt is null when publishedAt explicitly null', () {
+      final apollo = _apolloState(
+        workId: workId,
+        workTitle: 'タイトル',
+        chapters: [
+          {
+            'id': 'c1',
+            'episodes': [
+              {'id': 'e1', 'title': '第1話', 'publishedAt': null},
+            ],
+          },
+        ],
+      );
+      final html = _buildApolloHtml(apolloState: apollo);
+
       final index = site.parseIndex(html, baseUrl);
 
-      expect(index.title, 'フォールバックタイトル');
+      expect(index.episodes[0].updatedAt, isNull);
+    });
+
+    test('NovelIndex.title comes from Work.title', () {
+      final apollo = _apolloState(
+        workId: workId,
+        workTitle: 'カクヨムから取った正しいタイトル',
+        chapters: [
+          {
+            'id': 'c1',
+            'episodes': [
+              {
+                'id': 'e1',
+                'title': '第1話',
+                'publishedAt': '2025-01-01T00:00:00.000Z',
+              },
+            ],
+          },
+        ],
+      );
+      const irrelevantHeading = '<h1 id="workTitle">DOM上の異なるタイトル</h1>';
+      final html = _buildApolloHtml(
+        apolloState: apollo,
+        extraBodyHtml: irrelevantHeading,
+      );
+
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.title, 'カクヨムから取った正しいタイトル');
+    });
+
+    test('throws ArgumentError when __NEXT_DATA__ script is missing', () {
+      const html = '<html><body><h1>no script</h1></body></html>';
+
+      expect(() => site.parseIndex(html, baseUrl), throwsArgumentError);
+    });
+
+    test('throws ArgumentError when __NEXT_DATA__ JSON is malformed', () {
+      const html =
+          '<html><body><script id="__NEXT_DATA__" type="application/json">'
+          'this is not json'
+          '</script></body></html>';
+
+      expect(() => site.parseIndex(html, baseUrl), throwsArgumentError);
+    });
+
+    test('throws ArgumentError when __APOLLO_STATE__ is missing', () {
+      const json = '{"props":{"pageProps":{}}}';
+      const html =
+          '<html><body><script id="__NEXT_DATA__" type="application/json">'
+          '$json'
+          '</script></body></html>';
+
+      expect(() => site.parseIndex(html, baseUrl), throwsArgumentError);
+    });
+
+    test('throws ArgumentError when Work entity cannot be resolved', () {
+      // Apollo state present but Work:<workId> missing
+      final apollo = <String, Object?>{
+        'ROOT_QUERY': {
+          '__typename': 'Query',
+          'work({"id":"$workId"})': {'__ref': 'Work:$workId'},
+        },
+        // Note: no Work:12345 entry
+      };
+      final html = _buildApolloHtml(apolloState: apollo);
+
+      expect(() => site.parseIndex(html, baseUrl), throwsArgumentError);
+    });
+
+    test('returns empty episodes when tableOfContentsV2 is empty', () {
+      final apollo = <String, Object?>{
+        'ROOT_QUERY': {
+          '__typename': 'Query',
+          'work({"id":"$workId"})': {'__ref': 'Work:$workId'},
+        },
+        'Work:$workId': {
+          '__typename': 'Work',
+          'id': workId,
+          'title': '空のTOC',
+          'tableOfContentsV2': <Map<String, String>>[],
+        },
+      };
+      final html = _buildApolloHtml(apolloState: apollo);
+
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.title, '空のTOC');
+      expect(index.episodes, isEmpty);
+    });
+
+    test('regression: "1話目から読む" CTA in DOM does not affect ep1 title', () {
+      final apollo = _apolloState(
+        workId: workId,
+        workTitle: 'テスト小説',
+        chapters: [
+          {
+            'id': 'c1',
+            'episodes': [
+              {
+                'id': 'e1',
+                'title': '第1話 「お願いだ……〈レイダス〉、動いてくれよ！」',
+                'publishedAt': '2025-01-27T17:36:06.000Z',
+              },
+              {
+                'id': 'e2',
+                'title': '第2話 つづき',
+                'publishedAt': '2025-01-31T03:00:30.000Z',
+              },
+            ],
+          },
+        ],
+      );
+      // Mimic real Kakuyomu page: CTA + latest preview links pointing to same URLs
+      const ctaAndPreview = '''
+<a href="/works/12345/episodes/e1">1話目から読む</a>
+<a href="/works/12345/episodes/e1">第1話「お願いだ…」</a>
+<a href="/works/12345/episodes/e2">第2話「つづき」</a>
+''';
+      final html = _buildApolloHtml(
+        apolloState: apollo,
+        extraBodyHtml: ctaAndPreview,
+      );
+
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.episodes, hasLength(2));
+      expect(index.episodes[0].title,
+          '第1話 「お願いだ……〈レイダス〉、動いてくれよ！」');
+      expect(index.episodes[0].url.toString(),
+          'https://kakuyomu.jp/works/$workId/episodes/e1');
+      expect(index.episodes[1].title, '第2話 つづき');
+    });
+
+    test('throws ArgumentError when ROOT_QUERY is missing', () {
+      // Apollo state with Work directly accessible but no ROOT_QUERY.
+      final apollo = <String, Object?>{
+        'Work:$workId': {
+          '__typename': 'Work',
+          'id': workId,
+          'title': 'タイトル',
+          'tableOfContentsV2': <Map<String, String>>[],
+        },
+      };
+      final html = _buildApolloHtml(apolloState: apollo);
+
+      expect(() => site.parseIndex(html, baseUrl), throwsArgumentError);
+    });
+
+    test('throws ArgumentError when tableOfContentsV2 is not a List', () {
+      final apollo = <String, Object?>{
+        'ROOT_QUERY': {
+          '__typename': 'Query',
+          'work({"id":"$workId"})': {'__ref': 'Work:$workId'},
+        },
+        'Work:$workId': {
+          '__typename': 'Work',
+          'id': workId,
+          'title': 'タイトル',
+          'tableOfContentsV2': {'unexpected': 'object'},
+        },
+      };
+      final html = _buildApolloHtml(apolloState: apollo);
+
+      expect(() => site.parseIndex(html, baseUrl), throwsArgumentError);
+    });
+
+    test('throws ArgumentError when a chapter ref cannot be resolved', () {
+      final apollo = <String, Object?>{
+        'ROOT_QUERY': {
+          '__typename': 'Query',
+          'work({"id":"$workId"})': {'__ref': 'Work:$workId'},
+        },
+        'Work:$workId': {
+          '__typename': 'Work',
+          'id': workId,
+          'title': 'タイトル',
+          'tableOfContentsV2': [
+            {'__ref': 'TableOfContentsChapter:missing'},
+          ],
+        },
+      };
+      final html = _buildApolloHtml(apolloState: apollo);
+
+      expect(() => site.parseIndex(html, baseUrl), throwsArgumentError);
+    });
+
+    test('throws ArgumentError when an Episode is missing id', () {
+      final apollo = <String, Object?>{
+        'ROOT_QUERY': {
+          '__typename': 'Query',
+          'work({"id":"$workId"})': {'__ref': 'Work:$workId'},
+        },
+        'Work:$workId': {
+          '__typename': 'Work',
+          'id': workId,
+          'title': 'タイトル',
+          'tableOfContentsV2': [
+            {'__ref': 'TableOfContentsChapter:c1'},
+          ],
+        },
+        'TableOfContentsChapter:c1': {
+          '__typename': 'TableOfContentsChapter',
+          'id': 'c1',
+          'episodeUnions': [
+            {'__ref': 'Episode:e1'},
+          ],
+        },
+        'Episode:e1': {
+          '__typename': 'Episode',
+          // no 'id'
+          'title': 'タイトル無きエピソード',
+          'publishedAt': '2025-01-01T00:00:00.000Z',
+        },
+      };
+      final html = _buildApolloHtml(apolloState: apollo);
+
+      expect(() => site.parseIndex(html, baseUrl), throwsArgumentError);
+    });
+
+    test('resolves Work via ROOT_QUERY ref even when canonical key differs',
+        () {
+      // Apollo's keyFields could in principle yield a different cache key.
+      // Since we navigate via ROOT_QUERY, we should still find the work.
+      final apollo = <String, Object?>{
+        'ROOT_QUERY': {
+          '__typename': 'Query',
+          'work({"id":"$workId"})': {'__ref': 'Work:by-slug:$workId'},
+        },
+        'Work:by-slug:$workId': {
+          '__typename': 'Work',
+          'id': workId,
+          'title': 'カノニカルでないキー',
+          'tableOfContentsV2': <Map<String, String>>[],
+        },
+      };
+      final html = _buildApolloHtml(apolloState: apollo);
+
+      final index = site.parseIndex(html, baseUrl);
+
+      expect(index.title, 'カノニカルでないキー');
       expect(index.episodes, isEmpty);
     });
   });
