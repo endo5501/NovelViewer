@@ -86,12 +86,21 @@ class SegmentPlayer {
     }
   }
 
-  /// User-initiated stop. Skips any pending drain delay and prevents further
-  /// pause/stop calls from this segment.
-  Future<void> stop() async {
-    _stopped = true;
+  /// Interrupts the current segment without permanently disabling this
+  /// player. Skips any pending drain delay. After [interrupt], a fresh
+  /// [playSegment] call still works — use this for "user pressed stop, but
+  /// might press play again" flows (e.g. the TTS edit dialog).
+  Future<void> interrupt() async {
     _releasePending();
     await _player.stop();
+  }
+
+  /// Terminal stop: same as [interrupt] but also marks this player as
+  /// stopped, so subsequent [playSegment] calls return immediately. Pair
+  /// with [dispose] for full teardown.
+  Future<void> stop() async {
+    _stopped = true;
+    await interrupt();
   }
 
   /// Pauses the underlying player. Use this for "pause/resume" semantics

@@ -37,6 +37,12 @@ sealed class TtsEngineConfig {
   /// PCM sample rate produced by the engine (Hz).
   final int sampleRate;
 
+  /// Cache key for the underlying isolate's `loadModel`. Two configs that
+  /// share the same key produce the same loaded model — useful so Qwen3
+  /// regenerate calls that swap only `refWavPath` (synthesis-time, not
+  /// load-time) don't trigger a needless model reload.
+  Object get modelLoadKey;
+
   /// Build the engine config for [type] by reading the relevant Riverpod
   /// providers via [read].
   ///
@@ -89,6 +95,12 @@ class Qwen3EngineConfig extends TtsEngineConfig {
         refWavPath: refWavPath,
         embeddingCacheDir: embeddingCacheDir,
       );
+
+  // refWavPath is synthesis-time (passed per-call), so it is intentionally
+  // omitted from the load key — swapping it must not reload the model.
+  @override
+  Object get modelLoadKey =>
+      (TtsEngineType.qwen3, modelDir, languageId, embeddingCacheDir);
 }
 
 class PiperEngineConfig extends TtsEngineConfig {
@@ -112,6 +124,16 @@ class PiperEngineConfig extends TtsEngineConfig {
 
   /// Synthesis noise-W scale (controls noise duration).
   final double noiseW;
+
+  @override
+  Object get modelLoadKey => (
+        TtsEngineType.piper,
+        modelDir,
+        dicDir,
+        lengthScale,
+        noiseScale,
+        noiseW,
+      );
 }
 
 Qwen3EngineConfig _resolveQwen3(ProviderReader read) {

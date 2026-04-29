@@ -170,6 +170,34 @@ void main() {
       await session.dispose();
     });
 
+    test('two distinct-but-equivalent Qwen3 configs reuse the loaded model',
+        () async {
+      final isolate = _FakeTtsIsolate();
+      final session = TtsSession(isolate: isolate);
+
+      // Same modelDir/languageId — only refWavPath (synthesis-time) differs.
+      const a = Qwen3EngineConfig(
+        modelDir: '/q/m',
+        sampleRate: 24000,
+        languageId: 2058,
+        refWavPath: '/voice/a.wav',
+      );
+      const b = Qwen3EngineConfig(
+        modelDir: '/q/m',
+        sampleRate: 24000,
+        languageId: 2058,
+        refWavPath: '/voice/b.wav',
+      );
+
+      await session.ensureModelLoaded(a);
+      await session.ensureModelLoaded(b);
+
+      expect(isolate.loadModelCalls, hasLength(1),
+          reason:
+              'changing only synthesis-time fields must not trigger reload');
+      await session.dispose();
+    });
+
     test('synthesize resolves with audio result on happy path', () async {
       final isolate = _FakeTtsIsolate();
       final session = TtsSession(isolate: isolate);

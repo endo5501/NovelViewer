@@ -956,6 +956,52 @@ void main() {
         await controller.playSegment(0);
         expect(player.currentFilePath, isNull);
       });
+
+      test('stopPlayback is non-terminal — preview still works after stop',
+          () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.completed,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト。',
+          textOffset: 0,
+          textLength: 4,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: 'テスト。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.playSegment(0);
+        expect(player.currentFilePath, isNotNull);
+
+        // User presses stop in the middle of playback…
+        player.currentFilePath = null;
+        await controller.stopPlayback();
+
+        // …and then presses play on a segment again — must still work.
+        await controller.playSegment(0);
+        expect(player.currentFilePath, isNotNull,
+            reason:
+                'stopPlayback must be non-terminal so preview works again');
+      });
     });
 
     group('playAll', () {

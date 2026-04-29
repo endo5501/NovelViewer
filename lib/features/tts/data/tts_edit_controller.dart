@@ -341,7 +341,9 @@ class TtsEditController {
 
   Future<void> stopPlayback() async {
     _cancelled = true;
-    await _segmentPlayer.stop();
+    // interrupt() (not stop()) so the user can press preview again on the
+    // same dialog — terminal stop is reserved for dispose().
+    await _segmentPlayer.interrupt();
   }
 
   Future<void> resetSegment(int segmentIndex) async {

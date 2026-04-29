@@ -23,7 +23,7 @@ class TtsSession {
 
   bool _modelLoaded = false;
   bool _isolateSpawned = false;
-  TtsEngineConfig? _loadedConfig;
+  Object? _loadedKey;
   Completer<SynthesisResultResponse?>? _activeSynthesisCompleter;
   Completer<bool>? _activeModelLoadCompleter;
   bool _disposed = false;
@@ -38,7 +38,7 @@ class TtsSession {
     if (_disposed) {
       throw StateError('TtsSession.ensureModelLoaded after dispose()');
     }
-    if (_modelLoaded && _loadedConfig == config) return true;
+    if (_modelLoaded && _loadedKey == config.modelLoadKey) return true;
 
     if (!_isolateSpawned) {
       await _isolate.spawn();
@@ -76,7 +76,7 @@ class TtsSession {
       }
       final success = await completer.future;
       _modelLoaded = success;
-      _loadedConfig = success ? config : null;
+      _loadedKey = success ? config.modelLoadKey : null;
       return success;
     } finally {
       _activeModelLoadCompleter = null;
@@ -142,7 +142,7 @@ class TtsSession {
     }
     _isolateSpawned = false;
     _modelLoaded = false;
-    _loadedConfig = null;
+    _loadedKey = null;
   }
 
 }
