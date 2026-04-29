@@ -1,25 +1,25 @@
 ## 1. 準備
 
-- [ ] 1.1 Sprint 0-3 のマージ状況を確認 (本 sprint 自体は前段成果に強い依存はない、独立に進められる)
-- [ ] 1.2 `lib/features/settings/presentation/sections/` ディレクトリ作成
-- [ ] 1.3 現行 `settings_dialog.dart` の `wc -l` 値を記録 (解体前 1,070 LOC)
+- [x] 1.1 Sprint 0-3 のマージ状況を確認 (本 sprint 自体は前段成果に強い依存はない、独立に進められる)
+- [x] 1.2 `lib/features/settings/presentation/sections/` ディレクトリ作成
+- [x] 1.3 現行 `settings_dialog.dart` の `wc -l` 値を記録 (解体前 1,088 LOC)
 
 ## 2. Phase A — 既存挙動の widget テスト追加 (ベースライン)
 
-- [ ] 2.1 `test/features/settings/presentation/settings_dialog_test.dart` 新規作成
-- [ ] 2.2 「ダイアログを開くと "一般" / "読み上げ" の 2 タブが表示される」テスト
-- [ ] 2.3 「一般タブで表示モード SegmentedButton が `displayModeProvider` に応じて表示される」テスト
-- [ ] 2.4 「一般タブでテーマトグルが `themeModeProvider` に対応する」テスト
-- [ ] 2.5 「LLM プロバイダ dropdown で OpenAI/Ollama/未設定 を切替できる」テスト
-- [ ] 2.6 「OpenAI 互換選択時に URL/API key/model TextField が表示される」テスト
-- [ ] 2.7 「Ollama 選択時にモデル dropdown が表示され、URL から取得を試みる」テスト (mock `OllamaClient`)
-- [ ] 2.8 「読み上げタブの engine SegmentedButton で Qwen3/Piper を切替」テスト
-- [ ] 2.9 「Qwen3 選択時に model size / language / voice reference UI が表示」テスト
-- [ ] 2.10 「Piper 選択時に model dropdown / 3 sliders / download status が表示」テスト
-- [ ] 2.11 「voice reference dropdown に refresh / rename / open-folder ボタンが表示」テスト
-- [ ] 2.12 「drag-drop 領域が音声ファイルを受け入れる」テスト (`desktop_drop` の DropEvent 模擬)
-- [ ] 2.13 `fvm flutter test` で 2.x 全 green を確認 (現行実装に対するベースライン)
-- [ ] 2.14 ベースラインが固まった状態でコミット
+- [x] 2.1 `test/features/settings/presentation/settings_dialog_test.dart` 新規作成 (既存ファイルへの追加 + `settings_dialog_phase_a_test.dart` を新規作成)
+- [x] 2.2 「ダイアログを開くと "一般" / "読み上げ" の 2 タブが表示される」テスト (`settings_dialog_tabs_test.dart`)
+- [x] 2.3 「一般タブで表示モード Switch が `displayModeProvider` に応じて表示される」テスト (`settings_dialog_tabs_test.dart` / `settings_dialog_test.dart`)
+- [x] 2.4 「一般タブでテーマトグルが `themeModeProvider` に対応する」テスト (`settings_dialog_test.dart`)
+- [x] 2.5 「LLM プロバイダ dropdown で OpenAI/Ollama/未設定 を切替できる」テスト (`llm_settings_test.dart`)
+- [x] 2.6 「OpenAI 互換選択時に URL/API key/model TextField が表示される」テスト (`llm_settings_test.dart`)
+- [x] 2.7 「Ollama 選択時にモデル dropdown が表示され、URL から取得を試みる」テスト (`llm_settings_test.dart`)
+- [x] 2.8 「読み上げタブの engine SegmentedButton で Qwen3/Piper を切替」テスト (`settings_dialog_phase_a_test.dart`)
+- [x] 2.9 「Qwen3 選択時に model size / language / voice reference UI が表示」テスト (`settings_dialog_tabs_test.dart` + `tts_model_download_ui_test.dart`)
+- [x] 2.10 「Piper 選択時に model dropdown / 3 sliders / download status が表示」テスト (`settings_dialog_phase_a_test.dart`)
+- [x] 2.11 「voice reference dropdown に refresh / rename / open-folder ボタンが表示」テスト (`voice_reference_selector_test.dart`)
+- [x] 2.12 「drag-drop 領域が音声ファイルを受け入れる」テスト (`settings_dialog_phase_a_test.dart`)
+- [x] 2.13 `fvm flutter test` で 2.x 全 green を確認 (現行実装に対するベースライン)
+- [x] 2.14 ベースラインが固まった状態でコミット
 
 ## 3. Phase B — Piper UI の l10n 化 (F026)
 
