@@ -18,15 +18,16 @@ import 'package:novel_viewer/features/text_viewer/providers/text_viewer_provider
 import 'package:novel_viewer/features/tts/data/tts_adapters.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
-import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_streaming_controller.dart';
+import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode.dart';
 import 'package:novel_viewer/features/tts/presentation/dictionary_context_menu.dart';
 import 'package:novel_viewer/features/tts/presentation/tts_dictionary_dialog.dart';
 import 'package:novel_viewer/features/tts/presentation/tts_edit_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_state_provider.dart';
+import 'package:novel_viewer/features/tts/providers/vacuum_lifecycle_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_export_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
@@ -88,52 +89,35 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
 
   Future<void> _startStreaming(String content) async {
     final folderPath = ref.read(currentDirectoryProvider);
-    final fileName = ref.read(selectedFileProvider)?.name;
+    final selectedFile = ref.read(selectedFileProvider);
+    final fileName = selectedFile?.name;
     final engineType = ref.read(ttsEngineTypeProvider);
 
-    // Engine-specific settings
-    final String modelDir;
-    final String? refWavPath;
-    final int languageId;
-    final String? dicDir;
-    final double? lengthScale;
-    final double? noiseScale;
-    final double? noiseW;
+    final config = TtsEngineConfig.resolveFromRef(ref, engineType);
 
-    if (engineType == TtsEngineType.piper) {
-      final piperDir = ref.read(piperModelDirProvider);
-      final modelName = ref.read(piperModelNameProvider);
-      modelDir = '$piperDir/$modelName.onnx';
-      dicDir = ref.read(piperDicDirProvider);
-      lengthScale = ref.read(piperLengthScaleProvider);
-      noiseScale = ref.read(piperNoiseScaleProvider);
-      noiseW = ref.read(piperNoiseWProvider);
-      refWavPath = null;
-      languageId = 0; // unused for piper
-    } else {
-      modelDir = ref.read(ttsModelDirProvider);
-      final refWavFileName = ref.read(ttsRefWavPathProvider);
-      languageId = ref.read(ttsLanguageProvider).languageId;
-      final voiceService = ref.read(voiceReferenceServiceProvider);
-      refWavPath = refWavFileName.isNotEmpty && voiceService != null
-          ? voiceService.resolveVoiceFilePath(refWavFileName)
-          : null;
-      dicDir = null;
-      lengthScale = null;
-      noiseScale = null;
-      noiseW = null;
+    if (folderPath == null || selectedFile == null || fileName == null ||
+        config.modelDir.isEmpty) {
+      return;
     }
 
-    if (folderPath == null || fileName == null || modelDir.isEmpty) return;
-
-    final filePath = '$folderPath/$fileName';
+    // Use selectedFile.path verbatim so it matches the family key the build
+    // watches via `ttsAudioStateProvider(selectedFile.path)`. Building the
+    // path from `'$folderPath/$fileName'` here mixes separators on Windows
+    // (`D:\foo/bar.txt`), which makes the active-streaming key never match
+    // the watched key, so the UI never flips to the "generating" state and
+    // the stop button stays hidden.
+    final filePath = selectedFile.path;
     ref.read(activeStreamingFileProvider.notifier).set(filePath);
     ref.invalidate(ttsAudioStateProvider(filePath));
     ref.read(ttsGenerationProgressProvider.notifier)
         .set(const TtsGenerationProgress(current: 0, total: 0));
 
     final db = ref.read(ttsAudioDatabaseProvider(folderPath));
-    final repo = TtsAudioRepository(db);
+    final lifecycle = ref.read(vacuumLifecycleProvider);
+    final repo = TtsAudioRepository(
+      db,
+      onEpisodeDeleted: () => lifecycle.markDirty(folderPath),
+    );
     final dictDb = ref.read(ttsDictionaryDatabaseProvider(folderPath));
     final dictRepo = TtsDictionaryRepository(dictDb);
     final isolate = TtsIsolate();
@@ -163,18 +147,9 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
       await controller.start(
         text: content,
         fileName: fileName,
-        modelDir: modelDir,
-        sampleRate: engineType == TtsEngineType.piper ? 22050 : 24000,
-        engineType: engineType,
-        refWavPath: refWavPath,
+        config: config,
         startOffset: startOffset,
-        languageId: languageId,
         resolveRefWavPath: voiceService?.resolveVoiceFilePath,
-        dicDir: dicDir,
-        lengthScale: lengthScale,
-        noiseScale: noiseScale,
-        noiseW: noiseW,
-        embeddingCacheDir: ref.read(embeddingCacheDirProvider),
       );
     } finally {
       _streamingController = null;
@@ -275,7 +250,11 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     if (folderPath == null || fileName == null) return null;
 
     final db = ref.read(ttsAudioDatabaseProvider(folderPath));
-    final repo = TtsAudioRepository(db);
+    final lifecycle = ref.read(vacuumLifecycleProvider);
+    final repo = TtsAudioRepository(
+      db,
+      onEpisodeDeleted: () => lifecycle.markDirty(folderPath),
+    );
     final episode = await repo.findEpisodeByFileName(fileName);
     if (episode == null) return null;
     return action(repo, episode);

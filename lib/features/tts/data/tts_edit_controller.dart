@@ -4,22 +4,19 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 
+import 'segment_player.dart';
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
 import 'tts_dictionary_repository.dart';
 import 'tts_edit_segment.dart';
-import 'tts_engine_type.dart';
 import 'tts_isolate.dart';
-import 'tts_language.dart';
 import 'tts_playback_controller.dart';
+import 'tts_session.dart';
 import 'wav_writer.dart';
+import '../domain/tts_engine_config.dart';
 import '../domain/tts_episode_status.dart';
 import '../domain/tts_ref_wav_resolver.dart';
 import '../domain/tts_segment.dart';
-
-class _CancelledException implements Exception {
-  const _CancelledException();
-}
 
 class TtsEditController {
   TtsEditController({
@@ -29,36 +26,38 @@ class TtsEditController {
     required this.tempDirPath,
     TtsIsolate Function()? ttsIsolateFactory,
     TtsDictionaryRepository? dictionaryRepository,
-  })  : _ttsIsolate = ttsIsolate,
-        _audioPlayer = audioPlayer,
-        _repository = repository,
+    TtsSession? session,
+    SegmentPlayer? segmentPlayer,
+    TextSegmenter? textSegmenter,
+  })  : _repository = repository,
         _ttsIsolateFactory = ttsIsolateFactory ?? TtsIsolate.new,
-        _dictionaryRepository = dictionaryRepository;
+        _dictionaryRepository = dictionaryRepository,
+        _session = session ?? TtsSession(isolate: ttsIsolate),
+        _segmentPlayer = segmentPlayer ??
+            // Edit-screen previews always treat each segment as the last one
+            // (no follow-up play()), so default drain to zero — the WASAPI
+            // tail concern only applies to back-to-back segment playback.
+            SegmentPlayer(player: audioPlayer, bufferDrainDelay: Duration.zero),
+        _textSegmenter = textSegmenter ?? const TextSegmenter();
 
-  TtsIsolate _ttsIsolate;
+  TtsSession _session;
+  final SegmentPlayer _segmentPlayer;
   final TtsIsolate Function() _ttsIsolateFactory;
-  final TtsAudioPlayer _audioPlayer;
   final TtsAudioRepository _repository;
   final TtsDictionaryRepository? _dictionaryRepository;
   final String tempDirPath;
-  final _textSegmenter = TextSegmenter();
+  final TextSegmenter _textSegmenter;
 
   List<TtsEditSegment> _segments = [];
   List<TtsEditSegment> get segments => _segments;
 
-  bool _modelLoaded = false;
-  bool get modelLoaded => _modelLoaded;
+  bool get modelLoaded => _session.modelLoaded;
 
   bool _cancelled = false;
-  bool _isolateSpawned = false;
   int? _episodeId;
   String? _fileName;
   String? _textHash;
   int _sampleRate = 24000;
-  StreamSubscription<TtsIsolateResponse>? _subscription;
-  Completer<void>? _activePlayCompleter;
-  Completer<SynthesisResultResponse>? _activeSynthesisCompleter;
-  Completer<bool>? _activeModelLoadCompleter;
   final _writtenFiles = <String>[];
 
   void Function(int segmentIndex)? onSegmentGenerated;
@@ -181,107 +180,50 @@ class TtsEditController {
     }
   }
 
-  Future<bool> _ensureModelLoaded(
-    String modelDir, {
-    TtsEngineType engineType = TtsEngineType.qwen3,
-    int languageId = TtsLanguage.defaultLanguageId,
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
-  }) async {
-    if (_modelLoaded) return true;
-
-    await _ttsIsolate.spawn();
-    _isolateSpawned = true;
-
-    final completer = Completer<bool>();
-    _activeModelLoadCompleter = completer;
-
-    _subscription = _ttsIsolate.responses.listen((response) {
-      if (response is ModelLoadedResponse && !completer.isCompleted) {
-        completer.complete(response.success);
-        if (!response.success) {
-          onError?.call('Model load failed: ${response.error}');
-        }
-      }
-    });
-
-    _ttsIsolate.loadModel(
-      modelDir,
-      engineType: engineType,
-      languageId: languageId,
-      dicDir: dicDir,
-      lengthScale: lengthScale,
-      noiseScale: noiseScale,
-      noiseW: noiseW,
-      embeddingCacheDir: embeddingCacheDir,
-    );
-
-    try {
-      _modelLoaded = await completer.future;
-      return _modelLoaded;
-    } on _CancelledException {
-      return false;
-    } finally {
-      _activeModelLoadCompleter = null;
-    }
+  Future<bool> _ensureModelLoaded(TtsEngineConfig config) async {
+    return _session.ensureModelLoaded(config);
   }
 
   Future<bool> generateSegment({
     required int segmentIndex,
-    required String modelDir,
-    TtsEngineType engineType = TtsEngineType.qwen3,
-    String? refWavPath,
-    int languageId = TtsLanguage.defaultLanguageId,
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
+    required TtsEngineConfig config,
   }) async {
+    if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
     final dict = _dictionaryRepository;
     final entries = dict != null
         ? await dict.getEntriesSortedByLength()
         : null;
+    final fallbackRefWavPath = config is Qwen3EngineConfig
+        ? config.refWavPath
+        : null;
+    final refWavPath = TtsRefWavResolver.resolve(
+      storedPath: _segments[segmentIndex].refWavPath,
+      fallbackPath: fallbackRefWavPath,
+    );
     return _generateSegmentWithEntries(
       segmentIndex: segmentIndex,
-      modelDir: modelDir,
-      engineType: engineType,
+      config: config,
       refWavPath: refWavPath,
-      languageId: languageId,
       dictEntries: entries,
-      dicDir: dicDir,
-      lengthScale: lengthScale,
-      noiseScale: noiseScale,
-      noiseW: noiseW,
-      embeddingCacheDir: embeddingCacheDir,
     );
   }
 
   Future<bool> _generateSegmentWithEntries({
     required int segmentIndex,
-    required String modelDir,
-    TtsEngineType engineType = TtsEngineType.qwen3,
+    required TtsEngineConfig config,
     String? refWavPath,
-    int languageId = TtsLanguage.defaultLanguageId,
     List<TtsDictionaryEntry>? dictEntries,
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
   }) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
 
-    if (!await _ensureModelLoaded(modelDir, engineType: engineType, languageId: languageId, dicDir: dicDir, lengthScale: lengthScale, noiseScale: noiseScale, noiseW: noiseW, embeddingCacheDir: embeddingCacheDir)) return false;
+    if (!await _ensureModelLoaded(config)) return false;
 
     final segment = _segments[segmentIndex];
     // For new segments, apply dictionary before synthesizing and storing.
     // For segments already in DB, use their stored text as-is (already converted).
     final synthText = !segment.dbRecordExists && dictEntries != null
-        ? TtsDictionaryRepository.applyDictionaryWithEntries(dictEntries, segment.text)
+        ? TtsDictionaryRepository.applyDictionaryWithEntries(
+            dictEntries, segment.text)
         : segment.text;
     final result = await _synthesize(synthText, refWavPath);
     if (result == null) return false;
@@ -318,17 +260,9 @@ class TtsEditController {
   }
 
   Future<void> generateAllUngenerated({
-    required String modelDir,
-    TtsEngineType engineType = TtsEngineType.qwen3,
-    String? globalRefWavPath,
-    int languageId = TtsLanguage.defaultLanguageId,
+    required TtsEngineConfig config,
     String Function(String fileName)? resolveRefWavPath,
     void Function(int segmentIndex)? onSegmentStart,
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
   }) async {
     _cancelled = false;
     final ungenerated = <int>[];
@@ -346,6 +280,11 @@ class TtsEditController {
         ? await dictRepo.getEntriesSortedByLength()
         : null;
 
+    final globalRefWavPath = switch (config) {
+      Qwen3EngineConfig(:final refWavPath) => refWavPath,
+      PiperEngineConfig() => null,
+    };
+
     for (var idx = 0; idx < ungenerated.length; idx++) {
       if (_cancelled) break;
 
@@ -360,16 +299,9 @@ class TtsEditController {
 
       final success = await _generateSegmentWithEntries(
         segmentIndex: segmentIndex,
-        modelDir: modelDir,
-        engineType: engineType,
+        config: config,
         refWavPath: refWavPath,
-        languageId: languageId,
         dictEntries: dictEntries,
-        dicDir: dicDir,
-        lengthScale: lengthScale,
-        noiseScale: noiseScale,
-        noiseW: noiseW,
-        embeddingCacheDir: embeddingCacheDir,
       );
 
       if (!success) break;
@@ -391,24 +323,10 @@ class TtsEditController {
     await File(filePath).writeAsBytes(audioData);
     _writtenFiles.add(filePath);
 
-    await _audioPlayer.setFilePath(filePath);
-
-    final playCompleter = Completer<void>();
-    _activePlayCompleter = playCompleter;
-    late StreamSubscription<TtsPlayerState> playSub;
-    playSub = _audioPlayer.playerStateStream.listen((state) {
-      if (state == TtsPlayerState.completed && !playCompleter.isCompleted) {
-        playCompleter.complete();
-      }
-    });
-
-    await _audioPlayer.play();
-    await playCompleter.future;
-    _activePlayCompleter = null;
-    await playSub.cancel();
-    // Use pause() instead of stop() to reset _playing flag without
-    // destroying the platform (which would kill buffered audio output).
-    await _audioPlayer.pause();
+    // isLast: false so SegmentPlayer ends with pause() rather than letting the
+    // platform's playing flag stay set — required to play another segment next
+    // without destroying the underlying player via stop().
+    await _segmentPlayer.playSegment(filePath, isLast: false);
   }
 
   Future<void> playAll({void Function(int)? onSegmentStart}) async {
@@ -423,12 +341,9 @@ class TtsEditController {
 
   Future<void> stopPlayback() async {
     _cancelled = true;
-    final completer = _activePlayCompleter;
-    if (completer != null && !completer.isCompleted) {
-      completer.complete();
-    }
-    _activePlayCompleter = null;
-    await _audioPlayer.stop();
+    // interrupt() (not stop()) so the user can press preview again on the
+    // same dialog — terminal stop is reserved for dispose().
+    await _segmentPlayer.interrupt();
   }
 
   Future<void> resetSegment(int segmentIndex) async {
@@ -488,32 +403,17 @@ class TtsEditController {
 
   Future<void> cancel() async {
     _cancelled = true;
-    _ttsIsolate.abort();
-    if (!(_activeModelLoadCompleter?.isCompleted ?? true)) {
-      _activeModelLoadCompleter!.completeError(const _CancelledException());
-    }
-    if (!(_activeSynthesisCompleter?.isCompleted ?? true)) {
-      _activeSynthesisCompleter!.completeError(const _CancelledException());
-    }
-    await _teardownIsolate(recreate: true);
+    _session.abort();
+    await _session.dispose();
+    // Replace the session so a subsequent generateSegment can reload the model.
+    _session = TtsSession(isolate: _ttsIsolateFactory());
   }
 
   Future<void> dispose() async {
     _cancelled = true;
-    _ttsIsolate.abort();
-    await _teardownIsolate(recreate: false);
+    _session.abort();
+    await _session.dispose();
     await _cleanupFiles();
-  }
-
-  Future<void> _teardownIsolate({required bool recreate}) async {
-    await _subscription?.cancel();
-    _subscription = null;
-    if (_isolateSpawned || _modelLoaded) {
-      await _ttsIsolate.dispose();
-      if (recreate) _ttsIsolate = _ttsIsolateFactory();
-    }
-    _isolateSpawned = false;
-    _modelLoaded = false;
   }
 
   Future<void> _updateEpisodeStatusAfterReset() async {
@@ -545,33 +445,12 @@ class TtsEditController {
 
   Future<SynthesisResultResponse?> _synthesize(
       String text, String? refWavPath) async {
-    final completer = Completer<SynthesisResultResponse>();
-    _activeSynthesisCompleter = completer;
-
-    late StreamSubscription<TtsIsolateResponse> sub;
-    sub = _ttsIsolate.responses.listen((response) {
-      if (response is SynthesisResultResponse && !completer.isCompleted) {
-        completer.complete(response);
-      }
-    });
-
-    _ttsIsolate.synthesize(text, refWavPath: refWavPath);
-
-    try {
-      final result = await completer.future;
-
-      if (result.error != null || result.audio == null) {
-        onError?.call('Synthesis failed: ${result.error}');
-        return null;
-      }
-
-      return result;
-    } on _CancelledException {
-      return null;
-    } finally {
-      _activeSynthesisCompleter = null;
-      await sub.cancel();
+    final result =
+        await _session.synthesize(text: text, refWavPath: refWavPath);
+    if (result == null) {
+      onError?.call('Synthesis failed');
     }
+    return result;
   }
 
   Future<void> _cleanupFiles() async {

@@ -8,14 +8,16 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import 'segment_player.dart';
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
+import '../providers/text_segmenter_provider.dart';
 import 'tts_dictionary_repository.dart';
-import 'tts_engine_type.dart';
 import 'tts_isolate.dart';
-import 'tts_language.dart';
 import 'tts_playback_controller.dart';
+import 'tts_session.dart';
 import 'wav_writer.dart';
+import '../domain/tts_engine_config.dart';
 import '../domain/tts_episode_status.dart';
 import '../domain/tts_ref_wav_resolver.dart';
 import '../domain/tts_segment.dart';
@@ -32,50 +34,47 @@ class TtsStreamingController {
     required this.tempDirPath,
     Duration bufferDrainDelay = const Duration(milliseconds: 500),
     TtsDictionaryRepository? dictionaryRepository,
-  })  : _ttsIsolate = ttsIsolate,
-        _audioPlayer = audioPlayer,
-        _repository = repository,
-        _bufferDrainDelay = bufferDrainDelay,
-        _dictionaryRepository = dictionaryRepository;
+    TtsSession? session,
+    SegmentPlayer? segmentPlayer,
+  })  : _repository = repository,
+        _dictionaryRepository = dictionaryRepository,
+        _session = session ?? TtsSession(isolate: ttsIsolate),
+        _segmentPlayer = segmentPlayer ??
+            SegmentPlayer(
+              player: audioPlayer,
+              bufferDrainDelay: bufferDrainDelay,
+            );
 
   final ProviderContainer ref;
-  final TtsIsolate _ttsIsolate;
-  final TtsAudioPlayer _audioPlayer;
+  final TtsSession _session;
+  final SegmentPlayer _segmentPlayer;
   final TtsAudioRepository _repository;
   final TtsDictionaryRepository? _dictionaryRepository;
   final String tempDirPath;
-  final Duration _bufferDrainDelay;
-  final _textSegmenter = TextSegmenter();
+  late final TextSegmenter _textSegmenter = ref.read(textSegmenterProvider);
 
   bool _stopped = false;
-  bool _modelLoaded = false;
   final _writtenFiles = <String>[];
-  Completer<void>? _activePlayCompleter;
-  StreamSubscription<TtsIsolateResponse>? _subscription;
 
   Future<void> start({
     required String text,
     required String fileName,
-    required String modelDir,
-    required int sampleRate,
-    TtsEngineType engineType = TtsEngineType.qwen3,
-    String? refWavPath,
+    required TtsEngineConfig config,
     int? startOffset,
-    int languageId = TtsLanguage.defaultLanguageId,
     String Function(String fileName)? resolveRefWavPath,
-    // Piper-specific
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
   }) async {
     _stopped = false;
-    _modelLoaded = false;
 
     final textHash = sha256.convert(utf8.encode(text)).toString();
     final segments = _textSegmenter.splitIntoSentences(text);
     if (segments.isEmpty) return;
+
+    // Engine-config-derived values used for episode bookkeeping. The fallback
+    // refWavPath only applies to Qwen3 (Piper does not do voice cloning).
+    final fallbackRefWavPath = switch (config) {
+      Qwen3EngineConfig(:final refWavPath) => refWavPath,
+      PiperEngineConfig() => null,
+    };
 
     // Check existing episode
     var episode = await _repository.findEpisodeByFileName(fileName);
@@ -94,9 +93,9 @@ class TtsStreamingController {
 
     episodeId ??= await _repository.createEpisode(
       fileName: fileName,
-      sampleRate: sampleRate,
+      sampleRate: config.sampleRate,
       status: TtsEpisodeStatus.generating,
-      refWavPath: refWavPath,
+      refWavPath: fallbackRefWavPath,
       textHash: textHash,
     );
 
@@ -112,18 +111,10 @@ class TtsStreamingController {
         episodeId: episodeId,
         segments: segments,
         dbSegmentMap: dbSegmentMap,
-        modelDir: modelDir,
-        sampleRate: sampleRate,
-        engineType: engineType,
-        refWavPath: refWavPath,
+        config: config,
+        fallbackRefWavPath: fallbackRefWavPath,
         startOffset: startOffset,
-        languageId: languageId,
         resolveRefWavPath: resolveRefWavPath,
-        dicDir: dicDir,
-        lengthScale: lengthScale,
-        noiseScale: noiseScale,
-        noiseW: noiseW,
-        embeddingCacheDir: embeddingCacheDir,
       );
 
       // Update episode status
@@ -135,72 +126,13 @@ class TtsStreamingController {
             episodeId, TtsEpisodeStatus.completed);
       }
     } finally {
-      // Clean up isolate resources on natural completion
-      await _subscription?.cancel();
-      _subscription = null;
-      if (_modelLoaded) {
-        await _ttsIsolate.dispose();
-        _modelLoaded = false;
+      // Always release isolate + segment-player resources and clear temp
+      // files, even on early exit (model-load failure, exception).
+      await _session.dispose();
+      if (!_stopped) {
+        await _segmentPlayer.dispose();
+        await _cleanupFiles();
       }
-    }
-  }
-
-  Future<bool> _ensureModelLoaded(
-    String modelDir, {
-    TtsEngineType engineType = TtsEngineType.qwen3,
-    int languageId = TtsLanguage.defaultLanguageId,
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
-  }) async {
-    if (_modelLoaded) return true;
-
-    await _ttsIsolate.spawn();
-
-    final completer = Completer<bool>();
-    _subscription = _ttsIsolate.responses.listen((response) {
-      if (response is ModelLoadedResponse && !completer.isCompleted) {
-        completer.complete(response.success);
-      }
-    });
-
-    _ttsIsolate.loadModel(
-      modelDir,
-      engineType: engineType,
-      languageId: languageId,
-      dicDir: dicDir,
-      lengthScale: lengthScale,
-      noiseScale: noiseScale,
-      noiseW: noiseW,
-      embeddingCacheDir: embeddingCacheDir,
-    );
-    _modelLoaded = await completer.future;
-    return _modelLoaded;
-  }
-
-  Future<SynthesisResultResponse?> _synthesize(
-      String text, String? refWavPath) async {
-    final completer = Completer<SynthesisResultResponse>();
-
-    late StreamSubscription<TtsIsolateResponse> sub;
-    sub = _ttsIsolate.responses.listen((response) {
-      if (response is SynthesisResultResponse && !completer.isCompleted) {
-        completer.complete(response);
-      }
-    });
-
-    _ttsIsolate.synthesize(text, refWavPath: refWavPath);
-
-    try {
-      final result = await completer.future;
-      if (result.error != null || result.audio == null) {
-        return null;
-      }
-      return result;
-    } finally {
-      await sub.cancel();
     }
   }
 
@@ -208,18 +140,10 @@ class TtsStreamingController {
     required int episodeId,
     required List<TextSegment> segments,
     required Map<int, TtsSegment> dbSegmentMap,
-    required String modelDir,
-    required int sampleRate,
-    TtsEngineType engineType = TtsEngineType.qwen3,
-    required String? refWavPath,
+    required TtsEngineConfig config,
+    required String? fallbackRefWavPath,
     int? startOffset,
-    int languageId = TtsLanguage.defaultLanguageId,
     String Function(String fileName)? resolveRefWavPath,
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
   }) async {
     // Determine starting segment
     int startIndex = 0;
@@ -273,16 +197,7 @@ class TtsStreamingController {
             .read(ttsPlaybackStateProvider.notifier)
             .set(TtsPlaybackState.waiting);
 
-        if (!await _ensureModelLoaded(
-          modelDir,
-          engineType: engineType,
-          languageId: languageId,
-          dicDir: dicDir,
-          lengthScale: lengthScale,
-          noiseScale: noiseScale,
-          noiseW: noiseW,
-          embeddingCacheDir: embeddingCacheDir,
-        )) {
+        if (!await _session.ensureModelLoaded(config)) {
           break;
         }
         if (_stopped) break;
@@ -294,11 +209,14 @@ class TtsStreamingController {
             : rawText;
         final synthRefWavPath = TtsRefWavResolver.resolve(
           storedPath: dbRow?.refWavPath,
-          fallbackPath: refWavPath,
+          fallbackPath: fallbackRefWavPath,
           resolver: resolveRefWavPath,
         );
 
-        final result = await _synthesize(synthText, synthRefWavPath);
+        final result = await _session.synthesize(
+          text: synthText,
+          refWavPath: synthRefWavPath,
+        );
         if (result == null || _stopped) break;
 
         final wavBytes = WavWriter.toBytes(
@@ -345,71 +263,34 @@ class TtsStreamingController {
             TextRange(start: textOffset, end: textOffset + textLength),
           );
 
-      // Play segment
-      // IMPORTANT: setFilePath must come BEFORE subscribing to playerStateStream.
-      // just_audio's playerStateStream is a BehaviorSubject that replays the
-      // latest value. After a segment completes, the replayed state is
-      // 'completed', which would immediately trigger the completer and skip
-      // the segment. setFilePath resets processingState to 'ready'.
       ref
           .read(ttsPlaybackStateProvider.notifier)
           .set(TtsPlaybackState.playing);
-      await _audioPlayer.setFilePath(filePath);
 
-      final playCompleter = Completer<void>();
-      _activePlayCompleter = playCompleter;
-      late StreamSubscription<TtsPlayerState> playSub;
-      playSub = _audioPlayer.playerStateStream.listen((state) {
-        if (state == TtsPlayerState.completed && !playCompleter.isCompleted) {
-          playCompleter.complete();
-        }
-      });
-
-      unawaited(_audioPlayer.play().catchError((e, st) {
-        if (!playCompleter.isCompleted) playCompleter.completeError(e, st);
-      }));
-
-      await playCompleter.future;
-      _activePlayCompleter = null;
-      await playSub.cancel();
-
-      // Wait for audio output buffer to drain after each segment, including
-      // the last one. eof-reached fires when the decoder finishes, but the
-      // audio device (e.g. WASAPI on Windows) may still have buffered samples
-      // to play. For intermediate segments, pause() resets just_audio's
-      // _playing flag so the next play() call is not a no-op. For the last
-      // segment, pause() is unnecessary since no subsequent play() follows.
-      // pause() is used instead of stop() because stop() destroys the
-      // platform (MediaKitPlayer), which kills buffered audio.
-      if (!_stopped) {
-        await Future<void>.delayed(_bufferDrainDelay);
-        final hasNextSegment = i < segments.length - 1;
-        if (!_stopped && hasNextSegment) {
-          await _audioPlayer.pause();
-        }
-      }
+      final isLast = i == segments.length - 1;
+      await _segmentPlayer.playSegment(filePath, isLast: isLast);
 
       if (_stopped) break;
     }
 
     if (!_stopped) {
-      // All segments played - clean up
+      // All segments played — clear UI state. The segment player and temp
+      // files are disposed by `start()`'s outer finally so this branch and
+      // the exception path stay symmetric.
       ref
           .read(ttsPlaybackStateProvider.notifier)
           .set(TtsPlaybackState.stopped);
       ref.read(ttsHighlightRangeProvider.notifier).set(null);
-      await _audioPlayer.dispose();
-      await _cleanupFiles();
     }
   }
 
   Future<void> pause() async {
-    await _audioPlayer.pause();
+    await _segmentPlayer.pause();
     ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.paused);
   }
 
   Future<void> resume() async {
-    await _audioPlayer.play();
+    await _segmentPlayer.resume();
     ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.playing);
   }
 
@@ -418,27 +299,15 @@ class TtsStreamingController {
     _stopped = true;
 
     // Abort any in-progress synthesis so the worker Isolate becomes responsive
-    _ttsIsolate.abort();
-
-    // Cancel active play completion wait
-    final playCompleter = _activePlayCompleter;
-    if (playCompleter != null && !playCompleter.isCompleted) {
-      playCompleter.complete();
-    }
-    _activePlayCompleter = null;
+    _session.abort();
 
     try {
-      // Stop playback
-      await _audioPlayer.stop();
-      await _audioPlayer.dispose();
+      // Stop playback (skips any pending buffer-drain delay).
+      await _segmentPlayer.stop();
+      await _segmentPlayer.dispose();
 
-      // Clean up isolate if loaded
-      if (_modelLoaded) {
-        await _ttsIsolate.dispose();
-        _modelLoaded = false;
-      }
-      await _subscription?.cancel();
-      _subscription = null;
+      // Clean up isolate via the session.
+      await _session.dispose();
     } catch (e, st) {
       // E.g. DB closed by concurrent finally block, or audio player failing
       // to release device resources. Recovery still proceeds via the finally

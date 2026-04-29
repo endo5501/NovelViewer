@@ -3,7 +3,7 @@
 Drive incremental TTS synthesis and playback for an episode, persisting generated segments and surfacing observable failures during cleanup.
 ## Requirements
 ### Requirement: Unified streaming start
-The system SHALL provide a single entry point `TtsStreamingController.start()` that automatically determines the appropriate mode based on existing data. If no episode exists, it SHALL start fresh generation with immediate playback. If an episode exists with matching text_hash, it SHALL begin playing segments using existing audio where available and generating audio on-demand for segments without audio_data. The controller SHALL accept text, fileName, modelDir, sampleRate, optional refWavPath, optional startOffset, optional resolveRefWavPath callback, optional dictionaryRepository parameters, and a required engineType parameter. The engineType parameter SHALL determine which TTS engine (qwen3-tts or piper-plus) the TtsIsolate uses for synthesis. When engineType is `piper`, the controller SHALL also accept a `dicDir` parameter for the OpenJTalk dictionary path and optional synthesis parameters (lengthScale, noiseScale, noiseW). The resolveRefWavPath callback SHALL be used to resolve per-segment ref_wav_path filenames from the database to absolute filesystem paths before passing them to the TTS engine. When a dictionaryRepository is provided, the system SHALL apply dictionary substitution to each segment's text when writing new segment records to `tts_segments.text`, so that the stored text is already the dictionary-converted form that the TTS engine will receive.
+The system SHALL provide a single entry point `TtsStreamingController.start()` that automatically determines the appropriate mode based on existing data. If no episode exists, it SHALL start fresh generation with immediate playback. If an episode exists with matching text_hash, it SHALL begin playing segments using existing audio where available and generating audio on-demand for segments without audio_data. The controller SHALL accept text, fileName, an optional `startOffset`, an optional `resolveRefWavPath` callback, an optional `dictionaryRepository`, and a required `TtsEngineConfig` (typed; either `Qwen3EngineConfig` or `PiperEngineConfig`). All engine-specific parameters (modelDir, sampleRate, languageId, refWavPath, dicDir, synthesis parameters) SHALL be carried by the `TtsEngineConfig` rather than as separate `start()` parameters. The `resolveRefWavPath` callback SHALL be used to resolve per-segment ref_wav_path filenames from the database to absolute filesystem paths before passing them to the TTS engine. When a `dictionaryRepository` is provided, the system SHALL apply dictionary substitution to each segment's text when writing new segment records to `tts_segments.text`.
 
 #### Scenario: Start fresh when no episode exists
 - **WHEN** `start()` is called for a fileName with no existing episode in the database
@@ -51,19 +51,19 @@ The system SHALL provide a single entry point `TtsStreamingController.start()` t
 
 #### Scenario: 既存セグメント（audio_data=NULL）の再生成は保存済みテキストをそのまま使用する
 - **WHEN** 既にDBに `tts_segments.text` が保存されているセグメント（audio_data=NULL）のオンデマンド生成が行われる
-- **THEN** 追加の辞書変換は行わず、DBに保存されているテキストをそのままTTSエンジンに渡す（テキストは新規作成時にすでに変換済みのため）
+- **THEN** 追加の辞書変換は行わず、DBに保存されているテキストをそのままTTSエンジンに渡す
 
-#### Scenario: Start with piper engine type
-- **WHEN** `start()` is called with engineType=piper, dicDir="models/piper/open_jtalk_dic", and lengthScale=0.8
+#### Scenario: Start with piper engine config
+- **WHEN** `start()` is called with `config: PiperEngineConfig(dicDir: "models/piper/open_jtalk_dic", lengthScale: 0.8, ...)`
 - **THEN** the TtsIsolate loads PiperTtsEngine with the specified dictionary path and applies lengthScale=0.8 before synthesis
 
-#### Scenario: Start with qwen3 engine type
-- **WHEN** `start()` is called with engineType=qwen3 and refWavPath="voice.wav"
-- **THEN** the TtsIsolate loads TtsEngine (qwen3) with voice cloning support, same as current behavior
+#### Scenario: Start with qwen3 engine config
+- **WHEN** `start()` is called with `config: Qwen3EngineConfig(refWavPath: "voice.wav", languageId: 2058, ...)`
+- **THEN** the TtsIsolate loads TtsEngine (qwen3) with voice cloning support
 
 #### Scenario: Piper engine ignores refWavPath
-- **WHEN** `start()` is called with engineType=piper and refWavPath is provided
-- **THEN** the refWavPath is ignored since piper-plus does not support voice cloning
+- **WHEN** `start()` is called with `config: PiperEngineConfig(...)` (no refWavPath field exists on Piper config)
+- **THEN** voice cloning is not used, since `PiperEngineConfig` does not carry a `refWavPath` field at all
 
 ### Requirement: TtsIsolate engine type dispatch
 The TtsIsolate SHALL accept a `TtsEngineType` parameter in `LoadModelMessage`. When engineType is `qwen3`, the isolate SHALL create and use `TtsEngine` (existing behavior). When engineType is `piper`, the isolate SHALL create and use `PiperTtsEngine`. The `LoadModelMessage` SHALL also accept an optional `dicDir` parameter for piper's OpenJTalk dictionary path, and optional synthesis parameters (lengthScale, noiseScale, noiseW). When a qwen3 model is loaded, the `ModelLoadedResponse` SHALL include the native context pointer address for abort support. The worker Isolate SHALL call `resetAbort()` before each synthesis to ensure the abort flag is clear.
@@ -100,31 +100,50 @@ The system SHALL compute a SHA-256 hash of the episode text and store it in the 
 - **THEN** the SHA-256 hash of the full text content is stored in the episode's text_hash column
 
 ### Requirement: Audio buffer drain between segments
-The system SHALL wait for the audio output device to finish draining its buffer after each segment's playback completes, including the last segment, before proceeding to cleanup or the next segment. The wait duration SHALL be configurable via a `bufferDrainDelay` constructor parameter on `TtsStreamingController`, with a default value suitable for Windows WASAPI (500ms). For intermediate segments, after the buffer drain delay, the system SHALL call `pause()` on the audio player to reset the internal `playing` flag to `false`. For the last segment, `pause()` is not required since no subsequent `play()` call will be made. The system SHALL NOT call `stop()` between segments, as `stop()` destroys the underlying platform player and kills any remaining audio in the output buffer. If the user stops playback during the buffer drain delay, the delay SHALL be skipped and stop SHALL proceed immediately.
+The streaming pipeline SHALL delegate per-segment playback (including buffer drain handling and `pause`-not-`stop` semantics) to a shared `SegmentPlayer` component. The `SegmentPlayer` SHALL wait for the audio output device to finish draining its buffer after each segment's playback completes, including the last segment, before proceeding. The wait duration SHALL be configurable via the `SegmentPlayer.bufferDrainDelay` constructor parameter (default 500ms, suitable for Windows WASAPI). For intermediate segments, after the buffer drain delay, the `SegmentPlayer` SHALL call `pause()` on the audio player. For the last segment, `pause()` is not required. The system SHALL NOT call `stop()` between segments, as `stop()` destroys the underlying platform player. If the user stops playback during the buffer drain delay, the delay SHALL be skipped and stop SHALL proceed immediately.
 
 #### Scenario: Buffer drain delay prevents audio cutoff
 - **WHEN** segment N finishes playback (completed state is received) and segment N+1 is ready
-- **THEN** the system waits for the configured buffer drain delay before loading segment N+1, ensuring the audio output device finishes playing all buffered samples
+- **THEN** the `SegmentPlayer` waits for the configured buffer drain delay before loading segment N+1
 
 #### Scenario: pause() resets playing flag after buffer drain
 - **WHEN** the buffer drain delay completes after segment N and segment N is not the last segment
-- **THEN** the system calls `pause()` on the audio player, resetting the internal `playing` flag to `false` so that the subsequent `play()` call for segment N+1 is not a no-op
+- **THEN** the `SegmentPlayer` calls `pause()` on the audio player, resetting the internal `playing` flag to `false`
 
 #### Scenario: Last segment waits for buffer drain before cleanup
 - **WHEN** the last segment finishes playback (completed state is received)
-- **THEN** the system waits for the configured buffer drain delay before disposing the audio player, ensuring the audio output device finishes playing all buffered samples
+- **THEN** the `SegmentPlayer` waits for the configured buffer drain delay before disposing the audio player
 
 #### Scenario: stop() is not called between segments
 - **WHEN** segment N completes and the system transitions to segment N+1
-- **THEN** the system SHALL NOT call `stop()` on the audio player between segments, as `stop()` destroys the platform player (MediaKitPlayer) and kills audio in the WASAPI output buffer
+- **THEN** the `SegmentPlayer` SHALL NOT call `stop()` on the audio player between segments
 
 #### Scenario: Buffer drain delay is zero in tests
-- **WHEN** `TtsStreamingController` is constructed with `bufferDrainDelay: Duration.zero`
-- **THEN** no delay occurs between segments, allowing tests to complete quickly without waiting for real audio device drain
+- **WHEN** the controller is constructed with a `SegmentPlayer` whose `bufferDrainDelay: Duration.zero` (or constructed via the convenience `bufferDrainDelay:` constructor parameter that propagates to the segment player)
+- **THEN** no delay occurs between segments, allowing tests to complete quickly
 
 #### Scenario: Buffer drain skipped on stop
 - **WHEN** the user stops playback while the buffer drain delay is pending
 - **THEN** the delay is skipped and stop proceeds immediately
+
+### Requirement: TtsSession ownership of model-load and synthesis lifecycle
+`TtsStreamingController` SHALL delegate model-load (`ensureModelLoaded`) and synthesis (`synthesize`) orchestration to a shared `TtsSession` component. The controller SHALL NOT maintain its own `_subscription`, `_modelLoaded` flag, or `_activeSynthesisCompleter` state — these SHALL live in `TtsSession` exclusively. The controller SHALL hold a single `TtsSession` instance for its lifetime and dispose it as part of `dispose()`.
+
+#### Scenario: ensureModelLoaded is delegated
+- **WHEN** the controller needs to ensure the TTS engine model is loaded with a given `TtsEngineConfig`
+- **THEN** the controller calls `_session.ensureModelLoaded(config)` and the session manages the underlying isolate communication and the `_modelLoaded` flag
+
+#### Scenario: synthesize is delegated
+- **WHEN** the controller initiates synthesis for a segment
+- **THEN** the controller calls `_session.synthesize(...)` and the session manages the active completer and abort wiring
+
+#### Scenario: abort is delegated and idempotent
+- **WHEN** the controller stops the pipeline while synthesis is in-flight
+- **THEN** the controller calls `_session.abort()` exactly once; subsequent calls during the same abort cycle are no-ops
+
+#### Scenario: dispose releases session resources
+- **WHEN** the controller is disposed
+- **THEN** `_session.dispose()` is called and the session's stream subscription, completer, and any pending isolate handles are released
 
 ### Requirement: Producer-consumer pipeline coordination
 The system SHALL run generation and playback concurrently using a producer-consumer pattern. The generation loop (producer) SHALL synthesize segments sequentially and notify readiness after each segment is stored. The playback loop (consumer) SHALL play segments in order, loading from the database. When the playback loop reaches a segment that has not yet been generated and has no stored audio_data, it SHALL wait for the generation notification before proceeding. When the playback loop reaches a segment that already has audio_data in the database (from prior generation or edit screen regeneration), it SHALL play that segment immediately without waiting for the generation loop. After each segment's playback completes, the system SHALL wait for the audio buffer drain delay and call `pause()` before loading the next segment.

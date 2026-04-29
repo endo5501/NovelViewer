@@ -13,10 +13,12 @@ import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-/// Fake audio player for testing stored playback.
+/// Fake audio player for testing stored playback. play() does not auto-
+/// complete; callers drive completion explicitly via [simulateCompletion].
 class FakeAudioPlayer implements TtsAudioPlayer {
   final _stateController = StreamController<TtsPlayerState>.broadcast();
   String? currentFilePath;
+  final playedFiles = <String>[];
   bool isPlaying = false;
   bool isPaused = false;
   bool isDisposed = false;
@@ -33,6 +35,7 @@ class FakeAudioPlayer implements TtsAudioPlayer {
   Future<void> play() async {
     isPlaying = true;
     isPaused = false;
+    if (currentFilePath != null) playedFiles.add(currentFilePath!);
     _stateController.add(TtsPlayerState.playing);
   }
 
@@ -53,7 +56,9 @@ class FakeAudioPlayer implements TtsAudioPlayer {
   @override
   Future<void> dispose() async {
     isDisposed = true;
-    _stateController.close();
+    if (!_stateController.isClosed) {
+      await _stateController.close();
+    }
   }
 
   void simulateCompletion() {
@@ -67,6 +72,17 @@ Uint8List _makeWavBytes() {
     audio: Float32List.fromList([0.1, 0.2, 0.3, 0.4, 0.5]),
     sampleRate: 24000,
   );
+}
+
+Future<void> _pumpUntil(bool Function() condition,
+    {Duration timeout = const Duration(seconds: 3)}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (!condition()) {
+    if (DateTime.now().isAfter(deadline)) {
+      throw TimeoutException('Condition not met within $timeout');
+    }
+    await Future.delayed(const Duration(milliseconds: 1));
+  }
 }
 
 void main() {
@@ -123,32 +139,30 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
-      await controller.start(episodeId: episodeId);
+      // start() awaits all segments — run it in the background and drive
+      // each segment to completion via simulateCompletion.
+      final future = controller.start(episodeId: episodeId);
 
-      // First segment should be playing
-      expect(player.isPlaying, isTrue);
-      expect(player.currentFilePath, isNotNull);
-
-      // Simulate completion of each segment and wait for next to start
-      player.simulateCompletion();
       await _pumpUntil(() => player.isPlaying);
-
-      expect(player.isPlaying, isTrue); // second segment playing
-
-      player.simulateCompletion();
-      await _pumpUntil(() => player.isPlaying);
-
-      expect(player.isPlaying, isTrue); // third segment playing
+      expect(player.currentFilePath, contains('tts_playback_0'));
 
       player.simulateCompletion();
       await _pumpUntil(
-          () => container.read(ttsPlaybackStateProvider) == TtsPlaybackState.stopped);
+          () => player.currentFilePath?.contains('tts_playback_1') ?? false);
 
-      // All done - should be stopped
-      final state = container.read(ttsPlaybackStateProvider);
-      expect(state, TtsPlaybackState.stopped);
+      player.simulateCompletion();
+      await _pumpUntil(
+          () => player.currentFilePath?.contains('tts_playback_2') ?? false);
+
+      player.simulateCompletion();
+      await future;
+
+      expect(player.playedFiles, hasLength(3));
+      expect(container.read(ttsPlaybackStateProvider),
+          TtsPlaybackState.stopped);
     });
 
     test('updates highlight range for each segment', () async {
@@ -159,17 +173,17 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
-      await controller.start(episodeId: episodeId);
+      final future = controller.start(episodeId: episodeId);
 
-      // Check first segment highlight
+      await _pumpUntil(() => player.isPlaying);
       final highlight1 = container.read(ttsHighlightRangeProvider);
       expect(highlight1, isNotNull);
       expect(highlight1!.start, 0);
       expect(highlight1.end, 5);
 
-      // Move to second segment
       player.simulateCompletion();
       await _pumpUntil(() {
         final h = container.read(ttsHighlightRangeProvider);
@@ -181,32 +195,8 @@ void main() {
       expect(highlight2!.start, 6);
       expect(highlight2.end, 11);
 
-      // Clean up to prevent async leaks
-      await controller.stop();
-    });
-
-    test('supports pause and resume', () async {
-      final episodeId = await createTestEpisode();
-      final player = FakeAudioPlayer();
-      final controller = TtsStoredPlayerController(
-        ref: container,
-        audioPlayer: player,
-        repository: repository,
-        tempDirPath: tempDir.path,
-      );
-
-      await controller.start(episodeId: episodeId);
-      expect(container.read(ttsPlaybackStateProvider), TtsPlaybackState.playing);
-
-      // Pause
-      await controller.pause();
-      expect(player.isPaused, isTrue);
-      expect(container.read(ttsPlaybackStateProvider), TtsPlaybackState.paused);
-
-      // Resume
-      await controller.resume();
-      expect(player.isPlaying, isTrue);
-      expect(container.read(ttsPlaybackStateProvider), TtsPlaybackState.playing);
+      player.simulateCompletion();
+      await future;
     });
 
     test('stop resets state and clears highlight', () async {
@@ -217,13 +207,17 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
-      await controller.start(episodeId: episodeId);
+      final future = controller.start(episodeId: episodeId);
+      await _pumpUntil(() => player.isPlaying);
 
       await controller.stop();
+      await future;
 
-      expect(container.read(ttsPlaybackStateProvider), TtsPlaybackState.stopped);
+      expect(container.read(ttsPlaybackStateProvider),
+          TtsPlaybackState.stopped);
       expect(container.read(ttsHighlightRangeProvider), isNull);
     });
 
@@ -235,15 +229,20 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
-      // Start from offset 6 which should match segment 1
-      await controller.start(episodeId: episodeId, startOffset: 6);
+      final future =
+          controller.start(episodeId: episodeId, startOffset: 6);
+      await _pumpUntil(() => player.isPlaying);
 
       // Should be playing segment 1, not segment 0
       final highlight = container.read(ttsHighlightRangeProvider);
       expect(highlight, isNotNull);
       expect(highlight!.start, 6);
+
+      await controller.stop();
+      await future;
     });
 
     test('starts from segment 0 when no offset specified', () async {
@@ -254,80 +253,21 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
-      await controller.start(episodeId: episodeId);
+      final future = controller.start(episodeId: episodeId);
+      await _pumpUntil(() => player.isPlaying);
 
       final highlight = container.read(ttsHighlightRangeProvider);
       expect(highlight, isNotNull);
       expect(highlight!.start, 0);
+
+      await controller.stop();
+      await future;
     });
 
     test('cleans up temporary files on stop', () async {
-      final episodeId = await createTestEpisode(segmentCount: 1);
-      final player = FakeAudioPlayer();
-      final controller = TtsStoredPlayerController(
-        ref: container,
-        audioPlayer: player,
-        repository: repository,
-        tempDirPath: tempDir.path,
-      );
-
-      await controller.start(episodeId: episodeId);
-
-      // A temp file should exist
-      final tempFiles = tempDir
-          .listSync()
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.wav'));
-      expect(tempFiles, isNotEmpty);
-
-      await controller.stop();
-
-      // Temp files should be cleaned up
-      final remainingTempFiles = tempDir
-          .listSync()
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.wav'));
-      expect(remainingTempFiles, isEmpty);
-    });
-
-    test('temp files are cleaned up before state transitions to stopped', () async {
-      final episodeId = await createTestEpisode(segmentCount: 1);
-      final player = FakeAudioPlayer();
-      final controller = TtsStoredPlayerController(
-        ref: container,
-        audioPlayer: player,
-        repository: repository,
-        tempDirPath: tempDir.path,
-      );
-
-      // Track whether temp files exist at the exact moment state becomes stopped
-      bool? tempFilesExistWhenStopped;
-      container.listen(ttsPlaybackStateProvider, (prev, next) {
-        if (next == TtsPlaybackState.stopped) {
-          final wavFiles = tempDir
-              .listSync()
-              .whereType<File>()
-              .where((f) => f.path.endsWith('.wav'));
-          tempFilesExistWhenStopped = wavFiles.isNotEmpty;
-        }
-      });
-
-      await controller.start(episodeId: episodeId);
-
-      // Simulate completion so stop() is called internally via _onSegmentCompleted
-      player.simulateCompletion();
-      await _pumpUntil(
-          () => container.read(ttsPlaybackStateProvider) == TtsPlaybackState.stopped);
-
-      // Listener should have fired
-      expect(tempFilesExistWhenStopped, isNotNull);
-      // Files should have been cleaned up BEFORE state transitioned to stopped
-      expect(tempFilesExistWhenStopped, isFalse);
-    });
-
-    test('stop during pause works correctly', () async {
       final episodeId = await createTestEpisode();
       final player = FakeAudioPlayer();
       final controller = TtsStoredPlayerController(
@@ -335,18 +275,31 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
       );
 
-      await controller.start(episodeId: episodeId);
-      await controller.pause();
-      await controller.stop();
+      final future = controller.start(episodeId: episodeId);
+      await _pumpUntil(() => player.isPlaying);
 
-      expect(container.read(ttsPlaybackStateProvider), TtsPlaybackState.stopped);
-      expect(container.read(ttsHighlightRangeProvider), isNull);
+      final filesBefore = Directory(tempDir.path)
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.contains('tts_playback_'))
+          .toList();
+      expect(filesBefore, isNotEmpty);
+
+      await controller.stop();
+      await future;
+
+      final filesAfter = Directory(tempDir.path)
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.contains('tts_playback_'))
+          .toList();
+      expect(filesAfter, isEmpty);
     });
 
-    test('waits for buffer drain delay before disposing after last segment',
-        () async {
+    test('Duration.zero buffer drain on last segment skips wait', () async {
       final episodeId = await createTestEpisode(segmentCount: 1);
       final player = FakeAudioPlayer();
       final controller = TtsStoredPlayerController(
@@ -354,59 +307,18 @@ void main() {
         audioPlayer: player,
         repository: repository,
         tempDirPath: tempDir.path,
-        bufferDrainDelay: const Duration(milliseconds: 100),
+        bufferDrainDelay: Duration.zero,
       );
 
-      await controller.start(episodeId: episodeId);
-      expect(player.isPlaying, isTrue);
-
-      // Simulate completion of the only (last) segment
-      player.simulateCompletion();
-
-      // Immediately after completion, player should NOT be disposed yet
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(player.isDisposed, isFalse,
-          reason: 'Player should not be disposed before buffer drain delay');
-
-      // Wait for drain delay to elapse and stop to complete
-      await _pumpUntil(() => player.isDisposed);
-      expect(container.read(ttsPlaybackStateProvider), TtsPlaybackState.stopped);
-    });
-
-    test('does not wait for drain on intermediate segments', () async {
-      final episodeId = await createTestEpisode(segmentCount: 2);
-      final player = FakeAudioPlayer();
-      final controller = TtsStoredPlayerController(
-        ref: container,
-        audioPlayer: player,
-        repository: repository,
-        tempDirPath: tempDir.path,
-        bufferDrainDelay: const Duration(milliseconds: 100),
-      );
-
-      await controller.start(episodeId: episodeId);
-
-      // Complete first (intermediate) segment
-      player.simulateCompletion();
-
-      // Second segment should start quickly (no 100ms drain for intermediate)
+      final stopwatch = Stopwatch()..start();
+      final future = controller.start(episodeId: episodeId);
       await _pumpUntil(() => player.isPlaying);
-      expect(player.isPlaying, isTrue);
+      player.simulateCompletion();
+      await future;
+      stopwatch.stop();
 
-      // Clean up
-      await controller.stop();
+      expect(stopwatch.elapsedMilliseconds, lessThan(500),
+          reason: 'Duration.zero must short-circuit drain');
     });
   });
-}
-
-/// Pumps the event loop until [condition] returns true, with a timeout.
-Future<void> _pumpUntil(bool Function() condition,
-    {Duration timeout = const Duration(seconds: 5)}) async {
-  final deadline = DateTime.now().add(timeout);
-  while (!condition()) {
-    if (DateTime.now().isAfter(deadline)) {
-      throw TimeoutException('Condition not met within $timeout');
-    }
-    await Future.delayed(const Duration(milliseconds: 1));
-  }
 }

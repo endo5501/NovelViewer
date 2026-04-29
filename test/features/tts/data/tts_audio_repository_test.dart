@@ -344,8 +344,8 @@ void main() {
       });
     });
 
-    group('deleteEpisode runs incremental_vacuum', () {
-      test('reclaims disk space after deleting episode with audio', () async {
+    group('deleteEpisode defers vacuum until exit', () {
+      test('does NOT reclaim disk space synchronously', () async {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
@@ -369,15 +369,15 @@ void main() {
         await repository.deleteEpisode(episodeId);
 
         final sizeAfterDelete = dbFile.lengthSync();
-
-        expect(sizeAfterDelete, lessThan(sizeBeforeDelete));
+        // Free pages remain because vacuum is deferred to app exit.
+        expect(sizeAfterDelete, sizeBeforeDelete);
       });
 
-      test('no effect when episode has no audio BLOBs', () async {
+      test('explicit reclaimSpace() still reclaims free pages', () async {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: TtsEpisodeStatus.generating,
+          status: TtsEpisodeStatus.completed,
         );
 
         await repository.insertSegment(
@@ -386,15 +386,36 @@ void main() {
           text: 'テスト文。',
           textOffset: 0,
           textLength: 5,
+          audioData: Uint8List(100000),
+          sampleCount: 50000,
         );
 
         final dbFile = File('${tempDir.path}/tts_audio.db');
         final sizeBeforeDelete = dbFile.lengthSync();
 
         await repository.deleteEpisode(episodeId);
+        await database.reclaimSpace();
 
-        final sizeAfterDelete = dbFile.lengthSync();
-        expect(sizeAfterDelete, lessThanOrEqualTo(sizeBeforeDelete));
+        final sizeAfterReclaim = dbFile.lengthSync();
+        expect(sizeAfterReclaim, lessThan(sizeBeforeDelete));
+      });
+
+      test('invokes onEpisodeDeleted callback so the lifecycle can mark dirty',
+          () async {
+        var callbackCount = 0;
+        final repoWithCallback = TtsAudioRepository(
+          database,
+          onEpisodeDeleted: () => callbackCount++,
+        );
+        final episodeId = await repoWithCallback.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.completed,
+        );
+
+        await repoWithCallback.deleteEpisode(episodeId);
+
+        expect(callbackCount, 1);
       });
     });
 

@@ -16,9 +16,31 @@ import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_playback_controller.dart';
 import 'package:novel_viewer/features/tts/data/tts_streaming_controller.dart';
 import 'package:novel_viewer/features/tts/data/wav_writer.dart';
+import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+class _LoadModelCall {
+  _LoadModelCall({
+    required this.modelDir,
+    required this.engineType,
+    required this.languageId,
+    this.dicDir,
+    this.lengthScale,
+    this.noiseScale,
+    this.noiseW,
+    this.embeddingCacheDir,
+  });
+  final String modelDir;
+  final TtsEngineType engineType;
+  final int languageId;
+  final String? dicDir;
+  final double? lengthScale;
+  final double? noiseScale;
+  final double? noiseW;
+  final String? embeddingCacheDir;
+}
 
 /// Fake TtsIsolate that auto-responds to synthesis requests.
 class _FakeTtsIsolate implements TtsIsolate {
@@ -29,6 +51,7 @@ class _FakeTtsIsolate implements TtsIsolate {
   bool aborted = false;
   final synthesizeRequests = <String>[];
   final synthesizeRefWavPaths = <String?>[];
+  final loadModelCalls = <_LoadModelCall>[];
 
   @override
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
@@ -41,6 +64,16 @@ class _FakeTtsIsolate implements TtsIsolate {
   @override
   void loadModel(String modelDir,
       {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW, String? embeddingCacheDir}) {
+    loadModelCalls.add(_LoadModelCall(
+      modelDir: modelDir,
+      engineType: engineType,
+      languageId: languageId,
+      dicDir: dicDir,
+      lengthScale: lengthScale,
+      noiseScale: noiseScale,
+      noiseW: noiseW,
+      embeddingCacheDir: embeddingCacheDir,
+    ));
     Future.microtask(() {
       _responseController.add(ModelLoadedResponse(success: true));
     });
@@ -274,6 +307,40 @@ String _computeTextHash(String text) {
   return sha256.convert(utf8.encode(text)).toString();
 }
 
+/// Test helper that builds a Qwen3 engine config with sensible defaults.
+Qwen3EngineConfig _qwen3Config({
+  String modelDir = '/fake/model',
+  int sampleRate = 24000,
+  int languageId = TtsLanguage.defaultLanguageId,
+  String? refWavPath,
+  String? embeddingCacheDir,
+}) =>
+    Qwen3EngineConfig(
+      modelDir: modelDir,
+      sampleRate: sampleRate,
+      languageId: languageId,
+      refWavPath: refWavPath,
+      embeddingCacheDir: embeddingCacheDir,
+    );
+
+/// Test helper that builds a Piper engine config with sensible defaults.
+PiperEngineConfig _piperConfig({
+  String modelDir = '/fake/piper/model.onnx',
+  int sampleRate = 22050,
+  String dicDir = '/fake/dic',
+  double lengthScale = 1.0,
+  double noiseScale = 0.667,
+  double noiseW = 0.8,
+}) =>
+    PiperEngineConfig(
+      modelDir: modelDir,
+      sampleRate: sampleRate,
+      dicDir: dicDir,
+      lengthScale: lengthScale,
+      noiseScale: noiseScale,
+      noiseW: noiseW,
+    );
+
 void main() {
   late Directory tempDir;
   late TtsAudioDatabase database;
@@ -324,8 +391,7 @@ void main() {
         await controller.start(
           text: 'エルリックは勇者だ。',
           fileName: 'ep01.txt',
-          modelDir: '/fake/model',
-          sampleRate: 24000,
+          config: _qwen3Config(),
         );
 
         expect(isolate.synthesizeRequests.first, contains('えるりっく'));
@@ -356,8 +422,7 @@ void main() {
         await controller.start(
           text: 'エルリックは勇者だ。',
           fileName: 'ep01.txt',
-          modelDir: '/fake/model',
-          sampleRate: 24000,
+          config: _qwen3Config(),
         );
 
         expect(isolate.synthesizeRequests.first, contains('エルリック'));
@@ -382,8 +447,7 @@ void main() {
         await controller1.start(
           text: 'エルリックは勇者だ。',
           fileName: 'ep01.txt',
-          modelDir: '/fake/model',
-          sampleRate: 24000,
+          config: _qwen3Config(),
         );
 
         // Second run: same text hash, replays from DB, no new synthesis
@@ -401,8 +465,7 @@ void main() {
         await controller2.start(
           text: 'エルリックは勇者だ。',
           fileName: 'ep01.txt',
-          modelDir: '/fake/model',
-          sampleRate: 24000,
+          config: _qwen3Config(),
         );
 
         // Second run reuses stored audio - no synthesis calls
@@ -425,8 +488,7 @@ void main() {
       await controller.start(
         text: '文1。文2。',
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
       );
 
       // All segments should have been synthesized
@@ -489,8 +551,7 @@ void main() {
       await controller.start(
         text: text,
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
       );
 
       // Should NOT have synthesized anything
@@ -535,8 +596,7 @@ void main() {
       await controller.start(
         text: text,
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
       );
 
       // Should have synthesized only segments 1 and 2 (skipped 0)
@@ -587,8 +647,7 @@ void main() {
       await controller.start(
         text: newText,
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
       );
 
       // Should have generated new text
@@ -617,8 +676,7 @@ void main() {
       final future = controller.start(
         text: '文1。文2。文3。',
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
       );
 
       // Wait for first segment to start playing
@@ -662,8 +720,7 @@ void main() {
       final future = controller.start(
         text: '文1。文2。',
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
       );
 
       await _pumpUntil(() => player.isPlaying);
@@ -700,8 +757,7 @@ void main() {
       final future = controller.start(
         text: '文1。文2。',
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
       );
 
       await _pumpUntil(() => player.isPlaying);
@@ -735,8 +791,7 @@ void main() {
       await controller.start(
         text: '文1。文2。文3。文4。',
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
       );
 
       // All 4 segments must be played - no skipping
@@ -762,8 +817,7 @@ void main() {
       final future = controller.start(
         text: '文1。',
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
       );
 
       await _pumpUntil(() => player.isPlaying);
@@ -791,8 +845,7 @@ void main() {
       final future = controller.start(
         text: '文1。',
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
       );
 
       await _pumpUntil(() => player.isPlaying);
@@ -865,8 +918,7 @@ void main() {
       await controller.start(
         text: text,
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
       );
 
       // Should have synthesized only segment 1 (the one without audio)
@@ -914,8 +966,7 @@ void main() {
       await controller.start(
         text: text,
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
       );
 
       // Both segments should be synthesized
@@ -962,9 +1013,7 @@ void main() {
       await controller.start(
         text: text,
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
-        refWavPath: '/voices/global_voice.wav',
+        config: _qwen3Config(modelDir: '/models', refWavPath: '/voices/global_voice.wav'),
       );
 
       // Both should be synthesized
@@ -1009,9 +1058,9 @@ void main() {
       await controller.start(
         text: text,
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
-        refWavPath: '/full/path/to/voices/global_voice.wav',
+        config: _qwen3Config(
+            modelDir: '/models',
+            refWavPath: '/full/path/to/voices/global_voice.wav'),
         resolveRefWavPath: (fileName) => '/full/path/to/voices/$fileName',
       );
 
@@ -1042,9 +1091,9 @@ void main() {
       await controller.start(
         text: text,
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
-        refWavPath: '/full/path/to/voices/global_voice.wav',
+        config: _qwen3Config(
+            modelDir: '/models',
+            refWavPath: '/full/path/to/voices/global_voice.wav'),
       );
 
       // Check that inserted segments have ref_wav_path = NULL
@@ -1109,8 +1158,7 @@ void main() {
       await controller.start(
         text: text,
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
         startOffset: 4, // Should match segment 1 (text_offset=3)
       );
 
@@ -1154,9 +1202,7 @@ void main() {
       await controller.start(
         text: text,
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
-        refWavPath: '/voices/global.wav',
+        config: _qwen3Config(modelDir: '/models', refWavPath: '/voices/global.wav'),
       );
 
       expect(isolate.synthesizeRequests, hasLength(2));
@@ -1181,8 +1227,7 @@ void main() {
       final future = controller.start(
         text: '文1。文2。文3。',
         fileName: '0001_テスト.txt',
-        modelDir: '/models',
-        sampleRate: 24000,
+        config: _qwen3Config(modelDir: '/models'),
       );
 
       // Wait for playback to start (generation sets progress)
@@ -1219,8 +1264,7 @@ void main() {
       final future = controller.start(
         text: 'テスト。',
         fileName: 'drain_test.txt',
-        modelDir: '/fake/model',
-        sampleRate: 24000,
+        config: _qwen3Config(),
       );
 
       // Wait for segment to start playing
@@ -1257,8 +1301,7 @@ void main() {
       final future = controller.start(
         text: 'セグメント一。セグメント二。',
         fileName: 'no_pause_last.txt',
-        modelDir: '/fake/model',
-        sampleRate: 24000,
+        config: _qwen3Config(),
       );
 
       // Play through both segments
@@ -1276,6 +1319,74 @@ void main() {
       expect(player.pauseCount, 1,
           reason: 'last segment should not call pause()');
       expect(player.isDisposed, isTrue);
+    });
+
+    group('engine config dispatch', () {
+      test('start with PiperEngineConfig loads piper engine with piper params',
+          () async {
+        final isolate = _FakeTtsIsolate();
+        final player = _AutoCompleteAudioPlayer();
+        final controller = TtsStreamingController(
+          ref: container,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        await controller.start(
+          text: '文1。',
+          fileName: 'piper_test.txt',
+          config: _piperConfig(
+            modelDir: '/models/piper/voice.onnx',
+            dicDir: '/models/piper/open_jtalk_dic',
+            lengthScale: 0.9,
+            noiseScale: 0.5,
+            noiseW: 0.7,
+          ),
+        );
+
+        expect(isolate.loadModelCalls, hasLength(1));
+        final call = isolate.loadModelCalls.first;
+        expect(call.engineType, TtsEngineType.piper);
+        expect(call.modelDir, '/models/piper/voice.onnx');
+        expect(call.dicDir, '/models/piper/open_jtalk_dic');
+        expect(call.lengthScale, 0.9);
+        expect(call.noiseScale, 0.5);
+        expect(call.noiseW, 0.7);
+      });
+
+      test('start with Qwen3EngineConfig loads qwen3 engine with qwen3 params',
+          () async {
+        final isolate = _FakeTtsIsolate();
+        final player = _AutoCompleteAudioPlayer();
+        final controller = TtsStreamingController(
+          ref: container,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        await controller.start(
+          text: '文1。',
+          fileName: 'qwen3_test.txt',
+          config: _qwen3Config(
+            modelDir: '/models/qwen3',
+            languageId: 2050,
+            embeddingCacheDir: '/cache/embeddings',
+          ),
+        );
+
+        expect(isolate.loadModelCalls, hasLength(1));
+        final call = isolate.loadModelCalls.first;
+        expect(call.engineType, TtsEngineType.qwen3);
+        expect(call.modelDir, '/models/qwen3');
+        expect(call.languageId, 2050);
+        expect(call.embeddingCacheDir, '/cache/embeddings');
+      });
     });
   });
 }

@@ -16,19 +16,23 @@ The system SHALL provide a button in the TTS controls area (bottom-right of the 
 - **THEN** the edit button SHALL NOT be displayed in the TTS controls area
 
 ### Requirement: Segment list display
-The system SHALL display all segments of the current episode as a scrollable list in the TTS edit dialog. Segments SHALL be obtained by running `TextSegmenter` on the original episode text file, then merging with existing `tts_segments` records by `segment_index`. For segments with existing DB records, the DB values (text, ref_wav_path, memo) SHALL be displayed. For segments without DB records, the original text from `TextSegmenter` SHALL be displayed.
+The system SHALL display all segments of the current episode as a scrollable list in the TTS edit dialog. Segments SHALL be obtained by running the shared `TextSegmenter` instance (provided via `textSegmenterProvider`) on the original episode text file, then merging with existing `tts_segments` records by `segment_index`. For segments with existing DB records, the DB values (text, ref_wav_path, memo) SHALL be displayed. For segments without DB records, the original text from `TextSegmenter` SHALL be displayed.
 
 #### Scenario: Display segments for episode with no prior edits
 - **WHEN** the edit dialog opens for an episode with no existing `tts_segments` records
-- **THEN** all segments show the original text from `TextSegmenter`, status "未生成", and default reference audio
+- **THEN** all segments show the original text from the shared `TextSegmenter` (read via `textSegmenterProvider`), status "未生成", and default reference audio
 
 #### Scenario: Display segments for episode with existing audio
 - **WHEN** the edit dialog opens for an episode with some segments already generated
-- **THEN** segments with `audio_data` show status "生成済み" and their stored text (which may differ from the original), segments without records show original text and status "未生成"
+- **THEN** segments with `audio_data` show status "生成済み" and their stored text, segments without records show original text and status "未生成"
 
 #### Scenario: Display segments for episode with edited but ungenerated segments
 - **WHEN** the edit dialog opens for an episode where the user previously edited text but did not regenerate
-- **THEN** the edited text from DB is displayed and status shows "未生成" (since audio_data is NULL)
+- **THEN** the edited text from DB is displayed and status shows "未生成"
+
+#### Scenario: TextSegmenter is shared across the app
+- **WHEN** any TTS controller or dialog uses `TextSegmenter`
+- **THEN** the instance is obtained via `ref.read(textSegmenterProvider)` rather than constructed locally, so all consumers receive the same instance
 
 ### Requirement: Segment row columns
 Each segment row SHALL display the following columns: generation status indicator (未生成/生成済み/生成中), editable text field, reference audio selector, memo text field, play button, regenerate button, and reset button.
@@ -75,23 +79,15 @@ Each segment SHALL have an editable memo text field. Memo content SHALL be persi
 - **THEN** the memo is persisted to the segment's DB record
 
 ### Requirement: Segment preview playback
-The system SHALL allow playing a single segment's audio via the play button on each row. The play button SHALL only be enabled when the segment has generated audio (audio_data is not NULL). After playback completes, the system SHALL call `pause()` on the audio player to reset the internal `playing` flag. The system SHALL NOT call `stop()` after segment playback, as `stop()` destroys the underlying platform player and kills any remaining audio in the output buffer.
+The system SHALL allow playing a single segment's audio via the play button on each row. The play button SHALL only be enabled when the segment has generated audio (audio_data is not NULL). Per-segment playback SHALL be delegated to the shared `SegmentPlayer`. After playback completes, the `SegmentPlayer` SHALL call `pause()` on the audio player to reset the internal `playing` flag. The system SHALL NOT call `stop()` after segment playback, as `stop()` destroys the underlying platform player and kills any remaining audio in the output buffer.
 
 #### Scenario: Play a generated segment
-- **WHEN** the user clicks the play button on a segment with generated audio
-- **THEN** the segment's audio plays as a preview within the edit dialog
+- **WHEN** the user clicks the play button for a segment with audio_data
+- **THEN** the edit controller writes the WAV BLOB to a temporary file and asks the `SegmentPlayer` to play it; on completion the `SegmentPlayer` calls `pause()` (not `stop()`) on the underlying audio player
 
-#### Scenario: Play button disabled for ungenerated segment
-- **WHEN** a segment has no generated audio (audio_data is NULL)
-- **THEN** the play button is disabled
-
-#### Scenario: pause() called after segment playback completes
-- **WHEN** a segment finishes playing in the edit dialog
-- **THEN** the system calls `pause()` on the audio player, resetting the `playing` flag so that the next `play()` call functions correctly
-
-#### Scenario: stop() not called after segment playback
-- **WHEN** a segment finishes playing in the edit dialog
-- **THEN** the system SHALL NOT call `stop()` after playback, preserving the underlying platform player
+#### Scenario: Play button disabled when no audio
+- **WHEN** a segment has audio_data=NULL
+- **THEN** the play button is disabled or hidden
 
 ### Requirement: Single segment regeneration
 The system SHALL allow regenerating a single segment's audio via the regenerate button. Regeneration SHALL use the segment's current text and ref_wav_path (resolving "設定値" to the actual global setting). The TTS model SHALL be loaded on the first regeneration request within the dialog session and kept loaded until the dialog is closed. During generation, the segment status SHALL show "生成中". When inserting a new DB record for a previously unrecorded segment, the system SHALL store the segment's metadata ref_wav_path value (null, empty string, or filename) — NOT the resolved full filesystem path used for synthesis.
@@ -245,14 +241,14 @@ The system SHALL compute and store a SHA-256 hash of the episode text in the `tt
 - **THEN** the text hashes match and the streaming controller reuses the existing episode and its segments without deletion
 
 ### Requirement: 辞書管理ダイアログへのアクセス
-TTS編集ダイアログの上部に「辞書」ボタンを追加しなければならない。ボタンをクリックすると `TtsDictionaryDialog` が開き、現在の小説フォルダに紐付いた辞書エントリの一覧・追加・編集・削除ができなければならない。
+システムは TTS 編集ダイアログの上部に「辞書」ボタンを追加しなければならない (MUST)。ボタンをクリックすると `TtsDictionaryDialog` が開き、現在の小説フォルダに紐付いた辞書エントリの一覧・追加・編集・削除ができなければならない。
 
 #### Scenario: 辞書ボタンをクリックして辞書ダイアログを開く
 - **WHEN** ユーザーがTTS編集ダイアログの「辞書」ボタンをクリックする
 - **THEN** `TtsDictionaryDialog` が開き、登録済みの辞書エントリ一覧が表示される
 
 ### Requirement: 辞書エントリの一覧表示
-`TtsDictionaryDialog` は登録済みの辞書エントリを表記（surface）と読み（reading）のペアとして一覧表示しなければならない。
+`TtsDictionaryDialog` は登録済みの辞書エントリを表記（surface）と読み（reading）のペアとして一覧表示しなければならない (MUST)。
 
 #### Scenario: 辞書ダイアログが登録エントリを表示する
 - **WHEN** `TtsDictionaryDialog` が開いた時点で辞書にエントリが存在する
@@ -263,7 +259,7 @@ TTS編集ダイアログの上部に「辞書」ボタンを追加しなけれ�
 - **THEN** エントリが存在しないことを示すメッセージが表示される
 
 ### Requirement: 辞書エントリの追加
-`TtsDictionaryDialog` はユーザーが新しい表記と読みのペアを入力して辞書に追加できる機能を提供しなければならない。表記と読みの両方が空でない場合にのみ追加を許可しなければならない。
+`TtsDictionaryDialog` はユーザーが新しい表記と読みのペアを入力して辞書に追加できる機能を提供しなければならない (MUST)。表記と読みの両方が空でない場合にのみ追加を許可しなければならない。
 
 #### Scenario: 新しいエントリを追加する
 - **WHEN** ユーザーが表記フィールドと読みフィールドに値を入力して追加ボタンを押す
@@ -274,7 +270,7 @@ TTS編集ダイアログの上部に「辞書」ボタンを追加しなけれ�
 - **THEN** エントリは追加されずエラーメッセージが表示される
 
 ### Requirement: 辞書エントリの削除
-`TtsDictionaryDialog` の各エントリに削除ボタンを設け、ユーザーが個別のエントリを削除できなければならない。
+`TtsDictionaryDialog` の各エントリに削除ボタンを設け、ユーザーが個別のエントリを削除できなければならない (MUST)。
 
 #### Scenario: エントリを削除する
 - **WHEN** ユーザーが辞書エントリの削除ボタンをクリックする
