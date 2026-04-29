@@ -1,3 +1,7 @@
+## Purpose
+
+Playback of TTS-generated audio that has been stored to the per-folder `tts_audio.db`. Covers the controls UI, sequential segment playback delegated to the shared `SegmentPlayer`, partial-episode handling that waits for in-progress generation, pause/resume/stop semantics, text-position-based start, highlight + auto-page-turn integration, and deletion of stored audio.
+
 ## Requirements
 
 ### Requirement: Playback controls for stored audio
