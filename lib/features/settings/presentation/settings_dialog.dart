@@ -572,6 +572,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   }
 
   Widget _buildEngineSelector() {
+    final l10n = AppLocalizations.of(context)!;
     final engineType = ref.watch(ttsEngineTypeProvider);
 
     return Padding(
@@ -579,7 +580,8 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('TTSエンジン', style: Theme.of(context).textTheme.titleSmall),
+          Text(l10n.settings_ttsEngine,
+              style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
@@ -601,6 +603,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   }
 
   Widget _buildPiperModelSelector() {
+    final l10n = AppLocalizations.of(context)!;
     final modelName = ref.watch(piperModelNameProvider);
 
     return Padding(
@@ -608,8 +611,8 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
       child: DropdownButtonFormField<String>(
         initialValue: modelName,
         isExpanded: true,
-        decoration: const InputDecoration(
-          labelText: 'モデル',
+        decoration: InputDecoration(
+          labelText: l10n.settings_modelLabel,
         ),
         items: const [
           DropdownMenuItem(
@@ -629,6 +632,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   }
 
   Widget _buildPiperModelDownloadSection() {
+    final l10n = AppLocalizations.of(context)!;
     final downloadState = ref.watch(piperModelDownloadProvider);
 
     return Padding(
@@ -636,7 +640,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
       child: switch (downloadState) {
         PiperModelDownloadIdle() => ElevatedButton.icon(
             icon: const Icon(Icons.download),
-            label: const Text('モデルデータダウンロード'),
+            label: Text(l10n.settings_modelDataDownload),
             onPressed: () {
               ref
                   .read(piperModelDownloadProvider.notifier)
@@ -660,7 +664,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'ダウンロード済み${modelsDir != null ? '\n$modelsDir' : ''}',
+                  '${l10n.settings_piperDownloaded}${modelsDir != null ? '\n$modelsDir' : ''}',
                 ),
               ),
             ],
@@ -679,7 +683,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
                       .read(piperModelDownloadProvider.notifier)
                       .startDownload();
                 },
-                child: const Text('再試行'),
+                child: Text(l10n.settings_retryButton),
               ),
             ],
           ),
@@ -688,6 +692,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   }
 
   Widget _buildPiperSynthesisParams() {
+    final l10n = AppLocalizations.of(context)!;
     final lengthScale = ref.watch(piperLengthScaleProvider);
     final noiseScale = ref.watch(piperNoiseScaleProvider);
     final noiseW = ref.watch(piperNoiseWProvider);
@@ -697,7 +702,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('速度 (lengthScale): ${lengthScale.toStringAsFixed(1)}'),
+          Text('${l10n.settings_piperLengthScale}: ${lengthScale.toStringAsFixed(1)}'),
           Slider(
             value: lengthScale,
             min: 0.5,
@@ -709,7 +714,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
             },
           ),
           const SizedBox(height: 8),
-          Text('抑揚 (noiseScale): ${noiseScale.toStringAsFixed(3)}'),
+          Text('${l10n.settings_piperNoiseScale}: ${noiseScale.toStringAsFixed(3)}'),
           Slider(
             value: noiseScale,
             min: 0.0,
@@ -721,7 +726,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
             },
           ),
           const SizedBox(height: 8),
-          Text('ノイズ (noiseW): ${noiseW.toStringAsFixed(3)}'),
+          Text('${l10n.settings_piperNoiseW}: ${noiseW.toStringAsFixed(3)}'),
           Slider(
             value: noiseW,
             min: 0.0,

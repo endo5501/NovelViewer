@@ -280,6 +280,42 @@ abstract class AppLocalizations {
   /// **'再試行'**
   String get settings_retryButton;
 
+  /// No description provided for @settings_ttsEngine.
+  ///
+  /// In ja, this message translates to:
+  /// **'TTSエンジン'**
+  String get settings_ttsEngine;
+
+  /// No description provided for @settings_modelLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'モデル'**
+  String get settings_modelLabel;
+
+  /// No description provided for @settings_piperDownloaded.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロード済み'**
+  String get settings_piperDownloaded;
+
+  /// No description provided for @settings_piperLengthScale.
+  ///
+  /// In ja, this message translates to:
+  /// **'速度 (lengthScale)'**
+  String get settings_piperLengthScale;
+
+  /// No description provided for @settings_piperNoiseScale.
+  ///
+  /// In ja, this message translates to:
+  /// **'抑揚 (noiseScale)'**
+  String get settings_piperNoiseScale;
+
+  /// No description provided for @settings_piperNoiseW.
+  ///
+  /// In ja, this message translates to:
+  /// **'ノイズ (noiseW)'**
+  String get settings_piperNoiseW;
+
   /// No description provided for @settings_voiceModelTitle.
   ///
   /// In ja, this message translates to:

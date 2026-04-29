@@ -101,6 +101,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settings_retryButton => '再試行';
 
   @override
+  String get settings_ttsEngine => 'TTSエンジン';
+
+  @override
+  String get settings_modelLabel => 'モデル';
+
+  @override
+  String get settings_piperDownloaded => 'ダウンロード済み';
+
+  @override
+  String get settings_piperLengthScale => '速度 (lengthScale)';
+
+  @override
+  String get settings_piperNoiseScale => '抑揚 (noiseScale)';
+
+  @override
+  String get settings_piperNoiseW => 'ノイズ (noiseW)';
+
+  @override
   String get settings_voiceModelTitle => '音声モデル';
 
   @override

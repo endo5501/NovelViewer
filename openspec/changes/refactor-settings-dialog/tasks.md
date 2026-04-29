@@ -23,14 +23,14 @@
 
 ## 3. Phase B — Piper UI の l10n 化 (F026)
 
-- [ ] 3.1 `lib/l10n/app_ja.arb` に 8 キー追加: `settingsTtsEngine`, `settingsModel`, `settingsModelDownload`, `settingsDownloaded`, `settingsRetry`, `settingsLengthScale`, `settingsNoiseScale`, `settingsNoiseW`
-- [ ] 3.2 `lib/l10n/app_en.arb` に英訳を追加
-- [ ] 3.3 `lib/l10n/app_zh.arb` に中文翻訳を追加
-- [ ] 3.4 `fvm flutter pub get` で `AppLocalizations` を再生成
-- [ ] 3.5 「`Logger`/`AppLocalizations` で 8 ARB キーが取得できる」テストを追加 (各 locale)
-- [ ] 3.6 `settings_dialog.dart:564-715` の Piper セクションで 8 つの和文リテラルを `AppLocalizations.of(context)!.<key>` に置換
-- [ ] 3.7 Phase A テストの Piper 関連 finder を `find.text(AppLocalizations.of(...).<key>)` ベースに更新
-- [ ] 3.8 `fvm flutter test` で全 green、特に Piper 関連 widget テストが各 locale で通ることを確認
+- [x] 3.1 `lib/l10n/app_ja.arb` に 6 キー追加 + 既存 `settings_modelDataDownload` / `settings_retryButton` の再利用 (実 keys: `settings_ttsEngine`, `settings_modelLabel`, `settings_piperDownloaded`, `settings_piperLengthScale`, `settings_piperNoiseScale`, `settings_piperNoiseW`)
+- [x] 3.2 `lib/l10n/app_en.arb` に英訳を追加
+- [x] 3.3 `lib/l10n/app_zh.arb` に中文翻訳を追加
+- [x] 3.4 `fvm flutter pub get` で `AppLocalizations` を再生成
+- [x] 3.5 「`AppLocalizations` で 8 Piper ラベルが取得できる」テストを追加 (各 locale) — `settings_piper_l10n_test.dart`
+- [x] 3.6 `settings_dialog.dart` の Piper セクションで 8 つの和文リテラルを `AppLocalizations.of(context)!.<key>` に置換
+- [x] 3.7 Phase A テストの Piper 関連 finder を `find.text(AppLocalizations.of(...).<key>)` ベースに更新
+- [x] 3.8 `fvm flutter test` で全 green、特に Piper 関連 widget テストが各 locale で通ることを確認
 
 ## 4. Phase C — GeneralSettingsSection 抽出
 

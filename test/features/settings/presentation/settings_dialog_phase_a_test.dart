@@ -55,7 +55,7 @@ void main() {
     );
   }
 
-  Future<void> openTtsTab(WidgetTester tester) async {
+  Future<AppLocalizations> openTtsTab(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -66,11 +66,14 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
     });
     await tester.pumpAndSettle();
-    await tester.tap(find.text('読み上げ'));
+    final l10n =
+        AppLocalizations.of(tester.element(find.byType(SettingsDialog)))!;
+    await tester.tap(find.text(l10n.settings_ttsTabLabel));
     await tester.runAsync(
       () => Future.delayed(const Duration(milliseconds: 200)),
     );
     await tester.pumpAndSettle();
+    return l10n;
   }
 
   group('Engine selector (Phase A 2.8)', () {
@@ -97,35 +100,34 @@ void main() {
   });
 
   group('Piper section (Phase A 2.10)', () {
-    Future<void> selectPiperEngine(WidgetTester tester) async {
-      await openTtsTab(tester);
+    Future<AppLocalizations> selectPiperEngine(WidgetTester tester) async {
+      final l10n = await openTtsTab(tester);
       await tester.tap(find.text('Piper'));
       await tester.pumpAndSettle();
+      return l10n;
     }
 
     testWidgets('shows model dropdown when Piper is selected', (tester) async {
-      await selectPiperEngine(tester);
+      final l10n = await selectPiperEngine(tester);
 
-      // The Piper model dropdown should be visible
       expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
-      // Model label - currently a Japanese literal (will be migrated in Phase B)
-      expect(find.text('モデル'), findsOneWidget);
+      expect(find.text(l10n.settings_modelLabel), findsOneWidget);
     });
 
     testWidgets('shows three synthesis-parameter sliders', (tester) async {
-      await selectPiperEngine(tester);
+      final l10n = await selectPiperEngine(tester);
 
-      // Three sliders for lengthScale / noiseScale / noiseW
       expect(find.byType(Slider), findsNWidgets(3));
-      expect(find.textContaining('速度'), findsOneWidget);
-      expect(find.textContaining('抑揚'), findsOneWidget);
-      expect(find.textContaining('ノイズ'), findsOneWidget);
+      expect(find.textContaining(l10n.settings_piperLengthScale),
+          findsOneWidget);
+      expect(find.textContaining(l10n.settings_piperNoiseScale), findsOneWidget);
+      expect(find.textContaining(l10n.settings_piperNoiseW), findsOneWidget);
     });
 
     testWidgets('shows download button in idle state', (tester) async {
-      await selectPiperEngine(tester);
+      final l10n = await selectPiperEngine(tester);
 
-      expect(find.text('モデルデータダウンロード'), findsOneWidget);
+      expect(find.text(l10n.settings_modelDataDownload), findsOneWidget);
     });
   });
 
