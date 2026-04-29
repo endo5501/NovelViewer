@@ -6,6 +6,7 @@ import 'dart:ui';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
@@ -15,9 +16,14 @@ import 'tts_isolate.dart';
 import 'tts_language.dart';
 import 'tts_playback_controller.dart';
 import 'wav_writer.dart';
+import '../domain/tts_episode_status.dart';
+import '../domain/tts_ref_wav_resolver.dart';
+import '../domain/tts_segment.dart';
 import '../providers/tts_playback_providers.dart';
 
 class TtsStreamingController {
+  static final _log = Logger('tts.streaming');
+
   TtsStreamingController({
     required this.ref,
     required TtsIsolate ttsIsolate,
@@ -76,13 +82,12 @@ class TtsStreamingController {
     int? episodeId;
 
     if (episode != null) {
-      final storedHash = episode['text_hash'] as String?;
-      if (storedHash != null && storedHash == textHash) {
+      if (episode.textHash != null && episode.textHash == textHash) {
         // Text unchanged - reuse existing data
-        episodeId = episode['id'] as int;
+        episodeId = episode.id;
       } else {
         // Text changed - delete and start fresh
-        await _repository.deleteEpisode(episode['id'] as int);
+        await _repository.deleteEpisode(episode.id);
         episode = null;
       }
     }
@@ -90,17 +95,16 @@ class TtsStreamingController {
     episodeId ??= await _repository.createEpisode(
       fileName: fileName,
       sampleRate: sampleRate,
-      status: 'generating',
+      status: TtsEpisodeStatus.generating,
       refWavPath: refWavPath,
       textHash: textHash,
     );
 
     // Load existing segments into a map for quick lookup
     final dbSegments = await _repository.getSegments(episodeId);
-    final dbSegmentMap = <int, Map<String, Object?>>{};
-    for (final row in dbSegments) {
-      dbSegmentMap[row['segment_index'] as int] = row;
-    }
+    final dbSegmentMap = <int, TtsSegment>{
+      for (final row in dbSegments) row.segmentIndex: row,
+    };
 
     // Start playback with on-demand generation
     try {
@@ -124,9 +128,11 @@ class TtsStreamingController {
 
       // Update episode status
       if (_stopped) {
-        await _repository.updateEpisodeStatus(episodeId, 'partial');
+        await _repository.updateEpisodeStatus(
+            episodeId, TtsEpisodeStatus.partial);
       } else {
-        await _repository.updateEpisodeStatus(episodeId, 'completed');
+        await _repository.updateEpisodeStatus(
+            episodeId, TtsEpisodeStatus.completed);
       }
     } finally {
       // Clean up isolate resources on natural completion
@@ -201,7 +207,7 @@ class TtsStreamingController {
   Future<void> _startPlayback({
     required int episodeId,
     required List<TextSegment> segments,
-    required Map<int, Map<String, Object?>> dbSegmentMap,
+    required Map<int, TtsSegment> dbSegmentMap,
     required String modelDir,
     required int sampleRate,
     TtsEngineType engineType = TtsEngineType.qwen3,
@@ -221,7 +227,7 @@ class TtsStreamingController {
       final segment =
           await _repository.findSegmentByOffset(episodeId, startOffset);
       if (segment != null) {
-        startIndex = segment['segment_index'] as int;
+        startIndex = segment.segmentIndex;
       }
     }
 
@@ -229,7 +235,7 @@ class TtsStreamingController {
     int totalToGenerate = 0;
     for (var i = startIndex; i < segments.length; i++) {
       final dbRow = dbSegmentMap[i];
-      if (dbRow == null || dbRow['audio_data'] == null) {
+      if (dbRow == null || dbRow.audioData == null) {
         totalToGenerate++;
       }
     }
@@ -250,7 +256,7 @@ class TtsStreamingController {
       if (_stopped) break;
 
       final dbRow = dbSegmentMap[i];
-      final hasAudio = dbRow != null && dbRow['audio_data'] != null;
+      final hasAudio = dbRow != null && dbRow.audioData != null;
 
       Uint8List audioData;
       int textOffset;
@@ -258,9 +264,9 @@ class TtsStreamingController {
 
       if (hasAudio) {
         // Play existing audio
-        audioData = Uint8List.fromList(dbRow['audio_data'] as List<int>);
-        textOffset = dbRow['text_offset'] as int;
-        textLength = dbRow['text_length'] as int;
+        audioData = dbRow.audioData!;
+        textOffset = dbRow.textOffset;
+        textLength = dbRow.textLength;
       } else {
         // Generate on-demand
         ref
@@ -282,18 +288,15 @@ class TtsStreamingController {
         if (_stopped) break;
 
         // Use edited text from DB if available, otherwise apply dictionary to original
-        final rawText = dbRow?['text'] as String? ?? segments[i].text;
+        final rawText = dbRow?.text ?? segments[i].text;
         final synthText = dbRow == null && dictEntries != null
             ? TtsDictionaryRepository.applyDictionaryWithEntries(dictEntries, rawText)
             : rawText;
-        final dbRefWavPath = dbRow?['ref_wav_path'] as String?;
-        final synthRefWavPath = dbRefWavPath != null
-            ? (dbRefWavPath.isEmpty
-                ? null
-                : resolveRefWavPath != null
-                    ? resolveRefWavPath(dbRefWavPath)
-                    : dbRefWavPath)
-            : refWavPath;
+        final synthRefWavPath = TtsRefWavResolver.resolve(
+          storedPath: dbRow?.refWavPath,
+          fallbackPath: refWavPath,
+          resolver: resolveRefWavPath,
+        );
 
         final result = await _synthesize(synthText, synthRefWavPath);
         if (result == null || _stopped) break;
@@ -436,8 +439,11 @@ class TtsStreamingController {
       }
       await _subscription?.cancel();
       _subscription = null;
-    } catch (_) {
-      // Ignore cleanup errors (e.g. DB closed by concurrent finally block)
+    } catch (e, st) {
+      // E.g. DB closed by concurrent finally block, or audio player failing
+      // to release device resources. Recovery still proceeds via the finally
+      // block below; we just want the failure observable.
+      _log.warning('Error during stop() cleanup', e, st);
     } finally {
       // Always clear state even if cleanup throws
       ref

@@ -1,9 +1,11 @@
 import 'dart:io';
 
+import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 class NovelLibraryService {
+  static final _log = Logger('text_download.migration');
   final String? _basePath;
 
   NovelLibraryService({String? basePath}) : _basePath = basePath;
@@ -52,8 +54,12 @@ class NovelLibraryService {
 
     try {
       await _copyDirectory(oldLibraryDir, newLibraryDir);
-    } catch (_) {
-      // Migration failure is non-fatal; user can manually copy files
+    } catch (e, st) {
+      // Non-fatal: app continues without migration. User can manually copy.
+      _log.warning(
+          'Library migration from ${oldLibraryDir.path} to ${newLibraryDir.path} failed',
+          e,
+          st);
     }
   }
 

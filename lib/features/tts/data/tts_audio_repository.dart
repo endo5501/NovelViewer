@@ -1,24 +1,9 @@
 import 'dart:typed_data';
 
+import '../domain/tts_episode.dart';
+import '../domain/tts_episode_status.dart';
+import '../domain/tts_segment.dart';
 import 'tts_audio_database.dart';
-
-enum TtsEpisodeStatus {
-  none,
-  partial,
-  completed;
-
-  static TtsEpisodeStatus fromDbStatus(String? status) {
-    switch (status) {
-      case 'completed':
-        return TtsEpisodeStatus.completed;
-      case 'partial':
-      case 'generating':
-        return TtsEpisodeStatus.partial;
-      default:
-        return TtsEpisodeStatus.none;
-    }
-  }
-}
 
 class TtsAudioRepository {
   final TtsAudioDatabase _database;
@@ -28,7 +13,7 @@ class TtsAudioRepository {
   Future<int> createEpisode({
     required String fileName,
     required int sampleRate,
-    required String status,
+    required TtsEpisodeStatus status,
     String? refWavPath,
     String? textHash,
   }) async {
@@ -37,7 +22,7 @@ class TtsAudioRepository {
     return db.insert('tts_episodes', {
       'file_name': fileName,
       'sample_rate': sampleRate,
-      'status': status,
+      'status': status.toDb(),
       'ref_wav_path': refWavPath,
       'text_hash': textHash,
       'created_at': now,
@@ -45,12 +30,13 @@ class TtsAudioRepository {
     });
   }
 
-  Future<void> updateEpisodeStatus(int episodeId, String status) async {
+  Future<void> updateEpisodeStatus(
+      int episodeId, TtsEpisodeStatus status) async {
     final db = await _database.database;
     final now = DateTime.now().toUtc().toIso8601String();
     await db.update(
       'tts_episodes',
-      {'status': status, 'updated_at': now},
+      {'status': status.toDb(), 'updated_at': now},
       where: 'id = ?',
       whereArgs: [episodeId],
     );
@@ -67,8 +53,7 @@ class TtsAudioRepository {
     );
   }
 
-  Future<Map<String, Object?>?> findEpisodeByFileName(
-      String fileName) async {
+  Future<TtsEpisode?> findEpisodeByFileName(String fileName) async {
     final db = await _database.database;
     final rows = await db.query(
       'tts_episodes',
@@ -76,7 +61,7 @@ class TtsAudioRepository {
       whereArgs: [fileName],
       limit: 1,
     );
-    return rows.isEmpty ? null : rows.first;
+    return rows.isEmpty ? null : TtsEpisode.fromRow(rows.first);
   }
 
   Future<void> insertSegment({
@@ -104,18 +89,18 @@ class TtsAudioRepository {
     });
   }
 
-  Future<List<Map<String, Object?>>> getSegments(int episodeId) async {
+  Future<List<TtsSegment>> getSegments(int episodeId) async {
     final db = await _database.database;
-    return db.query(
+    final rows = await db.query(
       'tts_segments',
       where: 'episode_id = ?',
       whereArgs: [episodeId],
       orderBy: 'segment_index ASC',
     );
+    return [for (final row in rows) TtsSegment.fromRow(row)];
   }
 
-  Future<Map<String, Object?>> getSegmentByIndex(
-      int episodeId, int segmentIndex) async {
+  Future<TtsSegment> getSegmentByIndex(int episodeId, int segmentIndex) async {
     final db = await _database.database;
     final rows = await db.query(
       'tts_segments',
@@ -123,10 +108,10 @@ class TtsAudioRepository {
       whereArgs: [episodeId, segmentIndex],
       limit: 1,
     );
-    return rows.first;
+    return TtsSegment.fromRow(rows.first);
   }
 
-  Future<Map<String, Object?>?> findSegmentByOffset(
+  Future<TtsSegment?> findSegmentByOffset(
       int episodeId, int textOffset) async {
     final db = await _database.database;
     final rows = await db.query(
@@ -136,7 +121,7 @@ class TtsAudioRepository {
       orderBy: 'text_offset DESC',
       limit: 1,
     );
-    return rows.isEmpty ? null : rows.first;
+    return rows.isEmpty ? null : TtsSegment.fromRow(rows.first);
   }
 
   Future<int> getSegmentCount(int episodeId) async {
@@ -219,7 +204,7 @@ class TtsAudioRepository {
     return {
       for (final row in rows)
         row['file_name'] as String:
-            TtsEpisodeStatus.fromDbStatus(row['status'] as String?),
+            TtsEpisodeStatus.fromDb(row['status'] as String),
     };
   }
 

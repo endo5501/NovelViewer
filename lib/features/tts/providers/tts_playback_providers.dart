@@ -2,21 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// --- Audio generation state ---
-
 enum TtsAudioState { none, generating, ready }
-
-final ttsAudioStateProvider =
-    NotifierProvider<TtsAudioStateNotifier, TtsAudioState>(
-  TtsAudioStateNotifier.new,
-);
-
-class TtsAudioStateNotifier extends Notifier<TtsAudioState> {
-  @override
-  TtsAudioState build() => TtsAudioState.none;
-
-  void set(TtsAudioState value) => state = value;
-}
 
 // --- Generation progress ---
 

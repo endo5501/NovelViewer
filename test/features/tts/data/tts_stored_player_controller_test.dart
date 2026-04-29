@@ -9,6 +9,7 @@ import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_playback_controller.dart';
 import 'package:novel_viewer/features/tts/data/tts_stored_player_controller.dart';
 import 'package:novel_viewer/features/tts/data/wav_writer.dart';
+import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -97,7 +98,7 @@ void main() {
     final episodeId = await repository.createEpisode(
       fileName: '0001_テスト.txt',
       sampleRate: 24000,
-      status: 'completed',
+      status: TtsEpisodeStatus.completed,
     );
     for (var i = 0; i < segmentCount; i++) {
       await repository.insertSegment(

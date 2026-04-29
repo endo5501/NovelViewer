@@ -518,7 +518,7 @@ void main() {
         url: Uri.parse('https://example.com/index'),
         outputPath: tempDir.path,
         episodeCacheRepository: cacheRepo,
-        onProgress: (current, total, skipped) {
+        onProgress: (current, total, skipped, failed) {
           progressCalls.add((current, total, skipped));
         },
       );
@@ -771,7 +771,7 @@ void main() {
         site: _ShortStorySite(),
         url: Uri.parse('https://example.com/index'),
         outputPath: tempDir.path,
-        onProgress: (current, total, skipped) {
+        onProgress: (current, total, skipped, failed) {
           progressCalls.add((current, total, skipped));
         },
       );
@@ -910,7 +910,7 @@ void main() {
         site: _MultiPageSite(totalPages: 2, episodesPerPage: 2),
         url: Uri.parse('https://example.com/index'),
         outputPath: tempDir.path,
-        onProgress: (current, total, skipped) {
+        onProgress: (current, total, skipped, failed) {
           progressCalls.add((current, total, skipped));
         },
       );

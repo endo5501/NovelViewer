@@ -1,11 +1,13 @@
-import 'dart:io';
-
+import 'package:logging/logging.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
+
+import '../../../shared/database/database_opener.dart';
 
 class TtsDictionaryDatabase {
   static const _databaseName = 'tts_dictionary.db';
   static const _databaseVersion = 1;
+  static final _log = Logger('tts.dictionary_db');
 
   final String _folderPath;
   Database? _database;
@@ -20,23 +22,13 @@ class TtsDictionaryDatabase {
 
   Future<Database> _open() async {
     final path = p.join(_folderPath, _databaseName);
-    try {
-      return await openDatabase(
-        path,
-        version: _databaseVersion,
-        onCreate: _onCreate,
-      );
-    } catch (_) {
-      final file = File(path);
-      if (file.existsSync()) {
-        file.deleteSync();
-      }
-      return await openDatabase(
-        path,
-        version: _databaseVersion,
-        onCreate: _onCreate,
-      );
-    }
+    return openOrResetDatabase(
+      path: path,
+      version: _databaseVersion,
+      onCreate: _onCreate,
+      deleteOnFailure: true,
+      logger: _log,
+    );
   }
 
   Future<void> _onCreate(Database db, int version) async {

@@ -14,34 +14,8 @@ void main() {
     });
   });
 
-  group('ttsAudioStateProvider', () {
-    test('initial state is none', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      expect(container.read(ttsAudioStateProvider), TtsAudioState.none);
-    });
-
-    test('can transition to generating', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      container.read(ttsAudioStateProvider.notifier).set(
-          TtsAudioState.generating);
-      expect(
-          container.read(ttsAudioStateProvider), TtsAudioState.generating);
-    });
-
-    test('can transition to ready', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      container.read(ttsAudioStateProvider.notifier).set(
-          TtsAudioState.ready);
-      expect(
-          container.read(ttsAudioStateProvider), TtsAudioState.ready);
-    });
-  });
+  // ttsAudioStateProvider has moved to a FutureProvider.family keyed by file
+  // path; its behavior is tested in `tts_audio_state_provider_test.dart`.
 
   group('TtsGenerationProgress', () {
     test('zero constant has 0/0', () {

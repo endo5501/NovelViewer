@@ -16,16 +16,17 @@ import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_adapters.dart';
-import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
-import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_streaming_controller.dart';
+import 'package:novel_viewer/features/tts/domain/tts_episode.dart';
 import 'package:novel_viewer/features/tts/presentation/dictionary_context_menu.dart';
 import 'package:novel_viewer/features/tts/presentation/tts_dictionary_dialog.dart';
 import 'package:novel_viewer/features/tts/presentation/tts_edit_dialog.dart';
+import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
+import 'package:novel_viewer/features/tts/providers/tts_audio_state_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_export_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
@@ -47,9 +48,7 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
   bool _isTtsScrolling = false;
 
   TtsStreamingController? _streamingController;
-  TtsAudioDatabase? _streamingDb;
-  TtsDictionaryDatabase? _streamingDictDb;
-  String? _lastCheckedFileKey;
+  String? _previousSelectedPath;
 
   @override
   void initState() {
@@ -63,10 +62,6 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     WidgetsBinding.instance.removeObserver(this);
     _streamingController?.stop();
     _streamingController = null;
-    _streamingDb?.close();
-    _streamingDb = null;
-    _streamingDictDb?.close();
-    _streamingDictDb = null;
     _scrollController.dispose();
     super.dispose();
   }
@@ -82,45 +77,12 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     return AppExitResponse.exit;
   }
 
-  Future<void> _checkAudioState() async {
-    final folderPath = ref.read(currentDirectoryProvider);
-    final selectedFile = ref.read(selectedFileProvider);
-    final fileName = selectedFile?.name;
-    final selectedPath = selectedFile?.path;
-    if (folderPath == null || fileName == null || selectedPath == null) {
-      if (_streamingController != null) {
-        await _stopStreaming();
-      }
-      if (!mounted) return;
-      ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
-      return;
-    }
-
-    if (_lastCheckedFileKey == selectedPath) return;
-
-    // File changed - stop any active streaming before checking new file
+  Future<void> _onSelectedFileChanged() async {
+    final selectedPath = ref.read(selectedFileProvider)?.path;
+    if (_previousSelectedPath == selectedPath) return;
+    _previousSelectedPath = selectedPath;
     if (_streamingController != null) {
       await _stopStreaming();
-    }
-    if (!mounted) return;
-
-    _lastCheckedFileKey = selectedPath;
-
-    final db = TtsAudioDatabase(folderPath);
-    final repo = TtsAudioRepository(db);
-    try {
-      final episode = await repo.findEpisodeByFileName(fileName);
-      if (!mounted) return;
-      final status =
-          TtsEpisodeStatus.fromDbStatus(episode?['status'] as String?);
-      if (status == TtsEpisodeStatus.completed ||
-          status == TtsEpisodeStatus.partial) {
-        ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.ready);
-      } else {
-        ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
-      }
-    } finally {
-      await db.close();
     }
   }
 
@@ -164,13 +126,15 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
 
     if (folderPath == null || fileName == null || modelDir.isEmpty) return;
 
-    ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.generating);
+    final filePath = '$folderPath/$fileName';
+    ref.read(activeStreamingFileProvider.notifier).set(filePath);
+    ref.invalidate(ttsAudioStateProvider(filePath));
     ref.read(ttsGenerationProgressProvider.notifier)
         .set(const TtsGenerationProgress(current: 0, total: 0));
 
-    final db = TtsAudioDatabase(folderPath);
+    final db = ref.read(ttsAudioDatabaseProvider(folderPath));
     final repo = TtsAudioRepository(db);
-    final dictDb = TtsDictionaryDatabase(folderPath);
+    final dictDb = ref.read(ttsDictionaryDatabaseProvider(folderPath));
     final dictRepo = TtsDictionaryRepository(dictDb);
     final isolate = TtsIsolate();
     final providerContainer = ProviderScope.containerOf(context);
@@ -185,8 +149,6 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
       dictionaryRepository: dictRepo,
     );
     _streamingController = controller;
-    _streamingDb = db;
-    _streamingDictDb = dictDb;
 
     final selectedText = ref.read(selectedTextProvider);
     int? startOffset;
@@ -214,26 +176,13 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
         noiseW: noiseW,
         embeddingCacheDir: ref.read(embeddingCacheDirProvider),
       );
-
-      if (!mounted) return;
-
-      final audioState = ref.read(ttsAudioStateProvider);
-      if (audioState == TtsAudioState.generating) {
-        ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.ready);
-      }
-      ref.invalidate(directoryContentsProvider);
-    } catch (_) {
-      if (mounted) {
-        ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
-        ref.invalidate(directoryContentsProvider);
-      }
     } finally {
       _streamingController = null;
-      await db.close();
-      _streamingDb = null;
-      await dictDb.close();
-      _streamingDictDb = null;
-      _lastCheckedFileKey = null;
+      ref.read(activeStreamingFileProvider.notifier).set(null);
+      if (mounted) {
+        ref.invalidate(ttsAudioStateProvider(filePath));
+        ref.invalidate(directoryContentsProvider);
+      }
     }
   }
 
@@ -242,21 +191,20 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
       await _streamingController?.stop();
     } finally {
       _streamingController = null;
-      await _streamingDb?.close();
-      _streamingDb = null;
-      await _streamingDictDb?.close();
-      _streamingDictDb = null;
+      ref.read(activeStreamingFileProvider.notifier).set(null);
 
-      // Defensively clear all TTS state regardless of stop() success
+      // Defensively clear playback state regardless of stop() success.
       if (mounted) {
-        ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
         ref.read(ttsPlaybackStateProvider.notifier).set(
             TtsPlaybackState.stopped);
         ref.read(ttsHighlightRangeProvider.notifier).set(null);
         ref.read(ttsGenerationProgressProvider.notifier)
             .set(TtsGenerationProgress.zero);
+        final selectedPath = ref.read(selectedFileProvider)?.path;
+        if (selectedPath != null) {
+          ref.invalidate(ttsAudioStateProvider(selectedPath));
+        }
       }
-      _lastCheckedFileKey = null;
     }
   }
 
@@ -307,36 +255,30 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
   void _openDictionaryDialog(String selectedText) {
     final folderPath = ref.read(currentDirectoryProvider);
     if (folderPath == null) return;
-    final dictDb = TtsDictionaryDatabase(folderPath);
+    final dictDb = ref.read(ttsDictionaryDatabaseProvider(folderPath));
     final dictRepo = TtsDictionaryRepository(dictDb);
     TtsDictionaryDialog.show(
       context,
       repository: dictRepo,
       initialSurface: selectedText,
-    ).whenComplete(() => dictDb.close());
+    );
   }
 
-  /// Opens TtsAudioDatabase for the current directory, finds the episode for
-  /// the selected file, and calls [action] with the repository and episode.
-  /// Returns null if no directory/file is selected or no episode exists.
+  /// Looks up the episode for the currently selected file and runs [action]
+  /// with the repository and episode. Returns null if no directory/file is
+  /// selected or no episode exists.
   Future<T?> _withEpisodeRepo<T>(
-    Future<T?> Function(
-            TtsAudioRepository repo, Map<String, Object?> episode)
-        action,
+    Future<T?> Function(TtsAudioRepository repo, TtsEpisode episode) action,
   ) async {
     final folderPath = ref.read(currentDirectoryProvider);
     final fileName = ref.read(selectedFileProvider)?.name;
     if (folderPath == null || fileName == null) return null;
 
-    final db = TtsAudioDatabase(folderPath);
+    final db = ref.read(ttsAudioDatabaseProvider(folderPath));
     final repo = TtsAudioRepository(db);
-    try {
-      final episode = await repo.findEpisodeByFileName(fileName);
-      if (episode == null) return null;
-      return await action(repo, episode);
-    } finally {
-      await db.close();
-    }
+    final episode = await repo.findEpisodeByFileName(fileName);
+    if (episode == null) return null;
+    return action(repo, episode);
   }
 
   Future<void> _deleteAudio() async {
@@ -363,14 +305,16 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     if (!mounted || confirm != true) return;
 
     await _withEpisodeRepo((repo, episode) async {
-      await repo.deleteEpisode(episode['id'] as int);
+      await repo.deleteEpisode(episode.id);
       return null;
     });
 
     if (!mounted) return;
-    ref.read(ttsAudioStateProvider.notifier).set(TtsAudioState.none);
+    final selectedPath = ref.read(selectedFileProvider)?.path;
+    if (selectedPath != null) {
+      ref.invalidate(ttsAudioStateProvider(selectedPath));
+    }
     ref.invalidate(directoryContentsProvider);
-    _lastCheckedFileKey = null;
   }
 
   Future<void> _exportAudio() async {
@@ -379,16 +323,13 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
 
     try {
       final exported = await _withEpisodeRepo((repo, episode) async {
-        final episodeId = episode['id'] as int;
-        final sampleRate = episode['sample_rate'] as int? ?? 24000;
-
         return exportEpisodeToMp3(
           stateNotifier: ref.read(ttsExportStateProvider.notifier),
           progressNotifier: ref.read(ttsExportProgressProvider.notifier),
           repository: repo,
-          episodeId: episodeId,
+          episodeId: episode.id,
           episodeFileName: fileName,
-          sampleRate: sampleRate,
+          sampleRate: episode.sampleRate,
         );
       });
 
@@ -417,10 +358,12 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     );
 
     // Refresh audio state and file browser TTS icons after dialog closes
-    _lastCheckedFileKey = null;
     if (mounted) {
       ref.invalidate(directoryContentsProvider);
-      _checkAudioState();
+      final selectedPath = ref.read(selectedFileProvider)?.path;
+      if (selectedPath != null) {
+        ref.invalidate(ttsAudioStateProvider(selectedPath));
+      }
     }
   }
 
@@ -744,13 +687,17 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
         }
 
         final ttsModelDir = ref.watch(ttsModelDirProvider);
-        final audioState = ref.watch(ttsAudioStateProvider);
+        final audioStateAsync = selectedFile == null
+            ? const AsyncValue<TtsAudioState>.data(TtsAudioState.none)
+            : ref.watch(ttsAudioStateProvider(selectedFile.path));
+        final audioState =
+            audioStateAsync.value ?? TtsAudioState.none;
         final playbackState = ref.watch(ttsPlaybackStateProvider);
         final ttsHighlightRange = ref.watch(ttsHighlightRangeProvider);
 
-        // Check audio state when file changes (deferred to avoid modifying providers during build)
+        // Stop active streaming when the selection changes
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _checkAudioState();
+          if (mounted) _onSelectedFileChanged();
         });
 
         final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(

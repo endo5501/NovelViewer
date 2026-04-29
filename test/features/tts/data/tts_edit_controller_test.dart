@@ -15,6 +15,7 @@ import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_playback_controller.dart';
 import 'package:novel_viewer/features/tts/data/wav_writer.dart';
+import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class FakeTtsIsolate implements TtsIsolate {
@@ -250,8 +251,8 @@ void main() {
 
         // DB should store dictionary-converted text
         final episode = await repository.findEpisodeByFileName('test.txt');
-        final segments = await repository.getSegments(episode!['id'] as int);
-        expect((segments.first['text'] as String), contains('えるりっく'));
+        final segments = await repository.getSegments(episode!.id);
+        expect(segments.first.text, contains('えるりっく'));
       });
 
       test('does not apply dictionary when dictionaryRepository is null',
@@ -287,7 +288,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -459,7 +460,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -499,7 +500,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -530,14 +531,14 @@ void main() {
 
         // Verify stored in DB
         final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(dbSegment['audio_data'], isNotNull);
+        expect(dbSegment.audioData, isNotNull);
       });
 
       test('reuses model for subsequent generations', () async {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -572,7 +573,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -604,7 +605,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -635,7 +636,7 @@ void main() {
 
         // DB should store segment.refWavPath (null), NOT the resolved path
         final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(dbSegment['ref_wav_path'], isNull);
+        expect(dbSegment.refWavPath, isNull);
       });
 
       test('stores explicit segment refWavPath in DB on first insert',
@@ -643,7 +644,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -674,7 +675,7 @@ void main() {
 
         // DB should store the metadata value, not the resolved path
         final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(dbSegment['ref_wav_path'], 'custom_voice.wav');
+        expect(dbSegment.refWavPath, 'custom_voice.wav');
       });
 
       test('stores empty-string refWavPath in DB on first insert',
@@ -682,7 +683,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -713,14 +714,14 @@ void main() {
 
         // DB should store '' (not null), preserving "なし" setting
         final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(dbSegment['ref_wav_path'], '');
+        expect(dbSegment.refWavPath, '');
       });
 
       test('updates existing DB record audio on regeneration', () async {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -755,7 +756,7 @@ void main() {
 
         expect(controller.segments[0].hasAudio, true);
         final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(dbSegment['audio_data'], isNotNull);
+        expect(dbSegment.audioData, isNotNull);
       });
     });
 
@@ -764,7 +765,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
         // Segment 0 already has audio
         await repository.insertSegment(
@@ -811,7 +812,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -848,7 +849,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -889,7 +890,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -948,7 +949,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -998,7 +999,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -1054,7 +1055,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -1081,15 +1082,15 @@ void main() {
         expect(controller.segments[0].dbRecordExists, true);
 
         final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(dbSegment['text'], '山奥のいっけんや');
-        expect(dbSegment['audio_data'], isNull);
+        expect(dbSegment.text, '山奥のいっけんや');
+        expect(dbSegment.audioData, isNull);
       });
 
       test('updates existing DB record and deletes audio', () async {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -1124,8 +1125,8 @@ void main() {
         expect(controller.segments[0].hasAudio, false);
 
         final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(dbSegment['text'], '編集済み。');
-        expect(dbSegment['audio_data'], isNull);
+        expect(dbSegment.text, '編集済み。');
+        expect(dbSegment.audioData, isNull);
       });
     });
 
@@ -1134,7 +1135,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -1163,7 +1164,7 @@ void main() {
 
         expect(controller.segments[0].refWavPath, '/voices/male.wav');
         final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(dbSegment['ref_wav_path'], '/voices/male.wav');
+        expect(dbSegment.refWavPath, '/voices/male.wav');
       });
     });
 
@@ -1172,7 +1173,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -1201,7 +1202,7 @@ void main() {
 
         expect(controller.segments[0].memo, '感情的に読む');
         final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(dbSegment['memo'], '感情的に読む');
+        expect(dbSegment.memo, '感情的に読む');
       });
     });
 
@@ -1210,7 +1211,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -1288,7 +1289,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -1327,7 +1328,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -1366,7 +1367,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -1402,7 +1403,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -1441,7 +1442,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -1491,7 +1492,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -1540,7 +1541,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -1579,7 +1580,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
         await repository.insertSegment(
           episodeId: episodeId,
@@ -1620,7 +1621,7 @@ void main() {
         // Episode should remain with partial status
         final episode = await repository.findEpisodeByFileName('test.txt');
         expect(episode, isNotNull);
-        expect(episode!['status'], 'partial');
+        expect(episode!.status, TtsEpisodeStatus.partial);
       });
     });
 
@@ -1629,7 +1630,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -1667,7 +1668,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate1 = FakeTtsIsolate();
@@ -1735,7 +1736,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         // Create isolate that never responds to loadModel
@@ -1785,7 +1786,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -1827,7 +1828,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -1879,7 +1880,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -1957,7 +1958,7 @@ void main() {
         final episode =
             await repository.findEpisodeByFileName('test.txt');
         expect(episode, isNotNull);
-        expect(episode!['text_hash'], expectedHash);
+        expect(episode!.textHash, expectedHash);
 
         await controller.dispose();
       });
@@ -1968,7 +1969,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
         final isolate = FakeTtsIsolate();
@@ -1993,7 +1994,7 @@ void main() {
         final episode =
             await repository.findEpisodeByFileName('test.txt');
         expect(episode, isNotNull);
-        expect(episode!['text_hash'], expectedHash);
+        expect(episode!.textHash, expectedHash);
 
         await controller.dispose();
       });
@@ -2004,7 +2005,7 @@ void main() {
         await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
           textHash: existingHash,
         );
 
@@ -2026,7 +2027,7 @@ void main() {
         final episode =
             await repository.findEpisodeByFileName('test.txt');
         expect(episode, isNotNull);
-        expect(episode!['text_hash'], existingHash);
+        expect(episode!.textHash, existingHash);
 
         await controller.dispose();
       });
@@ -2066,14 +2067,14 @@ void main() {
 
         final textHash =
             sha256.convert(utf8.encode(text)).toString();
-        final storedHash = episode!['text_hash'] as String?;
+        final storedHash = episode!.textHash;
         expect(storedHash, textHash);
 
         // Verify the streaming controller would reuse it (hash matches)
-        final episodeId = episode['id'] as int;
+        final episodeId = episode.id;
         final segments = await repository.getSegments(episodeId);
         expect(segments, hasLength(1));
-        expect(segments[0]['audio_data'], isNotNull);
+        expect(segments[0].audioData, isNotNull);
       });
     });
   });

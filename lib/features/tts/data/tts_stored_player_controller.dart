@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'tts_audio_repository.dart';
 import 'tts_playback_controller.dart';
+import '../domain/tts_segment.dart';
 import '../providers/tts_playback_providers.dart';
 
 class TtsStoredPlayerController {
@@ -26,7 +26,7 @@ class TtsStoredPlayerController {
   final String tempDirPath;
   final Duration _bufferDrainDelay;
 
-  List<Map<String, Object?>> _segments = [];
+  List<TtsSegment> _segments = [];
   int _currentSegmentIndex = 0;
   final _writtenFiles = <String>[];
   StreamSubscription<TtsPlayerState>? _playerSubscription;
@@ -51,7 +51,7 @@ class TtsStoredPlayerController {
           await _repository.findSegmentByOffset(episodeId, startOffset);
       if (segment != null) {
         final found = _segments.indexWhere(
-            (s) => s['segment_index'] == segment['segment_index']);
+            (s) => s.segmentIndex == segment.segmentIndex);
         if (found >= 0) _currentSegmentIndex = found;
       }
     }
@@ -71,7 +71,8 @@ class TtsStoredPlayerController {
     if (_currentSegmentIndex >= _segments.length || _stopped) return;
 
     final segment = _segments[_currentSegmentIndex];
-    final audioData = segment['audio_data'] as Uint8List;
+    final audioData = segment.audioData;
+    if (audioData == null) return;
 
     // Write BLOB to temp file
     final filePath =
@@ -83,8 +84,8 @@ class TtsStoredPlayerController {
     if (_stopped) return;
 
     // Update highlight
-    final textOffset = segment['text_offset'] as int;
-    final textLength = segment['text_length'] as int;
+    final textOffset = segment.textOffset;
+    final textLength = segment.textLength;
     ref.read(ttsHighlightRangeProvider.notifier).set(
       TextRange(start: textOffset, end: textOffset + textLength),
     );

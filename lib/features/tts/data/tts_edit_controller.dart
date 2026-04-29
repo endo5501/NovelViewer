@@ -13,6 +13,9 @@ import 'tts_isolate.dart';
 import 'tts_language.dart';
 import 'tts_playback_controller.dart';
 import 'wav_writer.dart';
+import '../domain/tts_episode_status.dart';
+import '../domain/tts_ref_wav_resolver.dart';
+import '../domain/tts_segment.dart';
 
 class _CancelledException implements Exception {
   const _CancelledException();
@@ -74,15 +77,14 @@ class TtsEditController {
     final originalSegments = _textSegmenter.splitIntoSentences(text);
 
     final episode = await _repository.findEpisodeByFileName(fileName);
-    List<Map<String, Object?>> dbSegments = [];
+    List<TtsSegment> dbSegments = [];
 
     if (episode != null) {
-      _episodeId = episode['id'] as int;
+      _episodeId = episode.id;
       dbSegments = await _repository.getSegments(_episodeId!);
 
       // Backfill text_hash for episodes created before this fix
-      final storedHash = episode['text_hash'] as String?;
-      if (storedHash == null) {
+      if (episode.textHash == null) {
         await _repository.updateEpisodeTextHash(_episodeId!, _textHash!);
       }
     }
@@ -350,13 +352,11 @@ class TtsEditController {
       final segmentIndex = ungenerated[idx];
       onSegmentStart?.call(segmentIndex);
       final segment = _segments[segmentIndex];
-      final segmentRef = segment.refWavPath;
-      // null → fall back to global, '' → no reference audio ("なし"), path → resolve via callback
-      final refWavPath = switch (segmentRef) {
-        null => globalRefWavPath,
-        '' => null,
-        _ => resolveRefWavPath != null ? resolveRefWavPath(segmentRef) : segmentRef,
-      };
+      final refWavPath = TtsRefWavResolver.resolve(
+        storedPath: segment.refWavPath,
+        fallbackPath: globalRefWavPath,
+        resolver: resolveRefWavPath,
+      );
 
       final success = await _generateSegmentWithEntries(
         segmentIndex: segmentIndex,
@@ -384,7 +384,8 @@ class TtsEditController {
 
     final segmentData =
         await _repository.getSegmentByIndex(_episodeId!, segmentIndex);
-    final audioData = segmentData['audio_data'] as List<int>;
+    final audioData = segmentData.audioData;
+    if (audioData == null) return;
 
     final filePath = '$tempDirPath/tts_edit_preview_$segmentIndex.wav';
     await File(filePath).writeAsBytes(audioData);
@@ -524,7 +525,9 @@ class TtsEditController {
       _episodeId = null;
     } else {
       final allHaveAudio = _segments.every((s) => s.hasAudio);
-      final status = allHaveAudio ? 'completed' : 'partial';
+      final status = allHaveAudio
+          ? TtsEpisodeStatus.completed
+          : TtsEpisodeStatus.partial;
       await _repository.updateEpisodeStatus(_episodeId!, status);
     }
   }
@@ -535,7 +538,7 @@ class TtsEditController {
     _episodeId = await _repository.createEpisode(
       fileName: _fileName ?? 'unknown',
       sampleRate: _sampleRate,
-      status: 'partial',
+      status: TtsEpisodeStatus.partial,
       textHash: _textHash,
     );
   }

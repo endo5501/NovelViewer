@@ -4,6 +4,9 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
+import 'package:novel_viewer/features/tts/domain/tts_episode.dart';
+import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
+import 'package:novel_viewer/features/tts/domain/tts_segment.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -33,7 +36,7 @@ void main() {
         final id = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
         expect(id, greaterThan(0));
@@ -43,44 +46,45 @@ void main() {
         await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
           refWavPath: '/path/to/ref.wav',
         );
 
         final episode =
             await repository.findEpisodeByFileName('0001_プロローグ.txt');
         expect(episode, isNotNull);
-        expect(episode!['file_name'], '0001_プロローグ.txt');
-        expect(episode['sample_rate'], 24000);
-        expect(episode['status'], 'generating');
-        expect(episode['ref_wav_path'], '/path/to/ref.wav');
+        expect(episode, isA<TtsEpisode>());
+        expect(episode!.fileName, '0001_プロローグ.txt');
+        expect(episode.sampleRate, 24000);
+        expect(episode.status, TtsEpisodeStatus.generating);
+        expect(episode.refWavPath, '/path/to/ref.wav');
       });
 
       test('creates episode with text_hash', () async {
         await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
           textHash: 'abc123hash',
         );
 
         final episode =
             await repository.findEpisodeByFileName('0001_プロローグ.txt');
         expect(episode, isNotNull);
-        expect(episode!['text_hash'], 'abc123hash');
+        expect(episode!.textHash, 'abc123hash');
       });
 
       test('creates episode with null text_hash when not provided', () async {
         await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
         final episode =
             await repository.findEpisodeByFileName('0001_プロローグ.txt');
         expect(episode, isNotNull);
-        expect(episode!['text_hash'], isNull);
+        expect(episode!.textHash, isNull);
       });
     });
 
@@ -89,28 +93,28 @@ void main() {
         final id = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
-        await repository.updateEpisodeStatus(id, 'partial');
+        await repository.updateEpisodeStatus(id, TtsEpisodeStatus.partial);
 
         final episode =
             await repository.findEpisodeByFileName('0001_プロローグ.txt');
-        expect(episode!['status'], 'partial');
+        expect(episode!.status, TtsEpisodeStatus.partial);
       });
 
       test('updates status to completed', () async {
         final id = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
-        await repository.updateEpisodeStatus(id, 'completed');
+        await repository.updateEpisodeStatus(id, TtsEpisodeStatus.completed);
 
         final episode =
             await repository.findEpisodeByFileName('0001_プロローグ.txt');
-        expect(episode!['status'], 'completed');
+        expect(episode!.status, TtsEpisodeStatus.completed);
       });
     });
 
@@ -121,17 +125,17 @@ void main() {
         expect(result, isNull);
       });
 
-      test('returns episode record for existing file name', () async {
+      test('returns TtsEpisode for existing file name', () async {
         await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
 
         final result =
             await repository.findEpisodeByFileName('0001_プロローグ.txt');
-        expect(result, isNotNull);
-        expect(result!['file_name'], '0001_プロローグ.txt');
+        expect(result, isA<TtsEpisode>());
+        expect(result!.fileName, '0001_プロローグ.txt');
       });
     });
 
@@ -140,7 +144,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
         final wavData = Uint8List.fromList([0x52, 0x49, 0x46, 0x46]);
@@ -157,10 +161,12 @@ void main() {
 
         final segments = await repository.getSegments(episodeId);
         expect(segments, hasLength(1));
-        expect(segments.first['text'], 'テスト文。');
-        expect(segments.first['segment_index'], 0);
-        expect(segments.first['audio_data'], wavData);
-        expect(segments.first['sample_count'], 100);
+        expect(segments.first, isA<TtsSegment>());
+        expect(segments.first.text, 'テスト文。');
+        expect(segments.first.segmentIndex, 0);
+        expect(segments.first.audioData, isNotNull);
+        expect(segments.first.audioData!.toList(), wavData.toList());
+        expect(segments.first.sampleCount, 100);
       });
     });
 
@@ -169,10 +175,9 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
 
-        // Insert in reverse order
         for (var i = 2; i >= 0; i--) {
           await repository.insertSegment(
             episodeId: episodeId,
@@ -187,16 +192,16 @@ void main() {
 
         final segments = await repository.getSegments(episodeId);
         expect(segments, hasLength(3));
-        expect(segments[0]['segment_index'], 0);
-        expect(segments[1]['segment_index'], 1);
-        expect(segments[2]['segment_index'], 2);
+        expect(segments[0].segmentIndex, 0);
+        expect(segments[1].segmentIndex, 1);
+        expect(segments[2].segmentIndex, 2);
       });
 
       test('returns empty list for episode with no segments', () async {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
         final segments = await repository.getSegments(episodeId);
@@ -211,10 +216,9 @@ void main() {
         episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
 
-        // Segment 0: offset=0, length=8 ("今日は天気です。")
         await repository.insertSegment(
           episodeId: episodeId,
           segmentIndex: 0,
@@ -225,7 +229,6 @@ void main() {
           sampleCount: 100,
         );
 
-        // Segment 1: offset=8, length=11 ("明日も晴れるでしょう。")
         await repository.insertSegment(
           episodeId: episodeId,
           segmentIndex: 1,
@@ -236,7 +239,6 @@ void main() {
           sampleCount: 200,
         );
 
-        // Segment 2: offset=19, length=12 ("素敵な一日になりそう。")
         await repository.insertSegment(
           episodeId: episodeId,
           segmentIndex: 2,
@@ -252,28 +254,28 @@ void main() {
         final segment =
             await repository.findSegmentByOffset(episodeId, 8);
         expect(segment, isNotNull);
-        expect(segment!['segment_index'], 1);
+        expect(segment!.segmentIndex, 1);
       });
 
       test('finds segment containing offset in the middle', () async {
         final segment =
             await repository.findSegmentByOffset(episodeId, 19);
         expect(segment, isNotNull);
-        expect(segment!['segment_index'], 2);
+        expect(segment!.segmentIndex, 2);
       });
 
       test('finds first segment for offset 0', () async {
         final segment =
             await repository.findSegmentByOffset(episodeId, 0);
         expect(segment, isNotNull);
-        expect(segment!['segment_index'], 0);
+        expect(segment!.segmentIndex, 0);
       });
 
       test('finds last segment for offset beyond all segments', () async {
         final segment =
             await repository.findSegmentByOffset(episodeId, 100);
         expect(segment, isNotNull);
-        expect(segment!['segment_index'], 2);
+        expect(segment!.segmentIndex, 2);
       });
     });
 
@@ -282,7 +284,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
         final count = await repository.getSegmentCount(episodeId);
@@ -293,7 +295,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
         for (var i = 0; i < 3; i++) {
@@ -318,7 +320,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
 
         await repository.insertSegment(
@@ -347,11 +349,10 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
 
-        // Insert a segment with large audio BLOB
-        final largeAudio = Uint8List(100000); // 100KB
+        final largeAudio = Uint8List(100000);
         await repository.insertSegment(
           episodeId: episodeId,
           segmentIndex: 0,
@@ -362,17 +363,13 @@ void main() {
           sampleCount: 50000,
         );
 
-        // Get DB file size before deletion
         final dbFile = File('${tempDir.path}/tts_audio.db');
         final sizeBeforeDelete = dbFile.lengthSync();
 
-        // Delete episode (should trigger incremental_vacuum)
         await repository.deleteEpisode(episodeId);
 
-        // Get DB file size after deletion
         final sizeAfterDelete = dbFile.lengthSync();
 
-        // File size should have decreased
         expect(sizeAfterDelete, lessThan(sizeBeforeDelete));
       });
 
@@ -380,10 +377,9 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
-        // Insert segment without audio data
         await repository.insertSegment(
           episodeId: episodeId,
           segmentIndex: 0,
@@ -392,14 +388,11 @@ void main() {
           textLength: 5,
         );
 
-        // Get DB file size before deletion
         final dbFile = File('${tempDir.path}/tts_audio.db');
         final sizeBeforeDelete = dbFile.lengthSync();
 
-        // Delete episode (should succeed without error)
         await repository.deleteEpisode(episodeId);
 
-        // File size should remain the same (no BLOBs to free)
         final sizeAfterDelete = dbFile.lengthSync();
         expect(sizeAfterDelete, lessThanOrEqualTo(sizeBeforeDelete));
       });
@@ -410,7 +403,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
         await repository.insertSegment(
@@ -423,9 +416,9 @@ void main() {
 
         final segments = await repository.getSegments(episodeId);
         expect(segments, hasLength(1));
-        expect(segments.first['text'], 'テスト文。');
-        expect(segments.first['audio_data'], isNull);
-        expect(segments.first['sample_count'], isNull);
+        expect(segments.first.text, 'テスト文。');
+        expect(segments.first.audioData, isNull);
+        expect(segments.first.sampleCount, isNull);
       });
     });
 
@@ -434,7 +427,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
 
         await repository.insertSegment(
@@ -450,16 +443,16 @@ void main() {
         await repository.updateSegmentText(episodeId, 0, '山奥のいっけんや');
 
         final segment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(segment['text'], '山奥のいっけんや');
-        expect(segment['audio_data'], isNull);
-        expect(segment['sample_count'], isNull);
+        expect(segment.text, '山奥のいっけんや');
+        expect(segment.audioData, isNull);
+        expect(segment.sampleCount, isNull);
       });
 
       test('updates text of segment without audio', () async {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
         await repository.insertSegment(
@@ -473,8 +466,8 @@ void main() {
         await repository.updateSegmentText(episodeId, 0, '編集済み');
 
         final segment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(segment['text'], '編集済み');
-        expect(segment['audio_data'], isNull);
+        expect(segment.text, '編集済み');
+        expect(segment.audioData, isNull);
       });
     });
 
@@ -483,7 +476,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
         await repository.insertSegment(
@@ -498,8 +491,9 @@ void main() {
         await repository.updateSegmentAudio(episodeId, 0, newAudio, 300);
 
         final segment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(segment['audio_data'], newAudio);
-        expect(segment['sample_count'], 300);
+        expect(segment.audioData, isNotNull);
+        expect(segment.audioData!.toList(), newAudio.toList());
+        expect(segment.sampleCount, 300);
       });
     });
 
@@ -508,7 +502,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
         await repository.insertSegment(
@@ -523,7 +517,7 @@ void main() {
             episodeId, 0, '/path/to/voice.wav');
 
         final segment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(segment['ref_wav_path'], '/path/to/voice.wav');
+        expect(segment.refWavPath, '/path/to/voice.wav');
       });
     });
 
@@ -532,7 +526,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
         await repository.insertSegment(
@@ -546,7 +540,7 @@ void main() {
         await repository.updateSegmentMemo(episodeId, 0, '感情的に読む');
 
         final segment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(segment['memo'], '感情的に読む');
+        expect(segment.memo, '感情的に読む');
       });
     });
 
@@ -555,7 +549,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
 
         for (var i = 0; i < 3; i++) {
@@ -574,29 +568,8 @@ void main() {
 
         final segments = await repository.getSegments(episodeId);
         expect(segments, hasLength(2));
-        expect(segments[0]['segment_index'], 0);
-        expect(segments[1]['segment_index'], 2);
-      });
-    });
-
-    group('TtsEpisodeStatus.fromDbStatus', () {
-      test('maps "completed" to completed', () {
-        expect(TtsEpisodeStatus.fromDbStatus('completed'),
-            TtsEpisodeStatus.completed);
-      });
-
-      test('maps "partial" to partial', () {
-        expect(TtsEpisodeStatus.fromDbStatus('partial'),
-            TtsEpisodeStatus.partial);
-      });
-
-      test('maps "generating" to partial', () {
-        expect(TtsEpisodeStatus.fromDbStatus('generating'),
-            TtsEpisodeStatus.partial);
-      });
-
-      test('maps null to none', () {
-        expect(TtsEpisodeStatus.fromDbStatus(null), TtsEpisodeStatus.none);
+        expect(segments[0].segmentIndex, 0);
+        expect(segments[1].segmentIndex, 2);
       });
     });
 
@@ -605,17 +578,17 @@ void main() {
         await repository.createEpisode(
           fileName: '0001_chapter1.txt',
           sampleRate: 24000,
-          status: 'completed',
+          status: TtsEpisodeStatus.completed,
         );
         await repository.createEpisode(
           fileName: '0002_chapter2.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
         await repository.createEpisode(
           fileName: '0003_chapter3.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
         final statuses = await repository.getAllEpisodeStatuses();
@@ -623,7 +596,7 @@ void main() {
         expect(statuses, hasLength(3));
         expect(statuses['0001_chapter1.txt'], TtsEpisodeStatus.completed);
         expect(statuses['0002_chapter2.txt'], TtsEpisodeStatus.partial);
-        expect(statuses['0003_chapter3.txt'], TtsEpisodeStatus.partial);
+        expect(statuses['0003_chapter3.txt'], TtsEpisodeStatus.generating);
       });
 
       test('returns empty map for empty database', () async {
@@ -637,10 +610,9 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'partial',
+          status: TtsEpisodeStatus.partial,
         );
 
-        // Segment with audio
         await repository.insertSegment(
           episodeId: episodeId,
           segmentIndex: 0,
@@ -651,7 +623,6 @@ void main() {
           sampleCount: 100,
         );
 
-        // Segment without audio
         await repository.insertSegment(
           episodeId: episodeId,
           segmentIndex: 1,
@@ -660,7 +631,6 @@ void main() {
           textLength: 5,
         );
 
-        // Segment with audio
         await repository.insertSegment(
           episodeId: episodeId,
           segmentIndex: 2,
@@ -679,7 +649,7 @@ void main() {
         final episodeId = await repository.createEpisode(
           fileName: '0001_プロローグ.txt',
           sampleRate: 24000,
-          status: 'generating',
+          status: TtsEpisodeStatus.generating,
         );
 
         await repository.insertSegment(

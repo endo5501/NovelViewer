@@ -68,7 +68,7 @@ Future<bool> exportEpisodeToMp3({
     final segments = await repository.getSegments(episodeId);
     final wavSegments = <Uint8List>[];
     for (final segment in segments) {
-      final audioData = segment['audio_data'] as Uint8List?;
+      final audioData = segment.audioData;
       if (audioData != null) {
         wavSegments.add(audioData);
       }

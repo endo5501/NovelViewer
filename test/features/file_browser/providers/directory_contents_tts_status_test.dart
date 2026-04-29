@@ -6,6 +6,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
+import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
@@ -70,12 +71,12 @@ void main() {
       await repo.createEpisode(
         fileName: '0001_chapter1.txt',
         sampleRate: 24000,
-        status: 'completed',
+        status: TtsEpisodeStatus.completed,
       );
       await repo.createEpisode(
         fileName: '0002_chapter2.txt',
         sampleRate: 24000,
-        status: 'partial',
+        status: TtsEpisodeStatus.partial,
       );
       await ttsDb.close();
 

@@ -10,6 +10,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_audio_state_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_export_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -54,6 +55,9 @@ void main() {
             final notifier = SelectedFileNotifier();
             return notifier;
           }),
+          ttsAudioStateProvider.overrideWith((ref, filePath) async {
+            return TtsAudioState.ready;
+          }),
         ],
         child: const MaterialApp(
               locale: Locale('ja'),
@@ -67,19 +71,14 @@ void main() {
     final element = tester.element(find.byType(TextViewerPanel));
     final container = ProviderScope.containerOf(element);
 
-    // Set directory and file so _checkAudioState can run and set _lastCheckedFileKey
     container
         .read(currentDirectoryProvider.notifier)
         .setDirectory(tempDir.path);
     container.read(selectedFileProvider.notifier).selectFile(
           FileEntry(name: 'test.txt', path: '${tempDir.path}/test.txt'),
         );
-    // Let _checkAudioState run (creates empty DB, finds no episode, sets state to none)
     await tester.pumpAndSettle();
 
-    // Now _lastCheckedFileKey is set, subsequent calls return early
-    // Set the desired state
-    container.read(ttsAudioStateProvider.notifier).set(TtsAudioState.ready);
     container
         .read(ttsPlaybackStateProvider.notifier)
         .set(TtsPlaybackState.stopped);
@@ -128,6 +127,9 @@ void main() {
               final notifier = SelectedFileNotifier();
               return notifier;
             }),
+            ttsAudioStateProvider.overrideWith((ref, filePath) async {
+              return TtsAudioState.generating;
+            }),
           ],
           child: const MaterialApp(
                 locale: Locale('ja'),
@@ -147,11 +149,6 @@ void main() {
             FileEntry(name: 'test.txt', path: '${tempDir.path}/test.txt'),
           );
       await tester.pumpAndSettle();
-
-      container
-          .read(ttsAudioStateProvider.notifier)
-          .set(TtsAudioState.generating);
-      await tester.pump();
 
       expect(find.byIcon(Icons.download), findsNothing);
     });
