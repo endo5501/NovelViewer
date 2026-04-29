@@ -89,16 +89,24 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
 
   Future<void> _startStreaming(String content) async {
     final folderPath = ref.read(currentDirectoryProvider);
-    final fileName = ref.read(selectedFileProvider)?.name;
+    final selectedFile = ref.read(selectedFileProvider);
+    final fileName = selectedFile?.name;
     final engineType = ref.read(ttsEngineTypeProvider);
 
     final config = TtsEngineConfig.resolveFromRef(ref, engineType);
 
-    if (folderPath == null || fileName == null || config.modelDir.isEmpty) {
+    if (folderPath == null || selectedFile == null || fileName == null ||
+        config.modelDir.isEmpty) {
       return;
     }
 
-    final filePath = '$folderPath/$fileName';
+    // Use selectedFile.path verbatim so it matches the family key the build
+    // watches via `ttsAudioStateProvider(selectedFile.path)`. Building the
+    // path from `'$folderPath/$fileName'` here mixes separators on Windows
+    // (`D:\foo/bar.txt`), which makes the active-streaming key never match
+    // the watched key, so the UI never flips to the "generating" state and
+    // the stop button stays hidden.
+    final filePath = selectedFile.path;
     ref.read(activeStreamingFileProvider.notifier).set(filePath);
     ref.invalidate(ttsAudioStateProvider(filePath));
     ref.read(ttsGenerationProgressProvider.notifier)
