@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 
@@ -113,7 +114,7 @@ class NovelDatabase {
     await db.execute('DROP TABLE bookmarks_old');
   }
 
-  /// For testing: initialize with a provided database instance.
+  @visibleForTesting
   void setDatabase(Database db) {
     _database = db;
   }

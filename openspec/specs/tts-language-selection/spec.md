@@ -44,7 +44,7 @@ The system SHALL provide a `ttsLanguageProvider` (Riverpod NotifierProvider) tha
 - **THEN** the provider state updates to English and the value is persisted
 
 ### Requirement: TTS engine language application
-The TTS engine SHALL apply the selected language when initializing. The `TtsIsolate.loadModel` method SHALL accept a `languageId` parameter. The `TtsGenerationController` SHALL read the current language from the provider and pass it to the isolate.
+The TTS engine SHALL apply the selected language when initializing. The `TtsIsolate.loadModel` method SHALL accept a `languageId` parameter. The TTS playback controllers (`TtsStreamingController` and `TtsEditController`) SHALL read the current language from `ttsLanguageProvider` and pass it to the isolate when triggering model load.
 
 #### Scenario: Language applied during model load
 - **WHEN** the TTS engine loads a model with languageId 2050

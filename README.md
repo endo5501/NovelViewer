@@ -101,6 +101,10 @@ fvm flutter test test/features/text_download/narou_site_test.dart
 
 # qwen3-tts.cppのベンチマーク実行(結果はbenchmarks/に保存)
 scripts/benchmark_tts.sh --model-dir <dir> --max-tokens 200
+
+# ビルド成果物とリポジトリ root の flutter_*.log を一括削除
+scripts/clean.sh   # macOS/Linux
+scripts\clean.bat  # Windows
 ```
 
 ### リンター

@@ -45,13 +45,13 @@ The release-build log file SHALL be rotated by size to bound disk usage. When `a
 - **WHEN** the log file is rotated for the first time and only `app.log` exists
 - **THEN** `app.log` becomes `app.log.1` and a new empty `app.log` is created
 
-### Requirement: Initialization fallback before output configuration
-The logger system SHALL emit records via `debugPrint` until `AppLogger.initialize()` has completed. Records emitted before initialization SHALL NOT crash the application or be silently lost in debug builds.
+### Requirement: Fallback during async sink initialization
+The logger system SHALL route records to `debugPrint` while the file sink is still being prepared. The dispatcher listener SHALL be attached synchronously inside `AppLogger.initialize()` before any async file-sink setup begins, so records emitted during that async window are routed to `debugPrint` rather than dropped or delivered to a partially-initialized file sink. Callers are responsible for invoking `AppLogger.initialize()` before any feature module emits log records; records emitted prior to that call are out of scope.
 
-#### Scenario: Pre-initialization record in debug build
-- **WHEN** a record is emitted before `AppLogger.initialize()` completes in a debug build
-- **THEN** the record reaches `debugPrint` via the default `Logger.root` listener configured at facade load time
+#### Scenario: Record emitted during async sink setup in release build
+- **WHEN** a record is emitted after `AppLogger.initialize(debug: false)` is invoked but before the file sink finishes initializing
+- **THEN** the record reaches `debugPrint` (or the test-supplied debug sink), not the file sink
 
 #### Scenario: Initialization failure is non-fatal
-- **WHEN** `AppLogger.initialize()` throws (e.g. `path_provider` unavailable on a test platform)
-- **THEN** the failure is caught, the system falls back to `debugPrint` only, and `runApp` proceeds
+- **WHEN** `AppLogger.initialize()` encounters an exception while resolving or initializing the file sink (e.g. `path_provider` unavailable, or the sink's `initialize()` throws)
+- **THEN** the failure is caught internally, records continue to route to `debugPrint`, and `initialize()` completes without rethrowing so `runApp` proceeds

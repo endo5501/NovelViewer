@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 
@@ -111,10 +112,9 @@ class NarouSite extends NovelSite {
 
     // Detect pagination: look for "次へ" link with ?p= parameter
     Uri? nextPageUrl;
-    final nextLink = document.querySelectorAll('a[href*="?p="]').cast<dynamic>().firstWhere(
-      (link) => link.text.trim() == '次へ',
-      orElse: () => null,
-    );
+    final nextLink = document
+        .querySelectorAll('a[href*="?p="]')
+        .firstWhereOrNull((link) => link.text.trim() == '次へ');
     if (nextLink != null) {
       nextPageUrl = baseUrl.resolve(nextLink.attributes['href']!);
     }

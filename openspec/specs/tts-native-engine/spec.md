@@ -224,10 +224,10 @@ The system SHALL provide Dart FFI bindings that wrap the C API functions. The bi
 - **THEN** all C API functions (init, is_loaded, free, synthesize, synthesize_with_voice, set_language, get_audio, get_audio_length, get_sample_rate, get_error, abort, reset_abort) are available as Dart methods
 
 ### Requirement: TtsEngine language configuration
-The `TtsEngine` class SHALL provide a `setLanguage` method that accepts an integer language ID and calls the native `qwen3_tts_set_language` function. The class SHALL define a `languageJapanese` constant with value `2058`. The `setLanguage` method SHALL only be callable when the model is loaded.
+The `TtsEngine` class SHALL provide a `setLanguage` method that accepts an integer language ID and calls the native `qwen3_tts_set_language` function. The `setLanguage` method SHALL only be callable when the model is loaded. Callers SHALL pass the language ID via the `TtsLanguage` enum (e.g., `TtsLanguage.ja.languageId`); a top-level `languageJapanese` constant on `TtsEngine` SHALL NOT exist.
 
 #### Scenario: Set language on loaded engine
-- **WHEN** `setLanguage` is called with `TtsEngine.languageJapanese` on a loaded `TtsEngine`
+- **WHEN** `setLanguage` is called with `TtsLanguage.ja.languageId` on a loaded `TtsEngine`
 - **THEN** the native `qwen3_tts_set_language` is called with the context and language ID `2058`
 
 #### Scenario: Set language on unloaded engine throws
