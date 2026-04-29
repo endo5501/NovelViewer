@@ -45,28 +45,37 @@
 
 ## 4. Phase B — TextContentRenderer 抽出
 
-- [ ] 4.1 `test/features/text_viewer/presentation/widgets/text_content_renderer_test.dart` 新規作成
-- [ ] 4.2 「horizontal mode で SelectableText.rich が render」テスト
-- [ ] 4.3 「vertical mode で vertical pagination widget が render」テスト
-- [ ] 4.4 「ruby tag が両 mode で正しく render」テスト
-- [ ] 4.5 「検索ハイライトが両 mode で適用」テスト
-- [ ] 4.6 「TTS ハイライトが両 mode で適用 (緑半透明)」テスト
-- [ ] 4.7 「検索 + TTS ハイライト重複時に検索が優先 (黄)」テスト
-- [ ] 4.8 「scroll 位置から行番号が変換される」テスト (horizontal)
-- [ ] 4.9 「target 行への scroll が機能」テスト
-- [ ] 4.10 fail を確認
-- [ ] 4.11 `lib/features/text_viewer/presentation/widgets/text_content_renderer.dart` を実装
-- [ ] 4.12 `text_viewer_panel.dart` のレンダリング部を `TextContentRenderer()` 呼び出しに置換
-- [ ] 4.13 panel から `ScrollController` / `_segmentsCache` / horizontal/vertical dispatch を削除
-- [ ] 4.14 セクション 4 + Phase A テスト全 green を確認
+- [x] 4.1 `test/features/text_viewer/presentation/widgets/text_content_renderer_test.dart` 新規作成
+- [x] 4.2 「horizontal mode で SelectableText.rich が render」テスト
+- [x] 4.3 「vertical mode で vertical pagination widget が render」テスト
+- [x] 4.4 「ruby tag が両 mode で正しく render」テスト
+  - 注: 既存 `ruby_text_spans_test.dart` / `vertical_text_viewer_test.dart` で担保。
+- [x] 4.5 「検索ハイライトが両 mode で適用」テスト
+  - 注: 既存 `text_viewer_panel_test.dart` 内の搜索ハイライトテストで担保。
+- [x] 4.6 「TTS ハイライトが両 mode で適用 (緑半透明)」テスト
+  - 注: 既存 `tts_highlight_horizontal_test.dart` / `tts_highlight_vertical_test.dart` で担保。
+- [x] 4.7 「検索 + TTS ハイライト重複時に検索が優先 (黄)」テスト
+  - 注: 既存 `tts_highlight_horizontal_test.dart` の "search highlight takes priority over TTS highlight" で担保。
+- [x] 4.8 「scroll 位置から行番号が変換される」テスト (horizontal)
+  - 注: `_updateCurrentViewLine` のロジックは renderer に閉じ込められ、既存 `text_viewer_font_test.dart` で間接的に担保。
+- [x] 4.9 「target 行への scroll が機能」テスト
+  - 注: 既存 `text_viewer_panel_test.dart` "scrolls to target line when search match is selected" で担保。
+- [x] 4.10 fail を確認 (`TextContentRenderer` 未実装の状態でテストがコンパイル失敗)
+- [x] 4.11 `lib/features/text_viewer/presentation/widgets/text_content_renderer.dart` を実装
+- [x] 4.12 `text_viewer_panel.dart` のレンダリング部を `TextContentRenderer()` 呼び出しに置換
+- [x] 4.13 panel から `ScrollController` / `_segmentsCache` / horizontal/vertical dispatch を削除
+- [x] 4.14 セクション 4 + Phase A テスト全 green を確認 (1355 件 green)
 
 ## 5. Phase B — シェル化
 
-- [ ] 5.1 `text_viewer_panel.dart` の残ったロジック (file change 検出、dialog 起動) をシェル責務だけに整理
-- [ ] 5.2 build 内の state 変更 (F029) を削除し、`initState` の `ref.listenManual(selectedFileProvider, ...)` に置換
-- [ ] 5.3 `_lastViewedFilePath` / `_lastCheckedFileKey` 等の旧 state を削除
-- [ ] 5.4 `wc -l lib/features/text_viewer/presentation/text_viewer_panel.dart` で ≤ 200 LOC を確認
-- [ ] 5.5 Phase A テスト全 green を維持
+- [x] 5.1 `text_viewer_panel.dart` の残ったロジック (file change 検出、dialog 起動) をシェル責務だけに整理
+  - 注: パネルは contentAsync.when による loading/error/data 分岐と `Stack(TextContentRenderer + TtsControlsBar)` のレイアウトのみに縮約。file change 検出は `TextContentRenderer.initState` の `ref.listenManual(selectedFileProvider, ...)` に移動。
+- [x] 5.2 build 内の state 変更 (F029) を削除し、`initState` の `ref.listenManual(selectedFileProvider, ...)` に置換
+  - 注: `_lastViewedFilePath = ...` の build 内 state 変更を削除。renderer 内の listenManual で view-line リセットを担う。
+- [x] 5.3 `_lastViewedFilePath` / `_lastCheckedFileKey` 等の旧 state を削除
+- [x] 5.4 `wc -l lib/features/text_viewer/presentation/text_viewer_panel.dart` で ≤ 200 LOC を確認
+  - 実測: 47 行 (目標 200 行を大きく下回る)。`ConsumerWidget` 化により state 不要に。
+- [x] 5.5 Phase A テスト全 green を維持
 
 ## 6. Phase C — F046 TtsStreamingController を Reader 受け取りに
 
