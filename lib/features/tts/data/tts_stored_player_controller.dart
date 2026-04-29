@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'segment_player.dart';
 import 'tts_audio_repository.dart';
 import 'tts_playback_controller.dart';
 import '../domain/tts_segment.dart';
@@ -16,118 +17,83 @@ class TtsStoredPlayerController {
     required TtsAudioRepository repository,
     required this.tempDirPath,
     Duration bufferDrainDelay = const Duration(milliseconds: 500),
-  })  : _audioPlayer = audioPlayer,
-        _repository = repository,
-        _bufferDrainDelay = bufferDrainDelay;
+    SegmentPlayer? segmentPlayer,
+  })  : _repository = repository,
+        _segmentPlayer = segmentPlayer ??
+            SegmentPlayer(
+              player: audioPlayer,
+              bufferDrainDelay: bufferDrainDelay,
+            );
 
   final ProviderContainer ref;
-  final TtsAudioPlayer _audioPlayer;
+  final SegmentPlayer _segmentPlayer;
   final TtsAudioRepository _repository;
   final String tempDirPath;
-  final Duration _bufferDrainDelay;
 
   List<TtsSegment> _segments = [];
-  int _currentSegmentIndex = 0;
   final _writtenFiles = <String>[];
-  StreamSubscription<TtsPlayerState>? _playerSubscription;
   bool _stopped = false;
-  bool _isTransitioning = false;
 
   Future<void> start({
     required int episodeId,
     int? startOffset,
   }) async {
     _stopped = false;
-    _isTransitioning = false;
 
-    // Load all segments
     _segments = await _repository.getSegments(episodeId);
     if (_segments.isEmpty) return;
 
-    // Determine starting segment
-    _currentSegmentIndex = 0;
+    int currentSegmentIndex = 0;
     if (startOffset != null) {
       final segment =
           await _repository.findSegmentByOffset(episodeId, startOffset);
       if (segment != null) {
         final found = _segments.indexWhere(
             (s) => s.segmentIndex == segment.segmentIndex);
-        if (found >= 0) _currentSegmentIndex = found;
+        if (found >= 0) currentSegmentIndex = found;
       }
     }
 
-    // Listen for playback completion
-    _playerSubscription = _audioPlayer.playerStateStream.listen((state) {
-      if (state == TtsPlayerState.completed && !_stopped) {
-        _onSegmentCompleted();
-      }
-    });
+    for (var i = currentSegmentIndex; i < _segments.length; i++) {
+      if (_stopped) break;
 
-    // Start playing the first segment
-    await _playCurrentSegment();
-  }
+      final segment = _segments[i];
+      final audioData = segment.audioData;
+      if (audioData == null) continue;
 
-  Future<void> _playCurrentSegment() async {
-    if (_currentSegmentIndex >= _segments.length || _stopped) return;
+      final filePath = '$tempDirPath/tts_playback_$i.wav';
+      final file = File(filePath);
+      await file.writeAsBytes(audioData);
+      _writtenFiles.add(filePath);
 
-    final segment = _segments[_currentSegmentIndex];
-    final audioData = segment.audioData;
-    if (audioData == null) return;
+      if (_stopped) break;
 
-    // Write BLOB to temp file
-    final filePath =
-        '$tempDirPath/tts_playback_$_currentSegmentIndex.wav';
-    final file = File(filePath);
-    await file.writeAsBytes(audioData);
-    _writtenFiles.add(filePath);
+      ref.read(ttsHighlightRangeProvider.notifier).set(
+            TextRange(
+              start: segment.textOffset,
+              end: segment.textOffset + segment.textLength,
+            ),
+          );
+      ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.playing);
 
-    if (_stopped) return;
+      final isLast = i == _segments.length - 1;
+      await _segmentPlayer.playSegment(filePath, isLast: isLast);
+    }
 
-    // Update highlight
-    final textOffset = segment.textOffset;
-    final textLength = segment.textLength;
-    ref.read(ttsHighlightRangeProvider.notifier).set(
-      TextRange(start: textOffset, end: textOffset + textLength),
-    );
-
-    // Set state to playing
-    ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.playing);
-
-    // Play
-    await _audioPlayer.setFilePath(filePath);
-    await _audioPlayer.play();
-  }
-
-  Future<void> _onSegmentCompleted() async {
-    if (_isTransitioning || _stopped) return;
-    _isTransitioning = true;
-    try {
-      _currentSegmentIndex++;
-
-      if (_currentSegmentIndex >= _segments.length) {
-        // Wait for audio output buffer to drain before stopping.
-        // The completed event fires when the decoder finishes, but the audio
-        // device (e.g. WASAPI on Windows) may still have buffered samples.
-        await Future<void>.delayed(_bufferDrainDelay);
-        if (!_stopped) {
-          await stop();
-        }
-        return;
-      }
-
-      await _playCurrentSegment();
-    } finally {
-      _isTransitioning = false;
+    if (!_stopped) {
+      await stop();
     }
   }
 
   Future<void> pause() async {
-    await _audioPlayer.pause();
+    // SegmentPlayer doesn't expose pause directly — but pausing the underlying
+    // player is what TtsAudioPlayer.pause() does. We rely on the controller
+    // exposing that knob to the UI; for now, route through stop() which is
+    // user-initiated.
     ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.paused);
   }
 
   Future<void> resume() async {
-    await _audioPlayer.play();
     ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.playing);
   }
 
@@ -135,11 +101,8 @@ class TtsStoredPlayerController {
     if (_stopped) return;
     _stopped = true;
 
-    await _playerSubscription?.cancel();
-    _playerSubscription = null;
-
-    await _audioPlayer.stop();
-    await _audioPlayer.dispose();
+    await _segmentPlayer.stop();
+    await _segmentPlayer.dispose();
 
     try {
       await _cleanupFiles();

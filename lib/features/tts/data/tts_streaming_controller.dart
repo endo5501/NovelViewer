@@ -8,6 +8,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import 'segment_player.dart';
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
 import 'tts_dictionary_repository.dart';
@@ -33,24 +34,28 @@ class TtsStreamingController {
     Duration bufferDrainDelay = const Duration(milliseconds: 500),
     TtsDictionaryRepository? dictionaryRepository,
     TtsSession? session,
+    SegmentPlayer? segmentPlayer,
   })  : _audioPlayer = audioPlayer,
         _repository = repository,
-        _bufferDrainDelay = bufferDrainDelay,
         _dictionaryRepository = dictionaryRepository,
-        _session = session ?? TtsSession(isolate: ttsIsolate);
+        _session = session ?? TtsSession(isolate: ttsIsolate),
+        _segmentPlayer = segmentPlayer ??
+            SegmentPlayer(
+              player: audioPlayer,
+              bufferDrainDelay: bufferDrainDelay,
+            );
 
   final ProviderContainer ref;
   final TtsSession _session;
+  final SegmentPlayer _segmentPlayer;
   final TtsAudioPlayer _audioPlayer;
   final TtsAudioRepository _repository;
   final TtsDictionaryRepository? _dictionaryRepository;
   final String tempDirPath;
-  final Duration _bufferDrainDelay;
   final _textSegmenter = TextSegmenter();
 
   bool _stopped = false;
   final _writtenFiles = <String>[];
-  Completer<void>? _activePlayCompleter;
 
   Future<void> start({
     required String text,
@@ -256,49 +261,12 @@ class TtsStreamingController {
             TextRange(start: textOffset, end: textOffset + textLength),
           );
 
-      // Play segment
-      // IMPORTANT: setFilePath must come BEFORE subscribing to playerStateStream.
-      // just_audio's playerStateStream is a BehaviorSubject that replays the
-      // latest value. After a segment completes, the replayed state is
-      // 'completed', which would immediately trigger the completer and skip
-      // the segment. setFilePath resets processingState to 'ready'.
       ref
           .read(ttsPlaybackStateProvider.notifier)
           .set(TtsPlaybackState.playing);
-      await _audioPlayer.setFilePath(filePath);
 
-      final playCompleter = Completer<void>();
-      _activePlayCompleter = playCompleter;
-      late StreamSubscription<TtsPlayerState> playSub;
-      playSub = _audioPlayer.playerStateStream.listen((state) {
-        if (state == TtsPlayerState.completed && !playCompleter.isCompleted) {
-          playCompleter.complete();
-        }
-      });
-
-      unawaited(_audioPlayer.play().catchError((e, st) {
-        if (!playCompleter.isCompleted) playCompleter.completeError(e, st);
-      }));
-
-      await playCompleter.future;
-      _activePlayCompleter = null;
-      await playSub.cancel();
-
-      // Wait for audio output buffer to drain after each segment, including
-      // the last one. eof-reached fires when the decoder finishes, but the
-      // audio device (e.g. WASAPI on Windows) may still have buffered samples
-      // to play. For intermediate segments, pause() resets just_audio's
-      // _playing flag so the next play() call is not a no-op. For the last
-      // segment, pause() is unnecessary since no subsequent play() follows.
-      // pause() is used instead of stop() because stop() destroys the
-      // platform (MediaKitPlayer), which kills buffered audio.
-      if (!_stopped) {
-        await Future<void>.delayed(_bufferDrainDelay);
-        final hasNextSegment = i < segments.length - 1;
-        if (!_stopped && hasNextSegment) {
-          await _audioPlayer.pause();
-        }
-      }
+      final isLast = i == segments.length - 1;
+      await _segmentPlayer.playSegment(filePath, isLast: isLast);
 
       if (_stopped) break;
     }
@@ -309,7 +277,7 @@ class TtsStreamingController {
           .read(ttsPlaybackStateProvider.notifier)
           .set(TtsPlaybackState.stopped);
       ref.read(ttsHighlightRangeProvider.notifier).set(null);
-      await _audioPlayer.dispose();
+      await _segmentPlayer.dispose();
       await _cleanupFiles();
     }
   }
@@ -331,17 +299,10 @@ class TtsStreamingController {
     // Abort any in-progress synthesis so the worker Isolate becomes responsive
     _session.abort();
 
-    // Cancel active play completion wait
-    final playCompleter = _activePlayCompleter;
-    if (playCompleter != null && !playCompleter.isCompleted) {
-      playCompleter.complete();
-    }
-    _activePlayCompleter = null;
-
     try {
-      // Stop playback
-      await _audioPlayer.stop();
-      await _audioPlayer.dispose();
+      // Stop playback (skips any pending buffer-drain delay).
+      await _segmentPlayer.stop();
+      await _segmentPlayer.dispose();
 
       // Clean up isolate via the session.
       await _session.dispose();

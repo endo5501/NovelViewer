@@ -25,9 +25,7 @@ class TtsSession {
   bool _isolateSpawned = false;
   TtsEngineConfig? _loadedConfig;
   Completer<SynthesisResultResponse?>? _activeSynthesisCompleter;
-  StreamSubscription<TtsIsolateResponse>? _activeSynthesisSubscription;
   Completer<bool>? _activeModelLoadCompleter;
-  StreamSubscription<TtsIsolateResponse>? _activeModelLoadSubscription;
   bool _disposed = false;
 
   bool get modelLoaded => _modelLoaded;
@@ -56,7 +54,6 @@ class TtsSession {
         completer.complete(response.success);
       }
     });
-    _activeModelLoadSubscription = sub;
 
     switch (config) {
       case Qwen3EngineConfig():
@@ -84,7 +81,6 @@ class TtsSession {
       return success;
     } finally {
       _activeModelLoadCompleter = null;
-      _activeModelLoadSubscription = null;
       await sub.cancel();
     }
   }
@@ -109,14 +105,12 @@ class TtsSession {
         }
       }
     });
-    _activeSynthesisSubscription = sub;
 
     _isolate.synthesize(text, refWavPath: refWavPath);
     try {
       return await completer.future;
     } finally {
       _activeSynthesisCompleter = null;
-      _activeSynthesisSubscription = null;
       await sub.cancel();
     }
   }

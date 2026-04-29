@@ -72,37 +72,37 @@
 
 ## 9. Phase C — SegmentPlayer (TDD)
 
-- [ ] 9.1 `test/features/tts/data/segment_player_test.dart` 作成
-- [ ] 9.2 「`playSegment(filePath, isLast: false)`: setFilePath が listen より先に呼ばれる」テスト (call order assert)
-- [ ] 9.3 「`play()` は unawaited、完了は playerStateStream 経由で通知される」テスト
-- [ ] 9.4 「intermediate 完了で `pause()` が呼ばれ、`stop()` は呼ばれない」テスト
-- [ ] 9.5 「`isLast: true` で 500ms drain 後に pause/dispose 順で進む」テスト
-- [ ] 9.6 「`bufferDrainDelay: Duration.zero` で intermediate も last も即時に進む」テスト
-- [ ] 9.7 「`stop()` 中に drain delay が pending なら skip」テスト
-- [ ] 9.8 「`play().catchError` が completer のエラーパスを解決する」テスト
-- [ ] 9.9 テストが fail することを確認
-- [ ] 9.10 `lib/features/tts/data/segment_player.dart` を実装。`SegmentPlayer.playSegment` の冒頭に WASAPI 関連コメント (4 ポイント) を集約
-- [ ] 9.11 セクション 9 のテストが pass
+- [x] 9.1 `test/features/tts/data/segment_player_test.dart` 作成
+- [x] 9.2 「`playSegment(filePath, isLast: false)`: setFilePath が listen より先に呼ばれる」テスト (call order assert)
+- [x] 9.3 「`play()` は unawaited、完了は playerStateStream 経由で通知される」テスト
+- [x] 9.4 「intermediate 完了で `pause()` が呼ばれ、`stop()` は呼ばれない」テスト
+- [x] 9.5 「`isLast: true` で 500ms drain 後に pause/dispose 順で進む」テスト
+- [x] 9.6 「`bufferDrainDelay: Duration.zero` で intermediate も last も即時に進む」テスト
+- [x] 9.7 「`stop()` 中に drain delay が pending なら skip」テスト
+- [x] 9.8 「`play().catchError` が completer のエラーパスを解決する」テスト
+- [x] 9.9 テストが fail することを確認
+- [x] 9.10 `lib/features/tts/data/segment_player.dart` を実装。`SegmentPlayer.playSegment` の冒頭に WASAPI 関連コメント (4 ポイント) を集約
+- [x] 9.11 セクション 9 のテストが pass
 
 ## 10. Phase C — TtsStreamingController を SegmentPlayer 経由に
 
-- [ ] 10.1 既存テスト `tts_streaming_controller_test.dart` の "all segments without audio cutoff" 系シナリオを `SegmentPlayer` 経由実装でも担保するように調整
-- [ ] 10.2 `tts_streaming_controller.dart:355-388` を `SegmentPlayer.playSegment` 利用に置換
-- [ ] 10.3 既存の WASAPI 関連コメントは削除し、`SegmentPlayer` のコメントが正典であることを明示
-- [ ] 10.4 テストが pass することを確認
+- [x] 10.1 既存テスト `tts_streaming_controller_test.dart` の "all segments without audio cutoff" 系シナリオを `SegmentPlayer` 経由実装でも担保するように調整
+- [x] 10.2 `tts_streaming_controller.dart:355-388` を `SegmentPlayer.playSegment` 利用に置換
+- [x] 10.3 既存の WASAPI 関連コメントは削除し、`SegmentPlayer` のコメントが正典であることを明示
+- [x] 10.4 テストが pass することを確認
 
 ## 11. Phase C — TtsStoredPlayerController を SegmentPlayer 経由に
 
-- [ ] 11.1 既存テスト `tts_stored_player_controller_test.dart` の `bufferDrainDelay: Duration.zero` 経路が `SegmentPlayer` を通る形でも動くようにテスト fixture を調整
-- [ ] 11.2 `tts_stored_player_controller.dart:60-121` を `SegmentPlayer` 利用に置換
-- [ ] 11.3 既存の `bufferDrainDelay` パラメータは保持し、`SegmentPlayer` への propagation で実現
-- [ ] 11.4 テスト pass
+- [x] 11.1 既存テスト `tts_stored_player_controller_test.dart` の `bufferDrainDelay: Duration.zero` 経路が `SegmentPlayer` を通る形でも動くようにテスト fixture を調整
+- [x] 11.2 `tts_stored_player_controller.dart:60-121` を `SegmentPlayer` 利用に置換
+- [x] 11.3 既存の `bufferDrainDelay` パラメータは保持し、`SegmentPlayer` への propagation で実現
+- [x] 11.4 テスト pass
 
 ## 12. Phase C — TtsEditController.playSegment を SegmentPlayer 経由に
 
-- [ ] 12.1 既存テストで「pause not stop」が assert されているか確認、無ければ追加
-- [ ] 12.2 `tts_edit_controller.dart:381-411` を `SegmentPlayer` 利用に置換
-- [ ] 12.3 テスト pass
+- [x] 12.1 既存テストで「pause not stop」が assert されているか確認、無ければ追加
+- [x] 12.2 `tts_edit_controller.dart:381-411` を `SegmentPlayer` 利用に置換
+- [x] 12.3 テスト pass
 
 ## 13. Phase D — TextSegmenter provider (F027)
 

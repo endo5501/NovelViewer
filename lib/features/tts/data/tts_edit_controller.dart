@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 
+import 'segment_player.dart';
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
 import 'tts_dictionary_repository.dart';
@@ -26,15 +27,20 @@ class TtsEditController {
     TtsIsolate Function()? ttsIsolateFactory,
     TtsDictionaryRepository? dictionaryRepository,
     TtsSession? session,
-  })  : _audioPlayer = audioPlayer,
-        _repository = repository,
+    SegmentPlayer? segmentPlayer,
+  })  : _repository = repository,
         _ttsIsolateFactory = ttsIsolateFactory ?? TtsIsolate.new,
         _dictionaryRepository = dictionaryRepository,
-        _session = session ?? TtsSession(isolate: ttsIsolate);
+        _session = session ?? TtsSession(isolate: ttsIsolate),
+        _segmentPlayer = segmentPlayer ??
+            // Edit-screen previews always treat each segment as the last one
+            // (no follow-up play()), so default drain to zero — the WASAPI
+            // tail concern only applies to back-to-back segment playback.
+            SegmentPlayer(player: audioPlayer, bufferDrainDelay: Duration.zero);
 
   TtsSession _session;
+  final SegmentPlayer _segmentPlayer;
   final TtsIsolate Function() _ttsIsolateFactory;
-  final TtsAudioPlayer _audioPlayer;
   final TtsAudioRepository _repository;
   final TtsDictionaryRepository? _dictionaryRepository;
   final String tempDirPath;
@@ -50,7 +56,6 @@ class TtsEditController {
   String? _fileName;
   String? _textHash;
   int _sampleRate = 24000;
-  Completer<void>? _activePlayCompleter;
   final _writtenFiles = <String>[];
 
   void Function(int segmentIndex)? onSegmentGenerated;
@@ -327,24 +332,10 @@ class TtsEditController {
     await File(filePath).writeAsBytes(audioData);
     _writtenFiles.add(filePath);
 
-    await _audioPlayer.setFilePath(filePath);
-
-    final playCompleter = Completer<void>();
-    _activePlayCompleter = playCompleter;
-    late StreamSubscription<TtsPlayerState> playSub;
-    playSub = _audioPlayer.playerStateStream.listen((state) {
-      if (state == TtsPlayerState.completed && !playCompleter.isCompleted) {
-        playCompleter.complete();
-      }
-    });
-
-    await _audioPlayer.play();
-    await playCompleter.future;
-    _activePlayCompleter = null;
-    await playSub.cancel();
-    // Use pause() instead of stop() to reset _playing flag without
-    // destroying the platform (which would kill buffered audio output).
-    await _audioPlayer.pause();
+    // isLast: false so SegmentPlayer ends with pause() rather than letting the
+    // platform's playing flag stay set — required to play another segment next
+    // without destroying the underlying player via stop().
+    await _segmentPlayer.playSegment(filePath, isLast: false);
   }
 
   Future<void> playAll({void Function(int)? onSegmentStart}) async {
@@ -359,12 +350,7 @@ class TtsEditController {
 
   Future<void> stopPlayback() async {
     _cancelled = true;
-    final completer = _activePlayCompleter;
-    if (completer != null && !completer.isCompleted) {
-      completer.complete();
-    }
-    _activePlayCompleter = null;
-    await _audioPlayer.stop();
+    await _segmentPlayer.stop();
   }
 
   Future<void> resetSegment(int segmentIndex) async {
