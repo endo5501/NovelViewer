@@ -118,20 +118,25 @@ final ollamaModelListProvider = FutureProvider.autoDispose.family<List<String>, 
 
 ### Decision 5: Piper l10n キー命名
 
-`settings*` プレフィックスで以下 8 キーを追加:
+既存 ARB の命名規約 (`settings_camelCase`) に揃え、6 キーを新規追加し、値の一致する既存 2 キーを再利用する。Piper UI が必要とする 8 ラベルの内訳は以下:
 
-| キー | JA | EN (例) | ZH (例) |
-|------|----|---------|---------|
-| `settingsTtsEngine` | TTSエンジン | TTS Engine | TTS 引擎 |
-| `settingsModel` | モデル | Model | 模型 |
-| `settingsModelDownload` | モデルデータダウンロード | Download Model Data | 下载模型数据 |
-| `settingsDownloaded` | ダウンロード済み | Downloaded | 已下载 |
-| `settingsRetry` | 再試行 | Retry | 重试 |
-| `settingsLengthScale` | 速度 (lengthScale) | Speed (lengthScale) | 速度 (lengthScale) |
-| `settingsNoiseScale` | 抑揚 (noiseScale) | Intonation (noiseScale) | 抑扬 (noiseScale) |
-| `settingsNoiseW` | ノイズ (noiseW) | Noise (noiseW) | 噪声 (noiseW) |
+| 用途 | キー | 種別 | JA | EN | ZH |
+|------|------|------|----|----|-----|
+| TTS エンジンタイトル | `settings_ttsEngine` | 新規 | TTSエンジン | TTS Engine | TTS 引擎 |
+| モデルラベル | `settings_modelLabel` | 新規 | モデル | Model | 模型 |
+| モデルダウンロードボタン | `settings_modelDataDownload` | 既存再利用 | モデルデータダウンロード | Download model data | 下载模型数据 |
+| ダウンロード済み表示 | `settings_piperDownloaded` | 新規 | ダウンロード済み | Downloaded | 已下载 |
+| 再試行ボタン | `settings_retryButton` | 既存再利用 | 再試行 | Retry | 重试 |
+| 速度パラメータ | `settings_piperLengthScale` | 新規 | 速度 (lengthScale) | Speed (lengthScale) | 速度 (lengthScale) |
+| 抑揚パラメータ | `settings_piperNoiseScale` | 新規 | 抑揚 (noiseScale) | Intonation (noiseScale) | 抑扬 (noiseScale) |
+| ノイズパラメータ | `settings_piperNoiseW` | 新規 | ノイズ (noiseW) | Noise (noiseW) | 噪声 (noiseW) |
 
-EN/ZH の最終翻訳は実装時に確定。括弧内のパラメータ名 (lengthScale 等) はテクニカル用語として全言語で保持。
+採用理由:
+- 既存 ARB は `settings_camelCase` (アンダースコア区切り + プレフィックス) で統一されているため、新規キーも追従し命名揺れを避ける。
+- `settings_modelDataDownload` / `settings_retryButton` は値が完全一致するため再利用 (Qwen3 ダウンロード UI と Piper ダウンロード UI で同一文字列)。
+- `settings_modelNameLabel` (= "モデル名") は OpenAI 入力ラベルとして既存だが、Piper の "モデル" とは値が異なるため別キー (`settings_modelLabel`) を新設する。
+
+括弧内のパラメータ名 (`lengthScale` 等) はテクニカル用語として全言語で保持。
 
 ### Decision 6: Phase A の widget テストはセマンティック finder
 

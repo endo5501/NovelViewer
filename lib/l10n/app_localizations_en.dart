@@ -102,6 +102,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings_retryButton => 'Retry';
 
   @override
+  String get settings_ttsEngine => 'TTS Engine';
+
+  @override
+  String get settings_modelLabel => 'Model';
+
+  @override
+  String get settings_piperDownloaded => 'Downloaded';
+
+  @override
+  String get settings_piperLengthScale => 'Speed (lengthScale)';
+
+  @override
+  String get settings_piperNoiseScale => 'Intonation (noiseScale)';
+
+  @override
+  String get settings_piperNoiseW => 'Noise (noiseW)';
+
+  @override
   String get settings_voiceModelTitle => 'Voice model';
 
   @override

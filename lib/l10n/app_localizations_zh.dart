@@ -101,6 +101,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settings_retryButton => '重试';
 
   @override
+  String get settings_ttsEngine => 'TTS 引擎';
+
+  @override
+  String get settings_modelLabel => '模型';
+
+  @override
+  String get settings_piperDownloaded => '已下载';
+
+  @override
+  String get settings_piperLengthScale => '速度 (lengthScale)';
+
+  @override
+  String get settings_piperNoiseScale => '抑扬 (noiseScale)';
+
+  @override
+  String get settings_piperNoiseW => '噪声 (noiseW)';
+
+  @override
   String get settings_voiceModelTitle => '语音模型';
 
   @override

@@ -63,12 +63,13 @@ void main() {
 
     await tester.runAsync(() async {
       await tester.pumpWidget(buildTestWidget());
+      // Drive tab animation so VoiceReferenceSection mounts, then allow
+      // real-time file-system I/O scheduled in its initState to settle.
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('読み上げ'));
+      await tester.pumpAndSettle();
+      await Future.delayed(const Duration(milliseconds: 300));
     });
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('読み上げ'));
-    // runAsync needed because pumpAndSettle alone cannot drive
-    // _loadVoiceFiles() file-system I/O scheduled in initState.
-    await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 300)));
     await tester.pumpAndSettle();
   }
 
