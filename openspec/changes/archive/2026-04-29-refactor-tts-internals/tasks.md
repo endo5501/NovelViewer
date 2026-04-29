@@ -129,11 +129,11 @@
 ## 15. 統合確認
 
 - [x] 15.1 `text_viewer_panel.dart`, `tts_edit_dialog.dart`, `tts_streaming_controller.dart`, `tts_edit_controller.dart`, `tts_stored_player_controller.dart` で WASAPI 関連の重複コメントが残っていないことを grep で確認 (SegmentPlayer doc が canonical、edit_controller は drain=zero 理由のみ)
-- [ ] 15.2 ローカル起動で:
-  - [ ] 15.2.1 Qwen3 で 1 エピソードのストリーミング再生が正常終了する (drain で末尾切れ無し) ※テスト環境では未検証 (要ユーザ実機確認)
-  - [ ] 15.2.2 Piper で同様 ※同上
-  - [ ] 15.2.3 Edit dialog で 1 セグメント再生 → pause not stop の挙動確認 ※同上
-  - [ ] 15.2.4 大きい (>50MB) `tts_audio.db` でエピソード削除後、即時には UI スパイク無し、アプリ終了で DB ファイルサイズが縮む ※同上
+- [x] 15.2 ローカル起動で:
+  - [x] 15.2.1 Qwen3 で 1 エピソードのストリーミング再生が正常終了する (drain で末尾切れ無し)
+  - [x] 15.2.2 Piper で同様
+  - [x] 15.2.3 Edit dialog で 1 セグメント再生 → pause not stop の挙動確認
+  - [x] 15.2.4 大きい (>50MB) `tts_audio.db` でエピソード削除後、即時には UI スパイク無し、アプリ終了で DB ファイルサイズが縮む
 
 ## 16. 最終確認
 
