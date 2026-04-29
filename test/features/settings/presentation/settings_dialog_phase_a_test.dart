@@ -69,6 +69,7 @@ void main() {
     final l10n =
         AppLocalizations.of(tester.element(find.byType(SettingsDialog)))!;
     await tester.tap(find.text(l10n.settings_ttsTabLabel));
+    await tester.pumpAndSettle();
     await tester.runAsync(
       () => Future.delayed(const Duration(milliseconds: 200)),
     );
