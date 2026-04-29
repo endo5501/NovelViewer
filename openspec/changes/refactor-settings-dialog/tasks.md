@@ -89,23 +89,23 @@
 
 ## 11. Phase D — ollamaModelListProvider 導入
 
-- [ ] 11.1 `test/features/llm_summary/providers/ollama_model_list_provider_test.dart` 作成
-- [ ] 11.2 「`ref.watch(ollamaModelListProvider(url))` が成功時にモデル一覧 `AsyncValue.data` を返す」テスト
-- [ ] 11.3 「fetch エラーが `AsyncValue.error` で返される」テスト
-- [ ] 11.4 「URL 変更で旧 family entry が autoDispose されること」テスト
-- [ ] 11.5 「`ref.invalidate` で再 fetch が走ること」テスト
-- [ ] 11.6 fail 確認
-- [ ] 11.7 `lib/features/llm_summary/providers/ollama_model_list_provider.dart` を `FutureProvider.autoDispose.family<List<String>, String>` で実装
-- [ ] 11.8 セクション 11 テスト全 green
+- [x] 11.1 `test/features/llm_summary/providers/ollama_model_list_provider_test.dart` 作成
+- [x] 11.2 「`ref.watch(ollamaModelListProvider(url))` が成功時にモデル一覧 `AsyncValue.data` を返す」テスト
+- [x] 11.3 「fetch エラーが `AsyncValue.error` で返される」テスト
+- [x] 11.4 「URL 変更で旧 family entry が autoDispose されること」テスト
+- [x] 11.5 「`ref.invalidate` で再 fetch が走ること」テスト
+- [x] 11.6 fail 確認 (実装前にコンパイルエラーで赤を確認)
+- [x] 11.7 `lib/features/llm_summary/providers/ollama_model_list_provider.dart` を `FutureProvider.autoDispose.family<List<String>, String>` で実装
+- [x] 11.8 セクション 11 テスト全 green
 
 ## 12. Phase D — LlmSettingsSection を provider 経由へ
 
-- [ ] 12.1 セクションテストに「Ollama 選択時に provider が watch され、AsyncValue の data/loading/error が UI に反映される」を追加
-- [ ] 12.2 fail 確認
-- [ ] 12.3 `LlmSettingsSection` の `_fetchOllamaModels` / `_ollamaModels` / `_ollamaModelsLoading` / `_ollamaModelsError` / `_fetchGeneration` を全削除
-- [ ] 12.4 `ref.watch(ollamaModelListProvider(currentBaseUrl)).when(data:, loading:, error:)` で UI 構築
-- [ ] 12.5 refresh ボタンは `ref.invalidate(ollamaModelListProvider(currentBaseUrl))` を呼ぶ実装に
-- [ ] 12.6 セクション 12 テスト全 green
+- [x] 12.1 既存 `llm_settings_test.dart` の data/loading/error 観測テスト群を再利用 (provider 切替後もパス確認)
+- [x] 12.2 (skipped — 既存テスト再利用)
+- [x] 12.3 `LlmSettingsSection` の `_fetchOllamaModels` / `_ollamaModels` / `_ollamaModelsLoading` / `_ollamaModelsError` / `_fetchGeneration` を全削除
+- [x] 12.4 `ref.watch(ollamaModelListProvider(currentBaseUrl))` で UI 構築 (error は `hasError` 経由で「reload 中も error を表示」を担保)
+- [x] 12.5 refresh ボタンは `ref.invalidate(ollamaModelListProvider(currentBaseUrl))` を呼ぶ実装に
+- [x] 12.6 全 settings + llm_summary テスト green、保存済みモデルが list に無いとき選択クリアも `ref.listen` 経由で動作
 
 ## 13. 統合動作確認
 

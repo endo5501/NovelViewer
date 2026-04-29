@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:novel_viewer/features/llm_summary/data/ollama_client.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
+import 'package:novel_viewer/features/llm_summary/providers/ollama_model_list_provider.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -22,11 +22,6 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
   String? _selectedOllamaModel;
   String _persistedApiKey = '';
 
-  List<String> _ollamaModels = [];
-  bool _ollamaModelsLoading = false;
-  String? _ollamaModelsError;
-  int _fetchGeneration = 0;
-
   @override
   void initState() {
     super.initState();
@@ -43,14 +38,10 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
     _selectedOllamaModel = config.model.isEmpty ? null : config.model;
 
     _loadApiKey();
-    if (_llmProvider == LlmProvider.ollama) {
-      _fetchOllamaModels();
-    }
   }
 
   @override
   void dispose() {
-    _fetchGeneration++;
     _baseUrlController.dispose();
     _apiKeyController.dispose();
     _modelController.dispose();
@@ -64,47 +55,6 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
     if (_apiKeyController.text.isNotEmpty) return;
     _apiKeyController.text = apiKey;
     _persistedApiKey = apiKey;
-  }
-
-  Future<void> _fetchOllamaModels() async {
-    final generation = ++_fetchGeneration;
-
-    setState(() {
-      _ollamaModelsLoading = true;
-      _ollamaModelsError = null;
-    });
-
-    try {
-      final httpClient = ref.read(httpClientProvider);
-      final models = await OllamaClient.fetchModels(
-        baseUrl: _baseUrlController.text,
-        httpClient: httpClient,
-      );
-
-      if (!mounted || generation != _fetchGeneration) return;
-
-      final shouldClearSelection = _selectedOllamaModel != null &&
-          !models.contains(_selectedOllamaModel);
-
-      setState(() {
-        _ollamaModels = models;
-        _ollamaModelsLoading = false;
-        if (shouldClearSelection) {
-          _selectedOllamaModel = null;
-          _modelController.text = '';
-        }
-      });
-
-      if (shouldClearSelection) {
-        _saveLlmConfig();
-      }
-    } catch (e) {
-      if (!mounted || generation != _fetchGeneration) return;
-      setState(() {
-        _ollamaModelsLoading = false;
-        _ollamaModelsError = e.toString();
-      });
-    }
   }
 
   Future<void> _saveLlmConfig() async {
@@ -121,9 +71,33 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
     ref.invalidate(settingsRepositoryProvider);
   }
 
+  void _onSavedModelMissing() {
+    if (_selectedOllamaModel == null) return;
+    setState(() {
+      _selectedOllamaModel = null;
+      _modelController.text = '';
+    });
+    _saveLlmConfig();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+
+    if (_llmProvider == LlmProvider.ollama) {
+      ref.listen<AsyncValue<List<String>>>(
+        ollamaModelListProvider(_baseUrlController.text),
+        (_, next) {
+          if (next case AsyncData(value: final models)) {
+            if (_selectedOllamaModel != null &&
+                !models.contains(_selectedOllamaModel)) {
+              _onSavedModelMissing();
+            }
+          }
+        },
+      );
+    }
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,9 +117,6 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
                 }
               });
               _saveLlmConfig();
-              if (value == LlmProvider.ollama) {
-                _fetchOllamaModels();
-              }
             },
             items: [
               DropdownMenuItem(
@@ -171,7 +142,12 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
               decoration: InputDecoration(
                 labelText: l10n.settings_endpointUrlLabel,
               ),
-              onChanged: (_) => _saveLlmConfig(),
+              onChanged: (_) {
+                // Rebuild so the watched ollamaModelListProvider family key
+                // updates; autoDispose cancels the fetch for the old URL.
+                setState(() {});
+                _saveLlmConfig();
+              },
             ),
           ),
           if (_llmProvider == LlmProvider.openai) ...[
@@ -205,8 +181,65 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
 
   Widget _buildOllamaModelSelector() {
     final l10n = AppLocalizations.of(context)!;
-    if (_ollamaModelsLoading) {
+    final url = _baseUrlController.text;
+    final modelList = ref.watch(ollamaModelListProvider(url));
+
+    if (modelList.hasError) {
       return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                l10n.settings_modelListFetchError(modelList.error.toString()),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () => ref.invalidate(ollamaModelListProvider(url)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return modelList.when(
+      data: (models) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: DropdownButton<String>(
+                value: _selectedOllamaModel,
+                isExpanded: true,
+                hint: Text(l10n.settings_selectModelHint),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedOllamaModel = value;
+                    _modelController.text = value ?? '';
+                  });
+                  _saveLlmConfig();
+                },
+                items: models
+                    .map(
+                      (model) => DropdownMenuItem<String>(
+                        value: model,
+                        child: Text(model),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () =>
+                  ref.invalidate(ollamaModelListProvider(url)),
+            ),
+          ],
+        ),
+      ),
+      loading: () => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
@@ -219,58 +252,24 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
             Text(l10n.settings_modelListFetching),
           ],
         ),
-      );
-    }
-
-    if (_ollamaModelsError != null) {
-      return Padding(
+      ),
+      error: (error, _) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
             Expanded(
               child: Text(
-                l10n.settings_modelListFetchError(_ollamaModelsError!),
+                l10n.settings_modelListFetchError(error.toString()),
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
             IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: _fetchOllamaModels,
+              onPressed: () =>
+                  ref.invalidate(ollamaModelListProvider(url)),
             ),
           ],
         ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: DropdownButton<String>(
-              value: _selectedOllamaModel,
-              isExpanded: true,
-              hint: Text(l10n.settings_selectModelHint),
-              onChanged: (value) {
-                setState(() {
-                  _selectedOllamaModel = value;
-                  _modelController.text = value ?? '';
-                });
-                _saveLlmConfig();
-              },
-              items: _ollamaModels.map((model) {
-                return DropdownMenuItem<String>(
-                  value: model,
-                  child: Text(model),
-                );
-              }).toList(),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchOllamaModels,
-          ),
-        ],
       ),
     );
   }
