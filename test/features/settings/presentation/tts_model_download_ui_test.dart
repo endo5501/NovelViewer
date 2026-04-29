@@ -12,17 +12,23 @@ import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
+import '../../../test_utils/flutter_secure_storage_mock.dart';
+
 void main() {
   late SharedPreferences prefs;
   late Directory tempDir;
+  late FlutterSecureStorageMock secureStorageMock;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
     tempDir = Directory.systemTemp.createTempSync('tts_ui_test_');
+    secureStorageMock = FlutterSecureStorageMock();
+    secureStorageMock.install();
   });
 
   tearDown(() {
+    secureStorageMock.uninstall();
     if (tempDir.existsSync()) {
       tempDir.deleteSync(recursive: true);
     }

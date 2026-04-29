@@ -11,7 +11,20 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
+import '../../../test_utils/flutter_secure_storage_mock.dart';
+
 void main() {
+  late FlutterSecureStorageMock secureStorageMock;
+
+  setUp(() {
+    secureStorageMock = FlutterSecureStorageMock();
+    secureStorageMock.install();
+  });
+
+  tearDown(() {
+    secureStorageMock.uninstall();
+  });
+
   group('SettingsDialog LLM settings', () {
     // Common test labels
     const labelEndpointUrl = 'エンドポイントURL';
@@ -109,7 +122,6 @@ void main() {
         prefsValues: {
           'llm_provider': 'openai',
           'llm_base_url': 'https://api.openai.com/v1',
-          'llm_api_key': 'sk-test',
           'llm_model': 'gpt-4o-mini',
         },
       );
@@ -127,7 +139,6 @@ void main() {
         prefsValues: {
           'llm_provider': 'ollama',
           'llm_base_url': 'http://localhost:11434',
-          'llm_api_key': '',
           'llm_model': '',
         },
         httpClient: mockClient,
@@ -187,7 +198,6 @@ void main() {
         prefsValues: {
           'llm_provider': 'ollama',
           'llm_base_url': 'http://localhost:11434',
-          'llm_api_key': '',
           'llm_model': '',
         },
         httpClient: mockClient,
@@ -204,7 +214,6 @@ void main() {
         prefsValues: {
           'llm_provider': 'ollama',
           'llm_base_url': 'http://localhost:11434',
-          'llm_api_key': '',
           'llm_model': '',
         },
         httpClient: mockClient,
@@ -238,7 +247,6 @@ void main() {
         prefsValues: {
           'llm_provider': 'ollama',
           'llm_base_url': 'http://localhost:11434',
-          'llm_api_key': '',
           'llm_model': 'qwen3:8b',
         },
         httpClient: mockClient,
@@ -256,7 +264,6 @@ void main() {
         prefsValues: {
           'llm_provider': 'ollama',
           'llm_base_url': 'http://localhost:11434',
-          'llm_api_key': '',
           'llm_model': 'nonexistent-model',
         },
         httpClient: mockClient,

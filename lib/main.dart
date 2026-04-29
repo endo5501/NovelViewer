@@ -6,6 +6,8 @@ import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:novel_viewer/app.dart';
+import 'package:novel_viewer/app/startup_migrations.dart';
+import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/text_download/data/novel_library_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
@@ -28,6 +30,7 @@ void main() async {
   await libraryService.migrateFromOldBundleId();
   final libraryDir = await libraryService.ensureLibraryDirectory();
   final prefs = await SharedPreferences.getInstance();
+  await runStartupMigrations(SettingsRepository(prefs));
   final novelDatabase = NovelDatabase();
   await novelDatabase.database;
 
