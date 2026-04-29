@@ -10,8 +10,9 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
-import 'package:novel_viewer/features/text_viewer/data/parsed_segments_cache.dart';
+import 'package:novel_viewer/features/text_viewer/data/parsed_segments_cache_provider.dart';
 import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
+import 'package:novel_viewer/shared/utils/content_hash.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
@@ -43,7 +44,6 @@ class TextViewerPanel extends ConsumerStatefulWidget {
 class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
-  final ParsedSegmentsCache _segmentsCache = ParsedSegmentsCache();
   String? _lastScrollKey;
   String? _lastViewedFilePath;
   bool _isTtsScrolling = false;
@@ -121,11 +121,10 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     final dictDb = ref.read(ttsDictionaryDatabaseProvider(folderPath));
     final dictRepo = TtsDictionaryRepository(dictDb);
     final isolate = TtsIsolate();
-    final providerContainer = ProviderScope.containerOf(context);
     final tempDir = await ensureTemporaryDirectory();
 
     final controller = TtsStreamingController(
-      ref: providerContainer,
+      read: ref.read,
       ttsIsolate: isolate,
       audioPlayer: JustAudioPlayer(),
       repository: repo,
@@ -683,7 +682,9 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
               fontSize: fontSize,
               fontFamily: fontFamily.effectiveFontFamilyName,
             );
-        final segments = _segmentsCache.getSegments(content);
+        final segments = ref
+            .watch(parsedSegmentsCacheProvider)
+            .getOrParse(content, computeContentHash(content), parseRubyText);
 
         // Handle bookmark jump
         final bookmarkJumpLine = ref.watch(bookmarkJumpLineProvider);

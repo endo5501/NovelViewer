@@ -1,10 +1,12 @@
 ## 1. 準備
 
-- [ ] 1.1 Sprint 2 (`type-tts-dtos-and-cache-databases`) と Sprint 3 (`refactor-tts-internals`) のマージ確認
-- [ ] 1.2 `lib/features/text_viewer/presentation/widgets/` ディレクトリ作成
-- [ ] 1.3 `lib/features/text_viewer/data/` 配下に `parsed_segments_cache_provider.dart` の置き場所を確認
-- [ ] 1.4 `lib/shared/util/` に `content_hash.dart` の置き場所を確認 (Sprint 2 で導入された場合は再利用、なければ本 sprint で導入)
-- [ ] 1.5 現行 `text_viewer_panel.dart` の `wc -l` を記録 (解体前 900 LOC)
+- [x] 1.1 Sprint 2 (`type-tts-dtos-and-cache-databases`) と Sprint 3 (`refactor-tts-internals`) のマージ確認
+- [x] 1.2 `lib/features/text_viewer/presentation/widgets/` ディレクトリ作成
+- [x] 1.3 `lib/features/text_viewer/data/` 配下に `parsed_segments_cache_provider.dart` の置き場所を確認
+- [x] 1.4 `lib/shared/util/` に `content_hash.dart` の置き場所を確認 (Sprint 2 で導入された場合は再利用、なければ本 sprint で導入)
+  - 注: 既存ディレクトリは `lib/shared/utils/` (複数形)。`content_hash.dart` を新規導入する。
+- [x] 1.5 現行 `text_viewer_panel.dart` の `wc -l` を記録 (解体前 900 LOC)
+  - 実測: 826 行 (plan の "900 LOC" は概数)
 
 ## 2. Phase A — Panel-level integration test (F011)
 
@@ -65,29 +67,33 @@
 
 ## 6. Phase C — F046 TtsStreamingController を Reader 受け取りに
 
-- [ ] 6.1 `test/features/tts/data/tts_streaming_controller_test.dart` に「`TtsStreamingController(read: fakeReader)` でテスト用 reader が動作する」テスト追加
-- [ ] 6.2 「`ProviderScope.containerOf(context)` を使わずに動作する」を call site (`TtsControlsBar`) のテストで担保
-- [ ] 6.3 fail を確認
-- [ ] 6.4 `tts_streaming_controller.dart` のコンストラクタを `ProviderContainer` 受け取りから `Reader = T Function<T>(ProviderListenable<T>)` 受け取りに変更
-- [ ] 6.5 内部の `container.read(...)` を `_read(...)` に置換
-- [ ] 6.6 call site (`TtsControlsBar`) で `TtsStreamingController(read: ref.read, ...)` で構築
-- [ ] 6.7 既存テスト fixture を `Reader` 注入形式に更新 (test_utils ヘルパで定型化)
-- [ ] 6.8 `Grep` で `ProviderScope.containerOf` の `text_viewer` 配下からの消滅を確認
-- [ ] 6.9 セクション 6 のテスト全 green
+- [x] 6.1 `test/features/tts/data/tts_streaming_controller_test.dart` に「`TtsStreamingController(read: fakeReader)` でテスト用 reader が動作する」テスト追加
+- [x] 6.2 「`ProviderScope.containerOf(context)` を使わずに動作する」を call site (`TtsControlsBar`) のテストで担保
+  - 注: 現時点では panel の call site (旧 `ProviderScope.containerOf(context)` → `ref.read`) で担保。`TtsControlsBar` 抽出は Section 3 で行う。
+- [x] 6.3 fail を確認 (typedef Reader 未定義の状態でテストがコンパイルできないことを確認)
+- [x] 6.4 `tts_streaming_controller.dart` のコンストラクタを `ProviderContainer` 受け取りから `Reader = T Function<T>(ProviderListenable<T>)` 受け取りに変更
+- [x] 6.5 内部の `container.read(...)` を `_read(...)` に置換
+- [x] 6.6 call site (`TtsControlsBar`) で `TtsStreamingController(read: ref.read, ...)` で構築
+  - 注: 現時点では panel の `_startStreaming` で `ref.read` を渡す。`TtsControlsBar` 抽出は Section 3 で同 API を維持。
+- [x] 6.7 既存テスト fixture を `Reader` 注入形式に更新 (test_utils ヘルパで定型化)
+- [x] 6.8 `Grep` で `ProviderScope.containerOf` の `text_viewer` 配下からの消滅を確認
+- [x] 6.9 セクション 6 のテスト全 green
 
 ## 7. Phase C — F051 ParsedSegmentsCache provider 化
 
-- [ ] 7.1 `test/features/text_viewer/data/parsed_segments_cache_test.dart` 新規作成
-- [ ] 7.2 「同一 hash で getOrParse 2 回目はパーサーを呼ばない」テスト
-- [ ] 7.3 「異なる hash で別エントリを格納」テスト
-- [ ] 7.4 「LRU eviction: 51 個目で LRU エントリが消える」テスト
-- [ ] 7.5 「provider 経由で取得した cache が widget rebuild を跨いで共有される」テスト
-- [ ] 7.6 fail を確認
-- [ ] 7.7 `lib/features/text_viewer/data/parsed_segments_cache.dart` を LRU 実装で書く (max 50 entries)
-- [ ] 7.8 `lib/features/text_viewer/data/parsed_segments_cache_provider.dart` で `Provider<ParsedSegmentsCache>` を export
-- [ ] 7.9 `TextContentRenderer` から `_segmentsCache` インスタンス変数を削除し、`ref.watch(parsedSegmentsCacheProvider).getOrParse(...)` に置換
-- [ ] 7.10 ハッシュ計算を `lib/shared/util/content_hash.dart` (新規 or 既存) の関数に統一。`TtsEpisode.textHash` 計算と共有
-- [ ] 7.11 セクション 7 のテスト全 green
+- [x] 7.1 `test/features/text_viewer/data/parsed_segments_cache_test.dart` 新規作成
+- [x] 7.2 「同一 hash で getOrParse 2 回目はパーサーを呼ばない」テスト
+- [x] 7.3 「異なる hash で別エントリを格納」テスト
+- [x] 7.4 「LRU eviction: 51 個目で LRU エントリが消える」テスト
+- [x] 7.5 「provider 経由で取得した cache が widget rebuild を跨いで共有される」テスト
+- [x] 7.6 fail を確認
+- [x] 7.7 `lib/features/text_viewer/data/parsed_segments_cache.dart` を LRU 実装で書く (max 50 entries)
+- [x] 7.8 `lib/features/text_viewer/data/parsed_segments_cache_provider.dart` で `Provider<ParsedSegmentsCache>` を export
+- [x] 7.9 `TextContentRenderer` から `_segmentsCache` インスタンス変数を削除し、`ref.watch(parsedSegmentsCacheProvider).getOrParse(...)` に置換
+  - 注: Section 4 の widget 抽出までの過渡的措置として、現時点では panel の build 内で provider 経由に置換済み。
+- [x] 7.10 ハッシュ計算を `lib/shared/util/content_hash.dart` (新規 or 既存) の関数に統一。`TtsEpisode.textHash` 計算と共有
+  - 注: 既存ディレクトリ規約 `lib/shared/utils/` を踏襲。`tts_streaming_controller.dart` と `tts_edit_controller.dart` の `sha256.convert(utf8.encode(...))` を `computeContentHash(...)` に置換。
+- [x] 7.11 セクション 7 のテスト全 green
 
 ## 8. Phase C — F028 / F029 確認 (Phase B で吸収済み)
 

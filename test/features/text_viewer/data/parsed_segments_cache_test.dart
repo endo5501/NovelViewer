@@ -1,41 +1,93 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/text_viewer/data/parsed_segments_cache.dart';
+import 'package:novel_viewer/features/text_viewer/data/parsed_segments_cache_provider.dart';
+import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
+import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 
 void main() {
   group('ParsedSegmentsCache', () {
-    test('returns parsed segments for given content', () {
+    test('same hash returns cached segments without re-invoking parser', () {
+      var calls = 0;
       final cache = ParsedSegmentsCache();
-      final segments = cache.getSegments('テスト。');
+      List<TextSegment> parser(String s) {
+        calls++;
+        return parseRubyText(s);
+      }
 
-      expect(segments, isNotEmpty);
-      expect(segments, equals(parseRubyText('テスト。')));
+      final first = cache.getOrParse('テスト。', 'h1', parser);
+      final second = cache.getOrParse('テスト。', 'h1', parser);
+
+      expect(calls, 1);
+      expect(identical(first, second), isTrue);
     });
 
-    test('returns same reference for identical content', () {
+    test('different hash stores a separate entry', () {
       final cache = ParsedSegmentsCache();
-      final segments1 = cache.getSegments('テスト。');
-      final segments2 = cache.getSegments('テスト。');
+      final a = cache.getOrParse('テスト１', 'h1', parseRubyText);
+      final b = cache.getOrParse('テスト２', 'h2', parseRubyText);
 
-      expect(identical(segments1, segments2), isTrue);
+      expect(identical(a, b), isFalse);
+      expect(cache.size, 2);
     });
 
-    test('returns new reference when content changes', () {
-      final cache = ParsedSegmentsCache();
-      final segments1 = cache.getSegments('テスト１。');
-      final segments2 = cache.getSegments('テスト２。');
+    test('LRU eviction kicks in past max entries', () {
+      final cache = ParsedSegmentsCache(maxEntries: 3);
+      cache.getOrParse('a', 'h1', parseRubyText);
+      cache.getOrParse('b', 'h2', parseRubyText);
+      cache.getOrParse('c', 'h3', parseRubyText);
+      expect(cache.size, 3);
 
-      expect(identical(segments1, segments2), isFalse);
+      cache.getOrParse('d', 'h4', parseRubyText);
+      expect(cache.size, 3);
+
+      // h1 should have been evicted; re-parsing it invokes parser again.
+      var calls = 0;
+      cache.getOrParse('a', 'h1', (s) {
+        calls++;
+        return parseRubyText(s);
+      });
+      expect(calls, 1);
     });
 
-    test('returns new reference after content changes back', () {
-      final cache = ParsedSegmentsCache();
-      final segments1 = cache.getSegments('テスト１。');
-      cache.getSegments('テスト２。');
-      final segments3 = cache.getSegments('テスト１。');
+    test('access promotes entry to most-recently-used (LRU semantics)', () {
+      final cache = ParsedSegmentsCache(maxEntries: 3);
+      cache.getOrParse('a', 'h1', parseRubyText);
+      cache.getOrParse('b', 'h2', parseRubyText);
+      cache.getOrParse('c', 'h3', parseRubyText);
 
-      // Cache only holds last value, so this should be a new parse
-      expect(identical(segments1, segments3), isFalse);
+      // Touch h1 so h2 becomes the LRU.
+      cache.getOrParse('a', 'h1', parseRubyText);
+      cache.getOrParse('d', 'h4', parseRubyText);
+
+      // h2 evicted, h1 still cached.
+      var h1Calls = 0;
+      var h2Calls = 0;
+      cache.getOrParse('a', 'h1', (s) {
+        h1Calls++;
+        return parseRubyText(s);
+      });
+      cache.getOrParse('b', 'h2', (s) {
+        h2Calls++;
+        return parseRubyText(s);
+      });
+      expect(h1Calls, 0);
+      expect(h2Calls, 1);
+    });
+  });
+
+  group('parsedSegmentsCacheProvider', () {
+    test('cache survives widget rebuild (provider lifetime)', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final cache1 = container.read(parsedSegmentsCacheProvider);
+      final cache2 = container.read(parsedSegmentsCacheProvider);
+
+      expect(identical(cache1, cache2), isTrue);
+
+      cache1.getOrParse('テスト', 'h1', parseRubyText);
+      expect(cache2.size, 1);
     });
   });
 }

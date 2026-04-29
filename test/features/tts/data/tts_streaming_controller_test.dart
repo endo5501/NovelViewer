@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart';
-import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
@@ -19,6 +17,7 @@ import 'package:novel_viewer/features/tts/data/wav_writer.dart';
 import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
+import 'package:novel_viewer/shared/utils/content_hash.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class _LoadModelCall {
@@ -303,9 +302,7 @@ Uint8List _makeWavBytes() {
   );
 }
 
-String _computeTextHash(String text) {
-  return sha256.convert(utf8.encode(text)).toString();
-}
+String _computeTextHash(String text) => computeContentHash(text);
 
 /// Test helper that builds a Qwen3 engine config with sensible defaults.
 Qwen3EngineConfig _qwen3Config({
@@ -371,6 +368,44 @@ void main() {
   });
 
   group('TtsStreamingController', () {
+    group('reader injection (F046)', () {
+      test('operates with a custom Reader without a ProviderContainer', () async {
+        // Build a Reader that delegates to a private container the test owns
+        // directly, with no ProviderScope or context anywhere in scope.
+        final readerContainer = ProviderContainer();
+        addTearDown(readerContainer.dispose);
+
+        final isolate = _FakeTtsIsolate();
+        final player = _AutoCompleteAudioPlayer();
+        final controller = TtsStreamingController(
+          read: readerContainer.read,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        await controller.start(
+          text: 'こんにちは。',
+          fileName: 'reader_inject.txt',
+          config: _qwen3Config(),
+        );
+
+        // The injected reader's container is what the controller mutates,
+        // proving that no implicit ProviderScope/containerOf was used.
+        expect(
+          readerContainer.read(ttsPlaybackStateProvider),
+          TtsPlaybackState.stopped,
+        );
+        expect(
+          readerContainer.read(ttsHighlightRangeProvider),
+          isNull,
+        );
+        expect(isolate.synthesizeRequests, isNotEmpty);
+      });
+    });
+
     group('dictionary integration', () {
       test('converts segment text using dictionary before storing and synthesizing',
           () async {
@@ -379,7 +414,7 @@ void main() {
         final isolate = _FakeTtsIsolate();
         final player = _AutoCompleteAudioPlayer();
         final controller = TtsStreamingController(
-          ref: container,
+          read: container.read,
           ttsIsolate: isolate,
           audioPlayer: player,
           repository: repository,
@@ -411,7 +446,7 @@ void main() {
         final isolate = _FakeTtsIsolate();
         final player = _AutoCompleteAudioPlayer();
         final controller = TtsStreamingController(
-          ref: container,
+          read: container.read,
           ttsIsolate: isolate,
           audioPlayer: player,
           repository: repository,
@@ -436,7 +471,7 @@ void main() {
         final isolate1 = _FakeTtsIsolate();
         final player1 = _AutoCompleteAudioPlayer();
         final controller1 = TtsStreamingController(
-          ref: container,
+          read: container.read,
           ttsIsolate: isolate1,
           audioPlayer: player1,
           repository: repository,
@@ -454,7 +489,7 @@ void main() {
         final isolate2 = _FakeTtsIsolate();
         final player2 = _AutoCompleteAudioPlayer();
         final controller2 = TtsStreamingController(
-          ref: container,
+          read: container.read,
           ttsIsolate: isolate2,
           audioPlayer: player2,
           repository: repository,
@@ -477,7 +512,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _AutoCompleteAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -540,7 +575,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _AutoCompleteAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -585,7 +620,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _AutoCompleteAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -636,7 +671,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _AutoCompleteAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -664,7 +699,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _ManualAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -709,7 +744,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _ManualAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -746,7 +781,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _ManualAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -780,7 +815,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _BehaviorSubjectAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -806,7 +841,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _ManualAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -834,7 +869,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _ThrowingDisposeAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -907,7 +942,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _AutoCompleteAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -955,7 +990,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _AutoCompleteAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -1002,7 +1037,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _AutoCompleteAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -1047,7 +1082,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _AutoCompleteAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -1080,7 +1115,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _AutoCompleteAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -1147,7 +1182,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _AutoCompleteAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -1191,7 +1226,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _AutoCompleteAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -1216,7 +1251,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _ManualAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -1253,7 +1288,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _ManualAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -1290,7 +1325,7 @@ void main() {
       final isolate = _FakeTtsIsolate();
       final player = _ManualAudioPlayer();
       final controller = TtsStreamingController(
-        ref: container,
+        read: container.read,
         ttsIsolate: isolate,
         audioPlayer: player,
         repository: repository,
@@ -1327,7 +1362,7 @@ void main() {
         final isolate = _FakeTtsIsolate();
         final player = _AutoCompleteAudioPlayer();
         final controller = TtsStreamingController(
-          ref: container,
+          read: container.read,
           ttsIsolate: isolate,
           audioPlayer: player,
           repository: repository,
@@ -1362,7 +1397,7 @@ void main() {
         final isolate = _FakeTtsIsolate();
         final player = _AutoCompleteAudioPlayer();
         final controller = TtsStreamingController(
-          ref: container,
+          read: container.read,
           ttsIsolate: isolate,
           audioPlayer: player,
           repository: repository,
