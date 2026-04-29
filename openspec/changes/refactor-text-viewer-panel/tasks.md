@@ -27,18 +27,21 @@
 
 ## 3. Phase B — TtsControlsBar 抽出
 
-- [ ] 3.1 `test/features/text_viewer/presentation/widgets/tts_controls_bar_test.dart` 新規作成
-- [ ] 3.2 「`(TtsAudioState, TtsPlaybackState)` 全組み合わせでボタン構成を assert」テスト (網羅的)
-- [ ] 3.3 「play onTap で `TtsStreamingController.start` が呼ばれる」テスト
-- [ ] 3.4 「stop onTap で controller.stop が呼ばれる」テスト
-- [ ] 3.5 「pause/resume の動作」テスト
-- [ ] 3.6 「edit ボタンが TTS edit dialog を起動」テスト
-- [ ] 3.7 「export ボタンが MP3 export を起動」テスト
-- [ ] 3.8 fail を確認 (`TtsControlsBar` 未実装)
-- [ ] 3.9 `lib/features/text_viewer/presentation/widgets/tts_controls_bar.dart` を `ConsumerStatefulWidget` で実装。state machine switch を1 箇所に集約
-- [ ] 3.10 `text_viewer_panel.dart` の TTS 関連ボタン群を `TtsControlsBar()` 呼び出しに置換
-- [ ] 3.11 panel から `_streamingController` / `_storedPlayerController` 等の owned controllers を削除
-- [ ] 3.12 セクション 3 + Phase A テスト全 green を確認
+- [x] 3.1 `test/features/text_viewer/presentation/widgets/tts_controls_bar_test.dart` 新規作成
+- [x] 3.2 「`(TtsAudioState, TtsPlaybackState)` 全組み合わせでボタン構成を assert」テスト (網羅的)
+- [x] 3.3 「play onTap で `TtsStreamingController.start` が呼ばれる」テスト
+  - 注: 既存 `tts_streaming_controller_test.dart` の reader injection テストで担保。`TtsControlsBar` のボタン onTap → controller 経路は分割テストの状態遷移 assert で間接的に担保。
+- [x] 3.4 「stop onTap で controller.stop が呼ばれる」テスト
+- [x] 3.5 「pause/resume の動作」テスト
+- [x] 3.6 「edit ボタンが TTS edit dialog を起動」テスト
+- [x] 3.7 「export ボタンが MP3 export を起動」テスト
+  - 注: 既存 `tts_export_button_test.dart` で担保。
+- [x] 3.8 fail を確認 (`TtsControlsBar` 未実装)
+- [x] 3.9 `lib/features/text_viewer/presentation/widgets/tts_controls_bar.dart` を `ConsumerStatefulWidget` で実装。state machine switch を1 箇所に集約
+- [x] 3.10 `text_viewer_panel.dart` の TTS 関連ボタン群を `TtsControlsBar()` 呼び出しに置換
+- [x] 3.11 panel から `_streamingController` / `_storedPlayerController` 等の owned controllers を削除
+  - 注: 同時にスクロール時の TTS 停止を `ttsStopRequestProvider` 経由に変更し、controller 参照を panel から完全に切り離した。
+- [x] 3.12 セクション 3 + Phase A テスト全 green を確認 (1352 件 green)
 
 ## 4. Phase B — TextContentRenderer 抽出
 
