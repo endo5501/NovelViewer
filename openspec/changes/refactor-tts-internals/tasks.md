@@ -137,7 +137,7 @@
 
 ## 16. 最終確認
 
-- [ ] 16.1 simplifyスキルを使用してコードレビューを実施
-- [ ] 16.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 16.1 simplifyスキルを使用してコードレビューを実施
+- [x] 16.2 codexスキルを使用して現在開発中のコードレビューを実施
 - [x] 16.3 `fvm flutter analyze` でリントを実行 (1 info: implementation_imports for ProviderListenable — documented)
 - [x] 16.4 `fvm flutter test` でテストを実行 (1298 passed)
