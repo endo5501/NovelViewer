@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:ffi/ffi.dart';
 
-import 'tts_language.dart';
 import 'tts_native_bindings.dart';
 
 class TtsSynthesisResult {
@@ -30,9 +29,6 @@ class TtsEngine {
   TtsEngine(this._bindings);
 
   factory TtsEngine.open() => TtsEngine(TtsNativeBindings.open());
-
-  @Deprecated('Use TtsLanguage.ja.languageId instead')
-  static const int languageJapanese = TtsLanguage.defaultLanguageId;
 
   static const int _maxAudioTokensCap = 2048;
   static const int _tokensPerChar = 15;
@@ -286,12 +282,7 @@ class TtsEngine {
       throw const TtsEngineException('No audio data generated');
     }
 
-    // Copy the audio data from native memory to a Dart-owned Float32List
-    final audio = Float32List(length);
-    for (var i = 0; i < length; i++) {
-      audio[i] = audioPtr[i];
-    }
-
+    final audio = Float32List.fromList(audioPtr.asTypedList(length));
     return TtsSynthesisResult(audio: audio, sampleRate: sampleRate);
   }
 }

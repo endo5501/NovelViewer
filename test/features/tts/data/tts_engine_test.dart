@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine.dart';
+import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_native_bindings.dart';
 
 /// Mock bindings for testing TtsEngine without loading native library.
@@ -63,6 +64,32 @@ class MockTtsNativeBindings extends TtsNativeBindings {
     lastResetAbortCtx = ctx;
     resetAbortCallCount++;
   };
+
+  Pointer<Float> audioBuffer = nullptr;
+  int audioLength = 0;
+  int sampleRateValue = 0;
+  int synthesizeReturnCode = 0;
+
+  @override
+  // ignore: overridden_fields
+  late final int Function(Pointer<Void>, Pointer<Utf8>, int) synthesize =
+      (Pointer<Void> ctx, Pointer<Utf8> text, int maxTokens) =>
+          synthesizeReturnCode;
+
+  @override
+  // ignore: overridden_fields
+  late final Pointer<Float> Function(Pointer<Void>) getAudio =
+      (Pointer<Void> ctx) => audioBuffer;
+
+  @override
+  // ignore: overridden_fields
+  late final int Function(Pointer<Void>) getAudioLength =
+      (Pointer<Void> ctx) => audioLength;
+
+  @override
+  // ignore: overridden_fields
+  late final int Function(Pointer<Void>) getSampleRate =
+      (Pointer<Void> ctx) => sampleRateValue;
 }
 
 void main() {
@@ -82,8 +109,62 @@ void main() {
       expect(exception.toString(), contains('model load failed'));
     });
 
-    test('languageJapanese constant equals 2058', () {
-      expect(TtsEngine.languageJapanese, 2058);
+    test('TtsLanguage.ja.languageId equals 2058', () {
+      expect(TtsLanguage.ja.languageId, 2058);
+    });
+  });
+
+  group('TtsEngine - synthesize / audio extraction', () {
+    late MockTtsNativeBindings mockBindings;
+    late TtsEngine engine;
+
+    setUp(() {
+      mockBindings = MockTtsNativeBindings();
+      engine = TtsEngine(mockBindings);
+    });
+
+    test(
+        'synthesize copies the native audio buffer into a Float32List that is '
+        'byte-equivalent to Float32List.fromList of the same samples', () {
+      final fakeCtx = Pointer<Void>.fromAddress(0x1234);
+      mockBindings.setFakeContext(fakeCtx);
+
+      const samples = <double>[
+        0.0,
+        0.1,
+        -0.1,
+        0.5,
+        -0.5,
+        1.0,
+        -1.0,
+        0.123456,
+      ];
+      final buf = calloc<Float>(samples.length);
+      for (var i = 0; i < samples.length; i++) {
+        buf[i] = samples[i];
+      }
+
+      mockBindings.audioBuffer = buf;
+      mockBindings.audioLength = samples.length;
+      mockBindings.sampleRateValue = 24000;
+
+      try {
+        engine.loadModel('/fake/model/dir');
+        final result = engine.synthesize('hello');
+
+        expect(result.sampleRate, 24000);
+        expect(result.audio.length, samples.length);
+
+        final expected = Float32List.fromList(samples);
+        expect(result.audio, expected);
+
+        // Byte-level equivalence guards against representation drift when the
+        // implementation switches between per-element copy and asTypedList.
+        expect(result.audio.buffer.asUint8List(),
+            expected.buffer.asUint8List());
+      } finally {
+        calloc.free(buf);
+      }
     });
   });
 
@@ -102,14 +183,14 @@ void main() {
       mockBindings.setFakeContext(fakeCtx);
       engine.loadModel('/fake/model/dir');
 
-      engine.setLanguage(TtsEngine.languageJapanese);
+      engine.setLanguage(TtsLanguage.ja.languageId);
 
       expect(mockBindings.lastSetLanguageId, 2058);
     });
 
     test('setLanguage throws when model is not loaded', () {
       expect(
-        () => engine.setLanguage(TtsEngine.languageJapanese),
+        () => engine.setLanguage(TtsLanguage.ja.languageId),
         throwsA(isA<TtsEngineException>()),
       );
     });

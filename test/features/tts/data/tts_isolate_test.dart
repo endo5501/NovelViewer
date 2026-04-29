@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_viewer/features/tts/data/tts_engine.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
+import 'package:novel_viewer/features/tts/data/tts_language.dart';
 
 void main() {
   group('TtsIsolateMessage', () {
@@ -23,7 +23,7 @@ void main() {
 
     test('LoadModelMessage defaults languageId to Japanese', () {
       final msg = LoadModelMessage(modelDir: '/path/to/models');
-      expect(msg.languageId, TtsEngine.languageJapanese);
+      expect(msg.languageId, TtsLanguage.ja.languageId);
     });
 
     test('LoadModelMessage defaults engineType to qwen3', () {
