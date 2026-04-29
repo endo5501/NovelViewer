@@ -10,9 +10,9 @@ import 'tts_dictionary_repository.dart';
 import 'tts_edit_segment.dart';
 import 'tts_engine_type.dart';
 import 'tts_isolate.dart';
-import 'tts_language.dart';
 import 'tts_playback_controller.dart';
 import 'wav_writer.dart';
+import '../domain/tts_engine_config.dart';
 import '../domain/tts_episode_status.dart';
 import '../domain/tts_ref_wav_resolver.dart';
 import '../domain/tts_segment.dart';
@@ -181,16 +181,7 @@ class TtsEditController {
     }
   }
 
-  Future<bool> _ensureModelLoaded(
-    String modelDir, {
-    TtsEngineType engineType = TtsEngineType.qwen3,
-    int languageId = TtsLanguage.defaultLanguageId,
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
-  }) async {
+  Future<bool> _ensureModelLoaded(TtsEngineConfig config) async {
     if (_modelLoaded) return true;
 
     await _ttsIsolate.spawn();
@@ -208,16 +199,24 @@ class TtsEditController {
       }
     });
 
-    _ttsIsolate.loadModel(
-      modelDir,
-      engineType: engineType,
-      languageId: languageId,
-      dicDir: dicDir,
-      lengthScale: lengthScale,
-      noiseScale: noiseScale,
-      noiseW: noiseW,
-      embeddingCacheDir: embeddingCacheDir,
-    );
+    switch (config) {
+      case Qwen3EngineConfig():
+        _ttsIsolate.loadModel(
+          config.modelDir,
+          engineType: TtsEngineType.qwen3,
+          languageId: config.languageId,
+          embeddingCacheDir: config.embeddingCacheDir,
+        );
+      case PiperEngineConfig():
+        _ttsIsolate.loadModel(
+          config.modelDir,
+          engineType: TtsEngineType.piper,
+          dicDir: config.dicDir,
+          lengthScale: config.lengthScale,
+          noiseScale: config.noiseScale,
+          noiseW: config.noiseW,
+        );
+    }
 
     try {
       _modelLoaded = await completer.future;
@@ -231,57 +230,40 @@ class TtsEditController {
 
   Future<bool> generateSegment({
     required int segmentIndex,
-    required String modelDir,
-    TtsEngineType engineType = TtsEngineType.qwen3,
-    String? refWavPath,
-    int languageId = TtsLanguage.defaultLanguageId,
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
+    required TtsEngineConfig config,
   }) async {
     final dict = _dictionaryRepository;
     final entries = dict != null
         ? await dict.getEntriesSortedByLength()
         : null;
+    final perSegmentRefWavPath = _resolveSegmentRefWavPath(
+      segmentIndex: segmentIndex,
+      config: config,
+    );
     return _generateSegmentWithEntries(
       segmentIndex: segmentIndex,
-      modelDir: modelDir,
-      engineType: engineType,
-      refWavPath: refWavPath,
-      languageId: languageId,
+      config: config,
+      refWavPath: perSegmentRefWavPath,
       dictEntries: entries,
-      dicDir: dicDir,
-      lengthScale: lengthScale,
-      noiseScale: noiseScale,
-      noiseW: noiseW,
-      embeddingCacheDir: embeddingCacheDir,
     );
   }
 
   Future<bool> _generateSegmentWithEntries({
     required int segmentIndex,
-    required String modelDir,
-    TtsEngineType engineType = TtsEngineType.qwen3,
+    required TtsEngineConfig config,
     String? refWavPath,
-    int languageId = TtsLanguage.defaultLanguageId,
     List<TtsDictionaryEntry>? dictEntries,
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
   }) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
 
-    if (!await _ensureModelLoaded(modelDir, engineType: engineType, languageId: languageId, dicDir: dicDir, lengthScale: lengthScale, noiseScale: noiseScale, noiseW: noiseW, embeddingCacheDir: embeddingCacheDir)) return false;
+    if (!await _ensureModelLoaded(config)) return false;
 
     final segment = _segments[segmentIndex];
     // For new segments, apply dictionary before synthesizing and storing.
     // For segments already in DB, use their stored text as-is (already converted).
     final synthText = !segment.dbRecordExists && dictEntries != null
-        ? TtsDictionaryRepository.applyDictionaryWithEntries(dictEntries, segment.text)
+        ? TtsDictionaryRepository.applyDictionaryWithEntries(
+            dictEntries, segment.text)
         : segment.text;
     final result = await _synthesize(synthText, refWavPath);
     if (result == null) return false;
@@ -318,17 +300,9 @@ class TtsEditController {
   }
 
   Future<void> generateAllUngenerated({
-    required String modelDir,
-    TtsEngineType engineType = TtsEngineType.qwen3,
-    String? globalRefWavPath,
-    int languageId = TtsLanguage.defaultLanguageId,
+    required TtsEngineConfig config,
     String Function(String fileName)? resolveRefWavPath,
     void Function(int segmentIndex)? onSegmentStart,
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
   }) async {
     _cancelled = false;
     final ungenerated = <int>[];
@@ -346,6 +320,11 @@ class TtsEditController {
         ? await dictRepo.getEntriesSortedByLength()
         : null;
 
+    final globalRefWavPath = switch (config) {
+      Qwen3EngineConfig(:final refWavPath) => refWavPath,
+      PiperEngineConfig() => null,
+    };
+
     for (var idx = 0; idx < ungenerated.length; idx++) {
       if (_cancelled) break;
 
@@ -360,22 +339,30 @@ class TtsEditController {
 
       final success = await _generateSegmentWithEntries(
         segmentIndex: segmentIndex,
-        modelDir: modelDir,
-        engineType: engineType,
+        config: config,
         refWavPath: refWavPath,
-        languageId: languageId,
         dictEntries: dictEntries,
-        dicDir: dicDir,
-        lengthScale: lengthScale,
-        noiseScale: noiseScale,
-        noiseW: noiseW,
-        embeddingCacheDir: embeddingCacheDir,
       );
 
       if (!success) break;
 
       onProgress?.call(idx + 1, ungenerated.length);
     }
+  }
+
+  String? _resolveSegmentRefWavPath({
+    required int segmentIndex,
+    required TtsEngineConfig config,
+  }) {
+    if (config is! Qwen3EngineConfig) return null;
+    if (segmentIndex < 0 || segmentIndex >= _segments.length) {
+      return config.refWavPath;
+    }
+    final segment = _segments[segmentIndex];
+    return TtsRefWavResolver.resolve(
+      storedPath: segment.refWavPath,
+      fallbackPath: config.refWavPath,
+    );
   }
 
   Future<void> playSegment(int segmentIndex) async {

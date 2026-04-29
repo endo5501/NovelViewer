@@ -1,52 +1,52 @@
 ## 1. 準備
 
-- [ ] 1.1 Sprint 2 (`type-tts-dtos-and-cache-databases`) のマージ確認 (DTO/Resolver 前提)
-- [ ] 1.2 Sprint 0/1 のマージ確認 (Logger 前提)
-- [ ] 1.3 `lib/features/tts/domain/` 配下に新規 engine config の置き場所を確認、なければ作成
+- [x] 1.1 Sprint 2 (`type-tts-dtos-and-cache-databases`) のマージ確認 (DTO/Resolver 前提)
+- [x] 1.2 Sprint 0/1 のマージ確認 (Logger 前提)
+- [x] 1.3 `lib/features/tts/domain/` 配下に新規 engine config の置き場所を確認、なければ作成
 
 ## 2. Phase A — TtsEngineConfig sealed (TDD)
 
-- [ ] 2.1 `test/features/tts/domain/tts_engine_config_test.dart` 作成
-- [ ] 2.2 「`Qwen3EngineConfig` 構築で全フィールドが期待値で保持される」テスト
-- [ ] 2.3 「`PiperEngineConfig` 構築で全フィールドが期待値で保持される」テスト
-- [ ] 2.4 「sealed switch で両サブクラスが要求される (compile time)」テスト (compile_time の確認はコメント + 静的解析)
-- [ ] 2.5 「`Qwen3EngineConfig` には Piper 専用フィールドが存在しない」テスト (型レベル)
-- [ ] 2.6 テストが fail することを確認 (赤)
-- [ ] 2.7 `lib/features/tts/domain/tts_engine_config.dart` を実装 (sealed + 2 サブクラス)
-- [ ] 2.8 セクション 2 のテストが pass することを確認 (緑)
+- [x] 2.1 `test/features/tts/domain/tts_engine_config_test.dart` 作成
+- [x] 2.2 「`Qwen3EngineConfig` 構築で全フィールドが期待値で保持される」テスト
+- [x] 2.3 「`PiperEngineConfig` 構築で全フィールドが期待値で保持される」テスト
+- [x] 2.4 「sealed switch で両サブクラスが要求される (compile time)」テスト (compile_time の確認はコメント + 静的解析)
+- [x] 2.5 「`Qwen3EngineConfig` には Piper 専用フィールドが存在しない」テスト (型レベル)
+- [x] 2.6 テストが fail することを確認 (赤)
+- [x] 2.7 `lib/features/tts/domain/tts_engine_config.dart` を実装 (sealed + 2 サブクラス)
+- [x] 2.8 セクション 2 のテストが pass することを確認 (緑)
 
 ## 3. Phase A — resolveFromRef / resolveFromReader (TDD)
 
-- [ ] 3.1 「Qwen3 type を渡すと Qwen3EngineConfig を返す (provider state を読む)」テスト
-- [ ] 3.2 「Piper type を渡すと PiperEngineConfig を返す」テスト
-- [ ] 3.3 「`resolveFromReader(read, type)` が同等動作」テスト
-- [ ] 3.4 「`ref.read` を使い `ref.watch` を使わない」を反映するテスト (ProviderContainer の rebuild トリガーをカウント)
-- [ ] 3.5 テストが fail することを確認
-- [ ] 3.6 `resolveFromReader` 実装、`resolveFromRef` は委譲
-- [ ] 3.7 セクション 3 のテストが pass
+- [x] 3.1 「Qwen3 type を渡すと Qwen3EngineConfig を返す (provider state を読む)」テスト
+- [x] 3.2 「Piper type を渡すと PiperEngineConfig を返す」テスト
+- [x] 3.3 「`resolveFromReader(read, type)` が同等動作」テスト
+- [x] 3.4 「`ref.read` を使い `ref.watch` を使わない」を反映するテスト (ProviderContainer の rebuild トリガーをカウント)
+- [x] 3.5 テストが fail することを確認
+- [x] 3.6 `resolveFromReader` 実装、`resolveFromRef` は委譲
+- [x] 3.7 セクション 3 のテストが pass
 
 ## 4. Phase A — call site の置換
 
-- [ ] 4.1 `text_viewer_panel.dart:131-163` を `TtsEngineConfig.resolveFromRef(ref, engineType)` 1 行に置換
-- [ ] 4.2 `tts_edit_dialog.dart:166-194` を同様に置換
-- [ ] 4.3 `tts_edit_dialog.dart:226-259` を同様に置換
-- [ ] 4.4 `fvm flutter analyze` で 3 箇所の if/else が消えたことを確認
+- [x] 4.1 `text_viewer_panel.dart:131-163` を `TtsEngineConfig.resolveFromRef(ref, engineType)` 1 行に置換
+- [x] 4.2 `tts_edit_dialog.dart:166-194` を同様に置換
+- [x] 4.3 `tts_edit_dialog.dart:226-259` を同様に置換
+- [x] 4.4 `fvm flutter analyze` で 3 箇所の if/else が消えたことを確認
 
 ## 5. Phase A — TtsStreamingController.start シグネチャ変更
 
-- [ ] 5.1 既存 `tts_streaming_controller_test.dart` の `start()` 呼び出しを `TtsEngineConfig` 引数版に書き換え (テストパス)
-- [ ] 5.2 「`start(config: PiperEngineConfig(...))` で PiperTtsEngine が読み込まれる」テスト
-- [ ] 5.3 「`start(config: Qwen3EngineConfig(...))` で TtsEngine (qwen3) が読み込まれる」テスト
-- [ ] 5.4 テストが fail することを確認
-- [ ] 5.5 `TtsStreamingController.start()` シグネチャを変更し、内部で `config` から isolate に渡すパラメータを抽出
-- [ ] 5.6 セクション 5 のテストが pass
+- [x] 5.1 既存 `tts_streaming_controller_test.dart` の `start()` 呼び出しを `TtsEngineConfig` 引数版に書き換え (テストパス)
+- [x] 5.2 「`start(config: PiperEngineConfig(...))` で PiperTtsEngine が読み込まれる」テスト
+- [x] 5.3 「`start(config: Qwen3EngineConfig(...))` で TtsEngine (qwen3) が読み込まれる」テスト
+- [x] 5.4 テストが fail することを確認
+- [x] 5.5 `TtsStreamingController.start()` シグネチャを変更し、内部で `config` から isolate に渡すパラメータを抽出
+- [x] 5.6 セクション 5 のテストが pass
 
 ## 6. Phase A — TtsEditController 合成 API シグネチャ変更
 
-- [ ] 6.1 既存 `tts_edit_controller_test.dart` の合成系メソッド呼び出しを `TtsEngineConfig` 引数版に書き換え
-- [ ] 6.2 テストが fail することを確認
-- [ ] 6.3 `TtsEditController` 合成系メソッドを `TtsEngineConfig` 引数受け取りに変更
-- [ ] 6.4 セクション 6 のテストが pass
+- [x] 6.1 既存 `tts_edit_controller_test.dart` の合成系メソッド呼び出しを `TtsEngineConfig` 引数版に書き換え
+- [x] 6.2 テストが fail することを確認
+- [x] 6.3 `TtsEditController` 合成系メソッドを `TtsEngineConfig` 引数受け取りに変更
+- [x] 6.4 セクション 6 のテストが pass
 
 ## 7. Phase B — TtsSession (TDD)
 

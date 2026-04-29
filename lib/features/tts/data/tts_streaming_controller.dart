@@ -13,9 +13,9 @@ import 'tts_audio_repository.dart';
 import 'tts_dictionary_repository.dart';
 import 'tts_engine_type.dart';
 import 'tts_isolate.dart';
-import 'tts_language.dart';
 import 'tts_playback_controller.dart';
 import 'wav_writer.dart';
+import '../domain/tts_engine_config.dart';
 import '../domain/tts_episode_status.dart';
 import '../domain/tts_ref_wav_resolver.dart';
 import '../domain/tts_segment.dart';
@@ -56,19 +56,9 @@ class TtsStreamingController {
   Future<void> start({
     required String text,
     required String fileName,
-    required String modelDir,
-    required int sampleRate,
-    TtsEngineType engineType = TtsEngineType.qwen3,
-    String? refWavPath,
+    required TtsEngineConfig config,
     int? startOffset,
-    int languageId = TtsLanguage.defaultLanguageId,
     String Function(String fileName)? resolveRefWavPath,
-    // Piper-specific
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
   }) async {
     _stopped = false;
     _modelLoaded = false;
@@ -76,6 +66,13 @@ class TtsStreamingController {
     final textHash = sha256.convert(utf8.encode(text)).toString();
     final segments = _textSegmenter.splitIntoSentences(text);
     if (segments.isEmpty) return;
+
+    // Engine-config-derived values used for episode bookkeeping. The fallback
+    // refWavPath only applies to Qwen3 (Piper does not do voice cloning).
+    final fallbackRefWavPath = switch (config) {
+      Qwen3EngineConfig(:final refWavPath) => refWavPath,
+      PiperEngineConfig() => null,
+    };
 
     // Check existing episode
     var episode = await _repository.findEpisodeByFileName(fileName);
@@ -94,9 +91,9 @@ class TtsStreamingController {
 
     episodeId ??= await _repository.createEpisode(
       fileName: fileName,
-      sampleRate: sampleRate,
+      sampleRate: config.sampleRate,
       status: TtsEpisodeStatus.generating,
-      refWavPath: refWavPath,
+      refWavPath: fallbackRefWavPath,
       textHash: textHash,
     );
 
@@ -112,18 +109,10 @@ class TtsStreamingController {
         episodeId: episodeId,
         segments: segments,
         dbSegmentMap: dbSegmentMap,
-        modelDir: modelDir,
-        sampleRate: sampleRate,
-        engineType: engineType,
-        refWavPath: refWavPath,
+        config: config,
+        fallbackRefWavPath: fallbackRefWavPath,
         startOffset: startOffset,
-        languageId: languageId,
         resolveRefWavPath: resolveRefWavPath,
-        dicDir: dicDir,
-        lengthScale: lengthScale,
-        noiseScale: noiseScale,
-        noiseW: noiseW,
-        embeddingCacheDir: embeddingCacheDir,
       );
 
       // Update episode status
@@ -145,16 +134,7 @@ class TtsStreamingController {
     }
   }
 
-  Future<bool> _ensureModelLoaded(
-    String modelDir, {
-    TtsEngineType engineType = TtsEngineType.qwen3,
-    int languageId = TtsLanguage.defaultLanguageId,
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
-  }) async {
+  Future<bool> _ensureModelLoaded(TtsEngineConfig config) async {
     if (_modelLoaded) return true;
 
     await _ttsIsolate.spawn();
@@ -166,16 +146,24 @@ class TtsStreamingController {
       }
     });
 
-    _ttsIsolate.loadModel(
-      modelDir,
-      engineType: engineType,
-      languageId: languageId,
-      dicDir: dicDir,
-      lengthScale: lengthScale,
-      noiseScale: noiseScale,
-      noiseW: noiseW,
-      embeddingCacheDir: embeddingCacheDir,
-    );
+    switch (config) {
+      case Qwen3EngineConfig():
+        _ttsIsolate.loadModel(
+          config.modelDir,
+          engineType: TtsEngineType.qwen3,
+          languageId: config.languageId,
+          embeddingCacheDir: config.embeddingCacheDir,
+        );
+      case PiperEngineConfig():
+        _ttsIsolate.loadModel(
+          config.modelDir,
+          engineType: TtsEngineType.piper,
+          dicDir: config.dicDir,
+          lengthScale: config.lengthScale,
+          noiseScale: config.noiseScale,
+          noiseW: config.noiseW,
+        );
+    }
     _modelLoaded = await completer.future;
     return _modelLoaded;
   }
@@ -208,18 +196,10 @@ class TtsStreamingController {
     required int episodeId,
     required List<TextSegment> segments,
     required Map<int, TtsSegment> dbSegmentMap,
-    required String modelDir,
-    required int sampleRate,
-    TtsEngineType engineType = TtsEngineType.qwen3,
-    required String? refWavPath,
+    required TtsEngineConfig config,
+    required String? fallbackRefWavPath,
     int? startOffset,
-    int languageId = TtsLanguage.defaultLanguageId,
     String Function(String fileName)? resolveRefWavPath,
-    String? dicDir,
-    double? lengthScale,
-    double? noiseScale,
-    double? noiseW,
-    String? embeddingCacheDir,
   }) async {
     // Determine starting segment
     int startIndex = 0;
@@ -273,16 +253,7 @@ class TtsStreamingController {
             .read(ttsPlaybackStateProvider.notifier)
             .set(TtsPlaybackState.waiting);
 
-        if (!await _ensureModelLoaded(
-          modelDir,
-          engineType: engineType,
-          languageId: languageId,
-          dicDir: dicDir,
-          lengthScale: lengthScale,
-          noiseScale: noiseScale,
-          noiseW: noiseW,
-          embeddingCacheDir: embeddingCacheDir,
-        )) {
+        if (!await _ensureModelLoaded(config)) {
           break;
         }
         if (_stopped) break;
@@ -294,7 +265,7 @@ class TtsStreamingController {
             : rawText;
         final synthRefWavPath = TtsRefWavResolver.resolve(
           storedPath: dbRow?.refWavPath,
-          fallbackPath: refWavPath,
+          fallbackPath: fallbackRefWavPath,
           resolver: resolveRefWavPath,
         );
 

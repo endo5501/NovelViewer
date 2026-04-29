@@ -18,9 +18,9 @@ import 'package:novel_viewer/features/text_viewer/providers/text_viewer_provider
 import 'package:novel_viewer/features/tts/data/tts_adapters.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
-import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_streaming_controller.dart';
+import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode.dart';
 import 'package:novel_viewer/features/tts/presentation/dictionary_context_menu.dart';
 import 'package:novel_viewer/features/tts/presentation/tts_dictionary_dialog.dart';
@@ -91,40 +91,11 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     final fileName = ref.read(selectedFileProvider)?.name;
     final engineType = ref.read(ttsEngineTypeProvider);
 
-    // Engine-specific settings
-    final String modelDir;
-    final String? refWavPath;
-    final int languageId;
-    final String? dicDir;
-    final double? lengthScale;
-    final double? noiseScale;
-    final double? noiseW;
+    final config = TtsEngineConfig.resolveFromRef(ref, engineType);
 
-    if (engineType == TtsEngineType.piper) {
-      final piperDir = ref.read(piperModelDirProvider);
-      final modelName = ref.read(piperModelNameProvider);
-      modelDir = '$piperDir/$modelName.onnx';
-      dicDir = ref.read(piperDicDirProvider);
-      lengthScale = ref.read(piperLengthScaleProvider);
-      noiseScale = ref.read(piperNoiseScaleProvider);
-      noiseW = ref.read(piperNoiseWProvider);
-      refWavPath = null;
-      languageId = 0; // unused for piper
-    } else {
-      modelDir = ref.read(ttsModelDirProvider);
-      final refWavFileName = ref.read(ttsRefWavPathProvider);
-      languageId = ref.read(ttsLanguageProvider).languageId;
-      final voiceService = ref.read(voiceReferenceServiceProvider);
-      refWavPath = refWavFileName.isNotEmpty && voiceService != null
-          ? voiceService.resolveVoiceFilePath(refWavFileName)
-          : null;
-      dicDir = null;
-      lengthScale = null;
-      noiseScale = null;
-      noiseW = null;
+    if (folderPath == null || fileName == null || config.modelDir.isEmpty) {
+      return;
     }
-
-    if (folderPath == null || fileName == null || modelDir.isEmpty) return;
 
     final filePath = '$folderPath/$fileName';
     ref.read(activeStreamingFileProvider.notifier).set(filePath);
@@ -163,18 +134,9 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
       await controller.start(
         text: content,
         fileName: fileName,
-        modelDir: modelDir,
-        sampleRate: engineType == TtsEngineType.piper ? 22050 : 24000,
-        engineType: engineType,
-        refWavPath: refWavPath,
+        config: config,
         startOffset: startOffset,
-        languageId: languageId,
         resolveRefWavPath: voiceService?.resolveVoiceFilePath,
-        dicDir: dicDir,
-        lengthScale: lengthScale,
-        noiseScale: noiseScale,
-        noiseW: noiseW,
-        embeddingCacheDir: ref.read(embeddingCacheDirProvider),
       );
     } finally {
       _streamingController = null;
