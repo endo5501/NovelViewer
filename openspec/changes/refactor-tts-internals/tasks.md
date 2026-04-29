@@ -128,16 +128,16 @@
 
 ## 15. 統合確認
 
-- [ ] 15.1 `text_viewer_panel.dart`, `tts_edit_dialog.dart`, `tts_streaming_controller.dart`, `tts_edit_controller.dart`, `tts_stored_player_controller.dart` で WASAPI 関連の重複コメントが残っていないことを grep で確認
+- [x] 15.1 `text_viewer_panel.dart`, `tts_edit_dialog.dart`, `tts_streaming_controller.dart`, `tts_edit_controller.dart`, `tts_stored_player_controller.dart` で WASAPI 関連の重複コメントが残っていないことを grep で確認 (SegmentPlayer doc が canonical、edit_controller は drain=zero 理由のみ)
 - [ ] 15.2 ローカル起動で:
-  - 15.2.1 Qwen3 で 1 エピソードのストリーミング再生が正常終了する (drain で末尾切れ無し)
-  - 15.2.2 Piper で同様
-  - 15.2.3 Edit dialog で 1 セグメント再生 → pause not stop の挙動確認
-  - 15.2.4 大きい (>50MB) `tts_audio.db` でエピソード削除後、即時には UI スパイク無し、アプリ終了で DB ファイルサイズが縮む
+  - [ ] 15.2.1 Qwen3 で 1 エピソードのストリーミング再生が正常終了する (drain で末尾切れ無し) ※テスト環境では未検証 (要ユーザ実機確認)
+  - [ ] 15.2.2 Piper で同様 ※同上
+  - [ ] 15.2.3 Edit dialog で 1 セグメント再生 → pause not stop の挙動確認 ※同上
+  - [ ] 15.2.4 大きい (>50MB) `tts_audio.db` でエピソード削除後、即時には UI スパイク無し、アプリ終了で DB ファイルサイズが縮む ※同上
 
 ## 16. 最終確認
 
 - [ ] 16.1 simplifyスキルを使用してコードレビューを実施
 - [ ] 16.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 16.3 `fvm flutter analyze` でリントを実行
-- [ ] 16.4 `fvm flutter test` でテストを実行
+- [x] 16.3 `fvm flutter analyze` でリントを実行 (1 info: implementation_imports for ProviderListenable — documented)
+- [x] 16.4 `fvm flutter test` でテストを実行 (1298 passed)

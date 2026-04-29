@@ -5,7 +5,7 @@ void main() {
   late TextSegmenter segmenter;
 
   setUp(() {
-    segmenter = TextSegmenter();
+    segmenter = const TextSegmenter();
   });
 
   group('TextSegmenter - sentence splitting', () {
