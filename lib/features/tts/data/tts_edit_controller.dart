@@ -8,18 +8,14 @@ import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
 import 'tts_dictionary_repository.dart';
 import 'tts_edit_segment.dart';
-import 'tts_engine_type.dart';
 import 'tts_isolate.dart';
 import 'tts_playback_controller.dart';
+import 'tts_session.dart';
 import 'wav_writer.dart';
 import '../domain/tts_engine_config.dart';
 import '../domain/tts_episode_status.dart';
 import '../domain/tts_ref_wav_resolver.dart';
 import '../domain/tts_segment.dart';
-
-class _CancelledException implements Exception {
-  const _CancelledException();
-}
 
 class TtsEditController {
   TtsEditController({
@@ -29,13 +25,14 @@ class TtsEditController {
     required this.tempDirPath,
     TtsIsolate Function()? ttsIsolateFactory,
     TtsDictionaryRepository? dictionaryRepository,
-  })  : _ttsIsolate = ttsIsolate,
-        _audioPlayer = audioPlayer,
+    TtsSession? session,
+  })  : _audioPlayer = audioPlayer,
         _repository = repository,
         _ttsIsolateFactory = ttsIsolateFactory ?? TtsIsolate.new,
-        _dictionaryRepository = dictionaryRepository;
+        _dictionaryRepository = dictionaryRepository,
+        _session = session ?? TtsSession(isolate: ttsIsolate);
 
-  TtsIsolate _ttsIsolate;
+  TtsSession _session;
   final TtsIsolate Function() _ttsIsolateFactory;
   final TtsAudioPlayer _audioPlayer;
   final TtsAudioRepository _repository;
@@ -46,19 +43,14 @@ class TtsEditController {
   List<TtsEditSegment> _segments = [];
   List<TtsEditSegment> get segments => _segments;
 
-  bool _modelLoaded = false;
-  bool get modelLoaded => _modelLoaded;
+  bool get modelLoaded => _session.modelLoaded;
 
   bool _cancelled = false;
-  bool _isolateSpawned = false;
   int? _episodeId;
   String? _fileName;
   String? _textHash;
   int _sampleRate = 24000;
-  StreamSubscription<TtsIsolateResponse>? _subscription;
   Completer<void>? _activePlayCompleter;
-  Completer<SynthesisResultResponse>? _activeSynthesisCompleter;
-  Completer<bool>? _activeModelLoadCompleter;
   final _writtenFiles = <String>[];
 
   void Function(int segmentIndex)? onSegmentGenerated;
@@ -182,50 +174,7 @@ class TtsEditController {
   }
 
   Future<bool> _ensureModelLoaded(TtsEngineConfig config) async {
-    if (_modelLoaded) return true;
-
-    await _ttsIsolate.spawn();
-    _isolateSpawned = true;
-
-    final completer = Completer<bool>();
-    _activeModelLoadCompleter = completer;
-
-    _subscription = _ttsIsolate.responses.listen((response) {
-      if (response is ModelLoadedResponse && !completer.isCompleted) {
-        completer.complete(response.success);
-        if (!response.success) {
-          onError?.call('Model load failed: ${response.error}');
-        }
-      }
-    });
-
-    switch (config) {
-      case Qwen3EngineConfig():
-        _ttsIsolate.loadModel(
-          config.modelDir,
-          engineType: TtsEngineType.qwen3,
-          languageId: config.languageId,
-          embeddingCacheDir: config.embeddingCacheDir,
-        );
-      case PiperEngineConfig():
-        _ttsIsolate.loadModel(
-          config.modelDir,
-          engineType: TtsEngineType.piper,
-          dicDir: config.dicDir,
-          lengthScale: config.lengthScale,
-          noiseScale: config.noiseScale,
-          noiseW: config.noiseW,
-        );
-    }
-
-    try {
-      _modelLoaded = await completer.future;
-      return _modelLoaded;
-    } on _CancelledException {
-      return false;
-    } finally {
-      _activeModelLoadCompleter = null;
-    }
+    return _session.ensureModelLoaded(config);
   }
 
   Future<bool> generateSegment({
@@ -475,32 +424,17 @@ class TtsEditController {
 
   Future<void> cancel() async {
     _cancelled = true;
-    _ttsIsolate.abort();
-    if (!(_activeModelLoadCompleter?.isCompleted ?? true)) {
-      _activeModelLoadCompleter!.completeError(const _CancelledException());
-    }
-    if (!(_activeSynthesisCompleter?.isCompleted ?? true)) {
-      _activeSynthesisCompleter!.completeError(const _CancelledException());
-    }
-    await _teardownIsolate(recreate: true);
+    _session.abort();
+    await _session.dispose();
+    // Replace the session so a subsequent generateSegment can reload the model.
+    _session = TtsSession(isolate: _ttsIsolateFactory());
   }
 
   Future<void> dispose() async {
     _cancelled = true;
-    _ttsIsolate.abort();
-    await _teardownIsolate(recreate: false);
+    _session.abort();
+    await _session.dispose();
     await _cleanupFiles();
-  }
-
-  Future<void> _teardownIsolate({required bool recreate}) async {
-    await _subscription?.cancel();
-    _subscription = null;
-    if (_isolateSpawned || _modelLoaded) {
-      await _ttsIsolate.dispose();
-      if (recreate) _ttsIsolate = _ttsIsolateFactory();
-    }
-    _isolateSpawned = false;
-    _modelLoaded = false;
   }
 
   Future<void> _updateEpisodeStatusAfterReset() async {
@@ -532,33 +466,12 @@ class TtsEditController {
 
   Future<SynthesisResultResponse?> _synthesize(
       String text, String? refWavPath) async {
-    final completer = Completer<SynthesisResultResponse>();
-    _activeSynthesisCompleter = completer;
-
-    late StreamSubscription<TtsIsolateResponse> sub;
-    sub = _ttsIsolate.responses.listen((response) {
-      if (response is SynthesisResultResponse && !completer.isCompleted) {
-        completer.complete(response);
-      }
-    });
-
-    _ttsIsolate.synthesize(text, refWavPath: refWavPath);
-
-    try {
-      final result = await completer.future;
-
-      if (result.error != null || result.audio == null) {
-        onError?.call('Synthesis failed: ${result.error}');
-        return null;
-      }
-
-      return result;
-    } on _CancelledException {
-      return null;
-    } finally {
-      _activeSynthesisCompleter = null;
-      await sub.cancel();
+    final result =
+        await _session.synthesize(text: text, refWavPath: refWavPath);
+    if (result == null) {
+      onError?.call('Synthesis failed');
     }
+    return result;
   }
 
   Future<void> _cleanupFiles() async {

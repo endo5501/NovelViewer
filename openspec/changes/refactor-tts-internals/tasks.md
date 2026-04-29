@@ -50,25 +50,25 @@
 
 ## 7. Phase B — TtsSession (TDD)
 
-- [ ] 7.1 `test/features/tts/data/tts_session_test.dart` 作成
-- [ ] 7.2 「`ensureModelLoaded(config)` happy path で isolate に LoadModelMessage が送信される」テスト
-- [ ] 7.3 「同一 config で `ensureModelLoaded` を二度呼ぶと二回目は no-op」テスト
-- [ ] 7.4 「`synthesize(...)` happy path で結果 Future が解決する」テスト
-- [ ] 7.5 「`abort()` で in-flight synthesize completer がエラー解決し、isolate.abort が呼ばれる」テスト
-- [ ] 7.6 「`dispose()` で subscription/completer/isolate が片付く」テスト
-- [ ] 7.7 「dispose 後の `ensureModelLoaded` 呼び出しは StateError」テスト
-- [ ] 7.8 「abort 中の新規 ensureModelLoaded は abort 完了を待ってから続行」テスト
-- [ ] 7.9 テストが fail することを確認
-- [ ] 7.10 `lib/features/tts/data/tts_session.dart` を実装
-- [ ] 7.11 セクション 7 のテストが pass
+- [x] 7.1 `test/features/tts/data/tts_session_test.dart` 作成
+- [x] 7.2 「`ensureModelLoaded(config)` happy path で isolate に LoadModelMessage が送信される」テスト
+- [x] 7.3 「同一 config で `ensureModelLoaded` を二度呼ぶと二回目は no-op」テスト
+- [x] 7.4 「`synthesize(...)` happy path で結果 Future が解決する」テスト
+- [x] 7.5 「`abort()` で in-flight synthesize completer がエラー解決し、isolate.abort が呼ばれる」テスト
+- [x] 7.6 「`dispose()` で subscription/completer/isolate が片付く」テスト
+- [x] 7.7 「dispose 後の `ensureModelLoaded` 呼び出しは StateError」テスト
+- [x] 7.8 「abort 中の新規 ensureModelLoaded は abort 完了を待ってから続行」テスト
+- [x] 7.9 テストが fail することを確認
+- [x] 7.10 `lib/features/tts/data/tts_session.dart` を実装
+- [x] 7.11 セクション 7 のテストが pass
 
 ## 8. Phase B — controller を TtsSession 経由に書き換え
 
-- [ ] 8.1 `TtsStreamingController` のコンストラクタに `TtsSession?` を受け入れ、未指定時は内部で生成
-- [ ] 8.2 既存の `_subscription` / `_modelLoaded` / `_activeSynthesisCompleter` を削除し、`_session` 経由に置換
-- [ ] 8.3 既存テストの fixture を `TtsSession` inject 形に書き換え (定型ヘルパを `test_utils/` に追加)
-- [ ] 8.4 `tts_streaming_controller_test.dart` がパスすることを確認
-- [ ] 8.5 同様に `TtsEditController` を書き換え、`tts_edit_controller_test.dart` パス確認
+- [x] 8.1 `TtsStreamingController` のコンストラクタに `TtsSession?` を受け入れ、未指定時は内部で生成
+- [x] 8.2 既存の `_subscription` / `_modelLoaded` / `_activeSynthesisCompleter` を削除し、`_session` 経由に置換
+- [x] 8.3 既存テストの fixture を `TtsSession` inject 形に書き換え (定型ヘルパを `test_utils/` に追加)
+- [x] 8.4 `tts_streaming_controller_test.dart` がパスすることを確認
+- [x] 8.5 同様に `TtsEditController` を書き換え、`tts_edit_controller_test.dart` パス確認
 
 ## 9. Phase C — SegmentPlayer (TDD)
 
