@@ -19,7 +19,6 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
   late TextEditingController _apiKeyController;
   late TextEditingController _modelController;
 
-  String? _selectedOllamaModel;
   String _persistedApiKey = '';
 
   @override
@@ -35,10 +34,12 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
     );
     _apiKeyController = TextEditingController();
     _modelController = TextEditingController(text: config.model);
-    _selectedOllamaModel = config.model.isEmpty ? null : config.model;
 
     _loadApiKey();
   }
+
+  String? get _selectedOllamaModel =>
+      _modelController.text.isEmpty ? null : _modelController.text;
 
   @override
   void dispose() {
@@ -72,9 +73,8 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
   }
 
   void _onSavedModelMissing() {
-    if (_selectedOllamaModel == null) return;
+    if (_modelController.text.isEmpty) return;
     setState(() {
-      _selectedOllamaModel = null;
       _modelController.text = '';
     });
     _saveLlmConfig();
@@ -205,40 +205,48 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
     }
 
     return modelList.when(
-      data: (models) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            Expanded(
-              child: DropdownButton<String>(
-                value: _selectedOllamaModel,
-                isExpanded: true,
-                hint: Text(l10n.settings_selectModelHint),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedOllamaModel = value;
-                    _modelController.text = value ?? '';
-                  });
-                  _saveLlmConfig();
-                },
-                items: models
-                    .map(
-                      (model) => DropdownMenuItem<String>(
-                        value: model,
-                        child: Text(model),
-                      ),
-                    )
-                    .toList(),
+      data: (models) {
+        // Saved model may not be in the fetched list (e.g., switching from
+        // OpenAI carries a stale model name). Render unselected to avoid the
+        // DropdownButton "value not in items" assertion; ref.listen clears
+        // the persisted value on the next frame.
+        final selected = models.contains(_selectedOllamaModel)
+            ? _selectedOllamaModel
+            : null;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: DropdownButton<String>(
+                  value: selected,
+                  isExpanded: true,
+                  hint: Text(l10n.settings_selectModelHint),
+                  onChanged: (value) {
+                    setState(() {
+                      _modelController.text = value ?? '';
+                    });
+                    _saveLlmConfig();
+                  },
+                  items: models
+                      .map(
+                        (model) => DropdownMenuItem<String>(
+                          value: model,
+                          child: Text(model),
+                        ),
+                      )
+                      .toList(),
+                ),
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () =>
-                  ref.invalidate(ollamaModelListProvider(url)),
-            ),
-          ],
-        ),
-      ),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () =>
+                    ref.invalidate(ollamaModelListProvider(url)),
+              ),
+            ],
+          ),
+        );
+      },
       loading: () => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(

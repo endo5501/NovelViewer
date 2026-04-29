@@ -109,18 +109,18 @@
 
 ## 13. 統合動作確認
 
-- [ ] 13.1 `fvm flutter run` でローカル起動、設定ダイアログを開く
-- [ ] 13.2 一般タブ全項目の動作確認 (表示モード、テーマ、フォント等)
-- [ ] 13.3 LLM 設定: OpenAI 設定 → 保存 → 再起動で復元、Ollama URL 入力で自動取得、refresh で再取得
-- [ ] 13.4 TTS: Qwen3 / Piper 切替、各設定保存、再起動で復元
-- [ ] 13.5 voice reference: 選択、refresh、rename、フォルダ open、drag-drop
-- [ ] 13.6 ロケール切替で Piper ラベル 8 種が EN/ZH/JA で正しく表示
-- [ ] 13.7 `settings_dialog.dart` の最終 LOC を記録 (≤ 200)
-- [ ] 13.8 grep で `settings_dialog.dart` 内に和文リテラル `'TTSエンジン'` 等が残っていないことを確認
+- [ ] 13.1 `fvm flutter run` でローカル起動、設定ダイアログを開く (manual: ユーザー実機確認待ち)
+- [ ] 13.2 一般タブ全項目の動作確認 (manual)
+- [ ] 13.3 LLM 設定: OpenAI 設定 → 保存 → 再起動で復元、Ollama URL 入力で自動取得、refresh で再取得 (manual)
+- [ ] 13.4 TTS: Qwen3 / Piper 切替、各設定保存、再起動で復元 (manual)
+- [ ] 13.5 voice reference: 選択、refresh、rename、フォルダ open、drag-drop (manual)
+- [ ] 13.6 ロケール切替で Piper ラベル 8 種が EN/ZH/JA で正しく表示 (manual; widget テストは ARB 経由ラベル確認済み)
+- [x] 13.7 `settings_dialog.dart` の最終 LOC: 160 (≤ 200 達成)
+- [x] 13.8 `lib/features/settings/presentation/` 配下に Phase B で対象とした和文リテラルが残っていないことを `Grep` で確認
 
 ## 14. 最終確認
 
-- [ ] 14.1 simplifyスキルを使用してコードレビューを実施
-- [ ] 14.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 14.3 `fvm flutter analyze` でリントを実行
-- [ ] 14.4 `fvm flutter test` でテストを実行
+- [x] 14.1 simplifyスキルを使用してコードレビューを実施 — `_selectedOllamaModel` 重複状態を `_modelController.text` 派生 getter に統合
+- [x] 14.2 codexスキルを使用して現在開発中のコードレビューを実施 — DropdownButton の value が items に含まれないケース (OpenAI→Ollama 切替時の stale model name) を data 分岐内で正規化、 assertion 防止
+- [x] 14.3 `fvm flutter analyze` でリントを実行 (本 change 由来の指摘は 0、既存の `implementation_imports` info のみ残る)
+- [x] 14.4 `fvm flutter test` でテストを実行 (1336 件 全 green)
