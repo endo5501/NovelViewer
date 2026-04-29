@@ -28,6 +28,7 @@ class TtsEditController {
     TtsDictionaryRepository? dictionaryRepository,
     TtsSession? session,
     SegmentPlayer? segmentPlayer,
+    TextSegmenter? textSegmenter,
   })  : _repository = repository,
         _ttsIsolateFactory = ttsIsolateFactory ?? TtsIsolate.new,
         _dictionaryRepository = dictionaryRepository,
@@ -36,7 +37,8 @@ class TtsEditController {
             // Edit-screen previews always treat each segment as the last one
             // (no follow-up play()), so default drain to zero — the WASAPI
             // tail concern only applies to back-to-back segment playback.
-            SegmentPlayer(player: audioPlayer, bufferDrainDelay: Duration.zero);
+            SegmentPlayer(player: audioPlayer, bufferDrainDelay: Duration.zero),
+        _textSegmenter = textSegmenter ?? const TextSegmenter();
 
   TtsSession _session;
   final SegmentPlayer _segmentPlayer;
@@ -44,7 +46,7 @@ class TtsEditController {
   final TtsAudioRepository _repository;
   final TtsDictionaryRepository? _dictionaryRepository;
   final String tempDirPath;
-  final _textSegmenter = TextSegmenter();
+  final TextSegmenter _textSegmenter;
 
   List<TtsEditSegment> _segments = [];
   List<TtsEditSegment> get segments => _segments;

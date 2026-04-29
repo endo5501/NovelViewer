@@ -7,8 +7,14 @@ import 'tts_audio_database.dart';
 
 class TtsAudioRepository {
   final TtsAudioDatabase _database;
+  final void Function()? _onEpisodeDeleted;
 
-  TtsAudioRepository(this._database);
+  /// [onEpisodeDeleted] is invoked after `deleteEpisode` finishes. The
+  /// streaming/edit/UI layer wires this to `VacuumLifecycle.markDirty(folder)`
+  /// so the underlying SQLite file is reclaimed at app exit instead of
+  /// blocking the UI thread inside the delete call.
+  TtsAudioRepository(this._database, {void Function()? onEpisodeDeleted})
+      : _onEpisodeDeleted = onEpisodeDeleted;
 
   Future<int> createEpisode({
     required String fileName,
@@ -215,6 +221,8 @@ class TtsAudioRepository {
       where: 'id = ?',
       whereArgs: [episodeId],
     );
-    await _database.reclaimSpace();
+    // Defer reclaim to app exit via VacuumLifecycle to avoid blocking the
+    // UI thread (incremental_vacuum on a 100MB+ DB stalls hundreds of ms).
+    _onEpisodeDeleted?.call();
   }
 }

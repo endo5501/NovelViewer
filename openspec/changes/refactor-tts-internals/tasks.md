@@ -106,25 +106,25 @@
 
 ## 13. Phase D — TextSegmenter provider (F027)
 
-- [ ] 13.1 `test/features/tts/providers/text_segmenter_provider_test.dart` で「同一 ref で同じインスタンスが返る」テスト
-- [ ] 13.2 テストが fail することを確認
-- [ ] 13.3 `lib/features/tts/providers/text_segmenter_provider.dart` 実装 (`Provider<TextSegmenter>((ref) => const TextSegmenter())`)
-- [ ] 13.4 3 controller の `TextSegmenter()` 直接 instantiation を `ref.read(textSegmenterProvider)` に置換
-- [ ] 13.5 既存テスト群がパスすることを確認
+- [x] 13.1 `test/features/tts/providers/text_segmenter_provider_test.dart` で「同一 ref で同じインスタンスが返る」テスト
+- [x] 13.2 テストが fail することを確認
+- [x] 13.3 `lib/features/tts/providers/text_segmenter_provider.dart` 実装 (`Provider<TextSegmenter>((ref) => const TextSegmenter())`)
+- [x] 13.4 3 controller の `TextSegmenter()` 直接 instantiation を `ref.read(textSegmenterProvider)` に置換
+- [x] 13.5 既存テスト群がパスすることを確認
 
 ## 14. Phase D — vacuum lifecycle (F021)
 
-- [ ] 14.1 `test/features/tts/providers/vacuum_lifecycle_provider_test.dart` 作成
-- [ ] 14.2 「`markDirty(folder)` でフォルダが pending list に追加される」テスト
-- [ ] 14.3 「`AppLifecycleState.detached` で pending list 全フォルダに `incremental_vacuum(0)` が呼ばれる」テスト
-- [ ] 14.4 「detached が来ない (resume 等) では vacuum しない」テスト
-- [ ] 14.5 「同一フォルダの `markDirty` 複数回で vacuum は 1 回」テスト
-- [ ] 14.6 テストが fail することを確認
-- [ ] 14.7 `lib/features/tts/providers/vacuum_lifecycle_provider.dart` 実装
-- [ ] 14.8 `TtsAudioRepository.deleteEpisode` から `_database.reclaimSpace()` 同期呼び出しを削除し、`markDirty` 呼び出しに置換
-- [ ] 14.9 `reclaimSpace()` は public API として残し、明示呼び出しテストを追加
-- [ ] 14.10 `main.dart` に `WidgetsBinding.instance.addObserver(vacuumLifecycle)` を追加
-- [ ] 14.11 既存 `tts_audio_repository_test.dart` の "Disk space reclaimed after episode deletion" シナリオを「`detached` で reclaim されることを assert」に書き換え
+- [x] 14.1 `test/features/tts/providers/vacuum_lifecycle_provider_test.dart` 作成
+- [x] 14.2 「`markDirty(folder)` でフォルダが pending list に追加される」テスト
+- [x] 14.3 「`AppLifecycleState.detached` で pending list 全フォルダに `incremental_vacuum(0)` が呼ばれる」テスト
+- [x] 14.4 「detached が来ない (resume 等) では vacuum しない」テスト
+- [x] 14.5 「同一フォルダの `markDirty` 複数回で vacuum は 1 回」テスト
+- [x] 14.6 テストが fail することを確認
+- [x] 14.7 `lib/features/tts/providers/vacuum_lifecycle_provider.dart` 実装
+- [x] 14.8 `TtsAudioRepository.deleteEpisode` から `_database.reclaimSpace()` 同期呼び出しを削除し、`markDirty` 呼び出しに置換
+- [x] 14.9 `reclaimSpace()` は public API として残し、明示呼び出しテストを追加
+- [x] 14.10 `main.dart` に `WidgetsBinding.instance.addObserver(vacuumLifecycle)` を追加
+- [x] 14.11 既存 `tts_audio_repository_test.dart` の "Disk space reclaimed after episode deletion" シナリオを「`detached` で reclaim されることを assert」に書き換え
 
 ## 15. 統合確認
 

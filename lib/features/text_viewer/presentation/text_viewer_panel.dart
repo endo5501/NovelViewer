@@ -27,6 +27,7 @@ import 'package:novel_viewer/features/tts/presentation/tts_dictionary_dialog.dar
 import 'package:novel_viewer/features/tts/presentation/tts_edit_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_state_provider.dart';
+import 'package:novel_viewer/features/tts/providers/vacuum_lifecycle_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_export_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
@@ -104,7 +105,11 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
         .set(const TtsGenerationProgress(current: 0, total: 0));
 
     final db = ref.read(ttsAudioDatabaseProvider(folderPath));
-    final repo = TtsAudioRepository(db);
+    final lifecycle = ref.read(vacuumLifecycleProvider);
+    final repo = TtsAudioRepository(
+      db,
+      onEpisodeDeleted: () => lifecycle.markDirty(folderPath),
+    );
     final dictDb = ref.read(ttsDictionaryDatabaseProvider(folderPath));
     final dictRepo = TtsDictionaryRepository(dictDb);
     final isolate = TtsIsolate();
@@ -237,7 +242,11 @@ class _TextViewerPanelState extends ConsumerState<TextViewerPanel>
     if (folderPath == null || fileName == null) return null;
 
     final db = ref.read(ttsAudioDatabaseProvider(folderPath));
-    final repo = TtsAudioRepository(db);
+    final lifecycle = ref.read(vacuumLifecycleProvider);
+    final repo = TtsAudioRepository(
+      db,
+      onEpisodeDeleted: () => lifecycle.markDirty(folderPath),
+    );
     final episode = await repo.findEpisodeByFileName(fileName);
     if (episode == null) return null;
     return action(repo, episode);

@@ -11,6 +11,8 @@ import '../data/tts_edit_controller.dart';
 import '../data/tts_edit_segment.dart';
 import '../data/tts_isolate.dart';
 import '../domain/tts_engine_config.dart';
+import '../providers/text_segmenter_provider.dart';
+import '../providers/vacuum_lifecycle_provider.dart';
 import '../providers/tts_audio_database_provider.dart';
 import '../providers/tts_edit_providers.dart';
 import '../providers/tts_settings_providers.dart';
@@ -63,7 +65,11 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
 
   Future<void> _initialize() async {
     final db = ref.read(ttsAudioDatabaseProvider(widget.folderPath));
-    final repo = TtsAudioRepository(db);
+    final lifecycle = ref.read(vacuumLifecycleProvider);
+    final repo = TtsAudioRepository(
+      db,
+      onEpisodeDeleted: () => lifecycle.markDirty(widget.folderPath),
+    );
     final dictDb = ref.read(ttsDictionaryDatabaseProvider(widget.folderPath));
     final dictRepo = TtsDictionaryRepository(dictDb);
     final tempDir = await ensureTemporaryDirectory();
@@ -74,6 +80,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
       repository: repo,
       tempDirPath: tempDir.path,
       dictionaryRepository: dictRepo,
+      textSegmenter: ref.read(textSegmenterProvider),
     );
 
     controller.onSegmentGenerated = (index) {

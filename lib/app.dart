@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/providers/vacuum_lifecycle_provider.dart';
 import 'package:novel_viewer/home_screen.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -11,6 +12,11 @@ class NovelViewerApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
+    // Eagerly construct so the WidgetsBinding observer is registered before
+    // any deleteEpisode call could fire — markDirty is a no-op until then,
+    // but registration here means the detached lifecycle event is observed
+    // even if the user never opens a text viewer in this session.
+    ref.read(vacuumLifecycleProvider);
 
     return MaterialApp(
       title: 'NovelViewer',

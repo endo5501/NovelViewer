@@ -11,6 +11,8 @@ class TextSegment {
 }
 
 class TextSegmenter {
+  const TextSegmenter();
+
   static final _rubyTagPattern = RegExp(
     r'<ruby>(?:<rb>)?(.*?)(?:</rb>)?(?:<rp>.*?</rp>)?<rt>(.*?)</rt>(?:<rp>.*?</rp>)?</ruby>',
   );

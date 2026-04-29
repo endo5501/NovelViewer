@@ -11,6 +11,7 @@ import 'package:logging/logging.dart';
 import 'segment_player.dart';
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
+import '../providers/text_segmenter_provider.dart';
 import 'tts_dictionary_repository.dart';
 import 'tts_isolate.dart';
 import 'tts_playback_controller.dart';
@@ -52,7 +53,7 @@ class TtsStreamingController {
   final TtsAudioRepository _repository;
   final TtsDictionaryRepository? _dictionaryRepository;
   final String tempDirPath;
-  final _textSegmenter = TextSegmenter();
+  late final TextSegmenter _textSegmenter = ref.read(textSegmenterProvider);
 
   bool _stopped = false;
   final _writtenFiles = <String>[];
