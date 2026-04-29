@@ -13,6 +13,9 @@ import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_audio_state_provider.dart';
+import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
@@ -502,6 +505,71 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.bookmark), findsNothing);
+    });
+  });
+
+  group('TextViewerPanel — TTS integration (Phase A baseline)', () {
+    testWidgets('embeds TtsControlsBar when modelDir is configured',
+        (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
+            fileContentProvider
+                .overrideWith((ref) async => 'テスト本文。'),
+            ttsAudioStateProvider
+                .overrideWith((ref, _) async => TtsAudioState.ready),
+            ttsModelDirProvider
+                .overrideWith((ref) => '/tmp/tts_model'),
+          ],
+          child: const MaterialApp(
+            locale: Locale('ja'),
+            localizationsDelegates:
+                AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: TextViewerPanel()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(TextViewerPanel));
+      final container = ProviderScope.containerOf(element);
+      container.read(selectedFileProvider.notifier).selectFile(
+            const FileEntry(name: 'walk.txt', path: '/tmp/walk.txt'),
+          );
+      await tester.pump();
+      await tester.pump();
+
+      // Panel surfaces TTS controls when a model dir is configured —
+      // exhaustive (audio, playback) state assertions live in
+      // tts_controls_bar_test.dart.
+      expect(find.byType(FloatingActionButton), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets(
+        'controls hidden while ttsModelDir is empty (no engine configured)',
+        (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
+            fileContentProvider.overrideWith((ref) async => 'テスト'),
+            ttsModelDirProvider.overrideWith((ref) => ''),
+          ],
+          child: const MaterialApp(
+            locale: Locale('ja'),
+            localizationsDelegates:
+                AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: TextViewerPanel()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(FloatingActionButton), findsNothing);
     });
   });
 }

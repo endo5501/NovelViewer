@@ -42,6 +42,14 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   String? _lastScrollKey;
   bool _isTtsScrolling = false;
   int _lastReportedViewLine = 0;
+  // Memoised hash of `widget.content`. Recomputed only when the content
+  // identity changes — sha256 over a 100KB+ novel is expensive on each
+  // build (font/theme/playback ticks all rebuild this widget).
+  String? _contentHash;
+  // Last TTS highlight range we already scrolled to. Guards against
+  // re-firing the auto-scroll animation on unrelated rebuilds while TTS
+  // is active.
+  TextRange? _lastTtsScrolledRange;
 
   @override
   void initState() {
@@ -51,6 +59,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     ref.listenManual(selectedFileProvider, (prev, next) {
       if (prev?.path != next?.path) {
         _lastScrollKey = null;
+        _lastTtsScrolledRange = null;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           ref.read(currentViewLineProvider.notifier).set(1);
@@ -58,6 +67,15 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         });
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(TextContentRenderer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.content, widget.content)) {
+      _contentHash = null;
+      _lastTtsScrolledRange = null;
+    }
   }
 
   @override
@@ -200,8 +218,10 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
           fontSize: fontSize,
           fontFamily: fontFamily.effectiveFontFamilyName,
         );
-    final segments = ref.watch(parsedSegmentsCacheProvider).getOrParse(
-        widget.content, computeContentHash(widget.content), parseRubyText);
+    final hash = _contentHash ??= computeContentHash(widget.content);
+    final segments = ref
+        .watch(parsedSegmentsCacheProvider)
+        .getOrParse(widget.content, hash, parseRubyText);
 
     final bookmarkJumpLine = ref.watch(bookmarkJumpLineProvider);
     final targetLineNumber = activeMatch?.lineNumber ?? bookmarkJumpLine;
@@ -264,7 +284,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       });
     }
 
-    if (ttsHighlightRange != null) {
+    if (ttsHighlightRange != null &&
+        ttsHighlightRange != _lastTtsScrolledRange) {
+      _lastTtsScrolledRange = ttsHighlightRange;
       _scrollToTtsHighlight(widget.content, ttsHighlightRange, textStyle);
     }
 
