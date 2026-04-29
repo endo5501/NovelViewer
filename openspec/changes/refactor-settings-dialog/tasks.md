@@ -109,12 +109,12 @@
 
 ## 13. 統合動作確認
 
-- [ ] 13.1 `fvm flutter run` でローカル起動、設定ダイアログを開く (manual: ユーザー実機確認待ち)
-- [ ] 13.2 一般タブ全項目の動作確認 (manual)
-- [ ] 13.3 LLM 設定: OpenAI 設定 → 保存 → 再起動で復元、Ollama URL 入力で自動取得、refresh で再取得 (manual)
-- [ ] 13.4 TTS: Qwen3 / Piper 切替、各設定保存、再起動で復元 (manual)
-- [ ] 13.5 voice reference: 選択、refresh、rename、フォルダ open、drag-drop (manual)
-- [ ] 13.6 ロケール切替で Piper ラベル 8 種が EN/ZH/JA で正しく表示 (manual; widget テストは ARB 経由ラベル確認済み)
+- [x] 13.1 `fvm flutter run` でローカル起動、設定ダイアログを開く (manual confirmed)
+- [x] 13.2 一般タブ全項目の動作確認 (manual confirmed)
+- [x] 13.3 LLM 設定: OpenAI 設定 → 保存 → 再起動で復元、Ollama URL 入力で自動取得、refresh で再取得 (manual confirmed)
+- [x] 13.4 TTS: Qwen3 / Piper 切替、各設定保存、再起動で復元 (manual confirmed)
+- [x] 13.5 voice reference: 選択、refresh、rename、フォルダ open、drag-drop (manual confirmed)
+- [x] 13.6 ロケール切替で Piper ラベル 8 種が EN/ZH/JA で正しく表示 (manual confirmed)
 - [x] 13.7 `settings_dialog.dart` の最終 LOC: 160 (≤ 200 達成)
 - [x] 13.8 `lib/features/settings/presentation/` 配下に Phase B で対象とした和文リテラルが残っていないことを `Grep` で確認
 
