@@ -1,5 +1,7 @@
-## Requirements
+## Purpose
 
+Persist non-reproducible novel metadata (titles, library entries, bookmarks, word summaries) in a SQLite database whose corruption must surface to the user rather than be silently reset.
+## Requirements
 ### Requirement: Database initialization
 The system SHALL initialize a SQLite database on application startup to manage novel metadata. On Windows, the database file SHALL be placed in the same directory as the exe file. On macOS/Linux, the system SHALL use the default `getDatabasesPath()` location.
 
@@ -92,3 +94,15 @@ NovelRepositoryはフォルダ名を指定してタイトルのみを更新す�
 - **WHEN** NovelRepository.updateTitle(folderName, newTitle)が呼び出される
 - **AND** 指定されたfolder_nameのレコードが存在しない
 - **THEN** 例外がスローされる
+
+### Requirement: Metadata database preserves data on open failure
+The novel metadata database (`novel_metadata.db`) SHALL NOT be automatically deleted or recreated when its open operation fails. Failures SHALL be logged at WARNING level via `Logger('novel_metadata_db')` and rethrown so that the caller (typically application startup) becomes aware of the inconsistency. This requirement reflects that novel metadata (titles, library entries, bookmarks) is non-reproducible user data, distinct from the reproducible local-folder databases (TTS audio, dictionary, episode cache).
+
+#### Scenario: Open failure does not delete the database
+- **WHEN** `NovelDatabase` calls the shared open helper and the database file is corrupt
+- **THEN** a WARNING-level `LogRecord` is emitted on `Logger('novel_metadata_db')`, the original exception is rethrown, and the database file remains on disk so the user can attempt manual recovery or contact support
+
+#### Scenario: Helper invocation uses deleteOnFailure=false
+- **WHEN** `NovelDatabase` invokes the shared `openOrResetDatabase` helper
+- **THEN** the call passes `deleteOnFailure: false`, distinguishing it from `TtsAudioDatabase`, `TtsDictionaryDatabase`, and `EpisodeCacheDatabase`
+

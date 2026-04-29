@@ -10,6 +10,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_audio_state_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -37,7 +38,7 @@ void main() {
     }
   });
 
-  /// Build the widget tree with overrides that let _checkAudioState complete.
+  /// Build the widget tree with audio state forced to ready for the test file.
   Widget buildTestWidget({
     required SharedPreferences prefs,
     required String tempDirPath,
@@ -55,6 +56,9 @@ void main() {
           final notifier = SelectedFileNotifier();
           return notifier;
         }),
+        ttsAudioStateProvider.overrideWith((ref, filePath) async {
+          return TtsAudioState.ready;
+        }),
       ],
       child: const MaterialApp(
             locale: Locale('ja'),
@@ -64,9 +68,8 @@ void main() {
     );
   }
 
-  /// Pump the widget, select a file, let _checkAudioState run (sets none),
-  /// then set state to ready. After that, _checkAudioState will short-circuit
-  /// because _lastCheckedFileKey matches.
+  /// Pump the widget and select a file. The override above ensures
+  /// `ttsAudioStateProvider(...)` resolves to `ready` for any file path.
   Future<ProviderContainer> pumpWithReadyAudioState(
     WidgetTester tester, {
     required SharedPreferences prefs,
@@ -81,16 +84,9 @@ void main() {
     final element = tester.element(find.byType(TextViewerPanel));
     final container = ProviderScope.containerOf(element);
 
-    // Select a file so _checkAudioState will set _lastCheckedFileKey
     container.read(selectedFileProvider.notifier).selectFile(
           const FileEntry(name: 'test.txt', path: '/tmp/test.txt'),
         );
-    await tester.pumpAndSettle();
-
-    // _checkAudioState ran, found no episode, set state to none.
-    // _lastCheckedFileKey is now '/tmp/test.txt'.
-    // Set state to ready - next rebuild won't re-run _checkAudioState.
-    container.read(ttsAudioStateProvider.notifier).set(TtsAudioState.ready);
     await tester.pumpAndSettle();
 
     return container;
@@ -130,8 +126,11 @@ void main() {
       // Dialog should be dismissed
       expect(find.byType(AlertDialog), findsNothing);
 
-      // Audio state should remain ready (not deleted)
-      expect(container.read(ttsAudioStateProvider), TtsAudioState.ready);
+      // Audio state should remain ready (not deleted) — the override is global
+      // for the family, so any file path returns ready until it's invalidated.
+      final state = await container
+          .read(ttsAudioStateProvider('/tmp/test.txt').future);
+      expect(state, TtsAudioState.ready);
     });
 
     testWidgets('proceeds with deletion when confirm is tapped',

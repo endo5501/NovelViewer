@@ -1,11 +1,13 @@
-import 'dart:io';
-
+import 'package:logging/logging.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
+
+import '../../../shared/database/database_opener.dart';
 
 class TtsAudioDatabase {
   static const _databaseName = 'tts_audio.db';
   static const _databaseVersion = 3;
+  static final _log = Logger('tts.audio_db');
 
   final String _folderPath;
   Database? _database;
@@ -20,28 +22,15 @@ class TtsAudioDatabase {
 
   Future<Database> _open() async {
     final path = p.join(_folderPath, _databaseName);
-    Database db;
-    try {
-      db = await openDatabase(
-        path,
-        version: _databaseVersion,
-        onCreate: _onCreate,
-        onUpgrade: _onUpgrade,
-        onConfigure: _onConfigure,
-      );
-    } catch (_) {
-      final file = File(path);
-      if (file.existsSync()) {
-        file.deleteSync();
-      }
-      db = await openDatabase(
-        path,
-        version: _databaseVersion,
-        onCreate: _onCreate,
-        onUpgrade: _onUpgrade,
-        onConfigure: _onConfigure,
-      );
-    }
+    final db = await openOrResetDatabase(
+      path: path,
+      version: _databaseVersion,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+      onConfigure: _onConfigure,
+      deleteOnFailure: true,
+      logger: _log,
+    );
     await _migrateAutoVacuum(db);
     return db;
   }

@@ -103,6 +103,20 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
   String _skipSuffix(BuildContext context, int skipped) =>
       skipped > 0 ? ' ${AppLocalizations.of(context)!.download_skippedSuffix(skipped)}' : '';
 
+  String _failedSuffix(BuildContext context, int failed) {
+    if (failed <= 0) return '';
+    final locale = Localizations.localeOf(context).languageCode;
+    return switch (locale) {
+      'ja' => ' (失敗: $failed件)',
+      'zh' => ' （失败：$failed个）',
+      _ => ' (failed: $failed)',
+    };
+  }
+
+  String _summarySuffix(BuildContext context, DownloadState state) =>
+      _skipSuffix(context, state.skippedEpisodes) +
+      _failedSuffix(context, state.failedEpisodes);
+
   Widget _buildStatusArea(DownloadState state) {
     switch (state.status) {
       case DownloadStatus.idle:
@@ -117,7 +131,10 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
             LinearProgressIndicator(value: progress),
             const SizedBox(height: 8),
             Text(
-              AppLocalizations.of(context)!.download_progressFormat(state.currentEpisode, state.totalEpisodes, _skipSuffix(context, state.skippedEpisodes)),
+              AppLocalizations.of(context)!.download_progressFormat(
+                  state.currentEpisode,
+                  state.totalEpisodes,
+                  _summarySuffix(context, state)),
             ),
           ],
         );
@@ -127,7 +144,8 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
             const Icon(Icons.check_circle, color: Colors.green),
             const SizedBox(width: 8),
             Text(
-              AppLocalizations.of(context)!.download_completedFormat(state.totalEpisodes, _skipSuffix(context, state.skippedEpisodes)),
+              AppLocalizations.of(context)!.download_completedFormat(
+                  state.totalEpisodes, _summarySuffix(context, state)),
             ),
           ],
         );

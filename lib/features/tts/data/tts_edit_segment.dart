@@ -1,3 +1,4 @@
+import '../domain/tts_segment.dart';
 import 'text_segmenter.dart';
 
 class TtsEditSegment {
@@ -25,12 +26,11 @@ class TtsEditSegment {
 
   static List<TtsEditSegment> mergeSegments({
     required List<TextSegment> originalSegments,
-    required List<Map<String, Object?>> dbSegments,
+    required List<TtsSegment> dbSegments,
   }) {
-    final dbMap = <int, Map<String, Object?>>{};
-    for (final row in dbSegments) {
-      dbMap[row['segment_index'] as int] = row;
-    }
+    final dbMap = <int, TtsSegment>{
+      for (final row in dbSegments) row.segmentIndex: row,
+    };
 
     return List.generate(originalSegments.length, (i) {
       final original = originalSegments[i];
@@ -40,12 +40,12 @@ class TtsEditSegment {
         return TtsEditSegment(
           segmentIndex: i,
           originalText: original.text,
-          text: dbRow['text'] as String,
+          text: dbRow.text,
           textOffset: original.offset,
           textLength: original.length,
-          hasAudio: dbRow['audio_data'] != null,
-          refWavPath: dbRow['ref_wav_path'] as String?,
-          memo: dbRow['memo'] as String?,
+          hasAudio: dbRow.audioData != null,
+          refWavPath: dbRow.refWavPath,
+          memo: dbRow.memo,
           dbRecordExists: true,
         );
       }

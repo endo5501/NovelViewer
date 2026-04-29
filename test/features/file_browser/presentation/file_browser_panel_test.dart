@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/presentation/file_browser_panel.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
-import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
+import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {

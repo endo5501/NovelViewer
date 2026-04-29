@@ -8,7 +8,7 @@ import 'package:novel_viewer/features/novel_delete/providers/novel_delete_provid
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 import 'package:novel_viewer/features/file_browser/presentation/rename_title_dialog.dart';
-import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
+import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 
 /// Returns the parent directory of [currentDir], or null if already at root.
 String? getParentDirectory(String currentDir) {
@@ -79,17 +79,17 @@ class FileBrowserPanel extends ConsumerWidget {
           ),
           ...contents.files.map(
             (file) {
-              final ttsStatus = contents.ttsStatuses[file.name] ??
-                  TtsEpisodeStatus.none;
+              final ttsStatus = contents.ttsStatuses[file.name];
               return ListTile(
                 leading: const Icon(Icons.description),
                 title: Text(file.name),
                 trailing: switch (ttsStatus) {
                   TtsEpisodeStatus.completed =>
                     const Icon(Icons.check_circle, color: Colors.green),
-                  TtsEpisodeStatus.partial =>
+                  TtsEpisodeStatus.partial ||
+                  TtsEpisodeStatus.generating =>
                     const Icon(Icons.pie_chart, color: Colors.orange),
-                  TtsEpisodeStatus.none => null,
+                  null => null,
                 },
                 selected: selectedFile?.path == file.path,
                 onTap: () {
@@ -298,11 +298,22 @@ class _RefreshProgressDialog extends ConsumerWidget {
   Widget _buildContent(BuildContext context, DownloadState state) {
     final l10n = AppLocalizations.of(context)!;
 
+    String failedSuffix(int failed) {
+      if (failed <= 0) return '';
+      final lang = Localizations.localeOf(context).languageCode;
+      return switch (lang) {
+        'ja' => ' (失敗: $failed件)',
+        'zh' => ' （失败：$failed个）',
+        _ => ' (failed: $failed)',
+      };
+    }
+
     String episodeSummary(DownloadState s) {
       if (s.totalEpisodes <= 0) return '';
       final skipped =
           s.skippedEpisodes > 0 ? l10n.fileBrowser_skippedEpisodesSuffix(s.skippedEpisodes) : '';
-      return l10n.fileBrowser_episodeCountFormat(s.totalEpisodes, skipped);
+      final tail = skipped + failedSuffix(s.failedEpisodes);
+      return l10n.fileBrowser_episodeCountFormat(s.totalEpisodes, tail);
     }
 
     switch (state.status) {

@@ -16,6 +16,7 @@ import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_playback_controller.dart';
 import 'package:novel_viewer/features/tts/data/tts_streaming_controller.dart';
 import 'package:novel_viewer/features/tts/data/wav_writer.dart';
+import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -333,9 +334,9 @@ void main() {
         final episode =
             await repository.findEpisodeByFileName('ep01.txt');
         final segments =
-            await repository.getSegments(episode!['id'] as int);
+            await repository.getSegments(episode!.id);
         expect(
-          segments.any((s) => (s['text'] as String).contains('えるりっく')),
+          segments.any((s) => s.text.contains('えるりっく')),
           isTrue,
         );
       });
@@ -435,14 +436,14 @@ void main() {
       final episode =
           await repository.findEpisodeByFileName('0001_テスト.txt');
       expect(episode, isNotNull);
-      expect(episode!['status'], 'completed');
+      expect(episode!.status, TtsEpisodeStatus.completed);
 
       // Text hash should be stored
-      expect(episode['text_hash'], isNotNull);
-      expect(episode['text_hash'], _computeTextHash('文1。文2。'));
+      expect(episode.textHash, isNotNull);
+      expect(episode.textHash, _computeTextHash('文1。文2。'));
 
       // Segments should exist in DB
-      final segments = await repository.getSegments(episode['id'] as int);
+      final segments = await repository.getSegments(episode.id);
       expect(segments, hasLength(2));
     });
 
@@ -452,7 +453,7 @@ void main() {
       final episodeId = await repository.createEpisode(
         fileName: '0001_テスト.txt',
         sampleRate: 24000,
-        status: 'completed',
+        status: TtsEpisodeStatus.completed,
         textHash: _computeTextHash(text),
       );
       await repository.insertSegment(
@@ -506,7 +507,7 @@ void main() {
       final episodeId = await repository.createEpisode(
         fileName: '0001_テスト.txt',
         sampleRate: 24000,
-        status: 'partial',
+        status: TtsEpisodeStatus.partial,
         textHash: _computeTextHash(text),
       );
       // Only segment 0 is stored
@@ -549,7 +550,7 @@ void main() {
       // Episode should be completed
       final episode =
           await repository.findEpisodeByFileName('0001_テスト.txt');
-      expect(episode!['status'], 'completed');
+      expect(episode!.status, TtsEpisodeStatus.completed);
     });
 
     test('text hash mismatch deletes existing data and starts fresh',
@@ -559,7 +560,7 @@ void main() {
       final episodeId = await repository.createEpisode(
         fileName: '0001_テスト.txt',
         sampleRate: 24000,
-        status: 'completed',
+        status: TtsEpisodeStatus.completed,
         textHash: _computeTextHash(oldText),
       );
       await repository.insertSegment(
@@ -597,7 +598,7 @@ void main() {
       // Episode should have new text hash
       final episode =
           await repository.findEpisodeByFileName('0001_テスト.txt');
-      expect(episode!['text_hash'], _computeTextHash(newText));
+      expect(episode!.textHash, _computeTextHash(newText));
     });
 
     test('stop during streaming preserves data with partial status', () async {
@@ -631,8 +632,11 @@ void main() {
       final episode =
           await repository.findEpisodeByFileName('0001_テスト.txt');
       expect(episode, isNotNull);
-      final status = episode!['status'] as String;
-      expect(status == 'partial' || status == 'completed', isTrue);
+      final status = episode!.status;
+      expect(
+          status == TtsEpisodeStatus.partial ||
+              status == TtsEpisodeStatus.completed,
+          isTrue);
 
       // Abort should have been called before dispose
       expect(isolate.aborted, isTrue);
@@ -740,7 +744,7 @@ void main() {
 
       final episode =
           await repository.findEpisodeByFileName('0001_テスト.txt');
-      expect(episode!['status'], 'completed');
+      expect(episode!.status, TtsEpisodeStatus.completed);
     });
 
     test('stop clears highlight and sets stopped state', () async {
@@ -815,7 +819,7 @@ void main() {
       final episodeId = await repository.createEpisode(
         fileName: '0001_テスト.txt',
         sampleRate: 24000,
-        status: 'partial',
+        status: TtsEpisodeStatus.partial,
         textHash: _computeTextHash(text),
       );
       // Segment 0: has audio
@@ -875,7 +879,7 @@ void main() {
       // Episode should be completed
       final episode =
           await repository.findEpisodeByFileName('0001_テスト.txt');
-      expect(episode!['status'], 'completed');
+      expect(episode!.status, TtsEpisodeStatus.completed);
     });
 
     test('on-demand generation uses DB text for edited segments', () async {
@@ -883,7 +887,7 @@ void main() {
       final episodeId = await repository.createEpisode(
         fileName: '0001_テスト.txt',
         sampleRate: 24000,
-        status: 'partial',
+        status: TtsEpisodeStatus.partial,
         textHash: _computeTextHash(text),
       );
       // Segment 0: edited text, no audio
@@ -930,7 +934,7 @@ void main() {
       final episodeId = await repository.createEpisode(
         fileName: '0001_テスト.txt',
         sampleRate: 24000,
-        status: 'partial',
+        status: TtsEpisodeStatus.partial,
         textHash: _computeTextHash(text),
       );
       // Segment 0: no audio, has per-segment ref_wav_path
@@ -978,7 +982,7 @@ void main() {
       final episodeId = await repository.createEpisode(
         fileName: '0001_テスト.txt',
         sampleRate: 24000,
-        status: 'partial',
+        status: TtsEpisodeStatus.partial,
         textHash: _computeTextHash(text),
       );
       // Segment 0: no audio, has per-segment ref_wav_path (filename only)
@@ -1046,10 +1050,10 @@ void main() {
       // Check that inserted segments have ref_wav_path = NULL
       final episode =
           await repository.findEpisodeByFileName('0001_テスト.txt');
-      final segments = await repository.getSegments(episode!['id'] as int);
+      final segments = await repository.getSegments(episode!.id);
       expect(segments, hasLength(2));
       for (final segment in segments) {
-        expect(segment['ref_wav_path'], isNull,
+        expect(segment.refWavPath, isNull,
             reason: 'New segments should store NULL ref_wav_path, '
                 'not the global full path');
       }
@@ -1060,7 +1064,7 @@ void main() {
       final episodeId = await repository.createEpisode(
         fileName: '0001_テスト.txt',
         sampleRate: 24000,
-        status: 'completed',
+        status: TtsEpisodeStatus.completed,
         textHash: _computeTextHash(text),
       );
       await repository.insertSegment(
@@ -1122,7 +1126,7 @@ void main() {
       final episodeId = await repository.createEpisode(
         fileName: '0001_テスト.txt',
         sampleRate: 24000,
-        status: 'partial',
+        status: TtsEpisodeStatus.partial,
         textHash: _computeTextHash(text),
       );
       // Segment 0: has empty ref_wav_path (user chose "なし")

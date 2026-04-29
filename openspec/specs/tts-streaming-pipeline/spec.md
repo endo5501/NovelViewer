@@ -1,5 +1,7 @@
-## Requirements
+## Purpose
 
+Drive incremental TTS synthesis and playback for an episode, persisting generated segments and surfacing observable failures during cleanup.
+## Requirements
 ### Requirement: Unified streaming start
 The system SHALL provide a single entry point `TtsStreamingController.start()` that automatically determines the appropriate mode based on existing data. If no episode exists, it SHALL start fresh generation with immediate playback. If an episode exists with matching text_hash, it SHALL begin playing segments using existing audio where available and generating audio on-demand for segments without audio_data. The controller SHALL accept text, fileName, modelDir, sampleRate, optional refWavPath, optional startOffset, optional resolveRefWavPath callback, optional dictionaryRepository parameters, and a required engineType parameter. The engineType parameter SHALL determine which TTS engine (qwen3-tts or piper-plus) the TtsIsolate uses for synthesis. When engineType is `piper`, the controller SHALL also accept a `dicDir` parameter for the OpenJTalk dictionary path and optional synthesis parameters (lengthScale, noiseScale, noiseW). The resolveRefWavPath callback SHALL be used to resolve per-segment ref_wav_path filenames from the database to absolute filesystem paths before passing them to the TTS engine. When a dictionaryRepository is provided, the system SHALL apply dictionary substitution to each segment's text when writing new segment records to `tts_segments.text`, so that the stored text is already the dictionary-converted form that the TTS engine will receive.
 
@@ -233,3 +235,15 @@ The system SHALL use ruby text (furigana from `<rt>` elements) instead of base t
 #### Scenario: Long sentence without punctuation is split by length
 - **WHEN** the text segmenter processes a 250-character sentence with no sentence-ending punctuation but a comma at position 180
 - **THEN** the sentence is split into two segments at the comma position
+
+### Requirement: Stop cleanup errors are observable
+When the streaming controller's `stop()` cleanup path encounters an exception while releasing audio resources, the system SHALL log the exception at WARNING level via `Logger('tts.streaming')` rather than swallowing it silently. The cleanup SHALL still complete its state-clearing finally block (so `TtsPlaybackState` reaches `stopped` and `TtsHighlightRange` is set to `null` per existing requirements). If the same path encounters multiple errors, each is logged separately.
+
+#### Scenario: Cleanup error is logged
+- **WHEN** the streaming controller calls `stop()` and one of the resource-release operations (e.g., audio player tear-down) throws
+- **THEN** a WARNING-level `LogRecord` is emitted on `Logger('tts.streaming')` carrying the exception, the state-clearing finally block still runs, and `TtsPlaybackState` ends in `stopped`
+
+#### Scenario: Successful cleanup does not log
+- **WHEN** the streaming controller calls `stop()` and all resources release cleanly
+- **THEN** no cleanup warning is emitted (only the existing INFO/FINE diagnostics, if any)
+

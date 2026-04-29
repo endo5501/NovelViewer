@@ -3,6 +3,32 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/text_segmenter.dart';
 import 'package:novel_viewer/features/tts/data/tts_edit_segment.dart';
+import 'package:novel_viewer/features/tts/domain/tts_segment.dart';
+
+TtsSegment _seg({
+  required int segmentIndex,
+  required String text,
+  Uint8List? audioData,
+  int? sampleCount,
+  int textOffset = 0,
+  int textLength = 0,
+  String? refWavPath,
+  String? memo,
+}) {
+  return TtsSegment(
+    id: segmentIndex + 1,
+    episodeId: 1,
+    segmentIndex: segmentIndex,
+    text: text,
+    textOffset: textOffset,
+    textLength: textLength,
+    audioData: audioData,
+    sampleCount: sampleCount,
+    refWavPath: refWavPath,
+    memo: memo,
+    createdAt: DateTime.utc(2025, 1, 1),
+  );
+}
 
 void main() {
   group('TtsEditSegment.mergeSegments', () {
@@ -14,7 +40,7 @@ void main() {
 
       final result = TtsEditSegment.mergeSegments(
         originalSegments: originals,
-        dbSegments: [],
+        dbSegments: const [],
       );
 
       expect(result, hasLength(2));
@@ -34,13 +60,13 @@ void main() {
       ];
 
       final dbSegments = [
-        {
-          'segment_index': 0,
-          'text': '山奥のいっけんや',
-          'audio_data': Uint8List.fromList([1, 2, 3]),
-          'ref_wav_path': '/path/to/voice.wav',
-          'memo': '読み修正',
-        },
+        _seg(
+          segmentIndex: 0,
+          text: '山奥のいっけんや',
+          audioData: Uint8List.fromList([1, 2, 3]),
+          refWavPath: '/path/to/voice.wav',
+          memo: '読み修正',
+        ),
       ];
 
       final result = TtsEditSegment.mergeSegments(
@@ -67,13 +93,13 @@ void main() {
       ];
 
       final dbSegments = [
-        {
-          'segment_index': 0,
-          'text': '編集済みテキスト。',
-          'audio_data': null,
-          'ref_wav_path': null,
-          'memo': null,
-        },
+        _seg(
+          segmentIndex: 0,
+          text: '編集済みテキスト。',
+          audioData: null,
+          refWavPath: null,
+          memo: null,
+        ),
       ];
 
       final result = TtsEditSegment.mergeSegments(
@@ -94,20 +120,20 @@ void main() {
       ];
 
       final dbSegments = [
-        {
-          'segment_index': 0,
-          'text': 'セグメント0。',
-          'audio_data': Uint8List(4),
-          'ref_wav_path': null,
-          'memo': null,
-        },
-        {
-          'segment_index': 2,
-          'text': '編集済み2。',
-          'audio_data': null,
-          'ref_wav_path': '/voice.wav',
-          'memo': 'メモ',
-        },
+        _seg(
+          segmentIndex: 0,
+          text: 'セグメント0。',
+          audioData: Uint8List(4),
+          refWavPath: null,
+          memo: null,
+        ),
+        _seg(
+          segmentIndex: 2,
+          text: '編集済み2。',
+          audioData: null,
+          refWavPath: '/voice.wav',
+          memo: 'メモ',
+        ),
       ];
 
       final result = TtsEditSegment.mergeSegments(

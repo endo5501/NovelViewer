@@ -4,15 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/shared/utils/temp_directory_utils.dart';
 
 import '../data/tts_adapters.dart';
-import '../data/tts_audio_database.dart';
 import '../data/tts_audio_repository.dart';
-import '../data/tts_dictionary_database.dart';
 import '../data/tts_dictionary_repository.dart';
 import 'dictionary_context_menu.dart';
 import '../data/tts_edit_controller.dart';
 import '../data/tts_edit_segment.dart';
 import '../data/tts_engine_type.dart';
 import '../data/tts_isolate.dart';
+import '../providers/tts_audio_database_provider.dart';
 import '../providers/tts_edit_providers.dart';
 import '../providers/tts_settings_providers.dart';
 import 'tts_dictionary_dialog.dart';
@@ -52,8 +51,6 @@ class TtsEditDialog extends ConsumerStatefulWidget {
 
 class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   TtsEditController? _controller;
-  TtsAudioDatabase? _db;
-  TtsDictionaryDatabase? _dictDb;
   TtsDictionaryRepository? _dictRepository;
   bool _loading = true;
   List<String> _voiceFiles = [];
@@ -65,9 +62,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   }
 
   Future<void> _initialize() async {
-    final db = TtsAudioDatabase(widget.folderPath);
+    final db = ref.read(ttsAudioDatabaseProvider(widget.folderPath));
     final repo = TtsAudioRepository(db);
-    final dictDb = TtsDictionaryDatabase(widget.folderPath);
+    final dictDb = ref.read(ttsDictionaryDatabaseProvider(widget.folderPath));
     final dictRepo = TtsDictionaryRepository(dictDb);
     final tempDir = await ensureTemporaryDirectory();
 
@@ -101,8 +98,6 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
 
     await _loadVoiceFiles();
 
-    _db = db;
-    _dictDb = dictDb;
     _dictRepository = dictRepo;
     _controller = controller;
 
@@ -129,10 +124,6 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   Future<void> _dispose() async {
     await _controller?.dispose();
     _controller = null;
-    await _db?.close();
-    _db = null;
-    await _dictDb?.close();
-    _dictDb = null;
     _dictRepository = null;
   }
 

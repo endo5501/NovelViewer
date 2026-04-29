@@ -1,8 +1,11 @@
 import 'dart:convert';
 
+import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/llm_summary/data/context_chunker.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_prompt_builder.dart';
+
+final _log = Logger('llm_summary');
 
 class LlmSummaryPipeline {
   final LlmClient llmClient;
@@ -82,7 +85,16 @@ class LlmSummaryPipeline {
       if (decoded is Map<String, dynamic> && decoded.containsKey(key)) {
         return decoded[key] as String;
       }
-    } catch (_) {}
+    } catch (e, st) {
+      // Fall back to raw text (existing behavior); log so prompt regressions
+      // become observable. Cap the prefix at 200 chars to bound log size.
+      final length = normalized.length;
+      final prefix = length <= 200 ? normalized : normalized.substring(0, 200);
+      _log.warning(
+          'jsonDecode failed for $key; using raw text. length=$length prefix=$prefix',
+          e,
+          st);
+    }
     return normalized;
   }
 

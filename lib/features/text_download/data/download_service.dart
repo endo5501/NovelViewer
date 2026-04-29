@@ -1,11 +1,15 @@
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/episode_cache/data/episode_cache_repository.dart';
 import 'package:novel_viewer/features/episode_cache/domain/episode_cache.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 
-typedef ProgressCallback = void Function(int current, int total, int skipped);
+typedef ProgressCallback = void Function(
+    int current, int total, int skipped, int failed);
+
+final _log = Logger('text_download');
 
 const _maxIndexPages = 100;
 
@@ -33,6 +37,7 @@ class DownloadResult {
   final String folderName;
   final int episodeCount;
   final int skippedCount;
+  final int failedCount;
   final Uri url;
 
   const DownloadResult({
@@ -42,6 +47,7 @@ class DownloadResult {
     required this.folderName,
     required this.episodeCount,
     this.skippedCount = 0,
+    this.failedCount = 0,
     required this.url,
   });
 }
@@ -264,7 +270,7 @@ class DownloadService {
       );
     }
 
-    onProgress?.call(1, 1, skippedCount);
+    onProgress?.call(1, 1, skippedCount, 0);
 
     return DownloadResult(
       siteType: site.siteType,
@@ -293,6 +299,7 @@ class DownloadService {
         : <String, EpisodeCache>{};
 
     var skippedCount = 0;
+    var failedCount = 0;
     var hadPriorRequest = false;
 
     for (final (i, episode) in novelIndex.episodes.indexed) {
@@ -329,13 +336,17 @@ class DownloadService {
             dir: dir,
             episodeCacheRepository: episodeCacheRepository,
           );
-        } catch (e) {
-          // Skip failed episodes and continue
+        } catch (e, st) {
+          failedCount++;
+          _log.warning(
+              'Failed to download episode ${episode.index} from ${episode.url}',
+              e,
+              st);
         }
         hadPriorRequest = true;
       }
 
-      onProgress?.call(i + 1, total, skippedCount);
+      onProgress?.call(i + 1, total, skippedCount, failedCount);
     }
 
     return DownloadResult(
@@ -345,6 +356,7 @@ class DownloadService {
       folderName: folderName,
       episodeCount: total,
       skippedCount: skippedCount,
+      failedCount: failedCount,
       url: url,
     );
   }

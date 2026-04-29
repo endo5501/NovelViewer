@@ -1,12 +1,16 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
+
+import '../../../shared/database/database_opener.dart';
 
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
   static const _databaseVersion = 4;
+  static final _log = Logger('novel_metadata_db');
 
   final String? _dbDirPath;
   Database? _database;
@@ -22,11 +26,14 @@ class NovelDatabase {
   Future<Database> _open() async {
     final dbPath = await _resolveDatabaseDirPath();
     final path = p.join(dbPath, _databaseName);
-    return openDatabase(
-      path,
+    // Bookmarks/library state are non-reproducible — open failure must surface, not auto-delete.
+    return openOrResetDatabase(
+      path: path,
       version: _databaseVersion,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
+      deleteOnFailure: false,
+      logger: _log,
     );
   }
 

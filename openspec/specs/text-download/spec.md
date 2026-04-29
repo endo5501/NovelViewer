@@ -1,5 +1,7 @@
-## MODIFIED Requirements
+## Purpose
 
+Download Web novels (Narou, Kakuyomu, Aozora Bunko) to local files in the user's library directory, with episode-level update tracking and progress reporting.
+## Requirements
 ### Requirement: Download save location
 The system SHALL always save downloaded novels to the library root directory, regardless of the user's current browsing location in the file browser. On Windows, the library root directory SHALL be located under the exe directory. On macOS/Linux, the library root directory SHALL remain under `getApplicationDocumentsDirectory()`.
 
@@ -75,7 +77,7 @@ The system SHALL download each episode's HTML page, extract the body text, and s
 - **THEN** the system SHALL normalize the URL to remove the page parameter and download all pages starting from page 1
 
 ### Requirement: Download progress display
-The system SHALL display download progress during the download operation, including the number of skipped episodes.
+The system SHALL display download progress during the download operation, including the number of skipped episodes and the number of failed episodes. The completion message SHALL include the total downloaded count, the skipped count, and the failed count, distinguishing skip (cached, no-op) from failure (download error).
 
 #### Scenario: Progress is shown during download
 - **WHEN** episodes are being downloaded
@@ -85,9 +87,13 @@ The system SHALL display download progress during the download operation, includ
 - **WHEN** episodes are skipped due to cache hits during download
 - **THEN** the dialog displays the skipped count alongside the progress (e.g., "5/100 (スキップ: 90件)")
 
+#### Scenario: Failed episodes count is shown
+- **WHEN** one or more episodes have failed to download due to network or parsing errors
+- **THEN** the dialog displays the failed count alongside the progress (e.g., "5/100 (スキップ: 90件, 失敗: 2件)")
+
 #### Scenario: Download completes successfully
-- **WHEN** all episodes have been processed (downloaded or skipped)
-- **THEN** the dialog displays a completion message with the total number of downloaded episodes and skipped episodes
+- **WHEN** all episodes have been processed (downloaded, skipped, or failed)
+- **THEN** the dialog displays a completion message with the total number of downloaded episodes, the skipped count, and the failed count
 
 ### Requirement: Index page episode date extraction for Narou
 The system SHALL extract the update date for each episode from the Narou index page during parsing.
@@ -264,3 +270,19 @@ The download dialog SHALL indicate that Narou sister sites (`novel18.syosetu.com
 #### Scenario: Error message includes sister sites
 - **WHEN** the user enters an unsupported URL
 - **THEN** the error message SHALL mention that Narou sister sites (novel18.syosetu.com) and Aozora Bunko (www.aozora.gr.jp) are also supported
+
+### Requirement: Per-episode download failure observability
+When an individual episode fails to download, the system SHALL log the underlying exception at WARNING level via `Logger('text_download')` (including the episode URL or index) AND SHALL increment a `failedCount` field on the in-progress download result so that the final `DownloadResult` exposes the failure count to the caller. The system SHALL continue with the next episode (the existing recovery behavior is preserved).
+
+#### Scenario: Single episode failure is logged and counted
+- **WHEN** the system tries to download episode 7 of 10 and the underlying HTTP fetch throws
+- **THEN** a WARNING-level `LogRecord` is emitted on `Logger('text_download')` carrying the episode identifier and exception, the `failedCount` becomes 1, the failed episode is skipped, and the system proceeds with episode 8
+
+#### Scenario: DownloadResult exposes failed count
+- **WHEN** a download finishes with 8 successful, 1 skipped, and 1 failed episodes
+- **THEN** the returned `DownloadResult` has `downloadedCount == 8`, `skippedCount == 1`, and `failedCount == 1`
+
+#### Scenario: Zero failures yields zero count
+- **WHEN** all episodes complete without error
+- **THEN** the returned `DownloadResult` has `failedCount == 0`
+
