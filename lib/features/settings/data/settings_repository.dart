@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
@@ -37,8 +38,12 @@ class SettingsRepository {
   static const maxColumnSpacing = 24.0;
 
   final SharedPreferences _prefs;
+  final FlutterSecureStorage _secureStorage;
 
-  SettingsRepository(this._prefs);
+  SettingsRepository(
+    this._prefs, {
+    FlutterSecureStorage? secureStorage,
+  }) : _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   static const supportedLocales = ['ja', 'en', 'zh'];
   static const defaultLocale = 'ja';
@@ -117,7 +122,6 @@ class SettingsRepository {
     return LlmConfig(
       provider: provider,
       baseUrl: _prefs.getString(_llmBaseUrlKey) ?? '',
-      apiKey: _prefs.getString(_llmApiKeyKey) ?? '',
       model: _prefs.getString(_llmModelKey) ?? '',
     );
   }
@@ -125,8 +129,47 @@ class SettingsRepository {
   Future<void> setLlmConfig(LlmConfig config) async {
     await _prefs.setString(_llmProviderKey, config.provider.name);
     await _prefs.setString(_llmBaseUrlKey, config.baseUrl);
-    await _prefs.setString(_llmApiKeyKey, config.apiKey);
     await _prefs.setString(_llmModelKey, config.model);
+  }
+
+  Future<String> getApiKey() async {
+    final value = await _secureStorage.read(key: _llmApiKeyKey);
+    return value ?? '';
+  }
+
+  Future<void> setApiKey(String apiKey) async {
+    if (apiKey.isEmpty) {
+      await _secureStorage.delete(key: _llmApiKeyKey);
+      return;
+    }
+    await _secureStorage.write(key: _llmApiKeyKey, value: apiKey);
+  }
+
+  /// Migrate any pre-existing `llm_api_key` entry from `SharedPreferences` to
+  /// `flutter_secure_storage`. Safe to invoke on every startup: when the
+  /// SharedPreferences entry is absent (already migrated, or new install) the
+  /// call is a no-op. If the secure-storage write fails (e.g. libsecret
+  /// unavailable on Linux), the SharedPreferences entry is preserved so the
+  /// migration can be retried on the next startup, and the failure is logged
+  /// via [debugPrint] without propagating.
+  Future<void> migrateApiKeyToSecureStorage() async {
+    final legacyKey = _prefs.getString(_llmApiKeyKey);
+    if (legacyKey == null) {
+      return;
+    }
+    try {
+      // Don't clobber a key that secure storage already holds — it would be
+      // newer than the SharedPreferences leftover (e.g. a prior `prefs.remove`
+      // failed, or a future fallback path repopulated SharedPreferences).
+      final existing = await _secureStorage.read(key: _llmApiKeyKey);
+      if (existing == null || existing.isEmpty) {
+        await _secureStorage.write(key: _llmApiKeyKey, value: legacyKey);
+      }
+    } catch (e, stack) {
+      debugPrint('migrateApiKeyToSecureStorage: failed: $e\n$stack');
+      return;
+    }
+    await _prefs.remove(_llmApiKeyKey);
   }
 
   TtsModelSize getTtsModelSize() {

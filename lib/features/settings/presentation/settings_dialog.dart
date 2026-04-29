@@ -49,6 +49,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   String? _ollamaModelsError;
   String? _selectedOllamaModel;
   int _fetchGeneration = 0;
+  String _persistedApiKey = '';
 
   @override
   void initState() {
@@ -63,15 +64,27 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
           ? 'http://localhost:11434'
           : config.baseUrl,
     );
-    _apiKeyController = TextEditingController(text: config.apiKey);
+    _apiKeyController = TextEditingController();
     _modelController = TextEditingController(text: config.model);
     _selectedOllamaModel = config.model.isEmpty ? null : config.model;
 
+    _loadApiKey();
     _loadVoiceFiles();
 
     if (_llmProvider == LlmProvider.ollama) {
       _fetchOllamaModels();
     }
+  }
+
+  Future<void> _loadApiKey() async {
+    final repo = ref.read(settingsRepositoryProvider);
+    final apiKey = await repo.getApiKey();
+    if (!mounted) return;
+    // If the user has already started typing before secure storage returned,
+    // do not clobber their input with the stored value.
+    if (_apiKeyController.text.isNotEmpty) return;
+    _apiKeyController.text = apiKey;
+    _persistedApiKey = apiKey;
   }
 
   @override
@@ -130,9 +143,14 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
     await repo.setLlmConfig(LlmConfig(
       provider: _llmProvider,
       baseUrl: _baseUrlController.text,
-      apiKey: _apiKeyController.text,
       model: _modelController.text,
     ));
+    // Avoid hitting the OS keychain on every keystroke when only the URL or
+    // model field changed.
+    if (_apiKeyController.text != _persistedApiKey) {
+      await repo.setApiKey(_apiKeyController.text);
+      _persistedApiKey = _apiKeyController.text;
+    }
     ref.invalidate(settingsRepositoryProvider);
   }
 

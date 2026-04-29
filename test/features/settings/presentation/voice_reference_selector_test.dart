@@ -10,18 +10,24 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 import 'package:path/path.dart' as p;
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
+import '../../../test_utils/flutter_secure_storage_mock.dart';
+
 void main() {
   late SharedPreferences prefs;
   late Directory tempDir;
+  late FlutterSecureStorageMock secureStorageMock;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
     tempDir = Directory.systemTemp.createTempSync('voice_ref_ui_test_');
     Directory(p.join(tempDir.path, 'NovelViewer')).createSync();
+    secureStorageMock = FlutterSecureStorageMock();
+    secureStorageMock.install();
   });
 
   tearDown(() {
+    secureStorageMock.uninstall();
     tempDir.deleteSync(recursive: true);
   });
 

@@ -18,20 +18,28 @@ final llmConfigProvider = Provider<LlmConfig>((ref) {
   return repo.getLlmConfig();
 });
 
-final llmClientProvider = Provider<LlmClient?>((ref) {
+final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
   final config = ref.watch(llmConfigProvider);
-  return switch (config.provider) {
-    LlmProvider.ollama => OllamaClient(
+  switch (config.provider) {
+    case LlmProvider.ollama:
+      return OllamaClient(
         baseUrl: config.baseUrl,
         model: config.model,
-      ),
-    LlmProvider.openai => OpenAiCompatibleClient(
+      );
+    case LlmProvider.openai:
+      final apiKey =
+          await ref.watch(settingsRepositoryProvider).getApiKey();
+      if (apiKey.isEmpty) {
+        return null;
+      }
+      return OpenAiCompatibleClient(
         baseUrl: config.baseUrl,
-        apiKey: config.apiKey,
+        apiKey: apiKey,
         model: config.model,
-      ),
-    LlmProvider.none => null,
-  };
+      );
+    case LlmProvider.none:
+      return null;
+  }
 });
 
 final llmSummaryRepositoryProvider =
@@ -42,7 +50,8 @@ final llmSummaryRepositoryProvider =
 });
 
 final llmSummaryServiceProvider = Provider<LlmSummaryService?>((ref) {
-  final client = ref.watch(llmClientProvider);
+  final clientAsync = ref.watch(llmClientProvider);
+  final client = clientAsync.value;
   if (client == null) return null;
 
   final repoAsync = ref.watch(llmSummaryRepositoryProvider);
@@ -97,6 +106,10 @@ class LlmSummaryNotifier extends Notifier<LlmSummaryState> {
   Future<void> analyze({
     required SummaryType summaryType,
   }) async {
+    // Wait for the on-demand API key fetch from secure storage to settle so
+    // the button doesn't silently no-op during the brief loading window
+    // after app startup.
+    await ref.read(llmClientProvider.future);
     final service = ref.read(llmSummaryServiceProvider);
     if (service == null) return;
 

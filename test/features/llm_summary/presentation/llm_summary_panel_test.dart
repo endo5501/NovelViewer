@@ -77,7 +77,6 @@ void main() {
       SharedPreferences.setMockInitialValues({
         'llm_provider': 'ollama',
         'llm_base_url': 'http://localhost:11434',
-        'llm_api_key': '',
         'llm_model': 'llama3',
       });
       final prefs = await SharedPreferences.getInstance();
@@ -105,7 +104,6 @@ void main() {
       SharedPreferences.setMockInitialValues({
         'llm_provider': 'ollama',
         'llm_base_url': 'http://localhost:11434',
-        'llm_api_key': '',
         'llm_model': 'llama3',
       });
       final prefs = await SharedPreferences.getInstance();
@@ -138,7 +136,6 @@ void main() {
       SharedPreferences.setMockInitialValues({
         'llm_provider': 'ollama',
         'llm_base_url': 'http://localhost:11434',
-        'llm_api_key': '',
         'llm_model': 'llama3',
       });
       final prefs = await SharedPreferences.getInstance();

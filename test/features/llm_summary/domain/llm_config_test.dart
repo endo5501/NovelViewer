@@ -12,17 +12,15 @@ void main() {
   });
 
   group('LlmConfig', () {
-    test('creates with all fields', () {
+    test('creates with provider, baseUrl and model', () {
       const config = LlmConfig(
         provider: LlmProvider.openai,
         baseUrl: 'https://api.openai.com/v1',
-        apiKey: 'sk-test-key',
         model: 'gpt-4o-mini',
       );
 
       expect(config.provider, LlmProvider.openai);
       expect(config.baseUrl, 'https://api.openai.com/v1');
-      expect(config.apiKey, 'sk-test-key');
       expect(config.model, 'gpt-4o-mini');
     });
 
@@ -31,11 +29,10 @@ void main() {
 
       expect(config.provider, LlmProvider.none);
       expect(config.baseUrl, '');
-      expect(config.apiKey, '');
       expect(config.model, '');
     });
 
-    test('creates Ollama config without apiKey', () {
+    test('creates Ollama config', () {
       const config = LlmConfig(
         provider: LlmProvider.ollama,
         baseUrl: 'http://localhost:11434',
@@ -44,7 +41,6 @@ void main() {
 
       expect(config.provider, LlmProvider.ollama);
       expect(config.baseUrl, 'http://localhost:11434');
-      expect(config.apiKey, '');
       expect(config.model, 'llama3');
     });
 
@@ -62,6 +58,23 @@ void main() {
       const config = LlmConfig();
 
       expect(config.isConfigured, false);
+    });
+
+    test('does not expose an apiKey field (secrets live in secure storage)',
+        () {
+      const config = LlmConfig(
+        provider: LlmProvider.openai,
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'gpt-4o-mini',
+      );
+
+      // The intent is that LlmConfig has no apiKey accessor at all. Casting
+      // to dynamic and probing keeps the test compilable while still failing
+      // (NoSuchMethodError) if someone reintroduces the field.
+      expect(
+        () => (config as dynamic).apiKey,
+        throwsNoSuchMethodError,
+      );
     });
   });
 }
