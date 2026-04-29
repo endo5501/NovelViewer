@@ -36,8 +36,7 @@ class TtsStreamingController {
     TtsDictionaryRepository? dictionaryRepository,
     TtsSession? session,
     SegmentPlayer? segmentPlayer,
-  })  : _audioPlayer = audioPlayer,
-        _repository = repository,
+  })  : _repository = repository,
         _dictionaryRepository = dictionaryRepository,
         _session = session ?? TtsSession(isolate: ttsIsolate),
         _segmentPlayer = segmentPlayer ??
@@ -49,7 +48,6 @@ class TtsStreamingController {
   final ProviderContainer ref;
   final TtsSession _session;
   final SegmentPlayer _segmentPlayer;
-  final TtsAudioPlayer _audioPlayer;
   final TtsAudioRepository _repository;
   final TtsDictionaryRepository? _dictionaryRepository;
   final String tempDirPath;
@@ -128,9 +126,12 @@ class TtsStreamingController {
             episodeId, TtsEpisodeStatus.completed);
       }
     } finally {
-      // Release the session's isolate resources on natural completion.
-      if (_session.modelLoaded) {
-        await _session.dispose();
+      // Always release isolate + segment-player resources and clear temp
+      // files, even on early exit (model-load failure, exception).
+      await _session.dispose();
+      if (!_stopped) {
+        await _segmentPlayer.dispose();
+        await _cleanupFiles();
       }
     }
   }
@@ -273,23 +274,23 @@ class TtsStreamingController {
     }
 
     if (!_stopped) {
-      // All segments played - clean up
+      // All segments played — clear UI state. The segment player and temp
+      // files are disposed by `start()`'s outer finally so this branch and
+      // the exception path stay symmetric.
       ref
           .read(ttsPlaybackStateProvider.notifier)
           .set(TtsPlaybackState.stopped);
       ref.read(ttsHighlightRangeProvider.notifier).set(null);
-      await _segmentPlayer.dispose();
-      await _cleanupFiles();
     }
   }
 
   Future<void> pause() async {
-    await _audioPlayer.pause();
+    await _segmentPlayer.pause();
     ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.paused);
   }
 
   Future<void> resume() async {
-    await _audioPlayer.play();
+    await _segmentPlayer.resume();
     ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.playing);
   }
 

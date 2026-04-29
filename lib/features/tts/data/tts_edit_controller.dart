@@ -188,18 +188,22 @@ class TtsEditController {
     required int segmentIndex,
     required TtsEngineConfig config,
   }) async {
+    if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
     final dict = _dictionaryRepository;
     final entries = dict != null
         ? await dict.getEntriesSortedByLength()
         : null;
-    final perSegmentRefWavPath = _resolveSegmentRefWavPath(
-      segmentIndex: segmentIndex,
-      config: config,
+    final fallbackRefWavPath = config is Qwen3EngineConfig
+        ? config.refWavPath
+        : null;
+    final refWavPath = TtsRefWavResolver.resolve(
+      storedPath: _segments[segmentIndex].refWavPath,
+      fallbackPath: fallbackRefWavPath,
     );
     return _generateSegmentWithEntries(
       segmentIndex: segmentIndex,
       config: config,
-      refWavPath: perSegmentRefWavPath,
+      refWavPath: refWavPath,
       dictEntries: entries,
     );
   }
@@ -304,21 +308,6 @@ class TtsEditController {
 
       onProgress?.call(idx + 1, ungenerated.length);
     }
-  }
-
-  String? _resolveSegmentRefWavPath({
-    required int segmentIndex,
-    required TtsEngineConfig config,
-  }) {
-    if (config is! Qwen3EngineConfig) return null;
-    if (segmentIndex < 0 || segmentIndex >= _segments.length) {
-      return config.refWavPath;
-    }
-    final segment = _segments[segmentIndex];
-    return TtsRefWavResolver.resolve(
-      storedPath: segment.refWavPath,
-      fallbackPath: config.refWavPath,
-    );
   }
 
   Future<void> playSegment(int segmentIndex) async {

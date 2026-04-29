@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // flutter_riverpod entry point. Pulling it from `src/internals.dart` lets
 // the [ProviderReader] typedef precisely match those signatures.
 import 'package:flutter_riverpod/src/internals.dart' show ProviderListenable;
+import 'package:path/path.dart' as p;
 
 import '../data/tts_engine_type.dart';
 import '../providers/tts_settings_providers.dart';
@@ -76,6 +77,18 @@ class Qwen3EngineConfig extends TtsEngineConfig {
   /// Directory under which speaker-embedding caches are stored. `null`
   /// disables embedding caching.
   final String? embeddingCacheDir;
+
+  /// Returns a copy with [refWavPath] overridden. Used by the edit dialog
+  /// to swap the global ref WAV for a per-segment one without rebuilding
+  /// every field by hand.
+  Qwen3EngineConfig copyWithRefWavPath(String? refWavPath) =>
+      Qwen3EngineConfig(
+        modelDir: modelDir,
+        sampleRate: sampleRate,
+        languageId: languageId,
+        refWavPath: refWavPath,
+        embeddingCacheDir: embeddingCacheDir,
+      );
 }
 
 class PiperEngineConfig extends TtsEngineConfig {
@@ -122,7 +135,7 @@ PiperEngineConfig _resolvePiper(ProviderReader read) {
   final piperDir = read(piperModelDirProvider);
   final modelName = read(piperModelNameProvider);
   return PiperEngineConfig(
-    modelDir: '$piperDir/$modelName.onnx',
+    modelDir: p.join(piperDir, '$modelName.onnx'),
     sampleRate: _piperSampleRate,
     dicDir: read(piperDicDirProvider),
     lengthScale: read(piperLengthScaleProvider),

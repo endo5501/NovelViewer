@@ -86,14 +86,12 @@ class TtsStoredPlayerController {
   }
 
   Future<void> pause() async {
-    // SegmentPlayer doesn't expose pause directly — but pausing the underlying
-    // player is what TtsAudioPlayer.pause() does. We rely on the controller
-    // exposing that knob to the UI; for now, route through stop() which is
-    // user-initiated.
+    await _segmentPlayer.pause();
     ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.paused);
   }
 
   Future<void> resume() async {
+    await _segmentPlayer.resume();
     ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.playing);
   }
 

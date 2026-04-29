@@ -94,6 +94,13 @@ class SegmentPlayer {
     await _player.stop();
   }
 
+  /// Pauses the underlying player. Use this for "pause/resume" semantics
+  /// driven by the user; for the inter-segment drain handling, see [playSegment].
+  Future<void> pause() => _player.pause();
+
+  /// Resumes the underlying player after [pause].
+  Future<void> resume() => _player.play();
+
   Future<void> dispose() async {
     _stopped = true;
     _releasePending();

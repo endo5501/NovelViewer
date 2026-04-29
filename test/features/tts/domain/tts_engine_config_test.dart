@@ -147,7 +147,7 @@ void main() {
       expect(config, isA<PiperEngineConfig>());
       final piper = config as PiperEngineConfig;
       expect(piper.modelDir,
-          '${p.join('/home/user', 'models', 'piper')}/jp_JP-test-model.onnx');
+          p.join('/home/user', 'models', 'piper', 'jp_JP-test-model.onnx'));
       expect(piper.sampleRate, 22050);
       expect(piper.dicDir,
           p.join('/home/user', 'models', 'piper', 'open_jtalk_dic'));

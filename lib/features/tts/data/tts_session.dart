@@ -55,26 +55,25 @@ class TtsSession {
       }
     });
 
-    switch (config) {
-      case Qwen3EngineConfig():
-        _isolate.loadModel(
-          config.modelDir,
-          engineType: TtsEngineType.qwen3,
-          languageId: config.languageId,
-          embeddingCacheDir: config.embeddingCacheDir,
-        );
-      case PiperEngineConfig():
-        _isolate.loadModel(
-          config.modelDir,
-          engineType: TtsEngineType.piper,
-          dicDir: config.dicDir,
-          lengthScale: config.lengthScale,
-          noiseScale: config.noiseScale,
-          noiseW: config.noiseW,
-        );
-    }
-
     try {
+      switch (config) {
+        case Qwen3EngineConfig():
+          _isolate.loadModel(
+            config.modelDir,
+            engineType: TtsEngineType.qwen3,
+            languageId: config.languageId,
+            embeddingCacheDir: config.embeddingCacheDir,
+          );
+        case PiperEngineConfig():
+          _isolate.loadModel(
+            config.modelDir,
+            engineType: TtsEngineType.piper,
+            dicDir: config.dicDir,
+            lengthScale: config.lengthScale,
+            noiseScale: config.noiseScale,
+            noiseW: config.noiseW,
+          );
+      }
       final success = await completer.future;
       _modelLoaded = success;
       _loadedConfig = success ? config : null;
@@ -106,8 +105,8 @@ class TtsSession {
       }
     });
 
-    _isolate.synthesize(text, refWavPath: refWavPath);
     try {
+      _isolate.synthesize(text, refWavPath: refWavPath);
       return await completer.future;
     } finally {
       _activeSynthesisCompleter = null;

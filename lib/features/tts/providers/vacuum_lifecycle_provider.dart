@@ -40,6 +40,7 @@ class VacuumLifecycle with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.detached) return;
+    if (_inFlight != null) return; // a previous detached batch is still running
     _inFlight = _vacuumAll();
   }
 
@@ -51,16 +52,22 @@ class VacuumLifecycle with WidgetsBindingObserver {
   }
 
   Future<void> _vacuumAll() async {
-    if (_dirty.isEmpty) return;
+    if (_dirty.isEmpty) {
+      _inFlight = null;
+      return;
+    }
     final pending = List.of(_dirty);
     _dirty.clear();
-    for (final folder in pending) {
+    // Run in parallel — each folder writes to its own SQLite file, and at
+    // detached time the OS may kill the process at any moment, so don't pay
+    // O(N × hundreds-of-ms) when O(slowest folder) suffices.
+    await Future.wait(pending.map((folder) async {
       try {
         await vacuumFolder(folder);
       } catch (e, st) {
         _log.warning('vacuum failed for $folder', e, st);
       }
-    }
+    }));
     _inFlight = null;
   }
 }

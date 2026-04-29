@@ -166,13 +166,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     // Edit dialog uses per-segment ref_wav_path (overrides global) for Qwen3.
     if (config is Qwen3EngineConfig) {
       final segment = controller.segments[index];
-      config = Qwen3EngineConfig(
-        modelDir: config.modelDir,
-        sampleRate: config.sampleRate,
-        languageId: config.languageId,
-        refWavPath: _resolveRefWavPath(segment.refWavPath),
-        embeddingCacheDir: config.embeddingCacheDir,
-      );
+      config = config.copyWithRefWavPath(_resolveRefWavPath(segment.refWavPath));
     }
     if (config.modelDir.isEmpty) return;
 
