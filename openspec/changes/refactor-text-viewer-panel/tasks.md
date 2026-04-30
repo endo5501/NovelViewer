@@ -128,15 +128,16 @@
 
 ## 9. 統合動作確認
 
-- [ ] 9.1 `fvm flutter run` でローカル起動 (要・利用者による手動確認)
-- [ ] 9.2 horizontal モードでテキスト表示、ruby、検索ハイライト (要・利用者による手動確認)
-- [ ] 9.3 vertical モードでページめくり、ruby、検索 (要・利用者による手動確認)
-- [ ] 9.4 TTS Qwen3 で再生 → pause → resume → stop (要・利用者による手動確認)
-- [ ] 9.5 TTS Piper で再生 → 同上 (要・利用者による手動確認)
-- [ ] 9.6 mid-playback で別ファイルを選択 → TTS が停止し、新ファイルが表示 (要・利用者による手動確認)
-- [ ] 9.7 MP3 export ボタン動作確認 (要・利用者による手動確認)
-- [ ] 9.8 edit dialog 起動 → セグメント編集 → 戻る (要・利用者による手動確認)
-- [ ] 9.9 大きなテキスト (>100KB) を 2 連続表示 — 同一 content では segment 解析が走らないことを観察 (debug log でも可) (要・利用者による手動確認)
+- [x] 9.1 `fvm flutter run` でローカル起動
+- [x] 9.2 horizontal モードでテキスト表示、ruby、検索ハイライト
+- [x] 9.3 vertical モードでページめくり、ruby、検索
+- [x] 9.4 TTS Qwen3 で再生 → pause → resume → stop
+- [x] 9.5 TTS Piper で再生 → 同上
+- [x] 9.6 mid-playback で別ファイルを選択 → TTS が停止し、新ファイルが表示
+- [x] 9.7 MP3 export ボタン動作確認
+- [x] 9.8 edit dialog 起動 → セグメント編集 → 戻る
+- [x] 9.9 大きなテキスト (>100KB) を 2 連続表示 — 同一 content では segment 解析が走らないことを観察 (debug log でも可)
+  - 統合動作確認中に観測された 2 件 (横書きで列間隔パラメータが効かない / Ollama LLM 解析後に GPU メモリが解放されない) は本リファクタとは無関係の既存挙動と判定。別途 OpenSpec で対応する。
 
 ## 10. F001-F058 final pass
 
