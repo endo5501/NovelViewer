@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart';
 
-class _MockLlmClient implements LlmClient {
+class _MockLlmClient extends LlmClient {
   final List<String> responses;
   final List<String> prompts = [];
   int _callIndex = 0;

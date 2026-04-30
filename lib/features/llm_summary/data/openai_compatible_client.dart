@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 
-class OpenAiCompatibleClient implements LlmClient {
+class OpenAiCompatibleClient extends LlmClient {
   final String baseUrl;
   final String apiKey;
   final String model;
