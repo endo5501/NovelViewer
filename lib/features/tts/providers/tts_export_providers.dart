@@ -52,7 +52,7 @@ Future<bool> exportEpisodeToMp3({
   required int sampleRate,
 }) async {
   final defaultFileName = '$episodeFileName.mp3';
-  final savePath = await FilePicker.platform.saveFile(
+  final savePath = await FilePicker.saveFile(
     dialogTitle: 'MP3ファイルの保存先を選択',
     fileName: defaultFileName,
     type: FileType.custom,
