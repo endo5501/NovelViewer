@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // `ProviderListenable` is the upper bound that both `WidgetRef.read` and
-// `ProviderContainer.read` accept, but it is not re-exported by the public
-// flutter_riverpod entry point. Pulling it from `src/internals.dart` lets
-// the [ProviderReader] typedef precisely match those signatures.
-import 'package:flutter_riverpod/src/internals.dart' show ProviderListenable;
+// `ProviderContainer.read` accept. It lives in the auxiliary `misc.dart`
+// entry point rather than the main flutter_riverpod export, so import it
+// from there to keep [ProviderReader] matching those signatures.
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:path/path.dart' as p;
 
 import '../data/tts_engine_type.dart';
