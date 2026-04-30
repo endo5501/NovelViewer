@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
-import 'package:crypto/crypto.dart';
-
+import '../../../shared/utils/content_hash.dart';
 import 'segment_player.dart';
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
@@ -71,7 +69,7 @@ class TtsEditController {
   }) async {
     _sampleRate = sampleRate;
     _fileName = fileName;
-    _textHash = sha256.convert(utf8.encode(text)).toString();
+    _textHash = computeContentHash(text);
 
     final originalSegments = _textSegmenter.splitIntoSentences(text);
 

@@ -55,3 +55,21 @@ class TtsHighlightRangeNotifier extends Notifier<TextRange?> {
 
   void set(TextRange? value) => state = value;
 }
+
+// --- Stop request signal ---
+
+/// Monotonic counter that the renderer increments to request the
+/// `TtsControlsBar` stop the active streaming session (e.g. when the user
+/// manually scrolls during playback). Listeners observe value changes via
+/// `ref.listen`/`listenManual` and react to the new value.
+final ttsStopRequestProvider =
+    NotifierProvider<TtsStopRequestNotifier, int>(
+  TtsStopRequestNotifier.new,
+);
+
+class TtsStopRequestNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void request() => state = state + 1;
+}

@@ -1,13 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
 
-import 'package:crypto/crypto.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:logging/logging.dart';
 
+import '../../../shared/utils/content_hash.dart';
 import 'segment_player.dart';
 import 'text_segmenter.dart';
 import 'tts_audio_repository.dart';
@@ -23,11 +22,17 @@ import '../domain/tts_ref_wav_resolver.dart';
 import '../domain/tts_segment.dart';
 import '../providers/tts_playback_providers.dart';
 
+/// Reads a Riverpod provider value. Compatible with both
+/// `WidgetRef.read` and `ProviderContainer.read`, which lets call sites pass
+/// `ref.read` from a `ConsumerStatefulWidget` without leaking a
+/// `ProviderContainer` reference into the controller (F046).
+typedef Reader = T Function<T>(ProviderListenable<T> provider);
+
 class TtsStreamingController {
   static final _log = Logger('tts.streaming');
 
   TtsStreamingController({
-    required this.ref,
+    required Reader read,
     required TtsIsolate ttsIsolate,
     required TtsAudioPlayer audioPlayer,
     required TtsAudioRepository repository,
@@ -36,7 +41,8 @@ class TtsStreamingController {
     TtsDictionaryRepository? dictionaryRepository,
     TtsSession? session,
     SegmentPlayer? segmentPlayer,
-  })  : _repository = repository,
+  })  : _read = read,
+        _repository = repository,
         _dictionaryRepository = dictionaryRepository,
         _session = session ?? TtsSession(isolate: ttsIsolate),
         _segmentPlayer = segmentPlayer ??
@@ -45,13 +51,13 @@ class TtsStreamingController {
               bufferDrainDelay: bufferDrainDelay,
             );
 
-  final ProviderContainer ref;
+  final Reader _read;
   final TtsSession _session;
   final SegmentPlayer _segmentPlayer;
   final TtsAudioRepository _repository;
   final TtsDictionaryRepository? _dictionaryRepository;
   final String tempDirPath;
-  late final TextSegmenter _textSegmenter = ref.read(textSegmenterProvider);
+  late final TextSegmenter _textSegmenter = _read(textSegmenterProvider);
 
   bool _stopped = false;
   final _writtenFiles = <String>[];
@@ -65,7 +71,7 @@ class TtsStreamingController {
   }) async {
     _stopped = false;
 
-    final textHash = sha256.convert(utf8.encode(text)).toString();
+    final textHash = computeContentHash(text);
     final segments = _textSegmenter.splitIntoSentences(text);
     if (segments.isEmpty) return;
 
@@ -166,7 +172,7 @@ class TtsStreamingController {
     int generatedSoFar = 0;
 
     if (totalToGenerate > 0) {
-      ref.read(ttsGenerationProgressProvider.notifier).set(
+      _read(ttsGenerationProgressProvider.notifier).set(
           TtsGenerationProgress(current: 0, total: totalToGenerate));
     }
 
@@ -193,8 +199,7 @@ class TtsStreamingController {
         textLength = dbRow.textLength;
       } else {
         // Generate on-demand
-        ref
-            .read(ttsPlaybackStateProvider.notifier)
+        _read(ttsPlaybackStateProvider.notifier)
             .set(TtsPlaybackState.waiting);
 
         if (!await _session.ensureModelLoaded(config)) {
@@ -245,7 +250,7 @@ class TtsStreamingController {
 
         audioData = wavBytes;
         generatedSoFar++;
-        ref.read(ttsGenerationProgressProvider.notifier).set(
+        _read(ttsGenerationProgressProvider.notifier).set(
             TtsGenerationProgress(
                 current: generatedSoFar, total: totalToGenerate));
       }
@@ -259,12 +264,11 @@ class TtsStreamingController {
       if (_stopped) break;
 
       // Update highlight
-      ref.read(ttsHighlightRangeProvider.notifier).set(
+      _read(ttsHighlightRangeProvider.notifier).set(
             TextRange(start: textOffset, end: textOffset + textLength),
           );
 
-      ref
-          .read(ttsPlaybackStateProvider.notifier)
+      _read(ttsPlaybackStateProvider.notifier)
           .set(TtsPlaybackState.playing);
 
       final isLast = i == segments.length - 1;
@@ -277,21 +281,20 @@ class TtsStreamingController {
       // All segments played — clear UI state. The segment player and temp
       // files are disposed by `start()`'s outer finally so this branch and
       // the exception path stay symmetric.
-      ref
-          .read(ttsPlaybackStateProvider.notifier)
+      _read(ttsPlaybackStateProvider.notifier)
           .set(TtsPlaybackState.stopped);
-      ref.read(ttsHighlightRangeProvider.notifier).set(null);
+      _read(ttsHighlightRangeProvider.notifier).set(null);
     }
   }
 
   Future<void> pause() async {
     await _segmentPlayer.pause();
-    ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.paused);
+    _read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.paused);
   }
 
   Future<void> resume() async {
     await _segmentPlayer.resume();
-    ref.read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.playing);
+    _read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.playing);
   }
 
   Future<void> stop() async {
@@ -315,12 +318,10 @@ class TtsStreamingController {
       _log.warning('Error during stop() cleanup', e, st);
     } finally {
       // Always clear state even if cleanup throws
-      ref
-          .read(ttsPlaybackStateProvider.notifier)
+      _read(ttsPlaybackStateProvider.notifier)
           .set(TtsPlaybackState.stopped);
-      ref.read(ttsHighlightRangeProvider.notifier).set(null);
-      ref
-          .read(ttsGenerationProgressProvider.notifier)
+      _read(ttsHighlightRangeProvider.notifier).set(null);
+      _read(ttsGenerationProgressProvider.notifier)
           .set(TtsGenerationProgress.zero);
     }
 
