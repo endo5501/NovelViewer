@@ -79,6 +79,14 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
   }
 
   Future<void> _startStreaming() async {
+    // Re-entrancy guard. The play/generate FAB stops being shown as soon
+    // as `activeStreamingFileProvider` is set, but a fast double-tap can
+    // still land two calls before the next frame. Without this, the
+    // second call would overwrite `_streamingController`, orphan the
+    // first controller's isolate/player cleanup, and let either
+    // controller's `finally` clear the global state owned by the other.
+    if (_streamingController != null) return;
+
     final folderPath = ref.read(currentDirectoryProvider);
     final selectedFile = ref.read(selectedFileProvider);
     final fileName = selectedFile?.name;
@@ -145,11 +153,16 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
         resolveRefWavPath: voiceService?.resolveVoiceFilePath,
       );
     } finally {
-      _streamingController = null;
-      ref.read(activeStreamingFileProvider.notifier).set(null);
-      if (mounted) {
-        ref.invalidate(ttsAudioStateProvider(filePath));
-        ref.invalidate(directoryContentsProvider);
+      // Only clear shared state if we still own it. If `_stopStreaming`
+      // already swapped `_streamingController` to null (e.g. file switch
+      // or manual stop), don't clobber any newer session's state.
+      if (identical(_streamingController, controller)) {
+        _streamingController = null;
+        ref.read(activeStreamingFileProvider.notifier).set(null);
+        if (mounted) {
+          ref.invalidate(ttsAudioStateProvider(filePath));
+          ref.invalidate(directoryContentsProvider);
+        }
       }
     }
   }
