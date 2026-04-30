@@ -23,31 +23,41 @@ class LlmSummaryService {
     required SummaryType summaryType,
     String? currentFileName,
   }) async {
-    final searchResults = await searchService.searchWithContext(
-      directoryPath,
-      word,
-    );
+    try {
+      final searchResults = await searchService.searchWithContext(
+        directoryPath,
+        word,
+      );
 
-    final filteredResults = _filterResultsIfNeeded(
-      searchResults,
-      summaryType,
-      currentFileName,
-    );
+      final filteredResults = _filterResultsIfNeeded(
+        searchResults,
+        summaryType,
+        currentFileName,
+      );
 
-    final contexts = _extractContexts(filteredResults);
+      final contexts = _extractContexts(filteredResults);
 
-    final pipeline = LlmSummaryPipeline(llmClient: llmClient);
-    final summary = await pipeline.generate(word: word, contexts: contexts);
+      final pipeline = LlmSummaryPipeline(llmClient: llmClient);
+      final summary = await pipeline.generate(word: word, contexts: contexts);
 
-    await repository.saveSummary(
-      folderName: folderName,
-      word: word,
-      summaryType: summaryType,
-      summary: summary,
-      sourceFile: currentFileName,
-    );
+      await repository.saveSummary(
+        folderName: folderName,
+        word: word,
+        summaryType: summaryType,
+        summary: summary,
+        sourceFile: currentFileName,
+      );
 
-    return summary;
+      return summary;
+    } finally {
+      try {
+        await llmClient.releaseResources();
+      } catch (_) {
+        // Release failures are not user-facing: the original generation
+        // outcome must be preserved, and Ollama's default keep_alive
+        // timeout will eventually free resources anyway.
+      }
+    }
   }
 
   List<SearchResult> _filterResultsIfNeeded(

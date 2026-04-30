@@ -1,12 +1,27 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/ollama_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/openai_compatible_client.dart';
 
+class _MinimalLlmClient extends LlmClient {
+  @override
+  Future<String> generate(String prompt) async => '';
+}
+
 void main() {
+  group('LlmClient default behavior', () {
+    test('default releaseResources is a no-op that completes successfully',
+        () async {
+      final client = _MinimalLlmClient();
+      await expectLater(client.releaseResources(), completes);
+    });
+  });
+
   group('OllamaClient', () {
     test('generate sends correct request and returns response', () async {
       final mockClient = MockClient((request) async {
@@ -47,6 +62,66 @@ void main() {
         () => client.generate('test prompt'),
         throwsException,
       );
+    });
+
+    group('releaseResources', () {
+      test(
+          'sends POST with model, keep_alive=0, stream=false, and no prompt field',
+          () async {
+        Uri? capturedUrl;
+        String? capturedMethod;
+        Map<String, dynamic>? capturedBody;
+
+        final mockClient = MockClient((request) async {
+          capturedUrl = request.url;
+          capturedMethod = request.method;
+          capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(jsonEncode({'done': true}), 200);
+        });
+
+        final client = OllamaClient(
+          baseUrl: 'http://localhost:11434',
+          model: 'llama3',
+          httpClient: mockClient,
+        );
+
+        await client.releaseResources();
+
+        expect(capturedUrl.toString(), 'http://localhost:11434/api/generate');
+        expect(capturedMethod, 'POST');
+        expect(capturedBody!['model'], 'llama3');
+        expect(capturedBody!['keep_alive'], 0);
+        expect(capturedBody!['stream'], false);
+        expect(capturedBody!.containsKey('prompt'), isFalse);
+      });
+
+      test('throws when server returns non-success status', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('Server Error', 500);
+        });
+
+        final client = OllamaClient(
+          baseUrl: 'http://localhost:11434',
+          model: 'llama3',
+          httpClient: mockClient,
+        );
+
+        expect(client.releaseResources(), throwsException);
+      });
+
+      test('propagates network errors from underlying http client', () async {
+        final mockClient = MockClient((request) async {
+          throw const SocketException('connection refused');
+        });
+
+        final client = OllamaClient(
+          baseUrl: 'http://localhost:11434',
+          model: 'llama3',
+          httpClient: mockClient,
+        );
+
+        expect(client.releaseResources(), throwsA(isA<SocketException>()));
+      });
     });
 
     group('fetchModels', () {
@@ -188,6 +263,24 @@ void main() {
         () => client.generate('test prompt'),
         throwsException,
       );
+    });
+
+    test('releaseResources sends no HTTP request and completes', () async {
+      var requestCount = 0;
+      final mockClient = MockClient((request) async {
+        requestCount++;
+        return http.Response('', 200);
+      });
+
+      final client = OpenAiCompatibleClient(
+        baseUrl: 'https://api.openai.com/v1',
+        apiKey: 'sk-test',
+        model: 'gpt-4o-mini',
+        httpClient: mockClient,
+      );
+
+      await expectLater(client.releaseResources(), completes);
+      expect(requestCount, 0);
     });
   });
 }

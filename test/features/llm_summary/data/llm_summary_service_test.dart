@@ -9,19 +9,36 @@ import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-class _MockLlmClient implements LlmClient {
+class _MockLlmClient extends LlmClient {
   final List<String> responses;
   final List<String> prompts = [];
+  final List<String> events = [];
   int _callIndex = 0;
+  int releaseCallCount = 0;
+  Object? generateError;
+  Object? releaseError;
 
   _MockLlmClient(this.responses);
 
   @override
   Future<String> generate(String prompt) async {
+    events.add('generate');
     prompts.add(prompt);
+    if (generateError != null) {
+      throw generateError!;
+    }
     final response = responses[_callIndex % responses.length];
     _callIndex++;
     return response;
+  }
+
+  @override
+  Future<void> releaseResources() async {
+    events.add('release');
+    releaseCallCount++;
+    if (releaseError != null) {
+      throw releaseError!;
+    }
   }
 
   int get callCount => _callIndex;
@@ -192,6 +209,121 @@ void main() {
       );
 
       expect(result, '情報が見つかりません。');
+    });
+
+    test('releases LLM client resources after successful generation',
+        () async {
+      await createFile('001.txt', 'アリスが登場した。');
+
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': '- 登場した'}),
+        jsonEncode({'summary': 'アリスは登場人物。'}),
+      ]);
+
+      final service = LlmSummaryService(
+        llmClient: mockClient,
+        repository: repository,
+        searchService: searchService,
+      );
+
+      final result = await service.generateSummary(
+        directoryPath: tempDir.path,
+        folderName: 'test',
+        word: 'アリス',
+        summaryType: SummaryType.spoiler,
+      );
+
+      expect(result, 'アリスは登場人物。');
+      expect(mockClient.releaseCallCount, 1);
+      expect(mockClient.events.last, 'release');
+    });
+
+    test('releases LLM client resources when pipeline throws, then rethrows '
+        'original exception', () async {
+      await createFile('001.txt', 'アリスが登場した。');
+
+      final mockClient = _MockLlmClient(<String>[])
+        ..generateError = Exception('pipeline failure');
+
+      final service = LlmSummaryService(
+        llmClient: mockClient,
+        repository: repository,
+        searchService: searchService,
+      );
+
+      Object? thrown;
+      try {
+        await service.generateSummary(
+          directoryPath: tempDir.path,
+          folderName: 'test',
+          word: 'アリス',
+          summaryType: SummaryType.spoiler,
+        );
+      } catch (e) {
+        thrown = e;
+      }
+
+      expect(thrown, isA<Exception>());
+      expect(thrown.toString(), contains('pipeline failure'));
+      expect(mockClient.releaseCallCount, 1);
+    });
+
+    test('release failure is swallowed when generation succeeded', () async {
+      await createFile('001.txt', 'アリスが登場した。');
+
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': '- 登場した'}),
+        jsonEncode({'summary': '要約OK'}),
+      ])
+        ..releaseError = Exception('release boom');
+
+      final service = LlmSummaryService(
+        llmClient: mockClient,
+        repository: repository,
+        searchService: searchService,
+      );
+
+      final result = await service.generateSummary(
+        directoryPath: tempDir.path,
+        folderName: 'test',
+        word: 'アリス',
+        summaryType: SummaryType.spoiler,
+      );
+
+      expect(result, '要約OK');
+      expect(mockClient.releaseCallCount, 1);
+    });
+
+    test('original generation exception propagates when release also throws',
+        () async {
+      await createFile('001.txt', 'アリスが登場した。');
+
+      final mockClient = _MockLlmClient(<String>[])
+        ..generateError = Exception('original generation failure')
+        ..releaseError = Exception('secondary release failure');
+
+      final service = LlmSummaryService(
+        llmClient: mockClient,
+        repository: repository,
+        searchService: searchService,
+      );
+
+      Object? thrown;
+      try {
+        await service.generateSummary(
+          directoryPath: tempDir.path,
+          folderName: 'test',
+          word: 'アリス',
+          summaryType: SummaryType.spoiler,
+        );
+      } catch (e) {
+        thrown = e;
+      }
+
+      expect(thrown.toString(), contains('original generation failure'));
+      expect(
+          thrown.toString(), isNot(contains('secondary release failure')));
+      expect(mockClient.releaseCallCount, 1);
     });
   });
 }
