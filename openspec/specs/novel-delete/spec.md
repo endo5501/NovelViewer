@@ -1,3 +1,7 @@
+## Purpose
+
+ライブラリ画面で右クリックから小説フォルダを削除する機能。確認ダイアログで誤操作を防ぎ、`NovelDeleteService` 経由で novels テーブル / word_summaries テーブル / ファイルシステムの3層を一貫して削除し、削除後にファイルブラウザを自動更新する。
+
 ## Requirements
 
 ### Requirement: Context menu on novel folder

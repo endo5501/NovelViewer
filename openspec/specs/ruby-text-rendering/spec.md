@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+HTMLルビ (`<ruby><rt>...</rt></ruby>`) のパーシング、プレーンテキスト抽出、横書き/縦書きでのルビ描画（縦書きでは verticalCharMap を適用）、および検索ハイライトのルビ対応を提供する。
+
+## Requirements
 
 ### Requirement: Ruby text parsing
 The system SHALL parse HTML ruby tags in text content and convert them into structured segments consisting of plain text and ruby-annotated text.

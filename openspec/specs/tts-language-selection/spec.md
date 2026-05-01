@@ -1,3 +1,9 @@
+## Purpose
+
+User-selectable TTS synthesis language. Defines the `TtsLanguage` enum (10 supported languages with native language IDs), persists the selection via SharedPreferences (default: ja), exposes a Riverpod `ttsLanguageProvider`, and propagates the choice into TTS Isolate model loading and the settings UI dropdown.
+
+## Requirements
+
 ### Requirement: TTS language enum definition
 The system SHALL define a `TtsLanguage` enum with the following values and their corresponding language IDs: `en` (2050), `ru` (2069), `zh` (2055), `ja` (2058), `ko` (2064), `de` (2053), `fr` (2061), `es` (2054), `it` (2070), `pt` (2071). Each enum value SHALL have a `languageId` (int) property and a `displayName` (String) property for UI display.
 

@@ -1,3 +1,7 @@
+## Purpose
+
+User-facing language selection (ja/en/zh) for the application UI. Persisted in SharedPreferences (default: ja), exposed via a Riverpod `Locale` provider that triggers a MaterialApp rebuild, and selected from a top-of-settings dropdown displaying each option in its own native name.
+
 ## Requirements
 
 ### Requirement: Language setting persistence

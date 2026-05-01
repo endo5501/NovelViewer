@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+SQLite-backed cache (`word_summaries` table) for LLM word summaries, keyed by folder/word/spoiler-type. Loads cached results on word selection, updates on re-analysis, tracks reading position for no-spoiler entries, and migrates the schema from v1 to v2.
+
+## Requirements
 
 ### Requirement: Cache summary results in SQLite
 The system SHALL store LLM summary results in a `word_summaries` SQLite table, keyed by folder name, word, and summary type (spoiler/no_spoiler).

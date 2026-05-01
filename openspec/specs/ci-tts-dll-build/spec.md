@@ -1,3 +1,9 @@
+## Purpose
+
+GitHub Actions CIで Windows用TTS DLL（`qwen3_tts_ffi.dll` および `piper_tts_ffi.dll` + `onnxruntime.dll`）をflutter buildに先立ってビルドする。サブモジュールの再帰クローン、Vulkan SDKのインストール、ビルド成果物の存在検証までを含む。
+
+## Requirements
+
 ### Requirement: CIパイプラインでサブモジュールを再帰的にクローンする
 
 `actions/checkout` ステップで `submodules: recursive` を指定し、`third_party/qwen3-tts.cpp` とそのサブモジュール（ggml）をクローンしなければならない（MUST）。

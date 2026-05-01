@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Vertical (top-to-bottom, right-to-left) text rendering using a Wrap-based layout: per-character fixed-width centering, vertical character map, kinsoku (push-out) line breaking, dynamic page-based pagination via measured font metrics, navigation (arrow keys, swipe, mouse wheel), search highlighting, and TTS highlight offset mapping.
+
+## Requirements
 
 ### Requirement: Vertical text rendering
 The system SHALL render text content in vertical writing mode (top-to-bottom, right-to-left columns) using a Wrap widget with vertical axis direction and RTL text direction. Each character SHALL be rendered individually as a separate widget within the Wrap layout. Each character widget SHALL be wrapped in a fixed-width container (`SizedBox`) with width equal to the current font size, and the character SHALL be horizontally centered within that container using a `Center` widget. This ensures consistent column alignment regardless of platform-specific font metrics differences. Characters SHALL be rendered with compact vertical spacing by setting the TextStyle `height` property to approximately 1.1 and minimizing the Wrap `spacing` to avoid excessive gaps between characters. The Wrap widget's `runSpacing` SHALL use the column spacing value from the settings (default `8.0`) instead of a hardcoded constant. The `VerticalTextPage` SHALL accept a `columnSpacing` parameter to control the `runSpacing` value. The Wrap widget SHALL be wrapped in a GestureDetector to support text selection via drag gestures. The `VerticalTextPage` SHALL accept an `onSelectionChanged` callback. Each character widget SHALL be assigned a `GlobalKey` to enable post-layout collection of actual rendered rectangles for accurate hit testing.

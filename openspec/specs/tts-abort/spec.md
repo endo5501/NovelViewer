@@ -1,3 +1,7 @@
+## Purpose
+
+Cross-isolate abort for in-progress TTS synthesis: native atomic abort flag + ggml CPU callback + per-frame C++ checks (for GPU backends without callback support), Dart FFI bindings callable from any isolate, `TtsEngine.abort()` / `TtsIsolate.abort()` using a shared context-pointer address, and dispose-waits-for-abort cleanup.
+
 ## Requirements
 
 ### Requirement: C API for synthesis abort

@@ -1,3 +1,7 @@
+## Purpose
+
+Resolve the application's installation directory on Windows from `Platform.resolvedExecutable` (rather than the current working directory) so that portable installs can locate sibling resources reliably regardless of how the executable is launched.
+
 ## Requirements
 
 ### Requirement: Windows portable exe directory resolution

@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+ライブラリ画面のコンテキストメニューから既存の小説フォルダを「更新」（再ダウンロード）する機能。保存済みURLを用いてDownloadNotifierを起動し、進捗ダイアログ表示・完了後のUI再読込・並行実行ガードを提供する。
+
+## Requirements
 
 ### Requirement: Context menu displays refresh option
 ライブラリルートにおいて、小説フォルダを右クリックした際のコンテキストメニューに「更新」オプションが表示されなければならない（SHALL）。「更新」は「削除」の上に配置されなければならない（SHALL）。

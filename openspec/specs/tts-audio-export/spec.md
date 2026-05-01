@@ -1,3 +1,9 @@
+## Purpose
+
+生成済みTTS音声を1つのMP3ファイルへエクスポートする機能。FilePickerで保存先を選択し、DBの全セグメントWAVをPCM連結してLAME FFIで128kbps/24kHz/モノラルにエンコードし、Isolate内で実行する。LAME DLLのビルドスクリプトとCI統合、macOSサンドボックス権限設定も含む。
+
+## Requirements
+
 ### Requirement: MP3エクスポートボタンの表示
 TTS音声が生成済み（`TtsAudioState.ready`）かつ再生停止中の場合、エクスポートボタンをTTSコントロール行に表示しなければならない（SHALL）。ボタンのアイコンは `Icons.download` を使用する。
 

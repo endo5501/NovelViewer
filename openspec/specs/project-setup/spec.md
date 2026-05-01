@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Foundational Flutter project setup for desktop targets (macOS/Windows/Linux): core dependencies (flutter_riverpod, file_picker), feature-first directory layout under `lib/features/`, and mirrored test infrastructure.
+
+## Requirements
 
 ### Requirement: Flutter project initialization
 The system SHALL be a Flutter project configured for desktop platforms (macOS, Windows, Linux) with mobile targets (iOS, Android) retained for future use.

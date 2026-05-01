@@ -1,3 +1,9 @@
+## Purpose
+
+Batch-generate TTS audio for all sentences of an episode in sequence via the TTS Isolate, persist each WAV segment to the `tts_segments` table, expose progress / cancellation, drive text-highlight + auto-page-turn during synthesis, and use ruby (furigana) text instead of base kanji for the input sentences.
+
+## Requirements
+
 ### Requirement: Batch audio generation trigger
 The system SHALL provide a "読み上げ音声生成" button in the text viewer panel when no audio exists for the current episode. Pressing this button SHALL start batch generation of audio for all sentences in the current episode's text content.
 
@@ -12,8 +18,6 @@ The system SHALL provide a "読み上げ音声生成" button in the text viewer 
 #### Scenario: Start generation on button press
 - **WHEN** the user presses the "読み上げ音声生成" button
 - **THEN** batch audio generation begins for all sentences in the current episode
-
-## Requirements
 
 ### Requirement: Batch generation pipeline
 The system SHALL generate audio for all sentences in the episode text sequentially using the TTS Isolate. For each sentence, the system SHALL: synthesize audio via `TtsIsolate`, convert the Float32List result to WAV bytes using `WavWriter`, and save the WAV BLOB to the `tts_segments` table. An episode record with status "generating" SHALL be created before generation begins. The episode status SHALL be updated to "completed" when all segments have been generated. The system SHALL support starting generation from a specified segment index, skipping already-generated segments. After each segment is stored, the system SHALL invoke an `onSegmentStored` callback with the segment index to notify consumers.

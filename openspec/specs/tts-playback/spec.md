@@ -1,3 +1,9 @@
+## Purpose
+
+Stored-audio TTS playback pipeline: sentence-level text segmentation (with ruby stripping), background-Isolate audio generation, Riverpod state machine (none/generating/ready × stopped/playing/paused), playback start position from selection, in-text TTS highlight, auto page turn, and Windows-specific just_audio_media_kit initialization.
+
+## Requirements
+
 ### Requirement: Text segmentation for TTS
 The system SHALL split novel text into sentence-level segments for TTS processing. Segmentation SHALL occur at full-width sentence-ending punctuation (`。`, `！`, `？`) and newline characters. When a closing bracket (`」`, `』`, `）`) immediately follows sentence-ending punctuation, the split SHALL occur after the closing bracket. Empty segments SHALL be excluded. Ruby HTML tags SHALL be stripped to plain text (base text only) before segmentation. The Ruby tag stripping pattern SHALL handle all common Ruby HTML formats including those with `<rb>` tags and optional `<rp>` tags, and SHALL use the same regex pattern as `parseRubyText` to ensure consistent offset calculation. Each segment SHALL track its start offset and length relative to the stripped text. When a segment is created by splitting at a newline, the offset SHALL account for any leading whitespace that is trimmed: the offset SHALL point to the first non-whitespace character, and the length SHALL equal the trimmed text length.
 

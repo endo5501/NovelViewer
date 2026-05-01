@@ -1,3 +1,7 @@
+## Purpose
+
+Flutter intl-based internationalization foundation: `l10n.yaml` configuration, ARB resource files for ja/en/zh (with Japanese as the template), MaterialApp delegate wiring with a Riverpod-driven `locale`, and codebase-wide use of `AppLocalizations` instead of hardcoded Japanese strings.
+
 ## Requirements
 
 ### Requirement: Localization configuration

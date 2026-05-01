@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Cache extracted speaker embeddings (per-model, keyed by SHA256 of reference audio content) on disk to skip the encoder on repeat synthesis. Caching is transparent to callers of `synthesizeWithVoice`, with auto-creation of cache dirs and recovery from corrupted entries.
+
+## Requirements
 
 ### Requirement: Embedding cache directory management
 The system SHALL manage an embedding cache directory at `{LibraryParentDir}/cache/embeddings/{modelBasename}/` for storing pre-computed speaker embeddings, where `{modelBasename}` is the base name of the model directory (e.g., `0.6b`, `1.7b`). This per-model separation prevents cross-model cache contamination when different models produce different embedding dimensions. The system SHALL automatically create the directory if it does not exist when the cache is first accessed.

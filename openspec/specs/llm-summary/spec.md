@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+LLM-powered word/phrase summary panel in the right column with "no spoiler" / "spoiler" tabs. Triggers analysis on demand, runs the chunked extraction pipeline against context from the document folder (filtered by reading progress for the no-spoiler tab), parses the JSON response, and reacts to selection changes.
+
+## Requirements
 
 ### Requirement: LLM summary panel with spoiler tabs
 The system SHALL display an LLM summary panel in the upper section of the right column with two tabs: "ネタバレなし" (no spoiler) and "ネタバレあり" (spoiler).

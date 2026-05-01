@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+`small_to_mtp_projection` 線形変換のサポート。1.7B モデルのTalker隠れ状態(2048次元)をCode Predictor(1024次元)へ次元削減する射影層をGGUF変換・C++ロード・推論時に組み込み、0.6Bモデルでは射影をスキップする。
+
+## Requirements
 
 ### Requirement: GGUF conversion of small_to_mtp_projection tensors
 The GGUF conversion script (`convert_tts_to_gguf.py`) SHALL map the HuggingFace tensors `talker.code_predictor.small_to_mtp_projection.weight` and `talker.code_predictor.small_to_mtp_projection.bias` to GGUF tensor names `code_pred.mtp_proj.weight` and `code_pred.mtp_proj.bias` respectively. The conversion SHALL preserve these tensors in the specified output type (f16/f32).

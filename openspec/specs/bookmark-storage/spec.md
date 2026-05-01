@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Persist user bookmarks (novel ID, file path, optional line number) in the SQLite metadata database. Provides CRUD APIs for adding, removing, listing, and checking bookmarks, with database migrations to evolve the `bookmarks` table schema over time.
+
+## Requirements
 
 ### Requirement: Bookmark data persistence
 The system SHALL persist bookmark data in the existing SQLite database (`novel_metadata.db`) using a `bookmarks` table. The database version SHALL be upgraded from 3 to 4 to add the `line_number` column and update the UNIQUE constraint.

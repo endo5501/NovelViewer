@@ -1,3 +1,9 @@
+## Purpose
+
+`analysis_options.yaml` に追加のFlutter/Dartリントルール（const 推奨, 単一引用符, build_context_synchronously 等）を有効化し、既存違反の修正と `flutter analyze` のゼロ警告達成、既存テストの維持を保証する。
+
+## Requirements
+
 ### Requirement: analysis_options.yaml に追加リントルールを設定する
 
 `analysis_options.yaml` の `linter: rules:` セクションに、`flutter_lints` のデフォルトルールセットに加えて以下の追加ルールを有効化（`true` に設定）しなければならない（SHALL）:

@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Stream-download Qwen3-TTS GGUF model files (0.6B / 1.7B variants + tokenizer) from HuggingFace into per-size subdirectories alongside the library, with progress reporting, completion marker detection, partial-file cleanup on errors, and auto-derived model directories.
+
+## Requirements
 
 ### Requirement: Download TTS model files from HuggingFace
 The system SHALL download GGUF model files from HuggingFace's `endo5501/qwen3-tts.cpp` repository using HTTPS streaming. The files to download SHALL depend on the selected model size:

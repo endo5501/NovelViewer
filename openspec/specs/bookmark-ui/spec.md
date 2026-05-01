@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+User-facing bookmark interface: left-column tab switching between file browser and bookmark list, AppBar toggle button, Cmd/Ctrl+B shortcut, in-text bookmark indicators, and bookmark list interactions (open with line jump, delete).
+
+## Requirements
 
 ### Requirement: Left column tab switching
 The left column SHALL display a tab bar with two tabs: "ファイル" (file browser) and "ブックマーク" (bookmark list). The user SHALL be able to switch between tabs by tapping on them.

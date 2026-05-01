@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Manage the `voices/` directory for TTS reference audio files alongside the library: auto-create the directory, enumerate `.wav`/`.mp3` files, resolve full paths, open in the platform file manager, and provide add (copy), move, and rename operations with validation.
+
+## Requirements
 
 ### Requirement: Voices directory management
 The system SHALL manage a `voices` directory at `{LibraryParentDir}/voices/` for storing reference audio files. The system SHALL automatically create the `voices` directory if it does not exist when the directory path is first resolved.

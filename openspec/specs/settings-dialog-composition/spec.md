@@ -1,3 +1,9 @@
+## Purpose
+
+Settings dialog composition rules: split the monolithic dialog into a thin shell hosting a TabBar and per-section ConsumerStatefulWidgets that own their own controllers/state. Cross-section communication goes through Riverpod providers, the shell stays ≤200 LOC, and Piper labels come from AppLocalizations.
+
+## Requirements
+
 ### Requirement: Settings dialog is composed of section ConsumerStatefulWidgets
 The settings dialog SHALL be implemented as a thin shell widget hosting `TabBar`/`TabBarView`, plus a set of dedicated section widgets — one per coherent settings group. The shell SHALL NOT directly own controllers, focus nodes, or transient state belonging to any section. Each section SHALL be a `ConsumerStatefulWidget` (or `ConsumerWidget` if no local mutable state is needed) that owns the controllers, focus nodes, and ephemeral UI state for that section's inputs.
 

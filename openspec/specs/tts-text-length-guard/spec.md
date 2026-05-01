@@ -1,3 +1,9 @@
+## Purpose
+
+Guard rails against runaway TTS synthesis on long text: TextSegmenter splits sentences exceeding 200 chars at the nearest preceding comma (or force-splits at 200), and the synthesis layer derives `max_audio_tokens` dynamically as `min(chars * 15 + 50, 2048)`.
+
+## Requirements
+
 ### Requirement: Text length-based sentence splitting
 TextSegmenter SHALL split sentences that exceed 200 characters at the nearest comma (「、」) before the threshold. When no comma exists within the first 200 characters, the system SHALL force-split at 200 characters. The 200-character check SHALL be applied to the spoken text (after ruby tag processing), not the raw HTML text. The existing sentence-ending rules (「。」「！」「？」「\n」) SHALL continue to take priority over length-based splitting.
 

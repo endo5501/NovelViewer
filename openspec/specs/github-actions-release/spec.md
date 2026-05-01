@@ -1,3 +1,9 @@
+## Purpose
+
+`v*` タグpush時に Windows release ビルドを自動実行するGitHub Actionsワークフロー。Vulkan SDKを動的取得して導入し、ビルド成果物（exe / 各種DLL / data/）+ ライセンスファイルをZIP化して GitHub Releases に添付する。
+
+## Requirements
+
 ### Requirement: Tag-triggered Windows release build
 GitHub Actionsワークフローは、`v*` パターンに一致するタグがpushされた時にWindows releaseビルドを自動実行しなければならない（SHALL）。
 

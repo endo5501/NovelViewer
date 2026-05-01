@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Horizontal slide animation for page transitions in vertical-text mode (250ms easeInOut), with both pages drawn simultaneously via Stack/SlideTransition. Defines rapid-navigation snapping, layout-change cancellation, and no-op behavior at page boundaries.
+
+## Requirements
 
 ### Requirement: Page transition slide animation
 The system SHALL animate page transitions in vertical text display mode using a horizontal slide effect. When navigating to the next page, the outgoing page SHALL slide from its current position to the right (positive X direction), and the incoming page SHALL slide in from the left. When navigating to the previous page, the outgoing page SHALL slide from its current position to the left (negative X direction), and the incoming page SHALL slide in from the right. Both the outgoing and incoming pages SHALL be visible simultaneously during the animation using a Stack layout. The slide offset SHALL be proportional to the widget's width (using `SlideTransition` with `Offset` in widget-size units). The animation SHALL be driven by an `AnimationController` managed in `VerticalTextViewer`.

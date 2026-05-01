@@ -1,3 +1,7 @@
+## Purpose
+
+Stream-download Piper TTS model files (`.onnx` + `.onnx.json`) from HuggingFace and OpenJTalk dictionary into `models/piper/` alongside the library, with directory auto-creation, dictionary skip-if-present, and a Riverpod download-state machine (idle / downloading / completed / error).
+
 ## Requirements
 
 ### Requirement: Download piper-plus model files from HuggingFace

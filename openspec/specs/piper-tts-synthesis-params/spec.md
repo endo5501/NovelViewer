@@ -1,3 +1,7 @@
+## Purpose
+
+User-tunable Piper synthesis parameters (`lengthScale`, `noiseScale`, `noiseW`): SharedPreferences persistence with defaults & ranges, per-parameter Riverpod providers, settings-tab sliders shown when the Piper engine is active, and propagation into the TtsIsolate before synthesis.
+
 ## Requirements
 
 ### Requirement: Piper synthesis parameter persistence

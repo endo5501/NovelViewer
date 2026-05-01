@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Per-novel SQLite cache (`episode_cache.db`) that records each downloaded episode's URL, title, index, last-modified date and download timestamp. Enables incremental re-download by detecting which episodes are already up-to-date.
+
+## Requirements
 
 ### Requirement: Episode cache database per novel folder
 The system SHALL create and manage a SQLite database file (`episode_cache.db`) within each novel's download folder to store per-episode download metadata.

@@ -1,3 +1,9 @@
+## Purpose
+
+`scripts/benchmark_tts.sh` を介して qwen3-tts-cli を反復実行し、ウォームアップ + 計測複数回の各フェーズタイミングを集計してJSON出力する。決定論的（temperature=0）実行、max-tokens / timeout の制御、Windows (Vulkan) と macOS (Metal) の両方をサポートする。
+
+## Requirements
+
 ### Requirement: ベンチマークスクリプトがCLI経由でTTS推論を複数回実行し結果を集計する
 
 `scripts/benchmark_tts.sh` はqwen3-tts-cliを使用してTTS推論をウォームアップ1回＋計測3回実行し、各フェーズのタイミングを集計しなければならない（MUST）。

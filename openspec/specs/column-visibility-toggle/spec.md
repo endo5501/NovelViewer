@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Allow the user to show or hide the right-hand SearchSummaryPanel via an AppBar toggle button. State is managed by a Riverpod NotifierProvider so the layout responds reactively, with the center column expanding to fill freed space.
+
+## Requirements
 
 ### Requirement: Right column visibility toggle button
 The application SHALL display a toggle button in the AppBar that controls the visibility of the right column (SearchSummaryPanel).

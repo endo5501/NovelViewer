@@ -1,3 +1,9 @@
+## Purpose
+
+App-wide logging via `package:logging`: per-module named loggers, debug builds route to `debugPrint`, release builds append to a size-rotated file (`app.log` up to 3 generations) under the application support directory, with a synchronous fallback to `debugPrint` during async sink initialization.
+
+## Requirements
+
 ### Requirement: Application logger initialization
 The application SHALL initialize a root logger before any feature code can emit log records. The initialization SHALL configure the root log level (`Level.ALL` in debug builds, `Level.INFO` in release builds) and SHALL register a single dispatch listener on `Logger.root.onRecord` so that every emitted record is routed to a single output sink chosen by build mode.
 

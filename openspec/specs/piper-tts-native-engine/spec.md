@@ -1,3 +1,7 @@
+## Purpose
+
+Native piper-plus TTS engine integration: shared library build (macOS / Windows MSVC, statically linked deps + dynamic ONNX Runtime), C API for context lifecycle, synthesis (float32 PCM), tunable parameters (length/noise scales), and Dart FFI bindings + `PiperTtsEngine` wrapper conforming to the common TTS engine interface.
+
 ## Requirements
 
 ### Requirement: piper-plus shared library build

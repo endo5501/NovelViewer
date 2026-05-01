@@ -1,3 +1,7 @@
+## Purpose
+
+Episode-text search with line context (extended N-line context for LLM prompts), theme-aware highlight colors (yellow on light, amber+black on dark) consistently across horizontal/vertical/Ruby modes, and a Ctrl/Cmd+F shortcut whose behavior branches on whether text is currently selected.
+
 ## Requirements
 
 ### Requirement: Search match context

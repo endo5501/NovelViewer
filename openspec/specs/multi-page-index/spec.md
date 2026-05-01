@@ -1,3 +1,9 @@
+## Purpose
+
+Support multi-page Narou novel index pages: detect "次へ" pagination links, expose `nextPageUrl` on `NovelIndex`, normalize URLs by stripping `?p=N`, assign continuous episode numbers across pages, and guard against infinite loops with a 100-page maximum.
+
+## Requirements
+
 ### Requirement: Narou pagination detection
 The system SHALL detect pagination on Narou index pages by searching for a "次へ" (next page) anchor tag whose href contains a `?p=` query parameter. If such a link exists, the system SHALL extract the URL as the next page URL.
 

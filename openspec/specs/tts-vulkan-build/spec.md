@@ -1,3 +1,9 @@
+## Purpose
+
+Windows ビルドにおいて、ggml-vulkan が利用可能な場合は `qwen3_tts_ffi` および `qwen3-tts-cli` に Vulkan バックエンド（`ggml-vulkan` + `Vulkan::Vulkan`）を自動リンクし、利用不可ならCPU専用にフォールバックする CMake 設定とビルドスクリプトを規定する。
+
+## Requirements
+
 ### Requirement: qwen3_tts_ffi がVulkanバックエンドをリンクする
 
 qwen3_tts_ffiの共有ライブラリビルド時、ggml-vulkanライブラリが存在する場合、`ggml-vulkan`と`Vulkan::Vulkan`を自動的にリンクしなければならない（MUST）。

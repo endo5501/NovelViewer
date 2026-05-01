@@ -1,3 +1,7 @@
+## Purpose
+
+User selection between TTS engines (Qwen3-TTS / Piper). Defines the `TtsEngineType` enum, persists the choice via SharedPreferences (default qwen3), exposes a Riverpod provider, swaps the engine-specific settings panel with a SegmentedButton, and provides a Piper model dropdown when Piper is active.
+
 ## Requirements
 
 ### Requirement: TTS engine type enum

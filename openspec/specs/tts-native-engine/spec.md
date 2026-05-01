@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Native qwen3-tts.cpp shared library and its C/Dart-FFI surface: shared library build (macOS Metal / Windows MSVC / GGML), model lifecycle, synthesis (text + voice cloning + pre-extracted embedding), language config, MP3 decoding, Unicode/large-file support on Windows, GPU-safe codebook normalization, and Isolate-safe Dart bindings.
+
+## Requirements
 
 ### Requirement: TTS shared library build
 The system SHALL include qwen3-tts.cpp as a git submodule and build it as a shared library (`.dylib` on macOS, `.dll` on Windows). The shared library SHALL expose a C API that wraps the C++ `Qwen3TTS` class. The GGML dependency SHALL be built as part of the qwen3-tts.cpp submodule build process and SHALL use ggml v0.9.11 or later. The CMakeLists.txt SHALL include MSVC-specific compiler settings to ensure correct compilation on Windows: `/utf-8` for UTF-8 source file encoding, `_USE_MATH_DEFINES` for POSIX math constants, and `_CRT_SECURE_NO_WARNINGS` for CRT deprecation warnings. The source code SHALL include Windows platform support for process memory tracking using `GetProcessMemoryInfo` from the Windows API, with `NOMINMAX` defined to prevent `min`/`max` macro conflicts.
@@ -269,7 +273,7 @@ The `load_wav_file`, `load_mp3_file`, and `save_audio_file` functions SHALL corr
 - **THEN** the existing `fopen()` and `mp3dec_load()` functions are used without any UTF-16 conversion
 
 ### Requirement: 64-bit file seek for large GGUF files on Windows
-`tts_transformer.cpp` の `load_tensor_data` 関数はテンソルデータを読み込む際に、Windows では `_fseeki64` を使用して GGUF ファイル内の 2GB 超のオフセットを正しく処理しなければならない。Windows 以外では `fseek` をそのまま使用する。これにより 1.7B モデル（ファイルサイズ ~3.86GB）を Windows 上で正しくロードできる。
+`tts_transformer.cpp` の `load_tensor_data` 関数はテンソルデータを読み込む際に、Windows では `_fseeki64` を使用して GGUF ファイル内の 2GB 超のオフセットを正しく処理しなければならない（MUST）。Windows 以外では `fseek` をそのまま使用する。これにより 1.7B モデル（ファイルサイズ ~3.86GB）を Windows 上で正しくロードできる。
 
 #### Scenario: 1.7B model loads successfully on Windows
 - **WHEN** `qwen3_tts_init` is called on Windows with a directory containing the 1.7B model (`qwen3-tts-1.7b-f16.gguf`, ~3.86GB)
@@ -284,7 +288,7 @@ The `load_wav_file`, `load_mp3_file`, and `save_audio_file` functions SHALL corr
 - **THEN** a non-null context pointer is returned (existing behavior retained)
 
 ### Requirement: Model load failure error output
-`load_models()` 関数は、各コンポーネント（TTS transformer、vocoder）のロードに失敗した場合、エラーメッセージを stderr に出力しなければならない。これにより、Flutter 側で `qwen3_tts_init` が nullptr を返した際の原因をログから特定できるようになる。
+`load_models()` 関数は、各コンポーネント（TTS transformer、vocoder）のロードに失敗した場合、エラーメッセージを stderr に出力しなければならない（MUST）。これにより、Flutter 側で `qwen3_tts_init` が nullptr を返した際の原因をログから特定できるようになる。
 
 #### Scenario: Transformer load failure is logged to stderr
 - **WHEN** `qwen3_tts_init` fails because the TTS transformer model cannot be loaded

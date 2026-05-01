@@ -1,3 +1,9 @@
+## Purpose
+
+設定画面のトグルでアプリ全体のダークモード/ライトモードを切り替える。Material 3 ColorSchemeでダークテーマを定義し、Riverpodプロバイダで状態を管理、SharedPreferencesに設定を永続化する。
+
+## Requirements
+
 ### Requirement: Theme mode toggle in settings
 設定画面にダークモードのON/OFFを切り替えるトグルスイッチが存在しなければならない（SHALL）。トグルはSwitchListTileで実装し、現在のテーマ状態を反映する。
 

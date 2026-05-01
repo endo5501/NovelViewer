@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+LLM provider configuration (OpenAI-compatible API or Ollama): in-app settings UI, persistence (SharedPreferences for non-secrets, flutter_secure_storage for API keys), startup migration from legacy plaintext storage, client construction, and a `releaseResources()` contract for unloading model state.
+
+## Requirements
 
 ### Requirement: LLM provider selection in settings
 The settings dialog SHALL include an LLM configuration section where the user can select between "OpenAI互換API" and "Ollama" as the LLM provider. The LLM configuration section SHALL be accessible via scrolling when the settings dialog content exceeds the visible area.

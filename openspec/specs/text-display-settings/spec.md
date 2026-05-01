@@ -1,3 +1,7 @@
+## Purpose
+
+Per-user text display settings: horizontal/vertical writing mode toggle and column spacing slider (0–24, default 8). Settings persist via SharedPreferences, are exposed through Riverpod providers (preview-then-persist for column spacing), and the text viewer reacts reactively without reload.
+
 ## Requirements
 
 ### Requirement: Text display mode setting

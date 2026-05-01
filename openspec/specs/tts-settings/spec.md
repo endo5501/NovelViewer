@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Tabbed (一般 / 読み上げ) settings dialog for TTS configuration: engine selector (Qwen3-TTS / Piper), model size, model download status/progress, voice cloning reference selection (with drop zone, refresh, rename, folder open), and SharedPreferences persistence of all TTS settings.
+
+## Requirements
 
 ### Requirement: Tabbed settings dialog
 The settings dialog SHALL use a tabbed layout with `TabBar` and `TabBarView`. The tabs SHALL be: "一般" (General) containing all existing settings, and "読み上げ" (TTS) containing TTS-specific settings. All existing settings functionality SHALL be preserved in the "一般" tab. The TTS tab SHALL display an engine selector (`SegmentedButton<TtsEngineType>`) at the top, followed by engine-specific settings that change based on the selected engine.

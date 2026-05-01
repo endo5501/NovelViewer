@@ -1,3 +1,7 @@
+## Purpose
+
+Mouse-drag text selection in vertical display mode: hit-test via per-character `GlobalKey` rectangles, vertical reading-order range expansion, original-character extraction (Ruby base text, unmapped originals), blue selection highlight (yielding to yellow search highlight), auto-clear on page navigation, and a right-click context menu (Copy / 辞書追加).
+
 ## Requirements
 
 ### Requirement: Vertical text selection by drag
@@ -65,7 +69,7 @@ The system SHALL clear the text selection when the user navigates to a different
 - **THEN** the selection is cleared and `selectedTextProvider` is set to null
 
 ### Requirement: 縦書き表示のコンテキストメニュー
-縦書き閲覧画面でテキストを選択した状態で右クリックすると、「コピー」と「辞書追加」のメニュー項目を含むポップアップメニューを表示しなければならない。テキストが選択されていない場合はメニューを表示してはならない。
+縦書き閲覧画面でテキストを選択した状態で右クリックすると、「コピー」と「辞書追加」のメニュー項目を含むポップアップメニューを表示しなければならない（SHALL）。テキストが選択されていない場合はメニューを表示してはならない（SHALL NOT）。
 
 #### Scenario: 縦書きでテキスト選択後に右クリックでメニューが表示される
 - **WHEN** 縦書き閲覧画面でテキストを選択した状態で右クリックする

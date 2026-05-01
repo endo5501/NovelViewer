@@ -1,3 +1,9 @@
+## Purpose
+
+Fetch the installed model list from the Ollama server (`GET /api/tags`) and present it as a dropdown in settings instead of free-form text input. The dropdown is backed by a Riverpod `FutureProvider.autoDispose.family` keyed by base URL, with loading/error states surfaced directly from `AsyncValue`.
+
+## Requirements
+
 ### Requirement: Fetch Ollama model list from server
 The system SHALL fetch the list of installed models from the Ollama server by calling `GET {baseUrl}/api/tags`. The response SHALL be parsed to extract model names from the `models` array.
 

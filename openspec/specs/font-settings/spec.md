@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+User-configurable font size (10–32px) and font family (with platform-specific lists for macOS/Windows) for the text viewer. Settings are persisted via SharedPreferences, exposed through Riverpod providers, and apply to both horizontal and vertical display modes including Ruby/furigana scaling.
+
+## Requirements
 
 ### Requirement: Font size setting
 The system SHALL provide a font size setting that allows users to adjust the text size in the viewer area. The font size SHALL be a numeric value in the range of 10.0 to 32.0 pixels, with a default value of 14.0.
