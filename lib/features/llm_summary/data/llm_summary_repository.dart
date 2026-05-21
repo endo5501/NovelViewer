@@ -22,6 +22,8 @@ class LlmSummaryRepository {
     return WordSummary.fromMap(results.first);
   }
 
+  static const int minWordLength = 2;
+
   Future<void> saveSummary({
     required String folderName,
     required String word,
@@ -29,6 +31,13 @@ class LlmSummaryRepository {
     required String summary,
     String? sourceFile,
   }) async {
+    if (word.runes.length < minWordLength) {
+      throw ArgumentError.value(
+        word,
+        'word',
+        'must be at least $minWordLength characters long',
+      );
+    }
     final now = DateTime.now().toIso8601String();
     await _db.insert(
       'word_summaries',
@@ -43,6 +52,16 @@ class LlmSummaryRepository {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  Future<List<WordSummary>> findAllByFolder(String folderName) async {
+    final results = await _db.query(
+      'word_summaries',
+      where: 'folder_name = ?',
+      whereArgs: [folderName],
+      orderBy: 'updated_at DESC',
+    );
+    return results.map(WordSummary.fromMap).toList();
   }
 
   Future<void> deleteSummary({

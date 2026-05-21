@@ -179,5 +179,12 @@
   "homeScreen_downloadTooltip": "Download novel",
 
   "leftColumn_filesTab": "Files",
-  "leftColumn_bookmarksTab": "Bookmarks"
+  "leftColumn_bookmarksTab": "Bookmarks",
+  "leftColumn_historyTab": "History",
+
+  "llmHistory_noEntries": "No analysis history",
+  "llmHistory_typeBoth": "Both",
+  "llmHistory_typeNoSpoiler": "No-spoiler",
+  "llmHistory_typeSpoiler": "Spoiler",
+  "llmHistory_untrackedBadge": "Untracked"
 }

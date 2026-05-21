@@ -1089,6 +1089,42 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'ブックマーク'**
   String get leftColumn_bookmarksTab;
+
+  /// No description provided for @leftColumn_historyTab.
+  ///
+  /// In ja, this message translates to:
+  /// **'解析履歴'**
+  String get leftColumn_historyTab;
+
+  /// No description provided for @llmHistory_noEntries.
+  ///
+  /// In ja, this message translates to:
+  /// **'解析履歴がありません'**
+  String get llmHistory_noEntries;
+
+  /// No description provided for @llmHistory_typeBoth.
+  ///
+  /// In ja, this message translates to:
+  /// **'両'**
+  String get llmHistory_typeBoth;
+
+  /// No description provided for @llmHistory_typeNoSpoiler.
+  ///
+  /// In ja, this message translates to:
+  /// **'なし'**
+  String get llmHistory_typeNoSpoiler;
+
+  /// No description provided for @llmHistory_typeSpoiler.
+  ///
+  /// In ja, this message translates to:
+  /// **'あり'**
+  String get llmHistory_typeSpoiler;
+
+  /// No description provided for @llmHistory_untrackedBadge.
+  ///
+  /// In ja, this message translates to:
+  /// **'未追跡'**
+  String get llmHistory_untrackedBadge;
 }
 
 class _AppLocalizationsDelegate

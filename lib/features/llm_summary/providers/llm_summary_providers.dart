@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/llm_summary/data/ollama_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/openai_compatible_client.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
@@ -137,6 +138,7 @@ class LlmSummaryNotifier extends Notifier<LlmSummaryState> {
       );
 
       state = LlmSummaryState(currentSummary: result);
+      ref.invalidate(llmSummaryHistoryProvider);
     } catch (e) {
       state = LlmSummaryState(error: e.toString());
     }

@@ -212,6 +212,123 @@ void main() {
       expect(other, isNotNull);
     });
 
+    test('legacy spoiler row with NULL source_file reads back as null',
+        () async {
+      // Simulate a legacy row written before spoiler entries persisted
+      // source_file. We bypass the repository to insert NULL directly.
+      final now = DateTime.now().toIso8601String();
+      await db.insert('word_summaries', {
+        'folder_name': 'my_novel',
+        'word': 'アリス',
+        'summary_type': 'spoiler',
+        'summary': '古いネタバレ要約',
+        'source_file': null,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      final result = await repository.findSummary(
+        folderName: 'my_novel',
+        word: 'アリス',
+        summaryType: SummaryType.spoiler,
+      );
+
+      expect(result, isNotNull);
+      expect(result!.summary, '古いネタバレ要約');
+      expect(result.sourceFile, isNull,
+          reason: 'legacy NULL source_file must read back as null');
+    });
+
+    test('saveSummary rejects 1-character word', () async {
+      await expectLater(
+        repository.saveSummary(
+          folderName: 'my_novel',
+          word: 'の',
+          summaryType: SummaryType.spoiler,
+          summary: '要約',
+        ),
+        throwsArgumentError,
+      );
+
+      final result = await repository.findSummary(
+        folderName: 'my_novel',
+        word: 'の',
+        summaryType: SummaryType.spoiler,
+      );
+      expect(result, isNull,
+          reason: 'no row should be written for 1-char word');
+    });
+
+    test('saveSummary accepts 2-character word', () async {
+      await repository.saveSummary(
+        folderName: 'my_novel',
+        word: '聖印',
+        summaryType: SummaryType.spoiler,
+        summary: '騎士の証',
+      );
+
+      final result = await repository.findSummary(
+        folderName: 'my_novel',
+        word: '聖印',
+        summaryType: SummaryType.spoiler,
+      );
+      expect(result, isNotNull);
+      expect(result!.summary, '騎士の証');
+    });
+
+    test('findAllByFolder returns rows ordered by updated_at desc', () async {
+      // Insert rows with controlled updated_at timestamps so ordering is
+      // deterministic regardless of insert order.
+      final older = DateTime.utc(2026, 5, 20, 10, 0, 0).toIso8601String();
+      final middle = DateTime.utc(2026, 5, 20, 12, 0, 0).toIso8601String();
+      final newer = DateTime.utc(2026, 5, 20, 14, 0, 0).toIso8601String();
+
+      await db.insert('word_summaries', {
+        'folder_name': 'my_novel',
+        'word': '中間',
+        'summary_type': 'spoiler',
+        'summary': 'm',
+        'created_at': middle,
+        'updated_at': middle,
+      });
+      await db.insert('word_summaries', {
+        'folder_name': 'my_novel',
+        'word': '新しい',
+        'summary_type': 'no_spoiler',
+        'summary': 'n',
+        'created_at': newer,
+        'updated_at': newer,
+      });
+      await db.insert('word_summaries', {
+        'folder_name': 'my_novel',
+        'word': '古い',
+        'summary_type': 'spoiler',
+        'summary': 'o',
+        'created_at': older,
+        'updated_at': older,
+      });
+      // Different folder should be excluded.
+      await db.insert('word_summaries', {
+        'folder_name': 'other_novel',
+        'word': '他作品',
+        'summary_type': 'spoiler',
+        'summary': 'x',
+        'created_at': newer,
+        'updated_at': newer,
+      });
+
+      final results = await repository.findAllByFolder('my_novel');
+
+      expect(results.map((r) => r.word).toList(), ['新しい', '中間', '古い']);
+      expect(results.every((r) => r.folderName == 'my_novel'), isTrue);
+    });
+
+    test('findAllByFolder returns empty list when folder has no rows',
+        () async {
+      final results = await repository.findAllByFolder('empty_novel');
+      expect(results, isEmpty);
+    });
+
     test('deleteByFolderName does nothing for non-existent folder', () async {
       await repository.saveSummary(
         folderName: 'my_novel',

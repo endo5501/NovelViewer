@@ -555,4 +555,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get leftColumn_bookmarksTab => 'Bookmarks';
+
+  @override
+  String get leftColumn_historyTab => 'History';
+
+  @override
+  String get llmHistory_noEntries => 'No analysis history';
+
+  @override
+  String get llmHistory_typeBoth => 'Both';
+
+  @override
+  String get llmHistory_typeNoSpoiler => 'No-spoiler';
+
+  @override
+  String get llmHistory_typeSpoiler => 'Spoiler';
+
+  @override
+  String get llmHistory_untrackedBadge => 'Untracked';
 }

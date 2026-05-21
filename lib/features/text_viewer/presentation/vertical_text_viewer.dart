@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/column_splitter.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
@@ -46,6 +47,7 @@ class VerticalTextViewer extends StatefulWidget {
     this.columnSpacing = 8.0,
     this.bookmarkLineNumbers = const [],
     this.onPageLineChanged,
+    this.markedWords = const {},
   }) : assert(columnSpacing >= 0);
 
   final List<TextSegment> segments;
@@ -59,6 +61,7 @@ class VerticalTextViewer extends StatefulWidget {
   final double columnSpacing;
   final List<int> bookmarkLineNumbers;
   final ValueChanged<int>? onPageLineChanged;
+  final Map<String, MarkStyle> markedWords;
 
   @override
   State<VerticalTextViewer> createState() => _VerticalTextViewerState();
@@ -237,6 +240,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
                 onContextMenu: widget.onContextMenu,
                 onSwipe: _handleSwipe,
                 columnSpacing: widget.columnSpacing,
+                markedWords: widget.markedWords,
               ),
             );
 
@@ -261,6 +265,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
                         baseStyle: widget.baseStyle,
                         query: widget.query,
                         columnSpacing: widget.columnSpacing,
+                        markedWords: widget.markedWords,
                       ),
                     ),
                   ),

@@ -156,6 +156,41 @@ void main() {
       expect(factExtractionPrompt, isNot(contains('アリスが帰還した')));
     });
 
+    test('saves spoiler summary with source_file when currentFileName is provided',
+        () async {
+      await createFile('001_chapter.txt', 'アリスが登場した。');
+      await createFile('060_chapter.txt', 'アリスが旅に出た。');
+
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': '- 登場した\n- 旅に出た'}),
+        jsonEncode({'summary': 'アリスは冒険者。'}),
+      ]);
+
+      final service = LlmSummaryService(
+        llmClient: mockClient,
+        repository: repository,
+        searchService: searchService,
+      );
+
+      await service.generateSummary(
+        directoryPath: tempDir.path,
+        folderName: 'my_novel',
+        word: 'アリス',
+        summaryType: SummaryType.spoiler,
+        currentFileName: '060_chapter.txt',
+      );
+
+      final cached = await repository.findSummary(
+        folderName: 'my_novel',
+        word: 'アリス',
+        summaryType: SummaryType.spoiler,
+      );
+
+      expect(cached, isNotNull);
+      expect(cached!.sourceFile, '060_chapter.txt',
+          reason: 'spoiler entries must persist source_file for jump support');
+    });
+
     test('saves result to cache', () async {
       await createFile('001.txt', 'アリスが登場');
 

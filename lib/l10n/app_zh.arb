@@ -179,5 +179,12 @@
   "homeScreen_downloadTooltip": "下载小说",
 
   "leftColumn_filesTab": "文件",
-  "leftColumn_bookmarksTab": "书签"
+  "leftColumn_bookmarksTab": "书签",
+  "leftColumn_historyTab": "解析历史",
+
+  "llmHistory_noEntries": "没有解析历史",
+  "llmHistory_typeBoth": "两者",
+  "llmHistory_typeNoSpoiler": "无剧透",
+  "llmHistory_typeSpoiler": "剧透",
+  "llmHistory_untrackedBadge": "未跟踪"
 }

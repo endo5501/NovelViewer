@@ -543,4 +543,22 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get leftColumn_bookmarksTab => 'ブックマーク';
+
+  @override
+  String get leftColumn_historyTab => '解析履歴';
+
+  @override
+  String get llmHistory_noEntries => '解析履歴がありません';
+
+  @override
+  String get llmHistory_typeBoth => '両';
+
+  @override
+  String get llmHistory_typeNoSpoiler => 'なし';
+
+  @override
+  String get llmHistory_typeSpoiler => 'あり';
+
+  @override
+  String get llmHistory_untrackedBadge => '未追跡';
 }
