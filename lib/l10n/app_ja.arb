@@ -284,5 +284,12 @@
   "homeScreen_downloadTooltip": "小説ダウンロード",
 
   "leftColumn_filesTab": "ファイル",
-  "leftColumn_bookmarksTab": "ブックマーク"
+  "leftColumn_bookmarksTab": "ブックマーク",
+  "leftColumn_historyTab": "解析履歴",
+
+  "llmHistory_noEntries": "解析履歴がありません",
+  "llmHistory_typeBoth": "両",
+  "llmHistory_typeNoSpoiler": "なし",
+  "llmHistory_typeSpoiler": "あり",
+  "llmHistory_untrackedBadge": "未追跡"
 }

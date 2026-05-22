@@ -543,4 +543,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get leftColumn_bookmarksTab => '书签';
+
+  @override
+  String get leftColumn_historyTab => '解析历史';
+
+  @override
+  String get llmHistory_noEntries => '没有解析历史';
+
+  @override
+  String get llmHistory_typeBoth => '两者';
+
+  @override
+  String get llmHistory_typeNoSpoiler => '无剧透';
+
+  @override
+  String get llmHistory_typeSpoiler => '剧透';
+
+  @override
+  String get llmHistory_untrackedBadge => '未跟踪';
 }

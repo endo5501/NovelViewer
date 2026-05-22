@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/features/bookmark/presentation/bookmark_list_panel.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_history_panel.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/features/file_browser/presentation/file_browser_panel.dart';
 
@@ -17,7 +18,7 @@ class _LeftColumnPanelState extends State<LeftColumnPanel>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -28,13 +29,15 @@ class _LeftColumnPanelState extends State<LeftColumnPanel>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         TabBar(
           controller: _tabController,
           tabs: [
-            Tab(text: AppLocalizations.of(context)!.leftColumn_filesTab),
-            Tab(text: AppLocalizations.of(context)!.leftColumn_bookmarksTab),
+            Tab(text: l10n.leftColumn_filesTab),
+            Tab(text: l10n.leftColumn_bookmarksTab),
+            Tab(text: l10n.leftColumn_historyTab),
           ],
         ),
         Expanded(
@@ -43,6 +46,7 @@ class _LeftColumnPanelState extends State<LeftColumnPanel>
             children: const [
               FileBrowserPanel(),
               BookmarkListPanel(),
+              LlmSummaryHistoryPanel(),
             ],
           ),
         ),

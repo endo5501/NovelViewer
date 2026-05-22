@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 
 class RubyTextWidget extends StatelessWidget {
@@ -8,6 +9,7 @@ class RubyTextWidget extends StatelessWidget {
     required this.rubyText,
     required this.baseStyle,
     this.query,
+    this.localMarks = const [],
   });
 
   final String base;
@@ -15,24 +17,33 @@ class RubyTextWidget extends StatelessWidget {
   final TextStyle? baseStyle;
   final String? query;
 
+  /// Mark spans expressed in segment-local coordinates (positions inside
+  /// [base]). Computed by [buildRubyTextSpans] from the full-text mark scan.
+  final List<MarkSpan> localMarks;
+
   @override
   Widget build(BuildContext context) {
     final fontSize = baseStyle?.fontSize ?? 14.0;
     final rubyFontSize = fontSize * 0.5;
     final brightness = Theme.of(context).brightness;
 
-    final baseWidget = (query != null && query!.isNotEmpty)
-        ? Text.rich(
-            TextSpan(
-              children: _buildHighlightedPlainSpans(
-                base,
-                query!,
-                baseStyle?.copyWith(height: 1.0),
-                brightness: brightness,
-              ),
-            ),
+    final basePieceStyle = baseStyle?.copyWith(height: 1.0);
+    final initialSpans = (query != null && query!.isNotEmpty)
+        ? _buildHighlightedPlainSpans(
+            base,
+            query!,
+            basePieceStyle,
+            brightness: brightness,
           )
-        : Text(base, style: baseStyle?.copyWith(height: 1.0));
+        : <InlineSpan>[TextSpan(text: base, style: basePieceStyle)];
+    final markedSpans = localMarks.isEmpty
+        ? initialSpans
+        : _applyLocalMarksToSpans(initialSpans, localMarks);
+    final baseWidget = (markedSpans.length == 1 &&
+            markedSpans.first is TextSpan &&
+            (markedSpans.first as TextSpan).children == null)
+        ? Text.rich(markedSpans.first as TextSpan)
+        : Text.rich(TextSpan(children: markedSpans));
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -64,6 +75,7 @@ TextSpan buildRubyTextSpans(
   String? query, {
   TextRange? ttsHighlightRange,
   Brightness brightness = Brightness.light,
+  Map<String, MarkStyle> markedWords = const {},
 }) {
   if (segments.isEmpty) {
     return const TextSpan();
@@ -71,25 +83,43 @@ TextSpan buildRubyTextSpans(
 
   final hasQuery = query != null && query.isNotEmpty;
   final hasTts = ttsHighlightRange != null;
+  // Marks are computed over the FULL base text (plain segments + ruby base
+  // text) so a cached word that straddles a segment boundary still matches.
+  final globalMarks = markedWords.isEmpty
+      ? const <MarkSpan>[]
+      : findMarks(
+          text: _concatenatedBaseText(segments),
+          wordsByStyle: markedWords,
+        );
   final spans = <InlineSpan>[];
   var plainTextOffset = 0;
 
   for (final segment in segments) {
     switch (segment) {
       case PlainTextSegment(:final text):
+        final List<InlineSpan> renderedSpans;
         if (hasQuery) {
-          spans.addAll(_buildHighlightedPlainSpans(text, query, baseStyle,
+          renderedSpans = _buildHighlightedPlainSpans(text, query, baseStyle,
               ttsRange: ttsHighlightRange,
               textOffset: plainTextOffset,
-              brightness: brightness));
+              brightness: brightness);
         } else if (hasTts) {
-          spans.addAll(_buildTtsHighlightedSpans(
-              text, baseStyle, ttsHighlightRange, plainTextOffset));
+          renderedSpans = _buildTtsHighlightedSpans(
+              text, baseStyle, ttsHighlightRange, plainTextOffset);
         } else {
-          spans.add(TextSpan(text: text, style: baseStyle));
+          renderedSpans = [TextSpan(text: text, style: baseStyle)];
+        }
+        final segmentMarks = _localizeMarks(
+            globalMarks, plainTextOffset, text.length);
+        if (segmentMarks.isNotEmpty) {
+          spans.addAll(_applyLocalMarksToSpans(renderedSpans, segmentMarks));
+        } else {
+          spans.addAll(renderedSpans);
         }
         plainTextOffset += text.length;
       case RubyTextSegment(:final base, :final rubyText):
+        final segmentMarks =
+            _localizeMarks(globalMarks, plainTextOffset, base.length);
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
           child: RubyTextWidget(
@@ -97,6 +127,7 @@ TextSpan buildRubyTextSpans(
             rubyText: rubyText,
             baseStyle: baseStyle,
             query: hasQuery ? query : null,
+            localMarks: segmentMarks,
           ),
         ));
         plainTextOffset += base.length;
@@ -105,6 +136,104 @@ TextSpan buildRubyTextSpans(
 
   return TextSpan(style: baseStyle, children: spans);
 }
+
+String _concatenatedBaseText(List<TextSegment> segments) {
+  final buf = StringBuffer();
+  for (final s in segments) {
+    switch (s) {
+      case PlainTextSegment(:final text):
+        buf.write(text);
+      case RubyTextSegment(:final base):
+        buf.write(base);
+    }
+  }
+  return buf.toString();
+}
+
+/// Returns the subset of [globalMarks] that intersect the segment range
+/// `[segmentStart, segmentStart + segmentLength)`, with positions translated
+/// to local coordinates inside that segment (clamped to `[0, segmentLength]`).
+List<MarkSpan> _localizeMarks(
+  List<MarkSpan> globalMarks,
+  int segmentStart,
+  int segmentLength,
+) {
+  final segmentEnd = segmentStart + segmentLength;
+  final result = <MarkSpan>[];
+  for (final m in globalMarks) {
+    if (m.end <= segmentStart || m.start >= segmentEnd) continue;
+    final localStart = (m.start - segmentStart).clamp(0, segmentLength);
+    final localEnd = (m.end - segmentStart).clamp(0, segmentLength);
+    result.add(MarkSpan(
+      start: localStart,
+      end: localEnd,
+      style: m.style,
+      word: m.word,
+    ));
+  }
+  return result;
+}
+
+/// Splits [renderedSpans] at the boundaries of any mark in [localMarks] (in
+/// segment-local coordinates) and adds underline decoration to spans that
+/// fall inside a mark.
+List<InlineSpan> _applyLocalMarksToSpans(
+  List<InlineSpan> renderedSpans,
+  List<MarkSpan> localMarks,
+) {
+  if (localMarks.isEmpty) return renderedSpans;
+
+  final markStyleByPos = <int, MarkStyle>{};
+  for (final m in localMarks) {
+    for (var i = m.start; i < m.end; i++) {
+      markStyleByPos[i] = m.style;
+    }
+  }
+
+  final output = <InlineSpan>[];
+  var positionInSegment = 0;
+  for (final span in renderedSpans) {
+    if (span is! TextSpan || span.text == null) {
+      output.add(span);
+      continue;
+    }
+    final text = span.text!;
+    // Walk character by character within this span, grouping runs by mark
+    // style (or no-mark).
+    var runStart = 0;
+    MarkStyle? runStyle = markStyleByPos[positionInSegment];
+    for (var i = 1; i <= text.length; i++) {
+      final pos = positionInSegment + i;
+      final styleHere = i < text.length ? markStyleByPos[pos] : null;
+      final isBoundary = i == text.length || styleHere != runStyle;
+      if (isBoundary) {
+        final subText = text.substring(runStart, i);
+        if (runStyle == null) {
+          output.add(TextSpan(text: subText, style: span.style));
+        } else {
+          final markStyle = span.style?.copyWith(
+                decoration: TextDecoration.underline,
+                decorationStyle: _decorationStyleFor(runStyle),
+              ) ??
+              TextStyle(
+                decoration: TextDecoration.underline,
+                decorationStyle: _decorationStyleFor(runStyle),
+              );
+          output.add(TextSpan(text: subText, style: markStyle));
+        }
+        runStart = i;
+        runStyle = styleHere;
+      }
+    }
+    positionInSegment += text.length;
+  }
+  return output;
+}
+
+TextDecorationStyle _decorationStyleFor(MarkStyle style) => switch (style) {
+      MarkStyle.dotted => TextDecorationStyle.dotted,
+      MarkStyle.solid => TextDecorationStyle.solid,
+    };
 
 List<TextSpan> _buildHighlightedPlainSpans(
   String text,

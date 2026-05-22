@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_char_map.dart';
+import 'package:novel_viewer/features/text_viewer/data/vertical_marked_entries.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_text_layout.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_ruby_text_widget.dart';
@@ -22,6 +24,7 @@ class VerticalTextPage extends StatefulWidget {
     this.onSwipe,
     this.onContextMenu,
     this.columnSpacing = 8.0,
+    this.markedWords = const {},
   }) : assert(columnSpacing >= 0);
 
   final List<TextSegment> segments;
@@ -37,6 +40,7 @@ class VerticalTextPage extends StatefulWidget {
   final ValueChanged<SwipeDirection>? onSwipe;
   final void Function(Offset position, String selectedText)? onContextMenu;
   final double columnSpacing;
+  final Map<String, MarkStyle> markedWords;
 
   @override
   State<VerticalTextPage> createState() => _VerticalTextPageState();
@@ -125,6 +129,10 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         ? _computeHighlights(widget.query!)
         : const <int>{};
     final ttsHighlights = _computeTtsHighlights();
+    final markedEntries = computeMarkedEntries(
+      entries: _charEntries,
+      markedWords: widget.markedWords,
+    );
 
     final fontSize = widget.baseStyle?.fontSize ?? _kDefaultFontSize;
     final children = <Widget>[];
@@ -146,6 +154,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         isHighlighted: highlights.contains(i),
         isSelected: _isInSelection(i),
         isTtsHighlighted: ttsHighlights.contains(i),
+        markStyle: markedEntries[i],
       );
       final key = _entryKeys[i];
       if (key == null) {
@@ -386,29 +395,39 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     required bool isHighlighted,
     required bool isSelected,
     bool isTtsHighlighted = false,
+    MarkStyle? markStyle,
   }) {
+    final Widget core;
     if (entry.isRuby) {
-      return VerticalRubyTextWidget(
+      core = VerticalRubyTextWidget(
         base: entry.text,
         rubyText: entry.rubyText!,
         baseStyle: widget.baseStyle,
         highlighted: isHighlighted,
         selected: isSelected,
       );
-    }
-
-    final fontSize = widget.baseStyle?.fontSize ?? _kDefaultFontSize;
-    return SizedBox(
-      width: fontSize,
-      child: Text(
-        mapToVerticalChar(entry.text),
-        textAlign: TextAlign.center,
-        style: _createTextStyle(
-          isHighlighted: isHighlighted,
-          isSelected: isSelected,
-          isTtsHighlighted: isTtsHighlighted,
+    } else {
+      final fontSize = widget.baseStyle?.fontSize ?? _kDefaultFontSize;
+      core = SizedBox(
+        width: fontSize,
+        child: Text(
+          mapToVerticalChar(entry.text),
+          textAlign: TextAlign.center,
+          style: _createTextStyle(
+            isHighlighted: isHighlighted,
+            isSelected: isSelected,
+            isTtsHighlighted: isTtsHighlighted,
+          ),
         ),
+      );
+    }
+    if (markStyle == null) return core;
+    return CustomPaint(
+      foregroundPainter: _VerticalMarkSidebarPainter(
+        style: markStyle,
+        color: Theme.of(context).colorScheme.onSurface,
       ),
+      child: core,
     );
   }
 
@@ -510,4 +529,44 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
 
     return highlights;
   }
+}
+
+/// Draws a thin sidebar line to the LEFT of a vertically-rendered character
+/// to indicate it falls inside an LLM-summary research mark.
+class _VerticalMarkSidebarPainter extends CustomPainter {
+  final MarkStyle style;
+  final Color color;
+
+  _VerticalMarkSidebarPainter({required this.style, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+    const x = 1.0;
+    switch (style) {
+      case MarkStyle.solid:
+        canvas.drawLine(const Offset(x, 0), Offset(x, size.height), paint);
+        break;
+      case MarkStyle.dotted:
+        const dashLength = 2.0;
+        const gapLength = 2.0;
+        var y = 0.0;
+        while (y < size.height) {
+          canvas.drawLine(
+            Offset(x, y),
+            Offset(x, (y + dashLength).clamp(0, size.height)),
+            paint,
+          );
+          y += dashLength + gapLength;
+        }
+        break;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_VerticalMarkSidebarPainter oldDelegate) =>
+      oldDelegate.style != style || oldDelegate.color != color;
 }

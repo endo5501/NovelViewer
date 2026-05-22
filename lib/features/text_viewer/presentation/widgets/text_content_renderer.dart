@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/llm_summary/providers/marked_words_provider.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
@@ -227,6 +228,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     final targetLineNumber = activeMatch?.lineNumber ?? bookmarkJumpLine;
     final bookmarkLines =
         ref.watch(bookmarkLineNumbersForFileProvider).value ?? [];
+    final markedWords = ref.watch(markedWordsProvider);
 
     if (displayMode == TextDisplayMode.vertical) {
       // Clear bookmark jump after consuming in vertical mode.
@@ -245,6 +247,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         ttsHighlightEnd: ttsHighlightRange?.end,
         columnSpacing: columnSpacing,
         bookmarkLineNumbers: bookmarkLines,
+        markedWords: markedWords,
         onPageLineChanged: (lineNumber) {
           ref.read(currentViewLineProvider.notifier).set(lineNumber);
         },
@@ -264,6 +267,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       activeMatch?.query,
       ttsHighlightRange: ttsHighlightRange,
       brightness: Theme.of(context).brightness,
+      markedWords: markedWords,
     );
 
     if (activeMatch != null) {
