@@ -22,9 +22,10 @@ The application SHALL display a toggle button in the AppBar that controls the vi
 ### Requirement: Right column visibility state management
 The application SHALL manage the right column visibility state using a Riverpod NotifierProvider.
 
-#### Scenario: Right column is visible by default
+#### Scenario: Right column is hidden by default
 - **WHEN** the application launches
-- **THEN** the right column SHALL be visible (default state is true)
+- **THEN** the right column SHALL be hidden (default state is false)
+- **AND** the center column SHALL fill the space that would otherwise be occupied by the right column
 
 #### Scenario: Clicking toggle hides the right column
 - **WHEN** the right column is visible
