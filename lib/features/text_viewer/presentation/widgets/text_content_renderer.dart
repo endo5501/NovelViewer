@@ -166,6 +166,10 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     ref.read(hoverPopupProvider.notifier).hideIfShowing(token);
   }
 
+  void _onHoverHideRequest() {
+    ref.read(hoverPopupProvider.notifier).hide();
+  }
+
   void _scrollToTtsHighlight(
       String content, TextRange range, TextStyle? textStyle) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -281,6 +285,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         columnSpacing: columnSpacing,
         bookmarkLineNumbers: bookmarkLines,
         markedWords: markedWords,
+        onMarkEnter: _onMarkEnter,
+        onMarkExit: _onMarkExit,
+        onHoverHideRequest: _onHoverHideRequest,
         onPageLineChanged: (lineNumber) {
           ref.read(currentViewLineProvider.notifier).set(lineNumber);
         },

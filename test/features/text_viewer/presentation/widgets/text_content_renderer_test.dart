@@ -84,15 +84,16 @@ void main() {
     });
 
     testWidgets(
-        'vertical mode does NOT spawn a hover popup even if show() is invoked',
+        'TextContentRenderer never hosts the HoverPopupWidget itself — the '
+        'overlay insertion is HoverPopupHost\'s responsibility',
         (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
-            // Pretend there's a cached word so VerticalTextViewer would draw
-            // a sidebar line for it. Hover must still be suppressed.
+            // Pretend there's a cached word so the renderer treats the
+            // text as having marks.
             markedWordsProvider
                 .overrideWithValue({'アリス': MarkStyle.solid}),
           ],
@@ -118,28 +119,93 @@ void main() {
           .setMode(TextDisplayMode.vertical);
       await tester.pumpAndSettle();
 
-      // Sanity: vertical viewer is rendered with the marked word in its map.
+      // Vertical viewer still receives the marked words map.
       final vertical =
           tester.widget<VerticalTextViewer>(find.byType(VerticalTextViewer));
-      expect(vertical.markedWords.keys, contains('アリス'),
-          reason: 'Marked words must still be passed to the vertical viewer');
-      expect(find.byType(SelectableText), findsNothing,
-          reason:
-              'No SelectableText.rich path means no TextSpan.onEnter wiring '
-              'is possible — hover is structurally impossible in vertical mode');
+      expect(vertical.markedWords.keys, contains('アリス'));
+      expect(find.byType(SelectableText), findsNothing);
 
-      // Even if some caller were to force the popup notifier visible, no
-      // overlay would be inserted by TextContentRenderer (it is not a host).
+      // Forcing the notifier visible does NOT cause TextContentRenderer to
+      // render a popup — there is no Overlay in this widget subtree because
+      // TextContentRenderer is not a HoverPopupHost.
       container.read(hoverPopupProvider.notifier).show(
             word: 'アリス',
             position: const Offset(0, 0),
             token: const (start: 0, end: 3),
           );
       await tester.pumpAndSettle();
-      expect(find.byType(HoverPopupWidget), findsNothing,
-          reason: 'TextContentRenderer itself never inserts the hover popup; '
-              'that responsibility lives in HoverPopupHost (which suppresses '
-              'in vertical mode anyway).');
+      expect(
+        find.descendant(
+          of: find.byType(TextContentRenderer),
+          matching: find.byType(HoverPopupWidget),
+        ),
+        findsNothing,
+      );
     });
+
+    testWidgets(
+      'vertical mode wires onMarkEnter / onMarkExit / onHoverHideRequest into '
+      'VerticalTextViewer, and invoking them drives hoverPopupProvider',
+      (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
+              markedWordsProvider
+                  .overrideWithValue({'アリス': MarkStyle.solid}),
+            ],
+            child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: SizedBox(
+                  height: 400,
+                  child: TextContentRenderer(content: 'アリスは旅に出た。'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final element = tester.element(find.byType(TextContentRenderer));
+        final container = ProviderScope.containerOf(element);
+        await container
+            .read(displayModeProvider.notifier)
+            .setMode(TextDisplayMode.vertical);
+        await tester.pumpAndSettle();
+
+        final vertical =
+            tester.widget<VerticalTextViewer>(find.byType(VerticalTextViewer));
+        expect(vertical.onMarkEnter, isNotNull,
+            reason: 'vertical wiring must include onMarkEnter');
+        expect(vertical.onMarkExit, isNotNull,
+            reason: 'vertical wiring must include onMarkExit');
+        expect(vertical.onHoverHideRequest, isNotNull,
+            reason: 'vertical wiring must include onHoverHideRequest');
+
+        // Drive the wired callbacks and verify they affect the provider.
+        const token = (start: 0, end: 3);
+        vertical.onMarkEnter!('アリス', const Offset(10, 10), token);
+        await tester.pump();
+        expect(container.read(hoverPopupProvider).isVisible, isTrue);
+        expect(container.read(hoverPopupProvider).word, 'アリス');
+
+        vertical.onHoverHideRequest!();
+        await tester.pump();
+        expect(container.read(hoverPopupProvider).isVisible, isFalse);
+
+        // onMarkExit should drop the popup through the grace-period path.
+        // Bring it back, then exit and confirm it is gone after the timer.
+        vertical.onMarkEnter!('アリス', const Offset(10, 10), token);
+        await tester.pump();
+        vertical.onMarkExit!(token);
+        // Wait past the 150ms grace period.
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(container.read(hoverPopupProvider).isVisible, isFalse);
+      },
+    );
   });
 }

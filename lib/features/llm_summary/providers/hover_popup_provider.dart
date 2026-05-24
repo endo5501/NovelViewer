@@ -2,12 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/painting.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/llm_summary/domain/hover_token.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 
-/// Identifies a specific marked-text occurrence so the hover popup can tell
-/// two same-word occurrences apart. Uses the segment-global text range of
-/// the mark, which is stable across rebuilds while the mark layout is.
-typedef HoverToken = ({int start, int end});
+export 'package:novel_viewer/features/llm_summary/domain/hover_token.dart'
+    show HoverToken;
 
 /// Brief window during which a `hideIfShowing` request is deferred so the
 /// pointer can travel from a marked span into the popup widget itself
@@ -71,6 +70,11 @@ class HoverPopupNotifier extends Notifier<HoverPopupState> {
     required HoverToken token,
   }) {
     _hideTimer?.cancel();
+    // A fresh popup never inherits the previous popup's hover latch — if
+    // the old popup was hovered when something programmatically hid it
+    // (mode switch, page jump), that latch would otherwise suppress the
+    // grace-period hide of the new popup.
+    _popupHovered = false;
     // Skip the state write when the same span is already active, so sub-pixel
     // pointer wobble inside one marked occurrence does not churn the
     // OverlayEntry via the host's ref.listen. Different occurrences of the
@@ -85,6 +89,7 @@ class HoverPopupNotifier extends Notifier<HoverPopupState> {
 
   void hide() {
     _hideTimer?.cancel();
+    _popupHovered = false;
     state = const HoverPopupState.hidden();
   }
 

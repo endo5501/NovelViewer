@@ -1,7 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/features/llm_summary/domain/hover_token.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
-import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 
 typedef OnMarkEnter = void Function(

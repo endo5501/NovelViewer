@@ -271,6 +271,32 @@ void main() {
     });
 
     test(
+        'grace-period boundary: popup is still visible at 149 ms and hidden '
+        'just after 150 ms (regression guard against accidental drift / '
+        'pumpAndSettle swallowing the timer)',
+        () {
+      fakeAsync((async) {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(hoverPopupProvider.notifier);
+
+        notifier.show(
+            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+        notifier.hideIfShowing(_tokenA);
+
+        async.elapse(const Duration(milliseconds: 149));
+        expect(container.read(hoverPopupProvider).isVisible, isTrue,
+            reason:
+                'Must remain visible right up to the grace boundary so the '
+                'pointer has time to reach the popup');
+
+        async.elapse(const Duration(milliseconds: 2));
+        expect(container.read(hoverPopupProvider).isVisible, isFalse,
+            reason: 'Must hide immediately once the 150 ms grace elapses');
+      });
+    });
+
+    test(
         'onPopupEnter during the grace window cancels the deferred hide so '
         'the popup stays visible while the pointer is inside it', () {
       fakeAsync((async) {
@@ -308,6 +334,41 @@ void main() {
             reason:
                 'Leaving the popup itself bypasses the grace period — the '
                 'user has clearly moved on');
+      });
+    });
+
+    test(
+        'programmatic hide() resets the popup-hover latch so a later '
+        'hideIfShowing on a fresh popup is NOT suppressed',
+        () {
+      // Regression: when hide() was called while _popupHovered was true
+      // (e.g. mode flip or page jump while pointer is inside the popup),
+      // the latch lingered. The next popup's deferred hide then short-
+      // circuited inside the grace-period callback and the new popup
+      // stayed visible indefinitely.
+      fakeAsync((async) {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(hoverPopupProvider.notifier);
+
+        notifier.show(
+            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+        notifier.onPopupEnter();
+        // Mode switch / page jump path fires hide() while the pointer
+        // happens to be over the popup.
+        notifier.hide();
+
+        // Fresh popup for a different mark.
+        notifier.show(
+            word: 'ボブ', position: const Offset(20, 20), token: _tokenB);
+        // Pointer leaves the new mark and is NOT inside any popup.
+        notifier.hideIfShowing(_tokenB);
+        async.elapse(const Duration(milliseconds: 300));
+
+        expect(container.read(hoverPopupProvider).isVisible, isFalse,
+            reason:
+                'After a programmatic hide(), the next popup must close '
+                'normally via the grace-period exit timer.');
       });
     });
 

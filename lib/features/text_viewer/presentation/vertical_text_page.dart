@@ -1,12 +1,18 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/features/llm_summary/domain/hover_token.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_char_map.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_marked_entries.dart';
+import 'package:novel_viewer/features/text_viewer/data/vertical_marked_ranges.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_text_layout.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_ruby_text_widget.dart';
+
+export 'package:novel_viewer/features/llm_summary/domain/hover_token.dart'
+    show HoverToken;
 
 class VerticalTextPage extends StatefulWidget {
   const VerticalTextPage({
@@ -25,6 +31,9 @@ class VerticalTextPage extends StatefulWidget {
     this.onContextMenu,
     this.columnSpacing = 8.0,
     this.markedWords = const {},
+    this.onMarkEnter,
+    this.onMarkExit,
+    this.onHoverHideRequest,
   }) : assert(columnSpacing >= 0);
 
   final List<TextSegment> segments;
@@ -41,6 +50,15 @@ class VerticalTextPage extends StatefulWidget {
   final void Function(Offset position, String selectedText)? onContextMenu;
   final double columnSpacing;
   final Map<String, MarkStyle> markedWords;
+  final void Function(String word, Offset globalPosition, HoverToken token)?
+      onMarkEnter;
+  final void Function(HoverToken token)? onMarkExit;
+
+  /// Coarse "drop any active popup" signal — fired when the page's overall
+  /// hover state can no longer be trusted (selection drag starts here, page
+  /// turn requested by the parent viewer). Distinct from [onMarkExit], which
+  /// only carries the most recently entered token.
+  final VoidCallback? onHoverHideRequest;
 
   @override
   State<VerticalTextPage> createState() => _VerticalTextPageState();
@@ -72,6 +90,14 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   List<VerticalHitRegion> _hitRegions = const [];
   bool _hitRegionUpdateScheduled = false;
 
+  // Hover differential state — kept in sync as the pointer moves so
+  // adjacent hover events inside one mark coalesce into a single
+  // onMarkEnter and crossings into/out of marks fire exit/enter exactly
+  // once per transition.
+  int? _lastHoverCharIndex;
+  HoverToken? _lastHoverToken;
+  Map<int, MarkInfo> _markedRanges = const {};
+
   @override
   void initState() {
     super.initState();
@@ -84,6 +110,11 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     if (oldWidget.segments != widget.segments) {
       _rebuildEntries();
       _clearInternalSelection();
+      // Entry indices change meaning when segments rebuild, so any stale
+      // hover state would otherwise suppress the next onMarkEnter via the
+      // _lastHoverCharIndex differential check.
+      _lastHoverCharIndex = null;
+      _lastHoverToken = null;
       return;
     }
     if (oldWidget.baseStyle != widget.baseStyle) {
@@ -133,6 +164,10 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       entries: _charEntries,
       markedWords: widget.markedWords,
     );
+    _markedRanges = computeMarkedRanges(
+      entries: _charEntries,
+      markedWords: widget.markedWords,
+    );
 
     final fontSize = widget.baseStyle?.fontSize ?? _kDefaultFontSize;
     final children = <Widget>[];
@@ -165,24 +200,65 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     }
     _scheduleHitRegionRebuild();
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onPanDown: _onPanDown,
-      onPanStart: _onPanStart,
-      onPanUpdate: _onPanUpdate,
-      onPanEnd: _onPanEnd,
-      onTap: _onTap,
-      onSecondaryTapUp: _onSecondaryTapUp,
-      child: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Wrap(
-          direction: Axis.vertical,
-          spacing: 0.0,
-          runSpacing: widget.columnSpacing,
-          children: children,
+    return MouseRegion(
+      onHover: _onHover,
+      onExit: _onMouseExit,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onPanDown: _onPanDown,
+        onPanStart: _onPanStart,
+        onPanUpdate: _onPanUpdate,
+        onPanEnd: _onPanEnd,
+        onTap: _onTap,
+        onSecondaryTapUp: _onSecondaryTapUp,
+        child: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Wrap(
+            direction: Axis.vertical,
+            spacing: 0.0,
+            runSpacing: widget.columnSpacing,
+            children: children,
+          ),
         ),
       ),
     );
+  }
+
+  void _onHover(PointerHoverEvent event) {
+    final charIndex = _hitTest(event.localPosition);
+    final newMark = charIndex == null ? null : _markedRanges[charIndex];
+    final newToken = newMark == null
+        ? null
+        : (start: newMark.startEntry, end: newMark.endEntry);
+
+    // Coalesce on the TOKEN value (not charIndex alone). This way a
+    // markedWords change that removes/replaces the mark under a stationary
+    // pointer still fires the appropriate exit/enter because newToken
+    // differs from _lastHoverToken even though the pixel and charIndex
+    // are unchanged.
+    if (charIndex == _lastHoverCharIndex && newToken == _lastHoverToken) {
+      return;
+    }
+
+    if (newToken != _lastHoverToken) {
+      if (_lastHoverToken != null) {
+        widget.onMarkExit?.call(_lastHoverToken!);
+      }
+      if (newMark != null) {
+        widget.onMarkEnter?.call(newMark.word, event.position, newToken!);
+      }
+    }
+
+    _lastHoverCharIndex = charIndex;
+    _lastHoverToken = newToken;
+  }
+
+  void _onMouseExit(PointerExitEvent _) {
+    if (_lastHoverToken != null) {
+      widget.onMarkExit?.call(_lastHoverToken!);
+    }
+    _lastHoverCharIndex = null;
+    _lastHoverToken = null;
   }
 
   bool _isInSelection(int index) {
@@ -200,7 +276,18 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
 
   void _onPanStart(DragStartDetails details) {
     _anchorIndex = _hitTest(details.localPosition);
+    // A real drag (not a tap) just began. onHover stops firing while a
+    // button is held, so any popup already visible would otherwise linger.
+    // Also clear the local hover diff so the popup can re-appear on the
+    // same charIndex after the drag ends.
+    _requestHoverHide();
     _tryDecideGestureMode(details.globalPosition);
+  }
+
+  void _requestHoverHide() {
+    _lastHoverCharIndex = null;
+    _lastHoverToken = null;
+    widget.onHoverHideRequest?.call();
   }
 
   /// Attempts to decide the gesture mode based on displacement from start.
