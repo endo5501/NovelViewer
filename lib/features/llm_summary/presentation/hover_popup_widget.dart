@@ -162,7 +162,7 @@ class _TypeToggle extends StatelessWidget {
       key: const Key('hover_popup_type_toggle'),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: theme.dividerColor),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
       child: Row(
