@@ -7,6 +7,8 @@ class HistoryEntry {
   final String word;
   final HistoryEntryType type;
   final String summaryPreview;
+  final String? noSpoilerSummary;
+  final String? spoilerSummary;
   final String? sourceFile;
   final DateTime updatedAt;
 
@@ -15,6 +17,8 @@ class HistoryEntry {
     required this.word,
     required this.type,
     required this.summaryPreview,
+    this.noSpoilerSummary,
+    this.spoilerSummary,
     required this.sourceFile,
     required this.updatedAt,
   });
@@ -54,6 +58,8 @@ class HistoryEntry {
         word: entry.key.word,
         type: type,
         summaryPreview: preview,
+        noSpoilerSummary: noSpoiler?.summary,
+        spoilerSummary: spoiler?.summary,
         sourceFile: sourceFile,
         updatedAt: updatedAt,
       );

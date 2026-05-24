@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_history_menu.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:path/path.dart' as p;
@@ -91,7 +93,8 @@ class _HistoryEntryTile extends ConsumerWidget {
     Offset position,
   ) async {
     final l10n = AppLocalizations.of(context)!;
-    final value = await showMenu<String>(
+    final messenger = ScaffoldMessenger.of(context);
+    final value = await showMenu<HistoryContextAction>(
       context: context,
       position: RelativeRect.fromLTRB(
         position.dx,
@@ -99,20 +102,29 @@ class _HistoryEntryTile extends ConsumerWidget {
         position.dx,
         position.dy,
       ),
-      items: [
-        PopupMenuItem<String>(
-          value: 'delete',
-          child: Text(l10n.bookmark_deleteMenuItem,
-              style: const TextStyle(color: Colors.red)),
-        ),
-      ],
+      items: buildHistoryContextMenuItems(
+        type: entry.type,
+        deleteLabel: l10n.bookmark_deleteMenuItem,
+        copyNoSpoilerLabel: l10n.contextMenu_copyNoSpoilerSummary,
+        copySpoilerLabel: l10n.contextMenu_copySpoilerSummary,
+      ),
     );
 
-    if (value == 'delete') {
-      await ref
+    if (value == null) return;
+    dispatchHistoryContextAction(
+      value,
+      noSpoilerSummary: entry.noSpoilerSummary,
+      spoilerSummary: entry.spoilerSummary,
+      onCopy: (text) async {
+        await Clipboard.setData(ClipboardData(text: text));
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.contextMenu_copiedToClipboard)),
+        );
+      },
+      onDelete: () => ref
           .read(llmSummaryHistoryProvider.notifier)
-          .deleteEntry(entry.word);
-    }
+          .deleteEntry(entry.word),
+    );
   }
 
   Future<void> _jumpToEntry(BuildContext context, WidgetRef ref) {

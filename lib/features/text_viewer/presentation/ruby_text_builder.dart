@@ -1,6 +1,12 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
+import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
+
+typedef OnMarkEnter = void Function(
+    String word, Offset position, HoverToken token);
+typedef OnMarkExit = void Function(HoverToken token);
 
 class RubyTextWidget extends StatelessWidget {
   const RubyTextWidget({
@@ -10,6 +16,8 @@ class RubyTextWidget extends StatelessWidget {
     required this.baseStyle,
     this.query,
     this.localMarks = const [],
+    this.onMarkEnter,
+    this.onMarkExit,
   });
 
   final String base;
@@ -20,6 +28,9 @@ class RubyTextWidget extends StatelessWidget {
   /// Mark spans expressed in segment-local coordinates (positions inside
   /// [base]). Computed by [buildRubyTextSpans] from the full-text mark scan.
   final List<MarkSpan> localMarks;
+
+  final OnMarkEnter? onMarkEnter;
+  final OnMarkExit? onMarkExit;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +49,12 @@ class RubyTextWidget extends StatelessWidget {
         : <InlineSpan>[TextSpan(text: base, style: basePieceStyle)];
     final markedSpans = localMarks.isEmpty
         ? initialSpans
-        : _applyLocalMarksToSpans(initialSpans, localMarks);
+        : _applyLocalMarksToSpans(
+            initialSpans,
+            localMarks,
+            onMarkEnter: onMarkEnter,
+            onMarkExit: onMarkExit,
+          );
     final baseWidget = (markedSpans.length == 1 &&
             markedSpans.first is TextSpan &&
             (markedSpans.first as TextSpan).children == null)
@@ -76,6 +92,8 @@ TextSpan buildRubyTextSpans(
   TextRange? ttsHighlightRange,
   Brightness brightness = Brightness.light,
   Map<String, MarkStyle> markedWords = const {},
+  OnMarkEnter? onMarkEnter,
+  OnMarkExit? onMarkExit,
 }) {
   if (segments.isEmpty) {
     return const TextSpan();
@@ -112,7 +130,12 @@ TextSpan buildRubyTextSpans(
         final segmentMarks = _localizeMarks(
             globalMarks, plainTextOffset, text.length);
         if (segmentMarks.isNotEmpty) {
-          spans.addAll(_applyLocalMarksToSpans(renderedSpans, segmentMarks));
+          spans.addAll(_applyLocalMarksToSpans(
+            renderedSpans,
+            segmentMarks,
+            onMarkEnter: onMarkEnter,
+            onMarkExit: onMarkExit,
+          ));
         } else {
           spans.addAll(renderedSpans);
         }
@@ -128,6 +151,8 @@ TextSpan buildRubyTextSpans(
             baseStyle: baseStyle,
             query: hasQuery ? query : null,
             localMarks: segmentMarks,
+            onMarkEnter: onMarkEnter,
+            onMarkExit: onMarkExit,
           ),
         ));
         plainTextOffset += base.length;
@@ -176,18 +201,31 @@ List<MarkSpan> _localizeMarks(
 
 /// Splits [renderedSpans] at the boundaries of any mark in [localMarks] (in
 /// segment-local coordinates) and adds underline decoration to spans that
-/// fall inside a mark.
+/// fall inside a mark. When [onMarkEnter] / [onMarkExit] are supplied, the
+/// emitted marked sub-spans also carry hover handlers that report the
+/// underlying [MarkSpan.word] to the caller.
 List<InlineSpan> _applyLocalMarksToSpans(
   List<InlineSpan> renderedSpans,
-  List<MarkSpan> localMarks,
-) {
+  List<MarkSpan> localMarks, {
+  OnMarkEnter? onMarkEnter,
+  OnMarkExit? onMarkExit,
+}) {
   if (localMarks.isEmpty) return renderedSpans;
 
-  final markStyleByPos = <int, MarkStyle>{};
-  for (final m in localMarks) {
-    for (var i = m.start; i < m.end; i++) {
-      markStyleByPos[i] = m.style;
+  // Marks are guaranteed non-overlapping by the mark-matcher's longest-match
+  // rule, so a single sorted list + forward-moving cursor classifies every
+  // character in O(text.length + marks.length) without per-char map entries.
+  final sortedMarks = [...localMarks]
+    ..sort((a, b) => a.start.compareTo(b.start));
+  var markIdx = 0;
+  MarkSpan? markAt(int pos) {
+    while (markIdx < sortedMarks.length && sortedMarks[markIdx].end <= pos) {
+      markIdx++;
     }
+    if (markIdx < sortedMarks.length && sortedMarks[markIdx].start <= pos) {
+      return sortedMarks[markIdx];
+    }
+    return null;
   }
 
   final output = <InlineSpan>[];
@@ -198,31 +236,44 @@ List<InlineSpan> _applyLocalMarksToSpans(
       continue;
     }
     final text = span.text!;
-    // Walk character by character within this span, grouping runs by mark
-    // style (or no-mark).
     var runStart = 0;
-    MarkStyle? runStyle = markStyleByPos[positionInSegment];
+    MarkSpan? runMark = markAt(positionInSegment);
     for (var i = 1; i <= text.length; i++) {
-      final pos = positionInSegment + i;
-      final styleHere = i < text.length ? markStyleByPos[pos] : null;
-      final isBoundary = i == text.length || styleHere != runStyle;
+      final markHere =
+          i < text.length ? markAt(positionInSegment + i) : null;
+      final isBoundary = i == text.length || !identical(markHere, runMark);
       if (isBoundary) {
         final subText = text.substring(runStart, i);
-        if (runStyle == null) {
+        if (runMark == null) {
           output.add(TextSpan(text: subText, style: span.style));
         } else {
           final markStyle = span.style?.copyWith(
                 decoration: TextDecoration.underline,
-                decorationStyle: _decorationStyleFor(runStyle),
+                decorationStyle: _decorationStyleFor(runMark.style),
               ) ??
               TextStyle(
                 decoration: TextDecoration.underline,
-                decorationStyle: _decorationStyleFor(runStyle),
+                decorationStyle: _decorationStyleFor(runMark.style),
               );
-          output.add(TextSpan(text: subText, style: markStyle));
+          final word = runMark.word;
+          final token = (start: runMark.start, end: runMark.end);
+          output.add(TextSpan(
+            text: subText,
+            style: markStyle,
+            mouseCursor: onMarkEnter != null || onMarkExit != null
+                ? SystemMouseCursors.help
+                : MouseCursor.defer,
+            onEnter: onMarkEnter == null
+                ? null
+                : (PointerEnterEvent event) =>
+                    onMarkEnter(word, event.position, token),
+            onExit: onMarkExit == null
+                ? null
+                : (PointerExitEvent _) => onMarkExit(token),
+          ));
         }
         runStart = i;
-        runStyle = styleHere;
+        runMark = markHere;
       }
     }
     positionInSegment += text.length;

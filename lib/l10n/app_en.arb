@@ -152,12 +152,31 @@
   "contextMenu_addToDictionary": "Add to Dictionary",
   "contextMenu_copy": "Copy",
 
-  "llmSummary_noSpoilerTab": "No spoilers",
-  "llmSummary_spoilerTab": "With spoilers",
-  "llmSummary_selectWordPrompt": "Please select a word",
-  "llmSummary_configureLlmPrompt": "Please configure LLM in Settings",
-  "llmSummary_referencePositionWarning": "Reference position differs. Re-analysis is recommended.",
-  "llmSummary_analyzeButton": "Analyze",
+  "contextMenu_analyzeNoSpoiler": "Analyze (no spoilers)",
+  "contextMenu_analyzeSpoiler": "Analyze (with spoilers)",
+  "contextMenu_copyNoSpoilerSummary": "Copy summary (no spoilers)",
+  "contextMenu_copySpoilerSummary": "Copy summary (with spoilers)",
+  "contextMenu_copiedToClipboard": "Copied to clipboard",
+
+  "llmAnalysis_inProgress": "Analyzing...",
+  "llmAnalysis_noFolderOpen": "Please open a novel folder first",
+  "llmAnalysis_noLlmConfigured": "Please configure LLM in Settings",
+  "llmAnalysis_failed": "Analysis failed: {error}",
+  "@llmAnalysis_failed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "llmAnalysis_savedSummary": "Saved summary for \"{word}\"",
+  "@llmAnalysis_savedSummary": {
+    "placeholders": {
+      "word": { "type": "String" }
+    }
+  },
+
+  "hoverPopup_referenceWarning": "Summary generated from a different file",
+  "hoverPopup_typeNoSpoiler": "No",
+  "hoverPopup_typeSpoiler": "Yes",
 
   "bookmark_selectNovelPrompt": "Please select a novel folder",
   "bookmark_noBookmarks": "No bookmarks",

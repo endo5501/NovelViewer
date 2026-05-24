@@ -476,22 +476,47 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contextMenu_copy => '复制';
 
   @override
-  String get llmSummary_noSpoilerTab => '无剧透';
+  String get contextMenu_analyzeNoSpoiler => '开始分析（无剧透）';
 
   @override
-  String get llmSummary_spoilerTab => '有剧透';
+  String get contextMenu_analyzeSpoiler => '开始分析（含剧透）';
 
   @override
-  String get llmSummary_selectWordPrompt => '请选择一个词语';
+  String get contextMenu_copyNoSpoilerSummary => '复制摘要（无剧透）';
 
   @override
-  String get llmSummary_configureLlmPrompt => '请在设置中配置LLM';
+  String get contextMenu_copySpoilerSummary => '复制摘要（含剧透）';
 
   @override
-  String get llmSummary_referencePositionWarning => '参考位置不同，建议重新分析。';
+  String get contextMenu_copiedToClipboard => '已复制到剪贴板';
 
   @override
-  String get llmSummary_analyzeButton => '开始分析';
+  String get llmAnalysis_inProgress => '正在分析…';
+
+  @override
+  String get llmAnalysis_noFolderOpen => '请先打开小说文件夹';
+
+  @override
+  String get llmAnalysis_noLlmConfigured => '请在设置中配置LLM';
+
+  @override
+  String llmAnalysis_failed(String error) {
+    return '分析失败：$error';
+  }
+
+  @override
+  String llmAnalysis_savedSummary(String word) {
+    return '已保存「$word」的摘要';
+  }
+
+  @override
+  String get hoverPopup_referenceWarning => '摘要基于不同的文件生成';
+
+  @override
+  String get hoverPopup_typeNoSpoiler => '无';
+
+  @override
+  String get hoverPopup_typeSpoiler => '有';
 
   @override
   String get bookmark_selectNovelPrompt => '请选择作品文件夹';

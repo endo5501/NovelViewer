@@ -256,13 +256,31 @@
 
   "contextMenu_addToDictionary": "辞書追加",
   "contextMenu_copy": "コピー",
+  "contextMenu_analyzeNoSpoiler": "解析開始(ネタバレなし)",
+  "contextMenu_analyzeSpoiler": "解析開始(ネタバレあり)",
+  "contextMenu_copyNoSpoilerSummary": "要約をコピー(ネタバレなし)",
+  "contextMenu_copySpoilerSummary": "要約をコピー(ネタバレあり)",
+  "contextMenu_copiedToClipboard": "クリップボードにコピーしました",
 
-  "llmSummary_noSpoilerTab": "ネタバレなし",
-  "llmSummary_spoilerTab": "ネタバレあり",
-  "llmSummary_selectWordPrompt": "単語を選択してください",
-  "llmSummary_configureLlmPrompt": "設定画面でLLMを設定してください",
-  "llmSummary_referencePositionWarning": "基準位置が異なります。再解析をお勧めします。",
-  "llmSummary_analyzeButton": "解析開始",
+  "llmAnalysis_inProgress": "解析中…",
+  "llmAnalysis_noFolderOpen": "小説フォルダを開いてください",
+  "llmAnalysis_noLlmConfigured": "設定画面でLLMを設定してください",
+  "llmAnalysis_failed": "解析失敗: {error}",
+  "@llmAnalysis_failed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "llmAnalysis_savedSummary": "「{word}」の要約を保存しました",
+  "@llmAnalysis_savedSummary": {
+    "placeholders": {
+      "word": { "type": "String" }
+    }
+  },
+
+  "hoverPopup_referenceWarning": "別ファイルで解析した要約です",
+  "hoverPopup_typeNoSpoiler": "なし",
+  "hoverPopup_typeSpoiler": "あり",
 
   "bookmark_selectNovelPrompt": "作品フォルダを選択してください",
   "bookmark_noBookmarks": "ブックマークがありません",

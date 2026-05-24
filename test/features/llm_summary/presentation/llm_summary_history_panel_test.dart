@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -281,6 +282,220 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('削除'), findsOneWidget);
+    });
+
+    testWidgets(
+        'right-click on a 両 entry shows both copy items + delete',
+        (tester) async {
+      final entries = [
+        HistoryEntry(
+          folderName: 'my_novel',
+          word: 'アリス',
+          type: HistoryEntryType.both,
+          summaryPreview: 'プレビュー',
+          noSpoilerSummary: 'なし本文',
+          spoilerSummary: 'あり本文',
+          sourceFile: '040.txt',
+          updatedAt: DateTime.utc(2026, 5, 21, 14),
+        ),
+      ];
+
+      await tester.pumpWidget(_wrap(
+        overrides: [
+          libraryPathProvider.overrideWithValue('/library'),
+          currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/library/my_novel')),
+          llmSummaryHistoryProvider
+              .overrideWith(() => _StubHistoryNotifier(entries)),
+        ],
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tapAt(tester.getCenter(find.text('アリス')),
+          buttons: kSecondaryMouseButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('要約をコピー(ネタバレなし)'), findsOneWidget);
+      expect(find.text('要約をコピー(ネタバレあり)'), findsOneWidget);
+      expect(find.text('削除'), findsOneWidget);
+    });
+
+    testWidgets(
+        'right-click on a noSpoilerOnly entry shows only copy(なし) + delete',
+        (tester) async {
+      final entries = [
+        HistoryEntry(
+          folderName: 'my_novel',
+          word: 'ボブ',
+          type: HistoryEntryType.noSpoilerOnly,
+          summaryPreview: 'プレビュー',
+          noSpoilerSummary: 'ボブ本文',
+          sourceFile: '040.txt',
+          updatedAt: DateTime.utc(2026, 5, 21, 14),
+        ),
+      ];
+
+      await tester.pumpWidget(_wrap(
+        overrides: [
+          libraryPathProvider.overrideWithValue('/library'),
+          currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/library/my_novel')),
+          llmSummaryHistoryProvider
+              .overrideWith(() => _StubHistoryNotifier(entries)),
+        ],
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tapAt(tester.getCenter(find.text('ボブ')),
+          buttons: kSecondaryMouseButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('要約をコピー(ネタバレなし)'), findsOneWidget);
+      expect(find.text('要約をコピー(ネタバレあり)'), findsNothing);
+      expect(find.text('削除'), findsOneWidget);
+    });
+
+    testWidgets(
+        'right-click on a spoilerOnly entry shows only copy(あり) + delete',
+        (tester) async {
+      final entries = [
+        HistoryEntry(
+          folderName: 'my_novel',
+          word: '聖印',
+          type: HistoryEntryType.spoilerOnly,
+          summaryPreview: 'プレビュー',
+          spoilerSummary: '聖印本文',
+          sourceFile: '040.txt',
+          updatedAt: DateTime.utc(2026, 5, 21, 14),
+        ),
+      ];
+
+      await tester.pumpWidget(_wrap(
+        overrides: [
+          libraryPathProvider.overrideWithValue('/library'),
+          currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/library/my_novel')),
+          llmSummaryHistoryProvider
+              .overrideWith(() => _StubHistoryNotifier(entries)),
+        ],
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tapAt(tester.getCenter(find.text('聖印')),
+          buttons: kSecondaryMouseButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('要約をコピー(ネタバレなし)'), findsNothing);
+      expect(find.text('要約をコピー(ネタバレあり)'), findsOneWidget);
+      expect(find.text('削除'), findsOneWidget);
+    });
+
+    testWidgets(
+        'selecting copy(なし) writes the no-spoiler text to the clipboard '
+        'and shows a confirmation SnackBar', (tester) async {
+      String? clipboardText;
+      final binding = TestDefaultBinaryMessengerBinding.instance;
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboardText =
+                (call.arguments as Map)['text'] as String?;
+          }
+          return null;
+        },
+      );
+      addTearDown(() {
+        binding.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      final entries = [
+        HistoryEntry(
+          folderName: 'my_novel',
+          word: 'アリス',
+          type: HistoryEntryType.both,
+          summaryPreview: 'プレビュー',
+          noSpoilerSummary: 'なし本文',
+          spoilerSummary: 'あり本文',
+          sourceFile: '040.txt',
+          updatedAt: DateTime.utc(2026, 5, 21, 14),
+        ),
+      ];
+
+      await tester.pumpWidget(_wrap(
+        overrides: [
+          libraryPathProvider.overrideWithValue('/library'),
+          currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/library/my_novel')),
+          llmSummaryHistoryProvider
+              .overrideWith(() => _StubHistoryNotifier(entries)),
+        ],
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tapAt(tester.getCenter(find.text('アリス')),
+          buttons: kSecondaryMouseButton);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('要約をコピー(ネタバレなし)'));
+      await tester.pumpAndSettle();
+
+      expect(clipboardText, 'なし本文');
+      expect(find.text('クリップボードにコピーしました'), findsOneWidget);
+    });
+
+    testWidgets('selecting copy(あり) writes the spoiler text to the clipboard',
+        (tester) async {
+      String? clipboardText;
+      final binding = TestDefaultBinaryMessengerBinding.instance;
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboardText =
+                (call.arguments as Map)['text'] as String?;
+          }
+          return null;
+        },
+      );
+      addTearDown(() {
+        binding.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      final entries = [
+        HistoryEntry(
+          folderName: 'my_novel',
+          word: 'アリス',
+          type: HistoryEntryType.both,
+          summaryPreview: 'プレビュー',
+          noSpoilerSummary: 'なし本文',
+          spoilerSummary: 'あり本文',
+          sourceFile: '040.txt',
+          updatedAt: DateTime.utc(2026, 5, 21, 14),
+        ),
+      ];
+
+      await tester.pumpWidget(_wrap(
+        overrides: [
+          libraryPathProvider.overrideWithValue('/library'),
+          currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/library/my_novel')),
+          llmSummaryHistoryProvider
+              .overrideWith(() => _StubHistoryNotifier(entries)),
+        ],
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tapAt(tester.getCenter(find.text('アリス')),
+          buttons: kSecondaryMouseButton);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('要約をコピー(ネタバレあり)'));
+      await tester.pumpAndSettle();
+
+      expect(clipboardText, 'あり本文');
     });
   });
 }

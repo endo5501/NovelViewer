@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/app.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/text_search/presentation/search_results_panel.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/shared/providers/layout_providers.dart';
@@ -74,6 +75,26 @@ void main() {
         ).first,
       );
       expect(rightColumn.width, isNotNull);
+    });
+
+    testWidgets('right column is a SearchResultsPanel (no wrapper)',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+
+      final rightColumnWidget =
+          tester.widget(find.byKey(const Key('right_column')));
+      expect(rightColumnWidget, isA<SearchResultsPanel>(),
+          reason:
+              'After llm-summary-hover-popup the right column is search-only '
+              '— it should be a SearchResultsPanel directly, not a wrapper');
     });
   });
 

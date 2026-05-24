@@ -6,6 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
+import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/marked_words_provider.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
@@ -14,6 +18,7 @@ import 'package:novel_viewer/features/text_viewer/data/parsed_segments_cache_pro
 import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
+import 'package:novel_viewer/features/text_viewer/presentation/widgets/vertical_context_menu.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
 import 'package:novel_viewer/features/tts/presentation/dictionary_context_menu.dart';
@@ -52,6 +57,18 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   // is active.
   TextRange? _lastTtsScrolledRange;
 
+  // Memoised TextSpan tree for the horizontal mode. buildRubyTextSpans is
+  // O(text.length × marks) and runs on every rebuild (font/theme/playback
+  // tick), so the cache key compares its inputs by identity / value and we
+  // reuse the previous tree when nothing changed.
+  TextSpan? _cachedTextSpan;
+  String? _cachedTextSpanContent;
+  TextStyle? _cachedTextSpanStyle;
+  String? _cachedTextSpanQuery;
+  TextRange? _cachedTextSpanTtsRange;
+  Map<String, MarkStyle>? _cachedTextSpanMarkedWords;
+  Brightness? _cachedTextSpanBrightness;
+
   @override
   void initState() {
     super.initState();
@@ -76,6 +93,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     if (!identical(oldWidget.content, widget.content)) {
       _contentHash = null;
       _lastTtsScrolledRange = null;
+      _cachedTextSpan = null;
     }
   }
 
@@ -92,7 +110,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         Overlay.maybeOf(context)?.context.findRenderObject();
     if (renderObject is! RenderBox) return;
     final overlay = renderObject;
-    showMenu<_ContextMenuAction>(
+    showMenu<VerticalContextAction>(
       context: context,
       position: RelativeRect.fromLTRB(
         position.dx,
@@ -100,24 +118,21 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         overlay.size.width - position.dx,
         overlay.size.height - position.dy,
       ),
-      items: [
-        PopupMenuItem(
-          value: _ContextMenuAction.copy,
-          child: Text(l10n.contextMenu_copy),
-        ),
-        PopupMenuItem(
-          value: _ContextMenuAction.addToDictionary,
-          child: Text(l10n.contextMenu_addToDictionary),
-        ),
-      ],
+      items: buildVerticalContextMenuItems(
+        copyLabel: l10n.contextMenu_copy,
+        addToDictionaryLabel: l10n.contextMenu_addToDictionary,
+        analyzeNoSpoilerLabel: l10n.contextMenu_analyzeNoSpoiler,
+        analyzeSpoilerLabel: l10n.contextMenu_analyzeSpoiler,
+      ),
     ).then((value) {
       if (value == null || !mounted) return;
-      switch (value) {
-        case _ContextMenuAction.copy:
-          Clipboard.setData(ClipboardData(text: selectedText));
-        case _ContextMenuAction.addToDictionary:
-          _openDictionaryDialog(selectedText);
-      }
+      dispatchVerticalContextAction(
+        value,
+        selectedText: selectedText,
+        onCopy: (t) => Clipboard.setData(ClipboardData(text: t)),
+        onAddToDictionary: _openDictionaryDialog,
+        onAnalyze: _runAnalysis,
+      );
     });
   }
 
@@ -131,6 +146,24 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       repository: dictRepo,
       initialSurface: selectedText,
     );
+  }
+
+  void _runAnalysis(String word, SummaryType type) {
+    ref.read(analysisRunnerProvider).run(
+          context: context,
+          word: word,
+          type: type,
+        );
+  }
+
+  void _onMarkEnter(String word, Offset position, HoverToken token) {
+    ref
+        .read(hoverPopupProvider.notifier)
+        .show(word: word, position: position, token: token);
+  }
+
+  void _onMarkExit(HoverToken token) {
+    ref.read(hoverPopupProvider.notifier).hideIfShowing(token);
   }
 
   void _scrollToTtsHighlight(
@@ -261,14 +294,37 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     }
 
     // Horizontal mode
-    final textSpan = buildRubyTextSpans(
-      segments,
-      textStyle,
-      activeMatch?.query,
-      ttsHighlightRange: ttsHighlightRange,
-      brightness: Theme.of(context).brightness,
-      markedWords: markedWords,
-    );
+    final brightness = Theme.of(context).brightness;
+    final query = activeMatch?.query;
+    final cachedSpan = _cachedTextSpan;
+    final TextSpan textSpan;
+    if (cachedSpan != null &&
+        identical(_cachedTextSpanContent, widget.content) &&
+        _cachedTextSpanStyle == textStyle &&
+        _cachedTextSpanQuery == query &&
+        _cachedTextSpanTtsRange == ttsHighlightRange &&
+        identical(_cachedTextSpanMarkedWords, markedWords) &&
+        _cachedTextSpanBrightness == brightness) {
+      textSpan = cachedSpan;
+    } else {
+      textSpan = buildRubyTextSpans(
+        segments,
+        textStyle,
+        query,
+        ttsHighlightRange: ttsHighlightRange,
+        brightness: brightness,
+        markedWords: markedWords,
+        onMarkEnter: _onMarkEnter,
+        onMarkExit: _onMarkExit,
+      );
+      _cachedTextSpan = textSpan;
+      _cachedTextSpanContent = widget.content;
+      _cachedTextSpanStyle = textStyle;
+      _cachedTextSpanQuery = query;
+      _cachedTextSpanTtsRange = ttsHighlightRange;
+      _cachedTextSpanMarkedWords = markedWords;
+      _cachedTextSpanBrightness = brightness;
+    }
 
     if (activeMatch != null) {
       final scrollKey =
@@ -328,6 +384,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
                     context,
                     editableTextState,
                     onAddToDictionary: _openDictionaryDialog,
+                    onAnalyze: _runAnalysis,
                   );
                 },
               ),
@@ -349,4 +406,3 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   }
 }
 
-enum _ContextMenuAction { copy, addToDictionary }
