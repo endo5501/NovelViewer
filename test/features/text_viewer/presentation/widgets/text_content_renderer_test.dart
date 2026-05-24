@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
+import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_widget.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/marked_words_provider.dart';
@@ -45,6 +46,53 @@ void main() {
       const content = 'line1\nline2\nline3';
       // line2 starts at 6, line3 starts at 12
       expect(computeLineStartOffsets(content), [0, 6, 12]);
+    });
+  });
+
+  group('computeTextPainterLineStartOffsets', () {
+    test('empty segments returns single zero offset', () {
+      expect(computeTextPainterLineStartOffsets([]), [0]);
+    });
+
+    test('plain segments behave like computeLineStartOffsets', () {
+      final segments = [const PlainTextSegment('abc\ndef')];
+      expect(computeTextPainterLineStartOffsets(segments), [0, 4]);
+    });
+
+    test('ruby segment collapses to a single caret unit', () {
+      // Raw content equivalent: 'abc' + ruby + 'd\ne'
+      //   plain      : 'abc'   → caret offsets 0-2
+      //   ruby (base): 'XYZ'   → caret offset 3 (WidgetSpan = 1 unit)
+      //   plain      : 'd\ne'  → caret offsets 4-6 (\n at 5)
+      // line 2 should start at TextPainter caret offset 6.
+      final segments = [
+        const PlainTextSegment('abc'),
+        const RubyTextSegment(base: 'XYZ', rubyText: 'ruby'),
+        const PlainTextSegment('d\ne'),
+      ];
+      expect(computeTextPainterLineStartOffsets(segments), [0, 6]);
+    });
+
+    test(
+        'multiple rubies before a line shift its caret offset down to one '
+        'caret unit per ruby, NOT one per markup character',
+        () {
+      // Two rubies before the newline. Raw content offsets would put line 2
+      // at much larger position, but caret offsets count ruby = 1 each.
+      //   'a'          : caret 0
+      //   ruby base 'XX'      : caret 1
+      //   'b'          : caret 2
+      //   ruby base 'YY'      : caret 3
+      //   'c\nd'       : caret 4-6 (\n at 5)
+      // line 2 caret offset = 6.
+      final segments = [
+        const PlainTextSegment('a'),
+        const RubyTextSegment(base: 'XX', rubyText: 'rx'),
+        const PlainTextSegment('b'),
+        const RubyTextSegment(base: 'YY', rubyText: 'ry'),
+        const PlainTextSegment('c\nd'),
+      ];
+      expect(computeTextPainterLineStartOffsets(segments), [0, 6]);
     });
   });
 
@@ -136,6 +184,58 @@ void main() {
           reason:
               'narrow maxWidth should wrap line 1 into multiple rows, pushing '
               'line 2 well below the no-wrap baseline');
+    });
+
+    testWidgets('plain content Y scales linearly across many lines',
+        (tester) async {
+      final lines = List.generate(100, (i) => 'line${i + 1}');
+      final content = lines.join('\n');
+      final lineStarts = computeLineStartOffsets(content);
+
+      for (final n in [1, 5, 10, 50, 100]) {
+        final y = measureCharOffsetY(
+          textSpan: TextSpan(text: content, style: baseStyle),
+          globalCharOffset: lineStarts[n - 1],
+          maxWidth: 1000,
+          fontSize: fontSize,
+        );
+        expect(y, closeTo((n - 1) * lineHeight, 2.0),
+            reason: 'line $n should be at ~${(n - 1) * lineHeight}, got $y');
+      }
+    });
+
+    testWidgets(
+        'placeholder height matches actual RubyTextWidget Column height',
+        (tester) async {
+      const fs = 14.0;
+      const baseStyle = TextStyle(fontSize: fs, height: 1.5);
+
+      // Pump a stand-alone RubyTextWidget so we can measure its actual
+      // rendered size — this is what RenderEditable feeds into its internal
+      // TextPainter as a placeholder dimension.
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: UnconstrainedBox(
+              child: RubyTextWidget(
+                base: '漢字',
+                rubyText: 'かんじ',
+                baseStyle: baseStyle,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final actualSize =
+          tester.getSize(find.byType(RubyTextWidget));
+
+      // The estimate `_placeholderDimensionsFor` uses for height.
+      const estimatedHeight = fs * 1.5;
+      expect(actualSize.height, closeTo(estimatedHeight, 2.0),
+          reason:
+              'placeholder height estimate ($estimatedHeight) should match '
+              'actual RubyTextWidget height (${actualSize.height}) within 2 px');
     });
 
     testWidgets('larger font size scales Y of subsequent lines',

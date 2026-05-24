@@ -14,6 +14,7 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/data/parsed_segments_cache_provider.dart';
 import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
+import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/vertical_context_menu.dart';
@@ -29,13 +30,44 @@ import 'package:novel_viewer/shared/utils/content_hash.dart';
 /// Returns the global character offset where each line starts in [content].
 /// Index N (0-based) holds the start offset of the (N+1)th line.
 ///
-/// Used by [TextContentRenderer] to translate a line number into a glyph
-/// position before measuring its rendered Y coordinate with [TextPainter].
+/// This counts raw content characters and so is **not** suitable for feeding
+/// into [TextPainter.getOffsetForCaret] when the TextSpan tree contains
+/// [WidgetSpan]s (each [WidgetSpan] collapses a multi-character markup run
+/// in the raw content down to a single placeholder character in the painter).
+/// For TextPainter-space offsets, use [computeTextPainterLineStartOffsets].
 @visibleForTesting
 List<int> computeLineStartOffsets(String content) {
   final offsets = <int>[0];
   for (var i = 0; i < content.length; i++) {
     if (content.codeUnitAt(i) == 0x0A) offsets.add(i + 1);
+  }
+  return offsets;
+}
+
+/// Returns the TextPainter caret offset where each line starts when [segments]
+/// are flattened into the `TextSpan` tree built by `buildRubyTextSpans` (one
+/// caret unit per plain character, one caret unit per ruby [WidgetSpan]
+/// regardless of the markup length in the original file).
+///
+/// This is the offset space [TextPainter.getOffsetForCaret] expects, so it is
+/// what `_measureLineNumberOffset` and `_bookmarkLineYsFor` must use to land
+/// on the correct rendered line.
+@visibleForTesting
+List<int> computeTextPainterLineStartOffsets(List<TextSegment> segments) {
+  final offsets = <int>[0];
+  var painterOffset = 0;
+  for (final seg in segments) {
+    switch (seg) {
+      case PlainTextSegment(:final text):
+        for (var i = 0; i < text.length; i++) {
+          if (text.codeUnitAt(i) == 0x0A) {
+            offsets.add(painterOffset + i + 1);
+          }
+        }
+        painterOffset += text.length;
+      case RubyTextSegment():
+        painterOffset += 1; // WidgetSpan placeholder = 1 caret unit
+    }
   }
   return offsets;
 }
@@ -78,7 +110,29 @@ List<PlaceholderDimensions> _placeholderDimensionsFor(
     if (child is WidgetSpan) {
       final w = child.child;
       if (w is RubyTextWidget) {
-        final width = w.base.characters.length * fontSize;
+        // Width estimate: `chars * fontSize` is correct for full-width CJK
+        // glyphs (~1em each) but ~2× too wide for half-width Latin / kana.
+        // Measure both base and ruby text via TextPainter so the placeholder
+        // matches the actual `Column[rubyText, base]` width exactly, which
+        // keeps line wrap aligned with SelectableText.rich.
+        final baseLineStyle = (w.baseStyle ?? const TextStyle())
+            .copyWith(height: 1.0);
+        final basePainter = TextPainter(
+          text: TextSpan(text: w.base, style: baseLineStyle),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        final baseWidth = basePainter.width;
+        basePainter.dispose();
+
+        final rubyStyle = baseLineStyle.copyWith(fontSize: fontSize * 0.5);
+        final rubyPainter = TextPainter(
+          text: TextSpan(text: w.rubyText, style: rubyStyle),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        final rubyWidth = rubyPainter.width;
+        rubyPainter.dispose();
+
+        final width = baseWidth > rubyWidth ? baseWidth : rubyWidth;
         // Ruby (≈0.5 × fontSize) stacked above base (≈1.0 × fontSize).
         final height = fontSize * 1.5;
         dims.add(PlaceholderDimensions(
@@ -138,8 +192,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   Map<String, MarkStyle>? _cachedTextSpanMarkedWords;
   Brightness? _cachedTextSpanBrightness;
 
-  // Cached `\n` positions for the current content. Indexed by 0-based line
-  // number; entry N is the global character offset where line N+1 starts.
+  // Cached TextPainter-space offsets of each line start, derived from the
+  // parsed segments (so that ruby `WidgetSpan`s count as 1 caret unit each
+  // rather than the raw markup length). Indexed by 0-based line number.
   // Invalidated when `widget.content` identity changes (see didUpdateWidget).
   List<int>? _lineStartOffsets;
 
@@ -316,12 +371,13 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   /// has not been populated yet or the line is out of range.
   double _measureLineNumberOffset({
     required int lineNumber,
+    required List<TextSegment> segments,
     required InlineSpan textSpan,
     required double maxWidth,
     required double fontSize,
   }) {
-    final lineStarts = _lineStartOffsets ??=
-        computeLineStartOffsets(widget.content);
+    final lineStarts =
+        _lineStartOffsets ??= computeTextPainterLineStartOffsets(segments);
     final idx = lineNumber - 1;
     if (idx < 0 || idx >= lineStarts.length) return 0.0;
     return measureCharOffsetY(
@@ -341,6 +397,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   /// keys for bookmarks that were removed since the cache was populated.
   Map<int, double> _bookmarkLineYsFor({
     required List<int> lines,
+    required List<TextSegment> segments,
     required InlineSpan textSpan,
     required TextStyle? textStyle,
     required double maxWidth,
@@ -360,7 +417,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     }
 
     final lineStarts =
-        _lineStartOffsets ??= computeLineStartOffsets(widget.content);
+        _lineStartOffsets ??= computeTextPainterLineStartOffsets(segments);
     final dims = _placeholderDimensionsFor(textSpan, fontSize);
     final painter = TextPainter(
       text: textSpan,
@@ -392,6 +449,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
 
   void _scrollToLineNumber({
     required int lineNumber,
+    required List<TextSegment> segments,
     required InlineSpan textSpan,
     required double maxWidth,
     required double fontSize,
@@ -401,6 +459,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     final maxOffset = _scrollController.position.maxScrollExtent;
     final clampedOffset = _measureLineNumberOffset(
       lineNumber: lineNumber,
+      segments: segments,
       textSpan: textSpan,
       maxWidth: maxWidth,
       fontSize: fontSize,
@@ -548,6 +607,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
                 if (!identical(widget.content, scheduledContent)) return;
                 _scrollToLineNumber(
                   lineNumber: activeMatch.lineNumber,
+                  segments: segments,
                   textSpan: textSpan,
                   maxWidth: textMaxWidth,
                   fontSize: fontSize,
@@ -563,6 +623,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
               if (!identical(widget.content, scheduledContent)) return;
               _scrollToLineNumber(
                 lineNumber: targetLine,
+                segments: segments,
                 textSpan: textSpan,
                 maxWidth: textMaxWidth,
                 fontSize: fontSize,
@@ -601,6 +662,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
               ),
               ..._bookmarkLineYsFor(
                 lines: bookmarkLines,
+                segments: segments,
                 textSpan: textSpan,
                 textStyle: textStyle,
                 maxWidth: textMaxWidth,
