@@ -75,11 +75,16 @@ List<int> computeTextPainterLineStartOffsets(List<TextSegment> segments) {
 /// Returns the Y coordinate of the caret at [globalCharOffset] when
 /// [textSpan] is laid out with [maxWidth].
 ///
-/// Any [WidgetSpan] inside the tree is given an approximate placeholder
-/// dimension derived from [fontSize] (with [RubyTextWidget] sized to its
-/// `base.length × fontSize` width and `1.5 × fontSize` height to account for
-/// the ruby gloss). This matches the actual `SelectableText.rich` layout
-/// within roughly half a line, which is sufficient for scroll targeting.
+/// [globalCharOffset] is in TextPainter caret-offset space — for content
+/// containing ruby annotations, compute it via
+/// [computeTextPainterLineStartOffsets] (which collapses each
+/// [WidgetSpan] to one caret unit) rather than from raw content offsets.
+///
+/// Each [WidgetSpan] is given placeholder dimensions by
+/// [_placeholderDimensionsFor]: for [RubyTextWidget] the width is measured
+/// exactly with a sub-TextPainter over the base and ruby text (so half-width
+/// glyphs are not double-counted) and the height is approximated as
+/// `1.5 × fontSize` to account for the ruby gloss stacked above the base.
 @visibleForTesting
 double measureCharOffsetY({
   required InlineSpan textSpan,
