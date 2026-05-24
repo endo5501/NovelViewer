@@ -43,19 +43,27 @@ Widget _wrapWithBrightness(
   ProviderContainer container,
   Brightness brightness,
 ) {
+  final themeData = ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: Colors.blueGrey,
+      brightness: brightness,
+    ),
+    useMaterial3: true,
+  );
   return UncontrolledProviderScope(
     container: container,
     child: MaterialApp(
       locale: const Locale('ja'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blueGrey,
-          brightness: brightness,
-        ),
-        useMaterial3: true,
-      ),
+      // Pin both slots to the same brightness-matching theme and use
+      // themeMode explicitly so a future maintainer adding darkTheme: for
+      // symmetry cannot silently route the dark test to the light theme
+      // via the default themeMode: ThemeMode.system.
+      theme: themeData,
+      darkTheme: themeData,
+      themeMode:
+          brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
       home: Scaffold(body: child),
     ),
   );
@@ -385,6 +393,12 @@ void main() {
       expect(material.color, colorScheme.surfaceContainerHighest,
           reason: 'Popup background must use surfaceContainerHighest token');
 
+      // Elevation is the shadow half of the dual visual-separation cue
+      // (shadow + border). Drop-shadow vanishing would silently regress
+      // half the design even if the border survives.
+      expect(material.elevation, 4.0,
+          reason: 'Popup elevation must remain 4');
+
       expect(material.shape, isA<RoundedRectangleBorder>(),
           reason: 'Popup shape must be a RoundedRectangleBorder');
       final shape = material.shape! as RoundedRectangleBorder;
@@ -393,6 +407,10 @@ void main() {
           reason: 'Popup border must use outlineVariant token');
       expect(shape.side.width, 1.0,
           reason: 'Popup border width must be 1 px');
+      // BorderStyle.none would keep color/width equal but render no line —
+      // pin solid so that subtle regression cannot pass silently.
+      expect(shape.side.style, BorderStyle.solid,
+          reason: 'Popup border must be visibly drawn (solid style)');
 
       expect(shape.borderRadius, BorderRadius.circular(6),
           reason: 'Popup corner radius must remain 6 px');
@@ -515,6 +533,157 @@ void main() {
         expect(find.byKey(const Key('hover_popup_loading')), findsOneWidget,
             reason: 'Loading-state card must be the one rendered');
         verifyCardSurface(tester);
+      },
+    );
+
+    testWidgets(
+      'type-toggle border uses outlineVariant token to align with card edge',
+      (tester) async {
+        final container = ProviderContainer(overrides: [
+          hoverPopupCacheProvider(_aliceKey).overrideWith(
+            (_) async => WordSummariesByType(
+              noSpoiler: _summary(type: SummaryType.noSpoiler, text: 'なし'),
+              spoiler: _summary(type: SummaryType.spoiler, text: 'あり'),
+            ),
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        // The notifier must be visible so the toggle pill renders.
+        container.read(hoverPopupProvider.notifier).show(
+              word: 'アリス',
+              position: const Offset(0, 0),
+              token: const (start: 0, end: 3),
+            );
+
+        await tester.pumpWidget(_wrapWithBrightness(
+          const HoverPopupWidget(
+            folder: 'novel_a',
+            word: 'アリス',
+            currentFileName: null,
+          ),
+          container,
+          Brightness.dark,
+        ));
+        await tester.pumpAndSettle();
+
+        final toggleFinder = find.byKey(const Key('hover_popup_type_toggle'));
+        expect(toggleFinder, findsOneWidget);
+        final container_ = tester.widget<Container>(toggleFinder);
+        final decoration = container_.decoration! as BoxDecoration;
+        final border = decoration.border! as Border;
+        final colorScheme =
+            Theme.of(tester.element(toggleFinder)).colorScheme;
+
+        // The pill-row border must share the outer card's outlineVariant
+        // token so the two borders read as a single coherent panel rather
+        // than nested concentric outlines with inverted strength
+        // (dividerColor → outline is *stronger* than outlineVariant in M3).
+        expect(border.top.color, colorScheme.outlineVariant,
+            reason:
+                'Toggle border must use outlineVariant to avoid stronger '
+                'inner outline than the new card border');
+      },
+    );
+
+    testWidgets(
+      '_Card preserves overall size and child layout',
+      (tester) async {
+        final container = ProviderContainer(overrides: [
+          hoverPopupCacheProvider(_aliceKey).overrideWith(
+            (_) async => WordSummariesByType(
+              noSpoiler: _summary(type: SummaryType.noSpoiler, text: '本文'),
+            ),
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(_wrapWithBrightness(
+          const HoverPopupWidget(
+            folder: 'novel_a',
+            word: 'アリス',
+            currentFileName: null,
+          ),
+          container,
+          Brightness.light,
+        ));
+        await tester.pumpAndSettle();
+
+        final cardFinder = find.byKey(const Key('hover_popup_card'));
+
+        // ConstrainedBox(maxWidth: 320) is the original popup width cap.
+        final constrainedFinder = find.descendant(
+          of: cardFinder,
+          matching: find.byWidgetPredicate(
+            (w) => w is ConstrainedBox && w.constraints.maxWidth == 320,
+          ),
+        );
+        expect(constrainedFinder, findsOneWidget,
+            reason:
+                'Popup must keep its ConstrainedBox(maxWidth: 320) cap');
+
+        // Inner content padding fromLTRB(12, 8, 12, 10) is the original
+        // breathing room around the summary text + toggle pill.
+        final paddingFinder = find.descendant(
+          of: cardFinder,
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is Padding &&
+                w.padding == const EdgeInsets.fromLTRB(12, 8, 12, 10),
+          ),
+        );
+        expect(paddingFinder, findsOneWidget,
+            reason:
+                'Popup must keep its original fromLTRB(12, 8, 12, 10) '
+                'content padding');
+      },
+    );
+
+    testWidgets(
+      '_LoadingCard preserves overall size and child layout',
+      (tester) async {
+        final completer = Completer<WordSummariesByType>();
+        final container = ProviderContainer(overrides: [
+          hoverPopupCacheProvider(_aliceKey)
+              .overrideWith((_) => completer.future),
+        ]);
+        addTearDown(container.dispose);
+        addTearDown(() {
+          if (!completer.isCompleted) {
+            completer.complete(const WordSummariesByType());
+          }
+        });
+
+        await tester.pumpWidget(_wrapWithBrightness(
+          const HoverPopupWidget(
+            folder: 'novel_a',
+            word: 'アリス',
+            currentFileName: null,
+          ),
+          container,
+          Brightness.light,
+        ));
+        await tester.pump();
+
+        final cardFinder = find.byKey(const Key('hover_popup_card'));
+
+        final paddingFinder = find.descendant(
+          of: cardFinder,
+          matching: find.byWidgetPredicate(
+            (w) => w is Padding && w.padding == const EdgeInsets.all(12),
+          ),
+        );
+        expect(paddingFinder, findsOneWidget,
+            reason:
+                'Loading card must keep its original EdgeInsets.all(12) '
+                'padding');
+
+        final spinner = tester.widget<SizedBox>(
+            find.byKey(const Key('hover_popup_loading')));
+        expect(spinner.width, 24,
+            reason: 'Loading spinner width must remain 24');
+        expect(spinner.height, 24,
+            reason: 'Loading spinner height must remain 24');
       },
     );
   });
