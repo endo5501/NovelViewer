@@ -159,6 +159,22 @@
   "contextMenu_copiedToClipboard": "Copied to clipboard",
 
   "llmAnalysis_inProgress": "Analyzing...",
+  "llmAnalysis_extractingFacts": "Extracting facts ({current} / {total})",
+  "@llmAnalysis_extractingFacts": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "llmAnalysis_refiningRound": "Refining round {round} ({current} / {total})",
+  "@llmAnalysis_refiningRound": {
+    "placeholders": {
+      "round": { "type": "int" },
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "llmAnalysis_generatingFinal": "Generating final summary...",
   "llmAnalysis_noFolderOpen": "Please open a novel folder first",
   "llmAnalysis_noLlmConfigured": "Please configure LLM in Settings",
   "llmAnalysis_failed": "Analysis failed: {error}",

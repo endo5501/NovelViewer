@@ -4,6 +4,7 @@ import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/llm_summary/data/context_chunker.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_prompt_builder.dart';
+import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 
 final _log = Logger('llm_summary');
 
@@ -21,8 +22,14 @@ class LlmSummaryPipeline {
   Future<String> generate({
     required String word,
     required List<String> contexts,
+    void Function(AnalysisProgress progress)? onProgress,
   }) async {
+    // Isolate UI-callback failures so a buggy progress listener can never
+    // abort data-layer generation (and waste LLM tokens already consumed).
+    final notify = _isolatedNotifier(onProgress);
+
     if (contexts.isEmpty) {
+      notify(const AnalysisGeneratingFinalSummary());
       final prompt = LlmPromptBuilder.buildFinalSummaryPrompt(
         word: word,
         facts: '',
@@ -30,8 +37,9 @@ class LlmSummaryPipeline {
       return _parseSummaryResponse(await llmClient.generate(prompt));
     }
 
-    final facts = await _extractFactsRecursive(word, contexts, 0);
+    final facts = await _extractFactsRecursive(word, contexts, 0, notify);
 
+    notify(const AnalysisGeneratingFinalSummary());
     final prompt = LlmPromptBuilder.buildFinalSummaryPrompt(
       word: word,
       facts: facts,
@@ -39,20 +47,40 @@ class LlmSummaryPipeline {
     return _parseSummaryResponse(await llmClient.generate(prompt));
   }
 
+  static void Function(AnalysisProgress) _isolatedNotifier(
+    void Function(AnalysisProgress)? onProgress,
+  ) {
+    if (onProgress == null) return (_) {};
+    return (event) {
+      try {
+        onProgress(event);
+      } catch (e, st) {
+        _log.warning('onProgress callback threw; ignoring', e, st);
+      }
+    };
+  }
+
   Future<String> _extractFactsRecursive(
     String word,
     List<String> entries,
     int depth,
+    void Function(AnalysisProgress progress) notify,
   ) async {
     if (depth >= maxRecursionDepth) {
       return entries.join('\n');
     }
 
     final chunks = ContextChunker.split(entries, maxChunkSize: maxChunkSize);
+    final round = depth + 1;
 
     final factsList = <String>[];
-    for (final chunk in chunks) {
-      final contextBlock = chunk.join('\n---\n');
+    for (var i = 0; i < chunks.length; i++) {
+      notify(AnalysisExtractingFacts(
+        round: round,
+        current: i + 1,
+        total: chunks.length,
+      ));
+      final contextBlock = chunks[i].join('\n---\n');
       final prompt = LlmPromptBuilder.buildFactExtractionPrompt(
         word: word,
         contextChunk: contextBlock,
@@ -69,7 +97,7 @@ class LlmSummaryPipeline {
       return combinedFacts;
     }
 
-    return _extractFactsRecursive(word, factsList, depth + 1);
+    return _extractFactsRecursive(word, factsList, depth + 1, notify);
   }
 
   String _parseFactsResponse(String response) =>

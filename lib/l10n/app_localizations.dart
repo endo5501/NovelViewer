@@ -988,6 +988,24 @@ abstract class AppLocalizations {
   /// **'解析中…'**
   String get llmAnalysis_inProgress;
 
+  /// No description provided for @llmAnalysis_extractingFacts.
+  ///
+  /// In ja, this message translates to:
+  /// **'情報を抽出中 ({current} / {total})'**
+  String llmAnalysis_extractingFacts(int current, int total);
+
+  /// No description provided for @llmAnalysis_refiningRound.
+  ///
+  /// In ja, this message translates to:
+  /// **'絞り込み {round} 周目 ({current} / {total})'**
+  String llmAnalysis_refiningRound(int round, int current, int total);
+
+  /// No description provided for @llmAnalysis_generatingFinal.
+  ///
+  /// In ja, this message translates to:
+  /// **'最終要約を生成中…'**
+  String get llmAnalysis_generatingFinal;
+
   /// No description provided for @llmAnalysis_noFolderOpen.
   ///
   /// In ja, this message translates to:

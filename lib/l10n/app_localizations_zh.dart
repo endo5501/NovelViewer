@@ -494,6 +494,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get llmAnalysis_inProgress => '正在分析…';
 
   @override
+  String llmAnalysis_extractingFacts(int current, int total) {
+    return '正在提取信息 ($current / $total)';
+  }
+
+  @override
+  String llmAnalysis_refiningRound(int round, int current, int total) {
+    return '归纳第 $round 轮 ($current / $total)';
+  }
+
+  @override
+  String get llmAnalysis_generatingFinal => '正在生成最终摘要…';
+
+  @override
   String get llmAnalysis_noFolderOpen => '请先打开小说文件夹';
 
   @override

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart';
+import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 
 class _MockLlmClient extends LlmClient {
   final List<String> responses;
@@ -200,6 +201,178 @@ void main() {
       );
 
       expect(result, 'コードフェンス対応済み。');
+    });
+  });
+
+  group('LlmSummaryPipeline progress notifications', () {
+    test('initial fact extraction emits one event per chunk with round=1',
+        () async {
+      // 2 contexts, small maxChunkSize → 2 extraction chunks + 1 final summary
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': '- 事実1'}),
+        jsonEncode({'facts': '- 事実2'}),
+        jsonEncode({'summary': 'まとめ'}),
+      ]);
+
+      final pipeline = LlmSummaryPipeline(
+        llmClient: mockClient,
+        maxChunkSize: 15,
+      );
+
+      final events = <AnalysisProgress>[];
+      await pipeline.generate(
+        word: 'テスト',
+        contexts: [
+          'コンテキスト一つめ',
+          'コンテキスト二つめ',
+        ],
+        onProgress: events.add,
+      );
+
+      // Filter the extracting-facts events of round 1
+      final round1Events = events
+          .whereType<AnalysisExtractingFacts>()
+          .where((e) => e.round == 1)
+          .toList();
+
+      expect(round1Events.length, 2);
+      expect(round1Events[0].current, 1);
+      expect(round1Events[0].total, 2);
+      expect(round1Events[1].current, 2);
+      expect(round1Events[1].total, 2);
+    });
+
+    test('recursive refinement increments round and resets current', () async {
+      // Reuse the recursion fixture from the existing recursion test.
+      final mediumFacts = '- ${'あ' * 18}';
+      const shortFacts = '- 短い事実';
+
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': mediumFacts}),
+        jsonEncode({'facts': mediumFacts}),
+        jsonEncode({'facts': mediumFacts}),
+        jsonEncode({'facts': shortFacts}),
+        jsonEncode({'facts': shortFacts}),
+        jsonEncode({'summary': '最終要約。'}),
+      ]);
+
+      final pipeline = LlmSummaryPipeline(
+        llmClient: mockClient,
+        maxChunkSize: 50,
+      );
+
+      final contexts =
+          List.generate(3, (i) => '${'テスト' * 10}コンテキスト$i');
+
+      final events = <AnalysisProgress>[];
+      await pipeline.generate(
+        word: 'テスト',
+        contexts: contexts,
+        onProgress: events.add,
+      );
+
+      // Round 1 events
+      final round1 = events
+          .whereType<AnalysisExtractingFacts>()
+          .where((e) => e.round == 1)
+          .toList();
+      expect(round1.length, 3);
+      expect(round1.map((e) => e.current), [1, 2, 3]);
+      expect(round1.every((e) => e.total == 3), isTrue);
+
+      // Round 2 (refinement) events
+      final round2 = events
+          .whereType<AnalysisExtractingFacts>()
+          .where((e) => e.round == 2)
+          .toList();
+      expect(round2.length, 2);
+      expect(round2.map((e) => e.current), [1, 2]);
+      expect(round2.every((e) => e.total == 2), isTrue);
+
+      // Round 2 must come after all round-1 events
+      final round1LastIndex =
+          events.lastIndexWhere((e) => e is AnalysisExtractingFacts && e.round == 1);
+      final round2FirstIndex =
+          events.indexWhere((e) => e is AnalysisExtractingFacts && e.round == 2);
+      expect(round2FirstIndex, greaterThan(round1LastIndex));
+    });
+
+    test('final summary event fires exactly once before the final LLM call',
+        () async {
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': '- 事実'}),
+        jsonEncode({'summary': 'まとめ'}),
+      ]);
+
+      final pipeline = LlmSummaryPipeline(llmClient: mockClient);
+
+      final events = <AnalysisProgress>[];
+      await pipeline.generate(
+        word: 'テスト',
+        contexts: ['短いコンテキスト'],
+        onProgress: events.add,
+      );
+
+      final finals = events.whereType<AnalysisGeneratingFinalSummary>().toList();
+      expect(finals.length, 1);
+      // Final event must be the very last event in the stream
+      expect(events.last, isA<AnalysisGeneratingFinalSummary>());
+    });
+
+    test('empty contexts still emit the final summary event', () async {
+      final mockClient = _MockLlmClient([
+        jsonEncode({'summary': '情報なし。'}),
+      ]);
+
+      final pipeline = LlmSummaryPipeline(llmClient: mockClient);
+
+      final events = <AnalysisProgress>[];
+      await pipeline.generate(
+        word: 'テスト',
+        contexts: [],
+        onProgress: events.add,
+      );
+
+      expect(events.length, 1);
+      expect(events.single, isA<AnalysisGeneratingFinalSummary>());
+    });
+
+    test('omitting onProgress preserves existing behavior', () async {
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': '- 事実'}),
+        jsonEncode({'summary': 'プログレス無しでも動く'}),
+      ]);
+
+      final pipeline = LlmSummaryPipeline(llmClient: mockClient);
+      final result = await pipeline.generate(
+        word: 'テスト',
+        contexts: ['コンテキスト'],
+      );
+
+      expect(result, 'プログレス無しでも動く');
+      expect(mockClient.callCount, 2);
+    });
+
+    test('throwing onProgress does not abort the pipeline', () async {
+      // A UI callback throwing must NOT break data-layer generation: the
+      // pipeline isolates progress-callback failures so the summary still
+      // completes and the LLM tokens already consumed are not wasted.
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': '- 事実'}),
+        jsonEncode({'summary': '隔離成功'}),
+      ]);
+
+      final pipeline = LlmSummaryPipeline(llmClient: mockClient);
+      final result = await pipeline.generate(
+        word: 'テスト',
+        contexts: ['コンテキスト'],
+        onProgress: (_) {
+          throw StateError('callback boom');
+        },
+      );
+
+      expect(result, '隔離成功');
+      expect(mockClient.callCount, 2);
     });
   });
 }

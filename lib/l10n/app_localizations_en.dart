@@ -504,6 +504,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get llmAnalysis_inProgress => 'Analyzing...';
 
   @override
+  String llmAnalysis_extractingFacts(int current, int total) {
+    return 'Extracting facts ($current / $total)';
+  }
+
+  @override
+  String llmAnalysis_refiningRound(int round, int current, int total) {
+    return 'Refining round $round ($current / $total)';
+  }
+
+  @override
+  String get llmAnalysis_generatingFinal => 'Generating final summary...';
+
+  @override
   String get llmAnalysis_noFolderOpen => 'Please open a novel folder first';
 
   @override
