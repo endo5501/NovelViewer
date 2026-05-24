@@ -1,3 +1,4 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
@@ -192,18 +193,23 @@ void main() {
     });
 
     test('hideIfShowing hides only when the same token is active', () {
-      final container = makeContainer();
-      final notifier = container.read(hoverPopupProvider.notifier);
+      fakeAsync((async) {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(hoverPopupProvider.notifier);
 
-      notifier.show(
-          word: 'アリス', position: const Offset(0, 0), token: _tokenA);
-      notifier.hideIfShowing(_tokenB);
-      expect(container.read(hoverPopupProvider).hoverToken, _tokenA,
-          reason: 'hideIfShowing(B) must not hide an active A popup');
+        notifier.show(
+            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+        notifier.hideIfShowing(_tokenB);
+        async.elapse(const Duration(milliseconds: 500));
+        expect(container.read(hoverPopupProvider).hoverToken, _tokenA,
+            reason: 'hideIfShowing(B) must not hide an active A popup');
 
-      notifier.hideIfShowing(_tokenA);
-      expect(container.read(hoverPopupProvider).isVisible, isFalse,
-          reason: 'hideIfShowing must hide when tokens match');
+        notifier.hideIfShowing(_tokenA);
+        async.elapse(const Duration(milliseconds: 500));
+        expect(container.read(hoverPopupProvider).isVisible, isFalse,
+            reason: 'hideIfShowing must hide when tokens match');
+      });
     });
 
     test(
@@ -238,51 +244,161 @@ void main() {
     });
   });
 
-  group('hover transition A -> B (cross-event ordering)', () {
-    ProviderContainer makeContainer() {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      return container;
-    }
+  group('popup-hover grace period', () {
+    test(
+        'hideIfShowing schedules a deferred hide that fires after the grace '
+        'period when the popup was never entered', () {
+      fakeAsync((async) {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(hoverPopupProvider.notifier);
 
+        notifier.show(
+            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+        notifier.hideIfShowing(_tokenA);
+
+        // Still visible immediately after the exit handler fires.
+        expect(container.read(hoverPopupProvider).isVisible, isTrue,
+            reason:
+                'Hide must be deferred so the pointer can travel from the '
+                'marked span to the popup widget');
+
+        async.elapse(const Duration(milliseconds: 200));
+
+        expect(container.read(hoverPopupProvider).isVisible, isFalse,
+            reason: 'After the grace period elapses, the popup hides');
+      });
+    });
+
+    test(
+        'onPopupEnter during the grace window cancels the deferred hide so '
+        'the popup stays visible while the pointer is inside it', () {
+      fakeAsync((async) {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(hoverPopupProvider.notifier);
+
+        notifier.show(
+            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+        notifier.hideIfShowing(_tokenA);
+        async.elapse(const Duration(milliseconds: 80));
+        notifier.onPopupEnter();
+        async.elapse(const Duration(milliseconds: 500));
+
+        expect(container.read(hoverPopupProvider).isVisible, isTrue,
+            reason:
+                'A timely onPopupEnter must cancel the scheduled hide so the '
+                'user can interact with the popup');
+      });
+    });
+
+    test('onPopupExit hides the popup immediately', () {
+      fakeAsync((async) {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(hoverPopupProvider.notifier);
+
+        notifier.show(
+            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+        notifier.onPopupEnter();
+        async.flushMicrotasks();
+        notifier.onPopupExit();
+
+        expect(container.read(hoverPopupProvider).isVisible, isFalse,
+            reason:
+                'Leaving the popup itself bypasses the grace period — the '
+                'user has clearly moved on');
+      });
+    });
+
+    test(
+        'show() cancels any pending hide timer so re-entering a marked span '
+        'immediately keeps the popup visible', () {
+      fakeAsync((async) {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(hoverPopupProvider.notifier);
+
+        notifier.show(
+            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+        notifier.hideIfShowing(_tokenA);
+        async.elapse(const Duration(milliseconds: 50));
+        // Pointer re-enters a marked span before the grace period elapses.
+        notifier.show(
+            word: 'ボブ', position: const Offset(20, 0), token: _tokenB);
+        async.elapse(const Duration(milliseconds: 500));
+
+        final state = container.read(hoverPopupProvider);
+        expect(state.isVisible, isTrue);
+        expect(state.word, 'ボブ');
+      });
+    });
+
+    test(
+        'while the popup is hovered, a stale exit(token) does NOT close it '
+        'even after the grace period', () {
+      fakeAsync((async) {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(hoverPopupProvider.notifier);
+
+        notifier.show(
+            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+        notifier.onPopupEnter();
+        // Pointer is inside the popup; a stray exit handler arrives.
+        notifier.hideIfShowing(_tokenA);
+        async.elapse(const Duration(milliseconds: 500));
+
+        expect(container.read(hoverPopupProvider).isVisible, isTrue);
+      });
+    });
+  });
+
+  group('hover transition A -> B (cross-event ordering)', () {
     test(
         'when framework emits [exit(A), enter(B)] in order, final state is B',
         () {
-      final container = makeContainer();
-      final notifier = container.read(hoverPopupProvider.notifier);
+      fakeAsync((async) {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(hoverPopupProvider.notifier);
 
-      notifier.show(
-          word: 'A', position: const Offset(10, 10), token: _tokenA);
+        notifier.show(
+            word: 'A', position: const Offset(10, 10), token: _tokenA);
 
-      notifier.hideIfShowing(_tokenA);
-      notifier.show(
-          word: 'B', position: const Offset(20, 20), token: _tokenB);
+        notifier.hideIfShowing(_tokenA);
+        notifier.show(
+            word: 'B', position: const Offset(20, 20), token: _tokenB);
+        async.elapse(const Duration(milliseconds: 500));
 
-      final state = container.read(hoverPopupProvider);
-      expect(state.word, 'B');
-      expect(state.position, const Offset(20, 20));
+        final state = container.read(hoverPopupProvider);
+        expect(state.word, 'B');
+        expect(state.position, const Offset(20, 20));
+      });
     });
 
     test(
         'when framework emits [enter(B), exit(A)] in order, final state is still B',
         () {
-      final container = makeContainer();
-      final notifier = container.read(hoverPopupProvider.notifier);
+      fakeAsync((async) {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(hoverPopupProvider.notifier);
 
-      notifier.show(
-          word: 'A', position: const Offset(10, 10), token: _tokenA);
+        notifier.show(
+            word: 'A', position: const Offset(10, 10), token: _tokenA);
 
-      // Framework: entering B FIRST, then leaving A. The exit handler must
-      // not clobber B because the active token is no longer A.
-      notifier.show(
-          word: 'B', position: const Offset(20, 20), token: _tokenB);
-      notifier.hideIfShowing(_tokenA);
+        notifier.show(
+            word: 'B', position: const Offset(20, 20), token: _tokenB);
+        notifier.hideIfShowing(_tokenA);
+        async.elapse(const Duration(milliseconds: 500));
 
-      final state = container.read(hoverPopupProvider);
-      expect(state.word, 'B',
-          reason:
-              'Out-of-order exit(A) after enter(B) must NOT hide the popup');
-      expect(state.position, const Offset(20, 20));
+        final state = container.read(hoverPopupProvider);
+        expect(state.word, 'B',
+            reason:
+                'Out-of-order exit(A) after enter(B) must NOT hide the popup');
+        expect(state.position, const Offset(20, 20));
+      });
     });
   });
 }

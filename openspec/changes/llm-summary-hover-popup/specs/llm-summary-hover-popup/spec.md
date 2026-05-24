@@ -1,15 +1,24 @@
 ## ADDED Requirements
 
 ### Requirement: Hover popup on marked words in horizontal mode
-In horizontal display mode, the text viewer SHALL display a popup widget over the text when the mouse pointer enters the screen region of any marked word (a word with a dotted or solid mark from `llm-summary`'s mark rendering). The popup SHALL be displayed only while the pointer remains within the marked word's character range and SHALL disappear immediately when the pointer leaves that range. The popup SHALL NOT trigger for unmarked text.
+In horizontal display mode, the text viewer SHALL display a popup widget over the text when the mouse pointer enters the screen region of any marked word (a word with a dotted or solid mark from `llm-summary`'s mark rendering). The popup SHALL be displayed while the pointer remains within either the marked word's character range OR the popup widget itself; when the pointer leaves the marked word, a short grace period (~150 ms) SHALL allow the pointer to travel into the popup to interact with controls such as the no-spoiler / spoiler toggle. The popup SHALL NOT trigger for unmarked text.
 
 #### Scenario: Hover over a marked word shows popup
 - **WHEN** the user moves the mouse pointer onto an occurrence of the word "アリス" which has a cached summary for the active folder, in horizontal display mode
 - **THEN** a popup widget SHALL appear near the pointer position displaying the cached summary text for "アリス"
 
-#### Scenario: Pointer leaves marked word hides popup
-- **WHEN** the popup is being displayed and the user moves the mouse pointer outside the character range of the marked word
-- **THEN** the popup SHALL disappear immediately
+#### Scenario: Pointer leaves marked word without reaching popup hides it
+- **WHEN** the popup is displayed, the user moves the pointer off the marked word, and the pointer does NOT enter the popup widget within the grace period
+- **THEN** the popup SHALL disappear after the grace period elapses
+
+#### Scenario: Pointer enters popup before grace period elapses keeps it visible
+- **WHEN** the popup is displayed and the user moves the pointer from the marked word into the popup widget within the grace period
+- **THEN** the popup SHALL remain visible for as long as the pointer stays inside the popup
+- **AND** the user SHALL be able to click controls inside the popup such as the no-spoiler / spoiler toggle pill
+
+#### Scenario: Pointer leaves popup hides it immediately
+- **WHEN** the popup is displayed, the pointer is currently inside the popup widget, and the pointer leaves the popup
+- **THEN** the popup SHALL disappear immediately without waiting for the grace period
 
 #### Scenario: Hover over unmarked text does not show popup
 - **WHEN** the user moves the mouse pointer over text that is not marked (no cached summary)
@@ -55,19 +64,15 @@ When the popup is displaying a no-spoiler summary whose source `word_summaries.s
 - **WHEN** the popup is displaying the spoiler summary for "アリス" (regardless of `source_file` value)
 - **THEN** the popup SHALL NOT display the reference-position warning
 
-### Requirement: Popup content is non-interactive (no copy)
-The popup body SHALL render the summary text as non-selectable plain text. The popup SHALL NOT capture pointer events that would prevent the underlying hover detection from firing the exit handler when the pointer leaves the marked word range.
+### Requirement: Popup body text is non-selectable
+The popup body SHALL render the summary text as non-selectable plain text. (Users who want to copy summary text use the copy actions on the analysis history panel — see `llm-summary-history-ui`.)
 
 #### Scenario: Popup text is not selectable
 - **WHEN** the popup is displayed and the user attempts to drag-select text within it
 - **THEN** no text selection SHALL occur in the popup
 
-#### Scenario: Pointer moving from marked word toward popup still hides popup when leaving the word range
-- **WHEN** the popup is displayed and the user moves the pointer off the marked word into any other area (including the area occupied by the popup itself)
-- **THEN** the popup SHALL disappear
-
 ### Requirement: Popup display while cache is loading
-When the popup is triggered, the system SHALL fetch the cached summary asynchronously from the `word_summaries` table. While the fetch is in flight, the popup SHALL display a small loading indicator. If the fetch resolves to a value, the popup SHALL display the resolved content. If the pointer leaves the marked word range before the fetch resolves, the popup SHALL be hidden and the resolved data SHALL be discarded.
+When the popup is triggered, the system SHALL fetch the cached summary asynchronously from the `word_summaries` table. While the fetch is in flight, the popup SHALL display a small loading indicator. If the fetch resolves to a value, the popup SHALL display the resolved content. If the pointer leaves the marked word range (and does not enter the popup within the grace period) before the fetch resolves, the popup SHALL be hidden and the resolved data SHALL be discarded.
 
 #### Scenario: Loading indicator while cache fetch in flight
 - **WHEN** the user hovers over a marked word and the cache fetch has not yet completed

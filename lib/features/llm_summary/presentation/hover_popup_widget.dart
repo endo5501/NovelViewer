@@ -30,8 +30,9 @@ class HoverPopupWidget extends ConsumerWidget {
     final activeType = ref.watch(
       hoverPopupProvider.select((s) => s.activeType),
     );
+    final notifier = ref.read(hoverPopupProvider.notifier);
 
-    return cacheAsync.when(
+    final body = cacheAsync.when(
       loading: _LoadingCard.new,
       error: (_, _) => const SizedBox.shrink(),
       data: (summaries) {
@@ -53,11 +54,19 @@ class HoverPopupWidget extends ConsumerWidget {
           summaryText: displayed.summary,
           showToggle: hasBoth,
           activeType: activeType,
-          onTypeChange: (t) =>
-              ref.read(hoverPopupProvider.notifier).setSummaryType(t),
+          onTypeChange: notifier.setSummaryType,
           showReferenceWarning: showWarning,
         );
       },
+    );
+
+    // Wrapping the popup itself in a MouseRegion lets the notifier suppress
+    // the grace-period hide while the pointer is inside the popup, so the
+    // user can click the [なし|あり] toggle without the popup vanishing.
+    return MouseRegion(
+      onEnter: (_) => notifier.onPopupEnter(),
+      onExit: (_) => notifier.onPopupExit(),
+      child: body,
     );
   }
 }
