@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart' show TextSelection;
+
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 
 final _rubyPattern = RegExp(
@@ -68,6 +70,22 @@ String extractSelectedText(
   }
 
   return buffer.toString();
+}
+
+/// Converts a [TextSelection] from `SelectableText.rich` (which uses display
+/// offsets where each WidgetSpan counts as one U+FFFC character) into the
+/// underlying text with ruby base expanded. Returns the empty string for
+/// invalid or collapsed selections.
+///
+/// `selection.start` / `selection.end` are already SDK-normalized to the
+/// `min`/`max` of `baseOffset`/`extentOffset`, so reversed (right-to-left)
+/// drags do not need extra normalization here.
+String selectedTextFromSelection(
+  TextSelection selection,
+  List<TextSegment> segments,
+) {
+  if (!selection.isValid || selection.isCollapsed) return '';
+  return extractSelectedText(selection.start, selection.end, segments);
 }
 
 String buildPlainText(List<TextSegment> segments) {

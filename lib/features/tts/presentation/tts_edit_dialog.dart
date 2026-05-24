@@ -571,9 +571,15 @@ class _TtsEditSegmentRowState extends State<_TtsEditSegmentRow> {
               contextMenuBuilder: widget.dictRepository == null
                   ? null
                   : (menuContext, editableTextState) {
+                      final value = editableTextState.textEditingValue;
+                      final sel = value.selection;
+                      final selectedText = sel.isValid && !sel.isCollapsed
+                          ? sel.textInside(value.text)
+                          : '';
                       return buildDictionaryContextMenu(
                         context,
                         editableTextState,
+                        selectedText: selectedText,
                         onAddToDictionary: (selectedText) {
                           TtsDictionaryDialog.show(
                             context,
