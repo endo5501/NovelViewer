@@ -75,7 +75,7 @@
 ## 13. 最終確認
 
 - [x] 13.1 code-reviewスキルを使用してコードレビューを実施 *(simplify deprecated → code-review. Applied: textSpan memoization, sorted-marks scan, stable callback methods, show() guard, l10n for pill labels, required params, HoverPopupCacheKey → record, selection.textInside, comment cleanup.)*
-- [ ] 13.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 13.2 codexスキルを使用して現在開発中のコードレビューを実施 *(applied: per-occurrence HoverToken (start,end) instead of word-based id so two occurrences of the same word are correctly distinguished; DialogRoute push + finally removeRoute for race-safe modal lifecycle. Skipped: Host snapshot vs widget-level watch — popup-during-file-switch is not a realistic interaction here.)*
 - [x] 13.3 `fvm flutter analyze`でリントを実行 *(clean: No issues found)*
 - [x] 13.4 `fvm flutter test`でテストを実行 *(1501 tests pass)*
 - [ ] 13.5 手動検証：横書きで [選択 → 右クリ → 解析開始(なし) → modal → 完了 SnackBar → 単語にmark下線 → ホバー → ポップアップ表示 → マウス離脱で消失] の一連の流れを確認

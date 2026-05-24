@@ -156,12 +156,14 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         );
   }
 
-  void _onMarkEnter(String word, Offset position) {
-    ref.read(hoverPopupProvider.notifier).show(word: word, position: position);
+  void _onMarkEnter(String word, Offset position, HoverToken token) {
+    ref
+        .read(hoverPopupProvider.notifier)
+        .show(word: word, position: position, token: token);
   }
 
-  void _onMarkExit(String word) {
-    ref.read(hoverPopupProvider.notifier).hideIfShowing(word);
+  void _onMarkExit(HoverToken token) {
+    ref.read(hoverPopupProvider.notifier).hideIfShowing(token);
   }
 
   void _scrollToTtsHighlight(

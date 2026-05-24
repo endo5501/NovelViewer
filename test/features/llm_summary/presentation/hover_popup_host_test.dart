@@ -106,6 +106,7 @@ void main() {
       container.read(hoverPopupProvider.notifier).show(
             word: 'アリス',
             position: const Offset(100, 100),
+            token: const (start: 0, end: 3),
           );
       await tester.pumpAndSettle();
 
@@ -125,6 +126,7 @@ void main() {
       container.read(hoverPopupProvider.notifier).show(
             word: 'アリス',
             position: const Offset(100, 100),
+            token: const (start: 0, end: 3),
           );
       await tester.pumpAndSettle();
       expect(find.byType(HoverPopupWidget), findsOneWidget);
@@ -148,6 +150,7 @@ void main() {
       container.read(hoverPopupProvider.notifier).show(
             word: 'アリス',
             position: const Offset(100, 100),
+            token: const (start: 0, end: 3),
           );
       await tester.pumpAndSettle();
 
@@ -168,6 +171,7 @@ void main() {
       container.read(hoverPopupProvider.notifier).show(
             word: 'アリス',
             position: const Offset(100, 100),
+            token: const (start: 0, end: 3),
           );
       await tester.pumpAndSettle();
       expect(find.byType(HoverPopupWidget), findsOneWidget);
@@ -200,6 +204,7 @@ void main() {
       container.read(hoverPopupProvider.notifier).show(
             word: 'アリス',
             position: const Offset(100, 100),
+            token: const (start: 0, end: 3),
           );
       await tester.pumpAndSettle();
 
@@ -249,6 +254,7 @@ void main() {
       container2.read(hoverPopupProvider.notifier).show(
             word: 'アリス',
             position: const Offset(100, 100),
+            token: const (start: 0, end: 3),
           );
       await tester.pumpAndSettle();
 

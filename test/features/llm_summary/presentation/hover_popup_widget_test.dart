@@ -134,6 +134,7 @@ void main() {
       container.read(hoverPopupProvider.notifier).show(
             word: 'アリス',
             position: const Offset(0, 0),
+            token: const (start: 0, end: 3),
           );
 
       await tester.pumpWidget(_wrap(
@@ -167,6 +168,7 @@ void main() {
       container.read(hoverPopupProvider.notifier).show(
             word: 'アリス',
             position: const Offset(0, 0),
+            token: const (start: 0, end: 3),
           );
 
       await tester.pumpWidget(_wrap(
@@ -295,6 +297,7 @@ void main() {
       container.read(hoverPopupProvider.notifier).show(
             word: 'アリス',
             position: const Offset(0, 0),
+            token: const (start: 0, end: 3),
           );
 
       await tester.pumpWidget(_wrap(

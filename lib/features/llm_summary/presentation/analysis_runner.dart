@@ -52,11 +52,12 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     if (!context.mounted) return;
     final navigator = Navigator.of(context, rootNavigator: true);
     final messenger = ScaffoldMessenger.of(context);
-    unawaited(showDialog<void>(
+    final modalRoute = DialogRoute<void>(
       context: context,
       barrierDismissible: false,
       builder: (_) => const _AnalysisModal(),
-    ));
+    );
+    unawaited(navigator.push(modalRoute));
 
     String? errorMessage;
     try {
@@ -72,10 +73,15 @@ class DefaultAnalysisRunner implements AnalysisRunner {
           hoverPopupCacheProvider((folder: folderName, word: word)));
     } catch (e) {
       errorMessage = e.toString();
+    } finally {
+      // Remove the modal explicitly by its own route so we never pop a
+      // sibling route the user may have opened during the await window.
+      if (modalRoute.isActive) {
+        navigator.removeRoute(modalRoute);
+      }
     }
 
-    navigator.pop();
-
+    if (!messenger.mounted) return;
     final message = errorMessage != null
         ? l10n.llmAnalysis_failed(errorMessage)
         : l10n.llmAnalysis_savedSummary(word);

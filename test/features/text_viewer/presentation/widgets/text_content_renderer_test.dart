@@ -130,9 +130,11 @@ void main() {
 
       // Even if some caller were to force the popup notifier visible, no
       // overlay would be inserted by TextContentRenderer (it is not a host).
-      container
-          .read(hoverPopupProvider.notifier)
-          .show(word: 'アリス', position: const Offset(0, 0));
+      container.read(hoverPopupProvider.notifier).show(
+            word: 'アリス',
+            position: const Offset(0, 0),
+            token: const (start: 0, end: 3),
+          );
       await tester.pumpAndSettle();
       expect(find.byType(HoverPopupWidget), findsNothing,
           reason: 'TextContentRenderer itself never inserts the hover popup; '

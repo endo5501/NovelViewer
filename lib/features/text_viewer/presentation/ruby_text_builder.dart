@@ -1,10 +1,12 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
+import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 
-typedef OnMarkEnter = void Function(String word, Offset position);
-typedef OnMarkExit = void Function(String word);
+typedef OnMarkEnter = void Function(
+    String word, Offset position, HoverToken token);
+typedef OnMarkExit = void Function(HoverToken token);
 
 class RubyTextWidget extends StatelessWidget {
   const RubyTextWidget({
@@ -254,6 +256,7 @@ List<InlineSpan> _applyLocalMarksToSpans(
                 decorationStyle: _decorationStyleFor(runMark.style),
               );
           final word = runMark.word;
+          final token = (start: runMark.start, end: runMark.end);
           output.add(TextSpan(
             text: subText,
             style: markStyle,
@@ -263,10 +266,10 @@ List<InlineSpan> _applyLocalMarksToSpans(
             onEnter: onMarkEnter == null
                 ? null
                 : (PointerEnterEvent event) =>
-                    onMarkEnter(word, event.position),
+                    onMarkEnter(word, event.position, token),
             onExit: onMarkExit == null
                 ? null
-                : (PointerExitEvent _) => onMarkExit(word),
+                : (PointerExitEvent _) => onMarkExit(token),
           ));
         }
         runStart = i;

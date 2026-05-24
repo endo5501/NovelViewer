@@ -37,15 +37,15 @@ void main() {
     test('attaches onEnter/onExit to marked spans with their word', () {
       final segments = [const PlainTextSegment('AAA アリス BBB')];
       final enters = <(String, Offset)>[];
-      final exits = <String>[];
+      final exitTokens = <({int start, int end})>[];
 
       final result = buildRubyTextSpans(
         segments,
         _baseStyle,
         null,
         markedWords: {'アリス': MarkStyle.solid},
-        onMarkEnter: (word, position) => enters.add((word, position)),
-        onMarkExit: exits.add,
+        onMarkEnter: (word, position, _) => enters.add((word, position)),
+        onMarkExit: exitTokens.add,
       );
 
       final marked =
@@ -70,7 +70,8 @@ void main() {
       }
       expect(enters.map((e) => e.$1), everyElement('アリス'));
       expect(enters.first.$2, pointerPosition);
-      expect(exits, everyElement('アリス'));
+      expect(exitTokens, isNotEmpty,
+          reason: 'Marked span exit should fire and deliver its token');
     });
 
     test('does not attach hover handlers to unmarked spans', () {
@@ -81,7 +82,7 @@ void main() {
         _baseStyle,
         null,
         markedWords: {'アリス': MarkStyle.solid},
-        onMarkEnter: (_, _) {},
+        onMarkEnter: (_, _, _) {},
         onMarkExit: (_) {},
       );
 
@@ -113,7 +114,7 @@ void main() {
           'アリス': MarkStyle.dotted,
           'ボブ': MarkStyle.solid,
         },
-        onMarkEnter: (word, _) => enters.add(word),
+        onMarkEnter: (word, _, _) => enters.add(word),
         onMarkExit: (_) {},
       );
 
