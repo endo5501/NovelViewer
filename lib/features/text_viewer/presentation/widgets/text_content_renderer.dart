@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/marked_words_provider.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
@@ -268,6 +269,14 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       ttsHighlightRange: ttsHighlightRange,
       brightness: Theme.of(context).brightness,
       markedWords: markedWords,
+      onMarkEnter: (word, position) {
+        ref
+            .read(hoverPopupProvider.notifier)
+            .show(word: word, position: position);
+      },
+      onMarkExit: (word) {
+        ref.read(hoverPopupProvider.notifier).hideIfShowing(word);
+      },
     );
 
     if (activeMatch != null) {

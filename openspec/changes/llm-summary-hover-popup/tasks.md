@@ -24,16 +24,16 @@
 
 ## 5. ホバーポップアップ：widget 表示（TDD）
 
-- [ ] 5.1 ポップアップ widget 単体テスト：単一種別キャッシュ時に切替ピル非表示、両種別キャッシュ時にピル表示と既定 noSpoiler、ピル切替で表示テキスト更新
-- [ ] 5.2 ズレ警告テスト：noSpoiler 表示 + `sourceFile != currentFile` で警告表示、`sourceFile == currentFile` で非表示、spoiler 表示時は常に非表示
-- [ ] 5.3 ローディング表示テスト：cache fetch 未解決時に loading indicator、解決後に内容置換
-- [ ] 5.4 ポップアップ widget 実装を追加して green 化
-- [ ] 5.5 `TextContentRenderer` 配下にラッパ widget を追加して、`HoverPopupNotifier` 状態を `ref.listen` し OverlayEntry の挿入/破棄を行う実装を追加。横書きモードでのみ反応すること
-- [ ] 5.6 横書き widget test：marked TextSpan へのhover操作→Overlayにポップアップ挿入、leave操作→破棄。実マウスイベントの代わりに onEnter/onExit を直接呼ぶ形でOK
+- [x] 5.1 ポップアップ widget 単体テスト：単一種別キャッシュ時に切替ピル非表示、両種別キャッシュ時にピル表示と既定 noSpoiler、ピル切替で表示テキスト更新
+- [x] 5.2 ズレ警告テスト：noSpoiler 表示 + `sourceFile != currentFile` で警告表示、`sourceFile == currentFile` で非表示、spoiler 表示時は常に非表示
+- [x] 5.3 ローディング表示テスト：cache fetch 未解決時に loading indicator、解決後に内容置換
+- [x] 5.4 ポップアップ widget 実装を追加して green 化
+- [x] 5.5 `TextContentRenderer` 配下にラッパ widget を追加して、`HoverPopupNotifier` 状態を `ref.listen` し OverlayEntry の挿入/破棄を行う実装を追加。横書きモードでのみ反応すること
+- [x] 5.6 横書き widget test：marked TextSpan へのhover操作→Overlayにポップアップ挿入、leave操作→破棄。実マウスイベントの代わりに onEnter/onExit を直接呼ぶ形でOK
 
 ## 6. ホバーポップアップ：縦書きモードでの抑制
 
-- [ ] 6.1 縦書きモード時にはホバーポップアップが出ないこと（mark表示は維持）を `TextContentRenderer` レベルのテストで保証
+- [x] 6.1 縦書きモード時にはホバーポップアップが出ないこと（mark表示は維持）を `TextContentRenderer` レベルのテストで保証
 
 ## 7. 右クリックメニュー拡張：横書き（TDD）
 
