@@ -1,3 +1,7 @@
+import 'dart:math' show max, min;
+
+import 'package:flutter/services.dart' show TextSelection;
+
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 
 final _rubyPattern = RegExp(
@@ -68,6 +72,20 @@ String extractSelectedText(
   }
 
   return buffer.toString();
+}
+
+/// Converts a [TextSelection] from `SelectableText.rich` (which uses display
+/// offsets where each WidgetSpan counts as one U+FFFC character) into the
+/// underlying text with ruby base expanded. Returns the empty string for
+/// invalid or collapsed selections.
+String selectedTextFromSelection(
+  TextSelection selection,
+  List<TextSegment> segments,
+) {
+  if (!selection.isValid || selection.isCollapsed) return '';
+  final start = min(selection.start, selection.end);
+  final end = max(selection.start, selection.end);
+  return extractSelectedText(start, end, segments);
 }
 
 String buildPlainText(List<TextSegment> segments) {

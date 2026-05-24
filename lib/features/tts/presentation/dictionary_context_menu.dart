@@ -5,15 +5,11 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 Widget buildDictionaryContextMenu(
   BuildContext context,
   EditableTextState editableTextState, {
+  required String selectedText,
   required void Function(String selectedText) onAddToDictionary,
   void Function(String selectedText, SummaryType type)? onAnalyze,
 }) {
   final l10n = AppLocalizations.of(context)!;
-  final value = editableTextState.textEditingValue;
-  final selection = value.selection;
-  final selectedText = selection.isValid && !selection.isCollapsed
-      ? selection.textInside(value.text)
-      : '';
   final buttonItems = buildAnalysisButtonItems(
     baseItems: editableTextState.contextMenuButtonItems,
     selectedText: selectedText,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/tts/presentation/dictionary_context_menu.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   group('buildAnalysisButtonItems', () {
@@ -121,42 +122,36 @@ void main() {
     // Reproduces the horizontal-mode bug: when ruby is selected,
     // `EditableTextState.textEditingValue.text` contains U+FFFC (the
     // WidgetSpan placeholder). The fixed API takes `selectedText` explicitly
-    // so the caller can pass `extractSelectedText`-resolved text.
+    // so the caller can pass `extractSelectedText`-resolved text and the
+    // toolbar's buttonItems carry that resolved value into the handlers,
+    // regardless of what `editableTextState.value.text` contains.
 
-    testWidgets(
-        'forwards the explicit selectedText to analyze handlers, ignoring U+FFFC in editableTextState',
-        (tester) async {
-      String? capturedWord;
-      SummaryType? capturedType;
-
-      // We render the toolbar inside a Material widget tree so it can resolve
-      // theme/icon defaults. The TextField gives us a real `EditableTextState`
-      // whose textEditingValue contains the U+FFFC placeholder, exactly as
-      // SelectableText.rich does for ruby WidgetSpans.
+    Future<List<ContextMenuButtonItem>> buildToolbarButtonItemsFor(
+      WidgetTester tester, {
+      required String selectedText,
+      required void Function(String) onAddToDictionary,
+      required void Function(String, SummaryType)? onAnalyze,
+    }) async {
+      // A TextField gives us a real EditableTextState whose
+      // textEditingValue.text is the U+FFFC placeholder — exactly the
+      // pre-fix corruption path.
       final controller = TextEditingController(text: '￼');
       controller.selection =
           const TextSelection(baseOffset: 0, extentOffset: 1);
-
       final focusNode = FocusNode();
       addTearDown(controller.dispose);
       addTearDown(focusNode.dispose);
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                return TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                );
-              },
-            ),
+            body: TextField(controller: controller, focusNode: focusNode),
           ),
         ),
       );
-
-      // Focus the TextField so its EditableTextState becomes available.
       focusNode.requestFocus();
       await tester.pump();
 
@@ -164,9 +159,25 @@ void main() {
           tester.state<EditableTextState>(find.byType(EditableText));
       final menuContext = tester.element(find.byType(EditableText));
 
-      final menu = buildDictionaryContextMenu(
+      final widget = buildDictionaryContextMenu(
         menuContext,
         editableState,
+        selectedText: selectedText,
+        onAddToDictionary: onAddToDictionary,
+        onAnalyze: onAnalyze,
+      ) as AdaptiveTextSelectionToolbar;
+
+      return widget.buttonItems?.toList() ?? const [];
+    }
+
+    testWidgets(
+        'analyze items invoke onAnalyze with the explicit selectedText, not U+FFFC',
+        (tester) async {
+      String? capturedWord;
+      SummaryType? capturedType;
+
+      final buttonItems = await buildToolbarButtonItemsFor(
+        tester,
         selectedText: '宇宙',
         onAddToDictionary: (_) {},
         onAnalyze: (word, type) {
@@ -175,119 +186,52 @@ void main() {
         },
       );
 
-      // Mount the returned menu so the buttons are tappable.
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: Center(child: menu)),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.text('解析開始(ネタバレなし)'), findsOneWidget);
-      await tester.tap(find.text('解析開始(ネタバレなし)'));
-      await tester.pump();
-
+      final noSpoiler =
+          buttonItems.firstWhere((b) => b.label == '解析開始(ネタバレなし)');
+      noSpoiler.onPressed!();
       expect(capturedWord, '宇宙');
       expect(capturedWord, isNot(contains('￼')));
       expect(capturedType, SummaryType.noSpoiler);
+
+      final spoiler =
+          buttonItems.firstWhere((b) => b.label == '解析開始(ネタバレあり)');
+      spoiler.onPressed!();
+      expect(capturedWord, '宇宙');
+      expect(capturedType, SummaryType.spoiler);
     });
 
     testWidgets(
-        'forwards the explicit selectedText to dictionary handler, ignoring U+FFFC',
+        'dictionary item invokes onAddToDictionary with the explicit selectedText',
         (tester) async {
       String? captured;
 
-      final controller = TextEditingController(text: '￼');
-      controller.selection =
-          const TextSelection(baseOffset: 0, extentOffset: 1);
-
-      final focusNode = FocusNode();
-      addTearDown(controller.dispose);
-      addTearDown(focusNode.dispose);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: TextField(controller: controller, focusNode: focusNode),
-          ),
-        ),
-      );
-
-      focusNode.requestFocus();
-      await tester.pump();
-
-      final editableState =
-          tester.state<EditableTextState>(find.byType(EditableText));
-      final menuContext = tester.element(find.byType(EditableText));
-
-      final menu = buildDictionaryContextMenu(
-        menuContext,
-        editableState,
+      final buttonItems = await buildToolbarButtonItemsFor(
+        tester,
         selectedText: '宇宙',
         onAddToDictionary: (word) => captured = word,
         onAnalyze: (_, _) {},
       );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: Center(child: menu)),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.text('辞書追加'), findsOneWidget);
-      await tester.tap(find.text('辞書追加'));
-      await tester.pump();
-
+      final dict = buttonItems.firstWhere((b) => b.label == '辞書追加');
+      dict.onPressed!();
       expect(captured, '宇宙');
       expect(captured, isNot(contains('￼')));
     });
 
     testWidgets(
-        'omits analyze + dictionary items when explicit selectedText is empty',
+        'omits analyze + dictionary items when explicit selectedText is empty (even with a non-empty editableTextState)',
         (tester) async {
-      // Even if editableTextState has a non-empty (U+FFFC) selection, the
-      // explicit empty selectedText (e.g., caller decided extraction yielded
-      // nothing) should suppress the menu items.
-      final controller = TextEditingController(text: '￼');
-      controller.selection =
-          const TextSelection(baseOffset: 0, extentOffset: 1);
-      final focusNode = FocusNode();
-      addTearDown(controller.dispose);
-      addTearDown(focusNode.dispose);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: TextField(controller: controller, focusNode: focusNode),
-          ),
-        ),
-      );
-      focusNode.requestFocus();
-      await tester.pump();
-
-      final editableState =
-          tester.state<EditableTextState>(find.byType(EditableText));
-      final menuContext = tester.element(find.byType(EditableText));
-
-      final menu = buildDictionaryContextMenu(
-        menuContext,
-        editableState,
+      final buttonItems = await buildToolbarButtonItemsFor(
+        tester,
         selectedText: '',
         onAddToDictionary: (_) {},
         onAnalyze: (_, _) {},
       );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: Center(child: menu)),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.text('辞書追加'), findsNothing);
-      expect(find.text('解析開始(ネタバレなし)'), findsNothing);
-      expect(find.text('解析開始(ネタバレあり)'), findsNothing);
+      final labels = buttonItems.map((b) => b.label).toList();
+      expect(labels, isNot(contains('辞書追加')));
+      expect(labels, isNot(contains('解析開始(ネタバレなし)')));
+      expect(labels, isNot(contains('解析開始(ネタバレあり)')));
     });
   });
 }

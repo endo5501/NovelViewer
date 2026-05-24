@@ -1,5 +1,3 @@
-import 'dart:math' show min, max;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -378,18 +376,21 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
               child: SelectableText.rich(
                 textSpan,
                 onSelectionChanged: (selection, cause) {
-                  final start = min(selection.start, selection.end);
-                  final end = max(selection.start, selection.end);
                   final selectedText =
-                      extractSelectedText(start, end, segments);
+                      selectedTextFromSelection(selection, segments);
                   ref.read(selectedTextProvider.notifier).setText(
                         selectedText.isEmpty ? null : selectedText,
                       );
                 },
                 contextMenuBuilder: (menuContext, editableTextState) {
+                  final selectedText = selectedTextFromSelection(
+                    editableTextState.textEditingValue.selection,
+                    segments,
+                  );
                   return buildDictionaryContextMenu(
                     context,
                     editableTextState,
+                    selectedText: selectedText,
                     onAddToDictionary: _openDictionaryDialog,
                     onAnalyze: _runAnalysis,
                   );
