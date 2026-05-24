@@ -147,6 +147,11 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
 
   int? _pendingTtsOffset;
 
+  /// Page index for which a target-line auto-jump postFrame callback is
+  /// currently in flight. Prevents the same jump from being scheduled
+  /// multiple times when `build()` re-runs before the post-frame fires.
+  int? _scheduledTargetPage;
+
   @override
   void dispose() {
     _curvedAnimation.dispose();
@@ -182,11 +187,15 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
             _pageCount = totalPages;
 
             if (result.targetPage != null &&
-                result.targetPage != _currentPage) {
+                result.targetPage != _currentPage &&
+                result.targetPage != _scheduledTargetPage) {
+              final targetPage = result.targetPage!;
+              _scheduledTargetPage = targetPage;
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
+                _scheduledTargetPage = null;
+                if (!mounted || targetPage == _currentPage) return;
                 setState(() {
-                  _currentPage = result.targetPage!;
+                  _currentPage = targetPage;
                   _targetLine = null;
                 });
                 // The page jumped without going through _changePage, so the

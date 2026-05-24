@@ -54,6 +54,6 @@
 ## 9. 最終確認
 
 - [x] 9.1 code-reviewスキルを使用してコードレビューを実施 *(10件指摘、9件修正・1件 defer。修正内容: token-based diff (markedWords変更対応), bookmark/search jump時の hide, anchor clamp (narrow/short window), drag-開始時のみ hide (tap除外), drag後の状態リセット, HoverToken typedef 統一 (lib/features/llm_summary/domain/hover_token.dart), アウトゴーイングページ wiring, onHoverHideRequest メソッド化。defer: computeMarkedRanges/computeMarkedEntries 毎build呼び出しの一括化 (現状は既存 computeMarkedEntries と同パターン、追加リスク低い))*
-- [ ] 9.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 9.2 codexスキルを使用して現在開発中のコードレビューを実施 *(4件指摘+Residual Gaps。3件修正・1件 defer。修正: (1) `_popupHovered` latch leak (`hover_popup_provider.dart` の hide/show で `_popupHovered = false` を追加、回帰テスト1件追加)、(3) target line jump の post-frame double-scheduling 防止 (`_scheduledTargetPage` guard)、(4) `ruby_text_builder.dart` の HoverToken import を provider 層から domain 層に移動。defer: (2) ruby multi-char base の部分一致 mark — 既存 `computeMarkedEntries`/sidebar 描画も同じ粒度で扱う pre-existing 仕様、sub-entry hit region 化は別 change 相当。Residual Gaps の E2E test と FakeAsync 化も別 change 相当)*
 - [x] 9.3 `fvm flutter analyze`でリントを実行 *(No issues found)*
-- [x] 9.4 `fvm flutter test`でテストを実行 *(1550 tests pass)*
+- [x] 9.4 `fvm flutter test`でテストを実行 *(1551 tests pass)*

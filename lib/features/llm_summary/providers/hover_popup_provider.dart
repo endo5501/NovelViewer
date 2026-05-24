@@ -70,6 +70,11 @@ class HoverPopupNotifier extends Notifier<HoverPopupState> {
     required HoverToken token,
   }) {
     _hideTimer?.cancel();
+    // A fresh popup never inherits the previous popup's hover latch — if
+    // the old popup was hovered when something programmatically hid it
+    // (mode switch, page jump), that latch would otherwise suppress the
+    // grace-period hide of the new popup.
+    _popupHovered = false;
     // Skip the state write when the same span is already active, so sub-pixel
     // pointer wobble inside one marked occurrence does not churn the
     // OverlayEntry via the host's ref.listen. Different occurrences of the
@@ -84,6 +89,7 @@ class HoverPopupNotifier extends Notifier<HoverPopupState> {
 
   void hide() {
     _hideTimer?.cancel();
+    _popupHovered = false;
     state = const HoverPopupState.hidden();
   }
 

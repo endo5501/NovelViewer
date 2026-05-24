@@ -176,10 +176,11 @@ void main() {
         await tester.pumpWidget(buildWith(target: 25));
         await tester.pumpAndSettle();
 
-        expect(hideCount, greaterThanOrEqualTo(1),
+        expect(hideCount, 1,
             reason:
-                'Auto-jump to a target line on another page must hide the '
-                'hover popup (otherwise it lingers over the new content)');
+                'Auto-jump must hide exactly once even though build() may '
+                'run multiple times in the same frame — duplicate '
+                'addPostFrameCallback registrations should be deduped');
       },
     );
   });
