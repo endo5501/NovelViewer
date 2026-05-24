@@ -271,6 +271,32 @@ void main() {
     });
 
     test(
+        'grace-period boundary: popup is still visible at 149 ms and hidden '
+        'just after 150 ms (regression guard against accidental drift / '
+        'pumpAndSettle swallowing the timer)',
+        () {
+      fakeAsync((async) {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(hoverPopupProvider.notifier);
+
+        notifier.show(
+            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+        notifier.hideIfShowing(_tokenA);
+
+        async.elapse(const Duration(milliseconds: 149));
+        expect(container.read(hoverPopupProvider).isVisible, isTrue,
+            reason:
+                'Must remain visible right up to the grace boundary so the '
+                'pointer has time to reach the popup');
+
+        async.elapse(const Duration(milliseconds: 2));
+        expect(container.read(hoverPopupProvider).isVisible, isFalse,
+            reason: 'Must hide immediately once the 150 ms grace elapses');
+      });
+    });
+
+    test(
         'onPopupEnter during the grace window cancels the deferred hide so '
         'the popup stays visible while the pointer is inside it', () {
       fakeAsync((async) {
