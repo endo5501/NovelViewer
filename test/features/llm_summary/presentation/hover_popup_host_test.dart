@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -263,6 +264,57 @@ void main() {
           findsNothing,
           reason:
               'Warning should be absent when sourceFile matches the selected file');
+    });
+
+    testWidgets(
+        'pointer entering the popup widget cancels the deferred hide so the '
+        '[なし|あり] toggle is reachable; leaving the popup hides it',
+        (tester) async {
+      final container = _makeContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_wrap(
+        container,
+        const HoverPopupHost(child: SizedBox.expand()),
+      ));
+      const token = (start: 0, end: 3);
+      container.read(hoverPopupProvider.notifier).show(
+            word: 'アリス',
+            position: const Offset(100, 100),
+            token: token,
+          );
+      await tester.pumpAndSettle();
+      expect(find.byType(HoverPopupWidget), findsOneWidget);
+
+      // Drive a real mouse pointer onto the popup card so the MouseRegion's
+      // onEnter fires (this is what wires the widget to the notifier's
+      // onPopupEnter — the gap manual verification of task 13.6 caught).
+      final popupCenter =
+          tester.getCenter(find.byKey(const Key('hover_popup_card')));
+      final gesture =
+          await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: const Offset(-100, -100));
+      addTearDown(gesture.removePointer);
+      await gesture.moveTo(popupCenter);
+      await tester.pump();
+
+      // Simulate the marked-span exit handler firing as the pointer left
+      // the word region. Without the popup-hover wiring this would close
+      // the popup after the grace period.
+      container.read(hoverPopupProvider.notifier).hideIfShowing(token);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(HoverPopupWidget), findsOneWidget,
+          reason:
+              'Popup must stay visible while the pointer is inside it so the '
+              'toggle pill can be clicked');
+
+      // Now move the pointer off the popup — it must close immediately,
+      // bypassing the grace period.
+      await gesture.moveTo(const Offset(-100, -100));
+      await tester.pumpAndSettle();
+      expect(find.byType(HoverPopupWidget), findsNothing,
+          reason:
+              'Leaving the popup must hide it immediately (no grace period)');
     });
   });
 }
