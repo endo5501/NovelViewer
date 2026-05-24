@@ -29,9 +29,9 @@
   - **C2 CONFIRMED**: 横書きのシステム「コピー」も U+FFFC を吐く（base items が `editableTextState.contextMenuButtonItems` のまま転送されており、`onPressed` が `EditableText.copySelection` 経由で `value.text` を読むため）→ §6 で追加修正。
   - **C1 CONFIRMED**: `selectedTextFromSelection` 内の `min/max` 冗長（Flutter `TextSelection.start/.end` は SDK 側で `baseOffset`/`extentOffset` の min/max に正規化済み）→ §6 で追加修正。
   - C3/C4 PLAUSIBLE: レイヤリング (data 層 → Flutter 依存) と clamp 欠如 (理論上の edge case)。本 PR では非対応で follow-up 対象。
-- [ ] 5.2 codex スキルを使用して現在開発中のコードレビューを実施
-- [ ] 5.3 `fvm flutter analyze` でリントを実行
-- [ ] 5.4 `fvm flutter test` でテストを実行
+- [x] 5.2 codex スキル (`codex:rescue` → `codex:codex-rescue` GPT-5.4) でセカンドオピニオン取得。CRITICAL/MAJOR なし。MINOR 3 件すべて既知の follow-up（境界外クランプ欠如 / `AdaptiveTextSelectionToolbar` への `as` キャスト脆さ / テストの l10n ラベルハードコード）でマージ可と判断。
+- [x] 5.3 `fvm flutter analyze` 実行 → 本 PR 由来の警告ゼロ（`prefer_const_declarations` を §6 で修正済）。
+- [x] 5.4 `fvm flutter test` 実行 → 全 1567 件 pass。
 
 ## 6. code-review 由来の追加修正
 
@@ -39,4 +39,4 @@
 - [x] 6.2 (Green) `buildAnalysisButtonItems` で `baseItems` を `map` し、`type == ContextMenuButtonType.copy` を `Clipboard.setData(ClipboardData(text: selectedText))` を呼ぶ新 `ContextMenuButtonItem` に差し替えた。selectedText 空の場合はスルー（元の Copy 挙動 = 空文字列コピー）を維持。
 - [x] 6.3 (C1) `selectedTextFromSelection` から `min/max` を削除、`dart:math` import も削除。テスト「reversed selections」のコメントを「TextSelection は SDK 側で start/end が正規化済み」と説明する形に更新。
 - [x] 6.4 `fvm flutter test` 全 1567 件 Green、`fvm flutter analyze` 本 PR 由来の警告ゼロ (既存 `voice_recording_service_test.dart` の `override_on_non_overriding_member` 1 件のみ残るが本 PR と無関係)。
-- [ ] 6.5 ここまでをコミットする。
+- [x] 6.5 ここまでをコミットした (`9a25e0c fix: rewrite Copy item to use ruby-base text; drop redundant min/max`)。
