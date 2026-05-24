@@ -43,22 +43,22 @@
 
 ## 8. 右クリックメニュー拡張：縦書き（TDD）
 
-- [ ] 8.1 `_showVerticalContextMenu` の `PopupMenuItem` リストに2項目を追加するテスト
-- [ ] 8.2 実装を追加して green 化
-- [ ] 8.3 メニュー項目選択時のコールバック発火テスト
+- [x] 8.1 `_showVerticalContextMenu` の `PopupMenuItem` リストに2項目を追加するテスト
+- [x] 8.2 実装を追加して green 化
+- [x] 8.3 メニュー項目選択時のコールバック発火テスト
 
 ## 9. 解析起動フロー：modal とトリガー結線（TDD）
 
 - [x] 9.1 解析実行関数（選択語 + SummaryType を受け取り、modal を出し、`LlmSummaryService.generateSummary` を呼び、結果に応じて modal close + SnackBar）のテストを書く（成功・失敗の2ケース）
 - [x] 9.2 既存の `LlmSummaryNotifier.analyze` が `selectedTextProvider` を直接見ていた箇所を、引数で word/SummaryType を受け取れるリファクタにする（テストファースト）。`selectedTextProvider` 依存を解消 *(implemented as new `DefaultAnalysisRunner` which takes word/type as params; old notifier is deleted with the panel in Section 10)*
 - [x] 9.3 解析中に modal が `barrierDismissible: false` で表示され、ユーザがバリアをタップしても閉じないことを widget test で確認
-- [ ] 9.4 横書き/縦書き双方の context menu コールバックから 9.1 の関数を呼ぶよう結線 *(horizontal done; vertical pending Section 8)*
+- [x] 9.4 横書き/縦書き双方の context menu コールバックから 9.1 の関数を呼ぶよう結線
 
 ## 10. 右カラム構成変更
 
-- [ ] 10.1 `home_screen.dart` の右カラム中身を `SearchResultsPanel` 単独に差し替える widget test を書く
-- [ ] 10.2 実装を反映し、`SearchSummaryPanel` ファイル（`lib/shared/widgets/search_summary_panel.dart`）を削除
-- [ ] 10.3 `LlmSummaryPanel` ファイル（`lib/features/llm_summary/presentation/llm_summary_panel.dart`）を削除し、関連 import を全て掃除
+- [x] 10.1 `home_screen.dart` の右カラム中身を `SearchResultsPanel` 単独に差し替える widget test を書く
+- [x] 10.2 実装を反映し、`SearchSummaryPanel` ファイル（`lib/shared/widgets/search_summary_panel.dart`）を削除
+- [x] 10.3 `LlmSummaryPanel` ファイル（`lib/features/llm_summary/presentation/llm_summary_panel.dart`）を削除し、関連 import を全て掃除
 
 ## 11. 履歴タブのコピー機能（TDD）
 

@@ -17,6 +17,7 @@ import 'package:novel_viewer/features/text_viewer/data/parsed_segments_cache_pro
 import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
+import 'package:novel_viewer/features/text_viewer/presentation/widgets/vertical_context_menu.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
 import 'package:novel_viewer/features/tts/presentation/dictionary_context_menu.dart';
@@ -95,7 +96,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         Overlay.maybeOf(context)?.context.findRenderObject();
     if (renderObject is! RenderBox) return;
     final overlay = renderObject;
-    showMenu<_ContextMenuAction>(
+    showMenu<VerticalContextAction>(
       context: context,
       position: RelativeRect.fromLTRB(
         position.dx,
@@ -103,24 +104,19 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         overlay.size.width - position.dx,
         overlay.size.height - position.dy,
       ),
-      items: [
-        PopupMenuItem(
-          value: _ContextMenuAction.copy,
-          child: Text(l10n.contextMenu_copy),
-        ),
-        PopupMenuItem(
-          value: _ContextMenuAction.addToDictionary,
-          child: Text(l10n.contextMenu_addToDictionary),
-        ),
-      ],
+      items: buildVerticalContextMenuItems(
+        copyLabel: l10n.contextMenu_copy,
+        addToDictionaryLabel: l10n.contextMenu_addToDictionary,
+      ),
     ).then((value) {
       if (value == null || !mounted) return;
-      switch (value) {
-        case _ContextMenuAction.copy:
-          Clipboard.setData(ClipboardData(text: selectedText));
-        case _ContextMenuAction.addToDictionary:
-          _openDictionaryDialog(selectedText);
-      }
+      dispatchVerticalContextAction(
+        value,
+        selectedText: selectedText,
+        onCopy: (t) => Clipboard.setData(ClipboardData(text: t)),
+        onAddToDictionary: _openDictionaryDialog,
+        onAnalyze: _runAnalysis,
+      );
     });
   }
 
@@ -369,4 +365,3 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   }
 }
 
-enum _ContextMenuAction { copy, addToDictionary }

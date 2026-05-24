@@ -8,11 +8,11 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_host.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
+import 'package:novel_viewer/features/text_search/presentation/search_results_panel.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/shared/providers/layout_providers.dart';
-import 'package:novel_viewer/shared/widgets/search_summary_panel.dart';
 
 class _SearchIntent extends Intent {
   const _SearchIntent();
@@ -179,7 +179,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const VerticalDivider(width: 1),
                     const SizedBox(
                       width: 300,
-                      child: SearchSummaryPanel(key: Key('right_column')),
+                      child: SearchResultsPanel(key: Key('right_column')),
                     ),
                   ],
                 ],
