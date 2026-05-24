@@ -38,6 +38,29 @@ Widget _wrap(Widget child, ProviderContainer container) {
   );
 }
 
+Widget _wrapWithBrightness(
+  Widget child,
+  ProviderContainer container,
+  Brightness brightness,
+) {
+  return UncontrolledProviderScope(
+    container: container,
+    child: MaterialApp(
+      locale: const Locale('ja'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blueGrey,
+          brightness: brightness,
+        ),
+        useMaterial3: true,
+      ),
+      home: Scaffold(body: child),
+    ),
+  );
+}
+
 const _aliceKey = (folder: 'novel_a', word: 'アリス');
 
 void main() {
@@ -349,6 +372,151 @@ void main() {
       expect(find.byKey(const Key('hover_popup_reference_warning')),
           findsNothing);
     });
+  });
+
+  group('HoverPopupWidget visual separation', () {
+    void verifyCardSurface(WidgetTester tester) {
+      final cardFinder = find.byKey(const Key('hover_popup_card'));
+      expect(cardFinder, findsOneWidget);
+      final material = tester.widget<Material>(cardFinder);
+      final colorScheme =
+          Theme.of(tester.element(cardFinder)).colorScheme;
+
+      expect(material.color, colorScheme.surfaceContainerHighest,
+          reason: 'Popup background must use surfaceContainerHighest token');
+
+      expect(material.shape, isA<RoundedRectangleBorder>(),
+          reason: 'Popup shape must be a RoundedRectangleBorder');
+      final shape = material.shape! as RoundedRectangleBorder;
+
+      expect(shape.side.color, colorScheme.outlineVariant,
+          reason: 'Popup border must use outlineVariant token');
+      expect(shape.side.width, 1.0,
+          reason: 'Popup border width must be 1 px');
+
+      expect(shape.borderRadius, BorderRadius.circular(6),
+          reason: 'Popup corner radius must remain 6 px');
+    }
+
+    testWidgets(
+      '_Card uses surfaceContainerHighest + outlineVariant border in light theme',
+      (tester) async {
+        final container = ProviderContainer(overrides: [
+          hoverPopupCacheProvider(_aliceKey).overrideWith(
+            (_) async => WordSummariesByType(
+              noSpoiler:
+                  _summary(type: SummaryType.noSpoiler, text: 'ライト本文'),
+            ),
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(_wrapWithBrightness(
+          const HoverPopupWidget(
+            folder: 'novel_a',
+            word: 'アリス',
+            currentFileName: null,
+          ),
+          container,
+          Brightness.light,
+        ));
+        await tester.pumpAndSettle();
+
+        verifyCardSurface(tester);
+      },
+    );
+
+    testWidgets(
+      '_Card uses surfaceContainerHighest + outlineVariant border in dark theme',
+      (tester) async {
+        final container = ProviderContainer(overrides: [
+          hoverPopupCacheProvider(_aliceKey).overrideWith(
+            (_) async => WordSummariesByType(
+              noSpoiler:
+                  _summary(type: SummaryType.noSpoiler, text: 'ダーク本文'),
+            ),
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(_wrapWithBrightness(
+          const HoverPopupWidget(
+            folder: 'novel_a',
+            word: 'アリス',
+            currentFileName: null,
+          ),
+          container,
+          Brightness.dark,
+        ));
+        await tester.pumpAndSettle();
+
+        verifyCardSurface(tester);
+      },
+    );
+
+    testWidgets(
+      '_LoadingCard uses surfaceContainerHighest + outlineVariant border in light theme',
+      (tester) async {
+        final completer = Completer<WordSummariesByType>();
+        final container = ProviderContainer(overrides: [
+          hoverPopupCacheProvider(_aliceKey)
+              .overrideWith((_) => completer.future),
+        ]);
+        addTearDown(container.dispose);
+        addTearDown(() {
+          if (!completer.isCompleted) {
+            completer.complete(const WordSummariesByType());
+          }
+        });
+
+        await tester.pumpWidget(_wrapWithBrightness(
+          const HoverPopupWidget(
+            folder: 'novel_a',
+            word: 'アリス',
+            currentFileName: null,
+          ),
+          container,
+          Brightness.light,
+        ));
+        await tester.pump();
+
+        expect(find.byKey(const Key('hover_popup_loading')), findsOneWidget,
+            reason: 'Loading-state card must be the one rendered');
+        verifyCardSurface(tester);
+      },
+    );
+
+    testWidgets(
+      '_LoadingCard uses surfaceContainerHighest + outlineVariant border in dark theme',
+      (tester) async {
+        final completer = Completer<WordSummariesByType>();
+        final container = ProviderContainer(overrides: [
+          hoverPopupCacheProvider(_aliceKey)
+              .overrideWith((_) => completer.future),
+        ]);
+        addTearDown(container.dispose);
+        addTearDown(() {
+          if (!completer.isCompleted) {
+            completer.complete(const WordSummariesByType());
+          }
+        });
+
+        await tester.pumpWidget(_wrapWithBrightness(
+          const HoverPopupWidget(
+            folder: 'novel_a',
+            word: 'アリス',
+            currentFileName: null,
+          ),
+          container,
+          Brightness.dark,
+        ));
+        await tester.pump();
+
+        expect(find.byKey(const Key('hover_popup_loading')), findsOneWidget,
+            reason: 'Loading-state card must be the one rendered');
+        verifyCardSurface(tester);
+      },
+    );
   });
 
   group('HoverPopupWidget loading state', () {
