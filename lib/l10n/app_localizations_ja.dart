@@ -476,22 +476,41 @@ class AppLocalizationsJa extends AppLocalizations {
   String get contextMenu_copy => 'コピー';
 
   @override
-  String get llmSummary_noSpoilerTab => 'ネタバレなし';
+  String get contextMenu_analyzeNoSpoiler => '解析開始(ネタバレなし)';
 
   @override
-  String get llmSummary_spoilerTab => 'ネタバレあり';
+  String get contextMenu_analyzeSpoiler => '解析開始(ネタバレあり)';
 
   @override
-  String get llmSummary_selectWordPrompt => '単語を選択してください';
+  String get contextMenu_copyNoSpoilerSummary => '要約をコピー(ネタバレなし)';
 
   @override
-  String get llmSummary_configureLlmPrompt => '設定画面でLLMを設定してください';
+  String get contextMenu_copySpoilerSummary => '要約をコピー(ネタバレあり)';
 
   @override
-  String get llmSummary_referencePositionWarning => '基準位置が異なります。再解析をお勧めします。';
+  String get contextMenu_copiedToClipboard => 'クリップボードにコピーしました';
 
   @override
-  String get llmSummary_analyzeButton => '解析開始';
+  String get llmAnalysis_inProgress => '解析中…';
+
+  @override
+  String get llmAnalysis_noFolderOpen => '小説フォルダを開いてください';
+
+  @override
+  String get llmAnalysis_noLlmConfigured => '設定画面でLLMを設定してください';
+
+  @override
+  String llmAnalysis_failed(String error) {
+    return '解析失敗: $error';
+  }
+
+  @override
+  String llmAnalysis_savedSummary(String word) {
+    return '「$word」の要約を保存しました';
+  }
+
+  @override
+  String get hoverPopup_referenceWarning => '別ファイルで解析した要約です';
 
   @override
   String get bookmark_selectNovelPrompt => '作品フォルダを選択してください';

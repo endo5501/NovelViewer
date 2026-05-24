@@ -152,12 +152,29 @@
   "contextMenu_addToDictionary": "添加到词典",
   "contextMenu_copy": "复制",
 
-  "llmSummary_noSpoilerTab": "无剧透",
-  "llmSummary_spoilerTab": "有剧透",
-  "llmSummary_selectWordPrompt": "请选择一个词语",
-  "llmSummary_configureLlmPrompt": "请在设置中配置LLM",
-  "llmSummary_referencePositionWarning": "参考位置不同，建议重新分析。",
-  "llmSummary_analyzeButton": "开始分析",
+  "contextMenu_analyzeNoSpoiler": "开始分析（无剧透）",
+  "contextMenu_analyzeSpoiler": "开始分析（含剧透）",
+  "contextMenu_copyNoSpoilerSummary": "复制摘要（无剧透）",
+  "contextMenu_copySpoilerSummary": "复制摘要（含剧透）",
+  "contextMenu_copiedToClipboard": "已复制到剪贴板",
+
+  "llmAnalysis_inProgress": "正在分析…",
+  "llmAnalysis_noFolderOpen": "请先打开小说文件夹",
+  "llmAnalysis_noLlmConfigured": "请在设置中配置LLM",
+  "llmAnalysis_failed": "分析失败：{error}",
+  "@llmAnalysis_failed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "llmAnalysis_savedSummary": "已保存「{word}」的摘要",
+  "@llmAnalysis_savedSummary": {
+    "placeholders": {
+      "word": { "type": "String" }
+    }
+  },
+
+  "hoverPopup_referenceWarning": "摘要基于不同的文件生成",
 
   "bookmark_selectNovelPrompt": "请选择作品文件夹",
   "bookmark_noBookmarks": "没有书签",

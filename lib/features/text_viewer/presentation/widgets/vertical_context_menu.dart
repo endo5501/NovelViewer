@@ -18,6 +18,8 @@ enum VerticalContextAction {
 List<PopupMenuEntry<VerticalContextAction>> buildVerticalContextMenuItems({
   required String copyLabel,
   required String addToDictionaryLabel,
+  String analyzeNoSpoilerLabel = '解析開始(ネタバレなし)',
+  String analyzeSpoilerLabel = '解析開始(ネタバレあり)',
 }) {
   return [
     PopupMenuItem(
@@ -28,13 +30,13 @@ List<PopupMenuEntry<VerticalContextAction>> buildVerticalContextMenuItems({
       value: VerticalContextAction.addToDictionary,
       child: Text(addToDictionaryLabel),
     ),
-    const PopupMenuItem(
+    PopupMenuItem(
       value: VerticalContextAction.analyzeNoSpoiler,
-      child: Text('解析開始(ネタバレなし)'),
+      child: Text(analyzeNoSpoilerLabel),
     ),
-    const PopupMenuItem(
+    PopupMenuItem(
       value: VerticalContextAction.analyzeSpoiler,
-      child: Text('解析開始(ネタバレあり)'),
+      child: Text(analyzeSpoilerLabel),
     ),
   ];
 }

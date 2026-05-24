@@ -952,41 +952,71 @@ abstract class AppLocalizations {
   /// **'コピー'**
   String get contextMenu_copy;
 
-  /// No description provided for @llmSummary_noSpoilerTab.
+  /// No description provided for @contextMenu_analyzeNoSpoiler.
   ///
   /// In ja, this message translates to:
-  /// **'ネタバレなし'**
-  String get llmSummary_noSpoilerTab;
+  /// **'解析開始(ネタバレなし)'**
+  String get contextMenu_analyzeNoSpoiler;
 
-  /// No description provided for @llmSummary_spoilerTab.
+  /// No description provided for @contextMenu_analyzeSpoiler.
   ///
   /// In ja, this message translates to:
-  /// **'ネタバレあり'**
-  String get llmSummary_spoilerTab;
+  /// **'解析開始(ネタバレあり)'**
+  String get contextMenu_analyzeSpoiler;
 
-  /// No description provided for @llmSummary_selectWordPrompt.
+  /// No description provided for @contextMenu_copyNoSpoilerSummary.
   ///
   /// In ja, this message translates to:
-  /// **'単語を選択してください'**
-  String get llmSummary_selectWordPrompt;
+  /// **'要約をコピー(ネタバレなし)'**
+  String get contextMenu_copyNoSpoilerSummary;
 
-  /// No description provided for @llmSummary_configureLlmPrompt.
+  /// No description provided for @contextMenu_copySpoilerSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'要約をコピー(ネタバレあり)'**
+  String get contextMenu_copySpoilerSummary;
+
+  /// No description provided for @contextMenu_copiedToClipboard.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリップボードにコピーしました'**
+  String get contextMenu_copiedToClipboard;
+
+  /// No description provided for @llmAnalysis_inProgress.
+  ///
+  /// In ja, this message translates to:
+  /// **'解析中…'**
+  String get llmAnalysis_inProgress;
+
+  /// No description provided for @llmAnalysis_noFolderOpen.
+  ///
+  /// In ja, this message translates to:
+  /// **'小説フォルダを開いてください'**
+  String get llmAnalysis_noFolderOpen;
+
+  /// No description provided for @llmAnalysis_noLlmConfigured.
   ///
   /// In ja, this message translates to:
   /// **'設定画面でLLMを設定してください'**
-  String get llmSummary_configureLlmPrompt;
+  String get llmAnalysis_noLlmConfigured;
 
-  /// No description provided for @llmSummary_referencePositionWarning.
+  /// No description provided for @llmAnalysis_failed.
   ///
   /// In ja, this message translates to:
-  /// **'基準位置が異なります。再解析をお勧めします。'**
-  String get llmSummary_referencePositionWarning;
+  /// **'解析失敗: {error}'**
+  String llmAnalysis_failed(String error);
 
-  /// No description provided for @llmSummary_analyzeButton.
+  /// No description provided for @llmAnalysis_savedSummary.
   ///
   /// In ja, this message translates to:
-  /// **'解析開始'**
-  String get llmSummary_analyzeButton;
+  /// **'「{word}」の要約を保存しました'**
+  String llmAnalysis_savedSummary(String word);
+
+  /// No description provided for @hoverPopup_referenceWarning.
+  ///
+  /// In ja, this message translates to:
+  /// **'別ファイルで解析した要約です'**
+  String get hoverPopup_referenceWarning;
 
   /// No description provided for @bookmark_selectNovelPrompt.
   ///

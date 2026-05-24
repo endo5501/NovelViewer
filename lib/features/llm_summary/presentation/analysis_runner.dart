@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:path/path.dart' as p;
 
 /// Triggers an LLM summary analysis for a (word, SummaryType) pair and shows
@@ -32,9 +33,10 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     required String word,
     required SummaryType type,
   }) async {
+    final l10n = AppLocalizations.of(context)!;
     final directory = _ref.read(currentDirectoryProvider);
     if (directory == null) {
-      _snack(context, '小説フォルダを開いてください');
+      _snack(context, l10n.llmAnalysis_noFolderOpen);
       return;
     }
 
@@ -45,7 +47,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     final service = _ref.read(llmSummaryServiceProvider);
     if (!context.mounted) return;
     if (service == null) {
-      _snack(context, '設定画面でLLMを設定してください');
+      _snack(context, l10n.llmAnalysis_noLlmConfigured);
       return;
     }
 
@@ -81,8 +83,8 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     navigator.pop();
 
     final message = errorMessage != null
-        ? '解析失敗: $errorMessage'
-        : '「$word」の要約を保存しました';
+        ? l10n.llmAnalysis_failed(errorMessage)
+        : l10n.llmAnalysis_savedSummary(word);
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
@@ -99,20 +101,21 @@ class _AnalysisModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const PopScope(
+    final l10n = AppLocalizations.of(context)!;
+    return PopScope(
       canPop: false,
       child: AlertDialog(
-        key: Key('analysis_modal'),
+        key: const Key('analysis_modal'),
         content: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
+            const SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
-            SizedBox(width: 12),
-            Text('解析中…'),
+            const SizedBox(width: 12),
+            Text(l10n.llmAnalysis_inProgress),
           ],
         ),
       ),

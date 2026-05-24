@@ -107,6 +107,8 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       items: buildVerticalContextMenuItems(
         copyLabel: l10n.contextMenu_copy,
         addToDictionaryLabel: l10n.contextMenu_addToDictionary,
+        analyzeNoSpoilerLabel: l10n.contextMenu_analyzeNoSpoiler,
+        analyzeSpoilerLabel: l10n.contextMenu_analyzeSpoiler,
       ),
     ).then((value) {
       if (value == null || !mounted) return;

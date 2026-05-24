@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_widget.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 WordSummary _summary({
   required SummaryType type,
@@ -29,6 +30,9 @@ Widget _wrap(Widget child, ProviderContainer container) {
   return UncontrolledProviderScope(
     container: container,
     child: MaterialApp(
+      locale: const Locale('ja'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(body: child),
     ),
   );

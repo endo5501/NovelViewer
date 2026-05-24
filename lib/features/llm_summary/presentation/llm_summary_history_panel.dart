@@ -105,8 +105,8 @@ class _HistoryEntryTile extends ConsumerWidget {
       items: buildHistoryContextMenuItems(
         type: entry.type,
         deleteLabel: l10n.bookmark_deleteMenuItem,
-        copyNoSpoilerLabel: '要約をコピー(ネタバレなし)',
-        copySpoilerLabel: '要約をコピー(ネタバレあり)',
+        copyNoSpoilerLabel: l10n.contextMenu_copyNoSpoilerSummary,
+        copySpoilerLabel: l10n.contextMenu_copySpoilerSummary,
       ),
     );
 
@@ -118,7 +118,7 @@ class _HistoryEntryTile extends ConsumerWidget {
       onCopy: (text) async {
         await Clipboard.setData(ClipboardData(text: text));
         messenger.showSnackBar(
-          const SnackBar(content: Text('クリップボードにコピーしました')),
+          SnackBar(content: Text(l10n.contextMenu_copiedToClipboard)),
         );
       },
       onDelete: () => ref

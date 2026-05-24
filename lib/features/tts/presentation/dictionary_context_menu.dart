@@ -27,6 +27,8 @@ Widget buildDictionaryContextMenu(
     baseItems: editableTextState.contextMenuButtonItems,
     selectedText: selectedText,
     addToDictionaryLabel: l10n.contextMenu_addToDictionary,
+    analyzeNoSpoilerLabel: l10n.contextMenu_analyzeNoSpoiler,
+    analyzeSpoilerLabel: l10n.contextMenu_analyzeSpoiler,
     onAddToDictionary: onAddToDictionary,
     onAnalyze: onAnalyze,
   );
@@ -50,6 +52,8 @@ List<ContextMenuButtonItem> buildAnalysisButtonItems({
   required List<ContextMenuButtonItem> baseItems,
   required String selectedText,
   required String addToDictionaryLabel,
+  String analyzeNoSpoilerLabel = '解析開始(ネタバレなし)',
+  String analyzeSpoilerLabel = '解析開始(ネタバレあり)',
   required void Function(String selectedText) onAddToDictionary,
   void Function(String selectedText, SummaryType type)? onAnalyze,
 }) {
@@ -65,14 +69,14 @@ List<ContextMenuButtonItem> buildAnalysisButtonItems({
   ));
   if (onAnalyze != null) {
     items.add(ContextMenuButtonItem(
-      label: '解析開始(ネタバレなし)',
+      label: analyzeNoSpoilerLabel,
       onPressed: () {
         ContextMenuController.removeAny();
         onAnalyze(selectedText, SummaryType.noSpoiler);
       },
     ));
     items.add(ContextMenuButtonItem(
-      label: '解析開始(ネタバレあり)',
+      label: analyzeSpoilerLabel,
       onPressed: () {
         ContextMenuController.removeAny();
         onAnalyze(selectedText, SummaryType.spoiler);

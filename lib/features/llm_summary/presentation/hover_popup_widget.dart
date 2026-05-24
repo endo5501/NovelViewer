@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 /// Inline popup shown above a marked word when the pointer hovers it. Reads
 /// the cached `word_summaries` rows for (folder, word), decides which type to
@@ -175,6 +176,7 @@ class _ReferenceWarning extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       key: const Key('hover_popup_reference_warning'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,7 +189,7 @@ class _ReferenceWarning extends StatelessWidget {
         const SizedBox(width: 4),
         Expanded(
           child: Text(
-            '別ファイルで解析した要約です',
+            l10n.hoverPopup_referenceWarning,
             style: TextStyle(
               fontSize: 11,
               color: Colors.orange.shade700,

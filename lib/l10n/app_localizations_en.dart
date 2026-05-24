@@ -486,24 +486,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contextMenu_copy => 'Copy';
 
   @override
-  String get llmSummary_noSpoilerTab => 'No spoilers';
+  String get contextMenu_analyzeNoSpoiler => 'Analyze (no spoilers)';
 
   @override
-  String get llmSummary_spoilerTab => 'With spoilers';
+  String get contextMenu_analyzeSpoiler => 'Analyze (with spoilers)';
 
   @override
-  String get llmSummary_selectWordPrompt => 'Please select a word';
+  String get contextMenu_copyNoSpoilerSummary => 'Copy summary (no spoilers)';
 
   @override
-  String get llmSummary_configureLlmPrompt =>
-      'Please configure LLM in Settings';
+  String get contextMenu_copySpoilerSummary => 'Copy summary (with spoilers)';
 
   @override
-  String get llmSummary_referencePositionWarning =>
-      'Reference position differs. Re-analysis is recommended.';
+  String get contextMenu_copiedToClipboard => 'Copied to clipboard';
 
   @override
-  String get llmSummary_analyzeButton => 'Analyze';
+  String get llmAnalysis_inProgress => 'Analyzing...';
+
+  @override
+  String get llmAnalysis_noFolderOpen => 'Please open a novel folder first';
+
+  @override
+  String get llmAnalysis_noLlmConfigured => 'Please configure LLM in Settings';
+
+  @override
+  String llmAnalysis_failed(String error) {
+    return 'Analysis failed: $error';
+  }
+
+  @override
+  String llmAnalysis_savedSummary(String word) {
+    return 'Saved summary for \"$word\"';
+  }
+
+  @override
+  String get hoverPopup_referenceWarning =>
+      'Summary generated from a different file';
 
   @override
   String get bookmark_selectNovelPrompt => 'Please select a novel folder';

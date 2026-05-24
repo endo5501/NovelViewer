@@ -12,6 +12,7 @@ import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 // Dummy stand-ins for the dependencies of LlmSummaryService. They are never
 // invoked because [_StubService] overrides `generateSummary` (the only method
@@ -94,6 +95,9 @@ Widget _harness({
   return UncontrolledProviderScope(
     container: container,
     child: MaterialApp(
+      locale: const Locale('ja'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Consumer(
           builder: (context, ref, _) => ElevatedButton(
