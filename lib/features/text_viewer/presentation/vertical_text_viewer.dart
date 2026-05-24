@@ -48,6 +48,9 @@ class VerticalTextViewer extends StatefulWidget {
     this.bookmarkLineNumbers = const [],
     this.onPageLineChanged,
     this.markedWords = const {},
+    this.onMarkEnter,
+    this.onMarkExit,
+    this.onHoverHideRequest,
   }) : assert(columnSpacing >= 0);
 
   final List<TextSegment> segments;
@@ -62,6 +65,13 @@ class VerticalTextViewer extends StatefulWidget {
   final List<int> bookmarkLineNumbers;
   final ValueChanged<int>? onPageLineChanged;
   final Map<String, MarkStyle> markedWords;
+  final void Function(String word, Offset globalPosition, HoverToken token)?
+      onMarkEnter;
+  final void Function(HoverToken token)? onMarkExit;
+
+  /// Fired when the viewer-level hover state should be dropped wholesale —
+  /// page turn, selection drag started, etc.
+  final VoidCallback? onHoverHideRequest;
 
   @override
   State<VerticalTextViewer> createState() => _VerticalTextViewerState();
@@ -179,6 +189,10 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
                   _currentPage = result.targetPage!;
                   _targetLine = null;
                 });
+                // The page jumped without going through _changePage, so the
+                // popup's anchor position is now stale relative to the new
+                // content. Drop any visible popup.
+                widget.onHoverHideRequest?.call();
               });
             }
 
@@ -241,6 +255,9 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
                 onSwipe: _handleSwipe,
                 columnSpacing: widget.columnSpacing,
                 markedWords: widget.markedWords,
+                onMarkEnter: widget.onMarkEnter,
+                onMarkExit: widget.onMarkExit,
+                onHoverHideRequest: widget.onHoverHideRequest,
               ),
             );
 
@@ -266,6 +283,13 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
                         query: widget.query,
                         columnSpacing: widget.columnSpacing,
                         markedWords: widget.markedWords,
+                        // Symmetric wiring with the incoming page: if the
+                        // pointer briefly hovers the outgoing page during
+                        // the slide animation, callbacks still route to
+                        // the notifier so no orphan token leaks.
+                        onMarkEnter: widget.onMarkEnter,
+                        onMarkExit: widget.onMarkExit,
+                        onHoverHideRequest: widget.onHoverHideRequest,
                       ),
                     ),
                   ),
@@ -370,6 +394,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
       ..reset()
       ..forward();
     widget.onSelectionChanged?.call(null);
+    widget.onHoverHideRequest?.call();
   }
 
   void _nextPage() => _changePage(1);

@@ -2,12 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/painting.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/llm_summary/domain/hover_token.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 
-/// Identifies a specific marked-text occurrence so the hover popup can tell
-/// two same-word occurrences apart. Uses the segment-global text range of
-/// the mark, which is stable across rebuilds while the mark layout is.
-typedef HoverToken = ({int start, int end});
+export 'package:novel_viewer/features/llm_summary/domain/hover_token.dart'
+    show HoverToken;
 
 /// Brief window during which a `hideIfShowing` request is deferred so the
 /// pointer can travel from a marked span into the popup widget itself

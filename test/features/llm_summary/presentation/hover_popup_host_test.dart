@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_anchor.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_host.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_widget.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
@@ -139,7 +140,8 @@ void main() {
     });
 
     testWidgets(
-        'does NOT insert popup in vertical mode even when state is visible',
+        'inserts popup in vertical mode when state becomes visible (the '
+        'horizontal-only restriction has been lifted)',
         (tester) async {
       final container = _makeContainer(mode: TextDisplayMode.vertical);
       addTearDown(container.dispose);
@@ -150,17 +152,19 @@ void main() {
       ));
       container.read(hoverPopupProvider.notifier).show(
             word: 'アリス',
-            position: const Offset(100, 100),
+            position: const Offset(100, 600),
             token: const (start: 0, end: 3),
           );
       await tester.pumpAndSettle();
 
-      expect(find.byType(HoverPopupWidget), findsNothing,
-          reason: 'Hover popup must be suppressed in vertical mode');
+      expect(find.byType(HoverPopupWidget), findsOneWidget,
+          reason: 'Hover popup must appear in vertical mode too');
+      expect(find.text('なし本文'), findsOneWidget);
     });
 
     testWidgets(
-        'auto-hides popup and clears state when display mode flips to vertical',
+        'auto-hides popup and clears state when display mode flips '
+        'horizontal → vertical',
         (tester) async {
       final container = _makeContainer();
       addTearDown(container.dispose);
@@ -182,10 +186,94 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(HoverPopupWidget), findsNothing);
-      expect(container.read(hoverPopupProvider).isVisible, isFalse,
-          reason:
-              'Popup state should also be cleared so re-entering horizontal mode does not auto-restore');
+      expect(container.read(hoverPopupProvider).isVisible, isFalse);
     });
+
+    testWidgets(
+        'auto-hides popup and clears state when display mode flips '
+        'vertical → horizontal (mode-switch hide is unconditional)',
+        (tester) async {
+      final container = _makeContainer(mode: TextDisplayMode.vertical);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_wrap(
+        container,
+        const HoverPopupHost(child: SizedBox.expand()),
+      ));
+      container.read(hoverPopupProvider.notifier).show(
+            word: 'アリス',
+            position: const Offset(100, 600),
+            token: const (start: 0, end: 3),
+          );
+      await tester.pumpAndSettle();
+      expect(find.byType(HoverPopupWidget), findsOneWidget);
+
+      (container.read(displayModeProvider.notifier) as _MockDisplayMode)
+          .set(TextDisplayMode.horizontal);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HoverPopupWidget), findsNothing);
+      expect(container.read(hoverPopupProvider).isVisible, isFalse);
+    });
+
+    testWidgets(
+      'horizontal mode positions popup at pointer + 16/+16 (top-left anchor)',
+      (tester) async {
+        final container = _makeContainer();
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(_wrap(
+          container,
+          const HoverPopupHost(child: SizedBox.expand()),
+        ));
+        const pointer = Offset(200, 200);
+        container.read(hoverPopupProvider.notifier).show(
+              word: 'アリス',
+              position: pointer,
+              token: const (start: 0, end: 3),
+            );
+        await tester.pumpAndSettle();
+
+        final positioned = tester.widget<Positioned>(
+          find.ancestor(
+            of: find.byType(HoverPopupWidget),
+            matching: find.byType(Positioned),
+          ),
+        );
+        expect(positioned.left, pointer.dx + kHoverPopupGap);
+        expect(positioned.top, pointer.dy + kHoverPopupGap);
+      },
+    );
+
+    testWidgets(
+      'vertical mode places popup up-right of pointer when room permits',
+      (tester) async {
+        final container = _makeContainer(mode: TextDisplayMode.vertical);
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(_wrap(
+          container,
+          const HoverPopupHost(child: SizedBox.expand()),
+        ));
+        const pointer = Offset(200, 600); // far from edges
+        container.read(hoverPopupProvider.notifier).show(
+              word: 'アリス',
+              position: pointer,
+              token: const (start: 0, end: 3),
+            );
+        await tester.pumpAndSettle();
+
+        final positioned = tester.widget<Positioned>(
+          find.ancestor(
+            of: find.byType(HoverPopupWidget),
+            matching: find.byType(Positioned),
+          ),
+        );
+        expect(positioned.left, pointer.dx + kHoverPopupGap);
+        expect(positioned.top,
+            pointer.dy - kHoverPopupGap - kHoverPopupApproxHeight);
+      },
+    );
 
     testWidgets('does NOT insert popup when no novel directory is open',
         (tester) async {
