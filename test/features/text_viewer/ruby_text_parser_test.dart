@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show TextSelection;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
@@ -174,6 +175,98 @@ void main() {
       ];
       // Display: [WidgetSpan](0) の(1) [WidgetSpan](2)
       expect(extractSelectedText(0, 3, segments), '魔法の杖');
+    });
+  });
+
+  group('selectedTextFromSelection', () {
+    // Helper used by the horizontal context-menu builder to convert a
+    // SelectableText.rich selection (which uses display offsets where each
+    // WidgetSpan counts as 1 char / U+FFFC) into the actual underlying text
+    // with ruby base expanded.
+
+    final segments = [
+      const PlainTextSegment('我は'),
+      const RubyTextSegment(base: '宇宙', rubyText: 'うちゅう'),
+      const PlainTextSegment('の'),
+      const RubyTextSegment(base: '支配者', rubyText: 'しはいしゃ'),
+      const PlainTextSegment('なり'),
+    ];
+    // Display offsets: 我(0) は(1) [WidgetSpan=宇宙](2) の(3)
+    //                   [WidgetSpan=支配者](4) な(5) り(6) → length 7
+
+    test('returns empty string for an invalid selection', () {
+      expect(
+        selectedTextFromSelection(
+          const TextSelection(baseOffset: -1, extentOffset: -1),
+          segments,
+        ),
+        '',
+      );
+    });
+
+    test('returns empty string for a collapsed selection', () {
+      expect(
+        selectedTextFromSelection(
+          const TextSelection(baseOffset: 3, extentOffset: 3),
+          segments,
+        ),
+        '',
+      );
+    });
+
+    test('expands a ruby-only selection to its base text', () {
+      // baseOffset=2, extentOffset=3 covers the [WidgetSpan=宇宙] only.
+      expect(
+        selectedTextFromSelection(
+          const TextSelection(baseOffset: 2, extentOffset: 3),
+          segments,
+        ),
+        '宇宙',
+      );
+    });
+
+    test('expands a selection straddling ruby and plain segments', () {
+      // baseOffset=2, extentOffset=5 covers 宇宙 + の + 支配者.
+      expect(
+        selectedTextFromSelection(
+          const TextSelection(baseOffset: 2, extentOffset: 5),
+          segments,
+        ),
+        '宇宙の支配者',
+      );
+    });
+
+    test('normalizes reversed selections (extent before base)', () {
+      // Drag from right to left: baseOffset > extentOffset.
+      expect(
+        selectedTextFromSelection(
+          const TextSelection(baseOffset: 5, extentOffset: 2),
+          segments,
+        ),
+        '宇宙の支配者',
+      );
+    });
+
+    test('returns plain text for a ruby-free selection', () {
+      // baseOffset=0, extentOffset=2 covers 我は.
+      expect(
+        selectedTextFromSelection(
+          const TextSelection(baseOffset: 0, extentOffset: 2),
+          segments,
+        ),
+        '我は',
+      );
+    });
+
+    test('never returns the WidgetSpan placeholder character (U+FFFC)', () {
+      // Regression guard: the pre-fix code used
+      // selection.textInside(value.text) which leaks U+FFFC for each ruby
+      // segment. Any return from this helper MUST be free of U+FFFC.
+      final fullDisplaySelection =
+          const TextSelection(baseOffset: 0, extentOffset: 7);
+      final result = selectedTextFromSelection(fullDisplaySelection, segments);
+      expect(result, '我は宇宙の支配者なり');
+      expect(result.contains('￼'), isFalse);
     });
   });
 }
