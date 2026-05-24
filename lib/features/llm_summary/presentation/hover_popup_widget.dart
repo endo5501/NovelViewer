@@ -88,10 +88,15 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Material(
       key: const Key('hover_popup_card'),
       elevation: 4,
-      borderRadius: BorderRadius.circular(6),
+      color: colorScheme.surfaceContainerHighest,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: colorScheme.outlineVariant, width: 1),
+        borderRadius: BorderRadius.circular(6),
+      ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 320),
         child: Padding(
@@ -157,7 +162,7 @@ class _TypeToggle extends StatelessWidget {
       key: const Key('hover_popup_type_toggle'),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: theme.dividerColor),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
       child: Row(
@@ -214,10 +219,16 @@ class _LoadingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Material(
-      key: Key('hover_popup_card'),
+    final colorScheme = Theme.of(context).colorScheme;
+    return Material(
+      key: const Key('hover_popup_card'),
       elevation: 4,
-      child: Padding(
+      color: colorScheme.surfaceContainerHighest,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: colorScheme.outlineVariant, width: 1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: const Padding(
         padding: EdgeInsets.all(12),
         child: SizedBox(
           key: Key('hover_popup_loading'),
