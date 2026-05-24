@@ -1,6 +1,7 @@
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
+import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
@@ -22,6 +23,7 @@ class LlmSummaryService {
     required String word,
     required SummaryType summaryType,
     String? currentFileName,
+    void Function(AnalysisProgress progress)? onProgress,
   }) async {
     try {
       final searchResults = await searchService.searchWithContext(
@@ -38,7 +40,11 @@ class LlmSummaryService {
       final contexts = _extractContexts(filteredResults);
 
       final pipeline = LlmSummaryPipeline(llmClient: llmClient);
-      final summary = await pipeline.generate(word: word, contexts: contexts);
+      final summary = await pipeline.generate(
+        word: word,
+        contexts: contexts,
+        onProgress: onProgress,
+      );
 
       await repository.saveSummary(
         folderName: folderName,

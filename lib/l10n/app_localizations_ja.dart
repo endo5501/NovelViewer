@@ -494,6 +494,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get llmAnalysis_inProgress => '解析中…';
 
   @override
+  String llmAnalysis_extractingFacts(int current, int total) {
+    return '情報を抽出中 ($current / $total)';
+  }
+
+  @override
+  String llmAnalysis_refiningRound(int round, int current, int total) {
+    return '絞り込み $round 周目 ($current / $total)';
+  }
+
+  @override
+  String get llmAnalysis_generatingFinal => '最終要約を生成中…';
+
+  @override
   String get llmAnalysis_noFolderOpen => '小説フォルダを開いてください';
 
   @override

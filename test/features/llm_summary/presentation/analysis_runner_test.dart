@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
+import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
@@ -48,6 +49,7 @@ class _StubService extends LlmSummaryService {
   }) _behavior;
 
   int callCount = 0;
+  void Function(AnalysisProgress)? lastOnProgress;
 
   @override
   Future<String> generateSummary({
@@ -56,8 +58,10 @@ class _StubService extends LlmSummaryService {
     required String word,
     required SummaryType summaryType,
     String? currentFileName,
+    void Function(AnalysisProgress)? onProgress,
   }) async {
     callCount++;
+    lastOnProgress = onProgress;
     return _behavior(
       word: word,
       type: summaryType,
@@ -215,6 +219,179 @@ void main() {
       expect(find.byKey(const Key('analysis_modal')), findsOneWidget,
           reason:
               'Modal must remain open when the user taps outside its bounds');
+    });
+  });
+
+  group('DefaultAnalysisRunner progress display', () {
+    testWidgets('initial state shows llmAnalysis_inProgress label',
+        (tester) async {
+      final completer = Completer<String>();
+      final stub = _StubService(
+          ({required word, required type, currentFileName}) => completer.future);
+      final container = _container(stub);
+      addTearDown(container.dispose);
+      addTearDown(() {
+        if (!completer.isCompleted) completer.complete('done');
+      });
+
+      await tester.pumpWidget(_harness(
+        container: container,
+        onPressed: (ref, context) {
+          ref.read(analysisRunnerProvider).run(
+                context: context,
+                word: 'アリス',
+                type: SummaryType.noSpoiler,
+              );
+        },
+      ));
+
+      await tester.tap(find.text('go'));
+      await tester.pump();
+
+      expect(find.text('解析中…'), findsOneWidget,
+          reason:
+              'Before any progress event the modal must show the original idle label');
+    });
+
+    testWidgets(
+        'extracting facts event (round=1) shows "情報を抽出中 (current / total)" label',
+        (tester) async {
+      final completer = Completer<String>();
+      final stub = _StubService(
+          ({required word, required type, currentFileName}) => completer.future);
+      final container = _container(stub);
+      addTearDown(container.dispose);
+      addTearDown(() {
+        if (!completer.isCompleted) completer.complete('done');
+      });
+
+      await tester.pumpWidget(_harness(
+        container: container,
+        onPressed: (ref, context) {
+          ref.read(analysisRunnerProvider).run(
+                context: context,
+                word: 'アリス',
+                type: SummaryType.noSpoiler,
+              );
+        },
+      ));
+
+      await tester.tap(find.text('go'));
+      await tester.pump();
+
+      stub.lastOnProgress!(
+          const AnalysisExtractingFacts(round: 1, current: 2, total: 5));
+      await tester.pump();
+
+      expect(find.text('情報を抽出中 (2 / 5)'), findsOneWidget);
+      expect(find.text('解析中…'), findsNothing);
+    });
+
+    testWidgets(
+        'extracting facts event (round>=2) shows "絞り込み N 周目 (current / total)" label',
+        (tester) async {
+      final completer = Completer<String>();
+      final stub = _StubService(
+          ({required word, required type, currentFileName}) => completer.future);
+      final container = _container(stub);
+      addTearDown(container.dispose);
+      addTearDown(() {
+        if (!completer.isCompleted) completer.complete('done');
+      });
+
+      await tester.pumpWidget(_harness(
+        container: container,
+        onPressed: (ref, context) {
+          ref.read(analysisRunnerProvider).run(
+                context: context,
+                word: 'アリス',
+                type: SummaryType.noSpoiler,
+              );
+        },
+      ));
+
+      await tester.tap(find.text('go'));
+      await tester.pump();
+
+      stub.lastOnProgress!(
+          const AnalysisExtractingFacts(round: 3, current: 1, total: 2));
+      await tester.pump();
+
+      expect(find.text('絞り込み 3 周目 (1 / 2)'), findsOneWidget);
+    });
+
+    testWidgets('final summary event shows the localized "最終要約を生成中…" label',
+        (tester) async {
+      final completer = Completer<String>();
+      final stub = _StubService(
+          ({required word, required type, currentFileName}) => completer.future);
+      final container = _container(stub);
+      addTearDown(container.dispose);
+      addTearDown(() {
+        if (!completer.isCompleted) completer.complete('done');
+      });
+
+      await tester.pumpWidget(_harness(
+        container: container,
+        onPressed: (ref, context) {
+          ref.read(analysisRunnerProvider).run(
+                context: context,
+                word: 'アリス',
+                type: SummaryType.noSpoiler,
+              );
+        },
+      ));
+
+      await tester.tap(find.text('go'));
+      await tester.pump();
+
+      stub.lastOnProgress!(const AnalysisGeneratingFinalSummary());
+      await tester.pump();
+
+      expect(find.text('最終要約を生成中…'), findsOneWidget);
+    });
+
+    testWidgets('consecutive progress events keep the same modal route open',
+        (tester) async {
+      final completer = Completer<String>();
+      final stub = _StubService(
+          ({required word, required type, currentFileName}) => completer.future);
+      final container = _container(stub);
+      addTearDown(container.dispose);
+      addTearDown(() {
+        if (!completer.isCompleted) completer.complete('done');
+      });
+
+      await tester.pumpWidget(_harness(
+        container: container,
+        onPressed: (ref, context) {
+          ref.read(analysisRunnerProvider).run(
+                context: context,
+                word: 'アリス',
+                type: SummaryType.noSpoiler,
+              );
+        },
+      ));
+
+      await tester.tap(find.text('go'));
+      await tester.pump();
+
+      stub.lastOnProgress!(
+          const AnalysisExtractingFacts(round: 1, current: 1, total: 3));
+      await tester.pump();
+      stub.lastOnProgress!(
+          const AnalysisExtractingFacts(round: 1, current: 2, total: 3));
+      await tester.pump();
+      stub.lastOnProgress!(
+          const AnalysisExtractingFacts(round: 1, current: 3, total: 3));
+      await tester.pump();
+      stub.lastOnProgress!(const AnalysisGeneratingFinalSummary());
+      await tester.pump();
+
+      // Only one modal instance throughout the sequence.
+      expect(find.byKey(const Key('analysis_modal')), findsOneWidget,
+          reason: 'The same dialog route must remain across progress updates');
+      expect(find.text('最終要約を生成中…'), findsOneWidget);
     });
   });
 

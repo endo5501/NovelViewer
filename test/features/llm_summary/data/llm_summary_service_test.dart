@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
+import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -327,6 +328,39 @@ void main() {
 
       expect(result, '要約OK');
       expect(mockClient.releaseCallCount, 1);
+    });
+
+    test('forwards pipeline progress events to onProgress callback',
+        () async {
+      await createFile('001.txt', 'アリスが登場した。');
+
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': '- 登場した'}),
+        jsonEncode({'summary': '進捗パススルー要約'}),
+      ]);
+
+      final service = LlmSummaryService(
+        llmClient: mockClient,
+        repository: repository,
+        searchService: searchService,
+      );
+
+      final events = <AnalysisProgress>[];
+      await service.generateSummary(
+        directoryPath: tempDir.path,
+        folderName: 'test',
+        word: 'アリス',
+        summaryType: SummaryType.spoiler,
+        onProgress: events.add,
+      );
+
+      // Should at least include one extracting-facts event (round 1) and
+      // exactly one final-summary event.
+      expect(
+        events.whereType<AnalysisExtractingFacts>().any((e) => e.round == 1),
+        isTrue,
+      );
+      expect(events.whereType<AnalysisGeneratingFinalSummary>().length, 1);
     });
 
     test('original generation exception propagates when release also throws',

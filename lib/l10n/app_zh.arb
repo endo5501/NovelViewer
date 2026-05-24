@@ -159,6 +159,22 @@
   "contextMenu_copiedToClipboard": "已复制到剪贴板",
 
   "llmAnalysis_inProgress": "正在分析…",
+  "llmAnalysis_extractingFacts": "正在提取信息 ({current} / {total})",
+  "@llmAnalysis_extractingFacts": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "llmAnalysis_refiningRound": "归纳第 {round} 轮 ({current} / {total})",
+  "@llmAnalysis_refiningRound": {
+    "placeholders": {
+      "round": { "type": "int" },
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "llmAnalysis_generatingFinal": "正在生成最终摘要…",
   "llmAnalysis_noFolderOpen": "请先打开小说文件夹",
   "llmAnalysis_noLlmConfigured": "请在设置中配置LLM",
   "llmAnalysis_failed": "分析失败：{error}",
