@@ -513,6 +513,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get hoverPopup_referenceWarning => '別ファイルで解析した要約です';
 
   @override
+  String get hoverPopup_typeNoSpoiler => 'なし';
+
+  @override
+  String get hoverPopup_typeSpoiler => 'あり';
+
+  @override
   String get bookmark_selectNovelPrompt => '作品フォルダを選択してください';
 
   @override

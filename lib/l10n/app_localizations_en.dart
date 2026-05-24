@@ -524,6 +524,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Summary generated from a different file';
 
   @override
+  String get hoverPopup_typeNoSpoiler => 'No';
+
+  @override
+  String get hoverPopup_typeSpoiler => 'Yes';
+
+  @override
   String get bookmark_selectNovelPrompt => 'Please select a novel folder';
 
   @override

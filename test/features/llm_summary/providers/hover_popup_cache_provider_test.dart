@@ -73,7 +73,7 @@ void main() {
       final container = makeContainer();
       final result = await container.read(
         hoverPopupCacheProvider(
-          const HoverPopupCacheKey(folder: 'novel_a', word: 'アリス'),
+          (folder: 'novel_a', word: 'アリス'),
         ).future,
       );
 
@@ -95,7 +95,7 @@ void main() {
       final container = makeContainer();
       final result = await container.read(
         hoverPopupCacheProvider(
-          const HoverPopupCacheKey(folder: 'novel_a', word: 'ボブ'),
+          (folder: 'novel_a', word: 'ボブ'),
         ).future,
       );
 
@@ -115,7 +115,7 @@ void main() {
       final container = makeContainer();
       final result = await container.read(
         hoverPopupCacheProvider(
-          const HoverPopupCacheKey(folder: 'novel_a', word: '聖印'),
+          (folder: 'novel_a', word: '聖印'),
         ).future,
       );
 
@@ -128,7 +128,7 @@ void main() {
       final container = makeContainer();
       final result = await container.read(
         hoverPopupCacheProvider(
-          const HoverPopupCacheKey(folder: 'novel_a', word: 'メアリ'),
+          (folder: 'novel_a', word: 'メアリ'),
         ).future,
       );
 
@@ -147,7 +147,7 @@ void main() {
       final container = makeContainer();
       final result = await container.read(
         hoverPopupCacheProvider(
-          const HoverPopupCacheKey(folder: 'novel_b', word: 'アリス'),
+          (folder: 'novel_b', word: 'アリス'),
         ).future,
       );
 
@@ -156,15 +156,12 @@ void main() {
       expect(result.spoiler, isNull);
     });
 
-    test('HoverPopupCacheKey equal keys produce identical provider entries',
-        () {
+    test('equal keys produce identical provider entries', () {
       final container = makeContainer();
-      final a = container.read(hoverPopupCacheProvider(
-              const HoverPopupCacheKey(folder: 'novel_a', word: 'アリス'))
-          .future);
-      final b = container.read(hoverPopupCacheProvider(
-              const HoverPopupCacheKey(folder: 'novel_a', word: 'アリス'))
-          .future);
+      final a = container.read(
+          hoverPopupCacheProvider((folder: 'novel_a', word: 'アリス')).future);
+      final b = container.read(
+          hoverPopupCacheProvider((folder: 'novel_a', word: 'アリス')).future);
 
       expect(identical(a, b), isTrue,
           reason:

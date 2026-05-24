@@ -279,6 +279,8 @@
   },
 
   "hoverPopup_referenceWarning": "別ファイルで解析した要約です",
+  "hoverPopup_typeNoSpoiler": "なし",
+  "hoverPopup_typeSpoiler": "あり",
 
   "bookmark_selectNovelPrompt": "作品フォルダを選択してください",
   "bookmark_noBookmarks": "ブックマークがありません",

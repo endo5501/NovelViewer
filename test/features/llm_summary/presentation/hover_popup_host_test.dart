@@ -46,7 +46,7 @@ WordSummary _summary({
   );
 }
 
-const _aliceKey = HoverPopupCacheKey(folder: 'novel_a', word: 'アリス');
+const _aliceKey = (folder: 'novel_a', word: 'アリス');
 
 ProviderContainer _makeContainer({
   TextDisplayMode mode = TextDisplayMode.horizontal,

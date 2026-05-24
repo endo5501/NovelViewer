@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/marked_words_provider.dart';
@@ -56,6 +57,18 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   // is active.
   TextRange? _lastTtsScrolledRange;
 
+  // Memoised TextSpan tree for the horizontal mode. buildRubyTextSpans is
+  // O(text.length × marks) and runs on every rebuild (font/theme/playback
+  // tick), so the cache key compares its inputs by identity / value and we
+  // reuse the previous tree when nothing changed.
+  TextSpan? _cachedTextSpan;
+  String? _cachedTextSpanContent;
+  TextStyle? _cachedTextSpanStyle;
+  String? _cachedTextSpanQuery;
+  TextRange? _cachedTextSpanTtsRange;
+  Map<String, MarkStyle>? _cachedTextSpanMarkedWords;
+  Brightness? _cachedTextSpanBrightness;
+
   @override
   void initState() {
     super.initState();
@@ -80,6 +93,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     if (!identical(oldWidget.content, widget.content)) {
       _contentHash = null;
       _lastTtsScrolledRange = null;
+      _cachedTextSpan = null;
     }
   }
 
@@ -140,6 +154,14 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
           word: word,
           type: type,
         );
+  }
+
+  void _onMarkEnter(String word, Offset position) {
+    ref.read(hoverPopupProvider.notifier).show(word: word, position: position);
+  }
+
+  void _onMarkExit(String word) {
+    ref.read(hoverPopupProvider.notifier).hideIfShowing(word);
   }
 
   void _scrollToTtsHighlight(
@@ -270,22 +292,37 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     }
 
     // Horizontal mode
-    final textSpan = buildRubyTextSpans(
-      segments,
-      textStyle,
-      activeMatch?.query,
-      ttsHighlightRange: ttsHighlightRange,
-      brightness: Theme.of(context).brightness,
-      markedWords: markedWords,
-      onMarkEnter: (word, position) {
-        ref
-            .read(hoverPopupProvider.notifier)
-            .show(word: word, position: position);
-      },
-      onMarkExit: (word) {
-        ref.read(hoverPopupProvider.notifier).hideIfShowing(word);
-      },
-    );
+    final brightness = Theme.of(context).brightness;
+    final query = activeMatch?.query;
+    final cachedSpan = _cachedTextSpan;
+    final TextSpan textSpan;
+    if (cachedSpan != null &&
+        identical(_cachedTextSpanContent, widget.content) &&
+        _cachedTextSpanStyle == textStyle &&
+        _cachedTextSpanQuery == query &&
+        _cachedTextSpanTtsRange == ttsHighlightRange &&
+        identical(_cachedTextSpanMarkedWords, markedWords) &&
+        _cachedTextSpanBrightness == brightness) {
+      textSpan = cachedSpan;
+    } else {
+      textSpan = buildRubyTextSpans(
+        segments,
+        textStyle,
+        query,
+        ttsHighlightRange: ttsHighlightRange,
+        brightness: brightness,
+        markedWords: markedWords,
+        onMarkEnter: _onMarkEnter,
+        onMarkExit: _onMarkExit,
+      );
+      _cachedTextSpan = textSpan;
+      _cachedTextSpanContent = widget.content;
+      _cachedTextSpanStyle = textStyle;
+      _cachedTextSpanQuery = query;
+      _cachedTextSpanTtsRange = ttsHighlightRange;
+      _cachedTextSpanMarkedWords = markedWords;
+      _cachedTextSpanBrightness = brightness;
+    }
 
     if (activeMatch != null) {
       final scrollKey =

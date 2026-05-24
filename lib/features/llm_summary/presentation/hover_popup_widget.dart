@@ -25,9 +25,7 @@ class HoverPopupWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cacheAsync = ref.watch(
-      hoverPopupCacheProvider(
-        HoverPopupCacheKey(folder: folder, word: word),
-      ),
+      hoverPopupCacheProvider((folder: folder, word: word)),
     );
     final activeType = ref.watch(
       hoverPopupProvider.select((s) => s.activeType),
@@ -122,6 +120,7 @@ class _TypeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     Widget pill(SummaryType type, String label, Key key) {
       final selected = active == type;
       return Material(
@@ -157,12 +156,12 @@ class _TypeToggle extends StatelessWidget {
         children: [
           pill(
             SummaryType.noSpoiler,
-            'なし',
+            l10n.hoverPopup_typeNoSpoiler,
             const Key('hover_popup_type_no_spoiler'),
           ),
           pill(
             SummaryType.spoiler,
-            'あり',
+            l10n.hoverPopup_typeSpoiler,
             const Key('hover_popup_type_spoiler'),
           ),
         ],

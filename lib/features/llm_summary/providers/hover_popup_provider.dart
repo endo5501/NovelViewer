@@ -41,6 +41,10 @@ class HoverPopupNotifier extends Notifier<HoverPopupState> {
   HoverPopupState build() => const HoverPopupState.hidden();
 
   void show({required String word, required Offset position}) {
+    // Skip the state write when the popup is already pointing at the same
+    // word, so sub-pixel pointer wobble inside one marked span does not
+    // churn the OverlayEntry via the host's ref.listen.
+    if (state.word == word) return;
     state = HoverPopupState.visible(word: word, position: position);
   }
 

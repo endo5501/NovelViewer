@@ -14,6 +14,8 @@ void main() {
         baseItems: base,
         selectedText: '',
         addToDictionaryLabel: '辞書追加',
+        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
         onAddToDictionary: (_) {},
         onAnalyze: (_, _) {},
       );
@@ -33,6 +35,8 @@ void main() {
         baseItems: base,
         selectedText: 'アリス',
         addToDictionaryLabel: '辞書追加',
+        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
         onAddToDictionary: (_) {},
         onAnalyze: (_, _) {},
       );
@@ -54,6 +58,8 @@ void main() {
         baseItems: const [],
         selectedText: 'アリス',
         addToDictionaryLabel: '辞書追加',
+        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
         onAddToDictionary: (_) {},
         onAnalyze: (word, type) {
           capturedWord = word;
@@ -81,6 +87,8 @@ void main() {
         baseItems: const [],
         selectedText: 'アリス',
         addToDictionaryLabel: '辞書追加',
+        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
         onAddToDictionary: (w) => captured = w,
         onAnalyze: (_, _) {},
       );
@@ -89,16 +97,15 @@ void main() {
       expect(captured, 'アリス');
     });
 
-    test('omits dictionary and analyze items when selection is whitespace-only',
-        () {
-      // Future-proofing: whitespace shouldn't be a meaningful selection target.
-      // But the current implementation only checks `.isNotEmpty`, so this
-      // test pins down current behavior — a whitespace selection DOES add
-      // them. If we tighten the check later, update this expectation.
+    test('a whitespace-only selection still produces all menu items', () {
+      // Pins current behavior — the helper checks `.isNotEmpty`, not whether
+      // the selection has non-whitespace content. Update if that ever changes.
       final result = buildAnalysisButtonItems(
         baseItems: const [],
         selectedText: '   ',
         addToDictionaryLabel: '辞書追加',
+        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
         onAddToDictionary: (_) {},
         onAnalyze: (_, _) {},
       );

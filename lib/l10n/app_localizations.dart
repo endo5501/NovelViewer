@@ -1018,6 +1018,18 @@ abstract class AppLocalizations {
   /// **'別ファイルで解析した要約です'**
   String get hoverPopup_referenceWarning;
 
+  /// No description provided for @hoverPopup_typeNoSpoiler.
+  ///
+  /// In ja, this message translates to:
+  /// **'なし'**
+  String get hoverPopup_typeNoSpoiler;
+
+  /// No description provided for @hoverPopup_typeSpoiler.
+  ///
+  /// In ja, this message translates to:
+  /// **'あり'**
+  String get hoverPopup_typeSpoiler;
+
   /// No description provided for @bookmark_selectNovelPrompt.
   ///
   /// In ja, this message translates to:

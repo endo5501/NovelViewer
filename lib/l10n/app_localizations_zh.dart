@@ -513,6 +513,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hoverPopup_referenceWarning => '摘要基于不同的文件生成';
 
   @override
+  String get hoverPopup_typeNoSpoiler => '无';
+
+  @override
+  String get hoverPopup_typeSpoiler => '有';
+
+  @override
   String get bookmark_selectNovelPrompt => '请选择作品文件夹';
 
   @override

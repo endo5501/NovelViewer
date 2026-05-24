@@ -210,11 +210,20 @@ List<InlineSpan> _applyLocalMarksToSpans(
 }) {
   if (localMarks.isEmpty) return renderedSpans;
 
-  final markByPos = <int, MarkSpan>{};
-  for (final m in localMarks) {
-    for (var i = m.start; i < m.end; i++) {
-      markByPos[i] = m;
+  // Marks are guaranteed non-overlapping by the mark-matcher's longest-match
+  // rule, so a single sorted list + forward-moving cursor classifies every
+  // character in O(text.length + marks.length) without per-char map entries.
+  final sortedMarks = [...localMarks]
+    ..sort((a, b) => a.start.compareTo(b.start));
+  var markIdx = 0;
+  MarkSpan? markAt(int pos) {
+    while (markIdx < sortedMarks.length && sortedMarks[markIdx].end <= pos) {
+      markIdx++;
     }
+    if (markIdx < sortedMarks.length && sortedMarks[markIdx].start <= pos) {
+      return sortedMarks[markIdx];
+    }
+    return null;
   }
 
   final output = <InlineSpan>[];
@@ -225,15 +234,11 @@ List<InlineSpan> _applyLocalMarksToSpans(
       continue;
     }
     final text = span.text!;
-    // Walk character by character within this span, grouping runs by mark
-    // (or no-mark). A boundary occurs whenever the underlying MarkSpan
-    // identity changes — that way two adjacent marks of the same style but
-    // different words still split into separate hover-targets.
     var runStart = 0;
-    MarkSpan? runMark = markByPos[positionInSegment];
+    MarkSpan? runMark = markAt(positionInSegment);
     for (var i = 1; i <= text.length; i++) {
-      final pos = positionInSegment + i;
-      final markHere = i < text.length ? markByPos[pos] : null;
+      final markHere =
+          i < text.length ? markAt(positionInSegment + i) : null;
       final isBoundary = i == text.length || !identical(markHere, runMark);
       if (isBoundary) {
         final subText = text.substring(runStart, i);

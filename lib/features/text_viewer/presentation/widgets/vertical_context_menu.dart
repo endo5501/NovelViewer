@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 
-/// Actions surfaced in the vertical-mode selection context menu. Vertical
-/// mode cannot use the horizontal [AdaptiveTextSelectionToolbar] flow because
-/// [VerticalTextViewer] is a custom painter without an [EditableTextState];
-/// the menu is constructed manually via [showMenu] instead.
+/// Actions surfaced in the vertical-mode selection context menu. The vertical
+/// viewer is a custom painter without an [EditableTextState], so the menu is
+/// constructed manually via [showMenu] rather than the
+/// [AdaptiveTextSelectionToolbar] flow used in horizontal mode.
 enum VerticalContextAction {
   copy,
   addToDictionary,
@@ -12,14 +12,11 @@ enum VerticalContextAction {
   analyzeSpoiler,
 }
 
-/// Builds the four PopupMenuEntry items shown when the user opens the
-/// vertical-mode context menu against a non-empty selection. Extracted as a
-/// pure function so it can be unit-tested without showing a real menu.
 List<PopupMenuEntry<VerticalContextAction>> buildVerticalContextMenuItems({
   required String copyLabel,
   required String addToDictionaryLabel,
-  String analyzeNoSpoilerLabel = '解析開始(ネタバレなし)',
-  String analyzeSpoilerLabel = '解析開始(ネタバレあり)',
+  required String analyzeNoSpoilerLabel,
+  required String analyzeSpoilerLabel,
 }) {
   return [
     PopupMenuItem(
@@ -41,8 +38,6 @@ List<PopupMenuEntry<VerticalContextAction>> buildVerticalContextMenuItems({
   ];
 }
 
-/// Routes a chosen [VerticalContextAction] to the appropriate callback.
-/// Pure dispatcher; keeps the call site declarative.
 void dispatchVerticalContextAction(
   VerticalContextAction action, {
   required String selectedText,

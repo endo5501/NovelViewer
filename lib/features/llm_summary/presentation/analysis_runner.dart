@@ -10,11 +10,6 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_provider
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:path/path.dart' as p;
 
-/// Triggers an LLM summary analysis for a (word, SummaryType) pair and shows
-/// a modal progress dialog over the application until it resolves.
-///
-/// Provided via [analysisRunnerProvider] so tests can substitute their own
-/// implementation by overriding the provider.
 abstract class AnalysisRunner {
   Future<void> run({
     required BuildContext context,
@@ -73,9 +68,8 @@ class DefaultAnalysisRunner implements AnalysisRunner {
         currentFileName: selectedFile?.name,
       );
       _ref.invalidate(llmSummaryHistoryProvider);
-      _ref.invalidate(hoverPopupCacheProvider(
-        HoverPopupCacheKey(folder: folderName, word: word),
-      ));
+      _ref.invalidate(
+          hoverPopupCacheProvider((folder: folderName, word: word)));
     } catch (e) {
       errorMessage = e.toString();
     }

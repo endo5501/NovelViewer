@@ -175,6 +175,8 @@
   },
 
   "hoverPopup_referenceWarning": "摘要基于不同的文件生成",
+  "hoverPopup_typeNoSpoiler": "无",
+  "hoverPopup_typeSpoiler": "有",
 
   "bookmark_selectNovelPrompt": "请选择作品文件夹",
   "bookmark_noBookmarks": "没有书签",

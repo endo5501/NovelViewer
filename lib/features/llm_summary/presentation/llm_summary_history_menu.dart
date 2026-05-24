@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 
-/// Actions surfaced in the right-click context menu of a history entry.
 enum HistoryContextAction { copyNoSpoiler, copySpoiler, delete }
 
-/// Builds the PopupMenuEntry list for a single history entry's context menu.
-/// Copy items are conditional on the entry's [type] so the user never sees
-/// a copy option for a row that does not exist.
 List<PopupMenuEntry<HistoryContextAction>> buildHistoryContextMenuItems({
   required HistoryEntryType type,
   required String deleteLabel,
@@ -38,10 +34,9 @@ List<PopupMenuEntry<HistoryContextAction>> buildHistoryContextMenuItems({
   return items;
 }
 
-/// Routes a chosen [HistoryContextAction] to the appropriate callback. Copy
-/// actions are silently skipped if the corresponding summary text is null,
-/// guarding against a stale menu item firing after underlying data has
-/// changed.
+/// Copy actions are silently skipped if the corresponding summary text is
+/// null, guarding against a stale menu item firing after underlying data
+/// has changed.
 void dispatchHistoryContextAction(
   HistoryContextAction action, {
   required String? noSpoilerSummary,

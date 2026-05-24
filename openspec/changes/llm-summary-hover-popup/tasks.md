@@ -74,10 +74,10 @@
 
 ## 13. 最終確認
 
-- [ ] 13.1 simplifyスキルを使用してコードレビューを実施
+- [x] 13.1 code-reviewスキルを使用してコードレビューを実施 *(simplify deprecated → code-review. Applied: textSpan memoization, sorted-marks scan, stable callback methods, show() guard, l10n for pill labels, required params, HoverPopupCacheKey → record, selection.textInside, comment cleanup.)*
 - [ ] 13.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 13.3 `fvm flutter analyze`でリントを実行
-- [ ] 13.4 `fvm flutter test`でテストを実行
+- [x] 13.3 `fvm flutter analyze`でリントを実行 *(clean: No issues found)*
+- [x] 13.4 `fvm flutter test`でテストを実行 *(1501 tests pass)*
 - [ ] 13.5 手動検証：横書きで [選択 → 右クリ → 解析開始(なし) → modal → 完了 SnackBar → 単語にmark下線 → ホバー → ポップアップ表示 → マウス離脱で消失] の一連の流れを確認
 - [ ] 13.6 手動検証：両種別キャッシュ済み語ホバー時の [なし|あり] 切替動作、`sourceFile != currentFile` 警告表示
 - [ ] 13.7 手動検証：縦書きで mark 側線が出ること、hover では何も起きないこと、右クリで解析開始項目が出ること

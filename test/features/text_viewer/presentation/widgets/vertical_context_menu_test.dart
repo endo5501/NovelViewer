@@ -10,6 +10,8 @@ void main() {
       final items = buildVerticalContextMenuItems(
         copyLabel: 'コピー',
         addToDictionaryLabel: '辞書追加',
+        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
       );
       expect(items, hasLength(4));
       final values = items
@@ -28,6 +30,8 @@ void main() {
       final items = buildVerticalContextMenuItems(
         copyLabel: 'コピー',
         addToDictionaryLabel: '辞書追加',
+        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
       );
       // Wrap items in a Material/MediaQuery so Text widgets can render.
       await tester.pumpWidget(

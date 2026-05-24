@@ -38,7 +38,7 @@ Widget _wrap(Widget child, ProviderContainer container) {
   );
 }
 
-const _aliceKey = HoverPopupCacheKey(folder: 'novel_a', word: 'アリス');
+const _aliceKey = (folder: 'novel_a', word: 'アリス');
 
 void main() {
   group('HoverPopupWidget content', () {
