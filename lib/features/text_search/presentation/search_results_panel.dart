@@ -52,11 +52,14 @@ class _SearchResultsPanelState extends ConsumerState<SearchResultsPanel> {
 
   void _onSubmitted(String value) {
     final trimmed = value.trim();
-    ref.read(searchQueryProvider.notifier).setQuery(trimmed.isEmpty ? null : trimmed);
+    ref.read(selectedSearchMatchProvider.notifier).clear();
+    ref.read(searchQueryProvider.notifier)
+        .setQuery(trimmed.isEmpty ? null : trimmed);
   }
 
   void _onEscape() {
     ref.read(searchBoxVisibleProvider.notifier).hide();
+    ref.read(selectedSearchMatchProvider.notifier).clear();
     ref.read(searchQueryProvider.notifier).setQuery(null);
     _controller.clear();
   }

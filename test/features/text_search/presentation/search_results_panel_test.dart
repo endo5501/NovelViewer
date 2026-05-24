@@ -450,6 +450,136 @@ void main() {
       expect(textField.controller!.text, isEmpty);
     });
 
+    testWidgets('Escape key clears selectedSearchMatchProvider as well',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            selectedSearchMatchProvider.overrideWith(() {
+              return SelectedSearchMatchNotifier();
+            }),
+          ],
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(SearchResultsPanel));
+      final container = ProviderScope.containerOf(element);
+
+      // Simulate active search with selected match
+      container.read(searchQueryProvider.notifier).setQuery('太郎');
+      container.read(selectedSearchMatchProvider.notifier).select(
+            filePath: '/path/to/001.txt',
+            lineNumber: 3,
+            query: '太郎',
+          );
+      container.read(searchBoxVisibleProvider.notifier).show();
+      await tester.pump();
+
+      expect(container.read(selectedSearchMatchProvider), isNotNull);
+
+      // Focus the text field and press Escape
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+
+      expect(container.read(selectedSearchMatchProvider), isNull,
+          reason: 'Escape from search box should also clear '
+              'selectedSearchMatch so highlight disappears');
+    });
+
+    testWidgets(
+        'submitting empty query clears selectedSearchMatchProvider as well',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            selectedSearchMatchProvider.overrideWith(() {
+              return SelectedSearchMatchNotifier();
+            }),
+          ],
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(SearchResultsPanel));
+      final container = ProviderScope.containerOf(element);
+
+      // Set active search and match
+      container.read(searchQueryProvider.notifier).setQuery('太郎');
+      container.read(selectedSearchMatchProvider.notifier).select(
+            filePath: '/path/to/001.txt',
+            lineNumber: 3,
+            query: '太郎',
+          );
+      container.read(searchBoxVisibleProvider.notifier).show();
+      await tester.pump();
+
+      // Submit empty string to clear query
+      await tester.enterText(find.byType(TextField), '');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(container.read(searchQueryProvider), isNull);
+      expect(container.read(selectedSearchMatchProvider), isNull,
+          reason: 'Clearing the query via empty submit should also clear '
+              'selectedSearchMatch so highlight disappears');
+    });
+
+    testWidgets(
+        'submitting a new non-empty query clears stale selectedSearchMatch',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            selectedSearchMatchProvider.overrideWith(() {
+              return SelectedSearchMatchNotifier();
+            }),
+          ],
+          child: const MaterialApp(
+                locale: Locale('ja'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: SearchResultsPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(SearchResultsPanel));
+      final container = ProviderScope.containerOf(element);
+
+      // Simulate stale match from a previous search
+      container.read(searchQueryProvider.notifier).setQuery('太郎');
+      container.read(selectedSearchMatchProvider.notifier).select(
+            filePath: '/path/to/001.txt',
+            lineNumber: 3,
+            query: '太郎',
+          );
+      container.read(searchBoxVisibleProvider.notifier).show();
+      await tester.pump();
+
+      // Submit a new non-empty query
+      await tester.enterText(find.byType(TextField), '花子');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(container.read(searchQueryProvider), '花子');
+      expect(container.read(selectedSearchMatchProvider), isNull,
+          reason: 'Submitting a new query should clear the stale '
+              'selectedSearchMatch so highlight reflects the new query');
+    });
+
     testWidgets(
         'clicking file name clears selectedSearchMatchProvider',
         (WidgetTester tester) async {
