@@ -19,7 +19,7 @@ void main() {
     prefs = await SharedPreferences.getInstance();
   });
   group('HomeScreen 3-column layout', () {
-    testWidgets('displays three columns separated by vertical dividers',
+    testWidgets('right column is hidden by default on launch',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -30,6 +30,31 @@ void main() {
           child: const NovelViewerApp(),
         ),
       );
+
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+      expect(find.byKey(const Key('center_column')), findsOneWidget);
+      expect(find.byKey(const Key('right_column')), findsNothing);
+      expect(find.byType(VerticalDivider), findsNWidgets(1));
+    });
+
+    testWidgets('displays three columns separated by vertical dividers when right column shown',
+        (WidgetTester tester) async {
+      late ProviderContainer container;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+
+      container = ProviderScope.containerOf(
+        tester.element(find.byType(NovelViewerApp)),
+      );
+      container.read(rightColumnVisibleProvider.notifier).toggle();
+      await tester.pump();
 
       expect(find.byKey(const Key('left_column')), findsOneWidget);
       expect(find.byKey(const Key('center_column')), findsOneWidget);
@@ -57,27 +82,7 @@ void main() {
       expect(leftColumn.width, isNotNull);
     });
 
-    testWidgets('right column has fixed width', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: const NovelViewerApp(),
-        ),
-      );
-
-      final rightColumn = tester.widget<SizedBox>(
-        find.ancestor(
-          of: find.byKey(const Key('right_column')),
-          matching: find.byType(SizedBox),
-        ).first,
-      );
-      expect(rightColumn.width, isNotNull);
-    });
-
-    testWidgets('right column is a SearchResultsPanel (no wrapper)',
+    testWidgets('right column has fixed width when shown',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -88,6 +93,39 @@ void main() {
           child: const NovelViewerApp(),
         ),
       );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(NovelViewerApp)),
+      );
+      container.read(rightColumnVisibleProvider.notifier).toggle();
+      await tester.pump();
+
+      final rightColumn = tester.widget<SizedBox>(
+        find.ancestor(
+          of: find.byKey(const Key('right_column')),
+          matching: find.byType(SizedBox),
+        ).first,
+      );
+      expect(rightColumn.width, isNotNull);
+    });
+
+    testWidgets('right column is a SearchResultsPanel (no wrapper) when shown',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(NovelViewerApp)),
+      );
+      container.read(rightColumnVisibleProvider.notifier).toggle();
+      await tester.pump();
 
       final rightColumnWidget =
           tester.widget(find.byKey(const Key('right_column')));
@@ -158,7 +196,7 @@ void main() {
       expect(find.byKey(toggleButtonKey), findsOneWidget);
     });
 
-    testWidgets('clicking toggle hides right column and divider',
+    testWidgets('clicking toggle shows right column and divider',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -170,20 +208,20 @@ void main() {
         ),
       );
 
-      // Initially right column is visible
-      expect(find.byKey(const Key('right_column')), findsOneWidget);
-      expect(find.byType(VerticalDivider), findsNWidgets(2));
+      // Initially right column is hidden (default false)
+      expect(find.byKey(const Key('right_column')), findsNothing);
+      expect(find.byType(VerticalDivider), findsNWidgets(1));
 
       // Click toggle button
       await tester.tap(find.byKey(toggleButtonKey));
       await tester.pump();
 
-      // Right column and its divider should be hidden
-      expect(find.byKey(const Key('right_column')), findsNothing);
-      expect(find.byType(VerticalDivider), findsNWidgets(1));
+      // Right column and its divider should now be visible
+      expect(find.byKey(const Key('right_column')), findsOneWidget);
+      expect(find.byType(VerticalDivider), findsNWidgets(2));
     });
 
-    testWidgets('icon changes to view_sidebar when right column is hidden',
+    testWidgets('icon is view_sidebar by default (right column hidden)',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -194,16 +232,12 @@ void main() {
           child: const NovelViewerApp(),
         ),
       );
-
-      // Click toggle to hide
-      await tester.tap(find.byKey(toggleButtonKey));
-      await tester.pump();
 
       expect(find.byIcon(Icons.view_sidebar), findsOneWidget);
       expect(find.byIcon(Icons.vertical_split), findsNothing);
     });
 
-    testWidgets('clicking toggle again shows right column',
+    testWidgets('icon changes to vertical_split when right column is shown',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -215,17 +249,38 @@ void main() {
         ),
       );
 
-      // Hide
+      // Click toggle to show
       await tester.tap(find.byKey(toggleButtonKey));
       await tester.pump();
 
-      // Show again
-      await tester.tap(find.byKey(toggleButtonKey));
-      await tester.pump();
-
-      expect(find.byKey(const Key('right_column')), findsOneWidget);
-      expect(find.byType(VerticalDivider), findsNWidgets(2));
       expect(find.byIcon(Icons.vertical_split), findsOneWidget);
+      expect(find.byIcon(Icons.view_sidebar), findsNothing);
+    });
+
+    testWidgets('clicking toggle twice returns to hidden state',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+
+      // Show
+      await tester.tap(find.byKey(toggleButtonKey));
+      await tester.pump();
+      expect(find.byKey(const Key('right_column')), findsOneWidget);
+
+      // Hide again
+      await tester.tap(find.byKey(toggleButtonKey));
+      await tester.pump();
+
+      expect(find.byKey(const Key('right_column')), findsNothing);
+      expect(find.byType(VerticalDivider), findsNWidgets(1));
+      expect(find.byIcon(Icons.view_sidebar), findsOneWidget);
     });
   });
 
@@ -270,6 +325,44 @@ void main() {
       expect(container.read(searchQueryProvider), '太郎');
     });
 
+    testWidgets('Ctrl+F with selected text clears stale selectedSearchMatch',
+        (WidgetTester tester) async {
+      late ProviderContainer container;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(NovelViewerApp));
+      container = ProviderScope.containerOf(element);
+
+      // Simulate stale match from a previous search
+      container.read(searchQueryProvider.notifier).setQuery('太郎');
+      container.read(selectedSearchMatchProvider.notifier).select(
+            filePath: '/path/to/001.txt',
+            lineNumber: 3,
+            query: '太郎',
+          );
+      container.read(selectedTextProvider.notifier).setText('花子');
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+      await tester.pump();
+
+      expect(container.read(searchQueryProvider), '花子');
+      expect(container.read(selectedSearchMatchProvider), isNull,
+          reason: 'Ctrl+F with new selected text should clear stale '
+              'selectedSearchMatch from a previous search');
+    });
+
     testWidgets('Ctrl+F shows search box when no text is selected',
         (WidgetTester tester) async {
       late ProviderContainer container;
@@ -299,7 +392,7 @@ void main() {
       expect(container.read(searchQueryProvider), isNull);
     });
 
-    testWidgets('Ctrl+F auto-shows right column when hidden',
+    testWidgets('Ctrl+F auto-shows right column when initially hidden',
         (WidgetTester tester) async {
       late ProviderContainer container;
 
@@ -317,8 +410,7 @@ void main() {
       final element = tester.element(find.byType(NovelViewerApp));
       container = ProviderScope.containerOf(element);
 
-      // Hide right column first
-      container.read(rightColumnVisibleProvider.notifier).toggle();
+      // Right column starts hidden (default false)
       expect(container.read(rightColumnVisibleProvider), isFalse);
 
       await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
@@ -388,6 +480,44 @@ void main() {
       await tester.pump();
 
       expect(container.read(searchQueryProvider), isNull);
+    });
+
+    testWidgets('Escape clears selectedSearchMatchProvider as well',
+        (WidgetTester tester) async {
+      late ProviderContainer container;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(NovelViewerApp));
+      container = ProviderScope.containerOf(element);
+
+      // Simulate a search match selection (clicking a result row)
+      container.read(searchQueryProvider.notifier).setQuery('太郎');
+      container.read(selectedSearchMatchProvider.notifier).select(
+            filePath: '/path/to/001.txt',
+            lineNumber: 3,
+            query: '太郎',
+          );
+      await tester.pump();
+
+      expect(container.read(selectedSearchMatchProvider), isNotNull);
+
+      // Press Escape
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+
+      expect(container.read(selectedSearchMatchProvider), isNull,
+          reason: 'Escape should clear selectedSearchMatch '
+              'so the orange highlight disappears');
     });
 
     testWidgets('Escape does nothing when no search is active',

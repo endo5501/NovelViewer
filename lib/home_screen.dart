@@ -52,6 +52,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (!isSearchActive) return false;
 
     ref.read(searchBoxVisibleProvider.notifier).hide();
+    ref.read(selectedSearchMatchProvider.notifier).clear();
     ref.read(searchQueryProvider.notifier).setQuery(null);
     return true;
   }
@@ -112,6 +113,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             onInvoke: (_) {
               final selectedText = ref.read(selectedTextProvider);
               if (selectedText?.isNotEmpty ?? false) {
+                ref.read(selectedSearchMatchProvider.notifier).clear();
                 ref.read(searchQueryProvider.notifier).setQuery(selectedText);
               } else {
                 ref.read(searchBoxVisibleProvider.notifier).show();
