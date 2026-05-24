@@ -21,7 +21,7 @@
 
 - [x] 4.1 `Grep "buildDictionaryContextMenu"` の結果、`lib/` 配下の呼び出し元は `text_content_renderer.dart`（横書き本文） と `tts_edit_dialog.dart`（TTS編集ダイアログのプレーンテキスト編集）の2か所であることを確認。後者は元から U+FFFC 影響を受けない（ルビなしの TextField）ため、明示的な `selection.textInside(value.text)` 引き渡しで等価維持。
 - [x] 4.2 `Grep "analysisRunnerProvider\|_runAnalysis"` の結果、`analysisRunnerProvider` は `analysis_runner.dart` で定義、`text_content_renderer.dart` の `_runAnalysis` 経由でのみ呼ばれる。hover popup 経路 (`hoverPopupProvider` / `hover_popup_widget`) は別系統で `_runAnalysis` を通らないため本修正の影響なし。
-- [ ] 4.3 横書きで実際にルビ付きの小説を開き、ルビを含む選択 → 「解析開始(ネタバレなし)」「解析開始(ネタバレあり)」「辞書追加」をそれぞれ試して期待通り動作することを目視確認する。**ユーザー側での手動確認をお願いします（Flutter Windows デスクトップ GUI のため）**。
+- [x] 4.3 横書きでルビ付き小説の選択 → 「解析開始(ネタバレなし)」「解析開始(ネタバレあり)」「辞書追加」「コピー」をユーザーが実機で目視確認し、期待通り動作することを確認した。
 
 ## 5. 最終確認
 
