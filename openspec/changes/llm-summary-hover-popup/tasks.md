@@ -37,9 +37,9 @@
 
 ## 7. 右クリックメニュー拡張：横書き（TDD）
 
-- [ ] 7.1 `buildDictionaryContextMenu` を拡張するテスト：選択あり時に「解析開始(ネタバレなし)」「解析開始(ネタバレあり)」が追加されること、選択なし時に追加されないこと
-- [ ] 7.2 実装を追加して green 化
-- [ ] 7.3 メニュー項目選択時のコールバック発火テスト：選択語と SummaryType がコールバックに渡ること
+- [x] 7.1 `buildDictionaryContextMenu` を拡張するテスト：選択あり時に「解析開始(ネタバレなし)」「解析開始(ネタバレあり)」が追加されること、選択なし時に追加されないこと
+- [x] 7.2 実装を追加して green 化
+- [x] 7.3 メニュー項目選択時のコールバック発火テスト：選択語と SummaryType がコールバックに渡ること
 
 ## 8. 右クリックメニュー拡張：縦書き（TDD）
 
@@ -49,10 +49,10 @@
 
 ## 9. 解析起動フロー：modal とトリガー結線（TDD）
 
-- [ ] 9.1 解析実行関数（選択語 + SummaryType を受け取り、modal を出し、`LlmSummaryService.generateSummary` を呼び、結果に応じて modal close + SnackBar）のテストを書く（成功・失敗の2ケース）
-- [ ] 9.2 既存の `LlmSummaryNotifier.analyze` が `selectedTextProvider` を直接見ていた箇所を、引数で word/SummaryType を受け取れるリファクタにする（テストファースト）。`selectedTextProvider` 依存を解消
-- [ ] 9.3 解析中に modal が `barrierDismissible: false` で表示され、ユーザがバリアをタップしても閉じないことを widget test で確認
-- [ ] 9.4 横書き/縦書き双方の context menu コールバックから 9.1 の関数を呼ぶよう結線
+- [x] 9.1 解析実行関数（選択語 + SummaryType を受け取り、modal を出し、`LlmSummaryService.generateSummary` を呼び、結果に応じて modal close + SnackBar）のテストを書く（成功・失敗の2ケース）
+- [x] 9.2 既存の `LlmSummaryNotifier.analyze` が `selectedTextProvider` を直接見ていた箇所を、引数で word/SummaryType を受け取れるリファクタにする（テストファースト）。`selectedTextProvider` 依存を解消 *(implemented as new `DefaultAnalysisRunner` which takes word/type as params; old notifier is deleted with the panel in Section 10)*
+- [x] 9.3 解析中に modal が `barrierDismissible: false` で表示され、ユーザがバリアをタップしても閉じないことを widget test で確認
+- [ ] 9.4 横書き/縦書き双方の context menu コールバックから 9.1 の関数を呼ぶよう結線 *(horizontal done; vertical pending Section 8)*
 
 ## 10. 右カラム構成変更
 

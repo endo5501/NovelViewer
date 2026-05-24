@@ -96,14 +96,14 @@ void main() {
             markedWordsProvider
                 .overrideWithValue({'アリス': MarkStyle.solid}),
           ],
-          child: MaterialApp(
-            locale: const Locale('ja'),
+          child: const MaterialApp(
+            locale: Locale('ja'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SizedBox(
                 height: 400,
-                child: const TextContentRenderer(content: 'アリスは旅に出た。'),
+                child: TextContentRenderer(content: 'アリスは旅に出た。'),
               ),
             ),
           ),

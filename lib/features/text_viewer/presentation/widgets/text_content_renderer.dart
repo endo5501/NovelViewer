@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/marked_words_provider.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
@@ -132,6 +134,14 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       repository: dictRepo,
       initialSurface: selectedText,
     );
+  }
+
+  void _runAnalysis(String word, SummaryType type) {
+    ref.read(analysisRunnerProvider).run(
+          context: context,
+          word: word,
+          type: type,
+        );
   }
 
   void _scrollToTtsHighlight(
@@ -337,6 +347,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
                     context,
                     editableTextState,
                     onAddToDictionary: _openDictionaryDialog,
+                    onAnalyze: _runAnalysis,
                   );
                 },
               ),
