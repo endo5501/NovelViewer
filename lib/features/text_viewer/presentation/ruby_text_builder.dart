@@ -1,6 +1,10 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
+
+typedef OnMarkEnter = void Function(String word, Offset position);
+typedef OnMarkExit = void Function(String word);
 
 class RubyTextWidget extends StatelessWidget {
   const RubyTextWidget({
@@ -10,6 +14,8 @@ class RubyTextWidget extends StatelessWidget {
     required this.baseStyle,
     this.query,
     this.localMarks = const [],
+    this.onMarkEnter,
+    this.onMarkExit,
   });
 
   final String base;
@@ -20,6 +26,9 @@ class RubyTextWidget extends StatelessWidget {
   /// Mark spans expressed in segment-local coordinates (positions inside
   /// [base]). Computed by [buildRubyTextSpans] from the full-text mark scan.
   final List<MarkSpan> localMarks;
+
+  final OnMarkEnter? onMarkEnter;
+  final OnMarkExit? onMarkExit;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +47,12 @@ class RubyTextWidget extends StatelessWidget {
         : <InlineSpan>[TextSpan(text: base, style: basePieceStyle)];
     final markedSpans = localMarks.isEmpty
         ? initialSpans
-        : _applyLocalMarksToSpans(initialSpans, localMarks);
+        : _applyLocalMarksToSpans(
+            initialSpans,
+            localMarks,
+            onMarkEnter: onMarkEnter,
+            onMarkExit: onMarkExit,
+          );
     final baseWidget = (markedSpans.length == 1 &&
             markedSpans.first is TextSpan &&
             (markedSpans.first as TextSpan).children == null)
@@ -76,6 +90,8 @@ TextSpan buildRubyTextSpans(
   TextRange? ttsHighlightRange,
   Brightness brightness = Brightness.light,
   Map<String, MarkStyle> markedWords = const {},
+  OnMarkEnter? onMarkEnter,
+  OnMarkExit? onMarkExit,
 }) {
   if (segments.isEmpty) {
     return const TextSpan();
@@ -112,7 +128,12 @@ TextSpan buildRubyTextSpans(
         final segmentMarks = _localizeMarks(
             globalMarks, plainTextOffset, text.length);
         if (segmentMarks.isNotEmpty) {
-          spans.addAll(_applyLocalMarksToSpans(renderedSpans, segmentMarks));
+          spans.addAll(_applyLocalMarksToSpans(
+            renderedSpans,
+            segmentMarks,
+            onMarkEnter: onMarkEnter,
+            onMarkExit: onMarkExit,
+          ));
         } else {
           spans.addAll(renderedSpans);
         }
@@ -128,6 +149,8 @@ TextSpan buildRubyTextSpans(
             baseStyle: baseStyle,
             query: hasQuery ? query : null,
             localMarks: segmentMarks,
+            onMarkEnter: onMarkEnter,
+            onMarkExit: onMarkExit,
           ),
         ));
         plainTextOffset += base.length;
@@ -176,17 +199,21 @@ List<MarkSpan> _localizeMarks(
 
 /// Splits [renderedSpans] at the boundaries of any mark in [localMarks] (in
 /// segment-local coordinates) and adds underline decoration to spans that
-/// fall inside a mark.
+/// fall inside a mark. When [onMarkEnter] / [onMarkExit] are supplied, the
+/// emitted marked sub-spans also carry hover handlers that report the
+/// underlying [MarkSpan.word] to the caller.
 List<InlineSpan> _applyLocalMarksToSpans(
   List<InlineSpan> renderedSpans,
-  List<MarkSpan> localMarks,
-) {
+  List<MarkSpan> localMarks, {
+  OnMarkEnter? onMarkEnter,
+  OnMarkExit? onMarkExit,
+}) {
   if (localMarks.isEmpty) return renderedSpans;
 
-  final markStyleByPos = <int, MarkStyle>{};
+  final markByPos = <int, MarkSpan>{};
   for (final m in localMarks) {
     for (var i = m.start; i < m.end; i++) {
-      markStyleByPos[i] = m.style;
+      markByPos[i] = m;
     }
   }
 
@@ -199,30 +226,46 @@ List<InlineSpan> _applyLocalMarksToSpans(
     }
     final text = span.text!;
     // Walk character by character within this span, grouping runs by mark
-    // style (or no-mark).
+    // (or no-mark). A boundary occurs whenever the underlying MarkSpan
+    // identity changes — that way two adjacent marks of the same style but
+    // different words still split into separate hover-targets.
     var runStart = 0;
-    MarkStyle? runStyle = markStyleByPos[positionInSegment];
+    MarkSpan? runMark = markByPos[positionInSegment];
     for (var i = 1; i <= text.length; i++) {
       final pos = positionInSegment + i;
-      final styleHere = i < text.length ? markStyleByPos[pos] : null;
-      final isBoundary = i == text.length || styleHere != runStyle;
+      final markHere = i < text.length ? markByPos[pos] : null;
+      final isBoundary = i == text.length || !identical(markHere, runMark);
       if (isBoundary) {
         final subText = text.substring(runStart, i);
-        if (runStyle == null) {
+        if (runMark == null) {
           output.add(TextSpan(text: subText, style: span.style));
         } else {
           final markStyle = span.style?.copyWith(
                 decoration: TextDecoration.underline,
-                decorationStyle: _decorationStyleFor(runStyle),
+                decorationStyle: _decorationStyleFor(runMark.style),
               ) ??
               TextStyle(
                 decoration: TextDecoration.underline,
-                decorationStyle: _decorationStyleFor(runStyle),
+                decorationStyle: _decorationStyleFor(runMark.style),
               );
-          output.add(TextSpan(text: subText, style: markStyle));
+          final word = runMark.word;
+          output.add(TextSpan(
+            text: subText,
+            style: markStyle,
+            mouseCursor: onMarkEnter != null || onMarkExit != null
+                ? SystemMouseCursors.help
+                : MouseCursor.defer,
+            onEnter: onMarkEnter == null
+                ? null
+                : (PointerEnterEvent event) =>
+                    onMarkEnter(word, event.position),
+            onExit: onMarkExit == null
+                ? null
+                : (PointerExitEvent _) => onMarkExit(word),
+          ));
         }
         runStart = i;
-        runStyle = styleHere;
+        runMark = markHere;
       }
     }
     positionInSegment += text.length;

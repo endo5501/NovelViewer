@@ -4,23 +4,23 @@
 
 ## 2. 既存テスト/UIの撤去
 
-- [ ] 2.1 `LlmSummaryPanel` を参照する既存 widget test の洗い出しと、本change完了後に何を残し何を消すか整理（テスト先行で削除リストを書き出す）
-- [ ] 2.2 `SearchSummaryPanel` を撤去する前提で、`SearchResultsPanel` を直接配置できるよう `home_screen.dart` を読み解き、変更箇所を特定
-- [ ] 2.3 `LlmSummaryPanel` 削除時の影響範囲スキャン（grep で参照元洗い出し）
+- [x] 2.1 `LlmSummaryPanel` を参照する既存 widget test の洗い出しと、本change完了後に何を残し何を消すか整理（テスト先行で削除リストを書き出す）
+- [x] 2.2 `SearchSummaryPanel` を撤去する前提で、`SearchResultsPanel` を直接配置できるよう `home_screen.dart` を読み解き、変更箇所を特定
+- [x] 2.3 `LlmSummaryPanel` 削除時の影響範囲スキャン（grep で参照元洗い出し）
 
 ## 3. ホバーポップアップ：domain/state層（TDD）
 
-- [ ] 3.1 ホバーポップアップの状態モデル（表示中/単語/位置/種別）を表す不変オブジェクトのテストを書く
-- [ ] 3.2 `HoverPopupNotifier`（`show(word, position)` / `hide()` / `setSummaryType(type)`）の状態遷移テストを書く
-- [ ] 3.3 上記2つの実装を追加して green 化
-- [ ] 3.4 ホバー対象単語のキャッシュ取得 provider（folder+word を family key とする FutureProvider）のテストを書く（noSpoiler/spoiler 両方解決、片方のみ、両方なしの3パターン）
-- [ ] 3.5 provider 実装を追加して green 化
+- [x] 3.1 ホバーポップアップの状態モデル（表示中/単語/位置/種別）を表す不変オブジェクトのテストを書く
+- [x] 3.2 `HoverPopupNotifier`（`show(word, position)` / `hide()` / `setSummaryType(type)`）の状態遷移テストを書く
+- [x] 3.3 上記2つの実装を追加して green 化
+- [x] 3.4 ホバー対象単語のキャッシュ取得 provider（folder+word を family key とする FutureProvider）のテストを書く（noSpoiler/spoiler 両方解決、片方のみ、両方なしの3パターン）
+- [x] 3.5 provider 実装を追加して green 化
 
 ## 4. ホバーポップアップ：横書きのhover検出（TDD）
 
-- [ ] 4.1 mark付き TextSpan に `onEnter/onExit` を生やすロジックのテストを書く（`MarkSpan.word` がハンドラに渡ること、複数mark並びでも正しく分配されること、未mark span にはハンドラが付かないこと）
-- [ ] 4.2 `_applyLocalMarksToSpans` を拡張して onEnter/onExit を受け取れるようにし、`ruby_text_builder` から hover ハンドラを渡せるよう改修して green 化
-- [ ] 4.3 hover 連続切り替え（語Aから語Bへマウスが移動）の挙動テスト：A.onExit → B.onEnter の順序、notifier 状態が B に切り替わること
+- [x] 4.1 mark付き TextSpan に `onEnter/onExit` を生やすロジックのテストを書く（`MarkSpan.word` がハンドラに渡ること、複数mark並びでも正しく分配されること、未mark span にはハンドラが付かないこと）
+- [x] 4.2 `_applyLocalMarksToSpans` を拡張して onEnter/onExit を受け取れるようにし、`ruby_text_builder` から hover ハンドラを渡せるよう改修して green 化
+- [x] 4.3 hover 連続切り替え（語Aから語Bへマウスが移動）の挙動テスト：A.onExit → B.onEnter の順序、notifier 状態が B に切り替わること
 
 ## 5. ホバーポップアップ：widget 表示（TDD）
 
