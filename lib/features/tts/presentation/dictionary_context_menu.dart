@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -34,7 +35,23 @@ List<ContextMenuButtonItem> buildAnalysisButtonItems({
   required void Function(String selectedText) onAddToDictionary,
   void Function(String selectedText, SummaryType type)? onAnalyze,
 }) {
-  final items = [...baseItems];
+  // For SelectableText.rich, the default Copy item's onPressed routes
+  // through EditableText.copySelection -> value.text.textInside(...),
+  // which substitutes U+FFFC for each ruby WidgetSpan. Replace it so the
+  // explicit ruby-base-expanded selectedText reaches the clipboard.
+  final items = selectedText.isEmpty
+      ? [...baseItems]
+      : baseItems.map((item) {
+          if (item.type != ContextMenuButtonType.copy) return item;
+          return ContextMenuButtonItem(
+            type: ContextMenuButtonType.copy,
+            label: item.label,
+            onPressed: () {
+              ContextMenuController.removeAny();
+              Clipboard.setData(ClipboardData(text: selectedText));
+            },
+          );
+        }).toList();
   if (selectedText.isEmpty) return items;
 
   items.add(ContextMenuButtonItem(

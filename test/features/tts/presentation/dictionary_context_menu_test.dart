@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/tts/presentation/dictionary_context_menu.dart';
@@ -96,6 +97,102 @@ void main() {
 
       result.firstWhere((i) => i.label == '辞書追加').onPressed!();
       expect(captured, 'アリス');
+    });
+
+    testWidgets(
+        'rewrites the system Copy item to copy the explicit selectedText to the clipboard, ignoring the base onPressed (which would leak U+FFFC)',
+        (tester) async {
+      // Repro: in horizontal mode, the base "Copy" item from Flutter's
+      // toolbar resolves text via EditableText.copySelection ->
+      // value.text.textInside(...), which leaks U+FFFC for ruby
+      // WidgetSpans. After the fix, the base Copy item must be remapped
+      // so its onPressed copies the explicit ruby-base-expanded
+      // selectedText to the clipboard.
+
+      String? clipboardText;
+      var baseCopyPressed = false;
+
+      tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') {
+          final args = call.arguments as Map<Object?, Object?>;
+          clipboardText = args['text'] as String?;
+        }
+        return null;
+      });
+      addTearDown(() {
+        tester.binding.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      final base = [
+        ContextMenuButtonItem(
+          type: ContextMenuButtonType.copy,
+          onPressed: () => baseCopyPressed = true,
+        ),
+      ];
+
+      final result = buildAnalysisButtonItems(
+        baseItems: base,
+        selectedText: '宇宙',
+        addToDictionaryLabel: '辞書追加',
+        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
+        onAddToDictionary: (_) {},
+        onAnalyze: (_, _) {},
+      );
+
+      final copy = result.firstWhere(
+        (i) => i.type == ContextMenuButtonType.copy,
+      );
+      copy.onPressed!();
+      // Give the platform channel a microtask to flush the Clipboard call.
+      await tester.pump();
+
+      expect(clipboardText, '宇宙');
+      expect(clipboardText, isNot(contains('￼')));
+      expect(baseCopyPressed, isFalse,
+          reason:
+              'The base Copy onPressed must be replaced, not chained — '
+              'invoking it would re-trigger the U+FFFC-leaking copy path.');
+    });
+
+    testWidgets(
+        'leaves non-Copy base items untouched (Paste/SelectAll keep their original onPressed)',
+        (tester) async {
+      var pasteInvoked = false;
+      var selectAllInvoked = false;
+
+      final base = [
+        ContextMenuButtonItem(
+          type: ContextMenuButtonType.paste,
+          onPressed: () => pasteInvoked = true,
+        ),
+        ContextMenuButtonItem(
+          type: ContextMenuButtonType.selectAll,
+          onPressed: () => selectAllInvoked = true,
+        ),
+      ];
+
+      final result = buildAnalysisButtonItems(
+        baseItems: base,
+        selectedText: '宇宙',
+        addToDictionaryLabel: '辞書追加',
+        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
+        onAddToDictionary: (_) {},
+        onAnalyze: (_, _) {},
+      );
+
+      result
+          .firstWhere((i) => i.type == ContextMenuButtonType.paste)
+          .onPressed!();
+      result
+          .firstWhere((i) => i.type == ContextMenuButtonType.selectAll)
+          .onPressed!();
+
+      expect(pasteInvoked, isTrue);
+      expect(selectAllInvoked, isTrue);
     });
 
     test('a whitespace-only selection still produces all menu items', () {

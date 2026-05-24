@@ -236,8 +236,11 @@ void main() {
       );
     });
 
-    test('normalizes reversed selections (extent before base)', () {
-      // Drag from right to left: baseOffset > extentOffset.
+    test('handles reversed selections (extent before base)', () {
+      // Drag from right to left: baseOffset > extentOffset. Flutter's
+      // TextSelection constructor already normalizes start/end via
+      // min/max of baseOffset/extentOffset, so the helper relies on
+      // selection.start <= selection.end without re-normalizing.
       expect(
         selectedTextFromSelection(
           const TextSelection(baseOffset: 5, extentOffset: 2),
@@ -262,8 +265,8 @@ void main() {
       // Regression guard: the pre-fix code used
       // selection.textInside(value.text) which leaks U+FFFC for each ruby
       // segment. Any return from this helper MUST be free of U+FFFC.
-      final fullDisplaySelection =
-          const TextSelection(baseOffset: 0, extentOffset: 7);
+      const fullDisplaySelection =
+          TextSelection(baseOffset: 0, extentOffset: 7);
       final result = selectedTextFromSelection(fullDisplaySelection, segments);
       expect(result, '我は宇宙の支配者なり');
       expect(result.contains('￼'), isFalse);

@@ -1,5 +1,3 @@
-import 'dart:math' show max, min;
-
 import 'package:flutter/services.dart' show TextSelection;
 
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
@@ -78,14 +76,16 @@ String extractSelectedText(
 /// offsets where each WidgetSpan counts as one U+FFFC character) into the
 /// underlying text with ruby base expanded. Returns the empty string for
 /// invalid or collapsed selections.
+///
+/// `selection.start` / `selection.end` are already SDK-normalized to the
+/// `min`/`max` of `baseOffset`/`extentOffset`, so reversed (right-to-left)
+/// drags do not need extra normalization here.
 String selectedTextFromSelection(
   TextSelection selection,
   List<TextSegment> segments,
 ) {
   if (!selection.isValid || selection.isCollapsed) return '';
-  final start = min(selection.start, selection.end);
-  final end = max(selection.start, selection.end);
-  return extractSelectedText(start, end, segments);
+  return extractSelectedText(selection.start, selection.end, segments);
 }
 
 String buildPlainText(List<TextSegment> segments) {
