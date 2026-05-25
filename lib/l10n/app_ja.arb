@@ -258,8 +258,13 @@
   "contextMenu_copy": "コピー",
   "contextMenu_analyzeNoSpoiler": "解析開始(ネタバレなし)",
   "contextMenu_analyzeSpoiler": "解析開始(ネタバレあり)",
-  "contextMenu_copyNoSpoilerSummary": "要約をコピー(ネタバレなし)",
-  "contextMenu_copySpoilerSummary": "要約をコピー(ネタバレあり)",
+  "contextMenu_copySubmenu": "コピー",
+  "contextMenu_copySnapshotByEpisode": "{episode}ファイル時点の要約をコピー",
+  "@contextMenu_copySnapshotByEpisode": {
+    "placeholders": {
+      "episode": { "type": "int" }
+    }
+  },
   "contextMenu_copiedToClipboard": "クリップボードにコピーしました",
 
   "llmAnalysis_inProgress": "解析中…",
@@ -294,9 +299,29 @@
     }
   },
 
-  "hoverPopup_referenceWarning": "別ファイルで解析した要約です",
-  "hoverPopup_typeNoSpoiler": "なし",
-  "hoverPopup_typeSpoiler": "あり",
+  "hoverPopup_snapshotLabel": "{episode}ファイル時点の要約",
+  "@hoverPopup_snapshotLabel": {
+    "placeholders": {
+      "episode": { "type": "int" }
+    }
+  },
+  "hoverPopup_futureSnapshotWarning": "現在より先の解析です",
+  "hoverPopup_reanalyzeButton": "再解析",
+  "hoverPopup_reanalyzeUpToCurrent": "現在ページまで ({episode}ファイル時点)",
+  "@hoverPopup_reanalyzeUpToCurrent": {
+    "placeholders": {
+      "episode": { "type": "int" }
+    }
+  },
+  "hoverPopup_reanalyzeUpToAll": "全話まで ({episode}ファイル時点)",
+  "@hoverPopup_reanalyzeUpToAll": {
+    "placeholders": {
+      "episode": { "type": "int" }
+    }
+  },
+  "hoverPopup_reanalyzeOverwriteSuffix": " (上書き)",
+  "hoverPopup_snapshotNavPrev": "前のスナップショット",
+  "hoverPopup_snapshotNavNext": "次のスナップショット",
 
   "bookmark_selectNovelPrompt": "作品フォルダを選択してください",
   "bookmark_noBookmarks": "ブックマークがありません",
@@ -322,9 +347,12 @@
   "leftColumn_historyTab": "解析履歴",
 
   "llmHistory_noEntries": "解析履歴がありません",
-  "llmHistory_typeBoth": "両",
-  "llmHistory_typeNoSpoiler": "なし",
-  "llmHistory_typeSpoiler": "あり",
+  "llmHistory_snapshotsBadge": "{count}スナップショット",
+  "@llmHistory_snapshotsBadge": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "llmHistory_untrackedBadge": "未追跡",
 
   "verticalText_nextEpisodePrompt": "▶ 次話「{name}」へ（もう一度）",

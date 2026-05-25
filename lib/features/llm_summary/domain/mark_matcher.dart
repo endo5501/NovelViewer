@@ -1,5 +1,7 @@
-import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
-
+/// The style applied to a cached-word mark. v5 uses a uniform `solid` style
+/// for every mark; the `dotted` value is retained on the enum for callers
+/// that still discriminate (and for forward compatibility) but no production
+/// code path emits it today.
 enum MarkStyle { dotted, solid }
 
 class MarkSpan {
@@ -15,12 +17,6 @@ class MarkSpan {
     required this.word,
   });
 }
-
-MarkStyle markStyleForEntryType(HistoryEntryType type) => switch (type) {
-      HistoryEntryType.noSpoilerOnly => MarkStyle.dotted,
-      HistoryEntryType.spoilerOnly => MarkStyle.solid,
-      HistoryEntryType.both => MarkStyle.solid,
-    };
 
 /// Finds occurrences of [wordsByStyle] keys inside [text] and returns one
 /// [MarkSpan] per match. Words shorter than [minWordLength] are skipped to

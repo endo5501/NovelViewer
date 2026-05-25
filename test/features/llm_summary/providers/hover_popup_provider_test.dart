@@ -1,7 +1,6 @@
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 
 const _tokenA = (start: 0, end: 3);
@@ -16,11 +15,11 @@ void main() {
       expect(state.word, isNull);
       expect(state.position, isNull);
       expect(state.hoverToken, isNull);
-      expect(state.activeType, SummaryType.noSpoiler,
-          reason: 'activeType defaults to noSpoiler even when hidden');
+      expect(state.activeEpisode, isNull);
     });
 
-    test('visible() factory produces a visible state with given fields', () {
+    test('visible() factory produces a visible state with default episode',
+        () {
       const state = HoverPopupState.visible(
         word: 'アリス',
         position: Offset(100, 200),
@@ -31,19 +30,20 @@ void main() {
       expect(state.word, 'アリス');
       expect(state.position, const Offset(100, 200));
       expect(state.hoverToken, _tokenA);
-      expect(state.activeType, SummaryType.noSpoiler,
-          reason: 'activeType defaults to noSpoiler when not specified');
+      expect(state.activeEpisode, isNull,
+          reason:
+              'activeEpisode defaults to null, signalling "use default rule"');
     });
 
-    test('visible() factory honors explicit activeType', () {
+    test('visible() factory honors explicit activeEpisode', () {
       const state = HoverPopupState.visible(
         word: 'アリス',
         position: Offset(100, 200),
         hoverToken: _tokenA,
-        activeType: SummaryType.spoiler,
+        activeEpisode: 40,
       );
 
-      expect(state.activeType, SummaryType.spoiler);
+      expect(state.activeEpisode, 40);
     });
 
     test('equal hidden states compare equal', () {
@@ -80,6 +80,23 @@ void main() {
 
       expect(a, isNot(equals(b)));
     });
+
+    test('different activeEpisode values produce non-equal states', () {
+      const a = HoverPopupState.visible(
+        word: 'アリス',
+        position: Offset(10, 20),
+        hoverToken: _tokenA,
+        activeEpisode: 30,
+      );
+      const b = HoverPopupState.visible(
+        word: 'アリス',
+        position: Offset(10, 20),
+        hoverToken: _tokenA,
+        activeEpisode: 60,
+      );
+
+      expect(a, isNot(equals(b)));
+    });
   });
 
   group('HoverPopupNotifier', () {
@@ -111,8 +128,8 @@ void main() {
       expect(state.word, 'アリス');
       expect(state.position, const Offset(50, 75));
       expect(state.hoverToken, _tokenA);
-      expect(state.activeType, SummaryType.noSpoiler,
-          reason: 'show() resets activeType to the default noSpoiler');
+      expect(state.activeEpisode, isNull,
+          reason: 'show() leaves activeEpisode at null (default rule)');
     });
 
     test('hide() returns the state to hidden', () {
@@ -128,54 +145,65 @@ void main() {
       expect(state.word, isNull);
     });
 
-    test('setSummaryType updates activeType while preserving identity fields',
+    test('setActiveEpisode updates active snapshot while preserving identity',
         () {
       final container = makeContainer();
       final notifier = container.read(hoverPopupProvider.notifier);
 
       notifier.show(
           word: 'アリス', position: const Offset(50, 75), token: _tokenA);
-      notifier.setSummaryType(SummaryType.spoiler);
+      notifier.setActiveEpisode(60);
 
       final state = container.read(hoverPopupProvider);
       expect(state.isVisible, isTrue);
       expect(state.word, 'アリス');
       expect(state.position, const Offset(50, 75));
       expect(state.hoverToken, _tokenA);
-      expect(state.activeType, SummaryType.spoiler);
+      expect(state.activeEpisode, 60);
     });
 
-    test('setSummaryType is a no-op when the popup is hidden', () {
-      final container = makeContainer();
-      final notifier = container.read(hoverPopupProvider.notifier);
-
-      notifier.setSummaryType(SummaryType.spoiler);
-
-      final state = container.read(hoverPopupProvider);
-      expect(state.isVisible, isFalse,
-          reason: 'setSummaryType on a hidden popup must not make it visible');
-    });
-
-    test('show() with a different token replaces the request', () {
+    test('setActiveEpisode(null) clears the override (re-apply default rule)',
+        () {
       final container = makeContainer();
       final notifier = container.read(hoverPopupProvider.notifier);
 
       notifier.show(
           word: 'アリス', position: const Offset(50, 75), token: _tokenA);
-      notifier.setSummaryType(SummaryType.spoiler);
+      notifier.setActiveEpisode(30);
+      notifier.setActiveEpisode(null);
+
+      expect(container.read(hoverPopupProvider).activeEpisode, isNull);
+    });
+
+    test('setActiveEpisode is a no-op when the popup is hidden', () {
+      final container = makeContainer();
+      final notifier = container.read(hoverPopupProvider.notifier);
+
+      notifier.setActiveEpisode(30);
+
+      final state = container.read(hoverPopupProvider);
+      expect(state.isVisible, isFalse);
+    });
+
+    test('show() with a different token resets activeEpisode to null', () {
+      final container = makeContainer();
+      final notifier = container.read(hoverPopupProvider.notifier);
+
+      notifier.show(
+          word: 'アリス', position: const Offset(50, 75), token: _tokenA);
+      notifier.setActiveEpisode(60);
       notifier.show(
           word: 'ボブ', position: const Offset(100, 200), token: _tokenB);
 
       final state = container.read(hoverPopupProvider);
       expect(state.word, 'ボブ');
-      expect(state.position, const Offset(100, 200));
       expect(state.hoverToken, _tokenB);
-      expect(state.activeType, SummaryType.noSpoiler,
-          reason:
-              'A new show() resets activeType so the new occurrence starts with noSpoiler');
+      expect(state.activeEpisode, isNull,
+          reason: 'New occurrence starts with the default snapshot rule');
     });
 
-    test('show() with the same token is a no-op (position is NOT updated)', () {
+    test('show() with the same token is a no-op (position is NOT updated)',
+        () {
       final container = makeContainer();
       final notifier = container.read(hoverPopupProvider.notifier);
 
@@ -187,9 +215,7 @@ void main() {
           token: _tokenA);
 
       final state = container.read(hoverPopupProvider);
-      expect(state.position, const Offset(50, 75),
-          reason:
-              'Re-entering the SAME marked occurrence (e.g. sub-pixel pointer wobble) must not churn position');
+      expect(state.position, const Offset(50, 75));
     });
 
     test('hideIfShowing hides only when the same token is active', () {
@@ -202,52 +228,38 @@ void main() {
             word: 'アリス', position: const Offset(0, 0), token: _tokenA);
         notifier.hideIfShowing(_tokenB);
         async.elapse(const Duration(milliseconds: 500));
-        expect(container.read(hoverPopupProvider).hoverToken, _tokenA,
-            reason: 'hideIfShowing(B) must not hide an active A popup');
+        expect(container.read(hoverPopupProvider).hoverToken, _tokenA);
 
         notifier.hideIfShowing(_tokenA);
         async.elapse(const Duration(milliseconds: 500));
-        expect(container.read(hoverPopupProvider).isVisible, isFalse,
-            reason: 'hideIfShowing must hide when tokens match');
+        expect(container.read(hoverPopupProvider).isVisible, isFalse);
       });
     });
 
     test(
         'pointer moving between two occurrences of the SAME word switches '
-        'the popup to the new occurrence (not closed by the prior exit)', () {
-      // Regression: previously hideIfShowing matched on word, so leaving the
-      // first occurrence of "アリス" would also close the popup that just
-      // opened on the second occurrence.
+        'the popup to the new occurrence', () {
       final container = makeContainer();
       final notifier = container.read(hoverPopupProvider.notifier);
 
-      // Two occurrences of the same word at different positions.
       const tokenAlice1 = (start: 0, end: 3);
       const tokenAlice2 = (start: 20, end: 23);
 
       notifier.show(
           word: 'アリス', position: const Offset(10, 10), token: tokenAlice1);
-      // Pointer moves to second occurrence; framework typically fires
-      // exit(first) then enter(second), in either order.
       notifier.show(
           word: 'アリス', position: const Offset(30, 10), token: tokenAlice2);
       notifier.hideIfShowing(tokenAlice1);
 
       final state = container.read(hoverPopupProvider);
-      expect(state.isVisible, isTrue,
-          reason:
-              'Popup must remain visible for the second occurrence after the '
-              'exit handler for the first occurrence fires');
+      expect(state.isVisible, isTrue);
       expect(state.hoverToken, tokenAlice2);
-      expect(state.position, const Offset(30, 10),
-          reason: 'Popup position must reflect the new occurrence');
+      expect(state.position, const Offset(30, 10));
     });
   });
 
   group('popup-hover grace period', () {
-    test(
-        'hideIfShowing schedules a deferred hide that fires after the grace '
-        'period when the popup was never entered', () {
+    test('hideIfShowing schedules a deferred hide', () {
       fakeAsync((async) {
         final container = ProviderContainer();
         addTearDown(container.dispose);
@@ -257,24 +269,15 @@ void main() {
             word: 'アリス', position: const Offset(0, 0), token: _tokenA);
         notifier.hideIfShowing(_tokenA);
 
-        // Still visible immediately after the exit handler fires.
-        expect(container.read(hoverPopupProvider).isVisible, isTrue,
-            reason:
-                'Hide must be deferred so the pointer can travel from the '
-                'marked span to the popup widget');
+        expect(container.read(hoverPopupProvider).isVisible, isTrue);
 
         async.elapse(const Duration(milliseconds: 200));
 
-        expect(container.read(hoverPopupProvider).isVisible, isFalse,
-            reason: 'After the grace period elapses, the popup hides');
+        expect(container.read(hoverPopupProvider).isVisible, isFalse);
       });
     });
 
-    test(
-        'grace-period boundary: popup is still visible at 149 ms and hidden '
-        'just after 150 ms (regression guard against accidental drift / '
-        'pumpAndSettle swallowing the timer)',
-        () {
+    test('grace-period boundary: visible at 149 ms, hidden after 150 ms', () {
       fakeAsync((async) {
         final container = ProviderContainer();
         addTearDown(container.dispose);
@@ -285,20 +288,14 @@ void main() {
         notifier.hideIfShowing(_tokenA);
 
         async.elapse(const Duration(milliseconds: 149));
-        expect(container.read(hoverPopupProvider).isVisible, isTrue,
-            reason:
-                'Must remain visible right up to the grace boundary so the '
-                'pointer has time to reach the popup');
+        expect(container.read(hoverPopupProvider).isVisible, isTrue);
 
         async.elapse(const Duration(milliseconds: 2));
-        expect(container.read(hoverPopupProvider).isVisible, isFalse,
-            reason: 'Must hide immediately once the 150 ms grace elapses');
+        expect(container.read(hoverPopupProvider).isVisible, isFalse);
       });
     });
 
-    test(
-        'onPopupEnter during the grace window cancels the deferred hide so '
-        'the popup stays visible while the pointer is inside it', () {
+    test('onPopupEnter during the grace window cancels the deferred hide', () {
       fakeAsync((async) {
         final container = ProviderContainer();
         addTearDown(container.dispose);
@@ -311,10 +308,7 @@ void main() {
         notifier.onPopupEnter();
         async.elapse(const Duration(milliseconds: 500));
 
-        expect(container.read(hoverPopupProvider).isVisible, isTrue,
-            reason:
-                'A timely onPopupEnter must cancel the scheduled hide so the '
-                'user can interact with the popup');
+        expect(container.read(hoverPopupProvider).isVisible, isTrue);
       });
     });
 
@@ -330,22 +324,11 @@ void main() {
         async.flushMicrotasks();
         notifier.onPopupExit();
 
-        expect(container.read(hoverPopupProvider).isVisible, isFalse,
-            reason:
-                'Leaving the popup itself bypasses the grace period — the '
-                'user has clearly moved on');
+        expect(container.read(hoverPopupProvider).isVisible, isFalse);
       });
     });
 
-    test(
-        'programmatic hide() resets the popup-hover latch so a later '
-        'hideIfShowing on a fresh popup is NOT suppressed',
-        () {
-      // Regression: when hide() was called while _popupHovered was true
-      // (e.g. mode flip or page jump while pointer is inside the popup),
-      // the latch lingered. The next popup's deferred hide then short-
-      // circuited inside the grace-period callback and the new popup
-      // stayed visible indefinitely.
+    test('programmatic hide() resets the popup-hover latch', () {
       fakeAsync((async) {
         final container = ProviderContainer();
         addTearDown(container.dispose);
@@ -354,27 +337,18 @@ void main() {
         notifier.show(
             word: 'アリス', position: const Offset(0, 0), token: _tokenA);
         notifier.onPopupEnter();
-        // Mode switch / page jump path fires hide() while the pointer
-        // happens to be over the popup.
         notifier.hide();
 
-        // Fresh popup for a different mark.
         notifier.show(
             word: 'ボブ', position: const Offset(20, 20), token: _tokenB);
-        // Pointer leaves the new mark and is NOT inside any popup.
         notifier.hideIfShowing(_tokenB);
         async.elapse(const Duration(milliseconds: 300));
 
-        expect(container.read(hoverPopupProvider).isVisible, isFalse,
-            reason:
-                'After a programmatic hide(), the next popup must close '
-                'normally via the grace-period exit timer.');
+        expect(container.read(hoverPopupProvider).isVisible, isFalse);
       });
     });
 
-    test(
-        'show() cancels any pending hide timer so re-entering a marked span '
-        'immediately keeps the popup visible', () {
+    test('show() cancels any pending hide timer', () {
       fakeAsync((async) {
         final container = ProviderContainer();
         addTearDown(container.dispose);
@@ -384,7 +358,6 @@ void main() {
             word: 'アリス', position: const Offset(0, 0), token: _tokenA);
         notifier.hideIfShowing(_tokenA);
         async.elapse(const Duration(milliseconds: 50));
-        // Pointer re-enters a marked span before the grace period elapses.
         notifier.show(
             word: 'ボブ', position: const Offset(20, 0), token: _tokenB);
         async.elapse(const Duration(milliseconds: 500));
@@ -395,9 +368,7 @@ void main() {
       });
     });
 
-    test(
-        'while the popup is hovered, a stale exit(token) does NOT close it '
-        'even after the grace period', () {
+    test('while the popup is hovered, a stale exit(token) is suppressed', () {
       fakeAsync((async) {
         final container = ProviderContainer();
         addTearDown(container.dispose);
@@ -406,7 +377,6 @@ void main() {
         notifier.show(
             word: 'アリス', position: const Offset(0, 0), token: _tokenA);
         notifier.onPopupEnter();
-        // Pointer is inside the popup; a stray exit handler arrives.
         notifier.hideIfShowing(_tokenA);
         async.elapse(const Duration(milliseconds: 500));
 
@@ -416,9 +386,7 @@ void main() {
   });
 
   group('hover transition A -> B (cross-event ordering)', () {
-    test(
-        'when framework emits [exit(A), enter(B)] in order, final state is B',
-        () {
+    test('[exit(A), enter(B)] in order leaves final state as B', () {
       fakeAsync((async) {
         final container = ProviderContainer();
         addTearDown(container.dispose);
@@ -438,9 +406,7 @@ void main() {
       });
     });
 
-    test(
-        'when framework emits [enter(B), exit(A)] in order, final state is still B',
-        () {
+    test('[enter(B), exit(A)] in order leaves final state as B', () {
       fakeAsync((async) {
         final container = ProviderContainer();
         addTearDown(container.dispose);
@@ -455,9 +421,7 @@ void main() {
         async.elapse(const Duration(milliseconds: 500));
 
         final state = container.read(hoverPopupProvider);
-        expect(state.word, 'B',
-            reason:
-                'Out-of-order exit(A) after enter(B) must NOT hide the popup');
+        expect(state.word, 'B');
         expect(state.position, const Offset(20, 20));
       });
     });

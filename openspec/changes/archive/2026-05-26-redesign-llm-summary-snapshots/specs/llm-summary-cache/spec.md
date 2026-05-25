@@ -1,8 +1,4 @@
-## Purpose
-
-SQLite-backed cache (`word_summaries` table) for LLM word summaries, keyed by snapshot triplet `(folder_name, word, covered_up_to_episode)`. Loads snapshots on word selection, supports multi-snapshot retrieval, enforces a minimum word length, and migrates the schema from v4 (legacy `summary_type` keying) to v5 (snapshot keying).
-
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Snapshot-keyed summary storage
 The system SHALL store LLM summary results in the `word_summaries` SQLite table keyed by `(folder_name, word, covered_up_to_episode)`. The `covered_up_to_episode` column SHALL be a non-NULL integer that represents the upper bound (inclusive) of source files included in the analysis, expressed as the numeric prefix extracted from the file name by the regular expression `^(\d+)`. The system SHALL ALSO persist `source_file` set to the file the user was viewing when the analysis ran (no-spoiler scope) or to the highest-prefix file in the folder at analysis time (full-scope), so that subsequent UI features can resolve a jump target back into the text.
@@ -111,3 +107,25 @@ The system SHALL refuse to write a new `word_summaries` row when the analyzed wo
 #### Scenario: 2-character word write succeeds
 - **WHEN** the analysis pipeline saves a summary for the word "聖印"
 - **THEN** the save SHALL succeed normally
+
+## REMOVED Requirements
+
+### Requirement: Cache summary results in SQLite
+**Reason**: The `(folder_name, word, summary_type)` keyed schema is replaced by the snapshot schema. See "Snapshot-keyed summary storage" above.
+**Migration**: V4 rows are converted to V5 snapshot rows by the v4 → v5 migration; no API caller needs to invoke a migration helper directly.
+
+### Requirement: Load cached summary on word selection
+**Reason**: The `summaryType` lookup path is replaced by `findSnapshotsForWord` plus snapshot selection on the consumer side. See "Snapshot lookup API on repository" and "Snapshot selection on word display".
+**Migration**: Callers that previously called `findSummary(folder, word, summaryType)` SHALL switch to `findSnapshotsForWord(folder, word)` and apply the snapshot selection rule.
+
+### Requirement: Update cache on re-analysis
+**Reason**: Re-analysis is now expressed as "overwrite the row matching the new `covered_up_to_episode`"; the behavior is preserved but the keying differs. Covered by "Snapshot-keyed summary storage" / "Re-analysis overwrites the matching snapshot".
+**Migration**: No external migration; the upsert key is `(folder_name, word, covered_up_to_episode)` instead of `(folder_name, word, summary_type)`.
+
+### Requirement: No-spoiler cache position awareness
+**Reason**: The "cached at a different position" notice is generalized: every snapshot carries its own `covered_up_to_episode`, and the popup describes it as "X話時点の要約" (with a "future" warning when `covered_up_to_episode > C`). The per-no-spoiler-row position-awareness rule is therefore superseded.
+**Migration**: UI behavior is covered by the updated `llm-summary-hover-popup` spec.
+
+### Requirement: Database schema migration for word summaries
+**Reason**: Replaced by the more comprehensive "Database schema migration v4 → v5" requirement above, which covers both the schema reshape and the row-by-row data transform.
+**Migration**: The new requirement subsumes both v1 → v2 (table creation) and v4 → v5 (snapshot reshape) cases; existing v1 → v4 migrations remain in `onUpgrade` for users on intermediate versions.

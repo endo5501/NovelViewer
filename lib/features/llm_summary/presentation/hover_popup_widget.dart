@@ -1,94 +1,121 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 /// Inline popup shown above a marked word when the pointer hovers it. Reads
-/// the cached `word_summaries` rows for (folder, word), decides which type to
-/// display from the [hoverPopupProvider] state, and renders the summary plus
-/// optional toggle and reference-position warning. Content is non-selectable
-/// — copy support lives in the history panel.
+/// all `word_summaries` snapshots for `(folder, word)`, chooses the default
+/// one to display via [chooseDefaultSnapshot] (overridable via the snapshot
+/// navigator), and renders the summary plus the snapshot label, the
+/// re-analysis dropdown, and an optional future-snapshot warning icon.
 class HoverPopupWidget extends ConsumerWidget {
   const HoverPopupWidget({
     super.key,
     required this.folder,
     required this.word,
+    required this.currentEpisode,
     required this.currentFileName,
+    required this.maxEpisodeInFolder,
+    required this.maxEpisodeFileName,
   });
 
   final String folder;
   final String word;
+
+  /// Effective episode number of the file the user is currently viewing.
+  /// Used both for the default snapshot selection rule and the future-snapshot
+  /// warning. The `_runAnalysis` callbacks consume the matching file name.
+  final int currentEpisode;
   final String? currentFileName;
+
+  /// Effective episode number of the highest-prefix file in the folder, used
+  /// by the "All chapters" re-analysis menu item. May equal [currentEpisode]
+  /// for a single-file folder.
+  final int maxEpisodeInFolder;
+  final String? maxEpisodeFileName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cacheAsync = ref.watch(
+    final snapshotsAsync = ref.watch(
       hoverPopupCacheProvider((folder: folder, word: word)),
     );
-    final activeType = ref.watch(
-      hoverPopupProvider.select((s) => s.activeType),
+    final activeEpisode = ref.watch(
+      hoverPopupProvider.select((s) => s.activeEpisode),
     );
     final notifier = ref.read(hoverPopupProvider.notifier);
 
-    final body = cacheAsync.when(
+    final body = snapshotsAsync.when(
       loading: _LoadingCard.new,
       error: (_, _) => const SizedBox.shrink(),
-      data: (summaries) {
-        final hasBoth =
-            summaries.noSpoiler != null && summaries.spoiler != null;
-        final displayed = switch (activeType) {
-          SummaryType.noSpoiler =>
-            summaries.noSpoiler ?? summaries.spoiler,
-          SummaryType.spoiler => summaries.spoiler ?? summaries.noSpoiler,
-        };
+      data: (snapshots) {
+        if (snapshots.isEmpty) return const SizedBox.shrink();
+
+        final displayed = _resolveDisplayedSnapshot(
+          snapshots: snapshots,
+          activeEpisode: activeEpisode,
+          currentEpisode: currentEpisode,
+        );
         if (displayed == null) return const SizedBox.shrink();
 
-        final showWarning = activeType == SummaryType.noSpoiler &&
-            summaries.noSpoiler != null &&
-            summaries.noSpoiler!.sourceFile != null &&
-            summaries.noSpoiler!.sourceFile != currentFileName;
-
         return _Card(
-          summaryText: displayed.summary,
-          showToggle: hasBoth,
-          activeType: activeType,
-          onTypeChange: notifier.setSummaryType,
-          showReferenceWarning: showWarning,
+          snapshots: snapshots,
+          displayed: displayed,
+          currentEpisode: currentEpisode,
+          currentFileName: currentFileName,
+          maxEpisodeInFolder: maxEpisodeInFolder,
+          maxEpisodeFileName: maxEpisodeFileName,
+          onSelectEpisode: notifier.setActiveEpisode,
         );
       },
     );
 
-    // Wrapping the popup itself in a MouseRegion lets the notifier suppress
-    // the grace-period hide while the pointer is inside the popup, so the
-    // user can click the [なし|あり] toggle without the popup vanishing.
     return MouseRegion(
       onEnter: (_) => notifier.onPopupEnter(),
       onExit: (_) => notifier.onPopupExit(),
       child: body,
     );
   }
+
+  static WordSummary? _resolveDisplayedSnapshot({
+    required List<WordSummary> snapshots,
+    required int? activeEpisode,
+    required int currentEpisode,
+  }) {
+    if (activeEpisode != null) {
+      for (final s in snapshots) {
+        if (s.coveredUpToEpisode == activeEpisode) return s;
+      }
+    }
+    return chooseDefaultSnapshot(snapshots, currentEpisode);
+  }
 }
 
-class _Card extends StatelessWidget {
+class _Card extends ConsumerWidget {
   const _Card({
-    required this.summaryText,
-    required this.showToggle,
-    required this.activeType,
-    required this.onTypeChange,
-    required this.showReferenceWarning,
+    required this.snapshots,
+    required this.displayed,
+    required this.currentEpisode,
+    required this.currentFileName,
+    required this.maxEpisodeInFolder,
+    required this.maxEpisodeFileName,
+    required this.onSelectEpisode,
   });
 
-  final String summaryText;
-  final bool showToggle;
-  final SummaryType activeType;
-  final ValueChanged<SummaryType> onTypeChange;
-  final bool showReferenceWarning;
+  final List<WordSummary> snapshots;
+  final WordSummary displayed;
+  final int currentEpisode;
+  final String? currentFileName;
+  final int maxEpisodeInFolder;
+  final String? maxEpisodeFileName;
+  final ValueChanged<int?> onSelectEpisode;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    final showWarning = displayed.coveredUpToEpisode > currentEpisode;
     return Material(
       key: const Key('hover_popup_card'),
       elevation: 4,
@@ -98,25 +125,38 @@ class _Card extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 320),
+        constraints: const BoxConstraints(maxWidth: 360),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (showToggle) ...[
-                _TypeToggle(active: activeType, onChange: onTypeChange),
-                const SizedBox(height: 8),
-              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: _SnapshotSelector(
+                      snapshots: snapshots,
+                      displayed: displayed,
+                      onSelectEpisode: onSelectEpisode,
+                      showWarning: showWarning,
+                    ),
+                  ),
+                  _ReanalyzeMenuButton(
+                    word: displayed.word,
+                    snapshots: snapshots,
+                    currentEpisode: currentEpisode,
+                    currentFileName: currentFileName,
+                    maxEpisodeInFolder: maxEpisodeInFolder,
+                    maxEpisodeFileName: maxEpisodeFileName,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               Text(
-                summaryText,
+                displayed.summary,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
-              if (showReferenceWarning) ...[
-                const SizedBox(height: 8),
-                const _ReferenceWarning(),
-              ],
             ],
           ),
         ),
@@ -125,92 +165,218 @@ class _Card extends StatelessWidget {
   }
 }
 
-class _TypeToggle extends StatelessWidget {
-  const _TypeToggle({required this.active, required this.onChange});
+class _SnapshotSelector extends StatelessWidget {
+  const _SnapshotSelector({
+    required this.snapshots,
+    required this.displayed,
+    required this.onSelectEpisode,
+    required this.showWarning,
+  });
 
-  final SummaryType active;
-  final ValueChanged<SummaryType> onChange;
+  final List<WordSummary> snapshots;
+  final WordSummary displayed;
+  final ValueChanged<int?> onSelectEpisode;
+  final bool showWarning;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    Widget pill(SummaryType type, String label, Key key) {
-      final selected = active == type;
-      return Material(
-        key: key,
-        color: selected ? theme.colorScheme.primary : Colors.transparent,
-        child: InkWell(
-          onTap: () => onChange(type),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: selected
-                    ? theme.colorScheme.onPrimary
-                    : theme.colorScheme.onSurface,
-              ),
+    final theme = Theme.of(context);
+    final currentIndex =
+        snapshots.indexWhere((s) => s.coveredUpToEpisode == displayed.coveredUpToEpisode);
+    final hasPrev = currentIndex > 0;
+    final hasNext = currentIndex >= 0 && currentIndex < snapshots.length - 1;
+
+    return Row(
+      key: const Key('hover_popup_snapshot_selector'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          key: const Key('hover_popup_snapshot_prev'),
+          icon: const Icon(Icons.chevron_left, size: 18),
+          tooltip: l10n.hoverPopup_snapshotNavPrev,
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+          onPressed: hasPrev
+              ? () => onSelectEpisode(
+                  snapshots[currentIndex - 1].coveredUpToEpisode)
+              : null,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          l10n.hoverPopup_snapshotLabel(displayed.coveredUpToEpisode),
+          style: theme.textTheme.bodySmall,
+        ),
+        const SizedBox(width: 4),
+        IconButton(
+          key: const Key('hover_popup_snapshot_next'),
+          icon: const Icon(Icons.chevron_right, size: 18),
+          tooltip: l10n.hoverPopup_snapshotNavNext,
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+          onPressed: hasNext
+              ? () => onSelectEpisode(
+                  snapshots[currentIndex + 1].coveredUpToEpisode)
+              : null,
+        ),
+        if (showWarning) ...[
+          const SizedBox(width: 4),
+          Tooltip(
+            key: const Key('hover_popup_future_warning'),
+            message: l10n.hoverPopup_futureSnapshotWarning,
+            child: Icon(
+              Icons.warning_amber_outlined,
+              size: 14,
+              color: Colors.orange.shade700,
             ),
           ),
-        ),
-      );
-    }
-
-    return Container(
-      key: const Key('hover_popup_type_toggle'),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          pill(
-            SummaryType.noSpoiler,
-            l10n.hoverPopup_typeNoSpoiler,
-            const Key('hover_popup_type_no_spoiler'),
-          ),
-          pill(
-            SummaryType.spoiler,
-            l10n.hoverPopup_typeSpoiler,
-            const Key('hover_popup_type_spoiler'),
-          ),
         ],
-      ),
+      ],
     );
   }
 }
 
-class _ReferenceWarning extends StatelessWidget {
-  const _ReferenceWarning();
+/// Helper exposed for tests: whether the re-analysis menu should append the
+/// `(上書き)` suffix to a candidate `coveredUpToEpisode`.
+bool shouldAppendOverwriteSuffix(
+  List<WordSummary> snapshots,
+  int candidateEpisode,
+) {
+  for (final s in snapshots) {
+    if (s.coveredUpToEpisode == candidateEpisode) return true;
+  }
+  return false;
+}
+
+class _ReanalyzeMenuButton extends ConsumerStatefulWidget {
+  const _ReanalyzeMenuButton({
+    required this.word,
+    required this.snapshots,
+    required this.currentEpisode,
+    required this.currentFileName,
+    required this.maxEpisodeInFolder,
+    required this.maxEpisodeFileName,
+  });
+
+  final String word;
+  final List<WordSummary> snapshots;
+  final int currentEpisode;
+  final String? currentFileName;
+  final int maxEpisodeInFolder;
+  final String? maxEpisodeFileName;
+
+  @override
+  ConsumerState<_ReanalyzeMenuButton> createState() =>
+      _ReanalyzeMenuButtonState();
+}
+
+class _ReanalyzeMenuButtonState extends ConsumerState<_ReanalyzeMenuButton> {
+  // MenuController in Material is a plain controller (no ChangeNotifier,
+  // no dispose method) — it just exposes open()/close() that delegate to
+  // the bound MenuAnchor. No explicit cleanup is needed when the State
+  // unmounts; the MenuAnchor unsubscribes itself.
+  final MenuController _menuController = MenuController();
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Row(
-      key: const Key('hover_popup_reference_warning'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          Icons.warning_amber_outlined,
-          size: 14,
-          color: Colors.orange.shade700,
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            l10n.hoverPopup_referenceWarning,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.orange.shade700,
-            ),
+    final overwriteSuffix = l10n.hoverPopup_reanalyzeOverwriteSuffix;
+
+    String labelUpToCurrent =
+        l10n.hoverPopup_reanalyzeUpToCurrent(widget.currentEpisode);
+    if (shouldAppendOverwriteSuffix(widget.snapshots, widget.currentEpisode)) {
+      labelUpToCurrent += overwriteSuffix;
+    }
+
+    String labelUpToAll =
+        l10n.hoverPopup_reanalyzeUpToAll(widget.maxEpisodeInFolder);
+    if (shouldAppendOverwriteSuffix(
+        widget.snapshots, widget.maxEpisodeInFolder)) {
+      labelUpToAll += overwriteSuffix;
+    }
+
+    return MenuAnchor(
+      controller: _menuController,
+      // Notify the hover-popup notifier when the menu opens / closes so the
+      // popup's grace-period hide is suppressed while the pointer travels
+      // from the popup body onto a menu item. Without this, leaving the
+      // popup's MouseRegion to reach the dropdown would dismiss the popup
+      // mid-travel and the menu items become unreachable.
+      onOpen: () {
+        if (!mounted) return;
+        ref.read(hoverPopupProvider.notifier).onChildMenuOpen();
+      },
+      onClose: () {
+        if (!mounted) return;
+        ref.read(hoverPopupProvider.notifier).onChildMenuClose();
+      },
+      menuChildren: [
+        MenuItemButton(
+          key: const Key('hover_popup_reanalyze_up_to_current'),
+          onPressed: () => _runAnalysis(
+            episode: widget.currentEpisode,
+            sourceFile: widget.currentFileName,
           ),
+          child: Text(labelUpToCurrent),
+        ),
+        MenuItemButton(
+          key: const Key('hover_popup_reanalyze_up_to_all'),
+          onPressed: () => _runAnalysis(
+            episode: widget.maxEpisodeInFolder,
+            sourceFile: widget.maxEpisodeFileName,
+          ),
+          child: Text(labelUpToAll),
         ),
       ],
+      builder: (context, controller, _) => TextButton.icon(
+        key: const Key('hover_popup_reanalyze_button'),
+        onPressed: () {
+          if (controller.isOpen) {
+            controller.close();
+          } else {
+            controller.open();
+          }
+        },
+        icon: const Icon(Icons.refresh, size: 16),
+        label: Text(
+          l10n.hoverPopup_reanalyzeButton,
+          style: const TextStyle(fontSize: 12),
+        ),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+          minimumSize: const Size(0, 24),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
     );
+  }
+
+  void _runAnalysis({required int episode, required String? sourceFile}) {
+    // The popup (and this menu button) lives inside an Overlay entry that
+    // hides aggressively on pointer-exit. Two correctness concerns:
+    //   1. By the time the runner's first synchronous read of
+    //      AppLocalizations.of(context) executes, the menu's BuildContext
+    //      may already be unmounted — the Localizations ancestor is then
+    //      gone and the `!` bang throws in the orphaned future, swallowing
+    //      the analysis silently. Capture a root-navigator context BEFORE
+    //      close() so localizations/navigator/messenger lookups resolve
+    //      against an ancestor that survives the popup's teardown.
+    //   2. `_menuController.close()` synchronously fires `onClose` →
+    //      `onChildMenuClose` on the popup notifier, which may hide the
+    //      popup and start tearing down this State. Guard the post-close
+    //      `ref.read(analysisRunnerProvider)` with `mounted` so a disposed
+    //      Notifier lookup does not throw.
+    final rootContext = Navigator.of(context, rootNavigator: true).context;
+    _menuController.close();
+    if (!mounted) return;
+    ref.read(analysisRunnerProvider).run(
+          context: rootContext,
+          word: widget.word,
+          coveredUpToEpisode: episode,
+          sourceFileName: sourceFile,
+        );
   }
 }
 

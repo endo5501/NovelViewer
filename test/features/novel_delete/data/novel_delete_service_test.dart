@@ -6,7 +6,6 @@ import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_repository.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
-import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/novel_delete/data/novel_delete_service.dart';
 
@@ -53,7 +52,7 @@ void main() {
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               folder_name TEXT NOT NULL,
               word TEXT NOT NULL,
-              summary_type TEXT NOT NULL,
+              covered_up_to_episode INTEGER NOT NULL,
               summary TEXT NOT NULL,
               source_file TEXT,
               created_at TEXT NOT NULL,
@@ -62,7 +61,7 @@ void main() {
           ''');
           await db.execute('''
             CREATE UNIQUE INDEX idx_word_summaries_unique
-            ON word_summaries(folder_name, word, summary_type)
+            ON word_summaries(folder_name, word, covered_up_to_episode)
           ''');
         },
       ),
@@ -116,10 +115,10 @@ void main() {
 
     test('deletes word summaries for the folder', () async {
       await novelRepository.upsert(createMetadata());
-      await summaryRepository.saveSummary(
+      await summaryRepository.saveSnapshot(
         folderName: 'narou_n1234ab',
         word: 'アリス',
-        summaryType: SummaryType.spoiler,
+        coveredUpToEpisode: 10,
         summary: '要約',
       );
       final novelDir = Directory('${tempDir.path}/narou_n1234ab');
@@ -127,12 +126,11 @@ void main() {
 
       await deleteService.delete('narou_n1234ab', novelDir.path);
 
-      final summary = await summaryRepository.findSummary(
+      final snapshots = await summaryRepository.findSnapshotsForWord(
         folderName: 'narou_n1234ab',
         word: 'アリス',
-        summaryType: SummaryType.spoiler,
       );
-      expect(summary, isNull);
+      expect(snapshots, isEmpty);
     });
 
     test('deletes directory from file system', () async {
@@ -153,10 +151,10 @@ void main() {
         novelId: 'n5678cd',
         title: '別の小説',
       ));
-      await summaryRepository.saveSummary(
+      await summaryRepository.saveSnapshot(
         folderName: 'narou_n5678cd',
         word: 'ボブ',
-        summaryType: SummaryType.spoiler,
+        coveredUpToEpisode: 10,
         summary: '別の要約',
       );
       final novelDir = Directory('${tempDir.path}/narou_n1234ab');
@@ -167,12 +165,11 @@ void main() {
       final otherNovel =
           await novelRepository.findByFolderName('narou_n5678cd');
       expect(otherNovel, isNotNull);
-      final otherSummary = await summaryRepository.findSummary(
+      final otherSnapshots = await summaryRepository.findSnapshotsForWord(
         folderName: 'narou_n5678cd',
         word: 'ボブ',
-        summaryType: SummaryType.spoiler,
       );
-      expect(otherSummary, isNotNull);
+      expect(otherSnapshots, isNotEmpty);
     });
   });
 }

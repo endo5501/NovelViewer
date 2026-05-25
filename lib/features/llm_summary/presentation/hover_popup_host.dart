@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_anchor.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_widget.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
@@ -13,11 +14,6 @@ import 'package:path/path.dart' as p;
 /// directory is open), it inserts a [HoverPopupWidget] into the nearest
 /// [Overlay] near the pointer position. When the state goes hidden — or
 /// the display mode changes — it removes the entry.
-///
-/// Display mode changes trigger an automatic hide() on the popup notifier
-/// so the state stays consistent: the position math is mode-specific, so a
-/// popup whose position was computed for the previous mode's layout must
-/// not linger after the mode switch.
 class HoverPopupHost extends ConsumerStatefulWidget {
   const HoverPopupHost({super.key, required this.child});
 
@@ -45,7 +41,10 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
     required Offset position,
     required String folder,
     required String word,
+    required int currentEpisode,
     required String? currentFileName,
+    required int maxEpisodeInFolder,
+    required String? maxEpisodeFileName,
     required TextDisplayMode mode,
   }) {
     _removeEntry();
@@ -63,7 +62,10 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
           child: HoverPopupWidget(
             folder: folder,
             word: word,
+            currentEpisode: currentEpisode,
             currentFileName: currentFileName,
+            maxEpisodeInFolder: maxEpisodeInFolder,
+            maxEpisodeFileName: maxEpisodeFileName,
           ),
         );
       },
@@ -75,8 +77,6 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
   Widget build(BuildContext context) {
     ref.listen<TextDisplayMode>(displayModeProvider, (prev, next) {
       if (prev != next) {
-        // Position math is mode-specific, so any visible popup is now
-        // anchored to coordinates that no longer make sense. Drop it.
         ref.read(hoverPopupProvider.notifier).hide();
       }
     });
@@ -93,11 +93,20 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
       }
       final folder = p.basename(directory);
       final selectedFile = ref.read(selectedFileProvider);
+      final currentEpisode = resolveUpperBoundForCurrent(
+        directoryPath: directory,
+        currentFile: selectedFile,
+      );
+      final maxEpisode = resolveUpperBoundForAll(directory);
+      final maxFileName = resolveSourceFileForAll(directory);
       _insertEntry(
         position: next.position!,
         folder: folder,
         word: next.word!,
+        currentEpisode: currentEpisode,
         currentFileName: selectedFile?.name,
+        maxEpisodeInFolder: maxEpisode,
+        maxEpisodeFileName: maxFileName,
         mode: ref.read(displayModeProvider),
       );
     });

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/vertical_context_menu.dart';
 
 void main() {
@@ -81,7 +81,7 @@ void main() {
 
     test('analyzeNoSpoiler → onAnalyze(selectedText, noSpoiler)', () {
       String? capturedWord;
-      SummaryType? capturedType;
+      AnalysisScope? capturedType;
       dispatchVerticalContextAction(
         VerticalContextAction.analyzeNoSpoiler,
         selectedText: 'アリス',
@@ -93,12 +93,12 @@ void main() {
         },
       );
       expect(capturedWord, 'アリス');
-      expect(capturedType, SummaryType.noSpoiler);
+      expect(capturedType, AnalysisScope.upToCurrent);
     });
 
     test('analyzeSpoiler → onAnalyze(selectedText, spoiler)', () {
       String? capturedWord;
-      SummaryType? capturedType;
+      AnalysisScope? capturedType;
       dispatchVerticalContextAction(
         VerticalContextAction.analyzeSpoiler,
         selectedText: 'アリス',
@@ -110,7 +110,7 @@ void main() {
         },
       );
       expect(capturedWord, 'アリス');
-      expect(capturedType, SummaryType.spoiler);
+      expect(capturedType, AnalysisScope.upToAll);
     });
   });
 }

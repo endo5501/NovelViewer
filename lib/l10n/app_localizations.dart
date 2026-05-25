@@ -964,17 +964,17 @@ abstract class AppLocalizations {
   /// **'解析開始(ネタバレあり)'**
   String get contextMenu_analyzeSpoiler;
 
-  /// No description provided for @contextMenu_copyNoSpoilerSummary.
+  /// No description provided for @contextMenu_copySubmenu.
   ///
   /// In ja, this message translates to:
-  /// **'要約をコピー(ネタバレなし)'**
-  String get contextMenu_copyNoSpoilerSummary;
+  /// **'コピー'**
+  String get contextMenu_copySubmenu;
 
-  /// No description provided for @contextMenu_copySpoilerSummary.
+  /// No description provided for @contextMenu_copySnapshotByEpisode.
   ///
   /// In ja, this message translates to:
-  /// **'要約をコピー(ネタバレあり)'**
-  String get contextMenu_copySpoilerSummary;
+  /// **'{episode}ファイル時点の要約をコピー'**
+  String contextMenu_copySnapshotByEpisode(int episode);
 
   /// No description provided for @contextMenu_copiedToClipboard.
   ///
@@ -1030,23 +1030,53 @@ abstract class AppLocalizations {
   /// **'「{word}」の要約を保存しました'**
   String llmAnalysis_savedSummary(String word);
 
-  /// No description provided for @hoverPopup_referenceWarning.
+  /// No description provided for @hoverPopup_snapshotLabel.
   ///
   /// In ja, this message translates to:
-  /// **'別ファイルで解析した要約です'**
-  String get hoverPopup_referenceWarning;
+  /// **'{episode}ファイル時点の要約'**
+  String hoverPopup_snapshotLabel(int episode);
 
-  /// No description provided for @hoverPopup_typeNoSpoiler.
+  /// No description provided for @hoverPopup_futureSnapshotWarning.
   ///
   /// In ja, this message translates to:
-  /// **'なし'**
-  String get hoverPopup_typeNoSpoiler;
+  /// **'現在より先の解析です'**
+  String get hoverPopup_futureSnapshotWarning;
 
-  /// No description provided for @hoverPopup_typeSpoiler.
+  /// No description provided for @hoverPopup_reanalyzeButton.
   ///
   /// In ja, this message translates to:
-  /// **'あり'**
-  String get hoverPopup_typeSpoiler;
+  /// **'再解析'**
+  String get hoverPopup_reanalyzeButton;
+
+  /// No description provided for @hoverPopup_reanalyzeUpToCurrent.
+  ///
+  /// In ja, this message translates to:
+  /// **'現在ページまで ({episode}ファイル時点)'**
+  String hoverPopup_reanalyzeUpToCurrent(int episode);
+
+  /// No description provided for @hoverPopup_reanalyzeUpToAll.
+  ///
+  /// In ja, this message translates to:
+  /// **'全話まで ({episode}ファイル時点)'**
+  String hoverPopup_reanalyzeUpToAll(int episode);
+
+  /// No description provided for @hoverPopup_reanalyzeOverwriteSuffix.
+  ///
+  /// In ja, this message translates to:
+  /// **' (上書き)'**
+  String get hoverPopup_reanalyzeOverwriteSuffix;
+
+  /// No description provided for @hoverPopup_snapshotNavPrev.
+  ///
+  /// In ja, this message translates to:
+  /// **'前のスナップショット'**
+  String get hoverPopup_snapshotNavPrev;
+
+  /// No description provided for @hoverPopup_snapshotNavNext.
+  ///
+  /// In ja, this message translates to:
+  /// **'次のスナップショット'**
+  String get hoverPopup_snapshotNavNext;
 
   /// No description provided for @bookmark_selectNovelPrompt.
   ///
@@ -1162,23 +1192,11 @@ abstract class AppLocalizations {
   /// **'解析履歴がありません'**
   String get llmHistory_noEntries;
 
-  /// No description provided for @llmHistory_typeBoth.
+  /// No description provided for @llmHistory_snapshotsBadge.
   ///
   /// In ja, this message translates to:
-  /// **'両'**
-  String get llmHistory_typeBoth;
-
-  /// No description provided for @llmHistory_typeNoSpoiler.
-  ///
-  /// In ja, this message translates to:
-  /// **'なし'**
-  String get llmHistory_typeNoSpoiler;
-
-  /// No description provided for @llmHistory_typeSpoiler.
-  ///
-  /// In ja, this message translates to:
-  /// **'あり'**
-  String get llmHistory_typeSpoiler;
+  /// **'{count}スナップショット'**
+  String llmHistory_snapshotsBadge(int count);
 
   /// No description provided for @llmHistory_untrackedBadge.
   ///

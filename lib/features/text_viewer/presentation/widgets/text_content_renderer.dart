@@ -6,7 +6,6 @@ import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart
 import 'package:novel_viewer/features/episode_navigation/domain/file_entry_start_intent.dart';
 import 'package:novel_viewer/features/episode_navigation/providers/pending_file_entry_intent_provider.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
-import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
@@ -388,11 +387,11 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     );
   }
 
-  void _runAnalysis(String word, SummaryType type) {
-    ref.read(analysisRunnerProvider).run(
+  void _runAnalysis(String word, AnalysisScope scope) {
+    ref.read(analysisRunnerProvider).runWithScope(
           context: context,
           word: word,
-          type: type,
+          scope: scope,
         );
   }
 

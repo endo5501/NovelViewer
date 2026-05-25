@@ -53,7 +53,7 @@ class _HistoryEntryTile extends ConsumerWidget {
       onSecondaryTapUp: (details) =>
           _showContextMenu(context, ref, details.globalPosition),
       child: ListTile(
-        leading: _TypeBadge(type: entry.type),
+        leading: _SnapshotsBadge(count: entry.snapshotCount),
         title: Text(entry.word),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,19 +102,13 @@ class _HistoryEntryTile extends ConsumerWidget {
         position.dx,
         position.dy,
       ),
-      items: buildHistoryContextMenuItems(
-        type: entry.type,
-        deleteLabel: l10n.bookmark_deleteMenuItem,
-        copyNoSpoilerLabel: l10n.contextMenu_copyNoSpoilerSummary,
-        copySpoilerLabel: l10n.contextMenu_copySpoilerSummary,
-      ),
+      items: buildHistoryContextMenuItems(entry: entry, l10n: l10n),
     );
 
     if (value == null) return;
     dispatchHistoryContextAction(
       value,
-      noSpoilerSummary: entry.noSpoilerSummary,
-      spoilerSummary: entry.spoilerSummary,
+      entry: entry,
       onCopy: (text) async {
         await Clipboard.setData(ClipboardData(text: text));
         messenger.showSnackBar(
@@ -139,30 +133,16 @@ class _HistoryEntryTile extends ConsumerWidget {
   }
 }
 
-class _TypeBadge extends StatelessWidget {
-  final HistoryEntryType type;
+class _SnapshotsBadge extends StatelessWidget {
+  final int count;
 
-  const _TypeBadge({required this.type});
+  const _SnapshotsBadge({required this.count});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final (label, color) = switch (type) {
-      HistoryEntryType.both => (
-          l10n.llmHistory_typeBoth,
-          theme.colorScheme.primary,
-        ),
-      HistoryEntryType.noSpoilerOnly => (
-          l10n.llmHistory_typeNoSpoiler,
-          theme.colorScheme.secondary,
-        ),
-      HistoryEntryType.spoilerOnly => (
-          l10n.llmHistory_typeSpoiler,
-          theme.colorScheme.tertiary,
-        ),
-    };
-
+    final color = theme.colorScheme.primary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -170,7 +150,10 @@ class _TypeBadge extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.6)),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12)),
+      child: Text(
+        l10n.llmHistory_snapshotsBadge(count),
+        style: TextStyle(color: color, fontSize: 12),
+      ),
     );
   }
 }

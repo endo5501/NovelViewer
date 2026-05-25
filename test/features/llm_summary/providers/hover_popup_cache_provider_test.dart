@@ -22,7 +22,7 @@ void main() {
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               folder_name TEXT NOT NULL,
               word TEXT NOT NULL,
-              summary_type TEXT NOT NULL,
+              covered_up_to_episode INTEGER NOT NULL,
               summary TEXT NOT NULL,
               source_file TEXT,
               created_at TEXT NOT NULL,
@@ -31,7 +31,7 @@ void main() {
           ''');
           await db.execute('''
             CREATE UNIQUE INDEX idx_word_summaries_unique
-            ON word_summaries(folder_name, word, summary_type)
+            ON word_summaries(folder_name, word, covered_up_to_episode)
           ''');
         },
       ),
@@ -54,20 +54,27 @@ void main() {
   }
 
   group('hoverPopupCacheProvider', () {
-    test('returns both summaries when noSpoiler and spoiler caches exist',
-        () async {
-      await repository.saveSummary(
+    test('returns all snapshots for the word sorted by episode asc', () async {
+      await repository.saveSnapshot(
         folderName: 'novel_a',
         word: 'アリス',
-        summaryType: SummaryType.noSpoiler,
-        summary: 'アリスは主人公。',
-        sourceFile: '040_chapter.txt',
+        coveredUpToEpisode: 60,
+        summary: 'mid',
+        sourceFile: '060.txt',
       );
-      await repository.saveSummary(
+      await repository.saveSnapshot(
         folderName: 'novel_a',
         word: 'アリス',
-        summaryType: SummaryType.spoiler,
-        summary: 'アリスは第三王女で剣術の達人。',
+        coveredUpToEpisode: 10,
+        summary: 'early',
+        sourceFile: '010.txt',
+      );
+      await repository.saveSnapshot(
+        folderName: 'novel_a',
+        word: 'アリス',
+        coveredUpToEpisode: 120,
+        summary: 'late',
+        sourceFile: '120.txt',
       );
 
       final container = makeContainer();
@@ -77,54 +84,10 @@ void main() {
         ).future,
       );
 
-      expect(result.noSpoiler, isNotNull);
-      expect(result.noSpoiler!.summary, 'アリスは主人公。');
-      expect(result.noSpoiler!.sourceFile, '040_chapter.txt');
-      expect(result.spoiler, isNotNull);
-      expect(result.spoiler!.summary, 'アリスは第三王女で剣術の達人。');
+      expect(result.map((s) => s.coveredUpToEpisode).toList(), [10, 60, 120]);
     });
 
-    test('returns only noSpoiler when only no-spoiler cache exists', () async {
-      await repository.saveSummary(
-        folderName: 'novel_a',
-        word: 'ボブ',
-        summaryType: SummaryType.noSpoiler,
-        summary: 'ボブは友人。',
-      );
-
-      final container = makeContainer();
-      final result = await container.read(
-        hoverPopupCacheProvider(
-          (folder: 'novel_a', word: 'ボブ'),
-        ).future,
-      );
-
-      expect(result.noSpoiler, isNotNull);
-      expect(result.noSpoiler!.summary, 'ボブは友人。');
-      expect(result.spoiler, isNull);
-    });
-
-    test('returns only spoiler when only spoiler cache exists', () async {
-      await repository.saveSummary(
-        folderName: 'novel_a',
-        word: '聖印',
-        summaryType: SummaryType.spoiler,
-        summary: '聖印は神聖な印章。',
-      );
-
-      final container = makeContainer();
-      final result = await container.read(
-        hoverPopupCacheProvider(
-          (folder: 'novel_a', word: '聖印'),
-        ).future,
-      );
-
-      expect(result.noSpoiler, isNull);
-      expect(result.spoiler, isNotNull);
-      expect(result.spoiler!.summary, '聖印は神聖な印章。');
-    });
-
-    test('returns both null when no cache exists for the word', () async {
+    test('returns empty list when no cache exists', () async {
       final container = makeContainer();
       final result = await container.read(
         hoverPopupCacheProvider(
@@ -132,16 +95,16 @@ void main() {
         ).future,
       );
 
-      expect(result.noSpoiler, isNull);
-      expect(result.spoiler, isNull);
+      expect(result, isEmpty);
     });
 
-    test('scopes lookup by folder (does not bleed across folders)', () async {
-      await repository.saveSummary(
+    test('scopes lookup by folder', () async {
+      await repository.saveSnapshot(
         folderName: 'novel_a',
         word: 'アリス',
-        summaryType: SummaryType.noSpoiler,
-        summary: 'アリス (novel_a)',
+        coveredUpToEpisode: 10,
+        summary: 'a',
+        sourceFile: '010.txt',
       );
 
       final container = makeContainer();
@@ -151,9 +114,7 @@ void main() {
         ).future,
       );
 
-      expect(result.noSpoiler, isNull,
-          reason: 'A summary in novel_a must not appear when querying novel_b');
-      expect(result.spoiler, isNull);
+      expect(result, isEmpty);
     });
 
     test('equal keys produce identical provider entries', () {
@@ -163,9 +124,52 @@ void main() {
       final b = container.read(
           hoverPopupCacheProvider((folder: 'novel_a', word: 'アリス')).future);
 
-      expect(identical(a, b), isTrue,
-          reason:
-              'Family providers must reuse the same Future for equal keys');
+      expect(identical(a, b), isTrue);
+    });
+  });
+
+  group('chooseDefaultSnapshot', () {
+    WordSummary snap(int episode) => WordSummary(
+          folderName: 'f',
+          word: 'w',
+          coveredUpToEpisode: episode,
+          summary: 's$episode',
+          sourceFile: '$episode.txt',
+          createdAt: DateTime.utc(2026),
+          updatedAt: DateTime.utc(2026),
+        );
+
+    test('returns null when list is empty', () {
+      expect(chooseDefaultSnapshot(const [], 5), isNull);
+    });
+
+    test('picks max snapshot <= current when one exists', () {
+      final result = chooseDefaultSnapshot(
+        [snap(3), snap(9), snap(10), snap(20)],
+        6,
+      );
+      expect(result?.coveredUpToEpisode, 3);
+    });
+
+    test('picks earliest snapshot when all are in the future', () {
+      final result = chooseDefaultSnapshot(
+        [snap(9), snap(10), snap(20)],
+        6,
+      );
+      expect(result?.coveredUpToEpisode, 9);
+    });
+
+    test('exact-match snapshot wins', () {
+      final result = chooseDefaultSnapshot(
+        [snap(3), snap(6), snap(9)],
+        6,
+      );
+      expect(result?.coveredUpToEpisode, 6);
+    });
+
+    test('single snapshot is always returned', () {
+      expect(chooseDefaultSnapshot([snap(50)], 5)?.coveredUpToEpisode, 50);
+      expect(chooseDefaultSnapshot([snap(2)], 5)?.coveredUpToEpisode, 2);
     });
   });
 }

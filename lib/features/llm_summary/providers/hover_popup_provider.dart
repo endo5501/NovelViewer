@@ -3,35 +3,37 @@ import 'dart:async';
 import 'package:flutter/painting.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/domain/hover_token.dart';
-import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 
 export 'package:novel_viewer/features/llm_summary/domain/hover_token.dart'
     show HoverToken;
 
 /// Brief window during which a `hideIfShowing` request is deferred so the
 /// pointer can travel from a marked span into the popup widget itself
-/// (e.g. to click the no-spoiler / spoiler toggle pill). If the pointer
-/// reaches the popup within this window, [HoverPopupNotifier.onPopupEnter]
-/// cancels the pending hide.
+/// (e.g. to click the snapshot navigator or open the re-analysis dropdown).
 const _kHideGracePeriod = Duration(milliseconds: 150);
 
 class HoverPopupState {
   final String? word;
   final Offset? position;
   final HoverToken? hoverToken;
-  final SummaryType activeType;
+
+  /// Which snapshot the popup is currently showing. `null` means "use the
+  /// default selection rule" (most recent past, or earliest future as a
+  /// fallback). User interaction with the snapshot navigator sets this to a
+  /// concrete `coveredUpToEpisode` value.
+  final int? activeEpisode;
 
   const HoverPopupState.hidden()
       : word = null,
         position = null,
         hoverToken = null,
-        activeType = SummaryType.noSpoiler;
+        activeEpisode = null;
 
   const HoverPopupState.visible({
     required String this.word,
     required Offset this.position,
     required HoverToken this.hoverToken,
-    this.activeType = SummaryType.noSpoiler,
+    this.activeEpisode,
   });
 
   bool get isVisible => word != null;
@@ -43,18 +45,24 @@ class HoverPopupState {
           other.word == word &&
           other.position == position &&
           other.hoverToken == hoverToken &&
-          other.activeType == activeType;
+          other.activeEpisode == activeEpisode;
 
   @override
-  int get hashCode => Object.hash(word, position, hoverToken, activeType);
+  int get hashCode => Object.hash(word, position, hoverToken, activeEpisode);
 }
 
 class HoverPopupNotifier extends Notifier<HoverPopupState> {
   Timer? _hideTimer;
-  // The pointer is currently inside the popup widget itself, so any pending
-  // hide should be suppressed and the popup must stay visible until
-  // [onPopupExit] fires.
   bool _popupHovered = false;
+
+  /// True while a popup-owned child overlay (currently the reanalyze
+  /// dropdown) is open. The pointer is briefly OUTSIDE the popup's
+  /// `MouseRegion` while traveling onto a menu item, so without this latch
+  /// the grace-period timer would hide the popup and the user could never
+  /// reach the menu options. Mirrors the role of `_popupHovered` but is
+  /// driven by `onChildMenuOpen` / `onChildMenuClose` instead of
+  /// `onPopupEnter` / `onPopupExit`.
+  bool _childMenuOpen = false;
 
   @override
   HoverPopupState build() {
@@ -70,15 +78,7 @@ class HoverPopupNotifier extends Notifier<HoverPopupState> {
     required HoverToken token,
   }) {
     _hideTimer?.cancel();
-    // A fresh popup never inherits the previous popup's hover latch — if
-    // the old popup was hovered when something programmatically hid it
-    // (mode switch, page jump), that latch would otherwise suppress the
-    // grace-period hide of the new popup.
     _popupHovered = false;
-    // Skip the state write when the same span is already active, so sub-pixel
-    // pointer wobble inside one marked occurrence does not churn the
-    // OverlayEntry via the host's ref.listen. Different occurrences of the
-    // same word produce different tokens and DO update.
     if (state.hoverToken == token) return;
     state = HoverPopupState.visible(
       word: word,
@@ -90,51 +90,66 @@ class HoverPopupNotifier extends Notifier<HoverPopupState> {
   void hide() {
     _hideTimer?.cancel();
     _popupHovered = false;
+    _childMenuOpen = false;
     state = const HoverPopupState.hidden();
   }
 
-  /// Schedule a deferred hide of the popup when the pointer leaves the
-  /// marked span identified by [token]. The hide is deferred by
-  /// [_kHideGracePeriod] so the pointer can travel into the popup widget
-  /// (e.g. to interact with the no-spoiler / spoiler toggle); within that
-  /// window, [onPopupEnter] cancels the pending hide. Calling this for a
-  /// token that does not match the currently visible popup is a no-op,
-  /// which together with the same-token guard in [show] handles
-  /// cross-event ordering when the pointer transitions between adjacent
-  /// marked spans.
   void hideIfShowing(HoverToken token) {
     if (state.hoverToken != token) return;
     _hideTimer?.cancel();
     _hideTimer = Timer(_kHideGracePeriod, () {
-      if (_popupHovered) return;
+      if (_popupHovered || _childMenuOpen) return;
       if (state.hoverToken == token) {
         state = const HoverPopupState.hidden();
       }
     });
   }
 
-  /// The pointer has entered the popup widget itself. Cancel any pending
-  /// hide so the popup remains visible while the user interacts with it.
   void onPopupEnter() {
     _popupHovered = true;
     _hideTimer?.cancel();
   }
 
-  /// The pointer has left the popup widget. Hide immediately — the user has
-  /// clearly moved on, so the grace period does not apply.
   void onPopupExit() {
     _popupHovered = false;
+    // Suppress the immediate-hide when an owned child menu is open: the
+    // pointer is briefly outside the popup's MouseRegion as it travels onto
+    // a menu item, and dismissing the popup mid-travel would tear down the
+    // menu too. The hide will fire from onChildMenuClose if appropriate.
+    if (_childMenuOpen) return;
     _hideTimer?.cancel();
     state = const HoverPopupState.hidden();
   }
 
-  void setSummaryType(SummaryType type) {
+  /// Mark a popup-owned child overlay (e.g. the reanalyze dropdown) as open.
+  /// Cancels any pending grace-period hide so the popup survives the pointer
+  /// leaving its own MouseRegion to enter the menu.
+  void onChildMenuOpen() {
+    _childMenuOpen = true;
+    _hideTimer?.cancel();
+  }
+
+  /// Mark the child overlay closed. If the pointer is also outside the
+  /// popup body, hide immediately (the user has clearly moved on); otherwise
+  /// let the popup's own MouseRegion govern the next hide.
+  void onChildMenuClose() {
+    _childMenuOpen = false;
+    if (!_popupHovered) {
+      _hideTimer?.cancel();
+      state = const HoverPopupState.hidden();
+    }
+  }
+
+  /// Update which snapshot the popup is displaying. Pass `null` to revert to
+  /// the default snapshot selection rule (used when the popup re-opens or
+  /// after a re-analysis invalidates the cache).
+  void setActiveEpisode(int? episode) {
     if (!state.isVisible) return;
     state = HoverPopupState.visible(
       word: state.word!,
       position: state.position!,
       hoverToken: state.hoverToken!,
-      activeType: type,
+      activeEpisode: episode,
     );
   }
 }

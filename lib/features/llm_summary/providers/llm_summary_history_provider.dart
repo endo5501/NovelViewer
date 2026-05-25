@@ -6,12 +6,10 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/first_line_containing.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
-import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:path/path.dart' as p;
 
-class LlmSummaryHistoryNotifier
-    extends AsyncNotifier<List<HistoryEntry>> {
+class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
   @override
   Future<List<HistoryEntry>> build() async {
     final directory = ref.watch(currentDirectoryProvider);
@@ -30,41 +28,53 @@ class LlmSummaryHistoryNotifier
     final folderName = p.basename(directory);
     final repo = await ref.read(llmSummaryRepositoryProvider.future);
 
-    await repo.deleteSummary(
-      folderName: folderName,
-      word: word,
-      summaryType: SummaryType.noSpoiler,
-    );
-    await repo.deleteSummary(
-      folderName: folderName,
-      word: word,
-      summaryType: SummaryType.spoiler,
-    );
+    await repo.deleteAllForWord(folderName: folderName, word: word);
 
     ref.invalidateSelf();
   }
 
   Future<void> openEntry(HistoryEntry entry) async {
     final directory = ref.read(currentDirectoryProvider);
-    final sourceFile = entry.sourceFile;
-    if (directory == null || sourceFile == null) return;
+    if (directory == null) return;
 
-    final filePath = p.join(directory, sourceFile);
-    final file = File(filePath);
-    final String content;
-    try {
-      content = await file.readAsString();
-    } on FileSystemException {
+    // Try every snapshot's source_file (largest episode first, since that's
+    // the canonical "primary" jump target per spec) and fall through to the
+    // next-largest when a file is missing on disk. This makes the jump
+    // resilient to source files that were since renamed/deleted out-of-band
+    // — without this loop, a stale source_file on the largest-episode
+    // snapshot would cause the click to silently no-op even though other
+    // snapshots for the same word still point at existing files.
+    //
+    // `LinkedHashSet` deduplicates while preserving largest-first order:
+    // when multiple snapshots share the same source_file (e.g., the user
+    // re-analyzed at the same upper bound), avoid retrying the same I/O.
+    final candidates = <String>{
+      for (var i = entry.snapshots.length - 1; i >= 0; i--)
+        if (entry.snapshots[i].sourceFile != null)
+          entry.snapshots[i].sourceFile!,
+    };
+    if (candidates.isEmpty) return;
+
+    for (final sourceFile in candidates) {
+      final filePath = p.join(directory, sourceFile);
+      final file = File(filePath);
+      final String content;
+      try {
+        content = await file.readAsString();
+      } catch (_) {
+        // File missing or unreadable — try the next snapshot's source.
+        continue;
+      }
+
+      ref
+          .read(selectedFileProvider.notifier)
+          .selectFile(FileEntry(name: sourceFile, path: filePath));
+
+      final lineNumber = findFirstLineContaining1Indexed(content, entry.word);
+      if (lineNumber != null) {
+        ref.read(bookmarkJumpLineProvider.notifier).jump(lineNumber);
+      }
       return;
-    }
-
-    ref
-        .read(selectedFileProvider.notifier)
-        .selectFile(FileEntry(name: sourceFile, path: filePath));
-
-    final lineNumber = findFirstLineContaining1Indexed(content, entry.word);
-    if (lineNumber != null) {
-      ref.read(bookmarkJumpLineProvider.notifier).jump(lineNumber);
     }
   }
 }

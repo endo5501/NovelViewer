@@ -154,8 +154,13 @@
 
   "contextMenu_analyzeNoSpoiler": "Analyze (no spoilers)",
   "contextMenu_analyzeSpoiler": "Analyze (with spoilers)",
-  "contextMenu_copyNoSpoilerSummary": "Copy summary (no spoilers)",
-  "contextMenu_copySpoilerSummary": "Copy summary (with spoilers)",
+  "contextMenu_copySubmenu": "Copy",
+  "contextMenu_copySnapshotByEpisode": "Copy summary at file {episode}",
+  "@contextMenu_copySnapshotByEpisode": {
+    "placeholders": {
+      "episode": { "type": "int" }
+    }
+  },
   "contextMenu_copiedToClipboard": "Copied to clipboard",
 
   "llmAnalysis_inProgress": "Analyzing...",
@@ -190,9 +195,29 @@
     }
   },
 
-  "hoverPopup_referenceWarning": "Summary generated from a different file",
-  "hoverPopup_typeNoSpoiler": "No",
-  "hoverPopup_typeSpoiler": "Yes",
+  "hoverPopup_snapshotLabel": "Summary at file {episode}",
+  "@hoverPopup_snapshotLabel": {
+    "placeholders": {
+      "episode": { "type": "int" }
+    }
+  },
+  "hoverPopup_futureSnapshotWarning": "Snapshot is ahead of the current page",
+  "hoverPopup_reanalyzeButton": "Re-analyze",
+  "hoverPopup_reanalyzeUpToCurrent": "Up to current page (file {episode})",
+  "@hoverPopup_reanalyzeUpToCurrent": {
+    "placeholders": {
+      "episode": { "type": "int" }
+    }
+  },
+  "hoverPopup_reanalyzeUpToAll": "All chapters (file {episode})",
+  "@hoverPopup_reanalyzeUpToAll": {
+    "placeholders": {
+      "episode": { "type": "int" }
+    }
+  },
+  "hoverPopup_reanalyzeOverwriteSuffix": " (overwrite)",
+  "hoverPopup_snapshotNavPrev": "Previous snapshot",
+  "hoverPopup_snapshotNavNext": "Next snapshot",
 
   "bookmark_selectNovelPrompt": "Please select a novel folder",
   "bookmark_noBookmarks": "No bookmarks",
@@ -218,9 +243,12 @@
   "leftColumn_historyTab": "History",
 
   "llmHistory_noEntries": "No analysis history",
-  "llmHistory_typeBoth": "Both",
-  "llmHistory_typeNoSpoiler": "No-spoiler",
-  "llmHistory_typeSpoiler": "Spoiler",
+  "llmHistory_snapshotsBadge": "{count} snapshot(s)",
+  "@llmHistory_snapshotsBadge": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "llmHistory_untrackedBadge": "Untracked",
 
   "verticalText_nextEpisodePrompt": "▶ Next: \"{name}\" (press again)",

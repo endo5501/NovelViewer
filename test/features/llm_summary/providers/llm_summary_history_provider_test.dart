@@ -24,7 +24,7 @@ Future<Database> _openDb() async {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             folder_name TEXT NOT NULL,
             word TEXT NOT NULL,
-            summary_type TEXT NOT NULL,
+            covered_up_to_episode INTEGER NOT NULL,
             summary TEXT NOT NULL,
             source_file TEXT,
             created_at TEXT NOT NULL,
@@ -33,7 +33,7 @@ Future<Database> _openDb() async {
         ''');
         await db.execute('''
           CREATE UNIQUE INDEX idx_word_summaries_unique
-          ON word_summaries(folder_name, word, summary_type)
+          ON word_summaries(folder_name, word, covered_up_to_episode)
         ''');
       },
     ),
@@ -67,6 +67,25 @@ void main() {
     await db.close();
   });
 
+  Future<void> insert({
+    required String folder,
+    required String word,
+    required int episode,
+    String? sourceFile,
+    required String summary,
+    required String updatedAt,
+  }) async {
+    await db.insert('word_summaries', {
+      'folder_name': folder,
+      'word': word,
+      'covered_up_to_episode': episode,
+      'summary': summary,
+      'source_file': sourceFile,
+      'created_at': updatedAt,
+      'updated_at': updatedAt,
+    });
+  }
+
   group('llmSummaryHistoryProvider', () {
     test('returns empty list when no current directory is set', () async {
       final container =
@@ -78,50 +97,43 @@ void main() {
       expect(entries, isEmpty);
     });
 
-    test('returns merged entries for active folder ordered by updated_at desc',
-        () async {
-      // Seed 3 distinct words with controlled timestamps in folder "my_novel".
+    test('returns merged entries ordered by updated_at desc', () async {
       final older = DateTime.utc(2026, 5, 20, 10).toIso8601String();
       final middle = DateTime.utc(2026, 5, 20, 12).toIso8601String();
       final newer = DateTime.utc(2026, 5, 20, 14).toIso8601String();
 
-      await db.insert('word_summaries', {
-        'folder_name': 'my_novel',
-        'word': '中間',
-        'summary_type': 'spoiler',
-        'summary': 'm',
-        'source_file': '030.txt',
-        'created_at': middle,
-        'updated_at': middle,
-      });
-      await db.insert('word_summaries', {
-        'folder_name': 'my_novel',
-        'word': '新しい',
-        'summary_type': 'no_spoiler',
-        'summary': 'n',
-        'source_file': '050.txt',
-        'created_at': newer,
-        'updated_at': newer,
-      });
-      await db.insert('word_summaries', {
-        'folder_name': 'my_novel',
-        'word': '古い',
-        'summary_type': 'spoiler',
-        'summary': 'o',
-        'source_file': '010.txt',
-        'created_at': older,
-        'updated_at': older,
-      });
-      // Different folder — must be excluded.
-      await db.insert('word_summaries', {
-        'folder_name': 'other_novel',
-        'word': '他',
-        'summary_type': 'spoiler',
-        'summary': 'x',
-        'source_file': '999.txt',
-        'created_at': newer,
-        'updated_at': newer,
-      });
+      await insert(
+        folder: 'my_novel',
+        word: '中間',
+        episode: 30,
+        sourceFile: '030.txt',
+        summary: 'm',
+        updatedAt: middle,
+      );
+      await insert(
+        folder: 'my_novel',
+        word: '新しい',
+        episode: 50,
+        sourceFile: '050.txt',
+        summary: 'n',
+        updatedAt: newer,
+      );
+      await insert(
+        folder: 'my_novel',
+        word: '古い',
+        episode: 10,
+        sourceFile: '010.txt',
+        summary: 'o',
+        updatedAt: older,
+      );
+      await insert(
+        folder: 'other_novel',
+        word: '他',
+        episode: 999,
+        sourceFile: '999.txt',
+        summary: 'x',
+        updatedAt: newer,
+      );
 
       final container = _containerFor(
         repository: repository,
@@ -135,29 +147,36 @@ void main() {
       expect(entries.map((e) => e.word).toList(), ['新しい', '中間', '古い']);
     });
 
-    test('merges no_spoiler and spoiler rows of the same word into "both"',
+    test('multiple snapshots of the same word collapse into one entry',
         () async {
       final t1 = DateTime.utc(2026, 5, 20, 10).toIso8601String();
       final t2 = DateTime.utc(2026, 5, 20, 16).toIso8601String();
+      final t3 = DateTime.utc(2026, 5, 20, 18).toIso8601String();
 
-      await db.insert('word_summaries', {
-        'folder_name': 'my_novel',
-        'word': 'アリス',
-        'summary_type': 'no_spoiler',
-        'summary': 'なし要約',
-        'source_file': '040.txt',
-        'created_at': t1,
-        'updated_at': t1,
-      });
-      await db.insert('word_summaries', {
-        'folder_name': 'my_novel',
-        'word': 'アリス',
-        'summary_type': 'spoiler',
-        'summary': 'あり要約',
-        'source_file': '060.txt',
-        'created_at': t2,
-        'updated_at': t2,
-      });
+      await insert(
+        folder: 'my_novel',
+        word: 'アリス',
+        episode: 30,
+        sourceFile: '030.txt',
+        summary: '序盤',
+        updatedAt: t1,
+      );
+      await insert(
+        folder: 'my_novel',
+        word: 'アリス',
+        episode: 60,
+        sourceFile: '060.txt',
+        summary: '中盤',
+        updatedAt: t2,
+      );
+      await insert(
+        folder: 'my_novel',
+        word: 'アリス',
+        episode: 120,
+        sourceFile: '120.txt',
+        summary: '全話',
+        updatedAt: t3,
+      );
 
       final container = _containerFor(
         repository: repository,
@@ -170,39 +189,37 @@ void main() {
 
       expect(entries, hasLength(1));
       expect(entries.first.word, 'アリス');
-      expect(entries.first.type, HistoryEntryType.both);
-      expect(entries.first.sourceFile, '040.txt');
+      expect(entries.first.snapshotCount, 3);
+      expect(entries.first.sourceFile, '120.txt',
+          reason: 'jump target is the largest-episode non-null source_file');
+      expect(entries.first.updatedAt, DateTime.utc(2026, 5, 20, 18));
     });
   });
 
   group('LlmSummaryHistoryNotifier.deleteEntry', () {
-    test('removes both no_spoiler and spoiler rows for the word', () async {
+    test('removes every snapshot row for the word', () async {
       final now = DateTime.utc(2026, 5, 20, 10).toIso8601String();
-      await db.insert('word_summaries', {
-        'folder_name': 'my_novel',
-        'word': 'アリス',
-        'summary_type': 'no_spoiler',
-        'summary': 'なし要約',
-        'created_at': now,
-        'updated_at': now,
-      });
-      await db.insert('word_summaries', {
-        'folder_name': 'my_novel',
-        'word': 'アリス',
-        'summary_type': 'spoiler',
-        'summary': 'あり要約',
-        'created_at': now,
-        'updated_at': now,
-      });
-      // A different word that must NOT be touched.
-      await db.insert('word_summaries', {
-        'folder_name': 'my_novel',
-        'word': 'ボブ',
-        'summary_type': 'spoiler',
-        'summary': 'ボブの要約',
-        'created_at': now,
-        'updated_at': now,
-      });
+      await insert(
+        folder: 'my_novel',
+        word: 'アリス',
+        episode: 30,
+        summary: 'a30',
+        updatedAt: now,
+      );
+      await insert(
+        folder: 'my_novel',
+        word: 'アリス',
+        episode: 100,
+        summary: 'a100',
+        updatedAt: now,
+      );
+      await insert(
+        folder: 'my_novel',
+        word: 'ボブ',
+        episode: 30,
+        summary: 'bob',
+        updatedAt: now,
+      );
 
       final container = _containerFor(
         repository: repository,
@@ -210,28 +227,25 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      // Prime the provider so it's listening.
       await container.read(llmSummaryHistoryProvider.future);
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
           .deleteEntry('アリス');
 
-      // Reading raw repository: アリスは消え、ボブは残る
       final remaining = await repository.findAllByFolder('my_novel');
       expect(remaining.map((r) => r.word).toSet(), {'ボブ'});
     });
 
     test('refreshes the provider state after deletion', () async {
       final now = DateTime.utc(2026, 5, 20, 10).toIso8601String();
-      await db.insert('word_summaries', {
-        'folder_name': 'my_novel',
-        'word': 'アリス',
-        'summary_type': 'spoiler',
-        'summary': 'a',
-        'created_at': now,
-        'updated_at': now,
-      });
+      await insert(
+        folder: 'my_novel',
+        word: 'アリス',
+        episode: 30,
+        summary: 'a',
+        updatedAt: now,
+      );
 
       final container = _containerFor(
         repository: repository,
@@ -251,35 +265,28 @@ void main() {
       expect(refreshed, isEmpty);
     });
 
-    test(
-        'external invalidate of the provider causes a re-read so newly '
-        'saved rows become visible', () async {
+    test('external invalidate re-reads new snapshots', () async {
       final container = _containerFor(
         repository: repository,
         directoryPath: '/library/my_novel',
       );
       addTearDown(container.dispose);
 
-      // Initial state: empty
       var entries = await container.read(llmSummaryHistoryProvider.future);
       expect(entries, isEmpty);
 
-      // External code saves a row via the repository directly.
-      await repository.saveSummary(
+      await repository.saveSnapshot(
         folderName: 'my_novel',
         word: '聖印',
-        summaryType: SummaryType.spoiler,
+        coveredUpToEpisode: 50,
         summary: '神聖な刻印',
         sourceFile: '050.txt',
       );
 
-      // Without invalidation the cached AsyncValue is still empty.
       entries = await container.read(llmSummaryHistoryProvider.future);
       expect(entries, isEmpty,
-          reason:
-              'provider returns cached value until externally invalidated');
+          reason: 'cached value remains until externally invalidated');
 
-      // Invalidating forces a re-read.
       container.invalidate(llmSummaryHistoryProvider);
       entries = await container.read(llmSummaryHistoryProvider.future);
       expect(entries, hasLength(1));
@@ -293,17 +300,37 @@ void main() {
 
       await container.read(llmSummaryHistoryProvider.future);
 
-      // Should not throw.
       await container
           .read(llmSummaryHistoryProvider.notifier)
           .deleteEntry('アリス');
     });
   });
 
+  HistoryEntry _entry({
+    required String folder,
+    required String word,
+    String? sourceFile,
+  }) {
+    final snap = WordSummary(
+      folderName: folder,
+      word: word,
+      coveredUpToEpisode: sourceFile == null
+          ? 1
+          : int.tryParse(sourceFile.split('_').first.replaceAll(
+                    RegExp(r'[^0-9]'),
+                    '',
+                  )) ??
+              1,
+      summary: 'summary',
+      sourceFile: sourceFile,
+      createdAt: DateTime.utc(2026, 5, 21),
+      updatedAt: DateTime.utc(2026, 5, 21),
+    );
+    return HistoryEntry.mergeRows([snap]).single;
+  }
+
   group('LlmSummaryHistoryNotifier.openEntry', () {
-    test(
-        'sets selectedFile to the resolved sourceFile and jumps to the first '
-        'line containing the word', () async {
+    test('jumps to the first line containing the word', () async {
       final tempDir = await Directory.systemTemp.createTemp('open_entry_');
       addTearDown(() async {
         if (tempDir.existsSync()) {
@@ -322,13 +349,10 @@ void main() {
       await container.read(llmSummaryHistoryProvider.future);
 
       await container.read(llmSummaryHistoryProvider.notifier).openEntry(
-            HistoryEntry(
-              folderName: 'open_entry',
+            _entry(
+              folder: 'open_entry',
               word: 'アリス',
-              type: HistoryEntryType.spoilerOnly,
-              summaryPreview: 'アリスは主人公',
               sourceFile: '040_chapter.txt',
-              updatedAt: DateTime.utc(2026, 5, 21),
             ),
           );
 
@@ -338,9 +362,9 @@ void main() {
       expect(container.read(bookmarkJumpLineProvider), 2);
     });
 
-    test('opens the file but skips the jump when the word is not in the file',
-        () async {
-      final tempDir = await Directory.systemTemp.createTemp('open_entry_miss_');
+    test('opens but skips jump when word not in file', () async {
+      final tempDir =
+          await Directory.systemTemp.createTemp('open_entry_miss_');
       addTearDown(() async {
         if (tempDir.existsSync()) {
           await tempDir.delete(recursive: true);
@@ -358,13 +382,10 @@ void main() {
       await container.read(llmSummaryHistoryProvider.future);
 
       await container.read(llmSummaryHistoryProvider.notifier).openEntry(
-            HistoryEntry(
-              folderName: 'open_entry_miss',
+            _entry(
+              folder: 'open_entry_miss',
               word: 'いない単語',
-              type: HistoryEntryType.spoilerOnly,
-              summaryPreview: '存在しない',
               sourceFile: '050_chapter.txt',
-              updatedAt: DateTime.utc(2026, 5, 21),
             ),
           );
 
@@ -378,7 +399,7 @@ void main() {
       expect(container.read(bookmarkJumpLineProvider), isNull);
     });
 
-    test('no-op when entry has null sourceFile', () async {
+    test('no-op when sourceFile is null', () async {
       final container = _containerFor(
         repository: repository,
         directoryPath: '/library/my_novel',
@@ -388,13 +409,10 @@ void main() {
       await container.read(llmSummaryHistoryProvider.future);
 
       await container.read(llmSummaryHistoryProvider.notifier).openEntry(
-            HistoryEntry(
-              folderName: 'my_novel',
+            _entry(
+              folder: 'my_novel',
               word: 'アリス',
-              type: HistoryEntryType.spoilerOnly,
-              summaryPreview: 'a',
               sourceFile: null,
-              updatedAt: DateTime.utc(2026, 5, 21),
             ),
           );
 
@@ -402,9 +420,7 @@ void main() {
       expect(container.read(bookmarkJumpLineProvider), isNull);
     });
 
-    test(
-        'no-op when the resolved file does not exist on disk (e.g. moved or '
-        'deleted)', () async {
+    test('no-op when the resolved file does not exist on disk', () async {
       final container = _containerFor(
         repository: repository,
         directoryPath: '/library/nonexistent',
@@ -414,13 +430,10 @@ void main() {
       await container.read(llmSummaryHistoryProvider.future);
 
       await container.read(llmSummaryHistoryProvider.notifier).openEntry(
-            HistoryEntry(
-              folderName: 'nonexistent',
+            _entry(
+              folder: 'nonexistent',
               word: 'アリス',
-              type: HistoryEntryType.spoilerOnly,
-              summaryPreview: 'a',
               sourceFile: '040_chapter.txt',
-              updatedAt: DateTime.utc(2026, 5, 21),
             ),
           );
 

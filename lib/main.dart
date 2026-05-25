@@ -34,7 +34,12 @@ void main() async {
   final libraryDir = await libraryService.ensureLibraryDirectory();
   final prefs = await SharedPreferences.getInstance();
   await runStartupMigrations(SettingsRepository(prefs));
-  final novelDatabase = NovelDatabase();
+  // Wire a real folder lister so the v4→v5 LLM summary migration can resolve
+  // lexical ranks for legacy rows whose source_file lacks a numeric prefix.
+  final novelDatabase = NovelDatabase(
+    snapshotResolver:
+        NovelDatabaseSnapshotResolver.fromLibraryRoot(libraryDir.path),
+  );
   await novelDatabase.database;
 
   runApp(

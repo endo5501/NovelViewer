@@ -154,8 +154,13 @@
 
   "contextMenu_analyzeNoSpoiler": "开始分析（无剧透）",
   "contextMenu_analyzeSpoiler": "开始分析（含剧透）",
-  "contextMenu_copyNoSpoilerSummary": "复制摘要（无剧透）",
-  "contextMenu_copySpoilerSummary": "复制摘要（含剧透）",
+  "contextMenu_copySubmenu": "复制",
+  "contextMenu_copySnapshotByEpisode": "复制第{episode}文件时的摘要",
+  "@contextMenu_copySnapshotByEpisode": {
+    "placeholders": {
+      "episode": { "type": "int" }
+    }
+  },
   "contextMenu_copiedToClipboard": "已复制到剪贴板",
 
   "llmAnalysis_inProgress": "正在分析…",
@@ -190,9 +195,29 @@
     }
   },
 
-  "hoverPopup_referenceWarning": "摘要基于不同的文件生成",
-  "hoverPopup_typeNoSpoiler": "无",
-  "hoverPopup_typeSpoiler": "有",
+  "hoverPopup_snapshotLabel": "第{episode}文件时的摘要",
+  "@hoverPopup_snapshotLabel": {
+    "placeholders": {
+      "episode": { "type": "int" }
+    }
+  },
+  "hoverPopup_futureSnapshotWarning": "该摘要包含尚未阅读的内容",
+  "hoverPopup_reanalyzeButton": "重新分析",
+  "hoverPopup_reanalyzeUpToCurrent": "至当前页（第{episode}文件）",
+  "@hoverPopup_reanalyzeUpToCurrent": {
+    "placeholders": {
+      "episode": { "type": "int" }
+    }
+  },
+  "hoverPopup_reanalyzeUpToAll": "至全部（第{episode}文件）",
+  "@hoverPopup_reanalyzeUpToAll": {
+    "placeholders": {
+      "episode": { "type": "int" }
+    }
+  },
+  "hoverPopup_reanalyzeOverwriteSuffix": "（覆盖）",
+  "hoverPopup_snapshotNavPrev": "上一个快照",
+  "hoverPopup_snapshotNavNext": "下一个快照",
 
   "bookmark_selectNovelPrompt": "请选择作品文件夹",
   "bookmark_noBookmarks": "没有书签",
@@ -218,9 +243,12 @@
   "leftColumn_historyTab": "解析历史",
 
   "llmHistory_noEntries": "没有解析历史",
-  "llmHistory_typeBoth": "两者",
-  "llmHistory_typeNoSpoiler": "无剧透",
-  "llmHistory_typeSpoiler": "剧透",
+  "llmHistory_snapshotsBadge": "{count}个快照",
+  "@llmHistory_snapshotsBadge": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "llmHistory_untrackedBadge": "未跟踪",
 
   "verticalText_nextEpisodePrompt": "▶ 下一话「{name}」（再按一次）",

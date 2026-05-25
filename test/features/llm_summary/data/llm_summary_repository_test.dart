@@ -7,30 +7,32 @@ void main() {
   late Database db;
   late LlmSummaryRepository repository;
 
+  Future<void> createV5Schema(Database db) async {
+    await db.execute('''
+      CREATE TABLE word_summaries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        folder_name TEXT NOT NULL,
+        word TEXT NOT NULL,
+        covered_up_to_episode INTEGER NOT NULL,
+        summary TEXT NOT NULL,
+        source_file TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE UNIQUE INDEX idx_word_summaries_unique
+      ON word_summaries(folder_name, word, covered_up_to_episode)
+    ''');
+  }
+
   setUp(() async {
     sqfliteFfiInit();
     db = await databaseFactoryFfi.openDatabase(
       inMemoryDatabasePath,
       options: OpenDatabaseOptions(
         version: 1,
-        onCreate: (db, version) async {
-          await db.execute('''
-            CREATE TABLE word_summaries (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              folder_name TEXT NOT NULL,
-              word TEXT NOT NULL,
-              summary_type TEXT NOT NULL,
-              summary TEXT NOT NULL,
-              source_file TEXT,
-              created_at TEXT NOT NULL,
-              updated_at TEXT NOT NULL
-            )
-          ''');
-          await db.execute('''
-            CREATE UNIQUE INDEX idx_word_summaries_unique
-            ON word_summaries(folder_name, word, summary_type)
-          ''');
-        },
+        onCreate: (db, _) => createV5Schema(db),
       ),
     );
     repository = LlmSummaryRepository(db);
@@ -41,310 +43,371 @@ void main() {
   });
 
   group('LlmSummaryRepository', () {
-    test('saveSummary inserts and findSummary retrieves it', () async {
-      await repository.saveSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-        summary: 'アリスは主人公の少女。',
-      );
+    group('saveSnapshot', () {
+      test('inserts a new snapshot row', () async {
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 30,
+          summary: 'アリスは少女。',
+          sourceFile: '030_chapter.txt',
+        );
 
-      final result = await repository.findSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-      );
+        final snapshots = await repository.findSnapshotsForWord(
+          folderName: 'my_novel',
+          word: 'アリス',
+        );
 
-      expect(result, isNotNull);
-      expect(result!.word, 'アリス');
-      expect(result.summary, 'アリスは主人公の少女。');
-      expect(result.summaryType, SummaryType.spoiler);
-      expect(result.folderName, 'my_novel');
+        expect(snapshots, hasLength(1));
+        expect(snapshots.first.coveredUpToEpisode, 30);
+        expect(snapshots.first.summary, 'アリスは少女。');
+        expect(snapshots.first.sourceFile, '030_chapter.txt');
+      });
+
+      test('upserts when (folder, word, episode) collides', () async {
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 30,
+          summary: '初回',
+          sourceFile: '030_chapter.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 30,
+          summary: '上書き',
+          sourceFile: '030_chapter.txt',
+        );
+
+        final snapshots = await repository.findSnapshotsForWord(
+          folderName: 'my_novel',
+          word: 'アリス',
+        );
+
+        expect(snapshots, hasLength(1),
+            reason: 'colliding PK SHALL upsert, not duplicate');
+        expect(snapshots.first.summary, '上書き');
+      });
+
+      test('different episodes coexist for the same word', () async {
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 30,
+          summary: '30話時点',
+          sourceFile: '030_chapter.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 120,
+          summary: '全話時点',
+          sourceFile: '120_chapter.txt',
+        );
+
+        final snapshots = await repository.findSnapshotsForWord(
+          folderName: 'my_novel',
+          word: 'アリス',
+        );
+
+        expect(snapshots, hasLength(2));
+        expect(
+            snapshots.map((s) => s.coveredUpToEpisode).toList(), [30, 120]);
+      });
+
+      test('rejects 1-character word', () async {
+        await expectLater(
+          repository.saveSnapshot(
+            folderName: 'my_novel',
+            word: 'の',
+            coveredUpToEpisode: 1,
+            summary: '要約',
+          ),
+          throwsArgumentError,
+        );
+      });
+
+      test('accepts 2-character word', () async {
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: '聖印',
+          coveredUpToEpisode: 5,
+          summary: '騎士の証',
+        );
+        final snapshots = await repository.findSnapshotsForWord(
+          folderName: 'my_novel',
+          word: '聖印',
+        );
+        expect(snapshots, hasLength(1));
+      });
+
+      test('allows null source_file', () async {
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 10,
+          summary: 'レガシー扱い',
+          sourceFile: null,
+        );
+        final snapshots = await repository.findSnapshotsForWord(
+          folderName: 'my_novel',
+          word: 'アリス',
+        );
+        expect(snapshots.first.sourceFile, isNull);
+      });
     });
 
-    test('findSummary returns null for cache miss', () async {
-      final result = await repository.findSummary(
-        folderName: 'my_novel',
-        word: '存在しない単語',
-        summaryType: SummaryType.spoiler,
-      );
+    group('findSnapshotsForWord', () {
+      test('returns snapshots sorted by coveredUpToEpisode ascending', () async {
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 60,
+          summary: 'b',
+          sourceFile: '060.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 10,
+          summary: 'a',
+          sourceFile: '010.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 30,
+          summary: 'm',
+          sourceFile: '030.txt',
+        );
 
-      expect(result, isNull);
+        final snapshots = await repository.findSnapshotsForWord(
+          folderName: 'my_novel',
+          word: 'アリス',
+        );
+
+        expect(
+            snapshots.map((s) => s.coveredUpToEpisode).toList(), [10, 30, 60]);
+      });
+
+      test('returns empty list when no snapshots exist', () async {
+        final snapshots = await repository.findSnapshotsForWord(
+          folderName: 'my_novel',
+          word: '未知',
+        );
+        expect(snapshots, isEmpty);
+      });
+
+      test('only returns rows for the requested (folder, word)', () async {
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 10,
+          summary: 'a',
+          sourceFile: '010.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'other_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 20,
+          summary: 'other',
+          sourceFile: '020.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'ボブ',
+          coveredUpToEpisode: 30,
+          summary: 'bob',
+          sourceFile: '030.txt',
+        );
+
+        final snapshots = await repository.findSnapshotsForWord(
+          folderName: 'my_novel',
+          word: 'アリス',
+        );
+
+        expect(snapshots, hasLength(1));
+        expect(snapshots.first.folderName, 'my_novel');
+        expect(snapshots.first.word, 'アリス');
+      });
     });
 
-    test('saveSummary updates existing entry on conflict', () async {
-      await repository.saveSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-        summary: '初回の要約',
-      );
+    group('deleteAllForWord', () {
+      test('removes every snapshot for the (folder, word)', () async {
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 10,
+          summary: 'a',
+          sourceFile: '010.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 30,
+          summary: 'b',
+          sourceFile: '030.txt',
+        );
 
-      await repository.saveSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-        summary: '更新された要約',
-      );
+        await repository.deleteAllForWord(
+            folderName: 'my_novel', word: 'アリス');
 
-      final result = await repository.findSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-      );
+        final snapshots = await repository.findSnapshotsForWord(
+          folderName: 'my_novel',
+          word: 'アリス',
+        );
+        expect(snapshots, isEmpty);
+      });
 
-      expect(result!.summary, '更新された要約');
+      test('leaves other words and folders untouched', () async {
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 10,
+          summary: 'a',
+          sourceFile: '010.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'ボブ',
+          coveredUpToEpisode: 10,
+          summary: 'b',
+          sourceFile: '010.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'other_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 20,
+          summary: 'c',
+          sourceFile: '020.txt',
+        );
+
+        await repository.deleteAllForWord(
+            folderName: 'my_novel', word: 'アリス');
+
+        final bob = await repository.findSnapshotsForWord(
+            folderName: 'my_novel', word: 'ボブ');
+        final otherAlice = await repository.findSnapshotsForWord(
+            folderName: 'other_novel', word: 'アリス');
+        expect(bob, hasLength(1));
+        expect(otherAlice, hasLength(1));
+      });
     });
 
-    test('spoiler and noSpoiler are cached independently', () async {
-      await repository.saveSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-        summary: 'ネタバレあり要約',
-      );
+    group('deleteByFolderName', () {
+      test('removes every snapshot row for the folder', () async {
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 10,
+          summary: 'a',
+          sourceFile: '010.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'ボブ',
+          coveredUpToEpisode: 10,
+          summary: 'b',
+          sourceFile: '010.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'other_novel',
+          word: 'キャラ',
+          coveredUpToEpisode: 20,
+          summary: 'c',
+          sourceFile: '020.txt',
+        );
 
-      await repository.saveSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.noSpoiler,
-        summary: 'ネタバレなし要約',
-        sourceFile: '040_chapter.txt',
-      );
+        await repository.deleteByFolderName('my_novel');
 
-      final spoiler = await repository.findSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-      );
-      final noSpoiler = await repository.findSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.noSpoiler,
-      );
-
-      expect(spoiler!.summary, 'ネタバレあり要約');
-      expect(noSpoiler!.summary, 'ネタバレなし要約');
-      expect(noSpoiler.sourceFile, '040_chapter.txt');
+        final survived = await repository.findAllByFolder('my_novel');
+        expect(survived, isEmpty);
+        final other = await repository.findAllByFolder('other_novel');
+        expect(other, hasLength(1));
+      });
     });
 
-    test('saveSummary with sourceFile for no-spoiler', () async {
-      await repository.saveSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.noSpoiler,
-        summary: '要約テキスト',
-        sourceFile: '040_chapter.txt',
-      );
+    group('findAllByFolder', () {
+      test('returns rows ordered by (word, coveredUpToEpisode) ascending',
+          () async {
+        // Insert out of order; result should be deterministic.
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'ボブ',
+          coveredUpToEpisode: 5,
+          summary: 'bob5',
+          sourceFile: '005.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 30,
+          summary: 'a30',
+          sourceFile: '030.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'アリス',
+          coveredUpToEpisode: 10,
+          summary: 'a10',
+          sourceFile: '010.txt',
+        );
+        await repository.saveSnapshot(
+          folderName: 'my_novel',
+          word: 'ボブ',
+          coveredUpToEpisode: 50,
+          summary: 'bob50',
+          sourceFile: '050.txt',
+        );
 
-      final result = await repository.findSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.noSpoiler,
-      );
+        final rows = await repository.findAllByFolder('my_novel');
 
-      expect(result!.sourceFile, '040_chapter.txt');
+        expect(
+          rows.map((r) => '${r.word}/${r.coveredUpToEpisode}').toList(),
+          ['アリス/10', 'アリス/30', 'ボブ/5', 'ボブ/50'],
+        );
+      });
+
+      test('returns empty list when folder has no rows', () async {
+        final rows = await repository.findAllByFolder('empty_novel');
+        expect(rows, isEmpty);
+      });
     });
 
-    test('deleteSummary removes existing entry', () async {
-      await repository.saveSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-        summary: '要約',
-      );
-
-      await repository.deleteSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-      );
-
-      final result = await repository.findSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-      );
-
-      expect(result, isNull);
-    });
-
-    test('deleteByFolderName removes all summaries for a folder', () async {
-      await repository.saveSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-        summary: '要約1',
-      );
-      await repository.saveSummary(
-        folderName: 'my_novel',
-        word: 'ボブ',
-        summaryType: SummaryType.noSpoiler,
-        summary: '要約2',
-      );
-      await repository.saveSummary(
-        folderName: 'other_novel',
-        word: 'キャラ',
-        summaryType: SummaryType.spoiler,
-        summary: '他の要約',
-      );
-
-      await repository.deleteByFolderName('my_novel');
-
-      final alice = await repository.findSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-      );
-      final bob = await repository.findSummary(
-        folderName: 'my_novel',
-        word: 'ボブ',
-        summaryType: SummaryType.noSpoiler,
-      );
-      final other = await repository.findSummary(
-        folderName: 'other_novel',
-        word: 'キャラ',
-        summaryType: SummaryType.spoiler,
-      );
-
-      expect(alice, isNull);
-      expect(bob, isNull);
-      expect(other, isNotNull);
-    });
-
-    test('legacy spoiler row with NULL source_file reads back as null',
-        () async {
-      // Simulate a legacy row written before spoiler entries persisted
-      // source_file. We bypass the repository to insert NULL directly.
+    test('legacy null source_file reads back as null', () async {
       final now = DateTime.now().toIso8601String();
       await db.insert('word_summaries', {
         'folder_name': 'my_novel',
         'word': 'アリス',
-        'summary_type': 'spoiler',
+        'covered_up_to_episode': 10,
         'summary': '古いネタバレ要約',
         'source_file': null,
         'created_at': now,
         'updated_at': now,
       });
 
-      final result = await repository.findSummary(
+      final snapshots = await repository.findSnapshotsForWord(
         folderName: 'my_novel',
         word: 'アリス',
-        summaryType: SummaryType.spoiler,
       );
 
-      expect(result, isNotNull);
-      expect(result!.summary, '古いネタバレ要約');
-      expect(result.sourceFile, isNull,
-          reason: 'legacy NULL source_file must read back as null');
+      expect(snapshots, hasLength(1));
+      expect(snapshots.first.sourceFile, isNull);
+      expect(snapshots.first.summary, '古いネタバレ要約');
     });
 
-    test('saveSummary rejects 1-character word', () async {
-      await expectLater(
-        repository.saveSummary(
-          folderName: 'my_novel',
-          word: 'の',
-          summaryType: SummaryType.spoiler,
-          summary: '要約',
-        ),
-        throwsArgumentError,
+    // Construct WordSummary to ensure the test references the symbol cleanly.
+    test('WordSummary symbol is wired', () {
+      final ws = WordSummary(
+        folderName: 'f',
+        word: 'wd',
+        coveredUpToEpisode: 1,
+        summary: 's',
+        createdAt: DateTime.utc(2026),
+        updatedAt: DateTime.utc(2026),
       );
-
-      final result = await repository.findSummary(
-        folderName: 'my_novel',
-        word: 'の',
-        summaryType: SummaryType.spoiler,
-      );
-      expect(result, isNull,
-          reason: 'no row should be written for 1-char word');
-    });
-
-    test('saveSummary accepts 2-character word', () async {
-      await repository.saveSummary(
-        folderName: 'my_novel',
-        word: '聖印',
-        summaryType: SummaryType.spoiler,
-        summary: '騎士の証',
-      );
-
-      final result = await repository.findSummary(
-        folderName: 'my_novel',
-        word: '聖印',
-        summaryType: SummaryType.spoiler,
-      );
-      expect(result, isNotNull);
-      expect(result!.summary, '騎士の証');
-    });
-
-    test('findAllByFolder returns rows ordered by updated_at desc', () async {
-      // Insert rows with controlled updated_at timestamps so ordering is
-      // deterministic regardless of insert order.
-      final older = DateTime.utc(2026, 5, 20, 10, 0, 0).toIso8601String();
-      final middle = DateTime.utc(2026, 5, 20, 12, 0, 0).toIso8601String();
-      final newer = DateTime.utc(2026, 5, 20, 14, 0, 0).toIso8601String();
-
-      await db.insert('word_summaries', {
-        'folder_name': 'my_novel',
-        'word': '中間',
-        'summary_type': 'spoiler',
-        'summary': 'm',
-        'created_at': middle,
-        'updated_at': middle,
-      });
-      await db.insert('word_summaries', {
-        'folder_name': 'my_novel',
-        'word': '新しい',
-        'summary_type': 'no_spoiler',
-        'summary': 'n',
-        'created_at': newer,
-        'updated_at': newer,
-      });
-      await db.insert('word_summaries', {
-        'folder_name': 'my_novel',
-        'word': '古い',
-        'summary_type': 'spoiler',
-        'summary': 'o',
-        'created_at': older,
-        'updated_at': older,
-      });
-      // Different folder should be excluded.
-      await db.insert('word_summaries', {
-        'folder_name': 'other_novel',
-        'word': '他作品',
-        'summary_type': 'spoiler',
-        'summary': 'x',
-        'created_at': newer,
-        'updated_at': newer,
-      });
-
-      final results = await repository.findAllByFolder('my_novel');
-
-      expect(results.map((r) => r.word).toList(), ['新しい', '中間', '古い']);
-      expect(results.every((r) => r.folderName == 'my_novel'), isTrue);
-    });
-
-    test('findAllByFolder returns empty list when folder has no rows',
-        () async {
-      final results = await repository.findAllByFolder('empty_novel');
-      expect(results, isEmpty);
-    });
-
-    test('deleteByFolderName does nothing for non-existent folder', () async {
-      await repository.saveSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-        summary: '要約',
-      );
-
-      await repository.deleteByFolderName('nonexistent');
-
-      final result = await repository.findSummary(
-        folderName: 'my_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-      );
-      expect(result, isNotNull);
+      expect(ws.coveredUpToEpisode, 1);
     });
   });
 }

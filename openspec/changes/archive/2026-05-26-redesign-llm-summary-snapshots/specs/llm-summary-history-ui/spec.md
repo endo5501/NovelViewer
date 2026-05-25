@@ -1,33 +1,4 @@
-## Purpose
-
-LLM analysis history panel in the left column: a third tab ("解析履歴") alongside "ファイル" and "ブックマーク" that lists cached `word_summaries` entries for the active novel, supports click-to-jump back to the source file, and lets the user delete history entries via a context menu.
-## Requirements
-### Requirement: Left column history tab
-The left column SHALL include a third tab labeled "解析履歴" alongside "ファイル" and "ブックマーク". The user SHALL be able to switch to this tab by tapping on it. Tab switching SHALL preserve the state of the other tabs (current directory, bookmark list scroll position).
-
-#### Scenario: User switches to history tab
-- **WHEN** the user taps the "解析履歴" tab
-- **THEN** the analysis history panel SHALL be displayed below the tab bar
-- **AND** the "解析履歴" tab SHALL be visually indicated as active
-
-#### Scenario: User switches back from history tab
-- **WHEN** the user switches away from the "解析履歴" tab to another tab
-- **THEN** the other tab's panel SHALL be displayed with its prior state preserved
-
-### Requirement: History entries scoped to active novel
-The analysis history panel SHALL display only `word_summaries` entries whose `folder_name` matches the currently opened novel (the folder identified by `currentDirectoryProvider`). When no novel is active (user is at library root), a message SHALL be displayed instead of an entry list.
-
-#### Scenario: Display entries for active novel
-- **WHEN** the user is browsing files within a novel folder and switches to the history tab
-- **THEN** only the `word_summaries` rows whose `folder_name` matches the active novel SHALL be displayed
-
-#### Scenario: No active novel
-- **WHEN** the user is at the library root directory and switches to the history tab
-- **THEN** a message "作品フォルダを選択してください" SHALL be displayed
-
-#### Scenario: No entries exist
-- **WHEN** the user switches to the history tab and the active novel has no cached summaries
-- **THEN** a message "解析履歴がありません" SHALL be displayed
+## MODIFIED Requirements
 
 ### Requirement: History entry display
 Each history entry SHALL show the analyzed word, a snapshot-count badge indicating how many `word_summaries` rows exist for that `(folder_name, word)`, a preview of the most recently updated snapshot's summary text (truncated when long), and the most recent `updated_at` across all of the word's snapshots. The entry SHALL remain a single row per word regardless of how many snapshots exist (the multiple snapshots are exposed via the right-click menu, not via separate rows).
@@ -119,4 +90,3 @@ The right-click context menu on a history entry SHALL include a "コピー" item
 - **WHEN** the user selects any copy entry from the submenu
 - **THEN** no `word_summaries` rows SHALL be modified, deleted, or re-ordered
 - **AND** the history panel SHALL NOT refresh as a result of the copy
-

@@ -482,10 +482,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get contextMenu_analyzeSpoiler => '解析開始(ネタバレあり)';
 
   @override
-  String get contextMenu_copyNoSpoilerSummary => '要約をコピー(ネタバレなし)';
+  String get contextMenu_copySubmenu => 'コピー';
 
   @override
-  String get contextMenu_copySpoilerSummary => '要約をコピー(ネタバレあり)';
+  String contextMenu_copySnapshotByEpisode(int episode) {
+    return '$episodeファイル時点の要約をコピー';
+  }
 
   @override
   String get contextMenu_copiedToClipboard => 'クリップボードにコピーしました';
@@ -523,13 +525,34 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get hoverPopup_referenceWarning => '別ファイルで解析した要約です';
+  String hoverPopup_snapshotLabel(int episode) {
+    return '$episodeファイル時点の要約';
+  }
 
   @override
-  String get hoverPopup_typeNoSpoiler => 'なし';
+  String get hoverPopup_futureSnapshotWarning => '現在より先の解析です';
 
   @override
-  String get hoverPopup_typeSpoiler => 'あり';
+  String get hoverPopup_reanalyzeButton => '再解析';
+
+  @override
+  String hoverPopup_reanalyzeUpToCurrent(int episode) {
+    return '現在ページまで ($episodeファイル時点)';
+  }
+
+  @override
+  String hoverPopup_reanalyzeUpToAll(int episode) {
+    return '全話まで ($episodeファイル時点)';
+  }
+
+  @override
+  String get hoverPopup_reanalyzeOverwriteSuffix => ' (上書き)';
+
+  @override
+  String get hoverPopup_snapshotNavPrev => '前のスナップショット';
+
+  @override
+  String get hoverPopup_snapshotNavNext => '次のスナップショット';
 
   @override
   String get bookmark_selectNovelPrompt => '作品フォルダを選択してください';
@@ -589,13 +612,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get llmHistory_noEntries => '解析履歴がありません';
 
   @override
-  String get llmHistory_typeBoth => '両';
-
-  @override
-  String get llmHistory_typeNoSpoiler => 'なし';
-
-  @override
-  String get llmHistory_typeSpoiler => 'あり';
+  String llmHistory_snapshotsBadge(int count) {
+    return '$countスナップショット';
+  }
 
   @override
   String get llmHistory_untrackedBadge => '未追跡';
