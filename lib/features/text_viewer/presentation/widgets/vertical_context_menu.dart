@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 
 /// Actions surfaced in the vertical-mode selection context menu. The vertical
 /// viewer is a custom painter without an [EditableTextState], so the menu is
@@ -43,7 +43,7 @@ void dispatchVerticalContextAction(
   required String selectedText,
   required void Function(String selectedText) onCopy,
   required void Function(String selectedText) onAddToDictionary,
-  required void Function(String selectedText, SummaryType type) onAnalyze,
+  required void Function(String selectedText, AnalysisScope scope) onAnalyze,
 }) {
   switch (action) {
     case VerticalContextAction.copy:
@@ -51,8 +51,8 @@ void dispatchVerticalContextAction(
     case VerticalContextAction.addToDictionary:
       onAddToDictionary(selectedText);
     case VerticalContextAction.analyzeNoSpoiler:
-      onAnalyze(selectedText, SummaryType.noSpoiler);
+      onAnalyze(selectedText, AnalysisScope.upToCurrent);
     case VerticalContextAction.analyzeSpoiler:
-      onAnalyze(selectedText, SummaryType.spoiler);
+      onAnalyze(selectedText, AnalysisScope.upToAll);
   }
 }

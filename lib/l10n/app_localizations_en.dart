@@ -492,10 +492,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contextMenu_analyzeSpoiler => 'Analyze (with spoilers)';
 
   @override
-  String get contextMenu_copyNoSpoilerSummary => 'Copy summary (no spoilers)';
+  String get contextMenu_copySubmenu => 'Copy';
 
   @override
-  String get contextMenu_copySpoilerSummary => 'Copy summary (with spoilers)';
+  String contextMenu_copySnapshotByEpisode(int episode) {
+    return 'Copy summary at file $episode';
+  }
 
   @override
   String get contextMenu_copiedToClipboard => 'Copied to clipboard';
@@ -533,14 +535,35 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get hoverPopup_referenceWarning =>
-      'Summary generated from a different file';
+  String hoverPopup_snapshotLabel(int episode) {
+    return 'Summary at file $episode';
+  }
 
   @override
-  String get hoverPopup_typeNoSpoiler => 'No';
+  String get hoverPopup_futureSnapshotWarning =>
+      'Snapshot is ahead of the current page';
 
   @override
-  String get hoverPopup_typeSpoiler => 'Yes';
+  String get hoverPopup_reanalyzeButton => 'Re-analyze';
+
+  @override
+  String hoverPopup_reanalyzeUpToCurrent(int episode) {
+    return 'Up to current page (file $episode)';
+  }
+
+  @override
+  String hoverPopup_reanalyzeUpToAll(int episode) {
+    return 'All chapters (file $episode)';
+  }
+
+  @override
+  String get hoverPopup_reanalyzeOverwriteSuffix => ' (overwrite)';
+
+  @override
+  String get hoverPopup_snapshotNavPrev => 'Previous snapshot';
+
+  @override
+  String get hoverPopup_snapshotNavNext => 'Next snapshot';
 
   @override
   String get bookmark_selectNovelPrompt => 'Please select a novel folder';
@@ -600,13 +623,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get llmHistory_noEntries => 'No analysis history';
 
   @override
-  String get llmHistory_typeBoth => 'Both';
-
-  @override
-  String get llmHistory_typeNoSpoiler => 'No-spoiler';
-
-  @override
-  String get llmHistory_typeSpoiler => 'Spoiler';
+  String llmHistory_snapshotsBadge(int count) {
+    return '$count snapshot(s)';
+  }
 
   @override
   String get llmHistory_untrackedBadge => 'Untracked';

@@ -1,31 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 
 void main() {
-  group('markStyleForEntryType', () {
-    test('noSpoilerOnly maps to dotted', () {
-      expect(
-        markStyleForEntryType(HistoryEntryType.noSpoilerOnly),
-        MarkStyle.dotted,
-      );
-    });
-
-    test('spoilerOnly maps to solid', () {
-      expect(
-        markStyleForEntryType(HistoryEntryType.spoilerOnly),
-        MarkStyle.solid,
-      );
-    });
-
-    test('both maps to solid (spoiler precedence)', () {
-      expect(
-        markStyleForEntryType(HistoryEntryType.both),
-        MarkStyle.solid,
-      );
-    });
-  });
-
   group('findMarks', () {
     test('finds a single occurrence and returns its 0-indexed range', () {
       final marks = findMarks(
@@ -42,7 +18,7 @@ void main() {
     test('finds multiple non-overlapping occurrences of the same word', () {
       final marks = findMarks(
         text: 'アリス。アリス。',
-        wordsByStyle: const {'アリス': MarkStyle.dotted},
+        wordsByStyle: const {'アリス': MarkStyle.solid},
       );
       expect(marks, hasLength(2));
       expect(marks[0].start, 0);
@@ -65,7 +41,7 @@ void main() {
       final marks = findMarks(
         text: 'アリスの剣を持って',
         wordsByStyle: const {
-          'アリス': MarkStyle.dotted,
+          'アリス': MarkStyle.solid,
           'アリスの剣': MarkStyle.solid,
         },
       );
@@ -80,7 +56,7 @@ void main() {
       final marks = findMarks(
         text: 'アリスは聖印を持って',
         wordsByStyle: const {
-          'アリス': MarkStyle.dotted,
+          'アリス': MarkStyle.solid,
           '聖印': MarkStyle.solid,
         },
       );
@@ -91,8 +67,6 @@ void main() {
 
     test('substring of an unrelated word is still marked (accepted limitation)',
         () {
-      // "メアリス" contains the substring "アリス" — this is an acknowledged
-      // false positive of substring matching for Japanese text.
       final marks = findMarks(
         text: 'メアリスが歩く',
         wordsByStyle: const {'アリス': MarkStyle.solid},
@@ -106,7 +80,7 @@ void main() {
       final marks = findMarks(
         text: '聖印を持つアリスは王女',
         wordsByStyle: const {
-          'アリス': MarkStyle.dotted,
+          'アリス': MarkStyle.solid,
           '聖印': MarkStyle.solid,
         },
       );
@@ -133,8 +107,6 @@ void main() {
     });
 
     test('skips marks placed inside ruby tag annotations (rt content)', () {
-      // The ruby base text "聖印" should mark; the rt annotation "せいいん"
-      // should NOT mark even if it would otherwise match a cached word.
       final marks = findMarksOnBaseText(
         text: '<ruby>聖印<rt>せいいん</rt></ruby>を持つ',
         wordsByStyle: const {
@@ -142,10 +114,6 @@ void main() {
           'せいいん': MarkStyle.solid,
         },
       );
-      // findMarksOnBaseText returns marks whose start/end are positions in
-      // the BASE-TEXT-ONLY view (with rt content stripped). It should mark
-      // "聖印" (positions 0..2 in the stripped string "聖印を持つ") and SHALL
-      // NOT mark "せいいん".
       expect(marks.map((m) => m.word).toList(), ['聖印']);
     });
   });

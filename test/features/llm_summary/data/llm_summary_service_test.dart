@@ -6,7 +6,6 @@ import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
-import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -63,7 +62,7 @@ void main() {
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               folder_name TEXT NOT NULL,
               word TEXT NOT NULL,
-              summary_type TEXT NOT NULL,
+              covered_up_to_episode INTEGER NOT NULL,
               summary TEXT NOT NULL,
               source_file TEXT,
               created_at TEXT NOT NULL,
@@ -72,7 +71,7 @@ void main() {
           ''');
           await db.execute('''
             CREATE UNIQUE INDEX idx_word_summaries_unique
-            ON word_summaries(folder_name, word, summary_type)
+            ON word_summaries(folder_name, word, covered_up_to_episode)
           ''');
         },
       ),
@@ -95,15 +94,14 @@ void main() {
   }
 
   group('LlmSummaryService', () {
-    test('generates spoiler summary using all files via pipeline', () async {
+    test('analyzes "all files" when coveredUpToEpisode equals the max prefix',
+        () async {
       await createFile('001_chapter.txt', 'アリスが登場した。');
       await createFile('050_chapter.txt', 'アリスが旅に出た。');
       await createFile('100_chapter.txt', 'アリスが帰還した。');
 
       final mockClient = _MockLlmClient([
-        // Stage 1: fact extraction (single chunk since contexts are small)
         jsonEncode({'facts': '- 物語の序盤に登場\n- 旅に出た\n- 帰還した'}),
-        // Final stage: summary
         jsonEncode({'summary': 'アリスは冒険者。'}),
       ]);
 
@@ -117,15 +115,24 @@ void main() {
         directoryPath: tempDir.path,
         folderName: 'test_novel',
         word: 'アリス',
-        summaryType: SummaryType.spoiler,
+        coveredUpToEpisode: 100,
+        sourceFileName: '100_chapter.txt',
       );
 
       expect(result, 'アリスは冒険者。');
-      // Pipeline should be called (at least extract + summarize)
       expect(mockClient.callCount, 2);
+
+      final cached = await repository.findSnapshotsForWord(
+        folderName: 'test_novel',
+        word: 'アリス',
+      );
+      expect(cached, hasLength(1));
+      expect(cached.first.coveredUpToEpisode, 100);
+      expect(cached.first.sourceFile, '100_chapter.txt');
     });
 
-    test('generates no-spoiler summary filtering by current file', () async {
+    test('filters out files whose numeric prefix is greater than the bound',
+        () async {
       await createFile('001_chapter.txt', 'アリスが登場した。');
       await createFile('040_chapter.txt', 'アリスが旅に出た。');
       await createFile('100_chapter.txt', 'アリスが帰還した。');
@@ -145,20 +152,18 @@ void main() {
         directoryPath: tempDir.path,
         folderName: 'test_novel',
         word: 'アリス',
-        summaryType: SummaryType.noSpoiler,
-        currentFileName: '040_chapter.txt',
+        coveredUpToEpisode: 40,
+        sourceFileName: '040_chapter.txt',
       );
 
       expect(result, 'アリスは旅立った少女。');
-      // Verify the fact extraction prompt does NOT contain content from file 100
       final factExtractionPrompt = mockClient.prompts[0];
       expect(factExtractionPrompt, contains('アリスが登場した'));
       expect(factExtractionPrompt, contains('アリスが旅に出た'));
       expect(factExtractionPrompt, isNot(contains('アリスが帰還した')));
     });
 
-    test('saves spoiler summary with source_file when currentFileName is provided',
-        () async {
+    test('saves snapshot at the provided coveredUpToEpisode', () async {
       await createFile('001_chapter.txt', 'アリスが登場した。');
       await createFile('060_chapter.txt', 'アリスが旅に出た。');
 
@@ -177,54 +182,21 @@ void main() {
         directoryPath: tempDir.path,
         folderName: 'my_novel',
         word: 'アリス',
-        summaryType: SummaryType.spoiler,
-        currentFileName: '060_chapter.txt',
+        coveredUpToEpisode: 60,
+        sourceFileName: '060_chapter.txt',
       );
 
-      final cached = await repository.findSummary(
+      final snapshots = await repository.findSnapshotsForWord(
         folderName: 'my_novel',
         word: 'アリス',
-        summaryType: SummaryType.spoiler,
       );
 
-      expect(cached, isNotNull);
-      expect(cached!.sourceFile, '060_chapter.txt',
-          reason: 'spoiler entries must persist source_file for jump support');
-    });
-
-    test('saves result to cache', () async {
-      await createFile('001.txt', 'アリスが登場');
-
-      final mockClient = _MockLlmClient([
-        jsonEncode({'facts': '- 登場した'}),
-        jsonEncode({'summary': 'キャッシュされる要約'}),
-      ]);
-
-      final service = LlmSummaryService(
-        llmClient: mockClient,
-        repository: repository,
-        searchService: searchService,
-      );
-
-      await service.generateSummary(
-        directoryPath: tempDir.path,
-        folderName: 'test_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-      );
-
-      final cached = await repository.findSummary(
-        folderName: 'test_novel',
-        word: 'アリス',
-        summaryType: SummaryType.spoiler,
-      );
-
-      expect(cached, isNotNull);
-      expect(cached!.summary, 'キャッシュされる要約');
+      expect(snapshots, hasLength(1));
+      expect(snapshots.first.coveredUpToEpisode, 60);
+      expect(snapshots.first.sourceFile, '060_chapter.txt');
     });
 
     test('handles empty search results', () async {
-      // No files with the search term
       await createFile('001.txt', '関係ないテキスト');
 
       final mockClient = _MockLlmClient([
@@ -241,7 +213,8 @@ void main() {
         directoryPath: tempDir.path,
         folderName: 'test',
         word: 'アリス',
-        summaryType: SummaryType.spoiler,
+        coveredUpToEpisode: 1,
+        sourceFileName: '001.txt',
       );
 
       expect(result, '情報が見つかりません。');
@@ -266,7 +239,8 @@ void main() {
         directoryPath: tempDir.path,
         folderName: 'test',
         word: 'アリス',
-        summaryType: SummaryType.spoiler,
+        coveredUpToEpisode: 1,
+        sourceFileName: '001.txt',
       );
 
       expect(result, 'アリスは登場人物。');
@@ -274,8 +248,8 @@ void main() {
       expect(mockClient.events.last, 'release');
     });
 
-    test('releases LLM client resources when pipeline throws, then rethrows '
-        'original exception', () async {
+    test('releases resources when pipeline throws, rethrows original exception',
+        () async {
       await createFile('001.txt', 'アリスが登場した。');
 
       final mockClient = _MockLlmClient(<String>[])
@@ -293,7 +267,8 @@ void main() {
           directoryPath: tempDir.path,
           folderName: 'test',
           word: 'アリス',
-          summaryType: SummaryType.spoiler,
+          coveredUpToEpisode: 1,
+          sourceFileName: '001.txt',
         );
       } catch (e) {
         thrown = e;
@@ -323,7 +298,8 @@ void main() {
         directoryPath: tempDir.path,
         folderName: 'test',
         word: 'アリス',
-        summaryType: SummaryType.spoiler,
+        coveredUpToEpisode: 1,
+        sourceFileName: '001.txt',
       );
 
       expect(result, '要約OK');
@@ -350,12 +326,11 @@ void main() {
         directoryPath: tempDir.path,
         folderName: 'test',
         word: 'アリス',
-        summaryType: SummaryType.spoiler,
+        coveredUpToEpisode: 1,
+        sourceFileName: '001.txt',
         onProgress: events.add,
       );
 
-      // Should at least include one extracting-facts event (round 1) and
-      // exactly one final-summary event.
       expect(
         events.whereType<AnalysisExtractingFacts>().any((e) => e.round == 1),
         isTrue,
@@ -383,7 +358,8 @@ void main() {
           directoryPath: tempDir.path,
           folderName: 'test',
           word: 'アリス',
-          summaryType: SummaryType.spoiler,
+          coveredUpToEpisode: 1,
+          sourceFileName: '001.txt',
         );
       } catch (e) {
         thrown = e;
@@ -393,6 +369,38 @@ void main() {
       expect(
           thrown.toString(), isNot(contains('secondary release failure')));
       expect(mockClient.releaseCallCount, 1);
+    });
+
+    test('files without numeric prefix are filtered by lexical rank', () async {
+      await createFile('intro.txt', 'アリスが登場した。');
+      await createFile('part1.txt', 'アリスが旅に出た。');
+      await createFile('part2.txt', 'アリスが戻った。');
+
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': '- 登場\n- 旅'}),
+        jsonEncode({'summary': '中盤までの要約。'}),
+      ]);
+
+      final service = LlmSummaryService(
+        llmClient: mockClient,
+        repository: repository,
+        searchService: searchService,
+      );
+
+      // coveredUpToEpisode=2 means include intro.txt (rank 1) and part1.txt
+      // (rank 2), but exclude part2.txt (rank 3).
+      await service.generateSummary(
+        directoryPath: tempDir.path,
+        folderName: 'test',
+        word: 'アリス',
+        coveredUpToEpisode: 2,
+        sourceFileName: 'part1.txt',
+      );
+
+      final prompt = mockClient.prompts[0];
+      expect(prompt, contains('アリスが登場した'));
+      expect(prompt, contains('アリスが旅に出た'));
+      expect(prompt, isNot(contains('アリスが戻った')));
     });
   });
 }

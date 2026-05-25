@@ -1,27 +1,27 @@
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 
-enum HistoryEntryType { noSpoilerOnly, spoilerOnly, both }
-
+/// One row per `(folder, word)` in the analysis-history panel, collapsing all
+/// existing snapshots for that word into a single entry. The snapshots list is
+/// preserved in ascending `coveredUpToEpisode` order so the copy submenu and
+/// snapshot navigator can render them directly.
 class HistoryEntry {
   final String folderName;
   final String word;
-  final HistoryEntryType type;
+  final List<WordSummary> snapshots;
   final String summaryPreview;
-  final String? noSpoilerSummary;
-  final String? spoilerSummary;
   final String? sourceFile;
   final DateTime updatedAt;
 
   const HistoryEntry({
     required this.folderName,
     required this.word,
-    required this.type,
+    required this.snapshots,
     required this.summaryPreview,
-    this.noSpoilerSummary,
-    this.spoilerSummary,
     required this.sourceFile,
     required this.updatedAt,
   });
+
+  int get snapshotCount => snapshots.length;
 
   bool get isJumpable => sourceFile != null;
 
@@ -34,45 +34,35 @@ class HistoryEntry {
     }
 
     final entries = grouped.entries.map((entry) {
-      final group = entry.value;
-      final noSpoiler = _firstOfType(group, SummaryType.noSpoiler);
-      final spoiler = _firstOfType(group, SummaryType.spoiler);
+      final group = [...entry.value]
+        ..sort((a, b) => a.coveredUpToEpisode.compareTo(b.coveredUpToEpisode));
 
-      final HistoryEntryType type;
-      if (noSpoiler != null && spoiler != null) {
-        type = HistoryEntryType.both;
-      } else if (noSpoiler != null) {
-        type = HistoryEntryType.noSpoilerOnly;
-      } else {
-        type = HistoryEntryType.spoilerOnly;
+      final mostRecent =
+          group.reduce((a, b) => a.updatedAt.isAfter(b.updatedAt) ? a : b);
+
+      // Jump resolution: search downward from the largest episode and use
+      // the first non-null source_file. NULL on the largest snapshot is
+      // typically a migrated legacy spoiler row whose source_file was unknown.
+      String? resolvedSourceFile;
+      for (var i = group.length - 1; i >= 0; i--) {
+        final candidate = group[i].sourceFile;
+        if (candidate != null) {
+          resolvedSourceFile = candidate;
+          break;
+        }
       }
-
-      final preview = noSpoiler?.summary ?? spoiler!.summary;
-      final sourceFile = noSpoiler?.sourceFile ?? spoiler?.sourceFile;
-      final updatedAt = [noSpoiler?.updatedAt, spoiler?.updatedAt]
-          .whereType<DateTime>()
-          .reduce((a, b) => a.isAfter(b) ? a : b);
 
       return HistoryEntry(
         folderName: entry.key.folder,
         word: entry.key.word,
-        type: type,
-        summaryPreview: preview,
-        noSpoilerSummary: noSpoiler?.summary,
-        spoilerSummary: spoiler?.summary,
-        sourceFile: sourceFile,
-        updatedAt: updatedAt,
+        snapshots: List.unmodifiable(group),
+        summaryPreview: mostRecent.summary,
+        sourceFile: resolvedSourceFile,
+        updatedAt: mostRecent.updatedAt,
       );
     }).toList();
 
     entries.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return entries;
   }
-}
-
-WordSummary? _firstOfType(List<WordSummary> rows, SummaryType type) {
-  for (final r in rows) {
-    if (r.summaryType == type) return r;
-  }
-  return null;
 }

@@ -2,14 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 
 void main() {
-  group('SummaryType', () {
-    test('has two values: spoiler and noSpoiler', () {
-      expect(SummaryType.values.length, 2);
-      expect(SummaryType.values, contains(SummaryType.spoiler));
-      expect(SummaryType.values, contains(SummaryType.noSpoiler));
-    });
-  });
-
   group('WordSummary', () {
     test('creates with all fields', () {
       final now = DateTime(2025, 1, 1);
@@ -17,9 +9,9 @@ void main() {
         id: 1,
         folderName: 'my_novel',
         word: 'アリス',
-        summaryType: SummaryType.spoiler,
+        coveredUpToEpisode: 30,
         summary: 'アリスは主人公の少女である。',
-        sourceFile: null,
+        sourceFile: '030_chapter.txt',
         createdAt: now,
         updatedAt: now,
       );
@@ -27,39 +19,38 @@ void main() {
       expect(summary.id, 1);
       expect(summary.folderName, 'my_novel');
       expect(summary.word, 'アリス');
-      expect(summary.summaryType, SummaryType.spoiler);
+      expect(summary.coveredUpToEpisode, 30);
       expect(summary.summary, 'アリスは主人公の少女である。');
-      expect(summary.sourceFile, null);
+      expect(summary.sourceFile, '030_chapter.txt');
       expect(summary.createdAt, now);
       expect(summary.updatedAt, now);
     });
 
-    test('creates no-spoiler summary with sourceFile', () {
+    test('source_file may be null (migrated from legacy spoiler row)', () {
       final now = DateTime(2025, 1, 1);
       final summary = WordSummary(
-        id: 2,
         folderName: 'my_novel',
         word: 'アリス',
-        summaryType: SummaryType.noSpoiler,
-        summary: 'アリスは物語の序盤で登場する少女。',
-        sourceFile: '040_chapter.txt',
+        coveredUpToEpisode: 10,
+        summary: 'レガシーの要約。',
+        sourceFile: null,
         createdAt: now,
         updatedAt: now,
       );
 
-      expect(summary.summaryType, SummaryType.noSpoiler);
-      expect(summary.sourceFile, '040_chapter.txt');
+      expect(summary.sourceFile, isNull);
+      expect(summary.coveredUpToEpisode, 10);
     });
 
-    test('toMap converts to database map', () {
+    test('toMap converts to database map without id', () {
       final now = DateTime(2025, 1, 15, 10, 30);
       final summary = WordSummary(
         id: 1,
         folderName: 'my_novel',
         word: 'アリス',
-        summaryType: SummaryType.spoiler,
+        coveredUpToEpisode: 40,
         summary: 'アリスは主人公。',
-        sourceFile: null,
+        sourceFile: '040_chapter.txt',
         createdAt: now,
         updatedAt: now,
       );
@@ -68,20 +59,22 @@ void main() {
 
       expect(map['folder_name'], 'my_novel');
       expect(map['word'], 'アリス');
-      expect(map['summary_type'], 'spoiler');
+      expect(map['covered_up_to_episode'], 40);
       expect(map['summary'], 'アリスは主人公。');
-      expect(map['source_file'], null);
+      expect(map['source_file'], '040_chapter.txt');
       expect(map['created_at'], now.toIso8601String());
       expect(map['updated_at'], now.toIso8601String());
-      expect(map.containsKey('id'), false);
+      expect(map.containsKey('id'), isFalse);
+      expect(map.containsKey('summary_type'), isFalse,
+          reason: 'summary_type column is removed in v5');
     });
 
     test('fromMap creates from database map', () {
       final map = {
-        'id': 1,
+        'id': 7,
         'folder_name': 'my_novel',
         'word': 'アリス',
-        'summary_type': 'no_spoiler',
+        'covered_up_to_episode': 40,
         'summary': 'アリスは少女。',
         'source_file': '040_chapter.txt',
         'created_at': '2025-01-15T10:30:00.000',
@@ -90,12 +83,32 @@ void main() {
 
       final summary = WordSummary.fromMap(map);
 
-      expect(summary.id, 1);
+      expect(summary.id, 7);
       expect(summary.folderName, 'my_novel');
       expect(summary.word, 'アリス');
-      expect(summary.summaryType, SummaryType.noSpoiler);
+      expect(summary.coveredUpToEpisode, 40);
       expect(summary.summary, 'アリスは少女。');
       expect(summary.sourceFile, '040_chapter.txt');
+      expect(summary.createdAt, DateTime.parse('2025-01-15T10:30:00.000'));
+      expect(summary.updatedAt, DateTime.parse('2025-01-15T10:30:00.000'));
+    });
+
+    test('fromMap accepts null source_file', () {
+      final map = {
+        'id': 8,
+        'folder_name': 'my_novel',
+        'word': 'アリス',
+        'covered_up_to_episode': 10,
+        'summary': 'レガシー要約。',
+        'source_file': null,
+        'created_at': '2025-01-15T10:30:00.000',
+        'updated_at': '2025-01-15T10:30:00.000',
+      };
+
+      final summary = WordSummary.fromMap(map);
+
+      expect(summary.sourceFile, isNull);
+      expect(summary.coveredUpToEpisode, 10);
     });
   });
 }

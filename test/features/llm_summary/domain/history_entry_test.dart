@@ -2,33 +2,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 
-WordSummary _summary({
+WordSummary _snap({
   required String folderName,
   required String word,
-  required SummaryType type,
+  required int episode,
   required String summary,
   String? sourceFile,
   required DateTime updatedAt,
-}) {
-  return WordSummary(
-    folderName: folderName,
-    word: word,
-    summaryType: type,
-    summary: summary,
-    sourceFile: sourceFile,
-    createdAt: updatedAt,
-    updatedAt: updatedAt,
-  );
-}
+}) =>
+    WordSummary(
+      folderName: folderName,
+      word: word,
+      coveredUpToEpisode: episode,
+      summary: summary,
+      sourceFile: sourceFile,
+      createdAt: updatedAt,
+      updatedAt: updatedAt,
+    );
 
 void main() {
   group('HistoryEntry.mergeRows', () {
-    test('produces single entry for word with only no-spoiler row', () {
+    test('one snapshot per word produces one entry with snapshotCount=1', () {
       final rows = [
-        _summary(
+        _snap(
           folderName: 'my_novel',
           word: 'ボブ',
-          type: SummaryType.noSpoiler,
+          episode: 40,
           summary: 'ボブは主人公の友人。',
           sourceFile: '040_chapter.txt',
           updatedAt: DateTime.utc(2026, 5, 20, 10),
@@ -39,49 +38,38 @@ void main() {
 
       expect(entries, hasLength(1));
       expect(entries.first.word, 'ボブ');
-      expect(entries.first.type, HistoryEntryType.noSpoilerOnly);
+      expect(entries.first.snapshotCount, 1);
       expect(entries.first.summaryPreview, 'ボブは主人公の友人。');
       expect(entries.first.sourceFile, '040_chapter.txt');
       expect(entries.first.updatedAt, DateTime.utc(2026, 5, 20, 10));
+      expect(entries.first.snapshots, hasLength(1));
     });
 
-    test('produces single entry for word with only spoiler row', () {
+    test('multiple snapshots for the same word collapse into one entry', () {
       final rows = [
-        _summary(
-          folderName: 'my_novel',
-          word: '聖印',
-          type: SummaryType.spoiler,
-          summary: '神聖な刻印。',
-          sourceFile: '050_chapter.txt',
-          updatedAt: DateTime.utc(2026, 5, 20, 11),
-        ),
-      ];
-
-      final entries = HistoryEntry.mergeRows(rows);
-
-      expect(entries, hasLength(1));
-      expect(entries.first.type, HistoryEntryType.spoilerOnly);
-      expect(entries.first.summaryPreview, '神聖な刻印。');
-      expect(entries.first.sourceFile, '050_chapter.txt');
-    });
-
-    test('merges two rows of the same word into a single "both" entry', () {
-      final rows = [
-        _summary(
+        _snap(
           folderName: 'my_novel',
           word: 'アリス',
-          type: SummaryType.noSpoiler,
-          summary: 'アリスは少女。',
-          sourceFile: '040_chapter.txt',
+          episode: 30,
+          summary: '序盤の要約',
+          sourceFile: '030_chapter.txt',
           updatedAt: DateTime.utc(2026, 5, 20, 10),
         ),
-        _summary(
+        _snap(
           folderName: 'my_novel',
           word: 'アリス',
-          type: SummaryType.spoiler,
-          summary: 'アリスは王女。',
+          episode: 60,
+          summary: '中盤の要約',
           sourceFile: '060_chapter.txt',
           updatedAt: DateTime.utc(2026, 5, 20, 16),
+        ),
+        _snap(
+          folderName: 'my_novel',
+          word: 'アリス',
+          episode: 120,
+          summary: '全話要約',
+          sourceFile: '120_chapter.txt',
+          updatedAt: DateTime.utc(2026, 5, 20, 18),
         ),
       ];
 
@@ -89,26 +77,38 @@ void main() {
 
       expect(entries, hasLength(1));
       expect(entries.first.word, 'アリス');
-      expect(entries.first.type, HistoryEntryType.both);
+      expect(entries.first.snapshotCount, 3);
+      expect(
+          entries.first.snapshots.map((s) => s.coveredUpToEpisode).toList(),
+          [30, 60, 120],
+          reason: 'snapshots SHALL be ordered ascending by episode');
     });
 
-    test('"both" entry uses latest updated_at across the two rows', () {
+    test('updatedAt is the latest across all snapshots', () {
       final rows = [
-        _summary(
+        _snap(
           folderName: 'my_novel',
           word: 'アリス',
-          type: SummaryType.noSpoiler,
-          summary: 'なし要約',
-          sourceFile: '040_chapter.txt',
+          episode: 30,
+          summary: 'a',
+          sourceFile: '030.txt',
           updatedAt: DateTime.utc(2026, 5, 20, 10),
         ),
-        _summary(
+        _snap(
           folderName: 'my_novel',
           word: 'アリス',
-          type: SummaryType.spoiler,
-          summary: 'あり要約',
-          sourceFile: '060_chapter.txt',
+          episode: 60,
+          summary: 'b',
+          sourceFile: '060.txt',
           updatedAt: DateTime.utc(2026, 5, 20, 16),
+        ),
+        _snap(
+          folderName: 'my_novel',
+          word: 'アリス',
+          episode: 120,
+          summary: 'c',
+          sourceFile: '120.txt',
+          updatedAt: DateTime.utc(2026, 5, 20, 12),
         ),
       ];
 
@@ -117,100 +117,131 @@ void main() {
       expect(entries.first.updatedAt, DateTime.utc(2026, 5, 20, 16));
     });
 
-    test('"both" entry prefers no-spoiler summary as preview', () {
+    test('summaryPreview comes from the most recently updated snapshot', () {
       final rows = [
-        _summary(
+        _snap(
           folderName: 'my_novel',
           word: 'アリス',
-          type: SummaryType.noSpoiler,
-          summary: 'なし要約',
-          sourceFile: '040_chapter.txt',
+          episode: 30,
+          summary: '古い要約',
+          sourceFile: '030.txt',
           updatedAt: DateTime.utc(2026, 5, 20, 10),
         ),
-        _summary(
+        _snap(
           folderName: 'my_novel',
           word: 'アリス',
-          type: SummaryType.spoiler,
-          summary: 'あり要約',
-          sourceFile: '060_chapter.txt',
+          episode: 60,
+          summary: '新しい要約',
+          sourceFile: '060.txt',
           updatedAt: DateTime.utc(2026, 5, 20, 16),
         ),
       ];
 
       final entries = HistoryEntry.mergeRows(rows);
 
-      expect(entries.first.summaryPreview, 'なし要約');
+      expect(entries.first.summaryPreview, '新しい要約');
     });
 
     test(
-        'sourceFile resolution: prefers no_spoiler, falls back to spoiler, '
-        'null when neither has it', () {
+        'sourceFile resolution: pick non-null source_file from the largest '
+        'coveredUpToEpisode downward', () {
       final rows = [
-        // Both rows have source_file → prefer no_spoiler
-        _summary(
+        // Largest episode but source_file is NULL → fall back
+        _snap(
           folderName: 'f',
-          word: 'A_word',
-          type: SummaryType.noSpoiler,
-          summary: 'a',
-          sourceFile: 'a_no.txt',
-          updatedAt: DateTime.utc(2026, 5, 20, 10),
-        ),
-        _summary(
-          folderName: 'f',
-          word: 'A_word',
-          type: SummaryType.spoiler,
-          summary: 'a',
-          sourceFile: 'a_sp.txt',
-          updatedAt: DateTime.utc(2026, 5, 20, 11),
-        ),
-        // Only spoiler has source_file → use spoiler
-        _summary(
-          folderName: 'f',
-          word: 'B_word',
-          type: SummaryType.spoiler,
-          summary: 'b',
-          sourceFile: 'b_sp.txt',
-          updatedAt: DateTime.utc(2026, 5, 20, 12),
-        ),
-        // Spoiler-only with NULL source_file → null
-        _summary(
-          folderName: 'f',
-          word: 'C_word',
-          type: SummaryType.spoiler,
+          word: 'W',
+          episode: 120,
           summary: 'c',
           sourceFile: null,
-          updatedAt: DateTime.utc(2026, 5, 20, 13),
+          updatedAt: DateTime.utc(2026, 5, 20, 18),
+        ),
+        // Next largest episode has source_file → use this
+        _snap(
+          folderName: 'f',
+          word: 'W',
+          episode: 60,
+          summary: 'b',
+          sourceFile: '060.txt',
+          updatedAt: DateTime.utc(2026, 5, 20, 16),
+        ),
+        _snap(
+          folderName: 'f',
+          word: 'W',
+          episode: 30,
+          summary: 'a',
+          sourceFile: '030.txt',
+          updatedAt: DateTime.utc(2026, 5, 20, 10),
         ),
       ];
 
       final entries = HistoryEntry.mergeRows(rows);
-      final byWord = {for (final e in entries) e.word: e};
 
-      expect(byWord['A_word']!.sourceFile, 'a_no.txt');
-      expect(byWord['B_word']!.sourceFile, 'b_sp.txt');
-      expect(byWord['C_word']!.sourceFile, isNull);
+      expect(entries.first.sourceFile, '060.txt');
     });
 
-    test('returns entries sorted by updated_at descending', () {
+    test('sourceFile is null when every snapshot has source_file=null', () {
       final rows = [
-        _summary(
+        _snap(
+          folderName: 'f',
+          word: 'legacy',
+          episode: 10,
+          summary: 'a',
+          sourceFile: null,
+          updatedAt: DateTime.utc(2026, 5, 20, 10),
+        ),
+        _snap(
+          folderName: 'f',
+          word: 'legacy',
+          episode: 1,
+          summary: 'b',
+          sourceFile: null,
+          updatedAt: DateTime.utc(2026, 5, 20, 11),
+        ),
+      ];
+
+      final entries = HistoryEntry.mergeRows(rows);
+
+      expect(entries.first.sourceFile, isNull);
+      expect(entries.first.isJumpable, isFalse);
+    });
+
+    test('isJumpable is true when sourceFile resolves to non-null', () {
+      final rows = [
+        _snap(
+          folderName: 'f',
+          word: 'jumpable',
+          episode: 5,
+          summary: 'x',
+          sourceFile: 'x.txt',
+          updatedAt: DateTime.utc(2026, 5, 20, 10),
+        ),
+      ];
+
+      final entry = HistoryEntry.mergeRows(rows).single;
+
+      expect(entry.isJumpable, isTrue);
+    });
+
+    test('returns entries sorted by updatedAt descending across words', () {
+      final rows = [
+        _snap(
           folderName: 'f',
           word: 'middle',
-          type: SummaryType.spoiler,
+          episode: 10,
           summary: 'm',
           updatedAt: DateTime.utc(2026, 5, 20, 12),
         ),
-        _summary(
+        _snap(
           folderName: 'f',
           word: 'old',
-          type: SummaryType.spoiler,
+          episode: 5,
           summary: 'o',
           updatedAt: DateTime.utc(2026, 5, 20, 10),
         ),
-        _summary(
+        _snap(
           folderName: 'f',
           word: 'new',
-          type: SummaryType.spoiler,
+          episode: 1,
           summary: 'n',
           updatedAt: DateTime.utc(2026, 5, 20, 14),
         ),
@@ -219,34 +250,6 @@ void main() {
       final entries = HistoryEntry.mergeRows(rows);
 
       expect(entries.map((e) => e.word).toList(), ['new', 'middle', 'old']);
-    });
-
-    test('isJumpable is true when sourceFile is non-null, false otherwise',
-        () {
-      final rows = [
-        _summary(
-          folderName: 'f',
-          word: 'jumpable',
-          type: SummaryType.spoiler,
-          summary: 'a',
-          sourceFile: 'x.txt',
-          updatedAt: DateTime.utc(2026, 5, 20, 10),
-        ),
-        _summary(
-          folderName: 'f',
-          word: 'legacy',
-          type: SummaryType.spoiler,
-          summary: 'b',
-          sourceFile: null,
-          updatedAt: DateTime.utc(2026, 5, 20, 11),
-        ),
-      ];
-
-      final entries = HistoryEntry.mergeRows(rows);
-      final byWord = {for (final e in entries) e.word: e};
-
-      expect(byWord['jumpable']!.isJumpable, isTrue);
-      expect(byWord['legacy']!.isJumpable, isFalse);
     });
   });
 }

@@ -482,10 +482,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contextMenu_analyzeSpoiler => '开始分析（含剧透）';
 
   @override
-  String get contextMenu_copyNoSpoilerSummary => '复制摘要（无剧透）';
+  String get contextMenu_copySubmenu => '复制';
 
   @override
-  String get contextMenu_copySpoilerSummary => '复制摘要（含剧透）';
+  String contextMenu_copySnapshotByEpisode(int episode) {
+    return '复制第$episode文件时的摘要';
+  }
 
   @override
   String get contextMenu_copiedToClipboard => '已复制到剪贴板';
@@ -523,13 +525,34 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get hoverPopup_referenceWarning => '摘要基于不同的文件生成';
+  String hoverPopup_snapshotLabel(int episode) {
+    return '第$episode文件时的摘要';
+  }
 
   @override
-  String get hoverPopup_typeNoSpoiler => '无';
+  String get hoverPopup_futureSnapshotWarning => '该摘要包含尚未阅读的内容';
 
   @override
-  String get hoverPopup_typeSpoiler => '有';
+  String get hoverPopup_reanalyzeButton => '重新分析';
+
+  @override
+  String hoverPopup_reanalyzeUpToCurrent(int episode) {
+    return '至当前页（第$episode文件）';
+  }
+
+  @override
+  String hoverPopup_reanalyzeUpToAll(int episode) {
+    return '至全部（第$episode文件）';
+  }
+
+  @override
+  String get hoverPopup_reanalyzeOverwriteSuffix => '（覆盖）';
+
+  @override
+  String get hoverPopup_snapshotNavPrev => '上一个快照';
+
+  @override
+  String get hoverPopup_snapshotNavNext => '下一个快照';
 
   @override
   String get bookmark_selectNovelPrompt => '请选择作品文件夹';
@@ -589,13 +612,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get llmHistory_noEntries => '没有解析历史';
 
   @override
-  String get llmHistory_typeBoth => '两者';
-
-  @override
-  String get llmHistory_typeNoSpoiler => '无剧透';
-
-  @override
-  String get llmHistory_typeSpoiler => '剧透';
+  String llmHistory_snapshotsBadge(int count) {
+    return '$count个快照';
+  }
 
   @override
   String get llmHistory_untrackedBadge => '未跟踪';

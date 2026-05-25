@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 Widget buildDictionaryContextMenu(
@@ -8,7 +8,7 @@ Widget buildDictionaryContextMenu(
   EditableTextState editableTextState, {
   required String selectedText,
   required void Function(String selectedText) onAddToDictionary,
-  void Function(String selectedText, SummaryType type)? onAnalyze,
+  void Function(String selectedText, AnalysisScope scope)? onAnalyze,
 }) {
   final l10n = AppLocalizations.of(context)!;
   final buttonItems = buildAnalysisButtonItems(
@@ -33,7 +33,7 @@ List<ContextMenuButtonItem> buildAnalysisButtonItems({
   required String analyzeNoSpoilerLabel,
   required String analyzeSpoilerLabel,
   required void Function(String selectedText) onAddToDictionary,
-  void Function(String selectedText, SummaryType type)? onAnalyze,
+  void Function(String selectedText, AnalysisScope scope)? onAnalyze,
 }) {
   // For SelectableText.rich, the default Copy item's onPressed routes
   // through EditableText.copySelection -> value.text.textInside(...),
@@ -66,14 +66,14 @@ List<ContextMenuButtonItem> buildAnalysisButtonItems({
       label: analyzeNoSpoilerLabel,
       onPressed: () {
         ContextMenuController.removeAny();
-        onAnalyze(selectedText, SummaryType.noSpoiler);
+        onAnalyze(selectedText, AnalysisScope.upToCurrent);
       },
     ));
     items.add(ContextMenuButtonItem(
       label: analyzeSpoilerLabel,
       onPressed: () {
         ContextMenuController.removeAny();
-        onAnalyze(selectedText, SummaryType.spoiler);
+        onAnalyze(selectedText, AnalysisScope.upToAll);
       },
     ));
   }

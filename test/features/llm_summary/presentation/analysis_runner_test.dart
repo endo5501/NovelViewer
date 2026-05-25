@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,15 +10,12 @@ import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
-import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
-// Dummy stand-ins for the dependencies of LlmSummaryService. They are never
-// invoked because [_StubService] overrides `generateSummary` (the only method
-// the runner calls).
+// Dummy stand-ins for the dependencies of LlmSummaryService.
 class _DummyClient implements LlmClient {
   @override
   Future<String> generate(String prompt) => throw UnimplementedError();
@@ -44,11 +42,13 @@ class _StubService extends LlmSummaryService {
         );
   final Future<String> Function({
     required String word,
-    required SummaryType type,
-    String? currentFileName,
+    required int coveredUpToEpisode,
+    String? sourceFileName,
   }) _behavior;
 
   int callCount = 0;
+  int? lastCoveredUpToEpisode;
+  String? lastSourceFileName;
   void Function(AnalysisProgress)? lastOnProgress;
 
   @override
@@ -56,16 +56,18 @@ class _StubService extends LlmSummaryService {
     required String directoryPath,
     required String folderName,
     required String word,
-    required SummaryType summaryType,
-    String? currentFileName,
+    required int coveredUpToEpisode,
+    String? sourceFileName,
     void Function(AnalysisProgress)? onProgress,
   }) async {
     callCount++;
+    lastCoveredUpToEpisode = coveredUpToEpisode;
+    lastSourceFileName = sourceFileName;
     lastOnProgress = onProgress;
     return _behavior(
       word: word,
-      type: summaryType,
-      currentFileName: currentFileName,
+      coveredUpToEpisode: coveredUpToEpisode,
+      sourceFileName: sourceFileName,
     );
   }
 }
@@ -84,9 +86,6 @@ ProviderContainer _container(_StubService stub,
         .overrideWith(() => CurrentDirectoryNotifier(directory)),
     selectedFileProvider.overrideWith(() => _MockSelectedFile(file)),
     llmSummaryServiceProvider.overrideWithValue(stub),
-    // Keep llmClientProvider future resolved so the runner doesn't await
-    // forever. The real DefaultAnalysisRunner awaits llmClientProvider.future
-    // before reading the service.
     llmClientProvider.overrideWith((_) async => _DummyClient()),
   ]);
   return container;
@@ -120,7 +119,8 @@ void main() {
         (tester) async {
       final completer = Completer<String>();
       final stub = _StubService(
-          ({required word, required type, currentFileName}) => completer.future);
+          ({required word, required coveredUpToEpisode, sourceFileName}) =>
+              completer.future);
       final container = _container(stub);
       addTearDown(container.dispose);
 
@@ -130,26 +130,23 @@ void main() {
           ref.read(analysisRunnerProvider).run(
                 context: context,
                 word: 'アリス',
-                type: SummaryType.noSpoiler,
+                coveredUpToEpisode: 40,
               );
         },
       ));
 
       await tester.tap(find.text('go'));
-      await tester.pump(); // start modal
+      await tester.pump();
 
-      expect(find.byKey(const Key('analysis_modal')), findsOneWidget,
-          reason: 'Modal must be shown while analysis is in flight');
+      expect(find.byKey(const Key('analysis_modal')), findsOneWidget);
       expect(stub.callCount, 1);
+      expect(stub.lastCoveredUpToEpisode, 40);
 
       completer.complete('mock summary');
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('analysis_modal')), findsNothing,
-          reason: 'Modal must close once analysis resolves');
-      expect(find.textContaining('「アリス」'), findsOneWidget,
-          reason:
-              'A success SnackBar mentioning the analyzed word must be shown');
+      expect(find.byKey(const Key('analysis_modal')), findsNothing);
+      expect(find.textContaining('「アリス」'), findsOneWidget);
     });
   });
 
@@ -157,7 +154,7 @@ void main() {
     testWidgets('shows error SnackBar and closes modal when service throws',
         (tester) async {
       final stub = _StubService(
-        ({required word, required type, currentFileName}) async =>
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
             throw Exception('boom'),
       );
       final container = _container(stub);
@@ -169,7 +166,7 @@ void main() {
           ref.read(analysisRunnerProvider).run(
                 context: context,
                 word: 'ボブ',
-                type: SummaryType.spoiler,
+                coveredUpToEpisode: 100,
               );
         },
       ));
@@ -177,10 +174,8 @@ void main() {
       await tester.tap(find.text('go'));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('analysis_modal')), findsNothing,
-          reason: 'Modal must close after failure too');
-      expect(find.textContaining('boom'), findsOneWidget,
-          reason: 'Error message should be surfaced in a SnackBar');
+      expect(find.byKey(const Key('analysis_modal')), findsNothing);
+      expect(find.textContaining('boom'), findsOneWidget);
     });
   });
 
@@ -189,7 +184,8 @@ void main() {
         (tester) async {
       final completer = Completer<String>();
       final stub = _StubService(
-          ({required word, required type, currentFileName}) => completer.future);
+          ({required word, required coveredUpToEpisode, sourceFileName}) =>
+              completer.future);
       final container = _container(stub);
       addTearDown(container.dispose);
       addTearDown(() {
@@ -202,7 +198,7 @@ void main() {
           ref.read(analysisRunnerProvider).run(
                 context: context,
                 word: 'アリス',
-                type: SummaryType.noSpoiler,
+                coveredUpToEpisode: 40,
               );
         },
       ));
@@ -212,13 +208,10 @@ void main() {
 
       expect(find.byKey(const Key('analysis_modal')), findsOneWidget);
 
-      // Tap on the modal barrier (top-left corner, outside the dialog box).
       await tester.tapAt(const Offset(5, 5));
       await tester.pump();
 
-      expect(find.byKey(const Key('analysis_modal')), findsOneWidget,
-          reason:
-              'Modal must remain open when the user taps outside its bounds');
+      expect(find.byKey(const Key('analysis_modal')), findsOneWidget);
     });
   });
 
@@ -227,7 +220,8 @@ void main() {
         (tester) async {
       final completer = Completer<String>();
       final stub = _StubService(
-          ({required word, required type, currentFileName}) => completer.future);
+          ({required word, required coveredUpToEpisode, sourceFileName}) =>
+              completer.future);
       final container = _container(stub);
       addTearDown(container.dispose);
       addTearDown(() {
@@ -240,7 +234,7 @@ void main() {
           ref.read(analysisRunnerProvider).run(
                 context: context,
                 word: 'アリス',
-                type: SummaryType.noSpoiler,
+                coveredUpToEpisode: 40,
               );
         },
       ));
@@ -248,9 +242,7 @@ void main() {
       await tester.tap(find.text('go'));
       await tester.pump();
 
-      expect(find.text('解析中…'), findsOneWidget,
-          reason:
-              'Before any progress event the modal must show the original idle label');
+      expect(find.text('解析中…'), findsOneWidget);
     });
 
     testWidgets(
@@ -258,7 +250,8 @@ void main() {
         (tester) async {
       final completer = Completer<String>();
       final stub = _StubService(
-          ({required word, required type, currentFileName}) => completer.future);
+          ({required word, required coveredUpToEpisode, sourceFileName}) =>
+              completer.future);
       final container = _container(stub);
       addTearDown(container.dispose);
       addTearDown(() {
@@ -271,7 +264,7 @@ void main() {
           ref.read(analysisRunnerProvider).run(
                 context: context,
                 word: 'アリス',
-                type: SummaryType.noSpoiler,
+                coveredUpToEpisode: 40,
               );
         },
       ));
@@ -292,7 +285,8 @@ void main() {
         (tester) async {
       final completer = Completer<String>();
       final stub = _StubService(
-          ({required word, required type, currentFileName}) => completer.future);
+          ({required word, required coveredUpToEpisode, sourceFileName}) =>
+              completer.future);
       final container = _container(stub);
       addTearDown(container.dispose);
       addTearDown(() {
@@ -305,7 +299,7 @@ void main() {
           ref.read(analysisRunnerProvider).run(
                 context: context,
                 word: 'アリス',
-                type: SummaryType.noSpoiler,
+                coveredUpToEpisode: 40,
               );
         },
       ));
@@ -324,7 +318,8 @@ void main() {
         (tester) async {
       final completer = Completer<String>();
       final stub = _StubService(
-          ({required word, required type, currentFileName}) => completer.future);
+          ({required word, required coveredUpToEpisode, sourceFileName}) =>
+              completer.future);
       final container = _container(stub);
       addTearDown(container.dispose);
       addTearDown(() {
@@ -337,7 +332,7 @@ void main() {
           ref.read(analysisRunnerProvider).run(
                 context: context,
                 word: 'アリス',
-                type: SummaryType.noSpoiler,
+                coveredUpToEpisode: 40,
               );
         },
       ));
@@ -355,7 +350,8 @@ void main() {
         (tester) async {
       final completer = Completer<String>();
       final stub = _StubService(
-          ({required word, required type, currentFileName}) => completer.future);
+          ({required word, required coveredUpToEpisode, sourceFileName}) =>
+              completer.future);
       final container = _container(stub);
       addTearDown(container.dispose);
       addTearDown(() {
@@ -368,7 +364,7 @@ void main() {
           ref.read(analysisRunnerProvider).run(
                 context: context,
                 word: 'アリス',
-                type: SummaryType.noSpoiler,
+                coveredUpToEpisode: 40,
               );
         },
       ));
@@ -388,9 +384,7 @@ void main() {
       stub.lastOnProgress!(const AnalysisGeneratingFinalSummary());
       await tester.pump();
 
-      // Only one modal instance throughout the sequence.
-      expect(find.byKey(const Key('analysis_modal')), findsOneWidget,
-          reason: 'The same dialog route must remain across progress updates');
+      expect(find.byKey(const Key('analysis_modal')), findsOneWidget);
       expect(find.text('最終要約を生成中…'), findsOneWidget);
     });
   });
@@ -399,7 +393,8 @@ void main() {
     testWidgets('shows error SnackBar without opening modal when no directory',
         (tester) async {
       final stub = _StubService(
-        ({required word, required type, currentFileName}) async => 'never',
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            'never',
       );
       final container =
           _container(stub, directory: '/x').copyWithDirectoryOverride(null);
@@ -411,7 +406,7 @@ void main() {
           ref.read(analysisRunnerProvider).run(
                 context: context,
                 word: 'アリス',
-                type: SummaryType.noSpoiler,
+                coveredUpToEpisode: 1,
               );
         },
       ));
@@ -419,17 +414,89 @@ void main() {
       await tester.tap(find.text('go'));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('analysis_modal')), findsNothing,
-          reason: 'Modal must not appear when no novel is open');
-      expect(stub.callCount, 0,
-          reason: 'Service must not be invoked without a directory');
+      expect(find.byKey(const Key('analysis_modal')), findsNothing);
+      expect(stub.callCount, 0);
+    });
+  });
+
+  group('upper bound resolvers', () {
+    late Directory tempDir;
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('runner_resolver_');
+    });
+    tearDown(() async {
+      if (tempDir.existsSync()) {
+        await tempDir.delete(recursive: true);
+      }
+    });
+
+    Future<void> touch(String name) async {
+      await File('${tempDir.path}/$name').writeAsString('x');
+    }
+
+    test('resolveUpperBoundForCurrent returns numeric prefix when present',
+        () async {
+      await touch('010_a.txt');
+      await touch('040_b.txt');
+      await touch('100_c.txt');
+
+      final bound = resolveUpperBoundForCurrent(
+        directoryPath: tempDir.path,
+        currentFile: FileEntry(name: '040_b.txt', path: ''),
+      );
+      expect(bound, 40);
+    });
+
+    test('resolveUpperBoundForCurrent falls back to lexical rank', () async {
+      await touch('intro.txt');
+      await touch('part1.txt');
+      await touch('part2.txt');
+
+      final bound = resolveUpperBoundForCurrent(
+        directoryPath: tempDir.path,
+        currentFile: FileEntry(name: 'part2.txt', path: ''),
+      );
+      expect(bound, 3);
+    });
+
+    test('resolveUpperBoundForAll returns highest numeric prefix', () async {
+      await touch('010_a.txt');
+      await touch('040_b.txt');
+      await touch('100_c.txt');
+
+      expect(resolveUpperBoundForAll(tempDir.path), 100);
+    });
+
+    test('resolveUpperBoundForAll falls back to file count when no prefix',
+        () async {
+      await touch('intro.txt');
+      await touch('part1.txt');
+      await touch('part2.txt');
+
+      expect(resolveUpperBoundForAll(tempDir.path), 3);
+    });
+
+    test('resolveSourceFileForAll picks the highest-prefix file', () async {
+      await touch('010_a.txt');
+      await touch('040_b.txt');
+      await touch('100_c.txt');
+
+      expect(resolveSourceFileForAll(tempDir.path), '100_c.txt');
+    });
+
+    test('resolveSourceFileForAll falls back to the last lexical file',
+        () async {
+      await touch('intro.txt');
+      await touch('part1.txt');
+      await touch('part2.txt');
+
+      expect(resolveSourceFileForAll(tempDir.path), 'part2.txt');
     });
   });
 }
 
-/// Helper for the no-directory test. ProviderContainer doesn't have a
-/// "modify overrides after creation" API, so this extension builds a fresh
-/// container with the same setup minus the directory.
+/// Helper for the no-directory test.
 extension on ProviderContainer {
   ProviderContainer copyWithDirectoryOverride(String? directory) {
     dispose();
@@ -438,7 +505,8 @@ extension on ProviderContainer {
           .overrideWith(() => CurrentDirectoryNotifier(directory)),
       selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
       llmSummaryServiceProvider.overrideWithValue(_StubService(
-        ({required word, required type, currentFileName}) async => 'noop',
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            'noop',
       )),
       llmClientProvider.overrideWith((_) async => _DummyClient()),
     ]);

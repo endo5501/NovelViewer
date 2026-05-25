@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/tts/presentation/dictionary_context_menu.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -53,9 +53,9 @@ void main() {
       );
     });
 
-    test('the two analyze items pass the correct word + SummaryType', () {
+    test('the two analyze items pass the correct word + AnalysisScope', () {
       String? capturedWord;
-      SummaryType? capturedType;
+      AnalysisScope? capturedType;
       final result = buildAnalysisButtonItems(
         baseItems: const [],
         selectedText: 'アリス',
@@ -73,13 +73,13 @@ void main() {
           .firstWhere((i) => i.label == '解析開始(ネタバレなし)')
           .onPressed!();
       expect(capturedWord, 'アリス');
-      expect(capturedType, SummaryType.noSpoiler);
+      expect(capturedType, AnalysisScope.upToCurrent);
 
       result
           .firstWhere((i) => i.label == '解析開始(ネタバレあり)')
           .onPressed!();
       expect(capturedWord, 'アリス');
-      expect(capturedType, SummaryType.spoiler);
+      expect(capturedType, AnalysisScope.upToAll);
     });
 
     test('the dictionary item invokes onAddToDictionary with the selection',
@@ -227,7 +227,7 @@ void main() {
       WidgetTester tester, {
       required String selectedText,
       required void Function(String) onAddToDictionary,
-      required void Function(String, SummaryType)? onAnalyze,
+      required void Function(String, AnalysisScope)? onAnalyze,
     }) async {
       // A TextField gives us a real EditableTextState whose
       // textEditingValue.text is the U+FFFC placeholder — exactly the
@@ -271,7 +271,7 @@ void main() {
         'analyze items invoke onAnalyze with the explicit selectedText, not U+FFFC',
         (tester) async {
       String? capturedWord;
-      SummaryType? capturedType;
+      AnalysisScope? capturedType;
 
       final buttonItems = await buildToolbarButtonItemsFor(
         tester,
@@ -288,13 +288,13 @@ void main() {
       noSpoiler.onPressed!();
       expect(capturedWord, '宇宙');
       expect(capturedWord, isNot(contains('￼')));
-      expect(capturedType, SummaryType.noSpoiler);
+      expect(capturedType, AnalysisScope.upToCurrent);
 
       final spoiler =
           buttonItems.firstWhere((b) => b.label == '解析開始(ネタバレあり)');
       spoiler.onPressed!();
       expect(capturedWord, '宇宙');
-      expect(capturedType, SummaryType.spoiler);
+      expect(capturedType, AnalysisScope.upToAll);
     });
 
     testWidgets(
