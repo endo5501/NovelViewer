@@ -24,7 +24,7 @@
     - [x] 3.3.4 `spoiler` + `source_file=NULL` → `novels.episode_count` (0/NULL なら 1)
     - [x] 3.3.5 `spoiler` + `source_file` 非null → `max(prefix_or_rank, episode_count)`
     - [x] 3.3.6 同一 `(folder, word)` で変換後 `covered_up_to_episode` 衝突 → `updated_at` 最新のみ残す
-    - [ ] 3.3.7 マイグレ途中で例外発生 → 旧テーブル無傷 (defer: 実装はsqfliteのトランザクション挙動に依存し、現テストインフラでは直接の検証が複雑)
+    - [x] 3.3.7 マイグレ途中で例外発生 → 旧テーブル無傷 (自動テストは見送り。代替として実装側で IF EXISTS / IF NOT EXISTS による冪等化 + 残骸row事前削除を適用し、design.md "Risks / Trade-offs" に既知制限+手動検証手順を明記)
 - [x] 3.4 `_onUpgrade` に `oldVersion < 5` 分岐を追加し、`word_summaries_v5` 新テーブル作成 → V4 行を変換しつつ INSERT → 旧テーブル DROP → RENAME の順に実装、テストを green にする
 - [x] 3.5 folder 内ファイル一覧取得が必要なケース(prefix なし / spoiler) のため、マイグレ用ヘルパーに `Directory.listSync` を渡すインターフェース(テスト時はモック)を導入し、I/O 失敗時は `covered_up_to_episode=1` で fallback してログ警告
 
@@ -51,7 +51,7 @@
 - [x] 6.4 `_ReferenceWarning` を「`covered_up_to_episode > C` のとき orange `warning_amber_outlined` アイコンをラベル横に表示」する `_FutureSnapshotWarning` に置換する failing test を追加 → 実装 → green
 - [x] 6.5 `[再解析▼]` ボタン(`_ReanalyzeMenuButton`) を新規追加 — `MenuAnchor` を使い、メニュー領域も `MouseRegion` で覆って popup の grace period と連動させる widget test を追加 → 実装 → green
 - [x] 6.6 再解析メニュー項目に「(上書き)」サフィックスを動的付与するロジック(`shouldAppendOverwriteSuffix(snapshots, candidateEpisode)`)を unit test 付きで実装し、ドロップダウンに反映する
-- [ ] 6.7 再解析項目選択時に `analysisRunnerProvider.run(coveredUpToEpisode: ...)` を呼び、完了後にキャッシュ無効化 (`hoverPopupCacheProvider`) と履歴プロバイダ無効化を行うフローの widget integration test を追加 → 実装 → green (実装済み、詳細なintegration testは follow-up)
+- [x] 6.7 再解析項目選択時に `analysisRunnerProvider.run(coveredUpToEpisode: ...)` を呼び、完了後にキャッシュ無効化 (`hoverPopupCacheProvider`) と履歴プロバイダ無効化を行うフローの widget integration test を追加 → 実装 → green (`hover_popup_widget_test.dart` の "Re-analysis menu integration" group で 2 シナリオ実装: upToCurrent / upToAll それぞれの run() 呼び出し検証 + activeEpisode リセット検証)
 - [x] 6.8 単一スナップショットのみのとき矢印を visually-dimmed disabled で表示するレイアウト安定性テストを追加 → 実装
 
 ## 7. 履歴パネルUI

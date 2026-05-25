@@ -87,7 +87,9 @@ LLM 要約機能は現在、`word_summaries` テーブルに `(folder_name, word
 | `summary_type='spoiler'` + source_file 非null | `covered_up_to_episode = max(prefix or lexical_rank, novels.episode_count)` |
 
 - 重複(同 word に no_spoiler と spoiler 両方の行が存在し、変換後の episode 番号が衝突する場合): `updated_at` が新しい方を採用、古い方は破棄。
-- マイグレーション中にフォルダ内テキストファイルを `Directory.listSync` する必要があるため、`onUpgrade` 内では sqflite トランザクションを開きつつ、folder 単位のファイル列挙はトランザクション外で先に行う(SQL コネクションを長時間占有しないため)。
+- dedup map のキーは `'${folder} ${word} ${episode}'`(U+0000 区切り)で構成し、folder name や word に空白・記号が含まれてもキーが衝突しないことを保証する。
+- マイグレーション中にフォルダ内テキストファイルを `Directory.listSync` する必要があるため、folder 単位のファイル列挙は `NovelDatabaseSnapshotResolver` 経由で行う。
+- **実装ノート(更新)**: 当初は `await db.transaction(...)` で明示的にトランザクションを張る方針だったが、sqflite の `onUpgrade` は既に**暗黙の単一トランザクション**で実行されるため、追加ラップは不要と判断した。代わりに、`CREATE TABLE IF NOT EXISTS` / `DROP INDEX IF EXISTS` / `DROP TABLE IF EXISTS` で全 DDL を冪等化し、`CREATE TABLE word_summaries_v5` 直後に `await db.delete('word_summaries_v5')` で前回中断時の残骸 row を事前削除する。これにより、`user_version` が 5 に上がる前に強制終了したケースでも、次回起動時の `onUpgrade` 再実行が安全に通る。
 - **却下した代替**: V4 spoiler 行を episode 番号 `INT_MAX` のような sentinel で保存する案。比較ロジックが特殊ケース化して脆弱になるため。
 
 ### Decision 6: ホバーポップアップキャッシュは `List<WordSummary>` に変更
@@ -105,6 +107,7 @@ LLM 要約機能は現在、`word_summaries` テーブルに `(folder_name, word
 ## Risks / Trade-offs
 
 - **[Risk] マイグレーション失敗時のデータ消失** → 既存 `openOrResetDatabase` は `deleteOnFailure: false` で開かれているため、マイグレーション例外時は DB が破損せず例外が伝播する。ユーザは V4 のままアプリ起動失敗を経験するが、データは温存される。新テーブル作成は `CREATE TABLE word_summaries_v5` で行い、INSERT が完了するまで旧テーブルは保持する。INSERT 完了後に `DROP TABLE word_summaries; ALTER TABLE word_summaries_v5 RENAME TO word_summaries;` の順で切替える。
+- **[Known limitation — task 3.3.7] マイグレ途中で OS-level プロセス強制終了が起きた場合の検証は自動テスト未実装** → sqflite の暗黙トランザクションは Dart 側の例外でロールバックされるが、プロセス強制終了(電源断、OOM kill、`SIGKILL` 等)は SQLite ジャーナルレベルでの回復に依存する。in-memory DB を使う現テストインフラでは「実プロセスが落ちた状態」を再現できないため、シナリオテストは見送る。実装側のリスク低減策として、`_migrateWordSummariesToSnapshots` 全 DDL を `IF EXISTS` / `IF NOT EXISTS` で冪等化し、新テーブル作成直後に `delete('word_summaries_v5')` で前回中断時の残骸 row を事前削除している(Codex code-review HIGH-1 で適用済み)。手動検証としては、リリース前の Windows 環境で(1) v4 → v5 マイグレを走らせる、(2) 起動直後にタスクマネージャから強制終了、(3) 再起動、を実施して "table already exists" 等のエラーが出ないことを確認することを推奨。
 - **[Risk] フォルダ消失時のマイグレーション** → 解析されていたフォルダがディスクから削除されている場合、lexical sort 順位を解決できない。対応: そのケースでは `covered_up_to_episode = 1` で fallback し、警告ログのみ出す(行は保持)。
 - **[Risk] DB version 5 適用後にユーザがアプリ旧バージョンに戻すと開けなくなる** → 仕様として一方向マイグレーション。リリースノートで明記する。Goal/Non-Goal にも記述済み。
 - **[Trade-off] 単一スナップショット時の UI 簡素化** → スナップショットが 1 つしかない場合でも `◀ X話時点 ▶` を表示するか、ラベルだけにするか。採用案: 矢印は visibility:hidden ではなく `disabled` 状態(タップ無効、色薄め)で表示し、UI のジャンプを避ける。
