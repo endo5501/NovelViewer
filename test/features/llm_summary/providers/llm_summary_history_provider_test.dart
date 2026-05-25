@@ -306,7 +306,7 @@ void main() {
     });
   });
 
-  HistoryEntry _entry({
+  HistoryEntry entry({
     required String folder,
     required String word,
     String? sourceFile,
@@ -349,7 +349,7 @@ void main() {
       await container.read(llmSummaryHistoryProvider.future);
 
       await container.read(llmSummaryHistoryProvider.notifier).openEntry(
-            _entry(
+            entry(
               folder: 'open_entry',
               word: 'アリス',
               sourceFile: '040_chapter.txt',
@@ -382,7 +382,7 @@ void main() {
       await container.read(llmSummaryHistoryProvider.future);
 
       await container.read(llmSummaryHistoryProvider.notifier).openEntry(
-            _entry(
+            entry(
               folder: 'open_entry_miss',
               word: 'いない単語',
               sourceFile: '050_chapter.txt',
@@ -409,7 +409,7 @@ void main() {
       await container.read(llmSummaryHistoryProvider.future);
 
       await container.read(llmSummaryHistoryProvider.notifier).openEntry(
-            _entry(
+            entry(
               folder: 'my_novel',
               word: 'アリス',
               sourceFile: null,
@@ -430,7 +430,7 @@ void main() {
       await container.read(llmSummaryHistoryProvider.future);
 
       await container.read(llmSummaryHistoryProvider.notifier).openEntry(
-            _entry(
+            entry(
               folder: 'nonexistent',
               word: 'アリス',
               sourceFile: '040_chapter.txt',

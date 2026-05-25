@@ -38,11 +38,11 @@ void main() {
             (_) async => throw UnsupportedError('not used in this test'),
           ),
         ],
-        child: MaterialApp(
-          locale: const Locale('ja'),
+        child: const MaterialApp(
+          locale: Locale('ja'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const Material(
+          home: Material(
             child: HoverPopupWidget(
               folder: 'novel_a',
               word: 'アリス',

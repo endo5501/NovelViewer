@@ -443,7 +443,7 @@ void main() {
 
       final bound = resolveUpperBoundForCurrent(
         directoryPath: tempDir.path,
-        currentFile: FileEntry(name: '040_b.txt', path: ''),
+        currentFile: const FileEntry(name: '040_b.txt', path: ''),
       );
       expect(bound, 40);
     });
@@ -455,7 +455,7 @@ void main() {
 
       final bound = resolveUpperBoundForCurrent(
         directoryPath: tempDir.path,
-        currentFile: FileEntry(name: 'part2.txt', path: ''),
+        currentFile: const FileEntry(name: 'part2.txt', path: ''),
       );
       expect(bound, 3);
     });

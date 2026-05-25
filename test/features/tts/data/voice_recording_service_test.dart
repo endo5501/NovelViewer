@@ -77,8 +77,6 @@ class FakeAudioRecorder implements AudioRecorder {
   @override
   Future<bool> isEncoderSupported(AudioEncoder encoder) async => true;
   @override
-  List<int> convertBytesToInt16(Uint8List bytes, [Endian endian = Endian.little]) => [];
-  @override
   RecordIos? get ios => null;
 }
 
