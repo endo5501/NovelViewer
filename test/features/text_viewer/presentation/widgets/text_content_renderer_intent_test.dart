@@ -224,6 +224,60 @@ void main() {
     });
 
     testWidgets(
+        'null intent on content swap resets scroll to 0 (regression: '
+        'file-browser click must not leak previous file scroll offset)',
+        (tester) async {
+      // Mirrors the fromStart-on-content-swap regression test but for the
+      // case where no intent was ever set — i.e., the user picks a file
+      // directly from the file browser. The spec
+      // (specs/text-viewer/spec.md: "通常選択時のスクロール位置（横書き）")
+      // requires offset 0 on file swap when intent is null, so the previous
+      // file's offset must not leak through the persisted ScrollController.
+      final container = makeContainer();
+      addTearDown(container.dispose);
+
+      // Mount, then manually scroll into the middle of the file — the user
+      // is mid-reading when they click a different file in the browser.
+      await tester.pumpWidget(_wrap(
+          container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      final scrollable = find
+          .descendant(
+            of: find.byType(TextContentRenderer),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final state = tester.state<ScrollableState>(scrollable);
+      state.position.jumpTo(state.position.maxScrollExtent / 2);
+      await tester.pump();
+      expect(state.position.pixels, greaterThan(0));
+      // Intent is left untouched (null) — this is the file-browser-click path.
+      expect(container.read(pendingFileEntryIntentProvider), isNull);
+
+      // Simulate the file-browser click: content swap with no intent.
+      final newContent = List.generate(
+              200, (i) => '別ファイル ${i + 1} 行目')
+          .join('\n');
+      await tester.pumpWidget(
+          _wrap(container: container, content: newContent));
+      await tester.pumpAndSettle();
+
+      final state2 = tester.state<ScrollableState>(find
+          .descendant(
+            of: find.byType(TextContentRenderer),
+            matching: find.byType(Scrollable),
+          )
+          .first);
+      expect(state2.position.pixels, 0.0,
+          reason:
+              'A content swap with no pending intent (file browser click) '
+              'must reset scroll to top — otherwise the previous file\'s '
+              'offset leaks through the persisted ScrollController and the '
+              'user appears in the middle of the new file');
+    });
+
+    testWidgets(
         '_jumpToEndPending is cleared after a single build (no leak into '
         'later rebuilds)', (tester) async {
       // After fromEnd is consumed and the scroll jumped to the bottom, a

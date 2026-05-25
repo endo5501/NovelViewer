@@ -302,11 +302,13 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
 
   /// Reads the one-shot file-entry start intent on a content swap and queues
   /// the appropriate initial scroll. `fromEnd` triggers a jump to the bottom
-  /// and `fromStart` triggers a jump to the top once the new content has
-  /// laid out. `fromStart` is not a no-op: the ScrollController carries the
-  /// previous file's pixel offset across a content swap, which would land
-  /// the user mid-file (often near the previous file's tail) instead of at
-  /// the top of the new file.
+  /// and `fromStart` (or a null intent on file switch) triggers a jump to
+  /// the top once the new content has laid out. The non-`fromEnd` cases are
+  /// not no-ops: the ScrollController carries the previous file's pixel
+  /// offset across a content swap, which would land the user mid-file
+  /// (often near the previous file's tail) instead of at the top of the new
+  /// file — both for next-episode navigation (`fromStart`) and for plain
+  /// file-browser clicks (null intent).
   ///
   /// Only the active display mode's renderer is allowed to consume the
   /// intent: in vertical mode the VerticalTextViewer owns it. Acting in
@@ -316,18 +318,23 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   void _consumeFileEntryIntent() {
     if (ref.read(displayModeProvider) != TextDisplayMode.horizontal) return;
     final intent = ref.read(pendingFileEntryIntentProvider);
-    if (intent == null) return;
     if (intent == FileEntryStartIntent.fromEnd) {
       _jumpToEndPending = true;
-    } else if (intent == FileEntryStartIntent.fromStart) {
+    } else {
+      // fromStart OR null after a content swap: reset to top so the
+      // persisted ScrollController does not carry the previous file's
+      // offset into the new file's layout.
       _jumpToStartPending = true;
     }
-    // Riverpod 3.x forbids life-cycle mutations; defer the clear to a
-    // microtask so it runs after the build settles.
-    Future.microtask(() {
-      if (!mounted) return;
-      ref.read(pendingFileEntryIntentProvider.notifier).clear();
-    });
+    // Clear only when an intent was actually set — a null intent does not
+    // need clearing. Riverpod 3.x forbids life-cycle mutations, so defer
+    // the clear to a microtask that runs after the build settles.
+    if (intent != null) {
+      Future.microtask(() {
+        if (!mounted) return;
+        ref.read(pendingFileEntryIntentProvider.notifier).clear();
+      });
+    }
   }
 
   @override
