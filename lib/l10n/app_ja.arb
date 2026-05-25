@@ -325,5 +325,20 @@
   "llmHistory_typeBoth": "両",
   "llmHistory_typeNoSpoiler": "なし",
   "llmHistory_typeSpoiler": "あり",
-  "llmHistory_untrackedBadge": "未追跡"
+  "llmHistory_untrackedBadge": "未追跡",
+
+  "verticalText_nextEpisodePrompt": "▶ 次話「{name}」へ（もう一度）",
+  "@verticalText_nextEpisodePrompt": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "verticalText_prevEpisodePrompt": "◀ 前話「{name}」へ（もう一度）",
+  "@verticalText_prevEpisodePrompt": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "textViewer_nextEpisodeButton": "次話 →",
+  "textViewer_prevEpisodeButton": "← 前話"
 }

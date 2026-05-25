@@ -221,5 +221,20 @@
   "llmHistory_typeBoth": "Both",
   "llmHistory_typeNoSpoiler": "No-spoiler",
   "llmHistory_typeSpoiler": "Spoiler",
-  "llmHistory_untrackedBadge": "Untracked"
+  "llmHistory_untrackedBadge": "Untracked",
+
+  "verticalText_nextEpisodePrompt": "▶ Next: \"{name}\" (press again)",
+  "@verticalText_nextEpisodePrompt": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "verticalText_prevEpisodePrompt": "◀ Previous: \"{name}\" (press again)",
+  "@verticalText_prevEpisodePrompt": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "textViewer_nextEpisodeButton": "Next →",
+  "textViewer_prevEpisodeButton": "← Previous"
 }

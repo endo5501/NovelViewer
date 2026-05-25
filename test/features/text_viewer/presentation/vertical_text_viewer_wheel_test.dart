@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
@@ -12,7 +13,7 @@ Widget _buildTestWidget({
   double height = 400,
   ValueChanged<String?>? onSelectionChanged,
 }) {
-  return MaterialApp(
+  return ProviderScope(child: MaterialApp(
         locale: const Locale('ja'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -26,7 +27,7 @@ Widget _buildTestWidget({
         ),
       ),
     ),
-  );
+  ));
 }
 
 /// Extract current page number from page indicator text (e.g., "1 / 5" → 1)

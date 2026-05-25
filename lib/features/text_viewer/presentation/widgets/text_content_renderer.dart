@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
+import 'package:novel_viewer/features/episode_navigation/domain/file_entry_start_intent.dart';
+import 'package:novel_viewer/features/episode_navigation/providers/pending_file_entry_intent_provider.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
@@ -17,6 +19,7 @@ import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
+import 'package:novel_viewer/features/text_viewer/presentation/widgets/episode_navigation_buttons.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/vertical_context_menu.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
@@ -221,10 +224,29 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   // pending flag that resets when the queued callback runs.
   bool _bookmarkScrollPending = false;
 
+  // True when a `FileEntryStartIntent.fromEnd` was consumed and we still owe
+  // a `jumpTo(maxScrollExtent)` once layout settles. Cleared after the jump.
+  bool _jumpToEndPending = false;
+
+  // True when a `FileEntryStartIntent.fromStart` was consumed and we still
+  // owe a `jumpTo(0)` once the new content has settled. Cleared after the
+  // jump. Without this, the ScrollController retains the previous file's
+  // pixel offset across a content swap and the user lands mid-file instead
+  // of at the top.
+  bool _jumpToStartPending = false;
+
+  // Tracks whether the scroll view is currently parked at its first or last
+  // line. Drives visibility of the prev/next episode buttons so they only
+  // appear when the user is at a natural reading boundary — not in the
+  // middle, where they would overlap body text.
+  bool _atScrollTop = true;
+  bool _atScrollBottom = false;
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_updateCurrentViewLine);
+    _scrollController.addListener(_updateScrollEdgeFlags);
     // Reset current view line when the user switches files.
     ref.listenManual(selectedFileProvider, (prev, next) {
       if (prev?.path != next?.path) {
@@ -236,6 +258,30 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
           _lastReportedViewLine = 1;
         });
       }
+    });
+    _consumeFileEntryIntent();
+    // First layout may produce a maxScrollExtent of 0 (single-page content);
+    // capture the initial edge state after the frame so the single-page
+    // bottom-button visibility is correct from the start.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _updateScrollEdgeFlags();
+    });
+  }
+
+  /// Refreshes [_atScrollTop] / [_atScrollBottom] from the current scroll
+  /// position. Cheap; called from the existing scroll listener path. Skips
+  /// `setState` when the flags would not change to avoid extra rebuilds on
+  /// every scroll tick within the middle band.
+  void _updateScrollEdgeFlags() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    final newAtTop = pos.pixels <= pos.minScrollExtent;
+    final newAtBottom = pos.pixels >= pos.maxScrollExtent;
+    if (newAtTop == _atScrollTop && newAtBottom == _atScrollBottom) return;
+    setState(() {
+      _atScrollTop = newAtTop;
+      _atScrollBottom = newAtBottom;
     });
   }
 
@@ -250,6 +296,44 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       _cachedBookmarkLayoutContent = null;
       _cachedBookmarkLayoutStyle = null;
       _cachedBookmarkLineYs = null;
+      _consumeFileEntryIntent();
+    }
+  }
+
+  /// Reads the one-shot file-entry start intent on a content swap and queues
+  /// the appropriate initial scroll. `fromEnd` triggers a jump to the bottom
+  /// and `fromStart` (or a null intent on file switch) triggers a jump to
+  /// the top once the new content has laid out. The non-`fromEnd` cases are
+  /// not no-ops: the ScrollController carries the previous file's pixel
+  /// offset across a content swap, which would land the user mid-file
+  /// (often near the previous file's tail) instead of at the top of the new
+  /// file — both for next-episode navigation (`fromStart`) and for plain
+  /// file-browser clicks (null intent).
+  ///
+  /// Only the active display mode's renderer is allowed to consume the
+  /// intent: in vertical mode the VerticalTextViewer owns it. Acting in
+  /// vertical mode here would latch the pending flags, which are only
+  /// drained inside the horizontal branch of build() — that would surface
+  /// as a stray scroll on the next mode toggle.
+  void _consumeFileEntryIntent() {
+    if (ref.read(displayModeProvider) != TextDisplayMode.horizontal) return;
+    final intent = ref.read(pendingFileEntryIntentProvider);
+    if (intent == FileEntryStartIntent.fromEnd) {
+      _jumpToEndPending = true;
+    } else {
+      // fromStart OR null after a content swap: reset to top so the
+      // persisted ScrollController does not carry the previous file's
+      // offset into the new file's layout.
+      _jumpToStartPending = true;
+    }
+    // Clear only when an intent was actually set — a null intent does not
+    // need clearing. Riverpod 3.x forbids life-cycle mutations, so defer
+    // the clear to a microtask that runs after the build settles.
+    if (intent != null) {
+      Future.microtask(() {
+        if (!mounted) return;
+        ref.read(pendingFileEntryIntentProvider.notifier).clear();
+      });
     }
   }
 
@@ -580,7 +664,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       _scrollToTtsHighlight(widget.content, ttsHighlightRange, textStyle);
     }
 
-    return NotificationListener<ScrollNotification>(
+    final scrollView = NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (!_isTtsScrolling &&
             notification is ScrollStartNotification &&
@@ -637,6 +721,41 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
             });
           }
 
+          // `_jumpToEndPending` is consumed as its own block (not chained to
+          // the if/else if above) so that, when a higher-priority scroll
+          // target (search match / bookmark jump) is also pending, the flag
+          // is still cleared in this build rather than leaking into a later
+          // unrelated rebuild and surprising the user with a jump-to-bottom.
+          if (_jumpToEndPending) {
+            _jumpToEndPending = false;
+            final hasHigherPriority =
+                activeMatch != null || bookmarkJumpLine != null;
+            if (!hasHigherPriority) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted || !_scrollController.hasClients) return;
+                if (!identical(widget.content, scheduledContent)) return;
+                _scrollController
+                    .jumpTo(_scrollController.position.maxScrollExtent);
+              });
+            }
+          }
+
+          // Mirror of the `_jumpToEndPending` block for the fromStart intent:
+          // ensure the previous file's scroll offset does not leak into the
+          // new file's layout when the user enters via the "Next →" button.
+          if (_jumpToStartPending) {
+            _jumpToStartPending = false;
+            final hasHigherPriority =
+                activeMatch != null || bookmarkJumpLine != null;
+            if (!hasHigherPriority) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted || !_scrollController.hasClients) return;
+                if (!identical(widget.content, scheduledContent)) return;
+                _scrollController.jumpTo(0);
+              });
+            }
+          }
+
           return Stack(
             children: [
               Padding(
@@ -687,6 +806,29 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
           );
         }),
       ),
+    );
+
+    // Overlay the prev/next episode buttons only when the user is parked
+    // at the very first or last line of the current file — in the middle
+    // band they would obscure body text. The Stack is always returned (with
+    // a conditional child) so the underlying scroll view's element identity
+    // stays stable across visibility toggles — otherwise an unrelated
+    // ScrollController state reset would clobber line / TTS / bookmark
+    // scroll jumps that fire on the same frame.
+    final showEdgeButtons = _atScrollTop || _atScrollBottom;
+    return Stack(
+      children: [
+        scrollView,
+        if (showEdgeButtons)
+          Positioned(
+            left: 8,
+            bottom: 8,
+            child: EpisodeNavigationButtons(
+              showPrev: _atScrollTop,
+              showNext: _atScrollBottom,
+            ),
+          ),
+      ],
     );
   }
 }

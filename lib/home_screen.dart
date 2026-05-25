@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/app/selected_file_progress_title_provider.dart';
 import 'package:novel_viewer/features/bookmark/presentation/left_column_panel.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -136,8 +137,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Scaffold(
             appBar: AppBar(
               title: Text(
-                ref.watch(selectedNovelTitleProvider).value ??
-                    'NovelViewer',
+                ref.watch(selectedFileProgressTitleProvider),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               actions: [
                 _buildBookmarkButton(),

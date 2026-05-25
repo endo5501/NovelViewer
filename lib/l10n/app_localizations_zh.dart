@@ -599,4 +599,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get llmHistory_untrackedBadge => '未跟踪';
+
+  @override
+  String verticalText_nextEpisodePrompt(String name) {
+    return '▶ 下一话「$name」（再按一次）';
+  }
+
+  @override
+  String verticalText_prevEpisodePrompt(String name) {
+    return '◀ 上一话「$name」（再按一次）';
+  }
+
+  @override
+  String get textViewer_nextEpisodeButton => '下一话 →';
+
+  @override
+  String get textViewer_prevEpisodeButton => '← 上一话';
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
@@ -142,7 +143,7 @@ void main() {
       final segments = [PlainTextSegment(longText)];
 
       await tester.pumpWidget(
-        MaterialApp(
+        ProviderScope(child: MaterialApp(
               locale: const Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
@@ -156,7 +157,7 @@ void main() {
               ),
             ),
           ),
-        ),
+        )),
       );
       await tester.pumpAndSettle();
 
@@ -172,7 +173,7 @@ void main() {
 
       // Rebuild with SAME segment reference (simulating memoized cache)
       await tester.pumpWidget(
-        MaterialApp(
+        ProviderScope(child: MaterialApp(
               locale: const Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
@@ -186,7 +187,7 @@ void main() {
               ),
             ),
           ),
-        ),
+        )),
       );
       await tester.pumpAndSettle();
 

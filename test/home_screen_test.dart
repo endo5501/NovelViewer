@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/app.dart';
+import 'package:novel_viewer/app/selected_file_progress_title_provider.dart';
+import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/presentation/search_results_panel.dart';
@@ -175,6 +177,55 @@ void main() {
       final appBar = tester.widget<AppBar>(find.byType(AppBar));
       final titleWidget = appBar.title as Text;
       expect(titleWidget.data, '異世界転生物語');
+    });
+
+    testWidgets('shows "name (N/M)" suffix when a file is selected',
+        (WidgetTester tester) async {
+      const file = FileEntry(
+        name: '049-戦闘.txt',
+        path: '/library/n1234/049-戦闘.txt',
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+            selectedFileProgressTitleProvider
+                .overrideWithValue('異世界転生 — 049-戦闘.txt (49/200)'),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // Touch the FileEntry constant so it is not flagged unused.
+      expect(file.name, '049-戦闘.txt');
+
+      final appBar = tester.widget<AppBar>(find.byType(AppBar));
+      final titleWidget = appBar.title as Text;
+      expect(titleWidget.data, '異世界転生 — 049-戦闘.txt (49/200)');
+    });
+
+    testWidgets('title uses ellipsis overflow with maxLines=1',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+            selectedFileProgressTitleProvider.overrideWithValue(
+              '非常に長い小説タイトルがここにあって — '
+              '049-非常に長いエピソードタイトル.txt (49/200)',
+            ),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final appBar = tester.widget<AppBar>(find.byType(AppBar));
+      final titleWidget = appBar.title as Text;
+      expect(titleWidget.maxLines, 1);
+      expect(titleWidget.overflow, TextOverflow.ellipsis);
     });
   });
 

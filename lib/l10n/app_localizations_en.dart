@@ -610,4 +610,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get llmHistory_untrackedBadge => 'Untracked';
+
+  @override
+  String verticalText_nextEpisodePrompt(String name) {
+    return '▶ Next: \"$name\" (press again)';
+  }
+
+  @override
+  String verticalText_prevEpisodePrompt(String name) {
+    return '◀ Previous: \"$name\" (press again)';
+  }
+
+  @override
+  String get textViewer_nextEpisodeButton => 'Next →';
+
+  @override
+  String get textViewer_prevEpisodeButton => '← Previous';
 }

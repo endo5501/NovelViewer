@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
@@ -12,7 +13,7 @@ Widget _buildTestWidget({
   ValueChanged<String?>? onSelectionChanged,
   double columnSpacing = 8.0,
 }) {
-  return MaterialApp(
+  return ProviderScope(child: MaterialApp(
         locale: const Locale('ja'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -27,7 +28,7 @@ Widget _buildTestWidget({
         ),
       ),
     ),
-  );
+  ));
 }
 
 void main() {

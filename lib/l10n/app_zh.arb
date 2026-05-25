@@ -221,5 +221,20 @@
   "llmHistory_typeBoth": "两者",
   "llmHistory_typeNoSpoiler": "无剧透",
   "llmHistory_typeSpoiler": "剧透",
-  "llmHistory_untrackedBadge": "未跟踪"
+  "llmHistory_untrackedBadge": "未跟踪",
+
+  "verticalText_nextEpisodePrompt": "▶ 下一话「{name}」（再按一次）",
+  "@verticalText_nextEpisodePrompt": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "verticalText_prevEpisodePrompt": "◀ 上一话「{name}」（再按一次）",
+  "@verticalText_prevEpisodePrompt": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "textViewer_nextEpisodeButton": "下一话 →",
+  "textViewer_prevEpisodeButton": "← 上一话"
 }

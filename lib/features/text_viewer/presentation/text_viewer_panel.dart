@@ -8,7 +8,9 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 /// Shell that lays out the text viewer: file content rendering on top,
 /// TTS controls bar overlaid in the bottom-right. Owns no scroll, controller,
 /// or rendering state — those live inside `TextContentRenderer` and
-/// `TtsControlsBar` respectively.
+/// `TtsControlsBar` respectively. Episode navigation buttons (horizontal
+/// mode, scroll-edge only) are owned by `TextContentRenderer` because their
+/// visibility depends on its scroll position.
 class TextViewerPanel extends ConsumerWidget {
   const TextViewerPanel({super.key});
 
