@@ -360,3 +360,80 @@ The VerticalTextPage SHALL correctly compute TTS highlights for any page by conv
 #### Scenario: TTS highlight with Ruby text on wrapped columns
 - **WHEN** TTS plays a sentence that spans Ruby text entries across wrapped columns with synthetic newline separators
 - **THEN** the Ruby text base characters within the TTS range SHALL be correctly identified for highlighting, and synthetic newlines SHALL not shift the offset calculation
+
+### Requirement: 末尾ページでの次ページ操作による次話遷移（2 段階確認）
+最終ページで「次ページへ」の入力（左矢印キー、下方向マウスホイール、右スワイプのいずれか）が発生した時、システムは即座にファイル遷移を行わず、以下の 2 段階確認フローに従わなければならない（SHALL）：
+
+1. 隣接ファイル導出 Provider が「次のファイル」を返す場合、ページ番号領域の表示を `現在ページ / 総ページ` から「▶ 次話「`次のファイル名`」へ（もう一度）」というローカライズされたヒント表示に切り替え、同時にタイムアウトタイマー（4 秒）を開始する。
+2. タイムアウト前にもう一度同じ「次ページへ」の入力が発生した場合、システムは隣接ファイル遷移操作（`episode-navigation` capability）を呼び、開始位置ヒントを `fromStart` として次のファイルに切り替える。
+3. タイムアウトが満了した場合、ヒント表示を解除して通常のページ番号表示に戻す。
+4. ヒント表示中に「前ページへ」の入力（右矢印キー、上方向マウスホイール、左スワイプ）が発生した場合、タイマーをキャンセルしヒント表示を解除する。それ自体はページ遷移としては no-op（最終ページの 1 つ前へは戻らない）であってもよいが、最終ページから前へ戻る通常のページ遷移としてもよい。実装はどちらかに統一すること。
+5. 「次のファイル」が存在しない場合（最終話の末尾）、ヒント表示は出さず、現状の no-op 挙動（左矢印キー等が無反応）を維持しなければならない（SHALL）。
+
+ヒント表示中はページ番号領域以外の UI（本文、しおり、検索ハイライト等）は変化してはならない（SHALL NOT）。
+
+#### Scenario: 最終ページで次ページ操作 → ヒント表示
+- **WHEN** 末尾でない話を縦書きモードで開き、最終ページにいる状態でユーザーが左矢印キーを押す
+- **THEN** ページ番号領域の表示が「N / M」から「▶ 次話「`次のファイル名`」へ（もう一度）」に切り替わり、タイムアウトタイマーが開始する
+
+#### Scenario: ヒント表示中に同方向操作 → 次話へ遷移
+- **WHEN** ヒント表示中にユーザーが再度左矢印キーを押す
+- **THEN** 次のファイルが選択され、表示が次話のコンテンツ冒頭ページに切り替わる
+
+#### Scenario: ヒント表示のタイムアウト
+- **WHEN** ヒント表示中にいずれの追加入力もなく 4 秒が経過する
+- **THEN** ヒント表示は解除されページ番号領域は「N / M」表示に戻る
+
+#### Scenario: マウスホイールでも同じ 2 段階確認が成立する
+- **WHEN** 最終ページで下方向のマウスホイールスクロールが 2 回連続して行われる（タイムアウト内）
+- **THEN** 1 回目でヒント表示、2 回目で次話へ遷移する
+
+#### Scenario: 右スワイプでも同じ 2 段階確認が成立する
+- **WHEN** 最終ページで右スワイプが 2 回連続して行われる（タイムアウト内）
+- **THEN** 1 回目でヒント表示、2 回目で次話へ遷移する
+
+#### Scenario: 最終話の末尾では何もしない
+- **WHEN** 最終話（次のファイルが存在しない）の最終ページで左矢印キーを押す
+- **THEN** ヒント表示は出ず、ページ遷移も行われない（現状の no-op を維持）
+
+### Requirement: 先頭ページでの前ページ操作による前話遷移（2 段階確認、末尾から開始）
+先頭ページで「前ページへ」の入力（右矢印キー、上方向マウスホイール、左スワイプのいずれか）が発生した時、システムは前述の次話遷移と対称の 2 段階確認フローに従わなければならない（SHALL）。隣接ファイル導出 Provider が「前のファイル」を返す場合、ヒント表示は「◀ 前話「`前のファイル名`」へ（もう一度）」とし、2 回目の同方向入力で隣接ファイル遷移操作を `fromEnd`（末尾から開始）として呼ばなければならない（SHALL）。前のファイルに切り替わった後、ビューアは初期表示ページを最終ページに設定しなければならない（SHALL）。
+
+「前のファイル」が存在しない場合（最初の話の冒頭）、ヒント表示は出さず、現状の no-op 挙動を維持しなければならない（SHALL）。
+
+#### Scenario: 先頭ページで前ページ操作 → ヒント表示
+- **WHEN** 最初の話でない話を縦書きモードで開き、先頭ページ（ページ 1）にいる状態でユーザーが右矢印キーを押す
+- **THEN** ページ番号領域の表示が「1 / M」から「◀ 前話「`前のファイル名`」へ（もう一度）」に切り替わる
+
+#### Scenario: ヒント表示中の前話確定 → 前話の最終ページから開始
+- **WHEN** 前話ヒント表示中にユーザーが再度右矢印キーを押す
+- **THEN** 前のファイルが選択され、表示が前話のコンテンツの最終ページに切り替わる
+
+#### Scenario: 最初の話の冒頭では何もしない
+- **WHEN** 最初の話（前のファイルが存在しない）の先頭ページで右矢印キーを押す
+- **THEN** ヒント表示は出ず、ページ遷移も行われない
+
+### Requirement: ファイル切替時の初期ページは開始位置 Intent に従う
+新しいファイルに切り替わってビューアが再構築された時、システムは `episode-navigation` capability が提供する開始位置 intent provider を 1 度だけ読み取り、その値に従って初期表示ページを決定しなければならない（SHALL）。
+
+- intent が `null` または `fromStart` の場合、初期ページはコンテンツ先頭（ページインデックス 0）でなければならない（SHALL）。
+- intent が `fromEnd` の場合、初期ページは最終ページ（ページインデックス `pageCount - 1`）でなければならない（SHALL）。
+- 値を読み取った直後、ビューアは intent provider をクリア（`null` に戻す）しなければならない（SHALL）。これは intent のワンショットセマンティクスを保証するため。
+
+ページ数（`pageCount`）はレイアウト確定後にしか分からないため、`fromEnd` のジャンプはレイアウト完了後の post-frame コールバックで実行しなければならない（SHALL）。これは既存の TTS ハイライトジャンプ（`_pendingTtsOffset`）と同一の遅延パターンに従う。
+
+#### Scenario: intent が `fromStart` のファイル切替
+- **WHEN** `pendingFileEntryIntentProvider` が `fromStart` の状態で `selectedFileProvider` が新しいファイルに切り替わる
+- **THEN** ビューアは新しいファイルのページ 1 を表示し、その後 intent provider は `null` にクリアされる
+
+#### Scenario: intent が `fromEnd` のファイル切替
+- **WHEN** `pendingFileEntryIntentProvider` が `fromEnd` の状態で `selectedFileProvider` が新しいファイルに切り替わる
+- **THEN** ビューアは新しいファイルの最終ページを表示し、その後 intent provider は `null` にクリアされる
+
+#### Scenario: intent が `null` のファイル切替（通常選択）
+- **WHEN** ユーザーがファイル一覧から直接ファイルをタップで選択し、`pendingFileEntryIntentProvider` は `null` のまま `selectedFileProvider` が変化する
+- **THEN** ビューアは新しいファイルのページ 1 を表示する
+
+#### Scenario: 開始位置ヒントの消費は 1 度だけ
+- **WHEN** `fromEnd` でファイル切替後、ビューアがレイアウト確定までに複数回 `build` を実行する
+- **THEN** 最終ページへのジャンプは 1 回だけ発生し、その後の build では intent provider は `null` を返すので追加のジャンプは発生しない
