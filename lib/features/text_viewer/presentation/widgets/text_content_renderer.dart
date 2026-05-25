@@ -265,7 +265,14 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   /// the appropriate initial scroll. `fromEnd` triggers a jump to the bottom
   /// once the new content has laid out; `fromStart` (or null) leaves the
   /// default top-of-content position.
+  ///
+  /// Only the active display mode's renderer is allowed to consume the
+  /// intent: in vertical mode the VerticalTextViewer owns it. Acting in
+  /// vertical mode here would latch `_jumpToEndPending`, which is only
+  /// drained inside the horizontal branch of build() — that would surface
+  /// as a stray scroll-to-bottom on the next mode toggle.
   void _consumeFileEntryIntent() {
+    if (ref.read(displayModeProvider) != TextDisplayMode.horizontal) return;
     final intent = ref.read(pendingFileEntryIntentProvider);
     if (intent == null) return;
     if (intent == FileEntryStartIntent.fromEnd) {
@@ -661,16 +668,25 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
               );
               ref.read(bookmarkJumpLineProvider.notifier).clear();
             });
-          } else if (_jumpToEndPending) {
-            // Previous-episode navigation requested "start from the end".
-            // Jump after layout settles so `maxScrollExtent` is known.
+          }
+
+          // `_jumpToEndPending` is consumed as its own block (not chained to
+          // the if/else if above) so that, when a higher-priority scroll
+          // target (search match / bookmark jump) is also pending, the flag
+          // is still cleared in this build rather than leaking into a later
+          // unrelated rebuild and surprising the user with a jump-to-bottom.
+          if (_jumpToEndPending) {
             _jumpToEndPending = false;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted || !_scrollController.hasClients) return;
-              if (!identical(widget.content, scheduledContent)) return;
-              _scrollController
-                  .jumpTo(_scrollController.position.maxScrollExtent);
-            });
+            final hasHigherPriority =
+                activeMatch != null || bookmarkJumpLine != null;
+            if (!hasHigherPriority) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted || !_scrollController.hasClients) return;
+                if (!identical(widget.content, scheduledContent)) return;
+                _scrollController
+                    .jumpTo(_scrollController.position.maxScrollExtent);
+              });
+            }
           }
 
           return Stack(

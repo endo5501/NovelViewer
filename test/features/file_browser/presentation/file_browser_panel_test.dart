@@ -164,6 +164,52 @@ void main() {
       expect(find.byIcon(Icons.folder), findsOneWidget);
     });
 
+    testWidgets(
+        'long subdirectory title uses ellipsis overflow (fits in fixed-height '
+        'tile without clipping)',
+        (WidgetTester tester) async {
+      // Subdirectory tiles share the ListView's fixed itemExtent with file
+      // tiles. To avoid clipped novel titles (especially long ja/zh names),
+      // they must apply maxLines:1 + ellipsis overflow.
+      const longTitle = '非常に長い小説タイトルが続きます。途中で省略されるべき';
+      final testDirs = [
+        const DirectoryEntry(
+          name: 'n1234',
+          path: '/library/n1234',
+          displayName: longTitle,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return DirectoryContents(files: [], subdirectories: testDirs);
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/library');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(width: 200, child: FileBrowserPanel()),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final titleText = tester.widget<Text>(find.text(longTitle));
+      expect(titleText.maxLines, 1,
+          reason: 'Long subdirectory titles must render on a single line');
+      expect(titleText.overflow, TextOverflow.ellipsis,
+          reason: 'Overflowing subdirectory titles must use ellipsis');
+    });
+
     testWidgets('highlights selected file with selected=true on ListTile',
         (WidgetTester tester) async {
       const testFile =

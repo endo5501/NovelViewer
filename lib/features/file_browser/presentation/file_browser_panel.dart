@@ -182,6 +182,8 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         style: isSelected
             ? const TextStyle(fontWeight: FontWeight.w600)
             : null,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
       trailing: switch (ttsStatus) {
         TtsEpisodeStatus.completed =>
@@ -217,7 +219,11 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
   ) {
     final tile = ListTile(
       leading: const Icon(Icons.folder),
-      title: Text(dir.displayName),
+      title: Text(
+        dir.displayName,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       onTap: () {
         ref.read(currentDirectoryProvider.notifier).setDirectory(dir.path);
         ref.read(selectedFileProvider.notifier).clear();

@@ -29,6 +29,8 @@ Widget _wrap({
   required List<TextSegment> segments,
   double width = 100,
   double height = 400,
+  ValueChanged<String?>? onSelectionChanged,
+  VoidCallback? onHoverHideRequest,
 }) {
   return ProviderScope(
     overrides: [
@@ -48,6 +50,8 @@ Widget _wrap({
           child: VerticalTextViewer(
             segments: segments,
             baseStyle: const TextStyle(fontSize: 14.0),
+            onSelectionChanged: onSelectionChanged,
+            onHoverHideRequest: onHoverHideRequest,
           ),
         ),
       ),
@@ -146,7 +150,9 @@ void main() {
       await _navigateToLastPage(tester);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-      await tester.pump();
+      // Wait past the confirmation cooldown (300ms). Without this, the second
+      // press would be ignored as a likely KeyRepeat burst.
+      await tester.pump(const Duration(milliseconds: 350));
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pumpAndSettle();
 
@@ -233,7 +239,7 @@ void main() {
       await _primeAdjacentFiles(tester);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pumpAndSettle();
 
@@ -261,6 +267,133 @@ void main() {
       expect(find.textContaining('もう一度'), findsNothing);
       expect(container.read(pendingFileEntryIntentProvider), isNull);
       expect(container.read(selectedFileProvider), _ep1);
+    });
+  });
+
+  group('VerticalTextViewer boundary navigation clears stale UI state', () {
+    testWidgets('confirming next-episode navigation drops selection and hover',
+        (tester) async {
+      var selectionResetCount = 0;
+      var hoverHideCount = 0;
+      await tester.pumpWidget(_wrap(
+        files: const [_ep1, _ep2, _ep3],
+        selected: _ep2,
+        segments: longSegments,
+        onSelectionChanged: (text) {
+          if (text == null) selectionResetCount++;
+        },
+        onHoverHideRequest: () => hoverHideCount++,
+      ));
+      await tester.pumpAndSettle();
+      await _primeAdjacentFiles(tester);
+      await _navigateToLastPage(tester);
+      // Reset counters: only count what happens during the confirmation.
+      selectionResetCount = 0;
+      hoverHideCount = 0;
+
+      // First press → prompt
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump(const Duration(milliseconds: 350));
+      // Second press → confirm navigation
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+
+      expect(selectionResetCount, greaterThanOrEqualTo(1),
+          reason: 'Confirming file switch must clear active selection');
+      expect(hoverHideCount, greaterThanOrEqualTo(1),
+          reason: 'Confirming file switch must drop any hover popup');
+    });
+
+    testWidgets('confirming previous-episode navigation drops selection and hover',
+        (tester) async {
+      var selectionResetCount = 0;
+      var hoverHideCount = 0;
+      await tester.pumpWidget(_wrap(
+        files: const [_ep1, _ep2, _ep3],
+        selected: _ep2,
+        segments: longSegments,
+        onSelectionChanged: (text) {
+          if (text == null) selectionResetCount++;
+        },
+        onHoverHideRequest: () => hoverHideCount++,
+      ));
+      await tester.pumpAndSettle();
+      await _primeAdjacentFiles(tester);
+      selectionResetCount = 0;
+      hoverHideCount = 0;
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+
+      expect(selectionResetCount, greaterThanOrEqualTo(1),
+          reason: 'Confirming prev-episode navigation must clear selection');
+      expect(hoverHideCount, greaterThanOrEqualTo(1),
+          reason: 'Confirming prev-episode navigation must drop hover popup');
+    });
+  });
+
+  group('VerticalTextViewer boundary navigation rate-limiting', () {
+    testWidgets('held arrow key (rapid repeats) does not auto-confirm',
+        (tester) async {
+      late ProviderContainer container;
+      await tester.pumpWidget(_wrap(
+        files: const [_ep1, _ep2, _ep3],
+        selected: _ep2,
+        segments: longSegments,
+      ));
+      await tester.pumpAndSettle();
+      container = ProviderScope.containerOf(
+          tester.element(find.byType(VerticalTextViewer)));
+      await _primeAdjacentFiles(tester);
+      await _navigateToLastPage(tester);
+
+      // Simulate a held arrow key: KeyDown + rapid KeyRepeatEvents within
+      // a tighter-than-human window. The boundary handler must treat all
+      // repeats inside the cooldown as part of the same gesture and NOT
+      // confirm the file switch.
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      // Several repeat events in quick succession.
+      for (var i = 0; i < 5; i++) {
+        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowLeft);
+        await tester.pump(const Duration(milliseconds: 30));
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+
+      expect(container.read(selectedFileProvider), _ep2,
+          reason: 'Rapid repeats within cooldown must not navigate');
+      expect(container.read(pendingFileEntryIntentProvider), isNull,
+          reason: 'Intent must not be set by rapid repeats');
+    });
+
+    testWidgets('deliberate second press AFTER the cooldown confirms',
+        (tester) async {
+      late ProviderContainer container;
+      await tester.pumpWidget(_wrap(
+        files: const [_ep1, _ep2, _ep3],
+        selected: _ep2,
+        segments: longSegments,
+      ));
+      await tester.pumpAndSettle();
+      container = ProviderScope.containerOf(
+          tester.element(find.byType(VerticalTextViewer)));
+      await _primeAdjacentFiles(tester);
+      await _navigateToLastPage(tester);
+
+      // First press → prompt shown.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      // Wait past the cooldown (but within the prompt timeout).
+      await tester.pump(const Duration(milliseconds: 500));
+      // Second deliberate press → confirms.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+
+      expect(container.read(selectedFileProvider), _ep3,
+          reason: 'Deliberate press after cooldown must confirm navigation');
     });
   });
 }

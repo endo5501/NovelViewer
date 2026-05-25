@@ -101,6 +101,11 @@ const _kPageTransitionCurve = Curves.easeInOut;
 // same-direction press within the window confirms the switch.
 const _kFileNavigationPromptTimeout = Duration(seconds: 4);
 
+// Minimum delay between showing the prompt and accepting a confirming press.
+// Without this, holding an arrow key (KeyRepeatEvent) or rapidly spinning
+// the mouse wheel would auto-confirm the file switch on the very next tick.
+const _kFileNavigationConfirmCooldown = Duration(milliseconds: 300);
+
 class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     with SingleTickerProviderStateMixin {
   int _currentPage = 0;
@@ -114,6 +119,10 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   bool _pendingNextFilePrompt = false;
   bool _pendingPrevFilePrompt = false;
   Timer? _promptTimeoutTimer;
+  // While true, additional boundary inputs are ignored even if a prompt is
+  // pending — prevents KeyRepeat / wheel bursts from auto-confirming.
+  bool _inConfirmCooldown = false;
+  Timer? _confirmCooldownTimer;
 
   // True when the next non-null `pendingFileEntryIntent` should still be
   // consumed by this viewer's first build. Cleared after consumption to
@@ -209,6 +218,7 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   @override
   void dispose() {
     _promptTimeoutTimer?.cancel();
+    _confirmCooldownTimer?.cancel();
     _curvedAnimation.dispose();
     _animationController.dispose();
     _focusNode.dispose();
@@ -500,10 +510,9 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       // "Next page" at the last page → next episode candidate.
       if (adjacent.next == null) return;
       if (_pendingNextFilePrompt) {
-        _clearPendingPrompts();
-        ref
-            .read(episodeNavigationControllerProvider)
-            .navigateToNext();
+        if (_inConfirmCooldown) return;
+        _confirmFileNavigation(
+            ref.read(episodeNavigationControllerProvider).navigateToNext);
       } else {
         _showFileNavigationPrompt(next: true);
       }
@@ -511,18 +520,35 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       // "Previous page" at the first page → previous episode candidate.
       if (adjacent.prev == null) return;
       if (_pendingPrevFilePrompt) {
-        _clearPendingPrompts();
-        ref
-            .read(episodeNavigationControllerProvider)
-            .navigateToPrevious();
+        if (_inConfirmCooldown) return;
+        _confirmFileNavigation(
+            ref.read(episodeNavigationControllerProvider).navigateToPrevious);
       } else {
         _showFileNavigationPrompt(next: false);
       }
     }
   }
 
+  /// Runs the actual file swap after a confirming second press. Beyond
+  /// clearing the prompt, this also drops any in-flight text selection and
+  /// hover popup — the new file has different content and the anchor
+  /// coordinates from the prior episode would otherwise leak visually into
+  /// the new page.
+  void _confirmFileNavigation(VoidCallback navigate) {
+    _clearPendingPrompts();
+    widget.onSelectionChanged?.call(null);
+    widget.onHoverHideRequest?.call();
+    navigate();
+  }
+
   void _showFileNavigationPrompt({required bool next}) {
     _promptTimeoutTimer?.cancel();
+    _confirmCooldownTimer?.cancel();
+    _inConfirmCooldown = true;
+    _confirmCooldownTimer =
+        Timer(_kFileNavigationConfirmCooldown, () {
+      _inConfirmCooldown = false;
+    });
     setState(() {
       _pendingNextFilePrompt = next;
       _pendingPrevFilePrompt = !next;
@@ -534,6 +560,9 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   void _clearPendingPrompts() {
     _promptTimeoutTimer?.cancel();
     _promptTimeoutTimer = null;
+    _confirmCooldownTimer?.cancel();
+    _confirmCooldownTimer = null;
+    _inConfirmCooldown = false;
     if (!_pendingNextFilePrompt && !_pendingPrevFilePrompt) return;
     setState(() {
       _pendingNextFilePrompt = false;

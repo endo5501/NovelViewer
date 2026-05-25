@@ -129,6 +129,96 @@ void main() {
           reason: 'fromEnd intent should scroll to the bottom');
       expect(container.read(pendingFileEntryIntentProvider), isNull);
     });
+
+    testWidgets(
+        'vertical mode does not latch _jumpToEndPending — no leak on mode '
+        'toggle to horizontal', (tester) async {
+      // The bug: in vertical mode TextContentRenderer used to consume the
+      // intent and set _jumpToEndPending, which only fires inside the
+      // horizontal-mode build branch. Toggling to horizontal later would
+      // unexpectedly scroll to maxScrollExtent.
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          displayModeProvider.overrideWith(
+              () => _StubDisplayMode(TextDisplayMode.vertical)),
+        ],
+      );
+      addTearDown(container.dispose);
+      container
+          .read(pendingFileEntryIntentProvider.notifier)
+          .set(FileEntryStartIntent.fromEnd);
+
+      await tester.pumpWidget(_wrap(
+          container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      // Toggle to horizontal — if the bug were present, this rebuild would
+      // observe _jumpToEndPending=true and schedule a jumpTo(maxScrollExtent).
+      await container
+          .read(displayModeProvider.notifier)
+          .setMode(TextDisplayMode.horizontal);
+      await tester.pumpAndSettle();
+
+      final scrollable = find
+          .descendant(
+            of: find.byType(TextContentRenderer),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final state = tester.state<ScrollableState>(scrollable);
+      expect(state.position.pixels, 0.0,
+          reason:
+              'After a vertical-mode mount, toggling to horizontal must not '
+              'scroll to the bottom (no _jumpToEndPending leak)');
+    });
+
+    testWidgets(
+        '_jumpToEndPending is cleared after a single build (no leak into '
+        'later rebuilds)', (tester) async {
+      // After fromEnd is consumed and the scroll jumped to the bottom, a
+      // later rebuild with no fresh intent must not jump again — the flag
+      // must have been cleared in the original build, regardless of which
+      // branch of the if/else if chain ultimately fired.
+      final container = makeContainer();
+      addTearDown(container.dispose);
+      container
+          .read(pendingFileEntryIntentProvider.notifier)
+          .set(FileEntryStartIntent.fromEnd);
+
+      await tester.pumpWidget(_wrap(
+          container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      final scrollable = find
+          .descendant(
+            of: find.byType(TextContentRenderer),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final state = tester.state<ScrollableState>(scrollable);
+      // First build jumped to end as designed.
+      expect(state.position.pixels, state.position.maxScrollExtent);
+
+      // Manually scroll back to top, then pump a fresh build (no intent
+      // change). The flag must NOT re-fire and pull us back to the bottom.
+      state.position.jumpTo(0);
+      await tester.pump();
+      await tester.pumpWidget(_wrap(
+          container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      final state2 = tester.state<ScrollableState>(find
+          .descendant(
+            of: find.byType(TextContentRenderer),
+            matching: find.byType(Scrollable),
+          )
+          .first);
+      expect(state2.position.pixels, 0.0,
+          reason:
+              '_jumpToEndPending must be cleared after the first build so a '
+              'later rebuild does not jump again');
+    });
   });
 }
 
