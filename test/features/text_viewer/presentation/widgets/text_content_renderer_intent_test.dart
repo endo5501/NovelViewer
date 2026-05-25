@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/episode_navigation/domain/file_entry_start
 import 'package:novel_viewer/features/episode_navigation/providers/pending_file_entry_intent_provider.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/text_viewer/presentation/widgets/episode_navigation_buttons.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/text_content_renderer.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -218,6 +219,103 @@ void main() {
           reason:
               '_jumpToEndPending must be cleared after the first build so a '
               'later rebuild does not jump again');
+    });
+  });
+
+  group('TextContentRenderer scroll-edge episode navigation buttons', () {
+    testWidgets('initial mount at scroll-top: only prev button is visible',
+        (tester) async {
+      final container = makeContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_wrap(
+          container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      // At top of a scrollable file: prev button only.
+      expect(find.byKey(const Key('episode_nav_prev_button')), findsOneWidget);
+      expect(find.byKey(const Key('episode_nav_next_button')), findsNothing);
+    });
+
+    testWidgets('scroll into the middle: no episode-nav buttons visible',
+        (tester) async {
+      final container = makeContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_wrap(
+          container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      // Scroll some pixels — leaves both edges.
+      final scrollable = find
+          .descendant(
+            of: find.byType(TextContentRenderer),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final state = tester.state<ScrollableState>(scrollable);
+      state.position.jumpTo(state.position.maxScrollExtent / 2);
+      await tester.pump();
+
+      expect(find.byType(EpisodeNavigationButtons), findsNothing,
+          reason: 'Mid-scroll must NOT render the episode nav buttons '
+              '(they obscure body text)');
+    });
+
+    testWidgets('scroll to maxScrollExtent: only next button is visible',
+        (tester) async {
+      final container = makeContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_wrap(
+          container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      final scrollable = find
+          .descendant(
+            of: find.byType(TextContentRenderer),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final state = tester.state<ScrollableState>(scrollable);
+      state.position.jumpTo(state.position.maxScrollExtent);
+      await tester.pump();
+
+      expect(find.byKey(const Key('episode_nav_prev_button')), findsNothing);
+      expect(find.byKey(const Key('episode_nav_next_button')), findsOneWidget);
+    });
+
+    testWidgets('short content (single page): both buttons visible',
+        (tester) async {
+      final container = makeContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_wrap(
+          container: container, content: '一行だけのテキスト。'));
+      await tester.pumpAndSettle();
+
+      // When maxScrollExtent == 0 the user is simultaneously at the top
+      // and the bottom — both navigation options should be available.
+      expect(find.byKey(const Key('episode_nav_prev_button')), findsOneWidget);
+      expect(find.byKey(const Key('episode_nav_next_button')), findsOneWidget);
+    });
+
+    testWidgets('vertical mode does not render episode nav buttons',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          displayModeProvider.overrideWith(
+              () => _StubDisplayMode(TextDisplayMode.vertical)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_wrap(
+          container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EpisodeNavigationButtons), findsNothing);
     });
   });
 }

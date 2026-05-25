@@ -23,6 +23,8 @@ const _ep3 = FileEntry(name: '003-ep3.txt', path: '/novel/003-ep3.txt');
 Widget _harness({
   required List<FileEntry> files,
   required FileEntry? selected,
+  bool showPrev = true,
+  bool showNext = true,
 }) {
   return ProviderScope(
     overrides: [
@@ -32,11 +34,15 @@ Widget _harness({
       selectedFileProvider
           .overrideWith(() => _StubSelectedFileNotifier(selected)),
     ],
-    child: const MaterialApp(
-      locale: Locale('ja'),
+    child: MaterialApp(
+      locale: const Locale('ja'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: EpisodeNavigationButtons()),
+      home: Scaffold(
+          body: EpisodeNavigationButtons(
+        showPrev: showPrev,
+        showNext: showNext,
+      )),
     ),
   );
 }
@@ -135,6 +141,36 @@ void main() {
       expect(container.read(pendingFileEntryIntentProvider),
           FileEntryStartIntent.fromEnd);
       expect(container.read(selectedFileProvider), _ep1);
+    });
+
+    testWidgets('showPrev:false hides prev button', (tester) async {
+      await tester.pumpWidget(_harness(
+        files: const [_ep1, _ep2, _ep3],
+        selected: _ep2,
+        showPrev: false,
+      ));
+      final container = ProviderScope.containerOf(
+          tester.element(find.byType(EpisodeNavigationButtons)));
+      await container.read(directoryContentsProvider.future);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('episode_nav_prev_button')), findsNothing);
+      expect(find.byKey(const Key('episode_nav_next_button')), findsOneWidget);
+    });
+
+    testWidgets('showNext:false hides next button', (tester) async {
+      await tester.pumpWidget(_harness(
+        files: const [_ep1, _ep2, _ep3],
+        selected: _ep2,
+        showNext: false,
+      ));
+      final container = ProviderScope.containerOf(
+          tester.element(find.byType(EpisodeNavigationButtons)));
+      await container.read(directoryContentsProvider.future);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('episode_nav_prev_button')), findsOneWidget);
+      expect(find.byKey(const Key('episode_nav_next_button')), findsNothing);
     });
   });
 }

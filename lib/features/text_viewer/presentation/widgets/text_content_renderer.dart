@@ -19,6 +19,7 @@ import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
+import 'package:novel_viewer/features/text_viewer/presentation/widgets/episode_navigation_buttons.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/vertical_context_menu.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
@@ -227,10 +228,18 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   // a `jumpTo(maxScrollExtent)` once layout settles. Cleared after the jump.
   bool _jumpToEndPending = false;
 
+  // Tracks whether the scroll view is currently parked at its first or last
+  // line. Drives visibility of the prev/next episode buttons so they only
+  // appear when the user is at a natural reading boundary — not in the
+  // middle, where they would overlap body text.
+  bool _atScrollTop = true;
+  bool _atScrollBottom = false;
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_updateCurrentViewLine);
+    _scrollController.addListener(_updateScrollEdgeFlags);
     // Reset current view line when the user switches files.
     ref.listenManual(selectedFileProvider, (prev, next) {
       if (prev?.path != next?.path) {
@@ -244,6 +253,29 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       }
     });
     _consumeFileEntryIntent();
+    // First layout may produce a maxScrollExtent of 0 (single-page content);
+    // capture the initial edge state after the frame so the single-page
+    // bottom-button visibility is correct from the start.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _updateScrollEdgeFlags();
+    });
+  }
+
+  /// Refreshes [_atScrollTop] / [_atScrollBottom] from the current scroll
+  /// position. Cheap; called from the existing scroll listener path. Skips
+  /// `setState` when the flags would not change to avoid extra rebuilds on
+  /// every scroll tick within the middle band.
+  void _updateScrollEdgeFlags() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    final newAtTop = pos.pixels <= pos.minScrollExtent;
+    final newAtBottom = pos.pixels >= pos.maxScrollExtent;
+    if (newAtTop == _atScrollTop && newAtBottom == _atScrollBottom) return;
+    setState(() {
+      _atScrollTop = newAtTop;
+      _atScrollBottom = newAtBottom;
+    });
   }
 
   @override
@@ -613,7 +645,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       _scrollToTtsHighlight(widget.content, ttsHighlightRange, textStyle);
     }
 
-    return NotificationListener<ScrollNotification>(
+    final scrollView = NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (!_isTtsScrolling &&
             notification is ScrollStartNotification &&
@@ -739,6 +771,29 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
           );
         }),
       ),
+    );
+
+    // Overlay the prev/next episode buttons only when the user is parked
+    // at the very first or last line of the current file — in the middle
+    // band they would obscure body text. The Stack is always returned (with
+    // a conditional child) so the underlying scroll view's element identity
+    // stays stable across visibility toggles — otherwise an unrelated
+    // ScrollController state reset would clobber line / TTS / bookmark
+    // scroll jumps that fire on the same frame.
+    final showEdgeButtons = _atScrollTop || _atScrollBottom;
+    return Stack(
+      children: [
+        scrollView,
+        if (showEdgeButtons)
+          Positioned(
+            left: 8,
+            bottom: 8,
+            child: EpisodeNavigationButtons(
+              showPrev: _atScrollTop,
+              showNext: _atScrollBottom,
+            ),
+          ),
+      ],
     );
   }
 }

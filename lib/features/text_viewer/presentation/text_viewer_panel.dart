@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
-import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
-import 'package:novel_viewer/features/text_viewer/presentation/widgets/episode_navigation_buttons.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/text_content_renderer.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/tts_controls_bar.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
@@ -11,7 +8,9 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 /// Shell that lays out the text viewer: file content rendering on top,
 /// TTS controls bar overlaid in the bottom-right. Owns no scroll, controller,
 /// or rendering state — those live inside `TextContentRenderer` and
-/// `TtsControlsBar` respectively.
+/// `TtsControlsBar` respectively. Episode navigation buttons (horizontal
+/// mode, scroll-edge only) are owned by `TextContentRenderer` because their
+/// visibility depends on its scroll position.
 class TextViewerPanel extends ConsumerWidget {
   const TextViewerPanel({super.key});
 
@@ -34,16 +33,9 @@ class TextViewerPanel extends ConsumerWidget {
             ),
           );
         }
-        final displayMode = ref.watch(displayModeProvider);
         return Stack(
           children: [
             TextContentRenderer(content: content),
-            if (displayMode == TextDisplayMode.horizontal)
-              const Positioned(
-                left: 8,
-                bottom: 8,
-                child: EpisodeNavigationButtons(),
-              ),
             Positioned(
               right: 8,
               bottom: 8,
