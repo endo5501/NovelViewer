@@ -175,6 +175,55 @@ void main() {
     });
 
     testWidgets(
+        'intent=fromStart on content swap resets scroll to 0 (regression: '
+        'previous-file scroll position must not leak into the next file)',
+        (tester) async {
+      final container = makeContainer();
+      addTearDown(container.dispose);
+
+      // Mount, then manually scroll to the bottom — simulating a user
+      // parked at end-of-file before pressing "Next →".
+      await tester.pumpWidget(_wrap(
+          container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      final scrollable = find
+          .descendant(
+            of: find.byType(TextContentRenderer),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final state = tester.state<ScrollableState>(scrollable);
+      state.position.jumpTo(state.position.maxScrollExtent);
+      await tester.pump();
+      expect(state.position.pixels, greaterThan(0));
+
+      // Simulate "Next →" click: set fromStart intent, then swap content.
+      container
+          .read(pendingFileEntryIntentProvider.notifier)
+          .set(FileEntryStartIntent.fromStart);
+      final newContent = List.generate(
+              200, (i) => '別ファイル ${i + 1} 行目')
+          .join('\n');
+      await tester.pumpWidget(
+          _wrap(container: container, content: newContent));
+      await tester.pumpAndSettle();
+
+      final state2 = tester.state<ScrollableState>(find
+          .descendant(
+            of: find.byType(TextContentRenderer),
+            matching: find.byType(Scrollable),
+          )
+          .first);
+      expect(state2.position.pixels, 0.0,
+          reason:
+              'fromStart intent after content swap must reset scroll to top — '
+              'otherwise the previous file\'s scroll offset leaks into the '
+              'new file and the user appears in the middle of it');
+      expect(container.read(pendingFileEntryIntentProvider), isNull);
+    });
+
+    testWidgets(
         '_jumpToEndPending is cleared after a single build (no leak into '
         'later rebuilds)', (tester) async {
       // After fromEnd is consumed and the scroll jumped to the bottom, a

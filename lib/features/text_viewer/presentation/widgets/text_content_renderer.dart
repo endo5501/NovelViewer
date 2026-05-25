@@ -228,6 +228,13 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   // a `jumpTo(maxScrollExtent)` once layout settles. Cleared after the jump.
   bool _jumpToEndPending = false;
 
+  // True when a `FileEntryStartIntent.fromStart` was consumed and we still
+  // owe a `jumpTo(0)` once the new content has settled. Cleared after the
+  // jump. Without this, the ScrollController retains the previous file's
+  // pixel offset across a content swap and the user lands mid-file instead
+  // of at the top.
+  bool _jumpToStartPending = false;
+
   // Tracks whether the scroll view is currently parked at its first or last
   // line. Drives visibility of the prev/next episode buttons so they only
   // appear when the user is at a natural reading boundary — not in the
@@ -295,20 +302,25 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
 
   /// Reads the one-shot file-entry start intent on a content swap and queues
   /// the appropriate initial scroll. `fromEnd` triggers a jump to the bottom
-  /// once the new content has laid out; `fromStart` (or null) leaves the
-  /// default top-of-content position.
+  /// and `fromStart` triggers a jump to the top once the new content has
+  /// laid out. `fromStart` is not a no-op: the ScrollController carries the
+  /// previous file's pixel offset across a content swap, which would land
+  /// the user mid-file (often near the previous file's tail) instead of at
+  /// the top of the new file.
   ///
   /// Only the active display mode's renderer is allowed to consume the
   /// intent: in vertical mode the VerticalTextViewer owns it. Acting in
-  /// vertical mode here would latch `_jumpToEndPending`, which is only
+  /// vertical mode here would latch the pending flags, which are only
   /// drained inside the horizontal branch of build() — that would surface
-  /// as a stray scroll-to-bottom on the next mode toggle.
+  /// as a stray scroll on the next mode toggle.
   void _consumeFileEntryIntent() {
     if (ref.read(displayModeProvider) != TextDisplayMode.horizontal) return;
     final intent = ref.read(pendingFileEntryIntentProvider);
     if (intent == null) return;
     if (intent == FileEntryStartIntent.fromEnd) {
       _jumpToEndPending = true;
+    } else if (intent == FileEntryStartIntent.fromStart) {
+      _jumpToStartPending = true;
     }
     // Riverpod 3.x forbids life-cycle mutations; defer the clear to a
     // microtask so it runs after the build settles.
@@ -717,6 +729,22 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
                 if (!identical(widget.content, scheduledContent)) return;
                 _scrollController
                     .jumpTo(_scrollController.position.maxScrollExtent);
+              });
+            }
+          }
+
+          // Mirror of the `_jumpToEndPending` block for the fromStart intent:
+          // ensure the previous file's scroll offset does not leak into the
+          // new file's layout when the user enters via the "Next →" button.
+          if (_jumpToStartPending) {
+            _jumpToStartPending = false;
+            final hasHigherPriority =
+                activeMatch != null || bookmarkJumpLine != null;
+            if (!hasHigherPriority) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted || !_scrollController.hasClients) return;
+                if (!identical(widget.content, scheduledContent)) return;
+                _scrollController.jumpTo(0);
               });
             }
           }
