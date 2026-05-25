@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
@@ -8,7 +9,7 @@ void main() {
   group('VerticalTextViewer - TTS auto page', () {
     testWidgets('passes TTS highlight to VerticalTextPage', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        const ProviderScope(child: MaterialApp(
               locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
@@ -24,7 +25,7 @@ void main() {
               ),
             ),
           ),
-        ),
+        )),
       );
       await tester.pumpAndSettle();
 
@@ -38,7 +39,7 @@ void main() {
       final longText = List.generate(200, (i) => 'あ').join();
 
       await tester.pumpWidget(
-        MaterialApp(
+        ProviderScope(child: MaterialApp(
               locale: const Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
@@ -52,7 +53,7 @@ void main() {
               ),
             ),
           ),
-        ),
+        )),
       );
       await tester.pumpAndSettle();
 
@@ -61,7 +62,7 @@ void main() {
 
       // Update with TTS highlight pointing to later text
       await tester.pumpWidget(
-        MaterialApp(
+        ProviderScope(child: MaterialApp(
               locale: const Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
@@ -77,7 +78,7 @@ void main() {
               ),
             ),
           ),
-        ),
+        )),
       );
       await tester.pumpAndSettle();
 

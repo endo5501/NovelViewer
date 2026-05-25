@@ -1,11 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/episode_navigation/domain/file_entry_start_intent.dart';
+import 'package:novel_viewer/features/episode_navigation/providers/adjacent_files_provider.dart';
+import 'package:novel_viewer/features/episode_navigation/providers/episode_navigation_controller.dart';
+import 'package:novel_viewer/features/episode_navigation/providers/pending_file_entry_intent_provider.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/column_splitter.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
+import 'package:novel_viewer/l10n/app_localizations.dart';
 
 @visibleForTesting
 List<int> computeCharOffsetPerPage(
@@ -33,7 +41,7 @@ List<int> computeCharOffsetPerPage(
   return pageStarts.map((start) => cumulative[start]).toList();
 }
 
-class VerticalTextViewer extends StatefulWidget {
+class VerticalTextViewer extends ConsumerStatefulWidget {
   const VerticalTextViewer({
     super.key,
     required this.segments,
@@ -74,7 +82,8 @@ class VerticalTextViewer extends StatefulWidget {
   final VoidCallback? onHoverHideRequest;
 
   @override
-  State<VerticalTextViewer> createState() => _VerticalTextViewerState();
+  ConsumerState<VerticalTextViewer> createState() =>
+      _VerticalTextViewerState();
 }
 
 // Layout constants
@@ -87,12 +96,32 @@ const _kDefaultFontSize = 14.0;
 const _kPageTransitionDuration = Duration(milliseconds: 250);
 const _kPageTransitionCurve = Curves.easeInOut;
 
-class _VerticalTextViewerState extends State<VerticalTextViewer>
+// Two-step file-navigation confirmation window. After the user attempts to
+// cross a file boundary the prompt is shown for this long; a second
+// same-direction press within the window confirms the switch.
+const _kFileNavigationPromptTimeout = Duration(seconds: 4);
+
+class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     with SingleTickerProviderStateMixin {
   int _currentPage = 0;
   int _pageCount = 1;
   int _lastReportedLine = 0;
   final FocusNode _focusNode = FocusNode();
+
+  // Two-step file boundary navigation state. Only one direction can be
+  // pending at a time; switching direction (or any unrelated input) cancels
+  // the pending prompt.
+  bool _pendingNextFilePrompt = false;
+  bool _pendingPrevFilePrompt = false;
+  Timer? _promptTimeoutTimer;
+
+  // True when the next non-null `pendingFileEntryIntent` should still be
+  // consumed by this viewer's first build. Cleared after consumption to
+  // guarantee the one-shot semantics of the intent provider.
+  bool _intentAlreadyConsumed = false;
+  // Captures the desired initial page (last page) when the consumed intent
+  // was `fromEnd`. Applied via post-frame once `_pageCount` is known.
+  bool _jumpToLastPagePending = false;
 
   // Split segments into lines for pagination
   List<List<TextSegment>> _lines = [];
@@ -122,6 +151,24 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
       parent: _animationController,
       curve: _kPageTransitionCurve,
     );
+    _consumePendingIntent();
+  }
+
+  void _consumePendingIntent() {
+    if (_intentAlreadyConsumed) return;
+    final intent = ref.read(pendingFileEntryIntentProvider);
+    if (intent == null) return;
+    _intentAlreadyConsumed = true;
+    if (intent == FileEntryStartIntent.fromEnd) {
+      _jumpToLastPagePending = true;
+    }
+    // Riverpod 3.x rejects provider mutations during a widget life-cycle
+    // (initState / didUpdateWidget). Defer the one-shot clear to a
+    // microtask so it runs after the current build settles.
+    Future.microtask(() {
+      if (!mounted) return;
+      ref.read(pendingFileEntryIntentProvider.notifier).clear();
+    });
   }
 
   @override
@@ -134,6 +181,13 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
         _animationController.stop();
         _outgoingSegments = null;
       }
+      // A new segments stream means the file changed: drop any pending
+      // boundary prompt to avoid carrying it across files.
+      _clearPendingPrompts();
+      // Allow consuming a fresh intent (e.g., the navigation that drove the
+      // file switch).
+      _intentAlreadyConsumed = false;
+      _consumePendingIntent();
     }
     if (widget.targetLineNumber != null &&
         widget.targetLineNumber != oldWidget.targetLineNumber) {
@@ -154,6 +208,7 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
 
   @override
   void dispose() {
+    _promptTimeoutTimer?.cancel();
     _curvedAnimation.dispose();
     _animationController.dispose();
     _focusNode.dispose();
@@ -219,6 +274,22 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
             final currentSegments =
                 totalPages > 0 ? pages[safePage] : <TextSegment>[];
             _currentPageSegments = currentSegments;
+
+            // Honour `FileEntryStartIntent.fromEnd` once layout settles
+            // and `_pageCount` is known.
+            if (_jumpToLastPagePending && totalPages > 0) {
+              _jumpToLastPagePending = false;
+              final lastPage = totalPages - 1;
+              if (lastPage != _currentPage) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  setState(() {
+                    _currentPage = lastPage;
+                  });
+                  widget.onHoverHideRequest?.call();
+                });
+              }
+            }
 
             // Auto-navigate to TTS highlight page
             if (_pendingTtsOffset != null && totalPages > 1) {
@@ -334,11 +405,13 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
                     ],
                   ),
                 ),
-                if (totalPages > 1)
+                if (totalPages > 1 ||
+                    _pendingNextFilePrompt ||
+                    _pendingPrevFilePrompt)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
                     child: Text(
-                      '${safePage + 1} / $totalPages',
+                      _buildIndicatorText(context, safePage + 1, totalPages),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
@@ -391,7 +464,17 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
     if (_pageCount <= 0) return;
 
     final newPage = (_currentPage + delta).clamp(0, _pageCount - 1);
-    if (newPage == _currentPage) return;
+    if (newPage == _currentPage) {
+      // The page index is pinned at the boundary. Re-route the input through
+      // the file-boundary handler which decides whether to surface the
+      // 2-step "go to next/previous episode" prompt or confirm a pending
+      // one.
+      _handleBoundaryNavigation(delta);
+      return;
+    }
+
+    // Any successful in-file page move cancels a pending boundary prompt.
+    _clearPendingPrompts();
 
     setState(() {
       _outgoingSegments = _currentPageSegments;
@@ -406,8 +489,77 @@ class _VerticalTextViewerState extends State<VerticalTextViewer>
     widget.onHoverHideRequest?.call();
   }
 
+  /// Resolves a page-turn input that hit a file boundary (first or last page).
+  /// Surfaces the prompt on the first press, confirms file switch on the
+  /// second press within the timeout, and ignores both when there is no
+  /// adjacent file in the directory.
+  void _handleBoundaryNavigation(int delta) {
+    if (delta == 0) return;
+    final adjacent = ref.read(adjacentFilesProvider);
+    if (delta > 0) {
+      // "Next page" at the last page → next episode candidate.
+      if (adjacent.next == null) return;
+      if (_pendingNextFilePrompt) {
+        _clearPendingPrompts();
+        ref
+            .read(episodeNavigationControllerProvider)
+            .navigateToNext();
+      } else {
+        _showFileNavigationPrompt(next: true);
+      }
+    } else {
+      // "Previous page" at the first page → previous episode candidate.
+      if (adjacent.prev == null) return;
+      if (_pendingPrevFilePrompt) {
+        _clearPendingPrompts();
+        ref
+            .read(episodeNavigationControllerProvider)
+            .navigateToPrevious();
+      } else {
+        _showFileNavigationPrompt(next: false);
+      }
+    }
+  }
+
+  void _showFileNavigationPrompt({required bool next}) {
+    _promptTimeoutTimer?.cancel();
+    setState(() {
+      _pendingNextFilePrompt = next;
+      _pendingPrevFilePrompt = !next;
+    });
+    _promptTimeoutTimer =
+        Timer(_kFileNavigationPromptTimeout, _clearPendingPrompts);
+  }
+
+  void _clearPendingPrompts() {
+    _promptTimeoutTimer?.cancel();
+    _promptTimeoutTimer = null;
+    if (!_pendingNextFilePrompt && !_pendingPrevFilePrompt) return;
+    setState(() {
+      _pendingNextFilePrompt = false;
+      _pendingPrevFilePrompt = false;
+    });
+  }
+
   void _nextPage() => _changePage(1);
   void _previousPage() => _changePage(-1);
+
+  String _buildIndicatorText(BuildContext context, int currentPage, int total) {
+    final l10n = AppLocalizations.of(context)!;
+    if (_pendingNextFilePrompt) {
+      final name = ref.read(adjacentFilesProvider).next?.name;
+      if (name != null) {
+        return l10n.verticalText_nextEpisodePrompt(name);
+      }
+    }
+    if (_pendingPrevFilePrompt) {
+      final name = ref.read(adjacentFilesProvider).prev?.name;
+      if (name != null) {
+        return l10n.verticalText_prevEpisodePrompt(name);
+      }
+    }
+    return '$currentPage / $total';
+  }
 
   void _goToPage(int page) =>
       _changePage(page - _currentPage);

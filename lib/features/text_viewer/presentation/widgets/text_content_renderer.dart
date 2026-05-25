@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
+import 'package:novel_viewer/features/episode_navigation/domain/file_entry_start_intent.dart';
+import 'package:novel_viewer/features/episode_navigation/providers/pending_file_entry_intent_provider.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
@@ -221,6 +223,10 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   // pending flag that resets when the queued callback runs.
   bool _bookmarkScrollPending = false;
 
+  // True when a `FileEntryStartIntent.fromEnd` was consumed and we still owe
+  // a `jumpTo(maxScrollExtent)` once layout settles. Cleared after the jump.
+  bool _jumpToEndPending = false;
+
   @override
   void initState() {
     super.initState();
@@ -237,6 +243,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         });
       }
     });
+    _consumeFileEntryIntent();
   }
 
   @override
@@ -250,7 +257,26 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       _cachedBookmarkLayoutContent = null;
       _cachedBookmarkLayoutStyle = null;
       _cachedBookmarkLineYs = null;
+      _consumeFileEntryIntent();
     }
+  }
+
+  /// Reads the one-shot file-entry start intent on a content swap and queues
+  /// the appropriate initial scroll. `fromEnd` triggers a jump to the bottom
+  /// once the new content has laid out; `fromStart` (or null) leaves the
+  /// default top-of-content position.
+  void _consumeFileEntryIntent() {
+    final intent = ref.read(pendingFileEntryIntentProvider);
+    if (intent == null) return;
+    if (intent == FileEntryStartIntent.fromEnd) {
+      _jumpToEndPending = true;
+    }
+    // Riverpod 3.x forbids life-cycle mutations; defer the clear to a
+    // microtask so it runs after the build settles.
+    Future.microtask(() {
+      if (!mounted) return;
+      ref.read(pendingFileEntryIntentProvider.notifier).clear();
+    });
   }
 
   @override
@@ -634,6 +660,16 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
                 fontSize: fontSize,
               );
               ref.read(bookmarkJumpLineProvider.notifier).clear();
+            });
+          } else if (_jumpToEndPending) {
+            // Previous-episode navigation requested "start from the end".
+            // Jump after layout settles so `maxScrollExtent` is known.
+            _jumpToEndPending = false;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted || !_scrollController.hasClients) return;
+              if (!identical(widget.content, scheduledContent)) return;
+              _scrollController
+                  .jumpTo(_scrollController.position.maxScrollExtent);
             });
           }
 

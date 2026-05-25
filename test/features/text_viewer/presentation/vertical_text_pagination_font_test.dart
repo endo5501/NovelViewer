@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
@@ -10,7 +11,7 @@ Widget _buildTestWidget({
   double height = 400,
   TextStyle? baseStyle,
 }) {
-  return MaterialApp(
+  return ProviderScope(child: MaterialApp(
         locale: const Locale('ja'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -23,7 +24,7 @@ Widget _buildTestWidget({
         ),
       ),
     ),
-  );
+  ));
 }
 
 /// Extract page indicator text like "1 / 5" and return total page count.
@@ -416,7 +417,7 @@ void main() {
       final segments = [PlainTextSegment(text)];
 
       // Render targeting a line near the end (line 80 = 40th content line)
-      await tester.pumpWidget(MaterialApp(
+      await tester.pumpWidget(ProviderScope(child: MaterialApp(
             locale: const Locale('ja'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -430,7 +431,7 @@ void main() {
             ),
           ),
         ),
-      ));
+      )));
       await tester.pumpAndSettle();
 
       // Should navigate to a page beyond page 1

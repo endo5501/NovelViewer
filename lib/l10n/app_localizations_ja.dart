@@ -599,4 +599,20 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get llmHistory_untrackedBadge => '未追跡';
+
+  @override
+  String verticalText_nextEpisodePrompt(String name) {
+    return '▶ 次話「$name」へ（もう一度）';
+  }
+
+  @override
+  String verticalText_prevEpisodePrompt(String name) {
+    return '◀ 前話「$name」へ（もう一度）';
+  }
+
+  @override
+  String get textViewer_nextEpisodeButton => '次話 →';
+
+  @override
+  String get textViewer_prevEpisodeButton => '← 前話';
 }

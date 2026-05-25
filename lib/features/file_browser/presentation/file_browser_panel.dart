@@ -17,28 +17,91 @@ String? getParentDirectory(String currentDir) {
   return parent;
 }
 
-class FileBrowserPanel extends ConsumerWidget {
+class FileBrowserPanel extends ConsumerStatefulWidget {
   const FileBrowserPanel({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FileBrowserPanel> createState() => _FileBrowserPanelState();
+}
+
+/// Fixed row height used both for `ListView.itemExtent` and for the index-
+/// based scroll offset estimate. ListView's lazy materialisation means an
+/// off-screen tile has no `BuildContext`, so we cannot rely on
+/// `Scrollable.ensureVisible` against a per-tile GlobalKey for items that
+/// have never been painted. A fixed itemExtent lets us compute the target
+/// scroll offset directly from the item index.
+const double _kFileTileExtent = 56.0;
+
+class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-scroll the selected file into view whenever the selection
+    // transitions to a new file (programmatic selection or a tap). Skipping
+    // when the path is unchanged guards against unrelated rebuilds and
+    // re-selection no-ops.
+    ref.listenManual<FileEntry?>(selectedFileProvider, (prev, next) {
+      if (next == null) return;
+      if (prev?.path == next.path) return;
+      _scheduleScrollTo(next);
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scheduleScrollTo(FileEntry file) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final contents = ref.read(directoryContentsProvider).value;
+      if (contents == null) return;
+      final fileIndex =
+          contents.files.indexWhere((f) => f.path == file.path);
+      if (fileIndex < 0) return;
+      // Files render after subdirectories in the flat item list.
+      final flatIndex = contents.subdirectories.length + fileIndex;
+      final viewportHeight =
+          _scrollController.position.viewportDimension;
+      // Centre the target row in the viewport when possible.
+      final targetOffset =
+          flatIndex * _kFileTileExtent - (viewportHeight - _kFileTileExtent) / 2;
+      final clamped = targetOffset.clamp(
+        0.0,
+        _scrollController.position.maxScrollExtent,
+      );
+      _scrollController.animateTo(
+        clamped,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentDir = ref.watch(currentDirectoryProvider);
 
     return Column(
       children: [
-        _buildToolbar(context, ref, currentDir),
+        _buildToolbar(context, currentDir),
         const Divider(height: 1),
         Expanded(
           child: currentDir == null
-              ? Center(child: Text(AppLocalizations.of(context)!.fileBrowser_selectFolderPrompt))
-              : _buildFileList(context, ref),
+              ? Center(
+                  child: Text(AppLocalizations.of(context)!
+                      .fileBrowser_selectFolderPrompt))
+              : _buildFileList(context),
         ),
       ],
     );
   }
 
-  Widget _buildToolbar(
-      BuildContext context, WidgetRef ref, String? currentDir) {
+  Widget _buildToolbar(BuildContext context, String? currentDir) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
@@ -46,68 +109,109 @@ class FileBrowserPanel extends ConsumerWidget {
           if (currentDir != null)
             IconButton(
               icon: const Icon(Icons.arrow_upward),
-              onPressed: () => _navigateToParent(ref, currentDir),
-              tooltip: AppLocalizations.of(context)!.fileBrowser_goToParentFolder,
+              onPressed: () => _navigateToParent(currentDir),
+              tooltip: AppLocalizations.of(context)!
+                  .fileBrowser_goToParentFolder,
             ),
         ],
       ),
     );
   }
 
-  bool _isLibraryRoot(WidgetRef ref) {
+  bool _isLibraryRoot() {
     final currentDir = ref.read(currentDirectoryProvider);
     final libraryPath = ref.read(libraryPathProvider);
     return libraryPath != null && currentDir == libraryPath;
   }
 
-  Widget _buildFileList(BuildContext context, WidgetRef ref) {
+  Widget _buildFileList(BuildContext context) {
     final contentsAsync = ref.watch(directoryContentsProvider);
     final selectedFile = ref.watch(selectedFileProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return contentsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text(AppLocalizations.of(context)!.common_errorPrefix(error.toString()))),
+      error: (error, _) => Center(
+          child: Text(AppLocalizations.of(context)!
+              .common_errorPrefix(error.toString()))),
       data: (contents) {
         if (contents.isEmpty) {
-          return Center(child: Text(AppLocalizations.of(context)!.fileBrowser_noFilesFound));
+          return Center(
+              child: Text(AppLocalizations.of(context)!
+                  .fileBrowser_noFilesFound));
         }
 
-        final isAtLibraryRoot = _isLibraryRoot(ref);
+        final isAtLibraryRoot = _isLibraryRoot();
         final items = [
           ...contents.subdirectories.map(
-            (dir) => _buildDirectoryTile(context, ref, dir, isAtLibraryRoot),
+            (dir) => _buildDirectoryTile(context, dir, isAtLibraryRoot),
           ),
           ...contents.files.map(
-            (file) {
-              final ttsStatus = contents.ttsStatuses[file.name];
-              return ListTile(
-                leading: const Icon(Icons.description),
-                title: Text(file.name),
-                trailing: switch (ttsStatus) {
-                  TtsEpisodeStatus.completed =>
-                    const Icon(Icons.check_circle, color: Colors.green),
-                  TtsEpisodeStatus.partial ||
-                  TtsEpisodeStatus.generating =>
-                    const Icon(Icons.pie_chart, color: Colors.orange),
-                  null => null,
-                },
-                selected: selectedFile?.path == file.path,
-                onTap: () {
-                  ref.read(selectedFileProvider.notifier).selectFile(file);
-                },
-              );
-            },
+            (file) => _buildFileTile(
+              context,
+              file: file,
+              contents: contents,
+              isSelected: selectedFile?.path == file.path,
+              colorScheme: colorScheme,
+            ),
           ),
         ];
 
-        return ListView(children: items);
+        return ListView(
+          controller: _scrollController,
+          itemExtent: _kFileTileExtent,
+          children: items,
+        );
       },
+    );
+  }
+
+  Widget _buildFileTile(
+    BuildContext context, {
+    required FileEntry file,
+    required DirectoryContents contents,
+    required bool isSelected,
+    required ColorScheme colorScheme,
+  }) {
+    final ttsStatus = contents.ttsStatuses[file.name];
+
+    final tile = ListTile(
+      leading: const Icon(Icons.description),
+      title: Text(
+        file.name,
+        style: isSelected
+            ? const TextStyle(fontWeight: FontWeight.w600)
+            : null,
+      ),
+      trailing: switch (ttsStatus) {
+        TtsEpisodeStatus.completed =>
+          const Icon(Icons.check_circle, color: Colors.green),
+        TtsEpisodeStatus.partial || TtsEpisodeStatus.generating =>
+          const Icon(Icons.pie_chart, color: Colors.orange),
+        null => null,
+      },
+      selected: isSelected,
+      onTap: () {
+        ref.read(selectedFileProvider.notifier).selectFile(file);
+      },
+    );
+
+    if (!isSelected) return tile;
+
+    return Container(
+      key: const Key('selected_file_tile_decoration'),
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer,
+        border: Border(
+          left: BorderSide(color: colorScheme.primary, width: 4),
+        ),
+      ),
+      child: tile,
     );
   }
 
   Widget _buildDirectoryTile(
     BuildContext context,
-    WidgetRef ref,
     DirectoryEntry dir,
     bool isAtLibraryRoot,
   ) {
@@ -124,7 +228,7 @@ class FileBrowserPanel extends ConsumerWidget {
 
     return GestureDetector(
       onSecondaryTapUp: (details) {
-        _showContextMenu(context, ref, details.globalPosition, dir);
+        _showContextMenu(context, details.globalPosition, dir);
       },
       child: tile,
     );
@@ -132,7 +236,6 @@ class FileBrowserPanel extends ConsumerWidget {
 
   void _showContextMenu(
     BuildContext context,
-    WidgetRef ref,
     Offset position,
     DirectoryEntry dir,
   ) {
@@ -147,38 +250,40 @@ class FileBrowserPanel extends ConsumerWidget {
       items: [
         PopupMenuItem<String>(
           value: 'refresh',
-          child: Text(AppLocalizations.of(context)!.fileBrowser_refreshMenuItem),
+          child: Text(
+              AppLocalizations.of(context)!.fileBrowser_refreshMenuItem),
         ),
         PopupMenuItem<String>(
           value: 'rename',
-          child: Text(AppLocalizations.of(context)!.fileBrowser_renameMenuItem),
+          child:
+              Text(AppLocalizations.of(context)!.fileBrowser_renameMenuItem),
         ),
         PopupMenuItem<String>(
           value: 'delete',
-          child: Text(AppLocalizations.of(context)!.fileBrowser_deleteMenuItem, style: const TextStyle(color: Colors.red)),
+          child: Text(
+              AppLocalizations.of(context)!.fileBrowser_deleteMenuItem,
+              style: const TextStyle(color: Colors.red)),
         ),
       ],
     ).then((value) {
       if (!context.mounted) return;
       if (value == 'refresh') {
-        _startRefresh(context, ref, dir);
+        _startRefresh(context, dir);
       } else if (value == 'rename') {
-        _showRenameTitleDialog(context, ref, dir);
+        _showRenameTitleDialog(context, dir);
       } else if (value == 'delete') {
-        _showDeleteConfirmation(context, ref, dir);
+        _showDeleteConfirmation(context, dir);
       }
     });
   }
 
-  void _startRefresh(
-    BuildContext context,
-    WidgetRef ref,
-    DirectoryEntry dir,
-  ) {
+  void _startRefresh(BuildContext context, DirectoryEntry dir) {
     final downloadState = ref.read(downloadProvider);
     if (downloadState.status == DownloadStatus.downloading) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.fileBrowser_downloadInProgressWarning)),
+        SnackBar(
+            content: Text(AppLocalizations.of(context)!
+                .fileBrowser_downloadInProgressWarning)),
       );
       return;
     }
@@ -188,15 +293,12 @@ class FileBrowserPanel extends ConsumerWidget {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => _RefreshProgressDialog(novelTitle: dir.displayName),
+      builder: (context) =>
+          _RefreshProgressDialog(novelTitle: dir.displayName),
     );
   }
 
-  void _showRenameTitleDialog(
-    BuildContext context,
-    WidgetRef ref,
-    DirectoryEntry dir,
-  ) {
+  void _showRenameTitleDialog(BuildContext context, DirectoryEntry dir) {
     showDialog<String>(
       context: context,
       builder: (_) => RenameTitleDialog(currentTitle: dir.displayName),
@@ -211,31 +313,33 @@ class FileBrowserPanel extends ConsumerWidget {
       } catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.fileBrowser_renameFailed(e.toString()))),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!
+                  .fileBrowser_renameFailed(e.toString()))),
         );
       }
     });
   }
 
-  void _showDeleteConfirmation(
-    BuildContext context,
-    WidgetRef ref,
-    DirectoryEntry dir,
-  ) {
+  void _showDeleteConfirmation(BuildContext context, DirectoryEntry dir) {
     showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.fileBrowser_deleteNovelTitle),
-        content: Text(AppLocalizations.of(context)!.fileBrowser_deleteNovelConfirmation(dir.displayName)),
+        title: Text(
+            AppLocalizations.of(context)!.fileBrowser_deleteNovelTitle),
+        content: Text(AppLocalizations.of(context)!
+            .fileBrowser_deleteNovelConfirmation(dir.displayName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(AppLocalizations.of(context)!.common_cancelButton),
+            child:
+                Text(AppLocalizations.of(context)!.common_cancelButton),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text(AppLocalizations.of(context)!.common_deleteButton),
+            child:
+                Text(AppLocalizations.of(context)!.common_deleteButton),
           ),
         ],
       ),
@@ -250,13 +354,15 @@ class FileBrowserPanel extends ConsumerWidget {
       } catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.fileBrowser_deleteFailed(e.toString()))),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!
+                  .fileBrowser_deleteFailed(e.toString()))),
         );
       }
     });
   }
 
-  void _navigateToParent(WidgetRef ref, String currentDir) {
+  void _navigateToParent(String currentDir) {
     final parent = getParentDirectory(currentDir);
     if (parent != null) {
       ref.read(currentDirectoryProvider.notifier).setDirectory(parent);
@@ -275,7 +381,8 @@ class _RefreshProgressDialog extends ConsumerWidget {
     final downloadState = ref.watch(downloadProvider);
 
     return AlertDialog(
-      title: Text(AppLocalizations.of(context)!.fileBrowser_refreshProgressTitle(novelTitle)),
+      title: Text(AppLocalizations.of(context)!
+          .fileBrowser_refreshProgressTitle(novelTitle)),
       content: _buildContent(context, downloadState),
       actions: [
         if (downloadState.status == DownloadStatus.completed ||
@@ -289,7 +396,8 @@ class _RefreshProgressDialog extends ConsumerWidget {
               ref.read(downloadProvider.notifier).reset();
               Navigator.of(context).pop();
             },
-            child: Text(AppLocalizations.of(context)!.common_closeButton),
+            child:
+                Text(AppLocalizations.of(context)!.common_closeButton),
           ),
       ],
     );
@@ -310,8 +418,9 @@ class _RefreshProgressDialog extends ConsumerWidget {
 
     String episodeSummary(DownloadState s) {
       if (s.totalEpisodes <= 0) return '';
-      final skipped =
-          s.skippedEpisodes > 0 ? l10n.fileBrowser_skippedEpisodesSuffix(s.skippedEpisodes) : '';
+      final skipped = s.skippedEpisodes > 0
+          ? l10n.fileBrowser_skippedEpisodesSuffix(s.skippedEpisodes)
+          : '';
       final tail = skipped + failedSuffix(s.failedEpisodes);
       return l10n.fileBrowser_episodeCountFormat(s.totalEpisodes, tail);
     }
@@ -333,11 +442,13 @@ class _RefreshProgressDialog extends ConsumerWidget {
       case DownloadStatus.completed:
         final summary = episodeSummary(state);
         return Text(
-          l10n.fileBrowser_refreshCompleted(summary.isNotEmpty ? '\n$summary' : ''),
+          l10n.fileBrowser_refreshCompleted(
+              summary.isNotEmpty ? '\n$summary' : ''),
         );
       case DownloadStatus.error:
         return Text(
-          l10n.common_errorPrefix(state.errorMessage ?? l10n.common_unknownError),
+          l10n.common_errorPrefix(
+              state.errorMessage ?? l10n.common_unknownError),
           style: const TextStyle(color: Colors.red),
         );
     }

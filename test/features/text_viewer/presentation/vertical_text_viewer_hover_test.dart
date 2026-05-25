@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
@@ -17,7 +18,7 @@ Widget _build({
   double width = 200,
   double height = 400,
 }) {
-  return MaterialApp(
+  return ProviderScope(child: MaterialApp(
     locale: const Locale('ja'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
@@ -35,7 +36,7 @@ Widget _build({
         ),
       ),
     ),
-  );
+  ));
 }
 
 void main() {
@@ -144,7 +145,7 @@ void main() {
       (tester) async {
         var hideCount = 0;
         void Function()? onHide() => () => hideCount++;
-        Widget buildWith({int? target}) => MaterialApp(
+        Widget buildWith({int? target}) => ProviderScope(child: MaterialApp(
               locale: const Locale('ja'),
               localizationsDelegates:
                   AppLocalizations.localizationsDelegates,
@@ -165,7 +166,7 @@ void main() {
                   ),
                 ),
               ),
-            );
+            ));
 
         await tester.pumpWidget(buildWith());
         await tester.pumpAndSettle();

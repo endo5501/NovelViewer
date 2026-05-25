@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
+import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/text_viewer/presentation/widgets/episode_navigation_buttons.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/text_content_renderer.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/tts_controls_bar.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
@@ -31,9 +34,16 @@ class TextViewerPanel extends ConsumerWidget {
             ),
           );
         }
+        final displayMode = ref.watch(displayModeProvider);
         return Stack(
           children: [
             TextContentRenderer(content: content),
+            if (displayMode == TextDisplayMode.horizontal)
+              const Positioned(
+                left: 8,
+                bottom: 8,
+                child: EpisodeNavigationButtons(),
+              ),
             Positioned(
               right: 8,
               bottom: 8,
