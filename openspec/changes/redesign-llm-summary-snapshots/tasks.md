@@ -95,6 +95,6 @@
 ## 11. 最終確認
 
 - [x] 11.1 code-reviewスキルを使用してコードレビューを実施(15件指摘 → MUST/SHOULD/CHEAP 計8件適用、F10は MenuController に dispose API無のため取り下げ、残り6件は別proposal/docs先送り)
-- [ ] 11.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 11.2 codexスキルを使用して現在開発中のコードレビューを実施(9件指摘 → HIGH-2(dedup key)はバイト確認で誤検出、HIGH-1/HIGH-3+MED-1/MED-2/LOW-1 の4件を適用、MED-3/MED-4は前回deferred踏襲、LOW-2は情報提供のみ)
 - [x] 11.3 `fvm flutter analyze`でリントを実行(エラーなし、関係ないwarning 1件のみ: voice_recording_service_test.dart)
 - [x] 11.4 `fvm flutter test`でテストを実行(全1672テスト通過)

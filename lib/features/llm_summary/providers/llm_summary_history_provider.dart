@@ -44,11 +44,15 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
     // — without this loop, a stale source_file on the largest-episode
     // snapshot would cause the click to silently no-op even though other
     // snapshots for the same word still point at existing files.
-    final candidates = <String>[
+    //
+    // `LinkedHashSet` deduplicates while preserving largest-first order:
+    // when multiple snapshots share the same source_file (e.g., the user
+    // re-analyzed at the same upper bound), avoid retrying the same I/O.
+    final candidates = <String>{
       for (var i = entry.snapshots.length - 1; i >= 0; i--)
         if (entry.snapshots[i].sourceFile != null)
           entry.snapshots[i].sourceFile!,
-    ];
+    };
     if (candidates.isEmpty) return;
 
     for (final sourceFile in candidates) {

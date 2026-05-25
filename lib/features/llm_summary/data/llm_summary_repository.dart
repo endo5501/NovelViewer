@@ -31,11 +31,13 @@ class LlmSummaryRepository {
   /// mark rendering and the history panel never have to filter them at the
   /// presentation layer.
   ///
-  /// `created_at` is **preserved** across re-analyses: when an existing row
-  /// matches the `(folder_name, word, coveredUpToEpisode)` triplet, its
-  /// original `created_at` is reused. This keeps "when did the user first
-  /// cache this snapshot" stable even though `ConflictAlgorithm.replace`
-  /// physically DELETEs+INSERTs the row.
+  /// `created_at` is **preserved** across re-analyses: this is implemented as
+  /// a single SQLite native upsert (`INSERT ... ON CONFLICT(...) DO UPDATE`)
+  /// rather than a read-then-write pair, so a re-analysis double-tap cannot
+  /// race between the read and the write and overwrite the original
+  /// `created_at` with `now`. The unique index
+  /// `idx_word_summaries_unique(folder_name, word, covered_up_to_episode)`
+  /// is the conflict target.
   Future<void> saveSnapshot({
     required String folderName,
     required String word,
@@ -51,28 +53,26 @@ class LlmSummaryRepository {
       );
     }
     final now = DateTime.now().toIso8601String();
-    final existing = await _db.query(
-      'word_summaries',
-      columns: ['created_at'],
-      where: 'folder_name = ? AND word = ? AND covered_up_to_episode = ?',
-      whereArgs: [folderName, word, coveredUpToEpisode],
-      limit: 1,
-    );
-    final createdAt = existing.isNotEmpty
-        ? existing.first['created_at'] as String
-        : now;
-    await _db.insert(
-      'word_summaries',
-      {
-        'folder_name': folderName,
-        'word': word,
-        'covered_up_to_episode': coveredUpToEpisode,
-        'summary': summary,
-        'source_file': sourceFile,
-        'created_at': createdAt,
-        'updated_at': now,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
+    await _db.rawInsert(
+      '''
+      INSERT INTO word_summaries
+        (folder_name, word, covered_up_to_episode, summary, source_file,
+         created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(folder_name, word, covered_up_to_episode) DO UPDATE SET
+        summary = excluded.summary,
+        source_file = excluded.source_file,
+        updated_at = excluded.updated_at
+      ''',
+      [
+        folderName,
+        word,
+        coveredUpToEpisode,
+        summary,
+        sourceFile,
+        now,
+        now,
+      ],
     );
   }
 

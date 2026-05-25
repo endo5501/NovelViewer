@@ -228,8 +228,15 @@ class NovelDatabase {
     //    episode) collision in step 4's bulk INSERT will then surface at the
     //    offending row instead of at a deferred CREATE INDEX at the end —
     //    making the offending data much easier to identify.
+    //
+    //    `IF NOT EXISTS` makes this step idempotent against a previous
+    //    interrupted migration that already created `word_summaries_v5` but
+    //    didn't reach the swap (step 5). Since `user_version` is only bumped
+    //    after `_onUpgrade` returns successfully, sqflite re-runs the upgrade
+    //    on the next launch — and without the IF-NOT-EXISTS guard we would
+    //    crash on the re-attempt with "table already exists".
     await db.execute('''
-      CREATE TABLE word_summaries_v5 (
+      CREATE TABLE IF NOT EXISTS word_summaries_v5 (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         folder_name TEXT NOT NULL,
         word TEXT NOT NULL,
@@ -240,10 +247,15 @@ class NovelDatabase {
         updated_at TEXT NOT NULL
       )
     ''');
+    // A retry might also have left the index from a prior attempt.
+    await db.execute('DROP INDEX IF EXISTS idx_word_summaries_unique');
     await db.execute('''
       CREATE UNIQUE INDEX idx_word_summaries_unique
       ON word_summaries_v5(folder_name, word, covered_up_to_episode)
     ''');
+    // Same defense for the data rows: if a prior attempt half-inserted,
+    // clear it so the dedup map is the sole source of truth.
+    await db.delete('word_summaries_v5');
 
     // 2. Read every v4 row. Sort by updated_at ascending so the "keep latest
     //    on collision" rule is naturally satisfied by overwriting earlier
@@ -308,7 +320,9 @@ class NovelDatabase {
     // 5. Swap: drop the v4 table (its unique index is already gone from
     //    step 0), then rename — the canonical unique index follows the
     //    table across ALTER TABLE RENAME without needing to be recreated.
-    await db.execute('DROP TABLE word_summaries');
+    //    `IF EXISTS` covers the rare retry scenario where the old table
+    //    was already dropped in a prior partial attempt.
+    await db.execute('DROP TABLE IF EXISTS word_summaries');
     await db.execute('ALTER TABLE word_summaries_v5 RENAME TO word_summaries');
   }
 

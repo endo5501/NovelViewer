@@ -304,10 +304,14 @@ class _ReanalyzeMenuButtonState extends ConsumerState<_ReanalyzeMenuButton> {
       // from the popup body onto a menu item. Without this, leaving the
       // popup's MouseRegion to reach the dropdown would dismiss the popup
       // mid-travel and the menu items become unreachable.
-      onOpen: () =>
-          ref.read(hoverPopupProvider.notifier).onChildMenuOpen(),
-      onClose: () =>
-          ref.read(hoverPopupProvider.notifier).onChildMenuClose(),
+      onOpen: () {
+        if (!mounted) return;
+        ref.read(hoverPopupProvider.notifier).onChildMenuOpen();
+      },
+      onClose: () {
+        if (!mounted) return;
+        ref.read(hoverPopupProvider.notifier).onChildMenuClose();
+      },
       menuChildren: [
         MenuItemButton(
           key: const Key('hover_popup_reanalyze_up_to_current'),
@@ -351,15 +355,22 @@ class _ReanalyzeMenuButtonState extends ConsumerState<_ReanalyzeMenuButton> {
 
   void _runAnalysis({required int episode, required String? sourceFile}) {
     // The popup (and this menu button) lives inside an Overlay entry that
-    // hides aggressively on pointer-exit. By the time the runner's first
-    // synchronous read of AppLocalizations.of(context) executes, the menu's
-    // BuildContext may already be unmounted — the Localizations ancestor is
-    // then gone and the `!` bang throws in the orphaned future, swallowing
-    // the analysis silently. Capture a stable root-navigator context BEFORE
-    // close() so the runner's localizations/navigator/messenger lookups
-    // resolve against an ancestor that survives the popup's teardown.
+    // hides aggressively on pointer-exit. Two correctness concerns:
+    //   1. By the time the runner's first synchronous read of
+    //      AppLocalizations.of(context) executes, the menu's BuildContext
+    //      may already be unmounted — the Localizations ancestor is then
+    //      gone and the `!` bang throws in the orphaned future, swallowing
+    //      the analysis silently. Capture a root-navigator context BEFORE
+    //      close() so localizations/navigator/messenger lookups resolve
+    //      against an ancestor that survives the popup's teardown.
+    //   2. `_menuController.close()` synchronously fires `onClose` →
+    //      `onChildMenuClose` on the popup notifier, which may hide the
+    //      popup and start tearing down this State. Guard the post-close
+    //      `ref.read(analysisRunnerProvider)` with `mounted` so a disposed
+    //      Notifier lookup does not throw.
     final rootContext = Navigator.of(context, rootNavigator: true).context;
     _menuController.close();
+    if (!mounted) return;
     ref.read(analysisRunnerProvider).run(
           context: rootContext,
           word: widget.word,
