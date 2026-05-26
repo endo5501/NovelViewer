@@ -54,7 +54,7 @@ class NovelDatabaseSnapshotResolver {
 
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
-  static const _databaseVersion = 5;
+  static const _databaseVersion = 6;
   static final _log = Logger('novel_metadata_db');
 
   final String? _dbDirPath;
@@ -115,6 +115,7 @@ class NovelDatabase {
     ''');
     await _createV5WordSummariesTable(db);
     await _createBookmarksTable(db);
+    await _createReadingProgressTable(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -133,6 +134,9 @@ class NovelDatabase {
         resolver: _snapshotResolver,
         logger: _log,
       );
+    }
+    if (oldVersion < 6) {
+      await _createReadingProgressTable(db);
     }
   }
 
@@ -187,6 +191,19 @@ class NovelDatabase {
         line_number INTEGER,
         created_at TEXT NOT NULL,
         UNIQUE(novel_id, file_path, line_number)
+      )
+    ''');
+  }
+
+  static Future<void> _createReadingProgressTable(Database db) async {
+    // IF NOT EXISTS so a v5 -> v6 upgrade that was interrupted between the
+    // CREATE TABLE and user_version bump can be safely retried on next launch.
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS reading_progress (
+        novel_id TEXT NOT NULL PRIMARY KEY,
+        file_path TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        updated_at TEXT NOT NULL
       )
     ''');
   }

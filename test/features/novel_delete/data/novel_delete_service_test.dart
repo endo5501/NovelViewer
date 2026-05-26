@@ -8,12 +8,14 @@ import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.da
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/novel_delete/data/novel_delete_service.dart';
+import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
 
 void main() {
   late NovelDatabase novelDatabase;
   late Database db;
   late NovelRepository novelRepository;
   late LlmSummaryRepository summaryRepository;
+  late ReadingProgressRepository readingProgressRepository;
   late FileSystemService fileSystemService;
   late NovelDeleteService deleteService;
   late Directory tempDir;
@@ -63,16 +65,26 @@ void main() {
             CREATE UNIQUE INDEX idx_word_summaries_unique
             ON word_summaries(folder_name, word, covered_up_to_episode)
           ''');
+          await db.execute('''
+            CREATE TABLE reading_progress (
+              novel_id TEXT NOT NULL PRIMARY KEY,
+              file_path TEXT NOT NULL,
+              file_name TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+          ''');
         },
       ),
     );
     novelDatabase.setDatabase(db);
     novelRepository = NovelRepository(novelDatabase);
     summaryRepository = LlmSummaryRepository(db);
+    readingProgressRepository = ReadingProgressRepository(novelDatabase);
     fileSystemService = FileSystemService();
     deleteService = NovelDeleteService(
       novelRepository: novelRepository,
       summaryRepository: summaryRepository,
+      readingProgressRepository: readingProgressRepository,
       fileSystemService: fileSystemService,
     );
     tempDir = Directory.systemTemp.createTempSync('novel_delete_test_');
@@ -144,6 +156,23 @@ void main() {
       expect(novelDir.existsSync(), false);
     });
 
+    test('deletes reading_progress row for the folder', () async {
+      await novelRepository.upsert(createMetadata());
+      await readingProgressRepository.upsert(
+        novelId: 'narou_n1234ab',
+        filePath: '/library/narou_n1234ab/003_chapter3.txt',
+        fileName: '003_chapter3.txt',
+      );
+      final novelDir = Directory('${tempDir.path}/narou_n1234ab');
+      novelDir.createSync();
+
+      await deleteService.delete('narou_n1234ab', novelDir.path);
+
+      final progress =
+          await readingProgressRepository.findByNovelId('narou_n1234ab');
+      expect(progress, isNull);
+    });
+
     test('does not affect other novels', () async {
       await novelRepository.upsert(createMetadata());
       await novelRepository.upsert(createMetadata(
@@ -156,6 +185,11 @@ void main() {
         word: 'ボブ',
         coveredUpToEpisode: 10,
         summary: '別の要約',
+      );
+      await readingProgressRepository.upsert(
+        novelId: 'narou_n5678cd',
+        filePath: '/library/narou_n5678cd/002_chapter2.txt',
+        fileName: '002_chapter2.txt',
       );
       final novelDir = Directory('${tempDir.path}/narou_n1234ab');
       novelDir.createSync();
@@ -170,6 +204,10 @@ void main() {
         word: 'ボブ',
       );
       expect(otherSnapshots, isNotEmpty);
+      final otherProgress =
+          await readingProgressRepository.findByNovelId('narou_n5678cd');
+      expect(otherProgress, isNotNull,
+          reason: 'other novel\'s reading_progress SHALL be preserved');
     });
   });
 }
