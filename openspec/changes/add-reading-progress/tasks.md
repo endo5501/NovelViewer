@@ -11,11 +11,11 @@
 - [x] 2.3 `lib/features/reading_progress/data/reading_progress_repository.dart` を実装してテストをパスさせる
 - [x] 2.4 Repository のエラーパス: DB 操作が例外を投げた場合に WARNING ログ (`Logger('reading_progress')`) を残しつつ、save は失敗を握りつぶし、read は null を返すラッパー or 呼び出し側の責務分担を決め、それを反映するテストを追加してパスさせる (Decision 5)
 
-## 3. DB マイグレーション v4 → v5
+## 3. DB マイグレーション v5 → v6
 
-- [ ] 3.1 `test/features/novel_metadata_db/data/novel_database_migration_v5_test.dart` を作成: (a) fresh install で v5 として開き `reading_progress` テーブルが存在する, (b) v4 でデータ(novels/bookmarks 行)を作った DB を v5 で開き直して既存データが残り `reading_progress` が空テーブルとして追加されている
-- [ ] 3.2 3.1 のテストが失敗することを確認してコミット
-- [ ] 3.3 `lib/features/novel_metadata_db/data/novel_database.dart` でスキーマバージョンを 5 に上げ、`onCreate` と `onUpgrade` (oldVersion < 5 ブランチ) で `reading_progress` テーブルを作る SQL を追加してテストをパスさせる
+- [x] 3.1 `test/features/novel_metadata_db/data/novel_database_migration_v6_test.dart` を作成: (a) fresh install で v6 として開き `reading_progress` テーブルが存在する, (b) v5 でデータ(novels/bookmarks/word_summaries 行)を作った DB を v6 で開き直して既存データが残り `reading_progress` が空テーブルとして追加されている (現行 schema は既に v5 のため v5→v6 として再ベース)
+- [x] 3.2 3.1 のテストが失敗することを確認してコミット
+- [ ] 3.3 `lib/features/novel_metadata_db/data/novel_database.dart` でスキーマバージョンを 6 に上げ、`onCreate` と `onUpgrade` (oldVersion < 6 ブランチ) で `reading_progress` テーブルを作る SQL を追加してテストをパスさせる
 
 ## 4. Riverpod Provider (Repository / 自動保存 / 自動オープン)
 

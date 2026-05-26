@@ -1,16 +1,16 @@
 ## ADDED Requirements
 
 ### Requirement: Reading progress data persistence
-The system SHALL persist reading progress (last opened file per novel) in the existing SQLite database (`novel_metadata.db`) using a new `reading_progress` table. The database version SHALL be upgraded from 4 to 5 to add the `reading_progress` table.
+The system SHALL persist reading progress (last opened file per novel) in the existing SQLite database (`novel_metadata.db`) using a new `reading_progress` table. The database version SHALL be upgraded from 5 to 6 to add the `reading_progress` table.
 
 #### Scenario: Database migration creates reading_progress table
-- **WHEN** the application starts with database version 4
-- **THEN** the database SHALL be upgraded to version 5 by creating a new `reading_progress` table with columns: `novel_id` (TEXT NOT NULL PRIMARY KEY), `file_path` (TEXT NOT NULL), `file_name` (TEXT NOT NULL), `updated_at` (TEXT NOT NULL)
+- **WHEN** the application starts with database version 5
+- **THEN** the database SHALL be upgraded to version 6 by creating a new `reading_progress` table with columns: `novel_id` (TEXT NOT NULL PRIMARY KEY), `file_path` (TEXT NOT NULL), `file_name` (TEXT NOT NULL), `updated_at` (TEXT NOT NULL)
 - **AND** existing data in other tables (novels, bookmarks, word_summaries) SHALL be preserved
 
 #### Scenario: Fresh install creates reading_progress table
 - **WHEN** the application is installed for the first time
-- **THEN** the database SHALL be created at version 5 with the `reading_progress` table already present
+- **THEN** the database SHALL be created at version 6 with the `reading_progress` table already present
 
 ### Requirement: Upsert reading progress
 The system SHALL provide an upsert operation that records or replaces the single reading progress record for a given novel. Because `novel_id` is the PRIMARY KEY, each novel SHALL have at most one row.

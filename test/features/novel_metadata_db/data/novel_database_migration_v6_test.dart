@@ -11,10 +11,10 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  group('reading_progress migration v4 → v5', () {
-    test('fresh install at v5 has the reading_progress table', () async {
+  group('reading_progress migration v5 → v6', () {
+    test('fresh install at v6 has the reading_progress table', () async {
       final tempDir =
-          Directory.systemTemp.createTempSync('reading_progress_v5_fresh_');
+          Directory.systemTemp.createTempSync('reading_progress_v6_fresh_');
       try {
         final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
         try {
@@ -24,7 +24,7 @@ void main() {
             "SELECT name FROM sqlite_master WHERE type='table' AND name='reading_progress'",
           );
           expect(tables, isNotEmpty,
-              reason: 'reading_progress table SHALL exist on fresh v5 install');
+              reason: 'reading_progress table SHALL exist on fresh v6 install');
 
           final columns =
               await db.rawQuery('PRAGMA table_info(reading_progress)');
@@ -46,20 +46,20 @@ void main() {
       }
     });
 
-    test('upgrade from v4 to v5 preserves existing data and adds the table',
+    test('upgrade from v5 to v6 preserves existing data and adds the table',
         () async {
       final tempDir =
-          Directory.systemTemp.createTempSync('reading_progress_v5_upgrade_');
+          Directory.systemTemp.createTempSync('reading_progress_v6_upgrade_');
       try {
         final dbPath = p.join(tempDir.path, 'novel_metadata.db');
 
-        // Seed a v4-shaped database with novels, bookmarks, and v4
-        // word_summaries (summary_type column) so the existing v4 → v5
-        // word_summaries reshape still has the data shape it expects.
+        // Seed a v5-shaped database (post llm-summary-snapshots reshape:
+        // word_summaries has covered_up_to_episode, bookmarks already has
+        // line_number) so the v5 → v6 upgrade is exercised in isolation.
         final seeded = await databaseFactoryFfi.openDatabase(
           dbPath,
           options: OpenDatabaseOptions(
-            version: 4,
+            version: 5,
             onCreate: (db, _) async {
               await db.execute('''
                 CREATE TABLE novels (
@@ -83,12 +83,16 @@ void main() {
                   id INTEGER PRIMARY KEY AUTOINCREMENT,
                   folder_name TEXT NOT NULL,
                   word TEXT NOT NULL,
-                  summary_type TEXT NOT NULL,
+                  covered_up_to_episode INTEGER NOT NULL,
                   summary TEXT NOT NULL,
                   source_file TEXT,
                   created_at TEXT NOT NULL,
                   updated_at TEXT NOT NULL
                 )
+              ''');
+              await db.execute('''
+                CREATE UNIQUE INDEX idx_word_summaries_unique
+                ON word_summaries(folder_name, word, covered_up_to_episode)
               ''');
               await db.execute('''
                 CREATE TABLE bookmarks (
@@ -118,13 +122,22 @@ void main() {
                 'line_number': 42,
                 'created_at': '2026-05-01T01:00:00.000Z',
               });
+              await db.insert('word_summaries', {
+                'folder_name': 'narou_n1234ab',
+                'word': 'アリス',
+                'covered_up_to_episode': 5,
+                'summary': '要約テキスト',
+                'source_file': '005_chapter5.txt',
+                'created_at': '2026-05-01T02:00:00.000Z',
+                'updated_at': '2026-05-01T02:00:00.000Z',
+              });
             },
           ),
         );
         await seeded.close();
 
-        // Re-open through NovelDatabase, which runs the v4 → v5 upgrade
-        // including the new reading_progress CREATE TABLE.
+        // Re-open through NovelDatabase, which runs the v5 → v6 upgrade
+        // and creates the reading_progress table.
         final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
         try {
           final db = await novelDatabase.database;
@@ -133,7 +146,7 @@ void main() {
             "SELECT name FROM sqlite_master WHERE type='table' AND name='reading_progress'",
           );
           expect(tables, isNotEmpty,
-              reason: 'v4 → v5 upgrade SHALL add the reading_progress table');
+              reason: 'v5 → v6 upgrade SHALL add the reading_progress table');
 
           final rpRows = await db.query('reading_progress');
           expect(rpRows, isEmpty,
@@ -148,6 +161,11 @@ void main() {
           expect(bookmarkRows.length, 1,
               reason: 'pre-existing bookmarks SHALL be preserved');
           expect(bookmarkRows.first['line_number'], 42);
+
+          final summaryRows = await db.query('word_summaries');
+          expect(summaryRows.length, 1,
+              reason: 'pre-existing word_summaries SHALL be preserved');
+          expect(summaryRows.first['word'], 'アリス');
         } finally {
           await novelDatabase.close();
         }
