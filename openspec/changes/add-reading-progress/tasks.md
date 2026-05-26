@@ -19,13 +19,13 @@
 
 ## 4. Riverpod Provider (Repository / 自動保存 / 自動オープン)
 
-- [ ] 4.1 `test/features/reading_progress/providers/reading_progress_providers_test.dart` を作成し、`readingProgressRepositoryProvider` が `novelDatabaseProvider` を依存として正しく解決することを確認するテストを書く
-- [ ] 4.2 4.1 のテストが失敗することを確認してコミット
-- [ ] 4.3 `lib/features/reading_progress/providers/reading_progress_providers.dart` を実装してテストをパスさせる
-- [ ] 4.4 自動保存 listener のテストを追加: ProviderContainer で (a) `selectedFileProvider` が non-null に変化したとき `repository.upsert` が呼ばれる, (b) ライブラリルートでは novel_id が解決できないため upsert が呼ばれない, (c) `selectedFileProvider` が null へ変化したときは upsert が呼ばれない (Requirement: Auto-save on file selection)
-- [ ] 4.5 自動保存 listener Provider (例: `readingProgressAutoSaveListenerProvider`) を実装してテストをパスさせる
-- [ ] 4.6 自動オープン listener のテストを追加: (a) `currentDirectoryProvider` が library root → novel folder に遷移し、stored progress と一致する FileEntry が directory contents に存在するとき `selectedFileProvider` がそのファイルにセットされる, (b) stored progress が存在しない novel folder に進入したときは selectedFileProvider が変化しない, (c) stored file が directory contents に存在しないときは selectedFileProvider が変化しない, (d) library root への遷移では何もしない, (e) 既に novel に属する FileEntry が selectedFileProvider に入っている場合は上書きしない (Requirement: One-shot auto-open on novel folder entry)
-- [ ] 4.7 自動オープン listener Provider (例: `readingProgressAutoOpenListenerProvider`) を実装してテストをパスさせる。`directoryContentsProvider` を `.future` で待ち、`currentNovelIdProvider` を利用すること
+- [x] 4.1 `test/features/reading_progress/providers/reading_progress_providers_test.dart` を作成し、`readingProgressRepositoryProvider` が `novelDatabaseProvider` を依存として正しく解決することを確認するテストを書く
+- [x] 4.2 4.1 のテストが失敗することを確認してコミット
+- [x] 4.3 `lib/features/reading_progress/providers/reading_progress_providers.dart` を実装してテストをパスさせる
+- [x] 4.4 自動保存 listener のテストを追加: ProviderContainer で (a) `selectedFileProvider` が non-null に変化したとき `repository.upsert` が呼ばれる, (b) ライブラリルートでは novel_id が解決できないため upsert が呼ばれない, (c) `selectedFileProvider` が null へ変化したときは upsert が呼ばれない (Requirement: Auto-save on file selection)
+- [x] 4.5 自動保存 listener Provider (例: `readingProgressAutoSaveListenerProvider`) を実装してテストをパスさせる
+- [x] 4.6 自動オープン listener のテストを追加: (a) `currentDirectoryProvider` が library root → novel folder に遷移し、stored progress と一致する FileEntry が directory contents に存在するとき `selectedFileProvider` がそのファイルにセットされる, (b) stored progress が存在しない novel folder に進入したときは selectedFileProvider が変化しない, (c) stored file が directory contents に存在しないときは selectedFileProvider が変化しない, (d) library root への遷移では何もしない, (e) 既に novel に属する FileEntry が selectedFileProvider に入っている場合は上書きしない (Requirement: One-shot auto-open on novel folder entry)
+- [x] 4.7 自動オープン listener Provider (例: `readingProgressAutoOpenListenerProvider`) を実装してテストをパスさせる。`directoryContentsProvider` を `.future` で待ち、`currentNovelIdProvider` を利用すること
 
 ## 5. 起動配線
 
