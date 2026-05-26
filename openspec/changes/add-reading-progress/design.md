@@ -65,14 +65,18 @@ CREATE TABLE reading_progress (
 
 - `currentDirectoryProvider` を `ref.listen` する起動時 listener を作る。
 - 旧値→新値の遷移を検知し、新しいパスが library root と等しい場合は何もしない。
-- 新しいパスがライブラリ配下のサブディレクトリで、`currentNovelIdProvider` が新パスで non-null に解決される場合のみ:
+- 新しいパスがライブラリ配下のサブディレクトリで novel_id (= `{site_type}_{novel_id}` のフォルダ名) が解決される場合のみ:
   1. `directoryContentsProvider` の値を await (まだなら完了を待つ)。
-  2. `reading_progress` を読み出し、ヒットしたら file_path に一致する `FileEntry` を `DirectoryContents.files` の中から探す。
+  2. `reading_progress` を読み出し、ヒットしたら file_path に一致する `FileEntry` を `DirectoryContents.files` の中から `p.equals` (path-aware, Windows では case-insensitive) で探す。
   3. 見つかれば `selectedFileProvider.notifier.selectFile(entry)` を呼ぶ。見つからなければ何もしない。
 - 「ワンショット」性は「currentDirectoryProvider の遷移(=新しい novel_id へ入った瞬間)1 回につき 1 回しか発火しない」というロジック自体で担保される。同じフォルダ内でユーザーが選択を変えても auto-open は再発火しない。一旦 library root に戻り再び同じフォルダに入った場合は、新しい遷移なので再発火する (これは仕様としても直感的)。
+- 既存選択ガードは「現在の novel フォルダに属する `FileEntry`」のみ尊重する (`p.isWithin(targetDir, existing.path)`)。別 novel から残った stale 選択 (UI 経路がクリアし忘れた場合の防御) は上書きする。
+
+**novel_id 算出について:** spec 本文 (`reading-progress/spec.md`) と既存の `currentNovelIdProvider` (bookmark capability 内) は同じ「library root からの相対パス先頭」アルゴリズムを定義している。当初は `ref.read(currentNovelIdProvider)` でその値を借りる方針だったが、`ref.listen<String?>(currentDirectoryProvider, ...)` の callback 内では Riverpod の derived provider が pre-transition 値を返す挙動を実測で確認したため、algorithm を inline に展開する形に切り替えた。spec レベルでは同じ意味論なので spec 本体は変更不要。
 
 **Alternatives considered:**
 - A) `pendingFileEntryIntentProvider` と同じ "次の build で消費する intent" パターン。便利だが、本変更の発火点は「ディレクトリ遷移」という 1 個の自然なイベントしかないので、intent を保持する余分な state を持たずに listener の中で完結させる方がシンプル → そちらを採用。
+- B) `ref.read(currentNovelIdProvider)` で再利用。listener callback で pre-transition の値を返すリスクがあり実装中に発覚したため不採用。
 
 ### Decision 5: 障害時の挙動 — WARNING ログ + 機能無効化
 

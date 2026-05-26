@@ -187,9 +187,9 @@ void main() {
       name: '005_chapter5.txt',
       path: '/library/narou_n1234ab/005_chapter5.txt',
     );
-    final folderContentsWith3and5 = DirectoryContents(
-      files: const [chapter3, chapter5],
-      subdirectories: const [],
+    const folderContentsWith3and5 = DirectoryContents(
+      files: [chapter3, chapter5],
+      subdirectories: [],
     );
 
     test('entering a novel folder with stored progress selects that file',
@@ -356,6 +356,80 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(container.read(selectedFileProvider), isNull);
+    });
+
+    test(
+        're-entering the same folder after the user changed selection picks up '
+        'the now-stored progress', () async {
+      // Spec scenario: enter -> auto-open A -> user taps B (auto-save writes B)
+      // -> back to library root (UI clears selection) -> re-enter -> auto-open
+      // fires again and selects B because reading_progress now holds B.
+      String currentlyStoredPath = chapter3.path;
+      String currentlyStoredName = chapter3.name;
+      final repo = _FakeRepository(
+        onFindByNovelId: (id) => id == 'narou_n1234ab'
+            ? ReadingProgress(
+                novelId: 'narou_n1234ab',
+                filePath: currentlyStoredPath,
+                fileName: currentlyStoredName,
+                updatedAt: DateTime(2026, 5, 27),
+              )
+            : null,
+      );
+      final container = _buildContainer(
+        repository: repo,
+        initialDirectory: '/library',
+        contentsByPath: {novelFolder: folderContentsWith3and5},
+      );
+      addTearDown(container.dispose);
+
+      // Both listeners stay alive for the duration of the test, just like in
+      // production: auto-save observes the user tap on B, auto-open fires on
+      // each folder-entry transition.
+      container.read(readingProgressAutoSaveListenerProvider);
+      container.read(readingProgressAutoOpenListenerProvider);
+
+      // First entry: auto-open selects the stored chapter3.
+      container
+          .read(currentDirectoryProvider.notifier)
+          .setDirectory(novelFolder);
+      await container.read(directoryContentsProvider.future);
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+      expect(container.read(selectedFileProvider)?.path, chapter3.path,
+          reason: 'first entry SHALL auto-open the originally stored file');
+
+      // User taps chapter5; auto-save listener writes B.
+      container.read(selectedFileProvider.notifier).selectFile(chapter5);
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+      expect(repo.upsertCalls.map((c) => c.filePath), contains(chapter5.path),
+          reason: 'user tap SHALL be persisted via auto-save');
+      // Reflect that persistence in the fake's lookup state.
+      currentlyStoredPath = chapter5.path;
+      currentlyStoredName = chapter5.name;
+
+      // Mimic the production UI path: directory change back to root clears
+      // the current selection.
+      container
+          .read(currentDirectoryProvider.notifier)
+          .setDirectory('/library');
+      container.read(selectedFileProvider.notifier).clear();
+      await Future<void>.delayed(Duration.zero);
+
+      // Re-entering the same folder fires the listener again. The stored
+      // value is now chapter5, so auto-open SHALL select chapter5 (not the
+      // original chapter3 it picked the first time round).
+      container
+          .read(currentDirectoryProvider.notifier)
+          .setDirectory(novelFolder);
+      await container.read(directoryContentsProvider.future);
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(container.read(selectedFileProvider)?.path, chapter5.path,
+          reason:
+              're-entry SHALL auto-open the now-stored file, not the first one');
     });
   });
 }

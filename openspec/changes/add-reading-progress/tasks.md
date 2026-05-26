@@ -25,7 +25,7 @@
 - [x] 4.4 自動保存 listener のテストを追加: ProviderContainer で (a) `selectedFileProvider` が non-null に変化したとき `repository.upsert` が呼ばれる, (b) ライブラリルートでは novel_id が解決できないため upsert が呼ばれない, (c) `selectedFileProvider` が null へ変化したときは upsert が呼ばれない (Requirement: Auto-save on file selection)
 - [x] 4.5 自動保存 listener Provider (例: `readingProgressAutoSaveListenerProvider`) を実装してテストをパスさせる
 - [x] 4.6 自動オープン listener のテストを追加: (a) `currentDirectoryProvider` が library root → novel folder に遷移し、stored progress と一致する FileEntry が directory contents に存在するとき `selectedFileProvider` がそのファイルにセットされる, (b) stored progress が存在しない novel folder に進入したときは selectedFileProvider が変化しない, (c) stored file が directory contents に存在しないときは selectedFileProvider が変化しない, (d) library root への遷移では何もしない, (e) 既に novel に属する FileEntry が selectedFileProvider に入っている場合は上書きしない (Requirement: One-shot auto-open on novel folder entry)
-- [x] 4.7 自動オープン listener Provider (例: `readingProgressAutoOpenListenerProvider`) を実装してテストをパスさせる。`directoryContentsProvider` を `.future` で待ち、`currentNovelIdProvider` を利用すること
+- [x] 4.7 自動オープン listener Provider (例: `readingProgressAutoOpenListenerProvider`) を実装してテストをパスさせる。`directoryContentsProvider` を `.future` で待つ。novel_id 算出は当初 `currentNovelIdProvider` の再利用を予定したが、`ref.listen` callback 内で derived provider が pre-transition 値を返す挙動を実測したため inline で同じアルゴリズムを展開する形に切り替え (design.md Decision 4 と Alternative B を参照)。`p.equals` で path-aware (Windows で case-insensitive) なファイル一致、`p.isWithin(targetDir, existing.path)` で既存選択ガードを「この novel に属する場合のみ」にスコープ。
 
 ## 5. 起動配線
 
