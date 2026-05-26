@@ -1,8 +1,8 @@
 ## 1. Domain & データモデル (TDD: テストファースト)
 
-- [ ] 1.1 `lib/features/reading_progress/domain/reading_progress.dart` の `ReadingProgress` 値オブジェクト (novel_id, file_path, file_name, updated_at) と `toMap` / `fromMap` のテストを書く (`test/features/reading_progress/domain/reading_progress_test.dart`)
-- [ ] 1.2 1.1 のテストが失敗することを確認してコミット
-- [ ] 1.3 `ReadingProgress` 値オブジェクトを実装してテストをパスさせる
+- [x] 1.1 `lib/features/reading_progress/domain/reading_progress.dart` の `ReadingProgress` 値オブジェクト (novel_id, file_path, file_name, updated_at) と `toMap` / `fromMap` のテストを書く (`test/features/reading_progress/domain/reading_progress_test.dart`)
+- [x] 1.2 1.1 のテストが失敗することを確認してコミット
+- [x] 1.3 `ReadingProgress` 値オブジェクトを実装してテストをパスさせる
 
 ## 2. Repository 層 (TDD)
 
