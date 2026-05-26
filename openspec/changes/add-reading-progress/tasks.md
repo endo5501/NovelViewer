@@ -15,7 +15,7 @@
 
 - [x] 3.1 `test/features/novel_metadata_db/data/novel_database_migration_v6_test.dart` を作成: (a) fresh install で v6 として開き `reading_progress` テーブルが存在する, (b) v5 でデータ(novels/bookmarks/word_summaries 行)を作った DB を v6 で開き直して既存データが残り `reading_progress` が空テーブルとして追加されている (現行 schema は既に v5 のため v5→v6 として再ベース)
 - [x] 3.2 3.1 のテストが失敗することを確認してコミット
-- [ ] 3.3 `lib/features/novel_metadata_db/data/novel_database.dart` でスキーマバージョンを 6 に上げ、`onCreate` と `onUpgrade` (oldVersion < 6 ブランチ) で `reading_progress` テーブルを作る SQL を追加してテストをパスさせる
+- [x] 3.3 `lib/features/novel_metadata_db/data/novel_database.dart` でスキーマバージョンを 6 に上げ、`onCreate` と `onUpgrade` (oldVersion < 6 ブランチ) で `reading_progress` テーブルを作る SQL を追加してテストをパスさせる
 
 ## 4. Riverpod Provider (Repository / 自動保存 / 自動オープン)
 

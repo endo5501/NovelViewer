@@ -160,14 +160,21 @@ void main() {
   });
 
   group('error propagation (task 2.4)', () {
+    // Decision 5: the repository stays a thin CRUD layer. Callers
+    // (auto-save / auto-open listeners) wrap operations with try/catch and
+    // a WARNING log on `Logger('reading_progress')`. The repository itself
+    // MUST raise rather than silently swallow, so this contract is asserted
+    // explicitly here by dropping the table and verifying the SQL error
+    // surfaces.
+    Future<void> dropTable() async {
+      final db = await novelDatabase.database;
+      await db.execute('DROP TABLE reading_progress');
+    }
+
     test('upsert propagates DB errors to the caller', () async {
-      // Decision 5: repository stays a thin CRUD layer. Callers
-      // (auto-save / auto-open listeners) wrap operations with try/catch
-      // and a WARNING log. The repository itself MUST raise rather than
-      // silently swallow, so this contract is asserted explicitly.
-      await novelDatabase.close();
-      expect(
-        () => repository.upsert(
+      await dropTable();
+      await expectLater(
+        repository.upsert(
           novelId: 'narou_n1234ab',
           filePath: '/library/narou_n1234ab/001_chapter1.txt',
           fileName: '001_chapter1.txt',
@@ -177,17 +184,17 @@ void main() {
     });
 
     test('findByNovelId propagates DB errors to the caller', () async {
-      await novelDatabase.close();
-      expect(
-        () => repository.findByNovelId('narou_n1234ab'),
+      await dropTable();
+      await expectLater(
+        repository.findByNovelId('narou_n1234ab'),
         throwsA(isA<Object>()),
       );
     });
 
     test('deleteByNovelId propagates DB errors to the caller', () async {
-      await novelDatabase.close();
-      expect(
-        () => repository.deleteByNovelId('narou_n1234ab'),
+      await dropTable();
+      await expectLater(
+        repository.deleteByNovelId('narou_n1234ab'),
         throwsA(isA<Object>()),
       );
     });
