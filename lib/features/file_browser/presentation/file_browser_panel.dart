@@ -200,6 +200,10 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
 
     if (!isSelected) return tile;
 
+    // Wrap the ListTile in a transparent Material so the tile paints its
+    // selection background and ink splashes on that Material rather than
+    // through the outer DecoratedBox, which Flutter asserts against in
+    // newer stable releases.
     return Container(
       key: const Key('selected_file_tile_decoration'),
       decoration: BoxDecoration(
@@ -208,7 +212,10 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
           left: BorderSide(color: colorScheme.primary, width: 4),
         ),
       ),
-      child: tile,
+      child: Material(
+        type: MaterialType.transparency,
+        child: tile,
+      ),
     );
   }
 
