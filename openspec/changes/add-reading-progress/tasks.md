@@ -35,9 +35,9 @@
 
 ## 6. 小説削除との連鎖
 
-- [ ] 6.1 `test/features/novel_delete/data/novel_delete_service_test.dart` を更新 (or 追加) し、`NovelDeleteService.delete(folderName)` 呼び出しで `ReadingProgressRepository.deleteByNovelId(folderName)` が呼ばれることを検証するテストを追加 (Requirement: NovelDeleteService orchestration, Novel deletion cleans up all data)
-- [ ] 6.2 6.1 のテストが失敗することを確認してコミット
-- [ ] 6.3 `lib/features/novel_delete/data/novel_delete_service.dart` に `ReadingProgressRepository` を注入し、DB 削除フェーズで呼び出す。`lib/features/novel_delete/providers/novel_delete_providers.dart` も追従させる
+- [x] 6.1 `test/features/novel_delete/data/novel_delete_service_test.dart` を更新 (or 追加) し、`NovelDeleteService.delete(folderName)` 呼び出しで `ReadingProgressRepository.deleteByNovelId(folderName)` が呼ばれることを検証するテストを追加 (Requirement: NovelDeleteService orchestration, Novel deletion cleans up all data)
+- [x] 6.2 6.1 のテストが失敗することを確認してコミット
+- [x] 6.3 `lib/features/novel_delete/data/novel_delete_service.dart` に `ReadingProgressRepository` を注入し、DB 削除フェーズで呼び出す。`lib/features/novel_delete/providers/novel_delete_providers.dart` も追従させる
 
 ## 7. ドキュメント / ロガー初期化
 
