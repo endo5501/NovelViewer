@@ -48,13 +48,16 @@ final readingProgressAutoSaveListenerProvider = Provider<void>((ref) {
 final readingProgressAutoOpenListenerProvider = Provider<void>((ref) {
   ref.listen<String?>(currentDirectoryProvider, (previous, next) async {
     if (next == null) return;
-    if (previous == next) return;
 
+    // Re-derive the novel id from the new directory using the same rule the
+    // shared [currentNovelIdProvider] applies (library root / out-of-library
+    // → null). Computing it from `next` directly avoids depending on
+    // Riverpod's invalidation order for derived providers in a listener
+    // callback.
     final libraryPath = ref.read(libraryPathProvider);
     if (libraryPath == null) return;
     if (p.equals(next, libraryPath)) return;
     if (!p.isWithin(libraryPath, next)) return;
-
     final novelId = p.split(p.relative(next, from: libraryPath)).first;
 
     final ReadingProgress? progress;
@@ -91,16 +94,22 @@ final readingProgressAutoOpenListenerProvider = Provider<void>((ref) {
 
     FileEntry? match;
     for (final entry in contents.files) {
-      if (entry.path == progress.filePath) {
+      // p.equals normalises path separators and case where appropriate so
+      // a stored 'D:/library/...' path still matches a listing that walks
+      // the same file on Windows where the FS is case-insensitive.
+      if (p.equals(entry.path, progress.filePath)) {
         match = entry;
         break;
       }
     }
     if (match == null) return;
 
-    // Don't trample a selection the user (or a sibling code path) put in
-    // place between the directory transition and the awaited lookups.
-    if (ref.read(selectedFileProvider) != null) return;
+    // Don't trample a selection that already points at a file inside this
+    // novel folder — that's the spec's "belongs to this novel" carve-out for
+    // sibling code paths that set a selection just before the transition. A
+    // stale entry from a different novel falls through and is replaced.
+    final existing = ref.read(selectedFileProvider);
+    if (existing != null && p.isWithin(targetDir, existing.path)) return;
     ref.read(selectedFileProvider.notifier).selectFile(match);
   });
 });

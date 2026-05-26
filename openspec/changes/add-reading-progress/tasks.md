@@ -41,12 +41,12 @@
 
 ## 7. ドキュメント / ロガー初期化
 
-- [ ] 7.1 `Logger('reading_progress')` が初期化対象として `AppLogger` で扱われていることを確認 (既存仕組みが catch-all ならノーオペ、明示登録が必要なら追記)
-- [ ] 7.2 必要であれば `lib/features/reading_progress/` の README/コメントは追加せず、code-comment は禁則 (CLAUDE.md 方針) に従って最小限とする
+- [x] 7.1 `Logger('reading_progress')` が初期化対象として `AppLogger` で扱われていることを確認 (既存仕組みが catch-all ならノーオペ、明示登録が必要なら追記) — 確認: `Logger.root.onRecord.listen(_dispatch)` で全 Logger を捕捉する設計のため、新規 logger 名は明示登録不要。ノーオペ。
+- [x] 7.2 必要であれば `lib/features/reading_progress/` の README/コメントは追加せず、code-comment は禁則 (CLAUDE.md 方針) に従って最小限とする — 確認: domain/data/providers 各ファイルのコメントは WHY のみ (Decision 5 / IF NOT EXISTS の retry 理由 / 既存選択を尊重する理由 / ライフタイムの理由) に絞っている。
 
 ## 8. 最終確認
 
-- [ ] 8.1 code-review スキルを使用してコードレビューを実施
-- [ ] 8.2 codex スキルを使用して現在開発中のコードレビューを実施
-- [ ] 8.3 `fvm flutter analyze` でリントを実行
-- [ ] 8.4 `fvm flutter test` でテストを実行
+- [x] 8.1 code-review スキルを使用してコードレビューを実施 — 高優先 2 件 (path 比較の case-insensitive 化, 既存選択ガードの spec 整合) を取り込み、低優先は許容範囲。
+- [x] 8.2 codex スキルを使用して現在開発中のコードレビューを実施 — design divergence 1 件 (novel_id 算出の重複) を確認、bookmark capability への依存を避ける意図的選択として許容。
+- [x] 8.3 `fvm flutter analyze` でリントを実行 — `No issues found!`。
+- [x] 8.4 `fvm flutter test` でテストを実行 — 1706 件全パス。
