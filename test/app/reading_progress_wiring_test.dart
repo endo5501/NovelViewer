@@ -68,6 +68,17 @@ void main() {
             )
           ''');
           await db.execute('''
+            CREATE TABLE bookmarks (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              novel_id TEXT NOT NULL,
+              file_name TEXT NOT NULL,
+              file_path TEXT NOT NULL,
+              line_number INTEGER,
+              created_at TEXT NOT NULL,
+              UNIQUE(novel_id, file_path, line_number)
+            )
+          ''');
+          await db.execute('''
             CREATE TABLE reading_progress (
               novel_id TEXT NOT NULL PRIMARY KEY,
               file_path TEXT NOT NULL,
@@ -118,25 +129,32 @@ void main() {
         repository: repo,
         initialDirectory: '/library/narou_n1234ab',
       );
-      await tester.pumpWidget(app);
+      // `runAsync` lets sqflite_ffi's real-timer transactions inside
+      // HomeScreen's bookmark providers settle. Without it the FakeAsync
+      // zone reports a pending timer and fails the test before our wiring
+      // assertion runs.
+      await tester.runAsync(() async {
+        await tester.pumpWidget(app);
 
-      // Resolve the ProviderScope's container so we can poke at state from
-      // outside the widget tree.
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(NovelViewerApp)),
-      );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(NovelViewerApp)),
+        );
 
-      container.read(selectedFileProvider.notifier).selectFile(
-            const FileEntry(
-              name: '003_chapter3.txt',
-              path: '/library/narou_n1234ab/003_chapter3.txt',
-            ),
-          );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 1));
+        container.read(selectedFileProvider.notifier).selectFile(
+              const FileEntry(
+                name: '003_chapter3.txt',
+                path: '/library/narou_n1234ab/003_chapter3.txt',
+              ),
+            );
+        // Yield enough microtasks for the listener's async upsert.
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
 
-      expect(repo.upsertCalls,
-          contains('narou_n1234ab|/library/narou_n1234ab/003_chapter3.txt'));
+        expect(
+          repo.upsertCalls,
+          contains('narou_n1234ab|/library/narou_n1234ab/003_chapter3.txt'),
+        );
+      });
     },
   );
 
@@ -167,24 +185,24 @@ void main() {
           ),
         },
       );
-      await tester.pumpWidget(app);
+      await tester.runAsync(() async {
+        await tester.pumpWidget(app);
 
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(NovelViewerApp)),
-      );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(NovelViewerApp)),
+        );
 
-      container
-          .read(currentDirectoryProvider.notifier)
-          .setDirectory('/library/narou_n1234ab');
-      // Two pumps: one for the listener microtask scheduling, one for the
-      // awaited directoryContents future and the final selectFile.
-      await container.read(directoryContentsProvider.future);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 1));
+        container
+            .read(currentDirectoryProvider.notifier)
+            .setDirectory('/library/narou_n1234ab');
+        await container.read(directoryContentsProvider.future);
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
 
-      final selected = container.read(selectedFileProvider);
-      expect(selected, isNotNull);
-      expect(selected!.path, chapter3.path);
+        final selected = container.read(selectedFileProvider);
+        expect(selected, isNotNull);
+        expect(selected!.path, chapter3.path);
+      });
     },
   );
 }

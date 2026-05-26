@@ -29,9 +29,9 @@
 
 ## 5. 起動配線
 
-- [ ] 5.1 `app.dart` (または同等の起動箇所) で 4.5 / 4.7 の listener Provider を `ref.read` して起動時に常駐させる配線テストを追加 (vacuumLifecycleProvider と同じ流儀)
-- [ ] 5.2 5.1 のテストが失敗することを確認してコミット
-- [ ] 5.3 `app.dart` に listener の起動配線を実装してテストをパスさせる
+- [x] 5.1 `app.dart` (または同等の起動箇所) で 4.5 / 4.7 の listener Provider を `ref.read` して起動時に常駐させる配線テストを追加 (vacuumLifecycleProvider と同じ流儀)
+- [x] 5.2 5.1 のテストが失敗することを確認してコミット
+- [x] 5.3 `app.dart` に listener の起動配線を実装してテストをパスさせる
 
 ## 6. 小説削除との連鎖
 
