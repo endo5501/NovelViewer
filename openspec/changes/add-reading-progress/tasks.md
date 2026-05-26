@@ -6,10 +6,10 @@
 
 ## 2. Repository 層 (TDD)
 
-- [ ] 2.1 `test/features/reading_progress/data/reading_progress_repository_test.dart` を作成し、in-memory sqflite_common_ffi を使った `ReadingProgressRepository` のテストを書く: (a) upsert 新規挿入, (b) upsert 上書き(行数1のまま file_path/file_name/updated_at が更新される), (c) `findByNovelId` 存在時に返す, (d) `findByNovelId` 不在時に null, (e) `deleteByNovelId` 存在/不在ともに正常終了
-- [ ] 2.2 2.1 のテストが失敗することを確認してコミット
-- [ ] 2.3 `lib/features/reading_progress/data/reading_progress_repository.dart` を実装してテストをパスさせる
-- [ ] 2.4 Repository のエラーパス: DB 操作が例外を投げた場合に WARNING ログ (`Logger('reading_progress')`) を残しつつ、save は失敗を握りつぶし、read は null を返すラッパー or 呼び出し側の責務分担を決め、それを反映するテストを追加してパスさせる (Decision 5)
+- [x] 2.1 `test/features/reading_progress/data/reading_progress_repository_test.dart` を作成し、in-memory sqflite_common_ffi を使った `ReadingProgressRepository` のテストを書く: (a) upsert 新規挿入, (b) upsert 上書き(行数1のまま file_path/file_name/updated_at が更新される), (c) `findByNovelId` 存在時に返す, (d) `findByNovelId` 不在時に null, (e) `deleteByNovelId` 存在/不在ともに正常終了
+- [x] 2.2 2.1 のテストが失敗することを確認してコミット
+- [x] 2.3 `lib/features/reading_progress/data/reading_progress_repository.dart` を実装してテストをパスさせる
+- [x] 2.4 Repository のエラーパス: DB 操作が例外を投げた場合に WARNING ログ (`Logger('reading_progress')`) を残しつつ、save は失敗を握りつぶし、read は null を返すラッパー or 呼び出し側の責務分担を決め、それを反映するテストを追加してパスさせる (Decision 5)
 
 ## 3. DB マイグレーション v4 → v5
 
