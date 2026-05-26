@@ -19,7 +19,7 @@ A novel viewer for downloading and reading web novels locally from web novel sit
 (Supports Ollama / OpenAI-compatible APIs)
 - **Text-to-Speech**: Read aloud using a specified reference voice / edit read-aloud text
 
-![Reading view](images/view1.png)
+![Reading view](images/view3.png)
 
 ![Editing view](images/view2.png)
 

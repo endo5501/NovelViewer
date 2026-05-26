@@ -19,7 +19,7 @@
 （支持 Ollama / OpenAI 兼容 API）
 - **语音朗读**：使用指定的参考音色进行朗读 / 编辑朗读文本
 
-![阅读界面](images/view1.png)
+![阅读界面](images/view3.png)
 
 ![编辑界面](images/view2.png)
 
