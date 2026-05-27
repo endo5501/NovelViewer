@@ -119,6 +119,18 @@ jobs:
       - name: Build installer with Inno Setup
         shell: pwsh
         run: |
+          # Belt-and-braces: the ISS file uses `skipifsourcedoesntexist` on
+          # the license glob so it stays usable locally without setting up
+          # licenses, so CI asserts their presence here loudly instead.
+          $root = "build\windows\x64\runner\Release"
+          $requiredLicenses = @(
+            "$root\LAME_LICENSE_LGPL.txt",
+            "$root\PIPER_LICENSE_MIT.txt",
+            "$root\ONNXRUNTIME_LICENSE_MIT.txt"
+          )
+          foreach ($lic in $requiredLicenses) {
+            if (!(Test-Path -LiteralPath $lic)) { throw "Required license missing: $lic" }
+          }
           $tag = "${{ github.ref_name }}"
           $version = $tag -replace '^v', ''
           & ISCC.exe "installer\novel_viewer.iss" "/DAppVersion=$version"

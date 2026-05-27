@@ -60,7 +60,10 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; installer never sees it on packaging and the uninstaller never removes it.
 Source: "..\build\windows\x64\runner\Release\novel_viewer.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\build\windows\x64\runner\Release\*.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\build\windows\x64\runner\Release\*_LICENSE_*.txt"; DestDir: "{app}"; Flags: ignoreversion
+; License files are copied into the Release tree by CI before ISCC runs. The
+; skipifsourcedoesntexist flag lets developers compile locally without first
+; running the license-copy scripts; CI enforces their presence separately.
+Source: "..\build\windows\x64\runner\Release\*_LICENSE_*.txt"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "..\build\windows\x64\runner\Release\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
