@@ -30,7 +30,7 @@
 ```bash
 ollama pull qwen3:8b
 ```
-3. 在 NovelViewer 的设置界面中，将 LLM 提供者设为 `Ollama`，端点 URL 设为 `http://localhost:11334`，模型名称设为已下载的模型名（如 `qwen3:8b`）
+3. 在 NovelViewer 的设置界面中，将 LLM 提供者设为 `Ollama`，端点 URL 设为 `http://localhost:11434`，模型名称设为已下载的模型名（如 `qwen3:8b`）
 
 ## 开发
 
@@ -117,6 +117,40 @@ fvm flutter analyze
 git tag v1.0.0
 git push origin v1.0.0
 ```
+
+每个发布会附带以下 4 个文件：
+
+- `novel_viewer-setup-v*.exe` — Windows 安装程序（推荐，适合长期使用）
+- `novel_viewer-setup-v*.exe.sha256` — 安装程序的 SHA256 哈希
+- `novel_viewer-windows-x64-v*.zip` — 便携版（解压即用）
+- `novel_viewer-windows-x64-v*.zip.sha256` — ZIP 的 SHA256 哈希
+
+## Windows 安装
+
+### 安装程序（推荐）
+
+如果希望"稳定地长期使用"，请选择安装程序版本。
+
+1. 从 GitHub Releases 下载 `novel_viewer-setup-v*.exe`
+2. 运行（安装到 `%LOCALAPPDATA%\Programs\NovelViewer\`，无需 UAC）
+3. 从开始菜单启动
+
+**关于 SmartScreen 警告：** 当前安装程序未签名，首次启动时 Windows 会显示"Windows 已保护你的电脑"。请点击"详细信息"→"仍要运行"以继续（代码签名计划在未来支持）。
+
+**用户数据位置：** 小说文本、数据库等用户数据保存在 `%LOCALAPPDATA%\Programs\NovelViewer\NovelViewer\` 下。安装程序不会触及该子目录。
+
+- 覆盖安装（升级）：用户数据保留
+- 卸载：用户数据保留（如需删除，请手动删除 `%LOCALAPPDATA%\Programs\NovelViewer\NovelViewer\`）
+
+### 便携版（ZIP）
+
+用于动作确认、特定用途或多环境并行运行时，请使用 ZIP 版本。
+
+1. 从 GitHub Releases 下载 `novel_viewer-windows-x64-v*.zip`
+2. 解压到任意文件夹
+3. 运行 `novel_viewer.exe`
+
+数据保存在解压后的可执行文件旁的 `NovelViewer/` 子文件夹中。整个文件夹复制到其他位置即可连同数据一起克隆环境。
 
 ## 技术栈
 

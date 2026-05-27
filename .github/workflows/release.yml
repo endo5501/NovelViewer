@@ -67,6 +67,10 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
       - name: Build Windows release
         run: flutter build windows --release
 
@@ -87,14 +91,54 @@ jobs:
           if (!(Test-Path $ortLicense)) { throw "ONNX Runtime LICENSE not found at $ortLicense" }
           Copy-Item $ortLicense build/windows/x64/runner/Release/ONNXRUNTIME_LICENSE_MIT.txt
 
+      - name: Guard against packaging user-data subfolder
+        shell: pwsh
+        run: |
+          $userData = "build\windows\x64\runner\Release\NovelViewer"
+          if (Test-Path $userData) {
+            throw "$userData exists; this is runtime user-data and must not be packaged. Fail to avoid leaking developer data into release artifacts."
+          }
+
       - name: Create ZIP archive
         shell: pwsh
         run: |
           $tag = "${{ github.ref_name }}"
           Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "novel_viewer-windows-x64-${tag}.zip"
 
+      - name: Build installer with Inno Setup
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag -replace '^v', ''
+          & ISCC.exe "installer\novel_viewer.iss" "/DAppVersion=$version"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE" }
+          $exePath = "novel_viewer-setup-${tag}.exe"
+          if (!(Test-Path -LiteralPath $exePath)) { throw "Installer EXE not found at $exePath" }
+
+      - name: Generate SHA256 checksums
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $targets = @(
+            "novel_viewer-windows-x64-${tag}.zip",
+            "novel_viewer-setup-${tag}.exe"
+          )
+          foreach ($file in $targets) {
+            if (!(Test-Path -LiteralPath $file)) { throw "Target not found for SHA256: $file" }
+            $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLower()
+            # Write with LF endings (no CRLF, no BOM) so `sha256sum -c` on
+            # Linux/macOS verifies correctly.
+            $sidecar = Join-Path $PWD ("$file.sha256")
+            [System.IO.File]::WriteAllText($sidecar, "$hash  $file`n", [System.Text.UTF8Encoding]::new($false))
+          }
+
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          files: novel_viewer-windows-x64-*.zip
+          files: |
+            novel_viewer-setup-v*.exe
+            novel_viewer-setup-v*.exe.sha256
+            novel_viewer-windows-x64-v*.zip
+            novel_viewer-windows-x64-v*.zip.sha256
+          fail_on_unmatched_files: true
           generate_release_notes: true

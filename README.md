@@ -134,6 +134,40 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
+各リリースには以下4ファイルが添付されます。
+
+- `novel_viewer-setup-v*.exe` — Windowsインストーラ（推奨、長期運用向け）
+- `novel_viewer-setup-v*.exe.sha256` — インストーラのSHA256ハッシュ
+- `novel_viewer-windows-x64-v*.zip` — ポータブル版（解凍してそのまま実行）
+- `novel_viewer-windows-x64-v*.zip.sha256` — ZIPのSHA256ハッシュ
+
+## Windowsインストール
+
+### インストーラ版（推奨）
+
+「腰を据えて長期運用する」用途にはインストーラ版を推奨します。
+
+1. GitHub Releasesから `novel_viewer-setup-v*.exe` をダウンロード
+2. 実行（インストール先は `%LOCALAPPDATA%\Programs\NovelViewer\`、UAC不要）
+3. スタートメニューから起動
+
+**SmartScreen警告について:** 現状はインストーラに署名していないため、初回起動時に「WindowsによってPCが保護されました」と表示されます。「詳細情報」→「実行」を押して進めてください（コード署名は将来対応予定）。
+
+**ユーザデータの保存場所:** 小説テキスト・データベース等のユーザデータは `%LOCALAPPDATA%\Programs\NovelViewer\NovelViewer\` 配下に保存されます。インストーラはこのサブフォルダに触りません。
+
+- 上書きインストール（バージョンアップ）: ユーザデータは保持されます
+- アンインストール: ユーザデータは残ります（明示的に消したい場合は `%LOCALAPPDATA%\Programs\NovelViewer\NovelViewer\` を手動削除してください）
+
+### ポータブル版（ZIP）
+
+動作確認・特定用途・複数環境の並行運用には ZIP 版を使用してください。
+
+1. GitHub Releasesから `novel_viewer-windows-x64-v*.zip` をダウンロード
+2. 任意のフォルダに解凍
+3. `novel_viewer.exe` を実行
+
+データはZIPを展開したフォルダ配下の `NovelViewer/` サブフォルダに保存されます。フォルダごと別の場所にコピーすれば、データ込みで複製可能です。
+
 ## 技術スタック
 
 - **フレームワーク**: Flutter (Dart)

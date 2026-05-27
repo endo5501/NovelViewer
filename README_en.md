@@ -30,7 +30,7 @@ A novel viewer for downloading and reading web novels locally from web novel sit
 ```bash
 ollama pull qwen3:8b
 ```
-3. In NovelViewer's settings, set the LLM provider to `Ollama`, the endpoint URL to `http://localhost:11334`, and the model name to the downloaded model (e.g., `qwen3:8b`)
+3. In NovelViewer's settings, set the LLM provider to `Ollama`, the endpoint URL to `http://localhost:11434`, and the model name to the downloaded model (e.g., `qwen3:8b`)
 
 ## Development
 
@@ -117,6 +117,40 @@ Pushing a tag matching the `v*` pattern triggers an automatic Windows build and 
 git tag v1.0.0
 git push origin v1.0.0
 ```
+
+Each release attaches the following four files:
+
+- `novel_viewer-setup-v*.exe` — Windows installer (recommended for long-term use)
+- `novel_viewer-setup-v*.exe.sha256` — SHA256 of the installer
+- `novel_viewer-windows-x64-v*.zip` — Portable build (extract and run)
+- `novel_viewer-windows-x64-v*.zip.sha256` — SHA256 of the ZIP
+
+## Windows Installation
+
+### Installer (Recommended)
+
+Use the installer for long-term, "settled" usage.
+
+1. Download `novel_viewer-setup-v*.exe` from GitHub Releases
+2. Run it (installs to `%LOCALAPPDATA%\Programs\NovelViewer\`, no UAC required)
+3. Launch from the Start Menu
+
+**About the SmartScreen warning:** The installer is currently unsigned, so Windows shows "Windows protected your PC" on first run. Click "More info" → "Run anyway" to proceed. Code signing is planned for the future.
+
+**User data location:** Novel text, database, and other user data live under `%LOCALAPPDATA%\Programs\NovelViewer\NovelViewer\`. The installer never touches this subfolder.
+
+- Reinstall / upgrade: user data is preserved
+- Uninstall: user data is left behind (delete `%LOCALAPPDATA%\Programs\NovelViewer\NovelViewer\` manually if you want to remove it)
+
+### Portable (ZIP)
+
+Use the ZIP build for compatibility testing, ad-hoc environments, or running multiple independent setups in parallel.
+
+1. Download `novel_viewer-windows-x64-v*.zip` from GitHub Releases
+2. Extract anywhere
+3. Run `novel_viewer.exe`
+
+Data is stored in a `NovelViewer/` subfolder beside the extracted executable. Copying the whole folder elsewhere clones the environment along with the data.
 
 ## Tech Stack
 
