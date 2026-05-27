@@ -91,12 +91,23 @@ jobs:
           if (!(Test-Path $ortLicense)) { throw "ONNX Runtime LICENSE not found at $ortLicense" }
           Copy-Item $ortLicense build/windows/x64/runner/Release/ONNXRUNTIME_LICENSE_MIT.txt
 
-      - name: Guard against packaging user-data subfolder
+      - name: Guard against packaging runtime user-data
         shell: pwsh
         run: |
-          $userData = "build\windows\x64\runner\Release\NovelViewer"
-          if (Test-Path $userData) {
-            throw "$userData exists; this is runtime user-data and must not be packaged. Fail to avoid leaking developer data into release artifacts."
+          # The app creates these paths at runtime in the exe directory.
+          # None of them should appear in a clean CI build; their presence
+          # means the runner state is dirty or the build pipeline regressed.
+          $root = "build\windows\x64\runner\Release"
+          $userPaths = @(
+            "$root\NovelViewer",
+            "$root\models",
+            "$root\voices",
+            "$root\novel_metadata.db"
+          )
+          foreach ($p in $userPaths) {
+            if (Test-Path -LiteralPath $p) {
+              throw "$p exists; this is runtime user-data and must not be packaged. Fail to avoid leaking developer data into release artifacts."
+            }
           }
 
       - name: Create ZIP archive

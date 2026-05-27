@@ -137,10 +137,17 @@ git push origin v1.0.0
 
 **关于 SmartScreen 警告：** 当前安装程序未签名，首次启动时 Windows 会显示"Windows 已保护你的电脑"。请点击"详细信息"→"仍要运行"以继续（代码签名计划在未来支持）。
 
-**用户数据位置：** 小说文本、数据库等用户数据保存在 `%LOCALAPPDATA%\Programs\NovelViewer\NovelViewer\` 下。安装程序不会触及该子目录。
+**用户数据位置：** 用户创建的数据保存在以下路径（均位于安装根目录 `%LOCALAPPDATA%\Programs\NovelViewer\` 之下）：
+
+- `NovelViewer\` — 小说文本、书签、阅读进度
+- `novel_metadata.db` — 小说元数据数据库
+- `models\` — TTS 模型（用于语音合成，体积较大）
+- `voices\` — 参考音频
+
+安装程序只放置 Flutter 构建产物（`novel_viewer.exe`、各类 DLL、`data\` 子目录、许可证文件），不会触及上述用户数据。
 
 - 覆盖安装（升级）：用户数据保留
-- 卸载：用户数据保留（如需删除，请手动删除 `%LOCALAPPDATA%\Programs\NovelViewer\NovelViewer\`）
+- 卸载：用户数据保留（如需删除，请手动删除上述各路径）
 
 ### 便携版（ZIP）
 
@@ -150,7 +157,7 @@ git push origin v1.0.0
 2. 解压到任意文件夹
 3. 运行 `novel_viewer.exe`
 
-数据保存在解压后的可执行文件旁的 `NovelViewer/` 子文件夹中。整个文件夹复制到其他位置即可连同数据一起克隆环境。
+数据保存在解压后的可执行文件旁，与安装程序版本结构相同（`NovelViewer\`、`novel_metadata.db`、`models\`、`voices\`）。整个文件夹复制到其他位置即可连同数据一起克隆环境。
 
 ## 技术栈
 

@@ -54,11 +54,14 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; The "NovelViewer" subfolder is the app's runtime user-data location and must
-; never be packaged into the installer. Excludes guards against a developer
-; accidentally running ISCC against a Release/ tree that has been launched
-; locally; CI uses a fresh runner so this never triggers in production.
-Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Excludes: "NovelViewer,NovelViewer\*"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Whitelist approach: only ship Flutter build artifacts. User-created data
+; (NovelViewer\, models\, voices\, novel_metadata.db) lives at {app} and
+; sibling locations at runtime and is intentionally NOT matched here, so the
+; installer never sees it on packaging and the uninstaller never removes it.
+Source: "..\build\windows\x64\runner\Release\novel_viewer.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\build\windows\x64\runner\Release\*.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\build\windows\x64\runner\Release\*_LICENSE_*.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\build\windows\x64\runner\Release\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

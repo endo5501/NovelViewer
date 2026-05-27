@@ -137,10 +137,17 @@ Use the installer for long-term, "settled" usage.
 
 **About the SmartScreen warning:** The installer is currently unsigned, so Windows shows "Windows protected your PC" on first run. Click "More info" → "Run anyway" to proceed. Code signing is planned for the future.
 
-**User data location:** Novel text, database, and other user data live under `%LOCALAPPDATA%\Programs\NovelViewer\NovelViewer\`. The installer never touches this subfolder.
+**User data location:** User-created data lives at these paths (all directly under the install root `%LOCALAPPDATA%\Programs\NovelViewer\`):
+
+- `NovelViewer\` — novel text, bookmarks, reading progress
+- `novel_metadata.db` — novel metadata database
+- `models\` — TTS models (can be large)
+- `voices\` — voice reference audio
+
+The installer only places Flutter build artifacts (`novel_viewer.exe`, DLLs, the `data\` subtree, license files) and never touches the paths listed above.
 
 - Reinstall / upgrade: user data is preserved
-- Uninstall: user data is left behind (delete `%LOCALAPPDATA%\Programs\NovelViewer\NovelViewer\` manually if you want to remove it)
+- Uninstall: user data is left behind (delete each path manually if you want to remove it)
 
 ### Portable (ZIP)
 
@@ -150,7 +157,7 @@ Use the ZIP build for compatibility testing, ad-hoc environments, or running mul
 2. Extract anywhere
 3. Run `novel_viewer.exe`
 
-Data is stored in a `NovelViewer/` subfolder beside the extracted executable. Copying the whole folder elsewhere clones the environment along with the data.
+Data is stored directly beside the extracted executable with the same layout as the installer version (`NovelViewer\`, `novel_metadata.db`, `models\`, `voices\`). Copying the whole folder elsewhere clones the environment along with the data.
 
 ## Tech Stack
 
