@@ -29,10 +29,10 @@
 
 - [x] 4.1 タグ `v0.0.0-test1` を push し、CI が 4 アセット（EXE/EXE.sha256/ZIP/ZIP.sha256）すべてを Release に添付することを確認する
 - [x] 4.2 生成された `novel_viewer-setup-v*.exe` を実 Windows 環境でダウンロードして実行し、UAC が出ないこと、`%LOCALAPPDATA%\Programs\NovelViewer\` に展開されること、スタートメニューにショートカットが作られること、アンインストーラが「インストールされているアプリ」に登録されることを目視確認する
-- [ ] 4.3 旧バージョンをインストール → ユーザデータ（`{app}\NovelViewer\` 配下にダミーファイル配置）→ 新バージョンを上書きインストール、で**ユーザデータが残ること**を確認する（ローカルで `0.0.0-local` → `0.0.1-local` の2本で代替検証）
-- [ ] 4.4 アンインストール後に `{app}\NovelViewer\` サブフォルダが残ることを確認する
-- [ ] 4.5 PowerShell で `(Get-FileHash <file> -Algorithm SHA256).Hash.ToLower()` と `.sha256` ファイル内容が一致することを確認する
-- [ ] 4.6 検証用の `v0.0.0-test*` タグ・Release は確認後に削除する
+- [x] 4.3 旧バージョンをインストール → ユーザデータ（`{app}\NovelViewer\` 配下にダミーファイル配置）→ 新バージョンを上書きインストール、で**ユーザデータが残ること**を確認する（ローカルで `0.0.0-local` → `0.0.1-local` の2本で代替検証）
+- [x] 4.4 アンインストール後に `{app}\NovelViewer\` サブフォルダが残ることを確認する
+- [x] 4.5 PowerShell で `(Get-FileHash <file> -Algorithm SHA256).Hash.ToLower()` と `.sha256` ファイル内容が一致することを確認する
+- [x] 4.6 検証用の `v0.0.0-test*` タグ・Release は確認後に削除する
 
 ## 5. 最終確認
 
