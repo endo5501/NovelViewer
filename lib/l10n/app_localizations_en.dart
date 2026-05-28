@@ -645,4 +645,90 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get textViewer_prevEpisodeButton => '← Previous';
+
+  @override
+  String get update_badgeTooltip => 'Update available';
+
+  @override
+  String get update_dialogTitle => 'A new version is available';
+
+  @override
+  String update_versionTransition(String current, String newVersion) {
+    return '$current → $newVersion';
+  }
+
+  @override
+  String get update_releaseNotesLabel => 'Release notes';
+
+  @override
+  String get update_noReleaseNotes => 'No release notes';
+
+  @override
+  String get update_updateButton => 'Update now';
+
+  @override
+  String get update_openReleasePageButton => 'Open release page';
+
+  @override
+  String get update_laterButton => 'Later';
+
+  @override
+  String get update_downloadingLabel => 'Downloading...';
+
+  @override
+  String get update_failedMessage => 'Update failed';
+
+  @override
+  String get update_failedChecksumMessage =>
+      'Update failed (checksum mismatch)';
+
+  @override
+  String get update_missingAssetMessage => 'Installer not found';
+
+  @override
+  String get update_retryButton => 'Retry';
+
+  @override
+  String get settings_aboutUpdateTab => 'About / Update';
+
+  @override
+  String get settings_currentVersionLabel => 'Current version';
+
+  @override
+  String get settings_buildNumberLabel => 'Build number';
+
+  @override
+  String get settings_distributionLabel => 'Distribution';
+
+  @override
+  String get settings_distributionInstaller => 'Installer';
+
+  @override
+  String get settings_distributionPortable => 'Portable (ZIP)';
+
+  @override
+  String get settings_lastCheckedLabel => 'Last checked';
+
+  @override
+  String get settings_lastCheckedNever => 'Never';
+
+  @override
+  String get settings_checkForUpdatesButton => 'Check for updates';
+
+  @override
+  String get settings_autoCheckLabel => 'Auto-check';
+
+  @override
+  String get settings_checkingMessage => 'Checking...';
+
+  @override
+  String get settings_upToDateMessage => 'You\'re up to date';
+
+  @override
+  String settings_updateAvailableMessage(String version) {
+    return '$version available';
+  }
+
+  @override
+  String get settings_checkFailedMessage => 'Update check failed';
 }

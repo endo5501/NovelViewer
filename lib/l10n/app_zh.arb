@@ -264,5 +264,45 @@
     }
   },
   "textViewer_nextEpisodeButton": "下一话 →",
-  "textViewer_prevEpisodeButton": "← 上一话"
+  "textViewer_prevEpisodeButton": "← 上一话",
+
+  "update_badgeTooltip": "有可用更新",
+  "update_dialogTitle": "有新版本可用",
+  "update_versionTransition": "{current} → {newVersion}",
+  "@update_versionTransition": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "newVersion": { "type": "String" }
+    }
+  },
+  "update_releaseNotesLabel": "更新说明",
+  "update_noReleaseNotes": "没有更新说明",
+  "update_updateButton": "立即更新",
+  "update_openReleasePageButton": "打开发布页面",
+  "update_laterButton": "稍后",
+  "update_downloadingLabel": "正在下载...",
+  "update_failedMessage": "更新失败",
+  "update_failedChecksumMessage": "更新失败（校验和不匹配）",
+  "update_missingAssetMessage": "未找到安装程序",
+  "update_retryButton": "重试",
+
+  "settings_aboutUpdateTab": "关于 / 更新",
+  "settings_currentVersionLabel": "当前版本",
+  "settings_buildNumberLabel": "构建号",
+  "settings_distributionLabel": "分发形式",
+  "settings_distributionInstaller": "安装程序版",
+  "settings_distributionPortable": "便携版 (ZIP)",
+  "settings_lastCheckedLabel": "最后检查",
+  "settings_lastCheckedNever": "尚未检查",
+  "settings_checkForUpdatesButton": "检查更新",
+  "settings_autoCheckLabel": "自动检查",
+  "settings_checkingMessage": "正在检查...",
+  "settings_upToDateMessage": "已是最新版本",
+  "settings_updateAvailableMessage": "{version} 可用",
+  "@settings_updateAvailableMessage": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "settings_checkFailedMessage": "检查更新失败"
 }

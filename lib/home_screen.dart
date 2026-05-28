@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/app/selected_file_progress_title_provider.dart';
+import 'package:novel_viewer/features/app_update/presentation/update_badge.dart';
 import 'package:novel_viewer/features/bookmark/presentation/left_column_panel.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -142,6 +143,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
               actions: [
+                const UpdateBadge(),
                 _buildBookmarkButton(),
                 IconButton(
                   key: const Key('toggle_right_column_button'),

@@ -264,5 +264,45 @@
     }
   },
   "textViewer_nextEpisodeButton": "Next →",
-  "textViewer_prevEpisodeButton": "← Previous"
+  "textViewer_prevEpisodeButton": "← Previous",
+
+  "update_badgeTooltip": "Update available",
+  "update_dialogTitle": "A new version is available",
+  "update_versionTransition": "{current} → {newVersion}",
+  "@update_versionTransition": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "newVersion": { "type": "String" }
+    }
+  },
+  "update_releaseNotesLabel": "Release notes",
+  "update_noReleaseNotes": "No release notes",
+  "update_updateButton": "Update now",
+  "update_openReleasePageButton": "Open release page",
+  "update_laterButton": "Later",
+  "update_downloadingLabel": "Downloading...",
+  "update_failedMessage": "Update failed",
+  "update_failedChecksumMessage": "Update failed (checksum mismatch)",
+  "update_missingAssetMessage": "Installer not found",
+  "update_retryButton": "Retry",
+
+  "settings_aboutUpdateTab": "About / Update",
+  "settings_currentVersionLabel": "Current version",
+  "settings_buildNumberLabel": "Build number",
+  "settings_distributionLabel": "Distribution",
+  "settings_distributionInstaller": "Installer",
+  "settings_distributionPortable": "Portable (ZIP)",
+  "settings_lastCheckedLabel": "Last checked",
+  "settings_lastCheckedNever": "Never",
+  "settings_checkForUpdatesButton": "Check for updates",
+  "settings_autoCheckLabel": "Auto-check",
+  "settings_checkingMessage": "Checking...",
+  "settings_upToDateMessage": "You're up to date",
+  "settings_updateAvailableMessage": "{version} available",
+  "@settings_updateAvailableMessage": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "settings_checkFailedMessage": "Update check failed"
 }

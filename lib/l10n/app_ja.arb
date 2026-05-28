@@ -368,5 +368,45 @@
     }
   },
   "textViewer_nextEpisodeButton": "次話 →",
-  "textViewer_prevEpisodeButton": "← 前話"
+  "textViewer_prevEpisodeButton": "← 前話",
+
+  "update_badgeTooltip": "更新があります",
+  "update_dialogTitle": "新しいバージョンが利用可能です",
+  "update_versionTransition": "{current} → {newVersion}",
+  "@update_versionTransition": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "newVersion": { "type": "String" }
+    }
+  },
+  "update_releaseNotesLabel": "リリースノート",
+  "update_noReleaseNotes": "リリースノートはありません",
+  "update_updateButton": "更新する",
+  "update_openReleasePageButton": "リリースページを開く",
+  "update_laterButton": "後で",
+  "update_downloadingLabel": "ダウンロード中...",
+  "update_failedMessage": "アップデートに失敗しました",
+  "update_failedChecksumMessage": "アップデートに失敗しました（チェックサム不一致）",
+  "update_missingAssetMessage": "インストーラが見つかりませんでした",
+  "update_retryButton": "再試行",
+
+  "settings_aboutUpdateTab": "アプリ情報 / 更新",
+  "settings_currentVersionLabel": "現在のバージョン",
+  "settings_buildNumberLabel": "ビルド番号",
+  "settings_distributionLabel": "配布形態",
+  "settings_distributionInstaller": "インストーラ版",
+  "settings_distributionPortable": "ポータブル版 (ZIP)",
+  "settings_lastCheckedLabel": "最終確認",
+  "settings_lastCheckedNever": "未確認",
+  "settings_checkForUpdatesButton": "更新を確認",
+  "settings_autoCheckLabel": "自動チェック",
+  "settings_checkingMessage": "確認中...",
+  "settings_upToDateMessage": "最新です",
+  "settings_updateAvailableMessage": "{version} が利用可能",
+  "@settings_updateAvailableMessage": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "settings_checkFailedMessage": "更新の確認に失敗しました"
 }
