@@ -57,6 +57,10 @@ dependencies:
   desktop_drop: ^0.7.0
   record: ^6.2.0
   euc: ^1.0.6+8
+  package_info_plus: ^9.0.1
+  url_launcher: ^6.3.2
+  pub_semver: ^2.2.0
+  win32_registry: ^2.1.0
 
 dev_dependencies:
   flutter_test:

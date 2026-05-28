@@ -53,6 +53,13 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
+[Registry]
+; Mark this install as "installer" so the app can distinguish an installed
+; copy from a portable ZIP extraction and enable the in-app auto-update flow.
+; uninsdeletekey removes it on uninstall, so a later ZIP run is treated as
+; portable again.
+Root: HKCU; Subkey: "Software\NovelViewer"; ValueType: string; ValueName: "InstallType"; ValueData: "installer"; Flags: uninsdeletekey
+
 [Files]
 ; Whitelist approach: only ship Flutter build artifacts. User-created data
 ; (NovelViewer\, models\, voices\, novel_metadata.db) lives at {app} and

@@ -634,4 +634,89 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get textViewer_prevEpisodeButton => '← 上一话';
+
+  @override
+  String get update_badgeTooltip => '有可用更新';
+
+  @override
+  String get update_dialogTitle => '有新版本可用';
+
+  @override
+  String update_versionTransition(String current, String newVersion) {
+    return '$current → $newVersion';
+  }
+
+  @override
+  String get update_releaseNotesLabel => '更新说明';
+
+  @override
+  String get update_noReleaseNotes => '没有更新说明';
+
+  @override
+  String get update_updateButton => '立即更新';
+
+  @override
+  String get update_openReleasePageButton => '打开发布页面';
+
+  @override
+  String get update_laterButton => '稍后';
+
+  @override
+  String get update_downloadingLabel => '正在下载...';
+
+  @override
+  String get update_failedMessage => '更新失败';
+
+  @override
+  String get update_failedChecksumMessage => '更新失败（校验和不匹配）';
+
+  @override
+  String get update_missingAssetMessage => '未找到安装程序';
+
+  @override
+  String get update_retryButton => '重试';
+
+  @override
+  String get settings_aboutUpdateTab => '关于 / 更新';
+
+  @override
+  String get settings_currentVersionLabel => '当前版本';
+
+  @override
+  String get settings_buildNumberLabel => '构建号';
+
+  @override
+  String get settings_distributionLabel => '分发形式';
+
+  @override
+  String get settings_distributionInstaller => '安装程序版';
+
+  @override
+  String get settings_distributionPortable => '便携版 (ZIP)';
+
+  @override
+  String get settings_lastCheckedLabel => '最后检查';
+
+  @override
+  String get settings_lastCheckedNever => '尚未检查';
+
+  @override
+  String get settings_checkForUpdatesButton => '检查更新';
+
+  @override
+  String get settings_autoCheckLabel => '自动检查';
+
+  @override
+  String get settings_checkingMessage => '正在检查...';
+
+  @override
+  String get settings_upToDateMessage => '已是最新版本';
+
+  @override
+  String settings_updateAvailableMessage(String version) {
+    return '$version 可用';
+  }
+
+  @override
+  String get settings_checkFailedMessage => '检查更新失败';
 }

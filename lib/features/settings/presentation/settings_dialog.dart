@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/settings/presentation/sections/about_and_update_section.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/general_settings_section.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/llm_settings_section.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/piper_settings_section.dart';
@@ -26,7 +27,7 @@ class SettingsDialog extends ConsumerStatefulWidget {
 class _SettingsDialogState extends ConsumerState<SettingsDialog>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController =
-      TabController(length: 2, vsync: this);
+      TabController(length: 3, vsync: this);
 
   @override
   void dispose() {
@@ -49,6 +50,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
               tabs: [
                 Tab(text: l10n.settings_generalTabLabel),
                 Tab(text: l10n.settings_ttsTabLabel),
+                Tab(text: l10n.settings_aboutUpdateTab),
               ],
             ),
             Expanded(
@@ -57,6 +59,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
                 children: const [
                   _GeneralTab(),
                   _TtsTab(),
+                  SingleChildScrollView(child: AboutAndUpdateSection()),
                 ],
               ),
             ),

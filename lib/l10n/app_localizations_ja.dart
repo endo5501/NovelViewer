@@ -634,4 +634,89 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get textViewer_prevEpisodeButton => '← 前話';
+
+  @override
+  String get update_badgeTooltip => '更新があります';
+
+  @override
+  String get update_dialogTitle => '新しいバージョンが利用可能です';
+
+  @override
+  String update_versionTransition(String current, String newVersion) {
+    return '$current → $newVersion';
+  }
+
+  @override
+  String get update_releaseNotesLabel => 'リリースノート';
+
+  @override
+  String get update_noReleaseNotes => 'リリースノートはありません';
+
+  @override
+  String get update_updateButton => '更新する';
+
+  @override
+  String get update_openReleasePageButton => 'リリースページを開く';
+
+  @override
+  String get update_laterButton => '後で';
+
+  @override
+  String get update_downloadingLabel => 'ダウンロード中...';
+
+  @override
+  String get update_failedMessage => 'アップデートに失敗しました';
+
+  @override
+  String get update_failedChecksumMessage => 'アップデートに失敗しました（チェックサム不一致）';
+
+  @override
+  String get update_missingAssetMessage => 'インストーラが見つかりませんでした';
+
+  @override
+  String get update_retryButton => '再試行';
+
+  @override
+  String get settings_aboutUpdateTab => 'アプリ情報 / 更新';
+
+  @override
+  String get settings_currentVersionLabel => '現在のバージョン';
+
+  @override
+  String get settings_buildNumberLabel => 'ビルド番号';
+
+  @override
+  String get settings_distributionLabel => '配布形態';
+
+  @override
+  String get settings_distributionInstaller => 'インストーラ版';
+
+  @override
+  String get settings_distributionPortable => 'ポータブル版 (ZIP)';
+
+  @override
+  String get settings_lastCheckedLabel => '最終確認';
+
+  @override
+  String get settings_lastCheckedNever => '未確認';
+
+  @override
+  String get settings_checkForUpdatesButton => '更新を確認';
+
+  @override
+  String get settings_autoCheckLabel => '自動チェック';
+
+  @override
+  String get settings_checkingMessage => '確認中...';
+
+  @override
+  String get settings_upToDateMessage => '最新です';
+
+  @override
+  String settings_updateAvailableMessage(String version) {
+    return '$version が利用可能';
+  }
+
+  @override
+  String get settings_checkFailedMessage => '更新の確認に失敗しました';
 }

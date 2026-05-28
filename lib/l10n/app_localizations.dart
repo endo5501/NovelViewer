@@ -1227,6 +1227,168 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'← 前話'**
   String get textViewer_prevEpisodeButton;
+
+  /// No description provided for @update_badgeTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'更新があります'**
+  String get update_badgeTooltip;
+
+  /// No description provided for @update_dialogTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'新しいバージョンが利用可能です'**
+  String get update_dialogTitle;
+
+  /// No description provided for @update_versionTransition.
+  ///
+  /// In ja, this message translates to:
+  /// **'{current} → {newVersion}'**
+  String update_versionTransition(String current, String newVersion);
+
+  /// No description provided for @update_releaseNotesLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'リリースノート'**
+  String get update_releaseNotesLabel;
+
+  /// No description provided for @update_noReleaseNotes.
+  ///
+  /// In ja, this message translates to:
+  /// **'リリースノートはありません'**
+  String get update_noReleaseNotes;
+
+  /// No description provided for @update_updateButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'更新する'**
+  String get update_updateButton;
+
+  /// No description provided for @update_openReleasePageButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'リリースページを開く'**
+  String get update_openReleasePageButton;
+
+  /// No description provided for @update_laterButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'後で'**
+  String get update_laterButton;
+
+  /// No description provided for @update_downloadingLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロード中...'**
+  String get update_downloadingLabel;
+
+  /// No description provided for @update_failedMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'アップデートに失敗しました'**
+  String get update_failedMessage;
+
+  /// No description provided for @update_failedChecksumMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'アップデートに失敗しました（チェックサム不一致）'**
+  String get update_failedChecksumMessage;
+
+  /// No description provided for @update_missingAssetMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストーラが見つかりませんでした'**
+  String get update_missingAssetMessage;
+
+  /// No description provided for @update_retryButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'再試行'**
+  String get update_retryButton;
+
+  /// No description provided for @settings_aboutUpdateTab.
+  ///
+  /// In ja, this message translates to:
+  /// **'アプリ情報 / 更新'**
+  String get settings_aboutUpdateTab;
+
+  /// No description provided for @settings_currentVersionLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'現在のバージョン'**
+  String get settings_currentVersionLabel;
+
+  /// No description provided for @settings_buildNumberLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'ビルド番号'**
+  String get settings_buildNumberLabel;
+
+  /// No description provided for @settings_distributionLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'配布形態'**
+  String get settings_distributionLabel;
+
+  /// No description provided for @settings_distributionInstaller.
+  ///
+  /// In ja, this message translates to:
+  /// **'インストーラ版'**
+  String get settings_distributionInstaller;
+
+  /// No description provided for @settings_distributionPortable.
+  ///
+  /// In ja, this message translates to:
+  /// **'ポータブル版 (ZIP)'**
+  String get settings_distributionPortable;
+
+  /// No description provided for @settings_lastCheckedLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'最終確認'**
+  String get settings_lastCheckedLabel;
+
+  /// No description provided for @settings_lastCheckedNever.
+  ///
+  /// In ja, this message translates to:
+  /// **'未確認'**
+  String get settings_lastCheckedNever;
+
+  /// No description provided for @settings_checkForUpdatesButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'更新を確認'**
+  String get settings_checkForUpdatesButton;
+
+  /// No description provided for @settings_autoCheckLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'自動チェック'**
+  String get settings_autoCheckLabel;
+
+  /// No description provided for @settings_checkingMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'確認中...'**
+  String get settings_checkingMessage;
+
+  /// No description provided for @settings_upToDateMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'最新です'**
+  String get settings_upToDateMessage;
+
+  /// No description provided for @settings_updateAvailableMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'{version} が利用可能'**
+  String settings_updateAvailableMessage(String version);
+
+  /// No description provided for @settings_checkFailedMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'更新の確認に失敗しました'**
+  String get settings_checkFailedMessage;
 }
 
 class _AppLocalizationsDelegate
