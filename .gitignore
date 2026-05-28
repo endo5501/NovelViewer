@@ -38,3 +38,8 @@ coverage
 /.claude/settings.local.json
 /third_party/lame_enc_ffi/build
 /benchmarks/
+
+# Release artifacts produced by Inno Setup / CI at the repo root
+/novel_viewer-setup-v*.exe
+/novel_viewer-windows-x64-*.zip
+/*.sha256
