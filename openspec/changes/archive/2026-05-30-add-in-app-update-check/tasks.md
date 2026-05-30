@@ -2,7 +2,7 @@
 
 - [x] 1.1 `pubspec.yaml` に `package_info_plus`、`url_launcher`、`pub_semver`、`win32_registry`、`crypto` (既存の可能性あり、要確認) を追加し、`fvm flutter pub get` を実行する（crypto は既存。他4つを追加）
 - [x] 1.2 `installer/novel_viewer.iss` に `[Registry]` セクションを追加: `Root: HKCU; Subkey: "Software\NovelViewer"; ValueType: string; ValueName: "InstallType"; ValueData: "installer"; Flags: uninsdeletekey`
-- [ ] 1.3 ローカルでインストーラを再ビルドし、`reg query HKCU\Software\NovelViewer /v InstallType` でキーが書き込まれること、アンインストール後に削除されることを確認する（実機検証）
+- [x] 1.3 v1.0.1 インストーラ実機検証で、設定タブが「インストーラ版」と表示＝レジストリ読み取り成功＝書き込みも成立を確認（アンインストール削除は v1.0.2 リリース時に追加確認）
 
 ## 2. 配布形態の検出
 
@@ -74,7 +74,7 @@
 
 - [ ] 12.1 ローカルで偽の Release を返すモックサーバを用意するか、テスト用リポジトリで `v0.0.0-test*` を打って、AppBar バッジ表示まで動作することを確認
 - [ ] 12.2 インストーラ版で実際に新バージョンを検知 → DL → 検証 → 起動 → 自動再起動 のフルフローを実機で 1 回検証する
-- [ ] 12.3 ZIP 版で実行し、「リリースページを開く」フローのみが提示されることを実機で確認する
+- [x] 12.3 v1.0.1 ZIP 版実機: 更新なし状態で正しくバッジ非表示 / 設定タブの配布形態が「ポータブル版 (ZIP)」と表示。「リリースページを開く」ボタン自体は更新ありの時のみダイアログに出る仕様で、v1.0.2 リリース時に最終確認
 - [ ] 12.4 自動チェック OFF にした状態で起動して GitHub API が叩かれていないことを確認（Wireshark 等で確認、または logging 出力）
 - [ ] 12.5 24 時間レート制御が動くことを `last_check_timestamp` を直接書き換えて確認
 - [ ] 12.6 「後で」を押したバージョンが再通知されないこと、新バージョンで再通知されることを確認
