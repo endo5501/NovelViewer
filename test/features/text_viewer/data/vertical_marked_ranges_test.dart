@@ -199,5 +199,28 @@ void main() {
       );
       expect(result, isEmpty);
     });
+
+    test('ruby base text matches across a visual column break', () {
+      // A ruby segment expands to 2 buffer chars but a SINGLE entry, so the
+      // entry-index space here differs from the buffer-position space. With a
+      // visual break between the ruby base and the following plain char, the
+      // word "聖印を" must still match contiguously.
+      // Entries: ruby「聖印」(0) \n(1, visual) を(2).
+      final entries = buildVerticalCharEntries([
+        const RubyTextSegment(base: '聖印', rubyText: 'せいいん'),
+        const PlainTextSegment('\nを'),
+      ]);
+      final result = computeMarkedRanges(
+        entries: entries,
+        markedWords: const {'聖印を': MarkStyle.solid},
+        lineBreakEntryIndices: const {},
+      );
+      expect(result[0], isNotNull);
+      expect(result[2], isNotNull);
+      expect(identical(result[0], result[2]), isTrue);
+      expect(result[0]!.word, '聖印を');
+      // The visual newline entry itself is never marked.
+      expect(result.containsKey(1), isFalse);
+    });
   });
 }
