@@ -25,7 +25,7 @@ class VerticalTextPage extends StatefulWidget {
     this.ttsHighlightStart,
     this.ttsHighlightEnd,
     this.pageStartTextOffset = 0,
-    this.lineBreakEntryIndices = const {},
+    this.lineBreakEntryIndices,
     this.onSelectionChanged,
     this.onSwipe,
     this.onContextMenu,
@@ -44,7 +44,11 @@ class VerticalTextPage extends StatefulWidget {
   final int? ttsHighlightStart;
   final int? ttsHighlightEnd;
   final int pageStartTextOffset;
-  final Set<int> lineBreakEntryIndices;
+
+  /// Indices of the newline entries that correspond to real paragraph breaks.
+  /// Newline entries not in this set are visual column-wrap breaks. When null,
+  /// every newline is treated as a real break (legacy behaviour).
+  final Set<int>? lineBreakEntryIndices;
   final ValueChanged<String?>? onSelectionChanged;
   final ValueChanged<SwipeDirection>? onSwipe;
   final void Function(Offset position, String selectedText)? onContextMenu;
@@ -163,10 +167,12 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     final markedEntries = computeMarkedEntries(
       entries: _charEntries,
       markedWords: widget.markedWords,
+      lineBreakEntryIndices: widget.lineBreakEntryIndices,
     );
     _markedRanges = computeMarkedRanges(
       entries: _charEntries,
       markedWords: widget.markedWords,
+      lineBreakEntryIndices: widget.lineBreakEntryIndices,
     );
 
     final fontSize = widget.baseStyle?.fontSize ?? _kDefaultFontSize;
@@ -396,7 +402,12 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     final start = _effectiveStart;
     final end = _effectiveEnd;
     if (start == null || end == null || start >= end) return;
-    final text = extractVerticalSelectedText(_charEntries, start, end);
+    final text = extractVerticalSelectedText(
+      _charEntries,
+      start,
+      end,
+      lineBreakEntryIndices: widget.lineBreakEntryIndices,
+    );
     if (text.isEmpty) return;
     widget.onContextMenu?.call(details.globalPosition, text);
   }
@@ -416,7 +427,12 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       widget.onSelectionChanged?.call(null);
       return;
     }
-    final text = extractVerticalSelectedText(_charEntries, start, end);
+    final text = extractVerticalSelectedText(
+      _charEntries,
+      start,
+      end,
+      lineBreakEntryIndices: widget.lineBreakEntryIndices,
+    );
     widget.onSelectionChanged?.call(text.isEmpty ? null : text);
   }
 
@@ -569,7 +585,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       final entry = _charEntries[i];
       if (entry.isNewline) {
         // Line-break newlines count as 1 char in the original text offset
-        if (widget.lineBreakEntryIndices.contains(i)) {
+        if (widget.lineBreakEntryIndices?.contains(i) ?? false) {
           plainTextOffset += 1;
         }
         continue;

@@ -346,5 +346,44 @@ void main() {
     test('returns empty for empty entries', () {
       expect(extractVerticalSelectedText([], 0, 1), '');
     });
+
+    test('visual column break is omitted from extracted text', () {
+      // The newline at index 2 is a VISUAL column wrap (not in
+      // lineBreakEntryIndices), so the selection across it must be continuous.
+      final entries = [
+        VerticalCharEntry.plain('ア'),
+        VerticalCharEntry.plain('リ'),
+        VerticalCharEntry.newline(),
+        VerticalCharEntry.plain('ス'),
+      ];
+      expect(
+        extractVerticalSelectedText(entries, 0, 4,
+            lineBreakEntryIndices: const {}),
+        'アリス',
+      );
+    });
+
+    test('real line break is kept in extracted text', () {
+      final entries = [
+        VerticalCharEntry.plain('ア'),
+        VerticalCharEntry.plain('リ'),
+        VerticalCharEntry.newline(),
+        VerticalCharEntry.plain('ス'),
+      ];
+      expect(
+        extractVerticalSelectedText(entries, 0, 4,
+            lineBreakEntryIndices: const {2}),
+        'アリ\nス',
+      );
+    });
+
+    test('omitting lineBreakEntryIndices keeps the newline (legacy)', () {
+      final entries = [
+        VerticalCharEntry.plain('あ'),
+        VerticalCharEntry.newline(),
+        VerticalCharEntry.plain('い'),
+      ];
+      expect(extractVerticalSelectedText(entries, 0, 3), 'あ\nい');
+    });
   });
 }

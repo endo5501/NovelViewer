@@ -84,5 +84,45 @@ void main() {
       expect(result[3], MarkStyle.solid);
       expect(result[4], MarkStyle.solid);
     });
+
+    test('visual column break does not split mark styling', () {
+      // entries: ア(0) リ(1) \n(2) ス(3) が(4) 歩(5) く(6).
+      // The newline at index 2 is a VISUAL column wrap, so the "アリス" mark
+      // styling must reach entries 0,1,3.
+      final entries =
+          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
+      final result = computeMarkedEntries(
+        entries: entries,
+        markedWords: const {'アリス': MarkStyle.solid},
+        lineBreakEntryIndices: const {},
+      );
+      expect(result[0], MarkStyle.solid);
+      expect(result[1], MarkStyle.solid);
+      expect(result[3], MarkStyle.solid);
+      // The newline entry itself is never styled.
+      expect(result.containsKey(2), isFalse);
+    });
+
+    test('real line break splits mark styling', () {
+      final entries =
+          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
+      final result = computeMarkedEntries(
+        entries: entries,
+        markedWords: const {'アリス': MarkStyle.solid},
+        lineBreakEntryIndices: const {2},
+      );
+      expect(result, isEmpty);
+    });
+
+    test('omitting lineBreakEntryIndices treats newline as boundary (legacy)',
+        () {
+      final entries =
+          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
+      final result = computeMarkedEntries(
+        entries: entries,
+        markedWords: const {'アリス': MarkStyle.solid},
+      );
+      expect(result, isEmpty);
+    });
   });
 }
