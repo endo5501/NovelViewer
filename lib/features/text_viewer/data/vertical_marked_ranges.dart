@@ -35,9 +35,18 @@ class MarkInfo {
 ///
 /// Walks the same buffer/positionToEntry structure as `computeMarkedEntries`
 /// so the two functions agree on which entries belong to a mark.
+///
+/// [lineBreakEntryIndices] identifies the newline entries that correspond to
+/// real paragraph breaks in the source text. Newline entries NOT in this set
+/// are "visual" column-wrap breaks inserted by pagination; they are omitted
+/// from the matching buffer so a word straddling a column boundary still
+/// matches as a single contiguous span. When the set is null (caller is
+/// unaware of the distinction) every newline is treated as a real break, so
+/// the legacy boundary behaviour is preserved.
 Map<int, MarkInfo> computeMarkedRanges({
   required List<VerticalCharEntry> entries,
   required Map<String, MarkStyle> markedWords,
+  Set<int>? lineBreakEntryIndices,
 }) {
   if (markedWords.isEmpty) return const {};
 
@@ -46,6 +55,9 @@ Map<int, MarkInfo> computeMarkedRanges({
   for (var i = 0; i < entries.length; i++) {
     final entry = entries[i];
     if (entry.isNewline) {
+      final isRealBreak =
+          lineBreakEntryIndices == null || lineBreakEntryIndices.contains(i);
+      if (!isRealBreak) continue; // visual column wrap — keep word contiguous
       buffer.write('\n');
       positionToEntry.add(i);
       continue;

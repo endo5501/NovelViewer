@@ -153,5 +153,51 @@ void main() {
       expect(result[2]!.startEntry, 2);
       expect(result[2]!.endEntry, 5);
     });
+
+    test('visual column break (not in lineBreakEntryIndices) does not split a '
+        'mark', () {
+      // entries: ア(0) リ(1) \n(2) ス(3) が(4) 歩(5) く(6).
+      // The newline at index 2 is a VISUAL column wrap, so "アリス" must match
+      // across it and entries 0,1,3 share one MarkInfo instance.
+      final entries =
+          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
+      final result = computeMarkedRanges(
+        entries: entries,
+        markedWords: const {'アリス': MarkStyle.solid},
+        lineBreakEntryIndices: const {},
+      );
+      expect(result[0], isNotNull);
+      expect(result[1], isNotNull);
+      expect(result[3], isNotNull);
+      expect(identical(result[0], result[1]), isTrue);
+      expect(identical(result[1], result[3]), isTrue);
+      expect(result[0]!.word, 'アリス');
+      // The newline entry itself is never marked.
+      expect(result.containsKey(2), isFalse);
+    });
+
+    test('real line break (in lineBreakEntryIndices) splits a mark', () {
+      // Same entries, but the newline at index 2 is a REAL paragraph break,
+      // so "アリス" must NOT match across it.
+      final entries =
+          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
+      final result = computeMarkedRanges(
+        entries: entries,
+        markedWords: const {'アリス': MarkStyle.solid},
+        lineBreakEntryIndices: const {2},
+      );
+      expect(result, isEmpty);
+    });
+
+    test('omitting lineBreakEntryIndices treats every newline as a boundary '
+        '(legacy)', () {
+      final entries =
+          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
+      final result = computeMarkedRanges(
+        entries: entries,
+        markedWords: const {'アリス': MarkStyle.solid},
+      );
+      expect(result, isEmpty);
+    });
   });
 }

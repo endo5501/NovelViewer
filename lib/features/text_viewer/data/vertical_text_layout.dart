@@ -130,18 +130,35 @@ int? hitTestCharIndexFromRegions({
   return nearest?.charIndex;
 }
 
+/// Extracts the original (unmapped) text for the selected entry range.
+///
+/// [lineBreakEntryIndices] identifies the newline entries that correspond to
+/// real paragraph breaks. Newline entries NOT in this set are "visual"
+/// column-wrap breaks inserted by pagination; they contribute no character so
+/// a word straddling a column boundary is extracted as a continuous string
+/// (which then matches when sent for re-analysis). When the set is null every
+/// newline is emitted as `'\n'` (legacy behaviour).
 String extractVerticalSelectedText(
   List<VerticalCharEntry> entries,
   int startIndex,
-  int endIndex,
-) {
+  int endIndex, {
+  Set<int>? lineBreakEntryIndices,
+}) {
   if (startIndex >= endIndex) return '';
 
   final start = startIndex.clamp(0, entries.length);
   final end = endIndex.clamp(0, entries.length);
 
-  return entries
-      .sublist(start, end)
-      .map((e) => e.isNewline ? '\n' : e.text)
-      .join();
+  final buffer = StringBuffer();
+  for (var i = start; i < end; i++) {
+    final entry = entries[i];
+    if (entry.isNewline) {
+      final isRealBreak =
+          lineBreakEntryIndices == null || lineBreakEntryIndices.contains(i);
+      if (isRealBreak) buffer.write('\n');
+      continue;
+    }
+    buffer.write(entry.text);
+  }
+  return buffer.toString();
 }
