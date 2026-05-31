@@ -100,9 +100,17 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       return;
     }
 
-    // Wait for the on-demand secure-storage API key fetch to settle before
-    // we read the service.
+    // Wait for the async dependencies of `llmSummaryServiceProvider` to settle
+    // before reading it. The service is a *synchronous* provider that returns
+    // null while any of these FutureProviders is still loading, so reading it
+    // eagerly would yield null and make analysis silently bail. The client
+    // future covers the on-demand secure-storage API key fetch; the repository
+    // futures must be awaited too — nothing else pre-resolves
+    // `factCacheRepositoryProvider`, so without this the first analysis after
+    // launch would no-op.
     await _ref.read(llmClientProvider.future);
+    await _ref.read(llmSummaryRepositoryProvider.future);
+    await _ref.read(factCacheRepositoryProvider.future);
     final service = _ref.read(llmSummaryServiceProvider);
     if (!context.mounted) return;
     if (service == null) {

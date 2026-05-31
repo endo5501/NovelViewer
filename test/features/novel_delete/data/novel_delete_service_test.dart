@@ -5,6 +5,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_repository.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
+import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/novel_delete/data/novel_delete_service.dart';
@@ -15,6 +16,7 @@ void main() {
   late Database db;
   late NovelRepository novelRepository;
   late LlmSummaryRepository summaryRepository;
+  late FactCacheRepository factCacheRepository;
   late ReadingProgressRepository readingProgressRepository;
   late FileSystemService fileSystemService;
   late NovelDeleteService deleteService;
@@ -73,17 +75,35 @@ void main() {
               updated_at TEXT NOT NULL
             )
           ''');
+          await db.execute('''
+            CREATE TABLE fact_cache (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              folder_name TEXT NOT NULL,
+              word TEXT NOT NULL,
+              file_name TEXT NOT NULL,
+              facts TEXT NOT NULL,
+              content_hash TEXT NOT NULL,
+              prompt_version INTEGER NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE UNIQUE INDEX idx_fact_cache_unique
+            ON fact_cache(folder_name, word, file_name)
+          ''');
         },
       ),
     );
     novelDatabase.setDatabase(db);
     novelRepository = NovelRepository(novelDatabase);
     summaryRepository = LlmSummaryRepository(db);
+    factCacheRepository = FactCacheRepository(db);
     readingProgressRepository = ReadingProgressRepository(novelDatabase);
     fileSystemService = FileSystemService();
     deleteService = NovelDeleteService(
       novelRepository: novelRepository,
       summaryRepository: summaryRepository,
+      factCacheRepository: factCacheRepository,
       readingProgressRepository: readingProgressRepository,
       fileSystemService: fileSystemService,
     );
@@ -145,6 +165,29 @@ void main() {
       expect(snapshots, isEmpty);
     });
 
+    test('deletes fact_cache rows for the folder', () async {
+      await novelRepository.upsert(createMetadata());
+      await factCacheRepository.upsert(
+        folderName: 'narou_n1234ab',
+        word: 'アリス',
+        fileName: '001_chapter.txt',
+        facts: '- 事実',
+        contentHash: 'h1',
+        promptVersion: FactCacheRepository.currentPromptVersion,
+      );
+      final novelDir = Directory('${tempDir.path}/narou_n1234ab');
+      novelDir.createSync();
+
+      await deleteService.delete('narou_n1234ab', novelDir.path);
+
+      final cached = await factCacheRepository.findForWord(
+        folderName: 'narou_n1234ab',
+        word: 'アリス',
+      );
+      expect(cached, isEmpty,
+          reason: 'folder deletion SHALL cascade to fact_cache');
+    });
+
     test('deletes directory from file system', () async {
       await novelRepository.upsert(createMetadata());
       final novelDir = Directory('${tempDir.path}/narou_n1234ab');
@@ -186,6 +229,14 @@ void main() {
         coveredUpToEpisode: 10,
         summary: '別の要約',
       );
+      await factCacheRepository.upsert(
+        folderName: 'narou_n5678cd',
+        word: 'ボブ',
+        fileName: '001.txt',
+        facts: '- 事実',
+        contentHash: 'h2',
+        promptVersion: FactCacheRepository.currentPromptVersion,
+      );
       await readingProgressRepository.upsert(
         novelId: 'narou_n5678cd',
         filePath: '/library/narou_n5678cd/002_chapter2.txt',
@@ -204,6 +255,12 @@ void main() {
         word: 'ボブ',
       );
       expect(otherSnapshots, isNotEmpty);
+      final otherCache = await factCacheRepository.findForWord(
+        folderName: 'narou_n5678cd',
+        word: 'ボブ',
+      );
+      expect(otherCache, isNotEmpty,
+          reason: 'other novel\'s fact_cache SHALL be preserved');
       final otherProgress =
           await readingProgressRepository.findByNovelId('narou_n5678cd');
       expect(otherProgress, isNotNull,

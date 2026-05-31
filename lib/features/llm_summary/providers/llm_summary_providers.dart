@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
@@ -45,6 +46,13 @@ final llmSummaryRepositoryProvider =
   return LlmSummaryRepository(db);
 });
 
+final factCacheRepositoryProvider =
+    FutureProvider<FactCacheRepository>((ref) async {
+  final novelDb = ref.watch(novelDatabaseProvider);
+  final db = await novelDb.database;
+  return FactCacheRepository(db);
+});
+
 final llmSummaryServiceProvider = Provider<LlmSummaryService?>((ref) {
   final clientAsync = ref.watch(llmClientProvider);
   final client = clientAsync.value;
@@ -54,10 +62,15 @@ final llmSummaryServiceProvider = Provider<LlmSummaryService?>((ref) {
   final repo = repoAsync.value;
   if (repo == null) return null;
 
+  final factCacheAsync = ref.watch(factCacheRepositoryProvider);
+  final factCache = factCacheAsync.value;
+  if (factCache == null) return null;
+
   final searchService = ref.watch(textSearchServiceProvider);
   return LlmSummaryService(
     llmClient: client,
     repository: repo,
+    factCacheRepository: factCache,
     searchService: searchService,
   );
 });
