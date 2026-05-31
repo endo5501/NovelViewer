@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
@@ -35,6 +36,22 @@ Future<Database> _openDb() async {
           CREATE UNIQUE INDEX idx_word_summaries_unique
           ON word_summaries(folder_name, word, covered_up_to_episode)
         ''');
+        await db.execute('''
+          CREATE TABLE fact_cache (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            folder_name TEXT NOT NULL,
+            word TEXT NOT NULL,
+            file_name TEXT NOT NULL,
+            facts TEXT NOT NULL,
+            content_hash TEXT NOT NULL,
+            prompt_version INTEGER NOT NULL,
+            updated_at TEXT NOT NULL
+          )
+        ''');
+        await db.execute('''
+          CREATE UNIQUE INDEX idx_fact_cache_unique
+          ON fact_cache(folder_name, word, file_name)
+        ''');
       },
     ),
   );
@@ -42,11 +59,14 @@ Future<Database> _openDb() async {
 
 ProviderContainer _containerFor({
   required LlmSummaryRepository repository,
+  required FactCacheRepository factCacheRepository,
   required String? directoryPath,
 }) {
   return ProviderContainer(
     overrides: [
       llmSummaryRepositoryProvider.overrideWith((ref) async => repository),
+      factCacheRepositoryProvider
+          .overrideWith((ref) async => factCacheRepository),
       currentDirectoryProvider
           .overrideWith(() => CurrentDirectoryNotifier(directoryPath)),
     ],
@@ -57,10 +77,12 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late Database db;
   late LlmSummaryRepository repository;
+  late FactCacheRepository factCacheRepository;
 
   setUp(() async {
     db = await _openDb();
     repository = LlmSummaryRepository(db);
+    factCacheRepository = FactCacheRepository(db);
   });
 
   tearDown(() async {
@@ -89,7 +111,10 @@ void main() {
   group('llmSummaryHistoryProvider', () {
     test('returns empty list when no current directory is set', () async {
       final container =
-          _containerFor(repository: repository, directoryPath: null);
+          _containerFor(
+          repository: repository,
+          factCacheRepository: factCacheRepository,
+          directoryPath: null);
       addTearDown(container.dispose);
 
       final entries =
@@ -137,6 +162,7 @@ void main() {
 
       final container = _containerFor(
         repository: repository,
+        factCacheRepository: factCacheRepository,
         directoryPath: '/library/my_novel',
       );
       addTearDown(container.dispose);
@@ -180,6 +206,7 @@ void main() {
 
       final container = _containerFor(
         repository: repository,
+        factCacheRepository: factCacheRepository,
         directoryPath: '/library/my_novel',
       );
       addTearDown(container.dispose);
@@ -223,6 +250,7 @@ void main() {
 
       final container = _containerFor(
         repository: repository,
+        factCacheRepository: factCacheRepository,
         directoryPath: '/library/my_novel',
       );
       addTearDown(container.dispose);
@@ -237,6 +265,58 @@ void main() {
       expect(remaining.map((r) => r.word).toSet(), {'ボブ'});
     });
 
+    test('cascades deletion to the fact cache', () async {
+      final now = DateTime.utc(2026, 5, 20, 10).toIso8601String();
+      await insert(
+        folder: 'my_novel',
+        word: 'アリス',
+        episode: 30,
+        summary: 'a30',
+        updatedAt: now,
+      );
+      await factCacheRepository.upsert(
+        folderName: 'my_novel',
+        word: 'アリス',
+        fileName: '030.txt',
+        facts: '- 事実',
+        contentHash: 'h1',
+        promptVersion: FactCacheRepository.currentPromptVersion,
+      );
+      await factCacheRepository.upsert(
+        folderName: 'my_novel',
+        word: 'ボブ',
+        fileName: '030.txt',
+        facts: '- 別事実',
+        contentHash: 'h2',
+        promptVersion: FactCacheRepository.currentPromptVersion,
+      );
+
+      final container = _containerFor(
+        repository: repository,
+        factCacheRepository: factCacheRepository,
+        directoryPath: '/library/my_novel',
+      );
+      addTearDown(container.dispose);
+
+      await container.read(llmSummaryHistoryProvider.future);
+      await container
+          .read(llmSummaryHistoryProvider.notifier)
+          .deleteEntry('アリス');
+
+      expect(
+        await factCacheRepository.findForWord(
+            folderName: 'my_novel', word: 'アリス'),
+        isEmpty,
+        reason: 'deleting a word SHALL cascade to its fact_cache rows',
+      );
+      expect(
+        await factCacheRepository.findForWord(
+            folderName: 'my_novel', word: 'ボブ'),
+        hasLength(1),
+        reason: 'other words SHALL be preserved',
+      );
+    });
+
     test('refreshes the provider state after deletion', () async {
       final now = DateTime.utc(2026, 5, 20, 10).toIso8601String();
       await insert(
@@ -249,6 +329,7 @@ void main() {
 
       final container = _containerFor(
         repository: repository,
+        factCacheRepository: factCacheRepository,
         directoryPath: '/library/my_novel',
       );
       addTearDown(container.dispose);
@@ -268,6 +349,7 @@ void main() {
     test('external invalidate re-reads new snapshots', () async {
       final container = _containerFor(
         repository: repository,
+        factCacheRepository: factCacheRepository,
         directoryPath: '/library/my_novel',
       );
       addTearDown(container.dispose);
@@ -295,7 +377,10 @@ void main() {
 
     test('no-op when no current directory is set', () async {
       final container =
-          _containerFor(repository: repository, directoryPath: null);
+          _containerFor(
+          repository: repository,
+          factCacheRepository: factCacheRepository,
+          directoryPath: null);
       addTearDown(container.dispose);
 
       await container.read(llmSummaryHistoryProvider.future);
@@ -342,6 +427,7 @@ void main() {
 
       final container = _containerFor(
         repository: repository,
+        factCacheRepository: factCacheRepository,
         directoryPath: tempDir.path,
       );
       addTearDown(container.dispose);
@@ -375,6 +461,7 @@ void main() {
 
       final container = _containerFor(
         repository: repository,
+        factCacheRepository: factCacheRepository,
         directoryPath: tempDir.path,
       );
       addTearDown(container.dispose);
@@ -402,6 +489,7 @@ void main() {
     test('no-op when sourceFile is null', () async {
       final container = _containerFor(
         repository: repository,
+        factCacheRepository: factCacheRepository,
         directoryPath: '/library/my_novel',
       );
       addTearDown(container.dispose);
@@ -423,6 +511,7 @@ void main() {
     test('no-op when the resolved file does not exist on disk', () async {
       final container = _containerFor(
         repository: repository,
+        factCacheRepository: factCacheRepository,
         directoryPath: '/library/nonexistent',
       );
       addTearDown(container.dispose);

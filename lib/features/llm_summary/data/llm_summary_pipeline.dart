@@ -47,6 +47,66 @@ class LlmSummaryPipeline {
     return _parseSummaryResponse(await llmClient.generate(prompt));
   }
 
+  /// Stage-1 for a single source file: split this file's own contexts into
+  /// chunks (only chunking when the file alone exceeds [maxChunkSize]) and
+  /// combine the per-chunk extracted facts into the file's facts. Returns an
+  /// empty string and makes no LLM call when [contexts] is empty. Contexts
+  /// from other files are never passed here — the caller groups by file, which
+  /// is what makes the result cacheable per `(folder, word, file)`.
+  Future<String> extractFileFacts({
+    required String word,
+    required List<String> contexts,
+  }) async {
+    if (contexts.isEmpty) return '';
+    final chunks = ContextChunker.split(contexts, maxChunkSize: maxChunkSize);
+    final factsList = <String>[];
+    for (final chunk in chunks) {
+      final contextBlock = chunk.join('\n---\n');
+      final prompt = LlmPromptBuilder.buildFactExtractionPrompt(
+        word: word,
+        contextChunk: contextBlock,
+      );
+      factsList.add(_parseFactsResponse(await llmClient.generate(prompt)));
+    }
+    return factsList.join('\n');
+  }
+
+  /// Aggregate already-extracted per-file facts and generate the final summary.
+  /// When the combined facts exceed [maxChunkSize], runs recursive refinement
+  /// (rounds 2+) before summarizing; otherwise goes straight to the final
+  /// summary. Round-1 (per-file) progress is emitted by the caller, so this
+  /// method only emits refinement rounds and the final-summary event.
+  Future<String> summarizeFromFacts({
+    required String word,
+    required List<String> perFileFacts,
+    void Function(AnalysisProgress progress)? onProgress,
+  }) async {
+    final notify = _isolatedNotifier(onProgress);
+
+    final nonEmpty =
+        perFileFacts.where((f) => f.trim().isNotEmpty).toList(growable: false);
+
+    String facts;
+    if (nonEmpty.isEmpty) {
+      facts = '';
+    } else {
+      final combined = nonEmpty.join('\n');
+      if (combined.length <= maxChunkSize) {
+        facts = combined;
+      } else {
+        // Refinement starts at depth 1 so the first emitted round is 2.
+        facts = await _extractFactsRecursive(word, nonEmpty, 1, notify);
+      }
+    }
+
+    notify(const AnalysisGeneratingFinalSummary());
+    final prompt = LlmPromptBuilder.buildFinalSummaryPrompt(
+      word: word,
+      facts: facts,
+    );
+    return _parseSummaryResponse(await llmClient.generate(prompt));
+  }
+
   static void Function(AnalysisProgress) _isolatedNotifier(
     void Function(AnalysisProgress)? onProgress,
   ) {

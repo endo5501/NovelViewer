@@ -297,6 +297,30 @@ class _ReanalyzeMenuButtonState extends ConsumerState<_ReanalyzeMenuButton> {
       labelUpToAll += overwriteSuffix;
     }
 
+    // Capture everything the analysis trigger needs WHILE this State is still
+    // mounted. `MenuItemButton` defers its `onPressed` to a post-frame
+    // callback *after* it closes the menu — and closing the menu hides the
+    // popup and unmounts this State (its overlay entry is removed by the
+    // host). By the time the callback runs, `context`, `ref`, and `widget`
+    // are all defunct, so reading any of them throws and the analysis silently
+    // never starts. `rootContext` (the root navigator) survives the teardown,
+    // and `runner` is a plain object captured here while `ref` is valid.
+    final runner = ref.read(analysisRunnerProvider);
+    final rootContext = Navigator.of(context, rootNavigator: true).context;
+    final word = widget.word;
+    final currentEpisode = widget.currentEpisode;
+    final currentFileName = widget.currentFileName;
+    final maxEpisode = widget.maxEpisodeInFolder;
+    final maxFileName = widget.maxEpisodeFileName;
+    void runAnalysis(int episode, String? sourceFile) {
+      runner.run(
+        context: rootContext,
+        word: word,
+        coveredUpToEpisode: episode,
+        sourceFileName: sourceFile,
+      );
+    }
+
     return MenuAnchor(
       controller: _menuController,
       // Notify the hover-popup notifier when the menu opens / closes so the
@@ -315,18 +339,12 @@ class _ReanalyzeMenuButtonState extends ConsumerState<_ReanalyzeMenuButton> {
       menuChildren: [
         MenuItemButton(
           key: const Key('hover_popup_reanalyze_up_to_current'),
-          onPressed: () => _runAnalysis(
-            episode: widget.currentEpisode,
-            sourceFile: widget.currentFileName,
-          ),
+          onPressed: () => runAnalysis(currentEpisode, currentFileName),
           child: Text(labelUpToCurrent),
         ),
         MenuItemButton(
           key: const Key('hover_popup_reanalyze_up_to_all'),
-          onPressed: () => _runAnalysis(
-            episode: widget.maxEpisodeInFolder,
-            sourceFile: widget.maxEpisodeFileName,
-          ),
+          onPressed: () => runAnalysis(maxEpisode, maxFileName),
           child: Text(labelUpToAll),
         ),
       ],
@@ -351,32 +369,6 @@ class _ReanalyzeMenuButtonState extends ConsumerState<_ReanalyzeMenuButton> {
         ),
       ),
     );
-  }
-
-  void _runAnalysis({required int episode, required String? sourceFile}) {
-    // The popup (and this menu button) lives inside an Overlay entry that
-    // hides aggressively on pointer-exit. Two correctness concerns:
-    //   1. By the time the runner's first synchronous read of
-    //      AppLocalizations.of(context) executes, the menu's BuildContext
-    //      may already be unmounted — the Localizations ancestor is then
-    //      gone and the `!` bang throws in the orphaned future, swallowing
-    //      the analysis silently. Capture a root-navigator context BEFORE
-    //      close() so localizations/navigator/messenger lookups resolve
-    //      against an ancestor that survives the popup's teardown.
-    //   2. `_menuController.close()` synchronously fires `onClose` →
-    //      `onChildMenuClose` on the popup notifier, which may hide the
-    //      popup and start tearing down this State. Guard the post-close
-    //      `ref.read(analysisRunnerProvider)` with `mounted` so a disposed
-    //      Notifier lookup does not throw.
-    final rootContext = Navigator.of(context, rootNavigator: true).context;
-    _menuController.close();
-    if (!mounted) return;
-    ref.read(analysisRunnerProvider).run(
-          context: rootContext,
-          word: widget.word,
-          coveredUpToEpisode: episode,
-          sourceFileName: sourceFile,
-        );
   }
 }
 

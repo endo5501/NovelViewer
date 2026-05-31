@@ -10,12 +10,15 @@ final novelDeleteServiceProvider =
   final novelRepository = ref.watch(novelRepositoryProvider);
   final summaryRepository =
       await ref.watch(llmSummaryRepositoryProvider.future);
+  final factCacheRepository =
+      await ref.watch(factCacheRepositoryProvider.future);
   final readingProgressRepository =
       ref.watch(readingProgressRepositoryProvider);
   final fileSystemService = ref.watch(fileSystemServiceProvider);
   return NovelDeleteService(
     novelRepository: novelRepository,
     summaryRepository: summaryRepository,
+    factCacheRepository: factCacheRepository,
     readingProgressRepository: readingProgressRepository,
     fileSystemService: fileSystemService,
   );

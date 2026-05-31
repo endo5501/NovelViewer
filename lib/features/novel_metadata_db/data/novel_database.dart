@@ -54,7 +54,7 @@ class NovelDatabaseSnapshotResolver {
 
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
-  static const _databaseVersion = 6;
+  static const _databaseVersion = 7;
   static final _log = Logger('novel_metadata_db');
 
   final String? _dbDirPath;
@@ -116,6 +116,7 @@ class NovelDatabase {
     await _createV5WordSummariesTable(db);
     await _createBookmarksTable(db);
     await _createReadingProgressTable(db);
+    await _createFactCacheTable(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -137,6 +138,9 @@ class NovelDatabase {
     }
     if (oldVersion < 6) {
       await _createReadingProgressTable(db);
+    }
+    if (oldVersion < 7) {
+      await _createFactCacheTable(db);
     }
   }
 
@@ -192,6 +196,29 @@ class NovelDatabase {
         created_at TEXT NOT NULL,
         UNIQUE(novel_id, file_path, line_number)
       )
+    ''');
+  }
+
+  /// Per-`(folder, word, file)` cache of Stage-1 fact extraction results so a
+  /// re-analysis only re-extracts episodes that are new or whose source
+  /// content changed. `IF NOT EXISTS` keeps the v6 → v7 upgrade idempotent if
+  /// it is interrupted between the CREATE and the `user_version` bump.
+  static Future<void> _createFactCacheTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS fact_cache (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        folder_name TEXT NOT NULL,
+        word TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        facts TEXT NOT NULL,
+        content_hash TEXT NOT NULL,
+        prompt_version INTEGER NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_fact_cache_unique
+      ON fact_cache(folder_name, word, file_name)
     ''');
   }
 

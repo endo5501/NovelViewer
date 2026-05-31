@@ -27,8 +27,13 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
 
     final folderName = p.basename(directory);
     final repo = await ref.read(llmSummaryRepositoryProvider.future);
+    final factCache = await ref.read(factCacheRepositoryProvider.future);
 
     await repo.deleteAllForWord(folderName: folderName, word: word);
+    // Cascade the per-file fact cache so deleting a word's summaries also
+    // drops its cached extraction (see llm-summary-fact-cache "Cascade
+    // cleanup").
+    await factCache.deleteAllForWord(folderName: folderName, word: word);
 
     ref.invalidateSelf();
   }

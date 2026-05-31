@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
@@ -47,6 +48,7 @@ class _MockLlmClient extends LlmClient {
 void main() {
   late Database db;
   late LlmSummaryRepository repository;
+  late FactCacheRepository factCache;
   late TextSearchService searchService;
   late Directory tempDir;
 
@@ -73,10 +75,27 @@ void main() {
             CREATE UNIQUE INDEX idx_word_summaries_unique
             ON word_summaries(folder_name, word, covered_up_to_episode)
           ''');
+          await db.execute('''
+            CREATE TABLE fact_cache (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              folder_name TEXT NOT NULL,
+              word TEXT NOT NULL,
+              file_name TEXT NOT NULL,
+              facts TEXT NOT NULL,
+              content_hash TEXT NOT NULL,
+              prompt_version INTEGER NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE UNIQUE INDEX idx_fact_cache_unique
+            ON fact_cache(folder_name, word, file_name)
+          ''');
         },
       ),
     );
     repository = LlmSummaryRepository(db);
+    factCache = FactCacheRepository(db);
     searchService = TextSearchService();
     tempDir = await Directory.systemTemp.createTemp('llm_service_test_');
   });
@@ -101,13 +120,16 @@ void main() {
       await createFile('100_chapter.txt', 'アリスが帰還した。');
 
       final mockClient = _MockLlmClient([
-        jsonEncode({'facts': '- 物語の序盤に登場\n- 旅に出た\n- 帰還した'}),
+        jsonEncode({'facts': '- 物語の序盤に登場'}),
+        jsonEncode({'facts': '- 旅に出た'}),
+        jsonEncode({'facts': '- 帰還した'}),
         jsonEncode({'summary': 'アリスは冒険者。'}),
       ]);
 
       final service = LlmSummaryService(
         llmClient: mockClient,
         repository: repository,
+        factCacheRepository: factCache,
         searchService: searchService,
       );
 
@@ -120,7 +142,8 @@ void main() {
       );
 
       expect(result, 'アリスは冒険者。');
-      expect(mockClient.callCount, 2);
+      // 3 files extracted (per-file Stage-1) + 1 final summary.
+      expect(mockClient.callCount, 4);
 
       final cached = await repository.findSnapshotsForWord(
         folderName: 'test_novel',
@@ -138,13 +161,15 @@ void main() {
       await createFile('100_chapter.txt', 'アリスが帰還した。');
 
       final mockClient = _MockLlmClient([
-        jsonEncode({'facts': '- 物語の序盤に登場\n- 旅に出た'}),
+        jsonEncode({'facts': '- 物語の序盤に登場'}),
+        jsonEncode({'facts': '- 旅に出た'}),
         jsonEncode({'summary': 'アリスは旅立った少女。'}),
       ]);
 
       final service = LlmSummaryService(
         llmClient: mockClient,
         repository: repository,
+        factCacheRepository: factCache,
         searchService: searchService,
       );
 
@@ -157,10 +182,12 @@ void main() {
       );
 
       expect(result, 'アリスは旅立った少女。');
-      final factExtractionPrompt = mockClient.prompts[0];
-      expect(factExtractionPrompt, contains('アリスが登場した'));
-      expect(factExtractionPrompt, contains('アリスが旅に出た'));
-      expect(factExtractionPrompt, isNot(contains('アリスが帰還した')));
+      // Per-file Stage-1: 001 and 040 each get their own extraction prompt;
+      // 100 is filtered out and never extracted.
+      final extractionPrompts = mockClient.prompts.take(2).join('\n');
+      expect(extractionPrompts, contains('アリスが登場した'));
+      expect(extractionPrompts, contains('アリスが旅に出た'));
+      expect(extractionPrompts, isNot(contains('アリスが帰還した')));
     });
 
     test('saves snapshot at the provided coveredUpToEpisode', () async {
@@ -168,13 +195,15 @@ void main() {
       await createFile('060_chapter.txt', 'アリスが旅に出た。');
 
       final mockClient = _MockLlmClient([
-        jsonEncode({'facts': '- 登場した\n- 旅に出た'}),
+        jsonEncode({'facts': '- 登場した'}),
+        jsonEncode({'facts': '- 旅に出た'}),
         jsonEncode({'summary': 'アリスは冒険者。'}),
       ]);
 
       final service = LlmSummaryService(
         llmClient: mockClient,
         repository: repository,
+        factCacheRepository: factCache,
         searchService: searchService,
       );
 
@@ -206,6 +235,7 @@ void main() {
       final service = LlmSummaryService(
         llmClient: mockClient,
         repository: repository,
+        factCacheRepository: factCache,
         searchService: searchService,
       );
 
@@ -232,6 +262,7 @@ void main() {
       final service = LlmSummaryService(
         llmClient: mockClient,
         repository: repository,
+        factCacheRepository: factCache,
         searchService: searchService,
       );
 
@@ -258,6 +289,7 @@ void main() {
       final service = LlmSummaryService(
         llmClient: mockClient,
         repository: repository,
+        factCacheRepository: factCache,
         searchService: searchService,
       );
 
@@ -291,6 +323,7 @@ void main() {
       final service = LlmSummaryService(
         llmClient: mockClient,
         repository: repository,
+        factCacheRepository: factCache,
         searchService: searchService,
       );
 
@@ -318,6 +351,7 @@ void main() {
       final service = LlmSummaryService(
         llmClient: mockClient,
         repository: repository,
+        factCacheRepository: factCache,
         searchService: searchService,
       );
 
@@ -349,6 +383,7 @@ void main() {
       final service = LlmSummaryService(
         llmClient: mockClient,
         repository: repository,
+        factCacheRepository: factCache,
         searchService: searchService,
       );
 
@@ -377,13 +412,15 @@ void main() {
       await createFile('part2.txt', 'アリスが戻った。');
 
       final mockClient = _MockLlmClient([
-        jsonEncode({'facts': '- 登場\n- 旅'}),
+        jsonEncode({'facts': '- 登場'}),
+        jsonEncode({'facts': '- 旅'}),
         jsonEncode({'summary': '中盤までの要約。'}),
       ]);
 
       final service = LlmSummaryService(
         llmClient: mockClient,
         repository: repository,
+        factCacheRepository: factCache,
         searchService: searchService,
       );
 
@@ -397,10 +434,12 @@ void main() {
         sourceFileName: 'part1.txt',
       );
 
-      final prompt = mockClient.prompts[0];
-      expect(prompt, contains('アリスが登場した'));
-      expect(prompt, contains('アリスが旅に出た'));
-      expect(prompt, isNot(contains('アリスが戻った')));
+      // Per-file Stage-1: intro and part1 each get their own extraction
+      // prompt; part2 is filtered out and never extracted.
+      final extractionPrompts = mockClient.prompts.take(2).join('\n');
+      expect(extractionPrompts, contains('アリスが登場した'));
+      expect(extractionPrompts, contains('アリスが旅に出た'));
+      expect(extractionPrompts, isNot(contains('アリスが戻った')));
     });
   });
 }

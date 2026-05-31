@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
@@ -33,11 +34,18 @@ class _DummySearch implements TextSearchService {
   Object? noSuchMethod(Invocation invocation) => null;
 }
 
+class _DummyFactCache implements FactCacheRepository {
+  @override
+  Object? noSuchMethod(Invocation invocation) => null;
+}
+
+
 class _StubService extends LlmSummaryService {
   _StubService(this._behavior)
       : super(
           llmClient: _DummyClient(),
           repository: _DummyRepo(),
+          factCacheRepository: _DummyFactCache(),
           searchService: _DummySearch(),
         );
   final Future<String> Function({
@@ -87,6 +95,11 @@ ProviderContainer _container(_StubService stub,
     selectedFileProvider.overrideWith(() => _MockSelectedFile(file)),
     llmSummaryServiceProvider.overrideWithValue(stub),
     llmClientProvider.overrideWith((_) async => _DummyClient()),
+    // run() awaits these FutureProviders before reading the (overridden)
+    // service, so they must resolve in tests too. The values are unused here
+    // because the service itself is stubbed.
+    llmSummaryRepositoryProvider.overrideWith((_) async => _DummyRepo()),
+    factCacheRepositoryProvider.overrideWith((_) async => _DummyFactCache()),
   ]);
   return container;
 }
@@ -492,6 +505,71 @@ void main() {
       await touch('part2.txt');
 
       expect(resolveSourceFileForAll(tempDir.path), 'part2.txt');
+    });
+  });
+
+  group('DefaultAnalysisRunner provider resolution (regression)', () {
+    testWidgets(
+        'waits for factCacheRepositoryProvider before reading the service '
+        '(otherwise analysis silently bails on a null service)',
+        (tester) async {
+      final completer = Completer<String>();
+      final stub = _StubService(
+          ({required word, required coveredUpToEpisode, sourceFileName}) =>
+              completer.future);
+      addTearDown(() {
+        if (!completer.isCompleted) completer.complete('done');
+      });
+
+      // Reproduce the production wiring: llmSummaryServiceProvider is null
+      // until factCacheRepositoryProvider (a FutureProvider that nothing
+      // pre-resolves) finishes loading. The stub stands in for the real
+      // service so the test stays free of real file/DB I/O.
+      final container = ProviderContainer(overrides: [
+        currentDirectoryProvider
+            .overrideWith(() => CurrentDirectoryNotifier('/library/novel_a')),
+        selectedFileProvider.overrideWith(() => _MockSelectedFile(
+            const FileEntry(name: '001.txt', path: '/library/novel_a/001.txt'))),
+        llmClientProvider.overrideWith((_) async => _DummyClient()),
+        llmSummaryRepositoryProvider.overrideWith((_) async => _DummyRepo()),
+        factCacheRepositoryProvider
+            .overrideWith((_) async => _DummyFactCache()),
+        llmSummaryServiceProvider.overrideWith((ref) {
+          // Mirror the real provider: gate on the fact-cache FutureProvider.
+          final factCache = ref.watch(factCacheRepositoryProvider);
+          if (factCache.value == null) return null;
+          return stub;
+        }),
+      ]);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_harness(
+        container: container,
+        onPressed: (ref, context) {
+          ref.read(analysisRunnerProvider).run(
+                context: context,
+                word: 'アリス',
+                coveredUpToEpisode: 1,
+                sourceFileName: '001.txt',
+              );
+        },
+      ));
+
+      await tester.tap(find.text('go'));
+      await tester.pump();
+      await tester.pump();
+
+      // The modal only appears if run() obtained a non-null service, which
+      // requires it to await factCacheRepositoryProvider.future first.
+      expect(find.byKey(const Key('analysis_modal')), findsOneWidget,
+          reason: 'run() must wait for the fact-cache FutureProvider before '
+              'reading the (sync) service; otherwise the service is null and '
+              'analysis silently bails');
+      expect(stub.callCount, 1);
+      expect(stub.lastCoveredUpToEpisode, 1);
+
+      completer.complete('mock summary');
+      await tester.pumpAndSettle();
     });
   });
 }
