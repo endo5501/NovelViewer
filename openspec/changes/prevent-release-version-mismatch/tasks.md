@@ -26,6 +26,6 @@
 
 ## 5. ドキュメント
 
-- [ ] 5.1 `.claude/CLAUDE.md` の開発コマンドに release スクリプトの使い方（`scripts/release.ps1 <X.Y.Z>` / `scripts/release.sh <X.Y.Z>`）を追記
-- [ ] 5.2 `README.md` の「リリース」セクションを更新し、手打ち `git tag` ではなく release スクリプト経由を推奨手順として記載（pubspec 更新忘れ防止の二段防御に触れる）
-- [ ] 5.3 `README_en.md` / `README_zh.md` の対応セクションも同様に更新
+- [x] 5.1 `.claude/CLAUDE.md` の開発コマンドに release スクリプトの使い方（`scripts/release.ps1 <X.Y.Z>` / `scripts/release.sh <X.Y.Z>`）を追記
+- [x] 5.2 `README.md` の「リリース」セクションを更新し、手打ち `git tag` ではなく release スクリプト経由を推奨手順として記載（pubspec 更新忘れ防止の二段防御に触れる）
+- [x] 5.3 `README_en.md` / `README_zh.md` の対応セクションも同様に更新
