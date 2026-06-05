@@ -127,12 +127,21 @@ fvm flutter analyze
 
 ### リリース
 
-タグ（`v*`パターン）をpushすると、GitHub ActionsによりWindows版の自動ビルド・リリースが実行されます。
+リリースは付属のスクリプトで行います。`pubspec.yaml` の version 更新・commit・タグ付け・push を一括で実行し、更新忘れを防ぎます。
+
+```powershell
+# Windows (PowerShell)
+scripts\release.ps1 1.2.0
+```
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+# macOS / Linux / Git Bash
+scripts/release.sh 1.2.0
 ```
+
+スクリプトは実行前に「引数が `X.Y.Z` 形式 / 作業ツリーがclean / `main` ブランチ / タグ `v1.2.0` が未使用 / バージョンが後退していない」ことを検証し、すべて満たす場合のみ `pubspec.yaml` を `1.2.0+(ビルド番号+1)` に更新してから commit・`v1.2.0` タグ付け・push します。タグが push されると GitHub ActionsがWindows版を自動ビルドし、Releaseを作成します。
+
+> **バージョン不一致の二段防御:** リリースのバージョンは「git タグ」と「`pubspec.yaml` の version」の双方から決まります。`pubspec.yaml` の更新を忘れてタグだけ付けると、アプリが旧バージョンを名乗り更新通知が壊れます。これを防ぐため、(1) 上記スクリプトが push 前に両者を揃え、(2) GitHub Actions 側でもビルド前に `scripts/verify_release_version.sh` でタグと `pubspec.yaml` の一致を検証し、不一致なら Release を作成せず失敗します。手動で `git tag` する運用は避けてください。
 
 各リリースには以下4ファイルが添付されます。
 

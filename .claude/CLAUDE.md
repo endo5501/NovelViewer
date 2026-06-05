@@ -14,6 +14,7 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `fvm flutter analyze` - リント実行
  - `fvm flutter pub get` - 依存パッケージ取得
  - `scripts/benchmark_tts.sh --model-dir <dir> --max-tokens 200` - TTSベンチマーク実行（結果はbenchmarks/に保存）
+ - `scripts/release.ps1 <X.Y.Z>` / `scripts/release.sh <X.Y.Z>` - リリース実行(windows/unix)。pubspec.yamlのversionを`X.Y.Z+(N+1)`に更新→commit→`vX.Y.Z`タグ付け→pushを一括実行（事前検証込み）。手動の`git tag`は使わずこのスクリプト経由でリリースする
 
 ## 必須ルール(MUST)
 

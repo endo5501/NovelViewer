@@ -111,12 +111,21 @@ fvm flutter analyze
 
 ### 发布
 
-推送匹配 `v*` 模式的标签后，GitHub Actions 会自动构建并发布 Windows 版本。
+发布请使用附带的脚本。它会一次性完成更新 `pubspec.yaml` 版本、提交、打标签并推送，从而避免忘记更新版本号。
+
+```powershell
+# Windows (PowerShell)
+scripts\release.ps1 1.2.0
+```
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+# macOS / Linux / Git Bash
+scripts/release.sh 1.2.0
 ```
+
+脚本在执行前会校验：参数为 `X.Y.Z` 格式、工作区干净、当前在 `main` 分支、标签 `v1.2.0` 尚未使用、版本号未回退。全部满足后，才会将 `pubspec.yaml` 更新为 `1.2.0+(构建号+1)`，提交、打标签 `v1.2.0` 并推送。推送标签后，GitHub Actions 会自动构建并发布 Windows 版本。
+
+> **版本不一致的双重防护：** 发布版本由 git 标签和 `pubspec.yaml` 双方共同决定。若只打标签而忘记更新 `pubspec.yaml`，应用会报告旧版本，更新通知将出错。为此：(1) 上述脚本在推送前使两者保持一致；(2) GitHub Actions 也会在构建前运行 `scripts/verify_release_version.sh` 校验标签与 `pubspec.yaml` 是否一致，不一致则发布失败。请避免手动 `git tag`。
 
 每个发布会附带以下 4 个文件：
 

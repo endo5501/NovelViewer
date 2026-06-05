@@ -21,6 +21,10 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Verify tag matches pubspec.yaml version
+        shell: bash
+        run: scripts/verify_release_version.sh "${{ github.ref_name }}"
+
       - name: Install Vulkan SDK
         shell: pwsh
         run: |

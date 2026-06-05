@@ -111,12 +111,21 @@ Lint rules are configured in `analysis_options.yaml`.
 
 ### Release
 
-Pushing a tag matching the `v*` pattern triggers an automatic Windows build and release via GitHub Actions.
+Releases are cut with the bundled script, which updates the `pubspec.yaml` version, commits, tags, and pushes in one step so the version bump is never forgotten.
+
+```powershell
+# Windows (PowerShell)
+scripts\release.ps1 1.2.0
+```
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+# macOS / Linux / Git Bash
+scripts/release.sh 1.2.0
 ```
+
+Before doing anything, the script verifies that the argument is in `X.Y.Z` form, the working tree is clean, you are on `main`, the tag `v1.2.0` is unused, and the version is not going backwards. Only then does it bump `pubspec.yaml` to `1.2.0+(build+1)`, commit, tag `v1.2.0`, and push. Pushing the tag triggers the automatic Windows build and release via GitHub Actions.
+
+> **Two-layer guard against version mismatch:** A release's version comes from both the git tag and `pubspec.yaml`. If you tag without bumping `pubspec.yaml`, the app reports the old version and update notifications break. To prevent this, (1) the script above keeps the two in sync before pushing, and (2) GitHub Actions also runs `scripts/verify_release_version.sh` before building and fails the release if the tag and `pubspec.yaml` disagree. Avoid tagging manually with `git tag`.
 
 Each release attaches the following four files:
 
