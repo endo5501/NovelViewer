@@ -1,0 +1,4 @@
+# Shell scripts must keep LF endings so they run under bash on CI runners
+# (GitHub Windows runners default to core.autocrlf=true, which would otherwise
+# rewrite them to CRLF and break `shell: bash` steps).
+*.sh text eol=lf
