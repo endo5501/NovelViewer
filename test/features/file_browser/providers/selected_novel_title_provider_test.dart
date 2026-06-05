@@ -88,6 +88,38 @@ void main() {
       expect(title, 'unknown_folder');
     });
 
+    test('整理フォルダ配下の小説フォルダにいるときその小説のtitleを返す', () async {
+      final container = ProviderContainer(
+        overrides: [
+          libraryPathProvider.overrideWithValue('/library'),
+          currentDirectoryProvider.overrideWith(() {
+            return _TestCurrentDirectoryNotifier('/library/完結済み/n1234');
+          }),
+          allNovelsProvider.overrideWith((ref) async => [testNovel]),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final title = await container.read(selectedNovelTitleProvider.future);
+      expect(title, '異世界転生物語');
+    });
+
+    test('整理フォルダ配下の小説フォルダのサブディレクトリでもtitleを返す', () async {
+      final container = ProviderContainer(
+        overrides: [
+          libraryPathProvider.overrideWithValue('/library'),
+          currentDirectoryProvider.overrideWith(() {
+            return _TestCurrentDirectoryNotifier('/library/完結済み/n1234/sub');
+          }),
+          allNovelsProvider.overrideWith((ref) async => [testNovel]),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final title = await container.read(selectedNovelTitleProvider.future);
+      expect(title, '異世界転生物語');
+    });
+
     test('ライブラリ外のパスにいるときnullを返す', () async {
       final container = ProviderContainer(
         overrides: [

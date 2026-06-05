@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 
 void main() {
@@ -116,6 +117,262 @@ void main() {
       final dirs = await service.listSubdirectories(tempDir.path);
 
       expect(dirs, isEmpty);
+    });
+  });
+
+  group('listOrganizationalFolderTree', () {
+    test('returns organizational folders recursively, skipping novel folders',
+        () async {
+      Directory('${tempDir.path}/完結済み').createSync();
+      Directory('${tempDir.path}/完結済み/2024').createSync();
+      Directory('${tempDir.path}/連載中').createSync();
+      // A novel folder must not be descended into.
+      final novel = Directory('${tempDir.path}/narou_n1')..createSync();
+      Directory('${novel.path}/should_not_appear').createSync();
+      File('${novel.path}/001.txt').writeAsStringSync('x');
+
+      final paths = await service.listOrganizationalFolderTree(
+        tempDir.path,
+        {'narou_n1'},
+      );
+
+      final names = paths.map((path) => p.basename(path)).toSet();
+      expect(names, containsAll(<String>['完結済み', '2024', '連載中']));
+      expect(names, isNot(contains('narou_n1')));
+      expect(names, isNot(contains('should_not_appear')));
+    });
+
+    test('returns empty list when there are no organizational folders',
+        () async {
+      Directory('${tempDir.path}/narou_n1').createSync();
+
+      final paths = await service.listOrganizationalFolderTree(
+        tempDir.path,
+        {'narou_n1'},
+      );
+
+      expect(paths, isEmpty);
+    });
+  });
+
+  group('createDirectory', () {
+    test('creates a directory with a valid name', () async {
+      final entry = await service.createDirectory(tempDir.path, '完結済み');
+
+      expect(entry.name, '完結済み');
+      expect(Directory(entry.path).existsSync(), true);
+      expect(p.equals(entry.path, p.join(tempDir.path, '完結済み')), true);
+    });
+
+    test('throws nameCollision when a directory with the same name exists',
+        () async {
+      Directory('${tempDir.path}/連載中').createSync();
+
+      expect(
+        () => service.createDirectory(tempDir.path, '連載中'),
+        throwsA(isA<DirectoryOpException>()
+            .having((e) => e.error, 'error', DirectoryOpError.nameCollision)),
+      );
+    });
+
+    test('throws nameCollision when a file with the same name exists',
+        () async {
+      File('${tempDir.path}/memo').writeAsStringSync('x');
+
+      expect(
+        () => service.createDirectory(tempDir.path, 'memo'),
+        throwsA(isA<DirectoryOpException>()
+            .having((e) => e.error, 'error', DirectoryOpError.nameCollision)),
+      );
+    });
+
+    test('throws invalidName when the name contains invalid characters',
+        () async {
+      expect(
+        () => service.createDirectory(tempDir.path, 'a/b'),
+        throwsA(isA<DirectoryOpException>()
+            .having((e) => e.error, 'error', DirectoryOpError.invalidName)),
+      );
+    });
+
+    test('throws invalidName when the name is blank', () async {
+      expect(
+        () => service.createDirectory(tempDir.path, '   '),
+        throwsA(isA<DirectoryOpException>()
+            .having((e) => e.error, 'error', DirectoryOpError.invalidName)),
+      );
+    });
+  });
+
+  group('renameDirectory', () {
+    test('renames a directory in place to a new valid name', () async {
+      final src = Directory('${tempDir.path}/old')..createSync();
+      File('${src.path}/keep.txt').writeAsStringSync('x');
+
+      final entry = await service.renameDirectory(src.path, 'new');
+
+      expect(entry.name, 'new');
+      expect(src.existsSync(), false);
+      expect(Directory(p.join(tempDir.path, 'new')).existsSync(), true);
+      expect(File(p.join(tempDir.path, 'new', 'keep.txt')).existsSync(), true);
+    });
+
+    test('throws nameCollision when target name already exists', () async {
+      Directory('${tempDir.path}/old').createSync();
+      Directory('${tempDir.path}/taken').createSync();
+
+      expect(
+        () => service.renameDirectory('${tempDir.path}/old', 'taken'),
+        throwsA(isA<DirectoryOpException>()
+            .having((e) => e.error, 'error', DirectoryOpError.nameCollision)),
+      );
+    });
+
+    test('throws invalidName when the new name is invalid', () async {
+      Directory('${tempDir.path}/old').createSync();
+
+      expect(
+        () => service.renameDirectory('${tempDir.path}/old', 'a:b'),
+        throwsA(isA<DirectoryOpException>()
+            .having((e) => e.error, 'error', DirectoryOpError.invalidName)),
+      );
+    });
+
+    test('throws sourceNotFound when the directory does not exist', () async {
+      expect(
+        () => service.renameDirectory('${tempDir.path}/missing', 'new'),
+        throwsA(isA<DirectoryOpException>()
+            .having((e) => e.error, 'error', DirectoryOpError.sourceNotFound)),
+      );
+    });
+  });
+
+  group('moveDirectory', () {
+    test('moves a directory into the destination keeping its leaf name',
+        () async {
+      final src = Directory('${tempDir.path}/narou_n1234')..createSync();
+      File('${src.path}/001.txt').writeAsStringSync('content');
+      final dest = Directory('${tempDir.path}/完結済み')..createSync();
+
+      final newPath = await service.moveDirectory(src.path, dest.path);
+
+      expect(src.existsSync(), false);
+      expect(p.basename(newPath), 'narou_n1234');
+      expect(p.equals(newPath, p.join(dest.path, 'narou_n1234')), true);
+      expect(Directory(newPath).existsSync(), true);
+      expect(File(p.join(newPath, '001.txt')).existsSync(), true);
+    });
+
+    test('moves the folder-local tts_audio.db along with the folder', () async {
+      final src = Directory('${tempDir.path}/narou_n1234')..createSync();
+      File('${src.path}/tts_audio.db').writeAsStringSync('audio-data');
+      final dest = Directory('${tempDir.path}/完結済み')..createSync();
+
+      final newPath = await service.moveDirectory(src.path, dest.path);
+
+      final movedDb = File(p.join(newPath, 'tts_audio.db'));
+      expect(movedDb.existsSync(), true);
+      expect(movedDb.readAsStringSync(), 'audio-data');
+      // Leaf name preserved keeps the DB folder_name keys valid.
+      expect(p.basename(newPath), 'narou_n1234');
+    });
+
+    test('throws nameCollision when destination already has same leaf name',
+        () async {
+      final src = Directory('${tempDir.path}/narou_n1234')..createSync();
+      final dest = Directory('${tempDir.path}/完結済み')..createSync();
+      Directory('${dest.path}/narou_n1234').createSync();
+
+      expect(
+        () => service.moveDirectory(src.path, dest.path),
+        throwsA(isA<DirectoryOpException>()
+            .having((e) => e.error, 'error', DirectoryOpError.nameCollision)),
+      );
+    });
+
+    test('throws intoSelfOrDescendant when moving into itself', () async {
+      final src = Directory('${tempDir.path}/folder')..createSync();
+
+      expect(
+        () => service.moveDirectory(src.path, src.path),
+        throwsA(isA<DirectoryOpException>().having(
+            (e) => e.error, 'error', DirectoryOpError.intoSelfOrDescendant)),
+      );
+    });
+
+    test('throws intoSelfOrDescendant when moving into a descendant', () async {
+      final src = Directory('${tempDir.path}/parent')..createSync();
+      final child = Directory('${src.path}/child')..createSync();
+
+      expect(
+        () => service.moveDirectory(src.path, child.path),
+        throwsA(isA<DirectoryOpException>().having(
+            (e) => e.error, 'error', DirectoryOpError.intoSelfOrDescendant)),
+      );
+    });
+
+    test('throws sourceNotFound when the source does not exist', () async {
+      final dest = Directory('${tempDir.path}/dest')..createSync();
+
+      expect(
+        () => service.moveDirectory('${tempDir.path}/missing', dest.path),
+        throwsA(isA<DirectoryOpException>()
+            .having((e) => e.error, 'error', DirectoryOpError.sourceNotFound)),
+      );
+    });
+
+    test('normalizes a raw filesystem failure into ioFailure', () async {
+      // Destination parent does not exist, so Directory.rename raises a
+      // FileSystemException that must surface as a DirectoryOpException.
+      final src = Directory('${tempDir.path}/narou_n1234')..createSync();
+
+      expect(
+        () => service.moveDirectory(
+            src.path, '${tempDir.path}/does_not_exist'),
+        throwsA(isA<DirectoryOpException>()
+            .having((e) => e.error, 'error', DirectoryOpError.ioFailure)),
+      );
+    });
+  });
+
+  group('deleteEmptyDirectory', () {
+    test('deletes an empty directory', () async {
+      final dir = Directory('${tempDir.path}/empty')..createSync();
+
+      await service.deleteEmptyDirectory(dir.path);
+
+      expect(dir.existsSync(), false);
+    });
+
+    test('throws notEmpty when the directory contains a file', () async {
+      final dir = Directory('${tempDir.path}/withfile')..createSync();
+      File('${dir.path}/a.txt').writeAsStringSync('x');
+
+      expect(
+        () => service.deleteEmptyDirectory(dir.path),
+        throwsA(isA<DirectoryOpException>()
+            .having((e) => e.error, 'error', DirectoryOpError.notEmpty)),
+      );
+      expect(dir.existsSync(), true);
+    });
+
+    test('throws notEmpty when the directory contains a subfolder', () async {
+      final dir = Directory('${tempDir.path}/withsub')..createSync();
+      Directory('${dir.path}/sub').createSync();
+
+      expect(
+        () => service.deleteEmptyDirectory(dir.path),
+        throwsA(isA<DirectoryOpException>()
+            .having((e) => e.error, 'error', DirectoryOpError.notEmpty)),
+      );
+    });
+
+    test('throws sourceNotFound when the directory does not exist', () async {
+      expect(
+        () => service.deleteEmptyDirectory('${tempDir.path}/missing'),
+        throwsA(isA<DirectoryOpException>()
+            .having((e) => e.error, 'error', DirectoryOpError.sourceNotFound)),
+      );
     });
   });
 

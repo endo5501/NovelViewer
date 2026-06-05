@@ -249,6 +249,68 @@ class AppLocalizationsJa extends AppLocalizations {
   String get fileBrowser_deleteMenuItem => '削除';
 
   @override
+  String get fileBrowser_moveMenuItem => '移動';
+
+  @override
+  String get fileBrowser_renameFolderMenuItem => 'フォルダ名変更';
+
+  @override
+  String get fileBrowser_newFolderTooltip => '新規フォルダ';
+
+  @override
+  String get fileBrowser_newFolderTitle => '新規フォルダ';
+
+  @override
+  String get fileBrowser_folderNameLabel => 'フォルダ名';
+
+  @override
+  String get fileBrowser_createButton => '作成';
+
+  @override
+  String get fileBrowser_renameFolderTitle => 'フォルダ名を変更';
+
+  @override
+  String get fileBrowser_moveDialogTitle => '移動先を選択';
+
+  @override
+  String get fileBrowser_moveLibraryRoot => 'ライブラリ（最上位）';
+
+  @override
+  String get fileBrowser_deleteFolderTitle => 'フォルダを削除';
+
+  @override
+  String fileBrowser_deleteFolderConfirmation(String name) {
+    return 'フォルダ「$name」を削除しますか？';
+  }
+
+  @override
+  String get fileBrowser_errorInvalidName => 'フォルダ名に使用できない文字が含まれています';
+
+  @override
+  String get fileBrowser_errorNameCollision => '同名のフォルダが既に存在します';
+
+  @override
+  String get fileBrowser_errorFolderNotEmpty => 'フォルダが空ではないため削除できません';
+
+  @override
+  String get fileBrowser_errorMoveIntoSelf => 'フォルダを自分自身またはその中へは移動できません';
+
+  @override
+  String fileBrowser_createFolderFailed(String message) {
+    return 'フォルダの作成に失敗しました: $message';
+  }
+
+  @override
+  String fileBrowser_renameFolderFailed(String message) {
+    return 'フォルダ名の変更に失敗しました: $message';
+  }
+
+  @override
+  String fileBrowser_moveFailed(String message) {
+    return '移動に失敗しました: $message';
+  }
+
+  @override
   String get fileBrowser_downloadInProgressWarning => 'ダウンロード中です。完了後に再度お試しください';
 
   @override

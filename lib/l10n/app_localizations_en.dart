@@ -254,6 +254,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileBrowser_deleteMenuItem => 'Delete';
 
   @override
+  String get fileBrowser_moveMenuItem => 'Move';
+
+  @override
+  String get fileBrowser_renameFolderMenuItem => 'Rename folder';
+
+  @override
+  String get fileBrowser_newFolderTooltip => 'New folder';
+
+  @override
+  String get fileBrowser_newFolderTitle => 'New folder';
+
+  @override
+  String get fileBrowser_folderNameLabel => 'Folder name';
+
+  @override
+  String get fileBrowser_createButton => 'Create';
+
+  @override
+  String get fileBrowser_renameFolderTitle => 'Rename folder';
+
+  @override
+  String get fileBrowser_moveDialogTitle => 'Select destination';
+
+  @override
+  String get fileBrowser_moveLibraryRoot => 'Library (top level)';
+
+  @override
+  String get fileBrowser_deleteFolderTitle => 'Delete folder';
+
+  @override
+  String fileBrowser_deleteFolderConfirmation(String name) {
+    return 'Delete the folder “$name”?';
+  }
+
+  @override
+  String get fileBrowser_errorInvalidName =>
+      'The folder name contains invalid characters';
+
+  @override
+  String get fileBrowser_errorNameCollision =>
+      'A folder with the same name already exists';
+
+  @override
+  String get fileBrowser_errorFolderNotEmpty =>
+      'The folder is not empty and cannot be deleted';
+
+  @override
+  String get fileBrowser_errorMoveIntoSelf =>
+      'A folder cannot be moved into itself or its descendants';
+
+  @override
+  String fileBrowser_createFolderFailed(String message) {
+    return 'Failed to create folder: $message';
+  }
+
+  @override
+  String fileBrowser_renameFolderFailed(String message) {
+    return 'Failed to rename folder: $message';
+  }
+
+  @override
+  String fileBrowser_moveFailed(String message) {
+    return 'Failed to move: $message';
+  }
+
+  @override
   String get fileBrowser_downloadInProgressWarning =>
       'Download in progress. Please try again later';
 
