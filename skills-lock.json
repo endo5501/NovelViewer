@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "spec-to-readable-html": {
+      "source": "KeMezz/spec-to-readable-html",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "89a997f7c8218b531434565d434c1526c8588c2b851a0f922b5e892ed283e57b"
+    }
+  }
+}
