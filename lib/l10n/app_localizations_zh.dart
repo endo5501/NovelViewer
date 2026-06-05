@@ -249,6 +249,68 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fileBrowser_deleteMenuItem => '删除';
 
   @override
+  String get fileBrowser_moveMenuItem => '移动';
+
+  @override
+  String get fileBrowser_renameFolderMenuItem => '重命名文件夹';
+
+  @override
+  String get fileBrowser_newFolderTooltip => '新建文件夹';
+
+  @override
+  String get fileBrowser_newFolderTitle => '新建文件夹';
+
+  @override
+  String get fileBrowser_folderNameLabel => '文件夹名称';
+
+  @override
+  String get fileBrowser_createButton => '创建';
+
+  @override
+  String get fileBrowser_renameFolderTitle => '重命名文件夹';
+
+  @override
+  String get fileBrowser_moveDialogTitle => '选择目标位置';
+
+  @override
+  String get fileBrowser_moveLibraryRoot => '书库（顶层）';
+
+  @override
+  String get fileBrowser_deleteFolderTitle => '删除文件夹';
+
+  @override
+  String fileBrowser_deleteFolderConfirmation(String name) {
+    return '确定删除文件夹“$name”吗？';
+  }
+
+  @override
+  String get fileBrowser_errorInvalidName => '文件夹名称包含无效字符';
+
+  @override
+  String get fileBrowser_errorNameCollision => '已存在同名文件夹';
+
+  @override
+  String get fileBrowser_errorFolderNotEmpty => '文件夹非空，无法删除';
+
+  @override
+  String get fileBrowser_errorMoveIntoSelf => '无法将文件夹移动到自身或其子文件夹中';
+
+  @override
+  String fileBrowser_createFolderFailed(String message) {
+    return '创建文件夹失败：$message';
+  }
+
+  @override
+  String fileBrowser_renameFolderFailed(String message) {
+    return '重命名文件夹失败：$message';
+  }
+
+  @override
+  String fileBrowser_moveFailed(String message) {
+    return '移动失败：$message';
+  }
+
+  @override
   String get fileBrowser_downloadInProgressWarning => '正在下载中，请稍后再试';
 
   @override

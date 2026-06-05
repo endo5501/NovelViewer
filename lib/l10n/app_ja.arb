@@ -110,6 +110,44 @@
   "fileBrowser_refreshMenuItem": "更新",
   "fileBrowser_renameMenuItem": "タイトル変更",
   "fileBrowser_deleteMenuItem": "削除",
+  "fileBrowser_moveMenuItem": "移動",
+  "fileBrowser_renameFolderMenuItem": "フォルダ名変更",
+  "fileBrowser_newFolderTooltip": "新規フォルダ",
+  "fileBrowser_newFolderTitle": "新規フォルダ",
+  "fileBrowser_folderNameLabel": "フォルダ名",
+  "fileBrowser_createButton": "作成",
+  "fileBrowser_renameFolderTitle": "フォルダ名を変更",
+  "fileBrowser_moveDialogTitle": "移動先を選択",
+  "fileBrowser_moveLibraryRoot": "ライブラリ（最上位）",
+  "fileBrowser_deleteFolderTitle": "フォルダを削除",
+  "fileBrowser_deleteFolderConfirmation": "フォルダ「{name}」を削除しますか？",
+  "@fileBrowser_deleteFolderConfirmation": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "fileBrowser_errorInvalidName": "フォルダ名に使用できない文字が含まれています",
+  "fileBrowser_errorNameCollision": "同名のフォルダが既に存在します",
+  "fileBrowser_errorFolderNotEmpty": "フォルダが空ではないため削除できません",
+  "fileBrowser_errorMoveIntoSelf": "フォルダを自分自身またはその中へは移動できません",
+  "fileBrowser_createFolderFailed": "フォルダの作成に失敗しました: {message}",
+  "@fileBrowser_createFolderFailed": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "fileBrowser_renameFolderFailed": "フォルダ名の変更に失敗しました: {message}",
+  "@fileBrowser_renameFolderFailed": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "fileBrowser_moveFailed": "移動に失敗しました: {message}",
+  "@fileBrowser_moveFailed": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
   "fileBrowser_downloadInProgressWarning": "ダウンロード中です。完了後に再度お試しください",
   "fileBrowser_renameFailed": "タイトル変更に失敗しました: {message}",
   "@fileBrowser_renameFailed": {

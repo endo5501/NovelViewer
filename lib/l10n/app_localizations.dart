@@ -556,6 +556,114 @@ abstract class AppLocalizations {
   /// **'削除'**
   String get fileBrowser_deleteMenuItem;
 
+  /// No description provided for @fileBrowser_moveMenuItem.
+  ///
+  /// In ja, this message translates to:
+  /// **'移動'**
+  String get fileBrowser_moveMenuItem;
+
+  /// No description provided for @fileBrowser_renameFolderMenuItem.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォルダ名変更'**
+  String get fileBrowser_renameFolderMenuItem;
+
+  /// No description provided for @fileBrowser_newFolderTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'新規フォルダ'**
+  String get fileBrowser_newFolderTooltip;
+
+  /// No description provided for @fileBrowser_newFolderTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'新規フォルダ'**
+  String get fileBrowser_newFolderTitle;
+
+  /// No description provided for @fileBrowser_folderNameLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォルダ名'**
+  String get fileBrowser_folderNameLabel;
+
+  /// No description provided for @fileBrowser_createButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'作成'**
+  String get fileBrowser_createButton;
+
+  /// No description provided for @fileBrowser_renameFolderTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォルダ名を変更'**
+  String get fileBrowser_renameFolderTitle;
+
+  /// No description provided for @fileBrowser_moveDialogTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'移動先を選択'**
+  String get fileBrowser_moveDialogTitle;
+
+  /// No description provided for @fileBrowser_moveLibraryRoot.
+  ///
+  /// In ja, this message translates to:
+  /// **'ライブラリ（最上位）'**
+  String get fileBrowser_moveLibraryRoot;
+
+  /// No description provided for @fileBrowser_deleteFolderTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォルダを削除'**
+  String get fileBrowser_deleteFolderTitle;
+
+  /// No description provided for @fileBrowser_deleteFolderConfirmation.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォルダ「{name}」を削除しますか？'**
+  String fileBrowser_deleteFolderConfirmation(String name);
+
+  /// No description provided for @fileBrowser_errorInvalidName.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォルダ名に使用できない文字が含まれています'**
+  String get fileBrowser_errorInvalidName;
+
+  /// No description provided for @fileBrowser_errorNameCollision.
+  ///
+  /// In ja, this message translates to:
+  /// **'同名のフォルダが既に存在します'**
+  String get fileBrowser_errorNameCollision;
+
+  /// No description provided for @fileBrowser_errorFolderNotEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォルダが空ではないため削除できません'**
+  String get fileBrowser_errorFolderNotEmpty;
+
+  /// No description provided for @fileBrowser_errorMoveIntoSelf.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォルダを自分自身またはその中へは移動できません'**
+  String get fileBrowser_errorMoveIntoSelf;
+
+  /// No description provided for @fileBrowser_createFolderFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォルダの作成に失敗しました: {message}'**
+  String fileBrowser_createFolderFailed(String message);
+
+  /// No description provided for @fileBrowser_renameFolderFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'フォルダ名の変更に失敗しました: {message}'**
+  String fileBrowser_renameFolderFailed(String message);
+
+  /// No description provided for @fileBrowser_moveFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'移動に失敗しました: {message}'**
+  String fileBrowser_moveFailed(String message);
+
   /// No description provided for @fileBrowser_downloadInProgressWarning.
   ///
   /// In ja, this message translates to:

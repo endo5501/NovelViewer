@@ -1,17 +1,35 @@
+import 'dart:io' show FileSystemException;
+
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
+import 'package:novel_viewer/features/file_browser/domain/novel_folder_classifier.dart';
+import 'package:novel_viewer/features/file_browser/domain/move_destination.dart';
+import 'package:novel_viewer/features/file_browser/domain/move_follow.dart';
+import 'package:novel_viewer/features/file_browser/presentation/move_destination_dialog.dart';
+import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_delete/providers/novel_delete_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 import 'package:novel_viewer/features/file_browser/presentation/rename_title_dialog.dart';
+import 'package:novel_viewer/features/file_browser/presentation/new_folder_dialog.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 
-/// Returns the parent directory of [currentDir], or null if already at root.
-String? getParentDirectory(String currentDir) {
+/// Returns the parent directory of [currentDir], or null if navigation up is
+/// not allowed.
+///
+/// When [libraryPath] is provided, navigation is confined to the library: the
+/// function returns null when [currentDir] is at (or outside) the library
+/// root, so the file browser never escapes the NovelViewer folder. Without
+/// [libraryPath] it falls back to the filesystem root as the boundary.
+String? getParentDirectory(String currentDir, {String? libraryPath}) {
+  if (libraryPath != null) {
+    if (p.equals(currentDir, libraryPath)) return null;
+    if (!p.isWithin(libraryPath, currentDir)) return null;
+  }
   final parent = p.dirname(currentDir);
   if (parent == currentDir) return null;
   return parent;
@@ -102,6 +120,12 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
   }
 
   Widget _buildToolbar(BuildContext context, String? currentDir) {
+    var hasParent = false;
+    if (currentDir != null) {
+      final libraryPath = ref.watch(libraryPathProvider);
+      hasParent =
+          getParentDirectory(currentDir, libraryPath: libraryPath) != null;
+    }
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
@@ -109,19 +133,57 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
           if (currentDir != null)
             IconButton(
               icon: const Icon(Icons.arrow_upward),
-              onPressed: () => _navigateToParent(currentDir),
+              onPressed:
+                  hasParent ? () => _navigateToParent(currentDir) : null,
               tooltip: AppLocalizations.of(context)!
                   .fileBrowser_goToParentFolder,
+            ),
+          if (currentDir != null)
+            IconButton(
+              icon: const Icon(Icons.create_new_folder),
+              onPressed: () => _showNewFolderDialog(context, currentDir),
+              tooltip:
+                  AppLocalizations.of(context)!.fileBrowser_newFolderTooltip,
             ),
         ],
       ),
     );
   }
 
-  bool _isLibraryRoot() {
-    final currentDir = ref.read(currentDirectoryProvider);
-    final libraryPath = ref.read(libraryPathProvider);
-    return libraryPath != null && currentDir == libraryPath;
+  void _showNewFolderDialog(BuildContext context, String currentDir) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog<String>(
+      context: context,
+      builder: (_) => NewFolderDialog(title: l10n.fileBrowser_newFolderTitle),
+    ).then((name) async {
+      if (name == null || name.isEmpty) return;
+      try {
+        await ref
+            .read(fileSystemServiceProvider)
+            .createDirectory(currentDir, name);
+        if (!context.mounted) return;
+        ref.invalidate(directoryContentsProvider);
+      } on DirectoryOpException catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_directoryOpMessage(context, e))),
+        );
+      }
+    });
+  }
+
+  /// Maps a [DirectoryOpException] to a localized, user-facing message.
+  String _directoryOpMessage(BuildContext context, DirectoryOpException e) {
+    final l10n = AppLocalizations.of(context)!;
+    return switch (e.error) {
+      DirectoryOpError.invalidName => l10n.fileBrowser_errorInvalidName,
+      DirectoryOpError.nameCollision => l10n.fileBrowser_errorNameCollision,
+      DirectoryOpError.notEmpty => l10n.fileBrowser_errorFolderNotEmpty,
+      DirectoryOpError.intoSelfOrDescendant =>
+        l10n.fileBrowser_errorMoveIntoSelf,
+      DirectoryOpError.sourceNotFound => l10n.common_unknownError,
+      DirectoryOpError.ioFailure => l10n.common_unknownError,
+    };
   }
 
   Widget _buildFileList(BuildContext context) {
@@ -141,10 +203,20 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
                   .fileBrowser_noFilesFound));
         }
 
-        final isAtLibraryRoot = _isLibraryRoot();
+        // The set of registered novel folder names lets us classify each
+        // subdirectory as a novel folder vs an organizational folder at any
+        // depth (see [isNovelFolder]).
+        final novels = ref.watch(allNovelsProvider).value ?? const [];
+        final novelFolderNames = <String>{
+          for (final n in novels) n.folderName,
+        };
         final items = [
           ...contents.subdirectories.map(
-            (dir) => _buildDirectoryTile(context, dir, isAtLibraryRoot),
+            (dir) => _buildDirectoryTile(
+              context,
+              dir,
+              isNovelFolder(dir.name, novelFolderNames),
+            ),
           ),
           ...contents.files.map(
             (file) => _buildFileTile(
@@ -222,10 +294,10 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
   Widget _buildDirectoryTile(
     BuildContext context,
     DirectoryEntry dir,
-    bool isAtLibraryRoot,
+    bool isNovel,
   ) {
     final tile = ListTile(
-      leading: const Icon(Icons.folder),
+      leading: Icon(isNovel ? Icons.menu_book : Icons.folder),
       title: Text(
         dir.displayName,
         maxLines: 1,
@@ -237,11 +309,9 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       },
     );
 
-    if (!isAtLibraryRoot) return tile;
-
     return GestureDetector(
       onSecondaryTapUp: (details) {
-        _showContextMenu(context, details.globalPosition, dir);
+        _showContextMenu(context, details.globalPosition, dir, isNovel);
       },
       child: tile,
     );
@@ -251,7 +321,36 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     BuildContext context,
     Offset position,
     DirectoryEntry dir,
+    bool isNovel,
   ) {
+    final l10n = AppLocalizations.of(context)!;
+    final items = <PopupMenuEntry<String>>[
+      if (isNovel)
+        PopupMenuItem<String>(
+          value: 'refresh',
+          child: Text(l10n.fileBrowser_refreshMenuItem),
+        ),
+      if (isNovel)
+        PopupMenuItem<String>(
+          value: 'renameTitle',
+          child: Text(l10n.fileBrowser_renameMenuItem),
+        )
+      else
+        PopupMenuItem<String>(
+          value: 'renameFolder',
+          child: Text(l10n.fileBrowser_renameFolderMenuItem),
+        ),
+      PopupMenuItem<String>(
+        value: 'move',
+        child: Text(l10n.fileBrowser_moveMenuItem),
+      ),
+      PopupMenuItem<String>(
+        value: isNovel ? 'delete' : 'deleteFolder',
+        child: Text(l10n.fileBrowser_deleteMenuItem,
+            style: const TextStyle(color: Colors.red)),
+      ),
+    ];
+
     showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -260,32 +359,157 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         position.dx,
         position.dy,
       ),
-      items: [
-        PopupMenuItem<String>(
-          value: 'refresh',
-          child: Text(
-              AppLocalizations.of(context)!.fileBrowser_refreshMenuItem),
-        ),
-        PopupMenuItem<String>(
-          value: 'rename',
-          child:
-              Text(AppLocalizations.of(context)!.fileBrowser_renameMenuItem),
-        ),
-        PopupMenuItem<String>(
-          value: 'delete',
-          child: Text(
-              AppLocalizations.of(context)!.fileBrowser_deleteMenuItem,
-              style: const TextStyle(color: Colors.red)),
-        ),
-      ],
+      items: items,
     ).then((value) {
       if (!context.mounted) return;
-      if (value == 'refresh') {
-        _startRefresh(context, dir);
-      } else if (value == 'rename') {
-        _showRenameTitleDialog(context, dir);
-      } else if (value == 'delete') {
-        _showDeleteConfirmation(context, dir);
+      switch (value) {
+        case 'refresh':
+          _startRefresh(context, dir);
+        case 'renameTitle':
+          _showRenameTitleDialog(context, dir);
+        case 'renameFolder':
+          _showRenameFolderDialog(context, dir);
+        case 'move':
+          _showMoveDialog(context, dir);
+        case 'delete':
+          _showDeleteConfirmation(context, dir);
+        case 'deleteFolder':
+          _showDeleteFolderConfirmation(context, dir);
+      }
+    });
+  }
+
+  Future<void> _showMoveDialog(
+    BuildContext context,
+    DirectoryEntry dir,
+  ) async {
+    final libraryPath = ref.read(libraryPathProvider);
+    if (libraryPath == null) return;
+
+    final novels = ref.read(allNovelsProvider).value ?? const [];
+    final novelFolderNames = <String>{
+      for (final n in novels) n.folderName,
+    };
+    final service = ref.read(fileSystemServiceProvider);
+
+    final List<String> orgPaths;
+    try {
+      orgPaths =
+          await service.listOrganizationalFolderTree(libraryPath, novelFolderNames);
+    } on FileSystemException {
+      return;
+    }
+    if (!context.mounted) return;
+
+    final destinations = buildMoveDestinations(
+      libraryPath: libraryPath,
+      organizationalFolderPaths: orgPaths,
+      sourcePath: dir.path,
+    );
+
+    final destination = await showDialog<String>(
+      context: context,
+      builder: (_) => MoveDestinationDialog(destinations: destinations),
+    );
+    if (destination == null) return;
+    if (!context.mounted) return;
+
+    final currentDir = ref.read(currentDirectoryProvider);
+    try {
+      // Release per-folder DB handles BEFORE moving so an open SQLite file
+      // does not block the rename (Windows holds an exclusive lock).
+      _releaseFolderHandles(dir.path);
+      final newPath = await service.moveDirectory(dir.path, destination);
+      if (!context.mounted) return;
+      // Keep the browser pointed at the moved content if it was open.
+      final followed = followedCurrentDirectory(
+        currentDir: currentDir,
+        sourcePath: dir.path,
+        newSourcePath: newPath,
+      );
+      if (followed != null) {
+        ref.read(currentDirectoryProvider.notifier).setDirectory(followed);
+      }
+      ref.invalidate(directoryContentsProvider);
+    } on DirectoryOpException catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_directoryOpMessage(context, e))),
+      );
+    }
+  }
+
+  /// Invalidates the per-folder database handles keyed by [path] so a moved or
+  /// deleted folder does not leave a stale connection bound to its old path.
+  void _releaseFolderHandles(String path) {
+    ref.invalidate(ttsAudioDatabaseProvider(path));
+    ref.invalidate(ttsDictionaryDatabaseProvider(path));
+    ref.invalidate(episodeCacheDatabaseProvider(path));
+  }
+
+  void _showDeleteFolderConfirmation(BuildContext context, DirectoryEntry dir) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.fileBrowser_deleteFolderTitle),
+        content:
+            Text(l10n.fileBrowser_deleteFolderConfirmation(dir.displayName)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.common_cancelButton),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(l10n.common_deleteButton),
+          ),
+        ],
+      ),
+    ).then((confirmed) async {
+      if (confirmed != true) return;
+      try {
+        _releaseFolderHandles(dir.path);
+        await ref
+            .read(fileSystemServiceProvider)
+            .deleteEmptyDirectory(dir.path);
+        if (!context.mounted) return;
+        ref.invalidate(directoryContentsProvider);
+      } on DirectoryOpException catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_directoryOpMessage(context, e))),
+        );
+      }
+    });
+  }
+
+  void _showRenameFolderDialog(BuildContext context, DirectoryEntry dir) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog<String>(
+      context: context,
+      builder: (_) => NewFolderDialog(
+        title: l10n.fileBrowser_renameFolderTitle,
+        initialName: dir.name,
+        confirmLabel: l10n.common_changeButton,
+      ),
+    ).then((newName) async {
+      if (newName == null || newName.isEmpty || newName == dir.name) return;
+      try {
+        // Renaming changes the folder's absolute path, so release any per-
+        // folder DB handles bound to the old path first.
+        _releaseFolderHandles(dir.path);
+        await ref
+            .read(fileSystemServiceProvider)
+            .renameDirectory(dir.path, newName);
+        if (!context.mounted) return;
+        ref.invalidate(directoryContentsProvider);
+      } on DirectoryOpException catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_directoryOpMessage(context, e))),
+        );
       }
     });
   }
@@ -376,7 +600,8 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
   }
 
   void _navigateToParent(String currentDir) {
-    final parent = getParentDirectory(currentDir);
+    final libraryPath = ref.read(libraryPathProvider);
+    final parent = getParentDirectory(currentDir, libraryPath: libraryPath);
     if (parent != null) {
       ref.read(currentDirectoryProvider.notifier).setDirectory(parent);
       ref.read(selectedFileProvider.notifier).clear();

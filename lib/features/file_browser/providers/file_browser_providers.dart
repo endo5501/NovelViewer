@@ -57,23 +57,22 @@ final directoryContentsProvider =
   final sortedFiles = service.sortByNumericPrefix(files);
   var subdirectories = await service.listSubdirectories(dirPath);
 
-  final libraryPath = ref.watch(libraryPathProvider);
-  final isLibraryRoot = libraryPath != null && dirPath == libraryPath;
+  // Map any subdirectory whose leaf name is a registered novel folder to its
+  // database title, regardless of how deeply it is nested. Organizational
+  // (unregistered) folders keep their folder name as-is. See
+  // [isNovelFolder] for the discriminator.
+  final novels = await ref.watch(allNovelsProvider.future);
+  final folderToTitle = {
+    for (final novel in novels) novel.folderName: novel.title,
+  };
 
-  if (isLibraryRoot) {
-    final novels = await ref.watch(allNovelsProvider.future);
-    final folderToTitle = {
-      for (final novel in novels) novel.folderName: novel.title,
-    };
-
-    subdirectories = subdirectories
-        .map((dir) => DirectoryEntry(
-              name: dir.name,
-              path: dir.path,
-              displayName: folderToTitle[dir.name],
-            ))
-        .toList();
-  }
+  subdirectories = subdirectories
+      .map((dir) => DirectoryEntry(
+            name: dir.name,
+            path: dir.path,
+            displayName: folderToTitle[dir.name],
+          ))
+      .toList();
 
   // Skip TTS lookup when no DB file is present so we don't materialize a
   // long-lived family entry for a folder that doesn't need one.
@@ -109,15 +108,23 @@ final selectedNovelTitleProvider = FutureProvider<String?>((ref) async {
   if (p.equals(currentDir, libraryPath)) return null;
   if (!p.isWithin(libraryPath, currentDir)) return null;
 
-  final relativePath = p.relative(currentDir, from: libraryPath);
-  final folderName = p.split(relativePath).first;
+  final relativeParts = p.split(p.relative(currentDir, from: libraryPath));
 
   final novels = await ref.watch(allNovelsProvider.future);
   final titleByFolder = {
     for (final novel in novels) novel.folderName: novel.title,
   };
 
-  return titleByFolder[folderName] ?? folderName;
+  // Walk from the deepest path component upward and return the title of the
+  // nearest ancestor that is a registered novel folder. This makes the lookup
+  // independent of how deeply the novel is nested under organizational
+  // folders. If no component is a registered novel, fall back to the first
+  // component's folder name (legacy title-based / organizational folders).
+  for (final part in relativeParts.reversed) {
+    final title = titleByFolder[part];
+    if (title != null) return title;
+  }
+  return relativeParts.first;
 });
 
 class SelectedFileNotifier extends Notifier<FileEntry?> {

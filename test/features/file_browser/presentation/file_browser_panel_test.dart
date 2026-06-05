@@ -7,8 +7,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/presentation/file_browser_panel.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+
+NovelMetadata _registeredNovel(String folderName, String title) =>
+    NovelMetadata(
+      siteType: 'narou',
+      novelId: folderName,
+      title: title,
+      url: 'https://example.com/$folderName',
+      folderName: folderName,
+      episodeCount: 1,
+      downloadedAt: DateTime(2024, 1, 1),
+    );
 
 void main() {
   group('getParentDirectory', () {
@@ -51,6 +64,55 @@ void main() {
     test('returns null for Unix root', () {
       expect(getParentDirectory('/'), isNull);
     });
+
+    test('returns null when already at the library root', () {
+      expect(
+        getParentDirectory('/library', libraryPath: '/library'),
+        isNull,
+      );
+    });
+
+    test('returns parent when below the library root', () {
+      expect(
+        getParentDirectory('/library/完結済み', libraryPath: '/library'),
+        equals('/library'),
+      );
+    });
+
+    test('returns null when current dir is outside the library root', () {
+      expect(
+        getParentDirectory('/other/place', libraryPath: '/library'),
+        isNull,
+      );
+    });
+
+    test(
+      'returns null at the library root on Windows',
+      () {
+        expect(
+          getParentDirectory(
+            r'C:\Lib\NovelViewer',
+            libraryPath: r'C:\Lib\NovelViewer',
+          ),
+          isNull,
+        );
+      },
+      skip: !Platform.isWindows ? 'Windows-only path test' : null,
+    );
+
+    test(
+      'returns parent below the library root on Windows',
+      () {
+        expect(
+          getParentDirectory(
+            r'C:\Lib\NovelViewer\genre\book',
+            libraryPath: r'C:\Lib\NovelViewer',
+          ),
+          equals(r'C:\Lib\NovelViewer\genre'),
+        );
+      },
+      skip: !Platform.isWindows ? 'Windows-only path test' : null,
+    );
 
     test(
       'returns null for Windows root',
@@ -133,6 +195,62 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('テキストファイルが見つかりません'), findsOneWidget);
+    });
+
+    testWidgets('up button is disabled at the library root',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return DirectoryContents.empty();
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/library');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: FileBrowserPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final upButton = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.arrow_upward),
+      );
+      expect(upButton.onPressed, isNull);
+    });
+
+    testWidgets('up button is enabled below the library root',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return DirectoryContents.empty();
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/library/genre');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: FileBrowserPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final upButton = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.arrow_upward),
+      );
+      expect(upButton.onPressed, isNotNull);
     });
 
     testWidgets('shows subdirectories', (WidgetTester tester) async {
@@ -670,6 +788,8 @@ void main() {
               return _TestCurrentDirectoryNotifier('/library');
             }),
             libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith(
+                (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')]),
           ],
           child: const MaterialApp(
                 locale: Locale('ja'),
@@ -718,6 +838,8 @@ void main() {
               return _TestCurrentDirectoryNotifier('/library');
             }),
             libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith(
+                (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')]),
           ],
           child: const MaterialApp(
                 locale: Locale('ja'),
