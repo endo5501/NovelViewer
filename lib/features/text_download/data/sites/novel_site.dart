@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'package:novel_viewer/features/text_download/data/sites/aozora_site.dart';
+import 'package:novel_viewer/features/text_download/data/sites/hameln_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/narou_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/kakuyomu_site.dart';
 
@@ -76,6 +77,7 @@ class NovelSiteRegistry {
     NarouSite(),
     KakuyomuSite(),
     AozoraSite(),
+    HamelnSite(),
   ];
 
   NovelSite? findSite(Uri url) {
