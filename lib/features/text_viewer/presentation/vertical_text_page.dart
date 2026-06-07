@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/features/llm_summary/domain/hover_token.dart';
@@ -511,17 +513,34 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       );
     } else {
       final fontSize = widget.baseStyle?.fontSize ?? _kDefaultFontSize;
+      final style = _createTextStyle(
+        isHighlighted: isHighlighted,
+        isSelected: isSelected,
+        isTtsHighlighted: isTtsHighlighted,
+      );
+      // Rotation-target punctuation (quotes/apostrophes/backticks/colons/
+      // semicolons) has no usable vertical presentation form, so it is
+      // physically rotated 90° clockwise instead of being substituted.
+      // Transform.rotate is a paint-only transform: it keeps the cell's
+      // layout dimensions identical to a normal character cell, preserving
+      // the vertical column rhythm (RotatedBox would shrink the cell height).
+      final Widget inner = shouldRotateVertical(entry.text)
+          ? Transform.rotate(
+              angle: math.pi / 2,
+              child: Text(
+                entry.text,
+                textAlign: TextAlign.center,
+                style: style,
+              ),
+            )
+          : Text(
+              mapToVerticalChar(entry.text),
+              textAlign: TextAlign.center,
+              style: style,
+            );
       core = SizedBox(
         width: fontSize,
-        child: Text(
-          mapToVerticalChar(entry.text),
-          textAlign: TextAlign.center,
-          style: _createTextStyle(
-            isHighlighted: isHighlighted,
-            isSelected: isSelected,
-            isTtsHighlighted: isTtsHighlighted,
-          ),
-        ),
+        child: inner,
       );
     }
     if (markStyle == null) return core;
