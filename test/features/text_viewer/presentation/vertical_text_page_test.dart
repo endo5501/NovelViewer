@@ -226,6 +226,152 @@ void main() {
     });
   });
 
+  group('VerticalTextPage punctuation rotation', () {
+    // The fixed-width character cell that wraps [ch].
+    Finder cellOf(String ch) => find
+        .ancestor(
+          of: find.text(ch),
+          matching: find.byWidgetPredicate(
+            (w) => w is SizedBox && w.width == 14.0,
+          ),
+        )
+        .first;
+
+    testWidgets(
+        'colon is rotated 90° clockwise via Transform without substitution',
+        (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('A:B')],
+      ));
+
+      // Colon is not substituted (original character is rendered)
+      expect(find.text(':'), findsOneWidget);
+
+      // Within its cell it is rotated via a Transform (90° clockwise).
+      final transformFinder = find.descendant(
+        of: cellOf(':'),
+        matching: find.byType(Transform),
+      );
+      expect(transformFinder, findsOneWidget);
+      final transform = tester.widget<Transform>(transformFinder);
+      // For a clockwise z-rotation by π/2: m[0]=cos=0, m[1]=sin=1.
+      expect(transform.transform.storage[0], closeTo(0.0, 1e-9));
+      expect(transform.transform.storage[1], closeTo(1.0, 1e-9));
+    });
+
+    testWidgets('double quote is rotated and kept as original character',
+        (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あ”い')],
+      ));
+
+      expect(find.text('”'), findsOneWidget); // U+201D, not substituted
+      expect(
+        find.descendant(of: cellOf('”'), matching: find.byType(Transform)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+        'rotation does not use RotatedBox (which would shrink the cell)',
+        (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('A:B')],
+      ));
+
+      expect(
+        find.descendant(of: cellOf(':'), matching: find.byType(RotatedBox)),
+        findsNothing,
+      );
+    });
+
+    testWidgets('rotated cell keeps the same height as a normal character cell',
+        (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あ:う')],
+      ));
+
+      // The rotated colon cell must not be shorter than a normal char cell.
+      expect(
+        tester.getSize(cellOf(':')).height,
+        tester.getSize(cellOf('あ')).height,
+      );
+    });
+
+    testWidgets(
+        'non-rotation character is mapped via mapToVerticalChar without rotation',
+        (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('（あ')],
+      ));
+
+      // '（' is substituted to its vertical form '︵'
+      expect(find.text('︵'), findsOneWidget);
+
+      // and is NOT rotated within its cell
+      expect(
+        find.descendant(of: cellOf('︵'), matching: find.byType(Transform)),
+        findsNothing,
+      );
+    });
+  });
+
+  group('VerticalTextPage rotation offset/hit-test integrity', () {
+    testWidgets('search highlight lands on a rotation-target colon',
+        (tester) async {
+      // Rotation does not substitute the character, so text offsets are
+      // unchanged and the query ':' must highlight the colon cell.
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あ:う')],
+        query: ':',
+      ));
+
+      final colonText = tester.widget<Text>(find.text(':'));
+      expect(colonText.style?.backgroundColor, Colors.yellow);
+    });
+
+    testWidgets(
+        'selection extraction preserves rotation-target characters and offsets',
+        (tester) async {
+      String? receivedText;
+
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あ:う')],
+        selectionStart: 0,
+        selectionEnd: 3,
+        onContextMenu: (position, text) => receivedText = text,
+      ));
+      await tester.pump();
+
+      final center = tester.getCenter(find.byType(VerticalTextPage));
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kSecondaryMouseButton,
+      );
+      await gesture.addPointer(location: center);
+      await tester.pump();
+      await gesture.down(center);
+      await gesture.up();
+      await tester.pump();
+
+      // Offsets unchanged: full range returns the original 3 characters
+      // including the rotated colon.
+      expect(receivedText, 'あ:う');
+    });
+
+    testWidgets('rotation-target colon has a non-empty hit rectangle',
+        (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        segments: const [PlainTextSegment('あ:う')],
+      ));
+
+      // getCenter throws if the widget has no layout rect; size must be > 0.
+      final size = tester.getSize(find.text(':'));
+      expect(size.width, greaterThan(0));
+      expect(size.height, greaterThan(0));
+    });
+  });
+
   group('VerticalTextPage columnSpacing parameter', () {
     testWidgets('Wrap uses provided columnSpacing as runSpacing',
         (tester) async {

@@ -39,11 +39,9 @@ const verticalCharMap = <String, String>{
   '…': '︙',
   '‥': '︰',
 
-  // コロン・セミコロン
-  '：': '︓',
-  ':': '︓',
-  '；': '︔',
-  ';': '︔',
+  // コロン・セミコロンは verticalCharMap では扱わない。
+  // フォントが縦書き用CJK互換形(U+FE13/FE14)を回転グリフとして描画できないため、
+  // RotatedBox による物理回転で対応する（verticalRotateChars 参照）。
 
   // イコール
   '＝': '॥',
@@ -98,4 +96,41 @@ const verticalCharMap = <String, String>{
 
 String mapToVerticalChar(String char) {
   return verticalCharMap[char] ?? char;
+}
+
+/// 縦書き表示時に物理回転（時計回り90°）で描画する文字の集合。
+///
+/// これらの文字は Unicode に縦書き用字形が存在しない（クオート類）か、
+/// 存在してもフォントが回転グリフを描画できない（コロン・セミコロン）ため、
+/// [verticalCharMap] による置換ではなく [RotatedBox] で字形を回転して描画する。
+/// 文字自体は置換しないため、文字数・テキストオフセットは変化しない。
+const verticalRotateChars = <String>{
+  // ダブルクオート
+  '"', // U+0022 quotation mark
+  '＂', // U+FF02 fullwidth quotation mark
+  '“', // U+201C left double quotation mark
+  '”', // U+201D right double quotation mark
+
+  // シングルクオート・アポストロフィ
+  "'", // U+0027 apostrophe
+  '＇', // U+FF07 fullwidth apostrophe
+  '‘', // U+2018 left single quotation mark
+  '’', // U+2019 right single quotation mark
+
+  // バッククォート
+  '`', // U+0060 grave accent
+  '｀', // U+FF40 fullwidth grave accent
+
+  // コロン
+  ':', // U+003A
+  '：', // U+FF1A
+
+  // セミコロン
+  ';', // U+003B
+  '；', // U+FF1B
+};
+
+/// [char] が縦書きで物理回転して描画すべき文字かどうかを返す。
+bool shouldRotateVertical(String char) {
+  return verticalRotateChars.contains(char);
 }

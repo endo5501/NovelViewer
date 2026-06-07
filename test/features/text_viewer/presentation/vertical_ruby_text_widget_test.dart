@@ -173,4 +173,50 @@ void main() {
       expect(find.text('ジ'), findsOneWidget);
     });
   });
+
+  group('VerticalRubyTextWidget punctuation rotation', () {
+    testWidgets('rotation-target char in base is rotated via Transform',
+        (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        base: 'A:B',
+        rubyText: 'かな',
+      ));
+
+      // Colon is kept as the original character (not substituted)
+      final colonFinder = find.text(':');
+      expect(colonFinder, findsOneWidget);
+
+      final transformFinder = find.ancestor(
+        of: colonFinder,
+        matching: find.byType(Transform),
+      );
+      expect(transformFinder, findsWidgets);
+      final transform = tester.widgetList<Transform>(transformFinder).first;
+      // Clockwise z-rotation by π/2: m[0]=cos=0, m[1]=sin=1.
+      expect(transform.transform.storage[0], closeTo(0.0, 1e-9));
+      expect(transform.transform.storage[1], closeTo(1.0, 1e-9));
+
+      // RotatedBox must not be used (it would shrink the cell height).
+      expect(
+        find.ancestor(of: colonFinder, matching: find.byType(RotatedBox)),
+        findsNothing,
+      );
+    });
+
+    testWidgets('rotation-target char in ruby text is rotated via Transform',
+        (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        base: '漢字',
+        rubyText: '”',
+      ));
+
+      final quoteFinder = find.text('”'); // U+201D
+      expect(quoteFinder, findsOneWidget);
+
+      expect(
+        find.ancestor(of: quoteFinder, matching: find.byType(Transform)),
+        findsWidgets,
+      );
+    });
+  });
 }

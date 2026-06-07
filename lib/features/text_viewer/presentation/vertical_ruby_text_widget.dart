@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_char_map.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
@@ -28,16 +30,17 @@ class VerticalRubyTextWidget extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        _buildBaseText(_toVerticalChars(base), fontSize, brightness),
-        _buildRubyText(_toVerticalChars(rubyText), rubyFontSize),
+        _buildBaseText(_toOriginalChars(base), fontSize, brightness),
+        _buildRubyText(_toOriginalChars(rubyText), rubyFontSize),
       ],
     );
   }
 
-  List<String> _toVerticalChars(String text) {
-    return text.runes
-        .map((r) => mapToVerticalChar(String.fromCharCode(r)))
-        .toList();
+  /// Split [text] into individual characters (by rune), preserving the original
+  /// character. Vertical substitution/rotation is decided per-character in
+  /// [_buildVerticalText].
+  List<String> _toOriginalChars(String text) {
+    return text.runes.map((r) => String.fromCharCode(r)).toList();
   }
 
   Widget _buildBaseText(
@@ -83,9 +86,30 @@ class VerticalRubyTextWidget extends StatelessWidget {
         for (final char in chars)
           SizedBox(
             width: charWidth,
-            child: Text(char, textAlign: TextAlign.center, style: style),
+            child: _buildVerticalChar(char, style),
           ),
       ],
+    );
+  }
+
+  /// Rotation-target punctuation (quotes/apostrophes/backticks/colons/
+  /// semicolons) is physically rotated 90° clockwise instead of being
+  /// substituted; all other characters use [mapToVerticalChar].
+  ///
+  /// Transform.rotate is a paint-only transform so the character cell keeps
+  /// the same layout size as a normal character, preserving the vertical
+  /// alignment of base and ruby characters (RotatedBox would shrink the cell).
+  Widget _buildVerticalChar(String char, TextStyle? style) {
+    if (shouldRotateVertical(char)) {
+      return Transform.rotate(
+        angle: math.pi / 2,
+        child: Text(char, textAlign: TextAlign.center, style: style),
+      );
+    }
+    return Text(
+      mapToVerticalChar(char),
+      textAlign: TextAlign.center,
+      style: style,
     );
   }
 
