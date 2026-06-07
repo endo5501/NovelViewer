@@ -17,10 +17,17 @@ class HamelnSite extends NovelSite {
   @override
   String get siteType => 'hameln';
 
+  // Require a boundary after the id so `/novel/123abc` is not mistaken for
+  // novel 123 (which normalizeUrl would otherwise silently rewrite).
+  static final _novelPathPattern = RegExp(r'^/novel/\d+(?:/|$)');
+  // Hameln prepends a sequential display counter ("3　") to episode link text;
+  // it is not part of the author's subtitle, so strip a single leading one.
+  static final _displayCounterPattern = RegExp(r'^\d+　');
+
   @override
   bool canHandle(Uri url) {
     return _allowedHosts.contains(url.host) &&
-        RegExp(r'^/novel/\d+').hasMatch(url.path);
+        _novelPathPattern.hasMatch(url.path);
   }
 
   @override
@@ -75,7 +82,7 @@ class HamelnSite extends NovelSite {
 
       episodes.add(Episode(
         index: episodes.length + 1,
-        title: link.text.trim(),
+        title: link.text.trim().replaceFirst(_displayCounterPattern, ''),
         url: baseUrl.resolve(href),
         updatedAt: _extractUpdateDate(row),
       ));

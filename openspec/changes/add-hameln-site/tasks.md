@@ -36,7 +36,7 @@
 
 ## 5. 最終確認
 
-- [ ] 5.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 5.3 `fvm flutter analyze`でリントを実行
-- [ ] 5.4 `fvm flutter test`でテストを実行
+- [x] 5.1 code-reviewスキルを使用してコードレビューを実施（A1タイトル誤切り詰め・A3先頭アンカー誤選択・A5クラッシュ・A6 www host等を修正）
+- [x] 5.2 codexスキルを使用して現在開発中のコードレビューを実施（canHandle境界・表示連番除去を修正）
+- [x] 5.3 `fvm flutter analyze`でリントを実行（No issues found）
+- [x] 5.4 `fvm flutter test`でテストを実行（全1906件パス）

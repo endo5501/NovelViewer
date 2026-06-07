@@ -106,6 +106,20 @@ void main() {
       );
     });
 
+    test('rejects path with trailing non-digit after the id', () {
+      expect(
+        site.canHandle(Uri.parse('https://syosetu.org/novel/402955abc')),
+        isFalse,
+      );
+    });
+
+    test('accepts id without a trailing slash', () {
+      expect(
+        site.canHandle(Uri.parse('https://syosetu.org/novel/402955')),
+        isTrue,
+      );
+    });
+
     test('rejects Narou (syosetu.com) URL', () {
       expect(
         site.canHandle(Uri.parse('https://ncode.syosetu.com/n9669bk/')),
@@ -181,8 +195,10 @@ void main() {
       expect(index.episodes.map((e) => e.index), [1, 2, 3]);
     });
 
-    test('episode title comes from link text', () {
-      expect(index.episodes[2].title, '3　再会');
+    test('episode title strips Hameln\'s leading display counter', () {
+      // Link text is "3　再会"; the leading "3　" is Hameln's display counter
+      // (the file number is 4.html), so the stored title is just "再会".
+      expect(index.episodes[2].title, '再会');
     });
 
     test('URL uses href file number, not displayed episode number', () {
@@ -276,7 +292,7 @@ void main() {
 ''';
       final index = site.parseIndex(html, baseUrl);
       expect(index.episodes.length, 2);
-      expect(index.episodes[1].title, '2　挿絵回');
+      expect(index.episodes[1].title, '挿絵回');
       expect(index.episodes[1].url.toString(),
           'https://syosetu.org/novel/402955/3.html');
     });
@@ -313,6 +329,25 @@ void main() {
       final index = site.parseIndex(html, baseUrl);
       expect(index.episodes.length, 1);
       expect(index.episodes[0].updatedAt, isNull);
+    });
+  });
+
+  group('parseIndex - display counter stripping', () {
+    test('strips the leading counter but keeps named/unnumbered episodes', () {
+      const html = '''
+<html><head><title>連番テスト - ハーメルン</title></head>
+<body><div id="maind" itemscope itemtype="https://schema.org/CreativeWork">
+<div class="ss"><span itemprop="name">連番テスト</span></div>
+<div class="ss"><table width=100%>
+<tr bgcolor="#FFFFFF" class="bgcolor3"><td><a href=./1.html>プロローグ</a></td><td><NOBR>2026年01月01日(木) 00:00</NOBR></td></tr>
+<tr bgcolor="#F5F5F5" class="bgcolor2"><td><a href=./2.html>24　京都姉妹校交流会</a></td><td><NOBR>2026年01月02日(金) 00:00</NOBR></td></tr>
+</table></div>
+</div></body></html>
+''';
+      final index =
+          site.parseIndex(html, Uri.parse('https://syosetu.org/novel/1/'));
+      expect(index.episodes[0].title, 'プロローグ');
+      expect(index.episodes[1].title, '京都姉妹校交流会');
     });
   });
 
