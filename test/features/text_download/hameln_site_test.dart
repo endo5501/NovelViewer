@@ -178,6 +178,15 @@ void main() {
       expect(headers['User-Agent'], isNot(contains('Mozilla')));
       expect(headers['User-Agent'], contains('NovelViewer'));
     });
+
+    test('sends the R-18 age-confirmation cookie so gated works are reachable',
+        () {
+      // Some R-18 works (e.g. single-part stories) serve an age-confirmation
+      // interstitial instead of the body unless the over18 cookie is present.
+      final headers =
+          site.requestHeaders(Uri.parse('https://syosetu.org/novel/415332/'));
+      expect(headers['Cookie'], contains('over18'));
+    });
   });
 
   group('parseIndex - multi-part', () {

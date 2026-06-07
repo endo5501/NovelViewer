@@ -49,7 +49,7 @@ The `siteType` for Hameln SHALL be `hameln`.
 - **THEN** the download folder SHALL be named `hameln_{novelId}` (e.g., `hameln_402955`)
 
 ### Requirement: Hameln character encoding and request headers
-The system SHALL decode Hameln HTTP responses as UTF-8 (the base class default). Because `syosetu.org` is served behind Cloudflare bot protection that rejects the app's default spoofed-Chrome User-Agent with HTTP 403, the system SHALL override the User-Agent with an honest, non-browser-impersonating identifier for Hameln requests. No age-verification cookie SHALL be required to access R-18 works.
+The system SHALL decode Hameln HTTP responses as UTF-8 (the base class default). Because `syosetu.org` is served behind Cloudflare bot protection that rejects the app's default spoofed-Chrome User-Agent with HTTP 403, the system SHALL override the User-Agent with an honest, non-browser-impersonating identifier for Hameln requests. Because some R-18 works serve an age-confirmation interstitial instead of the body, the system SHALL also send the site's age-confirmation cookie (`over18`) so that gated works return their content.
 
 #### Scenario: UTF-8 page is decoded with the default decoder
 - **WHEN** the system fetches a Hameln page
@@ -59,9 +59,13 @@ The system SHALL decode Hameln HTTP responses as UTF-8 (the base class default).
 - **WHEN** the system makes an HTTP request to `syosetu.org`
 - **THEN** the request SHALL carry a User-Agent that does NOT impersonate a mainstream browser (no `Chrome`/`Mozilla` token), so Cloudflare returns the page (HTTP 200) instead of a 403 bot challenge
 
-#### Scenario: R-18 work is accessible without age cookie
-- **WHEN** the system fetches an R-18 Hameln work
-- **THEN** the full table of contents and body text SHALL be retrieved without any age-verification cookie or login
+#### Scenario: R-18 work is reachable via the age-confirmation cookie
+- **WHEN** the system fetches an R-18 Hameln work that would otherwise serve an age-confirmation interstitial
+- **THEN** the request SHALL include the `over18` cookie so the full table of contents / body text is returned instead of the interstitial
+
+#### Scenario: The age-confirmation cookie is harmless for non-R-18 works
+- **WHEN** the system fetches a non-R-18 Hameln work with the `over18` cookie present
+- **THEN** the work SHALL be retrieved normally
 
 ### Requirement: Hameln title extraction
 The system SHALL extract the novel title from the index page.

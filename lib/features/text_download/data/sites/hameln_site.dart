@@ -42,6 +42,11 @@ class HamelnSite extends NovelSite {
   @override
   Map<String, String> requestHeaders(Uri url) => const {
         'User-Agent': _userAgent,
+        // Some R-18 works serve an age-confirmation interstitial instead of
+        // the body unless this cookie is present. The site's own "はい" flow
+        // (?mode=r18_cs_end) sets `over18=off`; sending it up front is
+        // harmless for non-R-18 works and unlocks gated ones site-wide.
+        'Cookie': 'over18=off',
       };
 
   @override
