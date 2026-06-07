@@ -49,18 +49,18 @@ The `siteType` for Hameln SHALL be `hameln`.
 - **THEN** the download folder SHALL be named `hameln_{novelId}` (e.g., `hameln_402955`)
 
 ### Requirement: Hameln character encoding and request headers
-The system SHALL decode Hameln HTTP responses as UTF-8 (the base class default) and SHALL NOT send any special request headers beyond the default User-Agent. No age-verification cookie SHALL be required to access R-18 works.
+The system SHALL decode Hameln HTTP responses as UTF-8 (the base class default). Because `syosetu.org` is served behind Cloudflare bot protection that rejects the app's default spoofed-Chrome User-Agent with HTTP 403, the system SHALL override the User-Agent with an honest, non-browser-impersonating identifier for Hameln requests. No age-verification cookie SHALL be required to access R-18 works.
 
 #### Scenario: UTF-8 page is decoded with the default decoder
 - **WHEN** the system fetches a Hameln page
-- **THEN** the system SHALL use the default `response.body` (UTF-8) decoding without site-specific override
+- **THEN** the system SHALL use the default `response.body` (UTF-8) decoding without a site-specific decode override
 
-#### Scenario: No special headers are sent
+#### Scenario: An honest User-Agent is sent to pass Cloudflare
 - **WHEN** the system makes an HTTP request to `syosetu.org`
-- **THEN** only the default User-Agent header SHALL be included
+- **THEN** the request SHALL carry a User-Agent that does NOT impersonate a mainstream browser (no `Chrome`/`Mozilla` token), so Cloudflare returns the page (HTTP 200) instead of a 403 bot challenge
 
 #### Scenario: R-18 work is accessible without age cookie
-- **WHEN** the system fetches an R-18 Hameln work using only the default User-Agent
+- **WHEN** the system fetches an R-18 Hameln work
 - **THEN** the full table of contents and body text SHALL be retrieved without any age-verification cookie or login
 
 ### Requirement: Hameln title extraction

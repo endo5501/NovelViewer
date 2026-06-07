@@ -166,12 +166,17 @@ void main() {
     });
   });
 
-  group('requestHeaders and decodeBody', () {
-    test('returns empty headers (no over18 cookie needed)', () {
-      expect(
-        site.requestHeaders(Uri.parse('https://syosetu.org/novel/402955/')),
-        isEmpty,
-      );
+  group('requestHeaders', () {
+    test('overrides UA with an honest, non-browser-impersonating User-Agent',
+        () {
+      // syosetu.org is behind Cloudflare, which 403s a spoofed Chrome UA that
+      // lacks real-browser traits (e.g. brotli). An honest app UA is allowed.
+      final headers =
+          site.requestHeaders(Uri.parse('https://syosetu.org/novel/402955/'));
+      expect(headers['User-Agent'], isNotNull);
+      expect(headers['User-Agent'], isNot(contains('Chrome')));
+      expect(headers['User-Agent'], isNot(contains('Mozilla')));
+      expect(headers['User-Agent'], contains('NovelViewer'));
     });
   });
 

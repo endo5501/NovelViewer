@@ -51,9 +51,19 @@ NovelViewer のダウンロード機構は、サイトごとの差異を `NovelS
 
 複数話の目次ページには `#honbun` が無く、エピソード行（`class="bgcolor2/3"` のテーブル行）が存在する。一話完結作品はその逆になる。`parseIndex` でエピソードを収集した結果が空であれば `parseEpisode(html)` で本文を取り出し `bodyContent` に入れる（`NarouSite` の短編フォールバックと同型）。
 
-### 決定6: 文字コードと追加ヘッダは不要（UTF-8 / ヘッダなし）
+### 決定6: 文字コードはUTF-8デフォルト。ただしCloudflare対策で正直なUser-Agentに上書き
 
-実調査でハーメルンは UTF-8 配信であり、R-18 作品も素の User-Agent のみで目次・本文がフル取得できることを確認した。`decodeBody` は基底のデフォルト（`response.body`）、`requestHeaders` は空マップとし、青空の Shift-JIS のようなオーバーライドや、なろう novel18 の `over18=yes` Cookie は実装しない。
+実調査でハーメルンは UTF-8 配信（Content-Typeヘッダに`charset=UTF-8`明示）であり、R-18 作品も年齢Cookie無しで取得できる。よって `decodeBody` は基底のデフォルト（`response.body`）でよく、青空の Shift-JIS のようなオーバーライドや novel18 の `over18=yes` Cookie は不要。
+
+一方、`syosetu.org` は Cloudflare 配下にあり、アプリ既定の**Chrome偽装 User-Agent では HTTP 403**（bot検知）になることが判明した。検証の結果:
+
+- Chrome偽装UA（既定）→ 403。`Accept`/`Accept-Language` を足しても 403。
+- `Accept-Encoding: gzip, deflate, br`（brotli対応＝本物Chromeの特徴）を足すと通過するが、CFがbrotliで返し dart:io が自動解凍できず別問題が発生。
+- **正直な非ブラウザUA（`Dart/x` や `NovelViewer ...`）→ 200**（gzipで返り自動解凍、日本語正常）。
+
+根本原因は「Chromeを名乗るのに本物Chromeの特徴を欠く不整合」をCFが弾くこと。したがって `requestHeaders` で **`User-Agent` を正直なアプリ識別子（`NovelViewer (Flutter desktop app)`）に上書き**する。`_fetchPageResponse` は `{'User-Agent': 既定, ...siteHeaders}` の順でマージするため、サイト側の指定が既定のChrome偽装を上書きする。グローバル既定（Chrome偽装）は他サイト（なろう等、ブラウザUAを要する可能性）のため維持し、上書きはHamelnSiteに限定する。
+
+- **代替案**: ブラウザ一式ヘッダ＋brotli解凍を実装してChrome偽装を貫く → brotli解凍の追加依存と複雑性。正直UAの方が単純・堅牢で、スクレイピング作法としても適切。
 
 ## Risks / Trade-offs
 

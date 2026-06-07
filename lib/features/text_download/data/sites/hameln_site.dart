@@ -4,9 +4,18 @@ import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 /// Site adapter for ハーメルン (https://syosetu.org).
 ///
 /// Hameln serves UTF-8 pages and does not gate R-18 works behind an
-/// age-verification cookie for direct URL access, so [requestHeaders] and
-/// [decodeBody] use the base-class defaults.
+/// age-verification cookie for direct URL access, so [decodeBody] uses the
+/// base-class default. However syosetu.org sits behind Cloudflare, whose bot
+/// protection 403s the app's default spoofed Chrome User-Agent (a request that
+/// claims to be Chrome but lacks real-browser traits such as brotli support).
+/// [requestHeaders] therefore overrides the UA with an honest, non-browser
+/// identifier, which Cloudflare allows and which returns gzip-encoded content
+/// that dart:io decodes automatically.
 class HamelnSite extends NovelSite {
+  /// Honest, non-browser-impersonating User-Agent. Must NOT claim to be a
+  /// mainstream browser, or Cloudflare's bot check rejects it with 403.
+  static const _userAgent = 'NovelViewer (Flutter desktop app)';
+
   static final _idPattern = RegExp(r'/novel/(\d+)');
   // Episode links are relative file references like `./4.html` (or `4.html`).
   // Anchoring the pattern excludes absolute cross-links to other novels
@@ -29,6 +38,11 @@ class HamelnSite extends NovelSite {
     return _allowedHosts.contains(url.host) &&
         _novelPathPattern.hasMatch(url.path);
   }
+
+  @override
+  Map<String, String> requestHeaders(Uri url) => const {
+        'User-Agent': _userAgent,
+      };
 
   @override
   String extractNovelId(Uri url) {
