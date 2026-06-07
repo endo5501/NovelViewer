@@ -81,9 +81,13 @@ The system SHALL parse the table-of-contents table on the index page into a flat
 - **WHEN** an episode row contains `<a href=./4.html ...>3　運ぶための力</a>`
 - **THEN** the episode URL SHALL resolve to `https://syosetu.org/novel/<id>/4.html` (file number `4`), not `3`
 
-#### Scenario: Episode title is taken from the link text
-- **WHEN** an episode row link text is `3　運ぶための力`
-- **THEN** the episode `title` SHALL be `3　運ぶための力`
+#### Scenario: Episode title strips Hameln's leading display counter
+- **WHEN** an episode row link text is `3　運ぶための力` (where `3　` is Hameln's auto-prepended display counter, distinct from the `4.html` file number)
+- **THEN** the episode `title` SHALL be `運ぶための力`
+
+#### Scenario: Named episodes without a counter are kept intact
+- **WHEN** an episode row link text is `プロローグ` (no leading numeric counter)
+- **THEN** the episode `title` SHALL be `プロローグ`
 
 ### Requirement: Hameln episode update date extraction
 The system SHALL extract each episode's update date from the date cell (`<NOBR>` text) and store it verbatim in the episode's `updatedAt` field, without reformatting. Any revision marker (e.g., `(改)`) present in the cell SHALL be retained so that revisions change the stored string.
