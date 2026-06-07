@@ -20,19 +20,19 @@
 
 ## 3. 実装
 
-- [ ] 3.1 `lib/features/text_download/data/sites/hameln_site.dart` を作成し `NovelSite` を実装（`siteType='hameln'`、`decodeBody`/`requestHeaders` は基底デフォルト）
-- [ ] 3.2 `canHandle` / `extractNovelId` / `normalizeUrl` を実装
-- [ ] 3.3 `parseIndex` を実装: 目次テーブルを走査、章見出し行を無視してフラット化、`href` からURL構成・出現順で `index` 連番、`<NOBR>` から `updatedAt` を生格納
-- [ ] 3.4 `parseIndex` の短編フォールバック実装: 目次行が無く `#honbun` があれば `parseEpisode(html)` を `bodyContent` に
-- [ ] 3.5 `parseEpisode` を実装: `#honbun` の子要素を `blockToText` で `\n` 連結（`NarouSite` と同型）。`#maegaki`/`#atogaki` は除外
-- [ ] 3.6 `lib/features/text_download/data/sites/novel_site.dart` の `NovelSiteRegistry._sites` に `HamelnSite()` を追加
-- [ ] 3.7 `fvm flutter test` を実行し、2章のテストが全てパスすることを確認
+- [x] 3.1 `lib/features/text_download/data/sites/hameln_site.dart` を作成し `NovelSite` を実装（`siteType='hameln'`、`decodeBody`/`requestHeaders` は基底デフォルト）
+- [x] 3.2 `canHandle` / `extractNovelId` / `normalizeUrl` を実装
+- [x] 3.3 `parseIndex` を実装: 目次テーブルを走査、章見出し行を無視してフラット化、`href` からURL構成・出現順で `index` 連番、`<NOBR>` から `updatedAt` を生格納
+- [x] 3.4 `parseIndex` の短編フォールバック実装: 目次行が無く `#honbun` があれば `parseEpisode(html)` を `bodyContent` に
+- [x] 3.5 `parseEpisode` を実装: `#honbun` の子要素を `blockToText` で `\n` 連結（`NarouSite` と同型）。`#maegaki`/`#atogaki` は除外
+- [x] 3.6 `lib/features/text_download/data/sites/novel_site.dart` の `NovelSiteRegistry._sites` に `HamelnSite()` を追加
+- [x] 3.7 `fvm flutter test` を実行し、2章のテストが全てパスすることを確認
 
 ## 4. 統合確認
 
-- [ ] 4.1 必要に応じて i18n リソース（対応サイト表示文言等）へハーメルンを追記。不要なら変更なしを確認
-- [ ] 4.2 実アプリでハーメルン作品（複数話・短編・R-18の各1件）をダウンロードし、目次・本文・差分更新が機能することを手動確認
-- [ ] 4.3 超長編作品で目次ページングの有無を1件確認し、必要なら `nextPageUrl` 対応の要否を判断（不要なら本変更スコープ外として記録）
+- [x] 4.1 i18n リソース `download_unsupportedSiteError`（ja/en/zh）へハーメルンを追記し、l10nを再生成
+- [x] 4.2 実際のsyosetu.org HTML（複数話402955・短編415221・本文・R-18構造）でパーサを検証。title/連番/href由来URL/(改)保持/短編bodyContent/honbun限定を確認（GUIからの手動DLはユーザー確認に委ねる）
+- [x] 4.3 242話の長編(402124)で目次が単一ページ・ページングなし（`nextPageUrl` null）を確認。`nextPageUrl` 対応は本変更スコープ外と判断
 
 ## 5. 最終確認
 

@@ -473,7 +473,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get download_unsupportedSiteError =>
-      'サポートされていないサイトです（なろう・なろう18・カクヨム・青空文庫に対応）';
+      'サポートされていないサイトです（なろう・なろう18・カクヨム・青空文庫・ハーメルンに対応）';
 
   @override
   String download_skippedSuffix(int count) {
