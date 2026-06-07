@@ -8,14 +8,18 @@ import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 /// [decodeBody] use the base-class defaults.
 class HamelnSite extends NovelSite {
   static final _idPattern = RegExp(r'/novel/(\d+)');
-  static final _episodeHrefPattern = RegExp(r'\d+\.html');
+  // Episode links are relative file references like `./4.html` (or `4.html`).
+  // Anchoring the pattern excludes absolute cross-links to other novels
+  // (e.g. `//syosetu.org/novel/999/1.html` in a related-works table).
+  static final _episodeHrefPattern = RegExp(r'^(?:\./)?\d+\.html$');
+  static const _allowedHosts = {'syosetu.org', 'www.syosetu.org'};
 
   @override
   String get siteType => 'hameln';
 
   @override
   bool canHandle(Uri url) {
-    return url.host == 'syosetu.org' &&
+    return _allowedHosts.contains(url.host) &&
         RegExp(r'^/novel/\d+').hasMatch(url.path);
   }
 
@@ -52,24 +56,28 @@ class HamelnSite extends NovelSite {
     });
 
     for (final row in rows) {
-      final link = row.querySelector('a');
-      if (link == null) continue;
-      final href = link.attributes['href'];
-      // Use the link's href (the N.html file number) as the source of truth.
-      // The displayed episode number can differ from the file number when
-      // episodes are deleted or reordered.
-      if (href == null || !_episodeHrefPattern.hasMatch(href)) continue;
-
-      final updatedAt =
-          (row.querySelector('nobr') ?? row.querySelectorAll('td').last)
-              .text
-              .trim();
+      // Pick the anchor that points to an episode file. Use the href (the
+      // N.html file number) as the source of truth: the displayed episode
+      // number can differ from the file number when episodes are deleted or
+      // reordered, and a row may contain other anchors (e.g. an illustration
+      // link) before the episode link.
+      dynamic link;
+      String? href;
+      for (final anchor in row.querySelectorAll('a')) {
+        final candidate = anchor.attributes['href'];
+        if (candidate != null && _episodeHrefPattern.hasMatch(candidate)) {
+          link = anchor;
+          href = candidate;
+          break;
+        }
+      }
+      if (link == null || href == null) continue;
 
       episodes.add(Episode(
         index: episodes.length + 1,
         title: link.text.trim(),
         url: baseUrl.resolve(href),
-        updatedAt: updatedAt.isEmpty ? null : updatedAt,
+        updatedAt: _extractUpdateDate(row),
       ));
     }
 
@@ -97,7 +105,28 @@ class HamelnSite extends NovelSite {
     // (#maegaki) and afterword (#atogaki) are intentionally excluded.
     final honbun = document.querySelector('#honbun');
     if (honbun == null) return '';
-    return extractParagraphText(honbun);
+    // #honbun typically starts with a spacer paragraph (<p>　</p>); trim the
+    // resulting leading/trailing blank lines while preserving internal ones.
+    return extractParagraphText(honbun).trim();
+  }
+
+  /// Extracts the update date from a table-of-contents row. Prefers the
+  /// `<nobr>` date cell; falls back to the last `<td>` only when there are at
+  /// least two cells (so the title cell is never mistaken for the date).
+  /// Returns null when no date cell is present.
+  String? _extractUpdateDate(dynamic row) {
+    final nobr = row.querySelector('nobr');
+    String? text;
+    if (nobr != null) {
+      text = nobr.text.trim();
+    } else {
+      final cells = row.querySelectorAll('td');
+      if (cells.length >= 2) {
+        text = cells.last.text.trim();
+      }
+    }
+    if (text == null || text.isEmpty) return null;
+    return text;
   }
 
   String _extractTitle(dynamic document) {
@@ -107,14 +136,27 @@ class HamelnSite extends NovelSite {
       return nameEl.text.trim();
     }
     // Fallback (e.g. single-part works): derive from the <title> tag.
-    // Format is "<work> - ハーメルン" or "<work> - <episode> - ハーメルン".
+    // Format is "<work> - ハーメルン" or, for single-part works, the work
+    // title is duplicated as "<work> - <work> - ハーメルン".
     final titleTag = document.querySelector('title')?.text.trim() ?? '';
     if (titleTag.isEmpty) return '';
-    var stripped =
+    final stripped =
         titleTag.replaceFirst(RegExp(r'\s*-\s*ハーメルン\s*$'), '').trim();
-    final dashIndex = stripped.indexOf(' - ');
-    if (dashIndex >= 0) {
-      stripped = stripped.substring(0, dashIndex).trim();
+    // Collapse an exact duplication ("X - X" -> "X") without truncating a
+    // title that legitimately contains " - ".
+    final parts = stripped.split(' - ');
+    if (parts.length >= 2 && parts.length.isEven) {
+      final half = parts.length ~/ 2;
+      var duplicated = true;
+      for (var i = 0; i < half; i++) {
+        if (parts[i] != parts[half + i]) {
+          duplicated = false;
+          break;
+        }
+      }
+      if (duplicated) {
+        return parts.sublist(0, half).join(' - ').trim();
+      }
     }
     return stripped;
   }

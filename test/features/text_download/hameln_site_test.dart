@@ -250,6 +250,98 @@ void main() {
     });
   });
 
+  group('canHandle - www host', () {
+    test('accepts www.syosetu.org', () {
+      expect(
+        site.canHandle(Uri.parse('https://www.syosetu.org/novel/402955/')),
+        isTrue,
+      );
+    });
+  });
+
+  group('parseIndex - robustness', () {
+    final baseUrl = Uri.parse('https://syosetu.org/novel/402955/');
+
+    test('picks the episode anchor even when a non-episode anchor precedes it',
+        () {
+      const html = '''
+<html><head><title>堅牢テスト - ハーメルン</title></head>
+<body><div id="maind" itemscope itemtype="https://schema.org/CreativeWork">
+<div class="ss"><span itemprop="name">堅牢テスト</span></div>
+<div class="ss"><table width=100%>
+<tr bgcolor="#FFFFFF" class="bgcolor3"><td width=60%><span id="1">　</span> <a href=./1.html>1　通常</a></td><td><NOBR>2026年03月01日(日) 12:00</NOBR></td></tr>
+<tr bgcolor="#F5F5F5" class="bgcolor2"><td width=60%><a href="//syosetu.org/?mode=ss_view&uid=1">挿絵</a> <a href=./3.html>2　挿絵回</a></td><td><NOBR>2026年03月02日(月) 09:00</NOBR></td></tr>
+</table></div>
+</div></body></html>
+''';
+      final index = site.parseIndex(html, baseUrl);
+      expect(index.episodes.length, 2);
+      expect(index.episodes[1].title, '2　挿絵回');
+      expect(index.episodes[1].url.toString(),
+          'https://syosetu.org/novel/402955/3.html');
+    });
+
+    test('excludes phantom rows linking to other novels (absolute href)', () {
+      const html = '''
+<html><head><title>堅牢テスト - ハーメルン</title></head>
+<body><div id="maind" itemscope itemtype="https://schema.org/CreativeWork">
+<div class="ss"><span itemprop="name">堅牢テスト</span></div>
+<div class="ss"><table width=100%>
+<tr bgcolor="#FFFFFF" class="bgcolor3"><td width=60%><a href=./1.html>1　通常</a></td><td><NOBR>2026年03月01日(日) 12:00</NOBR></td></tr>
+</table></div>
+<div class="ss"><table width=100%>
+<tr bgcolor="#FFFFFF" class="bgcolor3"><td><a href="//syosetu.org/novel/999999/1.html">関連作品</a></td><td>2020年01月01日</td></tr>
+</table></div>
+</div></body></html>
+''';
+      final index = site.parseIndex(html, baseUrl);
+      expect(index.episodes.length, 1);
+      expect(index.episodes[0].url.toString(),
+          'https://syosetu.org/novel/402955/1.html');
+    });
+
+    test('handles episode row without a date cell without crashing', () {
+      const html = '''
+<html><head><title>堅牢テスト - ハーメルン</title></head>
+<body><div id="maind" itemscope itemtype="https://schema.org/CreativeWork">
+<div class="ss"><span itemprop="name">堅牢テスト</span></div>
+<div class="ss"><table width=100%>
+<tr bgcolor="#FFFFFF" class="bgcolor3"><td><a href=./4.html>4　日付なし</a></td></tr>
+</table></div>
+</div></body></html>
+''';
+      final index = site.parseIndex(html, baseUrl);
+      expect(index.episodes.length, 1);
+      expect(index.episodes[0].updatedAt, isNull);
+    });
+  });
+
+  group('parseIndex - title with hyphen', () {
+    test('preserves a short-story title containing " - "', () {
+      const html = '''
+<html><head><title>剣 - 盾 - 剣 - 盾 - ハーメルン</title></head>
+<body><div id="maind">
+<div class="ss"><p><span style="font-size:120%"><a href=./>剣 - 盾</a></span></p>
+<div id="honbun"><p id="1">本文。</p></div>
+</div></div></body></html>
+''';
+      final index =
+          site.parseIndex(html, Uri.parse('https://syosetu.org/novel/100/'));
+      expect(index.title, '剣 - 盾');
+    });
+  });
+
+  group('parseEpisode - no leading blank line', () {
+    test('trims the leading spacer paragraph', () {
+      const html = '''
+<html><body><div id="honbun"><p id="0">　</p><p id="1">本文の始まり。</p></div></body></html>
+''';
+      final text = site.parseEpisode(html);
+      expect(text.startsWith('\n'), isFalse);
+      expect(text, startsWith('本文の始まり。'));
+    });
+  });
+
   group('NovelSiteRegistry integration', () {
     test('findSite returns HamelnSite for Hameln URL', () {
       final registry = NovelSiteRegistry();
