@@ -1,10 +1,14 @@
 ## ADDED Requirements
 
 ### Requirement: Hameln URL recognition
-The system SHALL recognize URLs whose host is `syosetu.org` and whose path matches a novel page pattern (`/novel/<digits>/...`) as supported download targets.
+The system SHALL recognize URLs whose host is `syosetu.org` (or its `www.syosetu.org` form) and whose path matches a novel page pattern (`/novel/<digits>/...`) as supported download targets.
 
 #### Scenario: Valid Hameln novel index URL is accepted
 - **WHEN** the user enters a URL like `https://syosetu.org/novel/402955/`
+- **THEN** the system SHALL recognize it as a supported site and use the Hameln site handler
+
+#### Scenario: The www host form is accepted
+- **WHEN** the user enters a URL like `https://www.syosetu.org/novel/402955/`
 - **THEN** the system SHALL recognize it as a supported site and use the Hameln site handler
 
 #### Scenario: Valid Hameln episode URL is accepted
