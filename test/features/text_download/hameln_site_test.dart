@@ -365,6 +365,24 @@ void main() {
     });
   });
 
+  group('parseIndex - single-part title from heading', () {
+    test('uses the self-link heading when work title != episode label', () {
+      // The <title> tag is "<work> - <episode> - ハーメルン" with distinct
+      // work/episode, so de-duplication cannot recover the work title; the
+      // body heading <a href="./"> carries the clean work title.
+      const html = '''
+<html><head><title>ある日の日常 - 第1話 - ハーメルン</title></head>
+<body><div id="maind">
+<div class="ss"><p><span style="font-size:120%"><a href=./>ある日の日常</a></span> 　 作：<a href="//syosetu.org/user/1/">著者</a></p>
+<div id="honbun"><p id="1">本文。</p></div>
+</div></div></body></html>
+''';
+      final index =
+          site.parseIndex(html, Uri.parse('https://syosetu.org/novel/415332/'));
+      expect(index.title, 'ある日の日常');
+    });
+  });
+
   group('parseIndex - title with hyphen', () {
     test('preserves a short-story title containing " - "', () {
       const html = '''

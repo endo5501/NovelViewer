@@ -161,9 +161,19 @@ class HamelnSite extends NovelSite {
     if (nameEl != null && nameEl.text.trim().isNotEmpty) {
       return nameEl.text.trim();
     }
-    // Fallback (e.g. single-part works): derive from the <title> tag.
-    // Format is "<work> - ハーメルン" or, for single-part works, the work
-    // title is duplicated as "<work> - <work> - ハーメルン".
+    // Single-part works lack the itemprop markup; their heading is a self-link
+    // to the work root (<a href="./">work title</a>), which is the cleanest
+    // source for the work title.
+    final main = document.querySelector('#maind') ?? document;
+    final selfLink = main.querySelector('a[href="./"]') ??
+        main.querySelector('a[href="."]');
+    if (selfLink != null && selfLink.text.trim().isNotEmpty) {
+      return selfLink.text.trim();
+    }
+
+    // Last resort: derive from the <title> tag. Format is "<work> - ハーメルン"
+    // or, for single-part works, the work title may be duplicated as
+    // "<work> - <work> - ハーメルン".
     final titleTag = document.querySelector('title')?.text.trim() ?? '';
     if (titleTag.isEmpty) return '';
     final stripped =
