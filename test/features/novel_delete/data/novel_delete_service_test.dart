@@ -10,6 +10,7 @@ import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.da
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/novel_delete/data/novel_delete_service.dart';
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
+import 'package:novel_viewer/features/episode_cache/data/episode_cache_database.dart';
 
 void main() {
   late NovelDatabase novelDatabase;
@@ -214,6 +215,51 @@ void main() {
       final progress =
           await readingProgressRepository.findByNovelId('narou_n1234ab');
       expect(progress, isNull);
+    });
+
+    test('deletes folder even when episode_cache.db is open', () async {
+      // Regression: a novel downloaded then viewed leaves episode_cache.db open
+      // (the download flow's handle). On Windows that open SQLite connection
+      // locked the file, so deleteDirectory failed part-way and — because the
+      // metadata was deleted first — the folder became an undeletable
+      // "organizational" folder. The fix releases the handle before deleting
+      // and only removes DB rows after the folder is gone.
+      await novelRepository.upsert(createMetadata());
+      final novelDir = Directory('${tempDir.path}/narou_n1234ab');
+      novelDir.createSync();
+      File('${novelDir.path}/001_chapter.txt').writeAsStringSync('content');
+
+      // Simulate the leaked download handle: open and keep open.
+      final cacheDb = EpisodeCacheDatabase(novelDir.path);
+      await cacheDb.database;
+      expect(
+        File('${novelDir.path}/episode_cache.db').existsSync(),
+        isTrue,
+        reason: 'episode_cache.db should exist and be open before deletion',
+      );
+
+      final serviceWithRelease = NovelDeleteService(
+        novelRepository: novelRepository,
+        summaryRepository: summaryRepository,
+        factCacheRepository: factCacheRepository,
+        readingProgressRepository: readingProgressRepository,
+        fileSystemService: fileSystemService,
+        releaseFolderHandles: (dir) async {
+          // The provider wires this to close + invalidate the family handles;
+          // here we close the open cache DB to mirror that contract.
+          await cacheDb.close();
+        },
+      );
+
+      await serviceWithRelease.delete('narou_n1234ab', novelDir.path);
+
+      expect(novelDir.existsSync(), isFalse,
+          reason: 'the folder (including episode_cache.db) SHALL be deleted '
+              'once the handle is released');
+      expect(
+        await novelRepository.findByFolderName('narou_n1234ab'),
+        isNull,
+      );
     });
 
     test('does not affect other novels', () async {

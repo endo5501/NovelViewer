@@ -397,10 +397,12 @@ void main() {
       expect(emptyDir.existsSync(), false);
     });
 
-    test('throws when directory does not exist', () async {
-      expect(
-        () => service.deleteDirectory('${tempDir.path}/nonexistent'),
-        throwsA(isA<FileSystemException>()),
+    test('is idempotent: completes without throwing when missing', () async {
+      // Lets a delete retry finish remaining cleanup after a partial failure
+      // (folder already removed). See NovelDeleteService.delete.
+      await expectLater(
+        service.deleteDirectory('${tempDir.path}/nonexistent'),
+        completes,
       );
     });
   });

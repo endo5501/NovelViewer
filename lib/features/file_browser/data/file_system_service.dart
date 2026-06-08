@@ -236,6 +236,11 @@ class FileSystemService {
 
   Future<void> deleteDirectory(String path) async {
     final dir = Directory(path);
+    // Idempotent: an already-missing directory counts as deleted. This lets a
+    // retry after a partial failure (folder removed, but a later DB-row
+    // cleanup threw) re-run without the missing folder aborting the retry, so
+    // the remaining cleanup can finish. See NovelDeleteService.delete.
+    if (!await dir.exists()) return;
     await dir.delete(recursive: true);
   }
 

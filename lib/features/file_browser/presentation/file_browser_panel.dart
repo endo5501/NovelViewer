@@ -17,6 +17,7 @@ import 'package:novel_viewer/features/text_download/providers/text_download_prov
 import 'package:novel_viewer/features/file_browser/presentation/rename_title_dialog.dart';
 import 'package:novel_viewer/features/file_browser/presentation/new_folder_dialog.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
+import 'package:novel_viewer/shared/database/folder_db_key.dart';
 
 /// Returns the parent directory of [currentDir], or null if navigation up is
 /// not allowed.
@@ -444,7 +445,9 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
   void _releaseFolderHandles(String path) {
     ref.invalidate(ttsAudioDatabaseProvider(path));
     ref.invalidate(ttsDictionaryDatabaseProvider(path));
-    ref.invalidate(episodeCacheDatabaseProvider(path));
+    // episode_cache uses a canonical key so the download flow's handle is
+    // reachable regardless of path-separator spelling. See [folderDbKey].
+    ref.invalidate(episodeCacheDatabaseProvider(folderDbKey(path)));
   }
 
   void _showDeleteFolderConfirmation(BuildContext context, DirectoryEntry dir) {
@@ -583,6 +586,30 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     ).then((confirmed) async {
       if (confirmed != true) return;
       try {
+        // Drop any active watcher bound to the folder being deleted before the
+        // delete flow closes its per-folder DB handles. Otherwise the watcher
+        // would immediately re-materialize (and re-open) the handle right
+        // after it is closed, re-locking the file on Windows.
+        //
+        // Two watchers can point into the target folder:
+        //  - the file browser, when the current directory is inside it;
+        //  - the text viewer / TtsControlsBar, via the selected file, which
+        //    drives ttsAudioStateProvider -> ttsAudioDatabaseProvider.
+        final currentDir = ref.read(currentDirectoryProvider);
+        if (currentDir != null &&
+            (p.equals(currentDir, dir.path) ||
+                p.isWithin(dir.path, currentDir))) {
+          final libraryPath = ref.read(libraryPathProvider);
+          final parent =
+              getParentDirectory(dir.path, libraryPath: libraryPath) ??
+                  p.dirname(dir.path);
+          ref.read(currentDirectoryProvider.notifier).setDirectory(parent);
+        }
+        final selectedFile = ref.read(selectedFileProvider);
+        if (selectedFile != null &&
+            p.isWithin(dir.path, selectedFile.path)) {
+          ref.read(selectedFileProvider.notifier).clear();
+        }
         final deleteService =
             await ref.read(novelDeleteServiceProvider.future);
         await deleteService.delete(dir.name, dir.path);

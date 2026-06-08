@@ -6,6 +6,8 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/text_download/data/download_service.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
+import 'package:novel_viewer/shared/database/folder_db_key.dart';
+import 'package:path/path.dart' as p;
 
 enum DownloadStatus { idle, downloading, completed, error }
 
@@ -72,11 +74,14 @@ class DownloadNotifier extends Notifier<DownloadState> {
       outputPath: outputPath,
     );
 
-    final service = DownloadService();
+    final service = ref.read(downloadServiceFactoryProvider)();
     final folderName = service.buildFolderName(site, url);
-    final novelDirPath = '$outputPath/$folderName';
+    final novelDirPath = p.join(outputPath, folderName);
+    // Canonical family key so the handle opened here can be released later via
+    // the file browser's platform-separator path (see [folderDbKey]).
+    final cacheKey = folderDbKey(novelDirPath);
 
-    final cacheDb = ref.read(episodeCacheDatabaseProvider(novelDirPath));
+    final cacheDb = ref.read(episodeCacheDatabaseProvider(cacheKey));
     final cacheRepo = EpisodeCacheRepository(cacheDb);
 
     try {
@@ -117,6 +122,14 @@ class DownloadNotifier extends Notifier<DownloadState> {
       );
     } finally {
       service.dispose();
+      // Release the episode_cache.db handle opened above so it does not keep
+      // the file locked on Windows (which would block a later folder delete).
+      // Close the actual instance we hold and AWAIT it (rather than relying on
+      // invalidate's fire-and-forget onDispose close), so the OS lock is gone
+      // before control returns. Then invalidate to drop the disposed entry.
+      // Runs on both success and failure paths. See [folderDbKey].
+      await cacheDb.close();
+      ref.invalidate(episodeCacheDatabaseProvider(cacheKey));
     }
   }
 
@@ -170,3 +183,9 @@ final downloadProvider =
 final novelSiteRegistryProvider = Provider<NovelSiteRegistry>((ref) {
   return NovelSiteRegistry();
 });
+
+/// Factory for [DownloadService] instances. A new service is created per
+/// download (each owns an `http.Client` it disposes when done). Exposed as a
+/// provider so tests can inject a fake without performing real network I/O.
+final downloadServiceFactoryProvider =
+    Provider<DownloadService Function()>((ref) => DownloadService.new);
