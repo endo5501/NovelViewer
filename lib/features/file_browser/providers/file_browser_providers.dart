@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
+import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'package:path/path.dart' as p;
 
 final _fileBrowserLog = Logger('file_browser');
@@ -32,7 +33,10 @@ class CurrentDirectoryNotifier extends Notifier<String?> {
       // explicit cleanup point on folder switch.
       ref.invalidate(ttsAudioDatabaseProvider(oldPath));
       ref.invalidate(ttsDictionaryDatabaseProvider(oldPath));
-      ref.invalidate(episodeCacheDatabaseProvider(oldPath));
+      // episode_cache is keyed by a canonical path so the download flow's
+      // handle (opened under a joined path) is reachable here. See
+      // [folderDbKey].
+      ref.invalidate(episodeCacheDatabaseProvider(folderDbKey(oldPath)));
     }
   }
 }
