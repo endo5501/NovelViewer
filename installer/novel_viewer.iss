@@ -80,10 +80,14 @@ Name: "{userdesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 ; postinstall = invoked from the Wizard's Finished page (interactive installs).
-; Silent installs (/SILENT, /VERYSILENT) skip the Finished page; in that mode
-; the launch is opt-in via the custom /UPDATELAUNCH flag (used by the in-app
-; updater). Plain /SILENT installs (winget, choco, RMM) do not relaunch.
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall
+; IMPORTANT: postinstall entries are executed by DEFAULT during silent installs
+; too (the hidden Finished-page checkbox is treated as checked); skipifsilent is
+; required to suppress them. Without it this entry AND the [Code] launch below
+; would both fire under /SILENT /UPDATELAUNCH, opening two windows. So:
+;   - interactive install -> this [Run] entry launches the app (once)
+;   - /SILENT (+/UPDATELAUNCH) -> this entry is skipped; [Code] handles the launch
+;   - plain /SILENT (winget, choco, RMM) -> neither fires; app is not relaunched
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 var
