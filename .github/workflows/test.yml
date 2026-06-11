@@ -1,0 +1,38 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # Windows-only: several tests guard on Platform.isWindows and would
+    # silently skip on ubuntu, turning a partial run green. This also
+    # matches the release.yml build environment. Native DLLs (TTS/LAME/
+    # Piper) are intentionally NOT built here: the FFI integration tests
+    # self-skip when their .dll is absent (existsSync guard), so unit
+    # tests need neither the Vulkan SDK nor the native build steps.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run analyzer
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
