@@ -15,11 +15,11 @@
 - [x] 2.4 回帰防止テスト: ユーザ停止（`_stopped` 先行）→ status=`partial`、episode削除なし、`start()` が `stopped` を返す
 - [x] 2.5 回帰防止テスト: 全セグメント成功 → status=`completed`、`start()` が `completed` を返す
 - [x] 2.6 2.2〜2.5 を実行し、失敗を確認してコミット
-- [ ] 2.7 `tts_streaming_controller.dart` 実装: `enum TtsStartOutcome { completed, partial, stopped, failed }` を定義
-- [ ] 2.8 `_startPlayback` のループに `failed` 検出を追加（`!ensureModelLoaded && !_stopped` / `result == null && !_stopped` で `failed=true; break`）。`failed` を `start()` 側へ伝える
-- [ ] 2.9 `start()` の終了分岐を実装: `_stopped`→partial / `failed && 音声あり`→partial / `failed && 音声ゼロ`→`deleteEpisode` / それ以外→completed。`getSegments` で `audioData != null` の有無を判定
-- [ ] 2.10 `start()` の戻り値型を `Future<TtsStartOutcome>` に変更し各分岐で対応する outcome を返す
-- [ ] 2.11 2.2〜2.5 が通過することを確認してコミット
+- [x] 2.7 `tts_streaming_controller.dart` 実装: `enum TtsStartOutcome { completed, partial, stopped, failed }` を定義
+- [x] 2.8 `_startPlayback` のループに `failed` 検出を追加（`!ensureModelLoaded && !_stopped` / `result == null && !_stopped` で `failed=true; break`）。`failed` を `start()` 側へ伝える
+- [x] 2.9 `start()` の終了分岐を実装: `_stopped`→partial / `failed && 音声あり`→partial / `failed && 音声ゼロ`→`deleteEpisode` / それ以外→completed。`getSegments` で `audioData != null` の有無を判定
+- [x] 2.10 `start()` の戻り値型を `Future<TtsStartOutcome>` に変更し各分岐で対応する outcome を返す
+- [x] 2.11 2.2〜2.5 が通過することを確認してコミット
 
 ## 3. UI: 失敗スナックバーとローカライズ
 
