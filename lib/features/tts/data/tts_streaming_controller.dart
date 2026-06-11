@@ -30,8 +30,9 @@ typedef Reader = T Function<T>(ProviderListenable<T> provider);
 
 /// Result of a streaming `start()` run, letting callers distinguish a normal
 /// completion, a user stop, and a genuine engine failure (F101). A `failed`
-/// outcome is what the UI uses to surface an error to the user.
-enum TtsStartOutcome { completed, partial, stopped, failed }
+/// outcome is what the UI uses to surface an error to the user; it covers both
+/// a zero-audio failure and a mid-stream failure that kept some audio.
+enum TtsStartOutcome { completed, stopped, failed }
 
 class TtsStreamingController {
   static final _log = Logger('tts.streaming');
@@ -145,9 +146,10 @@ class TtsStreamingController {
         return TtsStartOutcome.stopped;
       }
       if (failed) {
-        final storedSegments = await _repository.getSegments(episodeId);
+        // Use a COUNT query rather than loading every segment's WAV blob just
+        // to test for presence of audio on this (failure) path.
         final hasAudio =
-            storedSegments.any((segment) => segment.audioData != null);
+            await _repository.getGeneratedSegmentCount(episodeId) > 0;
         if (hasAudio) {
           await _repository.updateEpisodeStatus(
               episodeId, TtsEpisodeStatus.partial);

@@ -57,10 +57,10 @@ status =
 ### 決定3: `start()` は `TtsStartOutcome` を返し、UIはそれを見てスナックバーを出す
 
 ```dart
-enum TtsStartOutcome { completed, partial, stopped, failed }
+enum TtsStartOutcome { completed, stopped, failed }
 ```
 
-`_startStreaming`（`tts_controls_bar.dart`）は `start()` の戻り値が `failed` の時のみ `ScaffoldMessenger` で汎用ローカライズ文言を表示する。`stopped` ではスナックバーを出さない。
+`_startStreaming`（`tts_controls_bar.dart`）は `start()` の戻り値が `failed` の時のみ `ScaffoldMessenger` で汎用ローカライズ文言を表示する。`stopped` ではスナックバーを出さない。失敗時に音声が途中まで残るケースもDBステータスは `partial` だが outcome は `failed` を返す（途中失敗もユーザに通知する）。そのため outcome に `partial` 値は持たせない。
 
 **代替案**: (a) `start()` 完了後に episode ステータスを再読込してUI判定 → 余分なDB読み込み＋削除済みケースの判別が曖昧。(b) `start()` が例外を投げる → 失敗は「処理済みの結果」であり例外的でなく、既存 `finally` のクリーンアップ前提も崩す。よって戻り値で返す案を採用（テスト容易性も高い）。
 
