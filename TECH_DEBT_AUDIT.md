@@ -204,7 +204,7 @@ jobs:
 - [ ] F110: `tts_edit_controller.dispose()` に `_segmentPlayer.dispose()` 追加
 - [ ] F112: tts_sessionでnativeエラー文字列をログへ
 - [ ] F113: LLMクライアントを `utf8.decode(response.bodyBytes)` に変更＋`choices`/`models` の形状ガード
-- [ ] F114: `test.yml`（push/PR CI）追加
+- [x] F114: `test.yml`（push/PR CI）追加
 - [ ] F126: `folderDbKey` を各family provider本体で適用
 - [ ] F139: 移行系の `debugPrint` 2件を `Logger` へ
 - [ ] F140: update経路の空catch 6箇所にロギング追加
