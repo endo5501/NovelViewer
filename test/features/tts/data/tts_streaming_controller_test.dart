@@ -52,6 +52,14 @@ class _FakeTtsIsolate implements TtsIsolate {
   final synthesizeRefWavPaths = <String?>[];
   final loadModelCalls = <_LoadModelCall>[];
 
+  /// When true, `loadModel` responds with `ModelLoadedResponse(success: false)`
+  /// to simulate a native model-load failure.
+  bool failModelLoad = false;
+
+  /// 1-based index of the synthesize call that should respond with an engine
+  /// error (null audio + error string). null means every call succeeds.
+  int? failSynthesisOnCall;
+
   @override
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
 
@@ -74,7 +82,13 @@ class _FakeTtsIsolate implements TtsIsolate {
       embeddingCacheDir: embeddingCacheDir,
     ));
     Future.microtask(() {
-      _responseController.add(ModelLoadedResponse(success: true));
+      if (_responseController.isClosed) return;
+      _responseController.add(
+        ModelLoadedResponse(
+          success: !failModelLoad,
+          error: failModelLoad ? 'model load failed' : null,
+        ),
+      );
     });
   }
 
@@ -82,11 +96,21 @@ class _FakeTtsIsolate implements TtsIsolate {
   void synthesize(String text, {String? refWavPath}) {
     synthesizeRequests.add(text);
     synthesizeRefWavPaths.add(refWavPath);
+    final callNumber = synthesizeRequests.length;
     Future.microtask(() {
-      _responseController.add(SynthesisResultResponse(
-        audio: Float32List.fromList([0.1, 0.2, 0.3]),
-        sampleRate: 24000,
-      ));
+      if (_responseController.isClosed) return;
+      if (failSynthesisOnCall != null && callNumber == failSynthesisOnCall) {
+        _responseController.add(SynthesisResultResponse(
+          audio: null,
+          sampleRate: 24000,
+          error: 'synthesis failed',
+        ));
+      } else {
+        _responseController.add(SynthesisResultResponse(
+          audio: Float32List.fromList([0.1, 0.2, 0.3]),
+          sampleRate: 24000,
+        ));
+      }
     });
   }
 
@@ -1279,6 +1303,121 @@ void main() {
       final progressAfter = container.read(ttsGenerationProgressProvider);
       expect(progressAfter.current, 0);
       expect(progressAfter.total, 0);
+    });
+
+    group('failure handling (F101)', () {
+      test(
+          'model-load failure with no audio deletes the episode and returns '
+          'failed', () async {
+        final isolate = _FakeTtsIsolate()..failModelLoad = true;
+        final player = _AutoCompleteAudioPlayer();
+        final controller = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        final outcome = await controller.start(
+          text: '文1。文2。',
+          fileName: 'fail_load.txt',
+          config: _qwen3Config(modelDir: '/models'),
+        );
+
+        expect(outcome, TtsStartOutcome.failed);
+        final episode = await repository.findEpisodeByFileName('fail_load.txt');
+        expect(episode, isNull,
+            reason: 'a zero-audio failure must delete the episode so the UI '
+                'reverts to none rather than showing a phantom ready episode');
+      });
+
+      test(
+          'mid-stream synthesis failure keeps partial status, preserves '
+          'generated segments, and returns failed', () async {
+        final isolate = _FakeTtsIsolate()..failSynthesisOnCall = 3;
+        final player = _AutoCompleteAudioPlayer();
+        final controller = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        final outcome = await controller.start(
+          text: '文1。文2。文3。文4。文5。',
+          fileName: 'fail_mid.txt',
+          config: _qwen3Config(modelDir: '/models'),
+        );
+
+        expect(outcome, TtsStartOutcome.failed);
+        final episode = await repository.findEpisodeByFileName('fail_mid.txt');
+        expect(episode, isNotNull);
+        expect(episode!.status, TtsEpisodeStatus.partial);
+
+        final segments = await repository.getSegments(episode.id);
+        final withAudio =
+            segments.where((s) => s.audioData != null).toList();
+        expect(withAudio, hasLength(2),
+            reason: 'the 2 segments generated before the failure are kept');
+      });
+
+      test('user stop returns stopped (not failed) and keeps partial status',
+          () async {
+        final isolate = _FakeTtsIsolate();
+        final player = _ManualAudioPlayer();
+        final controller = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        final future = controller.start(
+          text: '文1。文2。文3。',
+          fileName: 'stop.txt',
+          config: _qwen3Config(modelDir: '/models'),
+        );
+
+        await _pumpUntil(() => player.isPlaying);
+        await controller.stop();
+        final outcome = await future;
+
+        expect(outcome, TtsStartOutcome.stopped,
+            reason: 'a user stop must be distinguished from an engine failure');
+        final episode = await repository.findEpisodeByFileName('stop.txt');
+        expect(episode, isNotNull,
+            reason: 'a stop must never delete the episode');
+        expect(episode!.status, TtsEpisodeStatus.partial);
+      });
+
+      test('successful run returns completed', () async {
+        final isolate = _FakeTtsIsolate();
+        final player = _AutoCompleteAudioPlayer();
+        final controller = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        final outcome = await controller.start(
+          text: '文1。文2。',
+          fileName: 'ok.txt',
+          config: _qwen3Config(modelDir: '/models'),
+        );
+
+        expect(outcome, TtsStartOutcome.completed);
+        final episode = await repository.findEpisodeByFileName('ok.txt');
+        expect(episode!.status, TtsEpisodeStatus.completed);
+      });
     });
   });
 

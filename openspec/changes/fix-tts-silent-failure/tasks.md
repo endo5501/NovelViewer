@@ -9,12 +9,12 @@
 
 ## 2. F101: 失敗検出と終了ステータス分岐（テストファースト）
 
-- [ ] 2.1 `tts_streaming_controller_test.dart` の Fake を拡張: モデルロード失敗（`ModelLoadedResponse(success: false)`）と合成失敗（`SynthesisResultResponse(error/audio null)`）を任意セグメントで注入できるようにする
-- [ ] 2.2 失敗テスト: モデルロード失敗かつ音声ゼロ → episodeレコードが削除され（`findEpisodeByFileName` が null）、`start()` が `TtsStartOutcome.failed` を返す
-- [ ] 2.3 失敗テスト: 先頭2/5セグメント生成後に合成失敗（停止なし）→ status=`partial`、2セグメントは保持、`start()` が `failed` を返す
-- [ ] 2.4 回帰防止テスト: ユーザ停止（`_stopped` 先行）→ status=`partial`、episode削除なし、`start()` が `stopped` を返す
-- [ ] 2.5 回帰防止テスト: 全セグメント成功 → status=`completed`、`start()` が `completed` を返す
-- [ ] 2.6 2.2〜2.5 を実行し、失敗を確認してコミット
+- [x] 2.1 `tts_streaming_controller_test.dart` の Fake を拡張: モデルロード失敗（`ModelLoadedResponse(success: false)`）と合成失敗（`SynthesisResultResponse(error/audio null)`）を任意セグメントで注入できるようにする
+- [x] 2.2 失敗テスト: モデルロード失敗かつ音声ゼロ → episodeレコードが削除され（`findEpisodeByFileName` が null）、`start()` が `TtsStartOutcome.failed` を返す
+- [x] 2.3 失敗テスト: 先頭2/5セグメント生成後に合成失敗（停止なし）→ status=`partial`、2セグメントは保持、`start()` が `failed` を返す
+- [x] 2.4 回帰防止テスト: ユーザ停止（`_stopped` 先行）→ status=`partial`、episode削除なし、`start()` が `stopped` を返す
+- [x] 2.5 回帰防止テスト: 全セグメント成功 → status=`completed`、`start()` が `completed` を返す
+- [x] 2.6 2.2〜2.5 を実行し、失敗を確認してコミット
 - [ ] 2.7 `tts_streaming_controller.dart` 実装: `enum TtsStartOutcome { completed, partial, stopped, failed }` を定義
 - [ ] 2.8 `_startPlayback` のループに `failed` 検出を追加（`!ensureModelLoaded && !_stopped` / `result == null && !_stopped` で `failed=true; break`）。`failed` を `start()` 側へ伝える
 - [ ] 2.9 `start()` の終了分岐を実装: `_stopped`→partial / `failed && 音声あり`→partial / `failed && 音声ゼロ`→`deleteEpisode` / それ以外→completed。`getSegments` で `audioData != null` の有無を判定
