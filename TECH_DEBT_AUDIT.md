@@ -100,7 +100,7 @@ TTSが複雑性の中心: FFIで `qwen3-tts.cpp`（abort対応・24kHz）と `pi
 | F163 | 一貫性 | lib/features/llm_summary/providers/llm_summary_providers.dart:22,32（再掲F024系） | Medium | S | LLMクライアントがhttp client未注入→内部で未closeの`http.Client()`を設定変更のたび再生成。正規の`httpClientProvider`（settings_providers.dart:13）は他4機能で使用中。DL系は`client ?? http.Client()`の第3流派（download_service.dart:57） | `ref.watch(httpClientProvider)`を注入し、DI規約を必須注入に統一 |
 | F164 | アーキテクチャ | 死にコード一括: vertical_text_layout.dart:68-93（hitTestCharIndex+旧式テスト128-237）, swipe_detection.dart:27-66（detectSwipe）, ruby_text_parser.dart:91-103（buildPlainTextと_concatenatedBaseTextの重複）, text_content_renderer.dart:41-47（computeLineStartOffsets）, download_service.dart:81-84（fetchPage—再利用されると文字化け/403の罠）, llm_config.dart:14（isConfigured）, tts_edit_providers.dart:18-28 / tts_audio_repository.dart:133-140,195-202 / voice_recording_service.dart:40（テストのみ参照のメソッド群） | Low | S | 本番参照ゼロのコード＋それをピン留めする偽カバレッジテスト。特にhitTestCharIndexのテストは廃止済みグリッド幾何をassertし誤った安心感を与える | 一括削除（テストごと）。fetchPageは罠なので優先 |
 | F165 | 型・契約 | novel_site.dart:8,58 / narou_site.dart:154 / hameln_site.dart:144,159（再掲F008/F009） | Low | S | パース補助が`dynamic`受けでHTML境界の静的型を放棄。前回Deferredのまま新規アダプタ（hameln）にもコピーされた—「触るとき直す」が効いていない証拠 | `package:html/dom.dart`の`Element`/`Document`を明示 |
-| F166 | 堅牢性 | lib/features/novel_metadata_db/data/novel_database.dart:345 | Low | S | 移行のdedupキーに**生NULバイト(0x00)**がソースへ直接埋め込まれている（hexdumpで確認済み）。レビューで不可視、フォーマッタ/gitフィルタ1つで無言のキー衝突に化ける | `' '`エスケープに置換 |
+| F166 | 堅牢性 | lib/features/novel_metadata_db/data/novel_database.dart:345 | Low | S | 移行のdedupキーに**生NULバイト(0x00)**がソースへ直接埋め込まれている（hexdumpで確認済み）。レビューで不可視、フォーマッタ/gitフィルタ1つで無言のキー衝突に化ける | `'\x00'`エスケープに置換 |
 | F167 | 堅牢性 | lib/shared/utils/file_name_utils.dart:21-25 | Low | S | `isValidFolderName`が`.`/`..`、末尾ドット/空白、Windows予約名（CON/NUL）を許容。`'foo.'`はWindowsで`foo`を作り名前不一致、予約名は汎用「不明なエラー」に化ける | 予約名・末尾ドット/空白・`.`/`..`を明示拒否 |
 | F168 | エラー処理 | lib/features/file_browser/presentation/file_browser_panel.dart:400-402 | Low | S | `_showMoveDialog`がFileSystemExceptionを裸`return;`で握る—Move押下で何も起きず何も記録されない。兄弟フローは全てsnackbar表示 | ログ＋common_unknownError snackbar |
 | F169 | 一貫性 | lib/features/text_download/presentation/download_dialog.dart:25 + text_download_providers.dart:58 vs :137-139 + :118-122 | Low | S | ダイアログが`NovelSiteRegistry()`を直newしproviderと二重管理。`startDownload`に実行中ガードなし（refreshNovelにはある）。エラーは`e.toString()`生文字列でUI表示。:167-172の外側catchは到達不能の死にコード | provider経由に統一、ガード移動、例外→ローカライズ済みメッセージのマッピング層 |
@@ -214,7 +214,7 @@ jobs:
 - [ ] F168: `_showMoveDialog` の例外握り潰しにsnackbar
 - [ ] F117: `computeMarkedEntries` を `computeMarkedRanges` 由来に統合
 - [ ] F162: ホバーポップアップの `listSync` ×3 を1回に
-- [ ] F166: 生NULバイトを `' '` に置換
+- [ ] F166: 生NULバイトを `'\x00'` に置換
 - [ ] F179(一部): pubspec description修正＋`cupertino_icons`削除
 
 ## 一見問題だが実は健全なもの（Things that look bad but are actually fine）
