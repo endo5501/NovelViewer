@@ -35,7 +35,7 @@ TTSが複雑性の中心: FFIで `qwen3-tts.cpp`（abort対応・24kHz）と `pi
 
 | ID | Category | File:Line | Severity | Effort | Description | Recommendation |
 |----|----------|-----------|----------|--------|-------------|----------------|
-| F101 | エラー処理 | lib/features/tts/data/tts_streaming_controller.dart:127-133,205-225 | **Critical** | S | モデルロード/合成失敗時はループを`break`するだけで`_stopped`がfalseのまま→episodeが**completed**としてマークされる。UIは completed→ready 変換（tts_audio_state_provider.dart:15-17）のため、音声ゼロのepisodeに再生/エクスポートボタンが出現し、エラーは一切表示されない | 失敗フラグを導入し partial/error ステータス＋UI通知に分岐 |
+| F101 | エラー処理 | lib/features/tts/data/tts_streaming_controller.dart:127-133,205-225 | **Critical** | S | モデルロード/合成失敗時はループを`break`するだけで`_stopped`がfalseのまま→episodeが**completed**としてマークされる。UIは completed→ready 変換（tts_audio_state_provider.dart:15-17）のため、音声ゼロのepisodeに再生/エクスポートボタンが出現し、エラーは一切表示されない | ✅ 対応済み(fix-tts-silent-failure): 失敗を停止と区別し検出、音声ゼロはepisode削除/途中まではpartial、UIはlocalized snackbar通知（error値の新設はせずstatusで表現） |
 | F102 | エラー処理 | lib/features/text_download/data/download_service.dart:205-207 | High | S | 目次ページネーションのループが`catch (_) { break; }`で全例外を握り潰す。2ページ目以降の失敗が`failedCount=0`の「完了」として報告される | 失敗をfailedCountに計上、またはDownloadResultに途中打ち切りフラグを追加 |
 | F103 | 堅牢性 | lib/features/text_download/data/download_service.dart:68-71 | High | S | `_client.get`にタイムアウトが一切ない（lib配下に`.timeout(`はゼロ件）。接続スタックでダウンロードが永久ハングし、キャンセル手段もない | リクエスト毎に`.timeout()`、キャンセルトークン導入 |
 | F104 | アーキテクチャ | lib/features/text_download/data/download_service.dart:21-26,370-372 | High | M | ファイル名のゼロ埋め幅が「現在の総話数」依存。99話→100話で全話の期待ファイル名が変わり（`01_`→`001_`）、スキップ判定が全部外れて全話再DL＋旧名ファイルがゴミとして残留 | 固定幅パディング、またはDL前に旧幅ファイルをリネーム |
@@ -46,7 +46,7 @@ TTSが複雑性の中心: FFIで `qwen3-tts.cpp`（abort対応・24kHz）と `pi
 | F109 | アーキテクチャ | lib/features/tts/presentation/tts_edit_dialog.dart:103 + tts_edit_controller.dart:58,436-441 | High | S | 編集ダイアログが`sampleRate: 24000`をハードコード。Piper（22050Hz）で全生成するとメタデータが24000になり、MP3エクスポートが約8.8%ピッチずれ音声になる | engine configから実サンプルレートを取得 |
 | F110 | リソース | lib/features/tts/data/tts_edit_controller.dart:410-415 | High | S | `dispose()`が`_segmentPlayer.dispose()`を呼ばない。編集ダイアログ開閉のたびにプラットフォームプレイヤーがリーク（streaming側はdispose済み） | dispose()に追加 |
 | F111 | 並行性 | lib/features/tts/data/tts_isolate.dart:140-145,231-238 | High | M | `abort()`はメインisolateから`_ctxAddress`経由でnativeを直接叩くが、モデル再ロード時に旧ctxがfreeされた後も`ModelLoadedResponse`到着までアドレスがstale。ロード中（数秒窓）のstopで解放済みポインタへのFFI呼び出し＝use-after-free | `loadModel()`送信時に`_ctxAddress = null`を先行クリア。恒久対応はctx寿命と分離したabortフラグ専用アロケーション |
-| F112 | エラー処理 | lib/features/tts/data/tts_session.dart:52-56,98-106 | High | S | nativeのエラーメッセージ（ModelLoadedResponse.error等）がbool/nullに潰されログにもUIにも出ない。edit側は固定文言、streaming側は無言（F101の片割れ） | 最低限`_log.warning(response.error)`、理想は結果型で伝搬 |
+| F112 | エラー処理 | lib/features/tts/data/tts_session.dart:52-56,98-106 | High | S | nativeのエラーメッセージ（ModelLoadedResponse.error等）がbool/nullに潰されログにもUIにも出ない。edit側は固定文言、streaming側は無言（F101の片割れ） | ✅ 対応済み(fix-tts-silent-failure): `_log.warning(response.error)` を ensureModelLoaded/synthesize に追加（戻り値契約は不変） |
 | F113 | 型・契約 | lib/features/llm_summary/data/openai_compatible_client.dart:45（ollama_client.dart:24,38,60も） | High | S | `response.body`はcharset無指定時latin1にフォールバック（実OpenAIは裸の`application/json`を返す）→日本語要約が文字化けし得る。`choices[0]`は空配列でRangeError、`json['models'] as List`は生TypeErrorが設定UIへ | 全箇所`utf8.decode(response.bodyBytes)`＋形状ガード＋型付き例外 |
 | F114 | CI | .github/workflows/release.yml:3-6 | High | S | リポジトリ唯一のワークフローが`v*`タグでのみ起動。analyze/test（:68-72）はリリース時しか走らず、push/PRはCIゼロでマージされる | pub get + analyze + test だけの`test.yml`をpush/PRトリガで追加（単体テストにVulkan/DLLは不要） |
 | F115 | パフォーマンス | lib/features/text_viewer/presentation/vertical_text_viewer.dart:249（実体 :605-678） | High | M | `_paginateLines`がLayoutBuilder内で**毎ビルド**全文再ページネーション（flatten+禁則+段組+オフセット計算）。TTSハイライトの1ティック、ページ送りのsetState毎に小説全体を再計算。横書き側は同じ理由でメモ化済み（text_content_renderer.dart:192-200）で非対称 | `_PaginationResult`を(segments, constraints, style, columnSpacing)キーでメモ化 |
@@ -122,7 +122,7 @@ TTSが複雑性の中心: FFIで `qwen3-tts.cpp`（abort対応・24kHz）と `pi
 
 ## Top 5 — これだけは直す
 
-### 1. F101 + F112: TTS失敗の「completed」化を止める（Critical）
+### 1. F101 + F112: TTS失敗の「completed」化を止める（Critical）✅ 対応済み（change: fix-tts-silent-failure）
 
 合成が1セグメントも成功していなくても、ユーザには成功と同じUIが見える。これはTTS機能の信頼性そのものを毀損する。
 
@@ -202,7 +202,7 @@ jobs:
 - [ ] F127: 削除の4連DELETEを `db.transaction` で包む
 - [ ] F109: 編集ダイアログの `sampleRate: 24000` をengine configから取得
 - [ ] F110: `tts_edit_controller.dispose()` に `_segmentPlayer.dispose()` 追加
-- [ ] F112: tts_sessionでnativeエラー文字列をログへ
+- [x] F112: tts_sessionでnativeエラー文字列をログへ
 - [ ] F113: LLMクライアントを `utf8.decode(response.bodyBytes)` に変更＋`choices`/`models` の形状ガード
 - [x] F114: `test.yml`（push/PR CI）追加
 - [ ] F126: `folderDbKey` を各family provider本体で適用
