@@ -4,8 +4,8 @@
 - [x] 1.2 `tts_session_test.dart` に失敗テストを追加: `synthesize` が `SynthesisResultResponse(error: "...", audio: null)` を受けたとき、WARNINGが記録され戻り値は `null` のままであること
 - [x] 1.3 `tts_session_test.dart` に回帰防止テストを追加: 成功レスポンス（`success: true` / audioあり）ではエラーWARNINGが出ないこと
 - [x] 1.4 1.1〜1.3 のテストを実行し、失敗を確認してコミット
-- [ ] 1.5 `tts_session.dart` 実装: `ensureModelLoaded` の listener で `ModelLoadedResponse.error != null` なら `_log.warning(error)`、`synthesize` の listener で `null` 完了の直前に `SynthesisResultResponse.error != null` なら `_log.warning(error)`。戻り値契約は不変
-- [ ] 1.6 1.1〜1.3 が通過することを確認してコミット
+- [x] 1.5 `tts_session.dart` 実装: `ensureModelLoaded` の listener で `ModelLoadedResponse.error != null` なら `_log.warning(error)`、`synthesize` の listener で `null` 完了の直前に `SynthesisResultResponse.error != null` なら `_log.warning(error)`。戻り値契約は不変
+- [x] 1.6 1.1〜1.3 が通過することを確認してコミット
 
 ## 2. F101: 失敗検出と終了ステータス分岐（テストファースト）
 

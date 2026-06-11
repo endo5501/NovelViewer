@@ -51,6 +51,9 @@ class TtsSession {
     // load on the broadcast stream cannot complete this call's completer.
     final sub = _isolate.responses.listen((response) {
       if (response is ModelLoadedResponse && !completer.isCompleted) {
+        if (response.error != null) {
+          _log.warning('Model load failed: ${response.error}');
+        }
         completer.complete(response.success);
       }
     });
@@ -98,6 +101,9 @@ class TtsSession {
     final sub = _isolate.responses.listen((response) {
       if (response is SynthesisResultResponse && !completer.isCompleted) {
         if (response.error != null || response.audio == null) {
+          if (response.error != null) {
+            _log.warning('Synthesis failed: ${response.error}');
+          }
           completer.complete(null);
         } else {
           completer.complete(response);
