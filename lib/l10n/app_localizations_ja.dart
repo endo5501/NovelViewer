@@ -426,6 +426,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get textViewer_exportCompleted => 'MP3ファイルのエクスポートが完了しました';
 
   @override
+  String get textViewer_ttsGenerationFailed => '音声の生成に失敗しました';
+
+  @override
   String textViewer_exportError(String message) {
     return 'エクスポートエラー: $message';
   }

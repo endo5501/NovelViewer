@@ -23,14 +23,14 @@
 
 ## 3. UI: 失敗スナックバーとローカライズ
 
-- [ ] 3.1 `app_ja.arb` / `app_en.arb` / `app_zh.arb` に失敗通知用キーを1つ追加（例キー名 `textViewer_ttsGenerationFailed`、ja「音声の生成に失敗しました」）。3言語パリティを保つ
-- [ ] 3.2 `flutter gen-l10n`（またはビルド）で `AppLocalizations` に新キーが生成されることを確認
-- [ ] 3.3 `tts_controls_bar.dart` の `_startStreaming` を変更: `controller.start(...)` の戻り outcome を受け、`failed` の時のみ `mounted` 確認後に `ScaffoldMessenger` で新キーのスナックバーを表示。`stopped` 等では表示しない
-- [ ] 3.4 `start()` 戻り値型変更に伴う既存呼び出し箇所・テストのコンパイルエラーを解消
+- [x] 3.1 `app_ja.arb` / `app_en.arb` / `app_zh.arb` に失敗通知用キーを1つ追加（例キー名 `textViewer_ttsGenerationFailed`、ja「音声の生成に失敗しました」）。3言語パリティを保つ
+- [x] 3.2 `flutter gen-l10n`（またはビルド）で `AppLocalizations` に新キーが生成されることを確認
+- [x] 3.3 `tts_controls_bar.dart` の `_startStreaming` を変更: `controller.start(...)` の戻り outcome を受け、`failed` の時のみ `mounted` 確認後に `ScaffoldMessenger` で新キーのスナックバーを表示。`stopped` 等では表示しない
+- [x] 3.4 `start()` 戻り値型変更に伴う既存呼び出し箇所・テストのコンパイルエラーを解消
 
 ## 4. 注記
 
-- [ ] 4.1 `synthesize`/`ensureModelLoaded` が応答せずハングするケース（F144: タイムアウト/isolate死活監視なし）は本changeのスコープ外であることをコード近傍コメントかPR説明に明記
+- [x] 4.1 `synthesize`/`ensureModelLoaded` が応答せずハングするケース（F144: タイムアウト/isolate死活監視なし）は本changeのスコープ外であることをコード近傍コメントかPR説明に明記
 
 ## 5. 最終確認
 

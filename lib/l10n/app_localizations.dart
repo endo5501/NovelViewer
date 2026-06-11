@@ -862,6 +862,12 @@ abstract class AppLocalizations {
   /// **'MP3ファイルのエクスポートが完了しました'**
   String get textViewer_exportCompleted;
 
+  /// No description provided for @textViewer_ttsGenerationFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'音声の生成に失敗しました'**
+  String get textViewer_ttsGenerationFailed;
+
   /// No description provided for @textViewer_exportError.
   ///
   /// In ja, this message translates to:

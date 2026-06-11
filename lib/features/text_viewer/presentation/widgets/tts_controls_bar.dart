@@ -144,8 +144,9 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
 
     final voiceService = ref.read(voiceReferenceServiceProvider);
 
+    TtsStartOutcome? outcome;
     try {
-      await controller.start(
+      outcome = await controller.start(
         text: widget.content,
         fileName: fileName,
         config: config,
@@ -164,6 +165,18 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
           ref.invalidate(directoryContentsProvider);
         }
       }
+    }
+
+    // Surface a genuine synthesis/model-load failure to the user (F101). A
+    // user stop returns `stopped`, not `failed`, so it shows no error here.
+    if (outcome == TtsStartOutcome.failed && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.textViewer_ttsGenerationFailed,
+          ),
+        ),
+      );
     }
   }
 

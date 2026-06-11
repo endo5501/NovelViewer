@@ -116,7 +116,13 @@ class TtsStreamingController {
       for (final row in dbSegments) row.segmentIndex: row,
     };
 
-    // Start playback with on-demand generation
+    // Start playback with on-demand generation.
+    //
+    // Note: failure detection here assumes `ensureModelLoaded`/`synthesize`
+    // actually return. If the worker isolate dies and the completer never
+    // resolves, this loop hangs and the status is never updated. That hang
+    // (missing timeout / isolate liveness monitoring) is tracked separately as
+    // F144 and is out of scope for this change.
     try {
       final failed = await _startPlayback(
         episodeId: episodeId,
