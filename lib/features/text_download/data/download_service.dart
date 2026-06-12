@@ -5,6 +5,7 @@ import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/episode_cache/data/episode_cache_repository.dart';
 import 'package:novel_viewer/features/episode_cache/domain/episode_cache.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
+import 'package:novel_viewer/shared/utils/cancellation_token.dart';
 import 'package:novel_viewer/shared/utils/file_name_utils.dart' as file_names;
 
 typedef ProgressCallback = void Function(
@@ -33,6 +34,13 @@ class DownloadResult {
   final int episodeCount;
   final int skippedCount;
   final int failedCount;
+
+  /// True when the table of contents could not be fully fetched because a
+  /// subsequent index page failed to fetch or parse (F102). The episodes that
+  /// were collected before the failure are still downloaded, but some episodes
+  /// may be missing. Defaults to false (a fully-fetched index, including one
+  /// that stopped only because of the 100-page guard).
+  final bool indexTruncated;
   final Uri url;
 
   const DownloadResult({
@@ -43,17 +51,36 @@ class DownloadResult {
     required this.episodeCount,
     this.skippedCount = 0,
     this.failedCount = 0,
+    this.indexTruncated = false,
     required this.url,
   });
+}
+
+/// Internal result of collecting a (possibly multi-page) index: the merged
+/// index plus whether the pagination chain was truncated by a fetch/parse
+/// failure.
+class _CollectedIndex {
+  final NovelIndex index;
+  final bool truncated;
+
+  const _CollectedIndex(this.index, {this.truncated = false});
 }
 
 class DownloadService {
   final http.Client _client;
   final Duration requestDelay;
 
+  /// Per-request timeout applied to every HTTP GET. Without it a stuck
+  /// connection would hang the whole download forever (F103). On timeout the
+  /// request throws [TimeoutException], which is then handled like any other
+  /// fetch failure (episode -> failedCount, later index page -> indexTruncated,
+  /// first index page -> propagated to the caller).
+  final Duration requestTimeout;
+
   DownloadService({
     http.Client? client,
     this.requestDelay = const Duration(milliseconds: 700),
+    this.requestTimeout = const Duration(seconds: 30),
   }) : _client = client ?? http.Client();
 
   static const _userAgent =
@@ -68,7 +95,7 @@ class DownloadService {
     final response = await _client.get(
       url,
       headers: {'User-Agent': _userAgent, ...siteHeaders},
-    );
+    ).timeout(requestTimeout);
     if (response.statusCode != 200) {
       throw HttpException(
         'HTTP ${response.statusCode}',
@@ -120,7 +147,14 @@ class DownloadService {
     required String outputPath,
     EpisodeCacheRepository? episodeCacheRepository,
     ProgressCallback? onProgress,
+    CancellationToken? cancelToken,
   }) async {
+    // When cancelled, abort the in-flight request by closing the client. The
+    // episodes saved before cancellation are intentionally left in place so the
+    // download can be resumed (cache hit) on a later run.
+    cancelToken?.onCancel(_client.close);
+
+    cancelToken?.throwIfCancelled();
     final normalizedUrl = site.normalizeUrl(url);
     final folderName = buildFolderName(site, normalizedUrl);
     final novelId = site.extractNovelId(normalizedUrl);
@@ -147,31 +181,36 @@ class DownloadService {
         episodeCacheRepository: episodeCacheRepository,
         onProgress: onProgress,
         indexLastModified: indexResponse.headers['last-modified'],
+        cancelToken: cancelToken,
       );
     }
 
-    final mergedIndex = await _collectPagedIndex(
+    final collected = await _collectPagedIndex(
       site: site,
       firstIndex: novelIndex,
       firstUrl: normalizedUrl,
+      cancelToken: cancelToken,
     );
 
     return _downloadEpisodes(
       site: site,
       url: normalizedUrl,
       novelId: novelId,
-      novelIndex: mergedIndex,
+      novelIndex: collected.index,
       folderName: folderName,
       dir: dir,
       episodeCacheRepository: episodeCacheRepository,
       onProgress: onProgress,
+      indexTruncated: collected.truncated,
+      cancelToken: cancelToken,
     );
   }
 
-  Future<NovelIndex> _collectPagedIndex({
+  Future<_CollectedIndex> _collectPagedIndex({
     required NovelSite site,
     required NovelIndex firstIndex,
     required Uri firstUrl,
+    CancellationToken? cancelToken,
   }) async {
     final episodes = <Episode>[];
     final seenEpisodeUrls = <String>{};
@@ -187,8 +226,12 @@ class DownloadService {
 
     var next = firstIndex.nextPageUrl;
     var pageCount = 1;
+    var truncated = false;
 
     while (next != null && pageCount < _maxIndexPages) {
+      // Checked before the try so a cancellation propagates instead of being
+      // mistaken for an index fetch failure (truncation).
+      cancelToken?.throwIfCancelled();
       final key = next.toString();
       if (!visitedIndexUrls.add(key)) break;
 
@@ -202,7 +245,16 @@ class DownloadService {
         addEpisodes(idx.episodes);
         next = idx.nextPageUrl;
         pageCount++;
-      } catch (_) {
+      } catch (e, st) {
+        // If the failure was caused by a cancellation closing the client, treat
+        // it as a cancellation (not a truncation).
+        cancelToken?.throwIfCancelled();
+        // A later index page failed to fetch/parse. Do not swallow this
+        // silently (F102): stop the chain, keep the episodes collected so far,
+        // and flag the result as truncated so the UI can warn the user that
+        // some episodes may be missing.
+        _log.warning('Failed to fetch index page $next; index truncated', e, st);
+        truncated = true;
         break;
       }
     }
@@ -217,10 +269,13 @@ class DownloadService {
         ),
     ];
 
-    return NovelIndex(
-      title: firstIndex.title,
-      episodes: reindexed,
-      bodyContent: firstIndex.bodyContent,
+    return _CollectedIndex(
+      NovelIndex(
+        title: firstIndex.title,
+        episodes: reindexed,
+        bodyContent: firstIndex.bodyContent,
+      ),
+      truncated: truncated,
     );
   }
 
@@ -234,7 +289,12 @@ class DownloadService {
     EpisodeCacheRepository? episodeCacheRepository,
     ProgressCallback? onProgress,
     String? indexLastModified,
+    CancellationToken? cancelToken,
   }) async {
+    // The index fetch already happened; honour a cancellation requested during
+    // it before doing any local save/cache work.
+    cancelToken?.throwIfCancelled();
+
     final cache = episodeCacheRepository != null
         ? await episodeCacheRepository.getAllAsMap()
         : <String, EpisodeCache>{};
@@ -287,6 +347,8 @@ class DownloadService {
     required Directory dir,
     EpisodeCacheRepository? episodeCacheRepository,
     ProgressCallback? onProgress,
+    bool indexTruncated = false,
+    CancellationToken? cancelToken,
   }) async {
     final total = novelIndex.episodes.length;
     final cache = episodeCacheRepository != null
@@ -298,6 +360,10 @@ class DownloadService {
     var hadPriorRequest = false;
 
     for (final (i, episode) in novelIndex.episodes.indexed) {
+      // Checked outside the per-episode try so a cancellation propagates rather
+      // than being counted as a failed episode.
+      cancelToken?.throwIfCancelled();
+
       // Check skip condition first (local only, no network)
       final canSkip = _canSkipEpisode(
         url: episode.url,
@@ -321,17 +387,31 @@ class DownloadService {
             site: site,
           );
           final content = site.parseEpisode(site.decodeBody(response));
-          await _saveAndCacheEpisode(
-            url: episode.url,
-            index: episode.index,
-            title: episode.title,
-            content: content,
-            updatedAt: episode.updatedAt,
-            totalEpisodes: total,
-            dir: dir,
-            episodeCacheRepository: episodeCacheRepository,
-          );
+          if (content.trim().isEmpty) {
+            // The page was fetched but yielded no body text. This happens when
+            // the site changes its markup and the adapter's selectors no longer
+            // match (the adapters return ''). Saving/caching it would persist an
+            // empty file and skip the episode forever on later updates, so treat
+            // it as a failure instead and leave the cache untouched for retry.
+            failedCount++;
+            _log.warning(
+                'Empty parse result for episode ${episode.index} from ${episode.url}; treated as failure (not saved or cached)');
+          } else {
+            await _saveAndCacheEpisode(
+              url: episode.url,
+              index: episode.index,
+              title: episode.title,
+              content: content,
+              updatedAt: episode.updatedAt,
+              totalEpisodes: total,
+              dir: dir,
+              episodeCacheRepository: episodeCacheRepository,
+            );
+          }
         } catch (e, st) {
+          // If the failure was caused by a cancellation closing the client,
+          // treat it as a cancellation (not a failed episode).
+          cancelToken?.throwIfCancelled();
           failedCount++;
           _log.warning(
               'Failed to download episode ${episode.index} from ${episode.url}',
@@ -352,6 +432,7 @@ class DownloadService {
       episodeCount: total,
       skippedCount: skippedCount,
       failedCount: failedCount,
+      indexTruncated: indexTruncated,
       url: url,
     );
   }

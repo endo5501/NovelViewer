@@ -651,7 +651,8 @@ class _RefreshProgressDialog extends ConsumerWidget {
       content: _buildContent(context, downloadState),
       actions: [
         if (downloadState.status == DownloadStatus.completed ||
-            downloadState.status == DownloadStatus.error)
+            downloadState.status == DownloadStatus.error ||
+            downloadState.status == DownloadStatus.cancelled)
           TextButton(
             onPressed: () {
               if (downloadState.status == DownloadStatus.completed) {
@@ -706,10 +707,25 @@ class _RefreshProgressDialog extends ConsumerWidget {
         );
       case DownloadStatus.completed:
         final summary = episodeSummary(state);
-        return Text(
+        final completedText = Text(
           l10n.fileBrowser_refreshCompleted(
               summary.isNotEmpty ? '\n$summary' : ''),
         );
+        if (!state.indexTruncated) return completedText;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            completedText,
+            const SizedBox(height: 8),
+            Text(
+              l10n.download_indexTruncatedWarning,
+              style: const TextStyle(color: Colors.orange),
+            ),
+          ],
+        );
+      case DownloadStatus.cancelled:
+        return Text(l10n.download_cancelledMessage);
       case DownloadStatus.error:
         return Text(
           l10n.common_errorPrefix(

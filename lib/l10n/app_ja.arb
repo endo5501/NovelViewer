@@ -258,6 +258,12 @@
       "count": { "type": "int" }
     }
   },
+  "download_failedSuffix": "(失敗: {count}件)",
+  "@download_failedSuffix": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "download_progressFormat": "ダウンロード中: {current}/{total} エピソード{skipped}",
   "@download_progressFormat": {
     "placeholders": {
@@ -281,6 +287,8 @@
   },
   "download_downloadingButton": "ダウンロード中...",
   "download_startButton": "ダウンロード開始",
+  "download_indexTruncatedWarning": "目次の取得が途中で失敗しました（一部のエピソードが取得できていない可能性があります）",
+  "download_cancelledMessage": "ダウンロードを中断しました",
 
   "ttsDictionary_title": "読み上げ辞書",
   "ttsDictionary_bothFieldsRequired": "表記と読みの両方を入力してください",

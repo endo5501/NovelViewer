@@ -495,6 +495,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String download_failedSuffix(int count) {
+    return '(failed: $count)';
+  }
+
+  @override
   String download_progressFormat(int current, int total, String skipped) {
     return 'Downloading: $current/$total episodes$skipped';
   }
@@ -514,6 +519,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get download_startButton => 'Start download';
+
+  @override
+  String get download_indexTruncatedWarning =>
+      'Failed to fetch the full table of contents; some episodes may be missing';
+
+  @override
+  String get download_cancelledMessage => 'Download cancelled';
 
   @override
   String get ttsDictionary_title => 'TTS Dictionary';

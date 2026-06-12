@@ -484,6 +484,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String download_failedSuffix(int count) {
+    return '(失敗: $count件)';
+  }
+
+  @override
   String download_progressFormat(int current, int total, String skipped) {
     return 'ダウンロード中: $current/$total エピソード$skipped';
   }
@@ -503,6 +508,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get download_startButton => 'ダウンロード開始';
+
+  @override
+  String get download_indexTruncatedWarning =>
+      '目次の取得が途中で失敗しました（一部のエピソードが取得できていない可能性があります）';
+
+  @override
+  String get download_cancelledMessage => 'ダウンロードを中断しました';
 
   @override
   String get ttsDictionary_title => '読み上げ辞書';

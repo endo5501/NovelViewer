@@ -964,6 +964,12 @@ abstract class AppLocalizations {
   /// **'(スキップ: {count}件)'**
   String download_skippedSuffix(int count);
 
+  /// No description provided for @download_failedSuffix.
+  ///
+  /// In ja, this message translates to:
+  /// **'(失敗: {count}件)'**
+  String download_failedSuffix(int count);
+
   /// No description provided for @download_progressFormat.
   ///
   /// In ja, this message translates to:
@@ -993,6 +999,18 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'ダウンロード開始'**
   String get download_startButton;
+
+  /// No description provided for @download_indexTruncatedWarning.
+  ///
+  /// In ja, this message translates to:
+  /// **'目次の取得が途中で失敗しました（一部のエピソードが取得できていない可能性があります）'**
+  String get download_indexTruncatedWarning;
+
+  /// No description provided for @download_cancelledMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロードを中断しました'**
+  String get download_cancelledMessage;
 
   /// No description provided for @ttsDictionary_title.
   ///
