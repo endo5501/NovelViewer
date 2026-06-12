@@ -133,6 +133,7 @@
   "textViewer_deleteAudioTitle": "Delete audio data",
   "textViewer_deleteAudioConfirmation": "Delete audio data?",
   "textViewer_exportCompleted": "MP3 export completed",
+  "textViewer_ttsGenerationFailed": "Audio generation failed",
   "textViewer_exportError": "Export error: {message}",
   "textViewer_generationProgressFormat": "{current}/{total} sentences",
   "textViewer_editTtsTooltip": "Edit TTS",

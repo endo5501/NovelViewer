@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
@@ -248,6 +249,97 @@ void main() {
         () => session.ensureModelLoaded(_qwen3()),
         throwsStateError,
       );
+    });
+
+    test(
+        'ensureModelLoaded logs a WARNING carrying the native error string '
+        'when model load fails', () async {
+      final isolate = _FakeTtsIsolate();
+      final logger = Logger('tts.session.test.modelload');
+      final session = TtsSession(isolate: isolate, logger: logger);
+
+      final records = <LogRecord>[];
+      Logger.root.level = Level.ALL;
+      final sub = Logger.root.onRecord.listen(records.add);
+
+      try {
+        isolate.blockModelLoad = true;
+        final loadFuture = session.ensureModelLoaded(_qwen3());
+        await Future.delayed(Duration.zero);
+        isolate.emitModelLoaded(success: false, error: 'model file not found');
+        final result = await loadFuture;
+
+        expect(result, isFalse, reason: 'return contract must stay bool');
+        final warnings = records
+            .where((r) =>
+                r.level == Level.WARNING &&
+                r.loggerName == 'tts.session.test.modelload')
+            .toList();
+        expect(warnings, isNotEmpty);
+        expect(warnings.first.message, contains('model file not found'));
+      } finally {
+        await sub.cancel();
+        await session.dispose();
+      }
+    });
+
+    test(
+        'synthesize logs a WARNING carrying the native error string and still '
+        'returns null', () async {
+      final isolate = _FakeTtsIsolate();
+      isolate.autoSucceedSynthesis = false;
+      final logger = Logger('tts.session.test.synth');
+      final session = TtsSession(isolate: isolate, logger: logger);
+      await session.ensureModelLoaded(_qwen3());
+
+      final records = <LogRecord>[];
+      Logger.root.level = Level.ALL;
+      final sub = Logger.root.onRecord.listen(records.add);
+
+      try {
+        final synthFuture = session.synthesize(text: 'pending');
+        await Future.delayed(Duration.zero);
+        isolate.completeSynthesis(error: 'vocab load failed');
+        final result = await synthFuture;
+
+        expect(result, isNull, reason: 'return contract must stay nullable');
+        final warnings = records
+            .where((r) =>
+                r.level == Level.WARNING &&
+                r.loggerName == 'tts.session.test.synth')
+            .toList();
+        expect(warnings, isNotEmpty);
+        expect(warnings.first.message, contains('vocab load failed'));
+      } finally {
+        await sub.cancel();
+        await session.dispose();
+      }
+    });
+
+    test('successful model load and synthesis emit no error WARNING', () async {
+      final isolate = _FakeTtsIsolate();
+      final logger = Logger('tts.session.test.happy');
+      final session = TtsSession(isolate: isolate, logger: logger);
+
+      final records = <LogRecord>[];
+      Logger.root.level = Level.ALL;
+      final sub = Logger.root.onRecord.listen(records.add);
+
+      try {
+        await session.ensureModelLoaded(_qwen3());
+        final result = await session.synthesize(text: 'こんにちは');
+        expect(result, isNotNull);
+
+        final warnings = records
+            .where((r) =>
+                r.level == Level.WARNING &&
+                r.loggerName == 'tts.session.test.happy')
+            .toList();
+        expect(warnings, isEmpty);
+      } finally {
+        await sub.cancel();
+        await session.dispose();
+      }
     });
 
     test('ensureModelLoaded after abort waits and proceeds with new config',

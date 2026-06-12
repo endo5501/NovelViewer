@@ -426,6 +426,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get textViewer_exportCompleted => 'MP3导出完成';
 
   @override
+  String get textViewer_ttsGenerationFailed => '语音生成失败';
+
+  @override
   String textViewer_exportError(String message) {
     return '导出错误：$message';
   }

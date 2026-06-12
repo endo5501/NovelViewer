@@ -28,6 +28,12 @@ import '../providers/tts_playback_providers.dart';
 /// `ProviderContainer` reference into the controller (F046).
 typedef Reader = T Function<T>(ProviderListenable<T> provider);
 
+/// Result of a streaming `start()` run, letting callers distinguish a normal
+/// completion, a user stop, and a genuine engine failure (F101). A `failed`
+/// outcome is what the UI uses to surface an error to the user; it covers both
+/// a zero-audio failure and a mid-stream failure that kept some audio.
+enum TtsStartOutcome { completed, stopped, failed }
+
 class TtsStreamingController {
   static final _log = Logger('tts.streaming');
 
@@ -62,7 +68,7 @@ class TtsStreamingController {
   bool _stopped = false;
   final _writtenFiles = <String>[];
 
-  Future<void> start({
+  Future<TtsStartOutcome> start({
     required String text,
     required String fileName,
     required TtsEngineConfig config,
@@ -73,7 +79,7 @@ class TtsStreamingController {
 
     final textHash = computeContentHash(text);
     final segments = _textSegmenter.splitIntoSentences(text);
-    if (segments.isEmpty) return;
+    if (segments.isEmpty) return TtsStartOutcome.completed;
 
     // Engine-config-derived values used for episode bookkeeping. The fallback
     // refWavPath only applies to Qwen3 (Piper does not do voice cloning).
@@ -111,9 +117,15 @@ class TtsStreamingController {
       for (final row in dbSegments) row.segmentIndex: row,
     };
 
-    // Start playback with on-demand generation
+    // Start playback with on-demand generation.
+    //
+    // Note: failure detection here assumes `ensureModelLoaded`/`synthesize`
+    // actually return. If the worker isolate dies and the completer never
+    // resolves, this loop hangs and the status is never updated. That hang
+    // (missing timeout / isolate liveness monitoring) is tracked separately as
+    // F144 and is out of scope for this change.
     try {
-      await _startPlayback(
+      final failed = await _startPlayback(
         episodeId: episodeId,
         segments: segments,
         dbSegmentMap: dbSegmentMap,
@@ -123,14 +135,32 @@ class TtsStreamingController {
         resolveRefWavPath: resolveRefWavPath,
       );
 
-      // Update episode status
+      // Resolve the terminal status. A user stop and an engine failure both
+      // exit the loop early, but only a failure (F101) is surfaced as an
+      // error: a stop keeps `partial`, while a failure with no usable audio
+      // deletes the episode so the file reverts to `none` instead of showing
+      // a phantom "ready" episode.
       if (_stopped) {
         await _repository.updateEpisodeStatus(
             episodeId, TtsEpisodeStatus.partial);
-      } else {
-        await _repository.updateEpisodeStatus(
-            episodeId, TtsEpisodeStatus.completed);
+        return TtsStartOutcome.stopped;
       }
+      if (failed) {
+        // Use a COUNT query rather than loading every segment's WAV blob just
+        // to test for presence of audio on this (failure) path.
+        final hasAudio =
+            await _repository.getGeneratedSegmentCount(episodeId) > 0;
+        if (hasAudio) {
+          await _repository.updateEpisodeStatus(
+              episodeId, TtsEpisodeStatus.partial);
+        } else {
+          await _repository.deleteEpisode(episodeId);
+        }
+        return TtsStartOutcome.failed;
+      }
+      await _repository.updateEpisodeStatus(
+          episodeId, TtsEpisodeStatus.completed);
+      return TtsStartOutcome.completed;
     } finally {
       // Always release isolate + segment-player resources and clear temp
       // files, even on early exit (model-load failure, exception).
@@ -142,7 +172,10 @@ class TtsStreamingController {
     }
   }
 
-  Future<void> _startPlayback({
+  /// Runs the generation/playback loop. Returns `true` if the loop exited
+  /// because of a genuine engine failure (model-load or synthesis), as opposed
+  /// to a user stop (`_stopped`) or a normal completion.
+  Future<bool> _startPlayback({
     required int episodeId,
     required List<TextSegment> segments,
     required Map<int, TtsSegment> dbSegmentMap,
@@ -151,6 +184,8 @@ class TtsStreamingController {
     int? startOffset,
     String Function(String fileName)? resolveRefWavPath,
   }) async {
+    var failed = false;
+
     // Determine starting segment
     int startIndex = 0;
     if (startOffset != null) {
@@ -203,6 +238,11 @@ class TtsStreamingController {
             .set(TtsPlaybackState.waiting);
 
         if (!await _session.ensureModelLoaded(config)) {
+          // `ensureModelLoaded` returns false on a real failure or because an
+          // abort (from stop()) completed it. Since stop() sets `_stopped`
+          // before calling abort(), a false return while `_stopped` is false
+          // is always a genuine model-load failure.
+          if (!_stopped) failed = true;
           break;
         }
         if (_stopped) break;
@@ -222,7 +262,14 @@ class TtsStreamingController {
           text: synthText,
           refWavPath: synthRefWavPath,
         );
-        if (result == null || _stopped) break;
+        // A null result is either a real synthesis failure or an abort. As
+        // with model load, an abort implies `_stopped` is already true, so a
+        // null while `_stopped` is false is a genuine synthesis failure.
+        if (result == null) {
+          if (!_stopped) failed = true;
+          break;
+        }
+        if (_stopped) break;
 
         final wavBytes = WavWriter.toBytes(
           audio: result.audio!,
@@ -285,6 +332,8 @@ class TtsStreamingController {
           .set(TtsPlaybackState.stopped);
       _read(ttsHighlightRangeProvider.notifier).set(null);
     }
+
+    return failed;
   }
 
   Future<void> pause() async {

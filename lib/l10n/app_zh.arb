@@ -133,6 +133,7 @@
   "textViewer_deleteAudioTitle": "删除音频数据",
   "textViewer_deleteAudioConfirmation": "确定删除音频数据吗？",
   "textViewer_exportCompleted": "MP3导出完成",
+  "textViewer_ttsGenerationFailed": "语音生成失败",
   "textViewer_exportError": "导出错误：{message}",
   "textViewer_generationProgressFormat": "{current}/{total}句",
   "textViewer_editTtsTooltip": "编辑朗读",
