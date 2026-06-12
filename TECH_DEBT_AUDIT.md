@@ -36,10 +36,10 @@ TTSが複雑性の中心: FFIで `qwen3-tts.cpp`（abort対応・24kHz）と `pi
 | ID | Category | File:Line | Severity | Effort | Description | Recommendation |
 |----|----------|-----------|----------|--------|-------------|----------------|
 | F101 | エラー処理 | lib/features/tts/data/tts_streaming_controller.dart:127-133,205-225 | **Critical** | S | モデルロード/合成失敗時はループを`break`するだけで`_stopped`がfalseのまま→episodeが**completed**としてマークされる。UIは completed→ready 変換（tts_audio_state_provider.dart:15-17）のため、音声ゼロのepisodeに再生/エクスポートボタンが出現し、エラーは一切表示されない | ✅ 対応済み(fix-tts-silent-failure): 失敗を停止と区別し検出、音声ゼロはepisode削除/途中まではpartial、UIはlocalized snackbar通知（error値の新設はせずstatusで表現） |
-| F102 | エラー処理 | lib/features/text_download/data/download_service.dart:205-207 | High | S | 目次ページネーションのループが`catch (_) { break; }`で全例外を握り潰す。2ページ目以降の失敗が`failedCount=0`の「完了」として報告される | 失敗をfailedCountに計上、またはDownloadResultに途中打ち切りフラグを追加 |
-| F103 | 堅牢性 | lib/features/text_download/data/download_service.dart:68-71 | High | S | `_client.get`にタイムアウトが一切ない（lib配下に`.timeout(`はゼロ件）。接続スタックでダウンロードが永久ハングし、キャンセル手段もない | リクエスト毎に`.timeout()`、キャンセルトークン導入 |
+| F102 | エラー処理 | lib/features/text_download/data/download_service.dart:205-207 | High | S | 目次ページネーションのループが`catch (_) { break; }`で全例外を握り潰す。2ページ目以降の失敗が`failedCount=0`の「完了」として報告される | ✅ 対応済み(fix-download-silent-failures): `DownloadResult.indexTruncated`フラグで表面化し、UIで打ち切り警告＋WARNINGログ。ページ上限到達は truncated=false |
+| F103 | 堅牢性 | lib/features/text_download/data/download_service.dart:68-71 | High | S | `_client.get`にタイムアウトが一切ない（lib配下に`.timeout(`はゼロ件）。接続スタックでダウンロードが永久ハングし、キャンセル手段もない | ✅ 対応済み(fix-download-silent-failures): 全`_client.get`に`.timeout()`(既定30秒・注入可)。加えて`CancellationToken`新設＋ダイアログのキャンセルボタンでユーザ中断を実装 |
 | F104 | アーキテクチャ | lib/features/text_download/data/download_service.dart:21-26,370-372 | High | M | ファイル名のゼロ埋め幅が「現在の総話数」依存。99話→100話で全話の期待ファイル名が変わり（`01_`→`001_`）、スキップ判定が全部外れて全話再DL＋旧名ファイルがゴミとして残留 | 固定幅パディング、またはDL前に旧幅ファイルをリネーム |
-| F105 | エラー処理 | sites/narou_site.dart:149 / kakuyomu_site.dart:129 / hameln_site.dart:134 / aozora_site.dart:61 + download_service.dart:323-333 | High | M | 全アダプタの`parseEpisode`がセレクタ不一致（サイト改修）時に空文字を返し、それを正常として空.txtを保存＆キャッシュ登録。以降のインクリメンタル更新で永久にスキップされ直らない | 空パース結果を失敗扱いにしキャッシュへ書かない |
+| F105 | エラー処理 | sites/narou_site.dart:149 / kakuyomu_site.dart:129 / hameln_site.dart:134 / aozora_site.dart:61 + download_service.dart:323-333 | High | M | 全アダプタの`parseEpisode`がセレクタ不一致（サイト改修）時に空文字を返し、それを正常として空.txtを保存＆キャッシュ登録。以降のインクリメンタル更新で永久にスキップされ直らない | ✅ 対応済み(fix-download-silent-failures): 空パース結果はsave/cacheせず`failedCount++`（次回再試行）。空判定はdownload_service側の1箇所に集約しアダプタ契約は不変 |
 | F106 | 型・契約 | lib/features/bookmark/providers/bookmark_providers.dart:12-22（同ロジック: reading_progress_providers.dart:61） | High | M | `novel_id`をライブラリ直下の**第1セグメント**から導出。フォルダ管理機能のネスト配置（file_browser_panel.dart:383）では整理フォルダ名がキーになり、小説を別フォルダへ移動するとブックマーク/進捗が全て孤児化。novel判定は他所では任意深度の葉名（novel_folder_classifier.dart:7-9）で矛盾 | パスを下って登録済みフォルダ名を探す共通関数に一本化 |
 | F107 | アーキテクチャ | lib/features/novel_delete/data/novel_delete_service.dart:44-49 | High | S | 削除カスケードがnovels/word_summaries/fact_cache/reading_progressのみで**bookmarksを消さない**。孤児行が永久蓄積し、同名フォルダ再DLで古い絶対パス付きで復活する | カスケードに`BookmarkRepository.deleteByNovelId`を追加（F106のキー不整合にも注意） |
 | F108 | DBハイジーン | lib/features/file_browser/presentation/file_browser_panel.dart:445-451（使用箇所 :422,:476,:505） | High | M | move/rename/空フォルダ削除がfire-and-forgetの`ref.invalidate`でDBハンドルを「解放」するが、closeはunawaitedなFuture。`Directory.rename`/`delete`がWindowsのファイルロックとレースする。削除フローだけは修正済み（novel_delete_providers.dart:27-32が理由までコメント済み） | novel_delete_providers.dartのawait付きclose-then-invalidateヘルパーを3フローでも使う |
@@ -76,7 +76,7 @@ TTSが複雑性の中心: FFIで `qwen3-tts.cpp`（abort対応・24kHz）と `pi
 | F139 | エラー処理 | lib/app/startup_migrations.dart:11 + lib/features/settings/data/settings_repository.dart:169 | Medium | S | APIキー移行失敗が`debugPrint`のみ＝releaseビルドではファイルログに残らない。キーが平文prefsに残留したユーザを診断できない | `Logger('startup').warning(...)`でAppLoggerパイプラインへ（lib内のdebugPrintはこの2件のみ） |
 | F140 | エラー処理 | lib/features/app_update/data/installer_downloader.dart:76（同類: distribution_detector.dart:31, installer_updater.dart:83, installer_verifier.dart:20, registry_reader.dart:23, update_dialog.dart:84） | Medium | S | update経路に文字通り空の`catch (_) {}`が6箇所。update_dialog.dart:69-74は実際の例外文言（UpdateResult.message）も捨てる。フィールドでの更新失敗が診断不能 | 各箇所に`Logger('app_update.*').warning(...)`を追加 |
 | F141 | 一貫性 | lib/ 全域 | Medium | M | catchが4流派併存: 型付き18×、`catch (e, stack)`15×、裸`catch (e)`36×、無言`catch (_)`16×。汎用`throw Exception('…')`10×がカスタム例外8クラスと併存。規約文書なし | .claude/CLAUDE.mdに5行の規約（型付きcatch+stack付きログ、ユーザ向け失敗はカスタム例外）を明記 |
-| F142 | i18n | lib/features/text_download/providers/text_download_providers.dart:67,149,158,170 / tts_model_download_providers.dart:100-104 / piper_model_download_providers.dart:104-108 / tts_export_providers.dart:56,78 / tts_model_size.dart:2-3 | Medium | S | UI層は233キー完全パリティなのに、provider層のユーザ可視文字列が日本語ハードコード（`'サポートされていないサイトです'`等）。EN/ZHユーザにはエラーだけ日本語で出る。2つのモデルDL providerはエラー分類も相互コピー | エラー種別enum＋widget層で.arbローカライズ。file_browser_panel.dart:674-682とdownload_dialog.dart:110-111の手書きswitch重複もプレースホルダキー1つに |
+| F142 | i18n | lib/features/text_download/providers/text_download_providers.dart:67,149,158,170 / tts_model_download_providers.dart:100-104 / piper_model_download_providers.dart:104-108 / tts_export_providers.dart:56,78 / tts_model_size.dart:2-3 | Medium | S | UI層は233キー完全パリティなのに、provider層のユーザ可視文字列が日本語ハードコード（`'サポートされていないサイトです'`等）。EN/ZHユーザにはエラーだけ日本語で出る。2つのモデルDL providerはエラー分類も相互コピー | 🟡 一部対応(fix-download-silent-failures): download_dialog.dartの`_failedSuffix`手書きswitchを`download_failedSuffix`(.arb 3言語)へ移行。残り（provider層の日本語ハードコード、file_browser_panel.dart:674-682の重複switch、モデルDL provider）は未対応 |
 | F143 | テスト | lib/features/llm_summary/data/ollama_client.dart, openai_compatible_client.dart, lib/features/text_download/providers/text_download_providers.dart, lib/features/tts/data/tts_playback_controller.dart, lib/features/app_update/data/installer_downloader.dart ほか計47ファイル | Medium | L | 非l10nのlibファイルの25%（47/185）に対応テストなし。特にネットワークパーサ2本（LLMクライアント）とDL状態機械、installer_downloader（stream-to-disk/タイムアウト/部分ファイル掃除）が無防備 | LLMクライアント2本とtext_download_providersを最優先に追加 |
 | F144 | 並行性 | lib/features/tts/data/tts_session.dart:89-115 + tts_isolate.dart:86-107 | Medium | M | `synthesize()`にタイムアウトなし、`Isolate.spawn`に`addErrorListener`なし。workerがDart例外で死ぬとcompleterが永遠に未解決→streamingが「waiting」のまま無限ハング | onError/onExitリスナーでcompleterをエラー解決 |
 | F145 | 一貫性 | lib/features/tts/data/piper_native_bindings.dart（abortシンボル不在）+ tts_isolate.dart:269-272,290 | Medium | M | abort/resetAbortはqwen3専用でPiper合成中の`abort()`は無言のno-op。stopはセグメント完了待ちかdisposeの2秒タイムアウト後`kill`頼み（FFIブロック中はkillも効かずnativeリーク） | piper側にabortフラグAPIを追加、最低限no-opであることを明示 |
@@ -144,15 +144,15 @@ final status = _stopped
 
 同時に `tts_session.dart:52-56,98-106` で捨てているnativeエラー文字列を `_log.warning` に流す（F112、2行の修正）。これでフィールドの失敗が初めて診断可能になる。
 
-### 2. ダウンロードの「静かな失敗」三点セット（F102 / F105 / F103）
+### 2. ダウンロードの「静かな失敗」三点セット（F102 / F105 / F103）✅ 対応済み（change: fix-download-silent-failures）
 
 3つとも `download_service.dart` 内で完結し、互いに独立して小さい:
 
-- :205-207 の `catch (_) { break; }` → 例外を `indexTruncated = true` として `DownloadResult` に載せ、UIで「目次の取得が途中で失敗」を表示。
-- :323-333 で `parseEpisode` が空文字を返したら **保存もキャッシュ登録もせず** failedCount++。これで次回更新時に再試行される。
-- 全 `_client.get` に `.timeout(const Duration(seconds: 30))`。
+- :205-207 の `catch (_) { break; }` → 例外を `indexTruncated = true` として `DownloadResult` に載せ、UIで「目次の取得が途中で失敗」を表示。✅ WARNINGログも追加、ページ上限到達は truncated=false。
+- :323-333 で `parseEpisode` が空文字を返したら **保存もキャッシュ登録もせず** failedCount++。これで次回更新時に再試行される。✅ 空判定は download_service 側に集約しアダプタ契約は不変。
+- 全 `_client.get` に `.timeout(const Duration(seconds: 30))`。✅ あわせて `CancellationToken` を新設し、ダウンロードのユーザ中断（`DownloadStatus.cancelled`）を実装。
 
-先に現挙動を固定する失敗系テスト（F122）を書いてから直す（TDD原則どおり）。
+先に現挙動を固定する失敗系テスト（F122）を書いてから直す（TDD原則どおり）。✅ 失敗系・キャンセル系テストとサニタイズ済みフィクスチャを追加（empty_parse / request_timeout / index_truncated / download_cancellation / cancellation_token / provider_state / dialog）。コードレビューで判明したキャンセル中断時の例外誤分類（in-flight `ClientException` の `error` 誤判定、failedCount水増し、二重start、短編キャンセル未対応）も修正済み。
 
 ### 3. 小説アイデンティティの整合性（F106 / F107 / F128）
 
@@ -196,8 +196,8 @@ jobs:
 
 ## Quick wins（Low effort × Medium+ severity のチェックリスト）
 
-- [ ] F103: 全HTTPリクエストに `.timeout()` 追加
-- [ ] F102: ページネーション `catch (_) { break; }` を失敗計上に変更
+- [x] F103: 全HTTPリクエストに `.timeout()` 追加（＋キャンセルトークン）
+- [x] F102: ページネーション `catch (_) { break; }` を打ち切りフラグ（indexTruncated）に変更
 - [ ] F107: 削除カスケードに bookmarks 追加
 - [ ] F127: 削除の4連DELETEを `db.transaction` で包む
 - [ ] F109: 編集ダイアログの `sampleRate: 24000` をengine configから取得

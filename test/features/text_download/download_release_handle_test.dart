@@ -11,6 +11,7 @@ import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
+import 'package:novel_viewer/shared/utils/cancellation_token.dart';
 
 class _StubSite extends Fake implements NovelSite {}
 
@@ -43,6 +44,7 @@ class _ConfigurableDownloadService extends Fake implements DownloadService {
     required String outputPath,
     EpisodeCacheRepository? episodeCacheRepository,
     ProgressCallback? onProgress,
+    CancellationToken? cancelToken,
   }) async {
     if (throws) throw Exception('boom');
     return DownloadResult(

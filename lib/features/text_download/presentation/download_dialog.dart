@@ -103,15 +103,9 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
   String _skipSuffix(BuildContext context, int skipped) =>
       skipped > 0 ? ' ${AppLocalizations.of(context)!.download_skippedSuffix(skipped)}' : '';
 
-  String _failedSuffix(BuildContext context, int failed) {
-    if (failed <= 0) return '';
-    final locale = Localizations.localeOf(context).languageCode;
-    return switch (locale) {
-      'ja' => ' (失敗: $failed件)',
-      'zh' => ' （失败：$failed个）',
-      _ => ' (failed: $failed)',
-    };
-  }
+  String _failedSuffix(BuildContext context, int failed) => failed > 0
+      ? ' ${AppLocalizations.of(context)!.download_failedSuffix(failed)}'
+      : '';
 
   String _summarySuffix(BuildContext context, DownloadState state) =>
       _skipSuffix(context, state.skippedEpisodes) +
@@ -139,13 +133,48 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
           ],
         );
       case DownloadStatus.completed:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    AppLocalizations.of(context)!.download_completedFormat(
+                        state.totalEpisodes, _summarySuffix(context, state)),
+                  ),
+                ),
+              ],
+            ),
+            if (state.indexTruncated) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.warning_amber, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context)!
+                          .download_indexTruncatedWarning,
+                      style: const TextStyle(color: Colors.orange),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        );
+      case DownloadStatus.cancelled:
         return Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.green),
+            const Icon(Icons.cancel, color: Colors.grey),
             const SizedBox(width: 8),
-            Text(
-              AppLocalizations.of(context)!.download_completedFormat(
-                  state.totalEpisodes, _summarySuffix(context, state)),
+            Expanded(
+              child: Text(
+                AppLocalizations.of(context)!.download_cancelledMessage,
+              ),
             ),
           ],
         );
@@ -169,13 +198,14 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     if (state.status == DownloadStatus.downloading) {
       return [
         TextButton(
-          onPressed: null,
-          child: Text(AppLocalizations.of(context)!.download_downloadingButton),
+          onPressed: () => ref.read(downloadProvider.notifier).cancel(),
+          child: Text(AppLocalizations.of(context)!.common_cancelButton),
         ),
       ];
     }
 
-    if (state.status == DownloadStatus.completed) {
+    if (state.status == DownloadStatus.completed ||
+        state.status == DownloadStatus.cancelled) {
       return [
         TextButton(
           onPressed: () {

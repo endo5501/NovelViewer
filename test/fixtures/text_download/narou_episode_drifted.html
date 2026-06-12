@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>第一話 始まりの朝 - サンプル小説</title>
+</head>
+<body>
+  <!--
+    Simulates a site redesign where the body container class was renamed
+    (e.g. from `js-novel-text p-novel__text` to a new unknown class).
+    None of NarouSite._bodySelectors match, so parseEpisode returns ''.
+    This reproduces the real-world trigger for F105.
+  -->
+  <article class="p-novel">
+    <h1 class="p-novel__title">第一話 始まりの朝</h1>
+    <div class="c-novel-body__text">
+      <p>朝の光が窓から差し込んでいた。</p>
+      <p>少年はゆっくりと目を開けた。</p>
+    </div>
+  </article>
+</body>
+</html>

@@ -484,6 +484,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String download_failedSuffix(int count) {
+    return '（失败：$count个）';
+  }
+
+  @override
   String download_progressFormat(int current, int total, String skipped) {
     return '下载中：$current/$total 章节$skipped';
   }
@@ -503,6 +508,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get download_startButton => '开始下载';
+
+  @override
+  String get download_indexTruncatedWarning => '目录未能完整获取，部分章节可能缺失';
+
+  @override
+  String get download_cancelledMessage => '下载已取消';
 
   @override
   String get ttsDictionary_title => '朗读词典';
