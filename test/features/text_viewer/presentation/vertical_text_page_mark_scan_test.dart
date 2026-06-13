@@ -33,7 +33,7 @@ void main() {
       expect(computeMarkedRangesCallCount, 1);
     });
 
-    testWidgets('rebuild from a property change still scans exactly once', (
+    testWidgets('a mark-input change re-scans exactly once, never twice', (
       tester,
     ) async {
       await tester.pumpWidget(_wrap(const VerticalTextPage(
@@ -44,13 +44,13 @@ void main() {
 
       computeMarkedRangesCallCount = 0;
 
-      // Change a property that forces exactly one rebuild of VerticalTextPage.
+      // Changing the marked words legitimately invalidates the F116 memo, so
+      // the buffer is rescanned — but F117 guarantees a single scan, not the
+      // old two-pass (computeMarkedEntries + computeMarkedRanges).
       await tester.pumpWidget(_wrap(const VerticalTextPage(
         segments: [PlainTextSegment('アリスが歩く')],
         baseStyle: TextStyle(fontSize: 14.0),
-        markedWords: {'アリス': MarkStyle.solid},
-        selectionStart: 0,
-        selectionEnd: 2,
+        markedWords: {'歩く': MarkStyle.solid},
       )));
 
       expect(computeMarkedRangesCallCount, 1);

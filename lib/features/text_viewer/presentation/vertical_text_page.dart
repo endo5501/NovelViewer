@@ -15,6 +15,18 @@ import 'package:novel_viewer/features/text_viewer/presentation/vertical_ruby_tex
 export 'package:novel_viewer/features/llm_summary/domain/hover_token.dart'
     show HoverToken;
 
+/// Test-only: increments each time [_VerticalTextPageState] actually computes
+/// the TTS highlight set (a cache miss). F116 memoizes it so rebuilds that do
+/// not change the TTS range / entries / page offset reuse the cached set.
+@visibleForTesting
+int verticalTtsHighlightComputeCount = 0;
+
+/// Test-only: increments each time a post-frame hit-region rebuild is newly
+/// scheduled. F116 schedules it only when a layout-affecting input (entries,
+/// style, column spacing) changes — not on selection or TTS rebuilds.
+@visibleForTesting
+int verticalHitRegionScheduleCount = 0;
+
 class VerticalTextPage extends StatefulWidget {
   const VerticalTextPage({
     super.key,
@@ -103,6 +115,22 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   HoverToken? _lastHoverToken;
   Map<int, MarkInfo> _markedRanges = const {};
 
+  // F116: memoization keys for the per-build mark map. Recompute only when the
+  // entries, the marked words, or the line-break indices change — not on
+  // selection / TTS / search rebuilds.
+  List<VerticalCharEntry>? _markedRangesEntries;
+  Map<String, MarkStyle>? _markedRangesWords;
+  Set<int>? _markedRangesLineBreaks;
+
+  // F116: memoization for the TTS highlight set. Its inputs are the TTS range,
+  // the page text offset, the entries, and the line-break indices.
+  Set<int> _ttsHighlights = const {};
+  int? _ttsCacheStart;
+  int? _ttsCacheEnd;
+  int? _ttsCachePageOffset;
+  List<VerticalCharEntry>? _ttsCacheEntries;
+  Set<int>? _ttsCacheLineBreaks;
+
   @override
   void initState() {
     super.initState();
@@ -122,7 +150,11 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       _lastHoverToken = null;
       return;
     }
-    if (oldWidget.baseStyle != widget.baseStyle) {
+    // Character rectangles move when the font style or the column spacing
+    // changes, so the hit regions must be rebuilt in those cases. (Segments
+    // changes are handled by the early-return _rebuildEntries path above.)
+    if (oldWidget.baseStyle != widget.baseStyle ||
+        oldWidget.columnSpacing != widget.columnSpacing) {
       _scheduleHitRegionRebuild();
     }
   }
@@ -164,12 +196,8 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     final highlights = (widget.query?.isNotEmpty ?? false)
         ? _computeHighlights(widget.query!)
         : const <int>{};
-    final ttsHighlights = _computeTtsHighlights();
-    _markedRanges = computeMarkedRanges(
-      entries: _charEntries,
-      markedWords: widget.markedWords,
-      lineBreakEntryIndices: widget.lineBreakEntryIndices,
-    );
+    final ttsHighlights = _memoizedTtsHighlights();
+    _markedRanges = _memoizedMarkedRanges();
 
     final fontSize = widget.baseStyle?.fontSize ?? _kDefaultFontSize;
     final children = <Widget>[];
@@ -200,7 +228,10 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       }
       children.add(KeyedSubtree(key: key, child: child));
     }
-    _scheduleHitRegionRebuild();
+    // F116: the hit-region rebuild is NOT scheduled here. Character rectangles
+    // only move when the entries/columns (segments), the text style, or the
+    // column spacing change — all handled by _rebuildEntries / didUpdateWidget.
+    // Selection and TTS rebuilds reach this point without moving any rect.
 
     return MouseRegion(
       onHover: _onHover,
@@ -446,6 +477,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   void _scheduleHitRegionRebuild() {
     if (_hitRegionUpdateScheduled) return;
     _hitRegionUpdateScheduled = true;
+    verticalHitRegionScheduleCount++;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _hitRegionUpdateScheduled = false;
       if (!mounted) return;
@@ -581,7 +613,47 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
             height: _kTextHeight);
   }
 
+  /// Returns the mark map, recomputing only when the entries, marked words, or
+  /// line-break indices change. Entries and marked words are compared by
+  /// identity (both are rebuilt as fresh instances when their content changes).
+  Map<int, MarkInfo> _memoizedMarkedRanges() {
+    if (identical(_markedRangesEntries, _charEntries) &&
+        identical(_markedRangesWords, widget.markedWords) &&
+        _markedRangesLineBreaks == widget.lineBreakEntryIndices) {
+      return _markedRanges;
+    }
+    final result = computeMarkedRanges(
+      entries: _charEntries,
+      markedWords: widget.markedWords,
+      lineBreakEntryIndices: widget.lineBreakEntryIndices,
+    );
+    _markedRangesEntries = _charEntries;
+    _markedRangesWords = widget.markedWords;
+    _markedRangesLineBreaks = widget.lineBreakEntryIndices;
+    return result;
+  }
+
+  /// Returns the TTS highlight set, recomputing only when the TTS range, the
+  /// page text offset, the entries, or the line-break indices change.
+  Set<int> _memoizedTtsHighlights() {
+    if (identical(_ttsCacheEntries, _charEntries) &&
+        _ttsCacheStart == widget.ttsHighlightStart &&
+        _ttsCacheEnd == widget.ttsHighlightEnd &&
+        _ttsCachePageOffset == widget.pageStartTextOffset &&
+        _ttsCacheLineBreaks == widget.lineBreakEntryIndices) {
+      return _ttsHighlights;
+    }
+    _ttsHighlights = _computeTtsHighlights();
+    _ttsCacheEntries = _charEntries;
+    _ttsCacheStart = widget.ttsHighlightStart;
+    _ttsCacheEnd = widget.ttsHighlightEnd;
+    _ttsCachePageOffset = widget.pageStartTextOffset;
+    _ttsCacheLineBreaks = widget.lineBreakEntryIndices;
+    return _ttsHighlights;
+  }
+
   Set<int> _computeTtsHighlights() {
+    verticalTtsHighlightComputeCount++;
     final globalStart = widget.ttsHighlightStart;
     final globalEnd = widget.ttsHighlightEnd;
     if (globalStart == null || globalEnd == null) return const {};

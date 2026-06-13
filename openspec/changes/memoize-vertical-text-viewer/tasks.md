@@ -21,14 +21,14 @@
 
 ## 3. F116: ページ側マップ／ハイライトのメモ化と hit-region 条件化
 
-- [ ] 3.1 `_computeTtsHighlights` の依存（`ttsHighlightRange` 単体で十分か `_charEntries` identity も要るか）を精査し、メモ化キーを確定（design.md Open Questions）
-- [ ] 3.2 「選択ドラッグの `setState` でマーク再計算・TTSハイライト再計算が走らない」回数スパイテストを追加。実行して失敗を確認
-- [ ] 3.3 「TTSハイライトのみ変化では hit-region 再構築がスケジュールされない」「entries/style/layout 変化では hit-region 再構築がスケジュールされる」テストを追加。実行して失敗を確認
-- [ ] 3.4 `_markedRanges` を `(entries identity, markedWords identity, lineBreakEntryIndices)` キーでメモ化
-- [ ] 3.5 `_computeTtsHighlights` 結果を 3.1 で確定したキーでメモ化
-- [ ] 3.6 `_scheduleHitRegionRebuild()`（:209 無条件呼び出し）を、前回ビルドからの entries/style/layout 変化時のみ呼ぶよう条件化。3.2/3.3 のテストを通す
-- [ ] 3.7 「レンダリング出力（表示・検索/TTSハイライト・選択・マーク下線・ヒットテスト）が非メモ化版と同一」同値性テストを追加して通す
-- [ ] 3.8 ホバー系（`vertical_text_page_hover_test.dart`）・選択系・ヒットテスト系テストで回帰がないことを確認（特に `MarkInfo` 等価性変更後のホバー合体ロジック）
+- [x] 3.1 `_computeTtsHighlights` の依存（`ttsHighlightRange` 単体で十分か `_charEntries` identity も要るか）を精査し、メモ化キーを確定（design.md Open Questions）
+- [x] 3.2 「選択ドラッグの `setState` でマーク再計算・TTSハイライト再計算が走らない」回数スパイテストを追加。実行して失敗を確認
+- [x] 3.3 「TTSハイライトのみ変化では hit-region 再構築がスケジュールされない」「entries/style/layout 変化では hit-region 再構築がスケジュールされる」テストを追加。実行して失敗を確認
+- [x] 3.4 `_markedRanges` を `(entries identity, markedWords identity, lineBreakEntryIndices)` キーでメモ化
+- [x] 3.5 `_computeTtsHighlights` 結果を 3.1 で確定したキーでメモ化
+- [x] 3.6 `_scheduleHitRegionRebuild()`（:209 無条件呼び出し）を、前回ビルドからの entries/style/layout 変化時のみ呼ぶよう条件化。3.2/3.3 のテストを通す
+- [x] 3.7 「レンダリング出力（表示・検索/TTSハイライト・選択・マーク下線・ヒットテスト）が非メモ化版と同一」同値性テストを追加して通す
+- [x] 3.8 ホバー系（`vertical_text_page_hover_test.dart`）・選択系・ヒットテスト系テストで回帰がないことを確認（特に `MarkInfo` 等価性変更後のホバー合体ロジック）
 - [ ] 3.9 F116 をコミット
 
 ## 4. 最終確認
