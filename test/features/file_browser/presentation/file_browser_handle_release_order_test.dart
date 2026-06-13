@@ -10,7 +10,8 @@ import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.da
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
-import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
+import 'package:novel_viewer/shared/database/per_folder_db_registry.dart';
+import 'package:novel_viewer/shared/database/per_folder_db_registry_provider.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:path/path.dart' as p;
 
@@ -85,11 +86,27 @@ class _RecordingFileSystemService extends FileSystemService {
       orgFolderTree;
 }
 
+/// A registry whose handles are the recording fakes, pre-opened for
+/// [openFolder] so `closeAll(openFolder)` has something to close (the close is
+/// what the order assertion observes).
+PerFolderDbRegistry _fakeRegistry(List<String> log, String openFolder) {
+  final registry = PerFolderDbRegistry(
+    episodeFactory: (_) => _FakeEpisodeCacheDatabase(log),
+    audioFactory: (_) => _FakeTtsAudioDatabase(log),
+    dictionaryFactory: (_) => _FakeTtsDictionaryDatabase(log),
+  );
+  registry.episodeCache(openFolder);
+  registry.ttsAudio(openFolder);
+  registry.ttsDictionary(openFolder);
+  return registry;
+}
+
 Widget _panel({
   required String currentDir,
   required String libraryPath,
   required FileSystemService fs,
   required List<String> log,
+  required PerFolderDbRegistry registry,
   List<NovelMetadata> novels = const [],
   List<DirectoryEntry> subdirectories = const [],
 }) {
@@ -102,23 +119,10 @@ Widget _panel({
       fileSystemServiceProvider.overrideWithValue(fs),
       directoryContentsProvider.overrideWith((ref) async =>
           DirectoryContents(files: const [], subdirectories: subdirectories)),
-      // Mirror the real providers: register onDispose so a fire-and-forget
-      // `ref.invalidate` still triggers close() (just not awaited).
-      episodeCacheDatabaseProvider.overrideWith((ref, _) {
-        final db = _FakeEpisodeCacheDatabase(log);
-        ref.onDispose(db.close);
-        return db;
-      }),
-      ttsAudioDatabaseProvider.overrideWith((ref, _) {
-        final db = _FakeTtsAudioDatabase(log);
-        ref.onDispose(db.close);
-        return db;
-      }),
-      ttsDictionaryDatabaseProvider.overrideWith((ref, _) {
-        final db = _FakeTtsDictionaryDatabase(log);
-        ref.onDispose(db.close);
-        return db;
-      }),
+      // The registry owns the per-folder handles; the move/rename/delete flows
+      // release them via `registry.closeAll(folder)` (awaited) before the file
+      // operation. Pre-opened with the recording fakes so the close is visible.
+      perFolderDbRegistryProvider.overrideWithValue(registry),
     ],
     child: const MaterialApp(
       locale: Locale('ja'),
@@ -162,6 +166,7 @@ void main() {
       libraryPath: '/library',
       fs: fs,
       log: log,
+      registry: _fakeRegistry(log, '/library/narou_n1'),
       novels: [_novel('narou_n1', 'テスト小説')],
       subdirectories: const [
         DirectoryEntry(
@@ -194,6 +199,7 @@ void main() {
       libraryPath: '/library',
       fs: fs,
       log: log,
+      registry: _fakeRegistry(log, '/library/完結済み'),
       subdirectories: const [
         DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
       ],
@@ -222,6 +228,7 @@ void main() {
       libraryPath: '/library',
       fs: fs,
       log: log,
+      registry: _fakeRegistry(log, '/library/完結済み'),
       subdirectories: const [
         DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
       ],

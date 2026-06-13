@@ -1,0 +1,111 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/episode_cache/data/episode_cache_database.dart';
+import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
+import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
+import 'package:novel_viewer/shared/database/folder_db_key.dart';
+import 'package:novel_viewer/shared/database/per_folder_db_registry.dart';
+
+class _FakeEpisode extends EpisodeCacheDatabase {
+  _FakeEpisode(this.log) : super('unused');
+  final List<String> log;
+  @override
+  Future<void> close() async {
+    await Future<void>.delayed(Duration.zero);
+    log.add('close:episode');
+  }
+}
+
+class _FakeAudio extends TtsAudioDatabase {
+  _FakeAudio(this.log) : super('unused');
+  final List<String> log;
+  @override
+  Future<void> close() async {
+    await Future<void>.delayed(Duration.zero);
+    log.add('close:audio');
+  }
+}
+
+class _FakeDict extends TtsDictionaryDatabase {
+  _FakeDict(this.log) : super('unused');
+  final List<String> log;
+  @override
+  Future<void> close() async {
+    await Future<void>.delayed(Duration.zero);
+    log.add('close:dict');
+  }
+}
+
+void main() {
+  late List<String> log;
+
+  PerFolderDbRegistry buildRegistry() => PerFolderDbRegistry(
+        episodeFactory: (_) => _FakeEpisode(log),
+        audioFactory: (_) => _FakeAudio(log),
+        dictionaryFactory: (_) => _FakeDict(log),
+      );
+
+  setUp(() => log = <String>[]);
+
+  group('PerFolderDbRegistry', () {
+    test('returns the same handle for a folder until closeAll', () {
+      final registry = buildRegistry();
+      final a1 = registry.ttsAudio('/lib/n1');
+      final a2 = registry.ttsAudio('/lib/n1');
+      expect(a1, same(a2));
+    });
+
+    test('closeAll closes all three handles then evicts them', () async {
+      final registry = buildRegistry();
+      final e1 = registry.episodeCache('/lib/n1');
+      final a1 = registry.ttsAudio('/lib/n1');
+      final d1 = registry.ttsDictionary('/lib/n1');
+
+      await registry.closeAll('/lib/n1');
+
+      // All three close() awaited.
+      expect(log.toSet(), {'close:episode', 'close:audio', 'close:dict'});
+
+      // Evicted: a subsequent access creates fresh instances.
+      expect(registry.episodeCache('/lib/n1'), isNot(same(e1)));
+      expect(registry.ttsAudio('/lib/n1'), isNot(same(a1)));
+      expect(registry.ttsDictionary('/lib/n1'), isNot(same(d1)));
+    });
+
+    test('closeAll on a folder with no open handles is a no-op', () async {
+      final registry = buildRegistry();
+      await registry.closeAll('/lib/never-opened');
+      expect(log, isEmpty);
+    });
+
+    test('normalizes the folder key so equivalent paths share one handle', () {
+      final registry = buildRegistry();
+      final a1 = registry.ttsAudio(r'C:\lib\n1\..\n1');
+      final a2 = registry.ttsAudio(r'C:\lib\n1');
+      expect(a1, same(a2),
+          reason: 'folderDbKey(${folderDbKey(r'C:\lib\n1\..\n1')}) must match');
+    });
+
+    test('closeAll uses the normalized key to reach handles', () async {
+      final registry = buildRegistry();
+      registry.ttsAudio(r'C:\lib\n1');
+      await registry.closeAll(r'C:\lib\n1\..\n1');
+      expect(log, contains('close:audio'));
+    });
+
+    test('releaseInBackground evicts synchronously and closes in background',
+        () async {
+      final registry = buildRegistry();
+      final a1 = registry.ttsAudio('/lib/n1');
+
+      registry.releaseInBackground('/lib/n1');
+
+      // Evicted synchronously: the next access is a fresh handle even before
+      // the background close has run.
+      expect(registry.ttsAudio('/lib/n1'), isNot(same(a1)));
+
+      // The old handle is closed in the background.
+      await Future<void>.delayed(Duration.zero);
+      expect(log, contains('close:audio'));
+    });
+  });
+}

@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
+import 'package:novel_viewer/shared/database/per_folder_db_registry_provider.dart';
 import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 import 'package:path/path.dart' as p;
 
@@ -29,11 +30,15 @@ class CurrentDirectoryNotifier extends Notifier<String?> {
     final oldPath = state;
     state = path;
     if (oldPath != null && oldPath != path) {
-      // Release the per-folder DB handles for the folder we just left.
-      // The family providers are non-autoDispose by design, so this is the
-      // explicit cleanup point on folder switch. All three are keyed by the
-      // canonical (normalized) path so a handle opened under any path-separator
-      // spelling is reachable here. See [folderDbKey].
+      // Release the per-folder DB handles for the folder we just left. The
+      // registry owns the handles; eviction here is the explicit cleanup point
+      // on folder switch. A switch races no file-system operation, so a
+      // background close is fine (unlike move/rename/delete, which await
+      // closeAll). The registry normalizes the key, so a handle opened under
+      // any path-separator spelling is reachable. See [folderDbKey].
+      ref.read(perFolderDbRegistryProvider).releaseInBackground(oldPath);
+      // The thin-view providers cache their resolved handle, so invalidate them
+      // to drop references to the evicted handle and recompute on next read.
       final oldKey = folderDbKey(oldPath);
       ref.invalidate(ttsAudioDatabaseProvider(oldKey));
       ref.invalidate(ttsDictionaryDatabaseProvider(oldKey));

@@ -16,7 +16,7 @@ import 'package:novel_viewer/features/text_download/providers/text_download_prov
 import 'package:novel_viewer/features/file_browser/presentation/rename_title_dialog.dart';
 import 'package:novel_viewer/features/file_browser/presentation/new_folder_dialog.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
-import 'package:novel_viewer/shared/database/folder_db_handles.dart';
+import 'package:novel_viewer/shared/database/per_folder_db_registry_provider.dart';
 
 /// Returns the parent directory of [currentDir], or null if navigation up is
 /// not allowed.
@@ -420,8 +420,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       // does not block the rename (Windows holds an exclusive lock). Awaiting
       // the close is required: a bare ref.invalidate is fire-and-forget and
       // would race the file operation.
-      await releaseFolderDbHandles(dir.path,
-          read: ref.read, invalidate: ref.invalidate);
+      await ref.read(perFolderDbRegistryProvider).closeAll(dir.path);
       final newPath = await service.moveDirectory(dir.path, destination);
       if (!context.mounted) return;
       // Keep the browser pointed at the moved content if it was open.
@@ -465,8 +464,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     ).then((confirmed) async {
       if (confirmed != true) return;
       try {
-        await releaseFolderDbHandles(dir.path,
-            read: ref.read, invalidate: ref.invalidate);
+        await ref.read(perFolderDbRegistryProvider).closeAll(dir.path);
         await ref
             .read(fileSystemServiceProvider)
             .deleteEmptyDirectory(dir.path);
@@ -496,8 +494,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         // Renaming changes the folder's absolute path, so release any per-
         // folder DB handles bound to the old path first (awaited close, not a
         // fire-and-forget invalidate).
-        await releaseFolderDbHandles(dir.path,
-            read: ref.read, invalidate: ref.invalidate);
+        await ref.read(perFolderDbRegistryProvider).closeAll(dir.path);
         await ref
             .read(fileSystemServiceProvider)
             .renameDirectory(dir.path, newName);

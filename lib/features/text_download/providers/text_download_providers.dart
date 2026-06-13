@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/text_download/data/download_service.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
+import 'package:novel_viewer/shared/database/per_folder_db_registry_provider.dart';
 import 'package:novel_viewer/shared/utils/cancellation_token.dart';
 import 'package:path/path.dart' as p;
 
@@ -166,11 +167,11 @@ class DownloadNotifier extends Notifier<DownloadState> {
       service.dispose();
       // Release the episode_cache.db handle opened above so it does not keep
       // the file locked on Windows (which would block a later folder delete).
-      // Close the actual instance we hold and AWAIT it (rather than relying on
-      // invalidate's fire-and-forget onDispose close), so the OS lock is gone
-      // before control returns. Then invalidate to drop the disposed entry.
-      // Runs on both success and failure paths. See [folderDbKey].
-      await cacheDb.close();
+      // The registry owns the handle; closeAll closes it (awaited) and evicts,
+      // so the OS lock is gone before control returns. Then invalidate to drop
+      // the thin-view provider's reference. Runs on both success and failure
+      // paths. See [folderDbKey].
+      await ref.read(perFolderDbRegistryProvider).closeAll(cacheKey);
       ref.invalidate(episodeCacheDatabaseProvider(cacheKey));
     }
   }

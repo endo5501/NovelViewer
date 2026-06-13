@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
+import 'package:novel_viewer/shared/database/per_folder_db_registry_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -51,7 +52,8 @@ void main() {
       expect(identical(dbA, dbB), isFalse);
     });
 
-    test('invalidate(folder) closes the database', () async {
+    test('registry.closeAll releases the handle; a re-read yields a new one',
+        () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -59,6 +61,13 @@ void main() {
       // Force open by accessing the underlying database
       await db.database;
 
+      // The registry owns the handle: closeAll closes it (awaited) and evicts.
+      // The thin-view provider is invalidated so it recomputes from the
+      // registry on the next read. A bare invalidate alone would NOT release
+      // the registry-owned handle.
+      await container
+          .read(perFolderDbRegistryProvider)
+          .closeAll(tempDir.path);
       container.invalidate(ttsAudioDatabaseProvider(tempDir.path));
 
       // Reading again should yield a brand-new instance.

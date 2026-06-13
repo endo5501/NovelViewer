@@ -5,7 +5,7 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_provider
 import 'package:novel_viewer/features/novel_delete/data/novel_delete_service.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
-import 'package:novel_viewer/shared/database/folder_db_handles.dart';
+import 'package:novel_viewer/shared/database/per_folder_db_registry_provider.dart';
 
 final novelDeleteServiceProvider =
     FutureProvider<NovelDeleteService>((ref) async {
@@ -28,13 +28,10 @@ final novelDeleteServiceProvider =
     bookmarkRepository: bookmarkRepository,
     fileSystemService: fileSystemService,
     // Close the per-folder DB handles and WAIT for the close to finish before
-    // the caller deletes the directory. The shared helper closes the cached
-    // instances directly (a bare ref.invalidate is fire-and-forget and would
-    // race the deletion), keys all three via folderDbKey, then invalidates.
-    releaseFolderHandles: (directoryPath) => releaseFolderDbHandles(
-      directoryPath,
-      read: ref.read,
-      invalidate: ref.invalidate,
-    ),
+    // the caller deletes the directory. The registry owns the handles and
+    // closes them (awaited) before evicting — a bare ref.invalidate is
+    // fire-and-forget and would race the deletion.
+    releaseFolderHandles: (directoryPath) =>
+        ref.read(perFolderDbRegistryProvider).closeAll(directoryPath),
   );
 });
