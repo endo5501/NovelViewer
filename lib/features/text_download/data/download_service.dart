@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
+import 'package:path/path.dart' as p;
 import 'package:novel_viewer/features/episode_cache/data/episode_cache_repository.dart';
 import 'package:novel_viewer/features/episode_cache/domain/episode_cache.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
@@ -24,6 +25,80 @@ String formatEpisodeFileName(int index, String title, int totalEpisodes) {
   final paddedIndex = index.toString().padLeft(padWidth, '0');
   final safeTitle = safeName(title);
   return '${paddedIndex}_$safeTitle.txt';
+}
+
+/// Matches an episode file name `{paddedIndex}_{safeTitle}.txt`, capturing the
+/// numeric (zero-padded) index and the rest of the name (the safe title).
+final RegExp _episodeFileNamePattern = RegExp(r'^(\d+)_(.+)\.txt$');
+
+/// Migrates existing episode files in [directory] to the zero-pad width implied
+/// by [totalEpisodes], so that crossing a power-of-ten boundary (e.g. 99 -> 100)
+/// does not cause a spurious full re-download or leave old-width files behind
+/// (F104).
+///
+/// The pad width of [formatEpisodeFileName] depends on the digit count of the
+/// current total episode count, so when the total grows/shrinks across a
+/// boundary every episode's expected file name changes (`01_` <-> `001_`).
+/// [DownloadService._canSkipEpisode] recomputes the file name with the *current*
+/// total, so without this migration it would not find the existing (old-width)
+/// files and would re-download everything, leaving the old files as garbage.
+///
+/// For each episode in the current index, this finds an existing file that
+/// represents the same episode at a different pad width (same parsed index and
+/// same `safeName(title)`, but a different file name) and:
+/// - renames it to the current-width name when that name does not yet exist;
+/// - deletes it (residual garbage) when the current-width name already exists.
+/// It never touches the canonical current-width file, is idempotent, handles
+/// both width increase and decrease, and does not modify the episode cache.
+/// Individual rename/delete failures are logged and skipped (that episode falls
+/// back to being re-downloaded) rather than aborting the whole download.
+Future<void> migrateEpisodeFileNamePadding({
+  required Directory directory,
+  required List<({int index, String title})> episodes,
+  required int totalEpisodes,
+}) async {
+  if (!directory.existsSync()) return;
+
+  // Index existing .txt files by (parsedIndex, restName); a given key may have
+  // more than one file when corruption left differently-padded duplicates.
+  final byKey = <String, List<String>>{};
+  for (final entity in directory.listSync()) {
+    if (entity is! File) continue;
+    final name = p.basename(entity.path);
+    final match = _episodeFileNamePattern.firstMatch(name);
+    if (match == null) continue;
+    final parsedIndex = int.parse(match.group(1)!);
+    final restName = match.group(2)!;
+    (byKey['$parsedIndex/$restName'] ??= <String>[]).add(name);
+  }
+
+  for (final episode in episodes) {
+    final newName = formatEpisodeFileName(episode.index, episode.title, totalEpisodes);
+    final matches = byKey['${episode.index}/${safeName(episode.title)}'];
+    if (matches == null) continue;
+
+    for (final existing in matches) {
+      // Never delete or overwrite the canonical current-width file.
+      if (existing == newName) continue;
+      final existingFile = File('${directory.path}/$existing');
+      final target = File('${directory.path}/$newName');
+      try {
+        if (target.existsSync()) {
+          // Residual garbage: a correct file already exists, drop the stale one.
+          existingFile.deleteSync();
+        } else {
+          // Migrate the old-width file to the current-width name.
+          existingFile.renameSync(target.path);
+        }
+      } catch (e, st) {
+        _log.warning(
+          'Failed to migrate episode file "$existing" -> "$newName" in ${directory.path}',
+          e,
+          st,
+        );
+      }
+    }
+  }
 }
 
 class DownloadResult {
@@ -351,6 +426,19 @@ class DownloadService {
     CancellationToken? cancelToken,
   }) async {
     final total = novelIndex.episodes.length;
+
+    // Before the skip/download loop, align any existing episode files to the
+    // current zero-pad width so crossing a power-of-ten boundary (e.g. 99->100)
+    // does not trigger a spurious full re-download or leave old-width files
+    // behind (F104). Uses the merged index total (= the new pad width).
+    await migrateEpisodeFileNamePadding(
+      directory: dir,
+      episodes: [
+        for (final e in novelIndex.episodes) (index: e.index, title: e.title),
+      ],
+      totalEpisodes: total,
+    );
+
     final cache = episodeCacheRepository != null
         ? await episodeCacheRepository.getAllAsMap()
         : <String, EpisodeCache>{};

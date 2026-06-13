@@ -12,11 +12,11 @@
 
 ## 2. 実装（TDD: Green）
 
-- [ ] 2.1 `download_service.dart` に桁幅移行ヘルパーを実装（フォルダを1回 list、`^(\d+)_(.+)\.txt$` でパースして `(parsedIndex, restName)` を取得し、現index の各 `(i, title)` に対し `parsedIndex == i && restName == safeName(title) && name != newName` を一致条件とする）
-- [ ] 2.2 リネーム/削除の条件分岐を実装（`newName` 不在＋別桁幅一致→rename、`newName` 存在＋別桁幅一致→重複削除、それ以外→no-op）。正規 `newName` は決して削除しない
-- [ ] 2.3 `_downloadEpisodes` の `total` 確定後・エピソードループ前に移行パスを1回呼び出す（マルチページindex マージ後の total を使用）
-- [ ] 2.4 個々の rename/delete を try で囲み、失敗は `Logger('text_download').warning(...)` にとどめてDL全体は継続（当該話は従来どおり再DLにフォールバック）
-- [ ] 2.5 `fvm flutter test` で全テストがパスすることを確認（Green）
+- [x] 2.1 `download_service.dart` に桁幅移行ヘルパーを実装（フォルダを1回 list、`^(\d+)_(.+)\.txt$` でパースして `(parsedIndex, restName)` を取得し、現index の各 `(i, title)` に対し `parsedIndex == i && restName == safeName(title) && name != newName` を一致条件とする）
+- [x] 2.2 リネーム/削除の条件分岐を実装（`newName` 不在＋別桁幅一致→rename、`newName` 存在＋別桁幅一致→重複削除、それ以外→no-op）。正規 `newName` は決して削除しない
+- [x] 2.3 `_downloadEpisodes` の `total` 確定後・エピソードループ前に移行パスを1回呼び出す（マルチページindex マージ後の total を使用）
+- [x] 2.4 個々の rename/delete を try で囲み、失敗は `Logger('text_download').warning(...)` にとどめてDL全体は継続（当該話は従来どおり再DLにフォールバック）
+- [x] 2.5 `fvm flutter test` で全テストがパスすることを確認（Green）
 
 ## 3. 最終確認
 
