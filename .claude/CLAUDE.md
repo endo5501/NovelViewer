@@ -20,6 +20,7 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
 
 1. TDD厳守: テストファースト開発を必ず実施→ `/test-driven-development` スキルを使用
 2. デバッグ: デバッグ時、 `/systematic-debugging` スキルを使用
+3. OpenSpecで`/opsx:archive`の際は、必ず同期してからアーカイブをしてください
 
 ## tasks.md作成時の注意
 

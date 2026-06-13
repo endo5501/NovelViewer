@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:novel_viewer/features/llm_summary/data/openai_compatible_client.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
@@ -114,6 +118,80 @@ void main() {
 
       final client = await container.read(llmClientProvider.future);
       expect(client, isNull);
+    });
+
+    test('injects the shared httpClientProvider into the OpenAI client',
+        () async {
+      // F163: the provider must inject the shared, provider-managed client
+      // rather than letting the LLM client create its own unclosed one.
+      SharedPreferences.setMockInitialValues({
+        'llm_provider': 'openai',
+        'llm_base_url': 'https://api.openai.com/v1',
+        'llm_model': 'gpt-4o-mini',
+      });
+      secureStorageMock.store['llm_api_key'] = 'sk-test';
+      final prefs = await SharedPreferences.getInstance();
+
+      var sawRequest = false;
+      final mockClient = MockClient((request) async {
+        sawRequest = true;
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': 'ok'},
+              }
+            ],
+          }),
+          200,
+        );
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          httpClientProvider.overrideWithValue(mockClient),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final client = await container.read(llmClientProvider.future);
+      final result = await client!.generate('p');
+
+      expect(sawRequest, isTrue,
+          reason: 'generate() must route through the injected client');
+      expect(result, 'ok');
+    });
+
+    test('injects the shared httpClientProvider into the Ollama client',
+        () async {
+      SharedPreferences.setMockInitialValues({
+        'llm_provider': 'ollama',
+        'llm_base_url': 'http://localhost:11434',
+        'llm_model': 'llama3',
+      });
+      final prefs = await SharedPreferences.getInstance();
+
+      var sawRequest = false;
+      final mockClient = MockClient((request) async {
+        sawRequest = true;
+        return http.Response(jsonEncode({'response': 'ok'}), 200);
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          httpClientProvider.overrideWithValue(mockClient),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final client = await container.read(llmClientProvider.future);
+      final result = await client!.generate('p');
+
+      expect(sawRequest, isTrue,
+          reason: 'generate() must route through the injected client');
+      expect(result, 'ok');
     });
 
     test('does not call secure storage for the Ollama provider', () async {

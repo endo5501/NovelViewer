@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_format_exception.dart';
 import 'package:novel_viewer/features/llm_summary/data/ollama_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/openai_compatible_client.dart';
 
@@ -281,6 +282,260 @@ void main() {
 
       await expectLater(client.releaseResources(), completes);
       expect(requestCount, 0);
+    });
+  });
+
+  group('OpenAiCompatibleClient robustness', () {
+    OpenAiCompatibleClient clientWith(MockClient mockClient) =>
+        OpenAiCompatibleClient(
+          baseUrl: 'https://api.openai.com/v1',
+          apiKey: 'sk-test',
+          model: 'gpt-4o-mini',
+          httpClient: mockClient,
+        );
+
+    test('decodes UTF-8 body without a charset declaration (no mojibake)',
+        () async {
+      const japanese = 'アリスは王国の第三王女。';
+      final mockClient = MockClient((request) async {
+        // Real OpenAI-compatible endpoints return a bare application/json with
+        // no charset. http.Response.body would latin1-decode these bytes.
+        return http.Response.bytes(
+          utf8.encode(jsonEncode({
+            'choices': [
+              {
+                'message': {'content': japanese},
+              }
+            ],
+          })),
+          200,
+        );
+      });
+
+      final result = await clientWith(mockClient).generate('p');
+      expect(result, japanese);
+    });
+
+    test('empty choices array throws LlmResponseFormatException (not RangeError)',
+        () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(jsonEncode({'choices': []}), 200);
+      });
+
+      expect(
+        () => clientWith(mockClient).generate('p'),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
+    });
+
+    test('missing message content throws LlmResponseFormatException', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {'message': <String, dynamic>{}},
+            ],
+          }),
+          200,
+        );
+      });
+
+      expect(
+        () => clientWith(mockClient).generate('p'),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
+    });
+
+    test('non-string message content throws LlmResponseFormatException',
+        () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': null},
+              }
+            ],
+          }),
+          200,
+        );
+      });
+
+      expect(
+        () => clientWith(mockClient).generate('p'),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
+    });
+
+    test('non-object top-level JSON throws LlmResponseFormatException',
+        () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(jsonEncode([1, 2, 3]), 200);
+      });
+
+      expect(
+        () => clientWith(mockClient).generate('p'),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
+    });
+
+    test('non-200 error body is decoded as UTF-8 in the exception message',
+        () async {
+      const japaneseError = 'エラーが発生しました';
+      final mockClient = MockClient((request) async {
+        return http.Response.bytes(utf8.encode(japaneseError), 500);
+      });
+
+      await expectLater(
+        () => clientWith(mockClient).generate('p'),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'toString',
+            contains(japaneseError),
+          ),
+        ),
+      );
+    });
+
+    test('non-200 with a non-UTF-8 body still throws the status error '
+        '(not FormatException)', () async {
+      final mockClient = MockClient((request) async {
+        // Invalid UTF-8 byte sequence (lone 0xFF) in an error body.
+        return http.Response.bytes([0xff, 0xfe, 0x80], 502);
+      });
+
+      await expectLater(
+        () => clientWith(mockClient).generate('p'),
+        throwsA(
+          isA<Exception>()
+              .having((e) => e, 'not FormatException',
+                  isNot(isA<FormatException>()))
+              .having((e) => e.toString(), 'toString', contains('502')),
+        ),
+      );
+    });
+  });
+
+  group('OllamaClient robustness', () {
+    OllamaClient generateClient(MockClient mockClient) => OllamaClient(
+          baseUrl: 'http://localhost:11434',
+          model: 'llama3',
+          httpClient: mockClient,
+        );
+
+    test('generate decodes UTF-8 body without a charset declaration', () async {
+      const japanese = 'これは日本語の応答です。';
+      final mockClient = MockClient((request) async {
+        return http.Response.bytes(
+          utf8.encode(jsonEncode({'response': japanese})),
+          200,
+        );
+      });
+
+      final result = await generateClient(mockClient).generate('p');
+      expect(result, japanese);
+    });
+
+    test('generate with non-string response field throws '
+        'LlmResponseFormatException', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(jsonEncode({'response': null}), 200);
+      });
+
+      expect(
+        () => generateClient(mockClient).generate('p'),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
+    });
+
+    test('generate with missing response field throws '
+        'LlmResponseFormatException', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(jsonEncode({'done': true}), 200);
+      });
+
+      expect(
+        () => generateClient(mockClient).generate('p'),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
+    });
+
+    test('fetchModels decodes UTF-8 model names without a charset declaration',
+        () async {
+      const japaneseModel = 'モデル名:latest';
+      final mockClient = MockClient((request) async {
+        return http.Response.bytes(
+          utf8.encode(jsonEncode({
+            'models': [
+              {'name': japaneseModel},
+            ],
+          })),
+          200,
+        );
+      });
+
+      final result = await OllamaClient.fetchModels(
+        baseUrl: 'http://localhost:11434',
+        httpClient: mockClient,
+      );
+      expect(result, [japaneseModel]);
+    });
+
+    test('fetchModels with non-list models field throws '
+        'LlmResponseFormatException (not TypeError)', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(jsonEncode({'models': null}), 200);
+      });
+
+      expect(
+        () => OllamaClient.fetchModels(
+          baseUrl: 'http://localhost:11434',
+          httpClient: mockClient,
+        ),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
+    });
+
+    test('fetchModels with non-string model name throws '
+        'LlmResponseFormatException', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'models': [
+              {'name': 123},
+            ],
+          }),
+          200,
+        );
+      });
+
+      expect(
+        () => OllamaClient.fetchModels(
+          baseUrl: 'http://localhost:11434',
+          httpClient: mockClient,
+        ),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
+    });
+
+    test('non-200 error body is decoded as UTF-8 in the exception message',
+        () async {
+      const japaneseError = 'サーバエラー';
+      final mockClient = MockClient((request) async {
+        return http.Response.bytes(utf8.encode(japaneseError), 500);
+      });
+
+      await expectLater(
+        () => generateClient(mockClient).generate('p'),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'toString',
+            contains(japaneseError),
+          ),
+        ),
+      );
     });
   });
 }

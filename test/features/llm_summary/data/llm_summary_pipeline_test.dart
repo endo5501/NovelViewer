@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_format_exception.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 
@@ -186,6 +187,38 @@ void main() {
       );
 
       expect(result, 'プレーンテキストの要約');
+    });
+
+    test(
+        'valid JSON whose summary value is null throws '
+        'LlmResponseFormatException (raw JSON is never persisted)', () async {
+      // Regression for F132: previously the CastError from `as String` was
+      // swallowed and the raw JSON string was returned/persisted as summary.
+      final mockClient = _MockLlmClient([
+        jsonEncode({'summary': null}),
+      ]);
+
+      final pipeline = LlmSummaryPipeline(llmClient: mockClient);
+
+      await expectLater(
+        pipeline.generate(word: 'テスト', contexts: []),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
+    });
+
+    test(
+        'valid JSON object missing the summary key throws '
+        'LlmResponseFormatException', () async {
+      final mockClient = _MockLlmClient([
+        jsonEncode({'unexpected': 'value'}),
+      ]);
+
+      final pipeline = LlmSummaryPipeline(llmClient: mockClient);
+
+      await expectLater(
+        pipeline.generate(word: 'テスト', contexts: []),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
     });
 
     test('strips code fence from LLM response', () async {

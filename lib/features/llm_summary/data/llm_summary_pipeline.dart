@@ -4,6 +4,7 @@ import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/llm_summary/data/context_chunker.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_prompt_builder.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_format_exception.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 
 final _log = Logger('llm_summary');
@@ -168,22 +169,39 @@ class LlmSummaryPipeline {
 
   String _parseJsonResponse(String response, String key) {
     final normalized = _stripCodeFence(response.trim());
+
+    final dynamic decoded;
     try {
-      final decoded = jsonDecode(normalized);
-      if (decoded is Map<String, dynamic> && decoded.containsKey(key)) {
-        return decoded[key] as String;
-      }
+      decoded = jsonDecode(normalized);
     } catch (e, st) {
-      // Fall back to raw text (existing behavior); log so prompt regressions
-      // become observable. Cap the prefix at 200 chars to bound log size.
+      // Decode failed: the model returned plain (non-JSON) text. Fall back to
+      // the raw text (existing behavior) so the user-visible feature keeps
+      // working, but log so prompt regressions become observable. Cap the
+      // prefix at 200 chars to bound log size.
       final length = normalized.length;
       final prefix = length <= 200 ? normalized : normalized.substring(0, 200);
       _log.warning(
           'jsonDecode failed for $key; using raw text. length=$length prefix=$prefix',
           e,
           st);
+      return normalized;
     }
-    return normalized;
+
+    // Decode succeeded. A well-formed JSON object whose key holds a string is
+    // the happy path. Anything else (non-object, key absent, or non-string
+    // value such as {"summary": null}) is a malformed structured response: do
+    // NOT persist the raw JSON as the value (regression for F132).
+    if (decoded is Map<String, dynamic> && decoded[key] is String) {
+      return decoded[key] as String;
+    }
+
+    final length = normalized.length;
+    final prefix = length <= 200 ? normalized : normalized.substring(0, 200);
+    _log.warning(
+        'LLM response for $key decoded as JSON but had no string value; '
+        'rejecting. length=$length prefix=$prefix');
+    throw LlmResponseFormatException.withBody(
+      'LLM response for "$key" has no string value', normalized);
   }
 
   static String _stripCodeFence(String s) {

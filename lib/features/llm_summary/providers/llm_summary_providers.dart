@@ -17,11 +17,15 @@ final llmConfigProvider = Provider<LlmConfig>((ref) {
 
 final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
   final config = ref.watch(llmConfigProvider);
+  // Inject the shared, provider-managed http.Client (closed via its onDispose)
+  // instead of letting each client create its own unclosed one (F163).
+  final httpClient = ref.watch(httpClientProvider);
   switch (config.provider) {
     case LlmProvider.ollama:
       return OllamaClient(
         baseUrl: config.baseUrl,
         model: config.model,
+        httpClient: httpClient,
       );
     case LlmProvider.openai:
       final apiKey =
@@ -33,6 +37,7 @@ final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
         baseUrl: config.baseUrl,
         apiKey: apiKey,
         model: config.model,
+        httpClient: httpClient,
       );
     case LlmProvider.none:
       return null;
