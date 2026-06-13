@@ -28,8 +28,10 @@ String formatEpisodeFileName(int index, String title, int totalEpisodes) {
 }
 
 /// Matches an episode file name `{paddedIndex}_{safeTitle}.txt`, capturing the
-/// numeric (zero-padded) index and the rest of the name (the safe title).
-final RegExp _episodeFileNamePattern = RegExp(r'^(\d+)_(.+)\.txt$');
+/// numeric (zero-padded) index and the rest of the name (the safe title). The
+/// title group is `(.*)` (not `(.+)`) so files with an empty sanitised title
+/// (`01_.txt`, produced when `safeName(title)` is empty) are still matched.
+final RegExp _episodeFileNamePattern = RegExp(r'^(\d+)_(.*)\.txt$');
 
 /// Migrates existing episode files in [directory] to the zero-pad width implied
 /// by [totalEpisodes], so that crossing a power-of-ten boundary (e.g. 99 -> 100)
@@ -62,7 +64,21 @@ Future<void> migrateEpisodeFileNamePadding({
   // Index existing .txt files by (parsedIndex, restName); a given key may have
   // more than one file when corruption left differently-padded duplicates.
   final byKey = <String, List<String>>{};
-  for (final entity in directory.listSync()) {
+  final List<FileSystemEntity> entries;
+  try {
+    entries = directory.listSync(followLinks: false);
+  } catch (e, st) {
+    // Listing failed (permissions, symlink loop, ...). Honour the no-abort
+    // contract: skip migration rather than failing the whole download; the
+    // affected episodes fall back to the legacy re-download behaviour.
+    _log.warning(
+      'Failed to list ${directory.path} for pad-width migration; skipping',
+      e,
+      st,
+    );
+    return;
+  }
+  for (final entity in entries) {
     if (entity is! File) continue;
     final name = p.basename(entity.path);
     final match = _episodeFileNamePattern.firstMatch(name);

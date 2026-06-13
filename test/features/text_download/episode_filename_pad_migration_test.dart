@@ -148,6 +148,24 @@ void main() {
       expect(_txtNames(dir), equals(before));
     });
 
+    test('migrates files with an empty sanitised title (01_.txt)', () async {
+      // formatEpisodeFileName(1, '', 99) -> '01_.txt'. The migration must still
+      // match such files (regex title group is (.*), not (.+)).
+      expect(formatEpisodeFileName(1, '', 99), '01_.txt');
+      File('${dir.path}/01_.txt').writeAsStringSync('empty title');
+
+      await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: [(index: 1, title: '   ')], // safeName('   ') == ''
+        totalEpisodes: 100,
+      );
+
+      final names = _txtNames(dir);
+      expect(names, contains('001_.txt'));
+      expect(names, isNot(contains('01_.txt')));
+      expect(File('${dir.path}/001_.txt').readAsStringSync(), 'empty title');
+    });
+
     test('does not migrate a file whose title (safeName) differs', () async {
       // Same index but a different title: must be left untouched.
       File('${dir.path}/01_古いタイトル.txt').writeAsStringSync('old title');
