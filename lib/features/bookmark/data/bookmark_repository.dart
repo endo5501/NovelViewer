@@ -62,6 +62,19 @@ class BookmarkRepository {
     }
   }
 
+  /// Deletes every bookmark belonging to [novelId]. Pass [txn] to enlist this
+  /// delete in an existing transaction (used by the novel-delete cascade so all
+  /// metadata tables are removed atomically). Safe to call when the novel has
+  /// no bookmarks.
+  Future<void> deleteByNovelId(String novelId, {DatabaseExecutor? txn}) async {
+    final executor = txn ?? await _novelDatabase.database;
+    await executor.delete(
+      _tableName,
+      where: 'novel_id = ?',
+      whereArgs: [novelId],
+    );
+  }
+
   Future<List<Bookmark>> findByNovel(String novelId) async {
     final db = await _novelDatabase.database;
     final maps = await db.query(

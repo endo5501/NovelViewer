@@ -1,3 +1,4 @@
+import 'package:sqflite/sqflite.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 
@@ -77,9 +78,10 @@ class NovelRepository {
     }
   }
 
-  Future<void> deleteByFolderName(String folderName) async {
-    final db = await _novelDatabase.database;
-    await db.delete(
+  Future<void> deleteByFolderName(String folderName,
+      {DatabaseExecutor? txn}) async {
+    final executor = txn ?? await _novelDatabase.database;
+    await executor.delete(
       'novels',
       where: 'folder_name = ?',
       whereArgs: [folderName],

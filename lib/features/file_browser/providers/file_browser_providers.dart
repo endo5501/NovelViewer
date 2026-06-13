@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
+import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 import 'package:path/path.dart' as p;
 
 final _fileBrowserLog = Logger('file_browser');
@@ -112,23 +113,20 @@ final selectedNovelTitleProvider = FutureProvider<String?>((ref) async {
   if (p.equals(currentDir, libraryPath)) return null;
   if (!p.isWithin(libraryPath, currentDir)) return null;
 
-  final relativeParts = p.split(p.relative(currentDir, from: libraryPath));
-
   final novels = await ref.watch(allNovelsProvider.future);
   final titleByFolder = {
     for (final novel in novels) novel.folderName: novel.title,
   };
 
-  // Walk from the deepest path component upward and return the title of the
-  // nearest ancestor that is a registered novel folder. This makes the lookup
-  // independent of how deeply the novel is nested under organizational
-  // folders. If no component is a registered novel, fall back to the first
-  // component's folder name (legacy title-based / organizational folders).
-  for (final part in relativeParts.reversed) {
-    final title = titleByFolder[part];
-    if (title != null) return title;
-  }
-  return relativeParts.first;
+  // Resolve the nearest registered novel folder using the shared rule (also
+  // used to key bookmarks/reading-progress) so the title lookup is independent
+  // of nesting depth. If no ancestor is a registered novel, fall back to the
+  // first component's folder name (legacy title-based / organizational
+  // folders) — the one piece of behavior unique to the title display.
+  final novelId =
+      resolveNovelId(libraryPath, currentDir, titleByFolder.keys.toSet());
+  if (novelId != null) return titleByFolder[novelId];
+  return p.split(p.relative(currentDir, from: libraryPath)).first;
 });
 
 class SelectedFileNotifier extends Notifier<FileEntry?> {

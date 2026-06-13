@@ -39,9 +39,9 @@ class ReadingProgressRepository {
     return ReadingProgress.fromMap(rows.first);
   }
 
-  Future<void> deleteByNovelId(String novelId) async {
-    final db = await _novelDatabase.database;
-    await db.delete(
+  Future<void> deleteByNovelId(String novelId, {DatabaseExecutor? txn}) async {
+    final executor = txn ?? await _novelDatabase.database;
+    await executor.delete(
       _tableName,
       where: 'novel_id = ?',
       whereArgs: [novelId],

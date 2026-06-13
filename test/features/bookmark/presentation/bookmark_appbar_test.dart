@@ -4,7 +4,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+
+NovelMetadata _novel(String folderName) => NovelMetadata(
+      siteType: 'narou',
+      novelId: folderName,
+      title: 'Title $folderName',
+      url: 'https://example.com/$folderName',
+      folderName: folderName,
+      episodeCount: 1,
+      downloadedAt: DateTime(2026, 1, 1),
+    );
 
 class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
   final String? _initialValue;
@@ -17,7 +29,7 @@ class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
 /// Extracted bookmark button widget that mirrors the logic in HomeScreen
 /// for isolated testing.
 Widget buildBookmarkButton(WidgetRef ref) {
-  final novelId = ref.watch(currentNovelIdProvider);
+  final novelId = ref.watch(currentNovelIdProvider).value;
   final selectedFile = ref.watch(selectedFileProvider);
   final isEnabled = novelId != null && selectedFile != null;
   final isBookmarked = ref.watch(isBookmarkedProvider);
@@ -46,6 +58,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
             selectedFileProvider.overrideWith(() => _TestSelectedFileNotifier(
@@ -86,6 +99,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
             selectedFileProvider.overrideWith(() => _TestSelectedFileNotifier(
@@ -123,6 +137,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
             isBookmarkedProvider.overrideWithValue(false),
@@ -156,6 +171,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library')),
             isBookmarkedProvider.overrideWithValue(false),

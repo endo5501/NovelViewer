@@ -40,8 +40,8 @@ TTSが複雑性の中心: FFIで `qwen3-tts.cpp`（abort対応・24kHz）と `pi
 | F103 | 堅牢性 | lib/features/text_download/data/download_service.dart:68-71 | High | S | `_client.get`にタイムアウトが一切ない（lib配下に`.timeout(`はゼロ件）。接続スタックでダウンロードが永久ハングし、キャンセル手段もない | ✅ 対応済み(fix-download-silent-failures): 全`_client.get`に`.timeout()`(既定30秒・注入可)。加えて`CancellationToken`新設＋ダイアログのキャンセルボタンでユーザ中断を実装 |
 | F104 | アーキテクチャ | lib/features/text_download/data/download_service.dart:21-26,370-372 | High | M | ファイル名のゼロ埋め幅が「現在の総話数」依存。99話→100話で全話の期待ファイル名が変わり（`01_`→`001_`）、スキップ判定が全部外れて全話再DL＋旧名ファイルがゴミとして残留 | 固定幅パディング、またはDL前に旧幅ファイルをリネーム |
 | F105 | エラー処理 | sites/narou_site.dart:149 / kakuyomu_site.dart:129 / hameln_site.dart:134 / aozora_site.dart:61 + download_service.dart:323-333 | High | M | 全アダプタの`parseEpisode`がセレクタ不一致（サイト改修）時に空文字を返し、それを正常として空.txtを保存＆キャッシュ登録。以降のインクリメンタル更新で永久にスキップされ直らない | ✅ 対応済み(fix-download-silent-failures): 空パース結果はsave/cacheせず`failedCount++`（次回再試行）。空判定はdownload_service側の1箇所に集約しアダプタ契約は不変 |
-| F106 | 型・契約 | lib/features/bookmark/providers/bookmark_providers.dart:12-22（同ロジック: reading_progress_providers.dart:61） | High | M | `novel_id`をライブラリ直下の**第1セグメント**から導出。フォルダ管理機能のネスト配置（file_browser_panel.dart:383）では整理フォルダ名がキーになり、小説を別フォルダへ移動するとブックマーク/進捗が全て孤児化。novel判定は他所では任意深度の葉名（novel_folder_classifier.dart:7-9）で矛盾 | パスを下って登録済みフォルダ名を探す共通関数に一本化 |
-| F107 | アーキテクチャ | lib/features/novel_delete/data/novel_delete_service.dart:44-49 | High | S | 削除カスケードがnovels/word_summaries/fact_cache/reading_progressのみで**bookmarksを消さない**。孤児行が永久蓄積し、同名フォルダ再DLで古い絶対パス付きで復活する | カスケードに`BookmarkRepository.deleteByNovelId`を追加（F106のキー不整合にも注意） |
+| F106 | 型・契約 | lib/features/bookmark/providers/bookmark_providers.dart:12-22（同ロジック: reading_progress_providers.dart:61） | High | M | `novel_id`をライブラリ直下の**第1セグメント**から導出。フォルダ管理機能のネスト配置（file_browser_panel.dart:383）では整理フォルダ名がキーになり、小説を別フォルダへ移動するとブックマーク/進捗が全て孤児化。novel判定は他所では任意深度の葉名（novel_folder_classifier.dart:7-9）で矛盾 | ✅ 対応済み(fix-novel-identity-consistency): 共有`resolveNovelId`を新設し葉名(folder_name)に一本化。`currentNovelIdProvider`をFutureProvider化、reading_progressリスナーも差し替え。`selectedNovelTitleProvider`の重複走査も委譲。既存ネスト孤児行のクリーンアップはF128後続changeで対応 |
+| F107 | アーキテクチャ | lib/features/novel_delete/data/novel_delete_service.dart:44-49 | High | S | 削除カスケードがnovels/word_summaries/fact_cache/reading_progressのみで**bookmarksを消さない**。孤児行が永久蓄積し、同名フォルダ再DLで古い絶対パス付きで復活する | ✅ 対応済み(fix-novel-identity-consistency): カスケードに`BookmarkRepository.deleteByNovelId`を追加。novel_idは葉名(folder_name)で統一されsave側とキー一致（F106同時解消） |
 | F108 | DBハイジーン | lib/features/file_browser/presentation/file_browser_panel.dart:445-451（使用箇所 :422,:476,:505） | High | M | move/rename/空フォルダ削除がfire-and-forgetの`ref.invalidate`でDBハンドルを「解放」するが、closeはunawaitedなFuture。`Directory.rename`/`delete`がWindowsのファイルロックとレースする。削除フローだけは修正済み（novel_delete_providers.dart:27-32が理由までコメント済み） | novel_delete_providers.dartのawait付きclose-then-invalidateヘルパーを3フローでも使う |
 | F109 | アーキテクチャ | lib/features/tts/presentation/tts_edit_dialog.dart:103 + tts_edit_controller.dart:58,436-441 | High | S | 編集ダイアログが`sampleRate: 24000`をハードコード。Piper（22050Hz）で全生成するとメタデータが24000になり、MP3エクスポートが約8.8%ピッチずれ音声になる | engine configから実サンプルレートを取得 |
 | F110 | リソース | lib/features/tts/data/tts_edit_controller.dart:410-415 | High | S | `dispose()`が`_segmentPlayer.dispose()`を呼ばない。編集ダイアログ開閉のたびにプラットフォームプレイヤーがリーク（streaming側はdispose済み） | dispose()に追加 |
@@ -61,7 +61,7 @@ TTSが複雑性の中心: FFIで `qwen3-tts.cpp`（abort対応・24kHz）と `pi
 | F124 | DBハイジーン | lib/features/novel_metadata_db/data/novel_database.dart:71-75,480-483（同形: episode_cache_database.dart:17-21, tts_audio_database.dart:17-21） | Medium | M | `database` getterにin-flight openガードがなく`close()`にインターロックがない。close直前に始まったopenがclose完了**後**に新ハンドルを代入し、削除中のファイルを再ロックする。これがwidget層の振り付け（F125）で覆い隠している根本原因 | open中の`Future<Database>`をキャッシュし、close()はin-flight openをawaitして再openをゲート |
 | F125 | アーキテクチャ | lib/features/file_browser/presentation/file_browser_panel.dart:586-615 | Medium | L | DBハンドルのライフサイクルをwidget層が振り付け（currentDirectory退避→選択クリア→awaited close、の順序が必須）。per-folder DB providerの新規消費者を追加するたびにlocked-DBバグが再発する構造 | open/closeを所有するper-folder DBハンドルレジストリ（awaitableな`closeAll(folder)`）を導入し、providerは薄いビューに |
 | F126 | 一貫性 | lib/shared/database/folder_db_key.dart:3-5 vs lib/features/tts/providers/tts_audio_database_provider.dart:13-32 ほか約8呼び出し箇所 | Medium | S | `folderDbKey`のドキュメントは3つのper-folder DB familyすべての正規化を謳うが、適用されているのはepisode_cacheのみ。TTS系は生パス綴りがキーで、`'$a/$b'`連結パスを渡す未来の呼び出し1つでcommit 81ca506のバグがtts_audio.dbで再発する | 各family provider本体の中で`folderDbKey`を適用し、呼び出し側の規律を不要に |
-| F127 | DBハイジーン | lib/features/novel_delete/data/novel_delete_service.dart:44-49 | Medium | S | 同一DBへの4連DELETEがトランザクションなし。novels行（リトライのアンカー）削除後のクラッシュでword_summaries/fact_cache/reading_progressが永久孤児化 | `db.transaction`で包む（4テーブルとも同一DB） |
+| F127 | DBハイジーン | lib/features/novel_delete/data/novel_delete_service.dart:44-49 | Medium | S | 同一DBへの4連DELETEがトランザクションなし。novels行（リトライのアンカー）削除後のクラッシュでword_summaries/fact_cache/reading_progressが永久孤児化 | ✅ 対応済み(fix-novel-identity-consistency): 5テーブル削除(novels/word_summaries/fact_cache/reading_progress/bookmarks)を単一`db.transaction`で原子化。各repo delete に optional `DatabaseExecutor? txn` を追加 |
 | F128 | DBハイジーン | lib/features/bookmark/domain/bookmark.dart:5 / novel_database.dart:229-235（reading_progress） | Medium | M | 両テーブルが絶対`file_path`を保存。フォルダ移動/リネームで進捗の自動オープンが無言で外れ（reading_progress_providers.dart:100）、ブックマークジャンプは「ファイルなし」（bookmark_list_panel.dart:107-113）。`file_name`列は既にある | novel相対パス（novel_id + file_name）保存に移行＋既存行のワンショットマイグレーション |
 | F129 | テスト | lib/features/novel_metadata_db/data/novel_database.dart:238-246 | Medium | M | v3→v4ブックマーク移行（RENAME/再作成/コピー/DROP）のテストカバレッジゼロ。v1→v7のフルチェーン昇格テストもなく、`runMigrationForTesting`（:432-471）は_onUpgradeのステップ順序を迂回するため各versionブロックの相互作用が未検証 | 各歴史版をシードして`NovelDatabase`経由で開くパラメタライズドテスト |
 | F130 | テスト | test/features/novel_delete/data/novel_delete_service_test.dart:38-80 ほか計5フィクスチャ | Medium | M | 本番DDLがテストに手書きコピーされ、`_onCreate`（novel_database.dart:98-120）とのスキーマドリフトがテストを通過して本番で壊れる構造 | フィクスチャを`NovelDatabase(dbDirPath:)`+`setDatabase`経由か共有スキーマヘルパーで構築（v6移行テストが正しい手本） |
@@ -154,7 +154,7 @@ final status = _stopped
 
 先に現挙動を固定する失敗系テスト（F122）を書いてから直す（TDD原則どおり）。✅ 失敗系・キャンセル系テストとサニタイズ済みフィクスチャを追加（empty_parse / request_timeout / index_truncated / download_cancellation / cancellation_token / provider_state / dialog）。コードレビューで判明したキャンセル中断時の例外誤分類（in-flight `ClientException` の `error` 誤判定、failedCount水増し、二重start、短編キャンセル未対応）も修正済み。
 
-### 3. 小説アイデンティティの整合性（F106 / F107 / F128）
+### 3. 小説アイデンティティの整合性（F106 / F107 / F127）✅ 対応済み（change: fix-novel-identity-consistency）／ F128 は後続change
 
 3つは同じ根を持つ: 「小説を一意に識別する方法」が機能ごとにバラバラ。修正は1つの共有関数に収斂する:
 
@@ -198,8 +198,8 @@ jobs:
 
 - [x] F103: 全HTTPリクエストに `.timeout()` 追加（＋キャンセルトークン）
 - [x] F102: ページネーション `catch (_) { break; }` を打ち切りフラグ（indexTruncated）に変更
-- [ ] F107: 削除カスケードに bookmarks 追加
-- [ ] F127: 削除の4連DELETEを `db.transaction` で包む
+- [x] F107: 削除カスケードに bookmarks 追加（change: fix-novel-identity-consistency）
+- [x] F127: 削除の4連DELETEを `db.transaction` で包む（change: fix-novel-identity-consistency、bookmarks含む5テーブル）
 - [ ] F109: 編集ダイアログの `sampleRate: 24000` をengine configから取得
 - [ ] F110: `tts_edit_controller.dispose()` に `_segmentPlayer.dispose()` 追加
 - [x] F112: tts_sessionでnativeエラー文字列をログへ
@@ -237,7 +237,7 @@ jobs:
 
 ## Open questions for the maintainer
 
-1. **ネストされた小説のID（F106）**: 「ブックマーク/進捗はライブラリ直下第1セグメントをキーにする」は意図した仕様か、`currentNovelIdProvider` がフォルダ管理機能より古いだけか。`selectedNovelTitleProvider` と定義が矛盾しているため、どちらかが仕様上の正になる必要がある。
+1. **ネストされた小説のID（F106）**: 〜~「ブックマーク/進捗はライブラリ直下第1セグメントをキーにする」は意図した仕様か、`currentNovelIdProvider` がフォルダ管理機能より古いだけか。`selectedNovelTitleProvider` と定義が矛盾しているため、どちらかが仕様上の正になる必要がある。~〜 ✅ 決着(fix-novel-identity-consistency): **葉名(folder_name)を正**とし、第1セグメント派を共有`resolveNovelId`へ統一。`selectedNovelTitleProvider`も同関数へ委譲。第1セグメント導出は仕様外と確定。
 2. **provider層の日本語エラー文字列（F142）**: 主要ユーザは日本語という意図的判断か、見落としか。答えによってMediumかWon't-fixかが決まる。
 3. **編集ダイアログの `sampleRate: 24000`（F109）**: 「エクスポートはqwen3専用」という暗黙の前提だったのか。Piperエピソードのエクスポートが仕様内なら即修正対象。
 4. **Hamelnの目次ページネーション**: `nextPageUrl` 対応はNarouのみ。syosetu.orgが超長編で目次を分割する場合、2ページ目以降が黙って欠落する。実サイトでの分割有無の確認が必要。
