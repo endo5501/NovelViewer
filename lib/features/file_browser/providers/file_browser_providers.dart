@@ -31,13 +31,13 @@ class CurrentDirectoryNotifier extends Notifier<String?> {
     if (oldPath != null && oldPath != path) {
       // Release the per-folder DB handles for the folder we just left.
       // The family providers are non-autoDispose by design, so this is the
-      // explicit cleanup point on folder switch.
-      ref.invalidate(ttsAudioDatabaseProvider(oldPath));
-      ref.invalidate(ttsDictionaryDatabaseProvider(oldPath));
-      // episode_cache is keyed by a canonical path so the download flow's
-      // handle (opened under a joined path) is reachable here. See
-      // [folderDbKey].
-      ref.invalidate(episodeCacheDatabaseProvider(folderDbKey(oldPath)));
+      // explicit cleanup point on folder switch. All three are keyed by the
+      // canonical (normalized) path so a handle opened under any path-separator
+      // spelling is reachable here. See [folderDbKey].
+      final oldKey = folderDbKey(oldPath);
+      ref.invalidate(ttsAudioDatabaseProvider(oldKey));
+      ref.invalidate(ttsDictionaryDatabaseProvider(oldKey));
+      ref.invalidate(episodeCacheDatabaseProvider(oldKey));
     }
   }
 }
@@ -84,7 +84,7 @@ final directoryContentsProvider =
   var ttsStatuses = const <String, TtsEpisodeStatus>{};
   final ttsDbPath = p.join(dirPath, 'tts_audio.db');
   if (await File(ttsDbPath).exists()) {
-    final ttsDb = ref.watch(ttsAudioDatabaseProvider(dirPath));
+    final ttsDb = ref.watch(ttsAudioDatabaseProvider(folderDbKey(dirPath)));
     try {
       final repo = TtsAudioRepository(ttsDb);
       ttsStatuses = await repo.getAllEpisodeStatuses();

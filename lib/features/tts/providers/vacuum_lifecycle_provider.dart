@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
+import 'package:novel_viewer/shared/database/folder_db_key.dart';
 
 import 'tts_audio_database_provider.dart';
 
@@ -79,7 +80,7 @@ class VacuumLifecycle with WidgetsBindingObserver {
 final vacuumLifecycleProvider = Provider<VacuumLifecycle>((ref) {
   final lifecycle = VacuumLifecycle(
     vacuumFolder: (folder) async {
-      final db = ref.read(ttsAudioDatabaseProvider(folder));
+      final db = ref.read(ttsAudioDatabaseProvider(folderDbKey(folder)));
       await db.reclaimSpace();
     },
   );

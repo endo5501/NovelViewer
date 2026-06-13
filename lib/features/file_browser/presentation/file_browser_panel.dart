@@ -9,7 +9,6 @@ import 'package:novel_viewer/features/file_browser/domain/novel_folder_classifie
 import 'package:novel_viewer/features/file_browser/domain/move_destination.dart';
 import 'package:novel_viewer/features/file_browser/domain/move_follow.dart';
 import 'package:novel_viewer/features/file_browser/presentation/move_destination_dialog.dart';
-import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_delete/providers/novel_delete_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
@@ -17,7 +16,7 @@ import 'package:novel_viewer/features/text_download/providers/text_download_prov
 import 'package:novel_viewer/features/file_browser/presentation/rename_title_dialog.dart';
 import 'package:novel_viewer/features/file_browser/presentation/new_folder_dialog.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
-import 'package:novel_viewer/shared/database/folder_db_key.dart';
+import 'package:novel_viewer/shared/database/folder_db_handles.dart';
 
 /// Returns the parent directory of [currentDir], or null if navigation up is
 /// not allowed.
@@ -418,8 +417,11 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     final currentDir = ref.read(currentDirectoryProvider);
     try {
       // Release per-folder DB handles BEFORE moving so an open SQLite file
-      // does not block the rename (Windows holds an exclusive lock).
-      _releaseFolderHandles(dir.path);
+      // does not block the rename (Windows holds an exclusive lock). Awaiting
+      // the close is required: a bare ref.invalidate is fire-and-forget and
+      // would race the file operation.
+      await releaseFolderDbHandles(dir.path,
+          read: ref.read, invalidate: ref.invalidate);
       final newPath = await service.moveDirectory(dir.path, destination);
       if (!context.mounted) return;
       // Keep the browser pointed at the moved content if it was open.
@@ -438,16 +440,6 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         SnackBar(content: Text(_directoryOpMessage(context, e))),
       );
     }
-  }
-
-  /// Invalidates the per-folder database handles keyed by [path] so a moved or
-  /// deleted folder does not leave a stale connection bound to its old path.
-  void _releaseFolderHandles(String path) {
-    ref.invalidate(ttsAudioDatabaseProvider(path));
-    ref.invalidate(ttsDictionaryDatabaseProvider(path));
-    // episode_cache uses a canonical key so the download flow's handle is
-    // reachable regardless of path-separator spelling. See [folderDbKey].
-    ref.invalidate(episodeCacheDatabaseProvider(folderDbKey(path)));
   }
 
   void _showDeleteFolderConfirmation(BuildContext context, DirectoryEntry dir) {
@@ -473,7 +465,8 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     ).then((confirmed) async {
       if (confirmed != true) return;
       try {
-        _releaseFolderHandles(dir.path);
+        await releaseFolderDbHandles(dir.path,
+            read: ref.read, invalidate: ref.invalidate);
         await ref
             .read(fileSystemServiceProvider)
             .deleteEmptyDirectory(dir.path);
@@ -501,8 +494,10 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       if (newName == null || newName.isEmpty || newName == dir.name) return;
       try {
         // Renaming changes the folder's absolute path, so release any per-
-        // folder DB handles bound to the old path first.
-        _releaseFolderHandles(dir.path);
+        // folder DB handles bound to the old path first (awaited close, not a
+        // fire-and-forget invalidate).
+        await releaseFolderDbHandles(dir.path,
+            read: ref.read, invalidate: ref.invalidate);
         await ref
             .read(fileSystemServiceProvider)
             .renameDirectory(dir.path, newName);

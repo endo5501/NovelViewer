@@ -26,6 +26,7 @@ import 'package:novel_viewer/features/tts/presentation/dictionary_context_menu.d
 import 'package:novel_viewer/features/tts/presentation/tts_dictionary_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
+import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/shared/utils/content_hash.dart';
 
@@ -378,7 +379,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   void _openDictionaryDialog(String selectedText) {
     final folderPath = ref.read(currentDirectoryProvider);
     if (folderPath == null) return;
-    final dictDb = ref.read(ttsDictionaryDatabaseProvider(folderPath));
+    final dictDb = ref.read(ttsDictionaryDatabaseProvider(folderDbKey(folderPath)));
     final dictRepo = TtsDictionaryRepository(dictDb);
     TtsDictionaryDialog.show(
       context,

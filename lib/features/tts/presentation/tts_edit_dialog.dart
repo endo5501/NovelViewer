@@ -16,6 +16,7 @@ import '../providers/vacuum_lifecycle_provider.dart';
 import '../providers/tts_audio_database_provider.dart';
 import '../providers/tts_edit_providers.dart';
 import '../providers/tts_settings_providers.dart';
+import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'tts_dictionary_dialog.dart';
 
 class TtsEditDialog extends ConsumerStatefulWidget {
@@ -64,13 +65,14 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   }
 
   Future<void> _initialize() async {
-    final db = ref.read(ttsAudioDatabaseProvider(widget.folderPath));
+    final folderKey = folderDbKey(widget.folderPath);
+    final db = ref.read(ttsAudioDatabaseProvider(folderKey));
     final lifecycle = ref.read(vacuumLifecycleProvider);
     final repo = TtsAudioRepository(
       db,
       onEpisodeDeleted: () => lifecycle.markDirty(widget.folderPath),
     );
-    final dictDb = ref.read(ttsDictionaryDatabaseProvider(widget.folderPath));
+    final dictDb = ref.read(ttsDictionaryDatabaseProvider(folderKey));
     final dictRepo = TtsDictionaryRepository(dictDb);
     final tempDir = await ensureTemporaryDirectory();
 

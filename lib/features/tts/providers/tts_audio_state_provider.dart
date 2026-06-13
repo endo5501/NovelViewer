@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import '../data/tts_audio_repository.dart';
 import '../domain/tts_episode.dart';
 import '../domain/tts_episode_status.dart';
+import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'tts_audio_database_provider.dart';
 import 'tts_playback_providers.dart';
 
@@ -44,7 +45,7 @@ final ttsAudioStateProvider =
   }
   final folder = p.dirname(filePath);
   final fileName = p.basename(filePath);
-  final db = ref.watch(ttsAudioDatabaseProvider(folder));
+  final db = ref.watch(ttsAudioDatabaseProvider(folderDbKey(folder)));
   final repo = TtsAudioRepository(db);
   final episode = await repo.findEpisodeByFileName(fileName);
   return _stateFromEpisode(episode);
