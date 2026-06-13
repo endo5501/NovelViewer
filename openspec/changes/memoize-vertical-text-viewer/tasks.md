@@ -17,7 +17,7 @@
 - [x] 2.5 軽い層は毎ビルド、キャッシュ済み重い層から再計算して `_PaginationResult` を組む（キャッシュヒット時も `_PaginationResult` は毎ビルド生成し、build 内フィールド代入経路 `_pageCount`/`_currentPageSegments` を不変に保つ）。2.1/2.2 のテストを通す
 - [x] 2.6 `didUpdateWidget`/`initState` での `_lines`・`_charEntries`・columns 再構築タイミングを確認し、それらに連動して重い層キャッシュが無効化されることを保証（`_cachedPainter`/`_cachedStyle` の既存無効化との整合も確認）
 - [x] 2.7 キー/ホイール/スワイプ/初期ページ/フォント変更/アニメーション系テスト（`vertical_text_viewer_*_test.dart` 群）を実行して回帰がないことを確認
-- [ ] 2.8 F115 をコミット
+- [x] 2.8 F115 をコミット
 
 ## 3. F116: ページ側マップ／ハイライトのメモ化と hit-region 条件化
 
@@ -29,7 +29,7 @@
 - [x] 3.6 `_scheduleHitRegionRebuild()`（:209 無条件呼び出し）を、前回ビルドからの entries/style/layout 変化時のみ呼ぶよう条件化。3.2/3.3 のテストを通す
 - [x] 3.7 「レンダリング出力（表示・検索/TTSハイライト・選択・マーク下線・ヒットテスト）が非メモ化版と同一」同値性テストを追加して通す
 - [x] 3.8 ホバー系（`vertical_text_page_hover_test.dart`）・選択系・ヒットテスト系テストで回帰がないことを確認（特に `MarkInfo` 等価性変更後のホバー合体ロジック）
-- [ ] 3.9 F116 をコミット
+- [x] 3.9 F116 をコミット
 
 ## 4. 最終確認
 
