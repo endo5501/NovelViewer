@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/novel_delete/data/novel_delete_service.dart';
@@ -9,6 +10,7 @@ import 'package:novel_viewer/shared/database/folder_db_key.dart';
 
 final novelDeleteServiceProvider =
     FutureProvider<NovelDeleteService>((ref) async {
+  final novelDatabase = ref.watch(novelDatabaseProvider);
   final novelRepository = ref.watch(novelRepositoryProvider);
   final summaryRepository =
       await ref.watch(llmSummaryRepositoryProvider.future);
@@ -16,12 +18,15 @@ final novelDeleteServiceProvider =
       await ref.watch(factCacheRepositoryProvider.future);
   final readingProgressRepository =
       ref.watch(readingProgressRepositoryProvider);
+  final bookmarkRepository = ref.watch(bookmarkRepositoryProvider);
   final fileSystemService = ref.watch(fileSystemServiceProvider);
   return NovelDeleteService(
+    novelDatabase: novelDatabase,
     novelRepository: novelRepository,
     summaryRepository: summaryRepository,
     factCacheRepository: factCacheRepository,
     readingProgressRepository: readingProgressRepository,
+    bookmarkRepository: bookmarkRepository,
     fileSystemService: fileSystemService,
     releaseFolderHandles: (directoryPath) async {
       // Close the per-folder DB handles and WAIT for the close to finish

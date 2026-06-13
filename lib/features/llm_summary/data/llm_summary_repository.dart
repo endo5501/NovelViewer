@@ -103,8 +103,9 @@ class LlmSummaryRepository {
     );
   }
 
-  Future<void> deleteByFolderName(String folderName) async {
-    await _db.delete(
+  Future<void> deleteByFolderName(String folderName,
+      {DatabaseExecutor? txn}) async {
+    await (txn ?? _db).delete(
       'word_summaries',
       where: 'folder_name = ?',
       whereArgs: [folderName],

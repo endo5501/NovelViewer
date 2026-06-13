@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
-import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
 import 'package:novel_viewer/features/reading_progress/domain/reading_progress.dart';
+import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 
 final _log = Logger('reading_progress');
 
@@ -22,7 +22,16 @@ final readingProgressRepositoryProvider =
 final readingProgressAutoSaveListenerProvider = Provider<void>((ref) {
   ref.listen<FileEntry?>(selectedFileProvider, (_, next) async {
     if (next == null) return;
-    final novelId = ref.read(currentNovelIdProvider);
+
+    // Resolve the novel id from the selected file's own path using the shared
+    // nesting-aware rule (nearest registered ancestor folder's leaf name).
+    // Deriving it from `next.path` rather than a derived provider avoids any
+    // dependency on Riverpod's invalidation order inside this callback.
+    final libraryPath = ref.read(libraryPathProvider);
+    if (libraryPath == null) return;
+    final novels = await ref.read(allNovelsProvider.future);
+    final registeredFolderNames = {for (final n in novels) n.folderName};
+    final novelId = resolveNovelId(libraryPath, next.path, registeredFolderNames);
     if (novelId == null) return;
     try {
       await ref.read(readingProgressRepositoryProvider).upsert(
@@ -49,16 +58,18 @@ final readingProgressAutoOpenListenerProvider = Provider<void>((ref) {
   ref.listen<String?>(currentDirectoryProvider, (previous, next) async {
     if (next == null) return;
 
-    // Re-derive the novel id from the new directory using the same rule the
-    // shared [currentNovelIdProvider] applies (library root / out-of-library
-    // → null). Computing it from `next` directly avoids depending on
+    // Re-derive the novel id from the new directory using the shared
+    // nesting-aware rule [resolveNovelId] (nearest registered ancestor folder's
+    // leaf name = folder_name; library root / out-of-library / no registered
+    // ancestor → null). Computing it from `next` directly avoids depending on
     // Riverpod's invalidation order for derived providers in a listener
     // callback.
     final libraryPath = ref.read(libraryPathProvider);
     if (libraryPath == null) return;
-    if (p.equals(next, libraryPath)) return;
-    if (!p.isWithin(libraryPath, next)) return;
-    final novelId = p.split(p.relative(next, from: libraryPath)).first;
+    final novels = await ref.read(allNovelsProvider.future);
+    final registeredFolderNames = {for (final n in novels) n.folderName};
+    final novelId = resolveNovelId(libraryPath, next, registeredFolderNames);
+    if (novelId == null) return;
 
     final ReadingProgress? progress;
     try {

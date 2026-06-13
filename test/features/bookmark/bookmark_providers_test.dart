@@ -63,6 +63,24 @@ void main() {
       ),
     );
     novelDatabase.setDatabase(db);
+
+    // Register the novel folders used by tests that resolve novel ids through
+    // [currentNovelIdProvider]. Resolution now keys off the registered
+    // folder_name (leaf), so an unregistered path resolves to null.
+    Future<void> registerNovel(String folderName) async {
+      await db.insert('novels', {
+        'site_type': 'narou',
+        'novel_id': folderName,
+        'title': 'Title $folderName',
+        'url': 'https://example.com/$folderName',
+        'folder_name': folderName,
+        'episode_count': 1,
+        'downloaded_at': DateTime.now().toIso8601String(),
+      });
+    }
+
+    await registerNovel('narou_n1234');
+    await registerNovel('n1234');
   });
 
   tearDown(() async {
@@ -85,46 +103,72 @@ void main() {
   }
 
   group('currentNovelIdProvider', () {
-    test('returns null when at library root', () {
+    test('returns null when at library root', () async {
       final container = createContainer(
         libraryPath: '/library',
         currentDirectory: '/library',
       );
       addTearDown(container.dispose);
 
-      final novelId = container.read(currentNovelIdProvider);
+      final novelId = await container.read(currentNovelIdProvider.future);
       expect(novelId, isNull);
     });
 
-    test('returns folder name when inside a novel directory', () {
+    test('returns folder name when inside a registered novel directory',
+        () async {
       final container = createContainer(
         libraryPath: '/library',
         currentDirectory: '/library/narou_n1234',
       );
       addTearDown(container.dispose);
 
-      final novelId = container.read(currentNovelIdProvider);
+      final novelId = await container.read(currentNovelIdProvider.future);
       expect(novelId, 'narou_n1234');
     });
 
-    test('returns top-level folder name when in a subdirectory', () {
+    test('returns the novel folder name when in a subdirectory', () async {
       final container = createContainer(
         libraryPath: '/library',
         currentDirectory: '/library/narou_n1234/subdir',
       );
       addTearDown(container.dispose);
 
-      final novelId = container.read(currentNovelIdProvider);
+      final novelId = await container.read(currentNovelIdProvider.future);
       expect(novelId, 'narou_n1234');
     });
 
-    test('returns null when no directory is selected', () {
+    test('resolves the registered leaf name for a nested novel folder',
+        () async {
+      // narou_n1234 is registered and nested under the organizational folder
+      // "お気に入り". The novel id must be the leaf name, NOT the first segment.
+      final container = createContainer(
+        libraryPath: '/library',
+        currentDirectory: '/library/お気に入り/narou_n1234',
+      );
+      addTearDown(container.dispose);
+
+      final novelId = await container.read(currentNovelIdProvider.future);
+      expect(novelId, 'narou_n1234');
+    });
+
+    test('returns null inside an unregistered organizational folder', () async {
+      final container = createContainer(
+        libraryPath: '/library',
+        currentDirectory: '/library/お気に入り',
+      );
+      addTearDown(container.dispose);
+
+      final novelId = await container.read(currentNovelIdProvider.future);
+      expect(novelId, isNull);
+    });
+
+    test('returns null when no directory is selected', () async {
       final container = createContainer(
         libraryPath: '/library',
       );
       addTearDown(container.dispose);
 
-      final novelId = container.read(currentNovelIdProvider);
+      final novelId = await container.read(currentNovelIdProvider.future);
       expect(novelId, isNull);
     });
   });

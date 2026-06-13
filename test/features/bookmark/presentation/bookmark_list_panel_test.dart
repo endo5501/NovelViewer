@@ -6,6 +6,8 @@ import 'package:novel_viewer/features/bookmark/domain/bookmark.dart';
 import 'package:novel_viewer/features/bookmark/presentation/bookmark_list_panel.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
@@ -16,6 +18,16 @@ class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
   String? build() => _initialValue;
 }
 
+NovelMetadata _novel(String folderName) => NovelMetadata(
+      siteType: 'narou',
+      novelId: folderName,
+      title: 'Title $folderName',
+      url: 'https://example.com/$folderName',
+      folderName: folderName,
+      episodeCount: 1,
+      downloadedAt: DateTime(2026, 1, 1),
+    );
+
 void main() {
   group('BookmarkListPanel', () {
     testWidgets('shows placeholder when no novel is active',
@@ -24,6 +36,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider
                 .overrideWith(() => _TestCurrentDirectoryNotifier('/library')),
           ],
@@ -45,6 +58,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
             bookmarksForNovelProvider('n1234')
@@ -85,6 +99,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
             bookmarksForNovelProvider('n1234')
@@ -121,6 +136,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
             bookmarksForNovelProvider('n1234')
@@ -154,6 +170,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
             bookmarksForNovelProvider('n1234')
@@ -188,6 +205,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
             bookmarksForNovelProvider('n1234')
@@ -224,6 +242,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
             bookmarksForNovelProvider('n1234')

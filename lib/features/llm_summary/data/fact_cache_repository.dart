@@ -111,8 +111,9 @@ class FactCacheRepository {
 
   /// Cascade helper: removes every cache row for the folder. Call alongside
   /// `LlmSummaryRepository.deleteByFolderName`.
-  Future<void> deleteByFolderName(String folderName) async {
-    await _db.delete(
+  Future<void> deleteByFolderName(String folderName,
+      {DatabaseExecutor? txn}) async {
+    await (txn ?? _db).delete(
       'fact_cache',
       where: 'folder_name = ?',
       whereArgs: [folderName],

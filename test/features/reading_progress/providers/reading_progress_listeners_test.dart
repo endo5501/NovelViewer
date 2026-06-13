@@ -1,10 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
 import 'package:novel_viewer/features/reading_progress/domain/reading_progress.dart';
 import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
+
+NovelMetadata _novel(String folderName) => NovelMetadata(
+      siteType: 'narou',
+      novelId: folderName,
+      title: 'Title $folderName',
+      url: 'https://example.com/$folderName',
+      folderName: folderName,
+      episodeCount: 1,
+      downloadedAt: DateTime(2026, 1, 1),
+    );
 
 class _UpsertCall {
   final String novelId;
@@ -50,7 +63,7 @@ class _FakeRepository implements ReadingProgressRepository {
   }
 
   @override
-  Future<void> deleteByNovelId(String novelId) async {}
+  Future<void> deleteByNovelId(String novelId, {DatabaseExecutor? txn}) async {}
 }
 
 ProviderContainer _buildContainer({
@@ -58,6 +71,7 @@ ProviderContainer _buildContainer({
   String libraryPath = '/library',
   String initialDirectory = '/library',
   Map<String, DirectoryContents> contentsByPath = const {},
+  Set<String> registeredFolders = const {'narou_n1234ab'},
 }) {
   return ProviderContainer(
     overrides: [
@@ -65,6 +79,9 @@ ProviderContainer _buildContainer({
       currentDirectoryProvider
           .overrideWith(() => CurrentDirectoryNotifier(initialDirectory)),
       readingProgressRepositoryProvider.overrideWithValue(repository),
+      allNovelsProvider.overrideWith(
+        (ref) async => [for (final f in registeredFolders) _novel(f)],
+      ),
       directoryContentsProvider.overrideWith((ref) async {
         final dir = ref.watch(currentDirectoryProvider);
         if (dir == null) return DirectoryContents.empty();
@@ -102,6 +119,57 @@ void main() {
       expect(repo.upsertCalls.first.filePath,
           '/library/narou_n1234ab/003_chapter3.txt');
       expect(repo.upsertCalls.first.fileName, '003_chapter3.txt');
+    });
+
+    test(
+        'upserts under the registered leaf name for a nested novel folder '
+        '(F106 regression)', () async {
+      // narou_n1234ab is registered and nested under the organizational folder
+      // "お気に入り". The progress MUST be keyed by the leaf folder_name, not the
+      // first path segment ("お気に入り") which the old logic used.
+      final repo = _FakeRepository();
+      final container = _buildContainer(
+        repository: repo,
+        initialDirectory: '/library/お気に入り/narou_n1234ab',
+        registeredFolders: const {'narou_n1234ab'},
+      );
+      addTearDown(container.dispose);
+
+      container.read(readingProgressAutoSaveListenerProvider);
+
+      container.read(selectedFileProvider.notifier).selectFile(
+            const FileEntry(
+              name: '003_chapter3.txt',
+              path: '/library/お気に入り/narou_n1234ab/003_chapter3.txt',
+            ),
+          );
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repo.upsertCalls.length, 1);
+      expect(repo.upsertCalls.first.novelId, 'narou_n1234ab');
+    });
+
+    test(
+        'does not upsert inside an unregistered organizational folder '
+        '(no registered ancestor)', () async {
+      final repo = _FakeRepository();
+      final container = _buildContainer(
+        repository: repo,
+        initialDirectory: '/library/お気に入り',
+        registeredFolders: const {'narou_n1234ab'},
+      );
+      addTearDown(container.dispose);
+
+      container.read(readingProgressAutoSaveListenerProvider);
+
+      container.read(selectedFileProvider.notifier).selectFile(
+            const FileEntry(name: 'memo.txt', path: '/library/お気に入り/memo.txt'),
+          );
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repo.upsertCalls, isEmpty);
     });
 
     test('does not upsert at the library root (no novel id can be resolved)',
@@ -224,6 +292,51 @@ void main() {
       final selected = container.read(selectedFileProvider);
       expect(selected, isNotNull);
       expect(selected!.path, chapter3.path);
+    });
+
+    test(
+        'entering a nested novel folder resolves the registered leaf id '
+        '(F106 regression)', () async {
+      const nestedFolder = '/library/お気に入り/narou_n1234ab';
+      const nestedChapter3 = FileEntry(
+        name: '003_chapter3.txt',
+        path: '/library/お気に入り/narou_n1234ab/003_chapter3.txt',
+      );
+      final repo = _FakeRepository(
+        onFindByNovelId: (id) => id == 'narou_n1234ab'
+            ? ReadingProgress(
+                novelId: 'narou_n1234ab',
+                filePath: nestedChapter3.path,
+                fileName: nestedChapter3.name,
+                updatedAt: DateTime(2026, 5, 26),
+              )
+            : null,
+      );
+      final container = _buildContainer(
+        repository: repo,
+        initialDirectory: '/library',
+        contentsByPath: const {
+          nestedFolder: DirectoryContents(
+            files: [nestedChapter3],
+            subdirectories: [],
+          ),
+        },
+        registeredFolders: const {'narou_n1234ab'},
+      );
+      addTearDown(container.dispose);
+
+      container.read(readingProgressAutoOpenListenerProvider);
+
+      container
+          .read(currentDirectoryProvider.notifier)
+          .setDirectory(nestedFolder);
+      await container.read(directoryContentsProvider.future);
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      final selected = container.read(selectedFileProvider);
+      expect(selected, isNotNull);
+      expect(selected!.path, nestedChapter3.path);
     });
 
     test('does nothing when the novel has no stored progress', () async {

@@ -36,7 +36,7 @@ class _RecordingRepository implements ReadingProgressRepository {
   }
 
   @override
-  Future<void> deleteByNovelId(String novelId) async {}
+  Future<void> deleteByNovelId(String novelId, {DatabaseExecutor? txn}) async {}
 }
 
 void main() {
@@ -90,6 +90,18 @@ void main() {
       ),
     );
     novelDatabase.setDatabase(db);
+
+    // Register the novel folder so the shared nesting-aware resolveNovelId
+    // (which keys off the registered folder_name) can resolve it.
+    await db.insert('novels', {
+      'site_type': 'narou',
+      'novel_id': 'n1234ab',
+      'title': 'テスト小説',
+      'url': 'https://ncode.syosetu.com/n1234ab/',
+      'folder_name': 'narou_n1234ab',
+      'episode_count': 10,
+      'downloaded_at': DateTime(2026, 1, 1).toIso8601String(),
+    });
   });
 
   tearDown(() async {

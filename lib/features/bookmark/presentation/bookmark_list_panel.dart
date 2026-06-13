@@ -14,7 +14,7 @@ class BookmarkListPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final novelId = ref.watch(currentNovelIdProvider);
+    final novelId = ref.watch(currentNovelIdProvider).value;
 
     if (novelId == null) {
       return Center(child: Text(AppLocalizations.of(context)!.bookmark_selectNovelPrompt));

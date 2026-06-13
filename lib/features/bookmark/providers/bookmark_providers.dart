@@ -1,24 +1,29 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart' as p;
 import 'package:novel_viewer/features/bookmark/data/bookmark_repository.dart';
 import 'package:novel_viewer/features/bookmark/domain/bookmark.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 
 final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
   return BookmarkRepository(ref.watch(novelDatabaseProvider));
 });
 
-final currentNovelIdProvider = Provider<String?>((ref) {
+/// Resolves the novel id for the current directory using the shared
+/// nesting-aware rule [resolveNovelId] (nearest registered ancestor folder's
+/// leaf name = `folder_name`). Async because the set of registered folder
+/// names comes from [allNovelsProvider]. Resolves to null while the novel list
+/// is still loading and at the library root / outside the library.
+final currentNovelIdProvider = FutureProvider<String?>((ref) async {
   final currentDir = ref.watch(currentDirectoryProvider);
   final libraryPath = ref.watch(libraryPathProvider);
 
   if (currentDir == null || libraryPath == null) return null;
-  if (p.equals(currentDir, libraryPath)) return null;
-  if (!p.isWithin(libraryPath, currentDir)) return null;
 
-  final relativePath = p.relative(currentDir, from: libraryPath);
-  return p.split(relativePath).first;
+  final novels = await ref.watch(allNovelsProvider.future);
+  final registeredFolderNames = {for (final n in novels) n.folderName};
+
+  return resolveNovelId(libraryPath, currentDir, registeredFolderNames);
 });
 
 final bookmarksForNovelProvider =
@@ -86,7 +91,7 @@ final bookmarkJumpLineProvider =
 
 final bookmarkLineNumbersForFileProvider =
     FutureProvider<List<int>>((ref) async {
-  final novelId = ref.watch(currentNovelIdProvider);
+  final novelId = await ref.watch(currentNovelIdProvider.future);
   final selectedFile = ref.watch(selectedFileProvider);
 
   if (novelId == null || selectedFile == null) return [];

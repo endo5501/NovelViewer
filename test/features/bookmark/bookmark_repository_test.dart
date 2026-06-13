@@ -67,6 +67,39 @@ void main() {
     await novelDatabase.close();
   });
 
+  group('deleteByNovelId', () {
+    test('removes all bookmarks for the given novel id', () async {
+      await repository.add(
+        novelId: 'narou_n1234ab',
+        fileName: '001.txt',
+        filePath: '/library/narou_n1234ab/001.txt',
+        lineNumber: 10,
+      );
+      await repository.add(
+        novelId: 'narou_n1234ab',
+        fileName: '002.txt',
+        filePath: '/library/narou_n1234ab/002.txt',
+      );
+      await repository.add(
+        novelId: 'narou_n5678cd',
+        fileName: '001.txt',
+        filePath: '/library/narou_n5678cd/001.txt',
+      );
+
+      await repository.deleteByNovelId('narou_n1234ab');
+
+      expect(await repository.findByNovel('narou_n1234ab'), isEmpty);
+      // Other novels' bookmarks are untouched.
+      expect(await repository.findByNovel('narou_n5678cd'), hasLength(1));
+    });
+
+    test('completes without error when the novel has no bookmarks', () async {
+      await repository.deleteByNovelId('narou_unknown');
+
+      expect(await repository.findByNovel('narou_unknown'), isEmpty);
+    });
+  });
+
   group('add', () {
     test('adds a new bookmark', () async {
       await repository.add(

@@ -60,7 +60,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildBookmarkButton() {
-    final novelId = ref.watch(currentNovelIdProvider);
+    final novelId = ref.watch(currentNovelIdProvider).value;
     final selectedFile = ref.watch(selectedFileProvider);
     final isEnabled = novelId != null && selectedFile != null;
     final isBookmarked = ref.watch(isBookmarkedProvider);
@@ -74,7 +74,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _toggleBookmark() async {
-    final novelId = ref.read(currentNovelIdProvider);
+    final novelId = await ref.read(currentNovelIdProvider.future);
     final selectedFile = ref.read(selectedFileProvider);
     if (novelId == null || selectedFile == null) return;
 
