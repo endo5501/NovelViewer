@@ -7,16 +7,20 @@ import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata
 import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 import 'package:novel_viewer/shared/database/folder_db_handles.dart';
 
-final novelDeleteServiceProvider =
-    FutureProvider<NovelDeleteService>((ref) async {
+final novelDeleteServiceProvider = FutureProvider<NovelDeleteService>((
+  ref,
+) async {
   final novelDatabase = ref.watch(novelDatabaseProvider);
   final novelRepository = ref.watch(novelRepositoryProvider);
-  final summaryRepository =
-      await ref.watch(llmSummaryRepositoryProvider.future);
-  final factCacheRepository =
-      await ref.watch(factCacheRepositoryProvider.future);
-  final readingProgressRepository =
-      ref.watch(readingProgressRepositoryProvider);
+  final summaryRepository = await ref.watch(
+    llmSummaryRepositoryProvider.future,
+  );
+  final factCacheRepository = await ref.watch(
+    factCacheRepositoryProvider.future,
+  );
+  final readingProgressRepository = ref.watch(
+    readingProgressRepositoryProvider,
+  );
   final bookmarkRepository = ref.watch(bookmarkRepositoryProvider);
   final fileSystemService = ref.watch(fileSystemServiceProvider);
   return NovelDeleteService(
@@ -28,9 +32,9 @@ final novelDeleteServiceProvider =
     bookmarkRepository: bookmarkRepository,
     fileSystemService: fileSystemService,
     // Close the per-folder DB handles and WAIT for the close to finish before
-    // the caller deletes the directory. The shared helper closes the cached
-    // instances directly (a bare ref.invalidate is fire-and-forget and would
-    // race the deletion), keys all three via folderDbKey, then invalidates.
+    // the caller deletes the directory, then invalidate the thin-view
+    // providers so they don't keep serving the evicted (closed) handles. A
+    // bare ref.invalidate is fire-and-forget and would race the deletion.
     releaseFolderHandles: (directoryPath) => releaseFolderDbHandles(
       directoryPath,
       read: ref.read,

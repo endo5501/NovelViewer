@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../shared/database/database_opener.dart';
+import '../../../shared/database/db_connection_gate.dart';
 
 class TtsAudioDatabase {
   static const _databaseName = 'tts_audio.db';
@@ -10,15 +11,14 @@ class TtsAudioDatabase {
   static final _log = Logger('tts.audio_db');
 
   final String _folderPath;
-  Database? _database;
+  late final DbConnectionGate<Database> _gate = DbConnectionGate<Database>(
+    opener: _open,
+    closer: (db) => db.close(),
+  );
 
   TtsAudioDatabase(this._folderPath);
 
-  Future<Database> get database async {
-    final db = _database;
-    if (db != null) return db;
-    return _database = await _open();
-  }
+  Future<Database> get database => _gate.resource;
 
   Future<Database> _open() async {
     final path = p.join(_folderPath, _databaseName);
@@ -134,8 +134,5 @@ class TtsAudioDatabase {
     }
   }
 
-  Future<void> close() async {
-    await _database?.close();
-    _database = null;
-  }
+  Future<void> close() => _gate.close();
 }

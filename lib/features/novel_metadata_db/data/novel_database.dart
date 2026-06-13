@@ -6,6 +6,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../shared/database/database_opener.dart';
+import '../../../shared/database/db_connection_gate.dart';
 
 /// Returns the list of source-text file names for `folderName`, sorted
 /// lexically. Used by the v4 → v5 migration to compute lexical-rank fallback
@@ -59,7 +60,10 @@ class NovelDatabase {
 
   final String? _dbDirPath;
   final NovelDatabaseSnapshotResolver _snapshotResolver;
-  Database? _database;
+  late final DbConnectionGate<Database> _gate = DbConnectionGate<Database>(
+    opener: _open,
+    closer: (db) => db.close(),
+  );
 
   NovelDatabase({
     String? dbDirPath,
@@ -68,11 +72,7 @@ class NovelDatabase {
         _snapshotResolver =
             snapshotResolver ?? NovelDatabaseSnapshotResolver.empty;
 
-  Future<Database> get database async {
-    final db = _database;
-    if (db != null) return db;
-    return _database = await _open();
-  }
+  Future<Database> get database => _gate.resource;
 
   Future<Database> _open() async {
     final dbPath = await _resolveDatabaseDirPath();
@@ -530,7 +530,10 @@ class NovelDatabase {
 
   @visibleForTesting
   void setDatabase(Database db) {
-    _database = db;
+    // setDatabase is itself a test-only seam; delegating to the gate's
+    // test-only seed keeps the injected in-memory database behind the gate.
+    // ignore: invalid_use_of_visible_for_testing_member
+    _gate.seedResource(db);
   }
 
   /// Exposed for migration tests: runs the v4 → v5 migration against a fresh
@@ -585,8 +588,5 @@ class NovelDatabase {
     await _createV5WordSummariesTable(db);
   }
 
-  Future<void> close() async {
-    await _database?.close();
-    _database = null;
-  }
+  Future<void> close() => _gate.close();
 }

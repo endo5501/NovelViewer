@@ -7,11 +7,11 @@ import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/shared/database/folder_db_handles.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
+import 'package:novel_viewer/shared/database/per_folder_db_registry.dart';
+import 'package:novel_viewer/shared/database/per_folder_db_registry_provider.dart';
 
-/// Records a close call into [log] after an async gap, so a caller that fails
-/// to await close() before invalidating would be observable as out-of-order.
-class _FakeEpisodeCacheDatabase extends EpisodeCacheDatabase {
-  _FakeEpisodeCacheDatabase(this.log) : super('unused');
+class _FakeEpisode extends EpisodeCacheDatabase {
+  _FakeEpisode(this.log) : super('unused');
   final List<String> log;
   @override
   Future<void> close() async {
@@ -20,8 +20,8 @@ class _FakeEpisodeCacheDatabase extends EpisodeCacheDatabase {
   }
 }
 
-class _FakeTtsAudioDatabase extends TtsAudioDatabase {
-  _FakeTtsAudioDatabase(this.log) : super('unused');
+class _FakeAudio extends TtsAudioDatabase {
+  _FakeAudio(this.log) : super('unused');
   final List<String> log;
   @override
   Future<void> close() async {
@@ -30,8 +30,8 @@ class _FakeTtsAudioDatabase extends TtsAudioDatabase {
   }
 }
 
-class _FakeTtsDictionaryDatabase extends TtsDictionaryDatabase {
-  _FakeTtsDictionaryDatabase(this.log) : super('unused');
+class _FakeDict extends TtsDictionaryDatabase {
+  _FakeDict(this.log) : super('unused');
   final List<String> log;
   @override
   Future<void> close() async {
@@ -42,19 +42,23 @@ class _FakeTtsDictionaryDatabase extends TtsDictionaryDatabase {
 
 void main() {
   late List<String> log;
-  late ProviderContainer container;
   late List<ProviderOrFamily> invalidated;
+  late ProviderContainer container;
 
   setUp(() {
     log = <String>[];
     invalidated = <ProviderOrFamily>[];
+    final registry = PerFolderDbRegistry(
+      episodeFactory: (_) => _FakeEpisode(log),
+      audioFactory: (_) => _FakeAudio(log),
+      dictionaryFactory: (_) => _FakeDict(log),
+    );
+    // Pre-open the handles so the release has something to close.
+    registry.episodeCache('/lib/narou_n1');
+    registry.ttsAudio('/lib/narou_n1');
+    registry.ttsDictionary('/lib/narou_n1');
     container = ProviderContainer(overrides: [
-      episodeCacheDatabaseProvider
-          .overrideWith((ref, _) => _FakeEpisodeCacheDatabase(log)),
-      ttsAudioDatabaseProvider
-          .overrideWith((ref, _) => _FakeTtsAudioDatabase(log)),
-      ttsDictionaryDatabaseProvider
-          .overrideWith((ref, _) => _FakeTtsDictionaryDatabase(log)),
+      perFolderDbRegistryProvider.overrideWithValue(registry),
     ]);
   });
 
@@ -73,9 +77,6 @@ void main() {
         invalidate: recordingInvalidate,
       );
 
-      // Every close must be recorded (await completed) before the first
-      // invalidate. ref.invalidate alone is fire-and-forget; this helper must
-      // not rely on it for the close.
       final firstInvalidate = log.indexOf('invalidate');
       expect(firstInvalidate, greaterThanOrEqualTo(0));
       expect(log.indexOf('close:episode'), lessThan(firstInvalidate));
@@ -104,11 +105,7 @@ void main() {
       expect(invalidated.length, 3);
     });
 
-    test('reads handles via the normalized folder key', () async {
-      // A backslash-spelled path and its normalized form must resolve to the
-      // same provider family key, so the release reaches the handle that other
-      // call sites opened. We assert the helper applies folderDbKey by checking
-      // the invalidated family argument matches the normalized key.
+    test('invalidates providers under the normalized folder key', () async {
       const raw = r'C:\lib\narou_n1\..\narou_n1';
       await releaseFolderDbHandles(
         raw,
@@ -117,11 +114,8 @@ void main() {
       );
 
       final key = folderDbKey(raw);
-      expect(
-        invalidated.contains(ttsAudioDatabaseProvider(key)),
-        isTrue,
-        reason: 'invalidate SHALL target the normalized key, not the raw path',
-      );
+      expect(invalidated.contains(ttsAudioDatabaseProvider(key)), isTrue,
+          reason: 'invalidate SHALL target the normalized key, not the raw path');
     });
   });
 }

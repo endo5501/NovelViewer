@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/text_download/data/download_service.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
+import 'package:novel_viewer/shared/database/per_folder_db_registry_provider.dart';
 import 'package:novel_viewer/shared/utils/cancellation_token.dart';
 import 'package:path/path.dart' as p;
 
@@ -129,15 +130,17 @@ class DownloadNotifier extends Notifier<DownloadState> {
       );
 
       final repository = ref.read(novelRepositoryProvider);
-      await repository.upsert(NovelMetadata(
-        siteType: result.siteType,
-        novelId: result.novelId,
-        title: result.title,
-        url: result.url.toString(),
-        folderName: result.folderName,
-        episodeCount: result.episodeCount,
-        downloadedAt: DateTime.now(),
-      ));
+      await repository.upsert(
+        NovelMetadata(
+          siteType: result.siteType,
+          novelId: result.novelId,
+          title: result.title,
+          url: result.url.toString(),
+          folderName: result.folderName,
+          episodeCount: result.episodeCount,
+          downloadedAt: DateTime.now(),
+        ),
+      );
       ref.invalidate(allNovelsProvider);
 
       state = state.copyWith(
@@ -166,11 +169,12 @@ class DownloadNotifier extends Notifier<DownloadState> {
       service.dispose();
       // Release the episode_cache.db handle opened above so it does not keep
       // the file locked on Windows (which would block a later folder delete).
-      // Close the actual instance we hold and AWAIT it (rather than relying on
-      // invalidate's fire-and-forget onDispose close), so the OS lock is gone
-      // before control returns. Then invalidate to drop the disposed entry.
-      // Runs on both success and failure paths. See [folderDbKey].
-      await cacheDb.close();
+      // Close ONLY the episode cache (not the folder's TTS handles, which other
+      // consumers may be using): the registry closes it (awaited) and evicts,
+      // so the OS lock is gone before control returns. Then invalidate to drop
+      // the thin-view provider's reference. Runs on both success and failure
+      // paths. See [folderDbKey].
+      await ref.read(perFolderDbRegistryProvider).closeEpisodeCache(cacheKey);
       ref.invalidate(episodeCacheDatabaseProvider(cacheKey));
     }
   }
@@ -219,8 +223,9 @@ class DownloadNotifier extends Notifier<DownloadState> {
   }
 }
 
-final downloadProvider =
-    NotifierProvider<DownloadNotifier, DownloadState>(DownloadNotifier.new);
+final downloadProvider = NotifierProvider<DownloadNotifier, DownloadState>(
+  DownloadNotifier.new,
+);
 
 final novelSiteRegistryProvider = Provider<NovelSiteRegistry>((ref) {
   return NovelSiteRegistry();
@@ -229,5 +234,6 @@ final novelSiteRegistryProvider = Provider<NovelSiteRegistry>((ref) {
 /// Factory for [DownloadService] instances. A new service is created per
 /// download (each owns an `http.Client` it disposes when done). Exposed as a
 /// provider so tests can inject a fake without performing real network I/O.
-final downloadServiceFactoryProvider =
-    Provider<DownloadService Function()>((ref) => DownloadService.new);
+final downloadServiceFactoryProvider = Provider<DownloadService Function()>(
+  (ref) => DownloadService.new,
+);

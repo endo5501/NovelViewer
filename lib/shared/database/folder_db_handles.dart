@@ -1,35 +1,34 @@
 import 'package:flutter_riverpod/misc.dart'
     show ProviderListenable, ProviderOrFamily;
-import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
-import 'package:novel_viewer/shared/database/folder_db_key.dart';
+
+import '../../features/tts/providers/tts_audio_database_provider.dart';
+import 'folder_db_key.dart';
+import 'per_folder_db_registry_provider.dart';
 
 /// Releases the three per-folder database handles bound to [folderPath]
-/// (`episode_cache.db`, `tts_audio.db`, `tts_dictionary.db`) so a subsequent
-/// file-system operation on that folder does not race an open SQLite file.
+/// (`episode_cache.db`, `tts_audio.db`, `tts_dictionary.db`) before a
+/// file-system operation on that folder.
 ///
-/// The handles are closed by `awaiting` `close()` directly **before** any
-/// `invalidate`. `ref.invalidate` alone is fire-and-forget — its `onDispose`
-/// `close()` is not awaited — so relying on it would race `Directory.rename` /
-/// `delete` and fail under the Windows exclusive file lock. Callers MUST await
-/// this helper before touching the file system.
+/// Closes them via the owning [PerFolderDbRegistry] (`closeAll`, awaited — so
+/// the Windows file lock is gone before `Directory.rename`/`delete`), then
+/// invalidates the three thin-view providers.
 ///
-/// All three handles are keyed via [folderDbKey] so the release reaches the
-/// instance that other call sites (download flow, folder switch) opened,
-/// regardless of path-separator spelling.
+/// The invalidation is essential, not cosmetic: the per-folder providers are
+/// non-autoDispose `Provider.family` and cache the wrapper they resolved. Once
+/// the registry evicts a handle, an un-invalidated provider keeps serving the
+/// evicted wrapper, whose gate would re-open an *untracked* connection on the
+/// next `.database` access — re-locking the very file the close just released.
 ///
-/// [read] and [invalidate] are passed as tear-offs from either a provider
-/// `Ref` or a `WidgetRef` (`read: ref.read, invalidate: ref.invalidate`), which
-/// lets the move/rename/folder-delete (widget) and novel-delete (provider)
-/// flows share one implementation.
+/// [read] and [invalidate] are passed as tear-offs from a provider `Ref` or a
+/// `WidgetRef` so the move/rename/folder-delete (widget) and novel-delete
+/// (provider) flows share one implementation.
 Future<void> releaseFolderDbHandles(
   String folderPath, {
   required T Function<T>(ProviderListenable<T>) read,
   required void Function(ProviderOrFamily) invalidate,
 }) async {
+  await read(perFolderDbRegistryProvider).closeAll(folderPath);
   final key = folderDbKey(folderPath);
-  await read(episodeCacheDatabaseProvider(key)).close();
-  await read(ttsAudioDatabaseProvider(key)).close();
-  await read(ttsDictionaryDatabaseProvider(key)).close();
   invalidate(episodeCacheDatabaseProvider(key));
   invalidate(ttsAudioDatabaseProvider(key));
   invalidate(ttsDictionaryDatabaseProvider(key));

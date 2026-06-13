@@ -49,7 +49,8 @@ Future<Database> openOrResetDatabase({
     logger?.warning('Failed to open database at $path', e, st);
     if (!deleteOnFailure || !_looksLikeCorruption(e)) rethrow;
     logger?.warning(
-        'Resetting corrupt database at $path (will recreate via onCreate)');
+      'Resetting corrupt database at $path (will recreate via onCreate)',
+    );
     await deleteDatabase(path);
     return openDatabase(
       path,

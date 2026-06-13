@@ -3,30 +3,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/tts_audio_database.dart';
 import '../data/tts_dictionary_database.dart';
 import '../../episode_cache/data/episode_cache_database.dart';
+import '../../../shared/database/per_folder_db_registry_provider.dart';
 
-/// Per-folder cached `TtsAudioDatabase` keyed by absolute folder path.
+/// Per-folder `TtsAudioDatabase`, a thin view over [perFolderDbRegistryProvider].
 ///
-/// `ref.onDispose` closes the underlying database when the family entry is
-/// invalidated (e.g. on folder switch) or when the owning `ProviderContainer`
-/// is disposed. Not `autoDispose` so multiple consumers in the current folder
-/// share one instance even if their watch lifetimes differ.
+/// The registry owns the handle's open/close lifecycle (keyed by the
+/// normalized folder path) and releases it via `closeAll(folder)`. These
+/// providers no longer close handles in `onDispose`: ownership lives in one
+/// place so a new consumer cannot reintroduce the Windows file-lock bug.
 final ttsAudioDatabaseProvider =
     Provider.family<TtsAudioDatabase, String>((ref, folderPath) {
-  final db = TtsAudioDatabase(folderPath);
-  ref.onDispose(() => db.close());
-  return db;
+  return ref.watch(perFolderDbRegistryProvider).ttsAudio(folderPath);
 });
 
 final ttsDictionaryDatabaseProvider =
     Provider.family<TtsDictionaryDatabase, String>((ref, folderPath) {
-  final db = TtsDictionaryDatabase(folderPath);
-  ref.onDispose(() => db.close());
-  return db;
+  return ref.watch(perFolderDbRegistryProvider).ttsDictionary(folderPath);
 });
 
 final episodeCacheDatabaseProvider =
     Provider.family<EpisodeCacheDatabase, String>((ref, folderPath) {
-  final db = EpisodeCacheDatabase(folderPath);
-  ref.onDispose(() => db.close());
-  return db;
+  return ref.watch(perFolderDbRegistryProvider).episodeCache(folderPath);
 });

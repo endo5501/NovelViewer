@@ -78,16 +78,15 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       if (!mounted || !_scrollController.hasClients) return;
       final contents = ref.read(directoryContentsProvider).value;
       if (contents == null) return;
-      final fileIndex =
-          contents.files.indexWhere((f) => f.path == file.path);
+      final fileIndex = contents.files.indexWhere((f) => f.path == file.path);
       if (fileIndex < 0) return;
       // Files render after subdirectories in the flat item list.
       final flatIndex = contents.subdirectories.length + fileIndex;
-      final viewportHeight =
-          _scrollController.position.viewportDimension;
+      final viewportHeight = _scrollController.position.viewportDimension;
       // Centre the target row in the viewport when possible.
       final targetOffset =
-          flatIndex * _kFileTileExtent - (viewportHeight - _kFileTileExtent) / 2;
+          flatIndex * _kFileTileExtent -
+          (viewportHeight - _kFileTileExtent) / 2;
       final clamped = targetOffset.clamp(
         0.0,
         _scrollController.position.maxScrollExtent,
@@ -111,8 +110,12 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         Expanded(
           child: currentDir == null
               ? Center(
-                  child: Text(AppLocalizations.of(context)!
-                      .fileBrowser_selectFolderPrompt))
+                  child: Text(
+                    AppLocalizations.of(
+                      context,
+                    )!.fileBrowser_selectFolderPrompt,
+                  ),
+                )
               : _buildFileList(context),
         ),
       ],
@@ -133,17 +136,18 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
           if (currentDir != null)
             IconButton(
               icon: const Icon(Icons.arrow_upward),
-              onPressed:
-                  hasParent ? () => _navigateToParent(currentDir) : null,
-              tooltip: AppLocalizations.of(context)!
-                  .fileBrowser_goToParentFolder,
+              onPressed: hasParent ? () => _navigateToParent(currentDir) : null,
+              tooltip: AppLocalizations.of(
+                context,
+              )!.fileBrowser_goToParentFolder,
             ),
           if (currentDir != null)
             IconButton(
               icon: const Icon(Icons.create_new_folder),
               onPressed: () => _showNewFolderDialog(context, currentDir),
-              tooltip:
-                  AppLocalizations.of(context)!.fileBrowser_newFolderTooltip,
+              tooltip: AppLocalizations.of(
+                context,
+              )!.fileBrowser_newFolderTooltip,
             ),
         ],
       ),
@@ -194,22 +198,22 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     return contentsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Center(
-          child: Text(AppLocalizations.of(context)!
-              .common_errorPrefix(error.toString()))),
+        child: Text(
+          AppLocalizations.of(context)!.common_errorPrefix(error.toString()),
+        ),
+      ),
       data: (contents) {
         if (contents.isEmpty) {
           return Center(
-              child: Text(AppLocalizations.of(context)!
-                  .fileBrowser_noFilesFound));
+            child: Text(AppLocalizations.of(context)!.fileBrowser_noFilesFound),
+          );
         }
 
         // The set of registered novel folder names lets us classify each
         // subdirectory as a novel folder vs an organizational folder at any
         // depth (see [isNovelFolder]).
         final novels = ref.watch(allNovelsProvider).value ?? const [];
-        final novelFolderNames = <String>{
-          for (final n in novels) n.folderName,
-        };
+        final novelFolderNames = <String>{for (final n in novels) n.folderName};
         final items = [
           ...contents.subdirectories.map(
             (dir) => _buildDirectoryTile(
@@ -251,17 +255,19 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       leading: const Icon(Icons.description),
       title: Text(
         file.name,
-        style: isSelected
-            ? const TextStyle(fontWeight: FontWeight.w600)
-            : null,
+        style: isSelected ? const TextStyle(fontWeight: FontWeight.w600) : null,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
       trailing: switch (ttsStatus) {
-        TtsEpisodeStatus.completed =>
-          const Icon(Icons.check_circle, color: Colors.green),
-        TtsEpisodeStatus.partial || TtsEpisodeStatus.generating =>
-          const Icon(Icons.pie_chart, color: Colors.orange),
+        TtsEpisodeStatus.completed => const Icon(
+          Icons.check_circle,
+          color: Colors.green,
+        ),
+        TtsEpisodeStatus.partial || TtsEpisodeStatus.generating => const Icon(
+          Icons.pie_chart,
+          color: Colors.orange,
+        ),
         null => null,
       },
       selected: isSelected,
@@ -280,14 +286,9 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       key: const Key('selected_file_tile_decoration'),
       decoration: BoxDecoration(
         color: colorScheme.secondaryContainer,
-        border: Border(
-          left: BorderSide(color: colorScheme.primary, width: 4),
-        ),
+        border: Border(left: BorderSide(color: colorScheme.primary, width: 4)),
       ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: tile,
-      ),
+      child: Material(type: MaterialType.transparency, child: tile),
     );
   }
 
@@ -346,8 +347,10 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       ),
       PopupMenuItem<String>(
         value: isNovel ? 'delete' : 'deleteFolder',
-        child: Text(l10n.fileBrowser_deleteMenuItem,
-            style: const TextStyle(color: Colors.red)),
+        child: Text(
+          l10n.fileBrowser_deleteMenuItem,
+          style: const TextStyle(color: Colors.red),
+        ),
       ),
     ];
 
@@ -379,23 +382,20 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     });
   }
 
-  Future<void> _showMoveDialog(
-    BuildContext context,
-    DirectoryEntry dir,
-  ) async {
+  Future<void> _showMoveDialog(BuildContext context, DirectoryEntry dir) async {
     final libraryPath = ref.read(libraryPathProvider);
     if (libraryPath == null) return;
 
     final novels = ref.read(allNovelsProvider).value ?? const [];
-    final novelFolderNames = <String>{
-      for (final n in novels) n.folderName,
-    };
+    final novelFolderNames = <String>{for (final n in novels) n.folderName};
     final service = ref.read(fileSystemServiceProvider);
 
     final List<String> orgPaths;
     try {
-      orgPaths =
-          await service.listOrganizationalFolderTree(libraryPath, novelFolderNames);
+      orgPaths = await service.listOrganizationalFolderTree(
+        libraryPath,
+        novelFolderNames,
+      );
     } on FileSystemException {
       return;
     }
@@ -420,8 +420,11 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       // does not block the rename (Windows holds an exclusive lock). Awaiting
       // the close is required: a bare ref.invalidate is fire-and-forget and
       // would race the file operation.
-      await releaseFolderDbHandles(dir.path,
-          read: ref.read, invalidate: ref.invalidate);
+      await releaseFolderDbHandles(
+        dir.path,
+        read: ref.read,
+        invalidate: ref.invalidate,
+      );
       final newPath = await service.moveDirectory(dir.path, destination);
       if (!context.mounted) return;
       // Keep the browser pointed at the moved content if it was open.
@@ -436,9 +439,9 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       ref.invalidate(directoryContentsProvider);
     } on DirectoryOpException catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_directoryOpMessage(context, e))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_directoryOpMessage(context, e))));
     }
   }
 
@@ -448,8 +451,9 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.fileBrowser_deleteFolderTitle),
-        content:
-            Text(l10n.fileBrowser_deleteFolderConfirmation(dir.displayName)),
+        content: Text(
+          l10n.fileBrowser_deleteFolderConfirmation(dir.displayName),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -465,8 +469,11 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     ).then((confirmed) async {
       if (confirmed != true) return;
       try {
-        await releaseFolderDbHandles(dir.path,
-            read: ref.read, invalidate: ref.invalidate);
+        await releaseFolderDbHandles(
+          dir.path,
+          read: ref.read,
+          invalidate: ref.invalidate,
+        );
         await ref
             .read(fileSystemServiceProvider)
             .deleteEmptyDirectory(dir.path);
@@ -496,8 +503,11 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         // Renaming changes the folder's absolute path, so release any per-
         // folder DB handles bound to the old path first (awaited close, not a
         // fire-and-forget invalidate).
-        await releaseFolderDbHandles(dir.path,
-            read: ref.read, invalidate: ref.invalidate);
+        await releaseFolderDbHandles(
+          dir.path,
+          read: ref.read,
+          invalidate: ref.invalidate,
+        );
         await ref
             .read(fileSystemServiceProvider)
             .renameDirectory(dir.path, newName);
@@ -517,8 +527,10 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     if (downloadState.status == DownloadStatus.downloading) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(AppLocalizations.of(context)!
-                .fileBrowser_downloadInProgressWarning)),
+          content: Text(
+            AppLocalizations.of(context)!.fileBrowser_downloadInProgressWarning,
+          ),
+        ),
       );
       return;
     }
@@ -528,8 +540,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) =>
-          _RefreshProgressDialog(novelTitle: dir.displayName),
+      builder: (context) => _RefreshProgressDialog(novelTitle: dir.displayName),
     );
   }
 
@@ -549,8 +560,12 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(AppLocalizations.of(context)!
-                  .fileBrowser_renameFailed(e.toString()))),
+            content: Text(
+              AppLocalizations.of(
+                context,
+              )!.fileBrowser_renameFailed(e.toString()),
+            ),
+          ),
         );
       }
     });
@@ -560,21 +575,21 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-            AppLocalizations.of(context)!.fileBrowser_deleteNovelTitle),
-        content: Text(AppLocalizations.of(context)!
-            .fileBrowser_deleteNovelConfirmation(dir.displayName)),
+        title: Text(AppLocalizations.of(context)!.fileBrowser_deleteNovelTitle),
+        content: Text(
+          AppLocalizations.of(
+            context,
+          )!.fileBrowser_deleteNovelConfirmation(dir.displayName),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child:
-                Text(AppLocalizations.of(context)!.common_cancelButton),
+            child: Text(AppLocalizations.of(context)!.common_cancelButton),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child:
-                Text(AppLocalizations.of(context)!.common_deleteButton),
+            child: Text(AppLocalizations.of(context)!.common_deleteButton),
           ),
         ],
       ),
@@ -597,16 +612,14 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
           final libraryPath = ref.read(libraryPathProvider);
           final parent =
               getParentDirectory(dir.path, libraryPath: libraryPath) ??
-                  p.dirname(dir.path);
+              p.dirname(dir.path);
           ref.read(currentDirectoryProvider.notifier).setDirectory(parent);
         }
         final selectedFile = ref.read(selectedFileProvider);
-        if (selectedFile != null &&
-            p.isWithin(dir.path, selectedFile.path)) {
+        if (selectedFile != null && p.isWithin(dir.path, selectedFile.path)) {
           ref.read(selectedFileProvider.notifier).clear();
         }
-        final deleteService =
-            await ref.read(novelDeleteServiceProvider.future);
+        final deleteService = await ref.read(novelDeleteServiceProvider.future);
         await deleteService.delete(dir.name, dir.path);
         ref.invalidate(allNovelsProvider);
         ref.invalidate(directoryContentsProvider);
@@ -614,8 +627,12 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(AppLocalizations.of(context)!
-                  .fileBrowser_deleteFailed(e.toString()))),
+            content: Text(
+              AppLocalizations.of(
+                context,
+              )!.fileBrowser_deleteFailed(e.toString()),
+            ),
+          ),
         );
       }
     });
@@ -641,8 +658,11 @@ class _RefreshProgressDialog extends ConsumerWidget {
     final downloadState = ref.watch(downloadProvider);
 
     return AlertDialog(
-      title: Text(AppLocalizations.of(context)!
-          .fileBrowser_refreshProgressTitle(novelTitle)),
+      title: Text(
+        AppLocalizations.of(
+          context,
+        )!.fileBrowser_refreshProgressTitle(novelTitle),
+      ),
       content: _buildContent(context, downloadState),
       actions: [
         if (downloadState.status == DownloadStatus.completed ||
@@ -657,8 +677,7 @@ class _RefreshProgressDialog extends ConsumerWidget {
               ref.read(downloadProvider.notifier).reset();
               Navigator.of(context).pop();
             },
-            child:
-                Text(AppLocalizations.of(context)!.common_closeButton),
+            child: Text(AppLocalizations.of(context)!.common_closeButton),
           ),
       ],
     );
@@ -695,16 +714,15 @@ class _RefreshProgressDialog extends ConsumerWidget {
             const LinearProgressIndicator(),
             const SizedBox(height: 16),
             if (state.totalEpisodes > 0)
-              Text(
-                '${state.currentEpisode} / ${episodeSummary(state)}',
-              ),
+              Text('${state.currentEpisode} / ${episodeSummary(state)}'),
           ],
         );
       case DownloadStatus.completed:
         final summary = episodeSummary(state);
         final completedText = Text(
           l10n.fileBrowser_refreshCompleted(
-              summary.isNotEmpty ? '\n$summary' : ''),
+            summary.isNotEmpty ? '\n$summary' : '',
+          ),
         );
         if (!state.indexTruncated) return completedText;
         return Column(
@@ -724,7 +742,8 @@ class _RefreshProgressDialog extends ConsumerWidget {
       case DownloadStatus.error:
         return Text(
           l10n.common_errorPrefix(
-              state.errorMessage ?? l10n.common_unknownError),
+            state.errorMessage ?? l10n.common_unknownError,
+          ),
           style: const TextStyle(color: Colors.red),
         );
     }
