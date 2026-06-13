@@ -1,11 +1,11 @@
 ## 1. F117: マーク計算の統合（computeMarkedEntries 削除）
 
-- [ ] 1.1 `vertical_marked_ranges_test.dart` に「`computeMarkedRanges` の結果が各エントリの `style` を保持する」テストを追加（旧 `computeMarkedEntries` の同値ケースを移植: solid/dotted、ルビ base のみ照合、1文字語スキップ、視覚的カラム折返しで分断されない、実改行で分断される、legacy 改行扱い）。実行して失敗を確認
-- [ ] 1.2 `MarkInfo`（`vertical_marked_ranges.dart`）に `final MarkStyle style;` を追加し、`==`/`hashCode` に含める。コンストラクタを更新
-- [ ] 1.3 `computeMarkedRanges` で `MarkSpan.style` を `MarkInfo.style` に載せる。1.1 のテストを通す
-- [ ] 1.4 `vertical_text_page.dart` の `computeMarkedEntries` 呼び出し（:169-173）を削除し、`markStyle:`（:200）を `_markedRanges[i]?.style` から導出するよう変更
-- [ ] 1.5 `vertical_marked_entries.dart` と `vertical_marked_entries_test.dart` を削除。`findMarks`/バッファ走査が build あたり1回になったことをテストで担保（カウンタ付きフックまたは観測フラグ）
-- [ ] 1.6 `fvm flutter analyze` と関連テスト（`vertical_marked_ranges_test.dart`, `vertical_text_page_*`, `tts_highlight_vertical_test.dart`）を実行して回帰がないことを確認
+- [x] 1.1 `vertical_marked_ranges_test.dart` に「`computeMarkedRanges` の結果が各エントリの `style` を保持する」テストを追加（旧 `computeMarkedEntries` の同値ケースを移植: solid/dotted、ルビ base のみ照合、1文字語スキップ、視覚的カラム折返しで分断されない、実改行で分断される、legacy 改行扱い）。実行して失敗を確認
+- [x] 1.2 `MarkInfo`（`vertical_marked_ranges.dart`）に `final MarkStyle style;` を追加し、`==`/`hashCode` に含める。コンストラクタを更新
+- [x] 1.3 `computeMarkedRanges` で `MarkSpan.style` を `MarkInfo.style` に載せる。1.1 のテストを通す
+- [x] 1.4 `vertical_text_page.dart` の `computeMarkedEntries` 呼び出し（:169-173）を削除し、`markStyle:`（:200）を `_markedRanges[i]?.style` から導出するよう変更
+- [x] 1.5 `vertical_marked_entries.dart` と `vertical_marked_entries_test.dart` を削除。`findMarks`/バッファ走査が build あたり1回になったことをテストで担保（カウンタ付きフックまたは観測フラグ）
+- [x] 1.6 `fvm flutter analyze` と関連テスト（`vertical_marked_ranges_test.dart`, `vertical_text_page_*`, `tts_highlight_vertical_test.dart`）を実行して回帰がないことを確認
 - [ ] 1.7 F117 をコミット
 
 ## 2. F115: ページネーションのメモ化（重い層／軽い層の分離）

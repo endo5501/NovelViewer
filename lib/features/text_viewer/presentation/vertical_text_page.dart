@@ -7,7 +7,6 @@ import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_char_map.dart';
-import 'package:novel_viewer/features/text_viewer/data/vertical_marked_entries.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_marked_ranges.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_text_layout.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
@@ -166,11 +165,6 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         ? _computeHighlights(widget.query!)
         : const <int>{};
     final ttsHighlights = _computeTtsHighlights();
-    final markedEntries = computeMarkedEntries(
-      entries: _charEntries,
-      markedWords: widget.markedWords,
-      lineBreakEntryIndices: widget.lineBreakEntryIndices,
-    );
     _markedRanges = computeMarkedRanges(
       entries: _charEntries,
       markedWords: widget.markedWords,
@@ -197,7 +191,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         isHighlighted: highlights.contains(i),
         isSelected: _isInSelection(i),
         isTtsHighlighted: ttsHighlights.contains(i),
-        markStyle: markedEntries[i],
+        markStyle: _markedRanges[i]?.style,
       );
       final key = _entryKeys[i];
       if (key == null) {
