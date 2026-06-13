@@ -51,11 +51,15 @@ The system SHALL provide a deletion operation that removes the reading progress 
 - **THEN** the operation SHALL complete without error and SHALL NOT raise
 
 ### Requirement: Auto-save on file selection
-When the user opens a file inside a novel folder, the system SHALL upsert that file as the novel's reading progress. The save SHALL be triggered whenever `selectedFileProvider` transitions to a non-null value while the current directory is within a novel folder (i.e., `currentNovelIdProvider` resolves to a non-null novel id). Selections made while the current directory is the library root SHALL NOT save progress.
+When the user opens a file inside a novel folder, the system SHALL upsert that file as the novel's reading progress. The save SHALL be triggered whenever `selectedFileProvider` transitions to a non-null value while the current directory resolves to a non-null novel id. The novel id SHALL be derived with the shared nesting-aware rule `resolveNovelId` (nearest registered ancestor folder's leaf name = `folder_name`), NOT the first path segment under the library root. Selections made while no novel id can be resolved (library root, or a path with no registered ancestor folder) SHALL NOT save progress.
 
 #### Scenario: User selects a file inside a novel folder
 - **WHEN** the user is inside the folder for novel_id "narou_n1234ab" and selects "/library/narou_n1234ab/003_chapter3.txt" via tap or external navigation
 - **THEN** the `reading_progress` row for "narou_n1234ab" SHALL be upserted to file_path "/library/narou_n1234ab/003_chapter3.txt"
+
+#### Scenario: User selects a file inside a nested novel folder
+- **WHEN** the user is inside "/library/お気に入り/narou_n1234ab" (where "narou_n1234ab" is a registered novel nested under the organizational folder "お気に入り") and selects "/library/お気に入り/narou_n1234ab/003_chapter3.txt"
+- **THEN** the `reading_progress` row SHALL be upserted under novel_id "narou_n1234ab" (the registered leaf name), NOT "お気に入り"
 
 #### Scenario: Selection is cleared
 - **WHEN** `selectedFileProvider` transitions from a non-null `FileEntry` to null (e.g., directory change clears the selection)
@@ -65,16 +69,25 @@ When the user opens a file inside a novel folder, the system SHALL upsert that f
 - **WHEN** `currentDirectoryProvider` equals the library root path and `selectedFileProvider` somehow becomes non-null (defensive case)
 - **THEN** no upsert SHALL be performed because no novel id can be resolved
 
-### Requirement: One-shot auto-open on novel folder entry
-When the user navigates into a novel folder (i.e., `currentDirectoryProvider` transitions to a path inside the library root such that `currentNovelIdProvider` resolves to a non-null novel id), the system SHALL look up that novel's reading progress and, if a record exists and the recorded file is currently present in the directory listing, SHALL set `selectedFileProvider` to that file exactly once. Subsequent rebuilds or unrelated state changes SHALL NOT re-trigger the auto-open.
+#### Scenario: Selection inside an organizational folder with no registered ancestor
+- **WHEN** the current directory is an organizational folder that is not itself a registered novel and has no registered novel ancestor, and a file is selected
+- **THEN** no upsert SHALL be performed because `resolveNovelId` returns null
 
-The auto-open SHALL NOT fire when the current directory is the library root, and SHALL NOT fire when the user navigates away from a novel folder back to the library root.
+### Requirement: One-shot auto-open on novel folder entry
+When the user navigates into a novel folder (i.e., `currentDirectoryProvider` transitions to a path that resolves to a non-null novel id via the shared nesting-aware rule `resolveNovelId`), the system SHALL look up that novel's reading progress and, if a record exists and the recorded file is currently present in the directory listing, SHALL set `selectedFileProvider` to that file exactly once. Subsequent rebuilds or unrelated state changes SHALL NOT re-trigger the auto-open.
+
+The novel id used for the lookup SHALL be derived with `resolveNovelId` (nearest registered ancestor folder's leaf name = `folder_name`), so nested novels resolve to their registered leaf name rather than the first path segment. The auto-open SHALL NOT fire when no novel id can be resolved (library root, or a path with no registered ancestor folder).
 
 #### Scenario: Entering a novel folder with stored progress restores the file
 - **WHEN** the user navigates from the library root into the folder for novel_id "narou_n1234ab"
 - **AND** `reading_progress` contains a row for "narou_n1234ab" pointing to "/library/narou_n1234ab/003_chapter3.txt"
 - **AND** "003_chapter3.txt" is present in the directory's text file listing
 - **THEN** `selectedFileProvider` SHALL be set to the `FileEntry` for "003_chapter3.txt" exactly once
+
+#### Scenario: Entering a nested novel folder resolves to the registered leaf id
+- **WHEN** the user navigates into "/library/お気に入り/narou_n1234ab" (a registered novel nested under "お気に入り")
+- **AND** `reading_progress` contains a row for "narou_n1234ab"
+- **THEN** the lookup SHALL use novel_id "narou_n1234ab" and restore the stored file if present
 
 #### Scenario: Entering a novel folder with no stored progress
 - **WHEN** the user navigates into a novel folder that has no `reading_progress` row
