@@ -19,6 +19,7 @@ import 'package:novel_viewer/features/tts/providers/vacuum_lifecycle_provider.da
 import 'package:novel_viewer/features/tts/providers/tts_export_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
+import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/shared/utils/temp_directory_utils.dart';
 
@@ -114,13 +115,14 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
         .read(ttsGenerationProgressProvider.notifier)
         .set(const TtsGenerationProgress(current: 0, total: 0));
 
-    final db = ref.read(ttsAudioDatabaseProvider(folderPath));
+    final folderKey = folderDbKey(folderPath);
+    final db = ref.read(ttsAudioDatabaseProvider(folderKey));
     final lifecycle = ref.read(vacuumLifecycleProvider);
     final repo = TtsAudioRepository(
       db,
       onEpisodeDeleted: () => lifecycle.markDirty(folderPath),
     );
-    final dictDb = ref.read(ttsDictionaryDatabaseProvider(folderPath));
+    final dictDb = ref.read(ttsDictionaryDatabaseProvider(folderKey));
     final dictRepo = TtsDictionaryRepository(dictDb);
     final isolate = TtsIsolate();
     final tempDir = await ensureTemporaryDirectory();
@@ -222,7 +224,7 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
     final fileName = ref.read(selectedFileProvider)?.name;
     if (folderPath == null || fileName == null) return null;
 
-    final db = ref.read(ttsAudioDatabaseProvider(folderPath));
+    final db = ref.read(ttsAudioDatabaseProvider(folderDbKey(folderPath)));
     final lifecycle = ref.read(vacuumLifecycleProvider);
     final repo = TtsAudioRepository(
       db,
