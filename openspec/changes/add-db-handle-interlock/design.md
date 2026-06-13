@@ -111,7 +111,9 @@ class DbConnectionGate {
 - `Future<void> closeAll(String folder)`: 当該キーの3ハンドルを await close し、マップから除去する。**per-folder DB 解放の唯一の sanctioned API**。
 - Riverpod の `episodeCacheDatabaseProvider` ほかは `ref.watch(perFolderDbRegistryProvider).episodeCache(key)` を返す薄い `Provider` に縮退する。
 
-`releaseFolderDbHandles`（fire-and-forget invalidate を含む現行ヘルパー）と widget 層の振り付けは `registry.closeAll(folder)` の呼び出しへ置換する。レジストリがハンドルを所有するため `ref.invalidate` による解放は不要になり、「invalidate の onDispose close が await されない」fire-and-forget 経路そのものが消える。
+`releaseFolderDbHandles`（fire-and-forget invalidate を含む現行ヘルパー）と widget 層の振り付けは `registry.closeAll(folder)` の呼び出しへ置換する。「invalidate の onDispose close が await されない」fire-and-forget 経路そのものは消える。
+
+> **⚠ 補正（D5 参照）**: 当初は「レジストリがハンドルを所有するため `ref.invalidate` は不要」と想定したが、これは誤り。`Provider.family`（非 autoDispose）は body が `registry.xxx(key)` を再評価しても**解決済みのラッパーをキャッシュ**するため、`closeAll` がレジストリから evict した後も provider は古い（close 済み）ラッパーを返し続け、ゲートの再 open でレジストリ管理外の接続を開いてしまう。よって**解放後の provider 無効化は依然として必須**であり、D5 でヘルパーとして再導入した。
 
 **根拠**: audit F125 の意図「open/close を所有するレジストリ＋provider は薄いビュー」に一致。所有を1箇所へ集約することで、新しい消費者は `closeAll` を経由せざるを得ず、locked-DB バグを構造的に再発不能にする。D1 のゲートにより各ハンドル close 自体も既にレース安全。
 
@@ -120,6 +122,34 @@ class DbConnectionGate {
 ### D4. 段階適用（インターロック先行 → レジストリ後続）
 
 D1（ゲート）を先に全ラッパーへ入れると、現行の `releaseFolderDbHandles`（awaited close → invalidate）はゲートのインターロックにより既にレース安全になる。その上で D3（レジストリ）を載せる。各段でテストを緑に保ち、観測可能な「close→file-op 順序」を後退させない（Migration Plan 参照）。
+
+### D5. 解放は close + provider 無効化をペアで行う（レビュー由来）
+
+D3 の「invalidate 不要」想定が誤りだったため（上記補正）、`lib/shared/database/folder_db_handles.dart` の `releaseFolderDbHandles(folder, {read, invalidate})` ヘルパーを**再導入**した。ヘルパーは `await registry.closeAll(folder)`（OS ロック解放）の後に3つの thin-view provider を invalidate し、provider キャッシュをレジストリの最新状態に追従させる。move/rename/空フォルダ削除・小説削除の各 awaited 解放サイトはこのヘルパーを経由する。
+
+**根拠**: 非 autoDispose な `Provider.family` の独立キャッシュとレジストリの desync を防ぐ。close と invalidate を1関数に束ねることで、呼び出し側が invalidate を忘れて locked-DB バグを再発させる経路を消す（旧 `releaseFolderDbHandles` が担っていた close+invalidate 不変条件を、レジストリ backed で復元）。
+
+### D6. download は episode-cache のみ解放する（レビュー由来）
+
+download の finally は `closeAll`（3ハンドル）ではなく `registry.closeEpisodeCache(folder)`（episode-cache のみ await close + evict）を呼び、episode provider のみ invalidate する。
+
+**根拠**: download が開くのは episode-cache のみ。`closeAll` だと、同フォルダで TTS 再生中などに使用中の `tts_audio`/`tts_dictionary` ハンドルまで閉じ、消費者の `.database` が `DatabaseClosingException` を踏む。旧挙動（episode のみ close）に揃える。
+
+### D7. 解放経路の協調 — in-flight close を追跡する（レビュー由来）
+
+`releaseInBackground`（フォルダ切替用の同期 evict + 背景 close）と awaited な `closeAll`/`closeEpisodeCache` を協調させるため、レジストリは `Map<String, Future<void>> _closing`（フォルダ単位の進行中 close）を保持する。
+
+- `closeAll`/`closeEpisodeCache` は処理冒頭で `await _closing[key]` する → 切替が先行して evict 済みでもファイルロック解放を待てる。
+- `releaseInBackground` は同一フォルダの先行 close に**チェーン**する（`await previous`）→ 連続切替で先行 close を取りこぼさない。
+- `disposeAll` も `_closing` を drain する。
+
+**根拠**: 同期 evict だけだと「切替が evict → 直後の削除の `closeAll` が空マップを見て何も await せずファイル操作 → 背景 close とレース」する欠陥（codex 指摘②/③）を、進行中 close の追跡で閉じる。
+
+### D8. `close()` は close 失敗を伝播する（レビュー由来）
+
+ゲートの `close()` は **open 失敗のみ**握り（閉じる対象が無い）、`_closer`（実 `Database.close()`）の失敗は**再スロー**する。
+
+**根拠**: 解放はファイル操作の直前に行うため、close 失敗を握り潰すと「ロックが残ったまま rename/delete に進む」沈黙経路になる（codex 指摘①）。close 失敗は呼び出し側の try/catch（snackbar 等）へ伝える。
 
 ## Risks / Trade-offs
 
@@ -141,7 +171,7 @@ D1（ゲート）を先に全ラッパーへ入れると、現行の `releaseFol
 
 **ロールバック**: 各ステップは独立に revert 可能。ステップ1–3（インターロック）はステップ4–6（レジストリ）を後続change送りにしても単独で価値があり、安全な中断点になる。
 
-## Open Questions
+## Open Questions（実装で決着済み）
 
-1. グローバル `NovelDatabase` の `close()` は production で呼ばれるか、テスト専用か。前者ならゲートの「close 後再 open」挙動の対象シナリオを spec へ追加する（現時点ではテスト/起動ライフサイクル前提で設計）。
-2. レジストリのキャッシュ生存期間: `closeAll` 後の eviction で十分か、フォルダ切替時に明示 eviction も要るか（既存の folder-switch 解放テストの挙動に合わせる）。
+1. ~~グローバル `NovelDatabase` の `close()` は production で呼ばれるか、テスト専用か。~~ ✅ 決着: production の lib コードは getter（repository 経由）のみ使用し、`close()` は起動シーケンス/テスト用と確認（`main.dart:42,56` で起動時 override される長寿命シングルトン）。ゲートは適用するが「close 後再 open」を production シナリオとして spec 化はしない。
+2. ~~レジストリのキャッシュ生存期間: `closeAll` 後の eviction で十分か、フォルダ切替時に明示 eviction も要るか。~~ ✅ 決着: フォルダ切替は `releaseInBackground`（同期 evict + 背景 close、D7 で in-flight 追跡）で明示解放。awaited な mutation 解放（move/rename/delete）は `closeAll`、download は `closeEpisodeCache`。3経路を D7 の `_closing` 追跡で協調させる。
