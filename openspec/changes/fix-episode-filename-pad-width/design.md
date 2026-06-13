@@ -45,12 +45,14 @@ DL本体のループは `_downloadEpisodes`（`download_service.dart:341-438`）
 
 ### 決定2: 旧ファイルの特定はフォルダ走査＋(index, safeTitle) 照合で行う
 
-旧 `total`（旧桁幅）は保存していないため推測しない。フォルダ内の `.txt` を1回 list し、各ファイル名を `^(\d+)_(.+)\.txt$` でパースして `(parsedIndex, restName)` を得る。現index の各エピソード `(i, title)` について `newName = formatEpisodeFileName(i, title, total)` を求め、
+旧 `total`（旧桁幅）は保存していないため推測しない。フォルダ内の `.txt` を1回 list し、各ファイル名を `^(\d+)_(.*)\.txt$` でパースして `(parsedIndex, restName)` を得る。現index の各エピソード `(i, title)` について `newName = formatEpisodeFileName(i, title, total)` を求め、`(parsedIndex, restName)` をキーにした map から `(i, safeName(title))` で引く。
 
 - `parsedIndex == i` かつ `restName == safeName(title)` を満たす既存ファイルを「同一エピソードの別桁幅版」とみなす。
 - `index` はエピソード一意なので衝突しない。`restName` 一致条件によりタイトル変更ファイルは（意図的に）対象外。
+- **タイトル群は `(.+)` ではなく `(.*)`**: `safeName(title)` が空（空白のみ/タイトル欠落）だと `formatEpisodeFileName` は `01_.txt` を生成する。`(.+)` だと `_` の後が0文字でマッチせず移行漏れ→再DL＋ゴミ残留になるため、`(.*)` で空タイトルも対象に含める。
+- **map キーの区切り文字は `/`**: `parsedIndex` は数字のみ、`restName` は `safeName` が `/` を除去済みのため、`'$index/$rest'` 連結はキー衝突しない（生 NUL バイトを区切りに使う既存パターン＝監査F166 の罠は採らない）。
 
-走査は1回（per-episode の glob ではない）。`listSync` は DL サービス内（既にファイルIOを行う文脈）であり、UIスレッドのホットパス（F162とは別文脈）ではないため許容。
+走査は1回（per-episode の glob ではない）。`listSync` は DL サービス内（既にファイルIOを行う文脈）であり、UIスレッドのホットパス（F162とは別文脈）ではないため許容。`listSync(followLinks: false)` は try/catch でガードし、列挙失敗時は移行をスキップ（DL全体は中断しない＝下記リスク欄の no-abort 契約）。
 
 ### 決定3: リネームと残留ゴミ削除の条件
 
