@@ -1,8 +1,4 @@
-## Purpose
-
-Persist user bookmarks (novel ID, file name, optional line number) in the SQLite metadata database. Provides CRUD APIs for adding, removing, listing, and checking bookmarks, with database migrations to evolve the `bookmarks` table schema over time.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Bookmark data persistence
 The system SHALL persist bookmark data in the existing SQLite database (`novel_metadata.db`) using a `bookmarks` table. The bookmark identity SHALL be the move/rename-safe combination of `novel_id` and `file_name` (plus optional `line_number`); the table SHALL NOT persist the absolute file path. The database version SHALL be upgraded to 8, which recreates the `bookmarks` table to drop the `file_path` column and change the UNIQUE constraint from (`novel_id`, `file_path`, `line_number`) to (`novel_id`, `file_name`, `line_number`).
@@ -61,17 +57,6 @@ The system SHALL allow removing a bookmark by its novel_id, file_name, and line_
 - **WHEN** a bookmark removal is requested for a novel_id, file_name, and line_number combination that does not exist
 - **THEN** the operation SHALL complete without error
 
-### Requirement: List bookmarks for a novel
-The system SHALL provide a list of all bookmarks for a given novel, ordered by creation time (newest first).
-
-#### Scenario: Novel has bookmarks with line numbers
-- **WHEN** bookmarks are requested for novel_id "n1234" which has 3 bookmarks (including some with line numbers)
-- **THEN** all 3 bookmarks SHALL be returned with their line_number values, ordered by created_at descending
-
-#### Scenario: Novel has no bookmarks
-- **WHEN** bookmarks are requested for a novel_id that has no bookmarks
-- **THEN** an empty list SHALL be returned
-
 ### Requirement: Check bookmark existence
 The system SHALL provide a way to check whether a specific file and line combination is bookmarked within a novel, keyed on `novel_id` and `file_name`.
 
@@ -97,6 +82,8 @@ The system SHALL provide a way to retrieve all bookmarks for a specific file wit
 #### Scenario: File has no bookmarks
 - **WHEN** bookmarks are requested for a novel_id and file_name combination that has no bookmarks
 - **THEN** an empty list SHALL be returned
+
+## ADDED Requirements
 
 ### Requirement: Bookmark jump is move/rename-safe
 When the user opens (jumps to) a stored bookmark, the system SHALL resolve the target file's absolute path from the novel's current folder location and the bookmark's `file_name`, rather than from any persisted absolute path. As a fail-safe, the system SHALL verify the resolved file exists before navigating and SHALL show the existing "file not found" message when it does not.

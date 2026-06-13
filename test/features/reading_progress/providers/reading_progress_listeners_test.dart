@@ -21,11 +21,9 @@ NovelMetadata _novel(String folderName) => NovelMetadata(
 
 class _UpsertCall {
   final String novelId;
-  final String filePath;
   final String fileName;
   const _UpsertCall({
     required this.novelId,
-    required this.filePath,
     required this.fileName,
   });
 }
@@ -45,13 +43,11 @@ class _FakeRepository implements ReadingProgressRepository {
   @override
   Future<void> upsert({
     required String novelId,
-    required String filePath,
     required String fileName,
   }) async {
     if (upsertSideEffect != null) await upsertSideEffect!();
     upsertCalls.add(_UpsertCall(
       novelId: novelId,
-      filePath: filePath,
       fileName: fileName,
     ));
   }
@@ -116,8 +112,6 @@ void main() {
 
       expect(repo.upsertCalls.length, 1);
       expect(repo.upsertCalls.first.novelId, 'narou_n1234ab');
-      expect(repo.upsertCalls.first.filePath,
-          '/library/narou_n1234ab/003_chapter3.txt');
       expect(repo.upsertCalls.first.fileName, '003_chapter3.txt');
     });
 
@@ -266,7 +260,6 @@ void main() {
         onFindByNovelId: (id) => id == 'narou_n1234ab'
             ? ReadingProgress(
                 novelId: 'narou_n1234ab',
-                filePath: chapter3.path,
                 fileName: chapter3.name,
                 updatedAt: DateTime(2026, 5, 26),
               )
@@ -295,6 +288,56 @@ void main() {
     });
 
     test(
+        'entering a moved/renamed novel folder still restores the file by name',
+        () async {
+      // F128: the novel folder was moved since progress was saved. Matching is
+      // by file_name within the CURRENT directory listing, so the stored (now
+      // stale) absolute location is irrelevant — the file still opens. The
+      // current folder's leaf is the registered novel id, so resolution works
+      // at the new location.
+      const movedFolder = '/library/moved/narou_n1234ab';
+      const movedChapter3 = FileEntry(
+        name: '003_chapter3.txt',
+        path: '/library/moved/narou_n1234ab/003_chapter3.txt',
+      );
+      final repo = _FakeRepository(
+        onFindByNovelId: (id) => id == 'narou_n1234ab'
+            ? ReadingProgress(
+                novelId: 'narou_n1234ab',
+                fileName: '003_chapter3.txt',
+                updatedAt: DateTime(2026, 5, 26),
+              )
+            : null,
+      );
+      final container = _buildContainer(
+        repository: repo,
+        initialDirectory: '/library',
+        registeredFolders: const {'narou_n1234ab'},
+        contentsByPath: const {
+          movedFolder: DirectoryContents(
+            files: [movedChapter3],
+            subdirectories: [],
+          ),
+        },
+      );
+      addTearDown(container.dispose);
+
+      container.read(readingProgressAutoOpenListenerProvider);
+      container
+          .read(currentDirectoryProvider.notifier)
+          .setDirectory(movedFolder);
+      await container.read(directoryContentsProvider.future);
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      final selected = container.read(selectedFileProvider);
+      expect(selected, isNotNull);
+      expect(selected!.path, movedChapter3.path,
+          reason: 'auto-open SHALL match by file_name in the current folder, '
+              'ignoring the stale stored location');
+    });
+
+    test(
         'entering a nested novel folder resolves the registered leaf id '
         '(F106 regression)', () async {
       const nestedFolder = '/library/お気に入り/narou_n1234ab';
@@ -306,7 +349,6 @@ void main() {
         onFindByNovelId: (id) => id == 'narou_n1234ab'
             ? ReadingProgress(
                 novelId: 'narou_n1234ab',
-                filePath: nestedChapter3.path,
                 fileName: nestedChapter3.name,
                 updatedAt: DateTime(2026, 5, 26),
               )
@@ -364,7 +406,6 @@ void main() {
       final repo = _FakeRepository(
         onFindByNovelId: (id) => ReadingProgress(
           novelId: 'narou_n1234ab',
-          filePath: '/library/narou_n1234ab/099_removed.txt',
           fileName: '099_removed.txt',
           updatedAt: DateTime(2026, 5, 26),
         ),
@@ -391,7 +432,6 @@ void main() {
       final repo = _FakeRepository(
         onFindByNovelId: (id) => ReadingProgress(
           novelId: id,
-          filePath: chapter3.path,
           fileName: chapter3.name,
           updatedAt: DateTime(2026, 5, 26),
         ),
@@ -420,7 +460,6 @@ void main() {
       final repo = _FakeRepository(
         onFindByNovelId: (id) => ReadingProgress(
           novelId: 'narou_n1234ab',
-          filePath: chapter3.path,
           fileName: chapter3.name,
           updatedAt: DateTime(2026, 5, 26),
         ),
@@ -477,13 +516,11 @@ void main() {
       // Spec scenario: enter -> auto-open A -> user taps B (auto-save writes B)
       // -> back to library root (UI clears selection) -> re-enter -> auto-open
       // fires again and selects B because reading_progress now holds B.
-      String currentlyStoredPath = chapter3.path;
       String currentlyStoredName = chapter3.name;
       final repo = _FakeRepository(
         onFindByNovelId: (id) => id == 'narou_n1234ab'
             ? ReadingProgress(
                 novelId: 'narou_n1234ab',
-                filePath: currentlyStoredPath,
                 fileName: currentlyStoredName,
                 updatedAt: DateTime(2026, 5, 27),
               )
@@ -516,10 +553,9 @@ void main() {
       container.read(selectedFileProvider.notifier).selectFile(chapter5);
       await Future<void>.delayed(Duration.zero);
       await Future<void>.delayed(Duration.zero);
-      expect(repo.upsertCalls.map((c) => c.filePath), contains(chapter5.path),
+      expect(repo.upsertCalls.map((c) => c.fileName), contains(chapter5.name),
           reason: 'user tap SHALL be persisted via auto-save');
       // Reflect that persistence in the fake's lookup state.
-      currentlyStoredPath = chapter5.path;
       currentlyStoredName = chapter5.name;
 
       // Mimic the production UI path: directory change back to root clears

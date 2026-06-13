@@ -24,7 +24,6 @@ void main() {
           await db.execute('''
             CREATE TABLE reading_progress (
               novel_id TEXT NOT NULL PRIMARY KEY,
-              file_path TEXT NOT NULL,
               file_name TEXT NOT NULL,
               updated_at TEXT NOT NULL
             )

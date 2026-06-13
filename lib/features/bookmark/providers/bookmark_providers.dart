@@ -45,21 +45,19 @@ Future<void> toggleBookmark(
   BookmarkRepository repository, {
   required String novelId,
   required String fileName,
-  required String filePath,
   required bool isCurrentlyBookmarked,
   int? lineNumber,
 }) async {
   if (isCurrentlyBookmarked) {
     await repository.remove(
       novelId: novelId,
-      filePath: filePath,
+      fileName: fileName,
       lineNumber: lineNumber,
     );
   } else {
     await repository.add(
       novelId: novelId,
       fileName: fileName,
-      filePath: filePath,
       lineNumber: lineNumber,
     );
   }
@@ -99,7 +97,7 @@ final bookmarkLineNumbersForFileProvider =
   final repository = ref.watch(bookmarkRepositoryProvider);
   final bookmarks = await repository.findByNovelAndFile(
     novelId: novelId,
-    filePath: selectedFile.path,
+    fileName: selectedFile.name,
   );
   return bookmarks
       .where((b) => b.lineNumber != null)

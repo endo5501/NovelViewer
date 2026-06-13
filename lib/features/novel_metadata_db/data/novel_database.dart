@@ -54,7 +54,7 @@ class NovelDatabaseSnapshotResolver {
 
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
-  static const _databaseVersion = 7;
+  static const _databaseVersion = 8;
   static final _log = Logger('novel_metadata_db');
 
   final String? _dbDirPath;
@@ -114,8 +114,8 @@ class NovelDatabase {
       ON novels(site_type, novel_id)
     ''');
     await _createV5WordSummariesTable(db);
-    await _createBookmarksTable(db);
-    await _createReadingProgressTable(db);
+    await _createBookmarksTableV8(db);
+    await _createReadingProgressTableV8(db);
     await _createFactCacheTable(db);
   }
 
@@ -141,6 +141,9 @@ class NovelDatabase {
     }
     if (oldVersion < 7) {
       await _createFactCacheTable(db);
+    }
+    if (oldVersion < 8) {
+      await _migrateBookmarksAndProgressToRelativePath(db, logger: _log);
     }
   }
 
@@ -243,6 +246,111 @@ class NovelDatabase {
       SELECT id, novel_id, file_name, file_path, NULL, created_at FROM bookmarks_old
     ''');
     await db.execute('DROP TABLE bookmarks_old');
+  }
+
+  /// v8 `bookmarks` schema: file identity is the move/rename-safe pair
+  /// `(novel_id, file_name)` plus optional `line_number`. The absolute
+  /// `file_path` column is gone — consumers reconstruct the path from the
+  /// novel's current folder at read time.
+  static Future<void> _createBookmarksTableV8(Database db) async {
+    await db.execute('''
+      CREATE TABLE bookmarks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        novel_id TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        line_number INTEGER,
+        created_at TEXT NOT NULL,
+        UNIQUE(novel_id, file_name, line_number)
+      )
+    ''');
+  }
+
+  /// v8 `reading_progress` schema: stores `file_name` only (no absolute path).
+  static Future<void> _createReadingProgressTableV8(Database db) async {
+    await db.execute('''
+      CREATE TABLE reading_progress (
+        novel_id TEXT NOT NULL PRIMARY KEY,
+        file_name TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+  /// v7 → v8: drop the absolute `file_path` column from `bookmarks` and
+  /// `reading_progress`, re-keying bookmark identity on
+  /// `(novel_id, file_name, line_number)`.
+  ///
+  /// SQLite cannot drop a column or change a UNIQUE constraint in place on old
+  /// engine versions, so both tables are rebuilt via the
+  /// rename-old → create-canonical → copy → drop-old pattern (the same shape as
+  /// the v3 → v4 [_migrateBookmarksAddLineNumber] migration). Reusing the
+  /// `_create*TableV8` helpers keeps the upgraded schema identical to a fresh
+  /// install — there is no second copy of the DDL to drift. sqflite runs the
+  /// whole upgrade callback inside a transaction, so a mid-migration crash
+  /// rolls back atomically and re-runs on the next launch (`user_version` is
+  /// only bumped after success).
+  ///
+  /// Both tables are guaranteed to exist by this point on every real upgrade
+  /// path: `bookmarks` was created at v3, `reading_progress` at v6, both before
+  /// this v7 → v8 step in [_onUpgrade].
+  ///
+  /// Bookmark dedup: collapsing `file_path` can make formerly-distinct rows
+  /// collide on the new identity `(novel_id, file_name, line_number)`. For each
+  /// such group the copy keeps only the earliest row (`created_at ASC, id ASC`)
+  /// — the user's first bookmark. The dedup treats `line_number IS NULL` rows
+  /// for the same file as one group (NULL == NULL), matching the repository's
+  /// runtime add-dedup which also special-cases NULL; the new UNIQUE constraint
+  /// alone would not catch that, since SQLite treats NULLs as distinct in
+  /// UNIQUE. `changes()` after the copy reports how many rows survived, so the
+  /// dropped count is exact without a second table scan.
+  static Future<void> _migrateBookmarksAndProgressToRelativePath(
+    Database db, {
+    Logger? logger,
+  }) async {
+    // --- bookmarks ---
+    final bookmarkCountBefore =
+        (await db.rawQuery('SELECT COUNT(*) AS c FROM bookmarks'))
+            .first['c'] as int;
+    await db.execute('ALTER TABLE bookmarks RENAME TO bookmarks_v7old');
+    await _createBookmarksTableV8(db);
+    // Keep, per (novel_id, file_name, line_number) group, only the earliest
+    // row. The line_number match treats NULL as equal so duplicate whole-file
+    // bookmarks (which the UNIQUE constraint would NOT dedup) collapse too.
+    await db.execute('''
+      INSERT INTO bookmarks
+        (id, novel_id, file_name, line_number, created_at)
+      SELECT id, novel_id, file_name, line_number, created_at
+      FROM bookmarks_v7old b
+      WHERE id = (
+        SELECT id FROM bookmarks_v7old g
+        WHERE g.novel_id = b.novel_id
+          AND g.file_name = b.file_name
+          AND (g.line_number = b.line_number
+               OR (g.line_number IS NULL AND b.line_number IS NULL))
+        ORDER BY created_at ASC, id ASC
+        LIMIT 1
+      )
+    ''');
+    final bookmarkCountAfter =
+        (await db.rawQuery('SELECT changes() AS c')).first['c'] as int;
+    await db.execute('DROP TABLE bookmarks_v7old');
+    final deduped = bookmarkCountBefore - bookmarkCountAfter;
+    if (deduped > 0) {
+      logger?.warning(
+        'v8 migration: deduplicated $deduped bookmark row(s) that collided on '
+        '(novel_id, file_name, line_number) after dropping file_path',
+      );
+    }
+
+    // --- reading_progress ---
+    await db.execute(
+        'ALTER TABLE reading_progress RENAME TO reading_progress_v7old');
+    await _createReadingProgressTableV8(db);
+    await db.execute('''
+      INSERT INTO reading_progress (novel_id, file_name, updated_at)
+      SELECT novel_id, file_name, updated_at FROM reading_progress_v7old
+    ''');
+    await db.execute('DROP TABLE reading_progress_v7old');
   }
 
   /// Reshape the v4 `word_summaries` table into the v5 snapshot schema.

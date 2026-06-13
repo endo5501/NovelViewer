@@ -12,7 +12,6 @@ class BookmarkRepository {
   Future<void> add({
     required String novelId,
     required String fileName,
-    required String filePath,
     int? lineNumber,
   }) async {
     // SQLite treats NULLs as distinct in UNIQUE constraints,
@@ -20,7 +19,7 @@ class BookmarkRepository {
     if (lineNumber == null) {
       final alreadyExists = await exists(
         novelId: novelId,
-        filePath: filePath,
+        fileName: fileName,
       );
       if (alreadyExists) return;
     }
@@ -28,7 +27,6 @@ class BookmarkRepository {
     final bookmark = Bookmark(
       novelId: novelId,
       fileName: fileName,
-      filePath: filePath,
       lineNumber: lineNumber,
       createdAt: DateTime.now(),
     );
@@ -43,21 +41,21 @@ class BookmarkRepository {
 
   Future<void> remove({
     required String novelId,
-    required String filePath,
+    required String fileName,
     int? lineNumber,
   }) async {
     final db = await _novelDatabase.database;
     if (lineNumber != null) {
       await db.delete(
         _tableName,
-        where: 'novel_id = ? AND file_path = ? AND line_number = ?',
-        whereArgs: [novelId, filePath, lineNumber],
+        where: 'novel_id = ? AND file_name = ? AND line_number = ?',
+        whereArgs: [novelId, fileName, lineNumber],
       );
     } else {
       await db.delete(
         _tableName,
-        where: 'novel_id = ? AND file_path = ? AND line_number IS NULL',
-        whereArgs: [novelId, filePath],
+        where: 'novel_id = ? AND file_name = ? AND line_number IS NULL',
+        whereArgs: [novelId, fileName],
       );
     }
   }
@@ -88,13 +86,13 @@ class BookmarkRepository {
 
   Future<List<Bookmark>> findByNovelAndFile({
     required String novelId,
-    required String filePath,
+    required String fileName,
   }) async {
     final db = await _novelDatabase.database;
     final maps = await db.query(
       _tableName,
-      where: 'novel_id = ? AND file_path = ?',
-      whereArgs: [novelId, filePath],
+      where: 'novel_id = ? AND file_name = ?',
+      whereArgs: [novelId, fileName],
       orderBy: 'line_number ASC',
     );
     return maps.map(Bookmark.fromMap).toList();
@@ -102,18 +100,18 @@ class BookmarkRepository {
 
   Future<bool> exists({
     required String novelId,
-    required String filePath,
+    required String fileName,
     int? lineNumber,
   }) async {
     final db = await _novelDatabase.database;
     final String where;
     final List<Object?> whereArgs;
     if (lineNumber != null) {
-      where = 'novel_id = ? AND file_path = ? AND line_number = ?';
-      whereArgs = [novelId, filePath, lineNumber];
+      where = 'novel_id = ? AND file_name = ? AND line_number = ?';
+      whereArgs = [novelId, fileName, lineNumber];
     } else {
-      where = 'novel_id = ? AND file_path = ? AND line_number IS NULL';
-      whereArgs = [novelId, filePath];
+      where = 'novel_id = ? AND file_name = ? AND line_number IS NULL';
+      whereArgs = [novelId, fileName];
     }
     final result = await db.query(
       _tableName,

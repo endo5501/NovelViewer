@@ -109,6 +109,20 @@ void main() {
                   updated_at TEXT NOT NULL
                 )
               ''');
+              // A real v6 DB always has a bookmarks table (added at v3). The
+              // v7→v8 relative-path migration rebuilds it, so it must be present
+              // in this seed for the full upgrade chain to succeed.
+              await db.execute('''
+                CREATE TABLE bookmarks (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  novel_id TEXT NOT NULL,
+                  file_name TEXT NOT NULL,
+                  file_path TEXT NOT NULL,
+                  line_number INTEGER,
+                  created_at TEXT NOT NULL,
+                  UNIQUE(novel_id, file_path, line_number)
+                )
+              ''');
               await db.insert('word_summaries', {
                 'folder_name': 'narou_n1234ab',
                 'word': 'アリス',

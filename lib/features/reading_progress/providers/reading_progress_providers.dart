@@ -36,7 +36,6 @@ final readingProgressAutoSaveListenerProvider = Provider<void>((ref) {
     try {
       await ref.read(readingProgressRepositoryProvider).upsert(
             novelId: novelId,
-            filePath: next.path,
             fileName: next.name,
           );
     } catch (e, st) {
@@ -105,10 +104,13 @@ final readingProgressAutoOpenListenerProvider = Provider<void>((ref) {
 
     FileEntry? match;
     for (final entry in contents.files) {
-      // p.equals normalises path separators and case where appropriate so
-      // a stored 'D:/library/...' path still matches a listing that walks
-      // the same file on Windows where the FS is case-insensitive.
-      if (p.equals(entry.path, progress.filePath)) {
+      // Match on file_name within the current directory listing rather than a
+      // persisted absolute path, so a moved/renamed novel folder still
+      // restores progress. `p.equals` compares the base names with the same
+      // platform semantics the old absolute-path match used — notably
+      // case-insensitive on Windows, where the FS is case-preserving but
+      // case-insensitive.
+      if (p.equals(entry.name, progress.fileName)) {
         match = entry;
         break;
       }

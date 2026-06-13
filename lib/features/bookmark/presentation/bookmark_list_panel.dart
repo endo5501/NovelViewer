@@ -91,7 +91,7 @@ class BookmarkListPanel extends ConsumerWidget {
     final repository = ref.read(bookmarkRepositoryProvider);
     await repository.remove(
       novelId: bookmark.novelId,
-      filePath: bookmark.filePath,
+      fileName: bookmark.fileName,
       lineNumber: bookmark.lineNumber,
     );
     ref.invalidate(bookmarksForNovelProvider(bookmark.novelId));
@@ -104,18 +104,23 @@ class BookmarkListPanel extends ConsumerWidget {
     WidgetRef ref,
     Bookmark bookmark,
   ) {
-    final file = File(bookmark.filePath);
-    if (!file.existsSync()) {
+    // Reconstruct the target path from the novel's *current* folder + the
+    // bookmark's file_name (no absolute path is persisted). The panel only
+    // lists bookmarks for the current novel, so currentDirectory is that
+    // novel's folder. existsSync stays as a fail-safe for the rare case the
+    // file is gone (e.g. a renumber after refresh).
+    final currentDir = ref.read(currentDirectoryProvider);
+    final resolvedPath =
+        currentDir == null ? null : p.join(currentDir, bookmark.fileName);
+    if (resolvedPath == null || !File(resolvedPath).existsSync()) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.bookmark_fileNotFound)),
       );
       return;
     }
 
-    final directory = p.dirname(bookmark.filePath);
-    ref.read(currentDirectoryProvider.notifier).setDirectory(directory);
     ref.read(selectedFileProvider.notifier).selectFile(
-          FileEntry(name: bookmark.fileName, path: bookmark.filePath),
+          FileEntry(name: bookmark.fileName, path: resolvedPath),
         );
     if (bookmark.lineNumber != null) {
       ref.read(bookmarkJumpLineProvider.notifier).jump(bookmark.lineNumber!);
