@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_format_exception.dart';
 
 class OllamaClient extends LlmClient {
   final String baseUrl;
@@ -19,13 +20,22 @@ class OllamaClient extends LlmClient {
     required http.Client httpClient,
   }) async {
     final response = await httpClient.get(Uri.parse('$baseUrl/api/tags'));
-    _ensureOk(response);
+    final body = _decodeOk(response);
 
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
-    final models = json['models'] as List<dynamic>;
-    return models
-        .map((m) => (m as Map<String, dynamic>)['name'] as String)
-        .toList();
+    final decoded = jsonDecode(body);
+    final models = decoded is Map<String, dynamic> ? decoded['models'] : null;
+    if (models is! List) {
+      throw LlmResponseFormatException.withBody(
+        'Ollama /api/tags response has no models list', body);
+    }
+    return models.map((m) {
+      final name = m is Map<String, dynamic> ? m['name'] : null;
+      if (name is! String) {
+        throw LlmResponseFormatException.withBody(
+          'Ollama model entry has a missing or non-string name', body);
+      }
+      return name;
+    }).toList();
   }
 
   @override
@@ -35,7 +45,12 @@ class OllamaClient extends LlmClient {
       'prompt': prompt,
       'stream': false,
     });
-    return json['response'] as String;
+    final response = json['response'];
+    if (response is! String) {
+      throw LlmResponseFormatException(
+        'Ollama /api/generate response field is missing or not a string');
+    }
+    return response;
   }
 
   @override
@@ -56,15 +71,26 @@ class OllamaClient extends LlmClient {
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode(body),
     );
-    _ensureOk(response);
-    return jsonDecode(response.body) as Map<String, dynamic>;
+    final decodedBody = _decodeOk(response);
+    final decoded = jsonDecode(decodedBody);
+    if (decoded is! Map<String, dynamic>) {
+      throw LlmResponseFormatException.withBody(
+        'expected a JSON object at the top level', decodedBody);
+    }
+    return decoded;
   }
 
-  static void _ensureOk(http.Response response) {
+  /// Decodes the response body as UTF-8 (charset-independent) and throws on a
+  /// non-200 status. Returns the decoded body for further parsing.
+  /// `allowMalformed` so a non-UTF-8 error body does not throw FormatException
+  /// before the status check (the status error message stays diagnosable).
+  static String _decodeOk(http.Response response) {
+    final body = utf8.decode(response.bodyBytes, allowMalformed: true);
     if (response.statusCode != 200) {
       throw Exception(
-        'Ollama API error: ${response.statusCode} ${response.body}',
+        'Ollama API error: ${response.statusCode} $body',
       );
     }
+    return body;
   }
 }
