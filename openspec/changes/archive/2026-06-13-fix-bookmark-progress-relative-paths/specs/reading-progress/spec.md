@@ -1,8 +1,4 @@
-## Purpose
-
-Persist each novel's last opened file in the SQLite metadata database so the viewer can auto-open that file when the user re-enters the novel folder. Provides CRUD APIs for the one-row-per-novel `reading_progress` table, the auto-save trigger on file selection, the one-shot auto-open trigger on folder entry, and the WARNING-level failure-degradation contract.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Reading progress data persistence
 The system SHALL persist reading progress (last opened file per novel) in the existing SQLite database (`novel_metadata.db`) using a `reading_progress` table. The stored progress SHALL identify the file by `file_name` only and SHALL NOT persist an absolute file path. The database version SHALL be upgraded to 8, which recreates the `reading_progress` table to drop the `file_path` column.
@@ -44,17 +40,6 @@ The system SHALL provide a lookup operation that returns the single reading prog
 #### Scenario: Novel has no progress record
 - **WHEN** the reading progress is requested for novel_id "narou_unknown" which has no row stored
 - **THEN** the operation SHALL return null
-
-### Requirement: Delete reading progress by novel
-The system SHALL provide a deletion operation that removes the reading progress row for a given novel id. This operation SHALL be safe to call when no row exists.
-
-#### Scenario: Existing row is deleted
-- **WHEN** deletion is requested for novel_id "narou_n1234ab" which has a row stored
-- **THEN** the row SHALL be removed from the `reading_progress` table
-
-#### Scenario: Deletion of a non-existent row
-- **WHEN** deletion is requested for a novel_id that has no row
-- **THEN** the operation SHALL complete without error and SHALL NOT raise
 
 ### Requirement: Auto-save on file selection
 When the user opens a file inside a novel folder, the system SHALL upsert that file as the novel's reading progress, storing the file's `file_name`. The save SHALL be triggered whenever `selectedFileProvider` transitions to a non-null value while the current directory resolves to a non-null novel id. The novel id SHALL be derived with the shared nesting-aware rule `resolveNovelId` (nearest registered ancestor folder's leaf name = `folder_name`), NOT the first path segment under the library root. Selections made while no novel id can be resolved (library root, or a path with no registered ancestor folder) SHALL NOT save progress.
@@ -123,16 +108,3 @@ The novel id used for the lookup SHALL be derived with `resolveNovelId` (nearest
 #### Scenario: Library root entry does not auto-open
 - **WHEN** the user navigates to the library root path
 - **THEN** no auto-open SHALL occur (no novel id can be resolved at the library root)
-
-### Requirement: Repository failure is observable and non-fatal
-When the reading progress repository fails (e.g., the database is locked or corrupt), the system SHALL log the failure at WARNING level via `Logger('reading_progress')` and SHALL degrade gracefully: a failed save SHALL be silently dropped, and a failed read SHALL be treated as "no progress record" so the file listing remains usable. The system SHALL NOT swallow the exception silently (i.e., logging is mandatory).
-
-#### Scenario: Save fails
-- **WHEN** the upsert operation throws during a file selection
-- **THEN** a WARNING-level `LogRecord` SHALL be emitted on `Logger('reading_progress')` containing the exception
-- **AND** the user SHALL NOT see a crash or error dialog (the file remains opened)
-
-#### Scenario: Read fails on folder entry
-- **WHEN** the lookup operation throws on novel folder entry
-- **THEN** a WARNING-level `LogRecord` SHALL be emitted on `Logger('reading_progress')` containing the exception
-- **AND** no automatic selection SHALL occur (the user sees the normal unselected listing)

@@ -86,7 +86,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       repository,
       novelId: novelId,
       fileName: selectedFile.name,
-      filePath: selectedFile.path,
       isCurrentlyBookmarked: isBookmarked,
       lineNumber: lineNumber,
     );

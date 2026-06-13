@@ -11,7 +11,6 @@ class ReadingProgressRepository {
 
   Future<void> upsert({
     required String novelId,
-    required String filePath,
     required String fileName,
   }) async {
     final db = await _novelDatabase.database;
@@ -19,7 +18,6 @@ class ReadingProgressRepository {
       _tableName,
       {
         'novel_id': novelId,
-        'file_path': filePath,
         'file_name': fileName,
         'updated_at': DateTime.now().toIso8601String(),
       },

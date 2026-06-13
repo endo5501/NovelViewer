@@ -86,7 +86,6 @@ void main() {
           await db.execute('''
             CREATE TABLE reading_progress (
               novel_id TEXT NOT NULL PRIMARY KEY,
-              file_path TEXT NOT NULL,
               file_name TEXT NOT NULL,
               updated_at TEXT NOT NULL
             )
@@ -112,10 +111,9 @@ void main() {
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               novel_id TEXT NOT NULL,
               file_name TEXT NOT NULL,
-              file_path TEXT NOT NULL,
               line_number INTEGER,
               created_at TEXT NOT NULL,
-              UNIQUE(novel_id, file_path, line_number)
+              UNIQUE(novel_id, file_name, line_number)
             )
           ''');
         },
@@ -233,7 +231,6 @@ void main() {
       await novelRepository.upsert(createMetadata());
       await readingProgressRepository.upsert(
         novelId: 'narou_n1234ab',
-        filePath: '/library/narou_n1234ab/003_chapter3.txt',
         fileName: '003_chapter3.txt',
       );
       final novelDir = Directory('${tempDir.path}/narou_n1234ab');
@@ -298,13 +295,11 @@ void main() {
       await bookmarkRepository.add(
         novelId: 'narou_n1234ab',
         fileName: '001.txt',
-        filePath: '/library/narou_n1234ab/001.txt',
         lineNumber: 5,
       );
       await bookmarkRepository.add(
         novelId: 'narou_n1234ab',
         fileName: '002.txt',
-        filePath: '/library/narou_n1234ab/002.txt',
       );
       final novelDir = Directory('${tempDir.path}/narou_n1234ab');
       novelDir.createSync();
@@ -325,7 +320,6 @@ void main() {
       await bookmarkRepository.add(
         novelId: 'narou_n5678cd',
         fileName: '001.txt',
-        filePath: '/library/narou_n5678cd/001.txt',
       );
       final novelDir = Directory('${tempDir.path}/narou_n1234ab');
       novelDir.createSync();
@@ -348,7 +342,6 @@ void main() {
       await bookmarkRepository.add(
         novelId: 'narou_n1234ab',
         fileName: '001.txt',
-        filePath: '/library/narou_n1234ab/001.txt',
       );
       final novelDir = Directory('${tempDir.path}/narou_n1234ab');
       novelDir.createSync();
@@ -402,7 +395,6 @@ void main() {
       await bookmarkRepository.add(
         novelId: resolvedId!,
         fileName: '001.txt',
-        filePath: nestedFile,
       );
       final novelDir = Directory('${tempDir.path}/narou_n1234ab');
       novelDir.createSync();
@@ -438,7 +430,6 @@ void main() {
       );
       await readingProgressRepository.upsert(
         novelId: 'narou_n5678cd',
-        filePath: '/library/narou_n5678cd/002_chapter2.txt',
         fileName: '002_chapter2.txt',
       );
       final novelDir = Directory('${tempDir.path}/narou_n1234ab');

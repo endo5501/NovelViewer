@@ -62,7 +62,7 @@ TTSが複雑性の中心: FFIで `qwen3-tts.cpp`（abort対応・24kHz）と `pi
 | F125 | アーキテクチャ | lib/features/file_browser/presentation/file_browser_panel.dart:586-615 | Medium | L | DBハンドルのライフサイクルをwidget層が振り付け（currentDirectory退避→選択クリア→awaited close、の順序が必須）。per-folder DB providerの新規消費者を追加するたびにlocked-DBバグが再発する構造 | open/closeを所有するper-folder DBハンドルレジストリ（awaitableな`closeAll(folder)`）を導入し、providerは薄いビューに |
 | F126 | 一貫性 | lib/shared/database/folder_db_key.dart:3-5 vs lib/features/tts/providers/tts_audio_database_provider.dart:13-32 ほか約8呼び出し箇所 | Medium | S | `folderDbKey`のドキュメントは3つのper-folder DB familyすべての正規化を謳うが、適用されているのはepisode_cacheのみ。TTS系は生パス綴りがキーで、`'$a/$b'`連結パスを渡す未来の呼び出し1つでcommit 81ca506のバグがtts_audio.dbで再発する | 各family provider本体の中で`folderDbKey`を適用し、呼び出し側の規律を不要に |
 | F127 | DBハイジーン | lib/features/novel_delete/data/novel_delete_service.dart:44-49 | Medium | S | 同一DBへの4連DELETEがトランザクションなし。novels行（リトライのアンカー）削除後のクラッシュでword_summaries/fact_cache/reading_progressが永久孤児化 | ✅ 対応済み(fix-novel-identity-consistency): 5テーブル削除(novels/word_summaries/fact_cache/reading_progress/bookmarks)を単一`db.transaction`で原子化。各repo delete に optional `DatabaseExecutor? txn` を追加 |
-| F128 | DBハイジーン | lib/features/bookmark/domain/bookmark.dart:5 / novel_database.dart:229-235（reading_progress） | Medium | M | 両テーブルが絶対`file_path`を保存。フォルダ移動/リネームで進捗の自動オープンが無言で外れ（reading_progress_providers.dart:100）、ブックマークジャンプは「ファイルなし」（bookmark_list_panel.dart:107-113）。`file_name`列は既にある | novel相対パス（novel_id + file_name）保存に移行＋既存行のワンショットマイグレーション |
+| F128 | DBハイジーン | lib/features/bookmark/domain/bookmark.dart:5 / novel_database.dart:229-235（reading_progress） | Medium | M | 両テーブルが絶対`file_path`を保存。フォルダ移動/リネームで進捗の自動オープンが無言で外れ（reading_progress_providers.dart:100）、ブックマークジャンプは「ファイルなし」（bookmark_list_panel.dart:107-113）。`file_name`列は既にある | ✅ 対応済み(fix-bookmark-progress-relative-paths): `file_path`列を両テーブルから削除しv7→v8移行（dedupはNULL行含め最古保持、`changes()`で件数算出）。同一性を`(novel_id, file_name)`に統一、読み取り時は現在の小説フォルダ+file_nameでパス再構成、auto-openは現在ディレクトリ内のfile_name一致（Windows大小無視は`p.equals`で維持）。v1→v8フルチェーン昇格テストも追加（F129を一部解消） |
 | F129 | テスト | lib/features/novel_metadata_db/data/novel_database.dart:238-246 | Medium | M | v3→v4ブックマーク移行（RENAME/再作成/コピー/DROP）のテストカバレッジゼロ。v1→v7のフルチェーン昇格テストもなく、`runMigrationForTesting`（:432-471）は_onUpgradeのステップ順序を迂回するため各versionブロックの相互作用が未検証 | 各歴史版をシードして`NovelDatabase`経由で開くパラメタライズドテスト |
 | F130 | テスト | test/features/novel_delete/data/novel_delete_service_test.dart:38-80 ほか計5フィクスチャ | Medium | M | 本番DDLがテストに手書きコピーされ、`_onCreate`（novel_database.dart:98-120）とのスキーマドリフトがテストを通過して本番で壊れる構造 | フィクスチャを`NovelDatabase(dbDirPath:)`+`setDatabase`経由か共有スキーマヘルパーで構築（v6移行テストが正しい手本） |
 | F131 | テスト | lib/features/file_browser/presentation/file_browser_panel.dart:422,:505 | Medium | M | move/renameのハンドル解放順序（F108のレース）にテストなし。削除フローは novel_delete_order_test.dart:75-91 で固定済みという非対称が「削除だけ直った」原因 | 削除側のorder-testパターンをmove/renameに移植 |
@@ -154,7 +154,7 @@ final status = _stopped
 
 先に現挙動を固定する失敗系テスト（F122）を書いてから直す（TDD原則どおり）。✅ 失敗系・キャンセル系テストとサニタイズ済みフィクスチャを追加（empty_parse / request_timeout / index_truncated / download_cancellation / cancellation_token / provider_state / dialog）。コードレビューで判明したキャンセル中断時の例外誤分類（in-flight `ClientException` の `error` 誤判定、failedCount水増し、二重start、短編キャンセル未対応）も修正済み。
 
-### 3. 小説アイデンティティの整合性（F106 / F107 / F127）✅ 対応済み（change: fix-novel-identity-consistency）／ F128 は後続change
+### 3. 小説アイデンティティの整合性（F106 / F107 / F127）✅ 対応済み（change: fix-novel-identity-consistency）／ F128 も ✅ 対応済み（change: fix-bookmark-progress-relative-paths）
 
 3つは同じ根を持つ: 「小説を一意に識別する方法」が機能ごとにバラバラ。修正は1つの共有関数に収斂する:
 
@@ -165,7 +165,7 @@ final status = _stopped
 String? resolveNovelId(String libraryRoot, String filePath, Set<String> registeredFolders) { ... }
 ```
 
-`bookmark_providers.dart:12-22` と `reading_progress_providers.dart:61` をこれに差し替え、`novel_delete_service.dart:44-49` のカスケードに bookmarks を追加して4テーブル削除を `db.transaction` で包む（F127も同時に解消）。絶対パス→相対パスのマイグレーション（F128）は同じOpenSpec changeの後続タスクにする。
+`bookmark_providers.dart:12-22` と `reading_progress_providers.dart:61` をこれに差し替え、`novel_delete_service.dart:44-49` のカスケードに bookmarks を追加して4テーブル削除を `db.transaction` で包む（F127も同時に解消）。絶対パス→相対パスのマイグレーション（F128）は後続change `fix-bookmark-progress-relative-paths` で ✅ 対応済み（`file_path`列を削除しv7→v8移行、`(novel_id, file_name)`へ同一性統一）。
 
 ### 4. push/PRのCIを追加する（F114）
 

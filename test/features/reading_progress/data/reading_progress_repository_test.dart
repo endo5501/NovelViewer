@@ -14,15 +14,15 @@ void main() {
 
   setUp(() async {
     novelDatabase = NovelDatabase();
+    // v8 schema: reading_progress stores file_name only (no absolute path).
     final db = await databaseFactoryFfi.openDatabase(
       inMemoryDatabasePath,
       options: OpenDatabaseOptions(
-        version: 5,
+        version: 8,
         onCreate: (db, _) async {
           await db.execute('''
             CREATE TABLE reading_progress (
               novel_id TEXT NOT NULL PRIMARY KEY,
-              file_path TEXT NOT NULL,
               file_name TEXT NOT NULL,
               updated_at TEXT NOT NULL
             )
@@ -42,14 +42,12 @@ void main() {
     test('inserts a new row when none exists', () async {
       await repository.upsert(
         novelId: 'narou_n1234ab',
-        filePath: '/library/narou_n1234ab/001_chapter1.txt',
         fileName: '001_chapter1.txt',
       );
 
       final progress = await repository.findByNovelId('narou_n1234ab');
       expect(progress, isNotNull);
       expect(progress!.novelId, 'narou_n1234ab');
-      expect(progress.filePath, '/library/narou_n1234ab/001_chapter1.txt');
       expect(progress.fileName, '001_chapter1.txt');
       expect(progress.updatedAt, isNotNull);
     });
@@ -57,14 +55,12 @@ void main() {
     test('replaces the existing row without creating duplicates', () async {
       await repository.upsert(
         novelId: 'narou_n1234ab',
-        filePath: '/library/narou_n1234ab/001_chapter1.txt',
         fileName: '001_chapter1.txt',
       );
       // Small delay so updated_at strictly moves forward.
       await Future<void>.delayed(const Duration(milliseconds: 10));
       await repository.upsert(
         novelId: 'narou_n1234ab',
-        filePath: '/library/narou_n1234ab/005_chapter5.txt',
         fileName: '005_chapter5.txt',
       );
 
@@ -73,14 +69,12 @@ void main() {
       expect(rows.length, 1, reason: 'novel_id PK keeps the row count at 1');
 
       final progress = await repository.findByNovelId('narou_n1234ab');
-      expect(progress!.filePath, '/library/narou_n1234ab/005_chapter5.txt');
-      expect(progress.fileName, '005_chapter5.txt');
+      expect(progress!.fileName, '005_chapter5.txt');
     });
 
     test('updated_at advances on upsert', () async {
       await repository.upsert(
         novelId: 'narou_n1234ab',
-        filePath: '/library/narou_n1234ab/001_chapter1.txt',
         fileName: '001_chapter1.txt',
       );
       final first = await repository.findByNovelId('narou_n1234ab');
@@ -88,7 +82,6 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 10));
       await repository.upsert(
         novelId: 'narou_n1234ab',
-        filePath: '/library/narou_n1234ab/005_chapter5.txt',
         fileName: '005_chapter5.txt',
       );
       final second = await repository.findByNovelId('narou_n1234ab');
@@ -102,19 +95,17 @@ void main() {
     test('rows for different novels are independent', () async {
       await repository.upsert(
         novelId: 'narou_n1234ab',
-        filePath: '/library/narou_n1234ab/001_chapter1.txt',
         fileName: '001_chapter1.txt',
       );
       await repository.upsert(
         novelId: 'kakuyomu_1689',
-        filePath: '/library/kakuyomu_1689/002_chapter2.txt',
         fileName: '002_chapter2.txt',
       );
 
       final a = await repository.findByNovelId('narou_n1234ab');
       final b = await repository.findByNovelId('kakuyomu_1689');
-      expect(a!.filePath, '/library/narou_n1234ab/001_chapter1.txt');
-      expect(b!.filePath, '/library/kakuyomu_1689/002_chapter2.txt');
+      expect(a!.fileName, '001_chapter1.txt');
+      expect(b!.fileName, '002_chapter2.txt');
     });
   });
 
@@ -127,7 +118,6 @@ void main() {
     test('returns the stored row when present', () async {
       await repository.upsert(
         novelId: 'narou_n1234ab',
-        filePath: '/library/narou_n1234ab/003_chapter3.txt',
         fileName: '003_chapter3.txt',
       );
 
@@ -141,7 +131,6 @@ void main() {
     test('removes an existing row', () async {
       await repository.upsert(
         novelId: 'narou_n1234ab',
-        filePath: '/library/narou_n1234ab/001_chapter1.txt',
         fileName: '001_chapter1.txt',
       );
 
@@ -159,13 +148,12 @@ void main() {
     });
   });
 
-  group('error propagation (task 2.4)', () {
-    // Decision 5: the repository stays a thin CRUD layer. Callers
-    // (auto-save / auto-open listeners) wrap operations with try/catch and
-    // a WARNING log on `Logger('reading_progress')`. The repository itself
-    // MUST raise rather than silently swallow, so this contract is asserted
-    // explicitly here by dropping the table and verifying the SQL error
-    // surfaces.
+  group('error propagation', () {
+    // The repository stays a thin CRUD layer. Callers (auto-save / auto-open
+    // listeners) wrap operations with try/catch and a WARNING log on
+    // `Logger('reading_progress')`. The repository itself MUST raise rather
+    // than silently swallow, so this contract is asserted explicitly here by
+    // dropping the table and verifying the SQL error surfaces.
     Future<void> dropTable() async {
       final db = await novelDatabase.database;
       await db.execute('DROP TABLE reading_progress');
@@ -176,7 +164,6 @@ void main() {
       await expectLater(
         repository.upsert(
           novelId: 'narou_n1234ab',
-          filePath: '/library/narou_n1234ab/001_chapter1.txt',
           fileName: '001_chapter1.txt',
         ),
         throwsA(isA<Object>()),

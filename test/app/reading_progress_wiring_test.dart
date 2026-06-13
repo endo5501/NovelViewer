@@ -24,10 +24,9 @@ class _RecordingRepository implements ReadingProgressRepository {
   @override
   Future<void> upsert({
     required String novelId,
-    required String filePath,
     required String fileName,
   }) async {
-    upsertCalls.add('$novelId|$filePath');
+    upsertCalls.add('$novelId|$fileName');
   }
 
   @override
@@ -72,16 +71,14 @@ void main() {
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               novel_id TEXT NOT NULL,
               file_name TEXT NOT NULL,
-              file_path TEXT NOT NULL,
               line_number INTEGER,
               created_at TEXT NOT NULL,
-              UNIQUE(novel_id, file_path, line_number)
+              UNIQUE(novel_id, file_name, line_number)
             )
           ''');
           await db.execute('''
             CREATE TABLE reading_progress (
               novel_id TEXT NOT NULL PRIMARY KEY,
-              file_path TEXT NOT NULL,
               file_name TEXT NOT NULL,
               updated_at TEXT NOT NULL
             )
@@ -164,7 +161,7 @@ void main() {
 
         expect(
           repo.upsertCalls,
-          contains('narou_n1234ab|/library/narou_n1234ab/003_chapter3.txt'),
+          contains('narou_n1234ab|003_chapter3.txt'),
         );
       });
     },
@@ -181,7 +178,6 @@ void main() {
         lookup: (id) => id == 'narou_n1234ab'
             ? ReadingProgress(
                 novelId: id,
-                filePath: chapter3.path,
                 fileName: chapter3.name,
                 updatedAt: DateTime(2026, 5, 26),
               )

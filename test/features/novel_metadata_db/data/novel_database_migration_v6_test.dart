@@ -29,8 +29,11 @@ void main() {
           final columns =
               await db.rawQuery('PRAGMA table_info(reading_progress)');
           final columnNames = columns.map((c) => c['name']).toSet();
+          // Fresh install now lands at v8, which drops the absolute file_path
+          // column (F128). reading_progress identifies the file by file_name.
           expect(columnNames,
-              containsAll(['novel_id', 'file_path', 'file_name', 'updated_at']));
+              containsAll(['novel_id', 'file_name', 'updated_at']));
+          expect(columnNames, isNot(contains('file_path')));
 
           final pkColumns = columns
               .where((c) => (c['pk'] as int) > 0)

@@ -1,12 +1,10 @@
 class ReadingProgress {
   final String novelId;
-  final String filePath;
   final String fileName;
   final DateTime updatedAt;
 
   const ReadingProgress({
     required this.novelId,
-    required this.filePath,
     required this.fileName,
     required this.updatedAt,
   });
@@ -14,7 +12,6 @@ class ReadingProgress {
   factory ReadingProgress.fromMap(Map<String, dynamic> map) {
     return ReadingProgress(
       novelId: map['novel_id'] as String,
-      filePath: map['file_path'] as String,
       fileName: map['file_name'] as String,
       updatedAt: DateTime.parse(map['updated_at'] as String),
     );
@@ -23,7 +20,6 @@ class ReadingProgress {
   Map<String, dynamic> toMap() {
     return {
       'novel_id': novelId,
-      'file_path': filePath,
       'file_name': fileName,
       'updated_at': updatedAt.toIso8601String(),
     };

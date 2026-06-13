@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +11,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:path/path.dart' as p;
 
 class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
   final String? _initialValue;
@@ -83,14 +86,12 @@ void main() {
           id: 1,
           novelId: 'n1234',
           fileName: '002_chapter2.txt',
-          filePath: '/library/n1234/002_chapter2.txt',
           createdAt: DateTime(2026, 1, 2),
         ),
         Bookmark(
           id: 2,
           novelId: 'n1234',
           fileName: '001_chapter1.txt',
-          filePath: '/library/n1234/001_chapter1.txt',
           createdAt: DateTime(2026, 1, 1),
         ),
       ];
@@ -126,7 +127,6 @@ void main() {
           id: 1,
           novelId: 'n1234',
           fileName: '001_chapter1.txt',
-          filePath: '/library/n1234/001_chapter1.txt',
           lineNumber: 42,
           createdAt: DateTime(2026, 1, 1),
         ),
@@ -161,7 +161,6 @@ void main() {
           id: 1,
           novelId: 'n1234',
           fileName: '001_chapter1.txt',
-          filePath: '/library/n1234/001_chapter1.txt',
           createdAt: DateTime(2026, 1, 1),
         ),
       ];
@@ -196,7 +195,6 @@ void main() {
           id: 1,
           novelId: 'n1234',
           fileName: '001_chapter1.txt',
-          filePath: '/nonexistent/path/001_chapter1.txt',
           createdAt: DateTime(2026, 1, 1),
         ),
       ];
@@ -226,6 +224,64 @@ void main() {
       expect(find.text('ファイルが見つかりません'), findsOneWidget);
     });
 
+    testWidgets(
+        'jump reconstructs the path from the current folder after a rename '
+        '(F128)', (WidgetTester tester) async {
+      // Simulate a moved/renamed novel folder: the bookmark only stores
+      // file_name, and the file lives in the novel's CURRENT directory. The
+      // jump must reconstruct currentDir + file_name and select it, not rely on
+      // any stored absolute path. Build a real library/n1234 structure on disk
+      // so currentNovelId resolves and the reconstructed path exists.
+      final libraryDir =
+          Directory.systemTemp.createTempSync('bookmark_jump_rename_');
+      addTearDown(() => libraryDir.deleteSync(recursive: true));
+      final novelDir = Directory(p.join(libraryDir.path, 'n1234'))
+        ..createSync();
+      final file = File(p.join(novelDir.path, '001_chapter1.txt'))
+        ..writeAsStringSync('content');
+
+      final bookmarks = [
+        Bookmark(
+          id: 1,
+          novelId: 'n1234',
+          fileName: '001_chapter1.txt',
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            libraryPathProvider.overrideWithValue(libraryDir.path),
+            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
+            currentDirectoryProvider.overrideWith(
+                () => _TestCurrentDirectoryNotifier(novelDir.path)),
+            bookmarksForNovelProvider('n1234')
+                .overrideWithValue(AsyncValue.data(bookmarks)),
+          ],
+          child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: BookmarkListPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('001_chapter1.txt'));
+      await tester.pump();
+
+      // No "file not found" — the reconstructed path resolves to the real file.
+      expect(find.text('ファイルが見つかりません'), findsNothing);
+
+      final container = ProviderScope.containerOf(
+          tester.element(find.byType(BookmarkListPanel)));
+      final selected = container.read(selectedFileProvider);
+      expect(selected, isNotNull);
+      expect(selected!.path, file.path);
+      expect(selected.name, '001_chapter1.txt');
+    });
+
     testWidgets('right-click shows context menu with delete option',
         (WidgetTester tester) async {
       final bookmarks = [
@@ -233,7 +289,6 @@ void main() {
           id: 1,
           novelId: 'n1234',
           fileName: '001_chapter1.txt',
-          filePath: '/library/n1234/001_chapter1.txt',
           createdAt: DateTime(2026, 1, 1),
         ),
       ];

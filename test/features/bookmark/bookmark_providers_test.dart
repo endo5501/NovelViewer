@@ -53,10 +53,9 @@ void main() {
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               novel_id TEXT NOT NULL,
               file_name TEXT NOT NULL,
-              file_path TEXT NOT NULL,
               line_number INTEGER,
               created_at TEXT NOT NULL,
-              UNIQUE(novel_id, file_path, line_number)
+              UNIQUE(novel_id, file_name, line_number)
             )
           ''');
         },
@@ -192,7 +191,6 @@ void main() {
       await repository.add(
         novelId: 'n1234',
         fileName: '001_chapter1.txt',
-        filePath: '/library/n1234/001_chapter1.txt',
       );
 
       final bookmarks =
@@ -223,7 +221,6 @@ void main() {
       await repository.add(
         novelId: 'n1234',
         fileName: '001_chapter1.txt',
-        filePath: '/library/n1234/001_chapter1.txt',
         lineNumber: 10,
       );
 
@@ -288,13 +285,12 @@ void main() {
         repository,
         novelId: 'n1234',
         fileName: '001_chapter1.txt',
-        filePath: '/library/n1234/001_chapter1.txt',
         isCurrentlyBookmarked: false,
       );
 
       final exists = await repository.exists(
         novelId: 'n1234',
-        filePath: '/library/n1234/001_chapter1.txt',
+        fileName: '001_chapter1.txt',
       );
       expect(exists, isTrue);
     });
@@ -310,20 +306,18 @@ void main() {
       await repository.add(
         novelId: 'n1234',
         fileName: '001_chapter1.txt',
-        filePath: '/library/n1234/001_chapter1.txt',
       );
 
       await toggleBookmark(
         repository,
         novelId: 'n1234',
         fileName: '001_chapter1.txt',
-        filePath: '/library/n1234/001_chapter1.txt',
         isCurrentlyBookmarked: true,
       );
 
       final exists = await repository.exists(
         novelId: 'n1234',
-        filePath: '/library/n1234/001_chapter1.txt',
+        fileName: '001_chapter1.txt',
       );
       expect(exists, isFalse);
     });
@@ -341,14 +335,13 @@ void main() {
         repository,
         novelId: 'n1234',
         fileName: '001_chapter1.txt',
-        filePath: '/library/n1234/001_chapter1.txt',
         isCurrentlyBookmarked: false,
         lineNumber: 42,
       );
 
       final exists = await repository.exists(
         novelId: 'n1234',
-        filePath: '/library/n1234/001_chapter1.txt',
+        fileName: '001_chapter1.txt',
         lineNumber: 42,
       );
       expect(exists, isTrue);
@@ -365,7 +358,6 @@ void main() {
       await repository.add(
         novelId: 'n1234',
         fileName: '001_chapter1.txt',
-        filePath: '/library/n1234/001_chapter1.txt',
         lineNumber: 42,
       );
 
@@ -373,14 +365,13 @@ void main() {
         repository,
         novelId: 'n1234',
         fileName: '001_chapter1.txt',
-        filePath: '/library/n1234/001_chapter1.txt',
         isCurrentlyBookmarked: true,
         lineNumber: 42,
       );
 
       final exists = await repository.exists(
         novelId: 'n1234',
-        filePath: '/library/n1234/001_chapter1.txt',
+        fileName: '001_chapter1.txt',
         lineNumber: 42,
       );
       expect(exists, isFalse);
@@ -399,13 +390,11 @@ void main() {
       await repository.add(
         novelId: 'n1234',
         fileName: '001_chapter1.txt',
-        filePath: '/library/n1234/001_chapter1.txt',
         lineNumber: 10,
       );
       await repository.add(
         novelId: 'n1234',
         fileName: '001_chapter1.txt',
-        filePath: '/library/n1234/001_chapter1.txt',
         lineNumber: 42,
       );
 
