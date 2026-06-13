@@ -20,9 +20,9 @@ class PerFolderDbRegistry {
     EpisodeCacheDatabase Function(String folder)? episodeFactory,
     TtsAudioDatabase Function(String folder)? audioFactory,
     TtsDictionaryDatabase Function(String folder)? dictionaryFactory,
-  })  : _episodeFactory = episodeFactory ?? EpisodeCacheDatabase.new,
-        _audioFactory = audioFactory ?? TtsAudioDatabase.new,
-        _dictionaryFactory = dictionaryFactory ?? TtsDictionaryDatabase.new;
+  }) : _episodeFactory = episodeFactory ?? EpisodeCacheDatabase.new,
+       _audioFactory = audioFactory ?? TtsAudioDatabase.new,
+       _dictionaryFactory = dictionaryFactory ?? TtsDictionaryDatabase.new;
 
   final EpisodeCacheDatabase Function(String folder) _episodeFactory;
   final TtsAudioDatabase Function(String folder) _audioFactory;
@@ -31,6 +31,12 @@ class PerFolderDbRegistry {
   final _episode = <String, EpisodeCacheDatabase>{};
   final _audio = <String, TtsAudioDatabase>{};
   final _dictionary = <String, TtsDictionaryDatabase>{};
+
+  /// In-flight background closes keyed by folder, so an awaited [closeAll] /
+  /// [closeEpisodeCache] can wait for a prior [releaseInBackground] to finish
+  /// instead of racing it (the background close already evicted the handle, so
+  /// without this the awaited path would find an empty map and return early).
+  final _closing = <String, Future<void>>{};
 
   EpisodeCacheDatabase episodeCache(String folder) {
     final key = folderDbKey(folder);
@@ -53,6 +59,10 @@ class PerFolderDbRegistry {
   /// unlocked first.
   Future<void> closeAll(String folder) async {
     final key = folderDbKey(folder);
+    // Wait for any in-flight background close (releaseInBackground) on this
+    // folder first, so the file lock is gone even if the handle was already
+    // evicted by a switch that preceded this mutation.
+    await _closing[key];
     // Close first (awaited), then evict — matching the legacy release order
     // (await close → release). The handle stays in the map during its own
     // close so a concurrent access hits the closing gate rather than opening a
@@ -63,6 +73,17 @@ class PerFolderDbRegistry {
     _episode.remove(key);
     _audio.remove(key);
     _dictionary.remove(key);
+  }
+
+  /// Closes and evicts only the episode-cache handle for [folder] (awaited).
+  /// The download flow opens just this handle and releases it on completion;
+  /// it must not close the folder's TTS handles, which other consumers may be
+  /// using.
+  Future<void> closeEpisodeCache(String folder) async {
+    final key = folderDbKey(folder);
+    await _closing[key];
+    await _episode[key]?.close();
+    _episode.remove(key);
   }
 
   /// Evicts [folder]'s handles synchronously and closes them in the
@@ -76,19 +97,32 @@ class PerFolderDbRegistry {
     final episode = _episode.remove(key);
     final audio = _audio.remove(key);
     final dictionary = _dictionary.remove(key);
-    if (episode != null) unawaited(episode.close());
-    if (audio != null) unawaited(audio.close());
-    if (dictionary != null) unawaited(dictionary.close());
+    if (episode == null && audio == null && dictionary == null) return;
+    // Track the close so a later awaited closeAll/closeEpisodeCache on this
+    // folder can wait for it instead of racing the file operation.
+    final future = Future(() async {
+      if (episode != null) await episode.close();
+      if (audio != null) await audio.close();
+      if (dictionary != null) await dictionary.close();
+    });
+    _closing[key] = future;
+    future.whenComplete(() {
+      if (identical(_closing[key], future)) _closing.remove(key);
+    });
   }
 
   /// Best-effort release of every open handle, for container teardown.
   Future<void> disposeAll() async {
+    final inFlight = _closing.values.toList();
     final episodes = _episode.values.toList();
     final audios = _audio.values.toList();
     final dictionaries = _dictionary.values.toList();
     _episode.clear();
     _audio.clear();
     _dictionary.clear();
+    for (final close in inFlight) {
+      await close;
+    }
     for (final db in episodes) {
       await db.close();
     }

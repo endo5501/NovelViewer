@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/episode_cache/data/episode_cache_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
@@ -32,6 +34,19 @@ class _FakeDict extends TtsDictionaryDatabase {
   Future<void> close() async {
     await Future<void>.delayed(Duration.zero);
     log.add('close:dict');
+  }
+}
+
+/// An episode-cache fake whose close() blocks on [gate], so a test can hold a
+/// release "in flight" and observe whether another caller waits for it.
+class _GatedEpisode extends EpisodeCacheDatabase {
+  _GatedEpisode(this.gate, this.log) : super('unused');
+  final Future<void> gate;
+  final List<String> log;
+  @override
+  Future<void> close() async {
+    await gate;
+    log.add('close:episode');
   }
 }
 
@@ -92,6 +107,47 @@ void main() {
       expect(log, contains('close:audio'));
     });
 
+    test('closeEpisodeCache closes only the episode handle', () async {
+      final registry = buildRegistry();
+      registry.episodeCache('/lib/n1');
+      final audio = registry.ttsAudio('/lib/n1');
+      final dict = registry.ttsDictionary('/lib/n1');
+
+      await registry.closeEpisodeCache('/lib/n1');
+
+      expect(log, ['close:episode']);
+      // tts_audio / tts_dictionary handles are untouched (same instances).
+      expect(registry.ttsAudio('/lib/n1'), same(audio));
+      expect(registry.ttsDictionary('/lib/n1'), same(dict));
+    });
+
+    test('closeAll awaits an in-flight releaseInBackground close', () async {
+      final gate = Completer<void>();
+      final closeLog = <String>[];
+      final registry = PerFolderDbRegistry(
+        episodeFactory: (_) => _GatedEpisode(gate.future, closeLog),
+        audioFactory: (_) => _FakeAudio(log),
+        dictionaryFactory: (_) => _FakeDict(log),
+      );
+      registry.episodeCache('/lib/n1');
+
+      registry.releaseInBackground('/lib/n1'); // starts the gated bg close
+
+      var closeAllDone = false;
+      final closing =
+          registry.closeAll('/lib/n1').then((_) => closeAllDone = true);
+
+      await Future<void>.delayed(Duration.zero);
+      expect(closeAllDone, isFalse,
+          reason: 'closeAll MUST await the in-flight background close so a '
+              'file operation does not race it');
+
+      gate.complete();
+      await closing;
+      expect(closeAllDone, isTrue);
+      expect(closeLog, contains('close:episode'));
+    });
+
     test('releaseInBackground evicts synchronously and closes in background',
         () async {
       final registry = buildRegistry();
@@ -104,7 +160,7 @@ void main() {
       expect(registry.ttsAudio('/lib/n1'), isNot(same(a1)));
 
       // The old handle is closed in the background.
-      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
       expect(log, contains('close:audio'));
     });
   });

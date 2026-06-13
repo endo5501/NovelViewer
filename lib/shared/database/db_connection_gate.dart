@@ -28,8 +28,8 @@ class DbConnectionGate<T> {
   DbConnectionGate({
     required Future<T> Function() opener,
     required Future<void> Function(T resource) closer,
-  })  : _opener = opener,
-        _closer = closer;
+  }) : _opener = opener,
+       _closer = closer;
 
   final Future<T> Function() _opener;
   final Future<void> Function(T resource) _closer;
