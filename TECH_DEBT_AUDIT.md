@@ -48,7 +48,7 @@ TTSが複雑性の中心: FFIで `qwen3-tts.cpp`（abort対応・24kHz）と `pi
 | F111 | 並行性 | lib/features/tts/data/tts_isolate.dart:140-145,231-238 | High | M | `abort()`はメインisolateから`_ctxAddress`経由でnativeを直接叩くが、モデル再ロード時に旧ctxがfreeされた後も`ModelLoadedResponse`到着までアドレスがstale。ロード中（数秒窓）のstopで解放済みポインタへのFFI呼び出し＝use-after-free | `loadModel()`送信時に`_ctxAddress = null`を先行クリア。恒久対応はctx寿命と分離したabortフラグ専用アロケーション |
 | F112 | エラー処理 | lib/features/tts/data/tts_session.dart:52-56,98-106 | High | S | nativeのエラーメッセージ（ModelLoadedResponse.error等）がbool/nullに潰されログにもUIにも出ない。edit側は固定文言、streaming側は無言（F101の片割れ） | ✅ 対応済み(fix-tts-silent-failure): `_log.warning(response.error)` を ensureModelLoaded/synthesize に追加（戻り値契約は不変） |
 | F113 | 型・契約 | lib/features/llm_summary/data/openai_compatible_client.dart:45（ollama_client.dart:24,38,60も） | High | S | `response.body`はcharset無指定時latin1にフォールバック（実OpenAIは裸の`application/json`を返す）→日本語要約が文字化けし得る。`choices[0]`は空配列でRangeError、`json['models'] as List`は生TypeErrorが設定UIへ | 全箇所`utf8.decode(response.bodyBytes)`＋形状ガード＋型付き例外 |
-| F114 | CI | .github/workflows/release.yml:3-6 | High | S | リポジトリ唯一のワークフローが`v*`タグでのみ起動。analyze/test（:68-72）はリリース時しか走らず、push/PRはCIゼロでマージされる | pub get + analyze + test だけの`test.yml`をpush/PRトリガで追加（単体テストにVulkan/DLLは不要） |
+| F114 | CI | .github/workflows/release.yml:3-6 | High | S | リポジトリ唯一のワークフローが`v*`タグでのみ起動。analyze/test（:68-72）はリリース時しか走らず、push/PRはCIゼロでマージされる | ✅ 対応済み: `.github/workflows/test.yml`をpush(main)/PRトリガで追加（pub get + analyze + test、windows-latest、ネイティブDLLビルドなし=FFIテストは.dll不在時self-skip） |
 | F115 | パフォーマンス | lib/features/text_viewer/presentation/vertical_text_viewer.dart:249（実体 :605-678） | High | M | `_paginateLines`がLayoutBuilder内で**毎ビルド**全文再ページネーション（flatten+禁則+段組+オフセット計算）。TTSハイライトの1ティック、ページ送りのsetState毎に小説全体を再計算。横書き側は同じ理由でメモ化済み（text_content_renderer.dart:192-200）で非対称 | ✅ 対応済み(memoize-vertical-text-viewer): `_paginateLines`を重い層(pages/pageStarts/charOffset/lineStartColumns)と軽い層(targetPage/bookmarkPages/firstLinePerPage)に分離し、重い層を`(segments identity, constraints, style, columnSpacing)`キーでメモ化。bookmark/target変化では重い層を無効化しない。回数スパイ＋同値テスト追加 |
 | F116 | パフォーマンス | lib/features/text_viewer/presentation/vertical_text_page.dart:164-209 | High | M | build()毎に`computeMarkedEntries`+`computeMarkedRanges`+`_computeHighlights`（全バッファ走査+per-char Map）＋per-char widgetリスト再構築。選択ドラッグの1ポインタ移動毎（:352-365のsetState）にも走り、:209の無条件`_scheduleHitRegionRebuild()`がO(全文字)の`localToGlobal`をポストフレームに積む | ✅ 対応済み(memoize-vertical-text-viewer): マークマップとTTSハイライトを入力(entries/markedWords/lineBreaks/range/pageOffset)でメモ化。無条件のhit-region再構築を撤去し、segments/baseStyle/columnSpacing変化時のみ再スケジュール。回数スパイ＋出力同値テスト追加 |
 | F117 | アーキテクチャ | lib/features/text_viewer/data/vertical_marked_entries.dart:13-50 + vertical_marked_ranges.dart:46-100 | High | S | `computeMarkedEntries`と`computeMarkedRanges`が同一のバッファ走査＋`findMarks`を行単位で重複実装し、**両方が**毎ビルド呼ばれる（vertical_text_page.dart:169-178）—同じ入力にマーク照合が2回/フレーム | ✅ 対応済み(memoize-vertical-text-viewer): `MarkStyle`を`MarkInfo`へ畳み込み、entriesマップは`_markedRanges[i]?.style`で導出。`computeMarkedEntries`(と旧テスト)を削除しマーク照合を2回→1回/buildに半減 |
@@ -167,7 +167,7 @@ String? resolveNovelId(String libraryRoot, String filePath, Set<String> register
 
 `bookmark_providers.dart:12-22` と `reading_progress_providers.dart:61` をこれに差し替え、`novel_delete_service.dart:44-49` のカスケードに bookmarks を追加して4テーブル削除を `db.transaction` で包む（F127も同時に解消）。絶対パス→相対パスのマイグレーション（F128）は後続change `fix-bookmark-progress-relative-paths` で ✅ 対応済み（`file_path`列を削除しv7→v8移行、`(novel_id, file_name)`へ同一性統一）。
 
-### 4. push/PRのCIを追加する（F114）
+### 4. push/PRのCIを追加する（F114）✅ 対応済み（`.github/workflows/test.yml`）
 
 最小の `test.yml` で即日入る:
 
@@ -188,7 +188,7 @@ jobs:
       - run: flutter test
 ```
 
-単体テストにVulkan/TTS DLLは不要（release.ymlのネイティブビルドステップは持ち込まない）。3.9万行のテスト資産がタグ時しか走らない現状は、TDDで開発しているこのリポジトリにとって一番もったいない欠落。
+単体テストにVulkan/TTS DLLは不要（release.ymlのネイティブビルドステップは持ち込まない）。3.9万行のテスト資産がタグ時しか走らない欠落は、TDDで開発しているこのリポジトリにとって一番もったいないものだった。**結果**: `.github/workflows/test.yml` を push(main)/PR トリガで追加し解消（windows-latest、concurrency で多重起動キャンセル、FFI統合テストは `.dll` 不在時に self-skip するためネイティブビルド不要）。
 
 ### 5. 縦書きビューアのメモ化（F115 / F116 / F117） — ✅ 解決済み(memoize-vertical-text-viewer)
 
