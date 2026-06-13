@@ -30,6 +30,22 @@ void main() {
       const b = MarkInfo(word: 'アリス', startEntry: 0, endEntry: 4);
       expect(a, isNot(equals(b)));
     });
+
+    test('values differing in style are not equal', () {
+      const a = MarkInfo(
+        word: 'アリス',
+        startEntry: 0,
+        endEntry: 3,
+        style: MarkStyle.solid,
+      );
+      const b = MarkInfo(
+        word: 'アリス',
+        startEntry: 0,
+        endEntry: 3,
+        style: MarkStyle.dotted,
+      );
+      expect(a, isNot(equals(b)));
+    });
   });
 
   group('computeMarkedRanges', () {
@@ -221,6 +237,110 @@ void main() {
       expect(result[0]!.word, '聖印を');
       // The visual newline entry itself is never marked.
       expect(result.containsKey(1), isFalse);
+    });
+  });
+
+  // F117: computeMarkedEntries was removed; the char-entry -> MarkStyle map it
+  // produced is now derived from computeMarkedRanges via `.style`. These cases
+  // are migrated from the old vertical_marked_entries_test.dart and assert the
+  // derived style map matches the previous behaviour.
+  group('computeMarkedRanges style preservation (F117)', () {
+    Map<int, MarkStyle> styleMap(Map<int, MarkInfo> ranges) =>
+        ranges.map((k, v) => MapEntry(k, v.style));
+
+    test('marks every char-entry index inside a matched span with its style',
+        () {
+      final entries =
+          buildVerticalCharEntries([const PlainTextSegment('アリスが歩く')]);
+      final styles = styleMap(computeMarkedRanges(
+        entries: entries,
+        markedWords: const {'アリス': MarkStyle.solid},
+      ));
+      expect(styles[0], MarkStyle.solid);
+      expect(styles[1], MarkStyle.solid);
+      expect(styles[2], MarkStyle.solid);
+      expect(styles.containsKey(3), isFalse);
+      expect(styles.containsKey(4), isFalse);
+      expect(styles.containsKey(5), isFalse);
+    });
+
+    test('uses dotted style for dotted-cached words', () {
+      final entries =
+          buildVerticalCharEntries([const PlainTextSegment('ボブの旅')]);
+      final styles = styleMap(computeMarkedRanges(
+        entries: entries,
+        markedWords: const {'ボブ': MarkStyle.dotted},
+      ));
+      expect(styles[0], MarkStyle.dotted);
+      expect(styles[1], MarkStyle.dotted);
+    });
+
+    test('skips ruby annotations when matching marks (base text only)', () {
+      final entries = buildVerticalCharEntries([
+        const RubyTextSegment(base: '聖印', rubyText: 'せいいん'),
+        const PlainTextSegment('を持つ'),
+      ]);
+      final styles = styleMap(computeMarkedRanges(
+        entries: entries,
+        markedWords: const {
+          '聖印': MarkStyle.solid,
+          'せいいん': MarkStyle.solid,
+        },
+      ));
+      expect(styles[0], MarkStyle.solid);
+      expect(styles.containsKey(1), isFalse);
+    });
+
+    test('skips 1-character cached words (minWordLength=2)', () {
+      final entries =
+          buildVerticalCharEntries([const PlainTextSegment('のもアリス')]);
+      final styles = styleMap(computeMarkedRanges(
+        entries: entries,
+        markedWords: const {
+          'の': MarkStyle.solid,
+          'アリス': MarkStyle.solid,
+        },
+      ));
+      expect(styles.containsKey(0), isFalse);
+      expect(styles[2], MarkStyle.solid);
+      expect(styles[3], MarkStyle.solid);
+      expect(styles[4], MarkStyle.solid);
+    });
+
+    test('visual column break does not split mark styling', () {
+      final entries =
+          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
+      final styles = styleMap(computeMarkedRanges(
+        entries: entries,
+        markedWords: const {'アリス': MarkStyle.solid},
+        lineBreakEntryIndices: const {},
+      ));
+      expect(styles[0], MarkStyle.solid);
+      expect(styles[1], MarkStyle.solid);
+      expect(styles[3], MarkStyle.solid);
+      expect(styles.containsKey(2), isFalse);
+    });
+
+    test('real line break splits mark styling', () {
+      final entries =
+          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
+      final styles = styleMap(computeMarkedRanges(
+        entries: entries,
+        markedWords: const {'アリス': MarkStyle.solid},
+        lineBreakEntryIndices: const {2},
+      ));
+      expect(styles, isEmpty);
+    });
+
+    test('omitting lineBreakEntryIndices treats newline as boundary (legacy)',
+        () {
+      final entries =
+          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
+      final styles = styleMap(computeMarkedRanges(
+        entries: entries,
+        markedWords: const {'アリス': MarkStyle.solid},
+      ));
+      expect(styles, isEmpty);
     });
   });
 }

@@ -15,6 +15,15 @@ import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
+/// Test-only counter incremented once each time the expensive pagination
+/// layer actually recomputes (a cache miss). F115 memoizes the full-document
+/// pagination keyed by (segments identity, constraints, style, columnSpacing);
+/// tests reset this counter and assert it stays flat across rebuilds whose
+/// keyed inputs are unchanged (TTS tick, query, bookmark/target changes) and
+/// increments when a keyed input changes (constraints/style).
+@visibleForTesting
+int verticalPaginationHeavyCount = 0;
+
 @visibleForTesting
 List<int> computeCharOffsetPerPage(
   List<List<TextSegment>> columns,
@@ -138,6 +147,16 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   // Cache TextPainter for character metrics
   TextPainter? _cachedPainter;
   TextStyle? _cachedStyle;
+
+  // F115: memoized "heavy" pagination layer (full-document column/page layout).
+  // Keyed by (segments identity, constraints, style, columnSpacing). The light
+  // layer (targetPage / bookmarkPages / firstLinePerPage) is derived from this
+  // on every build, so bookmark/target changes never invalidate it.
+  _HeavyPagination? _cachedHeavy;
+  List<TextSegment>? _cachedHeavySegments;
+  BoxConstraints? _cachedHeavyConstraints;
+  TextStyle? _cachedHeavyStyle;
+  double? _cachedHeavyColumnSpacing;
 
   // Page transition animation state
   late final AnimationController _animationController;
@@ -630,19 +649,27 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       return _PaginationResult([widget.segments], null, const [0], const [{}], const {}, const [1]);
     }
 
-    final columns = <List<TextSegment>>[];
-    final lineStartColumns = _buildColumns(charsPerColumn, columns);
-    final lineStartSet = lineStartColumns.skip(1).toSet();
-    final (pages, pageStarts, lineBreakIndicesPerPage) =
-        _groupColumnsIntoPages(columns, charWidth, availableWidth, lineStartSet);
+    final heavy = _heavyPagination(
+      constraints: constraints,
+      style: style,
+      charWidth: charWidth,
+      charsPerColumn: charsPerColumn,
+      availableWidth: availableWidth,
+    );
 
-    if (pages.isEmpty) {
+    if (heavy == null) {
       return _PaginationResult([widget.segments], null, const [0], const [{}], const {}, const [1]);
     }
 
-    // Compute character offset per page for TTS auto-navigation
-    final charOffsetPerPage = computeCharOffsetPerPage(columns, pageStarts, lineStartColumns);
+    final pages = heavy.pages;
+    final pageStarts = heavy.pageStarts;
+    final lineStartColumns = heavy.lineStartColumns;
 
+    // --- Light layer ---
+    // Cheap, O(pages) derivations recomputed on every build from the cached
+    // heavy layer. Their inputs (target line, bookmark line set) change
+    // independently of the document layout, so keeping them out of the cache
+    // means a bookmark add or target-line jump never re-paginates.
     final targetPage =
         _findTargetPage(lineStartColumns, pageStarts, pages.length);
 
@@ -674,7 +701,57 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       firstLinePerPage.add(lineNum);
     }
 
-    return _PaginationResult(pages, targetPage, charOffsetPerPage, lineBreakIndicesPerPage, bookmarkPages, firstLinePerPage);
+    return _PaginationResult(pages, targetPage, heavy.charOffsetPerPage,
+        heavy.lineBreakIndicesPerPage, bookmarkPages, firstLinePerPage);
+  }
+
+  /// Expensive, full-document pagination layer (column splitting, kinsoku line
+  /// breaking, page grouping, per-page char offsets). Memoized by
+  /// (segments identity, constraints, style, columnSpacing); on a cache hit the
+  /// previous result is returned untouched and [verticalPaginationHeavyCount]
+  /// does NOT increment. Returns null when the layout produces no pages
+  /// (degenerate constraints), which is not cached so the next build retries.
+  _HeavyPagination? _heavyPagination({
+    required BoxConstraints constraints,
+    required TextStyle style,
+    required double charWidth,
+    required int charsPerColumn,
+    required double availableWidth,
+  }) {
+    final cached = _cachedHeavy;
+    if (cached != null &&
+        identical(_cachedHeavySegments, widget.segments) &&
+        _cachedHeavyConstraints == constraints &&
+        _cachedHeavyStyle == style &&
+        _cachedHeavyColumnSpacing == widget.columnSpacing) {
+      return cached;
+    }
+
+    verticalPaginationHeavyCount++;
+    final columns = <List<TextSegment>>[];
+    final lineStartColumns = _buildColumns(charsPerColumn, columns);
+    final lineStartSet = lineStartColumns.skip(1).toSet();
+    final (pages, pageStarts, lineBreakIndicesPerPage) =
+        _groupColumnsIntoPages(columns, charWidth, availableWidth, lineStartSet);
+
+    if (pages.isEmpty) return null;
+
+    final charOffsetPerPage =
+        computeCharOffsetPerPage(columns, pageStarts, lineStartColumns);
+
+    final heavy = _HeavyPagination(
+      pages: pages,
+      pageStarts: pageStarts,
+      lineBreakIndicesPerPage: lineBreakIndicesPerPage,
+      charOffsetPerPage: charOffsetPerPage,
+      lineStartColumns: lineStartColumns,
+    );
+    _cachedHeavy = heavy;
+    _cachedHeavySegments = widget.segments;
+    _cachedHeavyConstraints = constraints;
+    _cachedHeavyStyle = style;
+    _cachedHeavyColumnSpacing = widget.columnSpacing;
+    return heavy;
   }
 
   List<List<TextSegment>> _splitIntoLines(List<TextSegment> segments) {
@@ -812,6 +889,26 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     return null;
   }
 
+}
+
+/// The memoized "heavy" pagination layer: everything that depends only on the
+/// document, the layout constraints, the text style, and the column spacing.
+/// Deliberately excludes targetPage / bookmarkPages / firstLinePerPage, which
+/// depend on inputs that change independently of the layout (see [_paginateLines]).
+class _HeavyPagination {
+  const _HeavyPagination({
+    required this.pages,
+    required this.pageStarts,
+    required this.lineBreakIndicesPerPage,
+    required this.charOffsetPerPage,
+    required this.lineStartColumns,
+  });
+
+  final List<List<TextSegment>> pages;
+  final List<int> pageStarts;
+  final List<Set<int>> lineBreakIndicesPerPage;
+  final List<int> charOffsetPerPage;
+  final List<int> lineStartColumns;
 }
 
 class _PaginationResult {

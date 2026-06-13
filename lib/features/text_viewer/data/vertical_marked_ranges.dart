@@ -1,5 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_text_layout.dart';
+
+/// Test-only counter incremented once each time [computeMarkedRanges] runs its
+/// buffer scan. F117 collapsed the vertical page's two-pass mark matching
+/// (`computeMarkedEntries` + `computeMarkedRanges`) into this single function;
+/// F116 then memoizes its result. Tests reset this counter and assert the
+/// number of scans per build (F117: exactly one, not two) and across rebuilds
+/// (F116: zero when inputs are unchanged).
+@visibleForTesting
+int computeMarkedRangesCallCount = 0;
 
 /// Identifies a single mark occurrence in vertical layout space.
 ///
@@ -11,11 +21,13 @@ class MarkInfo {
     required this.word,
     required this.startEntry,
     required this.endEntry,
+    this.style = MarkStyle.solid,
   });
 
   final String word;
   final int startEntry; // inclusive
   final int endEntry; // exclusive
+  final MarkStyle style;
 
   @override
   bool operator ==(Object other) =>
@@ -23,10 +35,11 @@ class MarkInfo {
       other is MarkInfo &&
           other.word == word &&
           other.startEntry == startEntry &&
-          other.endEntry == endEntry;
+          other.endEntry == endEntry &&
+          other.style == style;
 
   @override
-  int get hashCode => Object.hash(word, startEntry, endEntry);
+  int get hashCode => Object.hash(word, startEntry, endEntry, style);
 }
 
 /// Returns a map from char-entry index to the [MarkInfo] describing the
@@ -48,6 +61,7 @@ Map<int, MarkInfo> computeMarkedRanges({
   required Map<String, MarkStyle> markedWords,
   Set<int>? lineBreakEntryIndices,
 }) {
+  computeMarkedRangesCallCount++;
   if (markedWords.isEmpty) return const {};
 
   final buffer = StringBuffer();
@@ -80,6 +94,7 @@ Map<int, MarkInfo> computeMarkedRanges({
       word: mark.word,
       startEntry: startEntry,
       endEntry: endEntry,
+      style: mark.style,
     );
     for (var pos = mark.start; pos < mark.end; pos++) {
       result[positionToEntry[pos]] = info;
