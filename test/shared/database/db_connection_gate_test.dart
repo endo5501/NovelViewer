@@ -99,6 +99,31 @@ void main() {
       expect(attempt, 2, reason: 'failed open must not be cached');
     });
 
+    test('close rethrows a closer failure instead of swallowing it', () async {
+      final gate = DbConnectionGate<_FakeResource>(
+        opener: () async => _FakeResource(),
+        closer: (r) async => throw StateError('close failed'),
+      );
+      await gate.resource;
+
+      await expectLater(gate.close(), throwsStateError);
+      // _closing must be reset (finally), so the gate is usable again.
+      expect(() => gate.resource, returnsNormally);
+    });
+
+    test('close still swallows an open failure (nothing to close)', () async {
+      final opener = Completer<_FakeResource>();
+      final gate = DbConnectionGate<_FakeResource>(
+        opener: () => opener.future,
+        closer: (r) async => throw StateError('should not be called'),
+      );
+      gate.resource; // start the open
+      final closing = gate.close();
+      opener.completeError(StateError('open failed'));
+      // The open failed, so close has no handle to close and must not throw.
+      await closing;
+    });
+
     test('reopens after close completes', () async {
       var openCount = 0;
       final gate = DbConnectionGate<_FakeResource>(

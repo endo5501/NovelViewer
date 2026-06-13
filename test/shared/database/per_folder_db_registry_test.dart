@@ -148,6 +148,38 @@ void main() {
       expect(closeLog, contains('close:episode'));
     });
 
+    test('closeAll awaits ALL overlapping background closes for a folder',
+        () async {
+      final gates = [Completer<void>(), Completer<void>()];
+      final closeLog = <String>[];
+      var i = 0;
+      final registry = PerFolderDbRegistry(
+        episodeFactory: (_) => _GatedEpisode(gates[i++].future, closeLog),
+        audioFactory: (_) => _FakeAudio(log),
+        dictionaryFactory: (_) => _FakeDict(log),
+      );
+
+      registry.episodeCache('/lib/n1'); // E0 (gate0)
+      registry.releaseInBackground('/lib/n1'); // bg close C1 of E0
+      registry.episodeCache('/lib/n1'); // E1 (gate1), fresh
+      registry.releaseInBackground('/lib/n1'); // bg close C2 of E1
+
+      var done = false;
+      final closing =
+          registry.closeAll('/lib/n1').then((_) => done = true);
+
+      // Complete only the LATER close. If closeAll tracked just the latest
+      // background close (overwriting the earlier one), it would finish here.
+      gates[1].complete();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(done, isFalse,
+          reason: 'closeAll MUST also await the earlier background close');
+
+      gates[0].complete();
+      await closing;
+      expect(done, isTrue);
+    });
+
     test('releaseInBackground evicts synchronously and closes in background',
         () async {
       final registry = buildRegistry();

@@ -50,6 +50,6 @@
 ## 7. 最終確認
 
 - [x] 7.1 code-reviewスキルを使用してコードレビューを実施（3件の実バグを修正: ①download が closeAll で全3ハンドルを閉じていた→`closeEpisodeCache` でepisodeのみに、②closeAll 系で provider invalidate が欠落→`releaseFolderDbHandles` ヘルパーで close+invalidate を再ペア化、③`releaseInBackground` と `closeAll` 非協調→registry に in-flight close 追跡を追加し closeAll が待機）
-- [ ] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 7.2 codexスキルを使用して現在開発中のコードレビューを実施（2件の実バグを修正: ①`DbConnectionGate.close()` が close() 失敗まで握り潰していた→open失敗のみ握りclose失敗は伝播、②`releaseInBackground` が同一フォルダの先行 in-flight close を上書きしていた→previousをチェーンして closeAll が全close待機。指摘③move/rename の watcher 未クリア、④保持wrapperのdesync は既存問題で本change対象外として記録）
 - [x] 7.3 `fvm flutter analyze`でリントを実行（No issues found）
 - [x] 7.4 `fvm flutter test`でテストを実行（2041件全緑）

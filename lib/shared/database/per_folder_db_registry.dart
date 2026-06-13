@@ -99,8 +99,12 @@ class PerFolderDbRegistry {
     final dictionary = _dictionary.remove(key);
     if (episode == null && audio == null && dictionary == null) return;
     // Track the close so a later awaited closeAll/closeEpisodeCache on this
-    // folder can wait for it instead of racing the file operation.
+    // folder can wait for it instead of racing the file operation. Chain onto
+    // any prior in-flight close for the same folder so a rapid re-release does
+    // not drop the earlier close (which may still hold the old file open).
+    final previous = _closing[key];
     final future = Future(() async {
+      await previous;
       if (episode != null) await episode.close();
       if (audio != null) await audio.close();
       if (dictionary != null) await dictionary.close();

@@ -69,15 +69,21 @@ class DbConnectionGate<T> {
     _closing = true;
     try {
       final opening = _open;
-      if (opening != null) {
-        try {
-          final resource = await opening;
-          await _closer(resource);
-        } catch (_) {
-          // The open itself failed — there is no handle to close.
-        }
-      }
       _open = null;
+      if (opening != null) {
+        final T resource;
+        try {
+          resource = await opening;
+        } catch (_) {
+          // The open itself failed — there is no handle to close. Swallow it
+          // (a failed open is the opener's error to surface, not close()'s).
+          return;
+        }
+        // A close() failure is NOT swallowed: callers release handles right
+        // before a file operation, so a hidden close failure would let the op
+        // proceed against a still-locked file.
+        await _closer(resource);
+      }
     } finally {
       _closing = false;
     }
