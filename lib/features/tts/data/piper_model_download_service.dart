@@ -12,8 +12,15 @@ class PiperModelDownloadService {
 
   static const defaultModelName = 'tsukuyomi-chan-6lang-fp16';
 
+  // Pinned to the 2026-03-18 revision (eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a):
+  // the last model state before the 2026-05-03 MB-iSTFT-VITS2 decoder switch
+  // (e22f5fe), which introduced a `speaker_embedding_mask` ONNX input the bundled
+  // piper-plus C++ runner (submodule pinned 2026-03-23) does not supply.
+  // `resolve/main` would fetch that incompatible newer model and break synthesis.
+  // A full commit SHA (not the short form, not a branch) is used so the revision
+  // is unambiguous and cannot drift.
   static const _baseUrl =
-      'https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan/resolve/main';
+      'https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan/resolve/eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a';
 
   static const _completeMarker = '.piper_models_complete';
 

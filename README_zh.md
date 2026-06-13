@@ -168,6 +168,17 @@ scripts/release.sh 1.2.0
 
 数据保存在解压后的可执行文件旁，与安装程序版本结构相同（`NovelViewer\`、`novel_metadata.db`、`models\`、`voices\`）。整个文件夹复制到其他位置即可连同数据一起克隆环境。
 
+## 故障排除
+
+### Piper TTS 无法播放语音（合成失败）
+
+如果你之前下载过 Piper 模型，磁盘上可能残留旧版（与推理引擎不兼容）模型，导致合成失败（日志会出现 `Missing Input: speaker_embedding_mask` 等）。Piper 模型按与内置推理引擎兼容的修订版固定分发，但已下载的模型不会自动替换。
+
+请按以下步骤替换为兼容模型：
+
+1. 手动删除 `models/piper/` 下的模型文件（`*.onnx` / `*.onnx.json` / `.piper_models_complete`）。**无需**删除 `open_jtalk_dic/`。
+2. 在应用的设置界面重新下载 Piper 模型。
+
 ## 技术栈
 
 - **框架**：Flutter (Dart)

@@ -168,6 +168,17 @@ Use the ZIP build for compatibility testing, ad-hoc environments, or running mul
 
 Data is stored directly beside the extracted executable with the same layout as the installer version (`NovelViewer\`, `novel_metadata.db`, `models\`, `voices\`). Copying the whole folder elsewhere clones the environment along with the data.
 
+## Troubleshooting
+
+### Piper TTS produces no audio (synthesis fails)
+
+If you downloaded a Piper model previously, an older model (incompatible with the bundled inference engine) may remain on disk and cause synthesis to fail (the log shows e.g. `Missing Input: speaker_embedding_mask`). Piper models are distributed pinned to a revision compatible with the bundled engine, but an already-downloaded model is not replaced automatically.
+
+To switch to the compatible model:
+
+1. Manually delete the model files under `models/piper/` (`*.onnx` / `*.onnx.json` / `.piper_models_complete`). You do **not** need to delete `open_jtalk_dic/`.
+2. Re-download the Piper model from the app's settings screen.
+
 ## Tech Stack
 
 - **Framework**: Flutter (Dart)
