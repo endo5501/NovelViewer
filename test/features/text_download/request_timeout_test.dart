@@ -37,6 +37,9 @@ void main() {
         client: client,
         requestDelay: Duration.zero,
         requestTimeout: const Duration(milliseconds: 200),
+        // Timeout is transient and retried (F121); zero backoff keeps the test
+        // off the wall clock (F123).
+        retryBaseDelay: Duration.zero,
       );
 
       final result = await service.downloadNovel(
@@ -54,6 +57,9 @@ void main() {
         client: client,
         requestDelay: Duration.zero,
         requestTimeout: const Duration(milliseconds: 200),
+        // Timeout is transient and retried (F121); zero backoff keeps the test
+        // off the wall clock (F123).
+        retryBaseDelay: Duration.zero,
       );
 
       expect(

@@ -55,6 +55,60 @@ MockClient routingClient(
   });
 }
 
+/// Builds a [MockClient] that returns a *sequence* of responses per URL: the
+/// i-th request whose URL contains a given key uses the i-th [FakeRoute] in that
+/// key's list. Once a key's sequence is exhausted, its last entry repeats for
+/// every subsequent request (so a single `[FakeRoute(503)]` keeps returning 503,
+/// and `[FakeRoute(503), FakeRoute(200)]` fails once then succeeds forever).
+///
+/// This is the stateful counterpart to [routingClient] (which is stateless and
+/// returns the same response every time), used to drive retry tests such as
+/// "503 then 200". A sequence step may carry an [FakeRoute.error] (thrown, e.g.
+/// a `TimeoutException`) or a [FakeRoute.delay] just like [routingClient].
+///
+/// Keys are matched against the request URL by substring, in insertion order
+/// (first match wins). Unmatched requests use [fallback]. When [requestLog] is
+/// given, every requested URL is appended to it (so tests can count attempts).
+MockClient sequencedClient(
+  Map<String, List<FakeRoute>> sequences, {
+  FakeRoute fallback = const FakeRoute(''),
+  List<String>? requestLog,
+}) {
+  final counters = <String, int>{};
+  return MockClient((request) async {
+    final urlStr = request.url.toString();
+    requestLog?.add(urlStr);
+
+    String? matchedKey;
+    for (final key in sequences.keys) {
+      if (urlStr.contains(key)) {
+        matchedKey = key;
+        break;
+      }
+    }
+
+    final FakeRoute route;
+    if (matchedKey == null) {
+      route = fallback;
+    } else {
+      final seq = sequences[matchedKey]!;
+      final i = counters[matchedKey] ?? 0;
+      counters[matchedKey] = i + 1;
+      route = seq.isEmpty
+          ? fallback
+          : (i < seq.length ? seq[i] : seq.last);
+    }
+
+    if (route.delay != null) {
+      await Future<void>.delayed(route.delay!);
+    }
+    if (route.error != null) {
+      throw route.error!;
+    }
+    return http.Response(route.body, route.statusCode, headers: route.headers);
+  });
+}
+
 /// A [MockClient] that records the request headers of every request into
 /// [captured] (last request wins), then returns a 200 response. Header names are
 /// lowercased by the http package, so look up e.g. `captured['user-agent']`.
