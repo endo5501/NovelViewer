@@ -51,12 +51,13 @@ ViewerEffects resolveViewerEffects(ViewerEffectInputs inputs)
 
 - `ViewerEffectInputs`（不変スナップショット）: `pageCount`, `targetPage`, `currentPage`, `scheduledTargetPage`, `jumpToLastPagePending`, `pendingTtsOffset`, `charOffsetPerPage`, `firstLinePerPage`, `safePage`, `lastReportedLine`, `constraintsChanged`, `isAnimating`。
 - `ViewerEffects`（コマンド値）: 
-  - `int? instantJumpToPage` — ①③を統合（即時 setState で `_currentPage` を移し hover を消す系）。①③は「即座に `_currentPage` を置き換える」点で同型なので 1 フィールドに畳む。優先順位は①（targetPage）を③（last page）より優先（現状の build 上から下への評価順を保存）。
-  - `int? animatedGoToPage` — ④TTS（`_changePage` 経由）。
+  - `int? targetJumpToPage` — ①（即時 setState、`_targetLine` クリア＋適用時の page 再チェックを伴う）。
+  - `int? lastJumpToPage` — ③（即時 setState、`fromEnd` の最終ページ）。①と**独立**に保持する。①③を 1 フィールドに畳まないのは、両者が同一 build で同時成立した際に「① の後に ③ を適用」して最終ページに着地する従来の二段 post-frame 挙動を、振る舞い不変に再現するため（優先順位による分岐や `fromEnd` intent の消失を生まない）。
+  - `int? animatedGoToPage` — ④TTS（`_changePage` 経由。`_changePage` 自身が hover 非表示を行う）。
   - `int? reportLine` — ⑤。
   - `bool cancelAnimation` — ②。
-  - `bool hideHover` — ①③④に伴う hover 非表示。
   - 消費フラグ: `bool consumeJumpToLastPage`, `bool consumeTtsOffset`, `int? newScheduledTargetPage` — 適用層が State を更新するための指示。
+  - hover 非表示は ①③ のジャンプが実際に適用されたときに適用層で `onHoverHideRequest` を呼ぶ（適用されないジャンプでは呼ばない＝従来挙動）。専用フラグは持たず、ジャンプ適用に内在させる。
 
 **なぜ純関数か:** F156 の指摘「最高チャーンのロジックが最もテスト困難な場所に集中」を直接解消する。決定ロジックを `WidgetTester` 不要の table-driven テストで網羅でき、TDD のテストファーストが自然に成立する。
 

@@ -107,25 +107,26 @@ class ViewerEffectInputs {
 @visibleForTesting
 class ViewerEffects {
   const ViewerEffects({
-    this.instantJumpToPage,
-    this.clearTargetLineOnJump = false,
+    this.targetJumpToPage,
+    this.lastJumpToPage,
     this.animatedGoToPage,
     this.reportLine,
     this.cancelAnimation = false,
-    this.hideHover = false,
     this.newScheduledTargetPage,
     this.consumeJumpToLastPage = false,
     this.consumeTtsOffset = false,
   });
 
-  /// Page to move to immediately via `setState` (① target jump or ③ last-page
-  /// jump). Null when neither fires.
-  final int? instantJumpToPage;
+  /// ① Page to jump to for a target-line navigation, via `setState`. Clears
+  /// `_targetLine` and re-checks the page on apply. Null when ① does not fire.
+  final int? targetJumpToPage;
 
-  /// True when [instantJumpToPage] originated from a target-line jump (①),
-  /// which also clears `_targetLine` and re-checks the page on apply. Last-page
-  /// jumps (③) leave this false.
-  final bool clearTargetLineOnJump;
+  /// ③ Page to jump to for a `fromEnd` intent (always the last page), via
+  /// `setState`. Applied unconditionally on the post-frame, matching the prior
+  /// inline code. Kept independent of [targetJumpToPage]: when both fire in the
+  /// same build they apply in order (① then ③), so the final page is the last
+  /// page exactly as before. Null when ③ does not jump.
+  final int? lastJumpToPage;
 
   /// Page to navigate to with the slide animation (④ TTS) via `_changePage`.
   final int? animatedGoToPage;
@@ -135,10 +136,6 @@ class ViewerEffects {
 
   /// ② Stop an in-flight page-transition animation (layout changed mid-anim).
   final bool cancelAnimation;
-
-  /// Drop the hover popup after an instant jump (①③). TTS (④) hides hover via
-  /// `_changePage`, so this stays false for TTS-only navigation.
-  final bool hideHover;
 
   /// Value to record into `_scheduledTargetPage` synchronously (① re-entrancy
   /// guard), or null when no target jump is scheduled.
@@ -155,24 +152,22 @@ class ViewerEffects {
   @override
   bool operator ==(Object other) =>
       other is ViewerEffects &&
-      other.instantJumpToPage == instantJumpToPage &&
-      other.clearTargetLineOnJump == clearTargetLineOnJump &&
+      other.targetJumpToPage == targetJumpToPage &&
+      other.lastJumpToPage == lastJumpToPage &&
       other.animatedGoToPage == animatedGoToPage &&
       other.reportLine == reportLine &&
       other.cancelAnimation == cancelAnimation &&
-      other.hideHover == hideHover &&
       other.newScheduledTargetPage == newScheduledTargetPage &&
       other.consumeJumpToLastPage == consumeJumpToLastPage &&
       other.consumeTtsOffset == consumeTtsOffset;
 
   @override
   int get hashCode => Object.hash(
-        instantJumpToPage,
-        clearTargetLineOnJump,
+        targetJumpToPage,
+        lastJumpToPage,
         animatedGoToPage,
         reportLine,
         cancelAnimation,
-        hideHover,
         newScheduledTargetPage,
         consumeJumpToLastPage,
         consumeTtsOffset,
@@ -180,12 +175,11 @@ class ViewerEffects {
 
   @override
   String toString() => 'ViewerEffects('
-      'instantJumpToPage: $instantJumpToPage, '
-      'clearTargetLineOnJump: $clearTargetLineOnJump, '
+      'targetJumpToPage: $targetJumpToPage, '
+      'lastJumpToPage: $lastJumpToPage, '
       'animatedGoToPage: $animatedGoToPage, '
       'reportLine: $reportLine, '
       'cancelAnimation: $cancelAnimation, '
-      'hideHover: $hideHover, '
       'newScheduledTargetPage: $newScheduledTargetPage, '
       'consumeJumpToLastPage: $consumeJumpToLastPage, '
       'consumeTtsOffset: $consumeTtsOffset)';
@@ -203,42 +197,37 @@ int? _findPageForOffset(int offset, List<int> charOffsetPerPage) {
 
 /// Pure decision: given a layout snapshot, return the side effects this build
 /// should apply. Behaviour mirrors the previous inline orchestration exactly,
-/// except that when a target jump (①) and a last-page jump (③) would fire in
-/// the same build the target jump deliberately wins (the prior code's
-/// last-registered-post-frame-wins ordering was an accident of two independent
-/// callbacks and this case is practically unreachable).
+/// including ordering: the target jump (①) and the last-page jump (③) are kept
+/// as independent effects so that when both fire in the same build they apply
+/// in order (① then ③) and the final page is the last page, just as the prior
+/// two-post-frame code produced.
 @visibleForTesting
 ViewerEffects resolveViewerEffects(ViewerEffectInputs i) {
   final safePage = i.safePage;
 
-  int? instantJumpToPage;
-  var clearTargetLineOnJump = false;
+  // ① Target-line page jump. The `scheduledTargetPage` check is the re-entrancy
+  // guard against re-scheduling the same jump across rebuilds before the
+  // post-frame fires.
+  int? targetJumpToPage;
   int? newScheduledTargetPage;
-  var hideHover = false;
-
-  // ① Target-line page jump (highest priority among instant jumps). The
-  // `scheduledTargetPage` check is the re-entrancy guard against re-scheduling
-  // the same jump across rebuilds before the post-frame fires.
   final targetFires = i.targetPage != null &&
       i.targetPage != i.currentPage &&
       i.targetPage != i.scheduledTargetPage;
   if (targetFires) {
-    instantJumpToPage = i.targetPage;
-    clearTargetLineOnJump = true;
+    targetJumpToPage = i.targetPage;
     newScheduledTargetPage = i.targetPage;
-    hideHover = true;
   }
 
   // ③ Jump-to-last-page (`fromEnd` intent). Consumed whenever pending and pages
-  // exist, even if the page is already last; does not override an active ①.
+  // exist, even if the page is already last. Independent of ① (applied after
+  // it), preserving the prior behaviour where the last-page jump ran last.
   var consumeJumpToLastPage = false;
+  int? lastJumpToPage;
   if (i.jumpToLastPagePending && i.totalPages > 0) {
     consumeJumpToLastPage = true;
     final lastPage = i.totalPages - 1;
-    if (lastPage != i.currentPage && instantJumpToPage == null) {
-      instantJumpToPage = lastPage;
-      clearTargetLineOnJump = false;
-      hideHover = true;
+    if (lastPage != i.currentPage) {
+      lastJumpToPage = lastPage;
     }
   }
 
@@ -267,12 +256,11 @@ ViewerEffects resolveViewerEffects(ViewerEffectInputs i) {
   final cancelAnimation = i.constraintsChanged && i.isAnimating;
 
   return ViewerEffects(
-    instantJumpToPage: instantJumpToPage,
-    clearTargetLineOnJump: clearTargetLineOnJump,
+    targetJumpToPage: targetJumpToPage,
+    lastJumpToPage: lastJumpToPage,
     animatedGoToPage: animatedGoToPage,
     reportLine: reportLine,
     cancelAnimation: cancelAnimation,
-    hideHover: hideHover,
     newScheduledTargetPage: newScheduledTargetPage,
     consumeJumpToLastPage: consumeJumpToLastPage,
     consumeTtsOffset: consumeTtsOffset,
@@ -826,7 +814,8 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       _lastReportedLine = effects.reportLine!;
     }
 
-    final hasPostFrameWork = effects.instantJumpToPage != null ||
+    final hasPostFrameWork = effects.targetJumpToPage != null ||
+        effects.lastJumpToPage != null ||
         effects.animatedGoToPage != null ||
         effects.reportLine != null;
     if (!hasPostFrameWork) return;
@@ -839,24 +828,26 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
         _scheduledTargetPage = null;
       }
 
-      // ①/③ Instant page jump (no slide animation).
-      final jump = effects.instantJumpToPage;
-      if (jump != null) {
-        // Target-origin jumps (①) re-check the page hasn't already moved;
-        // last-page jumps (③) apply unconditionally, matching the prior code.
-        final skip = effects.clearTargetLineOnJump && jump == _currentPage;
-        if (!skip) {
-          setState(() {
-            _currentPage = jump;
-            if (effects.clearTargetLineOnJump) _targetLine = null;
-          });
-        }
+      // ① Target-line jump (no slide animation). Re-checks the page hasn't
+      // already moved, clears the target line, and drops the now-stale hover
+      // popup (the jump bypasses _changePage). Skipping the hover-hide when the
+      // jump is a no-op matches the prior code, which returned early.
+      final targetJump = effects.targetJumpToPage;
+      if (targetJump != null && targetJump != _currentPage) {
+        setState(() {
+          _currentPage = targetJump;
+          _targetLine = null;
+        });
+        widget.onHoverHideRequest?.call();
       }
 
-      // ①/③ The page jumped without going through _changePage, so the popup's
-      // anchor is stale relative to the new content. Drop any visible popup.
-      // (TTS ④ hides hover via _changePage, so hideHover stays false there.)
-      if (effects.hideHover) {
+      // ③ Last-page (`fromEnd`) jump. Applied unconditionally as before, after
+      // ① so it wins when both fire in the same build.
+      final lastJump = effects.lastJumpToPage;
+      if (lastJump != null) {
+        setState(() {
+          _currentPage = lastJump;
+        });
         widget.onHoverHideRequest?.call();
       }
 

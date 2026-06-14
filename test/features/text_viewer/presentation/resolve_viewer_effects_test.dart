@@ -42,6 +42,13 @@ void main() {
           ViewerEffects.none);
     });
 
+    test('idle snapshot has no jumps', () {
+      final fx = resolveViewerEffects(inputs());
+      expect(fx.targetJumpToPage, isNull);
+      expect(fx.lastJumpToPage, isNull);
+      expect(fx.animatedGoToPage, isNull);
+    });
+
     test('single page never animates TTS even when offset pending', () {
       // totalPages must be > 1 for ④; with one page the offset stays pending.
       final fx = resolveViewerEffects(inputs(
@@ -56,18 +63,17 @@ void main() {
   });
 
   group('resolveViewerEffects — ① target-line jump', () {
-    test('fires with target priority and schedules the guard', () {
+    test('fires and schedules the re-entrancy guard', () {
       final fx = resolveViewerEffects(inputs(targetPage: 3, currentPage: 0));
-      expect(fx.instantJumpToPage, 3);
-      expect(fx.clearTargetLineOnJump, isTrue);
+      expect(fx.targetJumpToPage, 3);
       expect(fx.newScheduledTargetPage, 3);
-      expect(fx.hideHover, isTrue);
+      expect(fx.lastJumpToPage, isNull);
     });
 
     test('does not re-fire when already scheduled (re-entrancy guard)', () {
       final fx = resolveViewerEffects(
           inputs(targetPage: 3, currentPage: 0, scheduledTargetPage: 3));
-      expect(fx.instantJumpToPage, isNull);
+      expect(fx.targetJumpToPage, isNull);
       expect(fx.newScheduledTargetPage, isNull);
     });
   });
@@ -76,16 +82,14 @@ void main() {
     test('fires and consumes when not already on last page', () {
       final fx = resolveViewerEffects(
           inputs(totalPages: 4, currentPage: 0, jumpToLastPagePending: true));
-      expect(fx.instantJumpToPage, 3);
-      expect(fx.clearTargetLineOnJump, isFalse);
-      expect(fx.hideHover, isTrue);
+      expect(fx.lastJumpToPage, 3);
       expect(fx.consumeJumpToLastPage, isTrue);
     });
 
     test('consumes without jumping when already on last page', () {
       final fx = resolveViewerEffects(
           inputs(totalPages: 4, currentPage: 3, jumpToLastPagePending: true));
-      expect(fx.instantJumpToPage, isNull);
+      expect(fx.lastJumpToPage, isNull);
       expect(fx.consumeJumpToLastPage, isTrue);
     });
 
@@ -97,7 +101,7 @@ void main() {
         firstLinePerPage: const [1],
       ));
       expect(fx.consumeJumpToLastPage, isFalse);
-      expect(fx.instantJumpToPage, isNull);
+      expect(fx.lastJumpToPage, isNull);
     });
   });
 
@@ -112,8 +116,6 @@ void main() {
       ));
       expect(fx.animatedGoToPage, 2); // last offset <= 120 is index 2 (100)
       expect(fx.consumeTtsOffset, isTrue);
-      // TTS uses _changePage which hides hover itself, so hideHover stays false.
-      expect(fx.hideHover, isFalse);
     });
 
     test('consumes without navigating when offset is on the current page', () {
@@ -168,15 +170,18 @@ void main() {
   });
 
   group('resolveViewerEffects — priority & consume-once', () {
-    test('target jump wins over last-page jump but still consumes it', () {
+    test('target and last-page jumps are emitted independently when both fire',
+        () {
+      // Both effects are emitted; apply order (① then ③) lands on the last
+      // page exactly as the prior two-post-frame code did.
       final fx = resolveViewerEffects(inputs(
         totalPages: 5,
         currentPage: 0,
         targetPage: 2,
         jumpToLastPagePending: true,
       ));
-      expect(fx.instantJumpToPage, 2); // target, not last (4)
-      expect(fx.clearTargetLineOnJump, isTrue);
+      expect(fx.targetJumpToPage, 2);
+      expect(fx.lastJumpToPage, 4);
       expect(fx.consumeJumpToLastPage, isTrue);
       expect(fx.newScheduledTargetPage, 2);
     });
@@ -185,12 +190,12 @@ void main() {
       // build 1: pending → fires + consume.
       final first = resolveViewerEffects(
           inputs(totalPages: 4, currentPage: 0, jumpToLastPagePending: true));
-      expect(first.instantJumpToPage, 3);
+      expect(first.lastJumpToPage, 3);
       expect(first.consumeJumpToLastPage, isTrue);
       // build 2: apply cleared the flag → no effect.
       final second = resolveViewerEffects(
           inputs(totalPages: 4, currentPage: 0, jumpToLastPagePending: false));
-      expect(second.instantJumpToPage, isNull);
+      expect(second.lastJumpToPage, isNull);
       expect(second.consumeJumpToLastPage, isFalse);
     });
 

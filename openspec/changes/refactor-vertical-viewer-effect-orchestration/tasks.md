@@ -32,7 +32,7 @@
 
 ## 6. 最終確認
 
-- [ ] 6.1 code-review スキルを使用してコードレビューを実施
-- [ ] 6.2 codex スキルを使用して現在開発中のコードレビューを実施
-- [ ] 6.3 `fvm flutter analyze` でリントを実行
-- [ ] 6.4 `fvm flutter test` でテストを実行
+- [x] 6.1 code-review スキルを使用してコードレビューを実施
+- [x] 6.2 codex スキルを使用して現在開発中のコードレビューを実施
+- [x] 6.3 `fvm flutter analyze` でリントを実行
+- [x] 6.4 `fvm flutter test` でテストを実行
