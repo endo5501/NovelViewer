@@ -128,14 +128,14 @@ The system SHALL provide a delete button to remove all stored TTS audio for the 
 - **THEN** the audio data is not deleted and the UI remains unchanged
 
 ### Requirement: Audio buffer drain before stop on last segment
-The buffer drain handling on the last segment SHALL be implemented inside the shared `SegmentPlayer`, not duplicated in `TtsStoredPlayerController`. The wait duration SHALL be configurable via the `SegmentPlayer.bufferDrainDelay` parameter, with a default of 500ms. The `TtsStoredPlayerController` constructor SHALL continue to accept a `bufferDrainDelay` parameter that propagates to its underlying `SegmentPlayer`, preserving existing test fixtures (`bufferDrainDelay: Duration.zero`). If the user stops playback during the buffer drain delay, the delay SHALL be skipped and stop SHALL proceed immediately.
+The buffer drain handling on the last segment SHALL be implemented inside the shared `SegmentPlayer`, not duplicated in the playback controller. The wait duration SHALL be configurable via the `SegmentPlayer.bufferDrainDelay` parameter, with a default of 500ms. The `TtsStreamingController` constructor SHALL accept a `bufferDrainDelay` parameter that propagates to its underlying `SegmentPlayer`, preserving existing test fixtures (`bufferDrainDelay: Duration.zero`). If the user stops playback during the buffer drain delay, the delay SHALL be skipped and stop SHALL proceed immediately.
 
 #### Scenario: Last segment waits for buffer drain before stop
 - **WHEN** the last segment finishes playback (completed state is received)
 - **THEN** the `SegmentPlayer` waits for the configured buffer drain delay before calling its internal stop/pause sequence, ensuring the audio output device finishes playing all buffered samples
 
 #### Scenario: Buffer drain delay is zero in tests
-- **WHEN** `TtsStoredPlayerController` is constructed with `bufferDrainDelay: Duration.zero`
+- **WHEN** `TtsStreamingController` is constructed with `bufferDrainDelay: Duration.zero`
 - **THEN** the underlying `SegmentPlayer` is configured with `Duration.zero`, allowing tests to complete quickly
 
 #### Scenario: Buffer drain skipped on user stop

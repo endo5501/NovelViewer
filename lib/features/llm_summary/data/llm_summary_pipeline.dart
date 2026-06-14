@@ -20,34 +20,6 @@ class LlmSummaryPipeline {
     this.maxRecursionDepth = 5,
   });
 
-  Future<String> generate({
-    required String word,
-    required List<String> contexts,
-    void Function(AnalysisProgress progress)? onProgress,
-  }) async {
-    // Isolate UI-callback failures so a buggy progress listener can never
-    // abort data-layer generation (and waste LLM tokens already consumed).
-    final notify = _isolatedNotifier(onProgress);
-
-    if (contexts.isEmpty) {
-      notify(const AnalysisGeneratingFinalSummary());
-      final prompt = LlmPromptBuilder.buildFinalSummaryPrompt(
-        word: word,
-        facts: '',
-      );
-      return _parseSummaryResponse(await llmClient.generate(prompt));
-    }
-
-    final facts = await _extractFactsRecursive(word, contexts, 0, notify);
-
-    notify(const AnalysisGeneratingFinalSummary());
-    final prompt = LlmPromptBuilder.buildFinalSummaryPrompt(
-      word: word,
-      facts: facts,
-    );
-    return _parseSummaryResponse(await llmClient.generate(prompt));
-  }
-
   /// Stage-1 for a single source file: split this file's own contexts into
   /// chunks (only chunking when the file alone exceeds [maxChunkSize]) and
   /// combine the per-chunk extracted facts into the file's facts. Returns an
