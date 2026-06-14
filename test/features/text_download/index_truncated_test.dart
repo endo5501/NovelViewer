@@ -33,6 +33,9 @@ void main() {
       final service = DownloadService(
         client: client,
         requestDelay: Duration.zero,
+        // 500 is transient and retried; keep backoff at zero so the test does
+        // not wait in real time (F121 retry + F123 no-wall-clock).
+        retryBaseDelay: Duration.zero,
       );
 
       final result = await service.downloadNovel(
@@ -75,6 +78,8 @@ void main() {
         client: client,
         requestDelay: Duration.zero,
         requestTimeout: const Duration(milliseconds: 200),
+        // Timeout is transient and retried; zero backoff avoids real waits.
+        retryBaseDelay: Duration.zero,
       );
 
       final result = await service.downloadNovel(

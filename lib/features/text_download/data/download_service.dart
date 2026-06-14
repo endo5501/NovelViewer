@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -190,32 +191,95 @@ class DownloadService {
   /// first index page -> propagated to the caller).
   final Duration requestTimeout;
 
+  /// Maximum number of *retries* (in addition to the initial attempt) applied by
+  /// [_fetchPageResponse] to transient fetch failures — HTTP 5xx and
+  /// [TimeoutException] only (F121). The total number of attempts is therefore
+  /// `maxRetries + 1`. Permanent failures (HTTP 4xx) and non-transient
+  /// exceptions are never retried.
+  final int maxRetries;
+
+  /// Base delay for the exponential backoff between retries. The wait before the
+  /// n-th retry (1-based) is `retryBaseDelay * 2^(n-1)`. Injectable so tests can
+  /// exercise the retry path without waiting in real time.
+  final Duration retryBaseDelay;
+
   DownloadService({
     http.Client? client,
     this.requestDelay = const Duration(milliseconds: 700),
     this.requestTimeout = const Duration(seconds: 30),
+    this.maxRetries = 2,
+    this.retryBaseDelay = const Duration(milliseconds: 500),
   }) : _client = client ?? http.Client();
 
   static const _userAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
+  /// True when [statusCode] denotes a transient server-side failure (HTTP 5xx)
+  /// that is worth retrying. HTTP 4xx (e.g. 404 not found, 403 blocked) is a
+  /// permanent failure and is never retried.
+  static bool _isTransientStatus(int statusCode) =>
+      statusCode >= 500 && statusCode <= 599;
+
+  /// Waits for the exponential backoff before the [attempt]-th retry (1-based),
+  /// cooperating with cancellation. [Future.delayed] itself is not interruptible,
+  /// so a cancellation requested during the wait is observed right after it (the
+  /// post-wait [CancellationToken.throwIfCancelled] throws [CancelledException]),
+  /// bounded by a single backoff interval — the cancellation is never lost or
+  /// misclassified, just deferred by at most one wait.
+  Future<void> _backoff(int attempt, CancellationToken? cancelToken) async {
+    cancelToken?.throwIfCancelled();
+    await Future.delayed(retryBaseDelay * (1 << (attempt - 1)));
+    cancelToken?.throwIfCancelled();
+  }
+
+  /// Fetches [url] with the configured timeout, retrying transient failures
+  /// (HTTP 5xx and [TimeoutException] only) up to [maxRetries] times with
+  /// exponential backoff (F121).
+  ///
+  /// - HTTP 200 is returned immediately.
+  /// - HTTP 4xx (and any other non-200, non-5xx status) is a permanent failure:
+  ///   it is thrown as [HttpException] without retrying.
+  /// - HTTP 5xx and [TimeoutException] are retried; once retries are exhausted
+  ///   the last failure surfaces (HttpException / rethrown TimeoutException),
+  ///   preserving the per-caller contract (episode -> failedCount, later index
+  ///   page -> indexTruncated, first index page -> propagated).
+  /// - Other exceptions (e.g. [http.ClientException] from a cancelled client)
+  ///   are NOT retried and propagate, so a cancellation is never mistaken for a
+  ///   transient failure.
   Future<http.Response> _fetchPageResponse(
     Uri url, {
     NovelSite? site,
+    CancellationToken? cancelToken,
   }) async {
     final siteHeaders = site?.requestHeaders(url) ?? const <String, String>{};
-    final response = await _client.get(
-      url,
-      headers: {'User-Agent': _userAgent, ...siteHeaders},
-    ).timeout(requestTimeout);
-    if (response.statusCode != 200) {
-      throw HttpException(
-        'HTTP ${response.statusCode}',
-        uri: url,
-      );
+    final headers = {'User-Agent': _userAgent, ...siteHeaders};
+
+    var attempt = 0;
+    while (true) {
+      // Guard before each attempt so a cancellation (which closed the client)
+      // is not retried into a fresh ClientException.
+      cancelToken?.throwIfCancelled();
+      try {
+        final response =
+            await _client.get(url, headers: headers).timeout(requestTimeout);
+        if (response.statusCode == 200) return response;
+        if (_isTransientStatus(response.statusCode) && attempt < maxRetries) {
+          attempt++;
+          await _backoff(attempt, cancelToken);
+          continue;
+        }
+        throw HttpException('HTTP ${response.statusCode}', uri: url);
+      } on TimeoutException {
+        if (attempt < maxRetries) {
+          cancelToken?.throwIfCancelled();
+          attempt++;
+          await _backoff(attempt, cancelToken);
+          continue;
+        }
+        rethrow;
+      }
     }
-    return response;
   }
 
   Future<String> fetchPage(Uri url) async {
@@ -274,6 +338,7 @@ class DownloadService {
     final indexResponse = await _fetchPageResponse(
       normalizedUrl,
       site: site,
+      cancelToken: cancelToken,
     );
     final novelIndex = site.parseIndex(
       site.decodeBody(indexResponse),
@@ -366,6 +431,7 @@ class DownloadService {
         final res = await _fetchPageResponse(
           next,
           site: site,
+          cancelToken: cancelToken,
         );
         final idx = site.parseIndex(site.decodeBody(res), next);
         addEpisodes(idx.episodes);
@@ -524,6 +590,7 @@ class DownloadService {
           final response = await _fetchPageResponse(
             episode.url,
             site: site,
+            cancelToken: cancelToken,
           );
           final content = site.parseEpisode(site.decodeBody(response));
           if (content.trim().isEmpty) {
