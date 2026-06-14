@@ -99,10 +99,16 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
       );
     };
 
+    // Resolve the active engine's real sample rate (Qwen3=24000, Piper=22050)
+    // instead of hard-coding it, so the episode's sample_rate metadata matches
+    // the generated audio and MP3 export does not pitch-shift Piper episodes.
+    final engineType = ref.read(ttsEngineTypeProvider);
+    final config = TtsEngineConfig.resolveFromRef(ref, engineType);
+
     await controller.loadSegments(
       text: widget.content,
       fileName: widget.fileName,
-      sampleRate: 24000,
+      sampleRate: config.sampleRate,
     );
 
     await _loadVoiceFiles();

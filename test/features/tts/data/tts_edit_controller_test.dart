@@ -9,6 +9,7 @@ import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
+import 'package:novel_viewer/features/tts/data/segment_player.dart';
 import 'package:novel_viewer/features/tts/data/tts_edit_controller.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
@@ -200,6 +201,35 @@ class RealisticFakeAudioPlayer implements TtsAudioPlayer {
   Future<void> dispose() async {
     isDisposed = true;
     _stateController.close();
+  }
+}
+
+/// Spy [SegmentPlayer] that records whether a given preview file still exists
+/// at the moment `dispose()` is called. Used to assert that the controller
+/// disposes the player BEFORE deleting temporary preview files (F110).
+class _OrderSpySegmentPlayer extends SegmentPlayer {
+  _OrderSpySegmentPlayer({required super.player, required this.previewPath})
+      : super(bufferDrainDelay: Duration.zero);
+
+  final String previewPath;
+  bool? previewExistedAtDispose;
+
+  @override
+  Future<void> dispose() async {
+    previewExistedAtDispose = File(previewPath).existsSync();
+    await super.dispose();
+  }
+}
+
+/// Spy [SegmentPlayer] whose `dispose()` always throws, to verify the
+/// controller still cleans up temporary files when player teardown fails.
+class _ThrowingSegmentPlayer extends SegmentPlayer {
+  _ThrowingSegmentPlayer({required super.player})
+      : super(bufferDrainDelay: Duration.zero);
+
+  @override
+  Future<void> dispose() async {
+    throw StateError('player dispose failed');
   }
 }
 
@@ -1931,7 +1961,159 @@ void main() {
       });
     });
 
+    group('episode sample rate', () {
+      test('episode is created with the sample rate passed to loadSegments',
+          () async {
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        // Simulate the Piper engine (22050 Hz) being active: the dialog
+        // resolves config.sampleRate and passes it to loadSegments.
+        await controller.loadSegments(
+          text: 'テスト。',
+          fileName: 'test.txt',
+          sampleRate: 22050,
+        );
+
+        // Trigger episode creation via a segment operation.
+        await controller.generateSegment(
+          segmentIndex: 0,
+          config: _qwen3Config(sampleRate: 22050),
+        );
+
+        final episode = await repository.findEpisodeByFileName('test.txt');
+        expect(episode, isNotNull);
+        expect(episode!.sampleRate, 22050,
+            reason:
+                'episode sample_rate must reflect the value passed to '
+                'loadSegments (the active engine), not a hard-coded 24000');
+      });
+    });
+
     group('dispose', () {
+      test('disposes the SegmentPlayer (and underlying audio player) on dispose',
+          () async {
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        await controller.loadSegments(
+          text: 'テスト。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.dispose();
+
+        expect(player.isDisposed, true,
+            reason: 'dispose() must dispose the SegmentPlayer so the platform '
+                'audio player is released and does not leak');
+      });
+
+      test('disposes SegmentPlayer before deleting temporary preview files',
+          () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.completed,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト。',
+          textOffset: 0,
+          textLength: 4,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final previewPath = '${tempDir.path}/tts_edit_preview_0.wav';
+        final spyPlayer =
+            _OrderSpySegmentPlayer(player: player, previewPath: previewPath);
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          segmentPlayer: spyPlayer,
+        );
+
+        await controller.loadSegments(
+          text: 'テスト。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.playSegment(0);
+        expect(File(previewPath).existsSync(), true,
+            reason: 'sanity: preview file should be written by playSegment');
+
+        await controller.dispose();
+
+        expect(spyPlayer.previewExistedAtDispose, true,
+            reason: 'SegmentPlayer must be disposed before temporary preview '
+                'files are deleted (Windows file-lock safety)');
+        expect(File(previewPath).existsSync(), false,
+            reason: 'preview files must be cleaned up after dispose');
+      });
+
+      test('cleans up temporary files even if SegmentPlayer.dispose throws',
+          () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.completed,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト。',
+          textOffset: 0,
+          textLength: 4,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+
+        final isolate = FakeTtsIsolate();
+        final player = FakeAudioPlayer();
+        final previewPath = '${tempDir.path}/tts_edit_preview_0.wav';
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          segmentPlayer: _ThrowingSegmentPlayer(player: player),
+        );
+
+        await controller.loadSegments(
+          text: 'テスト。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.playSegment(0);
+        expect(File(previewPath).existsSync(), true);
+
+        await expectLater(controller.dispose(), throwsA(isA<StateError>()));
+
+        expect(File(previewPath).existsSync(), false,
+            reason: 'temp files must be cleaned up even when player dispose '
+                'throws (cleanup runs in finally)');
+      });
+
       test('disposes TtsIsolate if model was loaded', () async {
         await repository.createEpisode(
           fileName: 'test.txt',
