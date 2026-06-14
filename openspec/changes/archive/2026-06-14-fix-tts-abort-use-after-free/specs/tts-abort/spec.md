@@ -1,7 +1,41 @@
-## Purpose
+## ADDED Requirements
 
-Cross-isolate abort for in-progress TTS synthesis: native atomic abort flag + ggml CPU callback + per-frame C++ checks (for GPU backends without callback support), Dart FFI bindings callable from any isolate, `TtsEngine.abort()` / `TtsIsolate.abort()` using a shared context-pointer address, and dispose-waits-for-abort cleanup.
-## Requirements
+### Requirement: Abort handle with model-reload-independent lifetime
+The C API SHALL provide a dedicated abort handle (`qwen3_tts_abort_handle`) that holds the atomic abort flag, allocated independently of any synthesis context (`qwen3_tts_ctx`). `qwen3_tts_create_abort_handle()` SHALL allocate and return a handle whose flag is initialized to `false`. `qwen3_tts_free_abort_handle(handle)` SHALL release it. The handle's lifetime SHALL be independent of `qwen3_tts_init` / `qwen3_tts_free`: loading, reloading, or freeing a synthesis context SHALL NOT invalidate an abort handle. Calling `qwen3_tts_abort` / `qwen3_tts_reset_abort` on a live handle SHALL be memory-safe regardless of whether any context is currently loaded, mid-reload, or already freed. The synthesis context SHALL NOT own the abort flag.
+
+#### Scenario: Handle outlives context free and reload
+- **WHEN** an abort handle is created, a context is initialized with it, the context is freed via `qwen3_tts_free`, and a new context is initialized with the same handle
+- **THEN** the handle remains valid throughout and `qwen3_tts_abort(handle)` writes only to the handle's own memory (never to the freed context)
+
+#### Scenario: Abort during the model-reload window is memory-safe
+- **WHEN** `qwen3_tts_abort(handle)` is called in the window between freeing the old context and the new context becoming ready
+- **THEN** the call touches only the independently-allocated handle and performs no use-after-free access
+
+#### Scenario: Abort and reset on null handle are no-ops
+- **WHEN** `qwen3_tts_abort(null)` or `qwen3_tts_reset_abort(null)` is called
+- **THEN** the function returns without error and without dereferencing the pointer
+
+### Requirement: TtsIsolate owns the abort handle lifecycle
+The `TtsIsolate` SHALL create exactly one abort handle when it spawns its worker Isolate, expose the handle's stable native address to the main Isolate, and free the handle only after the worker Isolate has terminated. `TtsIsolate.abort()` SHALL signal abort by writing to this handle (via FFI from the main Isolate), never by dereferencing a synthesis context pointer. The handle's address SHALL remain constant across any number of `loadModel` calls.
+
+#### Scenario: Handle created once at spawn
+- **WHEN** `TtsIsolate.spawn()` completes
+- **THEN** exactly one abort handle has been created and its native address is available to the main Isolate before any model is loaded
+
+#### Scenario: Abort target is stable across model reloads
+- **WHEN** `loadModel` is called multiple times (including engine/model switches) on the same `TtsIsolate`
+- **THEN** the address used by `TtsIsolate.abort()` is unchanged and always points to the live abort handle
+
+#### Scenario: Abort before any model is loaded is memory-safe
+- **WHEN** `TtsIsolate.abort()` is called after `spawn()` but before any successful `loadModel`
+- **THEN** the call writes to the existing abort handle and performs no invalid memory access
+
+#### Scenario: Handle freed after worker termination on dispose
+- **WHEN** `TtsIsolate.dispose()` runs and the worker Isolate exits (gracefully or via force-kill on timeout)
+- **THEN** `qwen3_tts_free_abort_handle` is called only after the worker has terminated, so no isolate reads the flag after it is freed
+
+## MODIFIED Requirements
+
 ### Requirement: C API for synthesis abort
 The C API SHALL provide functions to abort an in-progress synthesis operation from an external thread, operating on a dedicated abort handle rather than the synthesis context. `qwen3_tts_abort(handle)` SHALL set the atomic abort flag held by the handle, causing the current or next `ggml_backend_sched_graph_compute` call to return `GGML_STATUS_ABORTED`. `qwen3_tts_reset_abort(handle)` SHALL clear the abort flag. The abort flag SHALL be implemented as `std::atomic<bool>` to guarantee thread safety. When aborted, the synthesis function SHALL return a non-zero error code and `qwen3_tts_get_error` SHALL return an error string indicating abort.
 
@@ -89,37 +123,8 @@ The `TtsIsolate.dispose()` method SHALL call `abort()` first when the model is l
 - **WHEN** `dispose()` is called while no synthesis is running
 - **THEN** `DisposeMessage` is sent and processed normally, and the abort handle is freed after the worker exits
 
-### Requirement: Abort handle with model-reload-independent lifetime
-The C API SHALL provide a dedicated abort handle (`qwen3_tts_abort_handle`) that holds the atomic abort flag, allocated independently of any synthesis context (`qwen3_tts_ctx`). `qwen3_tts_create_abort_handle()` SHALL allocate and return a handle whose flag is initialized to `false`. `qwen3_tts_free_abort_handle(handle)` SHALL release it. The handle's lifetime SHALL be independent of `qwen3_tts_init` / `qwen3_tts_free`: loading, reloading, or freeing a synthesis context SHALL NOT invalidate an abort handle. Calling `qwen3_tts_abort` / `qwen3_tts_reset_abort` on a live handle SHALL be memory-safe regardless of whether any context is currently loaded, mid-reload, or already freed. The synthesis context SHALL NOT own the abort flag.
+## REMOVED Requirements
 
-#### Scenario: Handle outlives context free and reload
-- **WHEN** an abort handle is created, a context is initialized with it, the context is freed via `qwen3_tts_free`, and a new context is initialized with the same handle
-- **THEN** the handle remains valid throughout and `qwen3_tts_abort(handle)` writes only to the handle's own memory (never to the freed context)
-
-#### Scenario: Abort during the model-reload window is memory-safe
-- **WHEN** `qwen3_tts_abort(handle)` is called in the window between freeing the old context and the new context becoming ready
-- **THEN** the call touches only the independently-allocated handle and performs no use-after-free access
-
-#### Scenario: Abort and reset on null handle are no-ops
-- **WHEN** `qwen3_tts_abort(null)` or `qwen3_tts_reset_abort(null)` is called
-- **THEN** the function returns without error and without dereferencing the pointer
-
-### Requirement: TtsIsolate owns the abort handle lifecycle
-The `TtsIsolate` SHALL create exactly one abort handle when it spawns its worker Isolate, expose the handle's stable native address to the main Isolate, and free the handle only after the worker Isolate has terminated. `TtsIsolate.abort()` SHALL signal abort by writing to this handle (via FFI from the main Isolate), never by dereferencing a synthesis context pointer. The handle's address SHALL remain constant across any number of `loadModel` calls.
-
-#### Scenario: Handle created once at spawn
-- **WHEN** `TtsIsolate.spawn()` completes
-- **THEN** exactly one abort handle has been created and its native address is available to the main Isolate before any model is loaded
-
-#### Scenario: Abort target is stable across model reloads
-- **WHEN** `loadModel` is called multiple times (including engine/model switches) on the same `TtsIsolate`
-- **THEN** the address used by `TtsIsolate.abort()` is unchanged and always points to the live abort handle
-
-#### Scenario: Abort before any model is loaded is memory-safe
-- **WHEN** `TtsIsolate.abort()` is called after `spawn()` but before any successful `loadModel`
-- **THEN** the call writes to the existing abort handle and performs no invalid memory access
-
-#### Scenario: Handle freed after worker termination on dispose
-- **WHEN** `TtsIsolate.dispose()` runs and the worker Isolate exits (gracefully or via force-kill on timeout)
-- **THEN** `qwen3_tts_free_abort_handle` is called only after the worker has terminated, so no isolate reads the flag after it is freed
-
+### Requirement: TtsIsolate shared context pointer for abort
+**Reason**: The shared synthesis-context pointer (`ModelLoadedResponse.ctxAddress`) is the root cause of the F111 use-after-free: the context is freed on model reload while the main Isolate still holds its address, so an abort during the reload window writes to freed memory. It is replaced by an abort handle whose lifetime is independent of the context (see ADDED "TtsIsolate owns the abort handle lifecycle" and "Abort handle with model-reload-independent lifetime").
+**Migration**: Stop exposing/consuming `ModelLoadedResponse.ctxAddress` for abort. The main Isolate obtains the abort handle address at `spawn()` and `TtsIsolate.abort()` writes to that handle. The worker receives the handle address (e.g., via `LoadModelMessage`) and passes it to `qwen3_tts_init`; the abort flag is no longer read from the context.

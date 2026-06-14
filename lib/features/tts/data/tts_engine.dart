@@ -42,6 +42,10 @@ class TtsEngine {
   final TtsNativeBindings _bindings;
   Pointer<Void> _ctx = nullptr;
 
+  /// Abort handle wired into the native context at load time. The flag lives
+  /// independently of the context, so abort/reset never dereference [_ctx].
+  Pointer<Void> _abortHandle = nullptr;
+
   bool get isLoaded => _ctx != nullptr && _bindings.isLoaded(_ctx) != 0;
 
   void setLanguage(int languageId) {
@@ -49,14 +53,20 @@ class TtsEngine {
     _bindings.setLanguage(_ctx, languageId);
   }
 
-  void loadModel(String modelDir, {int nThreads = 4}) {
+  void loadModel(
+    String modelDir, {
+    int nThreads = 4,
+    Pointer<Void>? abortHandle,
+  }) {
     if (_ctx != nullptr) {
       dispose();
     }
 
+    final handle = abortHandle ?? nullptr;
+    _abortHandle = handle;
     final modelDirPtr = modelDir.toNativeUtf8();
     try {
-      _ctx = _bindings.init(modelDirPtr, nThreads);
+      _ctx = _bindings.init(modelDirPtr, nThreads, handle);
     } finally {
       calloc.free(modelDirPtr);
     }
@@ -243,20 +253,19 @@ class TtsEngine {
     return sha256.convert(bytes).toString();
   }
 
-  int? get ctxAddress => _ctx != nullptr ? _ctx.address : null;
-
   /// Signal the native engine to abort the current synthesis.
-  /// Thread-safe: can be called from any isolate.
+  /// Thread-safe: can be called from any isolate. Operates on the abort handle,
+  /// never on the synthesis context, so it is safe across context reloads.
   void abort() {
-    if (_ctx != nullptr) {
-      _bindings.abort(_ctx);
+    if (_abortHandle != nullptr) {
+      _bindings.abort(_abortHandle);
     }
   }
 
   /// Clear the abort flag so subsequent synthesis calls proceed normally.
   void resetAbort() {
-    if (_ctx != nullptr) {
-      _bindings.resetAbort(_ctx);
+    if (_abortHandle != nullptr) {
+      _bindings.resetAbort(_abortHandle);
     }
   }
 
@@ -265,6 +274,9 @@ class TtsEngine {
       _bindings.free(_ctx);
       _ctx = nullptr;
     }
+    // The abort handle is owned by the caller (TtsIsolate); do not free it here.
+    // Drop our reference so a post-dispose abort() is a no-op.
+    _abortHandle = nullptr;
   }
 
   void _ensureLoaded() {

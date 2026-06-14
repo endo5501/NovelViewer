@@ -3,8 +3,17 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 
-typedef _QTtsInitC = Pointer<Void> Function(Pointer<Utf8>, Int32);
-typedef _QTtsInitDart = Pointer<Void> Function(Pointer<Utf8>, int);
+// init takes the model dir, thread count, and an abort handle pointer (may be
+// nullptr). The abort handle is owned by the caller and outlives the context.
+typedef _QTtsInitC = Pointer<Void> Function(Pointer<Utf8>, Int32, Pointer<Void>);
+typedef _QTtsInitDart = Pointer<Void> Function(Pointer<Utf8>, int, Pointer<Void>);
+
+// Abort handle lifecycle (lifetime independent of any synthesis context).
+typedef _QTtsCreateAbortHandleC = Pointer<Void> Function();
+typedef _QTtsCreateAbortHandleDart = Pointer<Void> Function();
+
+typedef _QTtsFreeAbortHandleC = Void Function(Pointer<Void>);
+typedef _QTtsFreeAbortHandleDart = void Function(Pointer<Void>);
 
 typedef _QTtsIsLoadedC = Int32 Function(Pointer<Void>);
 typedef _QTtsIsLoadedDart = int Function(Pointer<Void>);
@@ -130,6 +139,16 @@ class TtsNativeBindings {
   late final init = _library.lookupFunction<_QTtsInitC, _QTtsInitDart>(
     'qwen3_tts_init',
   );
+
+  late final createAbortHandle = _library.lookupFunction<
+    _QTtsCreateAbortHandleC,
+    _QTtsCreateAbortHandleDart
+  >('qwen3_tts_create_abort_handle');
+
+  late final freeAbortHandle = _library.lookupFunction<
+    _QTtsFreeAbortHandleC,
+    _QTtsFreeAbortHandleDart
+  >('qwen3_tts_free_abort_handle');
 
   late final isLoaded =
       _library.lookupFunction<_QTtsIsLoadedC, _QTtsIsLoadedDart>(
