@@ -14,12 +14,21 @@ import '../domain/tts_engine_config.dart';
 /// a class of "are these two booleans in sync?" bugs that previously lived
 /// in both the streaming and edit controllers.
 class TtsSession {
-  TtsSession({required TtsIsolate isolate, Logger? logger})
-      : _isolate = isolate,
-        _log = logger ?? Logger('tts.session');
+  TtsSession({
+    required TtsIsolate isolate,
+    Logger? logger,
+    Duration modelLoadTimeout = const Duration(seconds: 120),
+  })  : _isolate = isolate,
+        _log = logger ?? Logger('tts.session'),
+        _modelLoadTimeout = modelLoadTimeout;
 
   final TtsIsolate _isolate;
   final Logger _log;
+
+  /// Backstop for a worker that stays alive but never replies (e.g. stuck in a
+  /// native load). Worker *death* is handled deterministically via
+  /// [WorkerDiedResponse]; this only covers the no-response-no-death case.
+  final Duration _modelLoadTimeout;
 
   bool _modelLoaded = false;
   bool _isolateSpawned = false;
@@ -38,10 +47,24 @@ class TtsSession {
     if (_disposed) {
       throw StateError('TtsSession.ensureModelLoaded after dispose()');
     }
+    // The worker already died: the one-shot WorkerDiedResponse will not replay,
+    // so fail fast instead of short-circuiting to a stale `true` or awaiting a
+    // reply that never comes (F144 follow-up).
+    if (_isolate.hasWorkerDied) {
+      _log.warning('ensureModelLoaded skipped; worker already died');
+      return false;
+    }
     if (_modelLoaded && _loadedKey == config.modelLoadKey) return true;
 
     if (!_isolateSpawned) {
-      await _isolate.spawn();
+      try {
+        await _isolate.spawn();
+      } catch (e) {
+        // The worker died before delivering its SendPort. Surface as a load
+        // failure rather than propagating or hanging.
+        _log.warning('TTS isolate spawn failed: $e');
+        return false;
+      }
       _isolateSpawned = true;
     }
 
@@ -50,11 +73,17 @@ class TtsSession {
     // Per-call subscription so a stale response from a previous (aborted)
     // load on the broadcast stream cannot complete this call's completer.
     final sub = _isolate.responses.listen((response) {
-      if (response is ModelLoadedResponse && !completer.isCompleted) {
+      if (completer.isCompleted) return;
+      if (response is ModelLoadedResponse) {
         if (response.error != null) {
           _log.warning('Model load failed: ${response.error}');
         }
         completer.complete(response.success);
+      } else if (response is WorkerDiedResponse) {
+        // The worker terminated; the load will never reply. Resolve to false
+        // instead of hanging forever (F144).
+        _log.warning('Model load aborted; worker died: ${response.error}');
+        completer.complete(false);
       }
     });
 
@@ -77,7 +106,16 @@ class TtsSession {
             noiseW: config.noiseW,
           );
       }
-      final success = await completer.future;
+      final success = await completer.future.timeout(
+        _modelLoadTimeout,
+        onTimeout: () {
+          _log.warning(
+            'Model load timed out after $_modelLoadTimeout; '
+            'worker may be stuck',
+          );
+          return false;
+        },
+      );
       _modelLoaded = success;
       _loadedKey = success ? config.modelLoadKey : null;
       return success;
@@ -96,10 +134,18 @@ class TtsSession {
     if (_disposed) {
       throw StateError('TtsSession.synthesize after dispose()');
     }
+    // The worker already died: a fresh listener would never see the one-shot
+    // WorkerDiedResponse and synthesize has no timeout, so fail fast (F144
+    // follow-up) instead of hanging on a reply that never comes.
+    if (_isolate.hasWorkerDied) {
+      _log.warning('synthesize skipped; worker already died');
+      return null;
+    }
     final completer = Completer<SynthesisResultResponse?>();
     _activeSynthesisCompleter = completer;
     final sub = _isolate.responses.listen((response) {
-      if (response is SynthesisResultResponse && !completer.isCompleted) {
+      if (completer.isCompleted) return;
+      if (response is SynthesisResultResponse) {
         if (response.error != null || response.audio == null) {
           if (response.error != null) {
             _log.warning('Synthesis failed: ${response.error}');
@@ -108,6 +154,11 @@ class TtsSession {
         } else {
           completer.complete(response);
         }
+      } else if (response is WorkerDiedResponse) {
+        // The worker terminated; this synthesis will never reply. Resolve to
+        // null instead of hanging forever (F144).
+        _log.warning('Synthesis aborted; worker died: ${response.error}');
+        completer.complete(null);
       }
     });
 

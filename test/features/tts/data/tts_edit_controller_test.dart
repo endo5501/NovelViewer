@@ -114,6 +114,12 @@ class FakeTtsIsolate implements TtsIsolate {
   void abort() {
     aborted = true;
   }
+
+  @override
+  void debugCrashWorker() {}
+
+  @override
+  bool get hasWorkerDied => false;
 }
 
 class FakeAudioPlayer implements TtsAudioPlayer {

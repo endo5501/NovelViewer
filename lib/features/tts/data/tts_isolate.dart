@@ -125,6 +125,11 @@ class DisposeMessage extends TtsIsolateMessage {
   DisposeMessage();
 }
 
+/// Test-only message that forces the worker Isolate to terminate with an
+/// uncaught error, used to exercise [TtsIsolate]'s death-detection path
+/// without a native crash.
+class _CrashMessage extends TtsIsolateMessage {}
+
 // Responses from the TTS isolate
 
 sealed class TtsIsolateResponse {}
@@ -146,6 +151,17 @@ class SynthesisResultResponse extends TtsIsolateResponse {
   final String? error;
 }
 
+/// Signals that the worker Isolate terminated abnormally (uncaught error or an
+/// unexpected exit) outside of [TtsIsolate.dispose]. Emitted on the broadcast
+/// response stream so any in-flight [TtsSession] operation can resolve
+/// deterministically instead of waiting forever (fixes the F144 hang).
+class WorkerDiedResponse extends TtsIsolateResponse {
+  WorkerDiedResponse(this.error);
+
+  /// Human-readable reason for the death (uncaught error string or exit note).
+  final String error;
+}
+
 class TtsIsolate {
   TtsIsolate({TtsAbortHandleFactory? abortHandleFactory})
       : _abortHandleFactory = abortHandleFactory ?? _defaultAbortHandleFactory;
@@ -155,7 +171,32 @@ class TtsIsolate {
   Isolate? _isolate;
   SendPort? _sendPort;
   ReceivePort? _receivePort;
+  ReceivePort? _errorPort;
+  ReceivePort? _exitPort;
   final _responseController = StreamController<TtsIsolateResponse>.broadcast();
+
+  /// Set once [dispose] begins, so the spawn-registered error/exit listeners
+  /// do not mistake a graceful shutdown for an abnormal worker death.
+  bool _disposing = false;
+
+  /// Set once a [WorkerDiedResponse] has been emitted, so a single death that
+  /// fires both the error and exit listeners is reported only once.
+  bool _workerDeathSignaled = false;
+
+  /// True once the worker Isolate is known to have terminated (either via a
+  /// detected abnormal death or a graceful exit). Lets [dispose] skip the
+  /// graceful-shutdown wait when the worker is already gone.
+  bool _workerExited = false;
+
+  /// Completes with the worker's [SendPort] during [spawn]. Held as a field so
+  /// [_handleWorkerDeath] can error-complete it if the worker dies before
+  /// delivering its port, preventing spawn() from awaiting forever.
+  Completer<SendPort>? _spawnCompleter;
+
+  /// True once an abnormal worker death has been observed. Lets callers
+  /// fail fast instead of issuing work to a dead worker (the one-shot
+  /// [WorkerDiedResponse] does not replay on the broadcast stream).
+  bool get hasWorkerDied => _workerDeathSignaled;
 
   /// Session abort handle. Created once at [spawn] and freed only after the
   /// worker Isolate has terminated, so its address is stable across model
@@ -177,32 +218,95 @@ class TtsIsolate {
 
     try {
       _receivePort = ReceivePort();
-      _isolate = await Isolate.spawn(
-        _isolateEntryPoint,
-        _receivePort!.sendPort,
-      );
 
       final completer = Completer<SendPort>();
+      _spawnCompleter = completer;
 
       _receivePort!.listen((message) {
         if (message is SendPort) {
-          completer.complete(message);
+          if (!completer.isCompleted) completer.complete(message);
         } else if (message is TtsIsolateResponse) {
           _responseController.add(message);
         }
       });
 
+      // Detect abnormal worker termination. A fatal uncaught error in the
+      // worker fires onError (and, since spawned isolates are errorsAreFatal by
+      // default, also onExit). These MUST be wired via Isolate.spawn's onError/
+      // onExit arguments — not addErrorListener after spawn — so they are armed
+      // atomically when the isolate starts. A post-spawn registration would
+      // miss a worker that dies before delivering its SendPort, leaving spawn()
+      // awaiting forever (the F144 hang, at spawn time).
+      _errorPort = ReceivePort();
+      _errorPort!.listen((message) {
+        // onError delivers [errorString, stackTraceString].
+        final reason = (message is List && message.isNotEmpty)
+            ? message.first.toString()
+            : message.toString();
+        _handleWorkerDeath(reason);
+      });
+
+      _exitPort = ReceivePort();
+      _exitPort!.listen((_) {
+        _handleWorkerDeath('worker isolate exited unexpectedly');
+      });
+
+      _isolate = await Isolate.spawn(
+        _isolateEntryPoint,
+        _receivePort!.sendPort,
+        onError: _errorPort!.sendPort,
+        onExit: _exitPort!.sendPort,
+      );
+
       _sendPort = await completer.future;
+      _spawnCompleter = null;
     } catch (_) {
-      // Spawning failed; release the native handle we just created so it is not
-      // leaked when the caller treats spawn() failure as "nothing was started".
+      // Spawning failed (or the worker died before delivering its SendPort);
+      // release the native handle we just created so it is not leaked when the
+      // caller treats spawn() failure as "nothing was started".
+      _spawnCompleter = null;
       _abortHandle?.free();
       _abortHandle = null;
       _receivePort?.close();
       _receivePort = null;
+      _errorPort?.close();
+      _errorPort = null;
+      _exitPort?.close();
+      _exitPort = null;
       _isolate = null;
       rethrow;
     }
+  }
+
+  /// Reports an abnormal worker termination by emitting a single
+  /// [WorkerDiedResponse] on the response stream. Idempotent and suppressed
+  /// during [dispose] (a graceful exit is not a death).
+  void _handleWorkerDeath(String reason) {
+    if (_disposing || _workerDeathSignaled) return;
+    _workerDeathSignaled = true;
+    _workerExited = true;
+    // No further sends can reach a dead worker; null the port so callers and
+    // dispose() do not attempt to message it.
+    _sendPort = null;
+    // If the worker died before delivering its SendPort, unblock spawn() so it
+    // does not await forever (which would reintroduce the F144 hang at spawn
+    // time). spawn()'s catch handles the resulting cleanup.
+    final spawnCompleter = _spawnCompleter;
+    if (spawnCompleter != null && !spawnCompleter.isCompleted) {
+      spawnCompleter.completeError(
+        StateError('TTS worker died during spawn: $reason'),
+      );
+    }
+    _log.warning('TTS worker terminated abnormally: $reason');
+    if (!_responseController.isClosed) {
+      _responseController.add(WorkerDiedResponse(reason));
+    }
+  }
+
+  /// Test-only: forces the worker Isolate to terminate with an uncaught error,
+  /// exercising the death-detection path. No-op if not spawned.
+  void debugCrashWorker() {
+    _sendPort?.send(_CrashMessage());
   }
 
   void loadModel(
@@ -243,9 +347,15 @@ class TtsIsolate {
   }
 
   Future<void> dispose() async {
+    // Suppress the spawn-registered death listeners: the exit we are about to
+    // trigger is graceful, not an abnormal death.
+    _disposing = true;
     final isolate = _isolate;
-    var workerExited = true;
-    if (isolate != null) {
+    // If the worker already terminated abnormally (death path), it is a
+    // Dart-level death with no native call in flight, so the handle is safe to
+    // free without waiting — and there is no live worker to message.
+    var workerExited = _workerExited;
+    if (isolate != null && !_workerExited) {
       // Abort any in-progress synthesis so the worker Isolate's event loop
       // becomes responsive to DisposeMessage, enabling qwen3_tts_free().
       abort();
@@ -260,6 +370,7 @@ class TtsIsolate {
       // Wait for isolate to exit gracefully, or force-kill on timeout
       try {
         await exitPort.first.timeout(_disposeTimeout);
+        workerExited = true;
       } on TimeoutException {
         isolate.kill(priority: Isolate.immediate);
         workerExited = false;
@@ -271,6 +382,10 @@ class TtsIsolate {
     _isolate = null;
     _receivePort?.close();
     _receivePort = null;
+    _errorPort?.close();
+    _errorPort = null;
+    _exitPort?.close();
+    _exitPort = null;
     _sendPort = null;
     // Free the session abort handle only if the worker exited cleanly. On the
     // force-kill path the worker may still be blocked in a native synthesis FFI
@@ -415,6 +530,11 @@ class TtsIsolate {
       } else if (message is DisposeMessage) {
         disposeEngines();
         receivePort.close();
+      } else if (message is _CrashMessage) {
+        // Intentionally thrown OUTSIDE any try/catch so it propagates as an
+        // uncaught error, terminating the worker and firing the main isolate's
+        // error/exit listeners (test-only; see debugCrashWorker).
+        throw StateError('debugCrashWorker: intentional test crash');
       }
     });
   }
