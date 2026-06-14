@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/app_update/data/distribution_detector.dart';
 import 'package:novel_viewer/features/app_update/data/registry_reader.dart';
 import 'package:novel_viewer/features/app_update/domain/distribution_type.dart';
@@ -70,6 +71,34 @@ void main() {
       );
 
       expect(detector.detect(), DistributionType.portable);
+    });
+
+    test('logs the registry-read failure at FINE (not WARNING) and falls back',
+        () {
+      final previousLevel = Logger.root.level;
+      Logger.root.level = Level.ALL;
+      final records = <LogRecord>[];
+      final sub = Logger.root.onRecord.listen(records.add);
+      addTearDown(() {
+        sub.cancel();
+        Logger.root.level = previousLevel;
+      });
+
+      final reader = _FakeRegistryReader(throwOnRead: true);
+      final detector = DistributionDetector(
+        registryReader: reader,
+        isWindows: true,
+      );
+
+      expect(detector.detect(), DistributionType.portable);
+
+      final detected = records.where(
+        (r) => r.loggerName == 'app_update.distribution',
+      );
+      expect(detected, isNotEmpty);
+      // Expected fallback: must stay below the release threshold (Level.INFO)
+      // so portable installs do not pollute the release log on every launch.
+      expect(detected.every((r) => r.level < Level.INFO), isTrue);
     });
   });
 }

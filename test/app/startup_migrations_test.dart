@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logging/logging.dart';
 import 'package:novel_viewer/app/startup_migrations.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,20 +39,20 @@ void main() {
 
   test(
       'runStartupMigrations swallows exceptions so app startup is never '
-      'blocked', () async {
+      'blocked and records the failure via AppLogger', () async {
     await prefs.setString('llm_api_key', 'sk-legacy');
     secureStorageMock.forceWriteFailure = true;
 
-    // Capture debugPrint output so the failure path is verifiable without
-    // leaking onto the test console.
-    final logs = <String?>[];
-    final previous = debugPrint;
-    debugPrint = (message, {wrapWidth}) => logs.add(message);
-    addTearDown(() => debugPrint = previous);
+    // The failure must reach the AppLogger pipeline (WARNING) rather than
+    // debugPrint only, so it leaves a trace in release builds.
+    final records = <LogRecord>[];
+    final sub = Logger.root.onRecord.listen(records.add);
+    addTearDown(sub.cancel);
 
     await expectLater(runStartupMigrations(repo), completes);
 
     expect(prefs.getString('llm_api_key'), 'sk-legacy');
+    expect(records.any((r) => r.level == Level.WARNING), isTrue);
   });
 
   test('runStartupMigrations is a no-op for a fresh install', () async {

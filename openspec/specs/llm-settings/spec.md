@@ -92,7 +92,7 @@ The system SHALL create the appropriate LLM client (`OllamaClient` or `OpenAiCom
 - **THEN** the system returns null for the LLM client, indicating LLM features are unavailable
 
 ### Requirement: API key migration from SharedPreferences to secure storage
-On application startup, the system SHALL migrate any pre-existing `llm_api_key` entry in `SharedPreferences` to `flutter_secure_storage`. The migration SHALL be idempotent (safe to run on every startup), SHALL NOT block app startup if it fails, and SHALL leave the source `SharedPreferences` entry intact when the destination write fails so that the migration is retried on the next startup.
+On application startup, the system SHALL migrate any pre-existing `llm_api_key` entry in `SharedPreferences` to `flutter_secure_storage`. The migration SHALL be idempotent (safe to run on every startup), SHALL NOT block app startup if it fails, and SHALL leave the source `SharedPreferences` entry intact when the destination write fails so that the migration is retried on the next startup. When the migration fails, the system SHALL record the failure through the AppLogger pipeline (`logging-infrastructure`) at `WARNING` level — not via `debugPrint` only — so that the failure leaves a trace in release builds (where a user may still have a plaintext API key in `SharedPreferences`).
 
 #### Scenario: Existing user with API key in SharedPreferences
 - **WHEN** the application starts and `SharedPreferences` contains an `llm_api_key` entry
@@ -106,9 +106,9 @@ On application startup, the system SHALL migrate any pre-existing `llm_api_key` 
 - **WHEN** the migration has already completed and the application starts again
 - **THEN** the migration detects no `llm_api_key` entry in `SharedPreferences` and exits without touching `flutter_secure_storage`
 
-#### Scenario: Secure storage write failure is non-fatal
+#### Scenario: Secure storage write failure is non-fatal and logged via AppLogger
 - **WHEN** writing to `flutter_secure_storage` throws (e.g. `libsecret` unavailable on Linux)
-- **THEN** the system logs the failure via `debugPrint`, leaves the `SharedPreferences` entry untouched, and continues normal startup so the migration is retried next time
+- **THEN** the system records the failure via the AppLogger pipeline at `WARNING` level (not `debugPrint` only), leaves the `SharedPreferences` entry untouched, and continues normal startup so the migration is retried next time
 
 #### Scenario: Migration completes before any LLM client is constructed
 - **WHEN** the application creates an `OpenAiCompatibleClient` after startup

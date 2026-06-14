@@ -1,6 +1,9 @@
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:logging/logging.dart';
+
+final _log = Logger('app_update.verifier');
 
 /// Verifies a downloaded installer against its `.sha256` sidecar.
 class InstallerVerifier {
@@ -17,8 +20,10 @@ class InstallerVerifier {
       final bytes = await File(exePath).readAsBytes();
       final actual = sha256.convert(bytes).toString().toLowerCase();
       return actual == expected;
-    } catch (_) {
-      // Missing/unreadable files mean we cannot trust the download.
+    } catch (e, stack) {
+      // Missing/unreadable files mean we cannot trust the download. This is an
+      // anomaly that aborts the update, so surface it at WARNING.
+      _log.warning('Failed to read verification input: $e', e, stack);
       return false;
     }
   }

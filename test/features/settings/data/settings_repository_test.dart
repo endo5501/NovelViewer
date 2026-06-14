@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
@@ -307,6 +308,26 @@ void main() {
 
       expect(prefs.getString('llm_api_key'), 'sk-legacy');
       expect(secureStorageMock.store.containsKey('llm_api_key'), isFalse);
+    });
+
+    test('logs a WARNING via AppLogger when the secure storage write fails',
+        () async {
+      final records = <LogRecord>[];
+      final sub = Logger.root.onRecord.listen(records.add);
+      addTearDown(sub.cancel);
+
+      await prefs.setString('llm_api_key', 'sk-legacy');
+      secureStorageMock.forceWriteFailure = true;
+      final repo = buildRepo();
+
+      await repo.migrateApiKeyToSecureStorage();
+
+      // Plaintext key remaining in SharedPreferences is a security-relevant
+      // diagnostic, so it must surface at WARNING (retained in release logs).
+      expect(
+        records.any((r) => r.level == Level.WARNING),
+        isTrue,
+      );
     });
   });
 

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/app_update/data/installer_verifier.dart';
 import 'package:path/path.dart' as p;
 
@@ -100,6 +101,24 @@ void main() {
         sha256Path: p.join(tempDir.path, 'nope.exe.sha256'),
       ),
       isFalse,
+    );
+  });
+
+  test('logs a WARNING when verification input cannot be read', () async {
+    final records = <LogRecord>[];
+    final sub = Logger.root.onRecord.listen(records.add);
+    addTearDown(sub.cancel);
+
+    final result = await verifier.verify(
+      exePath: p.join(tempDir.path, 'nope.exe'),
+      sha256Path: p.join(tempDir.path, 'nope.exe.sha256'),
+    );
+
+    expect(result, isFalse);
+    expect(
+      records.any((r) =>
+          r.loggerName == 'app_update.verifier' && r.level == Level.WARNING),
+      isTrue,
     );
   });
 }

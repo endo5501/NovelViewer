@@ -167,3 +167,30 @@ GitHub API へのすべての HTTPS リクエストには `User-Agent: NovelView
 - **WHEN** `update_constants.dart` を確認する
 - **THEN** `const repoOwner = 'endo5501';` および `const repoName = 'NovelViewer';` が定義されている
 
+### Requirement: 更新経路の失敗の診断可能性
+自動更新経路における失敗（ダウンロード後のクリーンアップ、SHA256検証のための入力読取、配布形態検出、更新インストーラ起動後の一時ファイルクリーンアップ、レジストリ読取、外部ブラウザ起動）は、握り潰してはならない（MUST NOT be silently swallowed）。各失敗は `logging-infrastructure` の AppLogger（`package:logging` のモジュール別 `Logger`）を通じて記録しなければならない（SHALL）。既存の制御フロー（フォールバック値の返却、`rethrow`、ダイアログのクローズ）は変更してはならない（MUST NOT change）。
+
+ログレベルは失敗の性質に応じて切り分けなければならない（MUST）:
+- 無言で握り潰されていたユーザ操作・運用上の異常（ブラウザ起動失敗、クリーンアップ失敗、検証入力の読取不能）は `WARNING` で記録しなければならない（SHALL）。
+- 正常系として日常的に発生し得るフォールバック経路（レジストリキー不在による `null`、配布形態検出失敗による `portable` 既定）は `FINE` 以下で記録し、release ビルドのログを汚染してはならない（MUST NOT pollute）。
+
+#### Scenario: ダウンロード失敗時のパーシャル削除失敗がログに残る
+- **WHEN** ダウンロード失敗後の一時ディレクトリ削除（パーシャルインストーラの掃除）が例外を投げる
+- **THEN** 当該例外は `WARNING` レベルで AppLogger に記録され、元の失敗は従来どおり `rethrow` される
+
+#### Scenario: ブラウザ起動失敗が原因と共にログに残る
+- **WHEN** 更新ダイアログからの外部ブラウザ起動が例外を投げる、または `UpdateResult` が失敗を示す
+- **THEN** 失敗は `UpdateResult.message`（存在する場合）を含めて `WARNING` レベルで記録され、ダイアログは従来どおりクローズされる
+
+#### Scenario: 検証入力の読取不能が異常としてログに残る
+- **WHEN** SHA256検証のためのファイル読取が失敗する
+- **THEN** 失敗は `WARNING` レベルで記録され、検証結果は従来どおり `false`（不信扱い）が返る
+
+#### Scenario: 配布形態検出のフォールバックはログを汚染しない
+- **WHEN** 配布形態検出が例外で失敗し `portable` にフォールバックする（ポータブル版では起動の度に発生し得る）
+- **THEN** 失敗は `FINE` 以下で記録され、release ビルド（`Level.INFO` 閾値）のログファイルには書き込まれず、戻り値は従来どおり `DistributionType.portable` となる
+
+#### Scenario: レジストリ読取のフォールバックはログを汚染しない
+- **WHEN** レジストリ読取が失敗し `null` を返す（キー不在を含む正常系）
+- **THEN** 失敗は `FINE` 以下で記録され、release ビルドのログファイルには書き込まれず、戻り値は従来どおり `null` となる
+
