@@ -411,7 +411,16 @@ class TtsEditController {
     _cancelled = true;
     _session.abort();
     await _session.dispose();
-    await _cleanupFiles();
+    try {
+      // Dispose the preview player BEFORE deleting temporary files: on Windows
+      // a player still holding a WAV file would block its deletion. This also
+      // frees the platform audio player so it does not leak across dialog
+      // open/close.
+      await _segmentPlayer.dispose();
+    } finally {
+      // Always clean up temp files, even if the player dispose threw.
+      await _cleanupFiles();
+    }
   }
 
   Future<void> _updateEpisodeStatusAfterReset() async {
