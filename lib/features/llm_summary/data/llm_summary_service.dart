@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
-import 'package:novel_viewer/features/llm_summary/data/folder_file_lister.dart';
+import 'package:novel_viewer/shared/episode/episode_resolver.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
@@ -221,28 +221,21 @@ class LlmSummaryService {
   }) {
     if (results.isEmpty) return results;
 
-    // Build a lexical-rank map only when at least one search-result file
-    // lacks a numeric prefix — avoids paying the directory-listing cost in
-    // the common (well-numbered) case.
-    Map<String, int>? lexicalRanks;
+    // List the folder only when at least one search-result file lacks a
+    // numeric prefix and therefore needs a lexical rank — avoids paying the
+    // directory-listing cost in the common (well-numbered) case.
+    List<String>? folderFiles;
     final anyMissingPrefix =
         results.any((r) => extractNumericPrefix(r.fileName) == null);
     if (anyMissingPrefix) {
-      final folderFiles = listSortedTextFileNames(directoryPath);
-      lexicalRanks = {
-        for (var i = 0; i < folderFiles.length; i++) folderFiles[i]: i + 1,
-      };
+      folderFiles = listSortedTextFileNames(directoryPath);
     }
 
     return results.where((r) {
-      final episode = _episodeFor(r.fileName, lexicalRanks);
+      final episode = folderFiles != null
+          ? effectiveEpisodeOrNull(r.fileName, folderFiles)
+          : extractNumericPrefix(r.fileName);
       return episode != null && episode <= upperBound;
     }).toList();
-  }
-
-  static int? _episodeFor(String fileName, Map<String, int>? lexicalRanks) {
-    final prefix = extractNumericPrefix(fileName);
-    if (prefix != null) return prefix;
-    return lexicalRanks?[fileName];
   }
 }

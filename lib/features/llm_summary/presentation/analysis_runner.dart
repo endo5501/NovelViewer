@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
-import 'package:novel_viewer/features/llm_summary/data/folder_file_lister.dart';
+import 'package:novel_viewer/shared/episode/episode_resolver.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
@@ -193,13 +193,10 @@ int resolveUpperBoundForCurrent({
   required FileEntry? currentFile,
 }) {
   if (currentFile == null) return 1;
-  final prefix = extractNumericPrefix(currentFile.name);
-  if (prefix != null) return prefix;
-
-  final files = listSortedTextFileNames(directoryPath);
-  if (files.isEmpty) return 1;
-  final rank = lexicalRankOf(files, currentFile.name);
-  return rank ?? 1;
+  return resolveCurrentFileEpisode(
+    fileName: currentFile.name,
+    folderFiles: () => listSortedTextFileNames(directoryPath),
+  );
 }
 
 /// Resolve "解析開始(ネタバレあり)" → the inclusive upper bound that captures
@@ -211,40 +208,14 @@ int resolveUpperBoundForCurrent({
 /// mixed folder would silently be excluded from the "全話" scope.
 ///
 /// Returns 1 when the directory has no text files.
-int resolveUpperBoundForAll(String directoryPath) {
-  final files = listSortedTextFileNames(directoryPath);
-  if (files.isEmpty) return 1;
-  int? maxPrefix;
-  for (final name in files) {
-    final prefix = extractNumericPrefix(name);
-    if (prefix != null && (maxPrefix == null || prefix > maxPrefix)) {
-      maxPrefix = prefix;
-    }
-  }
-  final lengthBased = files.length;
-  if (maxPrefix == null) return lengthBased;
-  return maxPrefix > lengthBased ? maxPrefix : lengthBased;
-}
+int resolveUpperBoundForAll(String directoryPath) =>
+    resolveUpperBoundForAllFiles(listSortedTextFileNames(directoryPath));
 
 /// Resolve the file the spoiler-mode snapshot should be linked back to (for
 /// jump support). Prefers the highest-prefix file when any prefix exists,
 /// otherwise the last lexical file. Returns `null` when the folder is empty.
-String? resolveSourceFileForAll(String directoryPath) {
-  final files = listSortedTextFileNames(directoryPath);
-  if (files.isEmpty) return null;
-  String? candidate;
-  int? candidatePrefix;
-  for (final name in files) {
-    final prefix = extractNumericPrefix(name);
-    if (prefix != null) {
-      if (candidatePrefix == null || prefix > candidatePrefix) {
-        candidate = name;
-        candidatePrefix = prefix;
-      }
-    }
-  }
-  return candidate ?? files.last;
-}
+String? resolveSourceFileForAll(String directoryPath) =>
+    resolveSourceFileForAllFiles(listSortedTextFileNames(directoryPath));
 
 class _AnalysisModal extends StatelessWidget {
   const _AnalysisModal({required this.progress});
