@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:novel_viewer/features/episode_cache/data/episode_cache_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
@@ -94,16 +95,23 @@ void main() {
 
     test('normalizes the folder key so equivalent paths share one handle', () {
       final registry = buildRegistry();
-      final a1 = registry.ttsAudio(r'C:\lib\n1\..\n1');
-      final a2 = registry.ttsAudio(r'C:\lib\n1');
+      // Build an equivalent pair using the host OS separators so `..` is
+      // resolved by `folderDbKey` (p.normalize) on every platform.
+      final base = p.join('lib', 'n1');
+      final redundant = p.join('lib', 'n1', '..', 'n1');
+      final a1 = registry.ttsAudio(redundant);
+      final a2 = registry.ttsAudio(base);
       expect(a1, same(a2),
-          reason: 'folderDbKey(${folderDbKey(r'C:\lib\n1\..\n1')}) must match');
+          reason: 'folderDbKey($redundant) must match folderDbKey($base) '
+              '(${folderDbKey(redundant)} == ${folderDbKey(base)})');
     });
 
     test('closeAll uses the normalized key to reach handles', () async {
       final registry = buildRegistry();
-      registry.ttsAudio(r'C:\lib\n1');
-      await registry.closeAll(r'C:\lib\n1\..\n1');
+      // Open under the base path, close via an equivalent redundant path built
+      // with host OS separators so the normalized keys match on every platform.
+      registry.ttsAudio(p.join('lib', 'n1'));
+      await registry.closeAll(p.join('lib', 'n1', '..', 'n1'));
       expect(log, contains('close:audio'));
     });
 
