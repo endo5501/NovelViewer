@@ -7,7 +7,7 @@
 
 - [x] 2.1 `ViewerEffects` / `ViewerEffectInputs` の型を定義する（`@visibleForTesting` トップレベル、`vertical_text_viewer.dart` 同居）
 - [x] 2.2 `resolveViewerEffects` のユニットテストを新規作成（widget tree 不要）：各効果が単独で成立するケース（①〜⑤）を記述
-- [x] 2.3 競合・優先順位ケースを記述：同一 build でターゲット飛びと最終ページ飛びが同時成立 → ターゲット優先
+- [x] 2.3 競合ケースを記述：同一 build でターゲット飛び（①）と最終ページ飛び（③）が同時成立 → 両者を独立に emit（従来順 ①→③ で適用し最終ページに着地、振る舞い不変）
 - [x] 2.4 consume-once ケースを記述：保留中フラグが立った入力 → `consume*` / `newScheduledTargetPage` を返す。消費済み相当の入力 → 効果も消費フラグも返さない（複数回 build で 1 回適用を状態遷移として検証）
 - [x] 2.5 no-op ケースを記述：totalPages<=1、targetPage==currentPage、ttsPage==safePage 等で効果が出ないこと
 - [x] 2.6 `fvm flutter test` で新規テストの失敗（未実装）を確認し、テスト自体の妥当性を確認した段階でコミットする
@@ -15,7 +15,7 @@
 ## 3. 純関数の実装
 
 - [x] 3.1 `resolveViewerEffects` を実装し、2 章のユニットテストを緑にする（実装中はテストを変更しない）
-- [x] 3.2 即時ジャンプ系①③を `instantJumpToPage`（優先順位込み）、TTS④を `animatedGoToPage`、行レポート⑤を `reportLine`、アニメ停止②を `cancelAnimation`、hover 非表示を `hideHover`、消費指示を `consume*` / `newScheduledTargetPage` として返すよう畳み込む
+- [x] 3.2 ①を `targetJumpToPage`・③を `lastJumpToPage`（独立保持）、TTS④を `animatedGoToPage`、行レポート⑤を `reportLine`、アニメ停止②を `cancelAnimation`、消費指示を `consume*` / `newScheduledTargetPage` として返す（hover 非表示はジャンプ適用に内在＝専用フラグ無し）
 
 ## 4. build() を委譲層へ差し替え
 
