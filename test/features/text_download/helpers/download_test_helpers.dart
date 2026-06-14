@@ -55,6 +55,21 @@ MockClient routingClient(
   });
 }
 
+/// A [MockClient] that records the request headers of every request into
+/// [captured] (last request wins), then returns a 200 response. Header names are
+/// lowercased by the http package, so look up e.g. `captured['user-agent']`.
+MockClient capturingHeadersClient(
+  Map<String, String> captured, {
+  String body = 'ok',
+  Map<String, String> responseHeaders = const {},
+}) {
+  return MockClient((request) async {
+    captured.clear();
+    request.headers.forEach((k, v) => captured[k.toLowerCase()] = v);
+    return http.Response(body, 200, headers: responseHeaders);
+  });
+}
+
 /// A [MockClient] whose requests never complete — useful for verifying that
 /// request timeouts fire.
 MockClient hangingClient({List<String>? requestLog}) {

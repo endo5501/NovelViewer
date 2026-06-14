@@ -179,6 +179,24 @@ void main() {
       expect(container.read(downloadProvider).status, DownloadStatus.error);
     });
 
+    test('EmptyIndexException (F118) maps to error with a dedicated message',
+        () async {
+      final service = _ProgrammableService(
+        resultBuilder: () => throw EmptyIndexException(narouUrl),
+      );
+      final container = makeContainer(service);
+
+      await container
+          .read(downloadProvider.notifier)
+          .startDownload(url: narouUrl, outputPath: tempDir.path);
+
+      final state = container.read(downloadProvider);
+      expect(state.status, DownloadStatus.error);
+      // Not the raw exception string, and not the unsupported-site message.
+      expect(state.errorMessage, isNotNull);
+      expect(state.errorMessage, contains('目次を取得できませんでした'));
+    });
+
     test('a second startDownload while one is in flight is ignored', () async {
       final gate = Completer<void>();
       final service = _ProgrammableService(

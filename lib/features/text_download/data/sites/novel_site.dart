@@ -82,6 +82,13 @@ class NovelSiteRegistry {
 
   NovelSite? findSite(Uri url) {
     if (url.host.isEmpty) return null;
+    // F119: only resolve a site for web URLs. Non-web schemes (javascript:,
+    // file:, ftp:, ...) are rejected here once for all adapters. http is
+    // accepted but every adapter's normalizeUrl upgrades it to https before the
+    // actual fetch (so the request and the stored URL are always https), which
+    // keeps backward-compatibility with previously-entered http links (e.g.
+    // Aozora Bunko) without downgrading transport security.
+    if (url.scheme != 'https' && url.scheme != 'http') return null;
     for (final site in _sites) {
       if (site.canHandle(url)) return site;
     }

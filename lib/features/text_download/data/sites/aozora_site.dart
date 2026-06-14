@@ -23,6 +23,15 @@ class AozoraSite extends NovelSite {
     return match.group(1)!;
   }
 
+  /// F119: force https so the actual fetch and the stored URL are never plain
+  /// http (Aozora links are commonly http on the web). Parity with the other
+  /// adapters, which already canonicalize to https. The host/path are left
+  /// unchanged; only the scheme is upgraded.
+  @override
+  Uri normalizeUrl(Uri url) {
+    return url.scheme == 'https' ? url : url.replace(scheme: 'https');
+  }
+
   static final _shiftJis = ShiftJIS();
 
   @override
