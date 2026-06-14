@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
@@ -8,6 +9,8 @@ import 'package:novel_viewer/features/tts/data/piper_model_download_service.dart
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
+
+final _log = Logger('settings');
 
 class SettingsRepository {
   static const _localeKey = 'locale';
@@ -151,7 +154,8 @@ class SettingsRepository {
   /// call is a no-op. If the secure-storage write fails (e.g. libsecret
   /// unavailable on Linux), the SharedPreferences entry is preserved so the
   /// migration can be retried on the next startup, and the failure is logged
-  /// via [debugPrint] without propagating.
+  /// via the AppLogger pipeline (WARNING) without propagating, so a leftover
+  /// plaintext key remains diagnosable in release builds.
   Future<void> migrateApiKeyToSecureStorage() async {
     final legacyKey = _prefs.getString(_llmApiKeyKey);
     if (legacyKey == null) {
@@ -166,7 +170,7 @@ class SettingsRepository {
         await _secureStorage.write(key: _llmApiKeyKey, value: legacyKey);
       }
     } catch (e, stack) {
-      debugPrint('migrateApiKeyToSecureStorage: failed: $e\n$stack');
+      _log.warning('migrateApiKeyToSecureStorage failed: $e', e, stack);
       return;
     }
     await _prefs.remove(_llmApiKeyKey);

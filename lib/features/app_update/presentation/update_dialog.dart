@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/app_update/data/installer_updater.dart';
 import 'package:novel_viewer/features/app_update/data/release_info.dart';
 import 'package:novel_viewer/features/app_update/domain/distribution_type.dart';
@@ -7,6 +8,8 @@ import 'package:novel_viewer/features/app_update/domain/update_constants.dart';
 import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+final _log = Logger('app_update.dialog');
 
 class UpdateDialog extends ConsumerStatefulWidget {
   const UpdateDialog({super.key, required this.release});
@@ -52,6 +55,12 @@ class _UpdateDialogState extends ConsumerState<UpdateDialog> {
     );
 
     if (!mounted) return;
+    if (result.outcome != UpdateOutcome.launched) {
+      // Surface the concrete failure detail that the UI only shows as a
+      // generic localized message.
+      _log.warning(
+          'Update failed (${result.outcome.name}): ${result.message}');
+    }
     switch (result.outcome) {
       case UpdateOutcome.launched:
         // Process is exiting; nothing more to do.
@@ -81,9 +90,10 @@ class _UpdateDialogState extends ConsumerState<UpdateDialog> {
         Uri.parse(releasePageUrl(widget.release.tagName)),
         mode: LaunchMode.externalApplication,
       );
-    } catch (_) {
+    } catch (e, stack) {
       // Even if no browser handler is available, close the dialog rather than
       // leaving it stuck open on an unhandled exception.
+      _log.warning('Failed to open release page: $e', e, stack);
     }
     if (mounted) Navigator.of(context).pop();
   }

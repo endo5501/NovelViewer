@@ -1,9 +1,12 @@
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/app_update/data/release_info.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+final _log = Logger('app_update.downloader');
 
 class DownloadedInstaller {
   const DownloadedInstaller({required this.exePath, required this.sha256Path});
@@ -73,7 +76,10 @@ class HttpInstallerDownloader implements InstallerDownloader {
       if (dir.existsSync()) {
         try {
           await dir.delete(recursive: true);
-        } catch (_) {}
+        } catch (e, stack) {
+          _log.warning(
+              'Failed to remove partial download directory: $e', e, stack);
+        }
       }
       rethrow;
     }

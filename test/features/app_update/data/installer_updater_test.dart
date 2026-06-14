@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/app_update/data/installer_downloader.dart';
 import 'package:novel_viewer/features/app_update/data/installer_updater.dart';
 import 'package:novel_viewer/features/app_update/data/installer_verifier.dart';
@@ -138,6 +139,28 @@ void main() {
     expect(exitCode, isNull);
     expect(File(p.join(tempDir.path, 'setup.exe')).existsSync(), isFalse);
     expect(File(p.join(tempDir.path, 'setup.exe.sha256')).existsSync(), isFalse);
+  });
+
+  test('successful post-mismatch cleanup does not emit a WARNING', () async {
+    final records = <LogRecord>[];
+    final sub = Logger.root.onRecord.listen(records.add);
+    addTearDown(sub.cancel);
+
+    final updater = InstallerUpdater(
+      downloader: _FakeDownloader(tempDir, matchHash: false),
+      verifier: const InstallerVerifier(),
+      processStarter: _SpyProcessStarter(),
+      onExit: (_) {},
+    );
+
+    await updater.apply(_releaseWithInstaller());
+
+    // Cleanup of deletable files succeeds, so the best-effort catch must stay
+    // silent — guards against logging on every checksum mismatch.
+    expect(
+      records.any((r) => r.loggerName == 'app_update.installer'),
+      isFalse,
+    );
   });
 
   test('download failure returns downloadFailed and does not launch', () async {

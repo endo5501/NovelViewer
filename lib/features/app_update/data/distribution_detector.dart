@@ -1,7 +1,10 @@
 import 'dart:io';
 
+import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/app_update/data/registry_reader.dart';
 import 'package:novel_viewer/features/app_update/domain/distribution_type.dart';
+
+final _log = Logger('app_update.distribution');
 
 /// Determines whether the running app is an installed copy (eligible for the
 /// in-app auto-update flow) or a portable ZIP extraction.
@@ -28,7 +31,10 @@ class DistributionDetector {
     String? value;
     try {
       value = _registryReader.readString(registryKeyPath, registryValueName);
-    } catch (_) {
+    } catch (e, stack) {
+      // Expected fallback (portable installs hit this on every launch), so log
+      // at FINE to keep release logs clean.
+      _log.fine('Registry read failed; defaulting to portable: $e', e, stack);
       return DistributionType.portable;
     }
     return value == installerValue

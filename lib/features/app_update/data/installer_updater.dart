@@ -1,9 +1,12 @@
 import 'dart:io';
 
+import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/app_update/data/installer_downloader.dart';
 import 'package:novel_viewer/features/app_update/data/installer_verifier.dart';
 import 'package:novel_viewer/features/app_update/data/process_starter.dart';
 import 'package:novel_viewer/features/app_update/data/release_info.dart';
+
+final _log = Logger('app_update.installer');
 
 enum UpdateOutcome {
   launched,
@@ -80,8 +83,9 @@ class InstallerUpdater {
     try {
       final file = File(path);
       if (file.existsSync()) await file.delete();
-    } catch (_) {
-      // best-effort cleanup
+    } catch (e, stack) {
+      // best-effort cleanup; a leftover installer file is worth diagnosing.
+      _log.warning('Failed to clean up installer file "$path": $e', e, stack);
     }
   }
 }
