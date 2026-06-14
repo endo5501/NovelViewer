@@ -96,44 +96,6 @@ void main() {
     });
   });
 
-  group('buildPlainText', () {
-    test('returns plain text from mixed segments', () {
-      final segments = [
-        const PlainTextSegment('これは'),
-        const RubyTextSegment(base: '漢字', rubyText: 'かんじ'),
-        const PlainTextSegment('です'),
-      ];
-      expect(buildPlainText(segments), 'これは漢字です');
-    });
-
-    test('returns empty string for empty segments', () {
-      expect(buildPlainText([]), '');
-    });
-
-    test('returns text from plain segments only', () {
-      final segments = [
-        const PlainTextSegment('普通のテキスト'),
-      ];
-      expect(buildPlainText(segments), '普通のテキスト');
-    });
-
-    test('returns base text from ruby segments only', () {
-      final segments = [
-        const RubyTextSegment(base: '漢字', rubyText: 'かんじ'),
-      ];
-      expect(buildPlainText(segments), '漢字');
-    });
-
-    test('concatenates multiple segments correctly', () {
-      final segments = [
-        const RubyTextSegment(base: '魔法', rubyText: 'まほう'),
-        const PlainTextSegment('の'),
-        const RubyTextSegment(base: '杖', rubyText: 'つえ'),
-      ];
-      expect(buildPlainText(segments), '魔法の杖');
-    });
-  });
-
   group('extractSelectedText', () {
     test('extracts from plain text only', () {
       final segments = [const PlainTextSegment('こんにちは')];

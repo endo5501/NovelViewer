@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_format_exception.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 
@@ -149,6 +150,130 @@ void main() {
       expect(summary, '情報なし。');
       expect(mock.callCount, 1);
       expect(events.single, isA<AnalysisGeneratingFinalSummary>());
+    });
+  });
+
+  // Shared-helper coverage that previously lived in the deleted `generate()`
+  // tests. `summarizeFromFacts` exercises the same `_extractFactsRecursive`
+  // (recursion depth guard / no-progress termination), `_parseSummaryResponse`
+  // (JSON parsing, code-fence stripping, F132 regression) and
+  // `_isolatedNotifier` (progress-callback isolation) helpers.
+  group('LlmSummaryPipeline.summarizeFromFacts (shared-helper behavior)', () {
+    test('recursion depth limit prevents infinite refinement', () async {
+      // Combined facts (20ch) exceed maxChunkSize(10) → refinement starts at
+      // depth 1. Each round compresses but never fits, so without the
+      // maxRecursionDepth(3) guard refinement would never terminate.
+      //   depth 1: 20ch → 15ch (progress) → recurse
+      //   depth 2: 15ch → 13ch (progress) → recurse
+      //   depth 3: >= maxRecursionDepth → return without another call
+      // Then the final summary call. Total: 2 extractions + 1 summary.
+      final mock = _MockLlmClient([
+        jsonEncode({'facts': '- ${'あ' * 13}'}), // 15 chars
+        jsonEncode({'facts': '- ${'あ' * 11}'}), // 13 chars
+        jsonEncode({'summary': '再帰上限到達の要約。'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(
+        llmClient: mock,
+        maxChunkSize: 10,
+        maxRecursionDepth: 3,
+      );
+
+      final summary = await pipeline.summarizeFromFacts(
+        word: 'テスト',
+        perFileFacts: ['あ' * 20],
+      );
+
+      expect(summary, '再帰上限到達の要約。');
+      expect(mock.callCount, 3); // 2 refinement extractions + 1 summary
+    });
+
+    test('refinement stops when a round makes no compression progress',
+        () async {
+      // Combined facts (60ch) exceed maxChunkSize(50) → refinement at depth 1,
+      // but the round returns LARGER facts (no progress) so it must stop
+      // immediately instead of recursing on the bigger output.
+      final mock = _MockLlmClient([
+        jsonEncode({'facts': '- ${'あ' * 200}'}),
+        jsonEncode({'summary': '圧縮不可の要約。'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock, maxChunkSize: 50);
+
+      final summary = await pipeline.summarizeFromFacts(
+        word: 'テスト',
+        perFileFacts: ['あ' * 60],
+      );
+
+      expect(summary, '圧縮不可の要約。');
+      expect(mock.callCount, 2); // 1 extraction (no progress) + 1 summary
+    });
+
+    test(
+        'valid JSON whose summary value is null throws '
+        'LlmResponseFormatException (raw JSON is never persisted)', () async {
+      // Regression for F132: a CastError must not be swallowed and the raw JSON
+      // must never be returned/persisted as the summary.
+      final mock = _MockLlmClient([jsonEncode({'summary': null})]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      await expectLater(
+        pipeline.summarizeFromFacts(word: 'テスト', perFileFacts: const []),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
+    });
+
+    test(
+        'valid JSON object missing the summary key throws '
+        'LlmResponseFormatException', () async {
+      final mock = _MockLlmClient([jsonEncode({'unexpected': 'value'})]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      await expectLater(
+        pipeline.summarizeFromFacts(word: 'テスト', perFileFacts: const []),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
+    });
+
+    test('falls back to raw text for a non-JSON summary response', () async {
+      final mock = _MockLlmClient(['プレーンテキストの要約']);
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      final summary = await pipeline.summarizeFromFacts(
+        word: 'テスト',
+        perFileFacts: ['- 王女'],
+      );
+
+      expect(summary, 'プレーンテキストの要約');
+    });
+
+    test('strips a code fence from the summary response', () async {
+      final mock = _MockLlmClient([
+        '```json\n{"summary": "コードフェンス対応済み。"}\n```',
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      final summary = await pipeline.summarizeFromFacts(
+        word: 'テスト',
+        perFileFacts: ['- 王女'],
+      );
+
+      expect(summary, 'コードフェンス対応済み。');
+    });
+
+    test('a throwing onProgress callback does not abort summarization',
+        () async {
+      // A buggy UI callback must NOT break data-layer summarization: the
+      // final-summary progress event fires even with no refinement, and its
+      // failure is isolated so the summary still completes.
+      final mock = _MockLlmClient([jsonEncode({'summary': '隔離成功'})]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      final summary = await pipeline.summarizeFromFacts(
+        word: 'テスト',
+        perFileFacts: ['- 王女'],
+        onProgress: (_) => throw StateError('callback boom'),
+      );
+
+      expect(summary, '隔離成功');
     });
   });
 }

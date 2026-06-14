@@ -65,31 +65,6 @@ List<List<int>> buildColumnStructure(List<VerticalCharEntry> entries) {
   return columns;
 }
 
-int? hitTestCharIndex({
-  required Offset localPosition,
-  required double availableWidth,
-  required double fontSize,
-  required double runSpacing,
-  required double textHeight,
-  required List<List<int>> columns,
-}) {
-  if (localPosition.dx < 0 || localPosition.dy < 0) return null;
-  if (columns.isEmpty) return null;
-
-  final columnWidth = fontSize + runSpacing;
-  final charHeight = fontSize * textHeight;
-
-  // RTL: column 0 is at the right edge
-  final columnIndex =
-      ((availableWidth - localPosition.dx) / columnWidth).floor();
-  final rowIndex = (localPosition.dy / charHeight).floor();
-
-  if (columnIndex < 0 || columnIndex >= columns.length) return null;
-  if (rowIndex < 0 || rowIndex >= columns[columnIndex].length) return null;
-
-  return columns[columnIndex][rowIndex];
-}
-
 int? hitTestCharIndexFromRegions({
   required Offset localPosition,
   required List<VerticalHitRegion> hitRegions,

@@ -87,16 +87,3 @@ String selectedTextFromSelection(
   if (!selection.isValid || selection.isCollapsed) return '';
   return extractSelectedText(selection.start, selection.end, segments);
 }
-
-String buildPlainText(List<TextSegment> segments) {
-  final buffer = StringBuffer();
-  for (final segment in segments) {
-    switch (segment) {
-      case PlainTextSegment(:final text):
-        buffer.write(text);
-      case RubyTextSegment(:final base):
-        buffer.write(base);
-    }
-  }
-  return buffer.toString();
-}

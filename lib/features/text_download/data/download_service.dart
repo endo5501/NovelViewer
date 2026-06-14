@@ -282,11 +282,6 @@ class DownloadService {
     }
   }
 
-  Future<String> fetchPage(Uri url) async {
-    final response = await _fetchPageResponse(url);
-    return response.body;
-  }
-
   Future<Directory> createNovelDirectory(
     String parentPath,
     String folderName,
