@@ -5,6 +5,38 @@ import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 
+/// Fake abort handle that records lifecycle calls, so the F111 handle behaviour
+/// can be verified without the native library.
+class _FakeAbortHandle implements TtsAbortHandle {
+  _FakeAbortHandle(this.address);
+
+  @override
+  final int address;
+
+  int abortCount = 0;
+  int freeCount = 0;
+
+  @override
+  void abort() => abortCount++;
+
+  @override
+  void free() => freeCount++;
+}
+
+/// Factory that hands out [_FakeAbortHandle]s with a fixed address and records
+/// how many handles were created across a session.
+class _FakeAbortHandleFactory {
+  final int address = 0x1234;
+
+  final List<_FakeAbortHandle> created = [];
+
+  TtsAbortHandle create() {
+    final handle = _FakeAbortHandle(address);
+    created.add(handle);
+    return handle;
+  }
+}
+
 void main() {
   group('TtsIsolateMessage', () {
     test('LoadModelMessage holds model directory and thread count', () {
@@ -84,19 +116,6 @@ void main() {
       expect(response.error, 'model not found');
     });
 
-    test('ModelLoadedResponse holds ctxAddress for qwen3 engine', () {
-      final response = ModelLoadedResponse(
-        success: true,
-        ctxAddress: 0xDEAD,
-      );
-      expect(response.ctxAddress, 0xDEAD);
-    });
-
-    test('ModelLoadedResponse ctxAddress is null by default', () {
-      final response = ModelLoadedResponse(success: true);
-      expect(response.ctxAddress, isNull);
-    });
-
     test('SynthesisResultResponse holds audio data', () {
       final audio = Float32List.fromList([0.1, 0.2, 0.3]);
       final response = SynthesisResultResponse(
@@ -152,6 +171,84 @@ void main() {
 
       // Dispose should complete well within the 2 second timeout
       await ttsIsolate.dispose().timeout(const Duration(seconds: 3));
+    });
+  });
+
+  group('TtsIsolate - abort handle lifecycle (F111)', () {
+    test('spawn creates exactly one abort handle, available before loadModel',
+        () async {
+      final factory = _FakeAbortHandleFactory();
+      final iso = TtsIsolate(abortHandleFactory: factory.create);
+
+      await iso.spawn();
+
+      expect(factory.created, hasLength(1));
+      expect(iso.debugAbortHandleAddress, factory.address);
+
+      await iso.dispose();
+    });
+
+    test('abort target address is stable across model reloads', () async {
+      final factory = _FakeAbortHandleFactory();
+      final iso = TtsIsolate(abortHandleFactory: factory.create);
+      await iso.spawn();
+
+      final addrBefore = iso.debugAbortHandleAddress;
+
+      // Reload / switch models several times. The worker will fail to load
+      // (no native library in tests) but that is irrelevant: the abort target
+      // must not depend on any per-context address.
+      iso.loadModel('/nonexistent/model-a');
+      iso.loadModel('/nonexistent/model-b', engineType: TtsEngineType.piper);
+      iso.loadModel('/nonexistent/model-c');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final addrAfter = iso.debugAbortHandleAddress;
+
+      expect(addrBefore, isNotNull);
+      expect(addrAfter, addrBefore, reason: 'handle address must be stable');
+      expect(factory.created, hasLength(1),
+          reason: 'reloads must not create new handles');
+
+      iso.abort();
+      expect(factory.created.single.abortCount, 1);
+
+      await iso.dispose();
+    });
+
+    test('abort before any loadModel is safe (handle exists at spawn)',
+        () async {
+      final factory = _FakeAbortHandleFactory();
+      final iso = TtsIsolate(abortHandleFactory: factory.create);
+      await iso.spawn();
+
+      iso.abort();
+
+      expect(factory.created.single.abortCount, 1);
+
+      await iso.dispose();
+    });
+
+    test('dispose frees the abort handle (after worker termination)', () async {
+      final factory = _FakeAbortHandleFactory();
+      final iso = TtsIsolate(abortHandleFactory: factory.create);
+      await iso.spawn();
+
+      expect(factory.created.single.freeCount, 0,
+          reason: 'handle must not be freed before dispose');
+
+      await iso.dispose();
+
+      expect(factory.created.single.freeCount, 1);
+    });
+
+    test('dispose without spawn does not create or free a handle', () async {
+      final factory = _FakeAbortHandleFactory();
+      final iso = TtsIsolate(abortHandleFactory: factory.create);
+
+      await iso.dispose();
+
+      expect(factory.created, isEmpty);
     });
   });
 }

@@ -32,10 +32,15 @@ class MockTtsNativeBindings extends TtsNativeBindings {
     _isLoadedResult = loaded ? 1 : 0;
   }
 
+  Pointer<Void>? lastInitAbortHandle;
+
   @override
   // ignore: overridden_fields
-  late final Pointer<Void> Function(Pointer<Utf8>, int) init =
-      (Pointer<Utf8> modelDir, int nThreads) => _fakeCtx;
+  late final Pointer<Void> Function(Pointer<Utf8>, int, Pointer<Void>) init =
+      (Pointer<Utf8> modelDir, int nThreads, Pointer<Void> abortHandle) {
+    lastInitAbortHandle = abortHandle;
+    return _fakeCtx;
+  };
 
   @override
   // ignore: overridden_fields
@@ -46,22 +51,22 @@ class MockTtsNativeBindings extends TtsNativeBindings {
   // ignore: overridden_fields
   late final void Function(Pointer<Void>) free = (Pointer<Void> ctx) {};
 
-  Pointer<Void>? lastAbortCtx;
+  Pointer<Void>? lastAbortHandle;
   int abortCallCount = 0;
-  Pointer<Void>? lastResetAbortCtx;
+  Pointer<Void>? lastResetAbortHandle;
   int resetAbortCallCount = 0;
 
   @override
   // ignore: overridden_fields
-  late final void Function(Pointer<Void>) abort = (Pointer<Void> ctx) {
-    lastAbortCtx = ctx;
+  late final void Function(Pointer<Void>) abort = (Pointer<Void> handle) {
+    lastAbortHandle = handle;
     abortCallCount++;
   };
 
   @override
   // ignore: overridden_fields
-  late final void Function(Pointer<Void>) resetAbort = (Pointer<Void> ctx) {
-    lastResetAbortCtx = ctx;
+  late final void Function(Pointer<Void>) resetAbort = (Pointer<Void> handle) {
+    lastResetAbortHandle = handle;
     resetAbortCallCount++;
   };
 
@@ -205,15 +210,38 @@ void main() {
       engine = TtsEngine(mockBindings);
     });
 
-    test('abort calls native binding with context pointer', () {
+    test('loadModel wires the abort handle into native init', () {
       final fakeCtx = Pointer<Void>.fromAddress(0x1234);
+      final fakeHandle = Pointer<Void>.fromAddress(0xABCD);
       mockBindings.setFakeContext(fakeCtx);
-      engine.loadModel('/fake/model/dir');
+
+      engine.loadModel('/fake/model/dir', abortHandle: fakeHandle);
+
+      expect(mockBindings.lastInitAbortHandle, fakeHandle);
+    });
+
+    test('abort calls native binding with the abort handle (not the context)',
+        () {
+      final fakeCtx = Pointer<Void>.fromAddress(0x1234);
+      final fakeHandle = Pointer<Void>.fromAddress(0xABCD);
+      mockBindings.setFakeContext(fakeCtx);
+      engine.loadModel('/fake/model/dir', abortHandle: fakeHandle);
 
       engine.abort();
 
       expect(mockBindings.abortCallCount, 1);
-      expect(mockBindings.lastAbortCtx, fakeCtx);
+      expect(mockBindings.lastAbortHandle, fakeHandle);
+    });
+
+    test('abort is no-op when no abort handle is wired', () {
+      final fakeCtx = Pointer<Void>.fromAddress(0x1234);
+      mockBindings.setFakeContext(fakeCtx);
+      // Loaded without an abort handle.
+      engine.loadModel('/fake/model/dir');
+
+      engine.abort();
+
+      expect(mockBindings.abortCallCount, 0);
     });
 
     test('abort is no-op when model is not loaded', () {
@@ -222,33 +250,22 @@ void main() {
       expect(mockBindings.abortCallCount, 0);
     });
 
-    test('resetAbort calls native binding with context pointer', () {
+    test('resetAbort calls native binding with the abort handle', () {
       final fakeCtx = Pointer<Void>.fromAddress(0x1234);
+      final fakeHandle = Pointer<Void>.fromAddress(0xABCD);
       mockBindings.setFakeContext(fakeCtx);
-      engine.loadModel('/fake/model/dir');
+      engine.loadModel('/fake/model/dir', abortHandle: fakeHandle);
 
       engine.resetAbort();
 
       expect(mockBindings.resetAbortCallCount, 1);
-      expect(mockBindings.lastResetAbortCtx, fakeCtx);
+      expect(mockBindings.lastResetAbortHandle, fakeHandle);
     });
 
     test('resetAbort is no-op when model is not loaded', () {
       engine.resetAbort();
 
       expect(mockBindings.resetAbortCallCount, 0);
-    });
-
-    test('ctxAddress returns pointer address when model is loaded', () {
-      final fakeCtx = Pointer<Void>.fromAddress(0x1234);
-      mockBindings.setFakeContext(fakeCtx);
-      engine.loadModel('/fake/model/dir');
-
-      expect(engine.ctxAddress, 0x1234);
-    });
-
-    test('ctxAddress returns null when model is not loaded', () {
-      expect(engine.ctxAddress, isNull);
     });
   });
 

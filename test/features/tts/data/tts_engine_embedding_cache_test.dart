@@ -39,8 +39,9 @@ class MockEmbeddingBindings extends TtsNativeBindings {
   }
 
   @override
-  late final Pointer<Void> Function(Pointer<Utf8>, int) init =
-      (Pointer<Utf8> modelDir, int nThreads) => _fakeCtx;
+  late final Pointer<Void> Function(Pointer<Utf8>, int, Pointer<Void>) init =
+      (Pointer<Utf8> modelDir, int nThreads, Pointer<Void> abortHandle) =>
+          _fakeCtx;
 
   @override
   late final int Function(Pointer<Void>) isLoaded =

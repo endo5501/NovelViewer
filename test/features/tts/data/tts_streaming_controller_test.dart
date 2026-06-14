@@ -64,6 +64,9 @@ class _FakeTtsIsolate implements TtsIsolate {
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
 
   @override
+  int? get debugAbortHandleAddress => null;
+
+  @override
   Future<void> spawn() async {
     spawned = true;
   }

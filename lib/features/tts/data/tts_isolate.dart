@@ -3,6 +3,7 @@ import 'dart:ffi';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 
 import 'piper_tts_engine.dart';
@@ -10,6 +11,77 @@ import 'tts_engine.dart';
 import 'tts_engine_type.dart';
 import 'tts_language.dart';
 import 'tts_native_bindings.dart';
+
+final _log = Logger('tts.isolate');
+
+/// Owns the native abort flag for a [TtsIsolate] session. Its lifetime is
+/// independent of any synthesis context, so the main Isolate can signal abort
+/// at any time — including during a model reload — without touching freed
+/// memory (fixes the F111 use-after-free).
+abstract class TtsAbortHandle {
+  /// Native address of the handle, passed to the worker so it can wire the
+  /// handle into `qwen3_tts_init`. `0` when no native handle backs this.
+  int get address;
+
+  /// Set the abort flag. Safe to call from any isolate at any time.
+  void abort();
+
+  /// Release the native handle. Called only after the worker has terminated.
+  void free();
+}
+
+/// Creates the [TtsAbortHandle] for a session. Injectable for tests.
+typedef TtsAbortHandleFactory = TtsAbortHandle Function();
+
+/// Abort handle with no native backing (DLL unavailable / unsupported
+/// platform). Abort degrades to a safe no-op.
+class _NoopAbortHandle implements TtsAbortHandle {
+  const _NoopAbortHandle();
+
+  @override
+  int get address => 0;
+
+  @override
+  void abort() {}
+
+  @override
+  void free() {}
+}
+
+/// FFI-backed abort handle.
+class _NativeAbortHandle implements TtsAbortHandle {
+  _NativeAbortHandle(this._bindings, this._handle);
+
+  final TtsNativeBindings _bindings;
+  final Pointer<Void> _handle;
+
+  @override
+  int get address => _handle.address;
+
+  @override
+  void abort() => _bindings.abort(_handle);
+
+  @override
+  void free() => _bindings.freeAbortHandle(_handle);
+}
+
+TtsAbortHandle _defaultAbortHandleFactory() {
+  try {
+    final bindings = TtsNativeBindings.open();
+    final handle = bindings.createAbortHandle();
+    if (handle == nullptr) {
+      _log.warning('createAbortHandle returned null; abort disabled');
+      return const _NoopAbortHandle();
+    }
+    return _NativeAbortHandle(bindings, handle);
+  } catch (e) {
+    // DLL unavailable (e.g. unsupported platform, or a test host without a
+    // native build). Abort degrades to a no-op, matching the project's FFI
+    // self-skip posture.
+    _log.warning('TTS native library unavailable; abort disabled: $e');
+    return const _NoopAbortHandle();
+  }
+}
 
 // Messages sent to the TTS isolate
 
@@ -26,11 +98,15 @@ class LoadModelMessage extends TtsIsolateMessage {
     this.noiseScale,
     this.noiseW,
     this.embeddingCacheDir,
+    this.abortHandleAddress = 0,
   });
   final String modelDir;
   final TtsEngineType engineType;
   final int nThreads;
   final int languageId;
+  // Native address of the session abort handle (0 = none). Wired into
+  // qwen3_tts_init so the abort flag is checked during synthesis.
+  final int abortHandleAddress;
   // Piper-specific
   final String? dicDir;
   final double? lengthScale;
@@ -54,10 +130,9 @@ class DisposeMessage extends TtsIsolateMessage {
 sealed class TtsIsolateResponse {}
 
 class ModelLoadedResponse extends TtsIsolateResponse {
-  ModelLoadedResponse({required this.success, this.error, this.ctxAddress});
+  ModelLoadedResponse({required this.success, this.error});
   final bool success;
   final String? error;
-  final int? ctxAddress;
 }
 
 class SynthesisResultResponse extends TtsIsolateResponse {
@@ -72,11 +147,23 @@ class SynthesisResultResponse extends TtsIsolateResponse {
 }
 
 class TtsIsolate {
+  TtsIsolate({TtsAbortHandleFactory? abortHandleFactory})
+      : _abortHandleFactory = abortHandleFactory ?? _defaultAbortHandleFactory;
+
+  final TtsAbortHandleFactory _abortHandleFactory;
+
   Isolate? _isolate;
   SendPort? _sendPort;
   ReceivePort? _receivePort;
   final _responseController = StreamController<TtsIsolateResponse>.broadcast();
-  int? _ctxAddress;
+
+  /// Session abort handle. Created once at [spawn] and freed only after the
+  /// worker Isolate has terminated, so its address is stable across model
+  /// reloads and [abort] never touches a freed synthesis context.
+  TtsAbortHandle? _abortHandle;
+
+  /// Native address of the session abort handle. Exposed for tests.
+  int? get debugAbortHandleAddress => _abortHandle?.address;
 
   /// Timeout for graceful shutdown before force-killing the isolate.
   static const _disposeTimeout = Duration(seconds: 2);
@@ -84,26 +171,38 @@ class TtsIsolate {
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
 
   Future<void> spawn() async {
-    _receivePort = ReceivePort();
-    _isolate = await Isolate.spawn(
-      _isolateEntryPoint,
-      _receivePort!.sendPort,
-    );
+    // Create the session abort handle before spawning the worker so its address
+    // is available for the very first loadModel and for abort() at any time.
+    _abortHandle = _abortHandleFactory();
 
-    final completer = Completer<SendPort>();
+    try {
+      _receivePort = ReceivePort();
+      _isolate = await Isolate.spawn(
+        _isolateEntryPoint,
+        _receivePort!.sendPort,
+      );
 
-    _receivePort!.listen((message) {
-      if (message is SendPort) {
-        completer.complete(message);
-      } else if (message is TtsIsolateResponse) {
-        if (message is ModelLoadedResponse) {
-          _ctxAddress = message.ctxAddress;
+      final completer = Completer<SendPort>();
+
+      _receivePort!.listen((message) {
+        if (message is SendPort) {
+          completer.complete(message);
+        } else if (message is TtsIsolateResponse) {
+          _responseController.add(message);
         }
-        _responseController.add(message);
-      }
-    });
+      });
 
-    _sendPort = await completer.future;
+      _sendPort = await completer.future;
+    } catch (_) {
+      // Spawning failed; release the native handle we just created so it is not
+      // leaked when the caller treats spawn() failure as "nothing was started".
+      _abortHandle?.free();
+      _abortHandle = null;
+      _receivePort?.close();
+      _receivePort = null;
+      _isolate = null;
+      rethrow;
+    }
   }
 
   void loadModel(
@@ -127,6 +226,7 @@ class TtsIsolate {
       noiseScale: noiseScale,
       noiseW: noiseW,
       embeddingCacheDir: embeddingCacheDir,
+      abortHandleAddress: _abortHandle?.address ?? 0,
     ));
   }
 
@@ -136,24 +236,19 @@ class TtsIsolate {
 
   /// Abort any in-progress synthesis by setting the native abort flag directly.
   /// This bypasses the worker Isolate's event loop (which is blocked during
-  /// synthesis) by calling the FFI function from the main Isolate.
+  /// synthesis) by writing to the session abort handle, whose lifetime is
+  /// independent of the synthesis context.
   void abort() {
-    final addr = _ctxAddress;
-    if (addr == null) return;
-    _abortBindings ??= TtsNativeBindings.open();
-    _abortBindings!.abort(Pointer<Void>.fromAddress(addr));
+    _abortHandle?.abort();
   }
-
-  /// Lazily cached bindings for abort calls from the main Isolate.
-  TtsNativeBindings? _abortBindings;
 
   Future<void> dispose() async {
     final isolate = _isolate;
+    var workerExited = true;
     if (isolate != null) {
       // Abort any in-progress synthesis so the worker Isolate's event loop
       // becomes responsive to DisposeMessage, enabling qwen3_tts_free().
       abort();
-      _ctxAddress = null; // Prevent further abort calls on freed memory
 
       // Listen for isolate exit to know when it has terminated
       final exitPort = ReceivePort();
@@ -167,16 +262,27 @@ class TtsIsolate {
         await exitPort.first.timeout(_disposeTimeout);
       } on TimeoutException {
         isolate.kill(priority: Isolate.immediate);
+        workerExited = false;
       } finally {
         exitPort.close();
       }
     }
 
     _isolate = null;
-    _ctxAddress = null;
     _receivePort?.close();
     _receivePort = null;
     _sendPort = null;
+    // Free the session abort handle only if the worker exited cleanly. On the
+    // force-kill path the worker may still be blocked in a native synthesis FFI
+    // call (Isolate.kill cannot interrupt in-flight native code), and its ggml
+    // abort_callback can still read handle->abort_flag — freeing here would
+    // reintroduce the F111 use-after-free, just on the timeout branch. Leak the
+    // tiny handle in that rare case (the previous ctx-based design likewise
+    // freed nothing on timeout).
+    if (workerExited) {
+      _abortHandle?.free();
+    }
+    _abortHandle = null;
     if (!_responseController.isClosed) {
       _responseController.close();
     }
@@ -236,7 +342,12 @@ class TtsIsolate {
           switch (message.engineType) {
             case TtsEngineType.qwen3:
               final next = TtsEngine.open();
-              next.loadModel(message.modelDir, nThreads: message.nThreads);
+              next.loadModel(
+                message.modelDir,
+                nThreads: message.nThreads,
+                abortHandle:
+                    Pointer<Void>.fromAddress(message.abortHandleAddress),
+              );
               next.setLanguage(message.languageId);
               qwen3Engine = next;
 
@@ -266,10 +377,7 @@ class TtsIsolate {
           } else {
             embeddingCacheDir = null;
           }
-          mainSendPort.send(ModelLoadedResponse(
-            success: true,
-            ctxAddress: qwen3Engine?.ctxAddress,
-          ));
+          mainSendPort.send(ModelLoadedResponse(success: true));
         } catch (e) {
           disposeEngines();
           mainSendPort.send(
