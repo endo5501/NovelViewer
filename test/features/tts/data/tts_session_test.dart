@@ -36,6 +36,8 @@ class _FakeTtsIsolate implements TtsIsolate {
   bool spawned = false;
   bool disposed = false;
   bool aborted = false;
+  bool workerDied = false;
+  bool spawnThrows = false;
   final loadModelCalls = <_LoadModelCall>[];
   final synthesizeRequests = <(String text, String? refWavPath)>[];
   Completer<void>? synthesizeGate;
@@ -49,7 +51,13 @@ class _FakeTtsIsolate implements TtsIsolate {
   int? get debugAbortHandleAddress => null;
 
   @override
+  bool get hasWorkerDied => workerDied;
+
+  @override
   Future<void> spawn() async {
+    if (spawnThrows) {
+      throw StateError('worker died during spawn');
+    }
     spawned = true;
   }
 
@@ -111,6 +119,13 @@ class _FakeTtsIsolate implements TtsIsolate {
     aborted = true;
   }
 
+  @override
+  void debugCrashWorker() {
+    // Not used by TtsSession tests; worker death is simulated via
+    // emitWorkerDied(). Present only to satisfy the TtsIsolate interface.
+    emitWorkerDied('debugCrashWorker');
+  }
+
   void completeSynthesis({String? error}) {
     _responseController.add(SynthesisResultResponse(
       audio: error == null ? Float32List.fromList([0.1, 0.2]) : null,
@@ -123,6 +138,11 @@ class _FakeTtsIsolate implements TtsIsolate {
     _responseController.add(
       ModelLoadedResponse(success: success, error: error),
     );
+  }
+
+  void emitWorkerDied(String error) {
+    workerDied = true;
+    _responseController.add(WorkerDiedResponse(error));
   }
 }
 
@@ -343,6 +363,182 @@ void main() {
         await sub.cancel();
         await session.dispose();
       }
+    });
+
+    test(
+        'synthesize resolves with null and logs WARNING when worker dies '
+        'mid-flight (F144)', () async {
+      final isolate = _FakeTtsIsolate();
+      isolate.autoSucceedSynthesis = false; // never replies on its own
+      final logger = Logger('tts.session.test.death.synth');
+      final session = TtsSession(isolate: isolate, logger: logger);
+      await session.ensureModelLoaded(_qwen3());
+
+      final records = <LogRecord>[];
+      Logger.root.level = Level.ALL;
+      final sub = Logger.root.onRecord.listen(records.add);
+
+      try {
+        final synthFuture = session.synthesize(text: 'pending');
+        await Future.delayed(Duration.zero);
+        expect(isolate.synthesizeRequests, hasLength(1));
+
+        isolate.emitWorkerDied('worker crashed: RangeError');
+        final result = await synthFuture
+            .timeout(const Duration(seconds: 1), onTimeout: () {
+          fail('synthesize hung after worker death (F144 regression)');
+        });
+
+        expect(result, isNull, reason: 'return contract must stay nullable');
+        final warnings = records
+            .where((r) =>
+                r.level == Level.WARNING &&
+                r.loggerName == 'tts.session.test.death.synth')
+            .toList();
+        expect(warnings, isNotEmpty);
+        expect(warnings.first.message, contains('worker crashed'));
+      } finally {
+        await sub.cancel();
+        await session.dispose();
+      }
+    });
+
+    test(
+        'ensureModelLoaded resolves with false and logs WARNING when worker '
+        'dies mid-load (F144)', () async {
+      final isolate = _FakeTtsIsolate();
+      isolate.blockModelLoad = true; // never replies on its own
+      final logger = Logger('tts.session.test.death.load');
+      final session = TtsSession(isolate: isolate, logger: logger);
+
+      final records = <LogRecord>[];
+      Logger.root.level = Level.ALL;
+      final sub = Logger.root.onRecord.listen(records.add);
+
+      try {
+        final loadFuture = session.ensureModelLoaded(_qwen3());
+        await Future.delayed(Duration.zero);
+        expect(isolate.loadModelCalls, hasLength(1));
+
+        isolate.emitWorkerDied('worker crashed during load');
+        final result = await loadFuture
+            .timeout(const Duration(seconds: 1), onTimeout: () {
+          fail('ensureModelLoaded hung after worker death (F144 regression)');
+        });
+
+        expect(result, isFalse, reason: 'return contract must stay bool');
+        final warnings = records
+            .where((r) =>
+                r.level == Level.WARNING &&
+                r.loggerName == 'tts.session.test.death.load')
+            .toList();
+        expect(warnings, isNotEmpty);
+        expect(warnings.first.message, contains('worker crashed during load'));
+      } finally {
+        await sub.cancel();
+        await session.dispose();
+      }
+    });
+
+    test(
+        'ensureModelLoaded times out to false with WARNING when no response '
+        'arrives (F144 backstop)', () async {
+      final isolate = _FakeTtsIsolate();
+      isolate.blockModelLoad = true; // worker alive but stuck, never replies
+      final logger = Logger('tts.session.test.timeout');
+      final session = TtsSession(
+        isolate: isolate,
+        logger: logger,
+        modelLoadTimeout: const Duration(milliseconds: 100),
+      );
+
+      final records = <LogRecord>[];
+      Logger.root.level = Level.ALL;
+      final sub = Logger.root.onRecord.listen(records.add);
+
+      try {
+        final result = await session.ensureModelLoaded(_qwen3());
+
+        expect(result, isFalse);
+        final warnings = records
+            .where((r) =>
+                r.level == Level.WARNING &&
+                r.loggerName == 'tts.session.test.timeout')
+            .toList();
+        expect(warnings, isNotEmpty,
+            reason: 'timeout must be logged for field diagnosis');
+      } finally {
+        await sub.cancel();
+        await session.dispose();
+      }
+    });
+
+    test('ensureModelLoaded succeeds before timeout returns true', () async {
+      final isolate = _FakeTtsIsolate();
+      final session = TtsSession(
+        isolate: isolate,
+        modelLoadTimeout: const Duration(seconds: 5),
+      );
+
+      final result = await session.ensureModelLoaded(_qwen3());
+      expect(result, isTrue);
+      await session.dispose();
+    });
+
+    test(
+        'synthesize after a prior worker death fails fast with null, not a '
+        'second hang (F144 follow-up)', () async {
+      final isolate = _FakeTtsIsolate();
+      isolate.autoSucceedSynthesis = false;
+      final session = TtsSession(isolate: isolate);
+      await session.ensureModelLoaded(_qwen3());
+
+      // First synthesis: worker dies mid-flight.
+      final first = session.synthesize(text: 'first');
+      await Future.delayed(Duration.zero);
+      isolate.emitWorkerDied('crash');
+      expect(await first, isNull);
+
+      // Second synthesis on the now-dead session must NOT hang waiting for a
+      // WorkerDiedResponse that will never be re-emitted.
+      final second = await session.synthesize(text: 'second').timeout(
+            const Duration(seconds: 1),
+            onTimeout: () => fail('synthesize hung after worker already died'),
+          );
+      expect(second, isNull);
+      await session.dispose();
+    });
+
+    test(
+        'ensureModelLoaded after a prior worker death fails fast with false',
+        () async {
+      final isolate = _FakeTtsIsolate();
+      final session = TtsSession(isolate: isolate);
+      await session.ensureModelLoaded(_qwen3());
+
+      isolate.emitWorkerDied('crash while idle');
+      await Future.delayed(Duration.zero);
+
+      // Same config would normally short-circuit to true; a dead worker must
+      // not be reported as loaded.
+      final result = await session.ensureModelLoaded(_qwen3()).timeout(
+            const Duration(seconds: 1),
+            onTimeout: () => fail('ensureModelLoaded hung after worker died'),
+          );
+      expect(result, isFalse);
+      await session.dispose();
+    });
+
+    test('ensureModelLoaded returns false (not throws) when spawn fails',
+        () async {
+      final isolate = _FakeTtsIsolate()..spawnThrows = true;
+      final session = TtsSession(isolate: isolate);
+
+      final result = await session.ensureModelLoaded(_qwen3());
+      expect(result, isFalse,
+          reason: 'a spawn-time worker death must surface as false, not throw '
+              'or hang');
+      await session.dispose();
     });
 
     test('ensureModelLoaded after abort waits and proceeds with new config',

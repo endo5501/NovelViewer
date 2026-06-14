@@ -251,4 +251,79 @@ void main() {
       expect(factory.created, isEmpty);
     });
   });
+
+  group('TtsIsolate - worker death detection (F144)', () {
+    test('worker uncaught error emits a WorkerDiedResponse', () async {
+      final iso = TtsIsolate();
+      await iso.spawn();
+
+      final deaths = <WorkerDiedResponse>[];
+      final sub = iso.responses.listen((r) {
+        if (r is WorkerDiedResponse) deaths.add(r);
+      });
+
+      iso.debugCrashWorker();
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+
+      expect(deaths, hasLength(1),
+          reason: 'an abnormally terminated worker must surface a death signal');
+
+      await sub.cancel();
+      await iso.dispose();
+    });
+
+    test('error and exit listeners coalesce to a single WorkerDiedResponse',
+        () async {
+      final iso = TtsIsolate();
+      await iso.spawn();
+
+      final deaths = <WorkerDiedResponse>[];
+      final sub = iso.responses.listen((r) {
+        if (r is WorkerDiedResponse) deaths.add(r);
+      });
+
+      // A fatal uncaught error fires BOTH addErrorListener and
+      // addOnExitListener; the death signal must still be emitted only once.
+      iso.debugCrashWorker();
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+
+      expect(deaths, hasLength(1));
+
+      await sub.cancel();
+      await iso.dispose();
+    });
+
+    test('normal dispose does not emit WorkerDiedResponse', () async {
+      final iso = TtsIsolate();
+      await iso.spawn();
+
+      final deaths = <WorkerDiedResponse>[];
+      final sub = iso.responses.listen((r) {
+        if (r is WorkerDiedResponse) deaths.add(r);
+      });
+
+      await iso.dispose();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(deaths, isEmpty,
+          reason: 'graceful dispose is not an abnormal worker death');
+
+      await sub.cancel();
+    });
+
+    test('worker death path still frees the abort handle on dispose', () async {
+      final factory = _FakeAbortHandleFactory();
+      final iso = TtsIsolate(abortHandleFactory: factory.create);
+      await iso.spawn();
+
+      iso.debugCrashWorker();
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+
+      await iso.dispose();
+
+      expect(factory.created.single.freeCount, 1,
+          reason: 'a Dart-level worker death leaves no native call in flight, '
+              'so the handle is safe to free (no F111 regression)');
+    });
+  });
 }

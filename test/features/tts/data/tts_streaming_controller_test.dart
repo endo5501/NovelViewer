@@ -129,6 +129,12 @@ class _FakeTtsIsolate implements TtsIsolate {
   void abort() {
     aborted = true;
   }
+
+  @override
+  void debugCrashWorker() {}
+
+  @override
+  bool get hasWorkerDied => false;
 }
 
 /// Fake audio player that auto-completes playback after a microtask delay.
