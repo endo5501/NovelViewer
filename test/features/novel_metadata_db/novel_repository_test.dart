@@ -4,6 +4,8 @@ import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_repository.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 
+import '../../helpers/novel_metadata_db_fixture.dart';
+
 void main() {
   late NovelDatabase novelDatabase;
   late NovelRepository repository;
@@ -14,33 +16,7 @@ void main() {
   });
 
   setUp(() async {
-    novelDatabase = NovelDatabase();
-    final db = await databaseFactoryFfi.openDatabase(
-      inMemoryDatabasePath,
-      options: OpenDatabaseOptions(
-        version: 1,
-        onCreate: (db, version) async {
-          await db.execute('''
-            CREATE TABLE novels (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              site_type TEXT NOT NULL,
-              novel_id TEXT NOT NULL,
-              title TEXT NOT NULL,
-              url TEXT NOT NULL,
-              folder_name TEXT NOT NULL UNIQUE,
-              episode_count INTEGER NOT NULL DEFAULT 0,
-              downloaded_at TEXT NOT NULL,
-              updated_at TEXT
-            )
-          ''');
-          await db.execute('''
-            CREATE UNIQUE INDEX idx_novels_site_novel
-            ON novels(site_type, novel_id)
-          ''');
-        },
-      ),
-    );
-    novelDatabase.setDatabase(db);
+    novelDatabase = await seedNovelDatabaseFixture();
     repository = NovelRepository(novelDatabase);
   });
 

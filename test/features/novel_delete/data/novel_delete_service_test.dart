@@ -14,6 +14,8 @@ import 'package:novel_viewer/features/bookmark/data/bookmark_repository.dart';
 import 'package:novel_viewer/features/episode_cache/data/episode_cache_database.dart';
 import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 
+import '../../../helpers/novel_metadata_db_fixture.dart';
+
 /// A bookmark repository whose cascade delete always throws, used to prove the
 /// novels/word_summaries/fact_cache/reading_progress/bookmarks deletes run in a
 /// single transaction that rolls back as a unit (F127).
@@ -44,82 +46,8 @@ void main() {
   });
 
   setUp(() async {
-    novelDatabase = NovelDatabase();
-    db = await databaseFactoryFfi.openDatabase(
-      inMemoryDatabasePath,
-      options: OpenDatabaseOptions(
-        version: 1,
-        onCreate: (db, version) async {
-          await db.execute('''
-            CREATE TABLE novels (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              site_type TEXT NOT NULL,
-              novel_id TEXT NOT NULL,
-              title TEXT NOT NULL,
-              url TEXT NOT NULL,
-              folder_name TEXT NOT NULL UNIQUE,
-              episode_count INTEGER NOT NULL DEFAULT 0,
-              downloaded_at TEXT NOT NULL,
-              updated_at TEXT
-            )
-          ''');
-          await db.execute('''
-            CREATE UNIQUE INDEX idx_novels_site_novel
-            ON novels(site_type, novel_id)
-          ''');
-          await db.execute('''
-            CREATE TABLE word_summaries (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              folder_name TEXT NOT NULL,
-              word TEXT NOT NULL,
-              covered_up_to_episode INTEGER NOT NULL,
-              summary TEXT NOT NULL,
-              source_file TEXT,
-              created_at TEXT NOT NULL,
-              updated_at TEXT NOT NULL
-            )
-          ''');
-          await db.execute('''
-            CREATE UNIQUE INDEX idx_word_summaries_unique
-            ON word_summaries(folder_name, word, covered_up_to_episode)
-          ''');
-          await db.execute('''
-            CREATE TABLE reading_progress (
-              novel_id TEXT NOT NULL PRIMARY KEY,
-              file_name TEXT NOT NULL,
-              updated_at TEXT NOT NULL
-            )
-          ''');
-          await db.execute('''
-            CREATE TABLE fact_cache (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              folder_name TEXT NOT NULL,
-              word TEXT NOT NULL,
-              file_name TEXT NOT NULL,
-              facts TEXT NOT NULL,
-              content_hash TEXT NOT NULL,
-              prompt_version INTEGER NOT NULL,
-              updated_at TEXT NOT NULL
-            )
-          ''');
-          await db.execute('''
-            CREATE UNIQUE INDEX idx_fact_cache_unique
-            ON fact_cache(folder_name, word, file_name)
-          ''');
-          await db.execute('''
-            CREATE TABLE bookmarks (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              novel_id TEXT NOT NULL,
-              file_name TEXT NOT NULL,
-              line_number INTEGER,
-              created_at TEXT NOT NULL,
-              UNIQUE(novel_id, file_name, line_number)
-            )
-          ''');
-        },
-      ),
-    );
-    novelDatabase.setDatabase(db);
+    novelDatabase = await seedNovelDatabaseFixture();
+    db = await novelDatabase.database;
     novelRepository = NovelRepository(novelDatabase);
     summaryRepository = LlmSummaryRepository(db);
     factCacheRepository = FactCacheRepository(db);

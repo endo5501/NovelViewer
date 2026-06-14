@@ -3,6 +3,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
 
+import '../../../helpers/novel_metadata_db_fixture.dart';
+
 void main() {
   late NovelDatabase novelDatabase;
   late ReadingProgressRepository repository;
@@ -13,24 +15,7 @@ void main() {
   });
 
   setUp(() async {
-    novelDatabase = NovelDatabase();
-    // v8 schema: reading_progress stores file_name only (no absolute path).
-    final db = await databaseFactoryFfi.openDatabase(
-      inMemoryDatabasePath,
-      options: OpenDatabaseOptions(
-        version: 8,
-        onCreate: (db, _) async {
-          await db.execute('''
-            CREATE TABLE reading_progress (
-              novel_id TEXT NOT NULL PRIMARY KEY,
-              file_name TEXT NOT NULL,
-              updated_at TEXT NOT NULL
-            )
-          ''');
-        },
-      ),
-    );
-    novelDatabase.setDatabase(db);
+    novelDatabase = await seedNovelDatabaseFixture();
     repository = ReadingProgressRepository(novelDatabase);
   });
 

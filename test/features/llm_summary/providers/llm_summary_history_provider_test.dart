@@ -13,48 +13,11 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../../helpers/novel_metadata_db_fixture.dart';
+
 Future<Database> _openDb() async {
   sqfliteFfiInit();
-  return databaseFactoryFfi.openDatabase(
-    inMemoryDatabasePath,
-    options: OpenDatabaseOptions(
-      version: 1,
-      onCreate: (db, version) async {
-        await db.execute('''
-          CREATE TABLE word_summaries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            folder_name TEXT NOT NULL,
-            word TEXT NOT NULL,
-            covered_up_to_episode INTEGER NOT NULL,
-            summary TEXT NOT NULL,
-            source_file TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-          )
-        ''');
-        await db.execute('''
-          CREATE UNIQUE INDEX idx_word_summaries_unique
-          ON word_summaries(folder_name, word, covered_up_to_episode)
-        ''');
-        await db.execute('''
-          CREATE TABLE fact_cache (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            folder_name TEXT NOT NULL,
-            word TEXT NOT NULL,
-            file_name TEXT NOT NULL,
-            facts TEXT NOT NULL,
-            content_hash TEXT NOT NULL,
-            prompt_version INTEGER NOT NULL,
-            updated_at TEXT NOT NULL
-          )
-        ''');
-        await db.execute('''
-          CREATE UNIQUE INDEX idx_fact_cache_unique
-          ON fact_cache(folder_name, word, file_name)
-        ''');
-      },
-    ),
-  );
+  return openInMemoryNovelMetadataDb();
 }
 
 ProviderContainer _containerFor({
