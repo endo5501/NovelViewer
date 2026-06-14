@@ -158,6 +158,16 @@ class DownloadNotifier extends Notifier<DownloadState> {
       // later resumed download.
       if (e is CancelledException || cancelToken.isCancelled) {
         state = state.copyWith(status: DownloadStatus.cancelled);
+      } else if (e is EmptyIndexException) {
+        // F118: the index page yielded no episodes and no body — typically the
+        // site changed its markup, or the URL is not a novel index page. Surface
+        // a clear message instead of the raw exception string, and do not leave
+        // a half-finished "completed" state. (Localizing provider-layer error
+        // strings is tracked separately as F142.)
+        state = state.copyWith(
+          status: DownloadStatus.error,
+          errorMessage: '目次を取得できませんでした。サイトの仕様変更か、URLが正しくない可能性があります',
+        );
       } else {
         state = state.copyWith(
           status: DownloadStatus.error,

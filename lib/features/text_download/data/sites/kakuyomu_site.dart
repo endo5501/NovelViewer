@@ -21,9 +21,22 @@ class KakuyomuSite extends NovelSite {
     '.widget-episodeBody',
   ];
 
+  // F119: exact host allow-list (parity with the other adapters). The previous
+  // `host.contains('kakuyomu.jp')` also matched look-alike hosts such as
+  // `kakuyomu.jp.evil.com`.
+  static const _allowedHosts = {'kakuyomu.jp', 'www.kakuyomu.jp'};
+
+  // Kakuyomu's novel identity is the leading `/works/<id>` path segment; require
+  // it so bare-host URLs without a work id are not treated as handleable. The
+  // pattern is anchored with a trailing boundary (parity with HamelnSite's
+  // `^/novel/\d+(?:/|$)`) so `/foo/works/123` and `/works/123abc` are rejected
+  // rather than silently coerced to work id 123.
+  static final _worksPathPattern = RegExp(r'^/works/\d+(?:/|$)');
+
   @override
   bool canHandle(Uri url) {
-    return url.host.contains('kakuyomu.jp');
+    return _allowedHosts.contains(url.host) &&
+        _worksPathPattern.hasMatch(url.path);
   }
 
   @override

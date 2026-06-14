@@ -726,7 +726,11 @@ void main() {
       expect(result.skippedCount, 1);
     });
 
-    test('returns episodeCount=0 for empty novel (no episodes, no body)', () async {
+    test('throws EmptyIndexException for empty novel (no episodes, no body)',
+        () async {
+      // F118: an index that parses to no episodes AND no body content is a
+      // markup-drift failure, not a successful empty download. It must throw
+      // rather than silently "completing" with episodeCount=0.
       final mockClient = MockClient((request) async {
         if (request.method == 'GET') {
           return http.Response('index html', 200);
@@ -739,15 +743,14 @@ void main() {
         requestDelay: Duration.zero,
       );
 
-      final result = await service.downloadNovel(
-        site: _EmptyNovelSite(),
-        url: Uri.parse('https://example.com/index'),
-        outputPath: tempDir.path,
+      await expectLater(
+        service.downloadNovel(
+          site: _EmptyNovelSite(),
+          url: Uri.parse('https://example.com/index'),
+          outputPath: tempDir.path,
+        ),
+        throwsA(isA<EmptyIndexException>()),
       );
-
-      expect(result.episodeCount, 0);
-      expect(result.skippedCount, 0);
-      expect(result.title, '空の小説');
     });
 
     test('reports progress 1/1 for short story download', () async {

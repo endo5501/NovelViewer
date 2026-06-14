@@ -117,6 +117,28 @@ Future<void> migrateEpisodeFileNamePadding({
   }
 }
 
+/// Thrown when the first index page is fetched successfully but parses to no
+/// usable content — an empty `episodes` list AND a null `bodyContent` (F118).
+///
+/// This is the signature of site markup drift (the adapter's selectors no longer
+/// match), not a legitimate empty novel. It is thrown before any novel folder is
+/// created so no empty folder is left on disk, and propagates to the caller to be
+/// surfaced as a download error (the same severity as a failed first index
+/// fetch) instead of silently "completing" with `episodeCount == 0`.
+///
+/// Short stories and Aozora Bunko pages populate `bodyContent`, so they do not
+/// satisfy this condition and are unaffected.
+class EmptyIndexException implements Exception {
+  final Uri url;
+
+  const EmptyIndexException(this.url);
+
+  @override
+  String toString() =>
+      'EmptyIndexException: index page parsed to no episodes and no body '
+      'content (likely site markup drift): $url';
+}
+
 class DownloadResult {
   final String siteType;
   final String novelId;
@@ -257,6 +279,19 @@ class DownloadService {
       site.decodeBody(indexResponse),
       normalizedUrl,
     );
+
+    // F118: the index was fetched (HTTP 200) but parsed to nothing usable — no
+    // episodes AND no body content. This is markup drift, not a real empty
+    // novel. Throw BEFORE creating the folder so no empty directory is left on
+    // disk, and let it propagate to the caller as a download error instead of
+    // silently "completing" with episodeCount=0. Short stories / Aozora set
+    // bodyContent, so they do not hit this guard.
+    if (novelIndex.episodes.isEmpty && novelIndex.bodyContent == null) {
+      _log.warning(
+          'Index page parsed to no episodes and no body content (likely site '
+          'markup drift): $normalizedUrl');
+      throw EmptyIndexException(normalizedUrl);
+    }
 
     final dir = await createNovelDirectory(outputPath, folderName);
 

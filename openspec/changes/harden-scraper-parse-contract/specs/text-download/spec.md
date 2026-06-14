@@ -28,13 +28,17 @@ This guard applies only to the first index page. Aozora Bunko pages and short st
 
 ### Requirement: Site routing input validation
 
-`NovelSiteRegistry.findSite` SHALL only resolve a `NovelSite` for URLs whose scheme is `https`. URLs with any other scheme (e.g. `http`) SHALL resolve to null (treated as an unsupported site), regardless of host. Each site adapter's `canHandle` SHALL match its host against a strict, exact host allow-list (no substring matching) and, where the site uses a path-based identity, SHALL also require the expected path shape.
+`NovelSiteRegistry.findSite` SHALL only resolve a `NovelSite` for URLs whose scheme is a web scheme (`https` or `http`). URLs with any other scheme (e.g. `javascript:`, `file:`, `ftp:`) SHALL resolve to null (treated as an unsupported site), regardless of host. An `http` URL for a supported host SHALL still resolve, but every adapter's `normalizeUrl` SHALL upgrade the scheme to `https` so the actual fetch and the persisted URL are always `https` (this keeps backward-compatibility with previously-entered `http` links — notably Aozora Bunko — without downgrading transport security). Each site adapter's `canHandle` SHALL match its host against a strict, exact host allow-list (no substring matching) and, where the site uses a path-based identity, SHALL also require the expected path shape.
 
 In particular, `KakuyomuSite.canHandle` SHALL match the host against the exact set `{'kakuyomu.jp', 'www.kakuyomu.jp'}` (replacing the previous `host.contains('kakuyomu.jp')` substring check) AND SHALL require the path to contain a `/works/<id>` segment, bringing it to parity with the Narou, Hameln, and Aozora adapters.
 
-#### Scenario: Non-HTTPS URL is rejected
-- **WHEN** the user provides a URL whose scheme is not `https` (e.g. `http://kakuyomu.jp/works/123`)
+#### Scenario: Non-web scheme is rejected
+- **WHEN** the user provides a URL whose scheme is neither `https` nor `http` (e.g. `ftp://kakuyomu.jp/works/123`)
 - **THEN** `findSite` SHALL return null (unsupported site)
+
+#### Scenario: http URL is accepted and upgraded to https
+- **WHEN** the user provides an `http` URL for a supported host (e.g. `http://www.aozora.gr.jp/cards/001779/files/57105_59659.html`)
+- **THEN** `findSite` SHALL resolve the adapter, and the adapter's `normalizeUrl` SHALL return an `https` URL so the fetch and the stored URL are `https`
 
 #### Scenario: Look-alike host is rejected for Kakuyomu
 - **WHEN** the user provides `https://kakuyomu.jp.evil.com/works/123`

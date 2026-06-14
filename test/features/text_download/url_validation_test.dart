@@ -55,4 +55,63 @@ void main() {
       expect(site, isNotNull);
     });
   });
+
+  group('URL validation hardening (F119)', () {
+    test('rejects a look-alike Kakuyomu host', () {
+      final site = registry
+          .findSite(Uri.parse('https://kakuyomu.jp.evil.com/works/123'));
+      expect(site, isNull);
+    });
+
+    test('accepts www.kakuyomu.jp host', () {
+      final site = registry
+          .findSite(Uri.parse('https://www.kakuyomu.jp/works/123'));
+      expect(site, isNotNull);
+    });
+
+    test('rejects Kakuyomu URL without a /works/ path', () {
+      final site = registry.findSite(Uri.parse('https://kakuyomu.jp/'));
+      expect(site, isNull);
+    });
+
+    test('rejects Kakuyomu URL where /works/ is not the leading segment', () {
+      final site =
+          registry.findSite(Uri.parse('https://kakuyomu.jp/foo/works/123'));
+      expect(site, isNull);
+    });
+
+    test('rejects Kakuyomu URL with a non-numeric work id suffix', () {
+      final site =
+          registry.findSite(Uri.parse('https://kakuyomu.jp/works/123abc'));
+      expect(site, isNull);
+    });
+
+    test('still accepts a Kakuyomu episode URL', () {
+      final site = registry.findSite(
+          Uri.parse('https://kakuyomu.jp/works/123/episodes/456'));
+      expect(site, isNotNull);
+    });
+
+    test('rejects a non-web scheme (ftp)', () {
+      final site =
+          registry.findSite(Uri.parse('ftp://kakuyomu.jp/works/123'));
+      expect(site, isNull);
+    });
+
+    test('accepts http URL for a supported host (upgraded to https on normalize)',
+        () {
+      final url = Uri.parse('http://www.aozora.gr.jp/cards/001779/files/x.html');
+      final site = registry.findSite(url);
+      expect(site, isNotNull);
+      // normalizeUrl upgrades the scheme so the fetch / stored URL is https.
+      expect(site!.normalizeUrl(url).scheme, 'https');
+    });
+
+    test('accepts http Narou URL and normalizes it to https', () {
+      final url = Uri.parse('http://ncode.syosetu.com/n9669bk/');
+      final site = registry.findSite(url);
+      expect(site, isNotNull);
+      expect(site!.normalizeUrl(url).scheme, 'https');
+    });
+  });
 }
