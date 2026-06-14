@@ -8,6 +8,8 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 
+import '../../helpers/novel_metadata_db_fixture.dart';
+
 void main() {
   late NovelDatabase novelDatabase;
 
@@ -17,51 +19,8 @@ void main() {
   });
 
   setUp(() async {
-    novelDatabase = NovelDatabase();
-    final db = await databaseFactoryFfi.openDatabase(
-      inMemoryDatabasePath,
-      options: OpenDatabaseOptions(
-        version: 4,
-        onCreate: (db, version) async {
-          await db.execute('''
-            CREATE TABLE novels (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              site_type TEXT NOT NULL,
-              novel_id TEXT NOT NULL,
-              title TEXT NOT NULL,
-              url TEXT NOT NULL,
-              folder_name TEXT NOT NULL UNIQUE,
-              episode_count INTEGER NOT NULL DEFAULT 0,
-              downloaded_at TEXT NOT NULL,
-              updated_at TEXT
-            )
-          ''');
-          await db.execute('''
-            CREATE TABLE word_summaries (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              folder_name TEXT NOT NULL,
-              word TEXT NOT NULL,
-              summary_type TEXT NOT NULL,
-              summary TEXT NOT NULL,
-              source_file TEXT,
-              created_at TEXT NOT NULL,
-              updated_at TEXT NOT NULL
-            )
-          ''');
-          await db.execute('''
-            CREATE TABLE bookmarks (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              novel_id TEXT NOT NULL,
-              file_name TEXT NOT NULL,
-              line_number INTEGER,
-              created_at TEXT NOT NULL,
-              UNIQUE(novel_id, file_name, line_number)
-            )
-          ''');
-        },
-      ),
-    );
-    novelDatabase.setDatabase(db);
+    novelDatabase = await seedNovelDatabaseFixture();
+    final db = await novelDatabase.database;
 
     // Register the novel folders used by tests that resolve novel ids through
     // [currentNovelIdProvider]. Resolution now keys off the registered

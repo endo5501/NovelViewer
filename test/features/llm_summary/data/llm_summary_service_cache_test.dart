@@ -11,6 +11,8 @@ import 'package:novel_viewer/shared/utils/content_hash.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../../helpers/novel_metadata_db_fixture.dart';
+
 class _MockLlmClient extends LlmClient {
   final List<String> responses;
   final List<String> prompts = [];
@@ -38,46 +40,7 @@ void main() {
 
   setUp(() async {
     sqfliteFfiInit();
-    db = await databaseFactoryFfi.openDatabase(
-      inMemoryDatabasePath,
-      options: OpenDatabaseOptions(
-        version: 1,
-        onCreate: (db, _) async {
-          await db.execute('''
-            CREATE TABLE word_summaries (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              folder_name TEXT NOT NULL,
-              word TEXT NOT NULL,
-              covered_up_to_episode INTEGER NOT NULL,
-              summary TEXT NOT NULL,
-              source_file TEXT,
-              created_at TEXT NOT NULL,
-              updated_at TEXT NOT NULL
-            )
-          ''');
-          await db.execute('''
-            CREATE UNIQUE INDEX idx_word_summaries_unique
-            ON word_summaries(folder_name, word, covered_up_to_episode)
-          ''');
-          await db.execute('''
-            CREATE TABLE fact_cache (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              folder_name TEXT NOT NULL,
-              word TEXT NOT NULL,
-              file_name TEXT NOT NULL,
-              facts TEXT NOT NULL,
-              content_hash TEXT NOT NULL,
-              prompt_version INTEGER NOT NULL,
-              updated_at TEXT NOT NULL
-            )
-          ''');
-          await db.execute('''
-            CREATE UNIQUE INDEX idx_fact_cache_unique
-            ON fact_cache(folder_name, word, file_name)
-          ''');
-        },
-      ),
-    );
+    db = await openInMemoryNovelMetadataDb();
     repository = LlmSummaryRepository(db);
     factCache = FactCacheRepository(db);
     searchService = TextSearchService();

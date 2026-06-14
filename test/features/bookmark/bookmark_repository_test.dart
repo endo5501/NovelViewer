@@ -4,6 +4,8 @@ import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart
 import 'package:novel_viewer/features/bookmark/data/bookmark_repository.dart';
 import 'package:novel_viewer/features/bookmark/domain/bookmark.dart';
 
+import '../../helpers/novel_metadata_db_fixture.dart';
+
 void main() {
   late NovelDatabase novelDatabase;
   late BookmarkRepository repository;
@@ -14,28 +16,7 @@ void main() {
   });
 
   setUp(() async {
-    novelDatabase = NovelDatabase();
-    // v8 schema: bookmark identity is (novel_id, file_name, line_number);
-    // no absolute file_path column.
-    final db = await databaseFactoryFfi.openDatabase(
-      inMemoryDatabasePath,
-      options: OpenDatabaseOptions(
-        version: 8,
-        onCreate: (db, version) async {
-          await db.execute('''
-            CREATE TABLE bookmarks (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              novel_id TEXT NOT NULL,
-              file_name TEXT NOT NULL,
-              line_number INTEGER,
-              created_at TEXT NOT NULL,
-              UNIQUE(novel_id, file_name, line_number)
-            )
-          ''');
-        },
-      ),
-    );
-    novelDatabase.setDatabase(db);
+    novelDatabase = await seedNovelDatabaseFixture();
     repository = BookmarkRepository(novelDatabase);
   });
 

@@ -6,36 +6,15 @@ import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_pr
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../../helpers/novel_metadata_db_fixture.dart';
+
 void main() {
   late Database db;
   late LlmSummaryRepository repository;
 
   setUp(() async {
     sqfliteFfiInit();
-    db = await databaseFactoryFfi.openDatabase(
-      inMemoryDatabasePath,
-      options: OpenDatabaseOptions(
-        version: 1,
-        onCreate: (db, version) async {
-          await db.execute('''
-            CREATE TABLE word_summaries (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              folder_name TEXT NOT NULL,
-              word TEXT NOT NULL,
-              covered_up_to_episode INTEGER NOT NULL,
-              summary TEXT NOT NULL,
-              source_file TEXT,
-              created_at TEXT NOT NULL,
-              updated_at TEXT NOT NULL
-            )
-          ''');
-          await db.execute('''
-            CREATE UNIQUE INDEX idx_word_summaries_unique
-            ON word_summaries(folder_name, word, covered_up_to_episode)
-          ''');
-        },
-      ),
-    );
+    db = await openInMemoryNovelMetadataDb();
     repository = LlmSummaryRepository(db);
   });
 

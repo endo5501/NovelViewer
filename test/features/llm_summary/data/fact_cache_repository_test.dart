@@ -2,38 +2,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../../helpers/novel_metadata_db_fixture.dart';
+
 void main() {
   late Database db;
   late FactCacheRepository repository;
 
-  Future<void> createFactCacheSchema(Database db) async {
-    await db.execute('''
-      CREATE TABLE fact_cache (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        folder_name TEXT NOT NULL,
-        word TEXT NOT NULL,
-        file_name TEXT NOT NULL,
-        facts TEXT NOT NULL,
-        content_hash TEXT NOT NULL,
-        prompt_version INTEGER NOT NULL,
-        updated_at TEXT NOT NULL
-      )
-    ''');
-    await db.execute('''
-      CREATE UNIQUE INDEX idx_fact_cache_unique
-      ON fact_cache(folder_name, word, file_name)
-    ''');
-  }
-
   setUp(() async {
     sqfliteFfiInit();
-    db = await databaseFactoryFfi.openDatabase(
-      inMemoryDatabasePath,
-      options: OpenDatabaseOptions(
-        version: 1,
-        onCreate: (db, _) => createFactCacheSchema(db),
-      ),
-    );
+    db = await openInMemoryNovelMetadataDb();
     repository = FactCacheRepository(db);
   });
 

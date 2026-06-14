@@ -56,6 +56,10 @@ class NovelDatabaseSnapshotResolver {
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
   static const _databaseVersion = 8;
+
+  /// The current `novel_metadata.db` schema version. Exposed so test fixtures
+  /// open in-memory databases at the same version the production schema targets.
+  static const int currentSchemaVersion = _databaseVersion;
   static final _log = Logger('novel_metadata_db');
 
   final String? _dbDirPath;
@@ -96,6 +100,15 @@ class NovelDatabase {
   }
 
   Future<void> _onCreate(Database db, int version) async {
+    await createCurrentSchema(db);
+  }
+
+  /// Creates the full current-version schema on [db]. This is the single source
+  /// of truth for the production `_onCreate` and for test fixtures: tests build
+  /// their database through this method (see `test/helpers/`) so a production
+  /// schema change cannot silently drift away from hand-written test DDL (F130).
+  @visibleForTesting
+  static Future<void> createCurrentSchema(Database db) async {
     await db.execute('''
       CREATE TABLE novels (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

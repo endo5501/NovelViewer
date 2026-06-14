@@ -13,6 +13,8 @@ import 'package:novel_viewer/features/reading_progress/domain/reading_progress.d
 import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 
+import '../helpers/novel_metadata_db_fixture.dart';
+
 class _RecordingRepository implements ReadingProgressRepository {
   final List<String> upsertCalls = [];
   ReadingProgress? Function(String) lookup;
@@ -47,46 +49,8 @@ void main() {
   });
 
   setUp(() async {
-    novelDatabase = NovelDatabase();
-    final db = await databaseFactoryFfi.openDatabase(
-      inMemoryDatabasePath,
-      options: OpenDatabaseOptions(
-        version: 6,
-        onCreate: (db, _) async {
-          await db.execute('''
-            CREATE TABLE novels (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              site_type TEXT NOT NULL,
-              novel_id TEXT NOT NULL,
-              title TEXT NOT NULL,
-              url TEXT NOT NULL,
-              folder_name TEXT NOT NULL UNIQUE,
-              episode_count INTEGER NOT NULL DEFAULT 0,
-              downloaded_at TEXT NOT NULL,
-              updated_at TEXT
-            )
-          ''');
-          await db.execute('''
-            CREATE TABLE bookmarks (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              novel_id TEXT NOT NULL,
-              file_name TEXT NOT NULL,
-              line_number INTEGER,
-              created_at TEXT NOT NULL,
-              UNIQUE(novel_id, file_name, line_number)
-            )
-          ''');
-          await db.execute('''
-            CREATE TABLE reading_progress (
-              novel_id TEXT NOT NULL PRIMARY KEY,
-              file_name TEXT NOT NULL,
-              updated_at TEXT NOT NULL
-            )
-          ''');
-        },
-      ),
-    );
-    novelDatabase.setDatabase(db);
+    novelDatabase = await seedNovelDatabaseFixture();
+    final db = await novelDatabase.database;
 
     // Register the novel folder so the shared nesting-aware resolveNovelId
     // (which keys off the registered folder_name) can resolve it.

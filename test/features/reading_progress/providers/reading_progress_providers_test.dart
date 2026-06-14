@@ -6,6 +6,8 @@ import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
 import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 
+import '../../../helpers/novel_metadata_db_fixture.dart';
+
 void main() {
   late NovelDatabase novelDatabase;
 
@@ -15,23 +17,7 @@ void main() {
   });
 
   setUp(() async {
-    novelDatabase = NovelDatabase();
-    final db = await databaseFactoryFfi.openDatabase(
-      inMemoryDatabasePath,
-      options: OpenDatabaseOptions(
-        version: 6,
-        onCreate: (db, _) async {
-          await db.execute('''
-            CREATE TABLE reading_progress (
-              novel_id TEXT NOT NULL PRIMARY KEY,
-              file_name TEXT NOT NULL,
-              updated_at TEXT NOT NULL
-            )
-          ''');
-        },
-      ),
-    );
-    novelDatabase.setDatabase(db);
+    novelDatabase = await seedNovelDatabaseFixture();
   });
 
   tearDown(() async {

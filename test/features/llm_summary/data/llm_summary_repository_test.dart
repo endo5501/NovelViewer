@@ -3,38 +3,15 @@ import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.da
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../../helpers/novel_metadata_db_fixture.dart';
+
 void main() {
   late Database db;
   late LlmSummaryRepository repository;
 
-  Future<void> createV5Schema(Database db) async {
-    await db.execute('''
-      CREATE TABLE word_summaries (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        folder_name TEXT NOT NULL,
-        word TEXT NOT NULL,
-        covered_up_to_episode INTEGER NOT NULL,
-        summary TEXT NOT NULL,
-        source_file TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      )
-    ''');
-    await db.execute('''
-      CREATE UNIQUE INDEX idx_word_summaries_unique
-      ON word_summaries(folder_name, word, covered_up_to_episode)
-    ''');
-  }
-
   setUp(() async {
     sqfliteFfiInit();
-    db = await databaseFactoryFfi.openDatabase(
-      inMemoryDatabasePath,
-      options: OpenDatabaseOptions(
-        version: 1,
-        onCreate: (db, _) => createV5Schema(db),
-      ),
-    );
+    db = await openInMemoryNovelMetadataDb();
     repository = LlmSummaryRepository(db);
   });
 
