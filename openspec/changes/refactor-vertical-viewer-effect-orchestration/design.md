@@ -62,13 +62,15 @@ ViewerEffects resolveViewerEffects(ViewerEffectInputs inputs)
 
 **代替案:** (a) Controller/ChangeNotifier に状態機械を載せる → 状態移行の副作用が増え、レイアウト由来の入力（constraints）を controller に注入する配管が重い。(b) build 内の現状維持で `_scheduledTargetPage` 式ガードを足し続ける → F156 が問題視するパッチの上塗り。純関数抽出が最小侵襲かつ最大のテスト性向上。
 
-### 決定 2: ワンショットフラグのクリアを build 外へ
+### 決定 2: ワンショットフラグのクリアを散発変異から単一適用箇所へ集約する
 
-`resolveViewerEffects` は「このフラグを消費すべき」を `consumeXxx` フラグとして返すだけにし、実際の State 変異（`_jumpToLastPagePending=false` 等）は **post-frame の単一適用箇所**で行う。build 中の `_pendingTtsOffset=null` 直書きを撤去する。
+`resolveViewerEffects` は「このフラグを消費すべき」を `consumeXxx` フラグとして返すだけにし、実際の State 変異（`_jumpToLastPagePending=false`、`_pendingTtsOffset=null` 等）は **単一の適用ヘルパー `_applyViewerEffects` に集約**する。`LayoutBuilder.builder` の本体（ページネーション読み取り〜widget ツリー構築）に散らばっていた直書き変異を撤去する。
 
-**なぜ:** build の純粋性（副作用なし）に近づけ、build が複数回走っても入力スナップショットが安定するため、二重適用が構造的に起きなくなる。`_scheduledTargetPage` ガードはコマンド値の `newScheduledTargetPage` に置き換わり、意図が明示される。
+消費（フラグクリア）は `_applyViewerEffects` の中で **build 同期的に**行う。これは意図的な選択である：もし消費を post-frame に遅延すると、レイアウト確定までに build が複数回走った際、各 build の `resolveViewerEffects` がまだ立っているフラグを見て post-frame を再スケジュールし、効果が二重適用されてしまう（F156 が問題視する再入バグそのもの）。同期消費により、消費後の build のスナップショットは安定し、二重適用が構造的に起きない。`_scheduledTargetPage` ガードはコマンド値の `newScheduledTargetPage`（同期記録 → post-frame で null リセット）に置き換わり、意図が明示される。
 
-**トレードオフ:** 「即時に効果を起こしたい」②（アニメ停止）は post-frame に回すとフレーム内の整合が崩れる恐れがあるため、②だけは build 内即時適用を維持する（コマンド値としては `cancelAnimation` で表現するが適用タイミングは即時）。これは現状と同じ挙動。
+「散発変異の排除」は *ページネーション読み取りや widget 構築のロジックと交錯した状態変異をなくす* ことを意味し、消費を build 内に残すことと矛盾しない。F156 の smell は「レイアウト計算・効果スケジュール・フラグ変異が `LayoutBuilder.builder` 内で絡み合っている」点であり、それらを「決定（純関数）＋単一適用箇所」へ分離することで解消される。
+
+**トレードオフ:** ②（アニメ停止）も `_applyViewerEffects` 内で build 同期的に即時適用する（post-frame に回すとフレーム内整合が崩れる）。コマンド値としては `cancelAnimation` で表現するが適用タイミングは即時。これは現状と同じ挙動。ページ飛び（①③④）・hover 非表示・行コールバックのみ単一 post-frame に遅延する。
 
 ### 決定 3: 配置とスコープ
 

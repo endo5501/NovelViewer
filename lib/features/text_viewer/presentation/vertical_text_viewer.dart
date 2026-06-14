@@ -50,6 +50,235 @@ List<int> computeCharOffsetPerPage(
   return pageStarts.map((start) => cumulative[start]).toList();
 }
 
+/// Pure, immutable snapshot of everything [resolveViewerEffects] needs to decide
+/// which layout-derived side effects [VerticalTextViewer]'s build should fire.
+///
+/// Historically these decisions were inlined in `LayoutBuilder.builder` as five
+/// effect schedulers entangled with six in-build field mutations (F156):
+///   ① target-line page jump        (guarded by `scheduledTargetPage`)
+///   ② cancel animation on layout change
+///   ③ jump-to-last-page (`fromEnd` intent)
+///   ④ TTS auto-navigate (animated, via `_changePage`)
+///   ⑤ report current page's first line number
+/// Lifting the decision into a pure function makes it unit-testable without a
+/// widget tree and removes the in-layout flag mutations that made repeated
+/// builds re-schedule one-shot effects.
+@visibleForTesting
+class ViewerEffectInputs {
+  const ViewerEffectInputs({
+    required this.totalPages,
+    required this.currentPage,
+    required this.targetPage,
+    required this.scheduledTargetPage,
+    required this.jumpToLastPagePending,
+    required this.pendingTtsOffset,
+    required this.charOffsetPerPage,
+    required this.firstLinePerPage,
+    required this.lastReportedLine,
+    required this.constraintsChanged,
+    required this.isAnimating,
+  });
+
+  final int totalPages;
+  final int currentPage;
+  final int? targetPage;
+  final int? scheduledTargetPage;
+  final bool jumpToLastPagePending;
+  final int? pendingTtsOffset;
+  final List<int> charOffsetPerPage;
+  final List<int> firstLinePerPage;
+  final int lastReportedLine;
+  final bool constraintsChanged;
+  final bool isAnimating;
+
+  /// The page actually shown this build: current page clamped into range.
+  int get safePage =>
+      totalPages == 0 ? 0 : currentPage.clamp(0, totalPages - 1);
+}
+
+/// Command value describing the side effects a single build should apply.
+/// All fields are scalar so the value is cheap to compare in tests.
+///
+/// Application is split: [cancelAnimation] / [newScheduledTargetPage] /
+/// [consumeJumpToLastPage] / [consumeTtsOffset] / [reportLine] are applied
+/// synchronously (so repeated builds before the post-frame fires cannot apply a
+/// one-shot effect twice), while the page jumps, hover-hide and line callback
+/// run in a single post-frame (see `_applyViewerEffects`).
+@visibleForTesting
+class ViewerEffects {
+  const ViewerEffects({
+    this.instantJumpToPage,
+    this.clearTargetLineOnJump = false,
+    this.animatedGoToPage,
+    this.reportLine,
+    this.cancelAnimation = false,
+    this.hideHover = false,
+    this.newScheduledTargetPage,
+    this.consumeJumpToLastPage = false,
+    this.consumeTtsOffset = false,
+  });
+
+  /// Page to move to immediately via `setState` (① target jump or ③ last-page
+  /// jump). Null when neither fires.
+  final int? instantJumpToPage;
+
+  /// True when [instantJumpToPage] originated from a target-line jump (①),
+  /// which also clears `_targetLine` and re-checks the page on apply. Last-page
+  /// jumps (③) leave this false.
+  final bool clearTargetLineOnJump;
+
+  /// Page to navigate to with the slide animation (④ TTS) via `_changePage`.
+  final int? animatedGoToPage;
+
+  /// First line number of the current page to report (⑤), or null if unchanged.
+  final int? reportLine;
+
+  /// ② Stop an in-flight page-transition animation (layout changed mid-anim).
+  final bool cancelAnimation;
+
+  /// Drop the hover popup after an instant jump (①③). TTS (④) hides hover via
+  /// `_changePage`, so this stays false for TTS-only navigation.
+  final bool hideHover;
+
+  /// Value to record into `_scheduledTargetPage` synchronously (① re-entrancy
+  /// guard), or null when no target jump is scheduled.
+  final int? newScheduledTargetPage;
+
+  /// Clear `_jumpToLastPagePending` (③ consume).
+  final bool consumeJumpToLastPage;
+
+  /// Clear `_pendingTtsOffset` (④ consume).
+  final bool consumeTtsOffset;
+
+  static const none = ViewerEffects();
+
+  @override
+  bool operator ==(Object other) =>
+      other is ViewerEffects &&
+      other.instantJumpToPage == instantJumpToPage &&
+      other.clearTargetLineOnJump == clearTargetLineOnJump &&
+      other.animatedGoToPage == animatedGoToPage &&
+      other.reportLine == reportLine &&
+      other.cancelAnimation == cancelAnimation &&
+      other.hideHover == hideHover &&
+      other.newScheduledTargetPage == newScheduledTargetPage &&
+      other.consumeJumpToLastPage == consumeJumpToLastPage &&
+      other.consumeTtsOffset == consumeTtsOffset;
+
+  @override
+  int get hashCode => Object.hash(
+        instantJumpToPage,
+        clearTargetLineOnJump,
+        animatedGoToPage,
+        reportLine,
+        cancelAnimation,
+        hideHover,
+        newScheduledTargetPage,
+        consumeJumpToLastPage,
+        consumeTtsOffset,
+      );
+
+  @override
+  String toString() => 'ViewerEffects('
+      'instantJumpToPage: $instantJumpToPage, '
+      'clearTargetLineOnJump: $clearTargetLineOnJump, '
+      'animatedGoToPage: $animatedGoToPage, '
+      'reportLine: $reportLine, '
+      'cancelAnimation: $cancelAnimation, '
+      'hideHover: $hideHover, '
+      'newScheduledTargetPage: $newScheduledTargetPage, '
+      'consumeJumpToLastPage: $consumeJumpToLastPage, '
+      'consumeTtsOffset: $consumeTtsOffset)';
+}
+
+/// Finds the last page whose start text-offset is `<= offset`, mirroring the
+/// previous `_findPageForOffset` instance method. Pure so it can run inside
+/// [resolveViewerEffects].
+int? _findPageForOffset(int offset, List<int> charOffsetPerPage) {
+  for (var i = charOffsetPerPage.length - 1; i >= 0; i--) {
+    if (offset >= charOffsetPerPage[i]) return i;
+  }
+  return null;
+}
+
+/// Pure decision: given a layout snapshot, return the side effects this build
+/// should apply. Behaviour mirrors the previous inline orchestration exactly,
+/// except that when a target jump (①) and a last-page jump (③) would fire in
+/// the same build the target jump deliberately wins (the prior code's
+/// last-registered-post-frame-wins ordering was an accident of two independent
+/// callbacks and this case is practically unreachable).
+@visibleForTesting
+ViewerEffects resolveViewerEffects(ViewerEffectInputs i) {
+  final safePage = i.safePage;
+
+  int? instantJumpToPage;
+  var clearTargetLineOnJump = false;
+  int? newScheduledTargetPage;
+  var hideHover = false;
+
+  // ① Target-line page jump (highest priority among instant jumps). The
+  // `scheduledTargetPage` check is the re-entrancy guard against re-scheduling
+  // the same jump across rebuilds before the post-frame fires.
+  final targetFires = i.targetPage != null &&
+      i.targetPage != i.currentPage &&
+      i.targetPage != i.scheduledTargetPage;
+  if (targetFires) {
+    instantJumpToPage = i.targetPage;
+    clearTargetLineOnJump = true;
+    newScheduledTargetPage = i.targetPage;
+    hideHover = true;
+  }
+
+  // ③ Jump-to-last-page (`fromEnd` intent). Consumed whenever pending and pages
+  // exist, even if the page is already last; does not override an active ①.
+  var consumeJumpToLastPage = false;
+  if (i.jumpToLastPagePending && i.totalPages > 0) {
+    consumeJumpToLastPage = true;
+    final lastPage = i.totalPages - 1;
+    if (lastPage != i.currentPage && instantJumpToPage == null) {
+      instantJumpToPage = lastPage;
+      clearTargetLineOnJump = false;
+      hideHover = true;
+    }
+  }
+
+  // ④ TTS auto-navigate (animated). Consumed whenever pending and more than one
+  // page exists, regardless of whether a navigation is actually needed.
+  int? animatedGoToPage;
+  var consumeTtsOffset = false;
+  if (i.pendingTtsOffset != null && i.totalPages > 1) {
+    consumeTtsOffset = true;
+    final ttsPage = _findPageForOffset(i.pendingTtsOffset!, i.charOffsetPerPage);
+    if (ttsPage != null && ttsPage != safePage) {
+      animatedGoToPage = ttsPage;
+    }
+  }
+
+  // ⑤ Report the current page's first line number when it changes.
+  int? reportLine;
+  if (i.firstLinePerPage.isNotEmpty && safePage < i.firstLinePerPage.length) {
+    final pageLine = i.firstLinePerPage[safePage];
+    if (pageLine != i.lastReportedLine) {
+      reportLine = pageLine;
+    }
+  }
+
+  // ② Cancel an in-flight page-transition animation on a layout change.
+  final cancelAnimation = i.constraintsChanged && i.isAnimating;
+
+  return ViewerEffects(
+    instantJumpToPage: instantJumpToPage,
+    clearTargetLineOnJump: clearTargetLineOnJump,
+    animatedGoToPage: animatedGoToPage,
+    reportLine: reportLine,
+    cancelAnimation: cancelAnimation,
+    hideHover: hideHover,
+    newScheduledTargetPage: newScheduledTargetPage,
+    consumeJumpToLastPage: consumeJumpToLastPage,
+    consumeTtsOffset: consumeTtsOffset,
+  );
+}
+
 class VerticalTextViewer extends ConsumerStatefulWidget {
   const VerticalTextViewer({
     super.key,
@@ -270,30 +499,27 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
             final totalPages = pages.length;
             _pageCount = totalPages;
 
-            if (result.targetPage != null &&
-                result.targetPage != _currentPage &&
-                result.targetPage != _scheduledTargetPage) {
-              final targetPage = result.targetPage!;
-              _scheduledTargetPage = targetPage;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _scheduledTargetPage = null;
-                if (!mounted || targetPage == _currentPage) return;
-                setState(() {
-                  _currentPage = targetPage;
-                  _targetLine = null;
-                });
-                // The page jumped without going through _changePage, so the
-                // popup's anchor position is now stale relative to the new
-                // content. Drop any visible popup.
-                widget.onHoverHideRequest?.call();
-              });
-            }
+            // Resolve every layout-derived side effect as a pure decision over
+            // an immutable snapshot, then apply them in one place
+            // (_applyViewerEffects). This keeps build() free of the scattered
+            // in-layout flag mutations and post-frame schedulers it used to
+            // orchestrate inline (F156).
+            final constraintsChanged = _lastConstraints != constraints;
+            final effects = resolveViewerEffects(ViewerEffectInputs(
+              totalPages: totalPages,
+              currentPage: _currentPage,
+              targetPage: result.targetPage,
+              scheduledTargetPage: _scheduledTargetPage,
+              jumpToLastPagePending: _jumpToLastPagePending,
+              pendingTtsOffset: _pendingTtsOffset,
+              charOffsetPerPage: result.charOffsetPerPage,
+              firstLinePerPage: result.firstLinePerPage,
+              lastReportedLine: _lastReportedLine,
+              constraintsChanged: constraintsChanged,
+              isAnimating: _animationController.isAnimating,
+            ));
+            _applyViewerEffects(effects);
 
-            // Cancel animation on layout change
-            if (_lastConstraints != constraints && _animationController.isAnimating) {
-              _animationController.stop();
-              _outgoingSegments = null;
-            }
             _lastConstraints = constraints;
 
             final safePage = totalPages == 0
@@ -303,48 +529,6 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
             final currentSegments =
                 totalPages > 0 ? pages[safePage] : <TextSegment>[];
             _currentPageSegments = currentSegments;
-
-            // Honour `FileEntryStartIntent.fromEnd` once layout settles
-            // and `_pageCount` is known.
-            if (_jumpToLastPagePending && totalPages > 0) {
-              _jumpToLastPagePending = false;
-              final lastPage = totalPages - 1;
-              if (lastPage != _currentPage) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted) return;
-                  setState(() {
-                    _currentPage = lastPage;
-                  });
-                  widget.onHoverHideRequest?.call();
-                });
-              }
-            }
-
-            // Auto-navigate to TTS highlight page
-            if (_pendingTtsOffset != null && totalPages > 1) {
-              final ttsPage = _findPageForOffset(
-                  _pendingTtsOffset!, result.charOffsetPerPage);
-              if (ttsPage != null && ttsPage != safePage) {
-                _pendingTtsOffset = null;
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted) return;
-                  _goToPage(ttsPage);
-                });
-              } else {
-                _pendingTtsOffset = null;
-              }
-            }
-
-            // Report current page's first line number
-            if (result.firstLinePerPage.isNotEmpty) {
-              final pageLine = result.firstLinePerPage[safePage];
-              if (pageLine != _lastReportedLine) {
-                _lastReportedLine = pageLine;
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) widget.onPageLineChanged?.call(pageLine);
-                });
-              }
-            }
 
             final pageTextOffset = result.charOffsetPerPage[safePage];
             final lineBreakIndices = result.lineBreakIndicesPerPage[safePage];
@@ -612,11 +796,80 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   void _goToPage(int page) =>
       _changePage(page - _currentPage);
 
-  int? _findPageForOffset(int offset, List<int> charOffsetPerPage) {
-    for (var i = charOffsetPerPage.length - 1; i >= 0; i--) {
-      if (offset >= charOffsetPerPage[i]) return i;
+  /// Applies the [ViewerEffects] decided by [resolveViewerEffects].
+  ///
+  /// Synchronous updates (animation cancel, scheduled-target guard, one-shot
+  /// flag consumption, reported-line record) happen immediately so a rebuild
+  /// before the post-frame fires cannot apply a one-shot effect twice. The
+  /// page jumps, hover-hide and line callback are deferred to a single
+  /// post-frame callback.
+  void _applyViewerEffects(ViewerEffects effects) {
+    // ② Cancel an in-flight animation on layout change (immediate, as before).
+    if (effects.cancelAnimation) {
+      _animationController.stop();
+      _outgoingSegments = null;
     }
-    return null;
+    // ① Record the scheduled target page synchronously so the re-entrancy
+    // guard in resolveViewerEffects sees it on the next build.
+    if (effects.newScheduledTargetPage != null) {
+      _scheduledTargetPage = effects.newScheduledTargetPage;
+    }
+    // ③/④ Consume one-shot triggers synchronously.
+    if (effects.consumeJumpToLastPage) {
+      _jumpToLastPagePending = false;
+    }
+    if (effects.consumeTtsOffset) {
+      _pendingTtsOffset = null;
+    }
+    // ⑤ Record the reported line synchronously (guards duplicate reports).
+    if (effects.reportLine != null) {
+      _lastReportedLine = effects.reportLine!;
+    }
+
+    final hasPostFrameWork = effects.instantJumpToPage != null ||
+        effects.animatedGoToPage != null ||
+        effects.reportLine != null;
+    if (!hasPostFrameWork) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      // ① reset the re-entrancy guard once the scheduled frame runs.
+      if (effects.newScheduledTargetPage != null) {
+        _scheduledTargetPage = null;
+      }
+
+      // ①/③ Instant page jump (no slide animation).
+      final jump = effects.instantJumpToPage;
+      if (jump != null) {
+        // Target-origin jumps (①) re-check the page hasn't already moved;
+        // last-page jumps (③) apply unconditionally, matching the prior code.
+        final skip = effects.clearTargetLineOnJump && jump == _currentPage;
+        if (!skip) {
+          setState(() {
+            _currentPage = jump;
+            if (effects.clearTargetLineOnJump) _targetLine = null;
+          });
+        }
+      }
+
+      // ①/③ The page jumped without going through _changePage, so the popup's
+      // anchor is stale relative to the new content. Drop any visible popup.
+      // (TTS ④ hides hover via _changePage, so hideHover stays false there.)
+      if (effects.hideHover) {
+        widget.onHoverHideRequest?.call();
+      }
+
+      // ④ TTS animated navigation via _changePage (which also hides hover).
+      if (effects.animatedGoToPage != null) {
+        _goToPage(effects.animatedGoToPage!);
+      }
+
+      // ⑤ Report the current page's first line number.
+      if (effects.reportLine != null) {
+        widget.onPageLineChanged?.call(effects.reportLine!);
+      }
+    });
   }
 
   int? _targetLine;
