@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 
 import '../../../shared/database/database_opener.dart';
 import '../../../shared/database/db_connection_gate.dart';
+import '../../../shared/episode/episode_resolver.dart' as episode;
 
 /// Returns the list of source-text file names for `folderName`, sorted
 /// lexically. Used by the v4 → v5 migration to compute lexical-rank fallback
@@ -30,26 +31,19 @@ class NovelDatabaseSnapshotResolver {
       NovelDatabaseSnapshotResolver(folderFileLister: (_) => const []);
 
   /// Production resolver: lexically-sorts the `.txt` files directly inside
-  /// `<libraryRoot>/<folder>` and returns their base names.
+  /// `<libraryRoot>/<folder>` and returns their base names, via the shared
+  /// [episode.listSortedTextFileNames] (single source of truth for the folder
+  /// listing). Returns an empty list when the folder is missing or unreadable,
+  /// logging a warning on listing failures so v5 migration precision loss stays
+  /// diagnosable.
   factory NovelDatabaseSnapshotResolver.fromLibraryRoot(String libraryRoot) {
-    return NovelDatabaseSnapshotResolver(folderFileLister: (folderName) {
-      try {
-        final dir = Directory(p.join(libraryRoot, folderName));
-        if (!dir.existsSync()) return const [];
-        final files = dir
-            .listSync(followLinks: false)
-            .whereType<File>()
-            .map((f) => p.basename(f.path))
-            .where((name) => name.toLowerCase().endsWith('.txt'))
-            .toList()
-          ..sort();
-        return files;
-      } catch (e, st) {
-        Logger('novel_metadata_db').warning(
-            'Failed to list folder $folderName during v5 migration', e, st);
-        return const [];
-      }
-    });
+    return NovelDatabaseSnapshotResolver(
+      folderFileLister: (folderName) => episode.listSortedTextFileNames(
+        p.join(libraryRoot, folderName),
+        onError: (e, st) => Logger('novel_metadata_db').warning(
+            'Failed to list folder $folderName during v5 migration', e, st),
+      ),
+    );
   }
 }
 
@@ -499,12 +493,13 @@ class NovelDatabase {
     required String folder,
     Logger? logger,
   }) {
-    final prefix = sourceFile != null ? _extractNumericPrefix(sourceFile) : null;
+    final prefix =
+        sourceFile != null ? episode.extractNumericPrefix(sourceFile) : null;
 
     if (summaryType == 'no_spoiler') {
       if (prefix != null) return prefix;
       if (sourceFile != null) {
-        final rank = _lexicalRank(filesIn(folder), sourceFile);
+        final rank = episode.lexicalRankOf(filesIn(folder), sourceFile);
         if (rank != null) return rank;
         logger?.warning(
             'v5 migration: could not resolve lexical rank for '
@@ -523,22 +518,10 @@ class NovelDatabase {
       return prefix > base ? prefix : base;
     }
     if (sourceFile != null) {
-      final rank = _lexicalRank(filesIn(folder), sourceFile);
+      final rank = episode.lexicalRankOf(filesIn(folder), sourceFile);
       if (rank != null) return rank > base ? rank : base;
     }
     return base;
-  }
-
-  static int? _extractNumericPrefix(String fileName) {
-    final match = RegExp(r'^(\d+)').firstMatch(fileName);
-    return match != null ? int.parse(match.group(1)!) : null;
-  }
-
-  static int? _lexicalRank(List<String> sortedFiles, String target) {
-    if (sortedFiles.isEmpty) return null;
-    final index = sortedFiles.indexOf(target);
-    if (index < 0) return null;
-    return index + 1; // 1-origin
   }
 
   @visibleForTesting
