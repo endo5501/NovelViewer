@@ -59,6 +59,9 @@ class _FakeRepository implements ReadingProgressRepository {
   }
 
   @override
+  Future<List<ReadingProgress>> findAll() async => const [];
+
+  @override
   Future<void> deleteByNovelId(String novelId, {DatabaseExecutor? txn}) async {}
 }
 

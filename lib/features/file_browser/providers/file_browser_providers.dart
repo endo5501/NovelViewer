@@ -3,7 +3,9 @@ import 'dart:io' show File;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
+import 'package:novel_viewer/features/file_browser/domain/reading_progress_badge.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
@@ -14,6 +16,7 @@ import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 import 'package:path/path.dart' as p;
 
 final _fileBrowserLog = Logger('file_browser');
+final _readingProgressLog = Logger('reading_progress');
 
 final fileSystemServiceProvider = Provider<FileSystemService>((ref) {
   return FileSystemService();
@@ -110,6 +113,45 @@ final directoryContentsProvider =
     subdirectories: subdirectories,
     ttsStatuses: ttsStatuses,
   );
+});
+
+/// Reading progress badges keyed by `folder_name`, for the file browser to
+/// render per-novel progress on registered novel folder tiles.
+///
+/// Both numbers come from the global `novel_metadata.db` only: the denominator
+/// is `novels.episode_count`, the numerator is derived from
+/// `reading_progress.file_name`'s leading episode number (0 = unread). No
+/// folder DB is opened and no filesystem walk is performed. Only registered
+/// novels appear in the map; unregistered (manual) folders are absent.
+///
+/// A bulk-read failure degrades to "no progress" (every novel reads as unread)
+/// and is logged at WARNING on `Logger('reading_progress')`, so the file
+/// listing stays usable.
+final readingProgressBadgesProvider =
+    FutureProvider<Map<String, ReadingProgressBadge>>((ref) async {
+  final novels = await ref.watch(allNovelsProvider.future);
+
+  var fileNameByNovelId = const <String, String>{};
+  try {
+    final progress =
+        await ref.watch(readingProgressRepositoryProvider).findAll();
+    fileNameByNovelId = {for (final p in progress) p.novelId: p.fileName};
+  } catch (e, st) {
+    _readingProgressLog.warning(
+      'Failed to bulk-read reading progress for file browser badges; '
+      'falling back to unread for all novels',
+      e,
+      st,
+    );
+  }
+
+  return {
+    for (final novel in novels)
+      novel.folderName: ReadingProgressBadge.from(
+        episodeCount: novel.episodeCount,
+        fileName: fileNameByNovelId[novel.folderName],
+      ),
+  };
 });
 
 final selectedNovelTitleProvider = FutureProvider<String?>((ref) async {

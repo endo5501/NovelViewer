@@ -112,6 +112,31 @@ void main() {
     });
   });
 
+  group('findAll', () {
+    test('returns an empty list when no rows exist', () async {
+      final all = await repository.findAll();
+      expect(all, isEmpty);
+    });
+
+    test('returns every stored row in a single query', () async {
+      await repository.upsert(
+        novelId: 'narou_n1234ab',
+        fileName: '003_chapter3.txt',
+      );
+      await repository.upsert(
+        novelId: 'kakuyomu_1689',
+        fileName: '012_chapter12.txt',
+      );
+
+      final all = await repository.findAll();
+      expect(all.length, 2);
+
+      final byId = {for (final p in all) p.novelId: p};
+      expect(byId['narou_n1234ab']!.fileName, '003_chapter3.txt');
+      expect(byId['kakuyomu_1689']!.fileName, '012_chapter12.txt');
+    });
+  });
+
   group('deleteByNovelId', () {
     test('removes an existing row', () async {
       await repository.upsert(
@@ -167,6 +192,14 @@ void main() {
       await dropTable();
       await expectLater(
         repository.deleteByNovelId('narou_n1234ab'),
+        throwsA(isA<Object>()),
+      );
+    });
+
+    test('findAll propagates DB errors to the caller', () async {
+      await dropTable();
+      await expectLater(
+        repository.findAll(),
         throwsA(isA<Object>()),
       );
     });
