@@ -3,7 +3,6 @@ import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 
 WordSummary _snap({
-  required String folderName,
   required String word,
   required int episode,
   required String summary,
@@ -11,7 +10,6 @@ WordSummary _snap({
   required DateTime updatedAt,
 }) =>
     WordSummary(
-      folderName: folderName,
       word: word,
       coveredUpToEpisode: episode,
       summary: summary,
@@ -25,7 +23,6 @@ void main() {
     test('one snapshot per word produces one entry with snapshotCount=1', () {
       final rows = [
         _snap(
-          folderName: 'my_novel',
           word: 'ボブ',
           episode: 40,
           summary: 'ボブは主人公の友人。',
@@ -48,7 +45,6 @@ void main() {
     test('multiple snapshots for the same word collapse into one entry', () {
       final rows = [
         _snap(
-          folderName: 'my_novel',
           word: 'アリス',
           episode: 30,
           summary: '序盤の要約',
@@ -56,7 +52,6 @@ void main() {
           updatedAt: DateTime.utc(2026, 5, 20, 10),
         ),
         _snap(
-          folderName: 'my_novel',
           word: 'アリス',
           episode: 60,
           summary: '中盤の要約',
@@ -64,7 +59,6 @@ void main() {
           updatedAt: DateTime.utc(2026, 5, 20, 16),
         ),
         _snap(
-          folderName: 'my_novel',
           word: 'アリス',
           episode: 120,
           summary: '全話要約',
@@ -87,7 +81,6 @@ void main() {
     test('updatedAt is the latest across all snapshots', () {
       final rows = [
         _snap(
-          folderName: 'my_novel',
           word: 'アリス',
           episode: 30,
           summary: 'a',
@@ -95,7 +88,6 @@ void main() {
           updatedAt: DateTime.utc(2026, 5, 20, 10),
         ),
         _snap(
-          folderName: 'my_novel',
           word: 'アリス',
           episode: 60,
           summary: 'b',
@@ -103,7 +95,6 @@ void main() {
           updatedAt: DateTime.utc(2026, 5, 20, 16),
         ),
         _snap(
-          folderName: 'my_novel',
           word: 'アリス',
           episode: 120,
           summary: 'c',
@@ -120,7 +111,6 @@ void main() {
     test('summaryPreview comes from the most recently updated snapshot', () {
       final rows = [
         _snap(
-          folderName: 'my_novel',
           word: 'アリス',
           episode: 30,
           summary: '古い要約',
@@ -128,7 +118,6 @@ void main() {
           updatedAt: DateTime.utc(2026, 5, 20, 10),
         ),
         _snap(
-          folderName: 'my_novel',
           word: 'アリス',
           episode: 60,
           summary: '新しい要約',
@@ -148,7 +137,6 @@ void main() {
       final rows = [
         // Largest episode but source_file is NULL → fall back
         _snap(
-          folderName: 'f',
           word: 'W',
           episode: 120,
           summary: 'c',
@@ -157,7 +145,6 @@ void main() {
         ),
         // Next largest episode has source_file → use this
         _snap(
-          folderName: 'f',
           word: 'W',
           episode: 60,
           summary: 'b',
@@ -165,7 +152,6 @@ void main() {
           updatedAt: DateTime.utc(2026, 5, 20, 16),
         ),
         _snap(
-          folderName: 'f',
           word: 'W',
           episode: 30,
           summary: 'a',
@@ -182,7 +168,6 @@ void main() {
     test('sourceFile is null when every snapshot has source_file=null', () {
       final rows = [
         _snap(
-          folderName: 'f',
           word: 'legacy',
           episode: 10,
           summary: 'a',
@@ -190,7 +175,6 @@ void main() {
           updatedAt: DateTime.utc(2026, 5, 20, 10),
         ),
         _snap(
-          folderName: 'f',
           word: 'legacy',
           episode: 1,
           summary: 'b',
@@ -208,7 +192,6 @@ void main() {
     test('isJumpable is true when sourceFile resolves to non-null', () {
       final rows = [
         _snap(
-          folderName: 'f',
           word: 'jumpable',
           episode: 5,
           summary: 'x',
@@ -225,21 +208,18 @@ void main() {
     test('returns entries sorted by updatedAt descending across words', () {
       final rows = [
         _snap(
-          folderName: 'f',
           word: 'middle',
           episode: 10,
           summary: 'm',
           updatedAt: DateTime.utc(2026, 5, 20, 12),
         ),
         _snap(
-          folderName: 'f',
           word: 'old',
           episode: 5,
           summary: 'o',
           updatedAt: DateTime.utc(2026, 5, 20, 10),
         ),
         _snap(
-          folderName: 'f',
           word: 'new',
           episode: 1,
           summary: 'n',

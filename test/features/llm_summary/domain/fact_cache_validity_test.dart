@@ -7,7 +7,6 @@ FactCacheEntry _entry({
   required int promptVersion,
 }) {
   return FactCacheEntry(
-    folderName: 'novelA',
     word: 'アリス',
     fileName: '005.txt',
     facts: '- 事実',

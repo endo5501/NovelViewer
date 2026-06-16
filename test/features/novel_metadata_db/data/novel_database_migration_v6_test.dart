@@ -149,7 +149,7 @@ void main() {
             "SELECT name FROM sqlite_master WHERE type='table' AND name='reading_progress'",
           );
           expect(tables, isNotEmpty,
-              reason: 'v5 → v6 upgrade SHALL add the reading_progress table');
+              reason: 'reading_progress SHALL exist (added at v6, kept at v9)');
 
           final rpRows = await db.query('reading_progress');
           expect(rpRows, isEmpty,
@@ -160,15 +160,14 @@ void main() {
               reason: 'pre-existing novels rows SHALL be preserved');
           expect(novelRows.first['folder_name'], 'narou_n1234ab');
 
-          final bookmarkRows = await db.query('bookmarks');
-          expect(bookmarkRows.length, 1,
-              reason: 'pre-existing bookmarks SHALL be preserved');
-          expect(bookmarkRows.first['line_number'], 42);
-
-          final summaryRows = await db.query('word_summaries');
-          expect(summaryRows.length, 1,
-              reason: 'pre-existing word_summaries SHALL be preserved');
-          expect(summaryRows.first['word'], 'アリス');
+          // v9 drops the global per-novel tables (migrated into each folder's
+          // novel_data.db; the data-move is covered by the v9 migration test).
+          Future<bool> tableExists(String name) async => (await db.rawQuery(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                [name],
+              )).isNotEmpty;
+          expect(await tableExists('bookmarks'), isFalse);
+          expect(await tableExists('word_summaries'), isFalse);
         } finally {
           await novelDatabase.close();
         }

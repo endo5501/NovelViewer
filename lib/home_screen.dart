@@ -60,9 +60,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildBookmarkButton() {
-    final novelId = ref.watch(currentNovelIdProvider).value;
+    final folderPath = ref.watch(currentNovelFolderPathProvider).value;
     final selectedFile = ref.watch(selectedFileProvider);
-    final isEnabled = novelId != null && selectedFile != null;
+    final isEnabled = folderPath != null && selectedFile != null;
     final isBookmarked = ref.watch(isBookmarkedProvider);
 
     return IconButton(
@@ -74,24 +74,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _toggleBookmark() async {
-    final novelId = await ref.read(currentNovelIdProvider.future);
+    final folderPath = await ref.read(currentNovelFolderPathProvider.future);
     final selectedFile = ref.read(selectedFileProvider);
-    if (novelId == null || selectedFile == null) return;
+    if (folderPath == null || selectedFile == null) return;
 
     final lineNumber = ref.read(currentViewLineProvider);
     final isBookmarked = ref.read(isBookmarkedProvider);
-    final repository = ref.read(bookmarkRepositoryProvider);
+    final repository =
+        await ref.read(bookmarkRepositoryProvider(folderPath).future);
 
     await toggleBookmark(
       repository,
-      novelId: novelId,
       fileName: selectedFile.name,
       isCurrentlyBookmarked: isBookmarked,
       lineNumber: lineNumber,
     );
 
     ref.invalidate(isBookmarkedProvider);
-    ref.invalidate(bookmarksForNovelProvider(novelId));
+    ref.invalidate(bookmarksForCurrentNovelProvider);
     ref.invalidate(bookmarkLineNumbersForFileProvider);
   }
 

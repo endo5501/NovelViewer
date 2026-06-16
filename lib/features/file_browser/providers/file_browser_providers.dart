@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
+import 'package:novel_viewer/shared/database/novel_data_database_provider.dart';
 import 'package:novel_viewer/shared/database/per_folder_db_registry_provider.dart';
 import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 import 'package:path/path.dart' as p;
@@ -43,6 +44,7 @@ class CurrentDirectoryNotifier extends Notifier<String?> {
       ref.invalidate(ttsAudioDatabaseProvider(oldKey));
       ref.invalidate(ttsDictionaryDatabaseProvider(oldKey));
       ref.invalidate(episodeCacheDatabaseProvider(oldKey));
+      ref.invalidate(novelDataDatabaseProvider(oldKey));
     }
   }
 }

@@ -6,7 +6,6 @@ import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_histo
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 WordSummary _snap(int episode, {DateTime? updatedAt}) => WordSummary(
-      folderName: 'my_novel',
       word: 'アリス',
       coveredUpToEpisode: episode,
       summary: '要約#$episode',

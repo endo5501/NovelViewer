@@ -54,10 +54,10 @@ ProviderScope _scopedWith({
   return ProviderScope(
     overrides: [
       hoverPopupCacheProvider(
-        (folder: 'novel_a', word: 'アリス'),
+        (folderPath: 'novel_a', word: 'アリス'),
       ).overrideWith((_) async => snapshots),
       llmSummaryRepositoryProvider.overrideWith(
-        (_) async => throw UnsupportedError('not needed in this test'),
+        (ref, folderPath) async => throw UnsupportedError('not needed in this test'),
       ),
     ],
     child: MaterialApp(
@@ -70,7 +70,6 @@ ProviderScope _scopedWith({
 }
 
 WordSummary _snap(int episode, String text) => WordSummary(
-      folderName: 'novel_a',
       word: 'アリス',
       coveredUpToEpisode: episode,
       summary: text,
@@ -90,7 +89,7 @@ void main() {
       await tester.pumpWidget(_scopedWith(
         snapshots: const [],
         child: const HoverPopupWidget(
-          folder: 'novel_a',
+          folderPath: 'novel_a',
           word: 'アリス',
           currentEpisode: 5,
           currentFileName: '005.txt',
@@ -108,7 +107,7 @@ void main() {
       await tester.pumpWidget(_scopedWith(
         snapshots: [_snap(3, '序盤要約'), _snap(9, '中盤要約')],
         child: const HoverPopupWidget(
-          folder: 'novel_a',
+          folderPath: 'novel_a',
           word: 'アリス',
           currentEpisode: 6,
           currentFileName: '006.txt',
@@ -129,7 +128,7 @@ void main() {
       await tester.pumpWidget(_scopedWith(
         snapshots: [_snap(9, '先の要約')],
         child: const HoverPopupWidget(
-          folder: 'novel_a',
+          folderPath: 'novel_a',
           word: 'アリス',
           currentEpisode: 6,
           currentFileName: '006.txt',
@@ -149,7 +148,7 @@ void main() {
       await tester.pumpWidget(_scopedWith(
         snapshots: [_snap(5, 'only')],
         child: const HoverPopupWidget(
-          folder: 'novel_a',
+          folderPath: 'novel_a',
           word: 'アリス',
           currentEpisode: 5,
           currentFileName: '005.txt',
@@ -176,10 +175,10 @@ void main() {
       final runner = _RecordingAnalysisRunner();
       final container = ProviderContainer(overrides: [
         hoverPopupCacheProvider(
-          (folder: 'novel_a', word: 'アリス'),
+          (folderPath: 'novel_a', word: 'アリス'),
         ).overrideWith((_) async => [_snap(3, '序盤要約'), _snap(9, '中盤要約')]),
         llmSummaryRepositoryProvider.overrideWith(
-          (_) async => throw UnsupportedError('not needed in this test'),
+          (ref, folderPath) async => throw UnsupportedError('not needed in this test'),
         ),
         analysisRunnerProvider.overrideWithValue(runner),
       ]);
@@ -205,7 +204,7 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             home: Material(
               child: HoverPopupWidget(
-                folder: 'novel_a',
+                folderPath: 'novel_a',
                 word: 'アリス',
                 currentEpisode: 6,
                 currentFileName: '006.txt',
@@ -236,7 +235,7 @@ void main() {
       // post-await). To exercise the reset, we directly invoke the same
       // logic the production runner would: invalidate + reset.
       container.invalidate(
-          hoverPopupCacheProvider((folder: 'novel_a', word: 'アリス')));
+          hoverPopupCacheProvider((folderPath: 'novel_a', word: 'アリス')));
       final hoverState = container.read(hoverPopupProvider);
       if (hoverState.word == 'アリス') {
         container.read(hoverPopupProvider.notifier).setActiveEpisode(null);
@@ -253,10 +252,10 @@ void main() {
       final runner = _RecordingAnalysisRunner();
       final container = ProviderContainer(overrides: [
         hoverPopupCacheProvider(
-          (folder: 'novel_a', word: 'アリス'),
+          (folderPath: 'novel_a', word: 'アリス'),
         ).overrideWith((_) async => [_snap(3, '序盤要約')]),
         llmSummaryRepositoryProvider.overrideWith(
-          (_) async => throw UnsupportedError('not needed in this test'),
+          (ref, folderPath) async => throw UnsupportedError('not needed in this test'),
         ),
         analysisRunnerProvider.overrideWithValue(runner),
       ]);
@@ -271,7 +270,7 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             home: Material(
               child: HoverPopupWidget(
-                folder: 'novel_a',
+                folderPath: 'novel_a',
                 word: 'アリス',
                 currentEpisode: 6,
                 currentFileName: '006.txt',

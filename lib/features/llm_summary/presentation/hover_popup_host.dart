@@ -7,7 +7,6 @@ import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_widge
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
-import 'package:path/path.dart' as p;
 
 /// Host widget that places its [child] into the tree while listening to
 /// [hoverPopupProvider]. When the state becomes visible (and a novel
@@ -39,7 +38,7 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
 
   void _insertEntry({
     required Offset position,
-    required String folder,
+    required String folderPath,
     required String word,
     required int currentEpisode,
     required String? currentFileName,
@@ -60,7 +59,7 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
           left: anchor.left,
           top: anchor.top,
           child: HoverPopupWidget(
-            folder: folder,
+            folderPath: folderPath,
             word: word,
             currentEpisode: currentEpisode,
             currentFileName: currentFileName,
@@ -91,7 +90,6 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
         _removeEntry();
         return;
       }
-      final folder = p.basename(directory);
       final selectedFile = ref.read(selectedFileProvider);
       final currentEpisode = resolveUpperBoundForCurrent(
         directoryPath: directory,
@@ -101,7 +99,7 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
       final maxFileName = resolveSourceFileForAll(directory);
       _insertEntry(
         position: next.position!,
-        folder: folder,
+        folderPath: directory,
         word: next.word!,
         currentEpisode: currentEpisode,
         currentFileName: selectedFile?.name,

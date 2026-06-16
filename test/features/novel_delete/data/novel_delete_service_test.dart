@@ -5,37 +5,29 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_repository.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
-import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
-import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/novel_delete/data/novel_delete_service.dart';
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
-import 'package:novel_viewer/features/bookmark/data/bookmark_repository.dart';
 import 'package:novel_viewer/features/episode_cache/data/episode_cache_database.dart';
-import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 
 import '../../../helpers/novel_metadata_db_fixture.dart';
 
-/// A bookmark repository whose cascade delete always throws, used to prove the
-/// novels/word_summaries/fact_cache/reading_progress/bookmarks deletes run in a
-/// single transaction that rolls back as a unit (F127).
-class _ThrowingBookmarkRepository extends BookmarkRepository {
-  _ThrowingBookmarkRepository(super.novelDatabase);
+/// A reading-progress repository whose cascade delete always throws, used to
+/// prove the novels + reading_progress deletes run in a single transaction that
+/// rolls back as a unit (F127).
+class _ThrowingReadingProgressRepository extends ReadingProgressRepository {
+  _ThrowingReadingProgressRepository(super.novelDatabase);
 
   @override
   Future<void> deleteByNovelId(String novelId, {DatabaseExecutor? txn}) async {
-    throw Exception('bookmark delete failed');
+    throw Exception('reading_progress delete failed');
   }
 }
 
 void main() {
   late NovelDatabase novelDatabase;
-  late Database db;
   late NovelRepository novelRepository;
-  late LlmSummaryRepository summaryRepository;
-  late FactCacheRepository factCacheRepository;
   late ReadingProgressRepository readingProgressRepository;
-  late BookmarkRepository bookmarkRepository;
   late FileSystemService fileSystemService;
   late NovelDeleteService deleteService;
   late Directory tempDir;
@@ -47,20 +39,13 @@ void main() {
 
   setUp(() async {
     novelDatabase = await seedNovelDatabaseFixture();
-    db = await novelDatabase.database;
     novelRepository = NovelRepository(novelDatabase);
-    summaryRepository = LlmSummaryRepository(db);
-    factCacheRepository = FactCacheRepository(db);
     readingProgressRepository = ReadingProgressRepository(novelDatabase);
-    bookmarkRepository = BookmarkRepository(novelDatabase);
     fileSystemService = FileSystemService();
     deleteService = NovelDeleteService(
       novelDatabase: novelDatabase,
       novelRepository: novelRepository,
-      summaryRepository: summaryRepository,
-      factCacheRepository: factCacheRepository,
       readingProgressRepository: readingProgressRepository,
-      bookmarkRepository: bookmarkRepository,
       fileSystemService: fileSystemService,
     );
     tempDir = Directory.systemTemp.createTempSync('novel_delete_test_');
@@ -101,54 +86,15 @@ void main() {
       expect(novel, isNull);
     });
 
-    test('deletes word summaries for the folder', () async {
-      await novelRepository.upsert(createMetadata());
-      await summaryRepository.saveSnapshot(
-        folderName: 'narou_n1234ab',
-        word: 'アリス',
-        coveredUpToEpisode: 10,
-        summary: '要約',
-      );
-      final novelDir = Directory('${tempDir.path}/narou_n1234ab');
-      novelDir.createSync();
-
-      await deleteService.delete('narou_n1234ab', novelDir.path);
-
-      final snapshots = await summaryRepository.findSnapshotsForWord(
-        folderName: 'narou_n1234ab',
-        word: 'アリス',
-      );
-      expect(snapshots, isEmpty);
-    });
-
-    test('deletes fact_cache rows for the folder', () async {
-      await novelRepository.upsert(createMetadata());
-      await factCacheRepository.upsert(
-        folderName: 'narou_n1234ab',
-        word: 'アリス',
-        fileName: '001_chapter.txt',
-        facts: '- 事実',
-        contentHash: 'h1',
-        promptVersion: FactCacheRepository.currentPromptVersion,
-      );
-      final novelDir = Directory('${tempDir.path}/narou_n1234ab');
-      novelDir.createSync();
-
-      await deleteService.delete('narou_n1234ab', novelDir.path);
-
-      final cached = await factCacheRepository.findForWord(
-        folderName: 'narou_n1234ab',
-        word: 'アリス',
-      );
-      expect(cached, isEmpty,
-          reason: 'folder deletion SHALL cascade to fact_cache');
-    });
-
-    test('deletes directory from file system', () async {
+    test('deletes directory from file system (carrying novel_data.db with it)',
+        () async {
       await novelRepository.upsert(createMetadata());
       final novelDir = Directory('${tempDir.path}/narou_n1234ab');
       novelDir.createSync();
       File('${novelDir.path}/001_chapter.txt').writeAsStringSync('content');
+      // A novel_data.db (word_summaries/fact_cache/bookmarks) would live here;
+      // deleting the directory removes it — no per-row cascade is run.
+      File('${novelDir.path}/novel_data.db').writeAsStringSync('x');
 
       await deleteService.delete('narou_n1234ab', novelDir.path);
 
@@ -174,16 +120,14 @@ void main() {
     test('deletes folder even when episode_cache.db is open', () async {
       // Regression: a novel downloaded then viewed leaves episode_cache.db open
       // (the download flow's handle). On Windows that open SQLite connection
-      // locked the file, so deleteDirectory failed part-way and — because the
-      // metadata was deleted first — the folder became an undeletable
-      // "organizational" folder. The fix releases the handle before deleting
-      // and only removes DB rows after the folder is gone.
+      // locked the file, so deleteDirectory failed part-way. The fix releases
+      // the handle before deleting and only removes DB rows after the folder is
+      // gone.
       await novelRepository.upsert(createMetadata());
       final novelDir = Directory('${tempDir.path}/narou_n1234ab');
       novelDir.createSync();
       File('${novelDir.path}/001_chapter.txt').writeAsStringSync('content');
 
-      // Simulate the leaked download handle: open and keep open.
       final cacheDb = EpisodeCacheDatabase(novelDir.path);
       await cacheDb.database;
       expect(
@@ -195,14 +139,9 @@ void main() {
       final serviceWithRelease = NovelDeleteService(
         novelDatabase: novelDatabase,
         novelRepository: novelRepository,
-        summaryRepository: summaryRepository,
-        factCacheRepository: factCacheRepository,
         readingProgressRepository: readingProgressRepository,
-        bookmarkRepository: bookmarkRepository,
         fileSystemService: fileSystemService,
         releaseFolderHandles: (dir) async {
-          // The provider wires this to close + invalidate the family handles;
-          // here we close the open cache DB to mirror that contract.
           await cacheDb.close();
         },
       );
@@ -210,80 +149,28 @@ void main() {
       await serviceWithRelease.delete('narou_n1234ab', novelDir.path);
 
       expect(novelDir.existsSync(), isFalse,
-          reason: 'the folder (including episode_cache.db) SHALL be deleted '
-              'once the handle is released');
+          reason: 'the folder SHALL be deleted once the handle is released');
       expect(
         await novelRepository.findByFolderName('narou_n1234ab'),
         isNull,
       );
     });
 
-    test('cascades deletion to bookmarks (F107)', () async {
+    test('DB row deletion is atomic — a mid-transaction failure rolls back '
+        'novels and reading_progress (F127)', () async {
       await novelRepository.upsert(createMetadata());
-      await bookmarkRepository.add(
-        novelId: 'narou_n1234ab',
-        fileName: '001.txt',
-        lineNumber: 5,
-      );
-      await bookmarkRepository.add(
-        novelId: 'narou_n1234ab',
-        fileName: '002.txt',
-      );
-      final novelDir = Directory('${tempDir.path}/narou_n1234ab');
-      novelDir.createSync();
-
-      await deleteService.delete('narou_n1234ab', novelDir.path);
-
-      expect(await bookmarkRepository.findByNovel('narou_n1234ab'), isEmpty,
-          reason: 'folder deletion SHALL cascade to bookmarks');
-    });
-
-    test('preserves other novels\' bookmarks', () async {
-      await novelRepository.upsert(createMetadata());
-      await novelRepository.upsert(createMetadata(
-        folderName: 'narou_n5678cd',
-        novelId: 'n5678cd',
-        title: '別の小説',
-      ));
-      await bookmarkRepository.add(
-        novelId: 'narou_n5678cd',
-        fileName: '001.txt',
-      );
-      final novelDir = Directory('${tempDir.path}/narou_n1234ab');
-      novelDir.createSync();
-
-      await deleteService.delete('narou_n1234ab', novelDir.path);
-
-      expect(await bookmarkRepository.findByNovel('narou_n5678cd'), hasLength(1),
-          reason: 'other novel\'s bookmarks SHALL be preserved');
-    });
-
-    test('DB row deletion is atomic — a mid-transaction failure rolls back all '
-        'tables (F127)', () async {
-      await novelRepository.upsert(createMetadata());
-      await summaryRepository.saveSnapshot(
-        folderName: 'narou_n1234ab',
-        word: 'アリス',
-        coveredUpToEpisode: 10,
-        summary: '要約',
-      );
-      await bookmarkRepository.add(
+      await readingProgressRepository.upsert(
         novelId: 'narou_n1234ab',
         fileName: '001.txt',
       );
       final novelDir = Directory('${tempDir.path}/narou_n1234ab');
       novelDir.createSync();
 
-      // A repository that throws during the transaction, after novels/summaries
-      // have already been deleted within it. The whole transaction MUST roll
-      // back, leaving every table intact.
       final failingService = NovelDeleteService(
         novelDatabase: novelDatabase,
         novelRepository: novelRepository,
-        summaryRepository: summaryRepository,
-        factCacheRepository: factCacheRepository,
-        readingProgressRepository: readingProgressRepository,
-        bookmarkRepository: _ThrowingBookmarkRepository(novelDatabase),
+        readingProgressRepository:
+            _ThrowingReadingProgressRepository(novelDatabase),
         fileSystemService: fileSystemService,
       );
 
@@ -297,42 +184,10 @@ void main() {
       expect(await novelRepository.findByFolderName('narou_n1234ab'), isNotNull,
           reason: 'novels row SHALL be rolled back');
       expect(
-        await summaryRepository.findSnapshotsForWord(
-            folderName: 'narou_n1234ab', word: 'アリス'),
-        isNotEmpty,
-        reason: 'word_summaries SHALL be rolled back',
+        await readingProgressRepository.findByNovelId('narou_n1234ab'),
+        isNotNull,
+        reason: 'reading_progress SHALL be rolled back',
       );
-      expect(await bookmarkRepository.findByNovel('narou_n1234ab'), hasLength(1),
-          reason: 'bookmarks SHALL be rolled back');
-    });
-
-    test(
-        'save and delete agree on the novel id for a nested novel '
-        '(F106/F107 key consistency)', () async {
-      // The bookmark is SAVED under the id resolved from the nested file path
-      // (leaf folder_name), and DELETE cascades using the same folder_name.
-      // This proves the two sides use a single, consistent key.
-      const libraryRoot = '/library';
-      const nestedFile = '/library/お気に入り/narou_n1234ab/001.txt';
-      final resolvedId =
-          resolveNovelId(libraryRoot, nestedFile, {'narou_n1234ab'});
-      expect(resolvedId, 'narou_n1234ab',
-          reason: 'save side resolves the leaf folder_name, not "お気に入り"');
-
-      await novelRepository.upsert(createMetadata());
-      await bookmarkRepository.add(
-        novelId: resolvedId!,
-        fileName: '001.txt',
-      );
-      final novelDir = Directory('${tempDir.path}/narou_n1234ab');
-      novelDir.createSync();
-
-      // Delete uses the leaf folder_name, exactly the key the bookmark was
-      // saved under.
-      await deleteService.delete('narou_n1234ab', novelDir.path);
-
-      expect(await bookmarkRepository.findByNovel('narou_n1234ab'), isEmpty,
-          reason: 'the nested-novel bookmark SHALL be cascaded on delete');
     });
 
     test('does not affect other novels', () async {
@@ -342,20 +197,6 @@ void main() {
         novelId: 'n5678cd',
         title: '別の小説',
       ));
-      await summaryRepository.saveSnapshot(
-        folderName: 'narou_n5678cd',
-        word: 'ボブ',
-        coveredUpToEpisode: 10,
-        summary: '別の要約',
-      );
-      await factCacheRepository.upsert(
-        folderName: 'narou_n5678cd',
-        word: 'ボブ',
-        fileName: '001.txt',
-        facts: '- 事実',
-        contentHash: 'h2',
-        promptVersion: FactCacheRepository.currentPromptVersion,
-      );
       await readingProgressRepository.upsert(
         novelId: 'narou_n5678cd',
         fileName: '002_chapter2.txt',
@@ -365,24 +206,15 @@ void main() {
 
       await deleteService.delete('narou_n1234ab', novelDir.path);
 
-      final otherNovel =
-          await novelRepository.findByFolderName('narou_n5678cd');
-      expect(otherNovel, isNotNull);
-      final otherSnapshots = await summaryRepository.findSnapshotsForWord(
-        folderName: 'narou_n5678cd',
-        word: 'ボブ',
+      expect(
+        await novelRepository.findByFolderName('narou_n5678cd'),
+        isNotNull,
       );
-      expect(otherSnapshots, isNotEmpty);
-      final otherCache = await factCacheRepository.findForWord(
-        folderName: 'narou_n5678cd',
-        word: 'ボブ',
+      expect(
+        await readingProgressRepository.findByNovelId('narou_n5678cd'),
+        isNotNull,
+        reason: 'other novel\'s reading_progress SHALL be preserved',
       );
-      expect(otherCache, isNotEmpty,
-          reason: 'other novel\'s fact_cache SHALL be preserved');
-      final otherProgress =
-          await readingProgressRepository.findByNovelId('narou_n5678cd');
-      expect(otherProgress, isNotNull,
-          reason: 'other novel\'s reading_progress SHALL be preserved');
     });
   });
 }

@@ -1,8 +1,8 @@
-/// One cached Stage-1 fact-extraction result for a single `(folder, word,
-/// file)`. Persisted in the `fact_cache` table; reused on later analyses when
-/// still valid (see `isFactCacheValid`).
+/// One cached Stage-1 fact-extraction result for a single `(word, file)` inside
+/// a novel's `novel_data.db`. The novel identity is conveyed by which folder's
+/// database the row lives in, so no `folder_name` column is stored. Reused on
+/// later analyses when still valid (see `isFactCacheValid`).
 class FactCacheEntry {
-  final String folderName;
   final String word;
   final String fileName;
   final String facts;
@@ -11,7 +11,6 @@ class FactCacheEntry {
   final DateTime updatedAt;
 
   const FactCacheEntry({
-    required this.folderName,
     required this.word,
     required this.fileName,
     required this.facts,
@@ -22,7 +21,6 @@ class FactCacheEntry {
 
   factory FactCacheEntry.fromMap(Map<String, Object?> map) {
     return FactCacheEntry(
-      folderName: map['folder_name'] as String,
       word: map['word'] as String,
       fileName: map['file_name'] as String,
       facts: map['facts'] as String,

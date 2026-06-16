@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
+import 'package:novel_viewer/shared/database/novel_data_database_provider.dart';
 
 class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
   final String? _initialValue;
@@ -52,6 +53,21 @@ void main() {
       expect(identical(before, after), isFalse,
           reason: 'switching away SHALL invalidate the handle keyed by the '
               'normalized old path, not the raw spelling');
+    });
+
+    test('novel_data handle keyed by folderDbKey is invalidated on switch', () {
+      final container = makeContainer();
+      addTearDown(container.dispose);
+
+      final key = folderDbKey(rawOld);
+      final before = container.read(novelDataDatabaseProvider(key));
+
+      container.read(currentDirectoryProvider.notifier).setDirectory('/other');
+
+      final after = container.read(novelDataDatabaseProvider(key));
+      expect(identical(before, after), isFalse,
+          reason: 'switching away SHALL invalidate the novel_data handle keyed '
+              'by the normalized old path');
     });
   });
 }

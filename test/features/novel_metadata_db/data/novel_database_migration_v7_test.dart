@@ -11,11 +11,11 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  group('fact_cache migration v6 → v7', () {
-    test('fresh install at v7 has the fact_cache table with expected schema',
-        () async {
+  group('fact_cache migration v6 → v7 → v9', () {
+    test('fresh install (v9) has no global fact_cache table (moved to '
+        'novel_data.db)', () async {
       final tempDir =
-          Directory.systemTemp.createTempSync('fact_cache_v7_fresh_');
+          Directory.systemTemp.createTempSync('fact_cache_v9_fresh_');
       try {
         final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
         try {
@@ -24,33 +24,15 @@ void main() {
           final tables = await db.rawQuery(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='fact_cache'",
           );
-          expect(tables, isNotEmpty,
-              reason: 'fact_cache table SHALL exist on fresh v7 install');
+          expect(tables, isEmpty,
+              reason: 'fact_cache now lives in each folder\'s novel_data.db, '
+                  'not in the global novel_metadata.db');
 
-          final columns = await db.rawQuery('PRAGMA table_info(fact_cache)');
-          final columnNames = columns.map((c) => c['name']).toSet();
-          expect(
-            columnNames,
-            containsAll([
-              'folder_name',
-              'word',
-              'file_name',
-              'facts',
-              'content_hash',
-              'prompt_version',
-              'updated_at',
-            ]),
+          // reading_progress is retained globally.
+          final rp = await db.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='reading_progress'",
           );
-
-          final indices = await db.rawQuery(
-            "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='fact_cache'",
-          );
-          expect(
-            indices.any((row) => row['name'] == 'idx_fact_cache_unique'),
-            isTrue,
-            reason: 'fact_cache SHALL have a unique index on '
-                '(folder_name, word, file_name)',
-          );
+          expect(rp, isNotEmpty);
         } finally {
           await novelDatabase.close();
         }
@@ -59,7 +41,7 @@ void main() {
       }
     });
 
-    test('upgrade from v6 to v7 preserves existing data and adds the table',
+    test('upgrade from v6 reaches v9 and drops the global per-novel tables',
         () async {
       final tempDir =
           Directory.systemTemp.createTempSync('fact_cache_v7_upgrade_');
@@ -141,20 +123,21 @@ void main() {
         try {
           final db = await novelDatabase.database;
 
-          final tables = await db.rawQuery(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='fact_cache'",
-          );
-          expect(tables, isNotEmpty,
-              reason: 'v6 → v7 upgrade SHALL add the fact_cache table');
+          expect(await db.getVersion(), 9);
 
-          final cacheRows = await db.query('fact_cache');
-          expect(cacheRows, isEmpty,
-              reason: 'newly added table SHALL start empty');
-
-          final summaryRows = await db.query('word_summaries');
-          expect(summaryRows.length, 1,
-              reason: 'pre-existing word_summaries SHALL be preserved');
-          expect(summaryRows.first['word'], 'アリス');
+          // The per-novel tables are dropped at v9 (migrated into each folder's
+          // novel_data.db; the data-move itself is covered by
+          // novel_database_migration_v9_test). With no migrator wired here the
+          // legacy rows are discarded as orphans, which is acceptable for this
+          // chain-shape test.
+          Future<bool> tableExists(String name) async => (await db.rawQuery(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                [name],
+              )).isNotEmpty;
+          expect(await tableExists('fact_cache'), isFalse);
+          expect(await tableExists('word_summaries'), isFalse);
+          expect(await tableExists('bookmarks'), isFalse);
+          expect(await tableExists('reading_progress'), isTrue);
         } finally {
           await novelDatabase.close();
         }

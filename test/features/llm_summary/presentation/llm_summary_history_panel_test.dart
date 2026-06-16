@@ -31,7 +31,6 @@ HistoryEntry _entry({
   int extraSnapshots = 0,
 }) {
   final base = WordSummary(
-    folderName: 'my_novel',
     word: word,
     coveredUpToEpisode: episode,
     summary: '$wordの要約',
@@ -43,7 +42,6 @@ HistoryEntry _entry({
     base,
     for (var i = 1; i <= extraSnapshots; i++)
       WordSummary(
-        folderName: 'my_novel',
         word: word,
         coveredUpToEpisode: episode + i * 10,
         summary: '$wordの追加要約 #$i',

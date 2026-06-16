@@ -11,7 +11,7 @@ import 'package:novel_viewer/shared/utils/content_hash.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import '../../../helpers/novel_metadata_db_fixture.dart';
+import '../../../helpers/novel_data_db_fixture.dart';
 
 class _MockLlmClient extends LlmClient {
   final List<String> responses;
@@ -40,7 +40,7 @@ void main() {
 
   setUp(() async {
     sqfliteFfiInit();
-    db = await openInMemoryNovelMetadataDb();
+    db = await openInMemoryNovelDataDb();
     repository = LlmSummaryRepository(db);
     factCache = FactCacheRepository(db);
     searchService = TextSearchService();
@@ -61,7 +61,6 @@ void main() {
   Future<void> seedValidCache(String fileName, String facts) async {
     final content = await File('${tempDir.path}/$fileName').readAsString();
     await factCache.upsert(
-      folderName: 'novelA',
       word: 'アリス',
       fileName: fileName,
       facts: facts,
@@ -97,7 +96,6 @@ void main() {
 
       final result = await makeService(mock).generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'novelA',
         word: 'アリス',
         coveredUpToEpisode: 7,
         sourceFileName: '007_ch.txt',
@@ -132,7 +130,6 @@ void main() {
 
       final result = await makeService(mock).generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'novelA',
         word: 'アリス',
         coveredUpToEpisode: 2,
         sourceFileName: '002_ch.txt',
@@ -151,7 +148,6 @@ void main() {
       // hash (invalid → must re-extract).
       await seedValidCache('001_ch.txt', '- cached登場');
       await factCache.upsert(
-        folderName: 'novelA',
         word: 'アリス',
         fileName: '002_ch.txt',
         facts: '- stale旅',
@@ -166,7 +162,6 @@ void main() {
 
       await makeService(mock).generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'novelA',
         word: 'アリス',
         coveredUpToEpisode: 2,
         sourceFileName: '002_ch.txt',
@@ -184,7 +179,6 @@ void main() {
       final content =
           await File('${tempDir.path}/001_ch.txt').readAsString();
       await factCache.upsert(
-        folderName: 'novelA',
         word: 'アリス',
         fileName: '001_ch.txt',
         facts: '- 旧プロンプト事実',
@@ -199,7 +193,6 @@ void main() {
 
       await makeService(mock).generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'novelA',
         word: 'アリス',
         coveredUpToEpisode: 1,
         sourceFileName: '001_ch.txt',
@@ -222,7 +215,6 @@ void main() {
       ]);
       await makeService(mock1).generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'novelA',
         word: 'アリス',
         coveredUpToEpisode: 2,
         sourceFileName: '002_ch.txt',
@@ -238,7 +230,6 @@ void main() {
       ]);
       final result = await makeService(mock2).generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'novelA',
         word: 'アリス',
         coveredUpToEpisode: 2,
         sourceFileName: '002_ch.txt',
@@ -248,8 +239,7 @@ void main() {
       expect(mock2.callCount, 3,
           reason: 're-analysis re-extracts both files instead of reusing cache');
 
-      final snaps = await repository.findSnapshotsForWord(
-          folderName: 'novelA', word: 'アリス');
+      final snaps = await repository.findSnapshotsForWord(word: 'アリス');
       expect(snaps, hasLength(1));
       expect(snaps.first.summary, '再解析要約。',
           reason: 'snapshot overwritten with the fresh summary');
@@ -267,7 +257,6 @@ void main() {
       ]);
       await makeService(mock1).generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'novelA',
         word: 'アリス',
         coveredUpToEpisode: 1,
         sourceFileName: '001_ch.txt',
@@ -280,7 +269,6 @@ void main() {
       ]);
       await makeService(mock2).generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'novelA',
         word: 'アリス',
         coveredUpToEpisode: 2,
         sourceFileName: '002_ch.txt',
@@ -307,7 +295,6 @@ void main() {
       final events = <AnalysisProgress>[];
       await makeService(mock).generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'novelA',
         word: 'アリス',
         coveredUpToEpisode: 3,
         sourceFileName: '003_ch.txt',
@@ -335,7 +322,6 @@ void main() {
 
       await makeService(mock).generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'novelA',
         word: 'アリス',
         coveredUpToEpisode: 1,
         sourceFileName: '001_ch.txt',
@@ -344,7 +330,6 @@ void main() {
       final content =
           await File('${tempDir.path}/001_ch.txt').readAsString();
       final entry = await factCache.find(
-        folderName: 'novelA',
         word: 'アリス',
         fileName: '001_ch.txt',
       );

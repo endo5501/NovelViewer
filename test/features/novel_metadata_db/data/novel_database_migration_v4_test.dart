@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/novel_metadata_db/data/novel_data_migrator.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
+import 'package:novel_viewer/shared/database/novel_data_database.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -75,9 +77,9 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  group('bookmarks migration v3 → v4 (add line_number)', () {
-    test('pre-v4 bookmarks survive with line_number defaulted to NULL',
-        () async {
+  group('bookmarks migration v3 → v4 → v9', () {
+    test('pre-v4 bookmarks survive the chain and migrate into novel_data.db '
+        'with line_number defaulted to NULL', () async {
       final tempDir = Directory.systemTemp.createTempSync('migration_v4_bm_');
       try {
         final dbPath = p.join(tempDir.path, 'novel_metadata.db');
@@ -98,35 +100,66 @@ void main() {
           });
         });
 
-        // Open through the production upgrade path (real _onUpgrade ordering).
-        final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
+        // The novel's folder + its novel_data.db destination for the v9 move.
+        final folderDir = Directory(p.join(tempDir.path, 'narou_n1234ab'))
+          ..createSync();
+        final migrator = NovelDataMigrator(
+          resolveFolderPath: (folder) =>
+              folder == 'narou_n1234ab' ? folderDir.path : null,
+          openNovelDataDb: (folderPath) => databaseFactoryFfi.openDatabase(
+            p.join(folderPath, NovelDataDatabase.databaseName),
+            options: OpenDatabaseOptions(
+              version: 1,
+              onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
+            ),
+          ),
+        );
+
+        // Open through the production upgrade path (real _onUpgrade ordering),
+        // which runs v3→v4 (adds line_number) … → v9 (moves bookmarks into the
+        // folder's novel_data.db and drops the global table).
+        final novelDatabase =
+            NovelDatabase(dbDirPath: tempDir.path, dataMigrator: migrator);
         try {
           final db = await novelDatabase.database;
+          expect(await db.getVersion(), 9);
 
-          // The bookmarks table carries a line_number column introduced by the
-          // v3 → v4 migration step.
-          final columns = await db.rawQuery('PRAGMA table_info(bookmarks)');
-          final names = columns.map((c) => c['name']).toSet();
-          expect(names, contains('line_number'),
-              reason: 'v3 → v4 SHALL add a line_number column');
-
-          // Both pre-v4 bookmark rows survive the full chain, each with the
-          // NULL line_number that the v3 → v4 migration defaults them to.
-          final rows = await db.query('bookmarks', orderBy: 'file_name ASC');
-          expect(rows.length, 2,
-              reason: 'pre-v4 bookmark rows SHALL be preserved');
-
-          expect(rows[0]['novel_id'], 'narou_n1234ab');
-          expect(rows[0]['file_name'], '001_chapter1.txt');
-          expect(rows[0]['created_at'], '2026-05-01T01:00:00.000Z');
-          expect(rows[0]['line_number'], isNull,
-              reason: 'v3 → v4 SHALL default line_number to NULL');
-
-          expect(rows[1]['file_name'], '002_chapter2.txt');
-          expect(rows[1]['created_at'], '2026-05-01T01:05:00.000Z');
-          expect(rows[1]['line_number'], isNull);
+          // The global bookmarks table is dropped at v9.
+          final globalBm = await db.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='bookmarks'",
+          );
+          expect(globalBm, isEmpty);
         } finally {
           await novelDatabase.close();
+        }
+
+        // Both pre-v4 bookmark rows survived the full chain and were migrated
+        // into the folder's novel_data.db — each with the NULL line_number that
+        // the v3→v4 step defaulted, and no novel_id column.
+        final folderDb = await databaseFactoryFfi.openDatabase(
+          p.join(folderDir.path, NovelDataDatabase.databaseName),
+          options: OpenDatabaseOptions(
+            version: 1,
+            onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
+          ),
+        );
+        try {
+          final columns = await folderDb.rawQuery('PRAGMA table_info(bookmarks)');
+          final names = columns.map((c) => c['name']).toSet();
+          expect(names, contains('line_number'));
+          expect(names, isNot(contains('novel_id')));
+
+          final rows =
+              await folderDb.query('bookmarks', orderBy: 'file_name ASC');
+          expect(rows.length, 2,
+              reason: 'pre-v4 bookmark rows SHALL be preserved + migrated');
+          expect(rows[0]['file_name'], '001_chapter1.txt');
+          expect(rows[0]['created_at'], '2026-05-01T01:00:00.000Z');
+          expect(rows[0]['line_number'], isNull);
+          expect(rows[1]['file_name'], '002_chapter2.txt');
+          expect(rows[1]['line_number'], isNull);
+        } finally {
+          await folderDb.close();
         }
       } finally {
         tempDir.deleteSync(recursive: true);

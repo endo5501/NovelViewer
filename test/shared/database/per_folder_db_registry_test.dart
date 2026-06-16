@@ -6,6 +6,7 @@ import 'package:novel_viewer/features/episode_cache/data/episode_cache_database.
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
+import 'package:novel_viewer/shared/database/novel_data_database.dart';
 import 'package:novel_viewer/shared/database/per_folder_db_registry.dart';
 
 class _FakeEpisode extends EpisodeCacheDatabase {
@@ -38,6 +39,16 @@ class _FakeDict extends TtsDictionaryDatabase {
   }
 }
 
+class _FakeNovelData extends NovelDataDatabase {
+  _FakeNovelData(this.log) : super('unused');
+  final List<String> log;
+  @override
+  Future<void> close() async {
+    await Future<void>.delayed(Duration.zero);
+    log.add('close:novel_data');
+  }
+}
+
 /// An episode-cache fake whose close() blocks on [gate], so a test can hold a
 /// release "in flight" and observe whether another caller waits for it.
 class _GatedEpisode extends EpisodeCacheDatabase {
@@ -58,6 +69,7 @@ void main() {
         episodeFactory: (_) => _FakeEpisode(log),
         audioFactory: (_) => _FakeAudio(log),
         dictionaryFactory: (_) => _FakeDict(log),
+        novelDataFactory: (_) => _FakeNovelData(log),
       );
 
   setUp(() => log = <String>[]);
@@ -70,21 +82,24 @@ void main() {
       expect(a1, same(a2));
     });
 
-    test('closeAll closes all three handles then evicts them', () async {
+    test('closeAll closes all four handles then evicts them', () async {
       final registry = buildRegistry();
       final e1 = registry.episodeCache('/lib/n1');
       final a1 = registry.ttsAudio('/lib/n1');
       final d1 = registry.ttsDictionary('/lib/n1');
+      final nd1 = registry.novelData('/lib/n1');
 
       await registry.closeAll('/lib/n1');
 
-      // All three close() awaited.
-      expect(log.toSet(), {'close:episode', 'close:audio', 'close:dict'});
+      // All four close() awaited.
+      expect(log.toSet(),
+          {'close:episode', 'close:audio', 'close:dict', 'close:novel_data'});
 
       // Evicted: a subsequent access creates fresh instances.
       expect(registry.episodeCache('/lib/n1'), isNot(same(e1)));
       expect(registry.ttsAudio('/lib/n1'), isNot(same(a1)));
       expect(registry.ttsDictionary('/lib/n1'), isNot(same(d1)));
+      expect(registry.novelData('/lib/n1'), isNot(same(nd1)));
     });
 
     test('closeAll on a folder with no open handles is a no-op', () async {
@@ -120,13 +135,34 @@ void main() {
       registry.episodeCache('/lib/n1');
       final audio = registry.ttsAudio('/lib/n1');
       final dict = registry.ttsDictionary('/lib/n1');
+      final novelData = registry.novelData('/lib/n1');
 
       await registry.closeEpisodeCache('/lib/n1');
 
       expect(log, ['close:episode']);
-      // tts_audio / tts_dictionary handles are untouched (same instances).
+      // tts_audio / tts_dictionary / novel_data handles are untouched.
       expect(registry.ttsAudio('/lib/n1'), same(audio));
       expect(registry.ttsDictionary('/lib/n1'), same(dict));
+      expect(registry.novelData('/lib/n1'), same(novelData));
+    });
+
+    test('novelData returns the same handle until closeAll', () {
+      final registry = buildRegistry();
+      final n1 = registry.novelData('/lib/n1');
+      final n2 = registry.novelData('/lib/n1');
+      expect(n1, same(n2));
+    });
+
+    test('releaseInBackground also evicts and closes the novel_data handle',
+        () async {
+      final registry = buildRegistry();
+      final n1 = registry.novelData('/lib/n1');
+
+      registry.releaseInBackground('/lib/n1');
+
+      expect(registry.novelData('/lib/n1'), isNot(same(n1)));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(log, contains('close:novel_data'));
     });
 
     test('closeAll awaits an in-flight releaseInBackground close', () async {
