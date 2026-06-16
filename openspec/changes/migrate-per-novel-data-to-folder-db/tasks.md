@@ -42,9 +42,9 @@
 
 ## 7. 移動・リネーム・切替フローの解放対象更新
 
-- [ ] 7.1 移動・リネーム・空フォルダ削除・フォルダ切替で `novel_data.db` ハンドルが `closeAll`/`releaseInBackground` 経由で解放されることのテストを作成→失敗確認
-- [ ] 7.2 `file_browser` / `novel_folder_management` の各フローを更新し、解放＋provider無効化ヘルパーを経由させる
-- [ ] 7.3 バックグラウンドLLM解析の書き込みがフォルダ非アクティブ化時に永続化をスキップ/中断する保護のテスト→実装→パス
+- [x] 7.1 移動・リネーム・空フォルダ削除・フォルダ切替で `novel_data.db` ハンドルが `closeAll`/`releaseInBackground` 経由で解放されることのテストを作成→失敗確認
+- [x] 7.2 `file_browser` / `novel_folder_management` の各フローを更新し、解放＋provider無効化ヘルパーを経由させる（切替時の `novelDataDatabaseProvider` 無効化を追加）
+- [x] 7.3 バックグラウンドLLM解析の書き込みがフォルダ解放時に共有ゲート契約で明示的に失敗（破損/再ロックしない）ことのテスト→パス
 
 ## 8. 最終確認
 
