@@ -29,9 +29,9 @@ class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
 /// Extracted bookmark button widget that mirrors the logic in HomeScreen
 /// for isolated testing.
 Widget buildBookmarkButton(WidgetRef ref) {
-  final novelId = ref.watch(currentNovelIdProvider).value;
+  final folderPath = ref.watch(currentNovelFolderPathProvider).value;
   final selectedFile = ref.watch(selectedFileProvider);
-  final isEnabled = novelId != null && selectedFile != null;
+  final isEnabled = folderPath != null && selectedFile != null;
   final isBookmarked = ref.watch(isBookmarkedProvider);
 
   return IconButton(

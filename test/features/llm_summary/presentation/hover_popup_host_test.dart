@@ -33,7 +33,6 @@ class _MockSelectedFile extends SelectedFileNotifier {
 }
 
 WordSummary _snapshot(int episode, String text) => WordSummary(
-      folderName: 'novel_a',
       word: 'アリス',
       coveredUpToEpisode: episode,
       summary: text,
@@ -42,7 +41,7 @@ WordSummary _snapshot(int episode, String text) => WordSummary(
       updatedAt: DateTime.parse('2026-05-24T10:00:00Z'),
     );
 
-const _aliceKey = (folder: 'novel_a', word: 'アリス');
+const _aliceKey = (folderPath: '/library/novel_a', word: 'アリス');
 
 class _RecordingRunner implements AnalysisRunner {
   int callCount = 0;
@@ -84,7 +83,7 @@ ProviderContainer _makeContainer({
       (_) async => [_snapshot(1, 'なし本文')],
     ),
     llmSummaryRepositoryProvider.overrideWith(
-      (_) async => throw UnsupportedError('not used in this test'),
+      (ref, folderPath) async => throw UnsupportedError('not used in this test'),
     ),
     if (runner != null) analysisRunnerProvider.overrideWithValue(runner),
   ]);

@@ -20,7 +20,6 @@ void main() {
   testWidgets('HoverPopupWidget renders a card given a snapshot via the cache',
       (tester) async {
     final snap = WordSummary(
-      folderName: 'novel_a',
       word: 'アリス',
       coveredUpToEpisode: 1,
       summary: 'アリスは旅人です。',
@@ -32,10 +31,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          hoverPopupCacheProvider((folder: 'novel_a', word: 'アリス'))
+          hoverPopupCacheProvider((folderPath: 'novel_a', word: 'アリス'))
               .overrideWith((_) async => [snap]),
           llmSummaryRepositoryProvider.overrideWith(
-            (_) async => throw UnsupportedError('not used in this test'),
+            (ref, folderPath) async => throw UnsupportedError('not used in this test'),
           ),
         ],
         child: const MaterialApp(
@@ -44,7 +43,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: Material(
             child: HoverPopupWidget(
-              folder: 'novel_a',
+              folderPath: 'novel_a',
               word: 'アリス',
               currentEpisode: 1,
               currentFileName: 'chapter01.txt',

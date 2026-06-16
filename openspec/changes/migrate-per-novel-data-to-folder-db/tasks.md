@@ -15,11 +15,11 @@
 
 ## 3. リポジトリのフォルダDBハンドル化
 
-- [ ] 3.1 `LlmSummaryRepository` をフォルダDBハンドル受け取り＋キー `(word, covered_up_to_episode)`（`folderName` 引数除去）へ変更するテストを作成→失敗確認→実装
-- [ ] 3.2 `FactCacheRepository` をフォルダDBハンドル受け取り＋キー `(word, file_name)`（`folderName` 引数除去）へ変更するテストを作成→失敗確認→実装
-- [ ] 3.3 `BookmarkRepository` をフォルダDBハンドル受け取り＋キー `(file_name, line_number)`（`novel_id` 引数除去）へ変更するテストを作成→失敗確認→実装
-- [ ] 3.4 `ReadingProgressRepository` は据え置き（グローバル維持）であることを確認（変更しない）
-- [ ] 3.5 各 Riverpod provider を新ラッパー／新シグネチャに差し替え、解析ランナー・hover popup・history UI・ブックマークUI の呼び出し側を更新
+- [x] 3.1 `LlmSummaryRepository` をフォルダDBハンドル受け取り＋キー `(word, covered_up_to_episode)`（`folderName` 引数除去）へ変更するテストを作成→失敗確認→実装
+- [x] 3.2 `FactCacheRepository` をフォルダDBハンドル受け取り＋キー `(word, file_name)`（`folderName` 引数除去）へ変更するテストを作成→失敗確認→実装
+- [x] 3.3 `BookmarkRepository` をフォルダDBハンドル受け取り＋キー `(file_name, line_number)`（`novel_id` 引数除去）へ変更するテストを作成→失敗確認→実装
+- [x] 3.4 `ReadingProgressRepository` は据え置き（グローバル維持）であることを確認（変更しない）
+- [x] 3.5 各 Riverpod provider を新ラッパー／新シグネチャに差し替え、解析ランナー・hover popup・history UI・ブックマークUI の呼び出し側を更新
 
 ## 4. v8→v9 onUpgrade 内データ移行
 
@@ -36,9 +36,9 @@
 
 ## 6. novel-delete の縮小
 
-- [ ] 6.1 `NovelDeleteService` が `novels`+`reading_progress` のみを単一トランザクションで削除し、要約/fact/bookmark の削除呼び出しを行わず、`novel_data.db` を含む4ハンドルを解放してからFS削除する、というテストを作成→失敗確認
-- [ ] 6.2 `NovelDeleteService` を実装変更（不要な repository 依存を除去、ハンドル解放対象に `novel_data.db` を追加）
-- [ ] 6.3 削除順序・原子性・FS失敗時のロールバック・孤児行非発生のテストをパスさせる
+- [x] 6.1 `NovelDeleteService` が `novels`+`reading_progress` のみを単一トランザクションで削除し、要約/fact/bookmark の削除呼び出しを行わず、`novel_data.db` を含む4ハンドルを解放してからFS削除する、というテストを作成→失敗確認
+- [x] 6.2 `NovelDeleteService` を実装変更（不要な repository 依存を除去、ハンドル解放対象に `novel_data.db` を追加）
+- [x] 6.3 削除順序・原子性・FS失敗時のロールバック・孤児行非発生のテストをパスさせる
 
 ## 7. 移動・リネーム・切替フローの解放対象更新
 

@@ -64,7 +64,7 @@ void main() {
             allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
-            bookmarksForNovelProvider('n1234')
+            bookmarksForCurrentNovelProvider
                 .overrideWithValue(const AsyncValue.data([])),
           ],
           child: const MaterialApp(
@@ -84,13 +84,11 @@ void main() {
       final bookmarks = [
         Bookmark(
           id: 1,
-          novelId: 'n1234',
           fileName: '002_chapter2.txt',
           createdAt: DateTime(2026, 1, 2),
         ),
         Bookmark(
           id: 2,
-          novelId: 'n1234',
           fileName: '001_chapter1.txt',
           createdAt: DateTime(2026, 1, 1),
         ),
@@ -103,7 +101,7 @@ void main() {
             allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
-            bookmarksForNovelProvider('n1234')
+            bookmarksForCurrentNovelProvider
                 .overrideWithValue(AsyncValue.data(bookmarks)),
           ],
           child: const MaterialApp(
@@ -125,7 +123,6 @@ void main() {
       final bookmarks = [
         Bookmark(
           id: 1,
-          novelId: 'n1234',
           fileName: '001_chapter1.txt',
           lineNumber: 42,
           createdAt: DateTime(2026, 1, 1),
@@ -139,7 +136,7 @@ void main() {
             allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
-            bookmarksForNovelProvider('n1234')
+            bookmarksForCurrentNovelProvider
                 .overrideWithValue(AsyncValue.data(bookmarks)),
           ],
           child: const MaterialApp(
@@ -159,7 +156,6 @@ void main() {
       final bookmarks = [
         Bookmark(
           id: 1,
-          novelId: 'n1234',
           fileName: '001_chapter1.txt',
           createdAt: DateTime(2026, 1, 1),
         ),
@@ -172,7 +168,7 @@ void main() {
             allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
-            bookmarksForNovelProvider('n1234')
+            bookmarksForCurrentNovelProvider
                 .overrideWithValue(AsyncValue.data(bookmarks)),
           ],
           child: const MaterialApp(
@@ -193,7 +189,6 @@ void main() {
       final bookmarks = [
         Bookmark(
           id: 1,
-          novelId: 'n1234',
           fileName: '001_chapter1.txt',
           createdAt: DateTime(2026, 1, 1),
         ),
@@ -206,7 +201,7 @@ void main() {
             allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
-            bookmarksForNovelProvider('n1234')
+            bookmarksForCurrentNovelProvider
                 .overrideWithValue(AsyncValue.data(bookmarks)),
           ],
           child: const MaterialApp(
@@ -243,7 +238,6 @@ void main() {
       final bookmarks = [
         Bookmark(
           id: 1,
-          novelId: 'n1234',
           fileName: '001_chapter1.txt',
           createdAt: DateTime(2026, 1, 1),
         ),
@@ -256,7 +250,7 @@ void main() {
             allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier(novelDir.path)),
-            bookmarksForNovelProvider('n1234')
+            bookmarksForCurrentNovelProvider
                 .overrideWithValue(AsyncValue.data(bookmarks)),
           ],
           child: const MaterialApp(
@@ -287,7 +281,6 @@ void main() {
       final bookmarks = [
         Bookmark(
           id: 1,
-          novelId: 'n1234',
           fileName: '001_chapter1.txt',
           createdAt: DateTime(2026, 1, 1),
         ),
@@ -300,7 +293,7 @@ void main() {
             allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
                 () => _TestCurrentDirectoryNotifier('/library/n1234')),
-            bookmarksForNovelProvider('n1234')
+            bookmarksForCurrentNovelProvider
                 .overrideWithValue(AsyncValue.data(bookmarks)),
           ],
           child: const MaterialApp(

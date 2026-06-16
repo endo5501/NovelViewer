@@ -62,7 +62,6 @@ class _StubService extends LlmSummaryService {
   @override
   Future<String> generateSummary({
     required String directoryPath,
-    required String folderName,
     required String word,
     required int coveredUpToEpisode,
     String? sourceFileName,
@@ -93,13 +92,15 @@ ProviderContainer _container(_StubService stub,
     currentDirectoryProvider
         .overrideWith(() => CurrentDirectoryNotifier(directory)),
     selectedFileProvider.overrideWith(() => _MockSelectedFile(file)),
-    llmSummaryServiceProvider.overrideWithValue(stub),
+    llmSummaryServiceProvider.overrideWith((ref, folderPath) => stub),
     llmClientProvider.overrideWith((_) async => _DummyClient()),
     // run() awaits these FutureProviders before reading the (overridden)
     // service, so they must resolve in tests too. The values are unused here
     // because the service itself is stubbed.
-    llmSummaryRepositoryProvider.overrideWith((_) async => _DummyRepo()),
-    factCacheRepositoryProvider.overrideWith((_) async => _DummyFactCache()),
+    llmSummaryRepositoryProvider
+        .overrideWith((ref, folderPath) async => _DummyRepo()),
+    factCacheRepositoryProvider
+        .overrideWith((ref, folderPath) async => _DummyFactCache()),
   ]);
   return container;
 }
@@ -531,12 +532,13 @@ void main() {
         selectedFileProvider.overrideWith(() => _MockSelectedFile(
             const FileEntry(name: '001.txt', path: '/library/novel_a/001.txt'))),
         llmClientProvider.overrideWith((_) async => _DummyClient()),
-        llmSummaryRepositoryProvider.overrideWith((_) async => _DummyRepo()),
+        llmSummaryRepositoryProvider
+            .overrideWith((ref, folderPath) async => _DummyRepo()),
         factCacheRepositoryProvider
-            .overrideWith((_) async => _DummyFactCache()),
-        llmSummaryServiceProvider.overrideWith((ref) {
+            .overrideWith((ref, folderPath) async => _DummyFactCache()),
+        llmSummaryServiceProvider.overrideWith((ref, folderPath) {
           // Mirror the real provider: gate on the fact-cache FutureProvider.
-          final factCache = ref.watch(factCacheRepositoryProvider);
+          final factCache = ref.watch(factCacheRepositoryProvider(folderPath));
           if (factCache.value == null) return null;
           return stub;
         }),
@@ -582,10 +584,10 @@ extension on ProviderContainer {
       currentDirectoryProvider
           .overrideWith(() => CurrentDirectoryNotifier(directory)),
       selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
-      llmSummaryServiceProvider.overrideWithValue(_StubService(
-        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
-            'noop',
-      )),
+      llmSummaryServiceProvider.overrideWith((ref, folderPath) => _StubService(
+            ({required word, required coveredUpToEpisode, sourceFileName})
+                async => 'noop',
+          )),
       llmClientProvider.overrideWith((_) async => _DummyClient()),
     ]);
   }
