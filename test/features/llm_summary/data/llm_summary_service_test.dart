@@ -10,7 +10,7 @@ import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart'
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import '../../../helpers/novel_metadata_db_fixture.dart';
+import '../../../helpers/novel_data_db_fixture.dart';
 
 class _MockLlmClient extends LlmClient {
   final List<String> responses;
@@ -56,7 +56,7 @@ void main() {
 
   setUp(() async {
     sqfliteFfiInit();
-    db = await openInMemoryNovelMetadataDb();
+    db = await openInMemoryNovelDataDb();
     repository = LlmSummaryRepository(db);
     factCache = FactCacheRepository(db);
     searchService = TextSearchService();
@@ -98,7 +98,6 @@ void main() {
 
       final result = await service.generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'test_novel',
         word: 'アリス',
         coveredUpToEpisode: 100,
         sourceFileName: '100_chapter.txt',
@@ -109,7 +108,6 @@ void main() {
       expect(mockClient.callCount, 4);
 
       final cached = await repository.findSnapshotsForWord(
-        folderName: 'test_novel',
         word: 'アリス',
       );
       expect(cached, hasLength(1));
@@ -138,7 +136,6 @@ void main() {
 
       final result = await service.generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'test_novel',
         word: 'アリス',
         coveredUpToEpisode: 40,
         sourceFileName: '040_chapter.txt',
@@ -172,14 +169,12 @@ void main() {
 
       await service.generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'my_novel',
         word: 'アリス',
         coveredUpToEpisode: 60,
         sourceFileName: '060_chapter.txt',
       );
 
       final snapshots = await repository.findSnapshotsForWord(
-        folderName: 'my_novel',
         word: 'アリス',
       );
 
@@ -204,7 +199,6 @@ void main() {
 
       final result = await service.generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'test',
         word: 'アリス',
         coveredUpToEpisode: 1,
         sourceFileName: '001.txt',
@@ -231,7 +225,6 @@ void main() {
 
       final result = await service.generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'test',
         word: 'アリス',
         coveredUpToEpisode: 1,
         sourceFileName: '001.txt',
@@ -260,7 +253,6 @@ void main() {
       try {
         await service.generateSummary(
           directoryPath: tempDir.path,
-          folderName: 'test',
           word: 'アリス',
           coveredUpToEpisode: 1,
           sourceFileName: '001.txt',
@@ -292,7 +284,6 @@ void main() {
 
       final result = await service.generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'test',
         word: 'アリス',
         coveredUpToEpisode: 1,
         sourceFileName: '001.txt',
@@ -321,7 +312,6 @@ void main() {
       final events = <AnalysisProgress>[];
       await service.generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'test',
         word: 'アリス',
         coveredUpToEpisode: 1,
         sourceFileName: '001.txt',
@@ -354,7 +344,6 @@ void main() {
       try {
         await service.generateSummary(
           directoryPath: tempDir.path,
-          folderName: 'test',
           word: 'アリス',
           coveredUpToEpisode: 1,
           sourceFileName: '001.txt',
@@ -391,7 +380,6 @@ void main() {
       // (rank 2), but exclude part2.txt (rank 3).
       await service.generateSummary(
         directoryPath: tempDir.path,
-        folderName: 'test',
         word: 'アリス',
         coveredUpToEpisode: 2,
         sourceFileName: 'part1.txt',

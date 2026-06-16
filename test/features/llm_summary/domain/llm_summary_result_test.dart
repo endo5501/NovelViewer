@@ -7,7 +7,6 @@ void main() {
       final now = DateTime(2025, 1, 1);
       final summary = WordSummary(
         id: 1,
-        folderName: 'my_novel',
         word: 'アリス',
         coveredUpToEpisode: 30,
         summary: 'アリスは主人公の少女である。',
@@ -17,7 +16,6 @@ void main() {
       );
 
       expect(summary.id, 1);
-      expect(summary.folderName, 'my_novel');
       expect(summary.word, 'アリス');
       expect(summary.coveredUpToEpisode, 30);
       expect(summary.summary, 'アリスは主人公の少女である。');
@@ -29,7 +27,6 @@ void main() {
     test('source_file may be null (migrated from legacy spoiler row)', () {
       final now = DateTime(2025, 1, 1);
       final summary = WordSummary(
-        folderName: 'my_novel',
         word: 'アリス',
         coveredUpToEpisode: 10,
         summary: 'レガシーの要約。',
@@ -46,7 +43,6 @@ void main() {
       final now = DateTime(2025, 1, 15, 10, 30);
       final summary = WordSummary(
         id: 1,
-        folderName: 'my_novel',
         word: 'アリス',
         coveredUpToEpisode: 40,
         summary: 'アリスは主人公。',
@@ -57,7 +53,6 @@ void main() {
 
       final map = summary.toMap();
 
-      expect(map['folder_name'], 'my_novel');
       expect(map['word'], 'アリス');
       expect(map['covered_up_to_episode'], 40);
       expect(map['summary'], 'アリスは主人公。');
@@ -72,7 +67,6 @@ void main() {
     test('fromMap creates from database map', () {
       final map = {
         'id': 7,
-        'folder_name': 'my_novel',
         'word': 'アリス',
         'covered_up_to_episode': 40,
         'summary': 'アリスは少女。',
@@ -84,7 +78,6 @@ void main() {
       final summary = WordSummary.fromMap(map);
 
       expect(summary.id, 7);
-      expect(summary.folderName, 'my_novel');
       expect(summary.word, 'アリス');
       expect(summary.coveredUpToEpisode, 40);
       expect(summary.summary, 'アリスは少女。');
@@ -96,7 +89,6 @@ void main() {
     test('fromMap accepts null source_file', () {
       final map = {
         'id': 8,
-        'folder_name': 'my_novel',
         'word': 'アリス',
         'covered_up_to_episode': 10,
         'summary': 'レガシー要約。',

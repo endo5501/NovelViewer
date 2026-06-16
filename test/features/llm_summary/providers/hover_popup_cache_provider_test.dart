@@ -6,7 +6,7 @@ import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_pr
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import '../../../helpers/novel_metadata_db_fixture.dart';
+import '../../../helpers/novel_data_db_fixture.dart';
 
 void main() {
   late Database db;
@@ -14,7 +14,7 @@ void main() {
 
   setUp(() async {
     sqfliteFfiInit();
-    db = await openInMemoryNovelMetadataDb();
+    db = await openInMemoryNovelDataDb();
     repository = LlmSummaryRepository(db);
   });
 
@@ -25,7 +25,10 @@ void main() {
   ProviderContainer makeContainer() {
     final container = ProviderContainer(
       overrides: [
-        llmSummaryRepositoryProvider.overrideWith((_) async => repository),
+        // Folder-scoped family: any folder path resolves to the in-memory repo.
+        llmSummaryRepositoryProvider.overrideWith((ref, folderPath) async {
+          return repository;
+        }),
       ],
     );
     addTearDown(container.dispose);
@@ -35,21 +38,18 @@ void main() {
   group('hoverPopupCacheProvider', () {
     test('returns all snapshots for the word sorted by episode asc', () async {
       await repository.saveSnapshot(
-        folderName: 'novel_a',
         word: 'アリス',
         coveredUpToEpisode: 60,
         summary: 'mid',
         sourceFile: '060.txt',
       );
       await repository.saveSnapshot(
-        folderName: 'novel_a',
         word: 'アリス',
         coveredUpToEpisode: 10,
         summary: 'early',
         sourceFile: '010.txt',
       );
       await repository.saveSnapshot(
-        folderName: 'novel_a',
         word: 'アリス',
         coveredUpToEpisode: 120,
         summary: 'late',
@@ -59,7 +59,7 @@ void main() {
       final container = makeContainer();
       final result = await container.read(
         hoverPopupCacheProvider(
-          (folder: 'novel_a', word: 'アリス'),
+          (folderPath: '/lib/novel_a', word: 'アリス'),
         ).future,
       );
 
@@ -70,26 +70,7 @@ void main() {
       final container = makeContainer();
       final result = await container.read(
         hoverPopupCacheProvider(
-          (folder: 'novel_a', word: 'メアリ'),
-        ).future,
-      );
-
-      expect(result, isEmpty);
-    });
-
-    test('scopes lookup by folder', () async {
-      await repository.saveSnapshot(
-        folderName: 'novel_a',
-        word: 'アリス',
-        coveredUpToEpisode: 10,
-        summary: 'a',
-        sourceFile: '010.txt',
-      );
-
-      final container = makeContainer();
-      final result = await container.read(
-        hoverPopupCacheProvider(
-          (folder: 'novel_b', word: 'アリス'),
+          (folderPath: '/lib/novel_a', word: 'メアリ'),
         ).future,
       );
 
@@ -99,9 +80,11 @@ void main() {
     test('equal keys produce identical provider entries', () {
       final container = makeContainer();
       final a = container.read(
-          hoverPopupCacheProvider((folder: 'novel_a', word: 'アリス')).future);
+          hoverPopupCacheProvider((folderPath: '/lib/novel_a', word: 'アリス'))
+              .future);
       final b = container.read(
-          hoverPopupCacheProvider((folder: 'novel_a', word: 'アリス')).future);
+          hoverPopupCacheProvider((folderPath: '/lib/novel_a', word: 'アリス'))
+              .future);
 
       expect(identical(a, b), isTrue);
     });
@@ -109,7 +92,6 @@ void main() {
 
   group('chooseDefaultSnapshot', () {
     WordSummary snap(int episode) => WordSummary(
-          folderName: 'f',
           word: 'w',
           coveredUpToEpisode: episode,
           summary: 's$episode',

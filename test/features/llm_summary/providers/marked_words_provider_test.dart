@@ -20,7 +20,6 @@ HistoryEntry _entry({
   required int episode,
 }) {
   final snap = WordSummary(
-    folderName: folder,
     word: word,
     coveredUpToEpisode: episode,
     summary: 's',

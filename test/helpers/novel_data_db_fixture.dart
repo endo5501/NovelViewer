@@ -15,6 +15,11 @@ Future<Database> openInMemoryNovelDataDb() {
     inMemoryDatabasePath,
     options: OpenDatabaseOptions(
       version: 1,
+      // singleInstance:false so this in-memory DB is a DISTINCT connection from
+      // any other `:memory:` database opened in the same test (e.g. the
+      // novel_metadata fixture). With the default (true), sqflite dedups by the
+      // ':memory:' path and both fixtures would share one connection/schema.
+      singleInstance: false,
       onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
     ),
   );
