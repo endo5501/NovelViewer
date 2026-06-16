@@ -12,7 +12,6 @@ import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
-import 'package:path/path.dart' as p;
 
 /// The scope a context-menu / popup analysis trigger expresses. The runner
 /// resolves a `scope` into a concrete `coveredUpToEpisode` using the current
@@ -109,16 +108,15 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     // `factCacheRepositoryProvider`, so without this the first analysis after
     // launch would no-op.
     await _ref.read(llmClientProvider.future);
-    await _ref.read(llmSummaryRepositoryProvider.future);
-    await _ref.read(factCacheRepositoryProvider.future);
-    final service = _ref.read(llmSummaryServiceProvider);
+    await _ref.read(llmSummaryRepositoryProvider(directory).future);
+    await _ref.read(factCacheRepositoryProvider(directory).future);
+    final service = _ref.read(llmSummaryServiceProvider(directory));
     if (!context.mounted) return;
     if (service == null) {
       _snack(context, l10n.llmAnalysis_noLlmConfigured);
       return;
     }
 
-    final folderName = p.basename(directory);
     final selectedFile = _ref.read(selectedFileProvider);
     final resolvedSourceFile = sourceFileName ?? selectedFile?.name;
 
@@ -138,7 +136,6 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     try {
       await service.generateSummary(
         directoryPath: directory,
-        folderName: folderName,
         word: word,
         coveredUpToEpisode: coveredUpToEpisode,
         sourceFileName: resolvedSourceFile,
@@ -149,7 +146,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       );
       _ref.invalidate(llmSummaryHistoryProvider);
       _ref.invalidate(
-          hoverPopupCacheProvider((folder: folderName, word: word)));
+          hoverPopupCacheProvider((folderPath: directory, word: word)));
       // The popup's manual activeEpisode override may now point at a
       // snapshot that no longer exists post-overwrite — reset it so the
       // widget falls back to the default-selection rule against the fresh

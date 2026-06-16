@@ -33,3 +33,30 @@ String? resolveNovelId(
   }
   return null;
 }
+
+/// Resolves the **absolute path of the nearest registered novel folder** for an
+/// arbitrary [path] inside the library — the folder that owns the per-folder
+/// `novel_data.db`. This is the path counterpart of [resolveNovelId]: it
+/// returns the full path of the same ancestor folder whose leaf name
+/// [resolveNovelId] returns, so callers can open that novel's folder-scoped
+/// database.
+///
+/// Returns `null` under the same conditions as [resolveNovelId] (library root,
+/// outside the library, or no registered ancestor).
+String? resolveNovelFolderPath(
+  String libraryRoot,
+  String path,
+  Set<String> registeredFolderNames,
+) {
+  if (p.equals(path, libraryRoot)) return null;
+  if (!p.isWithin(libraryRoot, path)) return null;
+
+  final relativeParts = p.split(p.relative(path, from: libraryRoot));
+
+  for (var i = relativeParts.length - 1; i >= 0; i--) {
+    if (registeredFolderNames.contains(relativeParts[i])) {
+      return p.join(libraryRoot, p.joinAll(relativeParts.sublist(0, i + 1)));
+    }
+  }
+  return null;
+}

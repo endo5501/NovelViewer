@@ -14,13 +14,13 @@ class BookmarkListPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final novelId = ref.watch(currentNovelIdProvider).value;
+    final folderPath = ref.watch(currentNovelFolderPathProvider).value;
 
-    if (novelId == null) {
+    if (folderPath == null) {
       return Center(child: Text(AppLocalizations.of(context)!.bookmark_selectNovelPrompt));
     }
 
-    final bookmarksAsync = ref.watch(bookmarksForNovelProvider(novelId));
+    final bookmarksAsync = ref.watch(bookmarksForCurrentNovelProvider);
 
     return bookmarksAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -88,13 +88,15 @@ class BookmarkListPanel extends ConsumerWidget {
   }
 
   Future<void> _deleteBookmark(WidgetRef ref, Bookmark bookmark) async {
-    final repository = ref.read(bookmarkRepositoryProvider);
+    final folderPath = await ref.read(currentNovelFolderPathProvider.future);
+    if (folderPath == null) return;
+    final repository =
+        await ref.read(bookmarkRepositoryProvider(folderPath).future);
     await repository.remove(
-      novelId: bookmark.novelId,
       fileName: bookmark.fileName,
       lineNumber: bookmark.lineNumber,
     );
-    ref.invalidate(bookmarksForNovelProvider(bookmark.novelId));
+    ref.invalidate(bookmarksForCurrentNovelProvider);
     ref.invalidate(bookmarkLineNumbersForFileProvider);
     ref.invalidate(isBookmarkedProvider);
   }

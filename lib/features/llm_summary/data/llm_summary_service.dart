@@ -41,10 +41,10 @@ class LlmSummaryService {
   /// misses are extracted (and written back). When a snapshot already exists at
   /// `coveredUpToEpisode`, this run is a re-analysis ("fix a bad result"), so
   /// the word's whole cache is invalidated up-front to force fresh extraction.
-  /// The snapshot is then upserted at `(folderName, word, coveredUpToEpisode)`.
+  /// The snapshot is then upserted at `(word, coveredUpToEpisode)` in the
+  /// folder-scoped repository.
   Future<String> generateSummary({
     required String directoryPath,
-    required String folderName,
     required String word,
     required int coveredUpToEpisode,
     String? sourceFileName,
@@ -55,17 +55,11 @@ class LlmSummaryService {
       // means the user is overwriting a prior result. Invalidate the word's
       // whole cache so every in-scope file is re-extracted rather than served
       // from cache (restores "re-analyze = redo from scratch").
-      final existing = await repository.findSnapshotsForWord(
-        folderName: folderName,
-        word: word,
-      );
+      final existing = await repository.findSnapshotsForWord(word: word);
       final isReanalysis =
           existing.any((s) => s.coveredUpToEpisode == coveredUpToEpisode);
       if (isReanalysis) {
-        await factCacheRepository.invalidateWord(
-          folderName: folderName,
-          word: word,
-        );
+        await factCacheRepository.invalidateWord(word: word);
       }
 
       final searchResults = await searchService.searchWithContext(
@@ -92,7 +86,6 @@ class LlmSummaryService {
         final currentHash = await _hashFile(file.filePath);
         currentHashByFile[file.fileName] = currentHash;
         final cached = await factCacheRepository.find(
-          folderName: folderName,
           word: word,
           fileName: file.fileName,
         );
@@ -128,7 +121,6 @@ class LlmSummaryService {
           contexts: file.contexts,
         );
         await factCacheRepository.upsert(
-          folderName: folderName,
           word: word,
           fileName: file.fileName,
           facts: facts,
@@ -145,7 +137,6 @@ class LlmSummaryService {
       );
 
       await repository.saveSnapshot(
-        folderName: folderName,
         word: word,
         coveredUpToEpisode: coveredUpToEpisode,
         summary: summary,

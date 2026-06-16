@@ -1,11 +1,13 @@
-/// Persisted LLM summary row for a `(folder_name, word, covered_up_to_episode)`
-/// snapshot. The `summaryType` (spoiler/no_spoiler) taxonomy that earlier
-/// versions used is intentionally absent: range was a runtime concern of the
-/// analysis trigger, not a persistence attribute, so v5 keys snapshots by the
+/// Persisted LLM summary row for a `(word, covered_up_to_episode)` snapshot
+/// inside a novel's `novel_data.db`. The novel identity is conveyed by which
+/// folder's database the row lives in, so no `folder_name` column is stored.
+///
+/// The `summaryType` (spoiler/no_spoiler) taxonomy that earlier versions used
+/// is intentionally absent: range was a runtime concern of the analysis
+/// trigger, not a persistence attribute, so snapshots are keyed by the
 /// inclusive upper-bound episode number instead.
 class WordSummary {
   final int? id;
-  final String folderName;
   final String word;
 
   /// Inclusive upper bound (file numeric prefix or lexical rank fallback) of
@@ -19,7 +21,6 @@ class WordSummary {
 
   const WordSummary({
     this.id,
-    required this.folderName,
     required this.word,
     required this.coveredUpToEpisode,
     required this.summary,
@@ -29,7 +30,6 @@ class WordSummary {
   });
 
   Map<String, dynamic> toMap() => {
-        'folder_name': folderName,
         'word': word,
         'covered_up_to_episode': coveredUpToEpisode,
         'summary': summary,
@@ -40,7 +40,6 @@ class WordSummary {
 
   factory WordSummary.fromMap(Map<String, dynamic> map) => WordSummary(
         id: map['id'] as int?,
-        folderName: map['folder_name'] as String,
         word: map['word'] as String,
         coveredUpToEpisode: map['covered_up_to_episode'] as int,
         summary: map['summary'] as String,

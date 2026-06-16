@@ -1,11 +1,11 @@
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 
-/// One row per `(folder, word)` in the analysis-history panel, collapsing all
-/// existing snapshots for that word into a single entry. The snapshots list is
-/// preserved in ascending `coveredUpToEpisode` order so the copy submenu and
-/// snapshot navigator can render them directly.
+/// One row per `word` in the analysis-history panel, collapsing all existing
+/// snapshots for that word (within the active novel's `novel_data.db`) into a
+/// single entry. The snapshots list is preserved in ascending
+/// `coveredUpToEpisode` order so the copy submenu and snapshot navigator can
+/// render them directly.
 class HistoryEntry {
-  final String folderName;
   final String word;
   final List<WordSummary> snapshots;
   final String summaryPreview;
@@ -13,7 +13,6 @@ class HistoryEntry {
   final DateTime updatedAt;
 
   const HistoryEntry({
-    required this.folderName,
     required this.word,
     required this.snapshots,
     required this.summaryPreview,
@@ -26,11 +25,9 @@ class HistoryEntry {
   bool get isJumpable => sourceFile != null;
 
   static List<HistoryEntry> mergeRows(List<WordSummary> rows) {
-    final grouped = <({String folder, String word}), List<WordSummary>>{};
+    final grouped = <String, List<WordSummary>>{};
     for (final row in rows) {
-      grouped
-          .putIfAbsent((folder: row.folderName, word: row.word), () => [])
-          .add(row);
+      grouped.putIfAbsent(row.word, () => []).add(row);
     }
 
     final entries = grouped.entries.map((entry) {
@@ -53,8 +50,7 @@ class HistoryEntry {
       }
 
       return HistoryEntry(
-        folderName: entry.key.folder,
-        word: entry.key.word,
+        word: entry.key,
         snapshots: List.unmodifiable(group),
         summaryPreview: mostRecent.summary,
         sourceFile: resolvedSourceFile,

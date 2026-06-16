@@ -2,16 +2,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 
-typedef HoverPopupCacheKey = ({String folder, String word});
+typedef HoverPopupCacheKey = ({String folderPath, String word});
 
-/// Cached snapshots for `(folder, word)`, sorted ascending by
+/// Cached snapshots for `(folderPath, word)`, sorted ascending by
 /// `coveredUpToEpisode`. The hover popup feeds this list into the snapshot
-/// navigator and the future-warning rule.
+/// navigator and the future-warning rule. `folderPath` is the novel folder's
+/// absolute path, used to resolve its per-folder `novel_data.db`.
 final hoverPopupCacheProvider =
     FutureProvider.family<List<WordSummary>, HoverPopupCacheKey>(
         (ref, key) async {
-  final repo = await ref.watch(llmSummaryRepositoryProvider.future);
-  return repo.findSnapshotsForWord(folderName: key.folder, word: key.word);
+  final repo =
+      await ref.watch(llmSummaryRepositoryProvider(key.folderPath).future);
+  return repo.findSnapshotsForWord(word: key.word);
 });
 
 /// Selects the default snapshot to display in the hover popup given a

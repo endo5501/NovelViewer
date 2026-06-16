@@ -3,18 +3,22 @@ import 'package:novel_viewer/features/bookmark/data/bookmark_repository.dart';
 import 'package:novel_viewer/features/bookmark/domain/bookmark.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/shared/database/novel_data_database_provider.dart';
 import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 
-final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
-  return BookmarkRepository(ref.watch(novelDatabaseProvider));
+/// Folder-scoped `BookmarkRepository`, backed by the novel's per-folder
+/// `novel_data.db`. The family argument is the novel folder's absolute path.
+final bookmarkRepositoryProvider =
+    FutureProvider.family<BookmarkRepository, String>((ref, folderPath) async {
+  final db = await ref.watch(novelDataDatabaseProvider(folderPath)).database;
+  return BookmarkRepository(db);
 });
 
-/// Resolves the novel id for the current directory using the shared
-/// nesting-aware rule [resolveNovelId] (nearest registered ancestor folder's
-/// leaf name = `folder_name`). Async because the set of registered folder
-/// names comes from [allNovelsProvider]. Resolves to null while the novel list
-/// is still loading and at the library root / outside the library.
-final currentNovelIdProvider = FutureProvider<String?>((ref) async {
+/// Resolves the **absolute path of the current novel's folder** (the folder
+/// that owns its `novel_data.db`) using the shared nesting-aware rule
+/// [resolveNovelFolderPath]. Resolves to null while the novel list is still
+/// loading and at the library root / outside the library.
+final currentNovelFolderPathProvider = FutureProvider<String?>((ref) async {
   final currentDir = ref.watch(currentDirectoryProvider);
   final libraryPath = ref.watch(libraryPathProvider);
 
@@ -23,13 +27,18 @@ final currentNovelIdProvider = FutureProvider<String?>((ref) async {
   final novels = await ref.watch(allNovelsProvider.future);
   final registeredFolderNames = {for (final n in novels) n.folderName};
 
-  return resolveNovelId(libraryPath, currentDir, registeredFolderNames);
+  return resolveNovelFolderPath(libraryPath, currentDir, registeredFolderNames);
 });
 
-final bookmarksForNovelProvider =
-    FutureProvider.family<List<Bookmark>, String>((ref, novelId) {
-  final repository = ref.watch(bookmarkRepositoryProvider);
-  return repository.findByNovel(novelId);
+/// All bookmarks for the current novel (resolved via
+/// [currentNovelFolderPathProvider]), most-recent first. Empty when not inside
+/// a registered novel folder.
+final bookmarksForCurrentNovelProvider =
+    FutureProvider<List<Bookmark>>((ref) async {
+  final folderPath = await ref.watch(currentNovelFolderPathProvider.future);
+  if (folderPath == null) return const [];
+  final repository = await ref.watch(bookmarkRepositoryProvider(folderPath).future);
+  return repository.findAll();
 });
 
 final isBookmarkedProvider = Provider<bool>((ref) {
@@ -43,20 +52,17 @@ final isBookmarkedProvider = Provider<bool>((ref) {
 
 Future<void> toggleBookmark(
   BookmarkRepository repository, {
-  required String novelId,
   required String fileName,
   required bool isCurrentlyBookmarked,
   int? lineNumber,
 }) async {
   if (isCurrentlyBookmarked) {
     await repository.remove(
-      novelId: novelId,
       fileName: fileName,
       lineNumber: lineNumber,
     );
   } else {
     await repository.add(
-      novelId: novelId,
       fileName: fileName,
       lineNumber: lineNumber,
     );
@@ -89,16 +95,14 @@ final bookmarkJumpLineProvider =
 
 final bookmarkLineNumbersForFileProvider =
     FutureProvider<List<int>>((ref) async {
-  final novelId = await ref.watch(currentNovelIdProvider.future);
+  final folderPath = await ref.watch(currentNovelFolderPathProvider.future);
   final selectedFile = ref.watch(selectedFileProvider);
 
-  if (novelId == null || selectedFile == null) return [];
+  if (folderPath == null || selectedFile == null) return [];
 
-  final repository = ref.watch(bookmarkRepositoryProvider);
-  final bookmarks = await repository.findByNovelAndFile(
-    novelId: novelId,
-    fileName: selectedFile.name,
-  );
+  final repository =
+      await ref.watch(bookmarkRepositoryProvider(folderPath).future);
+  final bookmarks = await repository.findByFile(fileName: selectedFile.name);
   return bookmarks
       .where((b) => b.lineNumber != null)
       .map((b) => b.lineNumber!)

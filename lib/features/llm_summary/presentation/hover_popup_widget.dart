@@ -14,7 +14,7 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 class HoverPopupWidget extends ConsumerWidget {
   const HoverPopupWidget({
     super.key,
-    required this.folder,
+    required this.folderPath,
     required this.word,
     required this.currentEpisode,
     required this.currentFileName,
@@ -22,7 +22,9 @@ class HoverPopupWidget extends ConsumerWidget {
     required this.maxEpisodeFileName,
   });
 
-  final String folder;
+  /// Absolute path of the novel folder, used to resolve its per-folder
+  /// `novel_data.db` snapshot cache.
+  final String folderPath;
   final String word;
 
   /// Effective episode number of the file the user is currently viewing.
@@ -40,7 +42,7 @@ class HoverPopupWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final snapshotsAsync = ref.watch(
-      hoverPopupCacheProvider((folder: folder, word: word)),
+      hoverPopupCacheProvider((folderPath: folderPath, word: word)),
     );
     final activeEpisode = ref.watch(
       hoverPopupProvider.select((s) => s.activeEpisode),
