@@ -1,10 +1,10 @@
 ## 1. 新DBラッパー `novel_data.db` とスキーマ
 
-- [ ] 1.1 `novel_data.db` スキーマ（v1: `word_summaries(word, covered_up_to_episode, ...)` / `fact_cache(word, file_name, ...)` / `bookmarks(file_name, line_number, ...)`、`folder_name`/`novel_id` カラム無し、各一意インデックス）のテストを先に作成（テーブル定義・一意制約・upsert）
-- [ ] 1.2 テストの失敗を確認し、テストをコミット
-- [ ] 1.3 `NovelDataDatabase` ラッパーを実装（共有 `DbConnectionGate` 経由、`openOrResetDatabase` に `deleteOnFailure: false`、フォルダ配下に配置）
-- [ ] 1.4 open 失敗時にファイルを保全し WARNING ログ＋rethrow するテストを作成→失敗確認→実装
-- [ ] 1.5 1.1〜1.4 のテストを全てパスさせる
+- [x] 1.1 `novel_data.db` スキーマ（v1: `word_summaries(word, covered_up_to_episode, ...)` / `fact_cache(word, file_name, ...)` / `bookmarks(file_name, line_number, ...)`、`folder_name`/`novel_id` カラム無し、各一意インデックス）のテストを先に作成（テーブル定義・一意制約・upsert）
+- [x] 1.2 テストの失敗を確認し、テストをコミット
+- [x] 1.3 `NovelDataDatabase` ラッパーを実装（共有 `DbConnectionGate` 経由、`openOrResetDatabase` に `deleteOnFailure: false`、フォルダ配下に配置）
+- [x] 1.4 open 失敗時にファイルを保全し WARNING ログ＋rethrow するテストを作成→失敗確認→実装
+- [x] 1.5 1.1〜1.4 のテストを全てパスさせる
 
 ## 2. PerFolderDbRegistry への統合
 

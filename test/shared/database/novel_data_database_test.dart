@@ -135,4 +135,21 @@ void main() {
       expect(rows, hasLength(1));
     });
   });
+
+  group('NovelDataDatabase open failure', () {
+    test('a corrupt file is preserved (not deleted) and the error rethrown',
+        () async {
+      // Plant a non-SQLite file where the DB is expected.
+      final dbFile =
+          File('${tempDir.path}${Platform.pathSeparator}novel_data.db');
+      dbFile.writeAsStringSync('this is not a sqlite database');
+
+      final wrapper = NovelDataDatabase(tempDir.path);
+      addTearDown(wrapper.close);
+
+      await expectLater(wrapper.database, throwsA(anything));
+      // deleteOnFailure:false → the file must remain for manual recovery.
+      expect(dbFile.existsSync(), isTrue);
+    });
+  });
 }
