@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/domain/novel_folder_classifier.dart';
 import 'package:novel_viewer/features/file_browser/domain/move_destination.dart';
+import 'package:novel_viewer/features/file_browser/domain/reading_progress_badge.dart';
 import 'package:novel_viewer/features/file_browser/domain/move_follow.dart';
 import 'package:novel_viewer/features/file_browser/presentation/move_destination_dialog.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -48,7 +49,12 @@ class FileBrowserPanel extends ConsumerStatefulWidget {
 /// `Scrollable.ensureVisible` against a per-tile GlobalKey for items that
 /// have never been painted. A fixed itemExtent lets us compute the target
 /// scroll offset directly from the item index.
-const double _kFileTileExtent = 56.0;
+///
+/// Raised from the single-line 56.0 so a registered novel folder tile can show
+/// a second line (the reading-progress bar) under its title without clipping.
+/// File tiles share this extent and simply gain a little vertical breathing
+/// room.
+const double _kFileTileExtent = 64.0;
 
 class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
   final ScrollController _scrollController = ScrollController();
@@ -214,13 +220,19 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         // depth (see [isNovelFolder]).
         final novels = ref.watch(allNovelsProvider).value ?? const [];
         final novelFolderNames = <String>{for (final n in novels) n.folderName};
+        final badges =
+            ref.watch(readingProgressBadgesProvider).value ?? const {};
         final items = [
           ...contents.subdirectories.map(
-            (dir) => _buildDirectoryTile(
-              context,
-              dir,
-              isNovelFolder(dir.name, novelFolderNames),
-            ),
+            (dir) {
+              final isNovel = isNovelFolder(dir.name, novelFolderNames);
+              return _buildDirectoryTile(
+                context,
+                dir,
+                isNovel,
+                isNovel ? badges[dir.name] : null,
+              );
+            },
           ),
           ...contents.files.map(
             (file) => _buildFileTile(
@@ -296,6 +308,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     BuildContext context,
     DirectoryEntry dir,
     bool isNovel,
+    ReadingProgressBadge? badge,
   ) {
     final tile = ListTile(
       leading: Icon(isNovel ? Icons.menu_book : Icons.folder),
@@ -304,6 +317,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
+      subtitle: badge == null ? null : _ReadingProgressBar(badge: badge),
       onTap: () {
         ref.read(currentDirectoryProvider.notifier).setDirectory(dir.path);
         ref.read(selectedFileProvider.notifier).clear();
@@ -645,6 +659,40 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       ref.read(currentDirectoryProvider.notifier).setDirectory(parent);
       ref.read(selectedFileProvider.notifier).clear();
     }
+  }
+}
+
+/// A compact reading-progress indicator shown under a novel folder's title:
+/// a thin bar plus a small `read / total` label. Both numbers come from
+/// [ReadingProgressBadge] (denominator = `episode_count`, numerator = current
+/// position; 0 = unread).
+class _ReadingProgressBar extends StatelessWidget {
+  final ReadingProgressBadge badge;
+
+  const _ReadingProgressBar({required this.badge});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: badge.fraction,
+              minHeight: 4,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '${badge.read} / ${badge.total}',
+          style: theme.textTheme.bodySmall,
+        ),
+      ],
+    );
   }
 }
 

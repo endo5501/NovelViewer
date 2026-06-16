@@ -37,6 +37,15 @@ class ReadingProgressRepository {
     return ReadingProgress.fromMap(rows.first);
   }
 
+  /// Returns every stored reading progress row in a single query so callers
+  /// (e.g. the file browser badge) can render per-novel progress for many
+  /// novels without issuing one [findByNovelId] per novel.
+  Future<List<ReadingProgress>> findAll() async {
+    final db = await _novelDatabase.database;
+    final rows = await db.query(_tableName);
+    return rows.map(ReadingProgress.fromMap).toList();
+  }
+
   Future<void> deleteByNovelId(String novelId, {DatabaseExecutor? txn}) async {
     final executor = txn ?? await _novelDatabase.database;
     await executor.delete(

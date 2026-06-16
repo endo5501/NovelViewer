@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
+import 'package:novel_viewer/features/file_browser/domain/reading_progress_badge.dart';
 import 'package:novel_viewer/features/file_browser/presentation/file_browser_panel.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
@@ -819,6 +820,126 @@ void main() {
       expect(find.text('タイトル変更'), findsOneWidget);
       expect(find.text('削除'), findsOneWidget);
     });
+    testWidgets(
+        'registered novel folder shows a reading-progress bar and read / total',
+        (WidgetTester tester) async {
+      const testDir = DirectoryEntry(
+        name: 'narou_n1234ab',
+        path: '/library/narou_n1234ab',
+        displayName: 'テスト小説',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return const DirectoryContents(
+                  files: [], subdirectories: [testDir]);
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/library');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith(
+                (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')]),
+            readingProgressBadgesProvider.overrideWith((ref) async => {
+                  'narou_n1234ab':
+                      const ReadingProgressBadge(read: 3, total: 120),
+                }),
+          ],
+          child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: FileBrowserPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('3 / 120'), findsOneWidget);
+      final bar = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      expect(bar.value, closeTo(3 / 120, 1e-9));
+    });
+
+    testWidgets('unread registered novel shows 0 / N with a 0% bar',
+        (WidgetTester tester) async {
+      const testDir = DirectoryEntry(
+        name: 'narou_n1234ab',
+        path: '/library/narou_n1234ab',
+        displayName: 'テスト小説',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return const DirectoryContents(
+                  files: [], subdirectories: [testDir]);
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/library');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith(
+                (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')]),
+            readingProgressBadgesProvider.overrideWith((ref) async => {
+                  'narou_n1234ab':
+                      const ReadingProgressBadge(read: 0, total: 80),
+                }),
+          ],
+          child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: FileBrowserPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('0 / 80'), findsOneWidget);
+      final bar = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      expect(bar.value, 0.0);
+    });
+
+    testWidgets('manual (unregistered) folder shows no progress bar',
+        (WidgetTester tester) async {
+      const manualDir = DirectoryEntry(
+        name: 'お気に入り',
+        path: '/library/お気に入り',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return const DirectoryContents(
+                  files: [], subdirectories: [manualDir]);
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/library');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) async => const []),
+            readingProgressBadgesProvider
+                .overrideWith((ref) async => const {}),
+          ],
+          child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: FileBrowserPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('お気に入り'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+    });
+
     testWidgets('selecting rename from context menu shows rename dialog',
         (WidgetTester tester) async {
       const testDir = DirectoryEntry(
