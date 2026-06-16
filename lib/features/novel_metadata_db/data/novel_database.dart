@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import '../../../shared/database/database_opener.dart';
 import '../../../shared/database/db_connection_gate.dart';
 import '../../../shared/episode/episode_resolver.dart' as episode;
+import 'novel_data_migrator.dart';
 
 /// Returns the list of source-text file names for `folderName`, sorted
 /// lexically. Used by the v4 → v5 migration to compute lexical-rank fallback
@@ -49,7 +50,7 @@ class NovelDatabaseSnapshotResolver {
 
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
-  static const _databaseVersion = 8;
+  static const _databaseVersion = 9;
 
   /// The current `novel_metadata.db` schema version. Exposed so test fixtures
   /// open in-memory databases at the same version the production schema targets.
@@ -58,6 +59,7 @@ class NovelDatabase {
 
   final String? _dbDirPath;
   final NovelDatabaseSnapshotResolver _snapshotResolver;
+  final NovelDataMigrator _dataMigrator;
   late final DbConnectionGate<Database> _gate = DbConnectionGate<Database>(
     opener: _open,
     closer: (db) => db.close(),
@@ -66,9 +68,11 @@ class NovelDatabase {
   NovelDatabase({
     String? dbDirPath,
     NovelDatabaseSnapshotResolver? snapshotResolver,
+    NovelDataMigrator? dataMigrator,
   })  : _dbDirPath = dbDirPath,
         _snapshotResolver =
-            snapshotResolver ?? NovelDatabaseSnapshotResolver.empty;
+            snapshotResolver ?? NovelDatabaseSnapshotResolver.empty,
+        _dataMigrator = dataMigrator ?? NovelDataMigrator.empty;
 
   Future<Database> get database => _gate.resource;
 
@@ -120,10 +124,11 @@ class NovelDatabase {
       CREATE UNIQUE INDEX idx_novels_site_novel
       ON novels(site_type, novel_id)
     ''');
-    await _createV5WordSummariesTable(db);
-    await _createBookmarksTableV8(db);
+    // v9: the per-novel tables (word_summaries / fact_cache / bookmarks) now
+    // live in each novel's per-folder `novel_data.db`. A fresh install creates
+    // only the global catalog (`novels`) and `reading_progress` (kept global
+    // for the cross-novel "how far read" view).
     await _createReadingProgressTableV8(db);
-    await _createFactCacheTable(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -151,6 +156,14 @@ class NovelDatabase {
     }
     if (oldVersion < 8) {
       await _migrateBookmarksAndProgressToRelativePath(db, logger: _log);
+    }
+    if (oldVersion < 9) {
+      // Move word_summaries / fact_cache / bookmarks into each novel's
+      // per-folder novel_data.db, then drop them here. `user_version` only
+      // commits to 9 if this whole onUpgrade transaction succeeds, so an
+      // interruption rolls back to 8 and the next launch re-runs the copy
+      // (idempotent via INSERT OR IGNORE).
+      await migrateV8ToV9(db, _dataMigrator, logger: _log);
     }
   }
 

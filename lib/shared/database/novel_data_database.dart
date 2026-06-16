@@ -52,9 +52,9 @@ class NovelDataDatabase {
   }
 
   /// Creates the full current-version schema on [db]. Single source of truth
-  /// for production `_onCreate`, for the v8→v9 migration's per-folder target,
-  /// and for test fixtures — so the schema cannot drift between them.
-  @visibleForTesting
+  /// for production `_onCreate`, for the v8→v9 migration's per-folder target
+  /// ([NovelDataMigrator]), and for test fixtures — so the schema cannot drift
+  /// between them.
   static Future<void> createCurrentSchema(Database db) async {
     await db.execute('''
       CREATE TABLE word_summaries (

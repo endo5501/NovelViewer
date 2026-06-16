@@ -19,11 +19,7 @@ import '../../helpers/novel_metadata_db_fixture.dart';
 /// Builds a path under `/library` using the host path separators, so it matches
 /// what `resolveNovelFolderPath` (which joins via `package:path`) returns on
 /// every platform — avoiding `/` vs `\` mismatches on Windows.
-String lib([String? a, String? b]) => p.joinAll([
-      '/library',
-      if (a != null) a,
-      if (b != null) b,
-    ]);
+String lib([String? a, String? b]) => p.joinAll(['/library', ?a, ?b]);
 
 void main() {
   late NovelDatabase novelDatabase;

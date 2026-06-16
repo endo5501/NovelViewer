@@ -1,9 +1,38 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/novel_metadata_db/data/novel_data_migrator.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
+import 'package:novel_viewer/shared/database/novel_data_database.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+/// Builds a migrator that routes the seeded novel's rows into a real
+/// `novel_data.db` under [tempPath]/narou_n1234ab, plus a helper to reopen it.
+({NovelDataMigrator migrator, Directory folderDir}) _folderMigrator(
+    String tempPath) {
+  final folderDir = Directory(p.join(tempPath, 'narou_n1234ab'))..createSync();
+  final migrator = NovelDataMigrator(
+    resolveFolderPath: (f) => f == 'narou_n1234ab' ? folderDir.path : null,
+    openNovelDataDb: (fp) => databaseFactoryFfi.openDatabase(
+      p.join(fp, NovelDataDatabase.databaseName),
+      options: OpenDatabaseOptions(
+        version: 1,
+        onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
+      ),
+    ),
+  );
+  return (migrator: migrator, folderDir: folderDir);
+}
+
+Future<Database> _openFolderDb(Directory folderDir) =>
+    databaseFactoryFfi.openDatabase(
+      p.join(folderDir.path, NovelDataDatabase.databaseName),
+      options: OpenDatabaseOptions(
+        version: 1,
+        onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
+      ),
+    );
 
 /// Seeds a v7-shaped `novel_metadata.db` at [dbPath]. The v7 schema still keeps
 /// the absolute `file_path` column on both `bookmarks` and `reading_progress`,
@@ -99,36 +128,27 @@ void main() {
   });
 
   group('relative-path migration v7 → v8', () {
-    test(
-        'fresh install at v8 drops file_path and re-keys bookmarks on file_name',
-        () async {
-      final tempDir = Directory.systemTemp.createTempSync('relpath_v8_fresh_');
+    test('fresh install (v9) has no global bookmarks table; reading_progress '
+        'keeps its v8 shape', () async {
+      final tempDir = Directory.systemTemp.createTempSync('relpath_v9_fresh_');
       try {
         final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
         try {
           final db = await novelDatabase.database;
 
-          // bookmarks: no file_path column.
-          final bmColumns = await db.rawQuery('PRAGMA table_info(bookmarks)');
-          final bmNames = bmColumns.map((c) => c['name']).toSet();
-          expect(bmNames, containsAll(['id', 'novel_id', 'file_name', 'line_number', 'created_at']));
-          expect(bmNames, isNot(contains('file_path')),
-              reason: 'fresh v8 bookmarks SHALL NOT have a file_path column');
+          // bookmarks moved to each folder's novel_data.db → not global.
+          final bm = await db.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='bookmarks'",
+          );
+          expect(bm, isEmpty);
 
-          // bookmarks: UNIQUE on (novel_id, file_name, line_number).
-          final bmSql = (await db.rawQuery(
-            "SELECT sql FROM sqlite_master WHERE type='table' AND name='bookmarks'",
-          )).first['sql'] as String;
-          expect(bmSql.replaceAll(' ', ''),
-              contains('UNIQUE(novel_id,file_name,line_number)'.replaceAll(' ', '')));
-
-          // reading_progress: no file_path column.
+          // reading_progress: retained, no file_path column.
           final rpColumns =
               await db.rawQuery('PRAGMA table_info(reading_progress)');
           final rpNames = rpColumns.map((c) => c['name']).toSet();
           expect(rpNames, containsAll(['novel_id', 'file_name', 'updated_at']));
           expect(rpNames, isNot(contains('file_path')),
-              reason: 'fresh v8 reading_progress SHALL NOT have file_path');
+              reason: 'fresh v9 reading_progress SHALL NOT have file_path');
         } finally {
           await novelDatabase.close();
         }
@@ -137,7 +157,7 @@ void main() {
       }
     });
 
-    test('upgrade v7 → v8 drops bookmarks.file_path and preserves rows',
+    test('v7 → v8 drops file_path then v9 migrates rows to novel_data.db',
         () async {
       final tempDir = Directory.systemTemp.createTempSync('relpath_v8_bm_');
       try {
@@ -159,45 +179,44 @@ void main() {
           });
         });
 
-        final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
+        final m = _folderMigrator(tempDir.path);
+        final novelDatabase =
+            NovelDatabase(dbDirPath: tempDir.path, dataMigrator: m.migrator);
         try {
-          final db = await novelDatabase.database;
+          await novelDatabase.database;
+        } finally {
+          await novelDatabase.close();
+        }
 
-          final columns = await db.rawQuery('PRAGMA table_info(bookmarks)');
-          final names = columns.map((c) => c['name']).toSet();
-          expect(names, isNot(contains('file_path')),
-              reason: 'v7 → v8 SHALL drop bookmarks.file_path');
+        final folderDb = await _openFolderDb(m.folderDir);
+        try {
+          final names = (await folderDb.rawQuery('PRAGMA table_info(bookmarks)'))
+              .map((c) => c['name'])
+              .toSet();
+          expect(names, isNot(contains('file_path')));
+          expect(names, isNot(contains('novel_id')));
 
-          final sql = (await db.rawQuery(
-            "SELECT sql FROM sqlite_master WHERE type='table' AND name='bookmarks'",
-          )).first['sql'] as String;
-          expect(sql.replaceAll(' ', ''),
-              contains('UNIQUE(novel_id,file_name,line_number)'.replaceAll(' ', '')));
-
-          final rows = await db.query('bookmarks', orderBy: 'file_name ASC');
-          expect(rows.length, 2, reason: 'both bookmark rows SHALL be preserved');
+          final rows = await folderDb.query('bookmarks', orderBy: 'file_name ASC');
+          expect(rows.length, 2, reason: 'both rows preserved + migrated');
           expect(rows[0]['file_name'], '001_chapter1.txt');
           expect(rows[0]['line_number'], 42);
-          expect(rows[0]['novel_id'], 'narou_n1234ab');
           expect(rows[0]['created_at'], '2026-05-01T01:00:00.000Z');
           expect(rows[1]['file_name'], '002_chapter2.txt');
           expect(rows[1]['line_number'], isNull);
         } finally {
-          await novelDatabase.close();
+          await folderDb.close();
         }
       } finally {
         tempDir.deleteSync(recursive: true);
       }
     });
 
-    test('upgrade v7 → v8 deduplicates colliding bookmarks keeping earliest',
+    test('v7 → v8 dedup (keep earliest) survives the move to novel_data.db',
         () async {
       final tempDir = Directory.systemTemp.createTempSync('relpath_v8_dedup_');
       try {
         final dbPath = p.join(tempDir.path, 'novel_metadata.db');
         await _seedV7Database(dbPath, seed: (db) async {
-          // Same (novel_id, file_name, line_number), different file_path.
-          // Only the earliest created_at SHALL survive.
           await db.insert('bookmarks', {
             'novel_id': 'narou_n1234ab',
             'file_name': '001_chapter1.txt',
@@ -214,33 +233,37 @@ void main() {
           });
         });
 
-        final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
+        final m = _folderMigrator(tempDir.path);
+        final novelDatabase =
+            NovelDatabase(dbDirPath: tempDir.path, dataMigrator: m.migrator);
         try {
-          final db = await novelDatabase.database;
-          final rows = await db.query('bookmarks');
+          await novelDatabase.database;
+        } finally {
+          await novelDatabase.close();
+        }
+
+        final folderDb = await _openFolderDb(m.folderDir);
+        try {
+          final rows = await folderDb.query('bookmarks');
           expect(rows.length, 1,
               reason: 'colliding rows SHALL be deduplicated to one');
           expect(rows.first['created_at'], '2026-05-01T01:00:00.000Z',
               reason: 'the earliest created_at SHALL be kept');
         } finally {
-          await novelDatabase.close();
+          await folderDb.close();
         }
       } finally {
         tempDir.deleteSync(recursive: true);
       }
     });
 
-    test(
-        'upgrade v7 → v8 deduplicates colliding whole-file (NULL line) bookmarks',
+    test('v7 → v8 NULL-line dedup survives the move to novel_data.db',
         () async {
       final tempDir =
           Directory.systemTemp.createTempSync('relpath_v8_dedup_null_');
       try {
         final dbPath = p.join(tempDir.path, 'novel_metadata.db');
         await _seedV7Database(dbPath, seed: (db) async {
-          // Two whole-file bookmarks (line_number NULL) for the same file but
-          // different file_path. SQLite keeps NULLs distinct in UNIQUE, so the
-          // migration must dedup these explicitly, keeping the earliest.
           await db.insert('bookmarks', {
             'novel_id': 'narou_n1234ab',
             'file_name': '001_chapter1.txt',
@@ -257,16 +280,23 @@ void main() {
           });
         });
 
-        final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
+        final m = _folderMigrator(tempDir.path);
+        final novelDatabase =
+            NovelDatabase(dbDirPath: tempDir.path, dataMigrator: m.migrator);
         try {
-          final db = await novelDatabase.database;
-          final rows = await db.query('bookmarks');
-          expect(rows.length, 1,
-              reason: 'NULL-line collisions SHALL be deduplicated to one');
-          expect(rows.first['created_at'], '2026-05-01T01:00:00.000Z',
-              reason: 'the earliest created_at SHALL be kept');
+          await novelDatabase.database;
         } finally {
           await novelDatabase.close();
+        }
+
+        final folderDb = await _openFolderDb(m.folderDir);
+        try {
+          final rows = await folderDb.query('bookmarks');
+          expect(rows.length, 1,
+              reason: 'NULL-line collisions SHALL be deduplicated to one');
+          expect(rows.first['created_at'], '2026-05-01T01:00:00.000Z');
+        } finally {
+          await folderDb.close();
         }
       } finally {
         tempDir.deleteSync(recursive: true);

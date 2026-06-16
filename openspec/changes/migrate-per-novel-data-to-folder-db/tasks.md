@@ -23,16 +23,16 @@
 
 ## 4. v8→v9 onUpgrade 内データ移行
 
-- [ ] 4.1 v8→v9 `onUpgrade` 移行のテストを作成（各フォルダ `novel_data.db` への upsert コピー冪等・全コピー成功後の3テーブル drop・途中失敗で `user_version=8` のまま再実行可・孤児行破棄＋WARNINGログ・`reading_progress` 不可触）→失敗確認
-- [ ] 4.2 ライブラリルート（＋フォルダDB書き込み手段）の注入依存を `NovelDatabaseSnapshotResolver` と同様の要領で追加
-- [ ] 4.3 v8→v9 `onUpgrade` を実装（コピー → 全成功後に drop、`user_version` を唯一の完了フラグとする）
-- [ ] 4.4 4.1 のテストを全てパスさせる
+- [x] 4.1 v8→v9 `onUpgrade` 移行のテストを作成（各フォルダ `novel_data.db` への upsert コピー冪等・全コピー成功後の3テーブル drop・途中失敗で `user_version=8` のまま再実行可・孤児行破棄＋WARNINGログ・`reading_progress` 不可触）→失敗確認
+- [x] 4.2 ライブラリルート（＋フォルダDB書き込み手段）の注入依存を `NovelDatabaseSnapshotResolver` と同様の要領で追加（`NovelDataMigrator`）
+- [x] 4.3 v8→v9 `onUpgrade` を実装（コピー → 全成功後に drop、`user_version` を唯一の完了フラグとする）
+- [x] 4.4 4.1 のテストを全てパスさせる
 
 ## 5. novel_metadata.db スキーマ v9 化
 
-- [ ] 5.1 fresh install で v9 スキーマ（`word_summaries`/`fact_cache`/`bookmarks` 無し、`novels`/`reading_progress` 有り）になることのテストを作成→失敗確認
-- [ ] 5.2 `NovelDatabase` を v9 に更新し、`createCurrentSchema` から3テーブルDDLを除去、recovery 記述（非再現データの列挙）を更新
-- [ ] 5.3 全マイグレーションチェーン（v4→…→v9）と fresh install のスキーマ忠実性テストを更新→パス
+- [x] 5.1 fresh install で v9 スキーマ（`word_summaries`/`fact_cache`/`bookmarks` 無し、`novels`/`reading_progress` 有り）になることのテストを作成→失敗確認
+- [x] 5.2 `NovelDatabase` を v9 に更新し、`createCurrentSchema` から3テーブルDDLを除去
+- [x] 5.3 全マイグレーションチェーン（v4→…→v9）と fresh install のスキーマ忠実性テストを更新→パス
 
 ## 6. novel-delete の縮小
 
