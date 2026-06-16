@@ -87,10 +87,14 @@ void main() {
     if (libRoot.existsSync()) libRoot.deleteSync(recursive: true);
   });
 
+  // singleInstance:false so each open is an independent connection that reads
+  // the committed file — mirroring production, where a re-run after a crash
+  // opens the folder db fresh (new process) and sees prior-committed rows.
   Future<Database> openFolderDb(String folder) =>
       databaseFactoryFfi.openDatabase(
         p.join(libRoot.path, folder, NovelDataDatabase.databaseName),
         options: OpenDatabaseOptions(
+          singleInstance: false,
           version: 1,
           onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
         ),
@@ -109,6 +113,7 @@ void main() {
       openNovelDataDb: (folderPath) => databaseFactoryFfi.openDatabase(
         p.join(folderPath, NovelDataDatabase.databaseName),
         options: OpenDatabaseOptions(
+          singleInstance: false,
           version: 1,
           onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
         ),
@@ -218,5 +223,35 @@ void main() {
     addTearDown(folderDb.close);
     final ws = await folderDb.query('word_summaries');
     expect(ws, hasLength(1), reason: 'INSERT OR IGNORE dedups the re-copy');
+  });
+
+  test('re-running does not duplicate whole-file (NULL line) bookmarks',
+      () async {
+    await global.insert('bookmarks', {
+      'novel_id': 'novelA',
+      'file_name': '001.txt',
+      'line_number': null,
+      'created_at': 't',
+    });
+
+    final migrator = buildMigrator({'novelA'});
+    // Simulate a prior interrupted run that already copied the NULL-line
+    // bookmark into the folder db.
+    final pre = await openFolderDb('novelA');
+    await pre.insert('bookmarks', {
+      'file_name': '001.txt',
+      'line_number': null,
+      'created_at': 't',
+    });
+    await pre.close();
+
+    await migrateV8ToV9(global, migrator);
+
+    final folderDb = await openFolderDb('novelA');
+    addTearDown(folderDb.close);
+    final bm = await folderDb.query('bookmarks');
+    expect(bm, hasLength(1),
+        reason: 'the clear-then-copy migration SHALL not append a duplicate '
+            'whole-file (NULL line) bookmark on re-run');
   });
 }

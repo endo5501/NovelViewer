@@ -48,6 +48,14 @@ class NovelDataMigrator {
       resolveFolderPath: (folderName) {
         final root = Directory(libraryRoot);
         if (!root.existsSync()) return null;
+        // Fast path / disambiguation: the overwhelmingly common layout is a
+        // novel folder directly under the library root. Match it first so a
+        // same-named unregistered directory nested elsewhere cannot shadow the
+        // real novel folder.
+        final direct = Directory(p.join(libraryRoot, folderName));
+        if (direct.existsSync()) return direct.path;
+        // Otherwise the novel is nested under an organizational folder; find the
+        // first directory whose leaf name matches.
         for (final entity in root.listSync(recursive: true)) {
           if (entity is Directory && p.basename(entity.path) == folderName) {
             return entity.path;
@@ -105,7 +113,14 @@ Future<void> migrateV8ToV9(
     }
     final folderDb = await migrator.openNovelDataDb(folderPath);
     try {
+      // The folder's novel_data.db only ever holds migration output (the app never
+      // wrote to it before v9). Clear any rows from an interrupted prior run, then
+      // copy the authoritative global rows — idempotent by construction, incl.
+      // whole-file bookmarks (line_number IS NULL) that UNIQUE cannot dedup.
       final batch = folderDb.batch();
+      batch.delete('word_summaries');
+      batch.delete('fact_cache');
+      batch.delete('bookmarks');
       for (final r in wordRows.where((r) => r['folder_name'] == folder)) {
         batch.insert(
           'word_summaries',

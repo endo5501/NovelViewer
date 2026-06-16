@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/llm_summary/data/openai_compatible_client.
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
+import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'package:novel_viewer/shared/database/novel_data_database_provider.dart';
 
 final llmConfigProvider = Provider<LlmConfig>((ref) {
@@ -48,7 +49,13 @@ final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
 /// `novel_data.db`. The family argument is the novel folder's absolute path.
 final llmSummaryRepositoryProvider =
     FutureProvider.family<LlmSummaryRepository, String>((ref, folderPath) async {
-  final db = await ref.watch(novelDataDatabaseProvider(folderPath)).database;
+  // Normalize via folderDbKey so this resolves the SAME novel_data.db thin-view
+  // the registry/folder-switch flow evicts & invalidates (which key on
+  // folderDbKey). Reading the raw path would key a distinct provider entry that
+  // never gets invalidated and could serve a closed handle.
+  final db = await ref
+      .watch(novelDataDatabaseProvider(folderDbKey(folderPath)))
+      .database;
   return LlmSummaryRepository(db);
 });
 
@@ -56,7 +63,9 @@ final llmSummaryRepositoryProvider =
 /// `novel_data.db`. The family argument is the novel folder's absolute path.
 final factCacheRepositoryProvider =
     FutureProvider.family<FactCacheRepository, String>((ref, folderPath) async {
-  final db = await ref.watch(novelDataDatabaseProvider(folderPath)).database;
+  final db = await ref
+      .watch(novelDataDatabaseProvider(folderDbKey(folderPath)))
+      .database;
   return FactCacheRepository(db);
 });
 

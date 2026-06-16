@@ -3,6 +3,7 @@ import 'package:novel_viewer/features/bookmark/data/bookmark_repository.dart';
 import 'package:novel_viewer/features/bookmark/domain/bookmark.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'package:novel_viewer/shared/database/novel_data_database_provider.dart';
 import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 
@@ -10,7 +11,11 @@ import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 /// `novel_data.db`. The family argument is the novel folder's absolute path.
 final bookmarkRepositoryProvider =
     FutureProvider.family<BookmarkRepository, String>((ref, folderPath) async {
-  final db = await ref.watch(novelDataDatabaseProvider(folderPath)).database;
+  // Normalize via folderDbKey so the resolved novel_data.db thin-view matches
+  // the one the registry/folder-switch flow evicts & invalidates.
+  final db = await ref
+      .watch(novelDataDatabaseProvider(folderDbKey(folderPath)))
+      .database;
   return BookmarkRepository(db);
 });
 
