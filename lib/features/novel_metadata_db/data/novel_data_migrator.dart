@@ -43,23 +43,32 @@ class NovelDataMigrator {
   /// [libraryRoot] for a directory whose leaf name matches the `folderName`
   /// (so nested novels under organizational folders resolve correctly), and
   /// opens that folder's `novel_data.db` through the production schema.
-  factory NovelDataMigrator.fromLibraryRoot(String libraryRoot) {
+  factory NovelDataMigrator.fromLibraryRoot(String libraryRoot,
+      {Logger? logger}) {
     return NovelDataMigrator(
       resolveFolderPath: (folderName) {
         final root = Directory(libraryRoot);
         if (!root.existsSync()) return null;
-        // Fast path / disambiguation: the overwhelmingly common layout is a
-        // novel folder directly under the library root. Match it first so a
-        // same-named unregistered directory nested elsewhere cannot shadow the
-        // real novel folder.
-        final direct = Directory(p.join(libraryRoot, folderName));
-        if (direct.existsSync()) return direct.path;
-        // Otherwise the novel is nested under an organizational folder; find the
-        // first directory whose leaf name matches.
-        for (final entity in root.listSync(recursive: true)) {
-          if (entity is Directory && p.basename(entity.path) == folderName) {
-            return entity.path;
-          }
+        // Only the leaf folder_name is stored, so resolve by collecting every
+        // directory under the library with that leaf name. Return it ONLY when
+        // the match is unique. If two directories share the name (a registered
+        // novel plus an unrelated same-named folder), we cannot tell which is
+        // the novel from the name alone — returning either risks writing the
+        // novel's data into the WRONG folder, so we skip it (treated as an
+        // orphan: rows discarded + logged) rather than mis-target. Crashing the
+        // upgrade is not an option here — it would brick startup.
+        final matches = <String>[
+          for (final entity in root.listSync(recursive: true, followLinks: false))
+            if (entity is Directory && p.basename(entity.path) == folderName)
+              entity.path,
+        ];
+        if (matches.length == 1) return matches.single;
+        if (matches.length > 1) {
+          logger?.warning(
+            'v9 migration: folder name "$folderName" matches ${matches.length} '
+            'directories ($matches); cannot disambiguate from the leaf name '
+            'alone, skipping to avoid writing to the wrong folder',
+          );
         }
         return null;
       },

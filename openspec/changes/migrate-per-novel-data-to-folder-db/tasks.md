@@ -48,7 +48,7 @@
 
 ## 8. 最終確認
 
-- [ ] 8.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 8.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 8.3 `fvm flutter analyze`でリントを実行
-- [ ] 8.4 `fvm flutter test`でテストを実行
+- [x] 8.1 code-reviewスキルを使用してコードレビューを実施（provider正規化・移行冪等性・フォルダ解決の指摘を修正）
+- [x] 8.2 codexスキルを使用して現在開発中のコードレビューを実施（フォルダ名曖昧性を unique-match-or-skip へ修正）
+- [x] 8.3 `fvm flutter analyze`でリントを実行（No issues found）
+- [x] 8.4 `fvm flutter test`でテストを実行（全2125件パス）

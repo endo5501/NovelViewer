@@ -254,4 +254,31 @@ void main() {
         reason: 'the clear-then-copy migration SHALL not append a duplicate '
             'whole-file (NULL line) bookmark on re-run');
   });
+
+  group('NovelDataMigrator.fromLibraryRoot folder resolution', () {
+    test('resolves a unique folder by leaf name (flat and nested)', () {
+      Directory(p.join(libRoot.path, 'flatNovel')).createSync();
+      Directory(p.join(libRoot.path, 'Org', 'nestedNovel'))
+          .createSync(recursive: true);
+      final m = NovelDataMigrator.fromLibraryRoot(libRoot.path);
+
+      expect(m.resolveFolderPath('flatNovel'),
+          p.join(libRoot.path, 'flatNovel'));
+      expect(m.resolveFolderPath('nestedNovel'),
+          p.join(libRoot.path, 'Org', 'nestedNovel'));
+      expect(m.resolveFolderPath('missing'), isNull);
+    });
+
+    test('returns null (skip, no mis-target) when the leaf name is ambiguous',
+        () {
+      // A registered novel and an unrelated same-named directory elsewhere.
+      Directory(p.join(libRoot.path, 'dup')).createSync();
+      Directory(p.join(libRoot.path, 'Org', 'dup')).createSync(recursive: true);
+      final m = NovelDataMigrator.fromLibraryRoot(libRoot.path);
+
+      expect(m.resolveFolderPath('dup'), isNull,
+          reason: 'an ambiguous leaf name SHALL NOT resolve to a guessed '
+              'folder; writing to the wrong folder is worse than skipping');
+    });
+  });
 }

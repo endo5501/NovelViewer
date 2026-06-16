@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:novel_viewer/app.dart';
 import 'package:novel_viewer/app/startup_migrations.dart';
+import 'package:logging/logging.dart';
 import 'package:novel_viewer/shared/logging/app_logger.dart';
 import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
@@ -44,8 +45,10 @@ void main() async {
     snapshotResolver:
         NovelDatabaseSnapshotResolver.fromLibraryRoot(libraryDir.path),
     // v8→v9: move per-novel tables into each folder's novel_data.db. Locating
-    // novel folders (incl. nested) needs the library root.
-    dataMigrator: NovelDataMigrator.fromLibraryRoot(libraryDir.path),
+    // novel folders (incl. nested) needs the library root; the logger surfaces
+    // ambiguous/missing-folder skips.
+    dataMigrator: NovelDataMigrator.fromLibraryRoot(libraryDir.path,
+        logger: Logger('novel_metadata_db')),
   );
   await novelDatabase.database;
 
