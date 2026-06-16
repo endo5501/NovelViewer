@@ -4,10 +4,11 @@ import '../../features/episode_cache/data/episode_cache_database.dart';
 import '../../features/tts/data/tts_audio_database.dart';
 import '../../features/tts/data/tts_dictionary_database.dart';
 import 'folder_db_key.dart';
+import 'novel_data_database.dart';
 
-/// Owns the lifecycle of the three per-folder database handles
-/// (`episode_cache.db`, `tts_audio.db`, `tts_dictionary.db`) for every novel
-/// folder, keyed by the normalized [folderDbKey].
+/// Owns the lifecycle of the four per-folder database handles
+/// (`episode_cache.db`, `tts_audio.db`, `tts_dictionary.db`, `novel_data.db`)
+/// for every novel folder, keyed by the normalized [folderDbKey].
 ///
 /// This is the single sanctioned owner of per-folder handles: Riverpod
 /// providers are thin views that read from here, and folder mutation flows
@@ -20,17 +21,21 @@ class PerFolderDbRegistry {
     EpisodeCacheDatabase Function(String folder)? episodeFactory,
     TtsAudioDatabase Function(String folder)? audioFactory,
     TtsDictionaryDatabase Function(String folder)? dictionaryFactory,
+    NovelDataDatabase Function(String folder)? novelDataFactory,
   }) : _episodeFactory = episodeFactory ?? EpisodeCacheDatabase.new,
        _audioFactory = audioFactory ?? TtsAudioDatabase.new,
-       _dictionaryFactory = dictionaryFactory ?? TtsDictionaryDatabase.new;
+       _dictionaryFactory = dictionaryFactory ?? TtsDictionaryDatabase.new,
+       _novelDataFactory = novelDataFactory ?? NovelDataDatabase.new;
 
   final EpisodeCacheDatabase Function(String folder) _episodeFactory;
   final TtsAudioDatabase Function(String folder) _audioFactory;
   final TtsDictionaryDatabase Function(String folder) _dictionaryFactory;
+  final NovelDataDatabase Function(String folder) _novelDataFactory;
 
   final _episode = <String, EpisodeCacheDatabase>{};
   final _audio = <String, TtsAudioDatabase>{};
   final _dictionary = <String, TtsDictionaryDatabase>{};
+  final _novelData = <String, NovelDataDatabase>{};
 
   /// In-flight background closes keyed by folder, so an awaited [closeAll] /
   /// [closeEpisodeCache] can wait for a prior [releaseInBackground] to finish
@@ -53,6 +58,11 @@ class PerFolderDbRegistry {
     return _dictionary.putIfAbsent(key, () => _dictionaryFactory(key));
   }
 
+  NovelDataDatabase novelData(String folder) {
+    final key = folderDbKey(folder);
+    return _novelData.putIfAbsent(key, () => _novelDataFactory(key));
+  }
+
   /// Closes the three handles bound to [folder] (if open), awaiting each
   /// `close()` before evicting it from the cache. Callers MUST await this
   /// before any file-system operation on the folder so the SQLite files are
@@ -70,9 +80,11 @@ class PerFolderDbRegistry {
     await _episode[key]?.close();
     await _audio[key]?.close();
     await _dictionary[key]?.close();
+    await _novelData[key]?.close();
     _episode.remove(key);
     _audio.remove(key);
     _dictionary.remove(key);
+    _novelData.remove(key);
   }
 
   /// Closes and evicts only the episode-cache handle for [folder] (awaited).
@@ -97,7 +109,13 @@ class PerFolderDbRegistry {
     final episode = _episode.remove(key);
     final audio = _audio.remove(key);
     final dictionary = _dictionary.remove(key);
-    if (episode == null && audio == null && dictionary == null) return;
+    final novelData = _novelData.remove(key);
+    if (episode == null &&
+        audio == null &&
+        dictionary == null &&
+        novelData == null) {
+      return;
+    }
     // Track the close so a later awaited closeAll/closeEpisodeCache on this
     // folder can wait for it instead of racing the file operation. Chain onto
     // any prior in-flight close for the same folder so a rapid re-release does
@@ -108,6 +126,7 @@ class PerFolderDbRegistry {
       if (episode != null) await episode.close();
       if (audio != null) await audio.close();
       if (dictionary != null) await dictionary.close();
+      if (novelData != null) await novelData.close();
     });
     _closing[key] = future;
     future.whenComplete(() {
@@ -121,9 +140,11 @@ class PerFolderDbRegistry {
     final episodes = _episode.values.toList();
     final audios = _audio.values.toList();
     final dictionaries = _dictionary.values.toList();
+    final novelDatas = _novelData.values.toList();
     _episode.clear();
     _audio.clear();
     _dictionary.clear();
+    _novelData.clear();
     for (final close in inFlight) {
       await close;
     }
@@ -134,6 +155,9 @@ class PerFolderDbRegistry {
       await db.close();
     }
     for (final db in dictionaries) {
+      await db.close();
+    }
+    for (final db in novelDatas) {
       await db.close();
     }
   }

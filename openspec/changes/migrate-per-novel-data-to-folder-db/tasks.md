@@ -8,10 +8,10 @@
 
 ## 2. PerFolderDbRegistry への統合
 
-- [ ] 2.1 `novelData(folder)` 追加、`closeAll` / `releaseInBackground` / `disposeAll` が `novel_data.db` ハンドルを含むこと、`closeEpisodeCache` は含まないことを検証するテストを作成→失敗確認
-- [ ] 2.2 `PerFolderDbRegistry` に4本目ハンドルを実装し、close 振り付けに組み込む
-- [ ] 2.3 thin-view provider（`per_folder_db_registry_provider` 周辺）に `novel_data.db` ビューを追加し、解放＋provider無効化ヘルパーに束ねる
-- [ ] 2.4 `database-connection-interlock` の契約（in-flight open 共有・close 相互排他・close 中取得の明示エラー・失敗の非キャッシュ）を新ラッパーが満たすテストを作成→実装→パス
+- [x] 2.1 `novelData(folder)` 追加、`closeAll` / `releaseInBackground` / `disposeAll` が `novel_data.db` ハンドルを含むこと、`closeEpisodeCache` は含まないことを検証するテストを作成→失敗確認
+- [x] 2.2 `PerFolderDbRegistry` に4本目ハンドルを実装し、close 振り付けに組み込む
+- [x] 2.3 thin-view provider（`per_folder_db_registry_provider` 周辺）に `novel_data.db` ビューを追加し、解放＋provider無効化ヘルパーに束ねる
+- [x] 2.4 `database-connection-interlock` の契約（in-flight open 共有・close 相互排他・close 中取得の明示エラー・失敗の非キャッシュ）を新ラッパーが満たすテストを作成→実装→パス
 
 ## 3. リポジトリのフォルダDBハンドル化
 

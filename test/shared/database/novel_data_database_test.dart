@@ -152,4 +152,25 @@ void main() {
       expect(dbFile.existsSync(), isTrue);
     });
   });
+
+  group('NovelDataDatabase connection gate', () {
+    test('concurrent reads share a single open handle (in-flight sharing)',
+        () async {
+      final wrapper = NovelDataDatabase(tempDir.path);
+      addTearDown(wrapper.close);
+
+      final results = await Future.wait([wrapper.database, wrapper.database]);
+      expect(identical(results[0], results[1]), isTrue);
+    });
+
+    test('reopens with a fresh handle after close', () async {
+      final wrapper = NovelDataDatabase(tempDir.path);
+      addTearDown(wrapper.close);
+
+      final db1 = await wrapper.database;
+      await wrapper.close();
+      final db2 = await wrapper.database;
+      expect(identical(db1, db2), isFalse);
+    });
+  });
 }

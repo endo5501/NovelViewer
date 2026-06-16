@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/misc.dart'
 
 import '../../features/tts/providers/tts_audio_database_provider.dart';
 import 'folder_db_key.dart';
+import 'novel_data_database_provider.dart';
 import 'per_folder_db_registry_provider.dart';
 
-/// Releases the three per-folder database handles bound to [folderPath]
-/// (`episode_cache.db`, `tts_audio.db`, `tts_dictionary.db`) before a
-/// file-system operation on that folder.
+/// Releases the four per-folder database handles bound to [folderPath]
+/// (`episode_cache.db`, `tts_audio.db`, `tts_dictionary.db`, `novel_data.db`)
+/// before a file-system operation on that folder.
 ///
 /// Closes them via the owning [PerFolderDbRegistry] (`closeAll`, awaited — so
 /// the Windows file lock is gone before `Directory.rename`/`delete`), then
@@ -32,4 +33,5 @@ Future<void> releaseFolderDbHandles(
   invalidate(episodeCacheDatabaseProvider(key));
   invalidate(ttsAudioDatabaseProvider(key));
   invalidate(ttsDictionaryDatabaseProvider(key));
+  invalidate(novelDataDatabaseProvider(key));
 }
