@@ -15,6 +15,20 @@ final readingProgressRepositoryProvider =
   return ReadingProgressRepository(ref.watch(novelDatabaseProvider));
 });
 
+/// Monotonic counter bumped whenever reading progress is written. Consumers
+/// that cache progress-derived state (e.g. the file browser's folder badges)
+/// watch this to recompute after a save, since a write to one novel's
+/// `reading_progress` row is otherwise invisible to a cached aggregate.
+class ReadingProgressRevision extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state = state + 1;
+}
+
+final readingProgressRevisionProvider =
+    NotifierProvider<ReadingProgressRevision, int>(ReadingProgressRevision.new);
+
 /// Saves the current selection as the novel's last-opened file whenever the
 /// user transitions [selectedFileProvider] to a non-null entry inside a novel
 /// folder. Failures are logged at WARNING and otherwise swallowed so a
@@ -38,6 +52,8 @@ final readingProgressAutoSaveListenerProvider = Provider<void>((ref) {
             novelId: novelId,
             fileName: next.name,
           );
+      // Signal cached progress aggregates (folder badges) to refresh.
+      ref.read(readingProgressRevisionProvider.notifier).bump();
     } catch (e, st) {
       _log.warning(
         'Failed to save reading progress for $novelId at ${next.path}',

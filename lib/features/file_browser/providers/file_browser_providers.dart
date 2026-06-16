@@ -130,12 +130,21 @@ final directoryContentsProvider =
 final readingProgressBadgesProvider =
     FutureProvider<Map<String, ReadingProgressBadge>>((ref) async {
   final novels = await ref.watch(allNovelsProvider.future);
+  // Recompute after any reading-progress write so a parent folder's badge
+  // refreshes once the user advances inside the novel (the auto-save listener
+  // bumps this revision after each successful upsert).
+  ref.watch(readingProgressRevisionProvider);
 
-  var fileNameByNovelId = const <String, String>{};
+  // NOTE: despite its name, `reading_progress.novel_id` stores the registered
+  // novel's `folder_name` — the auto-save path keys rows by `resolveNovelId`,
+  // which returns the nearest registered folder's leaf name (= folder_name),
+  // NOT the site-specific `NovelMetadata.novelId`. So this map is keyed by
+  // folder_name and the lookup below correctly uses `novel.folderName`.
+  var fileNameByFolderName = const <String, String>{};
   try {
     final progress =
         await ref.watch(readingProgressRepositoryProvider).findAll();
-    fileNameByNovelId = {for (final p in progress) p.novelId: p.fileName};
+    fileNameByFolderName = {for (final p in progress) p.novelId: p.fileName};
   } catch (e, st) {
     _readingProgressLog.warning(
       'Failed to bulk-read reading progress for file browser badges; '
@@ -149,7 +158,7 @@ final readingProgressBadgesProvider =
     for (final novel in novels)
       novel.folderName: ReadingProgressBadge.from(
         episodeCount: novel.episodeCount,
-        fileName: fileNameByNovelId[novel.folderName],
+        fileName: fileNameByFolderName[novel.folderName],
       ),
   };
 });

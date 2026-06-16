@@ -118,6 +118,55 @@ void main() {
       expect(repo.upsertCalls.first.fileName, '003_chapter3.txt');
     });
 
+    test('bumps the reading-progress revision after a successful save',
+        () async {
+      // The folder-list badge provider watches this revision so it can refresh
+      // a parent folder's "read / total" after the user advances inside the
+      // novel. Without the bump the badge stays stale until an unrelated
+      // invalidation.
+      final repo = _FakeRepository();
+      final container = _buildContainer(
+        repository: repo,
+        initialDirectory: '/library/narou_n1234ab',
+      );
+      addTearDown(container.dispose);
+
+      container.read(readingProgressAutoSaveListenerProvider);
+      final before = container.read(readingProgressRevisionProvider);
+
+      container.read(selectedFileProvider.notifier).selectFile(
+            const FileEntry(
+              name: '003_chapter3.txt',
+              path: '/library/narou_n1234ab/003_chapter3.txt',
+            ),
+          );
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(container.read(readingProgressRevisionProvider), before + 1);
+    });
+
+    test('does not bump the revision when no progress is saved', () async {
+      final repo = _FakeRepository();
+      final container = _buildContainer(
+        repository: repo,
+        initialDirectory: '/library',
+      );
+      addTearDown(container.dispose);
+
+      container.read(readingProgressAutoSaveListenerProvider);
+      final before = container.read(readingProgressRevisionProvider);
+
+      // Selection at the library root resolves no novel id → no upsert.
+      container.read(selectedFileProvider.notifier).selectFile(
+            const FileEntry(name: 'memo.txt', path: '/library/memo.txt'),
+          );
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(container.read(readingProgressRevisionProvider), before);
+    });
+
     test(
         'upserts under the registered leaf name for a nested novel folder '
         '(F106 regression)', () async {

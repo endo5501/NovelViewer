@@ -25,7 +25,7 @@
 
 ## 5. 最終確認
 
-- [ ] 5.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 5.3 `fvm flutter analyze`でリントを実行
-- [ ] 5.4 `fvm flutter test`でテストを実行
+- [x] 5.1 code-reviewスキルを使用してコードレビューを実施（key mismatch 指摘は誤検出と検証→明確化コメント追加）
+- [x] 5.2 codexスキルを使用して現在開発中のコードレビューを実施（保存後にバッジが更新されない staleness バグを発見→revision provider で修正）
+- [x] 5.3 `fvm flutter analyze`でリントを実行（No issues found）
+- [x] 5.4 `fvm flutter test`でテストを実行（全2145件パス）

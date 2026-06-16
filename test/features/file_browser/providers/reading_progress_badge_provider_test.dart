@@ -9,6 +9,7 @@ import 'package:novel_viewer/features/novel_metadata_db/data/novel_repository.da
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
+import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 
 import '../../../helpers/novel_metadata_db_fixture.dart';
 
@@ -114,6 +115,32 @@ void main() {
       isNotEmpty,
       reason: 'bulk read failure must be logged at WARNING',
     );
+  });
+
+  test('recomputes when the reading-progress revision is bumped', () async {
+    final novelRepo = NovelRepository(novelDatabase);
+    await novelRepo.upsert(_novel(folderName: 'narou_n1234ab', episodeCount: 120));
+
+    final progressRepo = ReadingProgressRepository(novelDatabase);
+
+    final container = makeContainer();
+
+    // Initially unread.
+    final before =
+        await container.read(readingProgressBadgesProvider.future);
+    expect(before['narou_n1234ab']!.read, 0);
+
+    // Simulate the user advancing inside the novel: progress is saved and the
+    // revision is bumped (what the auto-save listener does).
+    await progressRepo.upsert(
+      novelId: 'narou_n1234ab',
+      fileName: '005_chapter5.txt',
+    );
+    container.read(readingProgressRevisionProvider.notifier).bump();
+
+    final after =
+        await container.read(readingProgressBadgesProvider.future);
+    expect(after['narou_n1234ab']!.read, 5);
   });
 
   test('returns badge values usable by the UI (ReadingProgressBadge)',
