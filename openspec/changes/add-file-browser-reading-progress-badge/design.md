@@ -46,6 +46,12 @@
 - 分母 `episode_count` を用いて `0 / N` を表示する（進捗バーは 0%）。
 - **理由**: 未読でも「全何話あるか」が一覧でわかるという当初要望に最も近い。
 
+### 決定5: 保存後のバッジ更新を `reading_progress` リビジョンで駆動する（レビュー追加）
+
+- バッジ用プロバイダは集約値をキャッシュするため、ユーザーが小説内で読み進めて `reading_progress` が upsert されても、親フォルダ一覧へ戻ったときバッジが古いままになる（codex レビューで検出）。`reading_progress` 層に単調増加カウンタ `readingProgressRevisionProvider` を設け、auto-save リスナーが upsert 成功後に `bump()`、バッジ用プロバイダが `watch` して再計算する。
+- **理由**: バッジは `reading_progress` レイヤーに既に依存しているため、リビジョンをそこに置けば `file_browser` → `reading_progress` の逆 import（循環）を生まずに済む。書き込みを発生源で1回シグナルするだけなので、ファイル選択ごとの過剰な再計算も避けられる。
+- **代替案**: auto-save リスナーから直接 `ref.invalidate(readingProgressBadgesProvider)` を呼ぶ案。→ `reading_progress_providers` が `file_browser_providers` を import する循環依存になるため不採用。
+
 ## Risks / Trade-offs
 
 - **`episode_count` と実ファイル数の食い違い** → 手動で `.txt` を削除した等のケースで分母が実態とずれうる。登録小説の通常運用（DL／更新で `episode_count` が維持される）では一致するため、スコープ外として許容。
