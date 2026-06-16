@@ -1,34 +1,24 @@
 ## Purpose
 
 Persist user bookmarks (novel ID, file name, optional line number) in the SQLite metadata database. Provides CRUD APIs for adding, removing, listing, and checking bookmarks, with database migrations to evolve the `bookmarks` table schema over time.
-
 ## Requirements
-
 ### Requirement: Bookmark data persistence
-The system SHALL persist bookmark data in the existing SQLite database (`novel_metadata.db`) using a `bookmarks` table. The bookmark identity SHALL be the move/rename-safe combination of `novel_id` and `file_name` (plus optional `line_number`); the table SHALL NOT persist the absolute file path. The database version SHALL be upgraded to 8, which recreates the `bookmarks` table to drop the `file_path` column and change the UNIQUE constraint from (`novel_id`, `file_path`, `line_number`) to (`novel_id`, `file_name`, `line_number`).
+The system SHALL persist bookmark data **in the per-folder `novel_data.db` of the bookmarked novel** using a `bookmarks` table. The table SHALL NOT carry a `novel_id` column; the novel identity is conveyed by which folder's `novel_data.db` the row lives in. The bookmark identity within a novel SHALL be the move/rename-safe combination of `file_name` plus optional `line_number`; the table SHALL NOT persist the absolute file path. The `BookmarkRepository` SHALL be constructed with a folder-scoped `novel_data.db` handle and its operations SHALL NOT take a `novel_id` argument.
 
-#### Scenario: Database migration creates bookmarks table (legacy v2 → v3)
-- **WHEN** the application starts with database version 2
-- **THEN** the database SHALL be upgraded to version 3 with a `bookmarks` table containing columns: `id` (INTEGER PRIMARY KEY AUTOINCREMENT), `novel_id` (TEXT NOT NULL), `file_name` (TEXT NOT NULL), `file_path` (TEXT NOT NULL), `created_at` (TEXT NOT NULL), with a UNIQUE constraint on (`novel_id`, `file_path`)
+The legacy global `bookmarks` table in `novel_metadata.db` SHALL be dropped at schema version 9 after its rows are migrated into each novel's `novel_data.db`.
 
-#### Scenario: Database migration adds line_number column (legacy v3 → v4)
-- **WHEN** the application starts with database version 3
-- **THEN** the database SHALL be upgraded to version 4 by recreating the `bookmarks` table with columns including `line_number` (INTEGER) and `file_path` (TEXT NOT NULL), with a UNIQUE constraint on (`novel_id`, `file_path`, `line_number`)
-- **AND** existing bookmark data SHALL be preserved with `line_number` set to NULL
+#### Scenario: Fresh install creates bookmarks table in novel_data.db
+- **WHEN** the user adds the first bookmark for a novel
+- **THEN** that novel's `novel_data.db` SHALL contain a `bookmarks` table with columns `id` (INTEGER PRIMARY KEY AUTOINCREMENT), `file_name` (TEXT NOT NULL), `line_number` (INTEGER), `created_at` (TEXT NOT NULL), with a UNIQUE constraint on (`file_name`, `line_number`), and no `novel_id` or `file_path` column
 
-#### Scenario: Database migration drops file_path and re-keys on file_name (v7 → v8)
-- **WHEN** the application starts with a database at version 7 whose `bookmarks` table still has a `file_path` column and a UNIQUE constraint on (`novel_id`, `file_path`, `line_number`)
-- **THEN** the database SHALL be upgraded to version 8 by recreating the `bookmarks` table with columns: `id` (INTEGER PRIMARY KEY AUTOINCREMENT), `novel_id` (TEXT NOT NULL), `file_name` (TEXT NOT NULL), `line_number` (INTEGER), `created_at` (TEXT NOT NULL), with a UNIQUE constraint on (`novel_id`, `file_name`, `line_number`)
-- **AND** the `file_path` column SHALL be removed
-- **AND** existing rows SHALL be preserved, carrying over `id`, `novel_id`, `file_name`, `line_number`, and `created_at`
+#### Scenario: Bookmark identity within a novel
+- **WHEN** a bookmark is added for `file_name="010_ch.txt"` at `line_number=42`
+- **THEN** the row is uniquely identified within the novel by (`file_name`, `line_number`), without reference to the absolute path or a novel id
 
-#### Scenario: Migration deduplicates rows that collide on the new key
-- **WHEN** the v7 `bookmarks` table contains two rows with the same (`novel_id`, `file_name`, `line_number`) but different `file_path` values
-- **THEN** the v8 migration SHALL keep exactly one row (the one with the earliest `created_at`) and drop the other without raising
-
-#### Scenario: Fresh install creates bookmarks table at v8
-- **WHEN** the application is installed for the first time
-- **THEN** the database SHALL be created at version 8 with the `bookmarks` table containing `id`, `novel_id`, `file_name`, `line_number`, `created_at` (no `file_path` column) and a UNIQUE constraint on (`novel_id`, `file_name`, `line_number`)
+#### Scenario: Existing global bookmarks migrate to novel_data.db
+- **WHEN** the application starts with a `novel_metadata.db` whose `bookmarks` table contains rows keyed by `novel_id`
+- **THEN** each row SHALL be copied (upsert) into the `bookmarks` table of the `novel_data.db` for the folder whose name equals `novel_id`, dropping the `novel_id` column
+- **AND** after all extant folders are migrated, the global `bookmarks` table SHALL be dropped at version 9
 
 ### Requirement: Add bookmark
 The system SHALL allow adding a bookmark for a specific file and line within a novel. A bookmark SHALL be uniquely identified by the combination of `novel_id`, `file_name`, and `line_number`. The system SHALL NOT store an absolute file path.
@@ -108,3 +98,4 @@ When the user opens (jumps to) a stored bookmark, the system SHALL resolve the t
 #### Scenario: Jump when the target file no longer exists
 - **WHEN** the user opens a bookmark whose `file_name` is not present in the novel's current folder
 - **THEN** the system SHALL NOT navigate and SHALL show the "file not found" message
+
