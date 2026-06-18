@@ -8,9 +8,9 @@
 
 ## 2. 実装
 
-- [ ] 2.1 `_buildDirectoryTile` のタイトル `Text(dir.displayName, ...)` を `Tooltip(message: dir.displayName, child: Text(...))` でラップする
-- [ ] 2.2 `_buildFileTile` のタイトル `Text(file.name, ...)` を `Tooltip(message: file.name, child: Text(...))` でラップする（選択装飾の `Container` 分岐より内側、`Text` の直上に置く）
-- [ ] 2.3 `fvm flutter test` を実行し、1章で追加したテストが通過することを確認する
+- [x] 2.1 `_buildDirectoryTile` のタイトル `Text(dir.displayName, ...)` を `Tooltip(message: dir.displayName, child: Text(...))` でラップする
+- [x] 2.2 `_buildFileTile` のタイトル `Text(file.name, ...)` を `Tooltip(message: file.name, child: Text(...))` でラップする（選択装飾の `Container` 分岐より内側、`Text` の直上に置く）
+- [x] 2.3 `fvm flutter test` を実行し、1章で追加したテストが通過することを確認する
 
 ## 3. 最終確認
 
