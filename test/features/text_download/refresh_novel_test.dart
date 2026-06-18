@@ -76,7 +76,7 @@ void main() {
 
       await container
           .read(downloadProvider.notifier)
-          .refreshNovel('narou_n1234ab');
+          .refreshNovel('narou_n1234ab', parentPath: '/tmp/test_novels');
 
       expect(fakeRepo.lastFolderName, 'narou_n1234ab');
       expect(
@@ -88,6 +88,33 @@ void main() {
         container.read(downloadProvider).status,
         DownloadStatus.completed,
       );
+    });
+
+    test(
+        'refresh of a novel inside a subfolder writes back to that subfolder '
+        '(no library-root duplication)', () async {
+      final fakeRepo = _FakeNovelRepository(testMetadata);
+      final trackingNotifier = _TrackingDownloadNotifier();
+
+      final container = ProviderContainer(
+        overrides: [
+          novelRepositoryProvider.overrideWithValue(fakeRepo),
+          libraryPathProvider.overrideWithValue('/tmp/test_novels'),
+          downloadProvider.overrideWith(() => trackingNotifier),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(downloadProvider);
+
+      await container.read(downloadProvider.notifier).refreshNovel(
+            'narou_n1234ab',
+            parentPath: '/tmp/test_novels/完結済み/異世界',
+          );
+
+      // The re-download targets the novel's current physical parent, not the
+      // library root, so no duplicate folder is created at the root.
+      expect(trackingNotifier.lastOutputPath, '/tmp/test_novels/完結済み/異世界');
+      expect(trackingNotifier.lastOutputPath, isNot('/tmp/test_novels'));
     });
 
     test('does nothing when download is already in progress', () async {
@@ -113,7 +140,7 @@ void main() {
 
       await container
           .read(downloadProvider.notifier)
-          .refreshNovel('narou_n1234ab');
+          .refreshNovel('narou_n1234ab', parentPath: '/tmp/test_novels');
 
       // Should still be downloading (unchanged)
       expect(
@@ -136,7 +163,7 @@ void main() {
 
       await container
           .read(downloadProvider.notifier)
-          .refreshNovel('unknown_folder');
+          .refreshNovel('unknown_folder', parentPath: '/tmp/test_novels');
 
       expect(
         container.read(downloadProvider).status,

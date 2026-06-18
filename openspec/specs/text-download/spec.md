@@ -3,23 +3,49 @@
 Download Web novels (Narou, Kakuyomu, Aozora Bunko) to local files in the user's library directory, with episode-level update tracking and progress reporting.
 ## Requirements
 ### Requirement: Download save location
-The system SHALL always save downloaded novels to the library root directory, regardless of the user's current browsing location in the file browser. On Windows, the library root directory SHALL be located under the exe directory. On macOS/Linux, the library root directory SHALL remain under `getApplicationDocumentsDirectory()`.
 
-#### Scenario: Download from library root
-- **WHEN** the user initiates a download while browsing the library root directory
-- **THEN** the novel is saved to the library root directory
+The system SHALL save a downloaded novel into a destination folder chosen by the user at download time. The destination SHALL be the library root by default, or any organizational (non-novel) folder located under the library root that the user selects in the download dialog. The system SHALL create the novel folder (`{siteType}_{novelId}`) under the selected destination (`<destination>/{siteType}_{novelId}`).
 
-#### Scenario: Download from inside a novel folder
-- **WHEN** the user initiates a download while browsing inside a novel's folder (e.g., viewing episodes)
-- **THEN** the novel is saved to the library root directory, not inside the currently viewed novel folder
+The selectable destinations SHALL be limited to the library root and folders under the library root that are NOT registered novel folders (and that are not located inside a registered novel folder); novel folders and their subtrees SHALL NOT be offered as destinations. The destination selection UI SHALL be presented within the download dialog. When the user makes no explicit choice, the default SHALL be the library root, preserving the previous behavior.
+
+On Windows, the library root directory SHALL be located under the exe directory. On macOS/Linux, the library root directory SHALL remain under `getApplicationDocumentsDirectory()`. The library root resolution logic itself SHALL be unchanged.
+
+All newly introduced user-visible strings (destination selection UI) SHALL be provided via `.arb` localization with full en/ja/zh parity.
+
+#### Scenario: Default destination is the library root
+
+- **WHEN** the user initiates a download without changing the destination selection
+- **THEN** the novel is saved under the library root directory (`<library_root>/{siteType}_{novelId}/`)
+
+#### Scenario: Download into a selected subfolder
+
+- **WHEN** the user selects an existing organizational subfolder (e.g. `完結済み/異世界`) as the destination and initiates a download
+- **THEN** the novel folder is created under that subfolder (`<library_root>/完結済み/異世界/{siteType}_{novelId}/`)
+
+#### Scenario: Destination list excludes novel folders
+
+- **WHEN** the download dialog presents the destination choices
+- **THEN** the list SHALL include the library root and organizational folders under it, and SHALL NOT include any registered novel folder or any folder located inside a registered novel folder
+
+#### Scenario: Nested novel is still recognized after download
+
+- **WHEN** a novel has been downloaded into an organizational subfolder
+- **THEN** the file browser SHALL recognize it as a novel folder by its leaf name (`{siteType}_{novelId}`) regardless of nesting depth (existing leaf-name classification behavior)
 
 #### Scenario: Windows library location
+
 - **WHEN** the application resolves the library path on Windows
 - **THEN** the library root directory SHALL be `<exe_directory>/NovelViewer/`
 
 #### Scenario: macOS library location unchanged
+
 - **WHEN** the application resolves the library path on macOS
 - **THEN** the library root directory SHALL be `<documents_directory>/NovelViewer/` (existing behavior)
+
+#### Scenario: Destination selection strings have full locale parity
+
+- **WHEN** the application is built for en, ja, or zh
+- **THEN** the destination selection UI strings SHALL be present in all three `.arb` files with no missing-translation warnings from `gen-l10n`
 
 ### Requirement: Episode download
 The system SHALL download each episode's HTML page, extract the body text, and save it as a text file. Before downloading, the system SHALL compare the episode's update date from the index page with the cached value and skip episodes that have not been modified since the last download. When the novel's index spans multiple pages, the system SHALL fetch all index pages, merge the episode lists with continuous numbering, and then download all episodes. When the extracted body text is empty (the adapter's `parseEpisode` returns an empty string after trimming, e.g. due to site markup drift / selector mismatch), the system SHALL treat it as a download failure: it SHALL NOT save a text file, SHALL NOT register or update the episode cache for that episode, SHALL increment `failedCount`, and SHALL log a WARNING. This ensures the episode is retried on the next update instead of being permanently skipped via a cached empty file.

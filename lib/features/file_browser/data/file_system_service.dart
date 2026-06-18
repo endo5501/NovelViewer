@@ -234,6 +234,39 @@ class FileSystemService {
         .toList();
   }
 
+  /// Lists organizational (non-novel) folders under [rootPath] as candidate
+  /// download destinations.
+  ///
+  /// The tree is walked recursively. Any folder whose leaf name is in
+  /// [registeredFolderNames] is a novel folder: it is excluded AND its entire
+  /// subtree is pruned, because nesting a novel inside another novel folder
+  /// must never be offered. [rootPath] itself is not included; the caller is
+  /// expected to prepend it as the default destination. Results are sorted by
+  /// their path for a stable ordering.
+  Future<List<DirectoryEntry>> listDownloadDestinationFolders(
+    String rootPath,
+    Set<String> registeredFolderNames,
+  ) async {
+    final results = <DirectoryEntry>[];
+
+    Future<void> walk(String dirPath) async {
+      final dir = Directory(dirPath);
+      if (!await dir.exists()) return;
+      final children = await dir.list().toList();
+      for (final child in children.whereType<Directory>()) {
+        final name = p.basename(child.path);
+        // Prune novel folders together with everything nested inside them.
+        if (registeredFolderNames.contains(name)) continue;
+        results.add(DirectoryEntry(name: name, path: child.path));
+        await walk(child.path);
+      }
+    }
+
+    await walk(rootPath);
+    results.sort((a, b) => a.path.compareTo(b.path));
+    return results;
+  }
+
   Future<void> deleteDirectory(String path) async {
     final dir = Directory(path);
     // Idempotent: an already-missing directory counts as deleted. This lets a

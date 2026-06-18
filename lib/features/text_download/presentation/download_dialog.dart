@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
@@ -24,6 +25,10 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
   final _urlController = TextEditingController();
   final _registry = NovelSiteRegistry();
   String? _urlError;
+
+  /// Selected destination folder path. `null` means the library root (the
+  /// default), preserving the previous always-save-to-root behavior.
+  String? _selectedDestinationPath;
 
   @override
   void dispose() {
@@ -60,9 +65,25 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     return _registry.findSite(uri) != null;
   }
 
+  /// Resolves the effective download destination. Mirrors the validity check in
+  /// [_buildDestinationSelector]: when the selected folder is no longer among
+  /// the current candidates (e.g. it was deleted while the dialog was open),
+  /// fall back to the library root so the action matches what the dropdown
+  /// displays.
+  String _resolveOutputPath(String libraryPath) {
+    final selected = _selectedDestinationPath;
+    if (selected == null) return libraryPath;
+    final destinations =
+        ref.read(downloadDestinationFoldersProvider).asData?.value ??
+            const <DirectoryEntry>[];
+    final isValid = destinations.any((d) => d.path == selected);
+    return isValid ? selected : libraryPath;
+  }
+
   void _startDownload() {
     final uri = Uri.parse(_urlController.text);
-    final outputPath = ref.read(libraryPathProvider)!;
+    final libraryPath = ref.read(libraryPathProvider)!;
+    final outputPath = _resolveOutputPath(libraryPath);
     ref.read(downloadProvider.notifier).startDownload(
           url: uri,
           outputPath: outputPath,
@@ -92,11 +113,62 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
               onChanged: _validateUrl,
             ),
             const SizedBox(height: 16),
+            _buildDestinationSelector(downloadState),
+            const SizedBox(height: 16),
             _buildStatusArea(downloadState),
           ],
         ),
       ),
       actions: _buildActions(downloadState),
+    );
+  }
+
+  /// Destination folder dropdown. The first option is the library root (the
+  /// default); the rest are organizational (non-novel) folders under the
+  /// library root, displayed by their path relative to the root. While the
+  /// candidate list is loading or fails to load, only the root option is shown.
+  Widget _buildDestinationSelector(DownloadState state) {
+    final l10n = AppLocalizations.of(context)!;
+    final libraryPath = ref.watch(libraryPathProvider);
+    if (libraryPath == null) return const SizedBox.shrink();
+
+    final destinations =
+        ref.watch(downloadDestinationFoldersProvider).asData?.value ??
+            const <DirectoryEntry>[];
+
+    final items = <DropdownMenuItem<String>>[
+      DropdownMenuItem(
+        value: libraryPath,
+        child: Text(l10n.download_destinationRoot),
+      ),
+      for (final dir in destinations)
+        DropdownMenuItem(value: dir.path, child: Text(dir.displayName)),
+    ];
+
+    // Fall back to the root when the previously-selected folder is no longer
+    // among the candidates (e.g. it was deleted while the dialog was open).
+    final validPaths = items.map((e) => e.value).toSet();
+    final current =
+        (_selectedDestinationPath != null &&
+                validPaths.contains(_selectedDestinationPath))
+            ? _selectedDestinationPath!
+            : libraryPath;
+
+    final isDownloading = state.status == DownloadStatus.downloading;
+
+    return InputDecorator(
+      decoration: InputDecoration(labelText: l10n.download_destinationLabel),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          key: const Key('download_destination_dropdown'),
+          value: current,
+          isExpanded: true,
+          onChanged: isDownloading
+              ? null
+              : (value) => setState(() => _selectedDestinationPath = value),
+          items: items,
+        ),
+      ),
     );
   }
 

@@ -289,6 +289,8 @@
   "download_startButton": "ダウンロード開始",
   "download_indexTruncatedWarning": "目次の取得が途中で失敗しました（一部のエピソードが取得できていない可能性があります）",
   "download_cancelledMessage": "ダウンロードを中断しました",
+  "download_destinationLabel": "保存先フォルダ",
+  "download_destinationRoot": "ライブラリルート（既定）",
 
   "ttsDictionary_title": "読み上げ辞書",
   "ttsDictionary_bothFieldsRequired": "表記と読みの両方を入力してください",

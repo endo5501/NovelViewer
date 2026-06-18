@@ -55,12 +55,16 @@ void main() {
       expect(find.text('キャンセル'), findsOneWidget);
     });
 
-    testWidgets('does not show output directory selector', (tester) async {
+    testWidgets('shows the destination folder selector', (tester) async {
       await tester.pumpWidget(createTestApp());
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.folder_open), findsNothing);
+      // The destination dropdown is always present; when the candidate list
+      // cannot be loaded (no DB in this test) it falls back to the root option.
+      expect(find.byKey(const Key('download_destination_dropdown')),
+          findsOneWidget);
+      expect(find.text('ライブラリルート（既定）'), findsWidgets);
     });
 
     testWidgets('download button is disabled when URL is empty',

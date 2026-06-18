@@ -516,6 +516,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get download_cancelledMessage => '下载已取消';
 
   @override
+  String get download_destinationLabel => '保存文件夹';
+
+  @override
+  String get download_destinationRoot => '库根目录（默认）';
+
+  @override
   String get ttsDictionary_title => '朗读词典';
 
   @override

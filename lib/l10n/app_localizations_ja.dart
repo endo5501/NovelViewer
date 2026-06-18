@@ -517,6 +517,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get download_cancelledMessage => 'ダウンロードを中断しました';
 
   @override
+  String get download_destinationLabel => '保存先フォルダ';
+
+  @override
+  String get download_destinationRoot => 'ライブラリルート（既定）';
+
+  @override
   String get ttsDictionary_title => '読み上げ辞書';
 
   @override
