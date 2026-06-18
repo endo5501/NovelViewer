@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/episode_cache/data/episode_cache_repository.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
-import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_download/data/download_service.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
@@ -189,7 +188,18 @@ class DownloadNotifier extends Notifier<DownloadState> {
     }
   }
 
-  Future<void> refreshNovel(String folderName) async {
+  /// Re-downloads the novel identified by [folderName].
+  ///
+  /// [parentPath] is the directory that physically contains the novel folder
+  /// (i.e. `dirname` of the novel folder's path). The re-download targets this
+  /// location so a novel stored inside an organizational subfolder is updated
+  /// in place rather than being duplicated at the library root. The caller
+  /// (which already holds the novel folder's physical path) is responsible for
+  /// supplying it.
+  Future<void> refreshNovel(
+    String folderName, {
+    required String parentPath,
+  }) async {
     if (state.status == DownloadStatus.downloading) {
       return;
     }
@@ -207,18 +217,9 @@ class DownloadNotifier extends Notifier<DownloadState> {
         return;
       }
 
-      final libraryPath = ref.read(libraryPathProvider);
-      if (libraryPath == null) {
-        state = const DownloadState(
-          status: DownloadStatus.error,
-          errorMessage: 'ライブラリパスが設定されていません',
-        );
-        return;
-      }
-
       await startDownload(
         url: Uri.parse(metadata.url),
-        outputPath: libraryPath,
+        outputPath: parentPath,
       );
     } catch (e) {
       state = DownloadState(

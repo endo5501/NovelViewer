@@ -528,6 +528,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get download_cancelledMessage => 'Download cancelled';
 
   @override
+  String get download_destinationLabel => 'Destination folder';
+
+  @override
+  String get download_destinationRoot => 'Library root (default)';
+
+  @override
   String get ttsDictionary_title => 'TTS Dictionary';
 
   @override

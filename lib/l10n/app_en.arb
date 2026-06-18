@@ -159,6 +159,8 @@
   "download_startButton": "Start download",
   "download_indexTruncatedWarning": "Failed to fetch the full table of contents; some episodes may be missing",
   "download_cancelledMessage": "Download cancelled",
+  "download_destinationLabel": "Destination folder",
+  "download_destinationRoot": "Library root (default)",
 
   "ttsDictionary_title": "TTS Dictionary",
   "ttsDictionary_bothFieldsRequired": "Both surface form and reading are required",

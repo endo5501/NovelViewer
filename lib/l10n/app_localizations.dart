@@ -1012,6 +1012,18 @@ abstract class AppLocalizations {
   /// **'ダウンロードを中断しました'**
   String get download_cancelledMessage;
 
+  /// No description provided for @download_destinationLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'保存先フォルダ'**
+  String get download_destinationLabel;
+
+  /// No description provided for @download_destinationRoot.
+  ///
+  /// In ja, this message translates to:
+  /// **'ライブラリルート（既定）'**
+  String get download_destinationRoot;
+
   /// No description provided for @ttsDictionary_title.
   ///
   /// In ja, this message translates to:

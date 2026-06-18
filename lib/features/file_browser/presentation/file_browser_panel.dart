@@ -556,7 +556,13 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       return;
     }
 
-    ref.read(downloadProvider.notifier).refreshNovel(dir.name);
+    // Re-download into the novel folder's current physical parent so a novel
+    // stored inside an organizational subfolder updates in place instead of
+    // being duplicated at the library root. `dir.path` is the novel folder's
+    // absolute path; its dirname is the parent directory.
+    ref
+        .read(downloadProvider.notifier)
+        .refreshNovel(dir.name, parentPath: p.dirname(dir.path));
 
     showDialog<void>(
       context: context,

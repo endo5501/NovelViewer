@@ -163,6 +163,41 @@ final readingProgressBadgesProvider =
   };
 });
 
+/// Candidate download destination folders: organizational (non-novel) folders
+/// under the library root, each with [DirectoryEntry.displayName] set to its
+/// path relative to the library root (e.g. `完結済み/異世界`) for display.
+///
+/// The library root itself is the default destination and is NOT included here;
+/// the download dialog prepends it. Novel folders and their subtrees are
+/// excluded by [FileSystemService.listDownloadDestinationFolders] so a novel is
+/// never nested inside another novel.
+///
+/// `autoDispose`: the download dialog is the only consumer and is short-lived.
+/// Disposing once it closes means each time the dialog reopens the candidate
+/// list is recomputed from the current filesystem, so folders created, renamed,
+/// moved, or deleted via the file browser between dialog sessions are always
+/// reflected (rather than served from a stale container-level cache).
+final downloadDestinationFoldersProvider =
+    FutureProvider.autoDispose<List<DirectoryEntry>>((ref) async {
+  final libraryPath = ref.watch(libraryPathProvider);
+  if (libraryPath == null) return const [];
+
+  final service = ref.watch(fileSystemServiceProvider);
+  final novels = await ref.watch(allNovelsProvider.future);
+  final registered = {for (final novel in novels) novel.folderName};
+
+  final folders =
+      await service.listDownloadDestinationFolders(libraryPath, registered);
+  return [
+    for (final folder in folders)
+      DirectoryEntry(
+        name: folder.name,
+        path: folder.path,
+        displayName: p.relative(folder.path, from: libraryPath),
+      ),
+  ];
+});
+
 final selectedNovelTitleProvider = FutureProvider<String?>((ref) async {
   final currentDir = ref.watch(currentDirectoryProvider);
   final libraryPath = ref.watch(libraryPathProvider);
