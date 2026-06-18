@@ -994,6 +994,132 @@ void main() {
       expect(find.text('変更'), findsOneWidget);
       expect(find.text('キャンセル'), findsOneWidget);
     });
+
+    testWidgets(
+        'folder tile wraps its title in a Tooltip showing the full displayName',
+        (WidgetTester tester) async {
+      const longTitle = '非常に長い小説タイトルが続きます。フルネームをツールチップで表示';
+      const testDir = DirectoryEntry(
+        name: 'n1234',
+        path: '/library/n1234',
+        displayName: longTitle,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return const DirectoryContents(
+                  files: [], subdirectories: [testDir]);
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/library');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: SizedBox(width: 200, child: FileBrowserPanel()),
+              )),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final tooltip = tester.widget<Tooltip>(
+        find.ancestor(
+          of: find.text(longTitle),
+          matching: find.byType(Tooltip),
+        ),
+      );
+      expect(tooltip.message, longTitle,
+          reason: 'Folder tile tooltip must show the full displayName');
+    });
+
+    testWidgets(
+        'file tile wraps its name in a Tooltip showing the full file name',
+        (WidgetTester tester) async {
+      const longName = '0001_とても長いエピソードタイトルのファイル名が続きます.txt';
+      const testFile = FileEntry(name: longName, path: '/test/$longName');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return const DirectoryContents(
+                  files: [testFile], subdirectories: []);
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/test');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: SizedBox(width: 200, child: FileBrowserPanel()),
+              )),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final tooltip = tester.widget<Tooltip>(
+        find.ancestor(
+          of: find.text(longName),
+          matching: find.byType(Tooltip),
+        ),
+      );
+      expect(tooltip.message, longName,
+          reason: 'File tile tooltip must show the full file name');
+    });
+
+    testWidgets(
+        'selected file tile keeps the name Tooltip and the selection decoration',
+        (WidgetTester tester) async {
+      const testFile =
+          FileEntry(name: '001-ep1.txt', path: '/test/001-ep1.txt');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return const DirectoryContents(
+                  files: [testFile], subdirectories: []);
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/test');
+            }),
+            selectedFileProvider.overrideWith(() {
+              return _TestSelectedFileNotifier(testFile);
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: FileBrowserPanel())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final tooltip = tester.widget<Tooltip>(
+        find.ancestor(
+          of: find.text('001-ep1.txt'),
+          matching: find.byType(Tooltip),
+        ),
+      );
+      expect(tooltip.message, '001-ep1.txt',
+          reason: 'Selected file tile must still expose the name Tooltip');
+
+      // The selection decoration must remain intact.
+      expect(find.byKey(const Key('selected_file_tile_decoration')),
+          findsOneWidget);
+    });
   });
 }
 

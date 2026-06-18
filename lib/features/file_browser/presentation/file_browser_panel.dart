@@ -265,11 +265,15 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
 
     final tile = ListTile(
       leading: const Icon(Icons.description),
-      title: Text(
-        file.name,
-        style: isSelected ? const TextStyle(fontWeight: FontWeight.w600) : null,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+      title: Tooltip(
+        message: file.name,
+        child: Text(
+          file.name,
+          style:
+              isSelected ? const TextStyle(fontWeight: FontWeight.w600) : null,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
       trailing: switch (ttsStatus) {
         TtsEpisodeStatus.completed => const Icon(
@@ -312,10 +316,13 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
   ) {
     final tile = ListTile(
       leading: Icon(isNovel ? Icons.menu_book : Icons.folder),
-      title: Text(
-        dir.displayName,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+      title: Tooltip(
+        message: dir.displayName,
+        child: Text(
+          dir.displayName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
       subtitle: badge == null ? null : _ReadingProgressBar(badge: badge),
       onTap: () {
