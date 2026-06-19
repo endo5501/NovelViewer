@@ -27,6 +27,14 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
+/// Whether a text input (e.g. the search box) currently holds focus. Used to
+/// keep Tab and Escape from being repurposed while the user is typing.
+bool _isTextFieldFocused() {
+  final ctx = FocusManager.instance.primaryFocus?.context;
+  return ctx != null &&
+      ctx.findAncestorStateOfType<EditableTextState>() != null;
+}
+
 /// Action for `SwitchPaneIntent` (Tab). Disabled while a text field is focused
 /// so Tab keeps its normal behavior during text entry (e.g. the search box)
 /// instead of switching panes.
@@ -36,11 +44,7 @@ class _SwitchPaneAction extends Action<SwitchPaneIntent> {
   final VoidCallback onToggle;
 
   @override
-  bool isEnabled(SwitchPaneIntent intent) {
-    final ctx = FocusManager.instance.primaryFocus?.context;
-    return ctx == null ||
-        ctx.findAncestorStateOfType<EditableTextState>() == null;
-  }
+  bool isEnabled(SwitchPaneIntent intent) => !_isTextFieldFocused();
 
   @override
   Object? invoke(SwitchPaneIntent intent) {
@@ -86,11 +90,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (event is! KeyDownEvent) return false;
     if (event.logicalKey != LogicalKeyboardKey.escape) return false;
 
-    final ctx = FocusManager.instance.primaryFocus?.context;
-    if (ctx != null &&
-        ctx.findAncestorStateOfType<EditableTextState>() != null) {
-      return false;
-    }
+    if (_isTextFieldFocused()) return false;
 
     final playback = ref.read(ttsPlaybackStateProvider);
     if (playback == TtsPlaybackState.playing ||

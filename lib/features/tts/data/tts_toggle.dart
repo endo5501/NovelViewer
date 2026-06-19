@@ -4,7 +4,7 @@ import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart'
 ///
 /// Stop is intentionally absent: the toggle only cycles start/pause/resume;
 /// stopping playback is bound to Escape instead.
-enum TtsToggleResolution { start, pause, resume, stop }
+enum TtsToggleResolution { start, pause, resume }
 
 /// Resolves a TTS toggle request against the current state machine.
 ///

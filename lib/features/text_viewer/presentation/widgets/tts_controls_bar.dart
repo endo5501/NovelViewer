@@ -82,8 +82,6 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
         _pausePlayback();
       case TtsToggleResolution.resume:
         _resumePlayback();
-      case TtsToggleResolution.stop:
-        _stopStreaming();
     }
   }
 

@@ -107,8 +107,14 @@ Future<KeyBinding?> _captureKeyBinding(BuildContext context) {
         content: Focus(
           autofocus: true,
           onKeyEvent: (node, event) {
-            if (event is! KeyDownEvent) return KeyEventResult.handled;
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
             final key = event.logicalKey;
+            // Escape cancels capture rather than binding itself (Escape is a
+            // reserved cancel key and is not customizable).
+            if (key == LogicalKeyboardKey.escape) {
+              Navigator.of(dialogContext).pop();
+              return KeyEventResult.handled;
+            }
             if (_isModifierKey(key)) return KeyEventResult.handled;
 
             final pressed = HardwareKeyboard.instance.logicalKeysPressed;

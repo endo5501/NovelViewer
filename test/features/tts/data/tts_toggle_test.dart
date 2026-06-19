@@ -35,13 +35,12 @@ void main() {
       );
     });
 
-    test('toggle never resolves to stop (stop is Escape only)', () {
+    test('resolves to a value for every state combination', () {
       for (final audio in TtsAudioState.values) {
         for (final playback in TtsPlaybackState.values) {
-          expect(
-            resolveTtsToggle(audio, playback),
-            isNot(TtsToggleResolution.stop),
-          );
+          // No combination is left unresolved (stop is Escape-only, hence not
+          // part of the toggle resolution at all).
+          expect(resolveTtsToggle(audio, playback), isA<TtsToggleResolution>());
         }
       }
     });
