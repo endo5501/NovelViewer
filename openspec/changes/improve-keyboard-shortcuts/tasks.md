@@ -9,8 +9,8 @@
 
 ## 2. HomeScreenの集約（動的Shortcutsマップ・クローズ処理統合）
 
-- [ ] 2.1 `Shortcuts`マップを`keyBindingsProvider`由来で動的構築するテストを書く（`home_screen_test`を拡張、TDD）
-- [ ] 2.2 固定マップを撤去し、動的構築を実装する。割り当て変更が再起動なしで反映されることを確認する
+- [x] 2.1 `Shortcuts`マップを`keyBindingsProvider`由来で動的構築するテストを書く（`home_screen_test`を拡張、TDD）
+- [x] 2.2 固定マップを撤去し、動的構築を実装する。割り当て変更が再起動なしで反映されることを確認する
 - [ ] 2.3 検索の共通クローズ関数（検索ボックス非表示＋クエリ/結果クリア＋右カラムを閉じる）を用意し、Ctrl+Fトグルの閉じと検索欄フォーカス時のEsc（`search_results_panel.dart`の`_onEscape`）の双方から呼ぶテストを書き、実装する。フォーカス非依存の旧グローバルEsc検索クローズ（`_handleEscapeKey`の検索分岐）は廃止する
 
 ## 3. ペイン切替（Tab限定）

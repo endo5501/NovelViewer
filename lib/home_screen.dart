@@ -7,6 +7,9 @@ import 'package:novel_viewer/features/app_update/presentation/update_badge.dart'
 import 'package:novel_viewer/features/bookmark/presentation/left_column_panel.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_action.dart';
+import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_intents.dart';
+import 'package:novel_viewer/features/keyboard_shortcuts/providers/keyboard_shortcut_providers.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_host.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
@@ -15,14 +18,6 @@ import 'package:novel_viewer/features/text_search/providers/text_search_provider
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/shared/providers/layout_providers.dart';
-
-class _SearchIntent extends Intent {
-  const _SearchIntent();
-}
-
-class _BookmarkIntent extends Intent {
-  const _BookmarkIntent();
-}
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -97,20 +92,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bindings = ref.watch(keyBindingsProvider);
+    // Dynamic Shortcuts map built from the customizable bindings. Only actions
+    // with a wired Actions handler below are included; switchPane (Tab) and
+    // ttsToggle (Ctrl+T) are added with their handlers in their own groups.
+    final shortcuts = <ShortcutActivator, Intent>{
+      for (final action in const [
+        ShortcutAction.search,
+        ShortcutAction.bookmark,
+      ])
+        if (bindings[action] != null)
+          bindings[action]!.toActivator(): intentFor(action),
+    };
+
     return Shortcuts(
-      shortcuts: {
-        const SingleActivator(LogicalKeyboardKey.keyF, control: true):
-            const _SearchIntent(),
-        const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
-            const _SearchIntent(),
-        const SingleActivator(LogicalKeyboardKey.keyB, control: true):
-            const _BookmarkIntent(),
-        const SingleActivator(LogicalKeyboardKey.keyB, meta: true):
-            const _BookmarkIntent(),
-      },
+      shortcuts: shortcuts,
       child: Actions(
         actions: {
-          _SearchIntent: CallbackAction<_SearchIntent>(
+          SearchIntent: CallbackAction<SearchIntent>(
             onInvoke: (_) {
               final selectedText = ref.read(selectedTextProvider);
               if (selectedText?.isNotEmpty ?? false) {
@@ -125,7 +124,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               return null;
             },
           ),
-          _BookmarkIntent: CallbackAction<_BookmarkIntent>(
+          BookmarkIntent: CallbackAction<BookmarkIntent>(
             onInvoke: (_) {
               _toggleBookmark();
               return null;
