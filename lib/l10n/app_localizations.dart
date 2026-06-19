@@ -1533,6 +1533,66 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'更新の確認に失敗しました'**
   String get settings_checkFailedMessage;
+
+  /// No description provided for @settings_shortcutsSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'キーボードショートカット'**
+  String get settings_shortcutsSection;
+
+  /// No description provided for @settings_shortcutReassign.
+  ///
+  /// In ja, this message translates to:
+  /// **'変更'**
+  String get settings_shortcutReassign;
+
+  /// No description provided for @settings_shortcutResetDefaults.
+  ///
+  /// In ja, this message translates to:
+  /// **'既定に戻す'**
+  String get settings_shortcutResetDefaults;
+
+  /// No description provided for @settings_shortcutPressKeys.
+  ///
+  /// In ja, this message translates to:
+  /// **'新しいキーの組み合わせを押してください…'**
+  String get settings_shortcutPressKeys;
+
+  /// No description provided for @settings_shortcutDuplicate.
+  ///
+  /// In ja, this message translates to:
+  /// **'そのキーは既に他の操作に割り当てられています'**
+  String get settings_shortcutDuplicate;
+
+  /// No description provided for @settings_shortcutNeedsModifier.
+  ///
+  /// In ja, this message translates to:
+  /// **'ショートカットには修飾キー（Ctrl/Cmd/Alt）が必要です'**
+  String get settings_shortcutNeedsModifier;
+
+  /// No description provided for @shortcutAction_search.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索'**
+  String get shortcutAction_search;
+
+  /// No description provided for @shortcutAction_bookmark.
+  ///
+  /// In ja, this message translates to:
+  /// **'しおり'**
+  String get shortcutAction_bookmark;
+
+  /// No description provided for @shortcutAction_ttsToggle.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み上げ 再生/一時停止'**
+  String get shortcutAction_ttsToggle;
+
+  /// No description provided for @shortcutAction_switchPane.
+  ///
+  /// In ja, this message translates to:
+  /// **'ペイン切替'**
+  String get shortcutAction_switchPane;
 }
 
 class _AppLocalizationsDelegate

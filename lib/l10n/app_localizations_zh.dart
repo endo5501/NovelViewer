@@ -801,4 +801,34 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settings_checkFailedMessage => '检查更新失败';
+
+  @override
+  String get settings_shortcutsSection => '键盘快捷键';
+
+  @override
+  String get settings_shortcutReassign => '更改';
+
+  @override
+  String get settings_shortcutResetDefaults => '恢复默认';
+
+  @override
+  String get settings_shortcutPressKeys => '请按下新的按键组合…';
+
+  @override
+  String get settings_shortcutDuplicate => '该按键已分配给其他操作';
+
+  @override
+  String get settings_shortcutNeedsModifier => '快捷键需要修饰键（Ctrl/Cmd/Alt）';
+
+  @override
+  String get shortcutAction_search => '搜索';
+
+  @override
+  String get shortcutAction_bookmark => '书签';
+
+  @override
+  String get shortcutAction_ttsToggle => '朗读 播放/暂停';
+
+  @override
+  String get shortcutAction_switchPane => '切换面板';
 }

@@ -2,6 +2,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
+import 'package:novel_viewer/shared/providers/layout_providers.dart';
+
+/// Closes the search session in one place: hides the search box, clears the
+/// query and selected match, and closes the (now search-only) right column so
+/// no empty column is left behind.
+///
+/// Shared by the Ctrl+F toggle (HomeScreen) and the search field's Escape
+/// handler (SearchResultsPanel), so both dismiss paths behave identically.
+void closeSearchSession(WidgetRef ref) {
+  ref.read(searchBoxVisibleProvider.notifier).hide();
+  ref.read(selectedSearchMatchProvider.notifier).clear();
+  ref.read(searchQueryProvider.notifier).setQuery(null);
+  if (ref.read(rightColumnVisibleProvider)) {
+    ref.read(rightColumnVisibleProvider.notifier).toggle();
+  }
+}
 
 class SearchBoxVisibleNotifier extends Notifier<bool> {
   @override

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_action.dart';
+import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_bindings.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
@@ -31,6 +33,7 @@ class SettingsRepository {
   static const _piperLengthScaleKey = 'piper_length_scale';
   static const _piperNoiseScaleKey = 'piper_noise_scale';
   static const _piperNoiseWKey = 'piper_noise_w';
+  static const _shortcutBindingsKey = 'keyboard_shortcuts';
 
   static const defaultFontSize = 14.0;
   static const minFontSize = 10.0;
@@ -259,5 +262,26 @@ class SettingsRepository {
 
   Future<void> setPiperNoiseW(double value) async {
     await _prefs.setDouble(_piperNoiseWKey, value);
+  }
+
+  /// Keyboard shortcut bindings for the customizable actions.
+  ///
+  /// Stored as a single JSON string. [defaults] supplies the platform-aware
+  /// fallback so that missing/malformed entries resolve to a sensible binding
+  /// rather than dropping the action.
+  Map<ShortcutAction, KeyBinding> getShortcutBindings({
+    required Map<ShortcutAction, KeyBinding> defaults,
+  }) {
+    final raw = _prefs.getString(_shortcutBindingsKey);
+    return ShortcutBindingCodec.decode(raw, defaults: defaults);
+  }
+
+  Future<void> setShortcutBindings(
+    Map<ShortcutAction, KeyBinding> bindings,
+  ) async {
+    await _prefs.setString(
+      _shortcutBindingsKey,
+      ShortcutBindingCodec.encode(bindings),
+    );
   }
 }

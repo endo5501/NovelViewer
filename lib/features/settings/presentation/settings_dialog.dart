@@ -6,6 +6,7 @@ import 'package:novel_viewer/features/settings/presentation/sections/llm_setting
 import 'package:novel_viewer/features/settings/presentation/sections/piper_settings_section.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/qwen3_settings_section.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/voice_reference_section.dart';
+import 'package:novel_viewer/features/keyboard_shortcuts/presentation/shortcut_settings_section.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -87,6 +88,8 @@ class _GeneralTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GeneralSettingsSection(),
+          Divider(),
+          ShortcutSettingsSection(),
           Divider(),
           LlmSettingsSection(),
         ],

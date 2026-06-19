@@ -328,5 +328,15 @@
       "version": { "type": "String" }
     }
   },
-  "settings_checkFailedMessage": "Update check failed"
+  "settings_checkFailedMessage": "Update check failed",
+  "settings_shortcutsSection": "Keyboard Shortcuts",
+  "settings_shortcutReassign": "Change",
+  "settings_shortcutResetDefaults": "Reset to defaults",
+  "settings_shortcutPressKeys": "Press the new key combination…",
+  "settings_shortcutDuplicate": "That key is already assigned to another action",
+  "settings_shortcutNeedsModifier": "Shortcuts need a modifier key (Ctrl/Cmd/Alt)",
+  "shortcutAction_search": "Search",
+  "shortcutAction_bookmark": "Bookmark",
+  "shortcutAction_ttsToggle": "Play/Pause speech",
+  "shortcutAction_switchPane": "Switch pane"
 }

@@ -457,5 +457,15 @@
       "version": { "type": "String" }
     }
   },
-  "settings_checkFailedMessage": "更新の確認に失敗しました"
+  "settings_checkFailedMessage": "更新の確認に失敗しました",
+  "settings_shortcutsSection": "キーボードショートカット",
+  "settings_shortcutReassign": "変更",
+  "settings_shortcutResetDefaults": "既定に戻す",
+  "settings_shortcutPressKeys": "新しいキーの組み合わせを押してください…",
+  "settings_shortcutDuplicate": "そのキーは既に他の操作に割り当てられています",
+  "settings_shortcutNeedsModifier": "ショートカットには修飾キー（Ctrl/Cmd/Alt）が必要です",
+  "shortcutAction_search": "検索",
+  "shortcutAction_bookmark": "しおり",
+  "shortcutAction_ttsToggle": "読み上げ 再生/一時停止",
+  "shortcutAction_switchPane": "ペイン切替"
 }

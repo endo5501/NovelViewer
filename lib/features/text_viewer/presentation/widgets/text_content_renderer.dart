@@ -17,6 +17,7 @@ import 'package:novel_viewer/features/text_viewer/data/parsed_segments_cache_pro
 import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
+import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_intents.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/episode_navigation_buttons.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/vertical_context_menu.dart';
@@ -176,6 +177,9 @@ class TextContentRenderer extends ConsumerStatefulWidget {
 
 class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   final ScrollController _scrollController = ScrollController();
+  // Focus for the horizontal viewer so the page-scroll arrow keys only act
+  // while this viewer holds focus (scoped, not global).
+  final FocusNode _horizontalFocusNode = FocusNode(debugLabel: 'horizontalViewer');
   String? _lastScrollKey;
   bool _isTtsScrolling = false;
   int _lastReportedViewLine = 0;
@@ -340,7 +344,24 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _horizontalFocusNode.dispose();
     super.dispose();
+  }
+
+  /// Scrolls the horizontal viewer by roughly one viewport height. [direction]
+  /// is +1 to page forward (down) and -1 to page back (up).
+  void _pageScroll(int direction) {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final viewport = position.viewportDimension;
+    final target = (position.pixels + direction * viewport)
+        .clamp(position.minScrollExtent, position.maxScrollExtent);
+    if (target == position.pixels) return;
+    _scrollController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+    );
   }
 
   void _showVerticalContextMenu(
@@ -816,19 +837,49 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     // ScrollController state reset would clobber line / TTS / bookmark
     // scroll jumps that fire on the same frame.
     final showEdgeButtons = _atScrollTop || _atScrollBottom;
-    return Stack(
-      children: [
-        scrollView,
-        if (showEdgeButtons)
-          Positioned(
-            left: 8,
-            bottom: 8,
-            child: EpisodeNavigationButtons(
-              showPrev: _atScrollTop,
-              showNext: _atScrollBottom,
-            ),
+    // Page navigation scoped to this viewer: arrow down/up page forward/back by
+    // one viewport. The shared NextPage/PrevPage intents are translated to the
+    // horizontal mode's physical direction (down = next). Scoping to the viewer
+    // keeps the file browser's standard arrow-key focus traversal intact.
+    return Shortcuts(
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.arrowDown): NextPageIntent(),
+        SingleActivator(LogicalKeyboardKey.arrowUp): PrevPageIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          NextPageIntent: CallbackAction<NextPageIntent>(
+            onInvoke: (_) {
+              _pageScroll(1);
+              return null;
+            },
           ),
-      ],
+          PrevPageIntent: CallbackAction<PrevPageIntent>(
+            onInvoke: (_) {
+              _pageScroll(-1);
+              return null;
+            },
+          ),
+        },
+        child: Focus(
+          focusNode: _horizontalFocusNode,
+          autofocus: true,
+          child: Stack(
+            children: [
+              scrollView,
+              if (showEdgeButtons)
+                Positioned(
+                  left: 8,
+                  bottom: 8,
+                  child: EpisodeNavigationButtons(
+                    showPrev: _atScrollTop,
+                    showNext: _atScrollBottom,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
