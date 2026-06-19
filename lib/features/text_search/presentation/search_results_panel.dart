@@ -32,13 +32,29 @@ class _SearchResultsPanelState extends ConsumerState<SearchResultsPanel> {
     };
     ref.listenManual(searchBoxVisibleProvider, (previous, next) {
       if (next && !_focusNode.hasFocus) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && !_focusNode.hasFocus) {
-            _focusNode.requestFocus();
-          }
-        });
+        _requestFieldFocusNextFrame();
       } else if (!next) {
         _controller.clear();
+      }
+    });
+
+    // The panel often mounts only when the right column is shown — which can
+    // happen in the same gesture that sets `searchBoxVisible` to true (Ctrl+F
+    // from a hidden right column). In that case `listenManual` never fires for
+    // the already-true value, so focus the field on mount as well. A post-frame
+    // request also wins over HomeScreen's `Focus(autofocus: true)`, which would
+    // otherwise claim focus first.
+    if (ref.read(searchBoxVisibleProvider)) {
+      _requestFieldFocusNextFrame();
+    }
+  }
+
+  void _requestFieldFocusNextFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted &&
+          ref.read(searchBoxVisibleProvider) &&
+          !_focusNode.hasFocus) {
+        _focusNode.requestFocus();
       }
     });
   }
@@ -58,9 +74,7 @@ class _SearchResultsPanelState extends ConsumerState<SearchResultsPanel> {
   }
 
   void _onEscape() {
-    ref.read(searchBoxVisibleProvider.notifier).hide();
-    ref.read(selectedSearchMatchProvider.notifier).clear();
-    ref.read(searchQueryProvider.notifier).setQuery(null);
+    closeSearchSession(ref);
     _controller.clear();
   }
 

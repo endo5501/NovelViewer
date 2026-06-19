@@ -473,7 +473,8 @@ void main() {
       expect(container.read(searchBoxVisibleProvider), isTrue);
     });
 
-    testWidgets('Escape clears search when search box is visible',
+    testWidgets(
+        'Escape on the focused search field closes search and right column',
         (WidgetTester tester) async {
       late ProviderContainer container;
 
@@ -491,67 +492,13 @@ void main() {
       final element = tester.element(find.byType(NovelViewerApp));
       container = ProviderScope.containerOf(element);
 
-      // Activate search box
-      container.read(searchBoxVisibleProvider.notifier).show();
-      container.read(searchQueryProvider.notifier).setQuery('太郎');
-      await tester.pump();
-
-      // Press Escape (focus is NOT on the search box)
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pump();
-
-      expect(container.read(searchBoxVisibleProvider), isFalse);
-      expect(container.read(searchQueryProvider), isNull);
-    });
-
-    testWidgets('Escape clears search when query is active but search box is hidden',
-        (WidgetTester tester) async {
-      late ProviderContainer container;
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: const NovelViewerApp(),
-        ),
-      );
+      // Open search via Ctrl+F: shows the box, opens the right column, and
+      // autofocuses the field.
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
       await tester.pumpAndSettle();
 
-      final element = tester.element(find.byType(NovelViewerApp));
-      container = ProviderScope.containerOf(element);
-
-      // Set query without showing search box (simulates selection-based search)
-      container.read(searchQueryProvider.notifier).setQuery('太郎');
-      await tester.pump();
-
-      // Press Escape
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pump();
-
-      expect(container.read(searchQueryProvider), isNull);
-    });
-
-    testWidgets('Escape clears selectedSearchMatchProvider as well',
-        (WidgetTester tester) async {
-      late ProviderContainer container;
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: const NovelViewerApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final element = tester.element(find.byType(NovelViewerApp));
-      container = ProviderScope.containerOf(element);
-
-      // Simulate a search match selection (clicking a result row)
       container.read(searchQueryProvider.notifier).setQuery('太郎');
       container.read(selectedSearchMatchProvider.notifier).select(
             filePath: '/path/to/001.txt',
@@ -560,15 +507,49 @@ void main() {
           );
       await tester.pump();
 
-      expect(container.read(selectedSearchMatchProvider), isNotNull);
-
-      // Press Escape
+      // Escape while the field is focused closes the whole search session.
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pump();
 
-      expect(container.read(selectedSearchMatchProvider), isNull,
-          reason: 'Escape should clear selectedSearchMatch '
-              'so the orange highlight disappears');
+      expect(container.read(searchBoxVisibleProvider), isFalse);
+      expect(container.read(searchQueryProvider), isNull);
+      expect(container.read(selectedSearchMatchProvider), isNull);
+      expect(container.read(rightColumnVisibleProvider), isFalse,
+          reason: 'Closing search also closes the search-only right column');
+    });
+
+    testWidgets('second Ctrl+F closes search and right column (toggle)',
+        (WidgetTester tester) async {
+      late ProviderContainer container;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.byType(NovelViewerApp));
+      container = ProviderScope.containerOf(element);
+
+      Future<void> pressCtrlF() async {
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+        await tester.pumpAndSettle();
+      }
+
+      await pressCtrlF();
+      expect(container.read(searchBoxVisibleProvider), isTrue);
+      expect(container.read(rightColumnVisibleProvider), isTrue);
+
+      await pressCtrlF();
+      expect(container.read(searchBoxVisibleProvider), isFalse);
+      expect(container.read(rightColumnVisibleProvider), isFalse);
     });
 
     testWidgets('Escape does nothing when no search is active',

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/app/selected_file_progress_title_provider.dart';
@@ -27,31 +26,31 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  @override
-  void initState() {
-    super.initState();
-    HardwareKeyboard.instance.addHandler(_handleEscapeKey);
-  }
+  /// Ctrl/Cmd+F behavior. A current text selection always triggers an immediate
+  /// search on that selection. Otherwise the shortcut toggles the search box:
+  /// open it (and the right column) when no search is active, or close the whole
+  /// search session (including the right column) when one is active.
+  void _onSearchShortcut() {
+    final selectedText = ref.read(selectedTextProvider);
+    if (selectedText != null && selectedText.isNotEmpty) {
+      ref.read(selectedSearchMatchProvider.notifier).clear();
+      ref.read(searchQueryProvider.notifier).setQuery(selectedText);
+      if (!ref.read(rightColumnVisibleProvider)) {
+        ref.read(rightColumnVisibleProvider.notifier).toggle();
+      }
+      return;
+    }
 
-  @override
-  void dispose() {
-    HardwareKeyboard.instance.removeHandler(_handleEscapeKey);
-    super.dispose();
-  }
-
-  bool _handleEscapeKey(KeyEvent event) {
-    if (event is! KeyDownEvent) return false;
-    if (event.logicalKey != LogicalKeyboardKey.escape) return false;
-
-    final isSearchActive =
-        ref.read(searchBoxVisibleProvider) ||
+    final isActive = ref.read(searchBoxVisibleProvider) ||
         ref.read(searchQueryProvider) != null;
-    if (!isSearchActive) return false;
-
-    ref.read(searchBoxVisibleProvider.notifier).hide();
-    ref.read(selectedSearchMatchProvider.notifier).clear();
-    ref.read(searchQueryProvider.notifier).setQuery(null);
-    return true;
+    if (isActive) {
+      closeSearchSession(ref);
+    } else {
+      ref.read(searchBoxVisibleProvider.notifier).show();
+      if (!ref.read(rightColumnVisibleProvider)) {
+        ref.read(rightColumnVisibleProvider.notifier).toggle();
+      }
+    }
   }
 
   Widget _buildBookmarkButton() {
@@ -111,16 +110,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         actions: {
           SearchIntent: CallbackAction<SearchIntent>(
             onInvoke: (_) {
-              final selectedText = ref.read(selectedTextProvider);
-              if (selectedText?.isNotEmpty ?? false) {
-                ref.read(selectedSearchMatchProvider.notifier).clear();
-                ref.read(searchQueryProvider.notifier).setQuery(selectedText);
-              } else {
-                ref.read(searchBoxVisibleProvider.notifier).show();
-              }
-              if (!ref.read(rightColumnVisibleProvider)) {
-                ref.read(rightColumnVisibleProvider.notifier).toggle();
-              }
+              _onSearchShortcut();
               return null;
             },
           ),
