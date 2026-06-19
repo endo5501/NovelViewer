@@ -73,3 +73,22 @@ class TtsStopRequestNotifier extends Notifier<int> {
 
   void request() => state = state + 1;
 }
+
+// --- Toggle request signal ---
+
+/// Monotonic counter incremented by the Ctrl+T keyboard shortcut to ask the
+/// `TtsControlsBar` to toggle playback (start / pause / resume depending on the
+/// current state). Mirrors [ttsStopRequestProvider]: the bar owns the streaming
+/// controller, so the shortcut reaches it through this command-bus signal
+/// rather than calling it directly.
+final ttsToggleRequestProvider =
+    NotifierProvider<TtsToggleRequestNotifier, int>(
+  TtsToggleRequestNotifier.new,
+);
+
+class TtsToggleRequestNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void request() => state = state + 1;
+}

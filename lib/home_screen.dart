@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/app/selected_file_progress_title_provider.dart';
@@ -16,6 +17,7 @@ import 'package:novel_viewer/features/text_search/presentation/search_results_pa
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/shared/providers/layout_providers.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -59,6 +61,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    HardwareKeyboard.instance.addHandler(_handleGlobalEscape);
     // Start with the file browser focused so the user can immediately navigate
     // files. A post-frame request wins over the descendant viewer's autofocus.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -68,9 +71,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleGlobalEscape);
     _fileBrowserPaneFocus.dispose();
     _novelPaneFocus.dispose();
     super.dispose();
+  }
+
+  /// Escape as a context-dependent cancel key (case B). When a text field is
+  /// focused (e.g. the search box), Escape is left to that field — it closes
+  /// search — and never stops TTS. Otherwise, if TTS is playing/paused, Escape
+  /// stops it via the command bus. No explicit priority ordering is needed: the
+  /// behavior is decided purely by focus context.
+  bool _handleGlobalEscape(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    if (event.logicalKey != LogicalKeyboardKey.escape) return false;
+
+    final ctx = FocusManager.instance.primaryFocus?.context;
+    if (ctx != null &&
+        ctx.findAncestorStateOfType<EditableTextState>() != null) {
+      return false;
+    }
+
+    final playback = ref.read(ttsPlaybackStateProvider);
+    if (playback == TtsPlaybackState.playing ||
+        playback == TtsPlaybackState.paused ||
+        playback == TtsPlaybackState.waiting) {
+      ref.read(ttsStopRequestProvider.notifier).request();
+      return true;
+    }
+    return false;
   }
 
   /// Toggles focus between the file browser and novel panes (Tab).
@@ -156,6 +185,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ShortcutAction.search,
         ShortcutAction.bookmark,
         ShortcutAction.switchPane,
+        ShortcutAction.ttsToggle,
       ])
         if (bindings[action] != null)
           bindings[action]!.toActivator(): intentFor(action),
@@ -178,6 +208,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             },
           ),
           SwitchPaneIntent: _SwitchPaneAction(_switchPane),
+          TtsToggleIntent: CallbackAction<TtsToggleIntent>(
+            onInvoke: (_) {
+              ref.read(ttsToggleRequestProvider.notifier).request();
+              return null;
+            },
+          ),
         },
         child: Focus(
           autofocus: true,

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_adapters.dart';
+import 'package:novel_viewer/features/tts/data/tts_toggle.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
@@ -58,6 +59,32 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
         _stopStreaming();
       }
     });
+    // Toggle playback (Ctrl+T) via the command bus. The bar resolves the
+    // current state to start / pause / resume.
+    ref.listenManual(ttsToggleRequestProvider, (prev, next) {
+      if (prev != null && next != prev) {
+        _onToggleRequest();
+      }
+    });
+  }
+
+  void _onToggleRequest() {
+    final selectedFile = ref.read(selectedFileProvider);
+    final audio = selectedFile == null
+        ? TtsAudioState.none
+        : ref.read(ttsAudioStateProvider(selectedFile.path)).value ??
+            TtsAudioState.none;
+    final playback = ref.read(ttsPlaybackStateProvider);
+    switch (resolveTtsToggle(audio, playback)) {
+      case TtsToggleResolution.start:
+        _startStreaming();
+      case TtsToggleResolution.pause:
+        _pausePlayback();
+      case TtsToggleResolution.resume:
+        _resumePlayback();
+      case TtsToggleResolution.stop:
+        _stopStreaming();
+    }
   }
 
   @override

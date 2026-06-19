@@ -43,10 +43,10 @@
 
 ## 7. TTSトグル（Ctrl+T）と停止（Escape）
 
-- [ ] 7.1 `ttsToggleRequestProvider`（新規）と、`TtsToggleIntent`が要求を立てるテストを書く（TDD）
-- [ ] 7.2 `TtsControlsBar`が`ttsToggleRequestProvider`を`listenManual`で監視し、`(TtsAudioState × TtsPlaybackState)`に応じて開始/一時停止/再開を解決するテストを書く（全状態組み合わせを網羅。停止はトグルに含めない）
-- [ ] 7.3 解決ロジックを実装し、モデル未設定時は何もしないことを確認する
-- [ ] 7.4 グローバルEscapeハンドラ（旧`_handleEscapeKey`を置換）を「検索入力欄にフォーカスが無く、TTSが再生中/一時停止中ならTTS停止（command bus経由）」のフォーカス分岐に変更するテストを書き、実装する（検索欄フォーカス時のEscは`_onEscape`が検索クローズを処理＝優先順位ロジック不要）
+- [x] 7.1 `ttsToggleRequestProvider`（新規）と、`TtsToggleIntent`が要求を立てるテストを書く（TDD）
+- [x] 7.2 `TtsControlsBar`が`ttsToggleRequestProvider`を`listenManual`で監視し、`(TtsAudioState × TtsPlaybackState)`に応じて開始/一時停止/再開を解決するテストを書く（全状態組み合わせを網羅。停止はトグルに含めない）
+- [x] 7.3 解決ロジックを実装し、モデル未設定時は何もしないことを確認する
+- [x] 7.4 グローバルEscapeハンドラ（旧`_handleEscapeKey`を置換）を「検索入力欄にフォーカスが無く、TTSが再生中/一時停止中ならTTS停止（command bus経由）」のフォーカス分岐に変更するテストを書き、実装する（検索欄フォーカス時のEscは`_onEscape`が検索クローズを処理＝優先順位ロジック不要）
 
 ## 8. ショートカット設定UI
 
