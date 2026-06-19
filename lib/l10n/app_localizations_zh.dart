@@ -818,6 +818,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settings_shortcutDuplicate => '该按键已分配给其他操作';
 
   @override
+  String get settings_shortcutNeedsModifier => '快捷键需要修饰键（Ctrl/Cmd/Alt）';
+
+  @override
   String get shortcutAction_search => '搜索';
 
   @override

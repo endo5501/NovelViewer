@@ -32,7 +32,16 @@ class ShortcutSettingsSection extends ConsumerWidget {
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final binding = await _captureKeyBinding(context);
-    if (binding == null) return;
+    if (binding == null || !context.mounted) return;
+
+    // A bare printable key (no Ctrl/Cmd/Alt) would fire while the user is typing
+    // in a text field, so require a real modifier for such keys.
+    if (_needsModifier(binding)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settings_shortcutNeedsModifier)),
+      );
+      return;
+    }
 
     final applied =
         await ref.read(keyBindingsProvider.notifier).rebind(action, binding);
@@ -139,6 +148,16 @@ Future<KeyBinding?> _captureKeyBinding(BuildContext context) {
       );
     },
   );
+}
+
+/// A binding needs a command modifier when its trigger is a single printable
+/// character with no Ctrl/Cmd/Alt held — otherwise it would fire during text
+/// entry. Shift alone does not count (Shift+letter is still typed text).
+/// Non-printable keys (Tab, function keys, arrows) have an empty/multi-char
+/// label and are allowed bare.
+bool _needsModifier(KeyBinding binding) {
+  if (binding.control || binding.meta || binding.alt) return false;
+  return LogicalKeyboardKey(binding.keyId).keyLabel.length == 1;
 }
 
 bool _isModifierKey(LogicalKeyboardKey key) {

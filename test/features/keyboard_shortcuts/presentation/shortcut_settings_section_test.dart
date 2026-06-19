@@ -99,6 +99,41 @@ void main() {
         reason: 'Duplicate is rejected; bookmark keeps its binding');
   });
 
+  testWidgets('rejects a bare printable key without a modifier',
+      (WidgetTester tester) async {
+    final container = await pumpSection(tester);
+    final original =
+        container.read(keyBindingsProvider)[ShortcutAction.bookmark];
+
+    await tester.tap(find.byKey(const Key('shortcut_reassign_bookmark')));
+    await tester.pumpAndSettle();
+    // Press a bare 'J' (no modifier).
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Shortcuts need a modifier key (Ctrl/Cmd/Alt)'),
+        findsOneWidget);
+    expect(container.read(keyBindingsProvider)[ShortcutAction.bookmark],
+        original,
+        reason: 'A bare printable key is rejected; binding unchanged');
+  });
+
+  testWidgets('Escape cancels the capture without rebinding',
+      (WidgetTester tester) async {
+    final container = await pumpSection(tester);
+    final original =
+        container.read(keyBindingsProvider)[ShortcutAction.bookmark];
+
+    await tester.tap(find.byKey(const Key('shortcut_reassign_bookmark')));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(container.read(keyBindingsProvider)[ShortcutAction.bookmark],
+        original,
+        reason: 'Escape cancels capture; Escape is not bound');
+  });
+
   testWidgets('reset to defaults restores bindings',
       (WidgetTester tester) async {
     final container = await pumpSection(tester);

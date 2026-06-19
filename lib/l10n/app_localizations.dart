@@ -1564,6 +1564,12 @@ abstract class AppLocalizations {
   /// **'そのキーは既に他の操作に割り当てられています'**
   String get settings_shortcutDuplicate;
 
+  /// No description provided for @settings_shortcutNeedsModifier.
+  ///
+  /// In ja, this message translates to:
+  /// **'ショートカットには修飾キー（Ctrl/Cmd/Alt）が必要です'**
+  String get settings_shortcutNeedsModifier;
+
   /// No description provided for @shortcutAction_search.
   ///
   /// In ja, this message translates to:

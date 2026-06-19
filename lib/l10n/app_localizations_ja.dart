@@ -819,6 +819,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settings_shortcutDuplicate => 'そのキーは既に他の操作に割り当てられています';
 
   @override
+  String get settings_shortcutNeedsModifier =>
+      'ショートカットには修飾キー（Ctrl/Cmd/Alt）が必要です';
+
+  @override
   String get shortcutAction_search => '検索';
 
   @override

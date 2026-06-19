@@ -836,6 +836,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'That key is already assigned to another action';
 
   @override
+  String get settings_shortcutNeedsModifier =>
+      'Shortcuts need a modifier key (Ctrl/Cmd/Alt)';
+
+  @override
   String get shortcutAction_search => 'Search';
 
   @override
