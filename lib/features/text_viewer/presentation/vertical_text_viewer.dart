@@ -12,6 +12,7 @@ import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/column_splitter.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
+import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_intents.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -472,14 +473,38 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
-      focusNode: _focusNode,
-      autofocus: true,
-      onKeyEvent: _handleKeyEvent,
-      child: Listener(
-        behavior: HitTestBehavior.opaque,
-        onPointerDown: _handlePointerDown,
-        onPointerSignal: _handlePointerSignal,
+    // Page navigation is scoped to this viewer (not HomeScreen's global
+    // Shortcuts) so the arrow keys only page while the viewer holds focus, and
+    // never steal arrow-key focus traversal from the file browser. The vertical
+    // viewer translates the logical next/prev into its physical direction:
+    // left = next (right-to-left reading), right = previous.
+    return Shortcuts(
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.arrowLeft): NextPageIntent(),
+        SingleActivator(LogicalKeyboardKey.arrowRight): PrevPageIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          NextPageIntent: CallbackAction<NextPageIntent>(
+            onInvoke: (_) {
+              _nextPage();
+              return null;
+            },
+          ),
+          PrevPageIntent: CallbackAction<PrevPageIntent>(
+            onInvoke: (_) {
+              _previousPage();
+              return null;
+            },
+          ),
+        },
+        child: Focus(
+          focusNode: _focusNode,
+          autofocus: true,
+          child: Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerDown: _handlePointerDown,
+            onPointerSignal: _handlePointerSignal,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final result = _paginateLines(constraints);
@@ -619,25 +644,11 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
               ],
             );
           },
+            ),
+          ),
         ),
       ),
     );
-  }
-
-  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
-      return KeyEventResult.ignored;
-    }
-
-    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-      _nextPage();
-      return KeyEventResult.handled;
-    } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-      _previousPage();
-      return KeyEventResult.handled;
-    }
-
-    return KeyEventResult.ignored;
   }
 
   void _handlePointerDown(PointerDownEvent event) {

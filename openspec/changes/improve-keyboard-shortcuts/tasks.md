@@ -21,11 +21,11 @@
 
 ## 4. ページ送り論理アクション（方式A: viewer配下にスコープ）
 
-- [ ] 4.1 `nextPage`/`prevPage`の`Shortcuts`+`Actions`をviewerのサブツリー内のみに置き、HomeScreenのグローバル`Shortcuts`には含めないことのテストを書く（ファイルブラウザフォーカス時に矢印が横取りされないことを検証、TDD）
-- [ ] 4.2 縦書き`VerticalTextViewer`が`nextPage`/`prevPage` Intentを`Actions`で受けて物理方向（左右）へ翻訳するテストを書く（`vertical_text_viewer_pagination_test`/`..._episode_nav_test`を更新）
-- [ ] 4.3 `VerticalTextViewer`の`onKeyEvent`によるarrowLeft/arrowRight直接処理を撤去し、viewer配下の`Shortcuts`+`Actions`経由（固定キー: 縦書き←=next/→=prev）に置き換える
-- [ ] 4.4 横書き`TextContentRenderer`が`nextPage`/`prevPage`で1画面分（ビューポート高さ）アニメーションスクロールするテストを書く（フォーカス時のみ）
-- [ ] 4.5 横書きの1画面スクロールを実装し、`SelectableText`のテキスト選択が非回帰であることを確認する
+- [x] 4.1 `nextPage`/`prevPage`の`Shortcuts`+`Actions`をviewerのサブツリー内のみに置き、HomeScreenのグローバル`Shortcuts`には含めないことのテストを書く（ファイルブラウザフォーカス時に矢印が横取りされないことを検証、TDD）
+- [x] 4.2 縦書き`VerticalTextViewer`が`nextPage`/`prevPage` Intentを`Actions`で受けて物理方向（左右）へ翻訳するテストを書く（`vertical_text_viewer_pagination_test`/`..._episode_nav_test`を更新）
+- [x] 4.3 `VerticalTextViewer`の`onKeyEvent`によるarrowLeft/arrowRight直接処理を撤去し、viewer配下の`Shortcuts`+`Actions`経由（固定キー: 縦書き←=next/→=prev）に置き換える
+- [x] 4.4 横書き`TextContentRenderer`が`nextPage`/`prevPage`で1画面分（ビューポート高さ）アニメーションスクロールするテストを書く（フォーカス時のみ）
+- [x] 4.5 横書きの1画面スクロールを実装し、`SelectableText`のテキスト選択が非回帰であることを確認する
 
 ## 5. ファイルブラウザのフォーカス（標準操作を温存）
 
