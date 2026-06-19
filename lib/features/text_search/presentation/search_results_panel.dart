@@ -28,6 +28,12 @@ class _SearchResultsPanelState extends ConsumerState<SearchResultsPanel> {
         _onEscape();
         return KeyEventResult.handled;
       }
+      // Swallow Tab while the search field is focused so it neither switches
+      // panes nor moves focus away mid-typing.
+      if (event is KeyDownEvent &&
+          event.logicalKey == LogicalKeyboardKey.tab) {
+        return KeyEventResult.handled;
+      }
       return KeyEventResult.ignored;
     };
     ref.listenManual(searchBoxVisibleProvider, (previous, next) {

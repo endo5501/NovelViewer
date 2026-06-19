@@ -25,7 +25,63 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
+/// Action for `SwitchPaneIntent` (Tab). Disabled while a text field is focused
+/// so Tab keeps its normal behavior during text entry (e.g. the search box)
+/// instead of switching panes.
+class _SwitchPaneAction extends Action<SwitchPaneIntent> {
+  _SwitchPaneAction(this.onToggle);
+
+  final VoidCallback onToggle;
+
+  @override
+  bool isEnabled(SwitchPaneIntent intent) {
+    final ctx = FocusManager.instance.primaryFocus?.context;
+    return ctx == null ||
+        ctx.findAncestorStateOfType<EditableTextState>() == null;
+  }
+
+  @override
+  Object? invoke(SwitchPaneIntent intent) {
+    onToggle();
+    return null;
+  }
+}
+
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  /// Focus scopes for the two panes that `switchPane` (Tab) cycles between.
+  /// The debug labels are also used by widget tests to assert which pane holds
+  /// focus.
+  final FocusScopeNode _fileBrowserPaneFocus =
+      FocusScopeNode(debugLabel: 'fileBrowserPane');
+  final FocusScopeNode _novelPaneFocus =
+      FocusScopeNode(debugLabel: 'novelPane');
+
+  @override
+  void initState() {
+    super.initState();
+    // Start with the file browser focused so the user can immediately navigate
+    // files. A post-frame request wins over the descendant viewer's autofocus.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _fileBrowserPaneFocus.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _fileBrowserPaneFocus.dispose();
+    _novelPaneFocus.dispose();
+    super.dispose();
+  }
+
+  /// Toggles focus between the file browser and novel panes (Tab).
+  void _switchPane() {
+    if (_fileBrowserPaneFocus.hasFocus) {
+      _novelPaneFocus.requestFocus();
+    } else {
+      _fileBrowserPaneFocus.requestFocus();
+    }
+  }
+
   /// Ctrl/Cmd+F behavior. A current text selection always triggers an immediate
   /// search on that selection. Otherwise the shortcut toggles the search box:
   /// open it (and the right column) when no search is active, or close the whole
@@ -99,6 +155,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       for (final action in const [
         ShortcutAction.search,
         ShortcutAction.bookmark,
+        ShortcutAction.switchPane,
       ])
         if (bindings[action] != null)
           bindings[action]!.toActivator(): intentFor(action),
@@ -120,6 +177,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               return null;
             },
           ),
+          SwitchPaneIntent: _SwitchPaneAction(_switchPane),
         },
         child: Focus(
           autofocus: true,
@@ -130,44 +188,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
+              // AppBar buttons are excluded from keyboard focus traversal so
+              // Tab only cycles between the file browser and novel panes. They
+              // remain fully usable via mouse.
               actions: [
-                const UpdateBadge(),
-                _buildBookmarkButton(),
-                IconButton(
-                  key: const Key('toggle_right_column_button'),
-                  icon: Icon(
-                    ref.watch(rightColumnVisibleProvider)
-                        ? Icons.vertical_split
-                        : Icons.view_sidebar,
+                ExcludeFocus(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const UpdateBadge(),
+                      _buildBookmarkButton(),
+                      IconButton(
+                        key: const Key('toggle_right_column_button'),
+                        icon: Icon(
+                          ref.watch(rightColumnVisibleProvider)
+                              ? Icons.vertical_split
+                              : Icons.view_sidebar,
+                        ),
+                        onPressed: () => ref
+                            .read(rightColumnVisibleProvider.notifier)
+                            .toggle(),
+                        tooltip: ref.watch(rightColumnVisibleProvider)
+                            ? AppLocalizations.of(context)!.homeScreen_hideRightColumnTooltip
+                            : AppLocalizations.of(context)!.homeScreen_showRightColumnTooltip,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.download),
+                        onPressed: () => DownloadDialog.show(context),
+                        tooltip: AppLocalizations.of(context)!.homeScreen_downloadTooltip,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.settings),
+                        onPressed: () => SettingsDialog.show(context),
+                      ),
+                    ],
                   ),
-                  onPressed: () => ref
-                      .read(rightColumnVisibleProvider.notifier)
-                      .toggle(),
-                  tooltip: ref.watch(rightColumnVisibleProvider)
-                      ? AppLocalizations.of(context)!.homeScreen_hideRightColumnTooltip
-                      : AppLocalizations.of(context)!.homeScreen_showRightColumnTooltip,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.download),
-                  onPressed: () => DownloadDialog.show(context),
-                  tooltip: AppLocalizations.of(context)!.homeScreen_downloadTooltip,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.settings),
-                  onPressed: () => SettingsDialog.show(context),
                 ),
               ],
             ),
             body: HoverPopupHost(
               child: Row(
                 children: [
-                  const SizedBox(
+                  SizedBox(
                     width: 250,
-                    child: LeftColumnPanel(key: Key('left_column')),
+                    child: FocusScope(
+                      node: _fileBrowserPaneFocus,
+                      child: const LeftColumnPanel(key: Key('left_column')),
+                    ),
                   ),
                   const VerticalDivider(width: 1),
-                  const Expanded(
-                    child: TextViewerPanel(key: Key('center_column')),
+                  Expanded(
+                    child: FocusScope(
+                      node: _novelPaneFocus,
+                      child: const TextViewerPanel(key: Key('center_column')),
+                    ),
                   ),
                   if (ref.watch(rightColumnVisibleProvider)) ...[
                     const VerticalDivider(width: 1),
