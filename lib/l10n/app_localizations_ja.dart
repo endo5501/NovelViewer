@@ -802,4 +802,31 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settings_checkFailedMessage => '更新の確認に失敗しました';
+
+  @override
+  String get settings_shortcutsSection => 'キーボードショートカット';
+
+  @override
+  String get settings_shortcutReassign => '変更';
+
+  @override
+  String get settings_shortcutResetDefaults => '既定に戻す';
+
+  @override
+  String get settings_shortcutPressKeys => '新しいキーの組み合わせを押してください…';
+
+  @override
+  String get settings_shortcutDuplicate => 'そのキーは既に他の操作に割り当てられています';
+
+  @override
+  String get shortcutAction_search => '検索';
+
+  @override
+  String get shortcutAction_bookmark => 'しおり';
+
+  @override
+  String get shortcutAction_ttsToggle => '読み上げ 再生/一時停止';
+
+  @override
+  String get shortcutAction_switchPane => 'ペイン切替';
 }

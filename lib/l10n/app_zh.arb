@@ -328,5 +328,14 @@
       "version": { "type": "String" }
     }
   },
-  "settings_checkFailedMessage": "检查更新失败"
+  "settings_checkFailedMessage": "检查更新失败",
+  "settings_shortcutsSection": "键盘快捷键",
+  "settings_shortcutReassign": "更改",
+  "settings_shortcutResetDefaults": "恢复默认",
+  "settings_shortcutPressKeys": "请按下新的按键组合…",
+  "settings_shortcutDuplicate": "该按键已分配给其他操作",
+  "shortcutAction_search": "搜索",
+  "shortcutAction_bookmark": "书签",
+  "shortcutAction_ttsToggle": "朗读 播放/暂停",
+  "shortcutAction_switchPane": "切换面板"
 }

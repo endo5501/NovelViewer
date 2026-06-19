@@ -818,4 +818,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settings_checkFailedMessage => 'Update check failed';
+
+  @override
+  String get settings_shortcutsSection => 'Keyboard Shortcuts';
+
+  @override
+  String get settings_shortcutReassign => 'Change';
+
+  @override
+  String get settings_shortcutResetDefaults => 'Reset to defaults';
+
+  @override
+  String get settings_shortcutPressKeys => 'Press the new key combination…';
+
+  @override
+  String get settings_shortcutDuplicate =>
+      'That key is already assigned to another action';
+
+  @override
+  String get shortcutAction_search => 'Search';
+
+  @override
+  String get shortcutAction_bookmark => 'Bookmark';
+
+  @override
+  String get shortcutAction_ttsToggle => 'Play/Pause speech';
+
+  @override
+  String get shortcutAction_switchPane => 'Switch pane';
 }
