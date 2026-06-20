@@ -40,6 +40,11 @@ add_definitions(-DUNICODE -D_UNICODE)
 function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_17)
   target_compile_options(${TARGET} PRIVATE /W4 /WX /wd"4100")
+  # Treat all sources as UTF-8 regardless of the system code page. Without this,
+  # MSVC reads sources using the ANSI code page (e.g. 932 on Japanese Windows)
+  # and emits C4819 for UTF-8 characters in third-party plugin sources, which
+  # /WX then promotes to a build error.
+  target_compile_options(${TARGET} PRIVATE /utf-8)
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
