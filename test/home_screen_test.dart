@@ -518,6 +518,77 @@ void main() {
           reason: 'Closing search also closes the search-only right column');
     });
 
+    testWidgets(
+        'Ctrl+F with a persistent selection closes on the second press',
+        (WidgetTester tester) async {
+      late ProviderContainer container;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final element = tester.element(find.byType(NovelViewerApp));
+      container = ProviderScope.containerOf(element);
+
+      // A text selection persists across both presses (range search).
+      container.read(selectedTextProvider.notifier).setText('太郎');
+
+      // First Ctrl+F runs an immediate search on the selection.
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+      await tester.pump();
+      expect(container.read(searchQueryProvider), '太郎');
+      expect(container.read(rightColumnVisibleProvider), isTrue);
+
+      // Second Ctrl+F with the SAME selection still active must close, not
+      // re-search.
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+      await tester.pump();
+      expect(container.read(searchQueryProvider), isNull);
+      expect(container.read(rightColumnVisibleProvider), isFalse);
+    });
+
+    testWidgets('Escape closes a selection-search that shows no search box',
+        (WidgetTester tester) async {
+      late ProviderContainer container;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final element = tester.element(find.byType(NovelViewerApp));
+      container = ProviderScope.containerOf(element);
+
+      container.read(selectedTextProvider.notifier).setText('太郎');
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+      await tester.pump();
+      expect(container.read(searchQueryProvider), '太郎');
+      expect(container.read(searchBoxVisibleProvider), isFalse,
+          reason: 'Selection search shows results without the search box');
+      expect(container.read(rightColumnVisibleProvider), isTrue);
+
+      // No search field is shown, so Escape must close via the global handler.
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(container.read(searchQueryProvider), isNull);
+      expect(container.read(rightColumnVisibleProvider), isFalse);
+    });
+
     testWidgets('second Ctrl+F closes search and right column (toggle)',
         (WidgetTester tester) async {
       late ProviderContainer container;

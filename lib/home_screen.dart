@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/app_update/presentation/update_badge.dart'
 import 'package:novel_viewer/features/bookmark/presentation/left_column_panel.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/keyboard_shortcuts/data/focus_utils.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_action.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_intents.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/providers/keyboard_shortcut_providers.dart';
@@ -27,14 +28,6 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-/// Whether a text input (e.g. the search box) currently holds focus. Used to
-/// keep Tab and Escape from being repurposed while the user is typing.
-bool _isTextFieldFocused() {
-  final ctx = FocusManager.instance.primaryFocus?.context;
-  return ctx != null &&
-      ctx.findAncestorStateOfType<EditableTextState>() != null;
-}
-
 /// Action for `SwitchPaneIntent` (Tab). Disabled while a text field is focused
 /// so Tab keeps its normal behavior during text entry (e.g. the search box)
 /// instead of switching panes.
@@ -44,7 +37,7 @@ class _SwitchPaneAction extends Action<SwitchPaneIntent> {
   final VoidCallback onToggle;
 
   @override
-  bool isEnabled(SwitchPaneIntent intent) => !_isTextFieldFocused();
+  bool isEnabled(SwitchPaneIntent intent) => !isTextInputFocused();
 
   @override
   Object? invoke(SwitchPaneIntent intent) {
@@ -81,16 +74,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
-  /// Escape as a context-dependent cancel key (case B). When a text field is
-  /// focused (e.g. the search box), Escape is left to that field — it closes
-  /// search — and never stops TTS. Otherwise, if TTS is playing/paused, Escape
-  /// stops it via the command bus. No explicit priority ordering is needed: the
-  /// behavior is decided purely by focus context.
+  /// Escape as a context-dependent cancel key. When a real text input is focused
+  /// (e.g. the search box), Escape is left to that field — it closes search.
+  /// Otherwise Escape closes an active search first (this covers a selection
+  /// search, which shows results but no editable field to receive Escape), and
+  /// only stops TTS when no search is open.
   bool _handleGlobalEscape(KeyEvent event) {
     if (event is! KeyDownEvent) return false;
     if (event.logicalKey != LogicalKeyboardKey.escape) return false;
 
-    if (_isTextFieldFocused()) return false;
+    // A genuine text field handles its own Escape. Read-only SelectableText
+    // (focused novel body) is not a text field, so Escape still works there.
+    if (isTextInputFocused()) return false;
+
+    final searchActive = ref.read(searchBoxVisibleProvider) ||
+        ref.read(searchQueryProvider) != null;
+    if (searchActive) {
+      closeSearchSession(ref);
+      return true;
+    }
 
     final playback = ref.read(ttsPlaybackStateProvider);
     if (playback == TtsPlaybackState.playing ||
@@ -111,13 +113,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  /// Ctrl/Cmd+F behavior. A current text selection always triggers an immediate
-  /// search on that selection. Otherwise the shortcut toggles the search box:
-  /// open it (and the right column) when no search is active, or close the whole
-  /// search session (including the right column) when one is active.
+  /// Ctrl/Cmd+F behavior. A text selection that differs from the active query
+  /// runs an immediate search on that selection. Otherwise the shortcut toggles
+  /// the search session: open it (and the right column) when nothing is active,
+  /// or close the whole session (including the right column) when one is active.
+  ///
+  /// Comparing the selection to the current query (rather than just "is there a
+  /// selection") is what lets a second Ctrl+F close a selection-search while the
+  /// same text is still highlighted, instead of re-searching it forever.
   void _onSearchShortcut() {
     final selectedText = ref.read(selectedTextProvider);
-    if (selectedText != null && selectedText.isNotEmpty) {
+    final query = ref.read(searchQueryProvider);
+
+    if (selectedText != null &&
+        selectedText.isNotEmpty &&
+        selectedText != query) {
       ref.read(selectedSearchMatchProvider.notifier).clear();
       ref.read(searchQueryProvider.notifier).setQuery(selectedText);
       if (!ref.read(rightColumnVisibleProvider)) {
@@ -126,8 +136,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return;
     }
 
-    final isActive = ref.read(searchBoxVisibleProvider) ||
-        ref.read(searchQueryProvider) != null;
+    final isActive = ref.read(searchBoxVisibleProvider) || query != null;
     if (isActive) {
       closeSearchSession(ref);
     } else {
