@@ -18,7 +18,10 @@ class TextSegmenter {
   );
 
   static const _sentenceEnders = {'。', '！', '？'};
-  static const _closingBrackets = {'」', '』', '）'};
+  // Half-width sentence enders only count as a boundary when followed by a
+  // whitespace / end-of-text / closing bracket (see [_isSentenceEnderAt]).
+  static const _asciiSentenceEnders = {'.', '!', '?'};
+  static const _closingBrackets = {'」', '』', '）', '"', ')'};
   static const _maxSegmentLength = 200;
 
   List<TextSegment> splitIntoSentences(String text) {
@@ -58,7 +61,7 @@ class TextSegmenter {
         continue;
       }
 
-      if (_sentenceEnders.contains(stripped[i])) {
+      if (_isSentenceEnderAt(stripped, i)) {
         var end = i + 1;
         while (end < stripped.length &&
             _closingBrackets.contains(stripped[end])) {
@@ -77,6 +80,27 @@ class TextSegmenter {
 
     return segments;
   }
+
+  /// Whether the character at [i] terminates a sentence.
+  ///
+  /// Full-width enders (`。！？`) always terminate. Half-width enders
+  /// (`.!?`) only terminate when, after skipping any run of closing brackets,
+  /// the next character is whitespace or the end of the text. This preserves
+  /// decimals like `3.14`, keeps mid-word periods intact, and avoids absorbing
+  /// an opening quote (e.g. `A."Bcd`) into the previous sentence while still
+  /// splitting real dialogue like `"OK." She` after the closing quote.
+  bool _isSentenceEnderAt(String text, int i) {
+    final char = text[i];
+    if (_sentenceEnders.contains(char)) return true;
+    if (!_asciiSentenceEnders.contains(char)) return false;
+    var j = i + 1;
+    while (j < text.length && _closingBrackets.contains(text[j])) {
+      j++;
+    }
+    return j >= text.length || _isWhitespace(text[j]);
+  }
+
+  bool _isWhitespace(String char) => char.trim().isEmpty;
 
   List<TextSegment> _splitLongSegments(List<TextSegment> segments) {
     final result = <TextSegment>[];
@@ -100,6 +124,13 @@ class TextSegmenter {
 
     while (text.length > _maxSegmentLength) {
       final splitPos = _findSplitPosition(text);
+      // Whitespace dropped from the remainder by trimLeft() still occupies
+      // display positions, so the display cursor must advance past it to keep
+      // subsequent offsets aligned with the source text.
+      final remainder = text.substring(splitPos);
+      final trimmedRemainder = remainder.trimLeft();
+      final droppedLen = remainder.length - trimmedRemainder.length;
+
       final splitDisplayLen = totalTextLen == totalDisplayLen
           ? splitPos
           : (splitPos / totalTextLen * totalDisplayLen).round()
@@ -109,9 +140,14 @@ class TextSegmenter {
         offset: displayOffset,
         length: splitDisplayLen,
       ));
-      displayOffset += splitDisplayLen;
-      displayRemaining -= splitDisplayLen;
-      text = text.substring(splitPos).trimLeft();
+      // For plain text the dropped whitespace maps 1:1 to display positions;
+      // for ruby-substituted text the proportional estimate already covers it.
+      final displayAdvance = totalTextLen == totalDisplayLen
+          ? splitDisplayLen + droppedLen
+          : splitDisplayLen;
+      displayOffset += displayAdvance;
+      displayRemaining -= displayAdvance;
+      text = trimmedRemainder;
     }
 
     if (text.isNotEmpty) {
@@ -126,17 +162,27 @@ class TextSegmenter {
   }
 
   int _findSplitPosition(String text) {
-    // Find the last comma within the first _maxSegmentLength characters
+    // Within the first _maxSegmentLength characters, find the last comma
+    // (full-width 「、」 or half-width ",") and the last whitespace.
     var lastComma = -1;
+    var lastSpace = -1;
     for (var i = 0; i < _maxSegmentLength && i < text.length; i++) {
-      if (text[i] == '、') {
+      final char = text[i];
+      if (char == '、' || char == ',') {
         lastComma = i;
+      } else if (_isWhitespace(char)) {
+        lastSpace = i;
       }
     }
     if (lastComma > 0) {
       return lastComma + 1; // Include the comma in the first segment
     }
-    // No comma found — force split at _maxSegmentLength
+    if (lastSpace > 0) {
+      // Split before the whitespace (word boundary); the remaining text is
+      // left-trimmed by the caller, dropping the leading whitespace.
+      return lastSpace;
+    }
+    // No comma or whitespace found — force split at _maxSegmentLength
     return _maxSegmentLength;
   }
 

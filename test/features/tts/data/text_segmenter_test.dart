@@ -319,6 +319,138 @@ void main() {
     });
   });
 
+  group('TextSegmenter - English sentence splitting', () {
+    test('splits English text at period followed by space', () {
+      final segments =
+          segmenter.splitIntoSentences('Hello world. Goodbye world.');
+
+      expect(segments.length, 2);
+      expect(segments[0].text, 'Hello world.');
+      expect(segments[1].text, 'Goodbye world.');
+    });
+
+    test('splits at question mark and exclamation mark', () {
+      final segments =
+          segmenter.splitIntoSentences('Who are you? Run away! Now.');
+
+      expect(segments.length, 3);
+      expect(segments[0].text, 'Who are you?');
+      expect(segments[1].text, 'Run away!');
+      expect(segments[2].text, 'Now.');
+    });
+
+    test('does not split at a decimal point', () {
+      final segments =
+          segmenter.splitIntoSentences('The value is 3.14 today.');
+
+      expect(segments.length, 1);
+      expect(segments[0].text, 'The value is 3.14 today.');
+    });
+
+    test('splits long English sentence at comma, not mid-word', () {
+      // 1 long clause (>200 chars) with commas; must split at a comma.
+      final clauseA = 'word ' * 30; // 150 chars incl trailing space
+      final clauseB = 'item ' * 30;
+      final text = '${clauseA.trim()}, ${clauseB.trim()}.';
+      final segments = segmenter.splitIntoSentences(text);
+
+      expect(segments.length, greaterThanOrEqualTo(2));
+      // First segment must end exactly at the comma boundary.
+      expect(segments[0].text, endsWith(','));
+    });
+
+    test('force-splits long English sentence at a space, never mid-word', () {
+      // >200 chars, no comma, words separated by spaces.
+      final text = 'alpha ' * 60; // 360 chars, no punctuation
+      final segments = segmenter.splitIntoSentences(text.trim());
+
+      expect(segments.length, greaterThanOrEqualTo(2));
+      // No segment may end in the middle of the word "alpha".
+      for (final segment in segments) {
+        final words = segment.text.trim().split(RegExp(r'\s+'));
+        for (final word in words) {
+          expect(word, 'alpha');
+        }
+      }
+    });
+
+    test('splits dialogue at period before closing quote', () {
+      final segments =
+          segmenter.splitIntoSentences('He said "OK." She replied.');
+
+      expect(segments.length, 2);
+      expect(segments[0].text, 'He said "OK."');
+      expect(segments[1].text, 'She replied.');
+    });
+
+    test('splits after closing paren that follows a period', () {
+      final segments =
+          segmenter.splitIntoSentences('(Note: optional.) Continue on.');
+
+      expect(segments.length, 2);
+      expect(segments[0].text, '(Note: optional.)');
+      expect(segments[1].text, 'Continue on.');
+    });
+
+    test('does not split when closing bracket is followed by a word', () {
+      // Period + closing quote immediately followed by a letter (no space):
+      // the bracket-skipped lookahead is not whitespace, so it is not a
+      // sentence boundary and the text stays as one segment.
+      final segments =
+          segmenter.splitIntoSentences('A."Bcd and more text follows here.');
+
+      expect(segments.length, 1);
+      expect(segments[0].text, 'A."Bcd and more text follows here.');
+    });
+
+    test('offsets stay aligned when long English sentence is space-split', () {
+      // ~450 chars, no comma → forces multiple whitespace splits.
+      final text = ('alpha ' * 75).trim();
+      final segments = segmenter.splitIntoSentences(text);
+
+      expect(segments.length, greaterThanOrEqualTo(2));
+      // For plain (non-ruby) text, each segment's [offset, offset+length)
+      // range must map back to exactly the segment text in the source.
+      for (final segment in segments) {
+        expect(
+          text.substring(segment.offset, segment.offset + segment.length),
+          segment.text,
+        );
+      }
+    });
+
+    test('reported paragraph splits at sentence/comma boundaries', () {
+      const text =
+          'Getting an agent into production takes more than a good prompt. '
+          'The agent needs somewhere to run the code it writes, credentials '
+          'to reach your data, observable sessions, and infrastructure that '
+          'scales with usage. On the Applied AI team, we work at the '
+          'intersection of product, research, and the customers building on '
+          'Claude—and we see the same pattern repeatedly: infrastructure is '
+          'what separates a prototype from a production agent. All too often, '
+          'teams burn development cycles on security, state management, '
+          'permissioning, and harness tuning.';
+
+      final segments = segmenter.splitIntoSentences(text);
+
+      // First sentence is short and must stand alone.
+      expect(segments.first.text,
+          'Getting an agent into production takes more than a good prompt.');
+
+      // Every non-final segment must end at a clause/sentence boundary
+      // (period or comma), never in the middle of a word.
+      for (var i = 0; i < segments.length - 1; i++) {
+        final segText = segments[i].text;
+        final last = segText.substring(segText.length - 1);
+        expect(
+          {'.', ',', '!', '?'}.contains(last),
+          isTrue,
+          reason: 'segment "${segments[i].text}" ends mid-word with "$last"',
+        );
+      }
+    });
+  });
+
   group('TextSegmenter - edge cases', () {
     test('returns empty list for empty string', () {
       final segments = segmenter.splitIntoSentences('');

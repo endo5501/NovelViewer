@@ -1,8 +1,4 @@
-## Purpose
-
-Guard rails against runaway TTS synthesis on long text: TextSegmenter splits sentences exceeding 200 chars at the nearest preceding comma (or force-splits at 200), and the synthesis layer derives `max_audio_tokens` dynamically as `min(chars * 15 + 50, 2048)`.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Text length-based sentence splitting
 TextSegmenter SHALL split sentences that exceed 200 characters at the nearest comma before the threshold, where a comma is either the full-width comma (`、`) or the half-width comma (`,`). When no comma exists within the first 200 characters, the system SHALL split at the nearest whitespace (word boundary) within the first 200 characters so that splitting does not occur in the middle of a word. When neither a comma nor a whitespace character exists within the first 200 characters, the system SHALL force-split at 200 characters. The 200-character check SHALL be applied to the spoken text (after ruby tag processing), not the raw HTML text. The existing sentence-ending rules (`。`, `！`, `？`, `.`, `!`, `?`, `\n`) SHALL continue to take priority over length-based splitting.
@@ -38,22 +34,3 @@ TextSegmenter SHALL split sentences that exceed 200 characters at the nearest co
 #### Scenario: Long sentence without a comma is split at a word boundary
 - **WHEN** TextSegmenter processes a long English sentence (over 200 characters) that has no comma but contains spaces between words
 - **THEN** the sentence is split at the last whitespace within the first 200 characters, and no segment ends in the middle of a word
-
-### Requirement: Dynamic max_audio_tokens calculation
-The Dart TtsEngine (or the layer calling the C API) SHALL calculate max_audio_tokens for each synthesis call using the formula: `min(text_length_in_characters * 15 + 50, 2048)`, where `text_length_in_characters` is the number of characters in the input text. The calculated value SHALL be passed to the C API synthesize function.
-
-#### Scenario: Short text gets proportional limit
-- **WHEN** a 10-character text is synthesized
-- **THEN** max_audio_tokens is set to min(10 * 15 + 50, 2048) = 200
-
-#### Scenario: Medium text gets proportional limit
-- **WHEN** a 50-character text is synthesized
-- **THEN** max_audio_tokens is set to min(50 * 15 + 50, 2048) = 800
-
-#### Scenario: Long text is capped at 2048
-- **WHEN** a 200-character text is synthesized
-- **THEN** max_audio_tokens is set to min(200 * 15 + 50, 2048) = 2048
-
-#### Scenario: Very short text has minimum floor
-- **WHEN** a 1-character text is synthesized
-- **THEN** max_audio_tokens is set to min(1 * 15 + 50, 2048) = 65

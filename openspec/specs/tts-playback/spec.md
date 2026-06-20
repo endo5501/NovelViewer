@@ -5,7 +5,7 @@ Stored-audio TTS playback pipeline: sentence-level text segmentation (with ruby 
 ## Requirements
 
 ### Requirement: Text segmentation for TTS
-The system SHALL split novel text into sentence-level segments for TTS processing. Segmentation SHALL occur at full-width sentence-ending punctuation (`。`, `！`, `？`) and newline characters. When a closing bracket (`」`, `』`, `）`) immediately follows sentence-ending punctuation, the split SHALL occur after the closing bracket. Empty segments SHALL be excluded. Ruby HTML tags SHALL be stripped to plain text (base text only) before segmentation. The Ruby tag stripping pattern SHALL handle all common Ruby HTML formats including those with `<rb>` tags and optional `<rp>` tags, and SHALL use the same regex pattern as `parseRubyText` to ensure consistent offset calculation. Each segment SHALL track its start offset and length relative to the stripped text. When a segment is created by splitting at a newline, the offset SHALL account for any leading whitespace that is trimmed: the offset SHALL point to the first non-whitespace character, and the length SHALL equal the trimmed text length.
+The system SHALL split novel text into sentence-level segments for TTS processing. Segmentation SHALL occur at full-width sentence-ending punctuation (`。`, `！`, `？`), at half-width sentence-ending punctuation (`.`, `!`, `?`), and at newline characters. A half-width sentence-ending punctuation mark SHALL be treated as a sentence boundary only when, after skipping any run of immediately-following closing brackets, the next character is a whitespace character or the end of the text; otherwise it SHALL NOT trigger a split (so decimals such as `3.14`, mid-word periods, and an opening quote that directly follows a period such as `A."Bcd` are preserved). When a closing bracket (`」`, `』`, `）`, `"`, `)`) immediately follows sentence-ending punctuation, the split SHALL occur after the closing bracket. Empty segments SHALL be excluded. Ruby HTML tags SHALL be stripped to plain text (base text only) before segmentation. The Ruby tag stripping pattern SHALL handle all common Ruby HTML formats including those with `<rb>` tags and optional `<rp>` tags, and SHALL use the same regex pattern as `parseRubyText` to ensure consistent offset calculation. Each segment SHALL track its start offset and length relative to the stripped text. When a segment is created by splitting at a newline, the offset SHALL account for any leading whitespace that is trimmed: the offset SHALL point to the first non-whitespace character, and the length SHALL equal the trimmed text length.
 
 #### Scenario: Split text at sentence-ending punctuation
 - **WHEN** text "今日は天気です。明日も晴れるでしょう。" is segmented
@@ -38,6 +38,26 @@ The system SHALL split novel text into sentence-level segments for TTS processin
 #### Scenario: Trim adjusts offset for leading whitespace at newline split
 - **WHEN** text "テスト。\n　第二章\n次の行。" is segmented and "　第二章" is split at a newline
 - **THEN** the segment text is "第二章" with offset pointing to the position of "第" (after the full-width space), not the position of "　"
+
+#### Scenario: Split English text at half-width period followed by space
+- **WHEN** text "Hello world. Goodbye world." is segmented
+- **THEN** two segments are produced: "Hello world." and "Goodbye world."
+
+#### Scenario: Split English text at question mark and exclamation mark
+- **WHEN** text "Who are you? Run away! Now." is segmented
+- **THEN** three segments are produced: "Who are you?", "Run away!", and "Now."
+
+#### Scenario: Do not split at a decimal point
+- **WHEN** text "The value is 3.14 today." is segmented
+- **THEN** one segment is produced: "The value is 3.14 today." (the period in `3.14` is not a boundary because it is followed by a digit)
+
+#### Scenario: Split dialogue at a period before a closing quote
+- **WHEN** text "He said \"OK.\" She replied." is segmented
+- **THEN** two segments are produced: "He said \"OK.\"" and "She replied." (the closing quote after the period is absorbed into the first segment)
+
+#### Scenario: Do not split when a closing bracket is followed by a word
+- **WHEN** text "A.\"Bcd and more text follows here." is segmented
+- **THEN** one segment is produced, because after skipping the closing quote the next character is a letter (not whitespace), so the period is not treated as a boundary and the opening quote is not absorbed into a previous sentence
 
 ### Requirement: TTS audio generation in Isolate
 The system SHALL perform TTS audio generation in a separate Dart Isolate to avoid blocking the UI thread. The Isolate SHALL load the TTS model, accept synthesis requests, and return generated audio data to the main Isolate. The Isolate SHALL support graceful shutdown that ensures native TTS engine resources are properly released before the Isolate terminates.
