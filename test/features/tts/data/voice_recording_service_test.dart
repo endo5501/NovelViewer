@@ -77,6 +77,9 @@ class FakeAudioRecorder implements AudioRecorder {
   @override
   Future<bool> isEncoderSupported(AudioEncoder encoder) async => true;
   @override
+  Future<void> setOnConfigChanged(
+          void Function(RecordConfig config)? callback) async {}
+  @override
   RecordIos? get ios => null;
 }
 
