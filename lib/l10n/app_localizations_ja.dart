@@ -713,12 +713,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get textViewer_nextEpisodeButton => '次話 →';
-
-  @override
-  String get textViewer_prevEpisodeButton => '← 前話';
-
-  @override
   String get update_badgeTooltip => '更新があります';
 
   @override

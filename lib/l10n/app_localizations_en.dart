@@ -728,12 +728,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get textViewer_nextEpisodeButton => 'Next →';
-
-  @override
-  String get textViewer_prevEpisodeButton => '← Previous';
-
-  @override
   String get update_badgeTooltip => 'Update available';
 
   @override

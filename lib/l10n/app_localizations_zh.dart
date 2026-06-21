@@ -712,12 +712,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get textViewer_nextEpisodeButton => '下一话 →';
-
-  @override
-  String get textViewer_prevEpisodeButton => '← 上一话';
-
-  @override
   String get update_badgeTooltip => '有可用更新';
 
   @override

@@ -1,9 +1,14 @@
+import 'dart:async';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/episode_navigation/domain/file_entry_start_intent.dart';
+import 'package:novel_viewer/features/episode_navigation/providers/adjacent_files_provider.dart';
+import 'package:novel_viewer/features/episode_navigation/providers/episode_navigation_controller.dart';
 import 'package:novel_viewer/features/episode_navigation/providers/pending_file_entry_intent_provider.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
@@ -19,7 +24,6 @@ import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_intents.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
-import 'package:novel_viewer/features/text_viewer/presentation/widgets/episode_navigation_buttons.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/vertical_context_menu.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
@@ -160,6 +164,11 @@ List<PlaceholderDimensions> _placeholderDimensionsFor(
   return dims;
 }
 
+/// Cooldown after a boundary episode switch during which further key/wheel
+/// boundary inputs are ignored. Sized to outlast a key-repeat burst / a single
+/// wheel gesture's discrete events so neither can skip multiple episodes.
+const _kEdgeNavCooldown = Duration(milliseconds: 350);
+
 /// Renders the text content of the currently open file in either horizontal
 /// (SelectableText.rich) or vertical (VerticalTextViewer) mode. Owns the
 /// scroll controller, search/TTS highlight application, ruby parsing cache
@@ -239,18 +248,18 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   // of at the top.
   bool _jumpToStartPending = false;
 
-  // Tracks whether the scroll view is currently parked at its first or last
-  // line. Drives visibility of the prev/next episode buttons so they only
-  // appear when the user is at a natural reading boundary — not in the
-  // middle, where they would overlap body text.
-  bool _atScrollTop = true;
-  bool _atScrollBottom = false;
+  // Two-step runaway guard for boundary episode navigation. After a key/wheel
+  // gesture at a scroll edge triggers a file switch, further boundary
+  // navigation is ignored until this Timer elapses — so a held arrow key
+  // (KeyRepeat) or a single wheel gesture (many discrete events) cannot skip
+  // several episodes at once.
+  bool _edgeNavCooldownActive = false;
+  Timer? _edgeNavCooldownTimer;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_updateCurrentViewLine);
-    _scrollController.addListener(_updateScrollEdgeFlags);
     // Reset current view line when the user switches files.
     ref.listenManual(selectedFileProvider, (prev, next) {
       if (prev?.path != next?.path) {
@@ -264,29 +273,6 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       }
     });
     _consumeFileEntryIntent();
-    // First layout may produce a maxScrollExtent of 0 (single-page content);
-    // capture the initial edge state after the frame so the single-page
-    // bottom-button visibility is correct from the start.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _updateScrollEdgeFlags();
-    });
-  }
-
-  /// Refreshes [_atScrollTop] / [_atScrollBottom] from the current scroll
-  /// position. Cheap; called from the existing scroll listener path. Skips
-  /// `setState` when the flags would not change to avoid extra rebuilds on
-  /// every scroll tick within the middle band.
-  void _updateScrollEdgeFlags() {
-    if (!_scrollController.hasClients) return;
-    final pos = _scrollController.position;
-    final newAtTop = pos.pixels <= pos.minScrollExtent;
-    final newAtBottom = pos.pixels >= pos.maxScrollExtent;
-    if (newAtTop == _atScrollTop && newAtBottom == _atScrollBottom) return;
-    setState(() {
-      _atScrollTop = newAtTop;
-      _atScrollBottom = newAtBottom;
-    });
   }
 
   @override
@@ -343,25 +329,77 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
 
   @override
   void dispose() {
+    _edgeNavCooldownTimer?.cancel();
     _scrollController.dispose();
     _horizontalFocusNode.dispose();
     super.dispose();
   }
 
   /// Scrolls the horizontal viewer by roughly one viewport height. [direction]
-  /// is +1 to page forward (down) and -1 to page back (up).
+  /// is +1 to page forward (down) and -1 to page back (up). When the content
+  /// is already parked at the boundary in [direction] (cannot scroll further),
+  /// the input is routed to boundary episode navigation instead.
   void _pageScroll(int direction) {
     if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
     final viewport = position.viewportDimension;
     final target = (position.pixels + direction * viewport)
         .clamp(position.minScrollExtent, position.maxScrollExtent);
-    if (target == position.pixels) return;
+    if (target == position.pixels) {
+      // At the scroll boundary in this direction: hand off to episode
+      // navigation (mirrors the vertical viewer's page-boundary handoff).
+      _navigateEpisodeAtEdge(direction);
+      return;
+    }
     _scrollController.animateTo(
       target,
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeInOut,
     );
+  }
+
+  /// Handles a mouse-wheel signal over the horizontal viewer. While the
+  /// content can still scroll in the wheel direction this is a no-op and the
+  /// underlying scroll view performs its normal scroll; only when the view is
+  /// already at the matching boundary does the wheel cross into the next/prev
+  /// episode. The edge test reads the live scroll position (not a cached flag)
+  /// so the "land on the edge with one tick, cross with the next" flow is
+  /// deterministic.
+  void _handleViewerPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final dy = event.scrollDelta.dy;
+    if (dy > 0 && position.pixels >= position.maxScrollExtent) {
+      _navigateEpisodeAtEdge(1);
+    } else if (dy < 0 && position.pixels <= position.minScrollExtent) {
+      _navigateEpisodeAtEdge(-1);
+    }
+  }
+
+  /// Routes a boundary input to the next ([direction] > 0) or previous
+  /// ([direction] < 0) episode. No-op when no adjacent file exists in that
+  /// direction, or while the runaway cooldown from a recent switch is active.
+  /// Only user input (keys/wheel) reaches here — the TTS auto-scroll path never
+  /// calls this, so playback cannot trigger an episode switch.
+  void _navigateEpisodeAtEdge(int direction) {
+    if (_edgeNavCooldownActive) return;
+    final adjacent = ref.read(adjacentFilesProvider);
+    final target = direction > 0 ? adjacent.next : adjacent.prev;
+    if (target == null) return;
+
+    _edgeNavCooldownActive = true;
+    _edgeNavCooldownTimer?.cancel();
+    _edgeNavCooldownTimer = Timer(_kEdgeNavCooldown, () {
+      _edgeNavCooldownActive = false;
+    });
+
+    final controller = ref.read(episodeNavigationControllerProvider);
+    if (direction > 0) {
+      controller.navigateToNext();
+    } else {
+      controller.navigateToPrevious();
+    }
   }
 
   void _showVerticalContextMenu(
@@ -829,18 +867,13 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       ),
     );
 
-    // Overlay the prev/next episode buttons only when the user is parked
-    // at the very first or last line of the current file — in the middle
-    // band they would obscure body text. The Stack is always returned (with
-    // a conditional child) so the underlying scroll view's element identity
-    // stays stable across visibility toggles — otherwise an unrelated
-    // ScrollController state reset would clobber line / TTS / bookmark
-    // scroll jumps that fire on the same frame.
-    final showEdgeButtons = _atScrollTop || _atScrollBottom;
     // Page navigation scoped to this viewer: arrow down/up page forward/back by
-    // one viewport. The shared NextPage/PrevPage intents are translated to the
-    // horizontal mode's physical direction (down = next). Scoping to the viewer
-    // keeps the file browser's standard arrow-key focus traversal intact.
+    // one viewport, and at a scroll boundary the same key crosses into the
+    // next/prev episode (see _pageScroll). The shared NextPage/PrevPage intents
+    // are translated to the horizontal mode's physical direction (down = next).
+    // Scoping to the viewer keeps the file browser's standard arrow-key focus
+    // traversal intact. The mouse wheel gets the equivalent boundary handoff via
+    // the Listener below; mid-content it falls through to the native scroll.
     return Shortcuts(
       shortcuts: const <ShortcutActivator, Intent>{
         SingleActivator(LogicalKeyboardKey.arrowDown): NextPageIntent(),
@@ -864,19 +897,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         child: Focus(
           focusNode: _horizontalFocusNode,
           autofocus: true,
-          child: Stack(
-            children: [
-              scrollView,
-              if (showEdgeButtons)
-                Positioned(
-                  left: 8,
-                  bottom: 8,
-                  child: EpisodeNavigationButtons(
-                    showPrev: _atScrollTop,
-                    showNext: _atScrollBottom,
-                  ),
-                ),
-            ],
+          child: Listener(
+            onPointerSignal: _handleViewerPointerSignal,
+            child: scrollView,
           ),
         ),
       ),
