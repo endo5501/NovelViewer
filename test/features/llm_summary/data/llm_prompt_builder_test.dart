@@ -35,6 +35,42 @@ void main() {
         expect(prompt, contains('<term>アリス</term>'));
         expect(prompt, contains('<context>'));
       });
+
+      test('instructs output language for en/zh', () {
+        final en = LlmPromptBuilder.buildFactExtractionPrompt(
+          word: 'アリス',
+          contextChunk: 'アリスは冒険に出た。',
+          language: 'en',
+        );
+        final zh = LlmPromptBuilder.buildFactExtractionPrompt(
+          word: 'アリス',
+          contextChunk: 'アリスは冒険に出た。',
+          language: 'zh',
+        );
+
+        expect(en, contains('English'));
+        expect(zh, contains('Chinese'));
+      });
+
+      test('defaults to Japanese output when language omitted', () {
+        final prompt = LlmPromptBuilder.buildFactExtractionPrompt(
+          word: 'アリス',
+          contextChunk: 'アリスは冒険に出た。',
+        );
+
+        expect(prompt, contains('Japanese'));
+      });
+
+      test('instructs to keep proper nouns in original language', () {
+        final prompt = LlmPromptBuilder.buildFactExtractionPrompt(
+          word: 'アリス',
+          contextChunk: 'アリスは冒険に出た。',
+          language: 'en',
+        );
+
+        expect(prompt, contains('固有名詞'));
+        expect(prompt, contains('原語'));
+      });
     });
 
     group('buildFinalSummaryPrompt', () {
@@ -58,6 +94,42 @@ void main() {
         );
 
         expect(prompt, contains('1〜2文'));
+      });
+
+      test('instructs output language for en/zh', () {
+        final en = LlmPromptBuilder.buildFinalSummaryPrompt(
+          word: '聖印',
+          facts: '- 騎士に与えられる印章',
+          language: 'en',
+        );
+        final zh = LlmPromptBuilder.buildFinalSummaryPrompt(
+          word: '聖印',
+          facts: '- 騎士に与えられる印章',
+          language: 'zh',
+        );
+
+        expect(en, contains('English'));
+        expect(zh, contains('Chinese'));
+      });
+
+      test('defaults to Japanese output when language omitted', () {
+        final prompt = LlmPromptBuilder.buildFinalSummaryPrompt(
+          word: '聖印',
+          facts: '- 騎士に与えられる印章',
+        );
+
+        expect(prompt, contains('Japanese'));
+      });
+
+      test('instructs to keep proper nouns in original language', () {
+        final prompt = LlmPromptBuilder.buildFinalSummaryPrompt(
+          word: '聖印',
+          facts: '- アリスが所持する印章',
+          language: 'en',
+        );
+
+        expect(prompt, contains('固有名詞'));
+        expect(prompt, contains('原語'));
       });
     });
   });
