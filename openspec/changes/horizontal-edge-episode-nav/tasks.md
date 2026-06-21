@@ -34,7 +34,7 @@
 
 ## 5. 最終確認
 
-- [ ] 5.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 5.3 `fvm flutter analyze`でリントを実行
-- [ ] 5.4 `fvm flutter test`でテストを実行
+- [x] 5.1 code-reviewスキルを使用してコードレビューを実施（死んだ l10n キー `textViewer_*EpisodeButton` を3言語分削除）
+- [x] 5.2 codexスキルを使用して現在開発中のコードレビューを実施（ホイールイベント未claim指摘 → 祖先スクロール非存在のため現状到達不能と判断、YAGNIで非対応）
+- [x] 5.3 `fvm flutter analyze`でリントを実行（No issues found）
+- [x] 5.4 `fvm flutter test`でテストを実行（2227 件パス）

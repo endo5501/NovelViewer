@@ -1360,18 +1360,6 @@ abstract class AppLocalizations {
   /// **'◀ 前話「{name}」へ（もう一度）'**
   String verticalText_prevEpisodePrompt(String name);
 
-  /// No description provided for @textViewer_nextEpisodeButton.
-  ///
-  /// In ja, this message translates to:
-  /// **'次話 →'**
-  String get textViewer_nextEpisodeButton;
-
-  /// No description provided for @textViewer_prevEpisodeButton.
-  ///
-  /// In ja, this message translates to:
-  /// **'← 前話'**
-  String get textViewer_prevEpisodeButton;
-
   /// No description provided for @update_badgeTooltip.
   ///
   /// In ja, this message translates to:

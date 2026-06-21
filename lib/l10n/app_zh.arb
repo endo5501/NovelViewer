@@ -287,9 +287,6 @@
       "name": { "type": "String" }
     }
   },
-  "textViewer_nextEpisodeButton": "下一话 →",
-  "textViewer_prevEpisodeButton": "← 上一话",
-
   "update_badgeTooltip": "有可用更新",
   "update_dialogTitle": "有新版本可用",
   "update_versionTransition": "{current} → {newVersion}",

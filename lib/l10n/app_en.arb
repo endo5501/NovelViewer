@@ -287,9 +287,6 @@
       "name": { "type": "String" }
     }
   },
-  "textViewer_nextEpisodeButton": "Next →",
-  "textViewer_prevEpisodeButton": "← Previous",
-
   "update_badgeTooltip": "Update available",
   "update_dialogTitle": "A new version is available",
   "update_versionTransition": "{current} → {newVersion}",
