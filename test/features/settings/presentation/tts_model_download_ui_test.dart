@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 import '../../../test_utils/flutter_secure_storage_mock.dart';
@@ -57,6 +58,33 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Waits for the download to actually reach a terminal state
+  /// (completed or error) instead of guessing with a fixed delay.
+  ///
+  /// The fixed-delay approach was flaky on CI: the real disk I/O of the
+  /// download (writing temp files, flushing, closing, renaming, writing the
+  /// completion marker) takes longer than a short delay on slower runners,
+  /// leaving the provider in the downloading state when the assertion ran.
+  /// Must be called inside [WidgetTester.runAsync] so real I/O can progress.
+  Future<void> waitForDownloadSettled(
+    WidgetTester tester, {
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(SettingsDialog)),
+      listen: false,
+    );
+    final stopwatch = Stopwatch()..start();
+    while (stopwatch.elapsed < timeout) {
+      final state = container.read(ttsModelDownloadProvider);
+      if (state is TtsModelDownloadCompleted ||
+          state is TtsModelDownloadError) {
+        return;
+      }
+      await Future.delayed(const Duration(milliseconds: 10));
+    }
+  }
+
   group('TTS model download section', () {
     testWidgets('shows download button when models not downloaded',
         (tester) async {
@@ -99,7 +127,7 @@ void main() {
 
       await tester.runAsync(() async {
         await tester.tap(find.text('モデルデータダウンロード'));
-        await Future.delayed(const Duration(milliseconds: 100));
+        await waitForDownloadSettled(tester);
       });
       await tester.pumpAndSettle();
 
@@ -117,7 +145,7 @@ void main() {
 
       await tester.runAsync(() async {
         await tester.tap(find.text('モデルデータダウンロード'));
-        await Future.delayed(const Duration(milliseconds: 100));
+        await waitForDownloadSettled(tester);
       });
       await tester.pumpAndSettle();
 
