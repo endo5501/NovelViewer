@@ -11,6 +11,7 @@ import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_pr
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
+import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 /// The scope a context-menu / popup analysis trigger expresses. The runner
@@ -132,6 +133,8 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     );
     unawaited(navigator.push(modalRoute));
 
+    final language = _ref.read(localeProvider).languageCode;
+
     String? errorMessage;
     try {
       await service.generateSummary(
@@ -139,6 +142,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
         word: word,
         coveredUpToEpisode: coveredUpToEpisode,
         sourceFileName: resolvedSourceFile,
+        language: language,
         onProgress: (event) {
           if (progressDisposed) return;
           progress.value = event;

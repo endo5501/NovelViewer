@@ -13,6 +13,7 @@ import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart'
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
+import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -57,6 +58,7 @@ class _StubService extends LlmSummaryService {
   int callCount = 0;
   int? lastCoveredUpToEpisode;
   String? lastSourceFileName;
+  String? lastLanguage;
   void Function(AnalysisProgress)? lastOnProgress;
 
   @override
@@ -65,11 +67,13 @@ class _StubService extends LlmSummaryService {
     required String word,
     required int coveredUpToEpisode,
     String? sourceFileName,
+    String language = 'ja',
     void Function(AnalysisProgress)? onProgress,
   }) async {
     callCount++;
     lastCoveredUpToEpisode = coveredUpToEpisode;
     lastSourceFileName = sourceFileName;
+    lastLanguage = language;
     lastOnProgress = onProgress;
     return _behavior(
       word: word,
@@ -86,12 +90,22 @@ class _MockSelectedFile extends SelectedFileNotifier {
   FileEntry? build() => _initial;
 }
 
+class _StubLocale extends LocaleNotifier {
+  _StubLocale(this._language);
+  final String _language;
+  @override
+  Locale build() => Locale(_language);
+}
+
 ProviderContainer _container(_StubService stub,
-    {String directory = '/library/novel_a', FileEntry? file}) {
+    {String directory = '/library/novel_a',
+    FileEntry? file,
+    String language = 'ja'}) {
   final container = ProviderContainer(overrides: [
     currentDirectoryProvider
         .overrideWith(() => CurrentDirectoryNotifier(directory)),
     selectedFileProvider.overrideWith(() => _MockSelectedFile(file)),
+    localeProvider.overrideWith(() => _StubLocale(language)),
     llmSummaryServiceProvider.overrideWith((ref, folderPath) => stub),
     llmClientProvider.overrideWith((_) async => _DummyClient()),
     // run() awaits these FutureProviders before reading the (overridden)
@@ -161,6 +175,35 @@ void main() {
 
       expect(find.byKey(const Key('analysis_modal')), findsNothing);
       expect(find.textContaining('「アリス」'), findsOneWidget);
+    });
+
+    testWidgets('passes the current display language to the service',
+        (tester) async {
+      final completer = Completer<String>();
+      final stub = _StubService(
+          ({required word, required coveredUpToEpisode, sourceFileName}) =>
+              completer.future);
+      final container = _container(stub, language: 'en');
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_harness(
+        container: container,
+        onPressed: (ref, context) {
+          ref.read(analysisRunnerProvider).run(
+                context: context,
+                word: 'アリス',
+                coveredUpToEpisode: 40,
+              );
+        },
+      ));
+
+      await tester.tap(find.text('go'));
+      await tester.pump();
+
+      expect(stub.lastLanguage, 'en');
+
+      completer.complete('mock summary');
+      await tester.pumpAndSettle();
     });
   });
 
@@ -531,6 +574,7 @@ void main() {
             .overrideWith(() => CurrentDirectoryNotifier('/library/novel_a')),
         selectedFileProvider.overrideWith(() => _MockSelectedFile(
             const FileEntry(name: '001.txt', path: '/library/novel_a/001.txt'))),
+        localeProvider.overrideWith(() => _StubLocale('ja')),
         llmClientProvider.overrideWith((_) async => _DummyClient()),
         llmSummaryRepositoryProvider
             .overrideWith((ref, folderPath) async => _DummyRepo()),

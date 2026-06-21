@@ -15,13 +15,13 @@
 
 ## 3. AnalysisRunner から locale の取得・受け渡し
 
-- [ ] 3.1 `AnalysisRunner` で `localeProvider` の言語コードを読み取り `generateSummary(language:)` へ渡す実装を追加
-- [ ] 3.2 既存の解析フローテストが回帰しないことを確認（必要に応じて runner レベルのテストを追加・更新）
+- [x] 3.1 `AnalysisRunner` で `localeProvider` の言語コードを読み取り `generateSummary(language:)` へ渡す実装を追加
+- [x] 3.2 既存の解析フローテストが回帰しないことを確認（必要に応じて runner レベルのテストを追加・更新）
 
 ## 4. キャッシュ非変更の確認
 
-- [ ] 4.1 `fact_cache` / `word_summaries` のキー・スキーマが変更されていないこと、`FactCacheRepository.currentPromptVersion` が変更されていないことをコードで確認
-- [ ] 4.2 言語を跨いでもキャッシュキーに言語が混入しないこと（仕様の運用どおり手動再生成で解消する想定）をテストまたはレビューで確認
+- [x] 4.1 `fact_cache` / `word_summaries` のキー・スキーマが変更されていないこと、`FactCacheRepository.currentPromptVersion` が変更されていないことをコードで確認
+- [x] 4.2 言語を跨いでもキャッシュキーに言語が混入しないこと（仕様の運用どおり手動再生成で解消する想定）をテストまたはレビューで確認
 
 ## 5. 最終確認
 
