@@ -153,6 +153,50 @@ void main() {
     });
   });
 
+  group('LlmSummaryPipeline language propagation', () {
+    test('threads language into the Stage-1 fact extraction prompt', () async {
+      final mock = _MockLlmClient([
+        jsonEncode({'facts': '- 王女'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock, language: 'en');
+
+      await pipeline.extractFileFacts(
+        word: 'アリス',
+        contexts: ['アリスは王国の王女として登場した。'],
+      );
+
+      expect(mock.prompts.single, contains('English'));
+    });
+
+    test('threads language into the Stage-2 final summary prompt', () async {
+      final mock = _MockLlmClient([
+        jsonEncode({'summary': 'a summary'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock, language: 'zh');
+
+      await pipeline.summarizeFromFacts(
+        word: 'アリス',
+        perFileFacts: ['- 王女'],
+      );
+
+      expect(mock.prompts.single, contains('Chinese'));
+    });
+
+    test('defaults to Japanese when language is not specified', () async {
+      final mock = _MockLlmClient([
+        jsonEncode({'summary': 'a summary'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      await pipeline.summarizeFromFacts(
+        word: 'アリス',
+        perFileFacts: ['- 王女'],
+      );
+
+      expect(mock.prompts.single, contains('Japanese'));
+    });
+  });
+
   // Shared-helper coverage that previously lived in the deleted `generate()`
   // tests. `summarizeFromFacts` exercises the same `_extractFactsRecursive`
   // (recursion depth guard / no-progress termination), `_parseSummaryResponse`

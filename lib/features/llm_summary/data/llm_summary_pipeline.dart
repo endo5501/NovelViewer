@@ -14,10 +14,16 @@ class LlmSummaryPipeline {
   final int maxChunkSize;
   final int maxRecursionDepth;
 
+  /// UI display language (`ja`/`en`/`zh`) that both prompt stages instruct the
+  /// LLM to answer in. One analysis run uses a single language, so it is fixed
+  /// at construction time rather than per call.
+  final String language;
+
   LlmSummaryPipeline({
     required this.llmClient,
     this.maxChunkSize = 4000,
     this.maxRecursionDepth = 5,
+    this.language = 'ja',
   });
 
   /// Stage-1 for a single source file: split this file's own contexts into
@@ -38,6 +44,7 @@ class LlmSummaryPipeline {
       final prompt = LlmPromptBuilder.buildFactExtractionPrompt(
         word: word,
         contextChunk: contextBlock,
+        language: language,
       );
       factsList.add(_parseFactsResponse(await llmClient.generate(prompt)));
     }
@@ -76,6 +83,7 @@ class LlmSummaryPipeline {
     final prompt = LlmPromptBuilder.buildFinalSummaryPrompt(
       word: word,
       facts: facts,
+      language: language,
     );
     return _parseSummaryResponse(await llmClient.generate(prompt));
   }
@@ -117,6 +125,7 @@ class LlmSummaryPipeline {
       final prompt = LlmPromptBuilder.buildFactExtractionPrompt(
         word: word,
         contextChunk: contextBlock,
+        language: language,
       );
       final response = await llmClient.generate(prompt);
       factsList.add(_parseFactsResponse(response));

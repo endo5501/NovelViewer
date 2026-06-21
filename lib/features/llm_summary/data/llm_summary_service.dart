@@ -48,6 +48,7 @@ class LlmSummaryService {
     required String word,
     required int coveredUpToEpisode,
     String? sourceFileName,
+    String language = 'ja',
     void Function(AnalysisProgress progress)? onProgress,
   }) async {
     try {
@@ -75,7 +76,8 @@ class LlmSummaryService {
 
       final files = _groupByFile(filteredResults);
 
-      final pipeline = LlmSummaryPipeline(llmClient: llmClient);
+      final pipeline =
+          LlmSummaryPipeline(llmClient: llmClient, language: language);
 
       // Resolve hit/miss for each file before extracting, so progress totals
       // reflect only the files actually extracted (the misses).

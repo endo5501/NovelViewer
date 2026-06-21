@@ -115,6 +115,37 @@ void main() {
       expect(cached.first.sourceFile, '100_chapter.txt');
     });
 
+    test('passes the display language through to every prompt', () async {
+      await createFile('001_chapter.txt', 'アリスが登場した。');
+
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': '- 物語の序盤に登場'}),
+        jsonEncode({'summary': 'Alice is an adventurer.'}),
+      ]);
+
+      final service = LlmSummaryService(
+        llmClient: mockClient,
+        repository: repository,
+        factCacheRepository: factCache,
+        searchService: searchService,
+      );
+
+      await service.generateSummary(
+        directoryPath: tempDir.path,
+        word: 'アリス',
+        coveredUpToEpisode: 1,
+        sourceFileName: '001_chapter.txt',
+        language: 'en',
+      );
+
+      expect(mockClient.prompts, isNotEmpty);
+      expect(
+        mockClient.prompts.every((p) => p.contains('English')),
+        isTrue,
+        reason: 'both Stage-1 and Stage-2 prompts must carry the language',
+      );
+    });
+
     test('filters out files whose numeric prefix is greater than the bound',
         () async {
       await createFile('001_chapter.txt', 'アリスが登場した。');
