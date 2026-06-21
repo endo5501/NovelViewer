@@ -18,19 +18,19 @@
 
 ## 3. 実装（テストをパスさせる）
 
-- [ ] 3.1 境界遷移の共通ハンドラを追加（方向を受け取り、エッジフラグ＋`adjacentFilesProvider` を確認して `navigateToNext` / `navigateToPrevious` を呼ぶ。隣接無しは no-op）
-- [ ] 3.2 暴発防止クールダウン（Timer ベースのフラグ）を追加し、共通ハンドラの先頭でガードする
-- [ ] 3.3 カーソルキー経路：`_pageScroll` のクランプ地点（`target == position.pixels`）で early return せず、境界方向に応じて共通ハンドラへルーティングする
-- [ ] 3.4 ホイール経路：`SingleChildScrollView` を `Listener` でラップし、`onPointerSignal` の `PointerScrollEvent` をエッジフラグで条件分岐して共通ハンドラへ渡す（境界以外はネイティブスクロールに委ねる）
-- [ ] 3.5 横書きビューアの `Stack` から `EpisodeNavigationButtons` を撤去し、表示制御（`showEdgeButtons` 等）に伴う不要コードを除去する
-- [ ] 3.6 参照が無くなった `episode_navigation_buttons.dart` を削除（他参照があれば残置し未使用化のみ）
-- [ ] 3.7 TTS オートスクロール経路（`_isTtsScrolling`）から境界遷移が発火しないこと（ユーザ入力起点限定）を実装上担保する
-- [ ] 3.8 `fvm flutter test` を実行し、2 章のテストが全てパスすることを確認してコミット
+- [x] 3.1 境界遷移の共通ハンドラを追加（方向を受け取り、エッジフラグ＋`adjacentFilesProvider` を確認して `navigateToNext` / `navigateToPrevious` を呼ぶ。隣接無しは no-op）
+- [x] 3.2 暴発防止クールダウン（Timer ベースのフラグ）を追加し、共通ハンドラの先頭でガードする
+- [x] 3.3 カーソルキー経路：`_pageScroll` のクランプ地点（`target == position.pixels`）で early return せず、境界方向に応じて共通ハンドラへルーティングする
+- [x] 3.4 ホイール経路：`SingleChildScrollView` を `Listener` でラップし、`onPointerSignal` の `PointerScrollEvent` を境界判定で条件分岐して共通ハンドラへ渡す（境界以外はネイティブスクロールに委ねる）
+- [x] 3.5 横書きビューアの `Stack` から `EpisodeNavigationButtons` を撤去し、表示制御（`showEdgeButtons` 等）に伴う不要コード（`_atScrollTop`/`_atScrollBottom`/`_updateScrollEdgeFlags`）を除去する
+- [x] 3.6 参照が無くなった `episode_navigation_buttons.dart` を削除（他参照があれば残置し未使用化のみ）
+- [x] 3.7 TTS オートスクロール経路（`_isTtsScrolling`）から境界遷移が発火しないこと（ユーザ入力起点限定）を実装上担保する
+- [x] 3.8 `fvm flutter test` を実行し、2 章のテストが全てパスすることを確認してコミット
 
 ## 4. 仕上げ・整合
 
-- [ ] 4.1 前話遷移後の末尾開始スクロール（`fromEnd` → `_jumpToEndPending`）が境界ナビ経由でも機能することを手動／テストで確認
-- [ ] 4.2 関連コメント・ドキュメント（`TextViewerPanel` / `TextContentRenderer` のクラスコメント中のボタン言及）を更新する
+- [x] 4.1 前話遷移後の末尾開始スクロール（`fromEnd` → `_jumpToEndPending`）が境界ナビ経由でも機能することを手動／テストで確認（intent 消費パス不変、既存 intent テストで担保）
+- [x] 4.2 関連コメント・ドキュメント（`TextViewerPanel` / `TextContentRenderer` のクラスコメント中のボタン言及）を更新する
 
 ## 5. 最終確認
 
