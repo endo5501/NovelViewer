@@ -275,6 +275,19 @@
   },
   "llmHistory_untrackedBadge": "Untracked",
 
+  "contextMenu_viewDetails": "Show details",
+  "historyDetail_dialogTitle": "Details: {word}",
+  "@historyDetail_dialogTitle": {
+    "placeholders": {
+      "word": { "type": "String" }
+    }
+  },
+  "historyDetail_factsTab": "Facts",
+  "historyDetail_resultTab": "Analysis",
+  "historyDetail_invalidBadge": "Invalid",
+  "historyDetail_noFacts": "No facts",
+  "historyDetail_noResults": "No analysis results",
+
   "verticalText_nextEpisodePrompt": "▶ Next: \"{name}\" (press again)",
   "@verticalText_nextEpisodePrompt": {
     "placeholders": {

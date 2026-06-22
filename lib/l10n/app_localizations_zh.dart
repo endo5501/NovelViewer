@@ -702,6 +702,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get llmHistory_untrackedBadge => '未跟踪';
 
   @override
+  String get contextMenu_viewDetails => '显示详情';
+
+  @override
+  String historyDetail_dialogTitle(String word) {
+    return '「$word」详情';
+  }
+
+  @override
+  String get historyDetail_factsTab => '事实';
+
+  @override
+  String get historyDetail_resultTab => '解析结果';
+
+  @override
+  String get historyDetail_invalidBadge => '无效';
+
+  @override
+  String get historyDetail_noFacts => '没有事实';
+
+  @override
+  String get historyDetail_noResults => '没有解析结果';
+
+  @override
   String verticalText_nextEpisodePrompt(String name) {
     return '▶ 下一话「$name」（再按一次）';
   }

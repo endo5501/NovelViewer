@@ -275,6 +275,19 @@
   },
   "llmHistory_untrackedBadge": "未跟踪",
 
+  "contextMenu_viewDetails": "显示详情",
+  "historyDetail_dialogTitle": "「{word}」详情",
+  "@historyDetail_dialogTitle": {
+    "placeholders": {
+      "word": { "type": "String" }
+    }
+  },
+  "historyDetail_factsTab": "事实",
+  "historyDetail_resultTab": "解析结果",
+  "historyDetail_invalidBadge": "无效",
+  "historyDetail_noFacts": "没有事实",
+  "historyDetail_noResults": "没有解析结果",
+
   "verticalText_nextEpisodePrompt": "▶ 下一话「{name}」（再按一次）",
   "@verticalText_nextEpisodePrompt": {
     "placeholders": {

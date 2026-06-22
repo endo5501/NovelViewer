@@ -19,6 +19,12 @@ class DeleteEntryAction extends HistoryContextAction {
   const DeleteEntryAction();
 }
 
+/// Opens the read-only detail dialog for the entry's word, showing its cached
+/// facts (`fact_cache`) and analysis-result snapshots (`word_summaries`).
+class ViewDetailsAction extends HistoryContextAction {
+  const ViewDetailsAction();
+}
+
 /// Caps the number of copy submenu entries to avoid an unreadably tall
 /// menu when (improbably) more than 8 snapshots exist. Picks the 8 most
 /// recently updated and returns them sorted ascending by episode for display.
@@ -59,6 +65,10 @@ List<PopupMenuEntry<HistoryContextAction>> buildHistoryContextMenuItems({
     items.add(const PopupMenuDivider());
   }
   items.add(PopupMenuItem(
+    value: const ViewDetailsAction(),
+    child: Text(l10n.contextMenu_viewDetails),
+  ));
+  items.add(PopupMenuItem(
     value: const DeleteEntryAction(),
     child: Text(
       l10n.bookmark_deleteMenuItem,
@@ -74,6 +84,7 @@ void dispatchHistoryContextAction(
   required HistoryEntry entry,
   required void Function(String text) onCopy,
   required void Function() onDelete,
+  required void Function() onViewDetails,
 }) {
   switch (action) {
     case CopySnapshotAction(:final episode):
@@ -85,5 +96,7 @@ void dispatchHistoryContextAction(
       }
     case DeleteEntryAction():
       onDelete();
+    case ViewDetailsAction():
+      onViewDetails();
   }
 }

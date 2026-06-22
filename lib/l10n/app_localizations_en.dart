@@ -718,6 +718,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get llmHistory_untrackedBadge => 'Untracked';
 
   @override
+  String get contextMenu_viewDetails => 'Show details';
+
+  @override
+  String historyDetail_dialogTitle(String word) {
+    return 'Details: $word';
+  }
+
+  @override
+  String get historyDetail_factsTab => 'Facts';
+
+  @override
+  String get historyDetail_resultTab => 'Analysis';
+
+  @override
+  String get historyDetail_invalidBadge => 'Invalid';
+
+  @override
+  String get historyDetail_noFacts => 'No facts';
+
+  @override
+  String get historyDetail_noResults => 'No analysis results';
+
+  @override
   String verticalText_nextEpisodePrompt(String name) {
     return '▶ Next: \"$name\" (press again)';
   }

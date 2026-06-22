@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/summary_snapshot_view.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -130,112 +131,23 @@ class _Card extends ConsumerWidget {
         constraints: const BoxConstraints(maxWidth: 360),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _SnapshotSelector(
-                      snapshots: snapshots,
-                      displayed: displayed,
-                      onSelectEpisode: onSelectEpisode,
-                      showWarning: showWarning,
-                    ),
-                  ),
-                  _ReanalyzeMenuButton(
-                    word: displayed.word,
-                    snapshots: snapshots,
-                    currentEpisode: currentEpisode,
-                    currentFileName: currentFileName,
-                    maxEpisodeInFolder: maxEpisodeInFolder,
-                    maxEpisodeFileName: maxEpisodeFileName,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                displayed.summary,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
+          child: SummarySnapshotView(
+            snapshots: snapshots,
+            displayed: displayed,
+            onSelectEpisode: onSelectEpisode,
+            keyPrefix: 'hover_popup',
+            showWarning: showWarning,
+            trailing: _ReanalyzeMenuButton(
+              word: displayed.word,
+              snapshots: snapshots,
+              currentEpisode: currentEpisode,
+              currentFileName: currentFileName,
+              maxEpisodeInFolder: maxEpisodeInFolder,
+              maxEpisodeFileName: maxEpisodeFileName,
+            ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _SnapshotSelector extends StatelessWidget {
-  const _SnapshotSelector({
-    required this.snapshots,
-    required this.displayed,
-    required this.onSelectEpisode,
-    required this.showWarning,
-  });
-
-  final List<WordSummary> snapshots;
-  final WordSummary displayed;
-  final ValueChanged<int?> onSelectEpisode;
-  final bool showWarning;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final currentIndex =
-        snapshots.indexWhere((s) => s.coveredUpToEpisode == displayed.coveredUpToEpisode);
-    final hasPrev = currentIndex > 0;
-    final hasNext = currentIndex >= 0 && currentIndex < snapshots.length - 1;
-
-    return Row(
-      key: const Key('hover_popup_snapshot_selector'),
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          key: const Key('hover_popup_snapshot_prev'),
-          icon: const Icon(Icons.chevron_left, size: 18),
-          tooltip: l10n.hoverPopup_snapshotNavPrev,
-          visualDensity: VisualDensity.compact,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-          onPressed: hasPrev
-              ? () => onSelectEpisode(
-                  snapshots[currentIndex - 1].coveredUpToEpisode)
-              : null,
-        ),
-        const SizedBox(width: 4),
-        Text(
-          l10n.hoverPopup_snapshotLabel(displayed.coveredUpToEpisode),
-          style: theme.textTheme.bodySmall,
-        ),
-        const SizedBox(width: 4),
-        IconButton(
-          key: const Key('hover_popup_snapshot_next'),
-          icon: const Icon(Icons.chevron_right, size: 18),
-          tooltip: l10n.hoverPopup_snapshotNavNext,
-          visualDensity: VisualDensity.compact,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-          onPressed: hasNext
-              ? () => onSelectEpisode(
-                  snapshots[currentIndex + 1].coveredUpToEpisode)
-              : null,
-        ),
-        if (showWarning) ...[
-          const SizedBox(width: 4),
-          Tooltip(
-            key: const Key('hover_popup_future_warning'),
-            message: l10n.hoverPopup_futureSnapshotWarning,
-            child: Icon(
-              Icons.warning_amber_outlined,
-              size: 14,
-              color: Colors.orange.shade700,
-            ),
-          ),
-        ],
-      ],
     );
   }
 }

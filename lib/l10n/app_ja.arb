@@ -404,6 +404,19 @@
   },
   "llmHistory_untrackedBadge": "未追跡",
 
+  "contextMenu_viewDetails": "詳細を表示",
+  "historyDetail_dialogTitle": "「{word}」の詳細",
+  "@historyDetail_dialogTitle": {
+    "placeholders": {
+      "word": { "type": "String" }
+    }
+  },
+  "historyDetail_factsTab": "事実",
+  "historyDetail_resultTab": "解析結果",
+  "historyDetail_invalidBadge": "無効",
+  "historyDetail_noFacts": "事実がありません",
+  "historyDetail_noResults": "解析結果がありません",
+
   "verticalText_nextEpisodePrompt": "▶ 次話「{name}」へ（もう一度）",
   "@verticalText_nextEpisodePrompt": {
     "placeholders": {
