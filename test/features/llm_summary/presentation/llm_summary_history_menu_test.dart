@@ -95,6 +95,26 @@ void main() {
           .any((i) => i.value is DeleteEntryAction);
       expect(hasDelete, isTrue);
     });
+
+    testWidgets('includes a ViewDetailsAction item', (tester) async {
+      await tester.pumpWidget(const MaterialApp(
+        locale: Locale('ja'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SizedBox(),
+      ));
+      await tester.pumpAndSettle();
+
+      final l10n = await _loadL10n();
+      final entry = _entry([_snap(10), _snap(30)]);
+
+      final items = buildHistoryContextMenuItems(entry: entry, l10n: l10n);
+
+      final hasViewDetails = items
+          .whereType<PopupMenuItem<HistoryContextAction>>()
+          .any((i) => i.value is ViewDetailsAction);
+      expect(hasViewDetails, isTrue);
+    });
   });
 
   group('dispatchHistoryContextAction', () {
@@ -107,6 +127,7 @@ void main() {
         entry: entry,
         onCopy: (t) => captured = t,
         onDelete: () => fail('delete should not fire'),
+        onViewDetails: () => fail('view details should not fire'),
       );
       expect(captured, '要約#30');
     });
@@ -118,8 +139,21 @@ void main() {
         entry: _entry([_snap(10)]),
         onCopy: (_) => fail('copy should not fire'),
         onDelete: () => deleted = true,
+        onViewDetails: () => fail('view details should not fire'),
       );
       expect(deleted, isTrue);
+    });
+
+    test('ViewDetailsAction invokes onViewDetails', () {
+      var viewed = false;
+      dispatchHistoryContextAction(
+        const ViewDetailsAction(),
+        entry: _entry([_snap(10)]),
+        onCopy: (_) => fail('copy should not fire'),
+        onDelete: () => fail('delete should not fire'),
+        onViewDetails: () => viewed = true,
+      );
+      expect(viewed, isTrue);
     });
 
     test('CopySnapshotAction with no matching episode is a no-op', () {
@@ -130,6 +164,7 @@ void main() {
         entry: entry,
         onCopy: (_) => copied = true,
         onDelete: () => fail('delete should not fire'),
+        onViewDetails: () => fail('view details should not fire'),
       );
       expect(copied, isFalse);
     });

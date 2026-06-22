@@ -1348,6 +1348,48 @@ abstract class AppLocalizations {
   /// **'未追跡'**
   String get llmHistory_untrackedBadge;
 
+  /// No description provided for @contextMenu_viewDetails.
+  ///
+  /// In ja, this message translates to:
+  /// **'詳細を表示'**
+  String get contextMenu_viewDetails;
+
+  /// No description provided for @historyDetail_dialogTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{word}」の詳細'**
+  String historyDetail_dialogTitle(String word);
+
+  /// No description provided for @historyDetail_factsTab.
+  ///
+  /// In ja, this message translates to:
+  /// **'事実'**
+  String get historyDetail_factsTab;
+
+  /// No description provided for @historyDetail_resultTab.
+  ///
+  /// In ja, this message translates to:
+  /// **'解析結果'**
+  String get historyDetail_resultTab;
+
+  /// No description provided for @historyDetail_invalidBadge.
+  ///
+  /// In ja, this message translates to:
+  /// **'無効'**
+  String get historyDetail_invalidBadge;
+
+  /// No description provided for @historyDetail_noFacts.
+  ///
+  /// In ja, this message translates to:
+  /// **'事実がありません'**
+  String get historyDetail_noFacts;
+
+  /// No description provided for @historyDetail_noResults.
+  ///
+  /// In ja, this message translates to:
+  /// **'解析結果がありません'**
+  String get historyDetail_noResults;
+
   /// No description provided for @verticalText_nextEpisodePrompt.
   ///
   /// In ja, this message translates to:

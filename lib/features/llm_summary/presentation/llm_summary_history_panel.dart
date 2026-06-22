@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_detail_dialog.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_history_menu.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/outlined_text_badge.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:path/path.dart' as p;
@@ -71,7 +73,9 @@ class _HistoryEntryTile extends ConsumerWidget {
                 ),
                 if (!entry.isJumpable) ...[
                   const SizedBox(width: 8),
-                  _UntrackedBadge(),
+                  OutlinedTextBadge(
+                    label: AppLocalizations.of(context)!.llmHistory_untrackedBadge,
+                  ),
                 ],
               ],
             ),
@@ -94,6 +98,7 @@ class _HistoryEntryTile extends ConsumerWidget {
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    final directory = ref.read(currentDirectoryProvider);
     final value = await showMenu<HistoryContextAction>(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -118,6 +123,16 @@ class _HistoryEntryTile extends ConsumerWidget {
       onDelete: () => ref
           .read(llmSummaryHistoryProvider.notifier)
           .deleteEntry(entry.word),
+      onViewDetails: () {
+        if (directory == null || !context.mounted) return;
+        showDialog<void>(
+          context: context,
+          builder: (_) => LlmSummaryDetailDialog(
+            folderPath: directory,
+            word: entry.word,
+          ),
+        );
+      },
     );
   }
 
@@ -158,23 +173,3 @@ class _SnapshotsBadge extends StatelessWidget {
   }
 }
 
-class _UntrackedBadge extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-      decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).disabledColor),
-        borderRadius: BorderRadius.circular(2),
-      ),
-      child: Text(
-        l10n.llmHistory_untrackedBadge,
-        style: TextStyle(
-          fontSize: 10,
-          color: Theme.of(context).disabledColor,
-        ),
-      ),
-    );
-  }
-}

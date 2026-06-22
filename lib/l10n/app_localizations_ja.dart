@@ -703,6 +703,29 @@ class AppLocalizationsJa extends AppLocalizations {
   String get llmHistory_untrackedBadge => '未追跡';
 
   @override
+  String get contextMenu_viewDetails => '詳細を表示';
+
+  @override
+  String historyDetail_dialogTitle(String word) {
+    return '「$word」の詳細';
+  }
+
+  @override
+  String get historyDetail_factsTab => '事実';
+
+  @override
+  String get historyDetail_resultTab => '解析結果';
+
+  @override
+  String get historyDetail_invalidBadge => '無効';
+
+  @override
+  String get historyDetail_noFacts => '事実がありません';
+
+  @override
+  String get historyDetail_noResults => '解析結果がありません';
+
+  @override
   String verticalText_nextEpisodePrompt(String name) {
     return '▶ 次話「$name」へ（もう一度）';
   }
