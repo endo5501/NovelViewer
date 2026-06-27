@@ -28,6 +28,50 @@ String formatEpisodeFileName(int index, String title, int totalEpisodes) {
   return '${paddedIndex}_$safeTitle.txt';
 }
 
+/// Fixed zero-pad width for generic-web collection episode files. Unlike
+/// [formatEpisodeFileName] (whose width tracks the total episode count), a
+/// collection grows one article at a time, so a dynamic width would rename
+/// existing files whenever the count crosses a power-of-ten boundary (D7).
+const int collectionEpisodePadWidth = 4;
+
+/// Episode file name for a generic-web collection: a fixed-width zero-padded
+/// index plus the sanitised article title. Stable as the collection grows.
+String formatCollectionEpisodeFileName(int index, String title) {
+  final paddedIndex = index.toString().padLeft(collectionEpisodePadWidth, '0');
+  final safeTitle = safeName(title);
+  return '${paddedIndex}_$safeTitle.txt';
+}
+
+/// Outcome of [DownloadService.createCollectionDirectory]: the created
+/// directory together with the folder name and the novel id derived from the
+/// (possibly suffixed) collection name.
+class CollectionDirectory {
+  final Directory dir;
+  final String folderName;
+  final String novelId;
+
+  const CollectionDirectory({
+    required this.dir,
+    required this.folderName,
+    required this.novelId,
+  });
+}
+
+/// Outcome of [DownloadService.downloadArticleIntoCollection].
+class CollectionAppendResult {
+  final String title;
+  final int episodeIndex;
+
+  /// True when an existing episode (same URL) was updated rather than appended.
+  final bool updated;
+
+  const CollectionAppendResult({
+    required this.title,
+    required this.episodeIndex,
+    required this.updated,
+  });
+}
+
 /// Matches an episode file name `{paddedIndex}_{safeTitle}.txt`, capturing the
 /// numeric (zero-padded) index and the rest of the name (the safe title). The
 /// title group is `(.*)` (not `(.+)`) so files with an empty sanitised title
@@ -679,6 +723,122 @@ class DownloadService {
       lastModified: updatedAt,
       downloadedAt: DateTime.now(),
     ));
+  }
+
+  /// Creates a new generic-web collection folder `web_<slug>` under
+  /// [outputPath]. The slug is [name] sanitised for the filesystem; if the
+  /// folder already exists a `_2`, `_3`, … suffix is appended so each call
+  /// yields a fresh collection. The returned [CollectionDirectory] carries the
+  /// final folder name and the matching novel id (folder name without `web_`).
+  Future<CollectionDirectory> createCollectionDirectory(
+    String outputPath,
+    String name,
+  ) async {
+    final baseId = safeName(name);
+    var novelId = baseId;
+    var folderName = 'web_$novelId';
+    var dir = Directory('$outputPath/$folderName');
+    var suffix = 2;
+    while (dir.existsSync()) {
+      novelId = '${baseId}_$suffix';
+      folderName = 'web_$novelId';
+      dir = Directory('$outputPath/$folderName');
+      suffix++;
+    }
+    await dir.create(recursive: true);
+    return CollectionDirectory(
+      dir: dir,
+      folderName: folderName,
+      novelId: novelId,
+    );
+  }
+
+  /// Fetches [url] via [site], extracts the article body, and saves it into the
+  /// existing [collectionDir] as an episode. The article identity is the URL,
+  /// tracked in the folder's [episodeCacheRepository]:
+  /// - a URL already in the collection updates its existing episode in place
+  ///   (no duplicate); the old file is replaced even if the title changed;
+  /// - a new URL is appended at `max(existing index) + 1`.
+  ///
+  /// Throws [EmptyIndexException] (and saves nothing) when the page yields no
+  /// usable body — the same guard the specialized download path uses, so a
+  /// JS-rendered or mis-typed page does not leave an empty episode behind.
+  Future<CollectionAppendResult> downloadArticleIntoCollection({
+    required NovelSite site,
+    required Uri url,
+    required Directory collectionDir,
+    required EpisodeCacheRepository episodeCacheRepository,
+    CancellationToken? cancelToken,
+  }) async {
+    cancelToken?.onCancel(_client.close);
+    cancelToken?.throwIfCancelled();
+
+    final normalizedUrl = site.normalizeUrl(url);
+    final response = await _fetchPageResponse(
+      normalizedUrl,
+      site: site,
+      cancelToken: cancelToken,
+    );
+    final index = site.parseIndex(site.decodeBody(response), normalizedUrl);
+    final body = index.bodyContent;
+    if (body == null || body.trim().isEmpty) {
+      throw EmptyIndexException(normalizedUrl);
+    }
+
+    final cache = await episodeCacheRepository.getAllAsMap();
+    final existing = cache[normalizedUrl.toString()];
+    final int episodeIndex;
+    final bool updated;
+    if (existing != null) {
+      episodeIndex = existing.episodeIndex;
+      updated = true;
+    } else {
+      var maxIndex = 0;
+      for (final entry in cache.values) {
+        if (entry.episodeIndex > maxIndex) maxIndex = entry.episodeIndex;
+      }
+      episodeIndex = maxIndex + 1;
+      updated = false;
+    }
+
+    // Remove any existing file(s) for this index so a changed title does not
+    // leave an orphan; the fresh file is written below.
+    _removeCollectionEpisodeFiles(collectionDir, episodeIndex);
+
+    final fileName = formatCollectionEpisodeFileName(episodeIndex, index.title);
+    await File('${collectionDir.path}/$fileName').writeAsString(body);
+
+    await episodeCacheRepository.upsert(EpisodeCache(
+      url: normalizedUrl.toString(),
+      episodeIndex: episodeIndex,
+      title: index.title,
+      lastModified: response.headers['last-modified'],
+      downloadedAt: DateTime.now(),
+    ));
+
+    return CollectionAppendResult(
+      title: index.title,
+      episodeIndex: episodeIndex,
+      updated: updated,
+    );
+  }
+
+  /// Deletes every `{paddedIndex}_*.txt` file in [dir] whose parsed index equals
+  /// [index] (any title), used before re-writing a collection episode.
+  void _removeCollectionEpisodeFiles(Directory dir, int index) {
+    if (!dir.existsSync()) return;
+    for (final entity in dir.listSync(followLinks: false)) {
+      if (entity is! File) continue;
+      final name = p.basename(entity.path);
+      final match = _episodeFileNamePattern.firstMatch(name);
+      if (match == null) continue;
+      if (int.parse(match.group(1)!) != index) continue;
+      try {
+        entity.deleteSync();
+      } catch (e, st) {
+        _log.warning('Failed to remove stale collection file "$name"', e, st);
+      }
+    }
   }
 
   void dispose() {
