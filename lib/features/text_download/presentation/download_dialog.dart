@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/features/text_download/data/sites/generic_web_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -60,7 +61,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
 
   /// True when the entered URL is handled by the generic web fallback, i.e. it
   /// should be filed into a collection rather than downloaded as a whole novel.
-  bool get _isWebArticle => _currentSite?.siteType == 'web';
+  bool get _isWebArticle => _currentSite?.siteType == GenericWebSite.siteTypeId;
 
   /// Existing `web` collections from the library, as (label, folderPath) pairs.
   List<({String label, String path})> _existingCollections(String libraryPath) {
@@ -68,7 +69,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
         const <NovelMetadata>[];
     return [
       for (final n in novels)
-        if (n.siteType == 'web')
+        if (n.siteType == GenericWebSite.siteTypeId)
           (label: n.title, path: p.join(libraryPath, n.folderName)),
     ];
   }
@@ -101,7 +102,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     if (libraryPath == null) return false;
     final site = _registry.findSite(uri);
     if (site == null) return false;
-    if (site.siteType == 'web' &&
+    if (site.siteType == GenericWebSite.siteTypeId &&
         _collectionMode == _CollectionMode.existing) {
       // Appending requires a concrete existing collection to be selected.
       return _selectedCollectionPath != null;

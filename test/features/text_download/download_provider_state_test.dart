@@ -18,8 +18,16 @@ import 'package:novel_viewer/shared/utils/cancellation_token.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class _FakeNovelRepository extends Fake implements NovelRepository {
+  final NovelMetadata? byFolderName;
+
+  _FakeNovelRepository({this.byFolderName});
+
   @override
   Future<void> upsert(NovelMetadata metadata) async {}
+
+  @override
+  Future<NovelMetadata?> findByFolderName(String folderName) async =>
+      byFolderName;
 }
 
 /// A [DownloadService] whose [downloadNovel] is fully controlled by the test.
@@ -93,11 +101,13 @@ void main() {
         url: narouUrl,
       );
 
-  ProviderContainer makeContainer(DownloadService service) {
+  ProviderContainer makeContainer(DownloadService service,
+      {NovelMetadata? metadata}) {
     final container = ProviderContainer(
       overrides: [
         libraryPathProvider.overrideWithValue(tempDir.path),
-        novelRepositoryProvider.overrideWithValue(_FakeNovelRepository()),
+        novelRepositoryProvider
+            .overrideWithValue(_FakeNovelRepository(byFolderName: metadata)),
         downloadServiceFactoryProvider.overrideWithValue(() => service),
         episodeCacheDatabaseProvider.overrideWith((ref, key) {
           final db = EpisodeCacheDatabase(tempDir.path);
@@ -134,6 +144,32 @@ void main() {
           .startDownload(url: narouUrl, outputPath: tempDir.path);
 
       expect(container.read(downloadProvider).indexTruncated, isFalse);
+    });
+
+    test('refreshNovel on a web collection does not run the novel download '
+        'path (no stray folder / wrong re-download)', () async {
+      final service = _ProgrammableService(resultBuilder: () => resultWith());
+      final container = makeContainer(
+        service,
+        metadata: NovelMetadata(
+          siteType: 'web',
+          novelId: 'research',
+          title: '研究コレクション',
+          url: 'https://blog.example.com/article',
+          folderName: 'web_research',
+          episodeCount: 2,
+          downloadedAt: DateTime(2026, 1, 1),
+        ),
+      );
+
+      await container
+          .read(downloadProvider.notifier)
+          .refreshNovel('web_research', parentPath: tempDir.path);
+
+      // The whole-novel download path must NOT run for a collection: doing so
+      // would create a web_<hash> folder and pull a single stale article URL.
+      expect(service.downloadCalls, 0);
+      expect(container.read(downloadProvider).status, DownloadStatus.error);
     });
 
     test('CancelledException maps to the cancelled status (not error)',

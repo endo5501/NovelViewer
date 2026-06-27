@@ -1,9 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/episode_cache/data/episode_cache_repository.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
-import 'dart:io';
-
 import 'package:novel_viewer/features/text_download/data/download_service.dart';
 import 'package:novel_viewer/features/text_download/data/sites/generic_web_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
@@ -268,7 +268,7 @@ class DownloadNotifier extends Notifier<DownloadState> {
 
       await ref.read(novelRepositoryProvider).upsert(
             NovelMetadata(
-              siteType: 'web',
+              siteType: GenericWebSite.siteTypeId,
               novelId: novelId,
               title: collectionTitle,
               url: normalized.toString(),
@@ -321,7 +321,7 @@ class DownloadNotifier extends Notifier<DownloadState> {
           await service.createCollectionDirectory(libraryPath, name);
       await ref.read(novelRepositoryProvider).upsert(
             NovelMetadata(
-              siteType: 'web',
+              siteType: GenericWebSite.siteTypeId,
               novelId: created.novelId,
               title: name,
               url: '',
@@ -361,6 +361,18 @@ class DownloadNotifier extends Notifier<DownloadState> {
         state = const DownloadState(
           status: DownloadStatus.error,
           errorMessage: '小説のメタデータが見つかりません',
+        );
+        return;
+      }
+      // A generic-web collection is a user-curated set of articles, not a single
+      // re-fetchable novel. Its metadata.url is empty (empty collection) or just
+      // the most-recently-added article, so the whole-novel download path would
+      // either error or pull one stale article into a different web_<hash>
+      // folder. Refuse instead of misbehaving. (Localization tracked as F142.)
+      if (metadata.siteType == GenericWebSite.siteTypeId) {
+        state = const DownloadState(
+          status: DownloadStatus.error,
+          errorMessage: 'コレクションは一括更新できません。記事ごとにダウンロードしてください',
         );
         return;
       }

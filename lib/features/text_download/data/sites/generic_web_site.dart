@@ -18,6 +18,11 @@ import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 /// short-story `bodyContent` path as Aozora, so all downstream features
 /// (LLM analysis, TTS, search, viewer) work unchanged.
 class GenericWebSite extends NovelSite {
+  /// The `siteType` identifying a generic-web collection, shared by the adapter,
+  /// the collection download provider, and the dialog's collection filter so the
+  /// magic string lives in one place.
+  static const String siteTypeId = 'web';
+
   /// Minimum extracted body length (characters). Shorter results are treated as
   /// extraction failures (JS-rendered page, typo URL, ...) and dropped so the
   /// existing [EmptyIndexException] guard fires.
@@ -53,7 +58,7 @@ class GenericWebSite extends NovelSite {
   ];
 
   @override
-  String get siteType => 'web';
+  String get siteType => siteTypeId;
 
   @override
   bool canHandle(Uri url) => url.scheme == 'https' || url.scheme == 'http';
