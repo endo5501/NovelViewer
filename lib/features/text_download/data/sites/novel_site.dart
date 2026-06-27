@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'package:novel_viewer/features/text_download/data/sites/aozora_site.dart';
+import 'package:novel_viewer/features/text_download/data/sites/generic_web_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/hameln_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/narou_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/kakuyomu_site.dart';
@@ -78,6 +79,11 @@ class NovelSiteRegistry {
     KakuyomuSite(),
     AozoraSite(),
     HamelnSite(),
+    // Fallback: must stay LAST so specialized adapters keep priority. Accepts
+    // any http/https URL the others do not claim (F119 scheme check already
+    // ran above), so no web URL is "unsupported" anymore — extraction failures
+    // surface later as EmptyIndexException.
+    GenericWebSite(),
   ];
 
   NovelSite? findSite(Uri url) {

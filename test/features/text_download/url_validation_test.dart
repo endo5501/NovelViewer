@@ -27,10 +27,14 @@ void main() {
       expect(site, isNotNull);
     });
 
-    test('rejects unknown domains', () {
+    test('resolves unknown domains to the generic web fallback', () {
+      // Behavior change: with the generic web fallback registered last, any
+      // http(s) URL no longer specialized resolves to siteType 'web' instead of
+      // being rejected. Importing arbitrary pages is the point of the feature.
       final site =
           registry.findSite(Uri.parse('https://example.com/novel/123'));
-      expect(site, isNull);
+      expect(site, isNotNull);
+      expect(site!.siteType, 'web');
     });
 
     test('rejects empty URLs', () {
@@ -57,33 +61,45 @@ void main() {
   });
 
   group('URL validation hardening (F119)', () {
-    test('rejects a look-alike Kakuyomu host', () {
+    // After the generic web fallback, the security property F119 guards is no
+    // longer "reject", but "never let a specialized adapter (e.g. Kakuyomu)
+    // claim a look-alike / malformed URL". Such URLs now fall through to the
+    // generic 'web' adapter and are fetched as the plain page the user pasted,
+    // not misparsed as Kakuyomu. So we assert siteType == 'web' (not Kakuyomu).
+    test('look-alike Kakuyomu host is not treated as Kakuyomu (web fallback)',
+        () {
       final site = registry
           .findSite(Uri.parse('https://kakuyomu.jp.evil.com/works/123'));
-      expect(site, isNull);
+      expect(site, isNotNull);
+      expect(site!.siteType, 'web');
     });
 
     test('accepts www.kakuyomu.jp host', () {
       final site = registry
           .findSite(Uri.parse('https://www.kakuyomu.jp/works/123'));
       expect(site, isNotNull);
+      expect(site!.siteType, isNot('web'));
     });
 
-    test('rejects Kakuyomu URL without a /works/ path', () {
+    test('Kakuyomu URL without a /works/ path falls back to web', () {
       final site = registry.findSite(Uri.parse('https://kakuyomu.jp/'));
-      expect(site, isNull);
+      expect(site, isNotNull);
+      expect(site!.siteType, 'web');
     });
 
-    test('rejects Kakuyomu URL where /works/ is not the leading segment', () {
+    test('Kakuyomu URL where /works/ is not the leading segment falls back to web',
+        () {
       final site =
           registry.findSite(Uri.parse('https://kakuyomu.jp/foo/works/123'));
-      expect(site, isNull);
+      expect(site, isNotNull);
+      expect(site!.siteType, 'web');
     });
 
-    test('rejects Kakuyomu URL with a non-numeric work id suffix', () {
+    test('Kakuyomu URL with a non-numeric work id falls back to web', () {
       final site =
           registry.findSite(Uri.parse('https://kakuyomu.jp/works/123abc'));
-      expect(site, isNull);
+      expect(site, isNotNull);
+      expect(site!.siteType, 'web');
     });
 
     test('still accepts a Kakuyomu episode URL', () {

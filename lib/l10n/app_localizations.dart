@@ -1024,6 +1024,72 @@ abstract class AppLocalizations {
   /// **'ライブラリルート（既定）'**
   String get download_destinationRoot;
 
+  /// No description provided for @download_collectionTargetLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'取り込み先'**
+  String get download_collectionTargetLabel;
+
+  /// No description provided for @download_collectionNew.
+  ///
+  /// In ja, this message translates to:
+  /// **'新規コレクション'**
+  String get download_collectionNew;
+
+  /// No description provided for @download_collectionExisting.
+  ///
+  /// In ja, this message translates to:
+  /// **'既存コレクションに追加'**
+  String get download_collectionExisting;
+
+  /// No description provided for @download_collectionNameLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'コレクション名'**
+  String get download_collectionNameLabel;
+
+  /// No description provided for @download_collectionNameHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'空欄なら記事タイトルを使用'**
+  String get download_collectionNameHint;
+
+  /// No description provided for @download_collectionSelectLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'コレクションを選択'**
+  String get download_collectionSelectLabel;
+
+  /// No description provided for @download_collectionNoneExisting.
+  ///
+  /// In ja, this message translates to:
+  /// **'既存のコレクションがありません'**
+  String get download_collectionNoneExisting;
+
+  /// No description provided for @download_createCollectionTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'新規コレクションを作成'**
+  String get download_createCollectionTitle;
+
+  /// No description provided for @download_createCollectionHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'コレクション名'**
+  String get download_createCollectionHint;
+
+  /// No description provided for @download_createCollectionButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'作成'**
+  String get download_createCollectionButton;
+
+  /// No description provided for @fileBrowser_newCollection.
+  ///
+  /// In ja, this message translates to:
+  /// **'新規コレクション'**
+  String get fileBrowser_newCollection;
+
   /// No description provided for @ttsDictionary_title.
   ///
   /// In ja, this message translates to:

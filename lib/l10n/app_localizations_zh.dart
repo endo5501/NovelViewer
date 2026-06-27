@@ -522,6 +522,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get download_destinationRoot => '库根目录（默认）';
 
   @override
+  String get download_collectionTargetLabel => '导入目标';
+
+  @override
+  String get download_collectionNew => '新建合集';
+
+  @override
+  String get download_collectionExisting => '添加到现有合集';
+
+  @override
+  String get download_collectionNameLabel => '合集名称';
+
+  @override
+  String get download_collectionNameHint => '留空则使用文章标题';
+
+  @override
+  String get download_collectionSelectLabel => '选择合集';
+
+  @override
+  String get download_collectionNoneExisting => '没有现有合集';
+
+  @override
+  String get download_createCollectionTitle => '新建合集';
+
+  @override
+  String get download_createCollectionHint => '合集名称';
+
+  @override
+  String get download_createCollectionButton => '创建';
+
+  @override
+  String get fileBrowser_newCollection => '新建合集';
+
+  @override
   String get ttsDictionary_title => '朗读词典';
 
   @override

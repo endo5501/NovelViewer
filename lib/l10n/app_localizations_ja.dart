@@ -523,6 +523,39 @@ class AppLocalizationsJa extends AppLocalizations {
   String get download_destinationRoot => 'ライブラリルート（既定）';
 
   @override
+  String get download_collectionTargetLabel => '取り込み先';
+
+  @override
+  String get download_collectionNew => '新規コレクション';
+
+  @override
+  String get download_collectionExisting => '既存コレクションに追加';
+
+  @override
+  String get download_collectionNameLabel => 'コレクション名';
+
+  @override
+  String get download_collectionNameHint => '空欄なら記事タイトルを使用';
+
+  @override
+  String get download_collectionSelectLabel => 'コレクションを選択';
+
+  @override
+  String get download_collectionNoneExisting => '既存のコレクションがありません';
+
+  @override
+  String get download_createCollectionTitle => '新規コレクションを作成';
+
+  @override
+  String get download_createCollectionHint => 'コレクション名';
+
+  @override
+  String get download_createCollectionButton => '作成';
+
+  @override
+  String get fileBrowser_newCollection => '新規コレクション';
+
+  @override
   String get ttsDictionary_title => '読み上げ辞書';
 
   @override
