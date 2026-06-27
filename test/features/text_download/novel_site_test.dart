@@ -100,17 +100,35 @@ void main() {
       expect(site, isNotNull);
     });
 
-    test('returns null for unsupported URL', () {
+    test('resolves generic web fallback for unsupported http(s) URL', () {
       final registry = NovelSiteRegistry();
       final url = Uri.parse('https://example.com/novel/123');
       final site = registry.findSite(url);
 
-      expect(site, isNull);
+      expect(site, isNotNull);
+      expect(site!.siteType, 'web');
+    });
+
+    test('specialized sites take priority over the generic fallback', () {
+      final registry = NovelSiteRegistry();
+      final url = Uri.parse('https://ncode.syosetu.com/n9669bk/');
+      final site = registry.findSite(url);
+
+      expect(site, isNotNull);
+      expect(site!.siteType, isNot('web'));
     });
 
     test('returns null for empty host', () {
       final registry = NovelSiteRegistry();
       final url = Uri.parse('not-a-url');
+      final site = registry.findSite(url);
+
+      expect(site, isNull);
+    });
+
+    test('returns null for non-web scheme', () {
+      final registry = NovelSiteRegistry();
+      final url = Uri.parse('file:///tmp/local.html');
       final site = registry.findSite(url);
 
       expect(site, isNull);

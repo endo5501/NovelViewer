@@ -79,7 +79,10 @@ void main() {
       expect(button.onPressed, isNull);
     });
 
-    testWidgets('shows error for unsupported URL', (tester) async {
+    testWidgets('does not show unsupported error for a generic web URL',
+        (tester) async {
+      // Behavior change: a generic http(s) page is now accepted via the web
+      // fallback, so the "unsupported site" error must not appear for it.
       await tester.pumpWidget(createTestApp());
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
@@ -92,7 +95,7 @@ void main() {
 
       expect(
           find.text('サポートされていないサイトです（なろう・なろう18・カクヨム・青空文庫・ハーメルンに対応）'),
-          findsOneWidget);
+          findsNothing);
     });
 
     testWidgets('accepts valid narou URL', (tester) async {

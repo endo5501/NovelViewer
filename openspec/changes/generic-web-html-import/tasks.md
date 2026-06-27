@@ -1,31 +1,32 @@
 ## 1. 事前確定（Open Questions の決着）
 
-- [ ] 1.1 本文「短すぎる」判定の最小文字数閾値を決める（CMSサンプルで確認、暫定200字）。決定値を design の Open Questions に反映
-- [ ] 1.2 コレクション名スラッグ生成規則を決める（日本語の safe 化方式・衝突サフィックス形式）。決定を design に反映
-- [ ] 1.3 エピソードファイル名の固定ゼロ埋め幅の桁数を決める（暫定4桁）。決定を design に反映
-- [ ] 1.4 密度スコアのリンク減点係数 `k` と候補要素の絞り込み初期値を決める（テストで調整可能にする前提）
+- [x] 1.1 本文「短すぎる」判定の最小文字数閾値を決める（200字に確定）。決定値を design に反映
+- [x] 1.2 コレクション名スラッグ生成規則を決める（`web_${safeName(name)}`＋衝突サフィックス `_2,_3...`）。決定を design に反映
+- [x] 1.3 エピソードファイル名の固定ゼロ埋め幅の桁数を決める（4桁固定）。決定を design に反映
+- [x] 1.4 密度スコアのリンク減点係数 `k` と候補要素の絞り込み初期値を決める（k=1.0・直下<p>テキスト基準、定数化）
 
 ## 2. 本文抽出ヒューリスティック（generic-web-import）
 
-- [ ] 2.1 [テスト] ノイズ除去（script/style/nav/header/footer/aside/form）のテストを書き、失敗を確認
-- [ ] 2.2 [テスト] セマンティック優先（article/main/[role=main]）→ CMS定番セレクタ → 密度フォールバックの選択順テストを、固定HTMLフィクスチャで書き、失敗を確認
-- [ ] 2.3 [テスト] `<ruby>` 保持・`<br>` 改行の踏襲テストを書き、失敗を確認
-- [ ] 2.4 `GenericWebSite` の本文抽出（除去→セマンティック→CMS定番→密度）を実装し、2.1–2.3 を通す（既存 `blockToText`/`extractParagraphText` を再利用）
-- [ ] 2.5 [テスト] タイトル決定（og:title → h1 → title）のテストを書き、失敗を確認
-- [ ] 2.6 タイトル決定を実装し 2.5 を通す
+- [x] 2.1 [テスト] ノイズ除去（script/style/nav/header/footer/aside/form）のテストを書き、失敗を確認
+- [x] 2.2 [テスト] セマンティック優先（article/main/[role=main]）→ CMS定番セレクタ → 密度フォールバックの選択順テストを、固定HTMLフィクスチャで書き、失敗を確認
+- [x] 2.3 [テスト] `<ruby>` 保持・`<br>` 改行の踏襲テストを書き、失敗を確認
+- [x] 2.4 `GenericWebSite` の本文抽出（除去→セマンティック→CMS定番→密度）を実装し、2.1–2.3 を通す（既存 `blockToText`/`extractParagraphText` を再利用）
+- [x] 2.5 [テスト] タイトル決定（og:title → h1 → title）のテストを書き、失敗を確認
+- [x] 2.6 タイトル決定を実装し 2.5 を通す
 
 ## 3. 文字コード判定（generic-web-import）
 
-- [ ] 3.1 [テスト] Content-Type charset → `<meta charset>` → 既定UTF-8 の優先順テスト（Shift_JIS 個人ブログのフィクスチャ含む）を書き、失敗を確認
-- [ ] 3.2 `decodeBody` のオーバーライドで多段文字コード判定を実装し 3.1 を通す
+- [x] 3.1 [テスト] Content-Type charset → `<meta charset>` → 既定UTF-8 の優先順テスト（Shift_JIS 個人ブログのフィクスチャ含む）を書き、失敗を確認
+- [x] 3.2 `decodeBody` のオーバーライドで多段文字コード判定を実装し 3.1 を通す
 
 ## 4. レジストリ統合と空ガード（generic-web-import）
 
-- [ ] 4.1 [テスト] フォールバック受理（専用サイト優先・末尾で web 受理・非webスキーム拒否）のレジストリ解決テストを書き、失敗を確認
-- [ ] 4.2 `NovelSiteRegistry._sites` 末尾に `GenericWebSite` を追加し 4.1 を通す
-- [ ] 4.3 [テスト] 抽出が空/閾値未満なら `bodyContent=null` に倒し、`EmptyIndexException` でフォルダ・エピソードを残さず失敗するテストを書き、失敗を確認
-- [ ] 4.4 空/短すぎガードを実装し 4.3 を通す（既存 download_service の `EmptyIndexException` 経路に合流）
-- [ ] 4.5 抽出失敗時のエラー文言（JS描画ページの可能性を示唆）を整備し、ダイアログのエラー表示に反映
+- [x] 4.1 [テスト] フォールバック受理（専用サイト優先・末尾で web 受理・非webスキーム拒否）のレジストリ解決テストを書き、失敗を確認
+- [x] 4.2 `NovelSiteRegistry._sites` 末尾に `GenericWebSite` を追加し 4.1 を通す
+- [x] 4.3 [テスト] 抽出が空/閾値未満なら `bodyContent=null` に倒すテストを書き、失敗を確認（`EmptyIndexException` 連携は download_service 既存ガードで担保）
+- [x] 4.4 空/短すぎガードを実装し 4.3 を通す（既存 download_service の `EmptyIndexException` 経路に合流）
+- [ ] 4.5 抽出失敗時のエラー文言（JS描画ページの可能性を示唆）を整備し、ダイアログのエラー表示に反映 ※Section 7 のUI改修と合わせて実施
+- [x] 4.6 挙動変化に伴う既存テスト更新（url_validation F119・download_dialog の「非対応URL」前提）→ web へ解決する新挙動に更新。design D9 に整理を明記
 
 ## 5. コレクションへの追記と採番（web-collection-download）
 
