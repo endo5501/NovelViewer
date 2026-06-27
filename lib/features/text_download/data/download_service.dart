@@ -846,20 +846,27 @@ class DownloadService {
       episodeIndex = existing.episodeIndex;
       updated = true;
     } else {
+      // Next index = max over BOTH the cache rows AND the on-disk episode files.
+      // Scanning the directory too means a missing/stale episode_cache.db (e.g.
+      // deleted, or a folder populated out-of-band) cannot make a new article
+      // reuse index 1 and overwrite an existing `0001_*.txt`.
       var maxIndex = 0;
       for (final entry in cache.values) {
         if (entry.episodeIndex > maxIndex) maxIndex = entry.episodeIndex;
       }
+      final diskMax = _maxCollectionEpisodeIndexOnDisk(collectionDir);
+      if (diskMax > maxIndex) maxIndex = diskMax;
       episodeIndex = maxIndex + 1;
       updated = false;
     }
 
-    // Remove any existing file(s) for this index so a changed title does not
-    // leave an orphan; the fresh file is written below.
-    _removeCollectionEpisodeFiles(collectionDir, episodeIndex);
-
+    // Write the new file FIRST, then remove any other file at this index (a
+    // stale name left by a title change). Writing before deleting means a crash
+    // can never destroy the old content without the replacement already on disk;
+    // an identical name is overwritten in place.
     final fileName = formatCollectionEpisodeFileName(episodeIndex, article.title);
     await File('${collectionDir.path}/$fileName').writeAsString(article.body);
+    _removeCollectionEpisodeFiles(collectionDir, episodeIndex, keep: fileName);
 
     await episodeCacheRepository.upsert(EpisodeCache(
       url: url.toString(),
@@ -876,13 +883,29 @@ class DownloadService {
     );
   }
 
+  /// Highest parsed index among `{index}_*.txt` files in [dir] (0 when none).
+  int _maxCollectionEpisodeIndexOnDisk(Directory dir) {
+    if (!dir.existsSync()) return 0;
+    var maxIndex = 0;
+    for (final entity in dir.listSync(followLinks: false)) {
+      if (entity is! File) continue;
+      final match = _episodeFileNamePattern.firstMatch(p.basename(entity.path));
+      if (match == null) continue;
+      final parsed = int.parse(match.group(1)!);
+      if (parsed > maxIndex) maxIndex = parsed;
+    }
+    return maxIndex;
+  }
+
   /// Deletes every `{paddedIndex}_*.txt` file in [dir] whose parsed index equals
-  /// [index] (any title), used before re-writing a collection episode.
-  void _removeCollectionEpisodeFiles(Directory dir, int index) {
+  /// [index] (any title), except [keep], used to clean up a stale episode file
+  /// after the replacement at the same index has been written.
+  void _removeCollectionEpisodeFiles(Directory dir, int index, {String? keep}) {
     if (!dir.existsSync()) return;
     for (final entity in dir.listSync(followLinks: false)) {
       if (entity is! File) continue;
       final name = p.basename(entity.path);
+      if (name == keep) continue;
       final match = _episodeFileNamePattern.firstMatch(name);
       if (match == null) continue;
       if (int.parse(match.group(1)!) != index) continue;

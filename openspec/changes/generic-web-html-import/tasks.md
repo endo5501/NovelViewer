@@ -60,7 +60,7 @@
 
 ## 10. 最終確認
 
-- [ ] 10.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 10.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 10.3 `fvm flutter analyze`でリントを実行
-- [ ] 10.4 `fvm flutter test`でテストを実行
+- [x] 10.1 code-reviewスキルを使用してコードレビューを実施（refreshNovel ガード修正＋siteType定数化＋import順）
+- [x] 10.2 codexスキルを使用して現在開発中のコードレビューを実施（採番のディスク併用・write-then-delete・http保持・dropdown値ガードを修正、サブフォルダ移動は既知制約として記録）
+- [x] 10.3 `fvm flutter analyze`でリントを実行（No issues found）
+- [x] 10.4 `fvm flutter test`でテストを実行（2283 passed / 1 skip）

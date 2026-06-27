@@ -305,7 +305,12 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
                 : DropdownButton<String>(
                     key: const Key('collection_existing_dropdown'),
                     isExpanded: true,
-                    value: _selectedCollectionPath,
+                    // Guard against a value no longer present in items (the
+                    // collection was deleted/renamed while the dialog was open),
+                    // which would trip DropdownButton's assertion.
+                    value: collections.any((c) => c.path == _selectedCollectionPath)
+                        ? _selectedCollectionPath
+                        : null,
                     hint: Text(l10n.download_collectionSelectLabel),
                     onChanged: isDownloading
                         ? null

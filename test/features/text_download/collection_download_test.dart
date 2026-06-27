@@ -211,6 +211,28 @@ void main() {
       expect(_txtFiles(collectionDir), ['0001_新タイトル.txt']);
     });
 
+    test('next index also accounts for on-disk files (stale/missing cache)',
+        () async {
+      // Simulate a folder that already has an episode file but whose cache row
+      // is missing (deleted episode_cache.db / out-of-band folder): a new
+      // article must NOT reuse index 1 and overwrite the existing file.
+      File('${collectionDir.path}/0001_既存記事.txt').writeAsStringSync('既存本文。');
+
+      const url = 'https://blog.example.com/new';
+      final service = serviceFor({});
+      final site = _ArticleSite({url: (title: '新規記事', body: '新規本文。')});
+
+      final result = await service.downloadArticleIntoCollection(
+        site: site,
+        url: Uri.parse(url),
+        collectionDir: collectionDir,
+        episodeCacheRepository: cacheRepo,
+      );
+
+      expect(result.episodeIndex, 2);
+      expect(_txtFiles(collectionDir), ['0001_既存記事.txt', '0002_新規記事.txt']);
+    });
+
     test('throws EmptyIndexException and saves nothing when body is empty',
         () async {
       const url = 'https://blog.example.com/spa';

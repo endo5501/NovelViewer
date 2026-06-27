@@ -72,15 +72,13 @@ class GenericWebSite extends NovelSite {
     return digest.toString().substring(0, 16);
   }
 
-  /// Upgrade http -> https and drop the fragment (which never identifies a
-  /// distinct article) so the stored/fetched URL is stable.
+  /// Drop the fragment (which never identifies a distinct article) so the
+  /// stored/fetched URL is stable. Unlike the specialized adapters, the scheme
+  /// is PRESERVED: a generic page may be served over plain http only (common for
+  /// older personal blogs), and forcing https would break the fetch.
   @override
   Uri normalizeUrl(Uri url) {
-    var normalized = url.scheme == 'http' ? url.replace(scheme: 'https') : url;
-    if (normalized.hasFragment) {
-      normalized = normalized.removeFragment();
-    }
-    return normalized;
+    return url.hasFragment ? url.removeFragment() : url;
   }
 
   /// Decodes the body using charset detection: Content-Type header ->

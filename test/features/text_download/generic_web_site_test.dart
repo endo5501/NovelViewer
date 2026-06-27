@@ -34,10 +34,10 @@ void main() {
   });
 
   group('normalizeUrl', () {
-    test('upgrades http to https', () {
+    test('preserves the http scheme (http-only sites)', () {
       expect(
         site.normalizeUrl(Uri.parse('http://example.com/a')).toString(),
-        'https://example.com/a',
+        'http://example.com/a',
       );
     });
 
