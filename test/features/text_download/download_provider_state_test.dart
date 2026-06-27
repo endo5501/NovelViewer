@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:io' show Directory, HttpException;
+import 'dart:convert';
+import 'dart:io' show Directory, File, HttpException;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,11 +20,14 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class _FakeNovelRepository extends Fake implements NovelRepository {
   final NovelMetadata? byFolderName;
+  final List<NovelMetadata> upserts = [];
 
   _FakeNovelRepository({this.byFolderName});
 
   @override
-  Future<void> upsert(NovelMetadata metadata) async {}
+  Future<void> upsert(NovelMetadata metadata) async {
+    upserts.add(metadata);
+  }
 
   @override
   Future<NovelMetadata?> findByFolderName(String folderName) async =>
@@ -102,12 +106,12 @@ void main() {
       );
 
   ProviderContainer makeContainer(DownloadService service,
-      {NovelMetadata? metadata}) {
+      {NovelMetadata? metadata, _FakeNovelRepository? repo}) {
     final container = ProviderContainer(
       overrides: [
         libraryPathProvider.overrideWithValue(tempDir.path),
-        novelRepositoryProvider
-            .overrideWithValue(_FakeNovelRepository(byFolderName: metadata)),
+        novelRepositoryProvider.overrideWithValue(
+            repo ?? _FakeNovelRepository(byFolderName: metadata)),
         downloadServiceFactoryProvider.overrideWithValue(() => service),
         episodeCacheDatabaseProvider.overrideWith((ref, key) {
           final db = EpisodeCacheDatabase(tempDir.path);
@@ -279,6 +283,72 @@ void main() {
       expect(service.capturedToken, isNotNull);
       expect(service.capturedToken!.isCancelled, isTrue);
       expect(container.read(downloadProvider).status, DownloadStatus.cancelled);
+    });
+  });
+
+  group('collection downloads', () {
+    // A real DownloadService whose MockClient serves an article page so the
+    // generic-web extraction in startCollectionDownload runs for real.
+    DownloadService articleService(String title) {
+      final body = 'これはコレクション取り込み用の十分に長い本文テキストです。' * 10;
+      final html = '<html><head>'
+          '<meta property="og:title" content="$title">'
+          '</head><body><article><p>$body</p></article></body></html>';
+      return DownloadService(
+        client: MockClient((_) async => http.Response.bytes(
+              utf8.encode(html),
+              200,
+              headers: {'content-type': 'text/html; charset=utf-8'},
+            )),
+        requestDelay: Duration.zero,
+      );
+    }
+
+    test('new collection with a blank name defaults to the article title',
+        () async {
+      final repo = _FakeNovelRepository();
+      final container = makeContainer(articleService('基礎から学ぶAI'), repo: repo);
+
+      await container.read(downloadProvider.notifier).startCollectionDownload(
+            url: Uri.parse('https://blog.example.com/intro'),
+            libraryPath: tempDir.path,
+            // newCollectionName omitted (blank) -> should use the article title.
+          );
+
+      expect(container.read(downloadProvider).status, DownloadStatus.completed);
+      expect(repo.upserts, hasLength(1));
+      final meta = repo.upserts.single;
+      expect(meta.siteType, 'web');
+      expect(meta.title, '基礎から学ぶAI');
+      expect(meta.folderName, 'web_基礎から学ぶAI');
+      expect(meta.episodeCount, 1);
+      expect(Directory('${tempDir.path}/web_基礎から学ぶAI').existsSync(), isTrue);
+    });
+
+    test('createEmptyCollection registers a zero-episode web collection',
+        () async {
+      final repo = _FakeNovelRepository();
+      final container = makeContainer(articleService('unused'), repo: repo);
+
+      await container.read(downloadProvider.notifier).createEmptyCollection(
+            name: '研究メモ',
+            libraryPath: tempDir.path,
+          );
+
+      expect(repo.upserts, hasLength(1));
+      final meta = repo.upserts.single;
+      expect(meta.siteType, 'web');
+      expect(meta.title, '研究メモ');
+      expect(meta.folderName, 'web_研究メモ');
+      expect(meta.episodeCount, 0);
+      expect(meta.url, '');
+      expect(Directory('${tempDir.path}/web_研究メモ').existsSync(), isTrue);
+      // No episode files in a freshly-created empty collection.
+      final txt = Directory('${tempDir.path}/web_研究メモ')
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.txt'));
+      expect(txt, isEmpty);
     });
   });
 }
