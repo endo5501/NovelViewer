@@ -534,6 +534,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get download_destinationRoot => 'Library root (default)';
 
   @override
+  String get download_collectionTargetLabel => 'Import target';
+
+  @override
+  String get download_collectionNew => 'New collection';
+
+  @override
+  String get download_collectionExisting => 'Add to existing collection';
+
+  @override
+  String get download_collectionNameLabel => 'Collection name';
+
+  @override
+  String get download_collectionNameHint => 'Blank uses the article title';
+
+  @override
+  String get download_collectionSelectLabel => 'Select a collection';
+
+  @override
+  String get download_collectionNoneExisting => 'No existing collections';
+
+  @override
+  String get download_createCollectionTitle => 'Create new collection';
+
+  @override
+  String get download_createCollectionHint => 'Collection name';
+
+  @override
+  String get download_createCollectionButton => 'Create';
+
+  @override
+  String get fileBrowser_newCollection => 'New collection';
+
+  @override
   String get ttsDictionary_title => 'TTS Dictionary';
 
   @override

@@ -57,6 +57,20 @@ class CollectionDirectory {
   });
 }
 
+/// An article fetched and extracted for a collection: its title, body text, and
+/// the source page's `Last-Modified` (if any).
+class FetchedArticle {
+  final String title;
+  final String body;
+  final String? lastModified;
+
+  const FetchedArticle({
+    required this.title,
+    required this.body,
+    required this.lastModified,
+  });
+}
+
 /// Outcome of [DownloadService.downloadArticleIntoCollection].
 class CollectionAppendResult {
   final String title;
@@ -770,6 +784,30 @@ class DownloadService {
     required EpisodeCacheRepository episodeCacheRepository,
     CancellationToken? cancelToken,
   }) async {
+    final normalizedUrl = site.normalizeUrl(url);
+    final article = await fetchArticle(
+      site: site,
+      url: normalizedUrl,
+      cancelToken: cancelToken,
+    );
+    return saveArticleToCollection(
+      collectionDir: collectionDir,
+      url: normalizedUrl,
+      article: article,
+      episodeCacheRepository: episodeCacheRepository,
+    );
+  }
+
+  /// Fetches [url] via [site] and extracts the article (title + body). Throws
+  /// [EmptyIndexException] when no usable body is produced (empty / JS-rendered
+  /// / mis-typed page), so callers never persist an empty article. Exposed
+  /// separately so a "new collection" flow can name the folder after the
+  /// article title before any folder is created.
+  Future<FetchedArticle> fetchArticle({
+    required NovelSite site,
+    required Uri url,
+    CancellationToken? cancelToken,
+  }) async {
     cancelToken?.onCancel(_client.close);
     cancelToken?.throwIfCancelled();
 
@@ -784,9 +822,24 @@ class DownloadService {
     if (body == null || body.trim().isEmpty) {
       throw EmptyIndexException(normalizedUrl);
     }
+    return FetchedArticle(
+      title: index.title,
+      body: body,
+      lastModified: response.headers['last-modified'],
+    );
+  }
 
+  /// Saves a pre-fetched [article] into [collectionDir] as an episode, indexing
+  /// it by [url] in the folder's [episodeCacheRepository] (update existing URL
+  /// in place, otherwise append at max+1). See [downloadArticleIntoCollection].
+  Future<CollectionAppendResult> saveArticleToCollection({
+    required Directory collectionDir,
+    required Uri url,
+    required FetchedArticle article,
+    required EpisodeCacheRepository episodeCacheRepository,
+  }) async {
     final cache = await episodeCacheRepository.getAllAsMap();
-    final existing = cache[normalizedUrl.toString()];
+    final existing = cache[url.toString()];
     final int episodeIndex;
     final bool updated;
     if (existing != null) {
@@ -805,19 +858,19 @@ class DownloadService {
     // leave an orphan; the fresh file is written below.
     _removeCollectionEpisodeFiles(collectionDir, episodeIndex);
 
-    final fileName = formatCollectionEpisodeFileName(episodeIndex, index.title);
-    await File('${collectionDir.path}/$fileName').writeAsString(body);
+    final fileName = formatCollectionEpisodeFileName(episodeIndex, article.title);
+    await File('${collectionDir.path}/$fileName').writeAsString(article.body);
 
     await episodeCacheRepository.upsert(EpisodeCache(
-      url: normalizedUrl.toString(),
+      url: url.toString(),
       episodeIndex: episodeIndex,
-      title: index.title,
-      lastModified: response.headers['last-modified'],
+      title: article.title,
+      lastModified: article.lastModified,
       downloadedAt: DateTime.now(),
     ));
 
     return CollectionAppendResult(
-      title: index.title,
+      title: article.title,
       episodeIndex: episodeIndex,
       updated: updated,
     );

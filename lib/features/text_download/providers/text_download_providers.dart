@@ -2,7 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/episode_cache/data/episode_cache_repository.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'dart:io';
+
 import 'package:novel_viewer/features/text_download/data/download_service.dart';
+import 'package:novel_viewer/features/text_download/data/sites/generic_web_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
@@ -185,6 +188,151 @@ class DownloadNotifier extends Notifier<DownloadState> {
       // paths. See [folderDbKey].
       await ref.read(perFolderDbRegistryProvider).closeEpisodeCache(cacheKey);
       ref.invalidate(episodeCacheDatabaseProvider(cacheKey));
+    }
+  }
+
+  /// Imports a single generic web article into a collection (theme folder).
+  ///
+  /// Always uses [GenericWebSite] (single-page extraction), regardless of
+  /// whether the URL also matches a specialized site — "add this page to a
+  /// collection" treats the page as a plain article.
+  ///
+  /// Exactly one of [existingCollectionPath] / [newCollectionName] selects the
+  /// destination: an existing collection folder is appended to, otherwise a new
+  /// `web_<slug>` collection is created. When [newCollectionName] is blank, the
+  /// fetched article title is used as the collection name.
+  Future<void> startCollectionDownload({
+    required Uri url,
+    required String libraryPath,
+    String? existingCollectionPath,
+    String? newCollectionName,
+  }) async {
+    if (_cancelToken != null) return;
+
+    final site = GenericWebSite();
+    state = const DownloadState(status: DownloadStatus.downloading);
+
+    final service = ref.read(downloadServiceFactoryProvider)();
+    final cancelToken = CancellationToken();
+    _cancelToken = cancelToken;
+    String? cacheKey;
+
+    try {
+      final normalized = site.normalizeUrl(url);
+      final article = await service.fetchArticle(
+        site: site,
+        url: normalized,
+        cancelToken: cancelToken,
+      );
+
+      final Directory collectionDir;
+      final String folderName;
+      final String novelId;
+      final String collectionTitle;
+      if (existingCollectionPath != null) {
+        collectionDir = Directory(existingCollectionPath);
+        folderName = p.basename(existingCollectionPath);
+        novelId =
+            folderName.startsWith('web_') ? folderName.substring(4) : folderName;
+        final existingMeta =
+            await ref.read(novelRepositoryProvider).findByFolderName(folderName);
+        collectionTitle = existingMeta?.title ?? novelId;
+      } else {
+        final name = (newCollectionName?.trim().isNotEmpty ?? false)
+            ? newCollectionName!.trim()
+            : article.title;
+        final created =
+            await service.createCollectionDirectory(libraryPath, name);
+        collectionDir = created.dir;
+        folderName = created.folderName;
+        novelId = created.novelId;
+        collectionTitle = name;
+      }
+
+      cacheKey = folderDbKey(collectionDir.path);
+      final cacheDb = ref.read(episodeCacheDatabaseProvider(cacheKey));
+      final cacheRepo = EpisodeCacheRepository(cacheDb);
+
+      await service.saveArticleToCollection(
+        collectionDir: collectionDir,
+        url: normalized,
+        article: article,
+        episodeCacheRepository: cacheRepo,
+      );
+
+      final episodeCount = collectionDir
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.txt'))
+          .length;
+
+      await ref.read(novelRepositoryProvider).upsert(
+            NovelMetadata(
+              siteType: 'web',
+              novelId: novelId,
+              title: collectionTitle,
+              url: normalized.toString(),
+              folderName: folderName,
+              episodeCount: episodeCount,
+              downloadedAt: DateTime.now(),
+            ),
+          );
+      ref.invalidate(allNovelsProvider);
+
+      state = state.copyWith(
+        status: DownloadStatus.completed,
+        totalEpisodes: episodeCount,
+      );
+    } catch (e) {
+      if (e is CancelledException || cancelToken.isCancelled) {
+        state = state.copyWith(status: DownloadStatus.cancelled);
+      } else if (e is EmptyIndexException) {
+        state = state.copyWith(
+          status: DownloadStatus.error,
+          errorMessage:
+              '本文を抽出できませんでした。JavaScriptで描画されるページか、本文の少ないページの可能性があります',
+        );
+      } else {
+        state = state.copyWith(
+          status: DownloadStatus.error,
+          errorMessage: e.toString(),
+        );
+      }
+    } finally {
+      _cancelToken = null;
+      service.dispose();
+      if (cacheKey != null) {
+        await ref.read(perFolderDbRegistryProvider).closeEpisodeCache(cacheKey);
+        ref.invalidate(episodeCacheDatabaseProvider(cacheKey));
+      }
+    }
+  }
+
+  /// Creates an empty `web` collection folder (no articles yet) so the user can
+  /// add pages to it later via [startCollectionDownload]. Registers metadata so
+  /// it appears in the library and in the "add to existing collection" picker.
+  Future<void> createEmptyCollection({
+    required String name,
+    required String libraryPath,
+  }) async {
+    final service = ref.read(downloadServiceFactoryProvider)();
+    try {
+      final created =
+          await service.createCollectionDirectory(libraryPath, name);
+      await ref.read(novelRepositoryProvider).upsert(
+            NovelMetadata(
+              siteType: 'web',
+              novelId: created.novelId,
+              title: name,
+              url: '',
+              folderName: created.folderName,
+              episodeCount: 0,
+              downloadedAt: DateTime.now(),
+            ),
+          );
+      ref.invalidate(allNovelsProvider);
+    } finally {
+      service.dispose();
     }
   }
 

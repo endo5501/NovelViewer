@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+
+/// How a generic web article should be filed: into a freshly-created collection
+/// or appended to an existing one.
+enum _CollectionMode { create, existing }
 
 class DownloadDialog extends ConsumerStatefulWidget {
   const DownloadDialog({super.key});
@@ -23,6 +30,7 @@ class DownloadDialog extends ConsumerStatefulWidget {
 
 class _DownloadDialogState extends ConsumerState<DownloadDialog> {
   final _urlController = TextEditingController();
+  final _newCollectionNameController = TextEditingController();
   final _registry = NovelSiteRegistry();
   String? _urlError;
 
@@ -30,10 +38,39 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
   /// default), preserving the previous always-save-to-root behavior.
   String? _selectedDestinationPath;
 
+  /// Collection target state, used only when the URL resolves to the generic
+  /// `web` adapter.
+  _CollectionMode _collectionMode = _CollectionMode.create;
+  String? _selectedCollectionPath;
+
   @override
   void dispose() {
     _urlController.dispose();
+    _newCollectionNameController.dispose();
     super.dispose();
+  }
+
+  /// The adapter for the currently-entered URL, or null when the field is
+  /// empty / not a parseable http(s) URL.
+  NovelSite? get _currentSite {
+    final uri = Uri.tryParse(_urlController.text);
+    if (uri == null) return null;
+    return _registry.findSite(uri);
+  }
+
+  /// True when the entered URL is handled by the generic web fallback, i.e. it
+  /// should be filed into a collection rather than downloaded as a whole novel.
+  bool get _isWebArticle => _currentSite?.siteType == 'web';
+
+  /// Existing `web` collections from the library, as (label, folderPath) pairs.
+  List<({String label, String path})> _existingCollections(String libraryPath) {
+    final novels = ref.watch(allNovelsProvider).asData?.value ??
+        const <NovelMetadata>[];
+    return [
+      for (final n in novels)
+        if (n.siteType == 'web')
+          (label: n.title, path: p.join(libraryPath, n.folderName)),
+    ];
   }
 
   void _validateUrl(String value) {
@@ -60,9 +97,16 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     if (url.isEmpty) return false;
     final uri = Uri.tryParse(url);
     if (uri == null) return false;
-    final outputPath = ref.read(libraryPathProvider);
-    if (outputPath == null) return false;
-    return _registry.findSite(uri) != null;
+    final libraryPath = ref.read(libraryPathProvider);
+    if (libraryPath == null) return false;
+    final site = _registry.findSite(uri);
+    if (site == null) return false;
+    if (site.siteType == 'web' &&
+        _collectionMode == _CollectionMode.existing) {
+      // Appending requires a concrete existing collection to be selected.
+      return _selectedCollectionPath != null;
+    }
+    return true;
   }
 
   /// Resolves the effective download destination. Mirrors the validity check in
@@ -83,6 +127,25 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
   void _startDownload() {
     final uri = Uri.parse(_urlController.text);
     final libraryPath = ref.read(libraryPathProvider)!;
+
+    if (_isWebArticle) {
+      if (_collectionMode == _CollectionMode.existing) {
+        ref.read(downloadProvider.notifier).startCollectionDownload(
+              url: uri,
+              libraryPath: libraryPath,
+              existingCollectionPath: _selectedCollectionPath,
+            );
+      } else {
+        final name = _newCollectionNameController.text.trim();
+        ref.read(downloadProvider.notifier).startCollectionDownload(
+              url: uri,
+              libraryPath: libraryPath,
+              newCollectionName: name.isEmpty ? null : name,
+            );
+      }
+      return;
+    }
+
     final outputPath = _resolveOutputPath(libraryPath);
     ref.read(downloadProvider.notifier).startDownload(
           url: uri,
@@ -113,7 +176,10 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
               onChanged: _validateUrl,
             ),
             const SizedBox(height: 16),
-            _buildDestinationSelector(downloadState),
+            if (_isWebArticle)
+              _buildCollectionTarget(downloadState)
+            else
+              _buildDestinationSelector(downloadState),
             const SizedBox(height: 16),
             _buildStatusArea(downloadState),
           ],
@@ -169,6 +235,88 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
           items: items,
         ),
       ),
+    );
+  }
+
+  /// Collection target UI shown when the URL is a generic web article: choose
+  /// between creating a new collection (optional name) or appending to an
+  /// existing one (dropdown of `web` collections).
+  Widget _buildCollectionTarget(DownloadState state) {
+    final l10n = AppLocalizations.of(context)!;
+    final libraryPath = ref.watch(libraryPathProvider);
+    if (libraryPath == null) return const SizedBox.shrink();
+
+    final collections = _existingCollections(libraryPath);
+    final isDownloading = state.status == DownloadStatus.downloading;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.download_collectionTargetLabel,
+            style: Theme.of(context).textTheme.labelLarge),
+        RadioGroup<_CollectionMode>(
+          groupValue: _collectionMode,
+          onChanged: (v) {
+            if (isDownloading || v == null) return;
+            // Cannot switch to "existing" with no collections to pick.
+            if (v == _CollectionMode.existing && collections.isEmpty) return;
+            setState(() => _collectionMode = v);
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              RadioListTile<_CollectionMode>(
+                key: const Key('collection_mode_create'),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: Text(l10n.download_collectionNew),
+                value: _CollectionMode.create,
+              ),
+              if (_collectionMode == _CollectionMode.create)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, bottom: 8),
+                  child: TextField(
+                    key: const Key('collection_name_field'),
+                    controller: _newCollectionNameController,
+                    enabled: !isDownloading,
+                    decoration: InputDecoration(
+                      labelText: l10n.download_collectionNameLabel,
+                      hintText: l10n.download_collectionNameHint,
+                      isDense: true,
+                    ),
+                  ),
+                ),
+              RadioListTile<_CollectionMode>(
+                key: const Key('collection_mode_existing'),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: Text(l10n.download_collectionExisting),
+                value: _CollectionMode.existing,
+              ),
+            ],
+          ),
+        ),
+        if (_collectionMode == _CollectionMode.existing)
+          Padding(
+            padding: const EdgeInsets.only(left: 16),
+            child: collections.isEmpty
+                ? Text(l10n.download_collectionNoneExisting)
+                : DropdownButton<String>(
+                    key: const Key('collection_existing_dropdown'),
+                    isExpanded: true,
+                    value: _selectedCollectionPath,
+                    hint: Text(l10n.download_collectionSelectLabel),
+                    onChanged: isDownloading
+                        ? null
+                        : (value) =>
+                            setState(() => _selectedCollectionPath = value),
+                    items: [
+                      for (final c in collections)
+                        DropdownMenuItem(value: c.path, child: Text(c.label)),
+                    ],
+                  ),
+          ),
+      ],
     );
   }
 

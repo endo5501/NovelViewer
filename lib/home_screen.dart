@@ -14,6 +14,7 @@ import 'package:novel_viewer/features/keyboard_shortcuts/providers/keyboard_shor
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_host.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
+import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 import 'package:novel_viewer/features/text_search/presentation/search_results_panel.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
@@ -147,6 +148,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  /// Prompts for a name and creates an empty `web` collection that articles can
+  /// be added to later from the download dialog.
+  Future<void> _showCreateCollectionDialog() async {
+    final libraryPath = ref.read(libraryPathProvider);
+    if (libraryPath == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController();
+
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.download_createCollectionTitle),
+        content: TextField(
+          key: const Key('create_collection_name_field'),
+          controller: controller,
+          autofocus: true,
+          decoration:
+              InputDecoration(hintText: l10n.download_createCollectionHint),
+          onSubmitted: (v) => Navigator.of(dialogContext).pop(v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.common_cancelButton),
+          ),
+          ElevatedButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(controller.text.trim()),
+            child: Text(l10n.download_createCollectionButton),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (name == null || name.isEmpty) return;
+    await ref.read(downloadProvider.notifier).createEmptyCollection(
+          name: name,
+          libraryPath: libraryPath,
+        );
+    ref.invalidate(directoryContentsProvider);
+  }
+
   Widget _buildBookmarkButton() {
     final folderPath = ref.watch(currentNovelFolderPathProvider).value;
     final selectedFile = ref.watch(selectedFileProvider);
@@ -256,6 +300,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         tooltip: ref.watch(rightColumnVisibleProvider)
                             ? AppLocalizations.of(context)!.homeScreen_hideRightColumnTooltip
                             : AppLocalizations.of(context)!.homeScreen_showRightColumnTooltip,
+                      ),
+                      IconButton(
+                        key: const Key('new_collection_button'),
+                        icon: const Icon(Icons.create_new_folder_outlined),
+                        onPressed: _showCreateCollectionDialog,
+                        tooltip:
+                            AppLocalizations.of(context)!.fileBrowser_newCollection,
                       ),
                       IconButton(
                         icon: const Icon(Icons.download),
