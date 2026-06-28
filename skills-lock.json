@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "cc-rsg": {
+      "source": "endo5501/cc-rsg",
+      "sourceType": "github",
+      "skillPath": "skills/cc-rsg/SKILL.md",
+      "computedHash": "3e7a243d9ebd7de3d5516870b3844389ebf7f0d9a9c9762fd963559818b0ad5e"
+    },
     "spec-to-readable-html": {
       "source": "KeMezz/spec-to-readable-html",
       "sourceType": "github",

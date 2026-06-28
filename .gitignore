@@ -43,3 +43,5 @@ coverage
 /novel_viewer-setup-v*.exe
 /novel_viewer-windows-x64-*.zip
 /*.sha256
+
+/.cc-rsg/
