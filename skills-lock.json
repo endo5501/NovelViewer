@@ -6,12 +6,6 @@
       "sourceType": "github",
       "skillPath": "skills/cc-rsg/SKILL.md",
       "computedHash": "3e7a243d9ebd7de3d5516870b3844389ebf7f0d9a9c9762fd963559818b0ad5e"
-    },
-    "spec-to-readable-html": {
-      "source": "KeMezz/spec-to-readable-html",
-      "sourceType": "github",
-      "skillPath": "SKILL.md",
-      "computedHash": "89a997f7c8218b531434565d434c1526c8588c2b851a0f922b5e892ed283e57b"
     }
   }
 }
