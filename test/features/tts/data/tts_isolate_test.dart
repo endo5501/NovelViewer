@@ -206,6 +206,47 @@ void main() {
     });
   });
 
+  group('createSessionAbortHandle - engine fallback', () {
+    TtsAbortHandle fake(int address) => _FakeAbortHandle(address);
+
+    test('returns the first attempt when it succeeds', () {
+      final handle = createSessionAbortHandle([
+        () => fake(0x1111),
+        () => fake(0x2222),
+      ]);
+      expect(handle.address, 0x1111);
+    });
+
+    test('falls back to the next attempt when one throws', () {
+      // qwen3 DLL unavailable must not disable abort when the audiocpp DLL
+      // can provide a handle (Irodori-only installations).
+      final handle = createSessionAbortHandle([
+        () => throw ArgumentError('qwen3 DLL missing'),
+        () => fake(0x2222),
+      ]);
+      expect(handle.address, 0x2222);
+    });
+
+    test('falls back when an attempt returns null (nullptr handle)', () {
+      final handle = createSessionAbortHandle([
+        () => null,
+        () => fake(0x3333),
+      ]);
+      expect(handle.address, 0x3333);
+    });
+
+    test('degrades to a safe no-op when every attempt fails', () {
+      final handle = createSessionAbortHandle([
+        () => throw ArgumentError('missing'),
+        () => null,
+      ]);
+      expect(handle.address, 0);
+      // Must not throw.
+      handle.abort();
+      handle.free();
+    });
+  });
+
   group('TtsIsolate - abort handle lifecycle (F111)', () {
     test('spawn creates exactly one abort handle, available before loadModel',
         () async {
