@@ -269,7 +269,8 @@ class SettingsRepository {
 
   // Irodori synthesis parameters (design D8 / spec irodori-caption-synthesis)
   double getIrodoriSpeakerGuidanceScale() {
-    return _prefs.getDouble(_irodoriSpeakerGuidanceScaleKey) ?? 5.0;
+    return (_prefs.getDouble(_irodoriSpeakerGuidanceScaleKey) ?? 5.0)
+        .clamp(0.0, 10.0);
   }
 
   Future<void> setIrodoriSpeakerGuidanceScale(double value) async {
@@ -277,7 +278,8 @@ class SettingsRepository {
   }
 
   double getIrodoriCaptionGuidanceScale() {
-    return _prefs.getDouble(_irodoriCaptionGuidanceScaleKey) ?? 3.0;
+    return (_prefs.getDouble(_irodoriCaptionGuidanceScaleKey) ?? 3.0)
+        .clamp(0.0, 10.0);
   }
 
   Future<void> setIrodoriCaptionGuidanceScale(double value) async {
@@ -285,7 +287,7 @@ class SettingsRepository {
   }
 
   int getIrodoriNumInferenceSteps() {
-    return _prefs.getInt(_irodoriNumInferenceStepsKey) ?? 40;
+    return (_prefs.getInt(_irodoriNumInferenceStepsKey) ?? 40).clamp(10, 80);
   }
 
   Future<void> setIrodoriNumInferenceSteps(int value) async {
