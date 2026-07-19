@@ -181,6 +181,26 @@ void main() {
       expect(container.read(ttsEngineTypeProvider), TtsEngineType.piper);
       expect(prefs.getString('tts_engine_type'), 'piper');
     });
+
+    test('returns irodori when persisted', () async {
+      await prefs.setString('tts_engine_type', 'irodori');
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(ttsEngineTypeProvider), TtsEngineType.irodori);
+    });
+
+    test('setEngineType(irodori) persists and updates state', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(ttsEngineTypeProvider.notifier)
+          .setEngineType(TtsEngineType.irodori);
+
+      expect(container.read(ttsEngineTypeProvider), TtsEngineType.irodori);
+      expect(prefs.getString('tts_engine_type'), 'irodori');
+    });
   });
 
   group('piperModelNameProvider', () {
