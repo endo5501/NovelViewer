@@ -1,4 +1,5 @@
 // ignore_for_file: prefer_function_declarations_over_variables
+// ignore_for_file: library_private_types_in_public_api
 
 import 'dart:ffi';
 import 'dart:typed_data';
@@ -8,6 +9,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/audiocpp_native_bindings.dart';
 import 'package:novel_viewer/features/tts/data/irodori_tts_engine.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine.dart';
+
+typedef _MockSynthesize = int Function(
+  Pointer<Void>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  double,
+  double,
+  int,
+);
 
 /// Mock bindings for testing IrodoriTtsEngine without loading the native
 /// library.
@@ -65,24 +76,23 @@ class MockAudiocppNativeBindings extends AudiocppNativeBindings {
   };
 
   String? lastText;
-  Pointer<Utf8>? lastRefWavPathPtr;
-  Pointer<Utf8>? lastCaptionPtr;
+  // Captured eagerly (decoded to Dart strings) at call time — the native
+  // pointers are freed by the engine immediately after this call returns, so
+  // holding onto the raw Pointer<Utf8> for later inspection would read freed
+  // memory.
+  bool lastRefWavPathWasNull = true;
+  String? lastRefWavPath;
+  bool lastCaptionWasNull = true;
+  String? lastCaption;
   double? lastSpeakerGuidanceScale;
   double? lastCaptionGuidanceScale;
   int? lastNumInferenceSteps;
   int synthesizeReturnCode = 0;
 
   @override
+  late final _MockSynthesize
   // ignore: overridden_fields
-  late final int Function(
-    Pointer<Void>,
-    Pointer<Utf8>,
-    Pointer<Utf8>,
-    Pointer<Utf8>,
-    double,
-    double,
-    int,
-  ) synthesize = (
+  synthesize = (
     Pointer<Void> ctx,
     Pointer<Utf8> text,
     Pointer<Utf8> refWavPath,
@@ -92,8 +102,10 @@ class MockAudiocppNativeBindings extends AudiocppNativeBindings {
     int numInferenceSteps,
   ) {
     lastText = text.toDartString();
-    lastRefWavPathPtr = refWavPath;
-    lastCaptionPtr = caption;
+    lastRefWavPathWasNull = refWavPath == nullptr;
+    lastRefWavPath = refWavPath == nullptr ? null : refWavPath.toDartString();
+    lastCaptionWasNull = caption == nullptr;
+    lastCaption = caption == nullptr ? null : caption.toDartString();
     lastSpeakerGuidanceScale = speakerGuidanceScale;
     lastCaptionGuidanceScale = captionGuidanceScale;
     lastNumInferenceSteps = numInferenceSteps;
@@ -180,6 +192,12 @@ void main() {
       final fakeCtx = Pointer<Void>.fromAddress(0x1234);
       mockBindings.setFakeContext(fakeCtx);
       engine.loadModel('/fake/model/dir');
+      // Default fake audio so tests that only assert on forwarded parameters
+      // (not on the returned audio) don't fail extraction with "no audio".
+      final defaultBuf = calloc<Float>(1);
+      mockBindings.audioBuffer = defaultBuf;
+      mockBindings.audioLength = 1;
+      mockBindings.sampleRateValue = 48000;
     });
 
     test('returns TtsSynthesisResult with 48kHz audio', () {
@@ -230,8 +248,8 @@ void main() {
         numInferenceSteps: 40,
       );
 
-      expect(mockBindings.lastRefWavPathPtr, nullptr);
-      expect(mockBindings.lastCaptionPtr, nullptr);
+      expect(mockBindings.lastRefWavPathWasNull, true);
+      expect(mockBindings.lastCaptionWasNull, true);
     });
 
     test('empty refWavPath and caption are passed as nullptr', () {
@@ -244,8 +262,8 @@ void main() {
         numInferenceSteps: 40,
       );
 
-      expect(mockBindings.lastRefWavPathPtr, nullptr);
-      expect(mockBindings.lastCaptionPtr, nullptr);
+      expect(mockBindings.lastRefWavPathWasNull, true);
+      expect(mockBindings.lastCaptionWasNull, true);
     });
 
     test('non-null refWavPath and caption are forwarded as native strings',
@@ -259,10 +277,10 @@ void main() {
         numInferenceSteps: 40,
       );
 
-      expect(mockBindings.lastRefWavPathPtr, isNot(nullptr));
-      expect(mockBindings.lastRefWavPathPtr!.toDartString(), '/voices/ref.wav');
-      expect(mockBindings.lastCaptionPtr, isNot(nullptr));
-      expect(mockBindings.lastCaptionPtr!.toDartString(), '落ち着いた大人の女性の声');
+      expect(mockBindings.lastRefWavPathWasNull, false);
+      expect(mockBindings.lastRefWavPath, '/voices/ref.wav');
+      expect(mockBindings.lastCaptionWasNull, false);
+      expect(mockBindings.lastCaption, '落ち着いた大人の女性の声');
     });
 
     test('throws TtsEngineException with native error message on failure',
