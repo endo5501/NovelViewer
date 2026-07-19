@@ -515,15 +515,19 @@ class TtsIsolate {
           return piperEngine!.synthesize(text);
         case TtsEngineType.irodori:
           // caption / guidance / steps are synthesis-time parameters (design
-          // D8). Fall back to the documented defaults if a caller omits them,
-          // so the native call always receives valid guidance values.
+          // D8). Invariant: every production call site that builds a
+          // SynthesizeMessage for the irodori engine always supplies
+          // speakerGuidanceScale/captionGuidanceScale/numInferenceSteps
+          // (product defaults live in settings_repository.dart, not here) —
+          // so a null here is a caller bug, not a value to silently paper
+          // over with a fallback.
           return irodoriEngine!.synthesize(
             text,
             refWavPath: refWavPath,
             caption: message.caption,
-            speakerGuidanceScale: message.speakerGuidanceScale ?? 5.0,
-            captionGuidanceScale: message.captionGuidanceScale ?? 3.0,
-            numInferenceSteps: message.numInferenceSteps ?? 40,
+            speakerGuidanceScale: message.speakerGuidanceScale!,
+            captionGuidanceScale: message.captionGuidanceScale!,
+            numInferenceSteps: message.numInferenceSteps!,
           );
       }
     }
