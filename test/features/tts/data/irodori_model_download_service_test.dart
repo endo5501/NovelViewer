@@ -352,5 +352,57 @@ void main() {
       );
       expect(service.areModelsDownloaded(modelsDir), isFalse);
     });
+
+    test(
+        'a cancel issued during the skip-check (between the HEAD and the '
+        'GET) is honored before the GET fires', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final modelDir =
+          Directory(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign'))
+            ..createSync(recursive: true);
+      // Local file exists but with a size that will NOT match whatever the
+      // HEAD reports below, so _isAlreadyComplete resolves to false and the
+      // file is a download candidate — exactly the window the new recheck
+      // guards.
+      File(p.join(modelDir.path, 'model.safetensors'))
+          .writeAsStringSync('x' * 5);
+
+      final headController = StreamController<List<int>>();
+      final getRequests = <String>[];
+
+      final mockClient = MockClient.streaming((request, _) async {
+        if (request.method == 'HEAD') {
+          return http.StreamedResponse(
+            headController.stream,
+            200,
+            contentLength: 999,
+          );
+        }
+        getRequests.add(request.url.toString());
+        return http.StreamedResponse(
+          Stream.value([1, 2, 3]),
+          200,
+          contentLength: 3,
+        );
+      });
+
+      final service = IrodoriModelDownloadService(client: mockClient);
+      final future = service.downloadModels(modelsDir);
+
+      // Let the HEAD request start (the service is awaiting its stream drain).
+      await Future<void>.delayed(Duration.zero);
+      service.cancel();
+      await headController.close();
+
+      await expectLater(
+        future,
+        throwsA(isA<IrodoriDownloadCancelledException>()),
+      );
+      expect(
+        getRequests,
+        isEmpty,
+        reason: 'cancel during the skip-check must prevent the GET',
+      );
+    });
   });
 }

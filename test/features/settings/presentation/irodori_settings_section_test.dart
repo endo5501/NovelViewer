@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -219,6 +220,41 @@ void main() {
 
       expect(
           find.textContaining(l10n.settings_irodoriDownloaded), findsOneWidget);
+    });
+
+    testWidgets(
+        'shows a cancel button while downloading, and tapping it returns '
+        'to the idle (download) state', (tester) async {
+      final chunkController = StreamController<List<int>>();
+      final mockClient = MockClient.streaming((request, _) async {
+        return http.StreamedResponse(
+          chunkController.stream,
+          200,
+          contentLength: 100,
+        );
+      });
+
+      final l10n =
+          await selectIrodoriEngine(tester, httpClient: mockClient);
+
+      await tester.tap(find.text(l10n.settings_modelDataDownload));
+      await tester.pump();
+
+      expect(find.text(l10n.common_cancelButton), findsOneWidget);
+
+      await tester.tap(find.text(l10n.common_cancelButton));
+
+      // Cancellation is only observed once the download's stream loop wakes
+      // up on a chunk (or close), same as the service-level cancel test.
+      await tester.runAsync(() async {
+        chunkController.add(List.filled(10, 0));
+        await Future<void>.delayed(Duration.zero);
+        await chunkController.close();
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.settings_modelDataDownload), findsOneWidget);
+      expect(find.text(l10n.common_cancelButton), findsNothing);
     });
 
     testWidgets('shows error with retry on download failure', (tester) async {
