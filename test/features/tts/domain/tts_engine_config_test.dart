@@ -152,6 +152,96 @@ void main() {
     });
   });
 
+  group('synthesisFallbackRefWavPath', () {
+    test('Qwen3EngineConfig returns its refWavPath', () {
+      const config = Qwen3EngineConfig(
+        modelDir: '/models/qwen3',
+        sampleRate: 24000,
+        languageId: 2058,
+        refWavPath: '/voice/narrator.wav',
+      );
+
+      expect(config.synthesisFallbackRefWavPath, '/voice/narrator.wav');
+    });
+
+    test('Qwen3EngineConfig returns null when refWavPath is unset', () {
+      const config = Qwen3EngineConfig(
+        modelDir: '/models/qwen3',
+        sampleRate: 24000,
+        languageId: 2058,
+      );
+
+      expect(config.synthesisFallbackRefWavPath, isNull);
+    });
+
+    test('IrodoriEngineConfig returns its refWavPath', () {
+      const config = IrodoriEngineConfig(
+        modelDir: '/models/irodori',
+        sampleRate: 48000,
+        refWavPath: '/voice/narrator.wav',
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+
+      expect(config.synthesisFallbackRefWavPath, '/voice/narrator.wav');
+    });
+
+    test('PiperEngineConfig always returns null', () {
+      const config = PiperEngineConfig(
+        modelDir: '/models/piper/foo.onnx',
+        sampleRate: 22050,
+        dicDir: '/models/piper/open_jtalk_dic',
+        lengthScale: 0.8,
+        noiseScale: 0.667,
+        noiseW: 0.8,
+      );
+
+      expect(config.synthesisFallbackRefWavPath, isNull);
+    });
+  });
+
+  group('irodoriSynthesisParams', () {
+    test('IrodoriEngineConfig returns a record with all three params', () {
+      const config = IrodoriEngineConfig(
+        modelDir: '/models/irodori',
+        sampleRate: 48000,
+        speakerGuidanceScale: 4.5,
+        captionGuidanceScale: 2.5,
+        numInferenceSteps: 20,
+      );
+
+      final params = config.irodoriSynthesisParams;
+      expect(params, isNotNull);
+      expect(params!.speakerGuidanceScale, 4.5);
+      expect(params.captionGuidanceScale, 2.5);
+      expect(params.numInferenceSteps, 20);
+    });
+
+    test('Qwen3EngineConfig returns null', () {
+      const config = Qwen3EngineConfig(
+        modelDir: '/models/qwen3',
+        sampleRate: 24000,
+        languageId: 2058,
+      );
+
+      expect(config.irodoriSynthesisParams, isNull);
+    });
+
+    test('PiperEngineConfig returns null', () {
+      const config = PiperEngineConfig(
+        modelDir: '/models/piper/foo.onnx',
+        sampleRate: 22050,
+        dicDir: '/models/piper/open_jtalk_dic',
+        lengthScale: 0.8,
+        noiseScale: 0.667,
+        noiseW: 0.8,
+      );
+
+      expect(config.irodoriSynthesisParams, isNull);
+    });
+  });
+
   group('TtsEngineConfig sealed switch', () {
     test('sealed switch is exhaustive and reaches all three arms', () {
       String describe(TtsEngineConfig config) {
