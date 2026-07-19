@@ -65,6 +65,17 @@ jobs:
           if (!(Test-Path "$runner/piper_tts_ffi.dll")) { throw "piper_tts_ffi.dll not found in $runner" }
           if (!(Test-Path "$runner/onnxruntime.dll")) { throw "onnxruntime.dll not found in $runner" }
 
+      - name: Build Irodori TTS DLL
+        shell: cmd
+        run: scripts\build_irodori_windows.bat
+
+      - name: Verify Irodori DLL and model spec exist
+        shell: pwsh
+        run: |
+          $runner = "build/windows/x64/runner/Release"
+          if (!(Test-Path "$runner/audiocpp_ffi.dll")) { throw "audiocpp_ffi.dll not found in $runner" }
+          if (!(Test-Path "$runner/model_specs/irodori_tts.json")) { throw "model_specs/irodori_tts.json not found in $runner" }
+
       - name: Run analyzer
         run: flutter analyze
 
