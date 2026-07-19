@@ -39,8 +39,8 @@
 
 ## 6. モデルダウンロード (TDD)
 
-- [ ] 6.1 `IrodoriModelDownloadService` のテストを作成する (4資産 URL / 保存レイアウト / 進捗通知 / ダウンロード済み判定 / 完了済みファイル skip / キャンセル) → 失敗確認 → コミット
-- [ ] 6.2 `IrodoriModelDownloadService` と providers を実装しテストをパスさせる (既存 qwen3/piper ダウンロードサービスの型を踏襲)
+- [x] 6.1 `IrodoriModelDownloadService` のテストを作成する (4資産 URL / 保存レイアウト / 進捗通知 / ダウンロード済み判定 / 完了済みファイル skip / キャンセル) → 失敗確認 → コミット
+- [x] 6.2 `IrodoriModelDownloadService` と providers を実装しテストをパスさせる (既存 qwen3/piper ダウンロードサービスの型を踏襲)
 
 ## 7. 設定 UI と国際化
 
@@ -50,7 +50,7 @@
 
 ## 8. CI
 
-- [ ] 8.1 CI ワークフローに audiocpp DLL ビルドステップ (build_irodori_windows.bat) と成果物検証 (audiocpp_ffi.dll / model spec) を flutter build より前に追加する
+- [x] 8.1 CI ワークフローに audiocpp DLL ビルドステップ (build_irodori_windows.bat) と成果物検証 (audiocpp_ffi.dll / model spec) を flutter build より前に追加する
 
 ## 9. 最終確認
 
