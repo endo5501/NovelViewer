@@ -316,6 +316,30 @@ abstract class AppLocalizations {
   /// **'ノイズ (noiseW)'**
   String get settings_piperNoiseW;
 
+  /// No description provided for @settings_irodoriDownloaded.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロード済み'**
+  String get settings_irodoriDownloaded;
+
+  /// No description provided for @settings_irodoriSpeakerGuidanceScale.
+  ///
+  /// In ja, this message translates to:
+  /// **'話者ガイダンス強度 (speaker_guidance_scale)'**
+  String get settings_irodoriSpeakerGuidanceScale;
+
+  /// No description provided for @settings_irodoriCaptionGuidanceScale.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャプションガイダンス強度 (caption_guidance_scale)'**
+  String get settings_irodoriCaptionGuidanceScale;
+
+  /// No description provided for @settings_irodoriNumInferenceSteps.
+  ///
+  /// In ja, this message translates to:
+  /// **'推論ステップ数 (num_inference_steps)'**
+  String get settings_irodoriNumInferenceSteps;
+
   /// No description provided for @settings_voiceModelTitle.
   ///
   /// In ja, this message translates to:

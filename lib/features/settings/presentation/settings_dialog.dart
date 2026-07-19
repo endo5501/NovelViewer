@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/about_and_update_section.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/general_settings_section.dart';
+import 'package:novel_viewer/features/settings/presentation/sections/irodori_settings_section.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/llm_settings_section.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/piper_settings_section.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/qwen3_settings_section.dart';
@@ -123,6 +124,16 @@ class _TtsTab extends ConsumerWidget {
             ),
           ],
           if (engineType == TtsEngineType.piper) const PiperSettingsSection(),
+          if (engineType == TtsEngineType.irodori) ...[
+            const IrodoriSettingsSection(),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: VoiceReferenceSection(),
+            ),
+          ],
         ],
       ),
     );

@@ -119,6 +119,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settings_piperNoiseW => '噪声 (noiseW)';
 
   @override
+  String get settings_irodoriDownloaded => '已下载';
+
+  @override
+  String get settings_irodoriSpeakerGuidanceScale =>
+      '说话人引导强度 (speaker_guidance_scale)';
+
+  @override
+  String get settings_irodoriCaptionGuidanceScale =>
+      '字幕引导强度 (caption_guidance_scale)';
+
+  @override
+  String get settings_irodoriNumInferenceSteps => '推理步数 (num_inference_steps)';
+
+  @override
   String get settings_voiceModelTitle => '语音模型';
 
   @override
