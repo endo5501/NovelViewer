@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -16,6 +15,36 @@ class IrodoriDownloadCancelledException implements Exception {
       'IrodoriDownloadCancelledException: download was cancelled';
 }
 
+/// Thrown when a downloaded Irodori asset's final size does not match the
+/// expected size pinned in [IrodoriModelDownloadService.defaultExpectedFileSizes]
+/// (or the manifest injected via the constructor). The mismatching file is
+/// deleted before this is thrown, so a corrupt-but-complete transfer can
+/// never read as "downloaded" via [IrodoriModelDownloadService.areModelsDownloaded].
+class IrodoriDownloadSizeMismatchException implements Exception {
+  const IrodoriDownloadSizeMismatchException(
+    this.relativePath,
+    this.expectedSize,
+    this.actualSize,
+  );
+
+  /// POSIX-style relative path (e.g.
+  /// `Irodori-TTS-600M-v3-VoiceDesign/model.safetensors`) of the file whose
+  /// downloaded size did not match the manifest.
+  final String relativePath;
+
+  /// The size, in bytes, pinned in the manifest for [relativePath]. `-1`
+  /// when the file has no manifest entry at all.
+  final int expectedSize;
+
+  /// The actual size, in bytes, of the file that was downloaded.
+  final int actualSize;
+
+  @override
+  String toString() =>
+      'IrodoriDownloadSizeMismatchException: $relativePath expected '
+      '$expectedSize bytes but got $actualSize bytes';
+}
+
 /// Downloads the Irodori-TTS-600M-v3-VoiceDesign model assets (audio.cpp
 /// engine) from the endo5501 Hugging Face repository, preserving the sibling
 /// directory layout the native engine resolves relative to the 600M model
@@ -24,10 +53,14 @@ class IrodoriDownloadCancelledException implements Exception {
 /// See design D7 / spec `irodori-tts-model-download`.
 class IrodoriModelDownloadService {
   final http.Client _client;
+  final Map<String, int> _expectedFileSizes;
   bool _cancelled = false;
 
-  IrodoriModelDownloadService({required http.Client client})
-      : _client = client;
+  IrodoriModelDownloadService({
+    required http.Client client,
+    Map<String, int>? expectedFileSizes,
+  })  : _client = client,
+        _expectedFileSizes = expectedFileSizes ?? defaultExpectedFileSizes;
 
   static const _baseUrl =
       'https://huggingface.co/endo5501/audio.cpp/resolve/main';
@@ -46,12 +79,27 @@ class IrodoriModelDownloadService {
     [dacvaeDirName, 'weights.safetensors'],
   ];
 
-  /// Sidecar file (at the models root) recording the byte size of each
-  /// successfully downloaded asset, keyed by its POSIX-style relative path
-  /// (e.g. `Irodori-TTS-600M-v3-VoiceDesign/model.safetensors`). Used to
-  /// decide whether a retry can skip a file without any network request —
-  /// replaces an earlier HEAD-based remote-size check.
-  static const _sizesFileName = '.irodori_download_sizes.json';
+  /// Exact byte sizes of the 4 assets pinned on Hugging Face
+  /// (`endo5501/audio.cpp`, `main` branch), keyed by their POSIX-style path
+  /// relative to the models root (e.g.
+  /// `Irodori-TTS-600M-v3-VoiceDesign/model.safetensors`).
+  ///
+  /// These assets are version-pinned by design (design D7 / memory
+  /// project-piper-model-runner-mismatch): the app always targets one exact
+  /// upload, never "whatever is currently on the branch". Trusting a
+  /// self-recorded size (what a file's own download reported) lets a
+  /// corrupt-but-complete transfer self-certify as valid; trusting this
+  /// hardcoded, independently-known-good manifest instead closes that gap.
+  ///
+  /// IMPORTANT: if the HF assets are ever re-uploaded (e.g. a runner/model
+  /// version bump), these sizes MUST be updated in lockstep, or every
+  /// download will report a mismatch.
+  static const Map<String, int> defaultExpectedFileSizes = {
+    'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 2468332708,
+    'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 1077,
+    'llm-jp-3-150m/tokenizer.json': 6416433,
+    'Semantic-DACVAE-Japanese-32dim/weights.safetensors': 429538708,
+  };
 
   /// Stops the current (or next) [downloadModels] transfer as soon as
   /// possible. Any partial (`.part`) file being written is discarded.
@@ -62,8 +110,14 @@ class IrodoriModelDownloadService {
     if (!dir.existsSync()) return false;
 
     for (final parts in _relativeFileParts) {
+      final relKey = parts.join('/');
       final file = File(p.joinAll([modelsDir, ...parts]));
-      if (!file.existsSync() || file.lengthSync() == 0) return false;
+      final expectedSize = _expectedFileSizes[relKey];
+      if (!file.existsSync() ||
+          expectedSize == null ||
+          file.lengthSync() != expectedSize) {
+        return false;
+      }
     }
     return true;
   }
@@ -89,7 +143,7 @@ class IrodoriModelDownloadService {
       final localPath = p.joinAll([modelsDir, ...parts]);
       final url = '$_baseUrl/${parts.join('/')}';
 
-      if (await _isAlreadyComplete(modelsDir, localPath, relKey)) {
+      if (_isAlreadyComplete(localPath, relKey)) {
         onProgress?.call(fileName, 1.0);
         continue;
       }
@@ -99,7 +153,7 @@ class IrodoriModelDownloadService {
         await parentDir.create(recursive: true);
       }
 
-      // A cancel issued while the skip-check above was in flight (and any
+      // A cancel issued while the skip-check above was running (and any
       // cancel during the transfer itself) is honored by downloadFile's
       // shouldCancel check — no need to duplicate that check here.
       try {
@@ -115,50 +169,35 @@ class IrodoriModelDownloadService {
         throw const IrodoriDownloadCancelledException();
       }
 
-      // Record the size only after a fully successful download — a failed
-      // or cancelled transfer must not make a future retry skip this file.
-      await _recordSize(modelsDir, relKey, File(localPath).lengthSync());
+      // A completed transfer must still match the pinned manifest size — a
+      // corrupt-but-complete transfer (e.g. a truncated write, a proxy that
+      // served an HTML error page as 200, etc.) must not be left in a state
+      // that reads as downloaded.
+      final expectedSize = _expectedFileSizes[relKey];
+      final actualSize = File(localPath).lengthSync();
+      if (expectedSize == null || actualSize != expectedSize) {
+        final badFile = File(localPath);
+        if (badFile.existsSync()) {
+          badFile.deleteSync();
+        }
+        throw IrodoriDownloadSizeMismatchException(
+          relKey,
+          expectedSize ?? -1,
+          actualSize,
+        );
+      }
     }
   }
 
   /// A file counts as already complete (and is skipped on retry, with no
   /// network request) only when it exists locally AND its size matches the
-  /// size recorded in the sidecar for a prior successful download of it. A
-  /// missing sidecar entry (never recorded, or recorded for a different
-  /// path) means "unknown", falling back to re-downloading it.
-  Future<bool> _isAlreadyComplete(
-    String modelsDir,
-    String localPath,
-    String relKey,
-  ) async {
+  /// pinned manifest entry for it. A missing manifest entry means "unknown",
+  /// falling back to re-downloading it.
+  bool _isAlreadyComplete(String localPath, String relKey) {
     final localFile = File(localPath);
-    if (!localFile.existsSync() || localFile.lengthSync() == 0) return false;
+    if (!localFile.existsSync()) return false;
 
-    final recordedSizes = await _readRecordedSizes(modelsDir);
-    final recordedSize = recordedSizes[relKey];
-    return recordedSize != null && recordedSize == localFile.lengthSync();
-  }
-
-  File _sizesFile(String modelsDir) =>
-      File(p.join(modelsDir, _sizesFileName));
-
-  Future<Map<String, int>> _readRecordedSizes(String modelsDir) async {
-    final file = _sizesFile(modelsDir);
-    if (!file.existsSync()) return {};
-    try {
-      final decoded = jsonDecode(await file.readAsString());
-      if (decoded is! Map<String, dynamic>) return {};
-      return decoded.map((key, value) => MapEntry(key, value as int));
-    } catch (_) {
-      // Corrupt/unreadable sidecar: treat as "nothing recorded" rather than
-      // failing the whole download — every file simply re-downloads.
-      return {};
-    }
-  }
-
-  Future<void> _recordSize(String modelsDir, String relKey, int size) async {
-    final sizes = await _readRecordedSizes(modelsDir);
-    sizes[relKey] = size;
-    await _sizesFile(modelsDir).writeAsString(jsonEncode(sizes));
+    final expectedSize = _expectedFileSizes[relKey];
+    return expectedSize != null && localFile.lengthSync() == expectedSize;
   }
 }
