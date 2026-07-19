@@ -3,9 +3,11 @@ import 'dart:ffi';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 
+import 'audiocpp_native_bindings.dart';
 import 'irodori_tts_engine.dart';
 import 'piper_tts_engine.dart';
 import 'tts_engine.dart';
@@ -49,39 +51,78 @@ class _NoopAbortHandle implements TtsAbortHandle {
   void free() {}
 }
 
-/// FFI-backed abort handle.
+/// FFI-backed abort handle. Parameterized over the owning library's abort /
+/// free functions so a handle can be backed by whichever TTS DLL is available
+/// (qwen3_tts_ffi or audiocpp_ffi).
+///
+/// ABI note: both `qwen3_tts_abort_handle` and `audiocpp_abort_handle` are a
+/// single `std::atomic<bool>` and are kept byte-compatible by contract (both
+/// forks are maintained by this project), so one session handle can be wired
+/// into either engine's init regardless of which DLL allocated it.
 class _NativeAbortHandle implements TtsAbortHandle {
-  _NativeAbortHandle(this._bindings, this._handle);
+  _NativeAbortHandle(this._handle, {required this.abortFn, required this.freeFn});
 
-  final TtsNativeBindings _bindings;
   final Pointer<Void> _handle;
+  final void Function(Pointer<Void>) abortFn;
+  final void Function(Pointer<Void>) freeFn;
 
   @override
   int get address => _handle.address;
 
   @override
-  void abort() => _bindings.abort(_handle);
+  void abort() => abortFn(_handle);
 
   @override
-  void free() => _bindings.freeAbortHandle(_handle);
+  void free() => freeFn(_handle);
+}
+
+/// Try each attempt in order and return the first non-null handle. An attempt
+/// may throw (DLL unavailable) or return null (native create returned
+/// nullptr); either way the next attempt runs. When every attempt fails,
+/// abort degrades to a safe no-op, matching the project's FFI self-skip
+/// posture.
+@visibleForTesting
+TtsAbortHandle createSessionAbortHandle(
+  List<TtsAbortHandle? Function()> attempts,
+) {
+  for (final attempt in attempts) {
+    try {
+      final handle = attempt();
+      if (handle != null) return handle;
+      _log.warning('abort handle attempt returned null; trying next');
+    } catch (e) {
+      _log.warning('abort handle attempt failed; trying next: $e');
+    }
+  }
+  _log.warning('no TTS native library available; abort disabled');
+  return const _NoopAbortHandle();
 }
 
 TtsAbortHandle _defaultAbortHandleFactory() {
-  try {
-    final bindings = TtsNativeBindings.open();
-    final handle = bindings.createAbortHandle();
-    if (handle == nullptr) {
-      _log.warning('createAbortHandle returned null; abort disabled');
-      return const _NoopAbortHandle();
-    }
-    return _NativeAbortHandle(bindings, handle);
-  } catch (e) {
-    // DLL unavailable (e.g. unsupported platform, or a test host without a
-    // native build). Abort degrades to a no-op, matching the project's FFI
-    // self-skip posture.
-    _log.warning('TTS native library unavailable; abort disabled: $e');
-    return const _NoopAbortHandle();
-  }
+  return createSessionAbortHandle([
+    () {
+      final bindings = TtsNativeBindings.open();
+      final handle = bindings.createAbortHandle();
+      if (handle == nullptr) return null;
+      return _NativeAbortHandle(
+        handle,
+        abortFn: bindings.abort,
+        freeFn: bindings.freeAbortHandle,
+      );
+    },
+    // Fallback: Irodori-only installations (or a broken qwen3 DLL) still get
+    // a live abort flag from the audiocpp library.
+    () {
+      final bindings = AudiocppNativeBindings.open();
+      final handle = bindings.createAbortHandle();
+      if (handle == nullptr) return null;
+      return _NativeAbortHandle(
+        handle,
+        abortFn: bindings.abort,
+        freeFn: bindings.freeAbortHandle,
+      );
+    },
+  ]);
 }
 
 // Messages sent to the TTS isolate
