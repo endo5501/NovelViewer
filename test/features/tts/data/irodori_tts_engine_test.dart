@@ -137,6 +137,13 @@ class MockAudiocppNativeBindings extends AudiocppNativeBindings {
   // ignore: overridden_fields
   late final Pointer<Utf8> Function(Pointer<Void>) getError =
       (Pointer<Void> ctx) => errorMessage.toNativeUtf8();
+
+  String initErrorMessage = '';
+
+  @override
+  // ignore: overridden_fields
+  late final Pointer<Utf8> Function() getInitError =
+      () => initErrorMessage.toNativeUtf8();
 }
 
 void main() {
@@ -178,6 +185,21 @@ void main() {
       expect(
         () => engine.loadModel('/fake/model/dir'),
         throwsA(isA<TtsEngineException>()),
+      );
+    });
+
+    test('loadModel surfaces the native init error message on failure', () {
+      mockBindings.setFakeContext(nullptr);
+      mockBindings.initErrorMessage =
+          'Irodori-TTS model spec (irodori_tts.json) not found';
+
+      expect(
+        () => engine.loadModel('/fake/model/dir'),
+        throwsA(isA<TtsEngineException>().having(
+          (e) => e.message,
+          'message',
+          contains('irodori_tts.json'),
+        )),
       );
     });
   });
