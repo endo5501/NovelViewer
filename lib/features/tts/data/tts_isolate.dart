@@ -418,6 +418,9 @@ class TtsIsolate {
           return qwen3Engine?.isLoaded ?? false;
         case TtsEngineType.piper:
           return piperEngine?.isLoaded ?? false;
+        case TtsEngineType.irodori:
+          // Placeholder: full IrodoriTtsEngine wiring lands in task 5.x.
+          return false;
         case null:
           return false;
       }
@@ -438,6 +441,13 @@ class TtsIsolate {
               : qwen3Engine!.synthesize(text);
         case TtsEngineType.piper:
           return piperEngine!.synthesize(text);
+        case TtsEngineType.irodori:
+          // Placeholder: full IrodoriTtsEngine wiring (incl. caption) lands
+          // in task 5.x. isEngineLoaded() always reports false for Irodori
+          // for now, so this path is unreachable in practice.
+          throw UnimplementedError(
+            'Irodori engine synthesis is not yet wired into TtsIsolate',
+          );
       }
     }
 
@@ -479,6 +489,14 @@ class TtsIsolate {
                 next.setNoiseW(message.noiseW!);
               }
               piperEngine = next;
+
+            case TtsEngineType.irodori:
+              // Placeholder: full IrodoriTtsEngine wiring lands in task 5.x.
+              // Fails the load explicitly (caught below) rather than
+              // silently reporting success with no engine loaded.
+              throw UnimplementedError(
+                'Irodori engine is not yet wired into TtsIsolate',
+              );
           }
 
           activeEngineType = message.engineType;
