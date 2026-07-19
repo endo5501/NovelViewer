@@ -204,12 +204,18 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(irodoriModelDownloadProvider.notifier);
+
+      // Cancel synchronously as soon as the first progress update lands,
+      // rather than racing real filesystem I/O with an arbitrary delay.
+      container.listen(irodoriModelDownloadProvider, (previous, next) {
+        if (next is IrodoriModelDownloadDownloading &&
+            (next.progress ?? 0) > 0) {
+          notifier.cancelDownload();
+        }
+      });
+
       final future = notifier.startDownload();
 
-      // Wait until at least one progress update lands, then cancel.
-      chunkController.add(List.filled(10, 0));
-      await Future<void>.delayed(Duration.zero);
-      notifier.cancelDownload();
       chunkController.add(List.filled(10, 0));
       await chunkController.close();
 
