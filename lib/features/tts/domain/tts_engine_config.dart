@@ -76,6 +76,46 @@ sealed class TtsEngineConfig {
     if (memo == null || memo.isEmpty) return null;
     return memo;
   }
+
+  /// Fallback reference WAV path for synthesis-time voice cloning, used when
+  /// a segment/episode specifies no override of its own.
+  ///
+  /// Qwen3 and Irodori share the voice reference library (design D9) and
+  /// both expose a synthesis-time `refWavPath`, so this returns it for
+  /// either. Piper has no voice cloning, so this is always `null` for
+  /// [PiperEngineConfig]. Centralised here so every call site that resolves
+  /// a fallback ref WAV (edit controller, streaming controller) uses the
+  /// same rule instead of repeating the switch.
+  String? get synthesisFallbackRefWavPath => switch (this) {
+        Qwen3EngineConfig(:final refWavPath) => refWavPath,
+        IrodoriEngineConfig(:final refWavPath) => refWavPath,
+        PiperEngineConfig() => null,
+      };
+
+  /// Irodori-only synthesis-time parameters (speaker/caption guidance scales
+  /// and diffusion step count), bundled as a single record so call sites can
+  /// extract all three with one type check instead of three separate
+  /// `config is IrodoriEngineConfig ? config.x : null` expressions.
+  ///
+  /// `null` for qwen3/piper, which do not have these parameters.
+  ({
+    double speakerGuidanceScale,
+    double captionGuidanceScale,
+    int numInferenceSteps,
+  })? get irodoriSynthesisParams => switch (this) {
+        IrodoriEngineConfig(
+          :final speakerGuidanceScale,
+          :final captionGuidanceScale,
+          :final numInferenceSteps,
+        ) =>
+          (
+            speakerGuidanceScale: speakerGuidanceScale,
+            captionGuidanceScale: captionGuidanceScale,
+            numInferenceSteps: numInferenceSteps,
+          ),
+        Qwen3EngineConfig() => null,
+        PiperEngineConfig() => null,
+      };
 }
 
 class Qwen3EngineConfig extends TtsEngineConfig {

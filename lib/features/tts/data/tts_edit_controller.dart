@@ -191,15 +191,9 @@ class TtsEditController {
     final entries = dict != null
         ? await dict.getEntriesSortedByLength()
         : null;
-    final fallbackRefWavPath = switch (config) {
-      Qwen3EngineConfig(:final refWavPath) => refWavPath,
-      // Irodori shares the voice library with Qwen3 (design D9).
-      IrodoriEngineConfig(:final refWavPath) => refWavPath,
-      PiperEngineConfig() => null,
-    };
     final refWavPath = TtsRefWavResolver.resolve(
       storedPath: _segments[segmentIndex].refWavPath,
-      fallbackPath: fallbackRefWavPath,
+      fallbackPath: config.synthesisFallbackRefWavPath,
     );
     return _generateSegmentWithEntries(
       segmentIndex: segmentIndex,
@@ -284,12 +278,7 @@ class TtsEditController {
         ? await dictRepo.getEntriesSortedByLength()
         : null;
 
-    final globalRefWavPath = switch (config) {
-      Qwen3EngineConfig(:final refWavPath) => refWavPath,
-      // Irodori shares the voice library with Qwen3 (design D9).
-      IrodoriEngineConfig(:final refWavPath) => refWavPath,
-      PiperEngineConfig() => null,
-    };
+    final globalRefWavPath = config.synthesisFallbackRefWavPath;
 
     for (var idx = 0; idx < ungenerated.length; idx++) {
       if (_cancelled) break;
@@ -464,14 +453,14 @@ class TtsEditController {
     TtsEngineConfig config,
     TtsEditSegment segment,
   ) async {
-    final irodoriConfig = config is IrodoriEngineConfig ? config : null;
+    final irodoriParams = config.irodoriSynthesisParams;
     final result = await _session.synthesize(
       text: text,
       refWavPath: refWavPath,
       caption: TtsEngineConfig.captionFromMemo(config, segment.memo),
-      speakerGuidanceScale: irodoriConfig?.speakerGuidanceScale,
-      captionGuidanceScale: irodoriConfig?.captionGuidanceScale,
-      numInferenceSteps: irodoriConfig?.numInferenceSteps,
+      speakerGuidanceScale: irodoriParams?.speakerGuidanceScale,
+      captionGuidanceScale: irodoriParams?.captionGuidanceScale,
+      numInferenceSteps: irodoriParams?.numInferenceSteps,
     );
     if (result == null) {
       onError?.call('Synthesis failed');
