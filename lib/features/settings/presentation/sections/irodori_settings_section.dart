@@ -55,6 +55,15 @@ class _IrodoriModelDownloadSection extends ConsumerWidget {
               LinearProgressIndicator(value: progress),
               if (progress != null)
                 Text('${(progress * 100).toStringAsFixed(1)}%'),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: () {
+                  ref
+                      .read(irodoriModelDownloadProvider.notifier)
+                      .cancelDownload();
+                },
+                child: Text(l10n.common_cancelButton),
+              ),
             ],
           ),
         IrodoriModelDownloadCompleted(:final modelsDir) => Row(

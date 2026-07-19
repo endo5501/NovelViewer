@@ -85,6 +85,12 @@ class IrodoriModelDownloadService {
         continue;
       }
 
+      // A cancel issued while the skip-check above was in flight must be
+      // honored here, before the GET request fires.
+      if (_cancelled) {
+        throw const IrodoriDownloadCancelledException();
+      }
+
       final parentDir = Directory(p.dirname(localPath));
       if (!parentDir.existsSync()) {
         await parentDir.create(recursive: true);
