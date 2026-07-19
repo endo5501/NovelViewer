@@ -237,18 +237,25 @@ void main() {
       final l10n =
           await selectIrodoriEngine(tester, httpClient: mockClient);
 
-      await tester.tap(find.text(l10n.settings_modelDataDownload));
-      await tester.pump();
+      await tester.runAsync(() async {
+        await tester.tap(find.text(l10n.settings_modelDataDownload));
+        // Give the download time to reach the Downloading state and start
+        // awaiting the (empty, still-open) response stream.
+        await Future.delayed(const Duration(milliseconds: 300));
+      });
+      await tester.pumpAndSettle();
 
       expect(find.text(l10n.common_cancelButton), findsOneWidget);
 
-      await tester.tap(find.text(l10n.common_cancelButton));
-
       // Cancellation is only observed once the download's stream loop wakes
-      // up on a chunk (or close), same as the service-level cancel test.
+      // up on a chunk (or close), same as the service-level cancel test —
+      // so the tap, the wake-up chunk, and the close all happen inside a
+      // single runAsync call (a second, separate runAsync call while one is
+      // still pending is rejected by the test framework).
       await tester.runAsync(() async {
+        await tester.tap(find.text(l10n.common_cancelButton));
         chunkController.add(List.filled(10, 0));
-        await Future<void>.delayed(Duration.zero);
+        await Future.delayed(const Duration(milliseconds: 300));
         await chunkController.close();
       });
       await tester.pumpAndSettle();
