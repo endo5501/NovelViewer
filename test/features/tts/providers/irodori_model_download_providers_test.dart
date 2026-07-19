@@ -232,7 +232,21 @@ void main() {
         );
       });
 
-      final container = createContainer(httpClient: mockClient);
+      // The single 10-byte chunk below completes model.safetensors's
+      // transfer (with no second chunk to hit the cancel check mid-stream)
+      // before the cancel flag is observed at the next file's loop
+      // boundary, so its manifest entry must match the 10 bytes actually
+      // written or the new size-mismatch check would fire first and mask
+      // the cancellation behavior this test targets.
+      final container = createContainer(
+        httpClient: mockClient,
+        expectedFileSizes: const {
+          'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 10,
+          'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 3,
+          'llm-jp-3-150m/tokenizer.json': 3,
+          'Semantic-DACVAE-Japanese-32dim/weights.safetensors': 3,
+        },
+      );
       addTearDown(container.dispose);
 
       final notifier = container.read(irodoriModelDownloadProvider.notifier);

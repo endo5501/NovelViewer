@@ -32,6 +32,14 @@ class IrodoriModelDownloadError extends IrodoriModelDownloadState {
   const IrodoriModelDownloadError(this.message);
 }
 
+/// The pinned expected-size manifest used by [IrodoriModelDownloadService].
+/// Defaults to the real, hardcoded sizes; overridable in tests so download
+/// fixtures don't need to produce multi-hundred-megabyte-to-gigabyte
+/// payloads to match the real manifest.
+final irodoriExpectedFileSizesProvider = Provider<Map<String, int>>(
+  (ref) => IrodoriModelDownloadService.defaultExpectedFileSizes,
+);
+
 final irodoriModelDownloadProvider = NotifierProvider<
     IrodoriModelDownloadNotifier, IrodoriModelDownloadState>(
   IrodoriModelDownloadNotifier.new,
@@ -43,8 +51,10 @@ class IrodoriModelDownloadNotifier
 
   @override
   IrodoriModelDownloadState build() {
-    _service =
-        IrodoriModelDownloadService(client: ref.read(httpClientProvider));
+    _service = IrodoriModelDownloadService(
+      client: ref.read(httpClientProvider),
+      expectedFileSizes: ref.read(irodoriExpectedFileSizesProvider),
+    );
 
     final modelsDir = ref.watch(modelsDirectoryPathProvider);
     if (modelsDir == null) return const IrodoriModelDownloadIdle();
