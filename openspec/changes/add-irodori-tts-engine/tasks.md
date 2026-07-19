@@ -25,8 +25,8 @@
 
 ## 4. エンジン種別・設定型の拡張 (TDD)
 
-- [ ] 4.1 `TtsEngineType.irodori` 追加のテストを作成する (enum / label / 永続化 "irodori") → 失敗確認 → コミット
-- [ ] 4.2 `TtsEngineType` と永続化を実装しテストをパスさせる
+- [x] 4.1 `TtsEngineType.irodori` 追加のテストを作成する (enum / label / 永続化 "irodori") → 失敗確認 → コミット
+- [x] 4.2 `TtsEngineType` と永続化を実装しテストをパスさせる
 - [ ] 4.3 `IrodoriEngineConfig` のテストを作成する (フィールド / sampleRate 48000 / modelLoadKey が modelDir のみ依存 / resolveFromReader の3分岐) → 失敗確認 → コミット
 - [ ] 4.4 `IrodoriEngineConfig` と resolve 分岐、Irodori パラメータ用プロバイダ (guidance 2種・steps、既定 5.0/3.0/40、SharedPreferences 永続化) を実装しテストをパスさせる
 
