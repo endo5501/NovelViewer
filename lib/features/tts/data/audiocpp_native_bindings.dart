@@ -65,6 +65,13 @@ typedef _AcGetSampleRateDart = int Function(Pointer<Void>);
 typedef _AcGetErrorC = Pointer<Utf8> Function(Pointer<Void>);
 typedef _AcGetErrorDart = Pointer<Utf8> Function(Pointer<Void>);
 
+// audiocpp_get_init_error() -> const char* : the reason the most recent
+// audiocpp_init on this thread returned null (empty when it succeeded). The
+// failed context is already freed, so its cause is unavailable via
+// audiocpp_get_error; this exposes it instead. Never returns null.
+typedef _AcGetInitErrorC = Pointer<Utf8> Function();
+typedef _AcGetInitErrorDart = Pointer<Utf8> Function();
+
 /// FFI bindings to the `audiocpp_ffi` shared library (endo5501/audio.cpp
 /// fork), exposing the Irodori-TTS C API described in design D3.
 class AudiocppNativeBindings {
@@ -138,5 +145,10 @@ class AudiocppNativeBindings {
   late final getError =
       _library.lookupFunction<_AcGetErrorC, _AcGetErrorDart>(
     'audiocpp_get_error',
+  );
+
+  late final getInitError =
+      _library.lookupFunction<_AcGetInitErrorC, _AcGetInitErrorDart>(
+    'audiocpp_get_init_error',
   );
 }

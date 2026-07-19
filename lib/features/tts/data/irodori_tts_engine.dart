@@ -48,7 +48,17 @@ class IrodoriTtsEngine {
     }
 
     if (_ctx == nullptr) {
-      throw const TtsEngineException('Failed to load Irodori-TTS model');
+      // audiocpp_init freed the failed context before returning null, so its
+      // cause is unavailable via getError(ctx); fetch it from the init-error
+      // buffer instead and surface it to the caller.
+      final initErrorPtr = _bindings.getInitError();
+      final message =
+          initErrorPtr == nullptr ? '' : initErrorPtr.toDartString();
+      throw TtsEngineException(
+        message.isEmpty
+            ? 'Failed to load Irodori-TTS model'
+            : 'Failed to load Irodori-TTS model: $message',
+      );
     }
   }
 

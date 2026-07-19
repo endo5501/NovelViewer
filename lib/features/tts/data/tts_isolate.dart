@@ -3,7 +3,6 @@ import 'dart:ffi';
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 
@@ -33,32 +32,20 @@ abstract class TtsAbortHandle {
   void free();
 }
 
-/// Creates the [TtsAbortHandle] for a session. Injectable for tests.
-typedef TtsAbortHandleFactory = TtsAbortHandle Function();
-
-/// Abort handle with no native backing (DLL unavailable / unsupported
-/// platform). Abort degrades to a safe no-op.
-class _NoopAbortHandle implements TtsAbortHandle {
-  const _NoopAbortHandle();
-
-  @override
-  int get address => 0;
-
-  @override
-  void abort() {}
-
-  @override
-  void free() {}
-}
+/// Creates the per-engine-family abort handles for a session. Injectable for
+/// tests. Returns a handle keyed by the [TtsEngineType] that will consume it:
+/// [TtsEngineType.qwen3] for the qwen3_tts_ffi handle and
+/// [TtsEngineType.irodori] for the audiocpp_ffi handle. A family whose native
+/// library is unavailable is simply absent from the map (that engine then has
+/// no native abort). [TtsEngineType.piper] never has a handle.
+typedef TtsAbortHandleFactory = Map<TtsEngineType, TtsAbortHandle> Function();
 
 /// FFI-backed abort handle. Parameterized over the owning library's abort /
-/// free functions so a handle can be backed by whichever TTS DLL is available
-/// (qwen3_tts_ffi or audiocpp_ffi).
-///
-/// ABI note: both `qwen3_tts_abort_handle` and `audiocpp_abort_handle` are a
-/// single `std::atomic<bool>` and are kept byte-compatible by contract (both
-/// forks are maintained by this project), so one session handle can be wired
-/// into either engine's init regardless of which DLL allocated it.
+/// free functions so it is created — and later freed — by the SAME native DLL
+/// that will dereference it. Each engine family owns its own handle
+/// (qwen3_tts_ffi allocates the qwen3 handle, audiocpp_ffi allocates the
+/// irodori handle); a handle is never wired into a different engine's DLL, so
+/// no cross-DLL handle sharing occurs.
 class _NativeAbortHandle implements TtsAbortHandle {
   _NativeAbortHandle(this._handle, {required this.abortFn, required this.freeFn});
 
@@ -76,53 +63,57 @@ class _NativeAbortHandle implements TtsAbortHandle {
   void free() => freeFn(_handle);
 }
 
-/// Try each attempt in order and return the first non-null handle. An attempt
-/// may throw (DLL unavailable) or return null (native create returned
-/// nullptr); either way the next attempt runs. When every attempt fails,
-/// abort degrades to a safe no-op, matching the project's FFI self-skip
-/// posture.
-@visibleForTesting
-TtsAbortHandle createSessionAbortHandle(
-  List<TtsAbortHandle? Function()> attempts,
-) {
-  for (final attempt in attempts) {
-    try {
-      final handle = attempt();
-      if (handle != null) return handle;
-      _log.warning('abort handle attempt returned null; trying next');
-    } catch (e) {
-      _log.warning('abort handle attempt failed; trying next: $e');
-    }
+/// Opens a native library and allocates one abort handle from it, backed by
+/// that library's own abort/free functions. Returns null (never throws) when
+/// the DLL is unavailable or its native create returns nullptr, so a missing
+/// engine family degrades to "no native abort" for that family only.
+TtsAbortHandle? _openNativeAbortHandle<B>({
+  required B Function() open,
+  required Pointer<Void> Function(B) createOf,
+  required void Function(Pointer<Void>) Function(B) abortOf,
+  required void Function(Pointer<Void>) Function(B) freeOf,
+}) {
+  try {
+    final bindings = open();
+    final handle = createOf(bindings);
+    if (handle == nullptr) return null;
+    return _NativeAbortHandle(
+      handle,
+      abortFn: abortOf(bindings),
+      freeFn: freeOf(bindings),
+    );
+  } catch (e) {
+    _log.warning('native abort handle unavailable: $e');
+    return null;
   }
-  _log.warning('no TTS native library available; abort disabled');
-  return const _NoopAbortHandle();
 }
 
-TtsAbortHandle _defaultAbortHandleFactory() {
-  return createSessionAbortHandle([
-    () {
-      final bindings = TtsNativeBindings.open();
-      final handle = bindings.createAbortHandle();
-      if (handle == nullptr) return null;
-      return _NativeAbortHandle(
-        handle,
-        abortFn: bindings.abort,
-        freeFn: bindings.freeAbortHandle,
-      );
-    },
-    // Fallback: Irodori-only installations (or a broken qwen3 DLL) still get
-    // a live abort flag from the audiocpp library.
-    () {
-      final bindings = AudiocppNativeBindings.open();
-      final handle = bindings.createAbortHandle();
-      if (handle == nullptr) return null;
-      return _NativeAbortHandle(
-        handle,
-        abortFn: bindings.abort,
-        freeFn: bindings.freeAbortHandle,
-      );
-    },
-  ]);
+/// Allocates one abort handle per available engine family. Each handle is
+/// created — and will be freed — by the SAME DLL that dereferences it, so no
+/// handle is ever shared across DLLs.
+Map<TtsEngineType, TtsAbortHandle> _defaultAbortHandleFactory() {
+  final handles = <TtsEngineType, TtsAbortHandle>{};
+
+  final qwen3 = _openNativeAbortHandle<TtsNativeBindings>(
+    open: TtsNativeBindings.open,
+    createOf: (b) => b.createAbortHandle(),
+    abortOf: (b) => b.abort,
+    freeOf: (b) => b.freeAbortHandle,
+  );
+  if (qwen3 != null) handles[TtsEngineType.qwen3] = qwen3;
+
+  final audiocpp = _openNativeAbortHandle<AudiocppNativeBindings>(
+    open: AudiocppNativeBindings.open,
+    createOf: (b) => b.createAbortHandle(),
+    abortOf: (b) => b.abort,
+    freeOf: (b) => b.freeAbortHandle,
+  );
+  if (audiocpp != null) handles[TtsEngineType.irodori] = audiocpp;
+
+  if (handles.isEmpty) {
+    _log.warning('no TTS native library available; abort disabled');
+  }
+  return handles;
 }
 
 // Messages sent to the TTS isolate
@@ -146,8 +137,11 @@ class LoadModelMessage extends TtsIsolateMessage {
   final TtsEngineType engineType;
   final int nThreads;
   final int languageId;
-  // Native address of the session abort handle (0 = none). Wired into
-  // qwen3_tts_init so the abort flag is checked during synthesis.
+  // Native address of the abort handle for THIS engine family (0 = none):
+  // the qwen3 handle for qwen3, the audiocpp handle for irodori, 0 for piper.
+  // Wired into the engine's native init so the abort flag is checked during
+  // synthesis. The address must match the engine being loaded — a handle is
+  // only ever dereferenced by the DLL that allocated it.
   final int abortHandleAddress;
   // Piper-specific
   final String? dicDir;
@@ -254,13 +248,16 @@ class TtsIsolate {
   /// [WorkerDiedResponse] does not replay on the broadcast stream).
   bool get hasWorkerDied => _workerDeathSignaled;
 
-  /// Session abort handle. Created once at [spawn] and freed only after the
-  /// worker Isolate has terminated, so its address is stable across model
-  /// reloads and [abort] never touches a freed synthesis context.
-  TtsAbortHandle? _abortHandle;
+  /// Per-engine-family abort handles, keyed by the [TtsEngineType] that
+  /// consumes each (qwen3, irodori). Created once at [spawn] and freed only
+  /// after the worker Isolate has terminated, so each address is stable across
+  /// model reloads and [abort] never touches a freed synthesis context.
+  Map<TtsEngineType, TtsAbortHandle> _abortHandles = const {};
 
-  /// Native address of the session abort handle. Exposed for tests.
-  int? get debugAbortHandleAddress => _abortHandle?.address;
+  /// Native address of the abort handle for [engineType] (null when that
+  /// engine family has no native handle). Exposed for tests.
+  int? debugAbortHandleAddressFor(TtsEngineType engineType) =>
+      _abortHandles[engineType]?.address;
 
   /// Timeout for graceful shutdown before force-killing the isolate.
   static const _disposeTimeout = Duration(seconds: 2);
@@ -268,9 +265,10 @@ class TtsIsolate {
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
 
   Future<void> spawn() async {
-    // Create the session abort handle before spawning the worker so its address
-    // is available for the very first loadModel and for abort() at any time.
-    _abortHandle = _abortHandleFactory();
+    // Create the per-engine abort handles before spawning the worker so their
+    // addresses are available for the very first loadModel and for abort() at
+    // any time.
+    _abortHandles = _abortHandleFactory();
 
     try {
       _receivePort = ReceivePort();
@@ -318,11 +316,13 @@ class TtsIsolate {
       _spawnCompleter = null;
     } catch (_) {
       // Spawning failed (or the worker died before delivering its SendPort);
-      // release the native handle we just created so it is not leaked when the
-      // caller treats spawn() failure as "nothing was started".
+      // release the native handles we just created so they are not leaked when
+      // the caller treats spawn() failure as "nothing was started".
       _spawnCompleter = null;
-      _abortHandle?.free();
-      _abortHandle = null;
+      for (final handle in _abortHandles.values) {
+        handle.free();
+      }
+      _abortHandles = const {};
       _receivePort?.close();
       _receivePort = null;
       _errorPort?.close();
@@ -386,7 +386,9 @@ class TtsIsolate {
       noiseScale: noiseScale,
       noiseW: noiseW,
       embeddingCacheDir: embeddingCacheDir,
-      abortHandleAddress: _abortHandle?.address ?? 0,
+      // Send the handle allocated by THIS engine's DLL so the address is only
+      // ever dereferenced by the library that created it (no cross-DLL wiring).
+      abortHandleAddress: _abortHandles[engineType]?.address ?? 0,
     ));
   }
 
@@ -410,10 +412,14 @@ class TtsIsolate {
 
   /// Abort any in-progress synthesis by setting the native abort flag directly.
   /// This bypasses the worker Isolate's event loop (which is blocked during
-  /// synthesis) by writing to the session abort handle, whose lifetime is
-  /// independent of the synthesis context.
+  /// synthesis) by writing to the abort handles, whose lifetimes are
+  /// independent of the synthesis context. Every live handle is set; flagging
+  /// the inactive engine's handle is harmless because synthesis start clears it
+  /// per-engine via resetAbort.
   void abort() {
-    _abortHandle?.abort();
+    for (final handle in _abortHandles.values) {
+      handle.abort();
+    }
   }
 
   Future<void> dispose() async {
@@ -457,17 +463,20 @@ class TtsIsolate {
     _exitPort?.close();
     _exitPort = null;
     _sendPort = null;
-    // Free the session abort handle only if the worker exited cleanly. On the
+    // Free the abort handles only if the worker exited cleanly. On the
     // force-kill path the worker may still be blocked in a native synthesis FFI
     // call (Isolate.kill cannot interrupt in-flight native code), and its ggml
     // abort_callback can still read handle->abort_flag — freeing here would
     // reintroduce the F111 use-after-free, just on the timeout branch. Leak the
-    // tiny handle in that rare case (the previous ctx-based design likewise
-    // freed nothing on timeout).
+    // tiny handles in that rare case (the previous ctx-based design likewise
+    // freed nothing on timeout). Each handle is freed by the same DLL that
+    // allocated it (its own freeFn).
     if (workerExited) {
-      _abortHandle?.free();
+      for (final handle in _abortHandles.values) {
+        handle.free();
+      }
     }
-    _abortHandle = null;
+    _abortHandles = const {};
     if (!_responseController.isClosed) {
       _responseController.close();
     }
@@ -617,7 +626,12 @@ class TtsIsolate {
           irodoriEngine?.resetAbort();
           final result = doSynthesize(message);
 
-          // Use TransferableTypedData for zero-copy transfer
+          // Materialize the audio into a fresh, isolate-owned buffer before
+          // sending. We route it through TransferableTypedData only to obtain
+          // that copy: materialize() runs here on the worker side and copies
+          // the bytes out eagerly, so this is a plain copy — NOT the zero-copy
+          // handoff TransferableTypedData enables when the receiver
+          // materializes. (Transfer semantics intentionally unchanged.)
           final transferable =
               TransferableTypedData.fromList([result.audio.buffer.asByteData()]);
           mainSendPort.send(SynthesisResultResponse(
