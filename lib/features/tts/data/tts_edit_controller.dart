@@ -281,6 +281,9 @@ class TtsEditController {
     final globalRefWavPath = switch (config) {
       Qwen3EngineConfig(:final refWavPath) => refWavPath,
       PiperEngineConfig() => null,
+      // Placeholder: Irodori's refWavPath fallback wiring into this
+      // all-ungenerated batch path lands in task 5.x.
+      IrodoriEngineConfig() => null,
     };
 
     for (var idx = 0; idx < ungenerated.length; idx++) {

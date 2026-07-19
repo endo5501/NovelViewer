@@ -16,6 +16,7 @@ typedef ProviderReader = T Function<T>(ProviderListenable<T> provider);
 
 const int _qwen3SampleRate = 24000;
 const int _piperSampleRate = 22050;
+const int _irodoriSampleRate = 48000;
 
 /// Engine-specific configuration for TTS synthesis.
 ///
@@ -55,6 +56,7 @@ sealed class TtsEngineConfig {
     return switch (type) {
       TtsEngineType.qwen3 => _resolveQwen3(read),
       TtsEngineType.piper => _resolvePiper(read),
+      TtsEngineType.irodori => _resolveIrodori(read),
     };
   }
 
@@ -136,6 +138,49 @@ class PiperEngineConfig extends TtsEngineConfig {
       );
 }
 
+class IrodoriEngineConfig extends TtsEngineConfig {
+  const IrodoriEngineConfig({
+    required super.modelDir,
+    required super.sampleRate,
+    this.refWavPath,
+    required this.speakerGuidanceScale,
+    required this.captionGuidanceScale,
+    required this.numInferenceSteps,
+  });
+
+  /// Absolute path to a reference WAV used for voice cloning (synthesis-time,
+  /// shares the same voice library as Qwen3). `null` disables cloning.
+  final String? refWavPath;
+
+  /// Balances adherence to the reference voice vs. the caption (design D8).
+  final double speakerGuidanceScale;
+
+  /// Balances adherence to the caption vs. the reference voice.
+  final double captionGuidanceScale;
+
+  /// Number of RF diffusion sampling steps.
+  final int numInferenceSteps;
+
+  /// Returns a copy with [refWavPath] overridden. Mirrors
+  /// [Qwen3EngineConfig.copyWithRefWavPath] for per-segment ref WAV swaps in
+  /// the edit dialog.
+  IrodoriEngineConfig copyWithRefWavPath(String? refWavPath) =>
+      IrodoriEngineConfig(
+        modelDir: modelDir,
+        sampleRate: sampleRate,
+        refWavPath: refWavPath,
+        speakerGuidanceScale: speakerGuidanceScale,
+        captionGuidanceScale: captionGuidanceScale,
+        numInferenceSteps: numInferenceSteps,
+      );
+
+  // refWavPath / guidance scales / steps are synthesis-time parameters
+  // (passed per-call, like caption), so they are intentionally omitted from
+  // the load key — changing them must not reload the model (design D8).
+  @override
+  Object get modelLoadKey => (TtsEngineType.irodori, modelDir);
+}
+
 Qwen3EngineConfig _resolveQwen3(ProviderReader read) {
   final modelDir = read(ttsModelDirProvider);
   final language = read(ttsLanguageProvider);
@@ -163,5 +208,23 @@ PiperEngineConfig _resolvePiper(ProviderReader read) {
     lengthScale: read(piperLengthScaleProvider),
     noiseScale: read(piperNoiseScaleProvider),
     noiseW: read(piperNoiseWProvider),
+  );
+}
+
+IrodoriEngineConfig _resolveIrodori(ProviderReader read) {
+  final modelDir = read(irodoriModelDirProvider);
+  // Shared voice reference library — same provider/service as Qwen3 (D9).
+  final refWavFileName = read(ttsRefWavPathProvider);
+  final voiceService = read(voiceReferenceServiceProvider);
+  final refWavPath = refWavFileName.isNotEmpty && voiceService != null
+      ? voiceService.resolveVoiceFilePath(refWavFileName)
+      : null;
+  return IrodoriEngineConfig(
+    modelDir: modelDir,
+    sampleRate: _irodoriSampleRate,
+    refWavPath: refWavPath,
+    speakerGuidanceScale: read(irodoriSpeakerGuidanceScaleProvider),
+    captionGuidanceScale: read(irodoriCaptionGuidanceScaleProvider),
+    numInferenceSteps: read(irodoriNumInferenceStepsProvider),
   );
 }

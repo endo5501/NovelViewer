@@ -33,6 +33,9 @@ class SettingsRepository {
   static const _piperLengthScaleKey = 'piper_length_scale';
   static const _piperNoiseScaleKey = 'piper_noise_scale';
   static const _piperNoiseWKey = 'piper_noise_w';
+  static const _irodoriSpeakerGuidanceScaleKey = 'irodori_speaker_guidance_scale';
+  static const _irodoriCaptionGuidanceScaleKey = 'irodori_caption_guidance_scale';
+  static const _irodoriNumInferenceStepsKey = 'irodori_num_inference_steps';
   static const _shortcutBindingsKey = 'keyboard_shortcuts';
 
   static const defaultFontSize = 14.0;
@@ -262,6 +265,31 @@ class SettingsRepository {
 
   Future<void> setPiperNoiseW(double value) async {
     await _prefs.setDouble(_piperNoiseWKey, value);
+  }
+
+  // Irodori synthesis parameters (design D8 / spec irodori-caption-synthesis)
+  double getIrodoriSpeakerGuidanceScale() {
+    return _prefs.getDouble(_irodoriSpeakerGuidanceScaleKey) ?? 5.0;
+  }
+
+  Future<void> setIrodoriSpeakerGuidanceScale(double value) async {
+    await _prefs.setDouble(_irodoriSpeakerGuidanceScaleKey, value);
+  }
+
+  double getIrodoriCaptionGuidanceScale() {
+    return _prefs.getDouble(_irodoriCaptionGuidanceScaleKey) ?? 3.0;
+  }
+
+  Future<void> setIrodoriCaptionGuidanceScale(double value) async {
+    await _prefs.setDouble(_irodoriCaptionGuidanceScaleKey, value);
+  }
+
+  int getIrodoriNumInferenceSteps() {
+    return _prefs.getInt(_irodoriNumInferenceStepsKey) ?? 40;
+  }
+
+  Future<void> setIrodoriNumInferenceSteps(int value) async {
+    await _prefs.setInt(_irodoriNumInferenceStepsKey, value);
   }
 
   /// Keyboard shortcut bindings for the customizable actions.

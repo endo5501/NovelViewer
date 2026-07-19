@@ -105,6 +105,16 @@ class TtsSession {
             noiseScale: config.noiseScale,
             noiseW: config.noiseW,
           );
+        case IrodoriEngineConfig():
+          // Placeholder: full Irodori wiring (refWavPath / guidance scales /
+          // steps / caption) into TtsIsolate.loadModel lands in task 5.x.
+          // TtsIsolate currently fails any Irodori load explicitly (see
+          // TtsIsolate._isolateEntryPoint), so this resolves to `false`
+          // through the normal load-failure path below rather than hanging.
+          _isolate.loadModel(
+            config.modelDir,
+            engineType: TtsEngineType.irodori,
+          );
       }
       final success = await completer.future.timeout(
         _modelLoadTimeout,

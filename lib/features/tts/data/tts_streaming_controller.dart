@@ -86,6 +86,9 @@ class TtsStreamingController {
     final fallbackRefWavPath = switch (config) {
       Qwen3EngineConfig(:final refWavPath) => refWavPath,
       PiperEngineConfig() => null,
+      // Placeholder: Irodori's refWavPath fallback wiring into the
+      // streaming pipeline lands in task 5.x.
+      IrodoriEngineConfig() => null,
     };
 
     // Check existing episode
