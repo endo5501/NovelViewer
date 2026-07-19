@@ -12,6 +12,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
+import 'package:novel_viewer/features/tts/providers/irodori_model_download_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -39,7 +40,10 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  Widget buildTestWidget({http.Client? httpClient}) {
+  Widget buildTestWidget({
+    http.Client? httpClient,
+    Map<String, int>? expectedFileSizes,
+  }) {
     final libraryPath = p.join(tempDir.path, 'NovelViewer');
     return ProviderScope(
       overrides: [
@@ -47,6 +51,13 @@ void main() {
         libraryPathProvider.overrideWithValue(libraryPath),
         if (httpClient != null)
           httpClientProvider.overrideWithValue(httpClient),
+        // Real manifest entries are multi-hundred-megabyte-to-gigabyte
+        // constants; tests that exercise a real download/completion state
+        // override this with small sizes matching their fixture bytes.
+        if (expectedFileSizes != null)
+          irodoriExpectedFileSizesProvider.overrideWithValue(
+            expectedFileSizes,
+          ),
       ],
       child: const MaterialApp(
         locale: Locale('ja'),
@@ -62,6 +73,7 @@ void main() {
   Future<AppLocalizations> openTtsTab(
     WidgetTester tester, {
     http.Client? httpClient,
+    Map<String, int>? expectedFileSizes,
   }) async {
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1.0;
@@ -70,7 +82,10 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
     await tester.runAsync(() async {
-      await tester.pumpWidget(buildTestWidget(httpClient: httpClient));
+      await tester.pumpWidget(buildTestWidget(
+        httpClient: httpClient,
+        expectedFileSizes: expectedFileSizes,
+      ));
     });
     await tester.pumpAndSettle();
     final l10n =
@@ -87,8 +102,13 @@ void main() {
   Future<AppLocalizations> selectIrodoriEngine(
     WidgetTester tester, {
     http.Client? httpClient,
+    Map<String, int>? expectedFileSizes,
   }) async {
-    final l10n = await openTtsTab(tester, httpClient: httpClient);
+    final l10n = await openTtsTab(
+      tester,
+      httpClient: httpClient,
+      expectedFileSizes: expectedFileSizes,
+    );
     await tester.tap(find.text('Irodori-TTS'));
     await tester.pumpAndSettle();
     return l10n;
@@ -192,7 +212,15 @@ void main() {
               modelsDir, 'Semantic-DACVAE-Japanese-32dim', 'weights.safetensors'))
           .writeAsStringSync('weights');
 
-      final l10n = await selectIrodoriEngine(tester);
+      final l10n = await selectIrodoriEngine(
+        tester,
+        expectedFileSizes: const {
+          'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 5, // 'model'
+          'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 6, // 'config'
+          'llm-jp-3-150m/tokenizer.json': 9, // 'tokenizer'
+          'Semantic-DACVAE-Japanese-32dim/weights.safetensors': 7, // 'weights'
+        },
+      );
 
       expect(
           find.textContaining(l10n.settings_irodoriDownloaded), findsOneWidget);
@@ -207,8 +235,16 @@ void main() {
         );
       });
 
-      final l10n =
-          await selectIrodoriEngine(tester, httpClient: mockClient);
+      final l10n = await selectIrodoriEngine(
+        tester,
+        httpClient: mockClient,
+        expectedFileSizes: const {
+          'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 3,
+          'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 3,
+          'llm-jp-3-150m/tokenizer.json': 3,
+          'Semantic-DACVAE-Japanese-32dim/weights.safetensors': 3,
+        },
+      );
 
       await tester.runAsync(() async {
         await tester.tap(find.text(l10n.settings_modelDataDownload));
