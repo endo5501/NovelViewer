@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -165,11 +166,13 @@ void main() {
 
     test(
         'retry after a mid-download failure skips already-complete files '
-        '(matching remote size) and only re-fetches the rest', () async {
+        '(recorded size matches local size, no network HEAD) and only '
+        're-fetches the rest', () async {
       final modelsDir = p.join(tempDir.path, 'models');
 
       // Pre-populate the first two files as if a previous attempt completed
-      // them before failing on the third.
+      // them before failing on the third, together with the sidecar record
+      // of their sizes (written by a prior successful downloadModels run).
       final modelDir =
           Directory(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign'))
             ..createSync(recursive: true);
@@ -177,28 +180,21 @@ void main() {
           .writeAsStringSync('a' * 10);
       File(p.join(modelDir.path, 'model_config.json'))
           .writeAsStringSync('b' * 20);
+      File(p.join(modelsDir, '.irodori_download_sizes.json')).writeAsStringSync(
+        jsonEncode({
+          'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 10,
+          'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 20,
+        }),
+      );
 
-      final headRequests = <String>[];
-      final getRequests = <String>[];
+      final requests = <String>[];
 
       final mockClient = MockClient.streaming((request, _) async {
+        // No HEAD requests should ever be issued now that skip decisions are
+        // made from the recorded-size sidecar rather than a network probe.
+        expect(request.method, 'GET');
+        requests.add(request.url.toString());
         final fileName = request.url.pathSegments.last;
-        if (request.method == 'HEAD') {
-          headRequests.add(request.url.toString());
-          // Report the same size as the pre-populated local files so they
-          // are recognized as already complete.
-          final localSize = switch (fileName) {
-            'model.safetensors' => 10,
-            'model_config.json' => 20,
-            _ => 0,
-          };
-          return http.StreamedResponse(
-            Stream.value(const []),
-            200,
-            contentLength: localSize,
-          );
-        }
-        getRequests.add(request.url.toString());
         final bytes = 'fake $fileName'.codeUnits;
         return http.StreamedResponse(
           Stream.value(bytes),
@@ -210,25 +206,26 @@ void main() {
       final service = IrodoriModelDownloadService(client: mockClient);
       await service.downloadModels(modelsDir);
 
-      // The two pre-existing, size-matching files must not be re-downloaded.
+      // The two pre-existing, recorded-size-matching files must not be
+      // re-downloaded.
       expect(
-        getRequests.any((u) => u.endsWith('model.safetensors')),
+        requests.any((u) => u.endsWith('model.safetensors')),
         isFalse,
         reason: 'model.safetensors already complete; must be skipped',
       );
       expect(
-        getRequests.any((u) => u.endsWith('model_config.json')),
+        requests.any((u) => u.endsWith('model_config.json')),
         isFalse,
         reason: 'model_config.json already complete; must be skipped',
       );
 
       // The remaining two files must still be fetched.
       expect(
-        getRequests.any((u) => u.endsWith('tokenizer.json')),
+        requests.any((u) => u.endsWith('tokenizer.json')),
         isTrue,
       );
       expect(
-        getRequests.any((u) => u.endsWith('weights.safetensors')),
+        requests.any((u) => u.endsWith('weights.safetensors')),
         isTrue,
       );
 
@@ -239,6 +236,149 @@ void main() {
       );
 
       expect(service.areModelsDownloaded(modelsDir), isTrue);
+    });
+
+    test(
+        'a file that exists locally but has no recorded size entry is '
+        're-downloaded (sidecar missing/incomplete does not imply complete)',
+        () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final modelDir =
+          Directory(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign'))
+            ..createSync(recursive: true);
+      // File exists locally (e.g. copied in by hand) but there is no sidecar
+      // at all, so its size was never recorded by a successful download.
+      File(p.join(modelDir.path, 'model.safetensors'))
+          .writeAsStringSync('a' * 10);
+
+      final requests = <String>[];
+      final mockClient = MockClient.streaming((request, _) async {
+        requests.add(request.url.toString());
+        final fileName = request.url.pathSegments.last;
+        final bytes = 'fake $fileName'.codeUnits;
+        return http.StreamedResponse(
+          Stream.value(bytes),
+          200,
+          contentLength: bytes.length,
+        );
+      });
+
+      final service = IrodoriModelDownloadService(client: mockClient);
+      await service.downloadModels(modelsDir);
+
+      expect(
+        requests.any((u) => u.endsWith('model.safetensors')),
+        isTrue,
+        reason: 'no recorded size for this file; it must be re-fetched',
+      );
+    });
+
+    test(
+        'records each successfully downloaded file\'s byte size in the '
+        'sidecar json', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+
+      final mockClient = MockClient.streaming((request, _) async {
+        final bytes = 'fake ${request.url.pathSegments.last}'.codeUnits;
+        return http.StreamedResponse(
+          Stream.value(bytes),
+          200,
+          contentLength: bytes.length,
+        );
+      });
+
+      final service = IrodoriModelDownloadService(client: mockClient);
+      await service.downloadModels(modelsDir);
+
+      final sizesFile =
+          File(p.join(modelsDir, '.irodori_download_sizes.json'));
+      expect(sizesFile.existsSync(), isTrue);
+      final recorded =
+          jsonDecode(sizesFile.readAsStringSync()) as Map<String, dynamic>;
+
+      final modelFile = File(p.join(
+          modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign', 'model.safetensors'));
+      expect(
+        recorded['Irodori-TTS-600M-v3-VoiceDesign/model.safetensors'],
+        modelFile.lengthSync(),
+      );
+      final tokenizerFile =
+          File(p.join(modelsDir, 'llm-jp-3-150m', 'tokenizer.json'));
+      expect(
+        recorded['llm-jp-3-150m/tokenizer.json'],
+        tokenizerFile.lengthSync(),
+      );
+    });
+
+    test('does not record a size for a file whose download fails (HTTP error)',
+        () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+
+      final mockClient = MockClient.streaming((request, _) async {
+        return http.StreamedResponse(Stream.value([]), 404);
+      });
+
+      final service = IrodoriModelDownloadService(client: mockClient);
+      await expectLater(
+        service.downloadModels(modelsDir),
+        throwsA(isA<HttpException>()),
+      );
+
+      final sizesFile =
+          File(p.join(modelsDir, '.irodori_download_sizes.json'));
+      if (sizesFile.existsSync()) {
+        final recorded =
+            jsonDecode(sizesFile.readAsStringSync()) as Map<String, dynamic>;
+        expect(
+          recorded['Irodori-TTS-600M-v3-VoiceDesign/model.safetensors'],
+          isNull,
+        );
+      }
+    });
+
+    test('does not record a size for a file whose download is cancelled',
+        () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final chunkController = StreamController<List<int>>();
+
+      final mockClient = MockClient.streaming((request, _) async {
+        return http.StreamedResponse(
+          chunkController.stream,
+          200,
+          contentLength: 100,
+        );
+      });
+
+      final service = IrodoriModelDownloadService(client: mockClient);
+      final future = service.downloadModels(
+        modelsDir,
+        onProgress: (fileName, progress) {
+          if (progress != null && progress > 0) {
+            service.cancel();
+          }
+        },
+      );
+      final expectation = expectLater(
+        future,
+        throwsA(isA<IrodoriDownloadCancelledException>()),
+      );
+
+      chunkController.add(List.filled(10, 0));
+      await Future<void>.delayed(Duration.zero);
+      chunkController.add(List.filled(10, 0));
+      await chunkController.close();
+      await expectation;
+
+      final sizesFile =
+          File(p.join(modelsDir, '.irodori_download_sizes.json'));
+      if (sizesFile.existsSync()) {
+        final recorded =
+            jsonDecode(sizesFile.readAsStringSync()) as Map<String, dynamic>;
+        expect(
+          recorded['Irodori-TTS-600M-v3-VoiceDesign/model.safetensors'],
+          isNull,
+        );
+      }
     });
   });
 
@@ -354,30 +494,13 @@ void main() {
     });
 
     test(
-        'a cancel issued during the skip-check (between the HEAD and the '
-        'GET) is honored before the GET fires', () async {
+        'a cancel issued immediately after downloadModels starts (during '
+        'the skip-check, before any GET) is honored — no GET is ever issued',
+        () async {
       final modelsDir = p.join(tempDir.path, 'models');
-      final modelDir =
-          Directory(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign'))
-            ..createSync(recursive: true);
-      // Local file exists but with a size that will NOT match whatever the
-      // HEAD reports below, so _isAlreadyComplete resolves to false and the
-      // file is a download candidate — exactly the window the new recheck
-      // guards.
-      File(p.join(modelDir.path, 'model.safetensors'))
-          .writeAsStringSync('x' * 5);
-
-      final headController = StreamController<List<int>>();
       final getRequests = <String>[];
 
       final mockClient = MockClient.streaming((request, _) async {
-        if (request.method == 'HEAD') {
-          return http.StreamedResponse(
-            headController.stream,
-            200,
-            contentLength: 999,
-          );
-        }
         getRequests.add(request.url.toString());
         return http.StreamedResponse(
           Stream.value([1, 2, 3]),
@@ -388,20 +511,25 @@ void main() {
 
       final service = IrodoriModelDownloadService(client: mockClient);
       final future = service.downloadModels(modelsDir);
-
-      // Let the HEAD request start (the service is awaiting its stream drain).
-      await Future<void>.delayed(Duration.zero);
-      service.cancel();
-      await headController.close();
-
-      await expectLater(
+      // Attach the failure expectation immediately (before any await) so the
+      // future always has a listener by the time it rejects below — otherwise
+      // the test framework's zone guard can flag the rejection as unhandled.
+      final expectation = expectLater(
         future,
         throwsA(isA<IrodoriDownloadCancelledException>()),
       );
+
+      // Cancel synchronously, with no intervening await: since downloadModels
+      // has not yielded control back to us via any completed I/O yet, this is
+      // guaranteed to land before the recheck / skip-check for the first
+      // file, and therefore before any GET could fire.
+      service.cancel();
+
+      await expectation;
       expect(
         getRequests,
         isEmpty,
-        reason: 'cancel during the skip-check must prevent the GET',
+        reason: 'an immediate cancel must prevent every GET',
       );
     });
   });
