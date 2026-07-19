@@ -79,6 +79,15 @@ void main() {
       expect(msg.noiseW, 0.6);
     });
 
+    test('LoadModelMessage holds irodori engine type', () {
+      final msg = LoadModelMessage(
+        modelDir: '/path/to/irodori',
+        engineType: TtsEngineType.irodori,
+      );
+      expect(msg.engineType, TtsEngineType.irodori);
+      expect(msg.modelDir, '/path/to/irodori');
+    });
+
     test('SynthesizeMessage holds text', () {
       final msg = SynthesizeMessage(text: 'こんにちは');
       expect(msg.text, 'こんにちは');
@@ -92,6 +101,29 @@ void main() {
       );
       expect(msg.text, 'こんにちは');
       expect(msg.refWavPath, '/path/to/ref.wav');
+    });
+
+    test('SynthesizeMessage defaults irodori caption/guidance to null', () {
+      final msg = SynthesizeMessage(text: 'こんにちは');
+      expect(msg.caption, isNull);
+      expect(msg.speakerGuidanceScale, isNull);
+      expect(msg.captionGuidanceScale, isNull);
+      expect(msg.numInferenceSteps, isNull);
+    });
+
+    test('SynthesizeMessage holds irodori caption and guidance params', () {
+      final msg = SynthesizeMessage(
+        text: 'こんにちは',
+        refWavPath: '/path/to/ref.wav',
+        caption: '落ち着いた大人の女性の声',
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+      expect(msg.caption, '落ち着いた大人の女性の声');
+      expect(msg.speakerGuidanceScale, 5.0);
+      expect(msg.captionGuidanceScale, 3.0);
+      expect(msg.numInferenceSteps, 40);
     });
 
     test('DisposeMessage is a simple marker', () {
@@ -209,6 +241,32 @@ void main() {
       expect(addrAfter, addrBefore, reason: 'handle address must be stable');
       expect(factory.created, hasLength(1),
           reason: 'reloads must not create new handles');
+
+      iso.abort();
+      expect(factory.created.single.abortCount, 1);
+
+      await iso.dispose();
+    });
+
+    test('abort target address is stable across an irodori reload', () async {
+      final factory = _FakeAbortHandleFactory();
+      final iso = TtsIsolate(abortHandleFactory: factory.create);
+      await iso.spawn();
+
+      final addrBefore = iso.debugAbortHandleAddress;
+
+      // Switch between engines including the third (irodori) branch. The
+      // worker fails to load (no native library in tests) but the abort
+      // target must stay stable and no new handle may be created.
+      iso.loadModel('/nonexistent/qwen3');
+      iso.loadModel('/nonexistent/irodori',
+          engineType: TtsEngineType.irodori);
+      iso.loadModel('/nonexistent/qwen3-again');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(iso.debugAbortHandleAddress, addrBefore);
+      expect(factory.created, hasLength(1),
+          reason: 'switching to irodori must not create a new handle');
 
       iso.abort();
       expect(factory.created.single.abortCount, 1);
