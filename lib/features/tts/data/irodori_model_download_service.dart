@@ -94,18 +94,26 @@ class IrodoriModelDownloadService {
         continue;
       }
 
-      // A cancel issued while the skip-check above was in flight must be
-      // honored here, before the GET request fires.
-      if (_cancelled) {
-        throw const IrodoriDownloadCancelledException();
-      }
-
       final parentDir = Directory(p.dirname(localPath));
       if (!parentDir.existsSync()) {
         await parentDir.create(recursive: true);
       }
 
-      await _downloadOne(url, localPath, fileName, onProgress);
+      // A cancel issued while the skip-check above was in flight (and any
+      // cancel during the transfer itself) is honored by downloadFile's
+      // shouldCancel check — no need to duplicate that check here.
+      try {
+        await downloadFile(
+          _client,
+          url,
+          localPath,
+          fileName,
+          onProgress,
+          shouldCancel: () => _cancelled,
+        );
+      } on DownloadCancelledException {
+        throw const IrodoriDownloadCancelledException();
+      }
 
       // Record the size only after a fully successful download — a failed
       // or cancelled transfer must not make a future retry skip this file.
@@ -152,55 +160,5 @@ class IrodoriModelDownloadService {
     final sizes = await _readRecordedSizes(modelsDir);
     sizes[relKey] = size;
     await _sizesFile(modelsDir).writeAsString(jsonEncode(sizes));
-  }
-
-  Future<void> _downloadOne(
-    String url,
-    String filePath,
-    String fileName,
-    DownloadProgressCallback? onProgress,
-  ) async {
-    final request = http.Request('GET', Uri.parse(url));
-    final response = await _client.send(request);
-
-    if (response.statusCode != 200) {
-      throw HttpException('HTTP ${response.statusCode}', uri: Uri.parse(url));
-    }
-
-    final contentLength = response.contentLength;
-    final tempFile = File('$filePath.part');
-    final sink = tempFile.openWrite();
-    var bytesReceived = 0;
-
-    try {
-      await for (final chunk in response.stream) {
-        if (_cancelled) {
-          throw const IrodoriDownloadCancelledException();
-        }
-        sink.add(chunk);
-        bytesReceived += chunk.length;
-        final progress = contentLength != null && contentLength > 0
-            ? bytesReceived / contentLength
-            : null;
-        onProgress?.call(fileName, progress);
-      }
-      if (_cancelled) {
-        throw const IrodoriDownloadCancelledException();
-      }
-      await sink.flush();
-      await sink.close();
-
-      final finalFile = File(filePath);
-      if (finalFile.existsSync()) {
-        await finalFile.delete();
-      }
-      await tempFile.rename(filePath);
-    } catch (e) {
-      await sink.close();
-      if (tempFile.existsSync()) {
-        tempFile.deleteSync();
-      }
-      rethrow;
-    }
   }
 }
