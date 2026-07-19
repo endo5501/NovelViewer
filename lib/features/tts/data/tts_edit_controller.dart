@@ -191,9 +191,12 @@ class TtsEditController {
     final entries = dict != null
         ? await dict.getEntriesSortedByLength()
         : null;
-    final fallbackRefWavPath = config is Qwen3EngineConfig
-        ? config.refWavPath
-        : null;
+    final fallbackRefWavPath = switch (config) {
+      Qwen3EngineConfig(:final refWavPath) => refWavPath,
+      // Irodori shares the voice library with Qwen3 (design D9).
+      IrodoriEngineConfig(:final refWavPath) => refWavPath,
+      PiperEngineConfig() => null,
+    };
     final refWavPath = TtsRefWavResolver.resolve(
       storedPath: _segments[segmentIndex].refWavPath,
       fallbackPath: fallbackRefWavPath,
@@ -223,7 +226,10 @@ class TtsEditController {
         ? TtsDictionaryRepository.applyDictionaryWithEntries(
             dictEntries, segment.text)
         : segment.text;
-    final result = await _synthesize(synthText, refWavPath);
+    // For Irodori, the segment's memo becomes the caption (design D8); for
+    // qwen3/piper captionFromMemo returns null so the memo never affects
+    // synthesis.
+    final result = await _synthesize(synthText, refWavPath, config, segment);
     if (result == null) return false;
 
     final wavBytes = WavWriter.toBytes(
@@ -280,10 +286,9 @@ class TtsEditController {
 
     final globalRefWavPath = switch (config) {
       Qwen3EngineConfig(:final refWavPath) => refWavPath,
+      // Irodori shares the voice library with Qwen3 (design D9).
+      IrodoriEngineConfig(:final refWavPath) => refWavPath,
       PiperEngineConfig() => null,
-      // Placeholder: Irodori's refWavPath fallback wiring into this
-      // all-ungenerated batch path lands in task 5.x.
-      IrodoriEngineConfig() => null,
     };
 
     for (var idx = 0; idx < ungenerated.length; idx++) {
@@ -454,9 +459,20 @@ class TtsEditController {
   }
 
   Future<SynthesisResultResponse?> _synthesize(
-      String text, String? refWavPath) async {
-    final result =
-        await _session.synthesize(text: text, refWavPath: refWavPath);
+    String text,
+    String? refWavPath,
+    TtsEngineConfig config,
+    TtsEditSegment segment,
+  ) async {
+    final irodoriConfig = config is IrodoriEngineConfig ? config : null;
+    final result = await _session.synthesize(
+      text: text,
+      refWavPath: refWavPath,
+      caption: TtsEngineConfig.captionFromMemo(config, segment.memo),
+      speakerGuidanceScale: irodoriConfig?.speakerGuidanceScale,
+      captionGuidanceScale: irodoriConfig?.captionGuidanceScale,
+      numInferenceSteps: irodoriConfig?.numInferenceSteps,
+    );
     if (result == null) {
       onError?.call('Synthesis failed');
     }

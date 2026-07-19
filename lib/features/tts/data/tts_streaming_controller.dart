@@ -85,10 +85,10 @@ class TtsStreamingController {
     // refWavPath only applies to Qwen3 (Piper does not do voice cloning).
     final fallbackRefWavPath = switch (config) {
       Qwen3EngineConfig(:final refWavPath) => refWavPath,
+      // Irodori shares the voice library with Qwen3 (design D9); its refWavPath
+      // is a synthesis-time clone reference, same as Qwen3's.
+      IrodoriEngineConfig(:final refWavPath) => refWavPath,
       PiperEngineConfig() => null,
-      // Placeholder: Irodori's refWavPath fallback wiring into the
-      // streaming pipeline lands in task 5.x.
-      IrodoriEngineConfig() => null,
     };
 
     // Check existing episode
@@ -261,9 +261,19 @@ class TtsStreamingController {
           resolver: resolveRefWavPath,
         );
 
+        // For Irodori, the segment's memo becomes the caption (design D8).
+        // Newly-generated segments (no DB row) carry no memo yet, so they
+        // synthesise caption-less; stored segments regenerated after a memo
+        // was written get the caption.
+        final irodoriConfig = config is IrodoriEngineConfig ? config : null;
+        final caption = TtsEngineConfig.captionFromMemo(config, dbRow?.memo);
         final result = await _session.synthesize(
           text: synthText,
           refWavPath: synthRefWavPath,
+          caption: caption,
+          speakerGuidanceScale: irodoriConfig?.speakerGuidanceScale,
+          captionGuidanceScale: irodoriConfig?.captionGuidanceScale,
+          numInferenceSteps: irodoriConfig?.numInferenceSteps,
         );
         // A null result is either a real synthesis failure or an abort. As
         // with model load, an abort implies `_stopped` is already true, so a

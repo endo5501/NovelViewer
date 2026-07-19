@@ -64,6 +64,18 @@ sealed class TtsEngineConfig {
   static TtsEngineConfig resolveFromRef(WidgetRef ref, TtsEngineType type) {
     return resolveFromReader(<T>(p) => ref.read(p), type);
   }
+
+  /// Maps a segment [memo] to the synthesis-time `caption` for [config].
+  ///
+  /// Only Irodori consumes the memo as a caption (design D8); for Qwen3/Piper
+  /// this always returns `null` so the memo never influences synthesis. A
+  /// `null` or empty memo yields `null` (clone-only / plain synthesis).
+  /// Centralised here so every synthesis call site applies the same rule.
+  static String? captionFromMemo(TtsEngineConfig config, String? memo) {
+    if (config is! IrodoriEngineConfig) return null;
+    if (memo == null || memo.isEmpty) return null;
+    return memo;
+  }
 }
 
 class Qwen3EngineConfig extends TtsEngineConfig {
