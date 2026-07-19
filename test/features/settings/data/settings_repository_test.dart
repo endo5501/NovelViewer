@@ -385,4 +385,87 @@ void main() {
       expect(repo.getTtsLanguage(), TtsLanguage.ja);
     });
   });
+
+  group('SettingsRepository - Irodori synthesis parameters', () {
+    test('getIrodoriSpeakerGuidanceScale returns default 5.0 when no value '
+        'stored', () {
+      final repo = buildRepo();
+      expect(repo.getIrodoriSpeakerGuidanceScale(), 5.0);
+    });
+
+    test('getIrodoriSpeakerGuidanceScale clamps a stored value below the '
+        'minimum to 0.0', () async {
+      await prefs.setDouble('irodori_speaker_guidance_scale', -1.0);
+      final repo = buildRepo();
+      expect(repo.getIrodoriSpeakerGuidanceScale(), 0.0);
+    });
+
+    test('getIrodoriSpeakerGuidanceScale clamps a stored value above the '
+        'maximum to 10.0', () async {
+      await prefs.setDouble('irodori_speaker_guidance_scale', 99.0);
+      final repo = buildRepo();
+      expect(repo.getIrodoriSpeakerGuidanceScale(), 10.0);
+    });
+
+    test('getIrodoriSpeakerGuidanceScale returns an in-range stored value '
+        'unchanged', () async {
+      await prefs.setDouble('irodori_speaker_guidance_scale', 7.5);
+      final repo = buildRepo();
+      expect(repo.getIrodoriSpeakerGuidanceScale(), 7.5);
+    });
+
+    test('getIrodoriCaptionGuidanceScale returns default 3.0 when no value '
+        'stored', () {
+      final repo = buildRepo();
+      expect(repo.getIrodoriCaptionGuidanceScale(), 3.0);
+    });
+
+    test('getIrodoriCaptionGuidanceScale clamps a stored value below the '
+        'minimum to 0.0', () async {
+      await prefs.setDouble('irodori_caption_guidance_scale', -1.0);
+      final repo = buildRepo();
+      expect(repo.getIrodoriCaptionGuidanceScale(), 0.0);
+    });
+
+    test('getIrodoriCaptionGuidanceScale clamps a stored value above the '
+        'maximum to 10.0', () async {
+      await prefs.setDouble('irodori_caption_guidance_scale', 99.0);
+      final repo = buildRepo();
+      expect(repo.getIrodoriCaptionGuidanceScale(), 10.0);
+    });
+
+    test('getIrodoriCaptionGuidanceScale returns an in-range stored value '
+        'unchanged', () async {
+      await prefs.setDouble('irodori_caption_guidance_scale', 2.5);
+      final repo = buildRepo();
+      expect(repo.getIrodoriCaptionGuidanceScale(), 2.5);
+    });
+
+    test('getIrodoriNumInferenceSteps returns default 40 when no value '
+        'stored', () {
+      final repo = buildRepo();
+      expect(repo.getIrodoriNumInferenceSteps(), 40);
+    });
+
+    test('getIrodoriNumInferenceSteps clamps a stored value below the '
+        'minimum to 10', () async {
+      await prefs.setInt('irodori_num_inference_steps', 5);
+      final repo = buildRepo();
+      expect(repo.getIrodoriNumInferenceSteps(), 10);
+    });
+
+    test('getIrodoriNumInferenceSteps clamps a stored value above the '
+        'maximum to 80', () async {
+      await prefs.setInt('irodori_num_inference_steps', 999);
+      final repo = buildRepo();
+      expect(repo.getIrodoriNumInferenceSteps(), 80);
+    });
+
+    test('getIrodoriNumInferenceSteps returns an in-range stored value '
+        'unchanged', () async {
+      await prefs.setInt('irodori_num_inference_steps', 55);
+      final repo = buildRepo();
+      expect(repo.getIrodoriNumInferenceSteps(), 55);
+    });
+  });
 }
