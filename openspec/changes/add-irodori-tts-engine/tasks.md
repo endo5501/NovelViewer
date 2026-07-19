@@ -20,8 +20,8 @@
 
 - [x] 3.1 `AudiocppNativeBindings` のテストを作成する (ライブラリ名解決、全シンボル lookup) → 失敗確認 → コミット
 - [x] 3.2 `AudiocppNativeBindings` を実装しテストをパスさせる
-- [ ] 3.3 `IrodoriTtsEngine` のテストを作成する (loadModel / synthesize(text, refWavPath?, caption?) / 未ロードエラー / abort / dispose、モック bindings 使用) → 失敗確認 → コミット
-- [ ] 3.4 `IrodoriTtsEngine` を実装しテストをパスさせる (TtsSynthesisResult 48kHz)
+- [x] 3.3 `IrodoriTtsEngine` のテストを作成する (loadModel / synthesize(text, refWavPath?, caption?) / 未ロードエラー / abort / dispose、モック bindings 使用) → 失敗確認 → コミット
+- [x] 3.4 `IrodoriTtsEngine` を実装しテストをパスさせる (TtsSynthesisResult 48kHz)
 
 ## 4. エンジン種別・設定型の拡張 (TDD)
 
