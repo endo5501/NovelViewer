@@ -4,17 +4,17 @@
 
 - [x] 1.1 Irodori-TTS-600M-v3-VoiceDesign / Semantic-DACVAE のライセンスを確認し、再配布可否と必要な帰属表示を記録する (600M: MIT+倫理条項 / llm-jp: Apache-2.0 / DACVAE: MIT。帰属表示は HF リポジトリ README に記載済み)
 - [x] 1.2 DACVAE weights.pth を safetensors に変換し、endo5501 HF リポジトリに4資産 (600M / llm-jp tokenizer / DACVAE / 必須構成ファイル) を design D7 のレイアウトでアップロードする (https://huggingface.co/endo5501/audio.cpp に最小4ファイル構成でアップロード済み・resolve URL 疎通確認済み)
-- [ ] 1.3 endo5501/audio.cpp フォークに abort パッチを実装する: `IrodoriTTSSession` の RF per-step ループ先頭で `std::atomic<bool>` フラグを確認し中断 (design D4)
-- [ ] 1.4 フォークに `src/audiocpp_c_api.{h,cpp}` を実装する: abort handle (ctx と独立ライフタイム) / init (registry→load→create_task_session, GPU優先+CPUフォールバック, model spec 解決) / 統合 synthesize (ref_wav・caption NULL可, guidance 2種, steps) / get_audio 系 / get_error (design D3)
-- [ ] 1.5 フォークの CMake に `AUDIOCPP_BUILD_SHARED` オプションと `audiocpp_ffi` 共有ライブラリターゲットを追加する (engine_runtime 静的リンク)
-- [ ] 1.6 フォークの CLI または最小 C テストで shim の4合成形態 (素/クローン/caption/両立) と abort 動作を確認し、フォークにタグを付ける
+- [x] 1.3 endo5501/audio.cpp フォークに abort パッチを実装する: `IrodoriTTSSession` の RF per-step ループ先頭で `std::atomic<bool>` フラグを確認し中断 (design D4)
+- [x] 1.4 フォークに `src/audiocpp_c_api.{h,cpp}` を実装する: abort handle (ctx と独立ライフタイム) / init (registry→load→create_task_session, GPU優先+CPUフォールバック, model spec 解決) / 統合 synthesize (ref_wav・caption NULL可, guidance 2種, steps) / get_audio 系 / get_error (design D3)
+- [x] 1.5 フォークの CMake に `AUDIOCPP_BUILD_SHARED` オプションと `audiocpp_ffi` 共有ライブラリターゲットを追加する (engine_runtime 静的リンク)
+- [x] 1.6 フォークの CLI または最小 C テストで shim の4合成形態 (素/クローン/caption/両立) と abort 動作を確認し、フォークにタグを付ける
 
 ## 2. ビルド統合 (NovelViewer 本体)
 
-- [ ] 2.1 `third_party/audio.cpp` に endo5501/audio.cpp フォークを git submodule として追加する (タグピン留め)
-- [ ] 2.2 `scripts/build_irodori_windows.bat` を作成する: Vulkan 有効 + `/utf-8` + `/openmp:experimental` で `audiocpp_ffi.dll` をビルドし `build/windows/x64/runner/Release/` へ配置、`model_specs/irodori_tts.json` を同梱 (design D5/D6)
-- [ ] 2.3 `scripts/build_irodori_macos.sh` を作成する: Metal 有効で `libaudiocpp_ffi.dylib` をビルドし `macos/Frameworks/` へ配置
-- [ ] 2.4 Windows でビルドスクリプトを実行し、DLL 生成と依存の静的リンクを確認する
+- [x] 2.1 `third_party/audio.cpp` に endo5501/audio.cpp フォークを git submodule として追加する (タグピン留め)
+- [x] 2.2 `scripts/build_irodori_windows.bat` を作成する: Vulkan 有効 + `/utf-8` + `/openmp:experimental` で `audiocpp_ffi.dll` をビルドし `build/windows/x64/runner/Release/` へ配置、`model_specs/irodori_tts.json` を同梱 (design D5/D6)
+- [x] 2.3 `scripts/build_irodori_macos.sh` を作成する: Metal 有効で `libaudiocpp_ffi.dylib` をビルドし `macos/Frameworks/` へ配置
+- [x] 2.4 Windows でビルドスクリプトを実行し、DLL 生成と依存の静的リンクを確認する
 
 ## 3. Dart FFI バインディングとエンジンラッパー (TDD)
 
