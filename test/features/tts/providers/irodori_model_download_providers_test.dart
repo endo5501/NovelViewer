@@ -28,9 +28,22 @@ void main() {
     }
   });
 
+  // A small manifest matching the fake payload sizes the tests' mock HTTP
+  // clients and pre-written fixture files use, overriding the real
+  // multi-hundred-megabyte-to-gigabyte pinned sizes
+  // (IrodoriModelDownloadService.defaultExpectedFileSizes) so fixtures can
+  // stay small. Provided by default; individual tests may override further.
+  const testExpectedFileSizes = {
+    'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 3,
+    'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 3,
+    'llm-jp-3-150m/tokenizer.json': 3,
+    'Semantic-DACVAE-Japanese-32dim/weights.safetensors': 3,
+  };
+
   ProviderContainer createContainer({
     required http.Client httpClient,
     String? libraryPath,
+    Map<String, int> expectedFileSizes = testExpectedFileSizes,
   }) {
     return ProviderContainer(
       overrides: [
@@ -38,6 +51,9 @@ void main() {
             .overrideWithValue(libraryPath ?? '${tempDir.path}/NovelViewer'),
         sharedPreferencesProvider.overrideWithValue(prefs),
         httpClientProvider.overrideWithValue(httpClient),
+        irodoriExpectedFileSizesProvider.overrideWithValue(
+          expectedFileSizes,
+        ),
       ],
     );
   }
@@ -77,7 +93,15 @@ void main() {
       final modelsDir = p.join(tempDir.path, 'models');
       writeAllRequiredFiles(modelsDir);
 
-      final container = createContainer(httpClient: http.Client());
+      final container = createContainer(
+        httpClient: http.Client(),
+        expectedFileSizes: const {
+          'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 5, // 'model'
+          'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 6, // 'config'
+          'llm-jp-3-150m/tokenizer.json': 9, // 'tokenizer'
+          'Semantic-DACVAE-Japanese-32dim/weights.safetensors': 7, // 'weights'
+        },
+      );
       addTearDown(container.dispose);
 
       final state = container.read(irodoriModelDownloadProvider);
@@ -127,7 +151,15 @@ void main() {
         );
       });
 
-      final container = createContainer(httpClient: mockClient);
+      final container = createContainer(
+        httpClient: mockClient,
+        expectedFileSizes: const {
+          'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 10,
+          'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 10,
+          'llm-jp-3-150m/tokenizer.json': 10,
+          'Semantic-DACVAE-Japanese-32dim/weights.safetensors': 10,
+        },
+      );
       addTearDown(container.dispose);
 
       container.listen(
