@@ -50,6 +50,7 @@ class _FakeTtsIsolate implements TtsIsolate {
   bool aborted = false;
   final synthesizeRequests = <String>[];
   final synthesizeRefWavPaths = <String?>[];
+  final synthesizeCaptions = <String?>[];
   final loadModelCalls = <_LoadModelCall>[];
 
   /// When true, `loadModel` responds with `ModelLoadedResponse(success: false)`
@@ -106,6 +107,7 @@ class _FakeTtsIsolate implements TtsIsolate {
   }) {
     synthesizeRequests.add(text);
     synthesizeRefWavPaths.add(refWavPath);
+    synthesizeCaptions.add(caption);
     final callNumber = synthesizeRequests.length;
     Future.microtask(() {
       if (_responseController.isClosed) return;
@@ -358,6 +360,24 @@ Qwen3EngineConfig _qwen3Config({
       languageId: languageId,
       refWavPath: refWavPath,
       embeddingCacheDir: embeddingCacheDir,
+    );
+
+/// Test helper that builds an Irodori engine config with sensible defaults.
+IrodoriEngineConfig _irodoriConfig({
+  String modelDir = '/fake/irodori',
+  int sampleRate = 48000,
+  String? refWavPath,
+  double speakerGuidanceScale = 5.0,
+  double captionGuidanceScale = 3.0,
+  int numInferenceSteps = 40,
+}) =>
+    IrodoriEngineConfig(
+      modelDir: modelDir,
+      sampleRate: sampleRate,
+      refWavPath: refWavPath,
+      speakerGuidanceScale: speakerGuidanceScale,
+      captionGuidanceScale: captionGuidanceScale,
+      numInferenceSteps: numInferenceSteps,
     );
 
 /// Test helper that builds a Piper engine config with sensible defaults.
@@ -1053,6 +1073,145 @@ void main() {
 
       // Both should have been played
       expect(player.playedFiles, hasLength(2));
+    });
+
+    test('irodori: stored segment memo is passed as caption', () async {
+      const text = '一文目。';
+      final episodeId = await repository.createEpisode(
+        fileName: '0001_テスト.txt',
+        sampleRate: 48000,
+        status: TtsEpisodeStatus.partial,
+        textHash: _computeTextHash(text),
+      );
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 0,
+        text: '一文目。',
+        textOffset: 0,
+        textLength: 4,
+      );
+      await repository.updateSegmentMemo(episodeId, 0, '怒って叫んでいる');
+
+      final isolate = _FakeTtsIsolate();
+      final player = _AutoCompleteAudioPlayer();
+      final controller = TtsStreamingController(
+        read: container.read,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
+      );
+
+      await controller.start(
+        text: text,
+        fileName: '0001_テスト.txt',
+        config: _irodoriConfig(modelDir: '/models'),
+      );
+
+      expect(isolate.synthesizeRequests, hasLength(1));
+      expect(isolate.synthesizeCaptions.single, '怒って叫んでいる');
+    });
+
+    test('irodori: empty stored memo yields no caption', () async {
+      const text = '一文目。';
+      final episodeId = await repository.createEpisode(
+        fileName: '0001_テスト.txt',
+        sampleRate: 48000,
+        status: TtsEpisodeStatus.partial,
+        textHash: _computeTextHash(text),
+      );
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 0,
+        text: '一文目。',
+        textOffset: 0,
+        textLength: 4,
+      );
+      await repository.updateSegmentMemo(episodeId, 0, '');
+
+      final isolate = _FakeTtsIsolate();
+      final player = _AutoCompleteAudioPlayer();
+      final controller = TtsStreamingController(
+        read: container.read,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
+      );
+
+      await controller.start(
+        text: text,
+        fileName: '0001_テスト.txt',
+        config: _irodoriConfig(modelDir: '/models'),
+      );
+
+      expect(isolate.synthesizeRequests, hasLength(1));
+      expect(isolate.synthesizeCaptions.single, isNull);
+    });
+
+    test('irodori: fresh segments without a memo synthesize caption-less',
+        () async {
+      const text = '一文目。';
+
+      final isolate = _FakeTtsIsolate();
+      final player = _AutoCompleteAudioPlayer();
+      final controller = TtsStreamingController(
+        read: container.read,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
+      );
+
+      await controller.start(
+        text: text,
+        fileName: '0001_テスト.txt',
+        config: _irodoriConfig(modelDir: '/models'),
+      );
+
+      expect(isolate.synthesizeRequests, hasLength(1));
+      expect(isolate.synthesizeCaptions.single, isNull);
+    });
+
+    test('qwen3: stored segment memo is NOT passed as caption', () async {
+      const text = '一文目。';
+      final episodeId = await repository.createEpisode(
+        fileName: '0001_テスト.txt',
+        sampleRate: 24000,
+        status: TtsEpisodeStatus.partial,
+        textHash: _computeTextHash(text),
+      );
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 0,
+        text: '一文目。',
+        textOffset: 0,
+        textLength: 4,
+      );
+      await repository.updateSegmentMemo(episodeId, 0, '怒って叫んでいる');
+
+      final isolate = _FakeTtsIsolate();
+      final player = _AutoCompleteAudioPlayer();
+      final controller = TtsStreamingController(
+        read: container.read,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
+      );
+
+      await controller.start(
+        text: text,
+        fileName: '0001_テスト.txt',
+        config: _qwen3Config(modelDir: '/models'),
+      );
+
+      expect(isolate.synthesizeRequests, hasLength(1));
+      expect(isolate.synthesizeCaptions.single, isNull);
     });
 
     test('on-demand generation uses per-segment ref_wav_path', () async {
