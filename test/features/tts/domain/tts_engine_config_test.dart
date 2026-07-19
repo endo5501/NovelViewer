@@ -57,12 +57,108 @@ void main() {
     });
   });
 
+  group('IrodoriEngineConfig', () {
+    test('holds all fields with the expected values', () {
+      const config = IrodoriEngineConfig(
+        modelDir: '/models/irodori',
+        sampleRate: 48000,
+        refWavPath: '/voice/narrator.wav',
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+
+      expect(config.modelDir, '/models/irodori');
+      expect(config.sampleRate, 48000);
+      expect(config.refWavPath, '/voice/narrator.wav');
+      expect(config.speakerGuidanceScale, 5.0);
+      expect(config.captionGuidanceScale, 3.0);
+      expect(config.numInferenceSteps, 40);
+    });
+
+    test('refWavPath is optional', () {
+      const config = IrodoriEngineConfig(
+        modelDir: '/models/irodori',
+        sampleRate: 48000,
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+
+      expect(config.refWavPath, isNull);
+    });
+
+    test(
+        'modelLoadKey excludes refWavPath/guidance/steps — two configs '
+        'differing only in those fields share the same modelLoadKey', () {
+      const a = IrodoriEngineConfig(
+        modelDir: '/models/irodori',
+        sampleRate: 48000,
+        refWavPath: '/voice/a.wav',
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+      const b = IrodoriEngineConfig(
+        modelDir: '/models/irodori',
+        sampleRate: 48000,
+        refWavPath: '/voice/b.wav',
+        speakerGuidanceScale: 4.2,
+        captionGuidanceScale: 2.1,
+        numInferenceSteps: 25,
+      );
+
+      expect(a.modelLoadKey, b.modelLoadKey);
+    });
+
+    test('modelLoadKey differs when modelDir differs', () {
+      const a = IrodoriEngineConfig(
+        modelDir: '/models/irodori-a',
+        sampleRate: 48000,
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+      const b = IrodoriEngineConfig(
+        modelDir: '/models/irodori-b',
+        sampleRate: 48000,
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+
+      expect(a.modelLoadKey, isNot(b.modelLoadKey));
+    });
+
+    test('copyWithRefWavPath returns a copy with only refWavPath changed',
+        () {
+      const config = IrodoriEngineConfig(
+        modelDir: '/models/irodori',
+        sampleRate: 48000,
+        refWavPath: '/voice/a.wav',
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+
+      final copy = config.copyWithRefWavPath('/voice/b.wav');
+
+      expect(copy.refWavPath, '/voice/b.wav');
+      expect(copy.modelDir, config.modelDir);
+      expect(copy.sampleRate, config.sampleRate);
+      expect(copy.speakerGuidanceScale, config.speakerGuidanceScale);
+      expect(copy.captionGuidanceScale, config.captionGuidanceScale);
+      expect(copy.numInferenceSteps, config.numInferenceSteps);
+    });
+  });
+
   group('TtsEngineConfig sealed switch', () {
-    test('sealed switch is exhaustive and reaches both arms', () {
+    test('sealed switch is exhaustive and reaches all three arms', () {
       String describe(TtsEngineConfig config) {
         return switch (config) {
           Qwen3EngineConfig() => 'qwen3',
           PiperEngineConfig() => 'piper',
+          IrodoriEngineConfig() => 'irodori',
         };
       }
 
@@ -76,9 +172,17 @@ void main() {
         noiseScale: 0.5,
         noiseW: 0.8,
       );
+      const irodori = IrodoriEngineConfig(
+        modelDir: '/m',
+        sampleRate: 48000,
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
 
       expect(describe(qwen3), 'qwen3');
       expect(describe(piper), 'piper');
+      expect(describe(irodori), 'irodori');
     });
   });
 
@@ -154,6 +258,58 @@ void main() {
       expect(piper.lengthScale, 0.9);
       expect(piper.noiseScale, 0.5);
       expect(piper.noiseW, 0.7);
+    });
+
+    test('returns IrodoriEngineConfig for irodori type', () async {
+      await prefs.setString('tts_ref_wav_path', 'narrator.wav');
+      await prefs.setDouble('irodori_speaker_guidance_scale', 4.5);
+      await prefs.setDouble('irodori_caption_guidance_scale', 2.5);
+      await prefs.setInt('irodori_num_inference_steps', 20);
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      final config = TtsEngineConfig.resolveFromReader(
+        container.read,
+        TtsEngineType.irodori,
+      );
+
+      expect(config, isA<IrodoriEngineConfig>());
+      final irodori = config as IrodoriEngineConfig;
+      expect(
+        irodori.modelDir,
+        p.join('/home/user', 'models', 'Irodori-TTS-600M-v3-VoiceDesign'),
+      );
+      expect(irodori.sampleRate, 48000);
+      // refWavPath is resolved through VoiceReferenceService — joins voices/,
+      // same shared voice library as Qwen3.
+      expect(irodori.refWavPath, p.join('/home/user', 'voices', 'narrator.wav'));
+      expect(irodori.speakerGuidanceScale, 4.5);
+      expect(irodori.captionGuidanceScale, 2.5);
+      expect(irodori.numInferenceSteps, 20);
+    });
+
+    test('Irodori refWavPath is null when no global ref wav is set', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      final config = TtsEngineConfig.resolveFromReader(
+        container.read,
+        TtsEngineType.irodori,
+      ) as IrodoriEngineConfig;
+      expect(config.refWavPath, isNull);
+    });
+
+    test('Irodori uses default guidance/steps when unset', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      final config = TtsEngineConfig.resolveFromReader(
+        container.read,
+        TtsEngineType.irodori,
+      ) as IrodoriEngineConfig;
+      expect(config.speakerGuidanceScale, 5.0);
+      expect(config.captionGuidanceScale, 3.0);
+      expect(config.numInferenceSteps, 40);
     });
 
     test('does not subscribe — repeated reads yield current values without notifications',
