@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 
+import 'irodori_tts_engine.dart';
 import 'piper_tts_engine.dart';
 import 'tts_engine.dart';
 import 'tts_engine_type.dart';
@@ -116,9 +117,23 @@ class LoadModelMessage extends TtsIsolateMessage {
 }
 
 class SynthesizeMessage extends TtsIsolateMessage {
-  SynthesizeMessage({required this.text, this.refWavPath});
+  SynthesizeMessage({
+    required this.text,
+    this.refWavPath,
+    this.caption,
+    this.speakerGuidanceScale,
+    this.captionGuidanceScale,
+    this.numInferenceSteps,
+  });
   final String text;
   final String? refWavPath;
+  // Irodori-only synthesis-time parameters. Ignored by the qwen3/piper
+  // branches; passed to IrodoriTtsEngine.synthesize (design D8). Changing any
+  // of these must NOT reload the model (they are absent from modelLoadKey).
+  final String? caption;
+  final double? speakerGuidanceScale;
+  final double? captionGuidanceScale;
+  final int? numInferenceSteps;
 }
 
 class DisposeMessage extends TtsIsolateMessage {
@@ -334,8 +349,22 @@ class TtsIsolate {
     ));
   }
 
-  void synthesize(String text, {String? refWavPath}) {
-    _sendPort?.send(SynthesizeMessage(text: text, refWavPath: refWavPath));
+  void synthesize(
+    String text, {
+    String? refWavPath,
+    String? caption,
+    double? speakerGuidanceScale,
+    double? captionGuidanceScale,
+    int? numInferenceSteps,
+  }) {
+    _sendPort?.send(SynthesizeMessage(
+      text: text,
+      refWavPath: refWavPath,
+      caption: caption,
+      speakerGuidanceScale: speakerGuidanceScale,
+      captionGuidanceScale: captionGuidanceScale,
+      numInferenceSteps: numInferenceSteps,
+    ));
   }
 
   /// Abort any in-progress synthesis by setting the native abort flag directly.
@@ -409,6 +438,7 @@ class TtsIsolate {
 
     TtsEngine? qwen3Engine;
     PiperTtsEngine? piperEngine;
+    IrodoriTtsEngine? irodoriEngine;
     TtsEngineType? activeEngineType;
     String? embeddingCacheDir;
 
@@ -419,14 +449,15 @@ class TtsIsolate {
         case TtsEngineType.piper:
           return piperEngine?.isLoaded ?? false;
         case TtsEngineType.irodori:
-          // Placeholder: full IrodoriTtsEngine wiring lands in task 5.x.
-          return false;
+          return irodoriEngine?.isLoaded ?? false;
         case null:
           return false;
       }
     }
 
-    TtsSynthesisResult doSynthesize(String text, String? refWavPath) {
+    TtsSynthesisResult doSynthesize(SynthesizeMessage message) {
+      final text = message.text;
+      final refWavPath = message.refWavPath;
       switch (activeEngineType!) {
         case TtsEngineType.qwen3:
           if (refWavPath != null && embeddingCacheDir != null) {
@@ -442,11 +473,16 @@ class TtsIsolate {
         case TtsEngineType.piper:
           return piperEngine!.synthesize(text);
         case TtsEngineType.irodori:
-          // Placeholder: full IrodoriTtsEngine wiring (incl. caption) lands
-          // in task 5.x. isEngineLoaded() always reports false for Irodori
-          // for now, so this path is unreachable in practice.
-          throw UnimplementedError(
-            'Irodori engine synthesis is not yet wired into TtsIsolate',
+          // caption / guidance / steps are synthesis-time parameters (design
+          // D8). Fall back to the documented defaults if a caller omits them,
+          // so the native call always receives valid guidance values.
+          return irodoriEngine!.synthesize(
+            text,
+            refWavPath: refWavPath,
+            caption: message.caption,
+            speakerGuidanceScale: message.speakerGuidanceScale ?? 5.0,
+            captionGuidanceScale: message.captionGuidanceScale ?? 3.0,
+            numInferenceSteps: message.numInferenceSteps ?? 40,
           );
       }
     }
@@ -456,6 +492,8 @@ class TtsIsolate {
       qwen3Engine = null;
       piperEngine?.dispose();
       piperEngine = null;
+      irodoriEngine?.dispose();
+      irodoriEngine = null;
       activeEngineType = null;
     }
 
@@ -491,12 +529,14 @@ class TtsIsolate {
               piperEngine = next;
 
             case TtsEngineType.irodori:
-              // Placeholder: full IrodoriTtsEngine wiring lands in task 5.x.
-              // Fails the load explicitly (caught below) rather than
-              // silently reporting success with no engine loaded.
-              throw UnimplementedError(
-                'Irodori engine is not yet wired into TtsIsolate',
+              final next = IrodoriTtsEngine.open();
+              next.loadModel(
+                message.modelDir,
+                nThreads: message.nThreads,
+                abortHandle:
+                    Pointer<Void>.fromAddress(message.abortHandleAddress),
               );
+              irodoriEngine = next;
           }
 
           activeEngineType = message.engineType;
@@ -529,7 +569,8 @@ class TtsIsolate {
           }
 
           qwen3Engine?.resetAbort();
-          final result = doSynthesize(message.text, message.refWavPath);
+          irodoriEngine?.resetAbort();
+          final result = doSynthesize(message);
 
           // Use TransferableTypedData for zero-copy transfer
           final transferable =

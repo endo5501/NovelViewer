@@ -32,8 +32,8 @@
 
 ## 5. TtsIsolate 第3ブランチと caption 伝搬 (TDD)
 
-- [ ] 5.1 `TtsIsolate` Irodori ブランチのテストを作成する (IrodoriEngineConfig でのロード / caption 付き合成リクエスト / caption 変更で再ロードなし / abort / dispose) → 失敗確認 → コミット
-- [ ] 5.2 `TtsIsolate` / `TtsSession` / adapters に Irodori ブランチと `caption` パラメータを実装しテストをパスさせる (qwen3/piper ブランチ非破壊)
+- [x] 5.1 `TtsIsolate` Irodori ブランチのテストを作成する (IrodoriEngineConfig でのロード / caption 付き合成リクエスト / caption 変更で再ロードなし / abort / dispose) → 失敗確認 → コミット
+- [x] 5.2 `TtsIsolate` / `TtsSession` / adapters に Irodori ブランチと `caption` パラメータを実装しテストをパスさせる (qwen3/piper ブランチ非破壊)
 - [ ] 5.3 caption 伝搬のテストを作成する (Irodori 選択時: segment.memo → caption、memo 空 → caption なし、qwen3 選択時: memo 不使用) → 失敗確認 → コミット
 - [ ] 5.4 ストリーミングパイプライン・編集ダイアログ再生成・保存済み再合成に memo → caption 配線を実装しテストをパスさせる
 

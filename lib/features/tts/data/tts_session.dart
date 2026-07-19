@@ -106,11 +106,9 @@ class TtsSession {
             noiseW: config.noiseW,
           );
         case IrodoriEngineConfig():
-          // Placeholder: full Irodori wiring (refWavPath / guidance scales /
-          // steps / caption) into TtsIsolate.loadModel lands in task 5.x.
-          // TtsIsolate currently fails any Irodori load explicitly (see
-          // TtsIsolate._isolateEntryPoint), so this resolves to `false`
-          // through the normal load-failure path below rather than hanging.
+          // refWavPath / guidance scales / steps / caption are synthesis-time
+          // parameters (design D8), so only modelDir is needed at load time —
+          // matching modelLoadKey = (type, modelDir).
           _isolate.loadModel(
             config.modelDir,
             engineType: TtsEngineType.irodori,
@@ -140,6 +138,10 @@ class TtsSession {
   Future<SynthesisResultResponse?> synthesize({
     required String text,
     String? refWavPath,
+    String? caption,
+    double? speakerGuidanceScale,
+    double? captionGuidanceScale,
+    int? numInferenceSteps,
   }) async {
     if (_disposed) {
       throw StateError('TtsSession.synthesize after dispose()');
@@ -173,7 +175,14 @@ class TtsSession {
     });
 
     try {
-      _isolate.synthesize(text, refWavPath: refWavPath);
+      _isolate.synthesize(
+        text,
+        refWavPath: refWavPath,
+        caption: caption,
+        speakerGuidanceScale: speakerGuidanceScale,
+        captionGuidanceScale: captionGuidanceScale,
+        numInferenceSteps: numInferenceSteps,
+      );
       return await completer.future;
     } finally {
       _activeSynthesisCompleter = null;

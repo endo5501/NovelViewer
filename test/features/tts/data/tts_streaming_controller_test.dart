@@ -96,7 +96,14 @@ class _FakeTtsIsolate implements TtsIsolate {
   }
 
   @override
-  void synthesize(String text, {String? refWavPath}) {
+  void synthesize(
+    String text, {
+    String? refWavPath,
+    String? caption,
+    double? speakerGuidanceScale,
+    double? captionGuidanceScale,
+    int? numInferenceSteps,
+  }) {
     synthesizeRequests.add(text);
     synthesizeRefWavPaths.add(refWavPath);
     final callNumber = synthesizeRequests.length;
