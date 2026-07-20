@@ -1581,6 +1581,60 @@ void main() {
             reason: 'cached playback must not need the model at all');
       });
 
+      test('plays the generated part, then stops at the first ungenerated one',
+          () async {
+        // Generate only the first sentence, by stopping the run after it.
+        final seedIsolate = _FakeTtsIsolate();
+        final seed = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: seedIsolate,
+          audioPlayer: _AutoCompleteAudioPlayer(),
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+        await seed.start(
+          text: '文1。文2。',
+          fileName: 'mixed.txt',
+          config: _qwen3Config(),
+          modelsReady: true,
+          resolveRefWavPath: null,
+        );
+        final episode = await repository.findEpisodeByFileName('mixed.txt');
+        final segments = await repository.getSegments(episode!.id);
+        // Re-storing the same text is the app's own "this segment needs
+        // regenerating" path: it clears audio_data without touching the text.
+        await repository.updateSegmentText(
+          episode.id,
+          segments.last.segmentIndex,
+          segments.last.text,
+        );
+
+        final isolate = _FakeTtsIsolate();
+        final player = _AutoCompleteAudioPlayer();
+        final controller = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        final outcome = await controller.start(
+          text: '文1。文2。',
+          fileName: 'mixed.txt',
+          config: _qwen3Config(),
+          modelsReady: false,
+          resolveRefWavPath: null,
+        );
+
+        expect(outcome, TtsStartOutcome.modelNotReady);
+        expect(player.playedFiles, hasLength(1),
+            reason: 'the already generated segment still plays');
+        expect(isolate.loadModelCalls, isEmpty);
+      });
+
       test('refuses to synthesize when the models are not ready', () async {
         final isolate = _FakeTtsIsolate();
         final controller = TtsStreamingController(
