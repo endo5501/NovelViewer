@@ -67,7 +67,10 @@ cp "$DYLIB_SRC" "$FRAMEWORKS_DIR/"
 # Fix install name so the app can find the library at runtime.
 install_name_tool -id "@rpath/libaudiocpp_ffi.dylib" "$FRAMEWORKS_DIR/libaudiocpp_ffi.dylib"
 
-# A model_specs/ directory left over from an earlier build would break codesign.
+# One-shot migration: earlier revisions of this script copied the spec here, and
+# a leftover directory breaks CodeSign ("code object is not signed at all" —
+# Frameworks is sealed). Safe to delete once no working tree predates the switch
+# to AUDIOCPP_DEPLOYMENT_BUILD.
 rm -rf "$FRAMEWORKS_DIR/model_specs"
 
 echo "=== Done ==="

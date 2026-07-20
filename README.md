@@ -85,8 +85,7 @@ npm i -g @openai/codex
 fvm flutter run -d macos
 
 # macOS向けReleaseビルド
-# 事前に brew install libomp が必要（build_irodori_macos.sh が使用。
-# AppleClangはOpenMPランタイムを同梱しないため）
+# libompはbuild_irodori_macos.shが使用（AppleClangはOpenMPを同梱しないため）
 brew install libomp
 scripts/build_tts_macos.sh
 scripts/build_lame_macos.sh

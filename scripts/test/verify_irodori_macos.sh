@@ -3,8 +3,8 @@
 #
 # Asserts the properties the macOS build must hold: the dylib exists, links
 # only against system frameworks (no Homebrew paths — libomp must be linked
-# statically), carries the Metal backend, exports the C API, and ships the
-# model spec next to itself. Exits non-zero if any check fails.
+# statically), carries the Metal backend, exports the C API, and has the model
+# spec compiled in rather than shipped beside it. Exits non-zero on any failure.
 #
 # Usage: scripts/test/verify_irodori_macos.sh [frameworks-dir]
 set -u
@@ -25,8 +25,9 @@ ng() {
   printf 'FAIL - %s\n' "$1"
 }
 
-# check <description> <command...> : passes when the command succeeds
-check() {
+# check_cmd <description> <command...> : passes when the command succeeds.
+# Named apart from release_test.sh's check(), which takes an exit code instead.
+check_cmd() {
   local desc="$1"
   shift
   if "$@" >/dev/null 2>&1; then ok "$desc"; else ng "$desc"; fi
@@ -45,18 +46,19 @@ ok "libaudiocpp_ffi.dylib exists"
 otool_out="$(otool -L "$DYLIB" 2>/dev/null)"
 
 # libomp must be statically linked: nothing under Homebrew's prefix may remain.
-if printf '%s' "$otool_out" | grep -q '/opt/homebrew\|/usr/local/opt'; then
+brew_deps="$(grep -E '/opt/homebrew|/usr/local/opt' <<<"$otool_out" || true)"
+if [ -n "$brew_deps" ]; then
   ng "no Homebrew library dependencies (libomp is linked statically)"
-  printf '%s\n' "$otool_out" | grep '/opt/homebrew\|/usr/local/opt' | sed 's/^/       /'
+  sed 's/^/       /' <<<"$brew_deps"
 else
   ok "no Homebrew library dependencies (libomp is linked statically)"
 fi
 
-check "Metal.framework is linked" \
+check_cmd "Metal.framework is linked" \
   grep -q 'Metal.framework' <<<"$otool_out"
-check "MetalKit.framework is linked" \
+check_cmd "MetalKit.framework is linked" \
   grep -q 'MetalKit.framework' <<<"$otool_out"
-check "install name is @rpath/libaudiocpp_ffi.dylib" \
+check_cmd "install name is @rpath/libaudiocpp_ffi.dylib" \
   grep -q '@rpath/libaudiocpp_ffi.dylib' <<<"$otool_out"
 
 # Undefined OpenMP symbols would mean the runtime was not linked in at all.
@@ -78,27 +80,21 @@ else
   ng "OpenMP runtime is embedded (found none — was OpenMP disabled?)"
 fi
 
-check "audiocpp C API is exported" \
+check_cmd "audiocpp C API is exported" \
   grep -q '_audiocpp_init' <<<"$(nm -gU "$DYLIB" 2>/dev/null)"
 
 # The spec is compiled in via AUDIOCPP_DEPLOYMENT_BUILD. Shipping it as a file
 # under Frameworks instead would fail codesign, which seals that directory.
-check "model spec is compiled into the dylib" \
-  grep -q '"family": *"irodori_tts"' <<<"$(strings "$DYLIB" 2>/dev/null)"
+check_cmd "model spec is compiled into the dylib" \
+  grep -aq '"family": *"irodori_tts"' "$DYLIB"
 
-if [ -e "$FRAMEWORKS_DIR/model_specs" ]; then
-  ng "no model_specs directory beside the dylib (would break codesign)"
-else
-  ok "no model_specs directory beside the dylib (would break codesign)"
-fi
+check_cmd "no model_specs directory beside the dylib (would break codesign)" \
+  test ! -e "$FRAMEWORKS_DIR/model_specs"
 
 # The Metal shader library is embedded into the dylib by ggml, so no separate
 # metallib should be shipped.
-if [ -e "$FRAMEWORKS_DIR/default.metallib" ]; then
-  ng "no standalone default.metallib (Metal library is embedded)"
-else
-  ok "no standalone default.metallib (Metal library is embedded)"
-fi
+check_cmd "no standalone default.metallib (Metal library is embedded)" \
+  test ! -e "$FRAMEWORKS_DIR/default.metallib"
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
