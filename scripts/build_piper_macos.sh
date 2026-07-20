@@ -21,15 +21,15 @@ echo "=== Copying shared libraries to macos/Frameworks/ ==="
 mkdir -p "$FRAMEWORKS_DIR"
 cp "$PIPER_DIR/build/libpiper_tts_ffi.dylib" "$FRAMEWORKS_DIR/"
 
-# Copy ONNX Runtime shared library
+# Copy ONNX Runtime shared library.
+# Only the unversioned name is copied: libpiper_tts_ffi.dylib links against
+# @rpath/libonnxruntime.dylib, and everything under macos/Frameworks/ gets
+# embedded into the app bundle. A versioned copy would be a byte-identical
+# 21MB duplicate that only bloats the bundle.
 ORT_LIB="$PIPER_DIR/build/ort/lib/libonnxruntime.dylib"
 if [ -f "$ORT_LIB" ]; then
     # Copy the actual file (resolve symlink)
     cp -L "$ORT_LIB" "$FRAMEWORKS_DIR/libonnxruntime.dylib"
-    # Also copy versioned dylib if exists
-    for f in "$PIPER_DIR/build/ort/lib"/libonnxruntime.*.dylib; do
-        [ -f "$f" ] && cp -L "$f" "$FRAMEWORKS_DIR/" || true
-    done
 fi
 
 # Fix install names
