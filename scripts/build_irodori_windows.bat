@@ -11,8 +11,19 @@ set AUDIO_DIR=%PROJECT_ROOT%\third_party\audio.cpp
 set BUILD_DIR=%AUDIO_DIR%\build\ffi-vulkan
 
 echo === Setting up MSVC environment ===
-set VCVARS=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat
-if not exist "%VCVARS%" set VCVARS=C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat
+REM Locate the VS install via vswhere (edition-agnostic; GitHub runners ship
+REM the Enterprise edition, local dev boxes usually Community/BuildTools).
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+set "VCVARS="
+if exist "%VSWHERE%" (
+    for /f "usebackq delims=" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VS_INSTALL=%%i"
+    if defined VS_INSTALL set "VCVARS=!VS_INSTALL!\VC\Auxiliary\Build\vcvars64.bat"
+)
+REM Fallback to well-known edition paths if vswhere didn't resolve one.
+if not defined VCVARS set "VCVARS=C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+if not exist "%VCVARS%" set "VCVARS=C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat"
+if not exist "%VCVARS%" set "VCVARS=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+if not exist "%VCVARS%" set "VCVARS=C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
 if not exist "%VCVARS%" (
     echo Could not find vcvars64.bat. Install Visual Studio 2022 with the C++ workload.
     exit /b 1
