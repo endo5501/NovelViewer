@@ -48,7 +48,7 @@
 - **THEN** caption なし (NULL) と同じ挙動になる
 
 ### Requirement: 中断 (abort) 機構
-C API はコンテキストと独立したライフタイムを持つ abort handle (`audiocpp_create_abort_handle` / `audiocpp_free_abort_handle`) を提供しなければならない (SHALL)。abort フラグは `std::atomic<bool>` とし、`audiocpp_abort(handle)` は任意のスレッドから安全に呼べなければならない (MUST)。Irodori の RF 拡散サンプリングループは各ステップ先頭で abort フラグを確認し、セット時は現在の合成を即座に中断して非ゼロエラーを返さなければならない (SHALL)。`audiocpp_reset_abort(handle)` はフラグをクリアし、以後の合成を通常どおり実行可能にしなければならない (SHALL)。handle は `audiocpp_free` によって解放されてはならず (MUST NOT)、コンテキスト解放後の `audiocpp_abort` 呼び出しは未定義動作であってはならない (MUST NOT)。
+C API はコンテキストと独立したライフタイムを持つ abort handle (`audiocpp_create_abort_handle` / `audiocpp_free_abort_handle`) を提供しなければならない (SHALL)。abort フラグは `std::atomic<bool>` とし、`audiocpp_abort(handle)` は任意のスレッドから安全に呼べなければならない (MUST)。Irodori の RF 拡散サンプリングループは各ステップ先頭で abort フラグを確認し、セット時は現在の合成を即座に中断して非ゼロエラーを返さなければならない (SHALL)。`audiocpp_reset_abort(handle)` はフラグをクリアし、以後の合成を通常どおり実行可能にしなければならない (SHALL)。handle は `audiocpp_free` によって解放されてはならず (MUST NOT)、コンテキスト解放後の `audiocpp_abort` 呼び出しは未定義動作であってはならない (MUST NOT)。abort handle はエンジンファミリごとに独立して所有され (qwen3 は qwen3_tts_ffi、Irodori は audiocpp_ffi が生成・解放)、一方の DLL が生成したハンドルを他方の DLL に渡してはならない (MUST NOT)。
 
 #### Scenario: 合成中の中断
 - **WHEN** 別スレッドで `audiocpp_synthesize` 実行中に `audiocpp_abort(handle)` を呼ぶ

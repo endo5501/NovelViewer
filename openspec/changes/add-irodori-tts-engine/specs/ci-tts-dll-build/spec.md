@@ -16,10 +16,10 @@
 
 ### Requirement: CIパイプラインで audiocpp DLL と model spec の存在を検証する
 
-audiocpp DLL ビルド後に `audiocpp_ffi.dll` の存在を検証しなければならない (MUST)。model spec を同梱ファイル方式で配布する場合は `model_specs/irodori_tts.json` の配置も検証しなければならない (MUST)。いずれかが存在しない場合、パイプラインをエラー終了しなければならない (MUST)。
+audiocpp DLL ビルド後に `audiocpp_ffi.dll` と `model_specs/irodori_tts.json` (実行ファイル隣接の同梱ファイル) の存在を検証しなければならない (MUST)。いずれかが存在しない場合、パイプラインをエラー終了しなければならない (MUST)。
 
-#### Scenario: DLL が存在する場合は成功
-- **WHEN** 検証ステップが実行され、`audiocpp_ffi.dll` (および同梱方式の場合は model spec) が存在する
+#### Scenario: DLL と model spec が存在する場合は成功
+- **WHEN** 検証ステップが実行され、`audiocpp_ffi.dll` と model spec が存在する
 - **THEN** ステップは正常終了する
 
 #### Scenario: audiocpp_ffi.dll が存在しない場合はエラー

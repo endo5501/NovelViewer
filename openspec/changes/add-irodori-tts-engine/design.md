@@ -99,6 +99,12 @@ models/
 ### D9: 設定 UI は Piper セクションの型を踏襲
 `IrodoriSettingsSection` (ConsumerStatefulWidget) を新設: モデルダウンロード (進捗/再試行)、speaker_guidance_scale スライダー、caption_guidance_scale スライダー、num_inference_steps。参照音声は既存の `VoiceReferenceSection` を共用 (qwen3 と同じ voices ライブラリ・`ttsRefWavPathProvider` を参照)。ラベルは3言語 ARB 必須。エンジン選択 SegmentedButton は3値になる。
 
+### 実装後の追記 (レビュー2巡での精緻化)
+
+- D3 追補: C API に `audiocpp_get_init_error()` を追加 (init 失敗原因の表面化)。guidance scale の転送契約は「>= 0.0 を常に転送 (0.0 = CFG 無効の正当値)、負値のみ engine 既定」に確定
+- abort handle は **エンジンファミリごとに独立所有** (qwen3 → qwen3_tts_ffi / Irodori → audiocpp_ffi、生成した DLL が解放)。1ハンドルを両 DLL で共有するバイト互換依存の案は Codex レビューで棄却。両フォークの static_assert は防御として残置
+- D7 追補: ダウンロード完了・スキップ判定は HF ピン留め資産の**固定サイズマニフェスト**照合 (自己記録サイズは不採用)。HF 再アップロード時はマニフェスト定数を同時更新すること
+
 ## Risks / Trade-offs
 
 - [engine_runtime が 30+ モデル全部入りで DLL が肥大 (数十MB)] → 初版は許容。フォーク側 CMake でモデル選別する最適化は将来課題として切り離す
