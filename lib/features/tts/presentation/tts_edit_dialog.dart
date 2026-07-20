@@ -148,44 +148,26 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     super.dispose();
   }
 
-  String? _resolveRefWavPath(String? segmentRefWavPath) {
-    final voiceService = ref.read(voiceReferenceServiceProvider);
-    if (voiceService == null) return null;
-
-    if (segmentRefWavPath != null) {
-      if (segmentRefWavPath.isEmpty) return null; // "なし" - no reference audio
-      return voiceService.resolveVoiceFilePath(segmentRefWavPath);
-    }
-
-    final globalRef = ref.read(ttsRefWavPathProvider);
-    if (globalRef.isNotEmpty) {
-      return voiceService.resolveVoiceFilePath(globalRef);
-    }
-
-    return null;
-  }
-
   Future<void> _generateSegment(int index) async {
     final controller = _controller;
     if (controller == null) return;
 
     final engineType = ref.read(ttsEngineTypeProvider);
-    var config = TtsEngineConfig.resolveFromRef(ref, engineType);
-    // Edit dialog uses per-segment ref_wav_path (overrides global) for Qwen3.
-    if (config is Qwen3EngineConfig) {
-      final segment = controller.segments[index];
-      config = config.copyWithRefWavPath(_resolveRefWavPath(segment.refWavPath));
-    }
+    final config = TtsEngineConfig.resolveFromRef(ref, engineType);
     if (config.modelDir.isEmpty) return;
+    final voiceService = ref.read(voiceReferenceServiceProvider);
 
     ref
         .read(ttsEditGenerationStateProvider.notifier)
         .set(TtsEditGenerationState.generating);
     ref.read(ttsEditGeneratingIndexProvider.notifier).set(index);
 
+    // The controller resolves the segment's own ref_wav_path (falling back to
+    // the global setting), so the engine config needs no per-segment override.
     await controller.generateSegment(
       segmentIndex: index,
       config: config,
+      resolveRefWavPath: voiceService?.resolveVoiceFilePath,
     );
 
     if (!mounted) return;
