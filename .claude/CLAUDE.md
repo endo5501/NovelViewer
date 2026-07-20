@@ -5,6 +5,8 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
 ## 開発コマンド
 
  - `scripts/build_tts_macos.sh` - TTSエンジンビルド(mac)
+ - `scripts/build_irodori_macos.sh` - Irodori-TTSエンジンビルド(mac、要 `brew install libomp`)
+ - `scripts/test/verify_irodori_macos.sh` - Irodori-TTSビルド成果物の検証(mac)
  - `scripts/build_lame_macos.sh` - LAMEビルド(mac)
  - `fvm flutter build macos` - 本番ビルド(mac)
  - `scripts/build_tts_windows.bat` - TTSエンジンビルド(windows)
