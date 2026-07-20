@@ -149,6 +149,14 @@ class _FakeTtsIsolate implements TtsIsolate {
     ));
   }
 
+  /// A failure the native side could not describe: no audio, no error string.
+  void completeSynthesisWithoutAudio() {
+    _responseController.add(SynthesisResultResponse(
+      audio: null,
+      sampleRate: 24000,
+    ));
+  }
+
   void emitModelLoaded({bool success = true, String? error}) {
     _responseController.add(
       ModelLoadedResponse(success: success, error: error),
@@ -334,6 +342,105 @@ void main() {
 
       expect(result, isNull);
       expect(isolate.aborted, isTrue);
+      await session.dispose();
+    });
+
+    test('synthesize retains the native error for the caller', () async {
+      final isolate = _FakeTtsIsolate();
+      isolate.autoSucceedSynthesis = false;
+      final session = TtsSession(isolate: isolate);
+      await session.ensureModelLoaded(_qwen3());
+
+      final synthesisFuture = session.synthesize(text: 'bad ref');
+      await Future.delayed(Duration.zero);
+      isolate.completeSynthesis(
+        error: 'unsupported WAV encoding (need PCM16, PCM24, or float32)',
+      );
+
+      final result = await synthesisFuture;
+
+      expect(result, isNull, reason: 'return contract must stay nullable');
+      expect(
+        session.lastSynthesisError,
+        contains('unsupported WAV encoding'),
+      );
+      await session.dispose();
+    });
+
+    test('synthesize retains the worker death reason for the caller', () async {
+      final isolate = _FakeTtsIsolate();
+      isolate.autoSucceedSynthesis = false;
+      final session = TtsSession(isolate: isolate);
+      await session.ensureModelLoaded(_qwen3());
+
+      final synthesisFuture = session.synthesize(text: 'pending');
+      await Future.delayed(Duration.zero);
+      isolate.emitWorkerDied('worker crashed: RangeError');
+
+      final result = await synthesisFuture;
+
+      expect(result, isNull);
+      expect(session.lastSynthesisError, contains('worker crashed'));
+      await session.dispose();
+    });
+
+    test('successful synthesize clears a retained error', () async {
+      final isolate = _FakeTtsIsolate();
+      isolate.autoSucceedSynthesis = false;
+      final session = TtsSession(isolate: isolate);
+      await session.ensureModelLoaded(_qwen3());
+
+      final failing = session.synthesize(text: 'bad ref');
+      await Future.delayed(Duration.zero);
+      isolate.completeSynthesis(error: 'could not open audio input');
+      await failing;
+      expect(session.lastSynthesisError, isNotNull);
+
+      isolate.autoSucceedSynthesis = true;
+      final result = await session.synthesize(text: 'fine');
+
+      expect(result, isNotNull, reason: 'return contract must stay unchanged');
+      expect(session.lastSynthesisError, isNull);
+      await session.dispose();
+    });
+
+    test('the worker-died fast path does not leak the previous reason',
+        () async {
+      final isolate = _FakeTtsIsolate();
+      isolate.autoSucceedSynthesis = false;
+      final session = TtsSession(isolate: isolate);
+      await session.ensureModelLoaded(_qwen3());
+
+      final failing = session.synthesize(text: 'bad ref');
+      await Future.delayed(Duration.zero);
+      isolate.completeSynthesis(error: 'unsupported WAV encoding');
+      await failing;
+      expect(session.lastSynthesisError, isNotNull);
+
+      // The worker dies with no synthesize in flight, so the next call takes
+      // the fail-fast path that returns before any response arrives.
+      isolate.emitWorkerDied('boom');
+      await Future.delayed(Duration.zero);
+      final result = await session.synthesize(text: 'again');
+
+      expect(result, isNull);
+      expect(session.lastSynthesisError, isNull,
+          reason: 'this failure was not explained by the previous WAV error');
+      await session.dispose();
+    });
+
+    test('a failure with no error string retains no reason', () async {
+      final isolate = _FakeTtsIsolate();
+      isolate.autoSucceedSynthesis = false;
+      final session = TtsSession(isolate: isolate);
+      await session.ensureModelLoaded(_qwen3());
+
+      final synthesisFuture = session.synthesize(text: 'silent failure');
+      await Future.delayed(Duration.zero);
+      isolate.completeSynthesisWithoutAudio();
+
+      expect(await synthesisFuture, isNull);
+      expect(session.lastSynthesisError, isNull);
       await session.dispose();
     });
 

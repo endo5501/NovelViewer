@@ -133,6 +133,7 @@
   "ttsEdit_playTooltip": "Play",
   "ttsEdit_regenerateTooltip": "Regenerate",
   "ttsEdit_resetTooltip": "Reset",
+  "ttsEdit_synthesisFailed": "Synthesis failed",
 
   "textViewer_deleteAudioTitle": "Delete audio data",
   "textViewer_deleteAudioConfirmation": "Delete audio data?",

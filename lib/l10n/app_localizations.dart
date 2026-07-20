@@ -868,6 +868,12 @@ abstract class AppLocalizations {
   /// **'リセット'**
   String get ttsEdit_resetTooltip;
 
+  /// No description provided for @ttsEdit_synthesisFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'合成に失敗しました'**
+  String get ttsEdit_synthesisFailed;
+
   /// No description provided for @textViewer_deleteAudioTitle.
   ///
   /// In ja, this message translates to:

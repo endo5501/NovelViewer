@@ -13,6 +13,7 @@ import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_streaming_controller.dart';
 import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode.dart';
+import 'package:novel_viewer/features/tts/presentation/tts_failure_snackbar.dart';
 import 'package:novel_viewer/features/tts/presentation/tts_edit_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_state_provider.dart';
@@ -214,12 +215,13 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
     // Surface a genuine synthesis/model-load failure to the user (F101). A
     // user stop returns `stopped`, not `failed`, so it shows no error here.
     if (outcome == TtsStartOutcome.failed && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.textViewer_ttsGenerationFailed,
-          ),
-        ),
+      showTtsFailureSnackBar(
+        context,
+        headline: AppLocalizations.of(context)!.textViewer_ttsGenerationFailed,
+        // Read the LOCAL controller: the finally above has already nulled
+        // `_streamingController` (or a newer run owns it), so going through
+        // the field would show no reason - or the wrong run's reason.
+        reason: controller.lastFailureReason,
       );
     }
   }

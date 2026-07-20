@@ -12,6 +12,7 @@ import '../data/tts_edit_segment.dart';
 import '../data/tts_engine_type.dart';
 import '../data/tts_isolate.dart';
 import '../domain/tts_engine_config.dart';
+import 'tts_failure_snackbar.dart';
 import '../providers/text_segmenter_provider.dart';
 import '../providers/vacuum_lifecycle_provider.dart';
 import '../providers/tts_audio_database_provider.dart';
@@ -94,10 +95,12 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
       ref.read(ttsEditGeneratingIndexProvider.notifier).set(null);
     };
 
-    controller.onError = (error) {
+    controller.onSynthesisFailed = (reason) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
+      showTtsFailureSnackBar(
+        context,
+        headline: AppLocalizations.of(context)!.ttsEdit_synthesisFailed,
+        reason: reason,
       );
     };
 

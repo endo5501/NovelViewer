@@ -443,6 +443,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ttsEdit_resetTooltip => 'Reset';
 
   @override
+  String get ttsEdit_synthesisFailed => 'Synthesis failed';
+
+  @override
   String get textViewer_deleteAudioTitle => 'Delete audio data';
 
   @override

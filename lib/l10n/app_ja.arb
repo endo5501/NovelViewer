@@ -224,6 +224,7 @@
   "ttsEdit_playTooltip": "再生",
   "ttsEdit_regenerateTooltip": "再生成",
   "ttsEdit_resetTooltip": "リセット",
+  "ttsEdit_synthesisFailed": "合成に失敗しました",
 
   "textViewer_deleteAudioTitle": "音声データの削除",
   "textViewer_deleteAudioConfirmation": "音声データを削除しますか？",
