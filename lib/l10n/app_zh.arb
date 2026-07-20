@@ -133,6 +133,7 @@
   "ttsEdit_playTooltip": "播放",
   "ttsEdit_regenerateTooltip": "重新生成",
   "ttsEdit_resetTooltip": "重置",
+  "ttsEdit_synthesisFailed": "合成失败",
 
   "textViewer_deleteAudioTitle": "删除音频数据",
   "textViewer_deleteAudioConfirmation": "确定删除音频数据吗？",

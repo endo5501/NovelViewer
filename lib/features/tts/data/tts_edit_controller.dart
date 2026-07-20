@@ -60,7 +60,10 @@ class TtsEditController {
 
   void Function(int segmentIndex)? onSegmentGenerated;
   void Function(int current, int total)? onProgress;
-  void Function(String error)? onError;
+
+  /// Called when a segment fails to synthesize. The argument is the native
+  /// engine's explanation, or `null` when the failure carried none.
+  void Function(String? reason)? onSynthesisFailed;
 
   Future<void> loadSegments({
     required String text,
@@ -468,7 +471,9 @@ class TtsEditController {
       numInferenceSteps: irodoriParams?.numInferenceSteps,
     );
     if (result == null) {
-      onError?.call('Synthesis failed');
+      // The localized headline belongs to the widget layer; this reports only
+      // the cause, which the engine produces in English at runtime.
+      onSynthesisFailed?.call(_session.lastSynthesisError);
     }
     return result;
   }

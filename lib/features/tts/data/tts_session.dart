@@ -36,9 +36,19 @@ class TtsSession {
   Completer<SynthesisResultResponse?>? _activeSynthesisCompleter;
   Completer<bool>? _activeModelLoadCompleter;
   bool _disposed = false;
+  String? _lastSynthesisError;
 
   bool get modelLoaded => _modelLoaded;
   bool get disposed => _disposed;
+
+  /// Why the most recent [synthesize] failed, or `null` if it succeeded or the
+  /// failure carried no explanation.
+  ///
+  /// [synthesize] keeps returning `null` on failure — callers that only branch
+  /// on that are unaffected — but the native message is no longer log-only, so
+  /// the UI can tell the user *which* file it could not read instead of a bare
+  /// "synthesis failed".
+  String? get lastSynthesisError => _lastSynthesisError;
 
   /// Loads the model corresponding to [config]. Successive calls with the
   /// same config are no-ops. Returns `true` if the model was (or is)
@@ -153,6 +163,7 @@ class TtsSession {
       _log.warning('synthesize skipped; worker already died');
       return null;
     }
+    _lastSynthesisError = null;
     final completer = Completer<SynthesisResultResponse?>();
     _activeSynthesisCompleter = completer;
     final sub = _isolate.responses.listen((response) {
@@ -161,6 +172,7 @@ class TtsSession {
         if (response.error != null || response.audio == null) {
           if (response.error != null) {
             _log.warning('Synthesis failed: ${response.error}');
+            _lastSynthesisError = response.error;
           }
           completer.complete(null);
         } else {
@@ -170,6 +182,7 @@ class TtsSession {
         // The worker terminated; this synthesis will never reply. Resolve to
         // null instead of hanging forever (F144).
         _log.warning('Synthesis aborted; worker died: ${response.error}');
+        _lastSynthesisError = response.error;
         completer.complete(null);
       }
     });

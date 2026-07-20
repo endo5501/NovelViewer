@@ -74,6 +74,15 @@ class TtsStreamingController {
 
   bool _stopped = false;
   final _writtenFiles = <String>[];
+  String? _lastFailureReason;
+
+  /// Why the last [start] failed, or `null` if it completed, was stopped, or
+  /// failed without an explanation from the engine.
+  ///
+  /// [start] returns a [TtsStartOutcome] enum and disposes its session on the
+  /// way out, so this is the only way for the UI to tell the user *what* went
+  /// wrong rather than just *that* something did.
+  String? get lastFailureReason => _lastFailureReason;
 
   Future<TtsStartOutcome> start({
     required String text,
@@ -84,6 +93,7 @@ class TtsStreamingController {
     int? startOffset,
   }) async {
     _stopped = false;
+    _lastFailureReason = null;
 
     final textHash = computeContentHash(text);
     final segments = _textSegmenter.splitIntoSentences(text);
@@ -152,6 +162,10 @@ class TtsStreamingController {
         return TtsStartOutcome.stopped;
       }
       if (result != _PlaybackResult.finished) {
+        // Read the cause before `finally` disposes the session: the caller
+        // only gets a TtsStartOutcome enum back, so the reason has to be
+        // stashed here or it is gone by the time the UI can ask for it.
+        _lastFailureReason = _session.lastSynthesisError;
         // Use a COUNT query rather than loading every segment's WAV blob just
         // to test for presence of audio on this (failure) path.
         final hasAudio =

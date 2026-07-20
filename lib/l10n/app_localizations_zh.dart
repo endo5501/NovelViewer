@@ -431,6 +431,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ttsEdit_resetTooltip => '重置';
 
   @override
+  String get ttsEdit_synthesisFailed => '合成失败';
+
+  @override
   String get textViewer_deleteAudioTitle => '删除音频数据';
 
   @override

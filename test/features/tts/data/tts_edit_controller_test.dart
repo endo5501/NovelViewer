@@ -129,6 +129,16 @@ class FakeTtsIsolate implements TtsIsolate {
     ));
   }
 
+  /// Replies to the pending synthesize with a failure. [error] is the native
+  /// engine's message, or null for a failure it could not describe.
+  void failSynthesis({String? error}) {
+    _responseController.add(SynthesisResultResponse(
+      audio: null,
+      sampleRate: 24000,
+      error: error,
+    ));
+  }
+
   @override
   Future<void> dispose() async {
     disposed = true;
@@ -2600,6 +2610,61 @@ void main() {
         final segments = await repository.getSegments(episodeId);
         expect(segments, hasLength(1));
         expect(segments[0].audioData, isNotNull);
+      });
+    });
+
+    group('synthesis failure reporting', () {
+      Future<String?> captureFailureReason({String? nativeError}) async {
+        final isolate = FakeTtsIsolate();
+        isolate.synthesizeGate = Completer<void>();
+        final player = FakeAudioPlayer();
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+
+        String? captured;
+        var called = false;
+        controller.onSynthesisFailed = (reason) {
+          captured = reason;
+          called = true;
+        };
+
+        await controller.loadSegments(
+          text: 'エルリックは勇者だ。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        final generateFuture = controller.generateSegment(
+          resolveRefWavPath: null,
+          segmentIndex: 0,
+          config: _qwen3Config(),
+        );
+
+        await Future.delayed(Duration.zero);
+        await Future.delayed(Duration.zero);
+        isolate.failSynthesis(error: nativeError);
+        await generateFuture;
+
+        expect(called, isTrue, reason: 'the failure must be reported');
+        return captured;
+      }
+
+      test('reports the native cause held by the session', () async {
+        final reason = await captureFailureReason(
+          nativeError: 'unsupported WAV encoding '
+              '(need PCM16, PCM24, or float32)',
+        );
+
+        expect(reason, contains('unsupported WAV encoding'));
+      });
+
+      test('reports a null cause when the failure carried no message',
+          () async {
+        expect(await captureFailureReason(), isNull);
       });
     });
   });

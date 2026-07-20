@@ -13,6 +13,7 @@ import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_streaming_controller.dart';
 import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode.dart';
+import 'package:novel_viewer/features/tts/domain/tts_failure_message.dart';
 import 'package:novel_viewer/features/tts/presentation/tts_edit_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_state_provider.dart';
@@ -216,9 +217,12 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
     if (outcome == TtsStartOutcome.failed && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
+          content: Text(formatTtsFailureMessage(
             AppLocalizations.of(context)!.textViewer_ttsGenerationFailed,
-          ),
+            _streamingController?.lastFailureReason,
+          )),
+          // Native causes run long; the default 4s is not enough to read one.
+          duration: const Duration(seconds: 8),
         ),
       );
     }

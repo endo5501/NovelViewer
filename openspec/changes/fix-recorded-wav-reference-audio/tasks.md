@@ -26,8 +26,8 @@
 
 ## 3. ネイティブライブラリの再ビルドと実ファイル検証
 
-- [ ] 3.1 `scripts/build_irodori_macos.sh` で audio.cpp の FFI ライブラリを再ビルドし、`macos/Frameworks/libaudiocpp_ffi.dylib` を差し替える（`build_tts_macos.sh` は qwen3-tts.cpp 用で、このライブラリは作らない）
-- [ ] 3.2 NovelViewer 側の submodule 参照を更新する（submodule bump）
+- [x] 3.1 `scripts/build_irodori_macos.sh` で audio.cpp の FFI ライブラリを再ビルドし、`macos/Frameworks/libaudiocpp_ffi.dylib` を差し替える（`build_tts_macos.sh` は qwen3-tts.cpp 用で、このライブラリは作らない）
+- [x] 3.2 NovelViewer 側の submodule 参照を更新する（submodule bump）
 - [ ] 3.3 macOS 実機で、録音機能で作成した WAV（例: `voices/test.wav`, `voices/endo1.wav`）を参照音声に指定して合成が成功することを確認する
 - [ ] 3.4 macOS 実機で、Windows 録音由来の WAV（例: `voices/test_rec.wav`）を参照音声に指定して合成が成功することを確認する
 - [ ] 3.5 従来動作していた MP3 / WAV（例: `voices/月ノ美兎.mp3`, `voices/tukino.wav`）で回帰がないことを確認する
@@ -35,23 +35,23 @@
 
 ## 4. Flutter: 合成失敗理由の伝播（テストファースト）
 
-- [ ] 4.1 `TtsSession` のテストを追加する: `SynthesisResultResponse` が `error` を伴って失敗したとき、`synthesize` が `null` を返しつつ直近の失敗理由がその文言を保持すること
-- [ ] 4.2 `TtsSession` のテストを追加する: `WorkerDiedResponse` を受信したとき、直近の失敗理由がその死亡理由を保持すること
-- [ ] 4.3 `TtsSession` のテストを追加する: 合成成功時に保持されている失敗理由がクリアされること
-- [ ] 4.4 `TtsSession` のテストを追加する: 既存の戻り値契約（成功時はレスポンス、失敗時は `null`）が変わらないこと
-- [ ] 4.5 テストを実行し、失敗することを確認する
-- [ ] 4.6 `lib/features/tts/data/tts_session.dart` に直近の失敗理由を保持する仕組みを実装し、4.1〜4.4 を成功させる
-- [ ] 4.7 既存の `TtsSession` / `TtsStreamingController` のテストが引き続き成功することを確認する（`null` 契約に依存する既存呼び出し元の回帰確認）
+- [x] 4.1 `TtsSession` のテストを追加する: `SynthesisResultResponse` が `error` を伴って失敗したとき、`synthesize` が `null` を返しつつ直近の失敗理由がその文言を保持すること
+- [x] 4.2 `TtsSession` のテストを追加する: `WorkerDiedResponse` を受信したとき、直近の失敗理由がその死亡理由を保持すること
+- [x] 4.3 `TtsSession` のテストを追加する: 合成成功時に保持されている失敗理由がクリアされること
+- [x] 4.4 `TtsSession` のテストを追加する: 既存の戻り値契約（成功時はレスポンス、失敗時は `null`）が変わらないこと
+- [x] 4.5 テストを実行し、失敗することを確認する
+- [x] 4.6 `lib/features/tts/data/tts_session.dart` に直近の失敗理由を保持する仕組みを実装し、4.1〜4.4 を成功させる
+- [x] 4.7 既存の `TtsSession` / `TtsStreamingController` のテストが引き続き成功することを確認する（`null` 契約に依存する既存呼び出し元の回帰確認）
 
 ## 5. Flutter: 編集画面でのエラー表示
 
-- [ ] 5.1 合成失敗の見出し文言のキー（例: `ttsEdit_synthesisFailed`）を `lib/l10n/app_ja.arb`, `app_en.arb`, `app_zh.arb` に追加する
-- [ ] 5.2 `TtsEditController` のテストを追加する: 合成失敗時に、セッションが保持する失敗理由を含むメッセージが `onError` に渡されること
-- [ ] 5.3 `TtsEditController` のテストを追加する: 失敗理由が `null` のとき、見出しのみが `onError` に渡されること
-- [ ] 5.4 テストを実行し、失敗することを確認する
-- [ ] 5.5 `lib/features/tts/data/tts_edit_controller.dart:471` の固定文言 `'Synthesis failed'` を廃し、ローカライズされた見出しと失敗理由を連結して `onError` に渡すよう実装する
-- [ ] 5.6 表示側 (`lib/features/tts/presentation/tts_edit_dialog.dart`) が長いメッセージを表示できることを確認する（必要ならスナックバーの表示時間・折り返しを調整する）
-- [ ] 5.7 テストを実行し、5.2〜5.3 が成功することを確認する
+- [x] 5.1 合成失敗の見出し文言のキー（例: `ttsEdit_synthesisFailed`）を `lib/l10n/app_ja.arb`, `app_en.arb`, `app_zh.arb` に追加する
+- [x] 5.2 `TtsEditController` のテストを追加する: 合成失敗時に、セッションが保持する失敗理由を含むメッセージが `onError` に渡されること
+- [x] 5.3 `TtsEditController` のテストを追加する: 失敗理由が `null` のとき、見出しのみが `onError` に渡されること
+- [x] 5.4 テストを実行し、失敗することを確認する
+- [x] 5.5 `lib/features/tts/data/tts_edit_controller.dart:471` の固定文言 `'Synthesis failed'` を廃す。連結は `lib/features/tts/domain/tts_failure_message.dart` の純粋関数 `formatTtsFailureMessage` に切り出し、data 層の `onSynthesisFailed` は失敗理由のみを渡す（ローカライズは widget 層の責務のため）
+- [x] 5.6 表示側 (`lib/features/tts/presentation/tts_edit_dialog.dart`) が長いメッセージを表示できることを確認する（必要ならスナックバーの表示時間・折り返しを調整する）
+- [x] 5.7 テストを実行し、5.2〜5.3 が成功することを確認する
 
 ## 6. Flutter: ストリーミング再生でのエラー表示
 
