@@ -33,8 +33,13 @@
 
 ## 5. 最終確認
 
-- [ ] 5.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 5.3 `fvm flutter analyze`でリントを実行
-- [ ] 5.4 `fvm flutter test`でテストを実行
+レビューで判明した設計変更: 検証は UI ではなく **`TtsStreamingController` のモデルロード地点**で行う
+(`TtsStartOutcome.modelNotReady` を追加)。再生専用の経路はモデルを必要としないため、
+ボタンでの事前ブロックは生成済み音声の再生を壊していた。readiness 自体も各ダウンロード
+Notifier の `…Completed` 状態へ委譲し、完了判定の二重実装を解消した。
+
+- [x] 5.1 code-reviewスキルを使用してコードレビューを実施 (reuse/簡素化/altitude。**altitude で退行を検出**: ガードを再生ボタンに置いたため、生成済み音声の再生までブロックしていた。モデルロード地点へ移動して修正)
+- [x] 5.2 codexスキルを使用して現在開発中のコードレビューを実施 (readiness がキャッシュされ、DL完了後も未取得のままになる指摘 → ダウンロード状態への依存を追加)
+- [x] 5.3 `fvm flutter analyze`でリントを実行 (No issues found)
+- [x] 5.4 `fvm flutter test`でテストを実行 (2432件 pass)
 - [ ] 5.5 実機で確認する (編集画面でセグメント指定の参照音声を選んで単体生成が成功すること)
