@@ -37,10 +37,10 @@
 
 - [x] 5.1 `third_party/audio.cpp` の submodule 参照を更新してコミットする
 - [x] 5.2 `scripts/build_irodori_windows.bat` で再ビルドし、`audiocpp_ffi.dll` が更新されることを確認する
-- [x] 5.3 MP3 参照音声で合成が成功することを実機で確認する (E2E: 非 ASCII 名の `月ノ美兎.mp3` で成功)
+- [x] 5.3 MP3 参照音声で合成が成功することを実機で確認する (E2E: 非 ASCII 名の `月ノ美兎.mp3` で成功。リーダ再構成後の最新 DLL でも再確認済み)
 - [x] 5.4 WAV 参照音声での合成が従来どおり動作することを確認する (回帰: OK)
 - [x] 5.5 未対応フォーマット指定時に `app.log` へ診断可能なエラーが出ることを確認する (`voices/` の選択肢に出ないため UI からは指定不能。エラー文言はユニットテストで担保)
-- [ ] 5.6 `scripts/build_irodori_macos.sh` でのビルド可否を確認する (可能な範囲で)
+- [x] 5.6 `scripts/build_irodori_macos.sh` でのビルド可否を確認する → **本 change では未実施**。CI は Windows 専用 (`release.yml` は `windows-latest` のみ) で、開発環境にも mac が無いため検証できない。minimp3 はプラットフォーム非依存で上流の警告抑止 pragma も GCC/Clang 向けに入っているためリスクは低いと判断し、実機確認は別途 macOS 環境で実施する
 
 ## 5.5 エラーメッセージの UTF-8 化 (E2E で判明)
 
