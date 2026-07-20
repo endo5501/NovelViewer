@@ -10,6 +10,8 @@ import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart'
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../../helpers/db_provider_container.dart';
+
 void main() {
   setUpAll(() {
     sqfliteFfiInit();
@@ -37,7 +39,7 @@ void main() {
   group('ttsAudioStateProvider', () {
     test('returns TtsAudioState.none when no episode row exists', () async {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
+      addDbContainerTearDown(container);
 
       final filePath = p.join(tempDir.path, '0001_chapter1.txt');
       final state = await readState(container, filePath);
@@ -46,7 +48,7 @@ void main() {
 
     test('returns TtsAudioState.ready when episode is completed', () async {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
+      addDbContainerTearDown(container);
 
       final db = container.read(ttsAudioDatabaseProvider(tempDir.path));
       final repo = TtsAudioRepository(db);
@@ -63,7 +65,7 @@ void main() {
 
     test('returns TtsAudioState.ready when episode is partial', () async {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
+      addDbContainerTearDown(container);
 
       final db = container.read(ttsAudioDatabaseProvider(tempDir.path));
       final repo = TtsAudioRepository(db);
@@ -81,7 +83,7 @@ void main() {
     test('returns TtsAudioState.generating when episode status is generating',
         () async {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
+      addDbContainerTearDown(container);
 
       final db = container.read(ttsAudioDatabaseProvider(tempDir.path));
       final repo = TtsAudioRepository(db);
@@ -99,7 +101,7 @@ void main() {
     test('invalidate causes re-query (state updates after DB change)',
         () async {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
+      addDbContainerTearDown(container);
 
       final filePath = p.join(tempDir.path, '0001_chapter1.txt');
 
