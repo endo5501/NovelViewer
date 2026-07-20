@@ -58,6 +58,21 @@ Dart 層に変更が無いため Flutter のテストで検証できるものが
 
 audio.cpp フォークで実装・テスト・push を完了させてから、NovelViewer 側で submodule 参照を進める。CI (`release.yml`) は submodule 参照に追従するため、ビルドスクリプトの変更は不要。
 
+### D6: エラーメッセージの UTF-8 保証は「共有ヘルパ + ABI 境界での修復」の二段構え (実装中に追加)
+
+E2E で `FormatException: Unexpected extension byte` が発生し、Windows の `path::string()` が ANSI コードページ (CP932) を返すことが原因と判明した。当初は発生箇所を個別に `u8string()` 化したが、レビューで「`g_init_error = ex.what()` にエンジン全体の例外が流れ込むため、葉を潰しても再発する」と指摘され、方針を二段構えに改めた。
+
+- `engine::io::path_to_utf8` を共有ヘルパとして新設し、シェイムとリーダ、および全モデルローダが通る `require_directory` / `require_file` / `read_text_file` で使用する
+- それでも残る約70箇所の `.string()` 由来の不正バイトは、**C ABI 境界 (`audiocpp_c_api.cpp`) で U+FFFD に修復**する。文字化けしてもエラー内容は読めるが、デコード失敗ではエラーそのものが失われるため
+
+### D7: 上流との差分は「重複の解消」に限って許容する (実装中に更新)
+
+D1 では「既存ファイルの改変は `CMakeLists.txt` 2行と呼び出し元のみ」を見込んでいたが、レビューで検出した重複 (UTF-8 変換・RIFF 判定・拡張子リスト・ファイル二重オープン) の解消のため `audio_reader.cpp` を再構成し、`io/filesystem.*` と `app/server/runtime.cpp` にも手を入れた。いずれも上流に還元しうる性質の変更であり、機能追加ではないため許容と判断した。
+
+一方、minimp3 の中間バッファ削減 (iterate API 化) と `read_file_bytes` の `engine::io::read_binary_file` への置換は、利得に対して差分が大きいため見送った。
+
+**この再構成で一度リグレッションを作り込んだ**: 未対応拡張子の早期リジェクトを先頭に置いた結果、上流が保証していた「拡張子に関わらず中身が WAV なら読める」挙動が失われた。検証時に発見し、順序を戻したうえでテストで固定した (`872201e`)。上流の判定順序は最適化の余地ではなく契約として扱う。
+
 ## Risks / Trade-offs
 
 - **上流ブランチが未マージの実験ブランチである** → `ci/new-feature-mp3` は上流 main にマージされていない。将来上流が別の実装で MP3 対応を入れると重複・衝突しうる。コミットをそのままチェリーピックしておけば、rebase 時に同一パッチとして検出される可能性が高い
