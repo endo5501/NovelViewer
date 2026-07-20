@@ -19,6 +19,7 @@ import 'package:novel_viewer/features/tts/providers/tts_audio_state_provider.dar
 import 'package:novel_viewer/features/tts/providers/vacuum_lifecycle_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_export_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_model_readiness_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -127,6 +128,13 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
       return;
     }
 
+    // Passed down rather than checked here: this entry point also serves plain
+    // playback, which reads generated audio from the DB and needs no model at
+    // all. The controller refuses only when it actually has to synthesize.
+    final modelsReady =
+        ref.read(ttsModelReadinessProvider(engineType)) ==
+            TtsModelReadiness.ready;
+
     // Use selectedFile.path verbatim so it matches the family key the build
     // watches via `ttsAudioStateProvider(selectedFile.path)`. Building the
     // path from `'$folderPath/$fileName'` here mixes separators on Windows
@@ -177,6 +185,7 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
         text: widget.content,
         fileName: fileName,
         config: config,
+        modelsReady: modelsReady,
         startOffset: startOffset,
         resolveRefWavPath: voiceService?.resolveVoiceFilePath,
       );
@@ -192,6 +201,14 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
           ref.invalidate(directoryContentsProvider);
         }
       }
+    }
+
+    if (outcome == TtsStartOutcome.modelNotReady && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.tts_modelNeedsRedownload),
+        ),
+      );
     }
 
     // Surface a genuine synthesis/model-load failure to the user (F101). A

@@ -444,6 +444,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get textViewer_ttsGenerationFailed => '音声の生成に失敗しました';
 
   @override
+  String get tts_modelNeedsRedownload => 'TTSモデルの再ダウンロードが必要です。設定画面から実行してください';
+
+  @override
   String textViewer_exportError(String message) {
     return 'エクスポートエラー: $message';
   }

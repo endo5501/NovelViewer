@@ -1,67 +1,12 @@
-## Purpose
+## REMOVED Requirements
 
-Stream-download Piper TTS model files (`.onnx` + `.onnx.json`) from HuggingFace and OpenJTalk dictionary into `models/piper/` alongside the library, with directory auto-creation, dictionary skip-if-present, and a Riverpod download-state machine (idle / downloading / completed / error).
-## Requirements
-### Requirement: Download piper-plus model files from HuggingFace
-The system SHALL download piper-plus model files from HuggingFace using HTTPS streaming. The initial supported model SHALL be `ja_JP-tsukuyomi-chan-medium` requiring two files: the ONNX model file (`.onnx`) and its JSON config file (`.onnx.json`). The download SHALL use HTTP streaming to write directly to disk without loading the entire file into memory.
+### Requirement: 旧モデル取得済みユーザの再取得は手動で行う
 
-#### Scenario: Download Japanese model files successfully
-- **WHEN** the user initiates a piper model download for `ja_JP-tsukuyomi-chan-medium`
-- **THEN** `ja_JP-tsukuyomi-chan-medium.onnx` and `ja_JP-tsukuyomi-chan-medium.onnx.json` are downloaded and saved to the `models/piper/` directory
+**Reason**: 完了マーカーが取得元リビジョンを記録するようになり、非互換モデルの残置を自動で検出できるようになったため。手動削除を前提とした要件は実装と矛盾する。
 
-#### Scenario: Download uses streaming to avoid memory issues
-- **WHEN** a model file is being downloaded
-- **THEN** the file content is streamed directly to disk without buffering the entire file in memory
+**Migration**: ユーザ操作は不要。旧形式のマーカー (タイムスタンプ) は不一致として扱われ、通常のダウンロード導線が再取得を提示する。`models/piper/` のファイルを手動削除する必要はなくなった。ただし移行時に一度だけ再取得 (約40MB) が発生する。
 
-#### Scenario: Download shows progress
-- **WHEN** a piper model download is in progress
-- **THEN** the current file name and download percentage are reported via the download state
-
-### Requirement: Download OpenJTalk dictionary with model
-The system SHALL download the OpenJTalk dictionary files as part of the piper model download process. The dictionary SHALL be saved to `models/piper/open_jtalk_dic/`. If the dictionary directory already exists and is non-empty, the download SHALL be skipped.
-
-#### Scenario: Download dictionary with first model
-- **WHEN** the user downloads a piper model and `models/piper/open_jtalk_dic/` does not exist
-- **THEN** the OpenJTalk dictionary is downloaded and extracted to `models/piper/open_jtalk_dic/`
-
-#### Scenario: Skip dictionary download when already present
-- **WHEN** the user downloads a second piper model and `models/piper/open_jtalk_dic/` already exists with files
-- **THEN** the dictionary download step is skipped
-
-### Requirement: Piper models directory path resolution
-The piper models directory SHALL be located at `models/piper/` relative to the NovelViewer library directory's parent. The OpenJTalk dictionary SHALL be at `models/piper/open_jtalk_dic/`. If the directory does not exist, it SHALL be created automatically before downloading.
-
-#### Scenario: Resolve piper models directory
-- **WHEN** the library path is `~/Documents/NovelViewer`
-- **THEN** the piper models directory is `~/Documents/models/piper/`
-
-#### Scenario: Resolve OpenJTalk dictionary directory
-- **WHEN** the library path is `~/Documents/NovelViewer`
-- **THEN** the OpenJTalk dictionary directory is `~/Documents/models/piper/open_jtalk_dic/`
-
-### Requirement: Piper model download state management
-The system SHALL manage piper model download state using a Riverpod provider with states: idle, downloading (with currentFile and progress), completed (with modelsDir), and error (with message). The state management SHALL follow the same pattern as the existing qwen3-tts model download.
-
-#### Scenario: Initial state is idle
-- **WHEN** the app starts and no download is in progress
-- **THEN** the piper download state is idle
-
-#### Scenario: Download error shows retry option
-- **WHEN** a piper model download fails
-- **THEN** the state transitions to error with the failure message, and a retry action is available
-
-### Requirement: Piper モデルは推論ランナーと互換な固定リビジョンから取得する
-システムは Piper モデルファイル（`.onnx` / `.onnx.json`）を、同梱する piper-plus 推論ランナー（`third_party/piper-plus` サブモジュールの固定コミット）と**互換なモデルリビジョンに固定**して取得しなければならない（SHALL）。HuggingFace の `main` などの**可変参照からのライブ取得を行ってはならない**（MUST NOT）。モデル取得元の基底 URL は、互換性が確認された固定リビジョン（コミット SHA）を指し、その選定理由を near コメントで明示しなければならない（SHALL）。
-
-理由: モデル（実行時取得）と推論ランナー（git ピン留め）の参照方式が非対称だと、上流モデルの更新（例: 話者条件付けを `sid` から `speaker_embedding` + `speaker_embedding_mask` へ変更する 2026-05-03 のデコーダ刷新）により、ランナーが供給しない ONNX 入力を新モデルが要求し、合成が `Missing Input: speaker_embedding_mask` で失敗する。
-
-#### Scenario: 基底 URL は可変参照でなく固定リビジョンを指す
-- **WHEN** Piper モデルのダウンロード元基底 URL を検査する
-- **THEN** URL は `/resolve/main`（または他のブランチ名・可変タグ）ではなく、固定コミット SHA（`/resolve/<commit-sha>`）を含む
-
-#### Scenario: 取得モデルが凍結ランナーと互換である
-- **WHEN** ピン留めされたリビジョンから取得したモデルで Piper 合成を実行する
-- **THEN** 合成はネイティブランナーのエラー（例: `Missing Input: speaker_embedding_mask`）なく完了し、音声が生成される
+## ADDED Requirements
 
 ### Requirement: 完了マーカーは取得元リビジョンを記録する
 
@@ -123,4 +68,3 @@ The system SHALL manage piper model download state using a Riverpod provider wit
 
 - **WHEN** マーカーが一致し、モデルファイルが揃っている
 - **THEN** 検証は透過的に通り、従来どおり合成が開始される
-

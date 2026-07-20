@@ -9,12 +9,14 @@ import '../data/tts_dictionary_repository.dart';
 import 'dictionary_context_menu.dart';
 import '../data/tts_edit_controller.dart';
 import '../data/tts_edit_segment.dart';
+import '../data/tts_engine_type.dart';
 import '../data/tts_isolate.dart';
 import '../domain/tts_engine_config.dart';
 import '../providers/text_segmenter_provider.dart';
 import '../providers/vacuum_lifecycle_provider.dart';
 import '../providers/tts_audio_database_provider.dart';
 import '../providers/tts_edit_providers.dart';
+import '../providers/tts_model_readiness_provider.dart';
 import '../providers/tts_settings_providers.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'tts_dictionary_dialog.dart';
@@ -148,21 +150,20 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     super.dispose();
   }
 
-  String? _resolveRefWavPath(String? segmentRefWavPath) {
-    final voiceService = ref.read(voiceReferenceServiceProvider);
-    if (voiceService == null) return null;
-
-    if (segmentRefWavPath != null) {
-      if (segmentRefWavPath.isEmpty) return null; // "なし" - no reference audio
-      return voiceService.resolveVoiceFilePath(segmentRefWavPath);
+  /// Blocks generation when the engine's models are missing or predate the
+  /// current pinned revision — loading such a model succeeds and only fails
+  /// later inside the native runner. Returns true when generation may proceed.
+  bool _ensureModelsReady(TtsEngineType engineType) {
+    if (ref.read(ttsModelReadinessProvider(engineType)) ==
+        TtsModelReadiness.ready) {
+      return true;
     }
-
-    final globalRef = ref.read(ttsRefWavPathProvider);
-    if (globalRef.isNotEmpty) {
-      return voiceService.resolveVoiceFilePath(globalRef);
-    }
-
-    return null;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.tts_modelNeedsRedownload),
+      ),
+    );
+    return false;
   }
 
   Future<void> _generateSegment(int index) async {
@@ -170,22 +171,22 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     if (controller == null) return;
 
     final engineType = ref.read(ttsEngineTypeProvider);
-    var config = TtsEngineConfig.resolveFromRef(ref, engineType);
-    // Edit dialog uses per-segment ref_wav_path (overrides global) for Qwen3.
-    if (config is Qwen3EngineConfig) {
-      final segment = controller.segments[index];
-      config = config.copyWithRefWavPath(_resolveRefWavPath(segment.refWavPath));
-    }
+    final config = TtsEngineConfig.resolveFromRef(ref, engineType);
     if (config.modelDir.isEmpty) return;
+    if (!_ensureModelsReady(engineType)) return;
+    final voiceService = ref.read(voiceReferenceServiceProvider);
 
     ref
         .read(ttsEditGenerationStateProvider.notifier)
         .set(TtsEditGenerationState.generating);
     ref.read(ttsEditGeneratingIndexProvider.notifier).set(index);
 
+    // The controller resolves the segment's own ref_wav_path (falling back to
+    // the global setting), so the engine config needs no per-segment override.
     await controller.generateSegment(
       segmentIndex: index,
       config: config,
+      resolveRefWavPath: voiceService?.resolveVoiceFilePath,
     );
 
     if (!mounted) return;
@@ -202,6 +203,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final engineType = ref.read(ttsEngineTypeProvider);
     final config = TtsEngineConfig.resolveFromRef(ref, engineType);
     if (config.modelDir.isEmpty) return;
+    if (!_ensureModelsReady(engineType)) return;
     final voiceService = ref.read(voiceReferenceServiceProvider);
 
     ref

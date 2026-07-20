@@ -182,9 +182,13 @@ class TtsEditController {
     return _session.ensureModelLoaded(config);
   }
 
+  /// [resolveRefWavPath] maps a stored reference file name to its full path,
+  /// exactly as in [generateAllUngenerated]. Segments store a bare file name,
+  /// so synthesis fails without it — the two paths must stay symmetric.
   Future<bool> generateSegment({
     required int segmentIndex,
     required TtsEngineConfig config,
+    required String Function(String fileName)? resolveRefWavPath,
   }) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
     final dict = _dictionaryRepository;
@@ -194,6 +198,7 @@ class TtsEditController {
     final refWavPath = TtsRefWavResolver.resolve(
       storedPath: _segments[segmentIndex].refWavPath,
       fallbackPath: config.synthesisFallbackRefWavPath,
+      resolver: resolveRefWavPath,
     );
     return _generateSegmentWithEntries(
       segmentIndex: segmentIndex,
@@ -259,7 +264,7 @@ class TtsEditController {
 
   Future<void> generateAllUngenerated({
     required TtsEngineConfig config,
-    String Function(String fileName)? resolveRefWavPath,
+    required String Function(String fileName)? resolveRefWavPath,
     void Function(int segmentIndex)? onSegmentStart,
   }) async {
     _cancelled = false;

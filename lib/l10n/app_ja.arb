@@ -229,6 +229,7 @@
   "textViewer_deleteAudioConfirmation": "音声データを削除しますか？",
   "textViewer_exportCompleted": "MP3ファイルのエクスポートが完了しました",
   "textViewer_ttsGenerationFailed": "音声の生成に失敗しました",
+  "tts_modelNeedsRedownload": "TTSモデルの再ダウンロードが必要です。設定画面から実行してください",
   "textViewer_exportError": "エクスポートエラー: {message}",
   "@textViewer_exportError": {
     "placeholders": {
