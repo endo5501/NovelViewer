@@ -130,27 +130,7 @@ void main() {
       expect(a.modelLoadKey, isNot(b.modelLoadKey));
     });
 
-    test('copyWithRefWavPath returns a copy with only refWavPath changed',
-        () {
-      const config = IrodoriEngineConfig(
-        modelDir: '/models/irodori',
-        sampleRate: 48000,
-        refWavPath: '/voice/a.wav',
-        speakerGuidanceScale: 5.0,
-        captionGuidanceScale: 3.0,
-        numInferenceSteps: 40,
-      );
-
-      final copy = config.copyWithRefWavPath('/voice/b.wav');
-
-      expect(copy.refWavPath, '/voice/b.wav');
-      expect(copy.modelDir, config.modelDir);
-      expect(copy.sampleRate, config.sampleRate);
-      expect(copy.speakerGuidanceScale, config.speakerGuidanceScale);
-      expect(copy.captionGuidanceScale, config.captionGuidanceScale);
-      expect(copy.numInferenceSteps, config.numInferenceSteps);
-    });
-  });
+ });
 
   group('synthesisFallbackRefWavPath', () {
     test('Qwen3EngineConfig returns its refWavPath', () {

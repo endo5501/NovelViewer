@@ -6,14 +6,18 @@ void main() {
     test('null storedPath returns fallbackPath', () {
       expect(
           TtsRefWavResolver.resolve(
-              storedPath: null, fallbackPath: '/voice/default.wav'),
+              storedPath: null,
+              fallbackPath: '/voice/default.wav',
+              resolver: null),
           '/voice/default.wav');
     });
 
     test('empty storedPath returns null (explicit "no reference")', () {
       expect(
           TtsRefWavResolver.resolve(
-              storedPath: '', fallbackPath: '/voice/default.wav'),
+              storedPath: '',
+              fallbackPath: '/voice/default.wav',
+              resolver: null),
           isNull);
     });
 
@@ -21,14 +25,15 @@ void main() {
       expect(
           TtsRefWavResolver.resolve(
               storedPath: '/voice/custom.wav',
-              fallbackPath: '/voice/default.wav'),
+              fallbackPath: '/voice/default.wav',
+              resolver: null),
           '/voice/custom.wav');
     });
 
     test('null storedPath and null fallbackPath returns null', () {
       expect(
           TtsRefWavResolver.resolve(
-              storedPath: null, fallbackPath: null),
+              storedPath: null, fallbackPath: null, resolver: null),
           isNull);
     });
 

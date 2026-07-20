@@ -23,13 +23,13 @@
 
 ## 3. 仕様との整合
 
-- [ ] 3.1 デルタスペックの内容が実装と一致していることを確認する (`openspec validate`)
-- [ ] 3.2 `openspec/specs/piper-tts-model-download/spec.md` の旧要件がアーカイブ時に置き換わることを確認する
+- [x] 3.1 デルタスペックの内容が実装と一致していることを確認する (`openspec validate` 通過)
+- [x] 3.2 `openspec/specs/piper-tts-model-download/spec.md` の旧要件がアーカイブ時に置き換わることを確認する
 
 ## 4. 積み残しの判断
 
-- [ ] 4.1 `TtsRefWavResolver.resolve()` の `resolver` を必須引数にするかを判断する (全呼び出し側の変更が必要。見送る場合は理由を design.md に追記)
-- [ ] 4.2 qwen3 (`TtsModelDownloadService`) のマーカー方式を揃える別 change を起票するか判断する
+- [x] 4.1 `TtsRefWavResolver.resolve()` の `resolver` を**必須（nullable）**にした。本番の呼び出し3箇所は既に渡していたため lib 側の変更は不要で、`resolver: null` を明示するテスト4箇所のみ更新。あわせて呼び出し元が無くなった `Qwen3EngineConfig.copyWithRefWavPath` / `IrodoriEngineConfig.copyWithRefWavPath` とそのテストを削除（docコメントが「編集ダイアログが使う」と実態と異なる説明のまま残るため）
+- [x] 4.2 qwen3 (`TtsModelDownloadService`) のマーカー方式は**別 change として起票する**判断とした。自前ホストの `resolve/main` から取得しており再アップロード時に同じ潜在問題を抱えるが、Irodori のサイズマニフェスト方式と揃えるか revision 方式にするかの設計判断を伴うため、本 change には含めない
 
 ## 5. 最終確認
 

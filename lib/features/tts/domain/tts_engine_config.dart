@@ -138,18 +138,6 @@ class Qwen3EngineConfig extends TtsEngineConfig {
   /// disables embedding caching.
   final String? embeddingCacheDir;
 
-  /// Returns a copy with [refWavPath] overridden. Used by the edit dialog
-  /// to swap the global ref WAV for a per-segment one without rebuilding
-  /// every field by hand.
-  Qwen3EngineConfig copyWithRefWavPath(String? refWavPath) =>
-      Qwen3EngineConfig(
-        modelDir: modelDir,
-        sampleRate: sampleRate,
-        languageId: languageId,
-        refWavPath: refWavPath,
-        embeddingCacheDir: embeddingCacheDir,
-      );
-
   // refWavPath is synthesis-time (passed per-call), so it is intentionally
   // omitted from the load key — swapping it must not reload the model.
   @override
@@ -212,19 +200,6 @@ class IrodoriEngineConfig extends TtsEngineConfig {
 
   /// Number of RF diffusion sampling steps.
   final int numInferenceSteps;
-
-  /// Returns a copy with [refWavPath] overridden. Mirrors
-  /// [Qwen3EngineConfig.copyWithRefWavPath] for per-segment ref WAV swaps in
-  /// the edit dialog.
-  IrodoriEngineConfig copyWithRefWavPath(String? refWavPath) =>
-      IrodoriEngineConfig(
-        modelDir: modelDir,
-        sampleRate: sampleRate,
-        refWavPath: refWavPath,
-        speakerGuidanceScale: speakerGuidanceScale,
-        captionGuidanceScale: captionGuidanceScale,
-        numInferenceSteps: numInferenceSteps,
-      );
 
   // refWavPath / guidance scales / steps are synthesis-time parameters
   // (passed per-call, like caption), so they are intentionally omitted from
