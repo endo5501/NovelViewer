@@ -19,9 +19,17 @@ class PiperModelDownloadService {
   // `resolve/main` would fetch that incompatible newer model and break synthesis.
   // A full commit SHA (not the short form, not a branch) is used so the revision
   // is unambiguous and cannot drift.
-  static const _baseUrl =
-      'https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan/resolve/eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a';
+  static const modelRevision = 'eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a';
 
+  static const _baseUrl =
+      'https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan/resolve/$modelRevision';
+
+  // The marker records the revision its files came from, not just "done": a
+  // bare completion flag made installs predating the revision pin keep their
+  // incompatible model forever (synthesis failing on `speaker_embedding_mask`)
+  // because nothing ever invalidated them. A mismatch — including the legacy
+  // timestamp content — makes areModelsDownloaded report the models as missing
+  // so the normal download flow refetches them.
   static const _completeMarker = '.piper_models_complete';
 
   static const _dicUrl =
@@ -42,6 +50,7 @@ class PiperModelDownloadService {
 
     final marker = File(p.join(modelsDir, _completeMarker));
     if (!marker.existsSync()) return false;
+    if (marker.readAsStringSync().trim() != modelRevision) return false;
 
     for (final fileName in localModelFiles(modelName)) {
       final file = File(p.join(modelsDir, fileName));
@@ -94,7 +103,7 @@ class PiperModelDownloadService {
     );
 
     // Write marker after all files downloaded
-    await marker.writeAsString(DateTime.now().toIso8601String());
+    await marker.writeAsString(modelRevision);
   }
 
   Future<void> downloadDictionary(

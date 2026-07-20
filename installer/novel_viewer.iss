@@ -72,6 +72,12 @@ Source: "..\build\windows\x64\runner\Release\*.dll"; DestDir: "{app}"; Flags: ig
 ; running the license-copy scripts; CI enforces their presence separately.
 Source: "..\build\windows\x64\runner\Release\*_LICENSE_*.txt"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "..\build\windows\x64\runner\Release\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Irodori-TTS model specs. The audio.cpp shim resolves
+; model_specs\irodori_tts.json relative to audiocpp_ffi.dll, i.e. {app}, so the
+; directory must ship alongside the DLLs. Without it Irodori fails at load with
+; "model package spec not found for family 'irodori_tts'" on installer-based
+; installs only (the ZIP archives the whole Release tree and stays working).
+Source: "..\build\windows\x64\runner\Release\model_specs\*"; DestDir: "{app}\model_specs"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
