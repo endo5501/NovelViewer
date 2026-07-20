@@ -48,13 +48,19 @@
 ANSI コードページ (CP932) に変換され、Dart 側の `.toDartString()` が
 `FormatException: Unexpected extension byte` を投げることが判明した (上流にも同じ問題がある)。
 
-- [ ] 5.5.1 非 ASCII 名のファイルで失敗させ、メッセージが UTF-8 であることを検証するテストを追加し、失敗を確認する
-- [ ] 5.5.2 `src/framework/audio/audio_reader.cpp` の `path.string()` を `path.u8string()` に変更する
-- [ ] 5.5.3 テストが通ることを確認し、コミットする
+- [x] 5.5.1 非 ASCII 名のファイルで失敗させ、メッセージが UTF-8 であることを検証するテストを追加し、失敗を確認する
+- [x] 5.5.2 `src/framework/audio/audio_reader.cpp` の `path.string()` を `display_path()` (u8string ベース) に変更する
+- [x] 5.5.3 テストが通ることを確認し、コミットする (`790f7e9`)
+
+## 5.7 レビュー指摘の反映
+
+- [x] 5.7.1 メモリ上入力用の `read_audio_f32(std::string_view)` を追加し、`app/cli/request.cpp` のマルチパート経路を通す (チェリーピックの結果、サーバが `.mp3` アップロードを受理しつつ WAV として復号する不整合が残っていた。オーバーロード不在時は `string_view` が暗黙に `path` へ変換され、音声バイト列がファイル名として扱われる罠も同時に解消)
+- [x] 5.7.2 `src/audiocpp_c_api.cpp` の初期化エラーのモデルパスを `u8string()` 化する (5.5 と同じ欠陥クラス)
+- [x] 5.7.3 テストを追加・実行し、フォークへ push する (`4390072`)
 
 ## 6. 最終確認
 
-- [ ] 6.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 6.3 `fvm flutter analyze`でリントを実行
-- [ ] 6.4 `fvm flutter test`でテストを実行
+- [x] 6.1 code-reviewスキルを使用してコードレビューを実施 (reuse/簡素化/効率/altitude の4観点。重複指摘を統合し `360d69e` で反映)
+- [x] 6.2 codexスキルを使用して現在開発中のコードレビューを実施 (指摘3件。2件を 5.7 で修正、piper の再DL強制は別 change へ)
+- [x] 6.3 `fvm flutter analyze`でリントを実行 (No issues found)
+- [x] 6.4 `fvm flutter test`でテストを実行 (2421 passed)

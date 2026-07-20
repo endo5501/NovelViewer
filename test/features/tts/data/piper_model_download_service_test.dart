@@ -57,19 +57,19 @@ void main() {
         );
       }
 
-      // The model and its config must come from the pinned revision.
+      // The model and its config must come from the pinned revision. Deriving
+      // the URLs from `modelRevision` is what ties the marker written on disk
+      // to the bytes actually fetched: if they drifted apart, a stale local
+      // model would still be accepted as current.
       const modelName = PiperModelDownloadService.defaultModelName;
+      const base = 'https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan'
+          '/resolve/${PiperModelDownloadService.modelRevision}';
+      expect(requestedUrls, contains('$base/$modelName.onnx'));
+      expect(requestedUrls, contains('$base/config.json'));
       expect(
-        requestedUrls,
-        contains(
-          'https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan/resolve/eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a/$modelName.onnx',
-        ),
-      );
-      expect(
-        requestedUrls,
-        contains(
-          'https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan/resolve/eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a/config.json',
-        ),
+        PiperModelDownloadService.modelRevision,
+        'eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a',
+        reason: 'The pin must stay on the last runner-compatible revision',
       );
     });
   });
@@ -81,6 +81,20 @@ void main() {
     // "Missing Input: speaker_embedding_mask". The marker therefore records
     // the revision the files came from, and a mismatch triggers a re-download.
     late Directory modelsDir;
+
+    File markerFile() =>
+        File(p.join(modelsDir.path, '.piper_models_complete'));
+
+    // The models are already on disk in these cases, so any HTTP traffic means
+    // the check under test decided to re-fetch when it should not have.
+    PiperModelDownloadService offlineService() => PiperModelDownloadService(
+          client: MockClient((_) async => throw StateError('no request expected')),
+        );
+
+    bool areModelsDownloaded() => offlineService().areModelsDownloaded(
+          modelsDir.path,
+          PiperModelDownloadService.defaultModelName,
+        );
 
     void writeModelFiles() {
       modelsDir.createSync(recursive: true);
@@ -110,28 +124,19 @@ void main() {
         PiperModelDownloadService.defaultModelName,
       );
 
-      final marker = File(p.join(modelsDir.path, '.piper_models_complete'));
-      expect(marker.existsSync(), isTrue);
+      expect(markerFile().existsSync(), isTrue);
       expect(
-        marker.readAsStringSync().trim(),
+        markerFile().readAsStringSync().trim(),
         PiperModelDownloadService.modelRevision,
       );
     });
 
     test('areModelsDownloaded is false for a legacy timestamp marker', () {
       writeModelFiles();
-      File(p.join(modelsDir.path, '.piper_models_complete'))
-          .writeAsStringSync('2026-06-13T20:23:12.187142');
-
-      final service = PiperModelDownloadService(client: MockClient((_) async {
-        throw StateError('no request expected');
-      }));
+      markerFile().writeAsStringSync('2026-06-13T20:23:12.187142');
 
       expect(
-        service.areModelsDownloaded(
-          modelsDir.path,
-          PiperModelDownloadService.defaultModelName,
-        ),
+        areModelsDownloaded(),
         isFalse,
         reason: 'A pre-pin download must be re-fetched, not trusted',
       );
@@ -140,20 +145,9 @@ void main() {
     test('areModelsDownloaded is false when the marker holds another revision',
         () {
       writeModelFiles();
-      File(p.join(modelsDir.path, '.piper_models_complete'))
-          .writeAsStringSync('0000000000000000000000000000000000000000');
+      markerFile().writeAsStringSync('0000000000000000000000000000000000000000');
 
-      final service = PiperModelDownloadService(client: MockClient((_) async {
-        throw StateError('no request expected');
-      }));
-
-      expect(
-        service.areModelsDownloaded(
-          modelsDir.path,
-          PiperModelDownloadService.defaultModelName,
-        ),
-        isFalse,
-      );
+      expect(areModelsDownloaded(), isFalse);
     });
 
     test('areModelsDownloaded is true when the marker matches the pin', () {
@@ -171,13 +165,6 @@ void main() {
           PiperModelDownloadService.defaultModelName,
         ),
         isTrue,
-      );
-    });
-
-    test('the pinned revision is the one the base URL fetches from', () {
-      expect(
-        PiperModelDownloadService.modelRevision,
-        'eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a',
       );
     });
   });
