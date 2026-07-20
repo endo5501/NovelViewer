@@ -14,7 +14,7 @@
 - [x] 2.4 `scripts/build_piper_macos.sh` を実行し、`macos/Frameworks/` に `libonnxruntime.dylib` 以外の `libonnxruntime.*.dylib` が生成されないことを確認する
 - [x] 2.5 `otool -L macos/Frameworks/libpiper_tts_ffi.dylib` が `@rpath/libonnxruntime.dylib` を参照し、バージョン付きパスを含まないことを確認する
 - [x] 2.6 `fvm flutter build macos` が成功し、同梱集合が 1.2 のベースラインから `libonnxruntime.1.14.1.dylib` 以外変わらないことを確認する
-- [ ] 2.7 Piper-TTS で実機合成を1文実行し、ONNX Runtime のロードが成功することを確認する → **4.6 とまとめて (B) 完了後に実施**
+- [x] 2.7 Piper-TTS で実機合成を1文実行し、ONNX Runtime のロードが成功することを確認する → 4.6 とまとめて実施、OK
 - [x] 2.8 (A) の内容をコミットする
 
 **(A) の検証メモ**: 同梱される5つの dylib はベースラインとバイト単位で同一 (削除対象は未参照ファイルのみ、再ビルドされた `libpiper_tts_ffi.dylib` は `git checkout` で復元)。したがって (A) がアプリのランタイム挙動を変える経路は存在しない。変わるのは `build_piper_macos.sh` の今後の出力のみ。Runner 実行ファイルは `@executable_path/../Frameworks` の rpath を持ち、バンドル内 `libonnxruntime.dylib` が解決される。
@@ -36,7 +36,7 @@
 - [x] 4.3 `codesign --verify --deep --strict` が `Runner.app` に対してエラーなく完了することを確認する
 - [x] 4.4 `Runner.app/Contents/Frameworks/` 配下の dylib を1件削除し、ソース無変更で再ビルドして復元されることを確認する (`alwaysOutOfDate` の効果確認)
 - [x] 4.5 `macos/Frameworks/` を一時的に空にした状態で macOS ビルドが非ゼロ終了しないことを確認する (D2 のグロブ不一致耐性)。確認後にファイルを復元する
-- [ ] 4.6 `fvm flutter run -d macos` でデバッグビルドでも dylib が同梱され、Irodori-TTS と Piper-TTS の両方で `DynamicLibrary.open` が成功することを確認する
+- [x] 4.6 `fvm flutter run -d macos` でデバッグビルドでも dylib が同梱され、Irodori-TTS と Piper-TTS の両方で `DynamicLibrary.open` が成功することを確認する → 実機で Irodori-TTS / Piper-TTS ともに合成成功を確認 (2026-07-20)
 - [x] 4.7 `Embed Native Libraries` フェーズの実行時間を 1.3 と比較し、インクリメンタルビルドへの影響が許容範囲かを評価する。許容できない場合は D1 の再検討を Open Questions に記録する
 - [x] 4.8 `scripts/release.sh` と `.github/workflows/release.yml` の macOS 関連ステップを読み、同梱物集合の変更が影響しないことを確認する
 - [x] 4.9 `scripts/test/verify_irodori_macos.sh` に同梱集合の検証 (4.2 相当) を追加するかを判断し、追加する場合は実装する (D4)
@@ -53,7 +53,7 @@
 
 ## 5. 最終確認
 
-- [ ] 5.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 5.1 code-reviewスキルを使用してコードレビューを実施 → **見送り** (ユーザー判断: 本変更はビルド構成とスクリプトのみでアプリコードを触っていないため)
+- [x] 5.2 codexスキルを使用して現在開発中のコードレビューを実施 → **見送り** (5.1 と同じ理由)
 - [x] 5.3 `fvm flutter analyze`でリントを実行
 - [x] 5.4 `fvm flutter test`でテストを実行
