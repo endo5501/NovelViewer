@@ -5,18 +5,26 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/piper_model_download_service.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_readiness_provider.dart';
+import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:path/path.dart' as p;
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// The completion marker is only consulted by the settings screen, so a user
 /// who presses play without opening settings still loads an incompatible model
 /// and only finds out when synthesis fails deep in the native runner. These
 /// tests pin the readiness check the synthesis entry points consult instead.
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late Directory tempDir;
   late String piperDir;
+  late SharedPreferences prefs;
 
-  setUp(() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
     tempDir = Directory.systemTemp.createTempSync('tts_readiness_test_');
     piperDir = p.join(tempDir.path, 'models', 'piper');
     Directory(piperDir).createSync(recursive: true);
@@ -40,6 +48,10 @@ void main() {
   TtsModelReadiness readinessFor(TtsEngineType engine) {
     final container = ProviderContainer(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        // qwen3 and Irodori derive their model directories from the library
+        // path; pointing it at the empty temp tree keeps them "not downloaded".
+        libraryPathProvider.overrideWithValue(p.join(tempDir.path, 'library')),
         piperModelDirProvider.overrideWithValue(piperDir),
         piperDicDirProvider
             .overrideWithValue(p.join(piperDir, 'open_jtalk_dic')),

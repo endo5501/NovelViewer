@@ -892,6 +892,12 @@ abstract class AppLocalizations {
   /// **'音声の生成に失敗しました'**
   String get textViewer_ttsGenerationFailed;
 
+  /// No description provided for @tts_modelNeedsRedownload.
+  ///
+  /// In ja, this message translates to:
+  /// **'TTSモデルの再ダウンロードが必要です。設定画面から実行してください'**
+  String get tts_modelNeedsRedownload;
+
   /// No description provided for @textViewer_exportError.
   ///
   /// In ja, this message translates to:

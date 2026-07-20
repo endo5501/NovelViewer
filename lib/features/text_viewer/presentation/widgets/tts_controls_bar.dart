@@ -19,6 +19,7 @@ import 'package:novel_viewer/features/tts/providers/tts_audio_state_provider.dar
 import 'package:novel_viewer/features/tts/providers/vacuum_lifecycle_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_export_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_model_readiness_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -124,6 +125,20 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
         selectedFile == null ||
         fileName == null ||
         config.modelDir.isEmpty) {
+      return;
+    }
+
+    // Stop before loading a model that is missing or predates the current
+    // pinned revision: loading it succeeds and synthesis then fails inside the
+    // native runner, where the cause is unrecoverable for the user.
+    if (ref.read(ttsModelReadinessProvider(engineType)) !=
+        TtsModelReadiness.ready) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.tts_modelNeedsRedownload),
+        ),
+      );
       return;
     }
 

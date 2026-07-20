@@ -443,6 +443,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get textViewer_ttsGenerationFailed => '语音生成失败';
 
   @override
+  String get tts_modelNeedsRedownload => '需要重新下载 TTS 模型。请在设置中执行下载。';
+
+  @override
   String textViewer_exportError(String message) {
     return '导出错误：$message';
   }

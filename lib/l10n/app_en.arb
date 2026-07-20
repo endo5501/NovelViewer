@@ -138,6 +138,7 @@
   "textViewer_deleteAudioConfirmation": "Delete audio data?",
   "textViewer_exportCompleted": "MP3 export completed",
   "textViewer_ttsGenerationFailed": "Audio generation failed",
+  "tts_modelNeedsRedownload": "The TTS model needs to be downloaded again. Run the download from Settings.",
   "textViewer_exportError": "Export error: {message}",
   "textViewer_generationProgressFormat": "{current}/{total} sentences",
   "textViewer_editTtsTooltip": "Edit TTS",

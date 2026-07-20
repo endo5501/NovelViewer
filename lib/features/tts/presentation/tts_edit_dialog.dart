@@ -9,12 +9,14 @@ import '../data/tts_dictionary_repository.dart';
 import 'dictionary_context_menu.dart';
 import '../data/tts_edit_controller.dart';
 import '../data/tts_edit_segment.dart';
+import '../data/tts_engine_type.dart';
 import '../data/tts_isolate.dart';
 import '../domain/tts_engine_config.dart';
 import '../providers/text_segmenter_provider.dart';
 import '../providers/vacuum_lifecycle_provider.dart';
 import '../providers/tts_audio_database_provider.dart';
 import '../providers/tts_edit_providers.dart';
+import '../providers/tts_model_readiness_provider.dart';
 import '../providers/tts_settings_providers.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'tts_dictionary_dialog.dart';
@@ -148,6 +150,22 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     super.dispose();
   }
 
+  /// Blocks generation when the engine's models are missing or predate the
+  /// current pinned revision — loading such a model succeeds and only fails
+  /// later inside the native runner. Returns true when generation may proceed.
+  bool _ensureModelsReady(TtsEngineType engineType) {
+    if (ref.read(ttsModelReadinessProvider(engineType)) ==
+        TtsModelReadiness.ready) {
+      return true;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.tts_modelNeedsRedownload),
+      ),
+    );
+    return false;
+  }
+
   Future<void> _generateSegment(int index) async {
     final controller = _controller;
     if (controller == null) return;
@@ -155,6 +173,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final engineType = ref.read(ttsEngineTypeProvider);
     final config = TtsEngineConfig.resolveFromRef(ref, engineType);
     if (config.modelDir.isEmpty) return;
+    if (!_ensureModelsReady(engineType)) return;
     final voiceService = ref.read(voiceReferenceServiceProvider);
 
     ref
@@ -184,6 +203,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final engineType = ref.read(ttsEngineTypeProvider);
     final config = TtsEngineConfig.resolveFromRef(ref, engineType);
     if (config.modelDir.isEmpty) return;
+    if (!_ensureModelsReady(engineType)) return;
     final voiceService = ref.read(voiceReferenceServiceProvider);
 
     ref

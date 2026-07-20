@@ -13,13 +13,13 @@
 
 ## 2. モデル取得状態の検証 (TDD)
 
-- [ ] 2.1 エンジン種別から取得状態を返すプロバイダのテストを書く (piper: 一致=ready / 旧形式マーカー=stale / 不一致=stale、qwen3・Irodori: 既存の判定に委譲)
-- [ ] 2.2 テストが失敗することを確認し、テストのみをコミットする
-- [ ] 2.3 プロバイダを実装する
-- [ ] 2.4 読み上げ開始 (`tts_controls_bar.dart`) で検証し、stale なら合成を開始せずメッセージを表示する
-- [ ] 2.5 編集画面の生成経路でも同様に検証する
-- [ ] 2.6 l10n に文言を追加する (`app_ja.arb` / `app_en.arb` / `app_zh.arb`)
-- [ ] 2.7 テストが通ることを確認する
+- [x] 2.1 エンジン種別から取得状態を返すプロバイダのテストを書く (piper: 一致=ready / 旧形式マーカー=stale / 不一致=stale、qwen3・Irodori: 既存の判定に委譲)
+- [x] 2.2 テストが失敗することを確認し、テストのみをコミットする (`ttsModelReadinessProvider` 未定義)
+- [x] 2.3 プロバイダを実装する (`lib/features/tts/providers/tts_model_readiness_provider.dart`)
+- [x] 2.4 読み上げ開始 (`tts_controls_bar.dart`) で検証し、stale なら合成を開始せずメッセージを表示する
+- [x] 2.5 編集画面の生成経路でも同様に検証する (単体生成・一括生成の両方)
+- [x] 2.6 l10n に文言を追加する (`app_ja.arb` / `app_en.arb` / `app_zh.arb`)
+- [x] 2.7 テストが通ることを確認する (readiness 6件 + 全体 2430件 pass)
 
 ## 3. 仕様との整合
 

@@ -455,6 +455,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get textViewer_ttsGenerationFailed => 'Audio generation failed';
 
   @override
+  String get tts_modelNeedsRedownload =>
+      'The TTS model needs to be downloaded again. Run the download from Settings.';
+
+  @override
   String textViewer_exportError(String message) {
     return 'Export error: $message';
   }
