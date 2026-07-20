@@ -181,6 +181,26 @@ void main() {
       expect(container.read(ttsEngineTypeProvider), TtsEngineType.piper);
       expect(prefs.getString('tts_engine_type'), 'piper');
     });
+
+    test('returns irodori when persisted', () async {
+      await prefs.setString('tts_engine_type', 'irodori');
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(ttsEngineTypeProvider), TtsEngineType.irodori);
+    });
+
+    test('setEngineType(irodori) persists and updates state', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(ttsEngineTypeProvider.notifier)
+          .setEngineType(TtsEngineType.irodori);
+
+      expect(container.read(ttsEngineTypeProvider), TtsEngineType.irodori);
+      expect(prefs.getString('tts_engine_type'), 'irodori');
+    });
   });
 
   group('piperModelNameProvider', () {
@@ -311,6 +331,98 @@ void main() {
 
       expect(container.read(piperNoiseWProvider), 0.6);
       expect(prefs.getDouble('piper_noise_w'), 0.6);
+    });
+  });
+
+  group('irodoriModelDirProvider', () {
+    test('resolves to models/Irodori-TTS-600M-v3-VoiceDesign', () {
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue('/home/user/NovelViewer'),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(irodoriModelDirProvider),
+        p.join('/home/user', 'models', 'Irodori-TTS-600M-v3-VoiceDesign'),
+      );
+    });
+
+    test('returns empty string when library path is null', () {
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue(null),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(irodoriModelDirProvider), '');
+    });
+  });
+
+  group('irodoriSpeakerGuidanceScaleProvider', () {
+    test('returns 5.0 by default', () {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(irodoriSpeakerGuidanceScaleProvider), 5.0);
+    });
+
+    test('setValue persists and updates state', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(irodoriSpeakerGuidanceScaleProvider.notifier)
+          .setValue(4.2);
+
+      expect(container.read(irodoriSpeakerGuidanceScaleProvider), 4.2);
+      expect(prefs.getDouble('irodori_speaker_guidance_scale'), 4.2);
+    });
+  });
+
+  group('irodoriCaptionGuidanceScaleProvider', () {
+    test('returns 3.0 by default', () {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(irodoriCaptionGuidanceScaleProvider), 3.0);
+    });
+
+    test('setValue persists and updates state', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(irodoriCaptionGuidanceScaleProvider.notifier)
+          .setValue(4.5);
+
+      expect(container.read(irodoriCaptionGuidanceScaleProvider), 4.5);
+      expect(prefs.getDouble('irodori_caption_guidance_scale'), 4.5);
+    });
+  });
+
+  group('irodoriNumInferenceStepsProvider', () {
+    test('returns 40 by default', () {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(irodoriNumInferenceStepsProvider), 40);
+    });
+
+    test('setValue persists and updates state', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(irodoriNumInferenceStepsProvider.notifier)
+          .setValue(20);
+
+      expect(container.read(irodoriNumInferenceStepsProvider), 20);
+      expect(prefs.getInt('irodori_num_inference_steps'), 20);
     });
   });
 }

@@ -40,6 +40,10 @@ class _FakeTtsIsolate implements TtsIsolate {
   bool spawnThrows = false;
   final loadModelCalls = <_LoadModelCall>[];
   final synthesizeRequests = <(String text, String? refWavPath)>[];
+  final synthesizeCaptions = <String?>[];
+  final synthesizeSpeakerGuidance = <double?>[];
+  final synthesizeCaptionGuidance = <double?>[];
+  final synthesizeSteps = <int?>[];
   Completer<void>? synthesizeGate;
   bool blockModelLoad = false;
   bool autoSucceedSynthesis = true;
@@ -48,7 +52,7 @@ class _FakeTtsIsolate implements TtsIsolate {
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
 
   @override
-  int? get debugAbortHandleAddress => null;
+  int? debugAbortHandleAddressFor(TtsEngineType engineType) => null;
 
   @override
   bool get hasWorkerDied => workerDied;
@@ -92,8 +96,19 @@ class _FakeTtsIsolate implements TtsIsolate {
   }
 
   @override
-  void synthesize(String text, {String? refWavPath}) {
+  void synthesize(
+    String text, {
+    String? refWavPath,
+    String? caption,
+    double? speakerGuidanceScale,
+    double? captionGuidanceScale,
+    int? numInferenceSteps,
+  }) {
     synthesizeRequests.add((text, refWavPath));
+    synthesizeCaptions.add(caption);
+    synthesizeSpeakerGuidance.add(speakerGuidanceScale);
+    synthesizeCaptionGuidance.add(captionGuidanceScale);
+    synthesizeSteps.add(numInferenceSteps);
     if (synthesizeGate != null) return;
     if (!autoSucceedSynthesis) return;
     Future.microtask(() {
@@ -219,6 +234,74 @@ void main() {
       expect(isolate.loadModelCalls, hasLength(1),
           reason:
               'changing only synthesis-time fields must not trigger reload');
+      await session.dispose();
+    });
+
+    test('ensureModelLoaded sends loadModel for irodori config', () async {
+      final isolate = _FakeTtsIsolate();
+      final session = TtsSession(isolate: isolate);
+
+      await session.ensureModelLoaded(_irodori());
+
+      expect(isolate.loadModelCalls, hasLength(1));
+      final call = isolate.loadModelCalls.first;
+      expect(call.engineType, TtsEngineType.irodori);
+      expect(call.modelDir, '/i/m');
+      await session.dispose();
+    });
+
+    test('two distinct-but-equivalent Irodori configs reuse the loaded model',
+        () async {
+      final isolate = _FakeTtsIsolate();
+      final session = TtsSession(isolate: isolate);
+
+      // Same modelDir — only synthesis-time fields (refWavPath / guidance /
+      // steps) differ. modelLoadKey is (type, modelDir), so no reload.
+      const a = IrodoriEngineConfig(
+        modelDir: '/i/m',
+        sampleRate: 48000,
+        refWavPath: '/voice/a.wav',
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+      const b = IrodoriEngineConfig(
+        modelDir: '/i/m',
+        sampleRate: 48000,
+        refWavPath: '/voice/b.wav',
+        speakerGuidanceScale: 6.0,
+        captionGuidanceScale: 4.5,
+        numInferenceSteps: 32,
+      );
+
+      await session.ensureModelLoaded(a);
+      await session.ensureModelLoaded(b);
+
+      expect(isolate.loadModelCalls, hasLength(1),
+          reason:
+              'changing only synthesis-time fields must not trigger reload');
+      await session.dispose();
+    });
+
+    test('synthesize forwards caption and guidance/steps to the isolate',
+        () async {
+      final isolate = _FakeTtsIsolate();
+      final session = TtsSession(isolate: isolate);
+      await session.ensureModelLoaded(_irodori());
+
+      await session.synthesize(
+        text: 'こんにちは',
+        refWavPath: '/voice/ref.wav',
+        caption: '落ち着いた大人の女性の声',
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+
+      expect(isolate.synthesizeCaptions.single, '落ち着いた大人の女性の声');
+      expect(isolate.synthesizeSpeakerGuidance.single, 5.0);
+      expect(isolate.synthesizeCaptionGuidance.single, 3.0);
+      expect(isolate.synthesizeSteps.single, 40);
       await session.dispose();
     });
 
@@ -575,6 +658,14 @@ Qwen3EngineConfig _qwen3() => const Qwen3EngineConfig(
       sampleRate: 24000,
       languageId: 2058,
       embeddingCacheDir: '/cache',
+    );
+
+IrodoriEngineConfig _irodori() => const IrodoriEngineConfig(
+      modelDir: '/i/m',
+      sampleRate: 48000,
+      speakerGuidanceScale: 5.0,
+      captionGuidanceScale: 3.0,
+      numInferenceSteps: 40,
     );
 
 PiperEngineConfig _piper() => const PiperEngineConfig(

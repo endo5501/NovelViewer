@@ -1,0 +1,549 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:novel_viewer/features/tts/data/irodori_model_download_service.dart';
+import 'package:path/path.dart' as p;
+
+void main() {
+  late Directory tempDir;
+
+  setUp(() {
+    tempDir = Directory.systemTemp.createTempSync('irodori_model_test_');
+  });
+
+  tearDown(() {
+    if (tempDir.existsSync()) {
+      tempDir.deleteSync(recursive: true);
+    }
+  });
+
+  // A small manifest matching the fake payload bytes the mock HTTP clients
+  // below write (`'fake $fileName'.codeUnits`), injected via the optional
+  // constructor parameter so success-path fixtures stay small instead of
+  // requiring multi-gigabyte fake payloads to satisfy the real, pinned
+  // manifest (IrodoriModelDownloadService.defaultExpectedFileSizes).
+  Map<String, int> fakeContentManifest() => {
+        'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors':
+            'fake model.safetensors'.length,
+        'Irodori-TTS-600M-v3-VoiceDesign/model_config.json':
+            'fake model_config.json'.length,
+        'llm-jp-3-150m/tokenizer.json': 'fake tokenizer.json'.length,
+        'Semantic-DACVAE-Japanese-32dim/weights.safetensors':
+            'fake weights.safetensors'.length,
+      };
+
+  Map<String, int> uniformSizeManifest(int size) => {
+        'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': size,
+        'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': size,
+        'llm-jp-3-150m/tokenizer.json': size,
+        'Semantic-DACVAE-Japanese-32dim/weights.safetensors': size,
+      };
+
+  group('downloadModels', () {
+    test(
+        'downloads all 4 required assets preserving the sibling directory '
+        'layout audio.cpp expects', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final requestedUrls = <String>[];
+
+      final mockClient = MockClient.streaming((request, _) async {
+        requestedUrls.add(request.url.toString());
+        final bytes = 'fake ${request.url.pathSegments.last}'.codeUnits;
+        return http.StreamedResponse(
+          Stream.value(bytes),
+          200,
+          contentLength: bytes.length,
+        );
+      });
+
+      final service = IrodoriModelDownloadService(
+        client: mockClient,
+        expectedFileSizes: fakeContentManifest(),
+      );
+      await service.downloadModels(modelsDir);
+
+      expect(
+        requestedUrls,
+        containsAll([
+          'https://huggingface.co/endo5501/audio.cpp/resolve/main/'
+              'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors',
+          'https://huggingface.co/endo5501/audio.cpp/resolve/main/'
+              'Irodori-TTS-600M-v3-VoiceDesign/model_config.json',
+          'https://huggingface.co/endo5501/audio.cpp/resolve/main/'
+              'llm-jp-3-150m/tokenizer.json',
+          'https://huggingface.co/endo5501/audio.cpp/resolve/main/'
+              'Semantic-DACVAE-Japanese-32dim/weights.safetensors',
+        ]),
+      );
+
+      expect(
+        File(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign',
+                'model.safetensors'))
+            .existsSync(),
+        isTrue,
+      );
+      expect(
+        File(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign',
+                'model_config.json'))
+            .existsSync(),
+        isTrue,
+      );
+      // Sibling directories, NOT nested under the 600M model dir: audio.cpp
+      // resolves them via `../llm-jp-3-150m` / `../Semantic-DACVAE-Japanese-32dim`
+      // relative to the 600M model dir.
+      expect(
+        File(p.join(modelsDir, 'llm-jp-3-150m', 'tokenizer.json'))
+            .existsSync(),
+        isTrue,
+      );
+      expect(
+        File(p.join(
+                modelsDir, 'Semantic-DACVAE-Japanese-32dim', 'weights.safetensors'))
+            .existsSync(),
+        isTrue,
+      );
+    });
+
+    test('reports per-file progress as received/total bytes', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final progressReports = <(String, double?)>[];
+
+      final mockClient = MockClient.streaming((request, _) async {
+        final bytes = List.filled(100, 0);
+        return http.StreamedResponse(
+          Stream.value(bytes),
+          200,
+          contentLength: 100,
+        );
+      });
+
+      final service = IrodoriModelDownloadService(
+        client: mockClient,
+        expectedFileSizes: uniformSizeManifest(100),
+      );
+      await service.downloadModels(
+        modelsDir,
+        onProgress: (fileName, progress) {
+          progressReports.add((fileName, progress));
+        },
+      );
+
+      expect(
+        progressReports.any((r) => r.$1 == 'model.safetensors'),
+        isTrue,
+      );
+      expect(
+        progressReports.any((r) => r.$1 == 'tokenizer.json'),
+        isTrue,
+      );
+      final modelProgress =
+          progressReports.where((r) => r.$1 == 'model.safetensors').last;
+      expect(modelProgress.$2, 1.0);
+    });
+
+    test('creates the models directory and sibling subdirectories if missing',
+        () async {
+      final modelsDir = p.join(tempDir.path, 'new_models');
+      expect(Directory(modelsDir).existsSync(), isFalse);
+
+      final mockClient = MockClient.streaming((request, _) async {
+        return http.StreamedResponse(
+          Stream.value([1, 2, 3]),
+          200,
+          contentLength: 3,
+        );
+      });
+
+      final service = IrodoriModelDownloadService(
+        client: mockClient,
+        expectedFileSizes: uniformSizeManifest(3),
+      );
+      await service.downloadModels(modelsDir);
+
+      expect(Directory(modelsDir).existsSync(), isTrue);
+      expect(service.areModelsDownloaded(modelsDir), isTrue);
+    });
+
+    test('throws and cleans up the partial file on HTTP error', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+
+      final mockClient = MockClient.streaming((request, _) async {
+        return http.StreamedResponse(Stream.value([]), 404);
+      });
+
+      final service = IrodoriModelDownloadService(client: mockClient);
+      await expectLater(
+        service.downloadModels(modelsDir),
+        throwsA(isA<HttpException>()),
+      );
+
+      expect(
+        File(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign',
+                'model.safetensors'))
+            .existsSync(),
+        isFalse,
+      );
+      expect(
+        File(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign',
+                'model.safetensors.part'))
+            .existsSync(),
+        isFalse,
+      );
+    });
+
+    test(
+        'retry after a mid-download failure skips already-complete files '
+        '(local size matches the expected-size manifest, no network '
+        'request) and only re-fetches the rest', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final manifest = fakeContentManifest();
+
+      // Pre-populate the first two files as if a previous attempt completed
+      // them before failing on the third. Their local size exactly matches
+      // the manifest entry for the manifest-based skip check to accept them
+      // without any network request.
+      final modelDir =
+          Directory(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign'))
+            ..createSync(recursive: true);
+      File(p.join(modelDir.path, 'model.safetensors')).writeAsStringSync(
+        'x' *
+            manifest[
+                'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors']!,
+      );
+      File(p.join(modelDir.path, 'model_config.json')).writeAsStringSync(
+        'x' *
+            manifest[
+                'Irodori-TTS-600M-v3-VoiceDesign/model_config.json']!,
+      );
+
+      final requests = <String>[];
+
+      final mockClient = MockClient.streaming((request, _) async {
+        expect(request.method, 'GET');
+        requests.add(request.url.toString());
+        final fileName = request.url.pathSegments.last;
+        final bytes = 'fake $fileName'.codeUnits;
+        return http.StreamedResponse(
+          Stream.value(bytes),
+          200,
+          contentLength: bytes.length,
+        );
+      });
+
+      final service = IrodoriModelDownloadService(
+        client: mockClient,
+        expectedFileSizes: manifest,
+      );
+      await service.downloadModels(modelsDir);
+
+      // The two pre-existing, manifest-size-matching files must not be
+      // re-downloaded.
+      expect(
+        requests.any((u) => u.endsWith('model.safetensors')),
+        isFalse,
+        reason: 'model.safetensors already complete; must be skipped',
+      );
+      expect(
+        requests.any((u) => u.endsWith('model_config.json')),
+        isFalse,
+        reason: 'model_config.json already complete; must be skipped',
+      );
+
+      // The remaining two files must still be fetched.
+      expect(
+        requests.any((u) => u.endsWith('tokenizer.json')),
+        isTrue,
+      );
+      expect(
+        requests.any((u) => u.endsWith('weights.safetensors')),
+        isTrue,
+      );
+
+      // Pre-existing file contents must be untouched (not truncated/rewritten).
+      expect(
+        File(p.join(modelDir.path, 'model.safetensors')).readAsStringSync(),
+        'x' *
+            manifest[
+                'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors']!,
+      );
+
+      expect(service.areModelsDownloaded(modelsDir), isTrue);
+    });
+
+    test(
+        'a file that exists locally but whose size does not match the '
+        'manifest is re-downloaded rather than trusted', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final manifest = fakeContentManifest();
+      final modelDir =
+          Directory(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign'))
+            ..createSync(recursive: true);
+      // File exists locally (e.g. a corrupt-but-complete prior transfer, or
+      // hand-copied) but its size does not match the pinned manifest entry.
+      File(p.join(modelDir.path, 'model.safetensors'))
+          .writeAsStringSync('a' * 10);
+
+      final requests = <String>[];
+      final mockClient = MockClient.streaming((request, _) async {
+        requests.add(request.url.toString());
+        final fileName = request.url.pathSegments.last;
+        final bytes = 'fake $fileName'.codeUnits;
+        return http.StreamedResponse(
+          Stream.value(bytes),
+          200,
+          contentLength: bytes.length,
+        );
+      });
+
+      final service = IrodoriModelDownloadService(
+        client: mockClient,
+        expectedFileSizes: manifest,
+      );
+      await service.downloadModels(modelsDir);
+
+      expect(
+        requests.any((u) => u.endsWith('model.safetensors')),
+        isTrue,
+        reason:
+            'local size does not match the manifest; it must be re-fetched',
+      );
+    });
+
+    test(
+        'throws IrodoriDownloadSizeMismatchException and deletes the file '
+        'when a completed download\'s final size does not match the pinned '
+        'manifest', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+
+      // Use the real (default) manifest so this exercises the pinned sizes
+      // directly, without any injected override. The tiny fake payload can
+      // never match the real, multi-hundred-megabyte pinned size for
+      // model.safetensors, so the very first file is guaranteed to mismatch.
+      final mockClient = MockClient.streaming((request, _) async {
+        final bytes = 'not the real model bytes'.codeUnits;
+        return http.StreamedResponse(
+          Stream.value(bytes),
+          200,
+          contentLength: bytes.length,
+        );
+      });
+
+      final service = IrodoriModelDownloadService(client: mockClient);
+      await expectLater(
+        service.downloadModels(modelsDir),
+        throwsA(isA<IrodoriDownloadSizeMismatchException>()),
+      );
+
+      // The corrupt/mismatched file must not be left behind — a completed
+      // download whose size mismatches the manifest must not self-certify
+      // as downloaded.
+      expect(
+        File(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign',
+                'model.safetensors'))
+            .existsSync(),
+        isFalse,
+      );
+      expect(
+        File(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign',
+                'model.safetensors.part'))
+            .existsSync(),
+        isFalse,
+      );
+      expect(service.areModelsDownloaded(modelsDir), isFalse);
+    });
+  });
+
+  group('areModelsDownloaded', () {
+    Map<String, int> contentSizeManifest() => {
+          'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors':
+              'model'.length,
+          'Irodori-TTS-600M-v3-VoiceDesign/model_config.json':
+              'config'.length,
+          'llm-jp-3-150m/tokenizer.json': 'tokenizer'.length,
+          'Semantic-DACVAE-Japanese-32dim/weights.safetensors':
+              'weights'.length,
+        };
+
+    void writeAllFiles(String modelsDir) {
+      Directory(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign'))
+          .createSync(recursive: true);
+      Directory(p.join(modelsDir, 'llm-jp-3-150m')).createSync();
+      Directory(p.join(modelsDir, 'Semantic-DACVAE-Japanese-32dim'))
+          .createSync();
+      File(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign',
+              'model.safetensors'))
+          .writeAsStringSync('model');
+      File(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign',
+              'model_config.json'))
+          .writeAsStringSync('config');
+      File(p.join(modelsDir, 'llm-jp-3-150m', 'tokenizer.json'))
+          .writeAsStringSync('tokenizer');
+      File(p.join(
+              modelsDir, 'Semantic-DACVAE-Japanese-32dim', 'weights.safetensors'))
+          .writeAsStringSync('weights');
+    }
+
+    test(
+        'returns true when all 4 required files exist with a size matching '
+        'the manifest', () {
+      final modelsDir = p.join(tempDir.path, 'models');
+      writeAllFiles(modelsDir);
+
+      final service = IrodoriModelDownloadService(
+        client: http.Client(),
+        expectedFileSizes: contentSizeManifest(),
+      );
+      expect(service.areModelsDownloaded(modelsDir), isTrue);
+    });
+
+    test('returns false when the models directory does not exist', () {
+      final service = IrodoriModelDownloadService(client: http.Client());
+      expect(
+        service.areModelsDownloaded(p.join(tempDir.path, 'nonexistent')),
+        isFalse,
+      );
+    });
+
+    test('returns false when one of the 4 required files is missing', () {
+      final modelsDir = p.join(tempDir.path, 'models');
+      writeAllFiles(modelsDir);
+      File(p.join(modelsDir, 'llm-jp-3-150m', 'tokenizer.json')).deleteSync();
+
+      final service = IrodoriModelDownloadService(
+        client: http.Client(),
+        expectedFileSizes: contentSizeManifest(),
+      );
+      expect(service.areModelsDownloaded(modelsDir), isFalse);
+    });
+
+    test('returns false when a required file exists but is a partial '
+        '(zero-byte) file', () {
+      final modelsDir = p.join(tempDir.path, 'models');
+      writeAllFiles(modelsDir);
+      File(p.join(
+              modelsDir, 'Semantic-DACVAE-Japanese-32dim', 'weights.safetensors'))
+          .writeAsStringSync('');
+
+      final service = IrodoriModelDownloadService(
+        client: http.Client(),
+        expectedFileSizes: contentSizeManifest(),
+      );
+      expect(service.areModelsDownloaded(modelsDir), isFalse);
+    });
+
+    test(
+        'returns false when a required file exists at the right name but '
+        'with a size that does not match the manifest (a corrupt-but-'
+        'complete transfer must not self-certify as downloaded)', () {
+      final modelsDir = p.join(tempDir.path, 'models');
+      writeAllFiles(modelsDir);
+      // Same file name, different (corrupt) contents/size than the manifest
+      // expects.
+      File(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign',
+              'model.safetensors'))
+          .writeAsStringSync('corrupted-but-nonempty-content');
+
+      final service = IrodoriModelDownloadService(
+        client: http.Client(),
+        expectedFileSizes: contentSizeManifest(),
+      );
+      expect(service.areModelsDownloaded(modelsDir), isFalse);
+    });
+  });
+
+  group('cancellation', () {
+    test('cancel() stops an in-flight transfer and does not leave a '
+        'state that reads as downloaded', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final chunkController = StreamController<List<int>>();
+
+      final mockClient = MockClient.streaming((request, _) async {
+        return http.StreamedResponse(
+          chunkController.stream,
+          200,
+          contentLength: 100,
+        );
+      });
+
+      final service = IrodoriModelDownloadService(client: mockClient);
+
+      final future = service.downloadModels(
+        modelsDir,
+        onProgress: (fileName, progress) {
+          // Cancel as soon as the first chunk has been received.
+          if (progress != null && progress > 0) {
+            service.cancel();
+          }
+        },
+      );
+
+      chunkController.add(List.filled(10, 0));
+      await Future<void>.delayed(Duration.zero);
+      chunkController.add(List.filled(10, 0));
+      await chunkController.close();
+
+      await expectLater(
+        future,
+        throwsA(isA<IrodoriDownloadCancelledException>()),
+      );
+
+      // No partial (.part) or final file must remain for the cancelled file.
+      expect(
+        File(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign',
+                'model.safetensors'))
+            .existsSync(),
+        isFalse,
+      );
+      expect(
+        File(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign',
+                'model.safetensors.part'))
+            .existsSync(),
+        isFalse,
+      );
+      expect(service.areModelsDownloaded(modelsDir), isFalse);
+    });
+
+    test(
+        'a cancel issued immediately after downloadModels starts (during '
+        'the skip-check, before any GET) is honored — no GET is ever issued',
+        () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final getRequests = <String>[];
+
+      final mockClient = MockClient.streaming((request, _) async {
+        getRequests.add(request.url.toString());
+        return http.StreamedResponse(
+          Stream.value([1, 2, 3]),
+          200,
+          contentLength: 3,
+        );
+      });
+
+      final service = IrodoriModelDownloadService(client: mockClient);
+      final future = service.downloadModels(modelsDir);
+      // Attach the failure expectation immediately (before any await) so the
+      // future always has a listener by the time it rejects below — otherwise
+      // the test framework's zone guard can flag the rejection as unhandled.
+      final expectation = expectLater(
+        future,
+        throwsA(isA<IrodoriDownloadCancelledException>()),
+      );
+
+      // Cancel synchronously, with no intervening await: since downloadModels
+      // has not yielded control back to us via any completed I/O yet, this is
+      // guaranteed to land before the recheck / skip-check for the first
+      // file, and therefore before any GET could fire.
+      service.cancel();
+
+      await expectation;
+      expect(
+        getRequests,
+        isEmpty,
+        reason: 'an immediate cancel must prevent every GET',
+      );
+    });
+  });
+}

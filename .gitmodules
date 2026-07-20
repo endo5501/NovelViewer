@@ -7,3 +7,6 @@
 [submodule "third_party/piper-plus"]
 	path = third_party/piper-plus
 	url = https://github.com/endo5501/piper-plus.git
+[submodule "third_party/audio.cpp"]
+	path = third_party/audio.cpp
+	url = https://github.com/endo5501/audio.cpp

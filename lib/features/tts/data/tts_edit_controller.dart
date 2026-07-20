@@ -191,12 +191,9 @@ class TtsEditController {
     final entries = dict != null
         ? await dict.getEntriesSortedByLength()
         : null;
-    final fallbackRefWavPath = config is Qwen3EngineConfig
-        ? config.refWavPath
-        : null;
     final refWavPath = TtsRefWavResolver.resolve(
       storedPath: _segments[segmentIndex].refWavPath,
-      fallbackPath: fallbackRefWavPath,
+      fallbackPath: config.synthesisFallbackRefWavPath,
     );
     return _generateSegmentWithEntries(
       segmentIndex: segmentIndex,
@@ -223,7 +220,10 @@ class TtsEditController {
         ? TtsDictionaryRepository.applyDictionaryWithEntries(
             dictEntries, segment.text)
         : segment.text;
-    final result = await _synthesize(synthText, refWavPath);
+    // For Irodori, the segment's memo becomes the caption (design D8); for
+    // qwen3/piper captionFromMemo returns null so the memo never affects
+    // synthesis.
+    final result = await _synthesize(synthText, refWavPath, config, segment);
     if (result == null) return false;
 
     final wavBytes = WavWriter.toBytes(
@@ -278,10 +278,7 @@ class TtsEditController {
         ? await dictRepo.getEntriesSortedByLength()
         : null;
 
-    final globalRefWavPath = switch (config) {
-      Qwen3EngineConfig(:final refWavPath) => refWavPath,
-      PiperEngineConfig() => null,
-    };
+    final globalRefWavPath = config.synthesisFallbackRefWavPath;
 
     for (var idx = 0; idx < ungenerated.length; idx++) {
       if (_cancelled) break;
@@ -451,9 +448,20 @@ class TtsEditController {
   }
 
   Future<SynthesisResultResponse?> _synthesize(
-      String text, String? refWavPath) async {
-    final result =
-        await _session.synthesize(text: text, refWavPath: refWavPath);
+    String text,
+    String? refWavPath,
+    TtsEngineConfig config,
+    TtsEditSegment segment,
+  ) async {
+    final irodoriParams = config.irodoriSynthesisParams;
+    final result = await _session.synthesize(
+      text: text,
+      refWavPath: refWavPath,
+      caption: TtsEngineConfig.captionFromMemo(config, segment.memo),
+      speakerGuidanceScale: irodoriParams?.speakerGuidanceScale,
+      captionGuidanceScale: irodoriParams?.captionGuidanceScale,
+      numInferenceSteps: irodoriParams?.numInferenceSteps,
+    );
     if (result == null) {
       onError?.call('Synthesis failed');
     }

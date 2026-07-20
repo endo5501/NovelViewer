@@ -203,3 +203,68 @@ class PiperNoiseWNotifier extends _SettingDoubleNotifier {
   Future<void> Function(SettingsRepository, double) get _setter =>
       (repo, value) => repo.setPiperNoiseW(value);
 }
+
+// --- Irodori model directory ---
+
+final irodoriModelDirProvider = Provider<String>((ref) {
+  final modelsBaseDir = ref.watch(modelsDirectoryPathProvider);
+  if (modelsBaseDir == null) return '';
+  return p.join(modelsBaseDir, 'Irodori-TTS-600M-v3-VoiceDesign');
+});
+
+// --- Irodori synthesis parameters ---
+
+abstract class _SettingIntNotifier extends Notifier<int> {
+  int Function(SettingsRepository) get _getter;
+  Future<void> Function(SettingsRepository, int) get _setter;
+
+  @override
+  int build() => _getter(ref.watch(settingsRepositoryProvider));
+
+  Future<void> setValue(int value) async {
+    await _setter(ref.read(settingsRepositoryProvider), value);
+    state = value;
+  }
+}
+
+final irodoriSpeakerGuidanceScaleProvider =
+    NotifierProvider<IrodoriSpeakerGuidanceScaleNotifier, double>(
+  IrodoriSpeakerGuidanceScaleNotifier.new,
+);
+
+class IrodoriSpeakerGuidanceScaleNotifier extends _SettingDoubleNotifier {
+  @override
+  double Function(SettingsRepository) get _getter =>
+      (repo) => repo.getIrodoriSpeakerGuidanceScale();
+  @override
+  Future<void> Function(SettingsRepository, double) get _setter =>
+      (repo, value) => repo.setIrodoriSpeakerGuidanceScale(value);
+}
+
+final irodoriCaptionGuidanceScaleProvider =
+    NotifierProvider<IrodoriCaptionGuidanceScaleNotifier, double>(
+  IrodoriCaptionGuidanceScaleNotifier.new,
+);
+
+class IrodoriCaptionGuidanceScaleNotifier extends _SettingDoubleNotifier {
+  @override
+  double Function(SettingsRepository) get _getter =>
+      (repo) => repo.getIrodoriCaptionGuidanceScale();
+  @override
+  Future<void> Function(SettingsRepository, double) get _setter =>
+      (repo, value) => repo.setIrodoriCaptionGuidanceScale(value);
+}
+
+final irodoriNumInferenceStepsProvider =
+    NotifierProvider<IrodoriNumInferenceStepsNotifier, int>(
+  IrodoriNumInferenceStepsNotifier.new,
+);
+
+class IrodoriNumInferenceStepsNotifier extends _SettingIntNotifier {
+  @override
+  int Function(SettingsRepository) get _getter =>
+      (repo) => repo.getIrodoriNumInferenceSteps();
+  @override
+  Future<void> Function(SettingsRepository, int) get _setter =>
+      (repo, value) => repo.setIrodoriNumInferenceSteps(value);
+}

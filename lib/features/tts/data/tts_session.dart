@@ -105,6 +105,14 @@ class TtsSession {
             noiseScale: config.noiseScale,
             noiseW: config.noiseW,
           );
+        case IrodoriEngineConfig():
+          // refWavPath / guidance scales / steps / caption are synthesis-time
+          // parameters (design D8), so only modelDir is needed at load time —
+          // matching modelLoadKey = (type, modelDir).
+          _isolate.loadModel(
+            config.modelDir,
+            engineType: TtsEngineType.irodori,
+          );
       }
       final success = await completer.future.timeout(
         _modelLoadTimeout,
@@ -130,6 +138,10 @@ class TtsSession {
   Future<SynthesisResultResponse?> synthesize({
     required String text,
     String? refWavPath,
+    String? caption,
+    double? speakerGuidanceScale,
+    double? captionGuidanceScale,
+    int? numInferenceSteps,
   }) async {
     if (_disposed) {
       throw StateError('TtsSession.synthesize after dispose()');
@@ -163,7 +175,14 @@ class TtsSession {
     });
 
     try {
-      _isolate.synthesize(text, refWavPath: refWavPath);
+      _isolate.synthesize(
+        text,
+        refWavPath: refWavPath,
+        caption: caption,
+        speakerGuidanceScale: speakerGuidanceScale,
+        captionGuidanceScale: captionGuidanceScale,
+        numInferenceSteps: numInferenceSteps,
+      );
       return await completer.future;
     } finally {
       _activeSynthesisCompleter = null;

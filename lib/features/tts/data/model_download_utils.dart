@@ -7,13 +7,34 @@ typedef DownloadProgressCallback = void Function(
   double? progress,
 );
 
+/// Thrown by [downloadFile] when `shouldCancel` reports true, either before
+/// the GET request fires or partway through the response stream.
+class DownloadCancelledException implements Exception {
+  const DownloadCancelledException();
+
+  @override
+  String toString() => 'DownloadCancelledException: download was cancelled';
+}
+
 Future<void> downloadFile(
   http.Client client,
   String url,
   String filePath,
   String fileName,
-  DownloadProgressCallback? onProgress,
-) async {
+  DownloadProgressCallback? onProgress, {
+  bool Function()? shouldCancel,
+}) async {
+  final tempFile = File('$filePath.part');
+
+  // Checked once before issuing the GET so a cancellation requested just
+  // before this call starts is honored without ever hitting the network.
+  if (shouldCancel != null && shouldCancel()) {
+    if (tempFile.existsSync()) {
+      tempFile.deleteSync();
+    }
+    throw const DownloadCancelledException();
+  }
+
   final request = http.Request('GET', Uri.parse(url));
   final response = await client.send(request);
 
@@ -25,12 +46,14 @@ Future<void> downloadFile(
   }
 
   final contentLength = response.contentLength;
-  final tempFile = File('$filePath.part');
   final sink = tempFile.openWrite();
   var bytesReceived = 0;
 
   try {
     await for (final chunk in response.stream) {
+      if (shouldCancel != null && shouldCancel()) {
+        throw const DownloadCancelledException();
+      }
       sink.add(chunk);
       bytesReceived += chunk.length;
       final progress =

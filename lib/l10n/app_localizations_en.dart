@@ -120,6 +120,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings_piperNoiseW => 'Noise (noiseW)';
 
   @override
+  String get settings_irodoriDownloaded => 'Downloaded';
+
+  @override
+  String get settings_irodoriSpeakerGuidanceScale =>
+      'Speaker guidance strength (speaker_guidance_scale)';
+
+  @override
+  String get settings_irodoriCaptionGuidanceScale =>
+      'Caption guidance strength (caption_guidance_scale)';
+
+  @override
+  String get settings_irodoriNumInferenceSteps =>
+      'Inference steps (num_inference_steps)';
+
+  @override
   String get settings_voiceModelTitle => 'Voice model';
 
   @override
