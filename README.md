@@ -85,15 +85,20 @@ npm i -g @openai/codex
 fvm flutter run -d macos
 
 # macOS向けReleaseビルド
+# 事前に brew install libomp が必要（build_irodori_macos.sh が使用。
+# AppleClangはOpenMPランタイムを同梱しないため）
+brew install libomp
 scripts/build_tts_macos.sh
 scripts/build_lame_macos.sh
 scripts/build_piper_macos.sh
+scripts/build_irodori_macos.sh
 fvm flutter build macos
 
 # Windows向けReleaseビルド
 scripts/build_tts_windows.bat
 scripts/build_lame_windows.bat
 scripts/build_piper_windows.bat
+scripts/build_irodori_windows.bat
 fvm flutter build windows
 ```
 

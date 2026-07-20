@@ -32,8 +32,8 @@ resolve_model_spec(model_dir):
 - `scripts/build_irodori_macos.sh` が Apple Silicon 上でエラーなく完走し、Metal バックエンド有効な `libaudiocpp_ffi.dylib` を生成する
 - 成果物 dylib が実行時に `.app` 外のライブラリへ依存しない (`otool -L` がシステムフレームワークのみ)
 - OpenMP による並列化を有効に保つ
-- `fvm flutter run -d macos` / `fvm flutter build macos` のどちらでも dylib と model spec が `Runner.app` 内に配置される
-- Windows 版と同じ「ライブラリ隣に model_specs を同梱」方式に揃え、プラットフォーム間で挙動を分岐させない
+- `fvm flutter run -d macos` / `fvm flutter build macos` のどちらでも dylib が `Runner.app` 内に配置され、model spec が解決される
+- `Runner.app` の codesign が通る
 
 **Non-Goals:**
 - macOS 版のバイナリ配布、コード署名、公証 (macOS は開発者自身のローカルビルド運用)
@@ -83,13 +83,45 @@ OMP=$(brew --prefix libomp)
 
 CMake の生エラーは原因 (Homebrew の keg-only) を示さない。スクリプト先頭で `brew --prefix libomp` の成否と `libomp.a` の実在を確認し、無ければ `brew install libomp` を案内して終了する。`set -euo pipefail` 下なので `brew --prefix` の失敗を握り潰さない書き方にする。
 
-### D3: model spec は「dylib の隣」に置く (提案の案1)
+### D3: model spec は共有ライブラリにコンパイル時埋め込みする
 
-`resolve_model_spec` の①経路を使う。`Runner.app/Contents/Frameworks/model_specs/irodori_tts.json` に配置する。
+`AUDIOCPP_DEPLOYMENT_BUILD=ON` を指定してビルドする。`third_party/audio.cpp/CMakeLists.txt:20-36` が `model_specs/*.json` を読み取り `generated/model_package_specs.inc` を生成、`engine_runtime` に静的データとして取り込む。`.app` に置くファイルは `libaudiocpp_ffi.dylib` **1つだけ**になる。
 
-**代替案 (②経路 = `<model_dir>/irodori_tts.json`) を却下した理由**: pbxproj への追加が不要になる代わり、モデルディレクトリを用意するたびに手作業で json を置く必要が生じ、Windows (DLL 隣に同梱) と macOS で挙動が分岐する。将来のデバッグコストが上回る。
+`audiocpp_c_api.cpp:280` の `resolve_model_spec` が `std::nullopt` を返した場合、`model_spec_override` は未設定のまま `family_hint = "irodori_tts"` でロードが進み、`model_package.cpp:373-378` の `require_model_package_spec` が埋め込みカタログ (`@builtin`) にフォールバックする。したがって外部ファイルは一切不要。
 
-`Contents/Frameworks/` にコード以外のリソースを置くのは Bundle 規約上は非正規で、`codesign --deep` や公証で問題になりうる。ただし macOS はバイナリ配布しない (Non-Goals) ため顕在化しない。配布を始める場合は再検討する。
+**当初の判断 (dylib 隣に `model_specs/` を同梱) を破棄した理由**
+
+実装中に `fvm flutter build macos` が以下で失敗した。
+
+```
+novel_viewer.app: code object is not signed at all
+In subcomponent: .../Contents/Frameworks/model_specs/irodori_tts.json
+Command CodeSign failed with a nonzero exit code
+```
+
+`Contents/Frameworks/` は署名の封印対象であり、そこに置かれた非コードファイルは「署名されていないコードオブジェクト」と判定される。「macOS はバイナリ配布しないので Bundle 規約違反は顕在化しない」という当初のリスク評価は誤りで、**配布以前にローカルの Release ビルドが通らない**。
+
+**実測による検証結果**
+
+| 項目 | 結果 |
+|---|---|
+| `AUDIOCPP_DEPLOYMENT_BUILD=ON` でのビルド | 終了コード 0 |
+| 生成された `model_package_specs.inc` | 36,973 バイト |
+| dylib 内の `irodori_tts` 文字列 | 64 箇所 (埋め込み確認) |
+
+**検討した代替案**
+
+| 案 | 判断 |
+|---|---|
+| `<model_dir>/irodori_tts.json` (②経路) に置く | 却下。モデルディレクトリを用意するたびに手作業で json を配置する必要が生じる |
+| `Contents/Resources/` に退避する | 却下。dylib 隣ではないため①経路に乗らず、結局②のフォールバック頼みになる。置き場所が増えるだけで実質は上と同じ |
+| `Contents/Frameworks/` に置いたまま署名から除外 | 却下。Frameworks は封印対象で、個別ファイルの除外はできない |
+
+### D3a: Windows 側は本 change では変更しない
+
+Windows は `build_irodori_windows.bat` が DLL 隣に `model_specs/irodori_tts.json` をコピーする方式で既に動作確認済み。macOS だけが埋め込み方式になり、プラットフォーム間で spec の供給経路が分岐する。
+
+動いているものに触らない方を優先し、本 change のスコープ (macOS 対応) に留める。両方を `AUDIOCPP_DEPLOYMENT_BUILD=ON` に揃えれば挙動は完全一致するが、検証済みの Windows ビルドを再検証するコストに見合わない。揃える場合は別 change とする。
 
 ### D4: pbxproj は既存フェーズの拡張にとどめる
 
@@ -119,3 +151,5 @@ shellScript  : model_specs ディレクトリの再帰コピー処理を追加
 **[pbxproj の手編集]** → Xcode GUI 経由ではなくテキスト編集するため、フォーマット崩れでプロジェクトが開けなくなる可能性がある。編集後に `xcodebuild -list -project macos/Runner.xcodeproj` でパース可能性を検証する。
 
 **[arm64 限定]** → 既存 dylib 群も arm64 単独であり、Intel Mac は元々サポート範囲外。本 change で状況は悪化しない。
+
+**[model spec 供給経路のプラットフォーム差]** → D3a のとおり macOS は埋め込み、Windows は DLL 隣のファイル。spec を更新した際に macOS は再ビルドが必要、Windows はファイル差し替えで済む、という差が生じる。`model_specs/irodori_tts.json` は submodule 側の資産であり submodule 更新時は両者とも再ビルドするため、実務上の影響は小さい。

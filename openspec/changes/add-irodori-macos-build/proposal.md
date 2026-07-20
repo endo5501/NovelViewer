@@ -15,7 +15,7 @@ Call Stack: third_party/audio.cpp/CMakeLists.txt:109 (find_package)
 - `scripts/build_irodori_macos.sh` に Homebrew `libomp` の **静的ライブラリ** (`libomp.a`) を指す CMake 引数を追加し、OpenMP を有効に保ったままビルドを成功させる
 - 同スクリプトに `libomp` 未導入時の事前チェックを追加し、`brew install libomp` を案内して早期終了する
 - `macos/Runner.xcodeproj/project.pbxproj` の `Embed Native Libraries` ビルドフェーズに `libaudiocpp_ffi.dylib` を追加 (`inputPaths` / `outputPaths` / `shellScript` の3箇所)
-- 同フェーズで `macos/Frameworks/model_specs/` を `Runner.app/Contents/Frameworks/model_specs/` へコピーする (Windows 版と同じ「ライブラリ隣に同梱」方式に揃える)
+- `AUDIOCPP_DEPLOYMENT_BUILD=ON` を指定し、model spec を共有ライブラリへコンパイル時埋め込みする (`.app` に置くのは dylib 1つだけになる。`Contents/Frameworks/` は codesign の封印対象であり、そこに非コードファイルを置くと署名が失敗するため)
 - `README.md` の macOS ビルド手順に前提条件 (`brew install libomp`) を追記
 - 実機での E2E 確認 (Metal バックエンドで実際に音声合成が成立するか)
 
@@ -24,7 +24,7 @@ Call Stack: third_party/audio.cpp/CMakeLists.txt:109 (find_package)
 ## Capabilities
 
 ### New Capabilities
-- `irodori-macos-build`: macOS 向け `audiocpp_ffi` 共有ライブラリのビルド構成 (Metal バックエンド / libomp 静的リンク / 外部依存ゼロ) と、`Runner.app` バンドルへの dylib・model spec 同梱を規定する
+- `irodori-macos-build`: macOS 向け `audiocpp_ffi` 共有ライブラリのビルド構成 (Metal バックエンド / libomp 静的リンク / model spec 埋め込み / 外部依存ゼロ) と、`Runner.app` バンドルへの dylib 同梱を規定する
 
 ### Modified Capabilities
 <!-- 既存 spec の要件文言は変更しない。irodori-tts-native-engine の macOS シナリオは
@@ -34,7 +34,8 @@ Call Stack: third_party/audio.cpp/CMakeLists.txt:109 (find_package)
 
 **変更ファイル**
 - `scripts/build_irodori_macos.sh` — CMake 引数追加、前提チェック追加
-- `macos/Runner.xcodeproj/project.pbxproj` — `Embed Native Libraries` フェーズ (396-421行付近) の3箇所 + model_specs コピー
+- `macos/Runner.xcodeproj/project.pbxproj` — `Embed Native Libraries` フェーズ (396-421行付近) の3箇所
+- `scripts/test/verify_irodori_macos.sh` — 新規。成果物の検証スクリプト
 - `README.md` — macOS 前提条件の追記
 
 **依存関係**

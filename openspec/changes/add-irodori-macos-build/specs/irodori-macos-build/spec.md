@@ -51,28 +51,47 @@
 - **WHEN** ビルドが完了する
 - **THEN** `macos/Frameworks/` に `default.metallib` が生成されない
 
-### Requirement: 成果物と model spec を macos/Frameworks に配置する
+### Requirement: model spec を共有ライブラリへコンパイル時埋め込みする
 
-`scripts/build_irodori_macos.sh` はビルド成果物 `libaudiocpp_ffi.dylib` を `macos/Frameworks/` へ、`third_party/audio.cpp/model_specs/irodori_tts.json` を `macos/Frameworks/model_specs/` へ配置しなければならない (MUST)。
+`scripts/build_irodori_macos.sh` は `AUDIOCPP_DEPLOYMENT_BUILD=ON` を指定し、`third_party/audio.cpp/model_specs/*.json` を `libaudiocpp_ffi.dylib` へコンパイル時に埋め込まなければならない (MUST)。`.app` バンドル内に model spec を独立したファイルとして配置してはならない (MUST NOT)。これは `Runner.app/Contents/Frameworks/` が codesign の封印対象であり、非コードファイルを置くと署名が失敗するためである。
+
+#### Scenario: spec が dylib に埋め込まれる
+
+- **WHEN** `scripts/build_irodori_macos.sh` が正常終了する
+- **THEN** 生成された `libaudiocpp_ffi.dylib` のバイナリ内に `irodori_tts` の spec 定義が含まれる
+
+#### Scenario: 外部ファイルなしで spec が解決される
+
+- **WHEN** `.app` 内に `model_specs/irodori_tts.json` が存在しない状態で `audiocpp_init` が呼ばれる
+- **THEN** 埋め込みカタログ (`@builtin`) から spec が解決され、初期化が成功する
+
+### Requirement: 成果物を macos/Frameworks に配置する
+
+`scripts/build_irodori_macos.sh` はビルド成果物 `libaudiocpp_ffi.dylib` を `macos/Frameworks/` へ配置しなければならない (MUST)。model spec は埋め込み済みのため、`macos/Frameworks/model_specs/` を作成してはならない (MUST NOT)。
 
 #### Scenario: スクリプト完走後の配置
 
 - **WHEN** `scripts/build_irodori_macos.sh` が正常終了する
-- **THEN** `macos/Frameworks/libaudiocpp_ffi.dylib` と `macos/Frameworks/model_specs/irodori_tts.json` が存在する
+- **THEN** `macos/Frameworks/libaudiocpp_ffi.dylib` が存在し、`macos/Frameworks/model_specs/` は存在しない
 
-### Requirement: Runner.app に dylib と model spec を同梱する
+### Requirement: Runner.app に dylib を同梱する
 
-`macos/Runner.xcodeproj` の `Embed Native Libraries` ビルドフェーズは、既存の4ライブラリに加えて `libaudiocpp_ffi.dylib` を `Runner.app/Contents/Frameworks/` へコピーし、コード署名しなければならない (MUST)。あわせて `macos/Frameworks/model_specs/` を `Runner.app/Contents/Frameworks/model_specs/` へコピーしなければならない (MUST)。これにより `audiocpp_c_api.cpp` の model spec 解決 (dylib と同じディレクトリの `model_specs/irodori_tts.json` を優先) が Windows 版と同一の経路で成立する。
+`macos/Runner.xcodeproj` の `Embed Native Libraries` ビルドフェーズは、既存の4ライブラリに加えて `libaudiocpp_ffi.dylib` を `Runner.app/Contents/Frameworks/` へコピーし、コード署名しなければならない (MUST)。
 
 #### Scenario: リリースビルドでの同梱
 
 - **WHEN** `fvm flutter build macos` を実行する
-- **THEN** `Runner.app/Contents/Frameworks/libaudiocpp_ffi.dylib` と `Runner.app/Contents/Frameworks/model_specs/irodori_tts.json` が存在する
+- **THEN** ビルドが成功し、`Runner.app/Contents/Frameworks/libaudiocpp_ffi.dylib` が存在する
+
+#### Scenario: codesign が成功する
+
+- **WHEN** `fvm flutter build macos` の CodeSign フェーズが実行される
+- **THEN** `code object is not signed at all` エラーが発生せずに署名が完了する
 
 #### Scenario: デバッグ実行での同梱
 
 - **WHEN** `fvm flutter run -d macos` を実行する
-- **THEN** 生成された `Runner.app` にも同じ2ファイルが同梱され、`DynamicLibrary.open('libaudiocpp_ffi.dylib')` が成功する
+- **THEN** 生成された `Runner.app` にも dylib が同梱され、`DynamicLibrary.open('libaudiocpp_ffi.dylib')` が成功する
 
 #### Scenario: dylib 未ビルドでもビルドが壊れない
 
@@ -105,4 +124,4 @@
 #### Scenario: model spec が解決される
 
 - **WHEN** `audiocpp_init` が呼ばれる
-- **THEN** `Runner.app/Contents/Frameworks/model_specs/irodori_tts.json` が model spec として解決され、初期化エラーが発生しない
+- **THEN** dylib に埋め込まれた spec が解決され、`spec not found` 系の初期化エラーが発生しない
