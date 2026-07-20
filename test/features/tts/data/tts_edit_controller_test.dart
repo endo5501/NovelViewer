@@ -579,6 +579,105 @@ void main() {
       });
     });
 
+    group('per-segment reference audio resolution', () {
+      // The stored ref_wav_path is a bare file name; synthesis needs the
+      // absolute path under voices/. generateAllUngenerated resolved it and
+      // generateSegment did not, so picking anything other than "設定値" for a
+      // segment failed with "could not open audio input: Anna.mp3".
+      String resolve(String fileName) => '/voices/$fileName';
+
+      Future<TtsEditController> loadedController(FakeTtsIsolate isolate) async {
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: FakeAudioPlayer(),
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+        await controller.loadSegments(
+          text: '一つ目の文です。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+        return controller;
+      }
+
+      test('resolves a segment reference file name to its full path', () async {
+        final isolate = FakeTtsIsolate();
+        final controller = await loadedController(isolate);
+        await controller.updateSegmentRefWavPath(0, 'Anna.mp3');
+
+        await controller.generateSegment(
+          segmentIndex: 0,
+          config: _qwen3Config(refWavPath: '/voices/Global.wav'),
+          resolveRefWavPath: resolve,
+        );
+
+        expect(isolate.synthesizeRequests.single.$2, '/voices/Anna.mp3');
+      });
+
+      test('single and bulk generation pass the same reference path', () async {
+        final singleIsolate = FakeTtsIsolate();
+        final single = await loadedController(singleIsolate);
+        await single.updateSegmentRefWavPath(0, 'Anna.mp3');
+        await single.generateSegment(
+          segmentIndex: 0,
+          config: _qwen3Config(refWavPath: '/voices/Global.wav'),
+          resolveRefWavPath: resolve,
+        );
+
+        final bulkIsolate = FakeTtsIsolate();
+        final bulk = TtsEditController(
+          ttsIsolate: bulkIsolate,
+          audioPlayer: FakeAudioPlayer(),
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+        await bulk.loadSegments(
+          text: '一つ目の文です。',
+          fileName: 'bulk.txt',
+          sampleRate: 24000,
+        );
+        await bulk.updateSegmentRefWavPath(0, 'Anna.mp3');
+        await bulk.generateAllUngenerated(
+          config: _qwen3Config(refWavPath: '/voices/Global.wav'),
+          resolveRefWavPath: resolve,
+        );
+
+        expect(
+          singleIsolate.synthesizeRequests.single.$2,
+          bulkIsolate.synthesizeRequests.single.$2,
+        );
+      });
+
+      test('an explicit "none" does not fall back to the global setting',
+          () async {
+        final isolate = FakeTtsIsolate();
+        final controller = await loadedController(isolate);
+        await controller.updateSegmentRefWavPath(0, '');
+
+        await controller.generateSegment(
+          segmentIndex: 0,
+          config: _qwen3Config(refWavPath: '/voices/Global.wav'),
+          resolveRefWavPath: resolve,
+        );
+
+        expect(isolate.synthesizeRequests.single.$2, isNull);
+      });
+
+      test('"設定値" uses the resolved global reference path', () async {
+        final isolate = FakeTtsIsolate();
+        final controller = await loadedController(isolate);
+
+        await controller.generateSegment(
+          segmentIndex: 0,
+          config: _qwen3Config(refWavPath: '/voices/Global.wav'),
+          resolveRefWavPath: resolve,
+        );
+
+        expect(isolate.synthesizeRequests.single.$2, '/voices/Global.wav');
+      });
+    });
+
     group('generateSegment', () {
       test('loads model on first generation and generates audio', () async {
         final episodeId = await repository.createEpisode(
