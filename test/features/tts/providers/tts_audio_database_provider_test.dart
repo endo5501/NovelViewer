@@ -6,6 +6,8 @@ import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.
 import 'package:novel_viewer/shared/database/per_folder_db_registry_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../../helpers/db_provider_container.dart';
+
 void main() {
   setUpAll(() {
     sqfliteFfiInit();
@@ -28,7 +30,7 @@ void main() {
   group('ttsAudioDatabaseProvider family', () {
     test('returns the same instance for the same folder path', () {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
+      addDbContainerTearDown(container);
 
       final db1 =
           container.read(ttsAudioDatabaseProvider(tempDir.path));
@@ -43,7 +45,7 @@ void main() {
       addTearDown(() => tempDir2.deleteSync(recursive: true));
 
       final container = ProviderContainer();
-      addTearDown(container.dispose);
+      addDbContainerTearDown(container);
 
       final dbA =
           container.read(ttsAudioDatabaseProvider(tempDir.path));
@@ -55,7 +57,7 @@ void main() {
     test('registry.closeAll releases the handle; a re-read yields a new one',
         () async {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
+      addDbContainerTearDown(container);
 
       final db = container.read(ttsAudioDatabaseProvider(tempDir.path));
       // Force open by accessing the underlying database
@@ -75,26 +77,22 @@ void main() {
       expect(identical(db, db2), isFalse);
     });
 
-    test('container dispose closes all cached databases', () async {
+    test('awaited container disposal releases the file lock on the folder',
+        () async {
       final container = ProviderContainer();
 
       final db = container.read(ttsAudioDatabaseProvider(tempDir.path));
       await db.database; // force open
 
-      container.dispose();
+      await disposeContainerWithDatabases(container);
 
-      // After dispose, the close call should have run on the database.
-      // We verify by checking that re-using the closed DB raises.
-      Object? error;
-      try {
-        await db.database;
-      } catch (e) {
-        error = e;
-      }
-      // Once closed, calling .database returns _database which is null and triggers re-open;
-      // but on a disposed container we just want to assert the file is no longer locked.
-      // Recreate a fresh container/instance to confirm we can reopen.
-      expect(error, isA<Object?>());
+      // Every handle is closed, so the folder holding tts_audio.db can be
+      // removed. On Windows this throws PathAccessException (errno 32) if any
+      // close is still in flight — which is exactly what a bare
+      // `container.dispose()` leaves behind, since Riverpod does not await the
+      // registry's asynchronous onDispose.
+      tempDir.deleteSync(recursive: true);
+      expect(tempDir.existsSync(), isFalse);
     });
   });
 }

@@ -9,6 +9,8 @@ import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../../helpers/db_provider_container.dart';
+
 class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
   final String? _initialValue;
   _TestCurrentDirectoryNotifier(this._initialValue);
@@ -89,7 +91,7 @@ void main() {
           allNovelsProvider.overrideWith((ref) async => []),
         ],
       );
-      addTearDown(container.dispose);
+      addDbContainerTearDown(container);
 
       final contents =
           await container.read(directoryContentsProvider.future);
@@ -114,7 +116,7 @@ void main() {
           allNovelsProvider.overrideWith((ref) async => []),
         ],
       );
-      addTearDown(container.dispose);
+      addDbContainerTearDown(container);
 
       final contents =
           await container.read(directoryContentsProvider.future);
