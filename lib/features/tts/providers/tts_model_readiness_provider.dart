@@ -6,6 +6,7 @@ import '../data/piper_model_download_service.dart';
 import '../data/tts_engine_type.dart';
 import '../data/tts_model_download_service.dart';
 import 'irodori_model_download_providers.dart';
+import 'piper_model_download_providers.dart';
 import 'tts_model_download_providers.dart';
 import 'tts_settings_providers.dart';
 
@@ -37,6 +38,10 @@ final ttsModelReadinessProvider =
   bool downloaded() {
     switch (engineType) {
       case TtsEngineType.piper:
+        // Watched for its transitions, not its value: this is a cached
+        // Provider, so without a dependency on the download state a user who
+        // downloads the models mid-session would stay blocked until restart.
+        ref.watch(piperModelDownloadProvider);
         final modelsDir = ref.watch(piperModelDirProvider);
         final dicDir = ref.watch(piperDicDirProvider);
         if (modelsDir.isEmpty || dicDir.isEmpty) return false;
@@ -47,11 +52,13 @@ final ttsModelReadinessProvider =
             ) &&
             service.isDictionaryDownloaded(dicDir);
       case TtsEngineType.qwen3:
+        ref.watch(ttsModelDownloadProvider);
         final modelsDir = ref.watch(ttsModelDirProvider);
         if (modelsDir.isEmpty) return false;
         return TtsModelDownloadService(client: client)
             .areModelsDownloaded(modelsDir, ref.watch(ttsModelSizeProvider));
       case TtsEngineType.irodori:
+        ref.watch(irodoriModelDownloadProvider);
         final modelsBaseDir = ref.watch(modelsDirectoryPathProvider);
         if (modelsBaseDir == null) return false;
         return IrodoriModelDownloadService(

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/piper_model_download_service.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
+import 'package:novel_viewer/features/tts/providers/piper_model_download_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_readiness_provider.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
@@ -109,6 +110,39 @@ void main() {
       expect(
         readinessFor(TtsEngineType.piper),
         TtsModelReadiness.needsDownload,
+      );
+    });
+  });
+
+  group('recomputation after a download', () {
+    // Readiness is a cached Provider, so without a dependency on the download
+    // state a user who downloads the models from settings stays blocked for
+    // the rest of the session.
+    test('re-evaluates when the download state changes', () {
+      writeMarker('2026-06-13T20:23:12.187142');
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue(p.join(tempDir.path, 'library')),
+          piperModelDirProvider.overrideWithValue(piperDir),
+          piperDicDirProvider
+              .overrideWithValue(p.join(piperDir, 'open_jtalk_dic')),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(ttsModelReadinessProvider(TtsEngineType.piper)),
+        TtsModelReadiness.needsDownload,
+      );
+
+      // What a completed download leaves behind.
+      writeMarker(PiperModelDownloadService.modelRevision);
+      container.invalidate(piperModelDownloadProvider);
+
+      expect(
+        container.read(ttsModelReadinessProvider(TtsEngineType.piper)),
+        TtsModelReadiness.ready,
       );
     });
   });
