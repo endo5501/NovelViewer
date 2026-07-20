@@ -60,6 +60,7 @@ class _FakeTtsIsolate implements TtsIsolate {
   /// 1-based index of the synthesize call that should respond with an engine
   /// error (null audio + error string). null means every call succeeds.
   int? failSynthesisOnCall;
+  String synthesisErrorMessage = 'synthesis failed';
 
   @override
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
@@ -115,7 +116,7 @@ class _FakeTtsIsolate implements TtsIsolate {
         _responseController.add(SynthesisResultResponse(
           audio: null,
           sampleRate: 24000,
-          error: 'synthesis failed',
+          error: synthesisErrorMessage,
         ));
       } else {
         _responseController.add(SynthesisResultResponse(
@@ -1723,6 +1724,88 @@ void main() {
             segments.where((s) => s.audioData != null).toList();
         expect(withAudio, hasLength(2),
             reason: 'the 2 segments generated before the failure are kept');
+      });
+
+      test(
+          'a synthesis failure leaves the native cause readable after start() '
+          'returns, even though start() disposes the session', () async {
+        final isolate = _FakeTtsIsolate()
+          ..failSynthesisOnCall = 1
+          ..synthesisErrorMessage =
+              'unsupported WAV encoding (need PCM16, PCM24, or float32)';
+        final player = _AutoCompleteAudioPlayer();
+        final controller = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        final outcome = await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: '文1。文2。',
+          fileName: 'cause.txt',
+          config: _qwen3Config(modelDir: '/models'),
+        );
+
+        expect(outcome, TtsStartOutcome.failed);
+        expect(controller.lastFailureReason,
+            contains('unsupported WAV encoding'));
+      });
+
+      test('a completed run leaves no failure reason', () async {
+        final isolate = _FakeTtsIsolate();
+        final player = _AutoCompleteAudioPlayer();
+        final controller = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        final outcome = await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: '文1。文2。',
+          fileName: 'clean.txt',
+          config: _qwen3Config(modelDir: '/models'),
+        );
+
+        expect(outcome, TtsStartOutcome.completed);
+        expect(controller.lastFailureReason, isNull);
+      });
+
+      test('a user stop leaves no failure reason', () async {
+        final isolate = _FakeTtsIsolate();
+        final player = _ManualAudioPlayer();
+        final controller = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        final future = controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: '文1。文2。文3。',
+          fileName: 'stop_no_reason.txt',
+          config: _qwen3Config(modelDir: '/models'),
+        );
+
+        await _pumpUntil(() => player.isPlaying);
+        await controller.stop();
+
+        expect(await future, TtsStartOutcome.stopped);
+        expect(controller.lastFailureReason, isNull,
+            reason: 'a stop is not a failure and must not look like one');
       });
 
       test('user stop returns stopped (not failed) and keeps partial status',

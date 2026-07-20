@@ -432,6 +432,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ttsEdit_resetTooltip => 'リセット';
 
   @override
+  String get ttsEdit_synthesisFailed => '合成に失敗しました';
+
+  @override
   String get textViewer_deleteAudioTitle => '音声データの削除';
 
   @override
