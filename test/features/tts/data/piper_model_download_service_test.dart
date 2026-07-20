@@ -57,19 +57,114 @@ void main() {
         );
       }
 
-      // The model and its config must come from the pinned revision.
+      // The model and its config must come from the pinned revision. Deriving
+      // the URLs from `modelRevision` is what ties the marker written on disk
+      // to the bytes actually fetched: if they drifted apart, a stale local
+      // model would still be accepted as current.
       const modelName = PiperModelDownloadService.defaultModelName;
+      const base = 'https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan'
+          '/resolve/${PiperModelDownloadService.modelRevision}';
+      expect(requestedUrls, contains('$base/$modelName.onnx'));
+      expect(requestedUrls, contains('$base/config.json'));
       expect(
-        requestedUrls,
-        contains(
-          'https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan/resolve/eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a/$modelName.onnx',
-        ),
+        PiperModelDownloadService.modelRevision,
+        'eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a',
+        reason: 'The pin must stay on the last runner-compatible revision',
       );
+    });
+  });
+
+  group('completion marker binds the local model to its revision', () {
+    // Installs made before the revision pin still hold the incompatible newer
+    // model, and the old marker (a bare timestamp) made `areModelsDownloaded`
+    // report them as complete forever, so synthesis kept failing with
+    // "Missing Input: speaker_embedding_mask". The marker therefore records
+    // the revision the files came from, and a mismatch triggers a re-download.
+    late Directory modelsDir;
+
+    File markerFile() =>
+        File(p.join(modelsDir.path, '.piper_models_complete'));
+
+    // The models are already on disk in these cases, so any HTTP traffic means
+    // the check under test decided to re-fetch when it should not have.
+    PiperModelDownloadService offlineService() => PiperModelDownloadService(
+          client: MockClient((_) async => throw StateError('no request expected')),
+        );
+
+    bool areModelsDownloaded() => offlineService().areModelsDownloaded(
+          modelsDir.path,
+          PiperModelDownloadService.defaultModelName,
+        );
+
+    void writeModelFiles() {
+      modelsDir.createSync(recursive: true);
+      for (final name in PiperModelDownloadService.localModelFiles(
+        PiperModelDownloadService.defaultModelName,
+      )) {
+        File(p.join(modelsDir.path, name)).writeAsStringSync('dummy');
+      }
+    }
+
+    setUp(() {
+      modelsDir = Directory(p.join(tempDir.path, 'models', 'piper'));
+    });
+
+    test('downloadModels writes the pinned revision into the marker', () async {
+      final mockClient = MockClient.streaming((request, _) async {
+        return http.StreamedResponse(
+          Stream.value([1, 2, 3]),
+          200,
+          contentLength: 3,
+        );
+      });
+
+      final service = PiperModelDownloadService(client: mockClient);
+      await service.downloadModels(
+        modelsDir.path,
+        PiperModelDownloadService.defaultModelName,
+      );
+
+      expect(markerFile().existsSync(), isTrue);
       expect(
-        requestedUrls,
-        contains(
-          'https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan/resolve/eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a/config.json',
+        markerFile().readAsStringSync().trim(),
+        PiperModelDownloadService.modelRevision,
+      );
+    });
+
+    test('areModelsDownloaded is false for a legacy timestamp marker', () {
+      writeModelFiles();
+      markerFile().writeAsStringSync('2026-06-13T20:23:12.187142');
+
+      expect(
+        areModelsDownloaded(),
+        isFalse,
+        reason: 'A pre-pin download must be re-fetched, not trusted',
+      );
+    });
+
+    test('areModelsDownloaded is false when the marker holds another revision',
+        () {
+      writeModelFiles();
+      markerFile().writeAsStringSync('0000000000000000000000000000000000000000');
+
+      expect(areModelsDownloaded(), isFalse);
+    });
+
+    test('areModelsDownloaded is true when the marker matches the pin', () {
+      writeModelFiles();
+      File(p.join(modelsDir.path, '.piper_models_complete'))
+          .writeAsStringSync('${PiperModelDownloadService.modelRevision}\n');
+
+      final service = PiperModelDownloadService(client: MockClient((_) async {
+        throw StateError('no request expected');
+      }));
+
+      expect(
+        service.areModelsDownloaded(
+          modelsDir.path,
+          PiperModelDownloadService.defaultModelName,
         ),
+        isTrue,
       );
     });
   });
