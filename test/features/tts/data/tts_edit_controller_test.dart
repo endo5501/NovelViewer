@@ -325,6 +325,7 @@ void main() {
         );
 
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(),
         );
@@ -357,6 +358,7 @@ void main() {
         );
 
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(),
         );
@@ -399,6 +401,7 @@ void main() {
         );
 
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(),
         );
@@ -447,6 +450,7 @@ void main() {
           sampleRate: 24000,
         );
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(),
         );
@@ -473,6 +477,7 @@ void main() {
           sampleRate: 24000,
         );
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(),
         );
@@ -502,10 +507,12 @@ void main() {
           sampleRate: 24000,
         );
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(),
         );
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 1,
           config: _qwen3Config(),
         );
@@ -702,6 +709,7 @@ void main() {
         );
 
         final result = await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(modelDir: '/models'),
         );
@@ -740,10 +748,12 @@ void main() {
         );
 
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(modelDir: '/models'),
         );
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 1,
           config: _qwen3Config(modelDir: '/models'),
         );
@@ -775,6 +785,7 @@ void main() {
         );
 
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(modelDir: '/models', refWavPath: '/voices/female.wav'),
         );
@@ -811,6 +822,7 @@ void main() {
 
         // Generate with a resolved full path (as the UI would pass)
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(modelDir: '/models', refWavPath: '/Users/someone/voices/voice.wav'),
         );
@@ -849,6 +861,7 @@ void main() {
 
         // Generate with a resolved full path (insertSegment path)
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(modelDir: '/models', refWavPath: '/Users/someone/voices/custom_voice.wav'),
         );
@@ -887,6 +900,7 @@ void main() {
 
         // Generate with null (resolved from '' → no reference audio)
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(modelDir: '/models'),
         );
@@ -929,6 +943,7 @@ void main() {
         expect(controller.segments[0].hasAudio, false);
 
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(modelDir: '/models'),
         );
@@ -978,6 +993,7 @@ void main() {
         };
 
         await controller.generateAllUngenerated(
+          resolveRefWavPath: null,
           config: _qwen3Config(modelDir: '/models'),
         );
 
@@ -1014,6 +1030,7 @@ void main() {
 
         final startedSegments = <int>[];
         await controller.generateAllUngenerated(
+          resolveRefWavPath: null,
           config: _qwen3Config(modelDir: '/models'),
           onSegmentStart: (index) {
             startedSegments.add(index);
@@ -1056,6 +1073,7 @@ void main() {
         );
 
         await controller.generateAllUngenerated(
+          resolveRefWavPath: null,
           config: _qwen3Config(modelDir: '/models'),
         );
 
@@ -1464,6 +1482,7 @@ void main() {
         );
 
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _irodoriConfig(),
         );
@@ -1489,6 +1508,7 @@ void main() {
         await controller.updateSegmentMemo(0, '');
 
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _irodoriConfig(),
         );
@@ -1514,6 +1534,7 @@ void main() {
         await controller.updateSegmentMemo(0, '怒って叫んでいる');
 
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(),
         );
@@ -1540,7 +1561,10 @@ void main() {
         await controller.updateSegmentMemo(0, 'ささやくように');
         await controller.updateSegmentMemo(1, '');
 
-        await controller.generateAllUngenerated(config: _irodoriConfig());
+        await controller.generateAllUngenerated(
+          config: _irodoriConfig(),
+          resolveRefWavPath: null,
+        );
 
         expect(isolate.synthesizeCaptions, hasLength(2));
         expect(isolate.synthesizeCaptions[0], 'ささやくように');
@@ -1653,6 +1677,7 @@ void main() {
         controller.segments[0].refWavPath = '';
 
         await controller.generateAllUngenerated(
+          resolveRefWavPath: null,
           config: _qwen3Config(modelDir: '/models', refWavPath: '/voices/global.wav'),
         );
 
@@ -1728,6 +1753,7 @@ void main() {
         controller.segments[0].refWavPath = 'custom_voice.wav';
 
         await controller.generateAllUngenerated(
+          resolveRefWavPath: null,
           config: _qwen3Config(modelDir: '/models', refWavPath: '/voices/global.wav'),
         );
 
@@ -1988,6 +2014,7 @@ void main() {
 
         // Load model by generating
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(modelDir: '/models'),
         );
@@ -2027,6 +2054,7 @@ void main() {
         );
 
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(modelDir: '/models'),
         );
@@ -2037,6 +2065,7 @@ void main() {
 
         // Generate again after cancel - should use new isolate
         final result = await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 1,
           config: _qwen3Config(modelDir: '/models'),
         );
@@ -2097,6 +2126,7 @@ void main() {
         // Start generation - will block on model loading
         var generateCompleted = false;
         final generateFuture = controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(modelDir: '/models'),
         ).then((result) {
@@ -2145,6 +2175,7 @@ void main() {
 
         // Start generation to trigger spawn
         unawaited(controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(modelDir: '/models'),
         ));
@@ -2188,6 +2219,7 @@ void main() {
         // Start generateAllUngenerated - will block on first synthesize
         var generateCompleted = false;
         final generateFuture = controller.generateAllUngenerated(
+          resolveRefWavPath: null,
           config: _qwen3Config(modelDir: '/models'),
         ).then((_) {
           generateCompleted = true;
@@ -2235,6 +2267,7 @@ void main() {
 
         // Trigger episode creation via a segment operation.
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(sampleRate: 22050),
         );
@@ -2389,6 +2422,7 @@ void main() {
         );
 
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(modelDir: '/models'),
         );
@@ -2544,6 +2578,7 @@ void main() {
 
         // Generate a segment to trigger episode creation with audio
         await controller.generateSegment(
+          resolveRefWavPath: null,
           segmentIndex: 0,
           config: _qwen3Config(modelDir: '/model'),
         );

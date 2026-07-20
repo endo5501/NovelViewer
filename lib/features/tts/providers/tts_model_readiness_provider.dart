@@ -1,74 +1,42 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../settings/providers/settings_providers.dart';
-import '../data/irodori_model_download_service.dart';
-import '../data/piper_model_download_service.dart';
 import '../data/tts_engine_type.dart';
-import '../data/tts_model_download_service.dart';
 import 'irodori_model_download_providers.dart';
 import 'piper_model_download_providers.dart';
 import 'tts_model_download_providers.dart';
-import 'tts_settings_providers.dart';
 
 /// Whether an engine's model files can be loaded as they are on disk.
 enum TtsModelReadiness {
   ready,
 
   /// Missing, incomplete, or superseded by a newer pinned revision. Callers
-  /// must not start synthesis; the user re-downloads from the settings screen.
+  /// must not synthesize; the user re-downloads from the settings screen.
   needsDownload,
 }
 
 /// Single entry point for "are this engine's models usable?".
 ///
-/// The three download services answer that question with different signatures
-/// (`(dir, modelName)`, `(dir, size)`, `(dir)`), so synthesis entry points that
-/// branched per engine would grow a new gap with every engine added. They ask
-/// here instead.
+/// Each engine's download notifier already answers exactly that question — its
+/// `…Completed` state means "the files on disk are complete" both on startup
+/// and after a download — so this reads their states instead of re-running the
+/// three different completeness predicates. When qwen3 and Irodori bind their
+/// markers to a revision the way piper does, this provider needs no change.
 ///
-/// Today only piper can report [TtsModelReadiness.needsDownload] for an
-/// up-to-date-looking install, because only its marker records the revision it
-/// was fetched from. qwen3 and Irodori delegate to their existing completeness
-/// rules; wiring them through the same provider means binding their markers
-/// later needs no change on the synthesis side.
+/// An `…Error` state reports [TtsModelReadiness.needsDownload] even if the
+/// files happen to be complete: a download that just failed is exactly when a
+/// half-written model is most likely, and the user is one retry away.
 final ttsModelReadinessProvider =
     Provider.family<TtsModelReadiness, TtsEngineType>((ref, engineType) {
-  final client = ref.watch(httpClientProvider);
+  final complete = switch (engineType) {
+    TtsEngineType.piper =>
+      ref.watch(piperModelDownloadProvider) is PiperModelDownloadCompleted,
+    TtsEngineType.qwen3 =>
+      ref.watch(ttsModelDownloadProvider) is TtsModelDownloadCompleted,
+    TtsEngineType.irodori =>
+      ref.watch(irodoriModelDownloadProvider) is IrodoriModelDownloadCompleted,
+  };
 
-  bool downloaded() {
-    switch (engineType) {
-      case TtsEngineType.piper:
-        // Watched for its transitions, not its value: this is a cached
-        // Provider, so without a dependency on the download state a user who
-        // downloads the models mid-session would stay blocked until restart.
-        ref.watch(piperModelDownloadProvider);
-        final modelsDir = ref.watch(piperModelDirProvider);
-        final dicDir = ref.watch(piperDicDirProvider);
-        if (modelsDir.isEmpty || dicDir.isEmpty) return false;
-        final service = PiperModelDownloadService(client: client);
-        return service.areModelsDownloaded(
-              modelsDir,
-              ref.watch(piperModelNameProvider),
-            ) &&
-            service.isDictionaryDownloaded(dicDir);
-      case TtsEngineType.qwen3:
-        ref.watch(ttsModelDownloadProvider);
-        final modelsDir = ref.watch(ttsModelDirProvider);
-        if (modelsDir.isEmpty) return false;
-        return TtsModelDownloadService(client: client)
-            .areModelsDownloaded(modelsDir, ref.watch(ttsModelSizeProvider));
-      case TtsEngineType.irodori:
-        ref.watch(irodoriModelDownloadProvider);
-        final modelsBaseDir = ref.watch(modelsDirectoryPathProvider);
-        if (modelsBaseDir == null) return false;
-        return IrodoriModelDownloadService(
-          client: client,
-          expectedFileSizes: ref.watch(irodoriExpectedFileSizesProvider),
-        ).areModelsDownloaded(modelsBaseDir);
-    }
-  }
-
-  return downloaded()
+  return complete
       ? TtsModelReadiness.ready
       : TtsModelReadiness.needsDownload;
 });

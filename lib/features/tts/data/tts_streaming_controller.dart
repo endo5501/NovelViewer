@@ -32,7 +32,14 @@ typedef Reader = T Function<T>(ProviderListenable<T> provider);
 /// completion, a user stop, and a genuine engine failure (F101). A `failed`
 /// outcome is what the UI uses to surface an error to the user; it covers both
 /// a zero-audio failure and a mid-stream failure that kept some audio.
-enum TtsStartOutcome { completed, stopped, failed }
+/// [modelNotReady] means synthesis was required but the engine's models are
+/// missing or predate the current pinned revision. Playback of already
+/// generated audio never reports it: that path loads no model.
+enum TtsStartOutcome { completed, stopped, failed, modelNotReady }
+
+/// How the generation/playback loop ended, before the caller folds in a user
+/// stop and the resulting episode status.
+enum _PlaybackResult { finished, failed, modelNotReady }
 
 class TtsStreamingController {
   static final _log = Logger('tts.streaming');
@@ -72,8 +79,9 @@ class TtsStreamingController {
     required String text,
     required String fileName,
     required TtsEngineConfig config,
+    required bool modelsReady,
+    required String Function(String fileName)? resolveRefWavPath,
     int? startOffset,
-    String Function(String fileName)? resolveRefWavPath,
   }) async {
     _stopped = false;
 
@@ -122,12 +130,13 @@ class TtsStreamingController {
     // (missing timeout / isolate liveness monitoring) is tracked separately as
     // F144 and is out of scope for this change.
     try {
-      final failed = await _startPlayback(
+      final result = await _startPlayback(
         episodeId: episodeId,
         segments: segments,
         dbSegmentMap: dbSegmentMap,
         config: config,
         fallbackRefWavPath: fallbackRefWavPath,
+        modelsReady: modelsReady,
         startOffset: startOffset,
         resolveRefWavPath: resolveRefWavPath,
       );
@@ -142,7 +151,7 @@ class TtsStreamingController {
             episodeId, TtsEpisodeStatus.partial);
         return TtsStartOutcome.stopped;
       }
-      if (failed) {
+      if (result != _PlaybackResult.finished) {
         // Use a COUNT query rather than loading every segment's WAV blob just
         // to test for presence of audio on this (failure) path.
         final hasAudio =
@@ -153,7 +162,9 @@ class TtsStreamingController {
         } else {
           await _repository.deleteEpisode(episodeId);
         }
-        return TtsStartOutcome.failed;
+        return result == _PlaybackResult.modelNotReady
+            ? TtsStartOutcome.modelNotReady
+            : TtsStartOutcome.failed;
       }
       await _repository.updateEpisodeStatus(
           episodeId, TtsEpisodeStatus.completed);
@@ -169,19 +180,19 @@ class TtsStreamingController {
     }
   }
 
-  /// Runs the generation/playback loop. Returns `true` if the loop exited
-  /// because of a genuine engine failure (model-load or synthesis), as opposed
-  /// to a user stop (`_stopped`) or a normal completion.
-  Future<bool> _startPlayback({
+  /// Runs the generation/playback loop. A user stop (`_stopped`) also exits
+  /// early but reports [_PlaybackResult.finished]; the caller distinguishes it.
+  Future<_PlaybackResult> _startPlayback({
     required int episodeId,
     required List<TextSegment> segments,
     required Map<int, TtsSegment> dbSegmentMap,
     required TtsEngineConfig config,
     required String? fallbackRefWavPath,
+    required bool modelsReady,
+    required String Function(String fileName)? resolveRefWavPath,
     int? startOffset,
-    String Function(String fileName)? resolveRefWavPath,
   }) async {
-    var failed = false;
+    var playbackResult = _PlaybackResult.finished;
 
     // Determine starting segment
     int startIndex = 0;
@@ -234,12 +245,20 @@ class TtsStreamingController {
         _read(ttsPlaybackStateProvider.notifier)
             .set(TtsPlaybackState.waiting);
 
+        // Checked here rather than at the caller: playing back segments that
+        // already have audio needs no model, so refusing earlier would block
+        // replaying an episode that is fully generated.
+        if (!modelsReady) {
+          playbackResult = _PlaybackResult.modelNotReady;
+          break;
+        }
+
         if (!await _session.ensureModelLoaded(config)) {
           // `ensureModelLoaded` returns false on a real failure or because an
           // abort (from stop()) completed it. Since stop() sets `_stopped`
           // before calling abort(), a false return while `_stopped` is false
           // is always a genuine model-load failure.
-          if (!_stopped) failed = true;
+          if (!_stopped) playbackResult = _PlaybackResult.failed;
           break;
         }
         if (_stopped) break;
@@ -273,7 +292,7 @@ class TtsStreamingController {
         // with model load, an abort implies `_stopped` is already true, so a
         // null while `_stopped` is false is a genuine synthesis failure.
         if (result == null) {
-          if (!_stopped) failed = true;
+          if (!_stopped) playbackResult = _PlaybackResult.failed;
           break;
         }
         if (_stopped) break;
@@ -340,7 +359,7 @@ class TtsStreamingController {
       _read(ttsHighlightRangeProvider.notifier).set(null);
     }
 
-    return failed;
+    return playbackResult;
   }
 
   Future<void> pause() async {

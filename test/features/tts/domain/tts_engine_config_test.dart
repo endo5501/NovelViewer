@@ -129,8 +129,7 @@ void main() {
 
       expect(a.modelLoadKey, isNot(b.modelLoadKey));
     });
-
- });
+  });
 
   group('synthesisFallbackRefWavPath', () {
     test('Qwen3EngineConfig returns its refWavPath', () {

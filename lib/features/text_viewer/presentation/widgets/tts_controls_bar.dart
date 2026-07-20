@@ -128,19 +128,12 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
       return;
     }
 
-    // Stop before loading a model that is missing or predates the current
-    // pinned revision: loading it succeeds and synthesis then fails inside the
-    // native runner, where the cause is unrecoverable for the user.
-    if (ref.read(ttsModelReadinessProvider(engineType)) !=
-        TtsModelReadiness.ready) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              Text(AppLocalizations.of(context)!.tts_modelNeedsRedownload),
-        ),
-      );
-      return;
-    }
+    // Passed down rather than checked here: this entry point also serves plain
+    // playback, which reads generated audio from the DB and needs no model at
+    // all. The controller refuses only when it actually has to synthesize.
+    final modelsReady =
+        ref.read(ttsModelReadinessProvider(engineType)) ==
+            TtsModelReadiness.ready;
 
     // Use selectedFile.path verbatim so it matches the family key the build
     // watches via `ttsAudioStateProvider(selectedFile.path)`. Building the
@@ -192,6 +185,7 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
         text: widget.content,
         fileName: fileName,
         config: config,
+        modelsReady: modelsReady,
         startOffset: startOffset,
         resolveRefWavPath: voiceService?.resolveVoiceFilePath,
       );
@@ -207,6 +201,14 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
           ref.invalidate(directoryContentsProvider);
         }
       }
+    }
+
+    if (outcome == TtsStartOutcome.modelNotReady && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.tts_modelNeedsRedownload),
+        ),
+      );
     }
 
     // Surface a genuine synthesis/model-load failure to the user (F101). A

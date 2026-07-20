@@ -188,7 +188,7 @@ class TtsEditController {
   Future<bool> generateSegment({
     required int segmentIndex,
     required TtsEngineConfig config,
-    String Function(String fileName)? resolveRefWavPath,
+    required String Function(String fileName)? resolveRefWavPath,
   }) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
     final dict = _dictionaryRepository;
@@ -264,7 +264,7 @@ class TtsEditController {
 
   Future<void> generateAllUngenerated({
     required TtsEngineConfig config,
-    String Function(String fileName)? resolveRefWavPath,
+    required String Function(String fileName)? resolveRefWavPath,
     void Function(int segmentIndex)? onSegmentStart,
   }) async {
     _cancelled = false;

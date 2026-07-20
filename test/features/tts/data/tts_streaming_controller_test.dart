@@ -447,6 +447,8 @@ void main() {
         );
 
         await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
           text: 'こんにちは。',
           fileName: 'reader_inject.txt',
           config: _qwen3Config(),
@@ -484,6 +486,8 @@ void main() {
         );
 
         await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
           text: 'エルリックは勇者だ。',
           fileName: 'ep01.txt',
           config: _qwen3Config(),
@@ -515,6 +519,8 @@ void main() {
         );
 
         await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
           text: 'エルリックは勇者だ。',
           fileName: 'ep01.txt',
           config: _qwen3Config(),
@@ -540,6 +546,8 @@ void main() {
           dictionaryRepository: dictRepository,
         );
         await controller1.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
           text: 'エルリックは勇者だ。',
           fileName: 'ep01.txt',
           config: _qwen3Config(),
@@ -558,6 +566,8 @@ void main() {
           dictionaryRepository: dictRepository,
         );
         await controller2.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
           text: 'エルリックは勇者だ。',
           fileName: 'ep01.txt',
           config: _qwen3Config(),
@@ -581,6 +591,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: '文1。文2。',
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -644,6 +656,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: text,
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -689,6 +703,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: text,
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -740,6 +756,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: newText,
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -769,6 +787,8 @@ void main() {
 
       // Start generation+playback in the background
       final future = controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: '文1。文2。文3。',
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -813,6 +833,8 @@ void main() {
       );
 
       final future = controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: '文1。文2。',
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -850,6 +872,8 @@ void main() {
       );
 
       final future = controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: '文1。文2。',
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -884,6 +908,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: '文1。文2。文3。文4。',
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -910,6 +936,8 @@ void main() {
       );
 
       final future = controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: '文1。',
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -938,6 +966,8 @@ void main() {
       );
 
       final future = controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: '文1。',
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -1011,6 +1041,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: text,
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -1059,6 +1091,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: text,
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -1104,6 +1138,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: text,
         fileName: '0001_テスト.txt',
         config: _irodoriConfig(modelDir: '/models'),
@@ -1142,6 +1178,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: text,
         fileName: '0001_テスト.txt',
         config: _irodoriConfig(modelDir: '/models'),
@@ -1167,6 +1205,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: text,
         fileName: '0001_テスト.txt',
         config: _irodoriConfig(modelDir: '/models'),
@@ -1205,6 +1245,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: text,
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -1245,6 +1287,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: text,
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models', refWavPath: '/voices/global_voice.wav'),
@@ -1290,6 +1334,7 @@ void main() {
       );
 
       await controller.start(
+        modelsReady: true,
         text: text,
         fileName: '0001_テスト.txt',
         config: _qwen3Config(
@@ -1323,6 +1368,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: text,
         fileName: '0001_テスト.txt',
         config: _qwen3Config(
@@ -1390,6 +1437,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: text,
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -1434,6 +1483,8 @@ void main() {
       );
 
       await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: text,
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models', refWavPath: '/voices/global.wav'),
@@ -1459,6 +1510,8 @@ void main() {
       );
 
       final future = controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: '文1。文2。文3。',
         fileName: '0001_テスト.txt',
         config: _qwen3Config(modelDir: '/models'),
@@ -1480,6 +1533,80 @@ void main() {
       expect(progressAfter.total, 0);
     });
 
+    group('model readiness precondition', () {
+      // The play and generate buttons share this entry point, and a fully
+      // generated episode plays straight from the DB without ever loading a
+      // model. Refusing to start on stale models must therefore happen where
+      // the model is actually loaded, not at the button.
+      test('plays existing audio even when the models are not ready', () async {
+        final isolate = _FakeTtsIsolate();
+        final controller = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: isolate,
+          audioPlayer: _AutoCompleteAudioPlayer(),
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        // First pass generates and stores the audio.
+        await controller.start(
+          resolveRefWavPath: null,
+          text: 'こんにちは。',
+          fileName: 'cached.txt',
+          config: _qwen3Config(),
+          modelsReady: true,
+        );
+
+        final replayIsolate = _FakeTtsIsolate();
+        final replay = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: replayIsolate,
+          audioPlayer: _AutoCompleteAudioPlayer(),
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        final outcome = await replay.start(
+          resolveRefWavPath: null,
+          text: 'こんにちは。',
+          fileName: 'cached.txt',
+          config: _qwen3Config(),
+          modelsReady: false,
+        );
+
+        expect(outcome, TtsStartOutcome.completed);
+        expect(replayIsolate.loadModelCalls, isEmpty,
+            reason: 'cached playback must not need the model at all');
+      });
+
+      test('refuses to synthesize when the models are not ready', () async {
+        final isolate = _FakeTtsIsolate();
+        final controller = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: isolate,
+          audioPlayer: _AutoCompleteAudioPlayer(),
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        final outcome = await controller.start(
+          resolveRefWavPath: null,
+          text: 'まだ生成していません。',
+          fileName: 'stale_models.txt',
+          config: _qwen3Config(),
+          modelsReady: false,
+        );
+
+        expect(outcome, TtsStartOutcome.modelNotReady);
+        expect(isolate.loadModelCalls, isEmpty,
+            reason: 'an incompatible model must not reach the native runner');
+        expect(isolate.synthesizeRequests, isEmpty);
+      });
+    });
+
     group('failure handling (F101)', () {
       test(
           'model-load failure with no audio deletes the episode and returns '
@@ -1496,6 +1623,8 @@ void main() {
         );
 
         final outcome = await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
           text: '文1。文2。',
           fileName: 'fail_load.txt',
           config: _qwen3Config(modelDir: '/models'),
@@ -1523,6 +1652,8 @@ void main() {
         );
 
         final outcome = await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
           text: '文1。文2。文3。文4。文5。',
           fileName: 'fail_mid.txt',
           config: _qwen3Config(modelDir: '/models'),
@@ -1554,6 +1685,8 @@ void main() {
         );
 
         final future = controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
           text: '文1。文2。文3。',
           fileName: 'stop.txt',
           config: _qwen3Config(modelDir: '/models'),
@@ -1584,6 +1717,8 @@ void main() {
         );
 
         final outcome = await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
           text: '文1。文2。',
           fileName: 'ok.txt',
           config: _qwen3Config(modelDir: '/models'),
@@ -1611,6 +1746,8 @@ void main() {
       );
 
       final future = controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: 'テスト。',
         fileName: 'drain_test.txt',
         config: _qwen3Config(),
@@ -1648,6 +1785,8 @@ void main() {
       );
 
       final future = controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
         text: 'セグメント一。セグメント二。',
         fileName: 'no_pause_last.txt',
         config: _qwen3Config(),
@@ -1685,6 +1824,8 @@ void main() {
         );
 
         await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
           text: '文1。',
           fileName: 'piper_test.txt',
           config: _piperConfig(
@@ -1720,6 +1861,8 @@ void main() {
         );
 
         await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
           text: '文1。',
           fileName: 'qwen3_test.txt',
           config: _qwen3Config(
