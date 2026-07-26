@@ -7,9 +7,9 @@
 
 ## 2. ダイアログ幅算出のTDD
 
-- [ ] 2.1 `test/features/tts/presentation/tts_edit_dialog_test.dart` を新規作成し、幅算出関数の境界値テストを書く（ウィンドウ幅 3440 → 1400、1720 → 1400、1200 → 1032、900 → 762）
-- [ ] 2.2 テストを実行し、関数が未実装であることによる失敗を確認する
-- [ ] 2.3 失敗するテストをコミットする
+- [x] 2.1 `test/features/tts/presentation/tts_edit_dialog_test.dart` を新規作成し、幅算出関数の境界値テストを書く（ウィンドウ幅 3440 → 1400、1720 → 1400、1200 → 1032、900 → 762）
+- [x] 2.2 テストを実行し、関数が未実装であることによる失敗を確認する
+- [x] 2.3 失敗するテストをコミットする
 - [ ] 2.4 `tts_edit_dialog.dart` に top-level 関数 `ttsEditDialogContentWidth(double windowWidth)` を実装する（`min(1400, windowWidth * 0.9 - 48)`。定数 48 が `AlertDialog` のデフォルト `contentPadding` 左右合計である旨をコメントで残す）
 - [ ] 2.5 テストが通ることを確認する
 
