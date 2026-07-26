@@ -21,6 +21,29 @@ import '../providers/tts_settings_providers.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'tts_dictionary_dialog.dart';
 
+/// Upper bound for the dialog's content width. Beyond this the row grows so
+/// wide that scanning from the text field to the trailing action buttons costs
+/// more than the extra room is worth.
+const double _kTtsEditDialogMaxContentWidth = 1400;
+
+/// Horizontal padding [AlertDialog] puts around its content by default
+/// (`EdgeInsets.fromLTRB(24, 20, 24, 24)`, so 24 on each side). The content
+/// [SizedBox] sits inside it, so the dialog's outer width is content + this.
+/// Subtracting it keeps the whole dialog within 90% of the window.
+const double _kAlertDialogHorizontalPadding = 48;
+
+/// Content width for the TTS edit dialog given the current window width.
+///
+/// Grows with the window up to [_kTtsEditDialogMaxContentWidth] so wide
+/// displays get a roomy memo column, and shrinks below it so the dialog never
+/// runs off a narrow window.
+double ttsEditDialogContentWidth(double windowWidth) {
+  final available = windowWidth * 0.9 - _kAlertDialogHorizontalPadding;
+  return available < _kTtsEditDialogMaxContentWidth
+      ? available
+      : _kTtsEditDialogMaxContentWidth;
+}
+
 class TtsEditDialog extends ConsumerStatefulWidget {
   const TtsEditDialog({
     super.key,

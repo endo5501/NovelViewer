@@ -10,19 +10,19 @@
 - [x] 2.1 `test/features/tts/presentation/tts_edit_dialog_test.dart` を新規作成し、幅算出関数の境界値テストを書く（ウィンドウ幅 3440 → 1400、1720 → 1400、1200 → 1032、900 → 762）
 - [x] 2.2 テストを実行し、関数が未実装であることによる失敗を確認する
 - [x] 2.3 失敗するテストをコミットする
-- [ ] 2.4 `tts_edit_dialog.dart` に top-level 関数 `ttsEditDialogContentWidth(double windowWidth)` を実装する（`min(1400, windowWidth * 0.9 - 48)`。定数 48 が `AlertDialog` のデフォルト `contentPadding` 左右合計である旨をコメントで残す）
-- [ ] 2.5 テストが通ることを確認する
+- [x] 2.4 `tts_edit_dialog.dart` に top-level 関数 `ttsEditDialogContentWidth(double windowWidth)` を実装する（`min(1400, windowWidth * 0.9 - 48)`。定数 48 が `AlertDialog` のデフォルト `contentPadding` 左右合計である旨をコメントで残す）
+- [x] 2.5 テストが通ることを確認する
 
 ## 3. セグメント行レイアウトのTDD
 
-- [ ] 3.1 `test/features/tts/presentation/tts_edit_segment_row_test.dart` を新規作成し、以下を検証するウィジェットテストを書く
+- [x] 3.1 `test/features/tts/presentation/tts_edit_segment_row_test.dart` を新規作成し、以下を検証するウィジェットテストを書く
   - 本文欄とメモ欄がともに可変幅で、幅比が本文 5 : メモ 2 であること
   - 利用可能幅を増やすと本文欄・メモ欄の幅がいずれも増加すること
   - 利用可能幅を減らしたときメモ欄が下限で止まらずに縮むこと
   - メモ欄が1行に収まらない入力で2行に折り返すこと
   - メモが空の行ではメモ欄の高さが1行分のままであること
-- [ ] 3.2 テストを実行し、現在の実装（メモ `SizedBox(width: 100)` / `maxLines` 未指定 / 本文 `flex: 4`）では失敗することを確認する
-- [ ] 3.3 失敗するテストをコミットする
+- [x] 3.2 テストを実行し、現在の実装（メモ `SizedBox(width: 100)` / `maxLines` 未指定 / 本文 `flex: 4`）では失敗することを確認する
+- [x] 3.3 失敗するテストをコミットする
 - [ ] 3.4 `tts_edit_segment_row.dart` を修正する
   - 本文 `Expanded(flex: 4)` → `Expanded(flex: 5)`
   - メモ `SizedBox(width: 100)` → `Expanded(flex: 2)`
