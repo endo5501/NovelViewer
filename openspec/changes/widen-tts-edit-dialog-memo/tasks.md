@@ -44,6 +44,9 @@
 ## 5. 最終確認
 
 - [x] 5.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
+  - 指摘反映: メモ欄の複数行化により Enter が改行になり `onSubmitted` が発火しなくなる回帰を検出。`textInputAction: TextInputAction.done` を指定して既存要件「Enter でメモを永続化」を維持し、リグレッションテストを追加
+  - 指摘反映: 公開ウィジェット `TtsEditSegmentRow` に有限幅の親を要する旨の doc コメントを追加
+  - 見送り: ダイアログ幅1400のクランプを検証する統合テスト（D1の通りフレームワーク挙動であり実測済み。`TtsEditDialog` は pump できないため統合テストは書けない）
 - [x] 5.3 `fvm flutter analyze`でリントを実行
 - [x] 5.4 `fvm flutter test`でテストを実行

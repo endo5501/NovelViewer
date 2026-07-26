@@ -29,6 +29,7 @@ void main() {
     WidgetTester tester, {
     required double rowWidth,
     String? memo,
+    void Function(String? memo)? onMemoEditComplete,
   }) async {
     await tester.binding.setSurfaceSize(Size(rowWidth + 100, 600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -45,7 +46,7 @@ void main() {
                 voiceFiles: const [],
                 onTextEditComplete: (_) {},
                 onRefWavPathChanged: (_) {},
-                onMemoEditComplete: (_) {},
+                onMemoEditComplete: onMemoEditComplete ?? (_) {},
                 onPlay: () {},
                 onGenerate: () {},
                 onReset: () {},
@@ -129,6 +130,42 @@ void main() {
       final overflowingHeight = tester.getSize(findMemoField()).height;
 
       expect(overflowingHeight, wrappedHeight);
+    });
+
+    testWidgets('Enter still commits the memo instead of inserting a newline',
+        (tester) async {
+      // Wrapping the memo made the field multiline, which by default turns
+      // Enter into a newline. The memo feeds the Irodori caption, so Enter must
+      // keep committing the value as it did when the field was single-line.
+      String? committed;
+      var callCount = 0;
+      await pumpRow(
+        tester,
+        rowWidth: 1000,
+        onMemoEditComplete: (memo) {
+          committed = memo;
+          callCount++;
+        },
+      );
+
+      // A multiline field defaults to TextInputAction.newline, which makes
+      // Enter insert a line break and never fire onSubmitted. Declaring `done`
+      // is what keeps Enter committing.
+      expect(
+        tester.widget<TextField>(findMemoField()).textInputAction,
+        TextInputAction.done,
+      );
+
+      await tester.enterText(findMemoField(), 'ゆっくり悲しげに');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(callCount, 1);
+      expect(committed, 'ゆっくり悲しげに');
+      expect(
+        tester.widget<TextField>(findMemoField()).controller!.text,
+        isNot(contains('\n')),
+      );
     });
 
     testWidgets('an empty memo keeps the single-line height', (tester) async {

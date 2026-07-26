@@ -120,6 +120,8 @@ Irodori-TTS 導入後、メモ欄の内容は `TtsEngineConfig.captionFromMemo`�
 
 `minLines: 1, maxLines: 2` とすることで**メモが空の行の高さは現状のまま変わらない**。行が高くなるのは実際に折り返した行だけで、一覧性への影響は限定的である。
 
+さらに `textInputAction: TextInputAction.done` の指定が必要である。`TextField` は `maxLines != 1` のとき `keyboardType` が `TextInputType.multiline` になり、実効の `textInputAction` が `newline` に決まる。この状態では **Enter が改行の挿入になり `onSubmitted` が発火しない**。既存 spec の「Segment memo field」要件は「フォーカスアウトまたは Enter で永続化する」と定めているため、指定を省くと折り返し対応が既存要件を壊す。メモは1文の指示であり改行に意味がないので、`done` を指定して Enter を確定操作のまま保つのが正しい。
+
 ### D4: メモ欄に下限幅を設けない
 
 `ConstrainedBox(minWidth: ...)` による下限は設けない。ウィンドウ幅900px以下ではメモが約19文字分まで縮むが、その状況では本文欄（約329px）も同様に苦しい。片方だけに下限を与えると、狭い画面で本文が不自然に潰れる。**揃って縮む方が挙動として素直**という判断。

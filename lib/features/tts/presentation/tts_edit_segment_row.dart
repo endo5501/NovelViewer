@@ -6,6 +6,11 @@ import '../data/tts_edit_segment.dart';
 import 'dictionary_context_menu.dart';
 import 'tts_dictionary_dialog.dart';
 
+/// One segment of the TTS edit dialog: status, editable text, reference audio,
+/// memo, and the per-segment actions.
+///
+/// The text and memo fields are [Expanded], so this must be given a parent with
+/// a bounded width.
 class TtsEditSegmentRow extends StatefulWidget {
   const TtsEditSegmentRow({
     super.key,
@@ -220,6 +225,11 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
               // make every row taller even when the memo is empty.
               minLines: 1,
               maxLines: 2,
+              // A multiline field otherwise defaults to TextInputAction.newline,
+              // which turns Enter into a line break and stops onSubmitted from
+              // firing. The memo is a one-line caption, so Enter must keep
+              // committing it the way it did before the field could wrap.
+              textInputAction: TextInputAction.done,
               style: const TextStyle(fontSize: 12),
               onSubmitted: (value) =>
                   widget.onMemoEditComplete(value.isEmpty ? null : value),
