@@ -1,9 +1,9 @@
 ## 1. セグメント行ウィジェットの切り出し（挙動不変）
 
-- [ ] 1.1 `lib/features/tts/presentation/tts_edit_segment_row.dart` を新規作成し、`tts_edit_dialog.dart:452-699` の `_TtsEditSegmentRow` / `_TtsEditSegmentRowState` を `TtsEditSegmentRow` / `TtsEditSegmentRowState` として移動する（ロジックは一切変更しない）
-- [ ] 1.2 `tts_edit_dialog.dart` から移動元のクラス定義を削除し、新ファイルを import してビルダー内の参照を `TtsEditSegmentRow` に置き換える
-- [ ] 1.3 `fvm flutter analyze` と `fvm flutter test` を実行し、切り出し前と同じくグリーンであることを確認する
-- [ ] 1.4 切り出しのみをコミットする（レイアウト変更は含めない）
+- [x] 1.1 `lib/features/tts/presentation/tts_edit_segment_row.dart` を新規作成し、`tts_edit_dialog.dart:452-699` の `_TtsEditSegmentRow` / `_TtsEditSegmentRowState` を `TtsEditSegmentRow` / `TtsEditSegmentRowState` として移動する（ロジックは一切変更しない）
+- [x] 1.2 `tts_edit_dialog.dart` から移動元のクラス定義を削除し、新ファイルを import してビルダー内の参照を `TtsEditSegmentRow` に置き換える
+- [x] 1.3 `fvm flutter analyze` と `fvm flutter test` を実行し、切り出し前と同じくグリーンであることを確認する
+- [x] 1.4 切り出しのみをコミットする（レイアウト変更は含めない）
 
 ## 2. ダイアログ幅算出のTDD
 
