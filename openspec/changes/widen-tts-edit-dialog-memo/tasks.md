@@ -23,20 +23,22 @@
   - メモが空の行ではメモ欄の高さが1行分のままであること
 - [x] 3.2 テストを実行し、現在の実装（メモ `SizedBox(width: 100)` / `maxLines` 未指定 / 本文 `flex: 4`）では失敗することを確認する
 - [x] 3.3 失敗するテストをコミットする
-- [ ] 3.4 `tts_edit_segment_row.dart` を修正する
+- [x] 3.4 `tts_edit_segment_row.dart` を修正する
   - 本文 `Expanded(flex: 4)` → `Expanded(flex: 5)`
   - メモ `SizedBox(width: 100)` → `Expanded(flex: 2)`
-  - メモの `TextField` に `maxLines: 2` を追加
-- [ ] 3.5 テストが通ることを確認する
+  - メモの `TextField` に `minLines: 1` と `maxLines: 2` を追加（`maxLines` 単独では高さが2行で固定されるため `minLines` が必須）
+- [x] 3.5 テストが通ることを確認する
 
 ## 4. ダイアログへの適用
 
-- [ ] 4.1 `tts_edit_dialog.dart:331` の `SizedBox(width: 800, height: 600)` を `width: ttsEditDialogContentWidth(MediaQuery.sizeOf(context).width)` に変更する（高さは 600 のまま据え置く）
-- [ ] 4.2 `fvm flutter run` でアプリを起動し、読み上げ編集ダイアログを開いて次を目視確認する
+- [x] 4.1 `tts_edit_dialog.dart:331` の `SizedBox(width: 800, height: 600)` を `width: ttsEditDialogContentWidth(MediaQuery.sizeOf(context).width)` に変更する（高さは 600 のまま据え置く）
+- [ ] 4.2 アプリを起動し、読み上げ編集ダイアログを開いて次を目視確認する（**ユーザ確認待ち**）
   - 通常のウィンドウ幅でダイアログが従来より広く表示されること
   - メモ欄に30文字程度のキャプションを入力して全文が読めること
   - ウィンドウを狭くしてもダイアログが画面外にはみ出さないこと
-- [ ] 4.3 レイアウト変更をコミットする
+
+  実施済み: `fvm flutter build windows --debug` でビルドが通り、起動してウィンドウが立ち上がることを確認。加えてプロダクションの行ウィジェットを実寸で描画し、ウィンドウ幅1720→content 1400（本文777px / メモ311px、20文字が1行に収まる）、ウィンドウ幅1100→content 942（メモ180px、24文字が2行に折り返し、空メモの行は1行のまま）を実測。ダイアログを開くまでのクリック操作は自動化できないため、実画面での最終確認はユーザに委ねる
+- [x] 4.3 レイアウト変更をコミットする
 
 ## 5. 最終確認
 

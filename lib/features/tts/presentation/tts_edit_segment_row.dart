@@ -123,7 +123,7 @@ class TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
           ),
           // Text field
           Expanded(
-            flex: 4,
+            flex: 5,
             child: TextField(
               controller: _textController,
               decoration: InputDecoration(
@@ -201,9 +201,11 @@ class TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
             ),
           ),
           const SizedBox(width: 8),
-          // Memo field
-          SizedBox(
-            width: 100,
+          // Memo field. Doubles as the Irodori caption, so it holds a short
+          // sentence rather than a keyword — it wraps to a second line instead
+          // of scrolling the text out of view.
+          Expanded(
+            flex: 2,
             child: TextField(
               controller: _memoController,
               decoration: InputDecoration(
@@ -213,6 +215,11 @@ class TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
                 border: const OutlineInputBorder(),
                 hintText: AppLocalizations.of(context)!.ttsEdit_memoHint,
               ),
+              // minLines is required for the field to grow from one line: with
+              // maxLines alone the height is pinned at two lines, which would
+              // make every row taller even when the memo is empty.
+              minLines: 1,
+              maxLines: 2,
               style: const TextStyle(fontSize: 12),
               onSubmitted: (value) =>
                   widget.onMemoEditComplete(value.isEmpty ? null : value),

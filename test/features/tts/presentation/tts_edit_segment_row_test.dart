@@ -20,11 +20,17 @@ void main() {
 
   /// Pumps a single row inside a box of [rowWidth] so the flex layout can be
   /// measured at a known available width.
+  ///
+  /// The surface is widened along with the row: the default 800x600 test
+  /// surface would silently clamp any wider row and make different widths
+  /// measure the same.
   Future<void> pumpRow(
     WidgetTester tester, {
     required double rowWidth,
     String? memo,
   }) async {
+    await tester.binding.setSurfaceSize(Size(rowWidth + 100, 600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,

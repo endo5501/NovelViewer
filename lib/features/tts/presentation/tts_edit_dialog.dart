@@ -350,7 +350,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     return AlertDialog(
       title: Text(AppLocalizations.of(context)!.ttsEdit_title),
       content: SizedBox(
-        width: 800,
+        width: ttsEditDialogContentWidth(MediaQuery.sizeOf(context).width),
         height: 600,
         child: _loading
             ? const Center(child: CircularProgressIndicator())
