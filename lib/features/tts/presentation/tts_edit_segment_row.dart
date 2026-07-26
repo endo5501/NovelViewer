@@ -37,10 +37,10 @@ class TtsEditSegmentRow extends StatefulWidget {
   final bool enabled;
 
   @override
-  State<TtsEditSegmentRow> createState() => TtsEditSegmentRowState();
+  State<TtsEditSegmentRow> createState() => _TtsEditSegmentRowState();
 }
 
-class TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
+class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
   late TextEditingController _textController;
   late TextEditingController _memoController;
 

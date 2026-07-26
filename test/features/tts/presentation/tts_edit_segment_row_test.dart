@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/tts_edit_segment.dart';
 import 'package:novel_viewer/features/tts/presentation/tts_edit_segment_row.dart';
-import 'package:novel_viewer/l10n/app_localizations.dart';
+
+import '../../../helpers/localized_material_app.dart';
 
 void main() {
   const originalText = 'セグメントの本文です。';
@@ -32,10 +33,7 @@ void main() {
     await tester.binding.setSurfaceSize(Size(rowWidth + 100, 600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('ja'),
+      LocalizedMaterialApp(
         home: Scaffold(
           body: Center(
             child: SizedBox(

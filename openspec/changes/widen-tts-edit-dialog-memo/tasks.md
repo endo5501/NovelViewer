@@ -5,13 +5,14 @@
 - [x] 1.3 `fvm flutter analyze` と `fvm flutter test` を実行し、切り出し前と同じくグリーンであることを確認する
 - [x] 1.4 切り出しのみをコミットする（レイアウト変更は含めない）
 
-## 2. ダイアログ幅算出のTDD
+## 2. ダイアログ幅算出のTDD（レビューを受けて撤回）
 
-- [x] 2.1 `test/features/tts/presentation/tts_edit_dialog_test.dart` を新規作成し、幅算出関数の境界値テストを書く（ウィンドウ幅 3440 → 1400、1720 → 1400、1200 → 1032、900 → 762）
-- [x] 2.2 テストを実行し、関数が未実装であることによる失敗を確認する
-- [x] 2.3 失敗するテストをコミットする
-- [x] 2.4 `tts_edit_dialog.dart` に top-level 関数 `ttsEditDialogContentWidth(double windowWidth)` を実装する（`min(1400, windowWidth * 0.9 - 48)`。定数 48 が `AlertDialog` のデフォルト `contentPadding` 左右合計である旨をコメントで残す）
-- [x] 2.5 テストが通ることを確認する
+当初は `ttsEditDialogContentWidth(windowWidth) = min(1400, windowWidth * 0.9 - 48)` をTDDで実装した（2.1〜2.5 は一度完了）。しかし最終確認のコードレビューで前提の誤りが判明し、撤回した。
+
+`AlertDialog` は `insetPadding`（左右40px）で既にウィンドウ内に収まり、content の `SizedBox` は親の制約でクランプされる。実測（window 700/900/1200/1720/3440）でオーバーフローが起きないことを確認済み。式が生む差は最大40pxにすぎず、`MediaQuery` 購読・公開関数・`AlertDialog` の内部デフォルトへの依存に見合わなかった。
+
+- [x] 2.1 幅算出を `_kTtsEditDialogMaxContentWidth = 1400` の定数のみに簡素化し、`ttsEditDialogContentWidth` と `test/features/tts/presentation/tts_edit_dialog_test.dart` を削除する
+- [x] 2.2 design.md D1 / D6、spec、proposal を実装に合わせて訂正する
 
 ## 3. セグメント行レイアウトのTDD
 
@@ -31,7 +32,7 @@
 
 ## 4. ダイアログへの適用
 
-- [x] 4.1 `tts_edit_dialog.dart:331` の `SizedBox(width: 800, height: 600)` を `width: ttsEditDialogContentWidth(MediaQuery.sizeOf(context).width)` に変更する（高さは 600 のまま据え置く）
+- [x] 4.1 `tts_edit_dialog.dart:331` の `SizedBox(width: 800, height: 600)` を `width: _kTtsEditDialogMaxContentWidth`（=1400）に変更する（高さは 600 のまま据え置く）
 - [ ] 4.2 アプリを起動し、読み上げ編集ダイアログを開いて次を目視確認する（**ユーザ確認待ち**）
   - 通常のウィンドウ幅でダイアログが従来より広く表示されること
   - メモ欄に30文字程度のキャプションを入力して全文が読めること
@@ -42,7 +43,7 @@
 
 ## 5. 最終確認
 
-- [ ] 5.1 code-reviewスキルを使用してコードレビューを実施
+- [x] 5.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 5.3 `fvm flutter analyze`でリントを実行
-- [ ] 5.4 `fvm flutter test`でテストを実行
+- [x] 5.3 `fvm flutter analyze`でリントを実行
+- [x] 5.4 `fvm flutter test`でテストを実行
