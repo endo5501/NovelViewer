@@ -5,9 +5,17 @@ import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_response_format_exception.dart';
 
 class OllamaClient extends LlmClient {
+  /// Upper bound on generated tokens per call. Valid fact/summary outputs
+  /// measure well under half of this; the cap only cuts off runaway output.
+  static const int maxOutputTokens = 1024;
+
   final String baseUrl;
   final String model;
   final http.Client _httpClient;
+
+  /// Set once a server rejects the `think` parameter, so every later call is
+  /// sent without it (and without a doomed first attempt).
+  bool _thinkRejected = false;
 
   OllamaClient({
     required this.baseUrl,
@@ -40,11 +48,31 @@ class OllamaClient extends LlmClient {
 
   @override
   Future<String> generate(String prompt) async {
-    final json = await _postJson('/api/generate', {
+    // Thinking-capable models spend most of their time on reasoning tokens
+    // that never reach the response, so thinking is disabled on every call.
+    final body = {
       'model': model,
       'prompt': prompt,
       'stream': false,
-    });
+      'options': const {'num_predict': maxOutputTokens},
+    };
+    Map<String, dynamic> json;
+    if (_thinkRejected) {
+      json = await _postJson('/api/generate', body);
+    } else {
+      try {
+        json = await _postJson('/api/generate', {...body, 'think': false});
+      } on _OllamaStatusException catch (e) {
+        // Some Ollama versions reject `think` for non-thinking models with a
+        // 400. Fall back once without it and remember, so later calls are
+        // sent once. Only 400 qualifies: other statuses (e.g. a 404 whose
+        // body echoes a model name containing "thinking") must not silently
+        // disable the optimization.
+        if (e.statusCode != 400 || !e.body.contains('think')) rethrow;
+        _thinkRejected = true;
+        json = await _postJson('/api/generate', body);
+      }
+    }
     final response = json['response'];
     if (response is! String) {
       throw LlmResponseFormatException(
@@ -87,10 +115,20 @@ class OllamaClient extends LlmClient {
   static String _decodeOk(http.Response response) {
     final body = utf8.decode(response.bodyBytes, allowMalformed: true);
     if (response.statusCode != 200) {
-      throw Exception(
-        'Ollama API error: ${response.statusCode} $body',
-      );
+      throw _OllamaStatusException(response.statusCode, body);
     }
     return body;
   }
+}
+
+/// Non-200 response from the Ollama API, keeping the error body inspectable
+/// so `generate` can detect a rejected `think` parameter.
+class _OllamaStatusException implements Exception {
+  final int statusCode;
+  final String body;
+
+  _OllamaStatusException(this.statusCode, this.body);
+
+  @override
+  String toString() => 'Ollama API error: $statusCode $body';
 }
