@@ -50,13 +50,13 @@
   - `cursorIndex` が 0 へ戻ったとき、一覧が先頭までスクロールすること
 - [x] 5.2 テストを実行し、現在の実装（1章で切り出した挙動不変の状態）では失敗することを確認する（`No named parameter with the name 'isPlaying'`）
 - [x] 5.3 失敗するテストをコミットする
-- [ ] 5.4 `tts_edit_segment_list.dart` を実装する
+- [x] 5.4 `tts_edit_segment_list.dart` を実装する
   - `cursorIndex` / `isPlaying` / `onCursorChanged` を受け取る
   - `isPlaying` のとき行からの `onCursorRequested` を握り潰す
   - 行ごとの `GlobalKey` を `Map<int, GlobalKey>` で保持する（ヘッド行に1つの `GlobalKey` を付け替える実装は要素の再親化を招くため採らない。design D7 参照）
   - `didUpdateWidget` で `cursorIndex` の変化を検出し、フレーム後に `Scrollable.ensureVisible` を呼ぶ。前進時は `keepVisibleAtEnd`、後退時は `keepVisibleAtStart` を指定して、対象が表示領域内なら動かないようにする
   - 対象が 0 かつ `currentContext` が null の場合は `ScrollController.animateTo(minScrollExtent)` で先頭へ戻す
-- [ ] 5.5 テストが通ることを確認する
+- [x] 5.5 テストが通ることを確認する
 
 ## 6. ダイアログへの配線とツールバー
 

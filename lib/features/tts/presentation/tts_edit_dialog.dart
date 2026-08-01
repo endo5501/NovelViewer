@@ -355,7 +355,10 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
                       segments: segments,
                       isGenerating: isGenerating,
                       generatingIndex: generatingIndex,
-                      playbackIndex: isPlaying ? cursorIndex : null,
+                      isPlaying: isPlaying,
+                      cursorIndex: cursorIndex,
+                      onCursorChanged: (index) =>
+                          ref.read(ttsEditCursorIndexProvider.notifier).set(index),
                       voiceFiles: _voiceFiles,
                       dictRepository: _dictRepository,
                       onTextEditComplete: _onTextEditComplete,

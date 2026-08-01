@@ -61,11 +61,33 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Walks the playhead from the first row up to [upTo] one segment at a time,
+  /// the way playback advances it. A direct jump would be a different case:
+  /// the target row would be too far off-screen for the list to have built it.
+  Future<void> playThrough(
+    WidgetTester tester, {
+    required int count,
+    required int upTo,
+  }) async {
+    for (var i = 0; i <= upTo; i++) {
+      await pumpList(tester, count: count, cursorIndex: i);
+    }
+  }
+
   Finder findRow(int index) => find.byWidgetPredicate(
       (w) => w is TtsEditSegmentRow && w.segment.segmentIndex == index);
 
-  double scrollOffset(WidgetTester tester) =>
-      tester.state<ScrollableState>(find.byType(Scrollable)).position.pixels;
+  // Every TextField carries a Scrollable of its own, so the list's has to be
+  // picked out: it is the outermost, and finders walk depth-first.
+  double scrollOffset(WidgetTester tester) => tester
+      .state<ScrollableState>(find
+          .descendant(
+            of: find.byType(TtsEditSegmentList),
+            matching: find.byType(Scrollable),
+          )
+          .first)
+      .position
+      .pixels;
 
   /// Whether row [index] is built and lies entirely inside the viewport.
   bool rowIsVisible(WidgetTester tester, int index) {
@@ -156,7 +178,7 @@ void main() {
 
     testWidgets('scrolls back when the playhead moves above the viewport',
         (tester) async {
-      await pumpList(tester, count: 30, cursorIndex: 12);
+      await playThrough(tester, count: 30, upTo: 12);
       final scrolledDown = scrollOffset(tester);
       expect(scrolledDown, greaterThan(0));
 
@@ -168,8 +190,11 @@ void main() {
 
     testWidgets('returns to the top when the playhead resets to the first row',
         (tester) async {
-      await pumpList(tester, count: 30, cursorIndex: 12);
+      // The reset happens when playback runs off the end, so the first row is
+      // by then far above the viewport and no longer built.
+      await playThrough(tester, count: 30, upTo: 12);
       expect(scrollOffset(tester), greaterThan(0));
+      expect(findRow(0).evaluate(), isEmpty);
 
       await pumpList(tester, count: 30, cursorIndex: 0);
 

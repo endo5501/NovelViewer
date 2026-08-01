@@ -6,16 +6,20 @@ import 'tts_edit_segment_row.dart';
 
 /// The scrollable segment list of the TTS edit dialog.
 ///
+/// Owns the presentation side of the playhead: it decides whether a row's
+/// request to take it is honoured, and keeps the row holding it in view.
+///
 /// Takes plain data and callbacks rather than reading providers, so it can be
 /// pumped on its own — the dialog around it grabs a real database, a real TTS
 /// isolate and a real audio player in `initState` and cannot.
-class TtsEditSegmentList extends StatelessWidget {
+class TtsEditSegmentList extends StatefulWidget {
   const TtsEditSegmentList({
     super.key,
     required this.segments,
     required this.isGenerating,
     required this.generatingIndex,
-    required this.playbackIndex,
+    required this.isPlaying,
+    required this.cursorIndex,
     required this.voiceFiles,
     required this.onTextEditComplete,
     required this.onRefWavPathChanged,
@@ -23,6 +27,7 @@ class TtsEditSegmentList extends StatelessWidget {
     required this.onPlay,
     required this.onGenerate,
     required this.onReset,
+    required this.onCursorChanged,
     this.dictRepository,
   });
 
@@ -34,8 +39,11 @@ class TtsEditSegmentList extends StatelessWidget {
   /// Index of the segment being generated, or null when none is.
   final int? generatingIndex;
 
-  /// Index of the segment being played, or null when nothing is playing.
-  final int? playbackIndex;
+  /// True while preview playback is running.
+  final bool isPlaying;
+
+  /// The segment the next playback starts from.
+  final int cursorIndex;
 
   final List<String> voiceFiles;
   final TtsDictionaryRepository? dictRepository;
@@ -46,28 +54,95 @@ class TtsEditSegmentList extends StatelessWidget {
   final void Function(int index) onPlay;
   final void Function(int index) onGenerate;
   final void Function(int index) onReset;
+  final void Function(int index) onCursorChanged;
+
+  @override
+  State<TtsEditSegmentList> createState() => _TtsEditSegmentListState();
+}
+
+class _TtsEditSegmentListState extends State<TtsEditSegmentList> {
+  final _scrollController = ScrollController();
+
+  /// One key per index, kept for the list's lifetime. Moving a single key onto
+  /// whichever row holds the playhead would reparent that element and drag the
+  /// row's text controllers along with it.
+  final _rowKeys = <int, GlobalKey>{};
+
+  @override
+  void didUpdateWidget(TtsEditSegmentList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.cursorIndex != oldWidget.cursorIndex) {
+      _revealCursor(movingForward: widget.cursorIndex > oldWidget.cursorIndex);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Brings the playhead row into view, and only then — a row already on screen
+  /// stays where it is, so a user reading elsewhere during playback is not
+  /// yanked back every segment.
+  void _revealCursor({required bool movingForward}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final context = _rowKeys[widget.cursorIndex]?.currentContext;
+      if (context == null) {
+        // The row is too far outside the viewport for ListView to have built
+        // it, so there is no element to reveal. Returning to the first segment
+        // is the one such jump the list can serve, and its target is the top.
+        if (widget.cursorIndex == 0 && _scrollController.hasClients) {
+          _scrollController.jumpTo(
+            _scrollController.position.minScrollExtent,
+          );
+        }
+        return;
+      }
+
+      // These two policies clamp the scroll to one direction, which is what
+      // makes an already-visible row a no-op: the computed target equals the
+      // current offset, and ensureVisible does nothing.
+      Scrollable.ensureVisible(
+        context,
+        alignmentPolicy: movingForward
+            ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
+            : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      itemCount: segments.length,
+      controller: _scrollController,
+      itemCount: widget.segments.length,
       itemBuilder: (context, index) {
-        return TtsEditSegmentRow(
-          segment: segments[index],
-          isGenerating: isGenerating && generatingIndex == index,
-          isPlaying: playbackIndex == index,
-          voiceFiles: voiceFiles,
-          onTextEditComplete: (text) => onTextEditComplete(index, text),
-          onRefWavPathChanged: (value) => onRefWavPathChanged(index, value),
-          onMemoEditComplete: (memo) => onMemoEditComplete(index, memo),
-          onPlay: () => onPlay(index),
-          onGenerate: () => onGenerate(index),
-          onReset: () => onReset(index),
-          // Wired up when the list starts owning the playhead.
-          isCursor: false,
-          onCursorRequested: () {},
-          enabled: !isGenerating,
-          dictRepository: dictRepository,
+        return KeyedSubtree(
+          key: _rowKeys.putIfAbsent(index, GlobalKey.new),
+          child: TtsEditSegmentRow(
+            segment: widget.segments[index],
+            isGenerating: widget.isGenerating && widget.generatingIndex == index,
+            isPlaying: widget.isPlaying && widget.cursorIndex == index,
+            isCursor: widget.cursorIndex == index,
+            voiceFiles: widget.voiceFiles,
+            onTextEditComplete: (text) => widget.onTextEditComplete(index, text),
+            onRefWavPathChanged: (value) =>
+                widget.onRefWavPathChanged(index, value),
+            onMemoEditComplete: (memo) => widget.onMemoEditComplete(index, memo),
+            onPlay: () => widget.onPlay(index),
+            onGenerate: () => widget.onGenerate(index),
+            onReset: () => widget.onReset(index),
+            // Playback owns the playhead while it runs: two writers would fight
+            // over the value and the highlight would jump between them.
+            onCursorRequested: () {
+              if (!widget.isPlaying) widget.onCursorChanged(index);
+            },
+            enabled: !widget.isGenerating,
+            dictRepository: widget.dictRepository,
+          ),
         );
       },
     );
