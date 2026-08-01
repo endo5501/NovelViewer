@@ -17,8 +17,8 @@
   - `startIndex` 以降に生成済みセグメントが1つも無いとき、何も再生せず `true` を返すこと
 - [x] 2.2 テストを実行し、現在の `playAll`（`startIndex` なし・戻り値 `void`）では失敗（コンパイルエラーを含む）することを確認する（`No named parameter with the name 'startIndex'` / `This expression has type 'void' and can't be used`）
 - [x] 2.3 失敗するテストをコミットする
-- [ ] 2.4 `tts_edit_controller.dart` の `playAll` を `Future<bool> playAll({int startIndex = 0, void Function(int)? onSegmentStart})` に変更し、ループ開始を `startIndex` に、戻り値を `!_cancelled` にする
-- [ ] 2.5 テストが通ることを確認する
+- [x] 2.4 `tts_edit_controller.dart` の `playAll` を `Future<bool> playAll({int startIndex = 0, void Function(int)? onSegmentStart})` に変更し、ループ開始を `startIndex` に、戻り値を `!_cancelled` にする
+- [x] 2.5 テストが通ることを確認する
 
 ## 3. provider の再構成
 

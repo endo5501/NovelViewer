@@ -332,14 +332,24 @@ class TtsEditController {
     await _segmentPlayer.playSegment(filePath, isLast: false);
   }
 
-  Future<void> playAll({void Function(int)? onSegmentStart}) async {
+  /// Plays every generated segment from [startIndex] to the end, skipping the
+  /// ones without audio.
+  ///
+  /// Returns true when playback reached the end, false when [stopPlayback] (or
+  /// teardown) cut it short — the edit dialog returns its playhead to the first
+  /// segment only on the former.
+  Future<bool> playAll({
+    int startIndex = 0,
+    void Function(int)? onSegmentStart,
+  }) async {
     _cancelled = false;
-    for (var i = 0; i < _segments.length; i++) {
+    for (var i = startIndex; i < _segments.length; i++) {
       if (_cancelled) break;
       if (!_segments[i].hasAudio) continue;
       onSegmentStart?.call(i);
       await playSegment(i);
     }
+    return !_cancelled;
   }
 
   Future<void> stopPlayback() async {
