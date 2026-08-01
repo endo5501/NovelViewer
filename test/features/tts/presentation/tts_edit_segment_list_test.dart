@@ -136,6 +136,31 @@ void main() {
       expect(moves, isEmpty);
     });
 
+    testWidgets('row actions are disabled while playback is running',
+        (tester) async {
+      // A row's play button would otherwise clear the playing flag when its
+      // segment finished, releasing the playhead lock while the play-through
+      // it interrupted is still running.
+      await pumpList(tester, count: 30, cursorIndex: 0, isPlaying: true);
+
+      final buttons = tester.widgetList<IconButton>(
+        find.descendant(of: findRow(0), matching: find.byType(IconButton)),
+      );
+      expect(buttons, isNotEmpty);
+      expect(buttons.every((b) => b.onPressed == null), true);
+    });
+
+    testWidgets('row actions are available while nothing is playing',
+        (tester) async {
+      await pumpList(tester, count: 30, cursorIndex: 0);
+
+      final buttons = tester.widgetList<IconButton>(
+        find.descendant(of: findRow(0), matching: find.byType(IconButton)),
+      );
+      expect(buttons, isNotEmpty);
+      expect(buttons.every((b) => b.onPressed != null), true);
+    });
+
     testWidgets('editing still works while playback is running',
         (tester) async {
       await pumpList(tester, count: 30, cursorIndex: 0, isPlaying: true);

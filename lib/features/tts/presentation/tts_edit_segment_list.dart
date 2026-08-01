@@ -140,7 +140,10 @@ class _TtsEditSegmentListState extends State<TtsEditSegmentList> {
             onCursorRequested: () {
               if (!widget.isPlaying) widget.onCursorChanged(index);
             },
-            enabled: !widget.isGenerating,
+            // Also off during playback: a row's play button reports playback
+            // finished when its own segment ends, which would release the
+            // playhead lock while the run it interrupted is still going.
+            enabled: !widget.isGenerating && !widget.isPlaying,
             dictRepository: widget.dictRepository,
           ),
         );
