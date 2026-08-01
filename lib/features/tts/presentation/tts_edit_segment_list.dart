@@ -86,32 +86,50 @@ class _TtsEditSegmentListState extends State<TtsEditSegmentList> {
   /// stays where it is, so a user reading elsewhere during playback is not
   /// yanked back every segment.
   void _revealCursor({required bool movingForward}) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _reveal(movingForward: movingForward, mayApproach: true),
+    );
+  }
 
-      final context = _rowKeys[widget.cursorIndex]?.currentContext;
-      if (context == null) {
-        // The row is too far outside the viewport for ListView to have built
-        // it, so there is no element to reveal. Returning to the first segment
-        // is the one such jump the list can serve, and its target is the top.
-        if (widget.cursorIndex == 0 && _scrollController.hasClients) {
-          _scrollController.jumpTo(
-            _scrollController.position.minScrollExtent,
-          );
-        }
-        return;
-      }
+  void _reveal({required bool movingForward, required bool mayApproach}) {
+    if (!mounted) return;
 
-      // These two policies clamp the scroll to one direction, which is what
-      // makes an already-visible row a no-op: the computed target equals the
-      // current offset, and ensureVisible does nothing.
-      Scrollable.ensureVisible(
-        context,
-        alignmentPolicy: movingForward
-            ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
-            : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+    final context = _rowKeys[widget.cursorIndex]?.currentContext;
+    if (context == null) {
+      // The row is too far outside the viewport for ListView to have built it,
+      // so there is no element to reveal. Jump to where it should roughly be
+      // and correct on the next frame, once it exists. Without this the list
+      // would stop following the playhead for the rest of the run, since every
+      // later advance would find nothing built either.
+      if (!mayApproach || !_scrollController.hasClients) return;
+      _scrollController.jumpTo(_estimatedOffsetOfCursor());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _reveal(movingForward: movingForward, mayApproach: false),
       );
-    });
+      return;
+    }
+
+    // These two policies clamp the scroll to one direction, which is what
+    // makes an already-visible row a no-op: the computed target equals the
+    // current offset, and ensureVisible does nothing.
+    Scrollable.ensureVisible(
+      context,
+      alignmentPolicy: movingForward
+          ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
+          : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+    );
+  }
+
+  /// Where the playhead row would be if every row were the same height. Only
+  /// an approximation — rows grow with wrapped text — so it is always followed
+  /// by an [Scrollable.ensureVisible] that lands it exactly.
+  double _estimatedOffsetOfCursor() {
+    final position = _scrollController.position;
+    final lastIndex = widget.segments.length - 1;
+    if (lastIndex <= 0) return position.minScrollExtent;
+    final fraction = (widget.cursorIndex / lastIndex).clamp(0.0, 1.0);
+    return position.minScrollExtent +
+        (position.maxScrollExtent - position.minScrollExtent) * fraction;
   }
 
   @override

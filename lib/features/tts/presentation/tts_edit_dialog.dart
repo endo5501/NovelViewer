@@ -267,17 +267,22 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
 
     ref.read(ttsEditPlayingProvider.notifier).set(true);
     try {
+      var playedAnything = false;
       final reachedEnd = await controller.playAll(
         startIndex: ref.read(ttsEditCursorIndexProvider),
         onSegmentStart: (i) {
+          playedAnything = true;
           if (mounted) {
             ref.read(ttsEditCursorIndexProvider.notifier).set(i);
           }
         },
       );
       // Only a full run rewinds: after a stop the playhead marks where the user
-      // left off, so pressing play again carries on from there.
-      if (mounted && reachedEnd) {
+      // left off, so pressing play again carries on from there. A run that
+      // found nothing to play does not move it either — pressing play on an
+      // ungenerated stretch would otherwise silently throw away the position
+      // the user had scrolled to.
+      if (mounted && reachedEnd && playedAnything) {
         ref.read(ttsEditCursorIndexProvider.notifier).set(0);
       }
     } finally {
@@ -439,13 +444,18 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
           )
         else
           TextButton.icon(
-            onPressed: _generateAll,
+            // Off while playing: generation and playback share the controller's
+            // cancel flag, so 停止 would silently break a bulk run and a bulk
+            // run would clear a stop.
+            onPressed: isPlaying ? null : _generateAll,
             icon: const Icon(Icons.auto_fix_high, size: 18),
             label: Text(AppLocalizations.of(context)!.ttsEdit_generateAllButton),
           ),
         const SizedBox(width: 8),
         TextButton.icon(
-          onPressed: isGenerating
+          // Off while playing: deleting the rows the playback loop is about to
+          // read makes its next segment lookup throw.
+          onPressed: isGenerating || isPlaying
               ? null
               : () async {
                   final confirm = await showDialog<bool>(

@@ -18,6 +18,7 @@ import 'package:novel_viewer/features/tts/data/tts_playback_controller.dart';
 import 'package:novel_viewer/features/tts/data/wav_writer.dart';
 import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
+import 'package:novel_viewer/features/tts/domain/tts_segment.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Test helper that builds a Qwen3 engine config with sensible defaults so
@@ -247,6 +248,26 @@ class RealisticFakeAudioPlayer implements TtsAudioPlayer {
   Future<void> dispose() async {
     isDisposed = true;
     _stateController.close();
+  }
+}
+
+/// Repository that stalls inside the preview's segment read, handing control
+/// back to the test in the window between "playback decided to play segment i"
+/// and "the player was given the file" — where a stop can arrive with nothing
+/// yet playing for it to interrupt.
+class GatedReadRepository extends TtsAudioRepository {
+  GatedReadRepository(super.database);
+
+  final reachedRead = Completer<void>();
+  final releaseRead = Completer<void>();
+
+  @override
+  Future<TtsSegment> getSegmentByIndex(int episodeId, int segmentIndex) async {
+    if (!reachedRead.isCompleted) {
+      reachedRead.complete();
+      await releaseRead.future;
+    }
+    return super.getSegmentByIndex(episodeId, segmentIndex);
   }
 }
 
@@ -1479,6 +1500,50 @@ void main() {
 
         expect(reachedEnd, true);
         expect(playedIndices(player), [0, 1, 2]);
+      });
+
+      test('does not start a segment that was stopped during its read',
+          () async {
+        // stopPlayback interrupts the player, but in this window the player is
+        // not holding anything yet — so without a check the segment starts
+        // playing after the UI has already returned to idle.
+        final gated = GatedReadRepository(database);
+        final player = RealisticFakeAudioPlayer();
+
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.partial,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'セグメント0。',
+          textOffset: 0,
+          textLength: 7,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+
+        final controller = TtsEditController(
+          ttsIsolate: FakeTtsIsolate(),
+          audioPlayer: player,
+          repository: gated,
+          tempDirPath: tempDir.path,
+        );
+        await controller.loadSegments(
+          text: 'セグメント0。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        final playing = controller.playAll();
+        await gated.reachedRead.future;
+        await controller.stopPlayback();
+        gated.releaseRead.complete();
+
+        expect(await playing, false);
+        expect(player.playedFiles, isEmpty);
       });
 
       test('returns false when the user stops playback midway', () async {

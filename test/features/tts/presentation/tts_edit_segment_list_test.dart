@@ -230,6 +230,19 @@ void main() {
       expect(rowIsVisible(tester, 7), true);
     });
 
+    testWidgets('reaches a playhead too far away to have been built',
+        (tester) async {
+      // Once the playhead row falls outside the build range there is no
+      // element to reveal. Without a fallback the list stops following it for
+      // the rest of the run — every later advance finds nothing built either.
+      await pumpList(tester, count: 30, cursorIndex: 0);
+      expect(findRow(25).evaluate(), isEmpty);
+
+      await pumpList(tester, count: 30, cursorIndex: 25);
+
+      expect(rowIsVisible(tester, 25), true);
+    });
+
     testWidgets('returns to the top when the playhead resets to the first row',
         (tester) async {
       // The reset happens when playback runs off the end, so the first row is

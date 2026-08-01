@@ -313,7 +313,15 @@ class TtsEditController {
     }
   }
 
-  Future<void> playSegment(int segmentIndex) async {
+  /// Plays one segment's audio. Pressing preview is a fresh intent, so an
+  /// earlier [stopPlayback] does not suppress it — [stopPlayback] is
+  /// deliberately non-terminal.
+  Future<void> playSegment(int segmentIndex) {
+    _cancelled = false;
+    return _playSegment(segmentIndex);
+  }
+
+  Future<void> _playSegment(int segmentIndex) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return;
     if (!_segments[segmentIndex].hasAudio || _episodeId == null) return;
 
@@ -325,6 +333,11 @@ class TtsEditController {
     final filePath = '$tempDirPath/tts_edit_preview_$segmentIndex.wav';
     await File(filePath).writeAsBytes(audioData);
     _writtenFiles.add(filePath);
+
+    // A stop can land during the read and the write above. The player holds
+    // nothing yet, so its interrupt has nothing to cut — starting now would
+    // play a segment after the UI has already gone back to idle.
+    if (_cancelled) return;
 
     // isLast: false so SegmentPlayer ends with pause() rather than letting the
     // platform's playing flag stay set — required to play another segment next
@@ -349,7 +362,9 @@ class TtsEditController {
       if (_cancelled) break;
       if (!_segments[i].hasAudio) continue;
       onSegmentStart?.call(i);
-      await playSegment(i);
+      // The private form: a stop mid-run must not be cleared by the next
+      // segment the way a fresh preview press clears it.
+      await _playSegment(i);
     }
     return !_cancelled;
   }

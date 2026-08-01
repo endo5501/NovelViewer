@@ -55,7 +55,7 @@
   - `isPlaying` のとき行からの `onCursorRequested` を握り潰す
   - 行ごとの `GlobalKey` を `Map<int, GlobalKey>` で保持する（ヘッド行に1つの `GlobalKey` を付け替える実装は要素の再親化を招くため採らない。design D7 参照）
   - `didUpdateWidget` で `cursorIndex` の変化を検出し、フレーム後に `Scrollable.ensureVisible` を呼ぶ。前進時は `keepVisibleAtEnd`、後退時は `keepVisibleAtStart` を指定して、対象が表示領域内なら動かないようにする
-  - 対象が 0 かつ `currentContext` が null の場合は `ScrollController.jumpTo(minScrollExtent)` で先頭へ戻す（`ensureVisible` の既定が即時なので、ここだけアニメーションさせない）
+  - 対象行が構築されていない場合は概算位置へ `jumpTo` してから次フレームで `ensureVisible` し直す（8.7 で一般化。index 0 の特例はこれに吸収された）
 - [x] 5.5 テストが通ることを確認する
 
 ## 6. ダイアログへの配線とツールバー
@@ -101,13 +101,13 @@ D8 の「再生中も行ボタンは有効のまま」が D4（再生中はヘ�
 
 ## 8. 最終確認
 
-- [ ] 8.1 code-reviewスキルを使用してコードレビューを実施
+- [x] 8.1 code-reviewスキルを使用してコードレビューを実施
 
-  `/code-review` はユーザ起動専用（`disable-model-invocation`）のため、モデルからは実行できない。代替として `superpowers:requesting-code-review` によるレビューを実施し、下記 8.5 に反映済み。`/code-review` はユーザに実行を依頼する
+  `/code-review` はユーザ起動専用（`disable-model-invocation`）のためモデルからは実行できず、ユーザに実行を依頼した。先行して `superpowers:requesting-code-review` によるレビューも実施している。指摘は 8.5（superpowers）と 8.7（`/code-review`）に反映
 
 - [x] 8.2 codexスキルを使用して現在開発中のコードレビューを実施（`codex:rescue`。指摘は下記 8.6 に反映）
 - [x] 8.3 `fvm flutter analyze`でリントを実行（`No issues found!`）
-- [x] 8.4 `fvm flutter test`でテストを実行（`+2488 ~1: All tests passed!`）
+- [x] 8.4 `fvm flutter test`でテストを実行（`+2490 ~1: All tests passed!`）
 
 ### 8.5 レビュー指摘の反映
 
@@ -126,3 +126,10 @@ D8 の「再生中も行ボタンは有効のまま」が D4（再生中はヘ�
 - [x] `playAll(startIndex: -1)` が `_segments[-1]` で RangeError を投げる（同クラスの `playSegment` は負値を防御しており非対称）→ 0 にクランプし、テストと spec シナリオを追加
 - [x] 行の [▶] をキーボード／アクセシビリティ経由で起動するとポインタイベントが無くヘッドが動かず、別の行に 🔊 が出たまま違う行が鳴る → `_playSegment` が `index` をヘッドに設定する。D8 で再生中の行ボタンを無効化したため、再生ループとの競合は起こらない（`TtsEditDialog` は pump できないため自動テストは無し。7.1 の目視確認に委ねる）
 - [x] Listener の実装（gesture arena に参加せず既存操作を壊さない）と `ensureVisible` + `GlobalKey` のライフサイクル（`ScrollController` の dispose、`GlobalKey` はマップ保持で再利用なし）は問題なしとの評価 — 変更不要
+
+### 8.7 `/code-review` 指摘の反映
+
+- [x] medium: `_stopPlayback` が「再生が実際に止まる前に」ロックを解いていた。セグメントのDB読み出し／ファイル書き出しの隙間に [停止] が入ると、`SegmentPlayer.interrupt()` は掴んでいない再生を中断できず、UI が idle に戻った後にそのセグメントが鳴り出す → `_playSegment` を private 化して player へ渡す直前に `_cancelled` を確認。公開 `playSegment`（行のプレビュー）は新しい意思表示として `_cancelled` をクリアしてから呼ぶので、既存要件「stopPlayback は非終端」は維持。ゲート付きリポジトリでその窓を再現するテストを追加
+- [x] low: ツールバーの [全生成] / [全消去] が再生中も押せた。前者はコントローラの `_cancelled` を再生と共有しており、[停止] が一括生成まで止め、逆に一括生成が停止フラグを消して `playAll` に「末尾到達」と誤答させる。後者は再生ループがこれから読むレコードを消すため `getSegmentByIndex` の `rows.first` が `StateError` を投げる → 両方 `isPlaying` で無効化
+- [x] low: 何も再生されなかった場合でもヘッドが 0 に戻り、未生成の後半を編集中のユーザーが [再生] を押しただけで表示位置を失う → `onSegmentStart` が一度でも呼ばれた場合のみ戻す
+- [x] low: 対象行が構築範囲の外に出ると自動スクロールが**その再生の間ずっと**復帰しない → 概算位置へ `jumpTo` してから次フレームで `ensureVisible` する二段階に変更（再帰は1回まで）。index 0 の特例はこの一般化に吸収された。遠方ジャンプのテストを追加
