@@ -60,18 +60,18 @@
 
 ## 6. ダイアログへの配線とツールバー
 
-- [ ] 6.1 `lib/l10n/app_ja.arb` / `app_en.arb` / `app_zh.arb` の `ttsEdit_playAllButton` を削除し、`ttsEdit_playButton`（`再生` / `Play` / `播放`）を追加する
-- [ ] 6.2 `grep -rn "ttsEdit_playAllButton" lib test` で残存参照が無いことを確認する
-- [ ] 6.3 `tts_edit_dialog.dart` の `_buildToolbar` のボタンラベルを `ttsEdit_playButton` に差し替える
-- [ ] 6.4 `_playAll` を再生ヘッドの位置から呼ぶよう変更する
+- [x] 6.1 `lib/l10n/app_ja.arb` / `app_en.arb` / `app_zh.arb` の `ttsEdit_playAllButton` を削除し、`ttsEdit_playButton`（`再生` / `Play` / `播放`）を追加する
+- [x] 6.2 `grep -rn "ttsEdit_playAllButton" lib test` で残存参照が無いことを確認する
+- [x] 6.3 `tts_edit_dialog.dart` の `_buildToolbar` のボタンラベルを `ttsEdit_playButton` に差し替える
+- [x] 6.4 `_playAll` を再生ヘッドの位置から呼ぶよう変更する
   - `controller.playAll(startIndex: ref.read(ttsEditCursorIndexProvider), onSegmentStart: ...)`
   - `onSegmentStart` でヘッドを更新する
   - 開始時に `ttsEditPlayingProvider` を true、終了時に false にする
   - 戻り値が `true`（完走）のときのみヘッドを 0 に戻す
-- [ ] 6.5 `_playSegment` を `ttsEditPlayingProvider` の true/false に置き換える（ヘッドは押下時点で移動済みのため触らない）
-- [ ] 6.6 `TtsEditSegmentList` に `cursorIndex` / `isPlaying` / `onCursorChanged` を渡す。`onCursorChanged` は `ttsEditCursorIndexProvider` を更新する
-- [ ] 6.7 `fvm flutter analyze` と `fvm flutter test` がグリーンであることを確認する
-- [ ] 6.8 機能追加をコミットする
+- [x] 6.5 `_playSegment` を `ttsEditPlayingProvider` の true/false に置き換える（ヘッドは押下時点で移動済みのため触らない）
+- [x] 6.6 `TtsEditSegmentList` に `cursorIndex` / `isPlaying` / `onCursorChanged` を渡す。`onCursorChanged` は `ttsEditCursorIndexProvider` を更新する
+- [x] 6.7 `fvm flutter analyze` と `fvm flutter test` がグリーンであることを確認する
+- [x] 6.8 機能追加をコミットする
 
 ## 7. 実機確認
 

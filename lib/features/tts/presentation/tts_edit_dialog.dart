@@ -244,27 +244,34 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final controller = _controller;
     if (controller == null) return;
 
-    // The playhead move is temporary: once rows report their own taps it
-    // happens on pointer down, before this runs.
-    ref.read(ttsEditCursorIndexProvider.notifier).set(index);
+    // The row already claimed the playhead on pointer down, so this only has
+    // to report that sound is coming out.
     ref.read(ttsEditPlayingProvider.notifier).set(true);
     await controller.playSegment(index);
     if (!mounted) return;
     ref.read(ttsEditPlayingProvider.notifier).set(false);
   }
 
-  Future<void> _playAll() async {
+  Future<void> _play() async {
     final controller = _controller;
     if (controller == null) return;
 
     ref.read(ttsEditPlayingProvider.notifier).set(true);
-    await controller.playAll(onSegmentStart: (i) {
-      if (mounted) {
-        ref.read(ttsEditCursorIndexProvider.notifier).set(i);
-      }
-    });
+    final reachedEnd = await controller.playAll(
+      startIndex: ref.read(ttsEditCursorIndexProvider),
+      onSegmentStart: (i) {
+        if (mounted) {
+          ref.read(ttsEditCursorIndexProvider.notifier).set(i);
+        }
+      },
+    );
     if (!mounted) return;
     ref.read(ttsEditPlayingProvider.notifier).set(false);
+    // Only a full run rewinds: after a stop the playhead marks where the user
+    // left off, so pressing play again carries on from there.
+    if (reachedEnd) {
+      ref.read(ttsEditCursorIndexProvider.notifier).set(0);
+    }
   }
 
   Future<void> _cancelGeneration() async {
@@ -399,9 +406,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
         ),
         const SizedBox(width: 8),
         TextButton.icon(
-          onPressed: isGenerating ? null : _playAll,
+          onPressed: isGenerating ? null : _play,
           icon: const Icon(Icons.play_arrow, size: 18),
-          label: Text(AppLocalizations.of(context)!.ttsEdit_playAllButton),
+          label: Text(AppLocalizations.of(context)!.ttsEdit_playButton),
         ),
         if (isPlaying)
           TextButton.icon(

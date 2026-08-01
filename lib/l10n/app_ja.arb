@@ -206,7 +206,7 @@
 
   "ttsEdit_title": "読み上げ編集",
   "ttsEdit_dictionaryButton": "辞書",
-  "ttsEdit_playAllButton": "全再生",
+  "ttsEdit_playButton": "再生",
   "ttsEdit_stopButton": "停止",
   "ttsEdit_cancelButton": "中断",
   "ttsEdit_generateAllButton": "全生成",

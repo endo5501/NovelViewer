@@ -378,7 +378,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ttsEdit_dictionaryButton => '辞書';
 
   @override
-  String get ttsEdit_playAllButton => '全再生';
+  String get ttsEdit_playButton => '再生';
 
   @override
   String get ttsEdit_stopButton => '停止';

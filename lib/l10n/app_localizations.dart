@@ -760,11 +760,11 @@ abstract class AppLocalizations {
   /// **'辞書'**
   String get ttsEdit_dictionaryButton;
 
-  /// No description provided for @ttsEdit_playAllButton.
+  /// No description provided for @ttsEdit_playButton.
   ///
   /// In ja, this message translates to:
-  /// **'全再生'**
-  String get ttsEdit_playAllButton;
+  /// **'再生'**
+  String get ttsEdit_playButton;
 
   /// No description provided for @ttsEdit_stopButton.
   ///
