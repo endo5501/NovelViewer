@@ -1303,6 +1303,151 @@ void main() {
       });
     });
 
+    group('playAll from a start index', () {
+      /// Builds a controller over [count] segments, giving audio to every one
+      /// except the indices in [withoutAudio].
+      Future<TtsEditController> loadedController({
+        required int count,
+        required TtsAudioPlayer player,
+        Set<int> withoutAudio = const {},
+      }) async {
+        final texts = List.generate(count, (i) => 'セグメント$i。');
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.partial,
+        );
+        for (var i = 0; i < count; i++) {
+          if (withoutAudio.contains(i)) continue;
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: i,
+            text: texts[i],
+            textOffset: i * texts[i].length,
+            textLength: texts[i].length,
+            audioData: _makeWavBytes(),
+            sampleCount: 5,
+          );
+        }
+
+        final controller = TtsEditController(
+          ttsIsolate: FakeTtsIsolate(),
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+        await controller.loadSegments(
+          text: texts.join(),
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+        return controller;
+      }
+
+      /// The segment indices behind the preview files the player received.
+      List<int> playedIndices(RealisticFakeAudioPlayer player) {
+        final pattern = RegExp(r'tts_edit_preview_(\d+)\.wav');
+        return player.playedFiles
+            .map((path) => int.parse(pattern.firstMatch(path)!.group(1)!))
+            .toList();
+      }
+
+      test('starts at the given index and leaves earlier segments unplayed',
+          () async {
+        final player = RealisticFakeAudioPlayer();
+        final controller = await loadedController(count: 4, player: player);
+
+        await controller.playAll(startIndex: 2);
+
+        expect(playedIndices(player), [2, 3]);
+      });
+
+      test('starts at the first segment when no index is given', () async {
+        final player = RealisticFakeAudioPlayer();
+        final controller = await loadedController(count: 4, player: player);
+
+        await controller.playAll();
+
+        expect(playedIndices(player), [0, 1, 2, 3]);
+      });
+
+      test('skips ungenerated segments at or after the start index', () async {
+        final player = RealisticFakeAudioPlayer();
+        final controller = await loadedController(
+          count: 5,
+          player: player,
+          withoutAudio: {3},
+        );
+
+        await controller.playAll(startIndex: 2);
+
+        expect(playedIndices(player), [2, 4]);
+      });
+
+      test('starts at the next generated segment when the start index has none',
+          () async {
+        final player = RealisticFakeAudioPlayer();
+        final controller = await loadedController(
+          count: 4,
+          player: player,
+          withoutAudio: {2},
+        );
+
+        await controller.playAll(startIndex: 2);
+
+        expect(playedIndices(player), [3]);
+      });
+
+      test('notifies onSegmentStart only for the segments it plays', () async {
+        final player = RealisticFakeAudioPlayer();
+        final controller = await loadedController(
+          count: 5,
+          player: player,
+          withoutAudio: {3},
+        );
+
+        final started = <int>[];
+        await controller.playAll(startIndex: 2, onSegmentStart: started.add);
+
+        expect(started, [2, 4]);
+      });
+
+      test('returns true when it reaches the end', () async {
+        final player = RealisticFakeAudioPlayer();
+        final controller = await loadedController(count: 3, player: player);
+
+        expect(await controller.playAll(), true);
+      });
+
+      test('returns true when no generated segment remains from the start index',
+          () async {
+        final player = RealisticFakeAudioPlayer();
+        final controller = await loadedController(
+          count: 4,
+          player: player,
+          withoutAudio: {2, 3},
+        );
+
+        final reachedEnd = await controller.playAll(startIndex: 2);
+
+        expect(reachedEnd, true);
+        expect(playedIndices(player), isEmpty);
+      });
+
+      test('returns false when the user stops playback midway', () async {
+        // A player that never signals completion on its own, so playback is
+        // still on the first segment when stop arrives.
+        final player = FakeAudioPlayer()..autoComplete = false;
+        final controller = await loadedController(count: 3, player: player);
+
+        final playing = controller.playAll();
+        await pumpEventQueue();
+        await controller.stopPlayback();
+
+        expect(await playing, false);
+      });
+    });
+
     group('updateSegmentText', () {
       test('creates DB record and clears audio for new segment', () async {
         final episodeId = await repository.createEpisode(

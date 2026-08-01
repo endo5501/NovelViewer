@@ -7,7 +7,7 @@
 
 ## 2. コントローラの `startIndex` と完走判定（TDD）
 
-- [ ] 2.1 `test/features/tts/data/tts_edit_controller_test.dart` に以下を検証するテストを追加する
+- [x] 2.1 `test/features/tts/data/tts_edit_controller_test.dart` に以下を検証するテストを追加する
   - `playAll(startIndex: 2)` がセグメント 0、1 を再生せず 2 から始めること
   - `startIndex` を省略すると 0 から始まること（既定値の後方互換）
   - `startIndex` 以降の未生成セグメントがスキップされ、`onSegmentStart` が生成済みのインデックスだけを通知すること
@@ -15,8 +15,8 @@
   - 中断されずに末尾へ到達したとき `true` を返すこと
   - `stopPlayback()` による中断で `false` を返すこと
   - `startIndex` 以降に生成済みセグメントが1つも無いとき、何も再生せず `true` を返すこと
-- [ ] 2.2 テストを実行し、現在の `playAll`（`startIndex` なし・戻り値 `void`）では失敗（コンパイルエラーを含む）することを確認する
-- [ ] 2.3 失敗するテストをコミットする
+- [x] 2.2 テストを実行し、現在の `playAll`（`startIndex` なし・戻り値 `void`）では失敗（コンパイルエラーを含む）することを確認する（`No named parameter with the name 'startIndex'` / `This expression has type 'void' and can't be used`）
+- [x] 2.3 失敗するテストをコミットする
 - [ ] 2.4 `tts_edit_controller.dart` の `playAll` を `Future<bool> playAll({int startIndex = 0, void Function(int)? onSegmentStart})` に変更し、ループ開始を `startIndex` に、戻り値を `!_cancelled` にする
 - [ ] 2.5 テストが通ることを確認する
 
