@@ -36,8 +36,8 @@
   - `isCursor: true, isPlaying: true` のとき 🔊 アイコンが表示され、`isCursor: true, isPlaying: false` のときは表示されないこと
 - [x] 4.2 テストを実行し、現在の実装では失敗することを確認する（`No named parameter with the name 'isCursor'`）
 - [x] 4.3 失敗するテストをコミットする
-- [ ] 4.4 `tts_edit_segment_row.dart` に `isCursor` と `onCursorRequested` を追加し、行全体を `Listener(onPointerDown: ...)` で包む。`isCursor` のとき背景色を描画する（テーマ由来の色を使う）
-- [ ] 4.5 テストが通ることを確認する
+- [x] 4.4 `tts_edit_segment_row.dart` に `isCursor` と `onCursorRequested` を追加し、行全体を `Listener(onPointerDown: ...)` で包む。`isCursor` のとき背景色を描画する（テーマ由来の色を使う）
+- [x] 4.5 テストが通ることを確認する
 
 ## 5. ヘッドの所有と自動スクロール（TDD）
 

@@ -63,6 +63,9 @@ class TtsEditSegmentList extends StatelessWidget {
           onPlay: () => onPlay(index),
           onGenerate: () => onGenerate(index),
           onReset: () => onReset(index),
+          // Wired up when the list starts owning the playhead.
+          isCursor: false,
+          onCursorRequested: () {},
           enabled: !isGenerating,
           dictRepository: dictRepository,
         );
