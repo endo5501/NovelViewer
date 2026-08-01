@@ -25,12 +25,17 @@
 
 ### Requirement: Fallback for Ollama versions rejecting the think parameter
 
-When a `/api/generate` call fails with a non-200 status whose error body mentions the `think` parameter, `OllamaClient` SHALL retry the request exactly once with the `think` field removed (other fields unchanged). After such a fallback has occurred, the same `OllamaClient` instance SHALL omit the `think` field from all subsequent `generate` requests, so that each later call is sent only once. Errors whose body does not mention `think` SHALL be propagated unchanged without retry.
+When a `/api/generate` call fails with HTTP status 400 and an error body that mentions the `think` parameter, `OllamaClient` SHALL retry the request exactly once with the `think` field removed (other fields unchanged). After such a fallback has occurred, the same `OllamaClient` instance SHALL omit the `think` field from all subsequent `generate` requests, so that each later call is sent only once. All other errors — including non-400 statuses whose body happens to contain `think` (e.g. a 404 for a model whose name contains "thinking") — SHALL be propagated unchanged without retry.
 
 #### Scenario: think-related error triggers a single retry
 
-- **WHEN** the first `/api/generate` response has a non-200 status and its body contains the string `think`
+- **WHEN** the first `/api/generate` response has HTTP status 400 and its body contains the string `think`
 - **THEN** the client SHALL send the same request once more without the `think` field, and SHALL return that retry's successful response
+
+#### Scenario: non-400 errors mentioning think are not retried
+
+- **WHEN** a `/api/generate` response has a non-200, non-400 status (e.g. 404) whose body contains the string `think`
+- **THEN** the client SHALL propagate the error without sending any retry request
 
 #### Scenario: subsequent calls skip think after fallback
 

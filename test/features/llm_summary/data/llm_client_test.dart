@@ -270,6 +270,29 @@ void main() {
       expect(bodies[0].containsKey('think'), isFalse);
     });
 
+    test('non-400 errors mentioning think are not retried', () async {
+      // A 404 for a model whose name contains "thinking" echoes that name in
+      // the error body; it must not trip the think fallback.
+      var requestCount = 0;
+      final mockClient = MockClient((request) async {
+        requestCount++;
+        return http.Response(
+          'model "qwen3:30b-thinking" not found',
+          404,
+        );
+      });
+
+      await expectLater(
+        () => clientWith(mockClient).generate('p'),
+        throwsA(isA<Exception>().having(
+          (e) => e.toString(),
+          'toString',
+          contains('404'),
+        )),
+      );
+      expect(requestCount, 1);
+    });
+
     test('errors unrelated to think are propagated without retry', () async {
       var requestCount = 0;
       final mockClient = MockClient((request) async {

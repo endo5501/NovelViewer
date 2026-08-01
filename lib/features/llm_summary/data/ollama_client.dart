@@ -63,9 +63,12 @@ class OllamaClient extends LlmClient {
       try {
         json = await _postJson('/api/generate', {...body, 'think': false});
       } on _OllamaStatusException catch (e) {
-        // Some Ollama versions reject `think` for non-thinking models. Fall
-        // back once without it and remember, so later calls are sent once.
-        if (!e.body.contains('think')) rethrow;
+        // Some Ollama versions reject `think` for non-thinking models with a
+        // 400. Fall back once without it and remember, so later calls are
+        // sent once. Only 400 qualifies: other statuses (e.g. a 404 whose
+        // body echoes a model name containing "thinking") must not silently
+        // disable the optimization.
+        if (e.statusCode != 400 || !e.body.contains('think')) rethrow;
         _thinkRejected = true;
         json = await _postJson('/api/generate', body);
       }
