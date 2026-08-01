@@ -182,6 +182,113 @@ void main() {
     });
   });
 
+  group('OllamaClient generation efficiency', () {
+    OllamaClient clientWith(MockClient mockClient) => OllamaClient(
+          baseUrl: 'http://localhost:11434',
+          model: 'gemma4:e4b',
+          httpClient: mockClient,
+        );
+
+    http.Response okResponse() =>
+        http.Response(jsonEncode({'response': 'ok'}), 200);
+
+    test('generate sends think:false and options.num_predict=1024', () async {
+      Map<String, dynamic>? capturedBody;
+      final mockClient = MockClient((request) async {
+        capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return okResponse();
+      });
+
+      await clientWith(mockClient).generate('p');
+
+      expect(capturedBody!['think'], false);
+      final options = capturedBody!['options'] as Map<String, dynamic>;
+      expect(options['num_predict'], 1024);
+    });
+
+    test('releaseResources sends neither think nor options', () async {
+      Map<String, dynamic>? capturedBody;
+      final mockClient = MockClient((request) async {
+        capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(jsonEncode({'done': true}), 200);
+      });
+
+      await clientWith(mockClient).releaseResources();
+
+      expect(capturedBody!.containsKey('think'), isFalse);
+      expect(capturedBody!.containsKey('options'), isFalse);
+    });
+
+    test('think-related error triggers a single retry without think',
+        () async {
+      final bodies = <Map<String, dynamic>>[];
+      final mockClient = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        bodies.add(body);
+        if (body.containsKey('think')) {
+          return http.Response(
+            '"gemma4:e4b" does not support thinking',
+            400,
+          );
+        }
+        return okResponse();
+      });
+
+      final result = await clientWith(mockClient).generate('p');
+
+      expect(result, 'ok');
+      expect(bodies, hasLength(2));
+      expect(bodies[0]['think'], false);
+      expect(bodies[1].containsKey('think'), isFalse);
+      // The retry keeps the other fields intact.
+      expect(bodies[1]['prompt'], 'p');
+      expect(
+        (bodies[1]['options'] as Map<String, dynamic>)['num_predict'],
+        1024,
+      );
+    });
+
+    test('subsequent generate calls skip think after fallback', () async {
+      final bodies = <Map<String, dynamic>>[];
+      final mockClient = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        bodies.add(body);
+        if (body.containsKey('think')) {
+          return http.Response('model does not support thinking', 400);
+        }
+        return okResponse();
+      });
+
+      final client = clientWith(mockClient);
+      await client.generate('first');
+      bodies.clear();
+
+      final result = await client.generate('second');
+
+      expect(result, 'ok');
+      expect(bodies, hasLength(1));
+      expect(bodies[0].containsKey('think'), isFalse);
+    });
+
+    test('errors unrelated to think are propagated without retry', () async {
+      var requestCount = 0;
+      final mockClient = MockClient((request) async {
+        requestCount++;
+        return http.Response('Server Error', 500);
+      });
+
+      await expectLater(
+        () => clientWith(mockClient).generate('p'),
+        throwsA(isA<Exception>().having(
+          (e) => e.toString(),
+          'toString',
+          contains('500'),
+        )),
+      );
+      expect(requestCount, 1);
+    });
+  });
+
   group('OpenAiCompatibleClient', () {
     test('generate sends correct request with auth and returns response',
         () async {
