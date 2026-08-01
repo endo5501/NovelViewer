@@ -1,9 +1,9 @@
 ## 1. セグメント一覧ウィジェットの切り出し（挙動不変）
 
-- [ ] 1.1 `lib/features/tts/presentation/tts_edit_segment_list.dart` を新規作成し、`tts_edit_dialog.dart:347-371` の `ListView.builder` 部分を `TtsEditSegmentList` として移動する。この時点では `segments` / `isGenerating` / `generatingIndex` / `playbackIndex` / `voiceFiles` / `dictRepository` と各コールバックを受け取るだけの、挙動を変えない機械的な切り出しとする（provider は参照しない）
-- [ ] 1.2 `tts_edit_dialog.dart` の `build` から `ListView.builder` を削除し、`TtsEditSegmentList` へ置き換える
-- [ ] 1.3 `fvm flutter analyze` と `fvm flutter test` を実行し、切り出し前と同じくグリーンであることを確認する
-- [ ] 1.4 切り出しのみをコミットする（機能変更は含めない）
+- [x] 1.1 `lib/features/tts/presentation/tts_edit_segment_list.dart` を新規作成し、`tts_edit_dialog.dart:347-371` の `ListView.builder` 部分を `TtsEditSegmentList` として移動する。この時点では `segments` / `isGenerating` / `generatingIndex` / `playbackIndex` / `voiceFiles` / `dictRepository` と各コールバックを受け取るだけの、挙動を変えない機械的な切り出しとする（provider は参照しない）
+- [x] 1.2 `tts_edit_dialog.dart` の `build` から `ListView.builder` を削除し、`TtsEditSegmentList` へ置き換える
+- [x] 1.3 `fvm flutter analyze` と `fvm flutter test` を実行し、切り出し前と同じくグリーンであることを確認する（`No issues found!` / `+2460 ~1: All tests passed!`）
+- [x] 1.4 切り出しのみをコミットする（機能変更は含めない）
 
 ## 2. コントローラの `startIndex` と完走判定（TDD）
 

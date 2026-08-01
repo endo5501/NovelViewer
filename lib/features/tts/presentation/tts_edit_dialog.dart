@@ -10,7 +10,7 @@ import '../data/tts_edit_controller.dart';
 import '../data/tts_engine_type.dart';
 import '../data/tts_isolate.dart';
 import '../domain/tts_engine_config.dart';
-import 'tts_edit_segment_row.dart';
+import 'tts_edit_segment_list.dart';
 import 'tts_failure_snackbar.dart';
 import '../providers/text_segmenter_provider.dart';
 import '../providers/vacuum_lifecycle_provider.dart';
@@ -345,28 +345,19 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
                   _buildToolbar(isGenerating, playbackIndex != null),
                   const Divider(),
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: segments.length,
-                      itemBuilder: (context, index) {
-                        return TtsEditSegmentRow(
-                          segment: segments[index],
-                          isGenerating:
-                              isGenerating && generatingIndex == index,
-                          isPlaying: playbackIndex == index,
-                          voiceFiles: _voiceFiles,
-                          onTextEditComplete: (text) =>
-                              _onTextEditComplete(index, text),
-                          onRefWavPathChanged: (value) =>
-                              _onRefWavPathChanged(index, value),
-                          onMemoEditComplete: (memo) =>
-                              _onMemoEditComplete(index, memo),
-                          onPlay: () => _playSegment(index),
-                          onGenerate: () => _generateSegment(index),
-                          onReset: () => _resetSegment(index),
-                          enabled: !isGenerating,
-                          dictRepository: _dictRepository,
-                        );
-                      },
+                    child: TtsEditSegmentList(
+                      segments: segments,
+                      isGenerating: isGenerating,
+                      generatingIndex: generatingIndex,
+                      playbackIndex: playbackIndex,
+                      voiceFiles: _voiceFiles,
+                      dictRepository: _dictRepository,
+                      onTextEditComplete: _onTextEditComplete,
+                      onRefWavPathChanged: _onRefWavPathChanged,
+                      onMemoEditComplete: _onMemoEditComplete,
+                      onPlay: _playSegment,
+                      onGenerate: _generateSegment,
+                      onReset: _resetSegment,
                     ),
                   ),
                 ],
