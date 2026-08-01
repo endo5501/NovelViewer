@@ -135,7 +135,8 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     ref.read(ttsEditGenerationStateProvider.notifier)
         .set(TtsEditGenerationState.idle);
     ref.read(ttsEditGeneratingIndexProvider.notifier).set(null);
-    ref.read(ttsEditPlaybackIndexProvider.notifier).set(null);
+    ref.read(ttsEditCursorIndexProvider.notifier).set(0);
+    ref.read(ttsEditPlayingProvider.notifier).set(false);
 
     setState(() => _loading = false);
   }
@@ -243,23 +244,27 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final controller = _controller;
     if (controller == null) return;
 
-    ref.read(ttsEditPlaybackIndexProvider.notifier).set(index);
+    // The playhead move is temporary: once rows report their own taps it
+    // happens on pointer down, before this runs.
+    ref.read(ttsEditCursorIndexProvider.notifier).set(index);
+    ref.read(ttsEditPlayingProvider.notifier).set(true);
     await controller.playSegment(index);
     if (!mounted) return;
-    ref.read(ttsEditPlaybackIndexProvider.notifier).set(null);
+    ref.read(ttsEditPlayingProvider.notifier).set(false);
   }
 
   Future<void> _playAll() async {
     final controller = _controller;
     if (controller == null) return;
 
+    ref.read(ttsEditPlayingProvider.notifier).set(true);
     await controller.playAll(onSegmentStart: (i) {
       if (mounted) {
-        ref.read(ttsEditPlaybackIndexProvider.notifier).set(i);
+        ref.read(ttsEditCursorIndexProvider.notifier).set(i);
       }
     });
     if (!mounted) return;
-    ref.read(ttsEditPlaybackIndexProvider.notifier).set(null);
+    ref.read(ttsEditPlayingProvider.notifier).set(false);
   }
 
   Future<void> _cancelGeneration() async {
@@ -273,7 +278,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   Future<void> _stopPlayback() async {
     await _controller?.stopPlayback();
     if (!mounted) return;
-    ref.read(ttsEditPlaybackIndexProvider.notifier).set(null);
+    ref.read(ttsEditPlayingProvider.notifier).set(false);
   }
 
   Future<void> _resetSegment(int index) async {
@@ -330,7 +335,8 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final segments = ref.watch(ttsEditSegmentsProvider);
     final generationState = ref.watch(ttsEditGenerationStateProvider);
     final generatingIndex = ref.watch(ttsEditGeneratingIndexProvider);
-    final playbackIndex = ref.watch(ttsEditPlaybackIndexProvider);
+    final cursorIndex = ref.watch(ttsEditCursorIndexProvider);
+    final isPlaying = ref.watch(ttsEditPlayingProvider);
     final isGenerating = generationState == TtsEditGenerationState.generating;
 
     return AlertDialog(
@@ -342,14 +348,14 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
-                  _buildToolbar(isGenerating, playbackIndex != null),
+                  _buildToolbar(isGenerating, isPlaying),
                   const Divider(),
                   Expanded(
                     child: TtsEditSegmentList(
                       segments: segments,
                       isGenerating: isGenerating,
                       generatingIndex: generatingIndex,
-                      playbackIndex: playbackIndex,
+                      playbackIndex: isPlaying ? cursorIndex : null,
                       voiceFiles: _voiceFiles,
                       dictRepository: _dictRepository,
                       onTextEditComplete: _onTextEditComplete,

@@ -22,10 +22,10 @@
 
 ## 3. provider の再構成
 
-- [ ] 3.1 `lib/features/tts/providers/tts_edit_providers.dart` に `ttsEditCursorIndexProvider`（`int`、初期 0）と `ttsEditPlayingProvider`（`bool`、初期 false）を追加する
-- [ ] 3.2 `ttsEditPlaybackIndexProvider` を削除し、参照箇所（`tts_edit_dialog.dart` の `_initialize` / `_playSegment` / `_playAll` / `_stopPlayback` / `build`）を新しい2つの provider へ置き換える
-- [ ] 3.3 `grep -rn "ttsEditPlaybackIndexProvider" lib test` で残存参照が無いことを確認する
-- [ ] 3.4 `fvm flutter analyze` と `fvm flutter test` がグリーンであることを確認する
+- [x] 3.1 `lib/features/tts/providers/tts_edit_providers.dart` に `ttsEditCursorIndexProvider`（`int`、初期 0）と `ttsEditPlayingProvider`（`bool`、初期 false）を追加する
+- [x] 3.2 `ttsEditPlaybackIndexProvider` を削除し、参照箇所（`tts_edit_dialog.dart` の `_initialize` / `_playSegment` / `_playAll` / `_stopPlayback` / `build`）を新しい2つの provider へ置き換える
+- [x] 3.3 `grep -rn "ttsEditPlaybackIndexProvider" lib test` で残存参照が無いことを確認する
+- [x] 3.4 `fvm flutter analyze` と `fvm flutter test` がグリーンであることを確認する
 
 ## 4. 行のポインタ検知と強調表示（TDD）
 

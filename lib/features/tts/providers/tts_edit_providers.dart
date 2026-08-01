@@ -58,16 +58,38 @@ class TtsEditGeneratingIndexNotifier extends Notifier<int?> {
   void set(int? value) => state = value;
 }
 
-// --- Edit playback state ---
+// --- Playhead ---
 
-final ttsEditPlaybackIndexProvider =
-    NotifierProvider<TtsEditPlaybackIndexNotifier, int?>(
-  TtsEditPlaybackIndexNotifier.new,
+/// The segment the next playback starts from.
+///
+/// Moved by tapping a row, by playback advancing, and by playback reaching the
+/// end (which returns it to the first segment). Never null: an unset playhead
+/// would only add a state the UI has to explain, and "at the first segment" is
+/// exactly the old "play all" behaviour.
+final ttsEditCursorIndexProvider =
+    NotifierProvider<TtsEditCursorIndexNotifier, int>(
+  TtsEditCursorIndexNotifier.new,
 );
 
-class TtsEditPlaybackIndexNotifier extends Notifier<int?> {
+class TtsEditCursorIndexNotifier extends Notifier<int> {
   @override
-  int? build() => null;
+  int build() => 0;
 
-  void set(int? value) => state = value;
+  void set(int value) => state = value;
+}
+
+// --- Edit playback state ---
+
+/// Whether preview playback is currently running. The position it is at lives
+/// in [ttsEditCursorIndexProvider].
+final ttsEditPlayingProvider =
+    NotifierProvider<TtsEditPlayingNotifier, bool>(
+  TtsEditPlayingNotifier.new,
+);
+
+class TtsEditPlayingNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void set(bool value) => state = value;
 }

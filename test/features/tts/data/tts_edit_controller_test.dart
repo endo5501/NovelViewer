@@ -250,6 +250,41 @@ class RealisticFakeAudioPlayer implements TtsAudioPlayer {
   }
 }
 
+/// Fake player that never signals completion and announces when `play()` was
+/// called, so a test can interrupt playback at a known point rather than
+/// guessing how many event-loop turns the preview's DB read and file write take.
+class NeverCompletingAudioPlayer implements TtsAudioPlayer {
+  final _stateController = StreamController<TtsPlayerState>.broadcast();
+  final playStarted = Completer<void>();
+
+  @override
+  Stream<TtsPlayerState> get playerStateStream => _stateController.stream;
+
+  @override
+  Future<void> setFilePath(String path) async {}
+
+  @override
+  Future<void> play() async {
+    if (!playStarted.isCompleted) playStarted.complete();
+    _stateController.add(TtsPlayerState.playing);
+  }
+
+  @override
+  Future<void> pause() async {
+    _stateController.add(TtsPlayerState.paused);
+  }
+
+  @override
+  Future<void> stop() async {
+    _stateController.add(TtsPlayerState.stopped);
+  }
+
+  @override
+  Future<void> dispose() async {
+    _stateController.close();
+  }
+}
+
 /// Spy [SegmentPlayer] that records whether a given preview file still exists
 /// at the moment `dispose()` is called. Used to assert that the controller
 /// disposes the player BEFORE deleting temporary preview files (F110).
@@ -1435,13 +1470,13 @@ void main() {
       });
 
       test('returns false when the user stops playback midway', () async {
-        // A player that never signals completion on its own, so playback is
-        // still on the first segment when stop arrives.
-        final player = FakeAudioPlayer()..autoComplete = false;
+        final player = NeverCompletingAudioPlayer();
         final controller = await loadedController(count: 3, player: player);
 
         final playing = controller.playAll();
-        await pumpEventQueue();
+        // Stop once the first segment is actually playing, not after a fixed
+        // number of event-loop turns.
+        await player.playStarted.future;
         await controller.stopPlayback();
 
         expect(await playing, false);
