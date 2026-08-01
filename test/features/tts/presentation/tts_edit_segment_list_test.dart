@@ -201,6 +201,23 @@ void main() {
       expect(scrollOffset(tester), before);
     });
 
+    testWidgets('stays put for a visible row part-way down the list too',
+        (tester) async {
+      // At offset 0 the list cannot scroll backwards at all, so half of what
+      // could go wrong is unreachable there. Part-way down it can move either
+      // way, and this is the position the requirement is really about.
+      await playThrough(tester, count: 30, upTo: 12);
+      final before = scrollOffset(tester);
+      expect(before, greaterThan(0));
+      expect(rowIsVisible(tester, 11), true);
+
+      await pumpList(tester, count: 30, cursorIndex: 11);
+      expect(scrollOffset(tester), before);
+
+      await pumpList(tester, count: 30, cursorIndex: 12);
+      expect(scrollOffset(tester), before);
+    });
+
     testWidgets('scrolls back when the playhead moves above the viewport',
         (tester) async {
       await playThrough(tester, count: 30, upTo: 12);

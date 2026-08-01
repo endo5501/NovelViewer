@@ -253,9 +253,6 @@ void main() {
       await tester.tap(findBodyField());
       await tester.pump();
 
-      expect(tester.widget<TextField>(findBodyField()).focusNode?.hasFocus,
-          isNot(false));
-      expect(find.byType(EditableText), findsWidgets);
       final editable =
           tester.state<EditableTextState>(find.byType(EditableText).first);
       expect(editable.widget.focusNode.hasFocus, true);

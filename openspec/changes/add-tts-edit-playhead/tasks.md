@@ -73,6 +73,16 @@
 - [x] 6.7 `fvm flutter analyze` と `fvm flutter test` がグリーンであることを確認する
 - [x] 6.8 機能追加をコミットする
 
+## 6b. 再生中の行操作の無効化（TDD・実装中の発見）
+
+D8 の「再生中も行ボタンは有効のまま」が D4（再生中はヘッドを再生ループが専有）を破ることが実装中に判明した。行の [▶] は自分のセグメントが終わると `isPlaying` を false にするため、通し再生の最中にヘッドのロックが解ける。ユーザー確認のうえ D8 を改め、再生中は行の操作ボタンを無効にする。
+
+- [x] 6b.1 `tts_edit_segment_list_test.dart` に「再生中は行の操作ボタンが無効」「非再生中は有効」のテストを追加する
+- [x] 6b.2 無効化のテストが失敗することを確認する（有効側は既存実装で通る）
+- [x] 6b.3 `enabled` を `!isGenerating && !isPlaying` に変更する
+- [x] 6b.4 テストが通ることを確認する
+- [x] 6b.5 design D8 / spec / proposal を実装に合わせて訂正する
+
 ## 7. 実機確認
 
 - [ ] 7.1 アプリを起動し、読み上げ編集ダイアログを開いて次を目視確認する
@@ -83,21 +93,30 @@
   - [停止] を押した位置に強調が残り、もう一度 [再生] を押すと続きから再生されること
   - 末尾まで再生し切ると強調がセグメント 0 に戻り、リストも先頭へスクロールすること
   - 再生中に別の行をクリックしても強調が飛ばないこと
+  - 再生中は行の [▶][↻][⟲] と参照音声セレクタ、ツールバーの [再生] がグレーアウトすること（[停止] だけが押せる）
+  - 強調された行の文字がダークテーマでも読めること（`primaryContainer` の上に `onSurface` 系の文字色が乗るため）
 - [ ] 7.2 確認結果を tasks.md に追記する
+
+  実施済み: `fvm flutter build windows --debug` が成功し、`build\windows\x64\runner\Debug\novel_viewer.exe` が生成されることを確認。ダイアログを開くまでのクリック操作と音声再生は自動化できないため、上記の目視確認はユーザに委ねる
 
 ## 8. 最終確認
 
 - [ ] 8.1 code-reviewスキルを使用してコードレビューを実施
+
+  `/code-review` はユーザ起動専用（`disable-model-invocation`）のため、モデルからは実行できない。代替として `superpowers:requesting-code-review` によるレビューを実施し、下記 8.5 に反映済み。`/code-review` はユーザに実行を依頼する
+
 - [ ] 8.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 8.3 `fvm flutter analyze`でリントを実行
-- [ ] 8.4 `fvm flutter test`でテストを実行
+- [x] 8.3 `fvm flutter analyze`でリントを実行（`No issues found!`）
+- [x] 8.4 `fvm flutter test`でテストを実行（`+2486 ~1: All tests passed!`）
 
-## 6b. 再生中の行操作の無効化（TDD・実装中の発見）
+### 8.5 レビュー指摘の反映
 
-D8 の「再生中も行ボタンは有効のまま」が D4（再生中はヘッドを再生ループが専有）を破ることが実装中に判明した。行の [▶] は自分のセグメントが終わると `isPlaying` を false にするため、通し再生の最中にヘッドのロックが解ける。ユーザー確認のうえ D8 を改め、再生中は行の操作ボタンを無効にする。
-
-- [x] 6b.1 `tts_edit_segment_list_test.dart` に「再生中は行の操作ボタンが無効」「非再生中は有効」のテストを追加する
-- [x] 6b.2 無効化のテストが失敗することを確認する（有効側は既存実装で通る）
-- [x] 6b.3 `enabled` を `!isGenerating && !isPlaying` に変更する
-- [x] 6b.4 テストが通ることを確認する
-- [x] 6b.5 design D8 / spec / proposal を実装に合わせて訂正する
+- [x] Important: 再生中もツールバーの [再生] が押せ、単体再生と通し再生が二重に走ると `isPlaying` が途中で落ちてヘッドのロックが解ける → `onPressed: isGenerating || isPlaying ? null : _play`
+- [x] Important: `playSegment` / `playAll` が例外を投げると `isPlaying` が true のまま固着し、全行の操作が無効のままになる → 両方を `try/finally` で囲み、`mounted` を見て必ず false に戻す
+- [x] Minor: spec の自動スクロール要件が実装より強い（進行方向と逆側へは追わない）→ 要件本文とシナリオを実装に合わせ、design D7 に裏面として明記
+- [x] Minor: design D7 / tasks 5.4 が `animateTo` と書いていたが実装は `jumpTo` → `ensureVisible` の既定が即時であることを理由として D7 に明記
+- [x] Minor: 行テストの `focusNode?.hasFocus` が `expect(null, isNot(false))` で恒真 → 削除（下段の `EditableTextState` 側が実質的な検証）
+- [x] Minor: 自動スクロールの「動かない」テストがオフセット0でのみ検証しており後退方向の失敗を検出できない → 一覧中ほどで前後両方向を検証するテストを追加
+- [x] Minor: ドラッグスクロールでヘッドが移る件 → デスクトップでは発生しない理由（`dragDevices` にマウスを含まない／ホイールとトラックパッドは `PointerDown` を出さない）を D5 に記載
+- [x] Minor: tasks.md の 6b 節が 8 節の後ろにあった → 7 節の前へ移動
+- [x] Minor: `_play` の配線に自動テストが無い（`TtsEditDialog` は pump 不能）→ 7.1 の目視確認項目に追加

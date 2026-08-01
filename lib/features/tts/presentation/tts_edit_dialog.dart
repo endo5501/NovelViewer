@@ -247,9 +247,14 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     // The row already claimed the playhead on pointer down, so this only has
     // to report that sound is coming out.
     ref.read(ttsEditPlayingProvider.notifier).set(true);
-    await controller.playSegment(index);
-    if (!mounted) return;
-    ref.read(ttsEditPlayingProvider.notifier).set(false);
+    try {
+      await controller.playSegment(index);
+    } finally {
+      // Always clear the flag: a preview can throw (file write, DB read, or an
+      // error routed out of the player), and leaving it set would disable every
+      // row's actions and freeze the playhead with nothing playing.
+      if (mounted) ref.read(ttsEditPlayingProvider.notifier).set(false);
+    }
   }
 
   Future<void> _play() async {
@@ -257,20 +262,22 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     if (controller == null) return;
 
     ref.read(ttsEditPlayingProvider.notifier).set(true);
-    final reachedEnd = await controller.playAll(
-      startIndex: ref.read(ttsEditCursorIndexProvider),
-      onSegmentStart: (i) {
-        if (mounted) {
-          ref.read(ttsEditCursorIndexProvider.notifier).set(i);
-        }
-      },
-    );
-    if (!mounted) return;
-    ref.read(ttsEditPlayingProvider.notifier).set(false);
-    // Only a full run rewinds: after a stop the playhead marks where the user
-    // left off, so pressing play again carries on from there.
-    if (reachedEnd) {
-      ref.read(ttsEditCursorIndexProvider.notifier).set(0);
+    try {
+      final reachedEnd = await controller.playAll(
+        startIndex: ref.read(ttsEditCursorIndexProvider),
+        onSegmentStart: (i) {
+          if (mounted) {
+            ref.read(ttsEditCursorIndexProvider.notifier).set(i);
+          }
+        },
+      );
+      // Only a full run rewinds: after a stop the playhead marks where the user
+      // left off, so pressing play again carries on from there.
+      if (mounted && reachedEnd) {
+        ref.read(ttsEditCursorIndexProvider.notifier).set(0);
+      }
+    } finally {
+      if (mounted) ref.read(ttsEditPlayingProvider.notifier).set(false);
     }
   }
 
@@ -406,7 +413,10 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
         ),
         const SizedBox(width: 8),
         TextButton.icon(
-          onPressed: isGenerating ? null : _play,
+          // Off while playing: a second run would fight the first over the
+          // playhead, and whichever finished first would report playback over
+          // and release the lock on it. While playing, the toolbar offers 停止.
+          onPressed: isGenerating || isPlaying ? null : _play,
           icon: const Icon(Icons.play_arrow, size: 18),
           label: Text(AppLocalizations.of(context)!.ttsEdit_playButton),
         ),
