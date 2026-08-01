@@ -230,6 +230,25 @@ void main() {
       expect(rowIsVisible(tester, 7), true);
     });
 
+    testWidgets('does not pull back a playhead the user has scrolled past',
+        (tester) async {
+      // The directional policy cuts both ways: following the playhead forwards
+      // must not mean dragging the view back to a row the user deliberately
+      // scrolled above. An `explicit` alignment would do exactly that.
+      await pumpList(tester, count: 30, cursorIndex: 5, isPlaying: true);
+      await tester.drag(find.byType(TtsEditSegmentList), const Offset(0, -400));
+      await tester.pumpAndSettle();
+
+      final afterUserScroll = scrollOffset(tester);
+      expect(afterUserScroll, greaterThan(0));
+      expect(rowIsVisible(tester, 6), false,
+          reason: 'the playhead must be off-screen for this to test anything');
+
+      await pumpList(tester, count: 30, cursorIndex: 6, isPlaying: true);
+
+      expect(scrollOffset(tester), afterUserScroll);
+    });
+
     testWidgets('reaches a playhead too far away to have been built',
         (tester) async {
       // Once the playhead row falls outside the build range there is no
