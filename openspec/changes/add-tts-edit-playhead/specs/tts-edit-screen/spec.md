@@ -51,7 +51,7 @@
 
 再生が中断されずに末尾へ到達した場合、再生ヘッドを 0 へ戻 SHALL す。ユーザーが [停止] を押して中断した場合は戻 SHALL NOT。
 
-`TtsEditController.playAll` は開始インデックスを引数として受け取 SHALL り、既定値 SHALL be 0 とする。末尾まで到達した場合は `true`、中断された場合は `false` を返 SHALL す。
+`TtsEditController.playAll` は開始インデックスを引数として受け取 SHALL り、既定値 SHALL be 0 とする。負の開始インデックスは 0 として扱 SHALL う。末尾まで到達した場合は `true`、中断された場合は `false` を返 SHALL す。
 
 #### Scenario: ヘッドが先頭にあるときは全体が再生される
 
@@ -77,6 +77,11 @@
 
 - **WHEN** 再生が中断されずに最終セグメントまで到達する
 - **THEN** 再生ヘッドは 0 へ戻り、続けて [再生] を押すと全体が頭から再生される
+
+#### Scenario: 負の開始インデックスは先頭として扱われる
+
+- **WHEN** `playAll(startIndex: -1)` を呼ぶ
+- **THEN** セグメント 0 から再生され、例外は発生しない
 
 #### Scenario: 中断ではヘッドが戻らない
 

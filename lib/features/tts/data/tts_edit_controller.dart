@@ -343,7 +343,9 @@ class TtsEditController {
     void Function(int)? onSegmentStart,
   }) async {
     _cancelled = false;
-    for (var i = startIndex; i < _segments.length; i++) {
+    // Clamped rather than trusted, matching playSegment's own guard: an index
+    // below zero would otherwise walk off the front of the list.
+    for (var i = startIndex < 0 ? 0 : startIndex; i < _segments.length; i++) {
       if (_cancelled) break;
       if (!_segments[i].hasAudio) continue;
       onSegmentStart?.call(i);

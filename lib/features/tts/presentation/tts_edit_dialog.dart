@@ -244,8 +244,12 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final controller = _controller;
     if (controller == null) return;
 
-    // The row already claimed the playhead on pointer down, so this only has
-    // to report that sound is coming out.
+    // A pointer press already claimed the playhead, but the button can also be
+    // activated from the keyboard, which sends no pointer — without this the
+    // speaker icon would sit on one row while another played. Safe to set here
+    // because row actions are disabled during playback, so this can never race
+    // the play-through's own writes.
+    ref.read(ttsEditCursorIndexProvider.notifier).set(index);
     ref.read(ttsEditPlayingProvider.notifier).set(true);
     try {
       await controller.playSegment(index);

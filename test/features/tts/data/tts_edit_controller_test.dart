@@ -1469,6 +1469,18 @@ void main() {
         expect(playedIndices(player), isEmpty);
       });
 
+      test('treats a negative start index as the first segment', () async {
+        // playSegment already ignores out-of-range indices; playAll would
+        // instead walk off the front of the list and throw.
+        final player = RealisticFakeAudioPlayer();
+        final controller = await loadedController(count: 3, player: player);
+
+        final reachedEnd = await controller.playAll(startIndex: -1);
+
+        expect(reachedEnd, true);
+        expect(playedIndices(player), [0, 1, 2]);
+      });
+
       test('returns false when the user stops playback midway', () async {
         final player = NeverCompletingAudioPlayer();
         final controller = await loadedController(count: 3, player: player);

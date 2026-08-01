@@ -55,7 +55,7 @@
   - `isPlaying` のとき行からの `onCursorRequested` を握り潰す
   - 行ごとの `GlobalKey` を `Map<int, GlobalKey>` で保持する（ヘッド行に1つの `GlobalKey` を付け替える実装は要素の再親化を招くため採らない。design D7 参照）
   - `didUpdateWidget` で `cursorIndex` の変化を検出し、フレーム後に `Scrollable.ensureVisible` を呼ぶ。前進時は `keepVisibleAtEnd`、後退時は `keepVisibleAtStart` を指定して、対象が表示領域内なら動かないようにする
-  - 対象が 0 かつ `currentContext` が null の場合は `ScrollController.animateTo(minScrollExtent)` で先頭へ戻す
+  - 対象が 0 かつ `currentContext` が null の場合は `ScrollController.jumpTo(minScrollExtent)` で先頭へ戻す（`ensureVisible` の既定が即時なので、ここだけアニメーションさせない）
 - [x] 5.5 テストが通ることを確認する
 
 ## 6. ダイアログへの配線とツールバー
@@ -68,7 +68,7 @@
   - `onSegmentStart` でヘッドを更新する
   - 開始時に `ttsEditPlayingProvider` を true、終了時に false にする
   - 戻り値が `true`（完走）のときのみヘッドを 0 に戻す
-- [x] 6.5 `_playSegment` を `ttsEditPlayingProvider` の true/false に置き換える（ヘッドは押下時点で移動済みのため触らない）
+- [x] 6.5 `_playSegment` を `ttsEditPlayingProvider` の true/false に置き換える（当初はヘッドを触らない方針だったが、キーボード起動ではポインタが発生しないため 8.6 でヘッド設定を戻した）
 - [x] 6.6 `TtsEditSegmentList` に `cursorIndex` / `isPlaying` / `onCursorChanged` を渡す。`onCursorChanged` は `ttsEditCursorIndexProvider` を更新する
 - [x] 6.7 `fvm flutter analyze` と `fvm flutter test` がグリーンであることを確認する
 - [x] 6.8 機能追加をコミットする
@@ -105,9 +105,9 @@ D8 の「再生中も行ボタンは有効のまま」が D4（再生中はヘ�
 
   `/code-review` はユーザ起動専用（`disable-model-invocation`）のため、モデルからは実行できない。代替として `superpowers:requesting-code-review` によるレビューを実施し、下記 8.5 に反映済み。`/code-review` はユーザに実行を依頼する
 
-- [ ] 8.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 8.2 codexスキルを使用して現在開発中のコードレビューを実施（`codex:rescue`。指摘は下記 8.6 に反映）
 - [x] 8.3 `fvm flutter analyze`でリントを実行（`No issues found!`）
-- [x] 8.4 `fvm flutter test`でテストを実行（`+2486 ~1: All tests passed!`）
+- [x] 8.4 `fvm flutter test`でテストを実行（`+2488 ~1: All tests passed!`）
 
 ### 8.5 レビュー指摘の反映
 
@@ -120,3 +120,9 @@ D8 の「再生中も行ボタンは有効のまま」が D4（再生中はヘ�
 - [x] Minor: ドラッグスクロールでヘッドが移る件 → デスクトップでは発生しない理由（`dragDevices` にマウスを含まない／ホイールとトラックパッドは `PointerDown` を出さない）を D5 に記載
 - [x] Minor: tasks.md の 6b 節が 8 節の後ろにあった → 7 節の前へ移動
 - [x] Minor: `_play` の配線に自動テストが無い（`TtsEditDialog` は pump 不能）→ 7.1 の目視確認項目に追加
+
+### 8.6 Codex レビュー指摘の反映
+
+- [x] `playAll(startIndex: -1)` が `_segments[-1]` で RangeError を投げる（同クラスの `playSegment` は負値を防御しており非対称）→ 0 にクランプし、テストと spec シナリオを追加
+- [x] 行の [▶] をキーボード／アクセシビリティ経由で起動するとポインタイベントが無くヘッドが動かず、別の行に 🔊 が出たまま違う行が鳴る → `_playSegment` が `index` をヘッドに設定する。D8 で再生中の行ボタンを無効化したため、再生ループとの競合は起こらない（`TtsEditDialog` は pump できないため自動テストは無し。7.1 の目視確認に委ねる）
+- [x] Listener の実装（gesture arena に参加せず既存操作を壊さない）と `ensureVisible` + `GlobalKey` のライフサイクル（`ScrollController` の dispose、`GlobalKey` はマップ保持で再利用なし）は問題なしとの評価 — 変更不要
