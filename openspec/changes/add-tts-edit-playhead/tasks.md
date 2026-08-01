@@ -107,7 +107,7 @@ D8 の「再生中も行ボタンは有効のまま」が D4（再生中はヘ�
 
 - [x] 8.2 codexスキルを使用して現在開発中のコードレビューを実施（`codex:rescue`。指摘は下記 8.6 に反映）
 - [x] 8.3 `fvm flutter analyze`でリントを実行（`No issues found!`）
-- [x] 8.4 `fvm flutter test`でテストを実行（`+2490 ~1: All tests passed!`）
+- [x] 8.4 `fvm flutter test`でテストを実行（`+2494 ~1: All tests passed!`）
 
 ### 8.5 レビュー指摘の反映
 
