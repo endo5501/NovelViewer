@@ -41,15 +41,15 @@
 
 ## 5. ヘッドの所有と自動スクロール（TDD）
 
-- [ ] 5.1 `test/features/tts/presentation/tts_edit_segment_list_test.dart` を新規作成し、以下を検証するテストを書く
+- [x] 5.1 `test/features/tts/presentation/tts_edit_segment_list_test.dart` を新規作成し、以下を検証するテストを書く
   - `isPlaying: false` のとき、行の押下で `onCursorChanged` が発火すること
   - `isPlaying: true` のとき、行の押下で `onCursorChanged` が発火しないこと（D4）
   - `cursorIndex` が表示領域より下の行へ変わったとき、その行が表示領域内に入るまでスクロールすること
   - `cursorIndex` が表示領域内の行へ変わったとき、スクロール位置が変化しないこと
   - `cursorIndex` が表示領域より上の行へ変わったとき、その行が見える位置まで戻ること
   - `cursorIndex` が 0 へ戻ったとき、一覧が先頭までスクロールすること
-- [ ] 5.2 テストを実行し、現在の実装（1章で切り出した挙動不変の状態）では失敗することを確認する
-- [ ] 5.3 失敗するテストをコミットする
+- [x] 5.2 テストを実行し、現在の実装（1章で切り出した挙動不変の状態）では失敗することを確認する（`No named parameter with the name 'isPlaying'`）
+- [x] 5.3 失敗するテストをコミットする
 - [ ] 5.4 `tts_edit_segment_list.dart` を実装する
   - `cursorIndex` / `isPlaying` / `onCursorChanged` を受け取る
   - `isPlaying` のとき行からの `onCursorRequested` を握り潰す
