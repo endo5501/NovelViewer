@@ -29,13 +29,13 @@
 
 ## 4. 行のポインタ検知と強調表示（TDD）
 
-- [ ] 4.1 `test/features/tts/presentation/tts_edit_segment_row_test.dart` に以下を検証するテストを追加する
+- [x] 4.1 `test/features/tts/presentation/tts_edit_segment_row_test.dart` に以下を検証するテストを追加する
   - 本文欄・メモ欄・参照音声セレクタ・[▶]・[↻]・[⟲] のいずれを押下しても `onCursorRequested` が発火すること
   - 本文欄を押下したとき、`onCursorRequested` の発火と同時に本文欄がフォーカスを得ること（既存の入力操作を妨げない）
   - `isCursor: true` の行に背景色が付き、`isCursor: false` の行には付かないこと
   - `isCursor: true, isPlaying: true` のとき 🔊 アイコンが表示され、`isCursor: true, isPlaying: false` のときは表示されないこと
-- [ ] 4.2 テストを実行し、現在の実装では失敗することを確認する
-- [ ] 4.3 失敗するテストをコミットする
+- [x] 4.2 テストを実行し、現在の実装では失敗することを確認する（`No named parameter with the name 'isCursor'`）
+- [x] 4.3 失敗するテストをコミットする
 - [ ] 4.4 `tts_edit_segment_row.dart` に `isCursor` と `onCursorRequested` を追加し、行全体を `Listener(onPointerDown: ...)` で包む。`isCursor` のとき背景色を描画する（テーマ由来の色を使う）
 - [ ] 4.5 テストが通ることを確認する
 

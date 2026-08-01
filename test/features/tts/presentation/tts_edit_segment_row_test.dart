@@ -8,7 +8,7 @@ import '../../../helpers/localized_material_app.dart';
 void main() {
   const originalText = 'セグメントの本文です。';
 
-  TtsEditSegment buildSegment({String? memo}) {
+  TtsEditSegment buildSegment({String? memo, bool hasAudio = false}) {
     return TtsEditSegment(
       segmentIndex: 0,
       originalText: originalText,
@@ -16,6 +16,7 @@ void main() {
       textOffset: 0,
       textLength: originalText.length,
       memo: memo,
+      hasAudio: hasAudio,
     );
   }
 
@@ -29,7 +30,11 @@ void main() {
     WidgetTester tester, {
     required double rowWidth,
     String? memo,
+    bool hasAudio = false,
+    bool isCursor = false,
+    bool isPlaying = false,
     void Function(String? memo)? onMemoEditComplete,
+    VoidCallback? onCursorRequested,
   }) async {
     await tester.binding.setSurfaceSize(Size(rowWidth + 100, 600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -40,9 +45,10 @@ void main() {
             child: SizedBox(
               width: rowWidth,
               child: TtsEditSegmentRow(
-                segment: buildSegment(memo: memo),
+                segment: buildSegment(memo: memo, hasAudio: hasAudio),
                 isGenerating: false,
-                isPlaying: false,
+                isPlaying: isPlaying,
+                isCursor: isCursor,
                 voiceFiles: const [],
                 onTextEditComplete: (_) {},
                 onRefWavPathChanged: (_) {},
@@ -50,6 +56,7 @@ void main() {
                 onPlay: () {},
                 onGenerate: () {},
                 onReset: () {},
+                onCursorRequested: onCursorRequested ?? () {},
                 enabled: true,
               ),
             ),
@@ -176,6 +183,122 @@ void main() {
       final shortHeight = tester.getSize(findMemoField()).height;
 
       expect(emptyHeight, shortHeight);
+    });
+  });
+
+  group('TtsEditSegmentRow playhead requests', () {
+    // Pressing anywhere in the row claims the playhead, so the segment the user
+    // just edited is the one playback starts from — whichever part of the row
+    // they happened to touch.
+    testWidgets('pressing the body field requests the playhead', (tester) async {
+      var requests = 0;
+      await pumpRow(tester, rowWidth: 1000, onCursorRequested: () => requests++);
+
+      await tester.tap(findBodyField());
+      await tester.pump();
+
+      expect(requests, 1);
+    });
+
+    testWidgets('pressing the memo field requests the playhead', (tester) async {
+      var requests = 0;
+      await pumpRow(tester, rowWidth: 1000, onCursorRequested: () => requests++);
+
+      await tester.tap(findMemoField());
+      await tester.pump();
+
+      expect(requests, 1);
+    });
+
+    testWidgets('pressing the reference audio selector requests the playhead',
+        (tester) async {
+      var requests = 0;
+      await pumpRow(tester, rowWidth: 1000, onCursorRequested: () => requests++);
+
+      await tester.tap(find.byType(DropdownButtonFormField<String?>));
+      await tester.pump();
+
+      expect(requests, 1);
+
+      // Close the menu the tap opened so the test tears down cleanly.
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('pressing an action button requests the playhead',
+        (tester) async {
+      var requests = 0;
+      await pumpRow(
+        tester,
+        rowWidth: 1000,
+        hasAudio: true,
+        onCursorRequested: () => requests++,
+      );
+
+      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.refresh));
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.restart_alt));
+      await tester.pump();
+
+      expect(requests, 3);
+    });
+
+    testWidgets('pressing the body field still focuses it', (tester) async {
+      // The playhead is claimed by observing pointers, not by consuming them:
+      // editing must work exactly as before.
+      await pumpRow(tester, rowWidth: 1000);
+
+      await tester.tap(findBodyField());
+      await tester.pump();
+
+      expect(tester.widget<TextField>(findBodyField()).focusNode?.hasFocus,
+          isNot(false));
+      expect(find.byType(EditableText), findsWidgets);
+      final editable =
+          tester.state<EditableTextState>(find.byType(EditableText).first);
+      expect(editable.widget.focusNode.hasFocus, true);
+    });
+  });
+
+  group('TtsEditSegmentRow playhead highlight', () {
+    List<Color> highlightColors(WidgetTester tester) => tester
+        .widgetList<ColoredBox>(find.descendant(
+          of: find.byType(TtsEditSegmentRow),
+          matching: find.byType(ColoredBox),
+        ))
+        .map((box) => box.color)
+        .where((color) => color.a > 0)
+        .toList();
+
+    testWidgets('the playhead row is given a background', (tester) async {
+      await pumpRow(tester, rowWidth: 1000, isCursor: true);
+
+      expect(highlightColors(tester), isNotEmpty);
+    });
+
+    testWidgets('other rows are not', (tester) async {
+      await pumpRow(tester, rowWidth: 1000, isCursor: false);
+
+      expect(highlightColors(tester), isEmpty);
+    });
+
+    testWidgets('the highlight shows without the speaker icon when idle',
+        (tester) async {
+      // The background means "playback starts here"; the speaker icon means
+      // "sound is coming out now". A stopped playhead shows only the former.
+      await pumpRow(tester, rowWidth: 1000, isCursor: true, isPlaying: false);
+
+      expect(highlightColors(tester), isNotEmpty);
+      expect(find.byIcon(Icons.volume_up), findsNothing);
+    });
+
+    testWidgets('both appear while the playhead row is playing', (tester) async {
+      await pumpRow(tester, rowWidth: 1000, isCursor: true, isPlaying: true);
+
+      expect(highlightColors(tester), isNotEmpty);
+      expect(find.byIcon(Icons.volume_up), findsOneWidget);
     });
   });
 }
