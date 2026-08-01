@@ -1,14 +1,14 @@
 ## 1. テスト作成（TDD: 先にテスト、失敗を確認してからコミット）
 
-- [ ] 1.1 `OllamaClient.generate` のリクエストボディに `"think": false` と `"options": {"num_predict": 1024}` が含まれることを検証するテストを `test/features/llm_summary/data/ollama_client_test.dart`（既存があれば追記）に作成
-- [ ] 1.2 `releaseResources` のボディに `think` / `options` が含まれないこと（`keep_alive: 0` のみ）を検証するテストを作成
-- [ ] 1.3 フォールバックのテストを作成: (a) 非200かつ本文に `think` を含むエラーで `think` なしの再送が1回だけ行われ成功レスポンスが返る、(b) フォールバック後の同一インスタンスの `generate` は最初から `think` なしで1回だけ送信される、(c) 本文に `think` を含まない非200エラーは再送なしでそのまま伝播する
-- [ ] 1.4 テストを実行して失敗（red）を確認し、テストのみをコミット
+- [x] 1.1 `OllamaClient.generate` のリクエストボディに `"think": false` と `"options": {"num_predict": 1024}` が含まれることを検証するテストを `test/features/llm_summary/data/ollama_client_test.dart`（既存があれば追記）に作成
+- [x] 1.2 `releaseResources` のボディに `think` / `options` が含まれないこと（`keep_alive: 0` のみ）を検証するテストを作成
+- [x] 1.3 フォールバックのテストを作成: (a) 非200かつ本文に `think` を含むエラーで `think` なしの再送が1回だけ行われ成功レスポンスが返る、(b) フォールバック後の同一インスタンスの `generate` は最初から `think` なしで1回だけ送信される、(c) 本文に `think` を含まない非200エラーは再送なしでそのまま伝播する
+- [x] 1.4 テストを実行して失敗（red）を確認し、テストのみをコミット
 
 ## 2. 実装
 
-- [ ] 2.1 `lib/features/llm_summary/data/ollama_client.dart` の `generate` に `think: false`・`options.num_predict`（static const、値1024）を追加し、think起因エラー時の1回フォールバック＋以後 `think` 省略のインスタンス状態を実装
-- [ ] 2.2 テストを実行して全テストがパス（green）することを確認
+- [x] 2.1 `lib/features/llm_summary/data/ollama_client.dart` の `generate` に `think: false`・`options.num_predict`（static const、値1024）を追加し、think起因エラー時の1回フォールバック＋以後 `think` 省略のインスタンス状態を実装
+- [x] 2.2 テストを実行して全テストがパス（green）することを確認
 
 ## 3. 実機確認
 
