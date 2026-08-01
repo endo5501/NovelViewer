@@ -388,7 +388,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ttsEdit_dictionaryButton => 'Dictionary';
 
   @override
-  String get ttsEdit_playAllButton => 'Play all';
+  String get ttsEdit_playButton => 'Play';
 
   @override
   String get ttsEdit_stopButton => 'Stop';

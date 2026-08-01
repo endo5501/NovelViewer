@@ -115,7 +115,7 @@
 
   "ttsEdit_title": "TTS Editor",
   "ttsEdit_dictionaryButton": "Dictionary",
-  "ttsEdit_playAllButton": "Play all",
+  "ttsEdit_playButton": "Play",
   "ttsEdit_stopButton": "Stop",
   "ttsEdit_cancelButton": "Cancel",
   "ttsEdit_generateAllButton": "Generate all",

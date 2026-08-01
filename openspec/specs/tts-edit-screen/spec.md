@@ -79,6 +79,8 @@ Each segment SHALL have an editable memo text field. Memo content SHALL be persi
 ### Requirement: Segment preview playback
 The system SHALL allow playing a single segment's audio via the play button on each row. The play button SHALL only be enabled when the segment has generated audio (audio_data is not NULL). Per-segment playback SHALL be delegated to the shared `SegmentPlayer`. After playback completes, the `SegmentPlayer` SHALL call `pause()` on the audio player to reset the internal `playing` flag. The system SHALL NOT call `stop()` after segment playback, as `stop()` destroys the underlying platform player and kills any remaining audio in the output buffer.
 
+Pressing the play button also moves the playhead to that row, since the button is inside the segment row (see 「再生ヘッド」). Single-segment playback SHALL NOT reset the playhead afterwards, so pressing [再生] next continues from that row.
+
 #### Scenario: Play a generated segment
 - **WHEN** the user clicks the play button for a segment with audio_data
 - **THEN** the edit controller writes the WAV BLOB to a temporary file and asks the `SegmentPlayer` to play it; on completion the `SegmentPlayer` calls `pause()` (not `stop()`) on the underlying audio player
@@ -86,6 +88,10 @@ The system SHALL allow playing a single segment's audio via the play button on e
 #### Scenario: Play button disabled when no audio
 - **WHEN** a segment has audio_data=NULL
 - **THEN** the play button is disabled or hidden
+
+#### Scenario: Single playback leaves the playhead on that row
+- **WHEN** the user clicks the play button on segment 5 and playback finishes
+- **THEN** the playhead is on segment 5, and pressing [再生] plays from segment 5 to the end
 
 ### Requirement: Single segment regeneration
 The system SHALL allow regenerating a single segment's audio via the regenerate button. Regeneration SHALL use the segment's current text and ref_wav_path (resolving "設定値" to the actual global setting). The TTS model SHALL be loaded on the first regeneration request within the dialog session and kept loaded until the dialog is closed. During generation, the segment status SHALL show "生成中". When inserting a new DB record for a previously unrecorded segment, the system SHALL store the segment's metadata ref_wav_path value (null, empty string, or filename) — NOT the resolved full filesystem path used for synthesis.
@@ -124,21 +130,6 @@ The system SHALL allow resetting a segment via the reset button. Resetting SHALL
 #### Scenario: Reset an unedited segment
 - **WHEN** the user clicks the reset button on a segment that has not been edited
 - **THEN** the segment's DB record is deleted (if it existed) and the segment shows original text with "未生成" status
-
-### Requirement: Play all segments
-The system SHALL provide a "全再生" button in the dialog toolbar that plays all segments in order as a preview. Only segments with generated audio SHALL be played. Segments without audio SHALL be skipped. Between segments, the system SHALL use `pause()` (not `stop()`) to reset the audio player's `playing` flag, ensuring each subsequent `play()` call functions correctly.
-
-#### Scenario: Play all with all segments generated
-- **WHEN** the user clicks "全再生" and all segments have generated audio
-- **THEN** all segments play in order from segment 0 to the last segment, with `pause()` called between each segment transition
-
-#### Scenario: Play all with some segments ungenerated
-- **WHEN** the user clicks "全再生" and segments 0, 2, 3 have audio but segment 1 does not
-- **THEN** segments 0, 2, 3 are played in order, segment 1 is skipped
-
-#### Scenario: Play all transitions cleanly between segments
-- **WHEN** segment N completes during "全再生" playback
-- **THEN** the system calls `pause()` to reset the `playing` flag, then loads and plays segment N+1 without audio cutoff or skipping
 
 ### Requirement: Generate all ungenerated segments
 The system SHALL provide a "全生成" button in the dialog toolbar that generates audio for all segments that currently have no audio_data. Generation SHALL proceed sequentially from the first ungenerated segment. The TTS model SHALL be loaded if not already loaded. Before generating each segment, the system SHALL notify the UI of the segment index being processed so that the per-segment progress indicator can be updated. For each segment, the system SHALL resolve the segment's ref_wav_path to a full filesystem path before passing it to the TTS engine. The resolution SHALL use the same voice file path resolution mechanism used by single-segment regeneration (resolving filename-only values to absolute paths via the voices directory).
@@ -406,3 +397,155 @@ The system SHALL set the `tts_episodes.sample_rate` column to the sample rate of
 
 - **WHEN** メモ欄にキャプションを入力して Enter を押す
 - **THEN** メモが確定され、改行が挿入されない（既存要件「Segment memo field」の Enter による永続化が維持される）
+
+### Requirement: 再生ヘッド
+
+システムは読み上げ編集ダイアログに「再生ヘッド」を1つ保持 SHALL する。再生ヘッドはセグメントのインデックスを指す非 null の整数であり、ダイアログを開いた直後の値 SHALL be 0 とする。再生ヘッドは次に再生を開始する位置を表す。
+
+再生ヘッドは次の契機で移動 SHALL する。
+
+- ユーザーがセグメント行のいずれかの箇所をポインタで押下したとき、そのセグメントへ移動する
+- 再生が次のセグメントを開始したとき、そのセグメントへ移動する
+- 再生が中断されずに末尾まで到達したとき、0 へ戻る
+
+再生中はユーザーの押下による移動を無視 SHALL する。再生の [停止] によって再生ヘッドが移動 SHALL NOT（止まった位置に留まる）。
+
+#### Scenario: 初期位置は先頭
+
+- **WHEN** 読み上げ編集ダイアログを開く
+- **THEN** 再生ヘッドはセグメント 0 を指す
+
+#### Scenario: 行の押下でヘッドが移動する
+
+- **WHEN** 再生していない状態でユーザーがセグメント 7 の行のいずれかの箇所（本文欄、メモ欄、参照音声セレクタ、各操作ボタンを含む）を押下する
+- **THEN** 再生ヘッドはセグメント 7 へ移動する
+
+#### Scenario: 行の押下が既存の入力操作を妨げない
+
+- **WHEN** ユーザーがセグメント行の本文欄を押下する
+- **THEN** 再生ヘッドが移動すると同時に、本文欄は従来どおりフォーカスを得て編集可能になる
+
+#### Scenario: 再生中の押下は無視される
+
+- **WHEN** 再生中にユーザーがセグメント 10 の行を押下する
+- **THEN** 再生ヘッドはセグメント 10 へ移動せず、再生の進行に従って更新され続ける
+
+#### Scenario: 停止してもヘッドは動かない
+
+- **WHEN** セグメント 5 の再生中にユーザーが [停止] を押す
+- **THEN** 再生ヘッドはセグメント 5 に留まり、次に [再生] を押すとセグメント 5 から再生される
+
+### Requirement: 再生ヘッドからの再生
+
+システムはダイアログのツールバーに「再生」ボタンを提供 SHALL する。押下すると、再生ヘッドの位置から末尾まで順にプレビュー再生 SHALL する。生成済み音声を持つセグメントのみを再生 SHALL し、音声を持たないセグメントはスキップ SHALL する。セグメント間では `stop()` ではなく `pause()` を用いて音声プレイヤーの `playing` フラグをリセット SHALL する。
+
+再生が中断されずに末尾へ到達し、かつ1つ以上のセグメントが実際に再生された場合、再生ヘッドを 0 へ戻 SHALL す。ユーザーが [停止] を押して中断した場合、および1つも再生されなかった場合は戻 SHALL NOT。
+
+停止が要求された後、システムはまだ再生を開始していないセグメントの再生を開始 SHALL NOT。
+
+`TtsEditController.playAll` は開始インデックスを引数として受け取 SHALL り、既定値 SHALL be 0 とする。負の開始インデックスは 0 として扱 SHALL う。末尾まで到達した場合は `true`、中断された場合は `false` を返 SHALL す。
+
+#### Scenario: ヘッドが先頭にあるときは全体が再生される
+
+- **WHEN** 再生ヘッドが 0 の状態でユーザーが [再生] を押し、すべてのセグメントに音声がある
+- **THEN** セグメント 0 から最終セグメントまでが順に再生され、セグメントの切り替えごとに `pause()` が呼ばれる
+
+#### Scenario: ヘッドの位置から末尾までが再生される
+
+- **WHEN** 再生ヘッドがセグメント 120 の状態でユーザーが [再生] を押す
+- **THEN** セグメント 120 から最終セグメントまでが順に再生され、セグメント 0〜119 は再生されない
+
+#### Scenario: ヘッド以降の未生成セグメントはスキップされる
+
+- **WHEN** 再生ヘッドがセグメント 2 の状態で [再生] を押し、セグメント 2、4、5 に音声があり 3 には無い
+- **THEN** セグメント 2、4、5 が順に再生され、セグメント 3 はスキップされる
+
+#### Scenario: ヘッド自身に音声が無い場合もスキップされる
+
+- **WHEN** 再生ヘッドがセグメント 2（音声なし）の状態で [再生] を押し、セグメント 3 に音声がある
+- **THEN** セグメント 3 から再生が始まる
+
+#### Scenario: 完走するとヘッドが先頭に戻る
+
+- **WHEN** 再生が中断されずに最終セグメントまで到達する
+- **THEN** 再生ヘッドは 0 へ戻り、続けて [再生] を押すと全体が頭から再生される
+
+#### Scenario: 何も再生されなかった場合はヘッドが動かない
+
+- **WHEN** 再生ヘッド以降に生成済みセグメントが1つも無い状態で [再生] を押す
+- **THEN** 何も再生されず、再生ヘッドはその位置に留まる（表示位置も動かない）
+
+#### Scenario: 停止後にセグメントが鳴り始めない
+
+- **WHEN** あるセグメントの音声をDBから読み出している最中にユーザーが [停止] を押す
+- **THEN** そのセグメントの再生は開始されず、`playAll` は `false` を返す
+
+#### Scenario: 負の開始インデックスは先頭として扱われる
+
+- **WHEN** `playAll(startIndex: -1)` を呼ぶ
+- **THEN** セグメント 0 から再生され、例外は発生しない
+
+#### Scenario: 中断ではヘッドが戻らない
+
+- **WHEN** セグメント 40 の再生中にユーザーが [停止] を押す
+- **THEN** `playAll` は `false` を返し、再生ヘッドはセグメント 40 に留まる
+
+#### Scenario: 再生中は停止ボタンが表示される
+
+- **WHEN** 再生が進行している
+- **THEN** ツールバーに [停止] ボタンが表示され、押下すると再生が打ち切られる
+
+#### Scenario: 再生中はセグメント行の操作ボタンが無効になる
+
+- **WHEN** 再生が進行している
+- **THEN** 各行の再生・再生成・リセットボタンと参照音声セレクタは無効になる（単体再生が通し再生の途中で「再生終了」を報告し、再生ヘッドのロックを解いてしまうことを防ぐ）。本文欄とメモ欄の編集は引き続き可能である
+
+#### Scenario: 再生中はツールバーで停止以外を押せない
+
+- **WHEN** 再生が進行している
+- **THEN** ツールバーの [再生]、[全生成]、[全消去] は無効になり、[停止] だけが押せる（一括生成は再生とキャンセルフラグを共有し、全消去は再生ループがこれから読むレコードを削除するため）
+
+### Requirement: 再生ヘッド行の強調表示
+
+システムは再生ヘッドが指すセグメント行に背景の強調を付与 SHALL する。強調は再生中かどうかに関わらず常に表示 SHALL する。再生中のセグメントを示す既存のアイコン表示（🔊）は、再生ヘッドが指す行かつ再生中である場合に表示 SHALL する。
+
+#### Scenario: ヘッドの行が強調される
+
+- **WHEN** 再生ヘッドがセグメント 3 を指している
+- **THEN** セグメント 3 の行に背景の強調が付き、他の行には付かない
+
+#### Scenario: 停止中も強調が残る
+
+- **WHEN** 再生していない状態で再生ヘッドがセグメント 3 を指している
+- **THEN** セグメント 3 の行の強調は表示されたままであり、次の再生開始位置が視認できる
+
+#### Scenario: 再生中は強調とアイコンが同じ行に重なる
+
+- **WHEN** セグメント 3 を再生している
+- **THEN** セグメント 3 の行に背景の強調と 🔊 アイコンの両方が表示される
+
+### Requirement: 再生ヘッドの自動スクロール
+
+再生ヘッドが移動した結果その行が**進行方向側**の表示領域外にある場合、システムはその行が見える位置までセグメント一覧をスクロール SHALL する。すなわちヘッドが後ろへ進んだときは下方向へ、前へ戻ったときは上方向へのみスクロール SHALL する。対象の行が既に表示領域内にある場合はスクロール SHALL NOT。
+
+進行方向と逆側にはみ出している場合（再生中にユーザーが手動で再生位置を追い越してスクロールした場合など）はスクロール SHALL NOT。ユーザーが自分で移動した表示位置を、再生の進行が奪い返さないことを優先する。
+
+#### Scenario: 再生の進行で画面外に出た行が追われる
+
+- **WHEN** 再生が進み、再生ヘッドの行が表示領域の下端より下にある
+- **THEN** 一覧はその行が見える位置までスクロールする
+
+#### Scenario: 表示領域内なら動かない
+
+- **WHEN** 再生ヘッドが移動し、移動先の行が既に表示領域内にある
+- **THEN** 一覧はスクロールしない（再生中にユーザーが別の箇所を表示していても引き戻されない）
+
+#### Scenario: 進行方向と逆側へは引き戻さない
+
+- **WHEN** 再生中にユーザーが一覧を手動で下へスクロールし、再生ヘッドの行が表示領域より上に出た状態で再生が次のセグメントへ進む
+- **THEN** 一覧はスクロールしない（ユーザーが選んだ表示位置が優先される）
+
+#### Scenario: 先頭への復帰でリストが先頭に戻る
+
+- **WHEN** 再生が完走して再生ヘッドが 0 へ戻る
+- **THEN** 一覧はセグメント 0 が見える位置までスクロールする

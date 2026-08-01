@@ -10,7 +10,7 @@ import '../data/tts_edit_controller.dart';
 import '../data/tts_engine_type.dart';
 import '../data/tts_isolate.dart';
 import '../domain/tts_engine_config.dart';
-import 'tts_edit_segment_row.dart';
+import 'tts_edit_segment_list.dart';
 import 'tts_failure_snackbar.dart';
 import '../providers/text_segmenter_provider.dart';
 import '../providers/vacuum_lifecycle_provider.dart';
@@ -135,7 +135,8 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     ref.read(ttsEditGenerationStateProvider.notifier)
         .set(TtsEditGenerationState.idle);
     ref.read(ttsEditGeneratingIndexProvider.notifier).set(null);
-    ref.read(ttsEditPlaybackIndexProvider.notifier).set(null);
+    ref.read(ttsEditCursorIndexProvider.notifier).set(0);
+    ref.read(ttsEditPlayingProvider.notifier).set(false);
 
     setState(() => _loading = false);
   }
@@ -243,23 +244,50 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final controller = _controller;
     if (controller == null) return;
 
-    ref.read(ttsEditPlaybackIndexProvider.notifier).set(index);
-    await controller.playSegment(index);
-    if (!mounted) return;
-    ref.read(ttsEditPlaybackIndexProvider.notifier).set(null);
+    // A pointer press already claimed the playhead, but the button can also be
+    // activated from the keyboard, which sends no pointer — without this the
+    // speaker icon would sit on one row while another played. Safe to set here
+    // because row actions are disabled during playback, so this can never race
+    // the play-through's own writes.
+    ref.read(ttsEditCursorIndexProvider.notifier).set(index);
+    ref.read(ttsEditPlayingProvider.notifier).set(true);
+    try {
+      await controller.playSegment(index);
+    } finally {
+      // Always clear the flag: a preview can throw (file write, DB read, or an
+      // error routed out of the player), and leaving it set would disable every
+      // row's actions and freeze the playhead with nothing playing.
+      if (mounted) ref.read(ttsEditPlayingProvider.notifier).set(false);
+    }
   }
 
-  Future<void> _playAll() async {
+  Future<void> _play() async {
     final controller = _controller;
     if (controller == null) return;
 
-    await controller.playAll(onSegmentStart: (i) {
-      if (mounted) {
-        ref.read(ttsEditPlaybackIndexProvider.notifier).set(i);
+    ref.read(ttsEditPlayingProvider.notifier).set(true);
+    try {
+      var playedAnything = false;
+      final reachedEnd = await controller.playAll(
+        startIndex: ref.read(ttsEditCursorIndexProvider),
+        onSegmentStart: (i) {
+          playedAnything = true;
+          if (mounted) {
+            ref.read(ttsEditCursorIndexProvider.notifier).set(i);
+          }
+        },
+      );
+      // Only a full run rewinds: after a stop the playhead marks where the user
+      // left off, so pressing play again carries on from there. A run that
+      // found nothing to play does not move it either — pressing play on an
+      // ungenerated stretch would otherwise silently throw away the position
+      // the user had scrolled to.
+      if (mounted && reachedEnd && playedAnything) {
+        ref.read(ttsEditCursorIndexProvider.notifier).set(0);
       }
-    });
-    if (!mounted) return;
-    ref.read(ttsEditPlaybackIndexProvider.notifier).set(null);
+    } finally {
+      if (mounted) ref.read(ttsEditPlayingProvider.notifier).set(false);
+    }
   }
 
   Future<void> _cancelGeneration() async {
@@ -273,7 +301,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   Future<void> _stopPlayback() async {
     await _controller?.stopPlayback();
     if (!mounted) return;
-    ref.read(ttsEditPlaybackIndexProvider.notifier).set(null);
+    ref.read(ttsEditPlayingProvider.notifier).set(false);
   }
 
   Future<void> _resetSegment(int index) async {
@@ -330,7 +358,8 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final segments = ref.watch(ttsEditSegmentsProvider);
     final generationState = ref.watch(ttsEditGenerationStateProvider);
     final generatingIndex = ref.watch(ttsEditGeneratingIndexProvider);
-    final playbackIndex = ref.watch(ttsEditPlaybackIndexProvider);
+    final cursorIndex = ref.watch(ttsEditCursorIndexProvider);
+    final isPlaying = ref.watch(ttsEditPlayingProvider);
     final isGenerating = generationState == TtsEditGenerationState.generating;
 
     return AlertDialog(
@@ -342,31 +371,25 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
-                  _buildToolbar(isGenerating, playbackIndex != null),
+                  _buildToolbar(isGenerating, isPlaying),
                   const Divider(),
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: segments.length,
-                      itemBuilder: (context, index) {
-                        return TtsEditSegmentRow(
-                          segment: segments[index],
-                          isGenerating:
-                              isGenerating && generatingIndex == index,
-                          isPlaying: playbackIndex == index,
-                          voiceFiles: _voiceFiles,
-                          onTextEditComplete: (text) =>
-                              _onTextEditComplete(index, text),
-                          onRefWavPathChanged: (value) =>
-                              _onRefWavPathChanged(index, value),
-                          onMemoEditComplete: (memo) =>
-                              _onMemoEditComplete(index, memo),
-                          onPlay: () => _playSegment(index),
-                          onGenerate: () => _generateSegment(index),
-                          onReset: () => _resetSegment(index),
-                          enabled: !isGenerating,
-                          dictRepository: _dictRepository,
-                        );
-                      },
+                    child: TtsEditSegmentList(
+                      segments: segments,
+                      isGenerating: isGenerating,
+                      generatingIndex: generatingIndex,
+                      isPlaying: isPlaying,
+                      cursorIndex: cursorIndex,
+                      onCursorChanged: (index) =>
+                          ref.read(ttsEditCursorIndexProvider.notifier).set(index),
+                      voiceFiles: _voiceFiles,
+                      dictRepository: _dictRepository,
+                      onTextEditComplete: _onTextEditComplete,
+                      onRefWavPathChanged: _onRefWavPathChanged,
+                      onMemoEditComplete: _onMemoEditComplete,
+                      onPlay: _playSegment,
+                      onGenerate: _generateSegment,
+                      onReset: _resetSegment,
                     ),
                   ),
                 ],
@@ -399,9 +422,12 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
         ),
         const SizedBox(width: 8),
         TextButton.icon(
-          onPressed: isGenerating ? null : _playAll,
+          // Off while playing: a second run would fight the first over the
+          // playhead, and whichever finished first would report playback over
+          // and release the lock on it. While playing, the toolbar offers 停止.
+          onPressed: isGenerating || isPlaying ? null : _play,
           icon: const Icon(Icons.play_arrow, size: 18),
-          label: Text(AppLocalizations.of(context)!.ttsEdit_playAllButton),
+          label: Text(AppLocalizations.of(context)!.ttsEdit_playButton),
         ),
         if (isPlaying)
           TextButton.icon(
@@ -418,13 +444,18 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
           )
         else
           TextButton.icon(
-            onPressed: _generateAll,
+            // Off while playing: generation and playback share the controller's
+            // cancel flag, so 停止 would silently break a bulk run and a bulk
+            // run would clear a stop.
+            onPressed: isPlaying ? null : _generateAll,
             icon: const Icon(Icons.auto_fix_high, size: 18),
             label: Text(AppLocalizations.of(context)!.ttsEdit_generateAllButton),
           ),
         const SizedBox(width: 8),
         TextButton.icon(
-          onPressed: isGenerating
+          // Off while playing: deleting the rows the playback loop is about to
+          // read makes its next segment lookup throw.
+          onPressed: isGenerating || isPlaying
               ? null
               : () async {
                   final confirm = await showDialog<bool>(

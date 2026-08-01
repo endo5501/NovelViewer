@@ -17,6 +17,7 @@ class TtsEditSegmentRow extends StatefulWidget {
     required this.segment,
     required this.isGenerating,
     required this.isPlaying,
+    required this.isCursor,
     required this.voiceFiles,
     required this.onTextEditComplete,
     required this.onRefWavPathChanged,
@@ -24,6 +25,7 @@ class TtsEditSegmentRow extends StatefulWidget {
     required this.onPlay,
     required this.onGenerate,
     required this.onReset,
+    required this.onCursorRequested,
     required this.enabled,
     this.dictRepository,
   });
@@ -31,6 +33,11 @@ class TtsEditSegmentRow extends StatefulWidget {
   final TtsEditSegment segment;
   final bool isGenerating;
   final bool isPlaying;
+
+  /// Whether the playhead sits on this segment — the one the next playback
+  /// starts from. Independent of [isPlaying]: a stopped playhead still shows.
+  final bool isCursor;
+
   final List<String> voiceFiles;
   final TtsDictionaryRepository? dictRepository;
   final void Function(String text) onTextEditComplete;
@@ -39,6 +46,11 @@ class TtsEditSegmentRow extends StatefulWidget {
   final VoidCallback onPlay;
   final VoidCallback onGenerate;
   final VoidCallback onReset;
+
+  /// Fired when a pointer goes down anywhere in this row, asking for the
+  /// playhead. Only a request: the list decides whether to honour it.
+  final VoidCallback onCursorRequested;
+
   final bool enabled;
 
   @override
@@ -113,7 +125,7 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
                 ? refWavPath
                 : '';
 
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,6 +280,21 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
         ],
+      ),
+    );
+
+    // A Listener rather than a tap gesture: it observes the pointer without
+    // consuming it, so the text fields, the selector and the buttons keep
+    // behaving exactly as before. Opaque so the gaps between them count as
+    // part of the row too.
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: (_) => widget.onCursorRequested(),
+      child: ColoredBox(
+        color: widget.isCursor
+            ? Theme.of(context).colorScheme.primaryContainer
+            : Colors.transparent,
+        child: content,
       ),
     );
   }

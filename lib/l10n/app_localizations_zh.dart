@@ -377,7 +377,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ttsEdit_dictionaryButton => '词典';
 
   @override
-  String get ttsEdit_playAllButton => '全部播放';
+  String get ttsEdit_playButton => '播放';
 
   @override
   String get ttsEdit_stopButton => '停止';

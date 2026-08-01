@@ -115,7 +115,7 @@
 
   "ttsEdit_title": "朗读编辑",
   "ttsEdit_dictionaryButton": "词典",
-  "ttsEdit_playAllButton": "全部播放",
+  "ttsEdit_playButton": "播放",
   "ttsEdit_stopButton": "停止",
   "ttsEdit_cancelButton": "中断",
   "ttsEdit_generateAllButton": "全部生成",
