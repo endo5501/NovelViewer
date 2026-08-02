@@ -35,11 +35,11 @@
 
 ## 4. ベースライン測定 (チェリーピック前) 🍎
 
-- [ ] 4.1 🍎 測定条件を記録する。マシン、OS バージョン、モデルディレクトリ、テキスト、seed、`third_party/audio.cpp` の commit hash
+- [x] 4.1 🍎 測定条件を記録する。マシン、OS バージョン、モデルディレクトリ、テキスト、seed、`third_party/audio.cpp` の commit hash
 - [x] 4.2 🍎 他アプリを停止し、`scripts/benchmark_tts.sh --engine irodori --model-dir <dir>` を**直列で**実行する (並列実行は禁止)
 - [x] 4.3 🍎 結果 JSON が `benchmarks/` に保存されたことを確認し、ファイル名を design.md に記録する
 - [x] 4.4 🍎 `codec_decode_ms / session.wall_ms` の比率を算出し、design.md の Open Questions に記録する。この比率が Metal 最適化の効果の上限を決める
-- [ ] 4.5 🍎 ベースライン結果をコミットする
+- [x] 4.5 🍎 ベースライン結果をコミットする
 
 ## 5. upstream Metal 最適化のチェリーピック 🪟
 
@@ -61,7 +61,7 @@
 - [x] 6.4 🍎 4.1 と**同一条件** (同一マシン・同一モデル・同一テキスト・同一 seed・他アプリ停止・直列) でベンチマークを実行する。4 と 6 の間でベンチスクリプト自体を変更していないことを確認する
 - [x] 6.5 🍎 before / after の `decode_ms` (主指標) と `total_ms` の中央値を比較し、`engine_timings` の内訳も含めて design.md に結果を追記する
 - [x] 6.6 🍎 design.md の D2 の判断基準に照らして、チェリーピックを残すか revert するかを決定し、判断とその根拠を design.md に記録する
-- [ ] 6.7 🍎 revert する場合は submodule pointer を戻し、理由を design.md に残す。残す場合は測定結果をコミットする
+- [x] 6.7 🍎 revert する場合は submodule pointer を戻し、理由を design.md に残す。残す場合は測定結果をコミットする
 
 ## 7. 最終確認
 
