@@ -51,7 +51,7 @@
 - [x] 5.6 🪟 Windows で `scripts/build_irodori_windows.bat` を実行し、Vulkan ビルドが壊れていないことを確認する (`conv_modules.cpp` と `miocodec/graph_ops.cpp` は Vulkan ビルドでもコンパイルされる)
 - [x] 5.7 🪟 Windows でアプリの Irodori 合成が従来どおり動作することを確認する。ゲート条件に追加したのは `Metal` のみで `Vulkan` は経路に入らないため、挙動は不変であるべき
 - [x] 5.8 🪟 `feat/metal-convtranspose` を endo5501/audio.cpp へ push する。**NovelViewer 側の pointer 更新より先に push すること** (順序を誤ると macOS 側の `git submodule update` が失敗する)
-- [ ] 5.9 🪟 NovelViewer 側で submodule pointer を更新してコミットし、`feat/speed-up-irodori-metal-decode` を push する
+- [x] 5.9 🪟 NovelViewer 側で submodule pointer を更新してコミットし、`feat/speed-up-irodori-metal-decode` を push する
 
 ## 6. 効果測定と判断 🍎
 
