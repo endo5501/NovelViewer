@@ -2,3 +2,4 @@
 # (GitHub Windows runners default to core.autocrlf=true, which would otherwise
 # rewrite them to CRLF and break `shell: bash` steps).
 *.sh text eol=lf
+scripts/test/fixtures/*.log -text
