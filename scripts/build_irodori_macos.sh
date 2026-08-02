@@ -55,6 +55,14 @@ cmake -S "$AUDIO_DIR" -B "$BUILD_DIR" \
 echo "=== Building audiocpp_ffi ==="
 cmake --build "$BUILD_DIR" --config Release --target audiocpp_ffi -j "$NUM_CORES"
 
+# audiocpp_cli is the measurement harness for scripts/benchmark_tts.sh
+# --engine irodori. Built from the same configure as audiocpp_ffi so a
+# benchmark measures the backend settings and engine_runtime the app ships,
+# and deliberately left in the build tree: Contents/Frameworks is sealed by
+# codesign, and an extra executable there changes what the signature covers.
+echo "=== Building audiocpp_cli (benchmark harness, not shipped) ==="
+cmake --build "$BUILD_DIR" --config Release --target audiocpp_cli -j "$NUM_CORES"
+
 echo "=== Copying shared library to macos/Frameworks/ ==="
 mkdir -p "$FRAMEWORKS_DIR"
 
@@ -76,6 +84,7 @@ rm -rf "$FRAMEWORKS_DIR/model_specs"
 echo "=== Done ==="
 echo "Shared library: $FRAMEWORKS_DIR/libaudiocpp_ffi.dylib"
 echo "Model spec:     compiled into the library (AUDIOCPP_DEPLOYMENT_BUILD)"
+echo "Benchmark CLI:  $BUILD_DIR/bin/audiocpp_cli (not copied — not shipped)"
 echo ""
 echo "The Runner target's 'Embed Native Libraries' phase copies and signs this"
 echo "library into the .app, so no Xcode changes are needed."

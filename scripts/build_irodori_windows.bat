@@ -55,6 +55,14 @@ echo === Building audiocpp_ffi ===
 cmake --build "%BUILD_DIR%" --target audiocpp_ffi
 if errorlevel 1 exit /b 1
 
+REM audiocpp_cli is the measurement harness for scripts/benchmark_tts.sh
+REM --engine irodori. Built from the same configure as audiocpp_ffi so the
+REM numbers come from the same backend settings and the same engine_runtime,
+REM and deliberately left in the build tree: it is not part of the app.
+echo === Building audiocpp_cli (benchmark harness, not shipped) ===
+cmake --build "%BUILD_DIR%" --target audiocpp_cli
+if errorlevel 1 exit /b 1
+
 echo === Copying DLL and model spec to build output ===
 set DLL_SRC=%BUILD_DIR%\bin\audiocpp_ffi.dll
 if not exist "%DLL_SRC%" set DLL_SRC=%BUILD_DIR%\audiocpp_ffi.dll
@@ -71,3 +79,4 @@ copy "%AUDIO_DIR%\model_specs\irodori_tts.json" "%SPEC_DIR%\" /Y
 echo === Done ===
 echo DLL copied to:  %RUNNER_DIR%\audiocpp_ffi.dll
 echo Spec copied to: %SPEC_DIR%\irodori_tts.json
+echo Benchmark CLI:  %BUILD_DIR%\bin\audiocpp_cli.exe (not copied - not shipped)
