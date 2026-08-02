@@ -139,6 +139,72 @@ void main() {
         final bob = await repository.findForWord(word: 'ボブ');
         expect(bob.single.contentHash, 'h3');
       });
+
+      Future<void> seed(String fileName, String updatedAt) async {
+        await repository.upsert(
+          word: 'アリス',
+          fileName: fileName,
+          facts: 'facts-$fileName',
+          contentHash: 'hash-$fileName',
+          promptVersion: 1,
+        );
+        await db.update(
+          'fact_cache',
+          {'updated_at': updatedAt},
+          where: 'word = ? AND file_name = ?',
+          whereArgs: ['アリス', fileName],
+        );
+      }
+
+      Future<String?> hashOf(String fileName) async =>
+          (await repository.find(word: 'アリス', fileName: fileName))
+              ?.contentHash;
+
+      test('rows newer than the reference timestamp are preserved', () async {
+        await seed('old.txt', '2026-08-01T00:00:00.000Z');
+        await seed('new.txt', '2026-08-03T00:00:00.000Z');
+
+        await repository.invalidateWord(
+          word: 'アリス',
+          notNewerThan: DateTime.utc(2026, 8, 2),
+        );
+
+        expect(await hashOf('old.txt'), FactCacheRepository.sentinelHash);
+        expect(await hashOf('new.txt'), 'hash-new.txt');
+      });
+
+      test('a row at exactly the reference timestamp is invalidated', () async {
+        await seed('exact.txt', '2026-08-02T00:00:00.000Z');
+
+        await repository.invalidateWord(
+          word: 'アリス',
+          notNewerThan: DateTime.utc(2026, 8, 2),
+        );
+
+        expect(await hashOf('exact.txt'), FactCacheRepository.sentinelHash);
+      });
+
+      test('facts of a preserved row are left intact', () async {
+        await seed('new.txt', '2026-08-03T00:00:00.000Z');
+
+        await repository.invalidateWord(
+          word: 'アリス',
+          notNewerThan: DateTime.utc(2026, 8, 2),
+        );
+
+        final row = await repository.find(word: 'アリス', fileName: 'new.txt');
+        expect(row!.facts, 'facts-new.txt');
+      });
+
+      test('omitting the reference timestamp invalidates every row', () async {
+        await seed('old.txt', '2026-08-01T00:00:00.000Z');
+        await seed('new.txt', '2026-08-03T00:00:00.000Z');
+
+        await repository.invalidateWord(word: 'アリス');
+
+        expect(await hashOf('old.txt'), FactCacheRepository.sentinelHash);
+        expect(await hashOf('new.txt'), FactCacheRepository.sentinelHash);
+      });
     });
 
     group('cascade cleanup', () {

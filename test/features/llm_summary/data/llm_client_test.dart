@@ -6,12 +6,18 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_response_format_exception.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 import 'package:novel_viewer/features/llm_summary/data/ollama_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/openai_compatible_client.dart';
 
 class _MinimalLlmClient extends LlmClient {
+  LlmResponseSchema? receivedSchema;
+
   @override
-  Future<String> generate(String prompt) async => '';
+  Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
+    receivedSchema = schema;
+    return '';
+  }
 }
 
 void main() {
@@ -20,6 +26,29 @@ void main() {
         () async {
       final client = _MinimalLlmClient();
       await expectLater(client.releaseResources(), completes);
+    });
+
+    test('generate accepts an optional response schema', () async {
+      final client = _MinimalLlmClient();
+
+      await client.generate(
+        'p',
+        schema: const LlmResponseSchema.singleStringField('facts'),
+      );
+
+      expect(
+        client.receivedSchema,
+        const LlmResponseSchema.singleStringField('facts'),
+      );
+    });
+
+    test('generate defaults to no schema when the argument is omitted',
+        () async {
+      final client = _MinimalLlmClient();
+
+      await client.generate('p');
+
+      expect(client.receivedSchema, isNull);
     });
   });
 
@@ -312,6 +341,140 @@ void main() {
     });
   });
 
+  group('OllamaClient structured output', () {
+    OllamaClient clientWith(MockClient mockClient) => OllamaClient(
+          baseUrl: 'http://localhost:11434',
+          model: 'gemma4:e4b',
+          httpClient: mockClient,
+        );
+
+    http.Response okResponse() =>
+        http.Response(jsonEncode({'response': 'ok'}), 200);
+
+    test('generate with a schema sends format as a JSON Schema object',
+        () async {
+      Map<String, dynamic>? capturedBody;
+      final mockClient = MockClient((request) async {
+        capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return okResponse();
+      });
+
+      await clientWith(mockClient).generate(
+        'p',
+        schema: const LlmResponseSchema.singleStringField('facts'),
+      );
+
+      expect(capturedBody!['format'], {
+        'type': 'object',
+        'properties': {
+          'facts': {'type': 'string'},
+        },
+        'required': ['facts'],
+      });
+      // The efficiency parameters stay in place alongside the schema.
+      expect(capturedBody!['think'], false);
+      expect(
+        (capturedBody!['options'] as Map<String, dynamic>)['num_predict'],
+        1024,
+      );
+    });
+
+    test('generate without a schema omits format', () async {
+      Map<String, dynamic>? capturedBody;
+      final mockClient = MockClient((request) async {
+        capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return okResponse();
+      });
+
+      await clientWith(mockClient).generate('p');
+
+      expect(capturedBody!.containsKey('format'), isFalse);
+    });
+
+    test('releaseResources sends no format field', () async {
+      Map<String, dynamic>? capturedBody;
+      final mockClient = MockClient((request) async {
+        capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(jsonEncode({'done': true}), 200);
+      });
+
+      await clientWith(mockClient).releaseResources();
+
+      expect(capturedBody!.containsKey('format'), isFalse);
+    });
+
+    test('the think fallback retry keeps the format schema', () async {
+      final bodies = <Map<String, dynamic>>[];
+      final mockClient = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        bodies.add(body);
+        if (body.containsKey('think')) {
+          return http.Response('model does not support thinking', 400);
+        }
+        return okResponse();
+      });
+
+      await clientWith(mockClient).generate(
+        'p',
+        schema: const LlmResponseSchema.singleStringField('summary'),
+      );
+
+      expect(bodies, hasLength(2));
+      expect(bodies[1].containsKey('think'), isFalse);
+      expect(
+        (bodies[1]['format'] as Map<String, dynamic>)['required'],
+        ['summary'],
+      );
+    });
+
+    test('a 400 mentioning format is propagated without retry', () async {
+      var requestCount = 0;
+      final mockClient = MockClient((request) async {
+        requestCount++;
+        return http.Response('unknown parameter "format"', 400);
+      });
+
+      await expectLater(
+        () => clientWith(mockClient).generate(
+          'p',
+          schema: const LlmResponseSchema.singleStringField('facts'),
+        ),
+        throwsA(isA<Exception>().having(
+          (e) => e.toString(),
+          'toString',
+          contains('400'),
+        )),
+      );
+      expect(requestCount, 1);
+    });
+
+    test('a format-related failure does not disable the schema for later calls',
+        () async {
+      final bodies = <Map<String, dynamic>>[];
+      var failFirst = true;
+      final mockClient = MockClient((request) async {
+        bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+        if (failFirst) {
+          failFirst = false;
+          return http.Response('unknown parameter "format"', 400);
+        }
+        return okResponse();
+      });
+
+      final client = clientWith(mockClient);
+      const schema = LlmResponseSchema.singleStringField('facts');
+      await expectLater(
+        () => client.generate('first', schema: schema),
+        throwsA(isA<Exception>()),
+      );
+
+      await client.generate('second', schema: schema);
+
+      expect(bodies, hasLength(2));
+      expect(bodies[1].containsKey('format'), isTrue);
+    });
+  });
+
   group('OpenAiCompatibleClient', () {
     test('generate sends correct request with auth and returns response',
         () async {
@@ -394,6 +557,39 @@ void main() {
         () => client.generate('test prompt'),
         throwsException,
       );
+    });
+
+    test('generate accepts a schema and leaves the request body unchanged',
+        () async {
+      Map<String, dynamic>? capturedBody;
+      final mockClient = MockClient((request) async {
+        capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': 'response'},
+              }
+            ],
+          }),
+          200,
+        );
+      });
+
+      final client = OpenAiCompatibleClient(
+        baseUrl: 'https://api.openai.com/v1',
+        apiKey: 'sk-test',
+        model: 'gpt-4o-mini',
+        httpClient: mockClient,
+      );
+
+      final result = await client.generate(
+        'test prompt',
+        schema: const LlmResponseSchema.singleStringField('summary'),
+      );
+
+      expect(result, 'response');
+      expect(capturedBody!.keys, unorderedEquals(['model', 'messages']));
     });
 
     test('releaseResources sends no HTTP request and completes', () async {

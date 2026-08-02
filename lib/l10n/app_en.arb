@@ -235,6 +235,19 @@
       "word": { "type": "String" }
     }
   },
+  "llmAnalysis_partialFailure": "Analysis stopped: {count} file(s) could not be analyzed, so no summary was saved. Run it again to retry just those files. ({error})",
+  "@llmAnalysis_partialFailure": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "error": { "type": "String" }
+    }
+  },
+  "llmAnalysis_noFacts": "Analysis stopped: no information about \"{word}\" could be extracted, so no summary was saved.",
+  "@llmAnalysis_noFacts": {
+    "placeholders": {
+      "word": { "type": "String" }
+    }
+  },
 
   "hoverPopup_snapshotLabel": "Summary at file {episode}",
   "@hoverPopup_snapshotLabel": {

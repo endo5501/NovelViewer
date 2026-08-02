@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
@@ -21,7 +22,7 @@ class _MockLlmClient extends LlmClient {
   _MockLlmClient(this.responses);
 
   @override
-  Future<String> generate(String prompt) async {
+  Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     prompts.add(prompt);
     final response = responses[_callIndex % responses.length];
     _callIndex++;

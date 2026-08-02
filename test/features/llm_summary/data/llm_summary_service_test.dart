@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
@@ -24,7 +25,7 @@ class _MockLlmClient extends LlmClient {
   _MockLlmClient(this.responses);
 
   @override
-  Future<String> generate(String prompt) async {
+  Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     events.add('generate');
     prompts.add(prompt);
     if (generateError != null) {
@@ -214,7 +215,11 @@ void main() {
       expect(snapshots.first.sourceFile, '060_chapter.txt');
     });
 
-    test('handles empty search results', () async {
+    test('empty search results fail instead of fabricating a summary',
+        () async {
+      // Nothing matched, so there is no evidence to summarize. Calling the LLM
+      // with an empty facts block would have it invent an answer that then gets
+      // saved as a snapshot.
       await createFile('001.txt', '関係ないテキスト');
 
       final mockClient = _MockLlmClient([
@@ -228,14 +233,18 @@ void main() {
         searchService: searchService,
       );
 
-      final result = await service.generateSummary(
-        directoryPath: tempDir.path,
-        word: 'アリス',
-        coveredUpToEpisode: 1,
-        sourceFileName: '001.txt',
+      await expectLater(
+        () => service.generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 1,
+          sourceFileName: '001.txt',
+        ),
+        throwsA(isA<LlmAnalysisNoFactsFailure>()),
       );
 
-      expect(result, '情報が見つかりません。');
+      expect(mockClient.callCount, 0);
+      expect(await repository.findSnapshotsForWord(word: 'アリス'), isEmpty);
     });
 
     test('releases LLM client resources after successful generation',

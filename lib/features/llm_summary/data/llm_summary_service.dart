@@ -6,6 +6,9 @@ import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
+
+export 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
 import 'package:novel_viewer/shared/utils/content_hash.dart';
 import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
@@ -20,6 +23,19 @@ class _FileWork {
 }
 
 class LlmSummaryService {
+  /// How many extractions may fail back-to-back before the run gives up on the
+  /// remaining files.
+  ///
+  /// Continuing past a failure exists to fill the cache for files that would
+  /// otherwise be re-extracted later, which pays off when the failure is
+  /// file-local. A streak this long instead points at something systemic — the
+  /// endpoint is down, the model name is wrong — where every remaining file
+  /// would fail too. That matters because `http.Client` applies no timeout and
+  /// the progress modal cannot be dismissed: against an endpoint that accepts
+  /// connections but never answers, each extra file is another pair of hanging
+  /// requests the user cannot cancel.
+  static const int maxConsecutiveFailures = 3;
+
   final LlmClient llmClient;
   final LlmSummaryRepository repository;
   final FactCacheRepository factCacheRepository;
@@ -38,11 +54,20 @@ class LlmSummaryService {
   ///
   /// Stage-1 fact extraction is assembled from the per-file fact cache: each
   /// in-scope file's cached facts are reused when still valid, and only cache
-  /// misses are extracted (and written back). When a snapshot already exists at
-  /// `coveredUpToEpisode`, this run is a re-analysis ("fix a bad result"), so
-  /// the word's whole cache is invalidated up-front to force fresh extraction.
-  /// The snapshot is then upserted at `(word, coveredUpToEpisode)` in the
-  /// folder-scoped repository.
+  /// misses are extracted (and written back) — and only when the extraction
+  /// decoded structurally and produced content. When a snapshot already exists
+  /// at `coveredUpToEpisode`, this run is a re-analysis ("fix a bad result"),
+  /// so the word's cache is invalidated up-front to force fresh extraction,
+  /// bounded to rows written no later than the word's newest snapshot (rows
+  /// newer than that came from an attempt that failed before saving and are
+  /// already fresh). The snapshot is then upserted at
+  /// `(word, coveredUpToEpisode)` in the folder-scoped repository.
+  ///
+  /// A file whose extraction fails is recorded and skipped so the rest still
+  /// reach the cache, but the run then fails without generating or saving a
+  /// summary: [LlmAnalysisPartialFailure]. A run whose files yield no facts at
+  /// all fails with [LlmAnalysisNoFactsFailure] rather than having the model
+  /// invent one.
   Future<String> generateSummary({
     required String directoryPath,
     required String word,
@@ -53,14 +78,32 @@ class LlmSummaryService {
   }) async {
     try {
       // Re-analysis detection: an existing snapshot at this exact upper bound
-      // means the user is overwriting a prior result. Invalidate the word's
-      // whole cache so every in-scope file is re-extracted rather than served
-      // from cache (restores "re-analyze = redo from scratch").
+      // means the user is overwriting a prior result, so the cache is
+      // invalidated to re-extract rather than serve the facts that produced it
+      // ("re-analyze = redo from scratch").
       final existing = await repository.findSnapshotsForWord(word: word);
       final isReanalysis =
           existing.any((s) => s.coveredUpToEpisode == coveredUpToEpisode);
       if (isReanalysis) {
-        await factCacheRepository.invalidateWord(word: word);
+        // Scope the invalidation to rows written no later than the word's most
+        // recent successful run of ANY scope. Only a run that saved a snapshot
+        // advances that mark, so rows newer than it can only have come from an
+        // attempt that failed before saving: those are already fresh, and
+        // invalidating them would make every retry of a failing re-analysis pay
+        // for all files again instead of only the ones that failed.
+        //
+        // The bound is the newest snapshot rather than the one being replaced,
+        // because a later wider analysis can refresh a row after that snapshot
+        // was written. Bounding by the replaced snapshot alone would leave such
+        // a row valid and serve it from cache — precisely the file the user is
+        // re-analyzing to fix.
+        final lastSuccessfulRun = existing
+            .map((s) => s.updatedAt)
+            .reduce((a, b) => a.isAfter(b) ? a : b);
+        await factCacheRepository.invalidateWord(
+          word: word,
+          notNewerThan: lastSuccessfulRun,
+        );
       }
 
       final searchResults = await searchService.searchWithContext(
@@ -103,6 +146,9 @@ class LlmSummaryService {
 
       final perFileFacts = <String>[];
       var missDone = 0;
+      var failedFileCount = 0;
+      var consecutiveFailures = 0;
+      Object? firstError;
       for (final file in files) {
         final cachedFacts = cachedFactsByFile[file.fileName];
         if (cachedFacts != null) {
@@ -118,18 +164,49 @@ class LlmSummaryService {
             total: missCount,
           ),
         );
-        final facts = await pipeline.extractFileFacts(
-          word: word,
-          contexts: file.contexts,
+        final ExtractedFileFacts extracted;
+        try {
+          extracted = await pipeline.extractFileFactsDetailed(
+            word: word,
+            contexts: file.contexts,
+          );
+        } catch (e) {
+          // Record the file and keep going. The remaining files still reach the
+          // cache, so the re-run this failure forces only pays for the files
+          // that failed. Nothing is cached for this one, so it is retried then.
+          failedFileCount++;
+          firstError ??= e;
+          consecutiveFailures++;
+          if (consecutiveFailures >= maxConsecutiveFailures) break;
+          continue;
+        }
+        // Only a successful extraction clears the streak. A cache hit says
+        // nothing about whether the LLM is reachable, so it must not.
+        consecutiveFailures = 0;
+        // Only a result that decoded structurally and carries content earns a
+        // cache row. A raw-text fallback is a fragment of malformed JSON and an
+        // empty result is an anomalous answer; caching either would poison
+        // every later analysis of this word. Withholding the row makes the next
+        // run treat the file as a miss and extract it again.
+        if (extracted.isStructured && extracted.facts.trim().isNotEmpty) {
+          await factCacheRepository.upsert(
+            word: word,
+            fileName: file.fileName,
+            facts: extracted.facts,
+            contentHash: currentHashByFile[file.fileName]!,
+            promptVersion: currentPromptVersion,
+          );
+        }
+        perFileFacts.add(extracted.facts);
+      }
+
+      // An incomplete evidence set never becomes a saved summary: fail here,
+      // before spending a final-summary call whose result would be discarded.
+      if (failedFileCount > 0) {
+        throw LlmAnalysisPartialFailure(
+          failedFileCount: failedFileCount,
+          firstError: firstError!,
         );
-        await factCacheRepository.upsert(
-          word: word,
-          fileName: file.fileName,
-          facts: facts,
-          contentHash: currentHashByFile[file.fileName]!,
-          promptVersion: currentPromptVersion,
-        );
-        perFileFacts.add(facts);
       }
 
       final summary = await pipeline.summarizeFromFacts(

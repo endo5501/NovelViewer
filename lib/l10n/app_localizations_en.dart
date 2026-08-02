@@ -677,6 +677,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String llmAnalysis_partialFailure(int count, String error) {
+    return 'Analysis stopped: $count file(s) could not be analyzed, so no summary was saved. Run it again to retry just those files. ($error)';
+  }
+
+  @override
+  String llmAnalysis_noFacts(String word) {
+    return 'Analysis stopped: no information about \"$word\" could be extracted, so no summary was saved.';
+  }
+
+  @override
   String hoverPopup_snapshotLabel(int episode) {
     return 'Summary at file $episode';
   }

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_response_format_exception.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 
 class OllamaClient extends LlmClient {
   /// Upper bound on generated tokens per call. Valid fact/summary outputs
@@ -47,14 +48,19 @@ class OllamaClient extends LlmClient {
   }
 
   @override
-  Future<String> generate(String prompt) async {
+  Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     // Thinking-capable models spend most of their time on reasoning tokens
     // that never reach the response, so thinking is disabled on every call.
-    final body = {
+    // `format` constrains decoding to the requested shape, which is what keeps
+    // malformed answers (unescaped quotes, a list where a string is required)
+    // from reaching the parser at all. Structured outputs have been available
+    // since Ollama 0.5.0, so it is sent unconditionally with no fallback.
+    final body = <String, dynamic>{
       'model': model,
       'prompt': prompt,
       'stream': false,
       'options': const {'num_predict': maxOutputTokens},
+      if (schema != null) 'format': _formatFor(schema),
     };
     Map<String, dynamic> json;
     if (_thinkRejected) {
@@ -89,6 +95,15 @@ class OllamaClient extends LlmClient {
       'stream': false,
     });
   }
+
+  /// Translates a response schema into Ollama's `format` field (a JSON Schema).
+  static Map<String, dynamic> _formatFor(LlmResponseSchema schema) => {
+        'type': 'object',
+        'properties': {
+          schema.fieldName: const {'type': 'string'},
+        },
+        'required': [schema.fieldName],
+      };
 
   Future<Map<String, dynamic>> _postJson(
     String path,

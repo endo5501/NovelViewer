@@ -660,6 +660,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String llmAnalysis_partialFailure(int count, String error) {
+    return '分析已中止：有 $count 个文件无法分析，因此未保存摘要。重新运行将只重试失败的文件。（$error）';
+  }
+
+  @override
+  String llmAnalysis_noFacts(String word) {
+    return '分析已中止：未能提取关于「$word」的信息，因此未保存摘要。';
+  }
+
+  @override
   String hoverPopup_snapshotLabel(int episode) {
     return '第$episode文件时的摘要';
   }

@@ -5,11 +5,40 @@ import 'package:novel_viewer/features/llm_summary/data/context_chunker.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_prompt_builder.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_response_format_exception.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
 
 final _log = Logger('llm_summary');
 
+/// One source file's Stage-1 result, together with how it was obtained.
+///
+/// [isStructured] is false when any chunk's response had to fall back to raw
+/// text (it failed `jsonDecode`). Such a value is still usable for the current
+/// run but must not be cached, or the fragment of malformed JSON would poison
+/// every later analysis of that word.
+class ExtractedFileFacts {
+  const ExtractedFileFacts({required this.facts, required this.isStructured});
+
+  final String facts;
+  final bool isStructured;
+}
+
+/// A parsed response value plus whether it came from a structured decode.
+class _ParsedValue {
+  const _ParsedValue(this.value, {required this.isStructured});
+
+  final String value;
+  final bool isStructured;
+}
+
 class LlmSummaryPipeline {
+  /// Shapes the two stages constrain their responses to. Requesting these
+  /// keeps malformed answers from being generated in the first place, rather
+  /// than relying on the parser to reject them after the fact.
+  static const factsSchema = LlmResponseSchema.singleStringField('facts');
+  static const summarySchema = LlmResponseSchema.singleStringField('summary');
+
   final LlmClient llmClient;
   final int maxChunkSize;
   final int maxRecursionDepth;
@@ -29,16 +58,24 @@ class LlmSummaryPipeline {
   /// Stage-1 for a single source file: split this file's own contexts into
   /// chunks (only chunking when the file alone exceeds [maxChunkSize]) and
   /// combine the per-chunk extracted facts into the file's facts. Returns an
-  /// empty string and makes no LLM call when [contexts] is empty. Contexts
-  /// from other files are never passed here — the caller groups by file, which
-  /// is what makes the result cacheable per `(folder, word, file)`.
-  Future<String> extractFileFacts({
+  /// empty, structured result and makes no LLM call when [contexts] is empty.
+  /// Contexts from other files are never passed here — the caller groups by
+  /// file, which is what makes the result cacheable per `(folder, word, file)`.
+  ///
+  /// The result reports whether every chunk decoded structurally. A single
+  /// chunk that fell back to raw text marks the whole file unstructured,
+  /// because the file's facts are the concatenation of its chunks and the
+  /// caller caches (or withholds) them as one unit.
+  Future<ExtractedFileFacts> extractFileFactsDetailed({
     required String word,
     required List<String> contexts,
   }) async {
-    if (contexts.isEmpty) return '';
+    if (contexts.isEmpty) {
+      return const ExtractedFileFacts(facts: '', isStructured: true);
+    }
     final chunks = ContextChunker.split(contexts, maxChunkSize: maxChunkSize);
     final factsList = <String>[];
+    var isStructured = true;
     for (final chunk in chunks) {
       final contextBlock = chunk.join('\n---\n');
       final prompt = LlmPromptBuilder.buildFactExtractionPrompt(
@@ -46,10 +83,23 @@ class LlmSummaryPipeline {
         contextChunk: contextBlock,
         language: language,
       );
-      factsList.add(_parseFactsResponse(await llmClient.generate(prompt)));
+      final parsed = await _generateFacts(prompt);
+      factsList.add(parsed.value);
+      isStructured = isStructured && parsed.isStructured;
     }
-    return factsList.join('\n');
+    return ExtractedFileFacts(
+      facts: factsList.join('\n'),
+      isStructured: isStructured,
+    );
   }
+
+  /// [extractFileFactsDetailed] without the parse provenance, for callers that
+  /// only need the text.
+  Future<String> extractFileFacts({
+    required String word,
+    required List<String> contexts,
+  }) async =>
+      (await extractFileFactsDetailed(word: word, contexts: contexts)).facts;
 
   /// Aggregate already-extracted per-file facts and generate the final summary.
   /// When the combined facts exceed [maxChunkSize], runs recursive refinement
@@ -66,17 +116,20 @@ class LlmSummaryPipeline {
     final nonEmpty =
         perFileFacts.where((f) => f.trim().isNotEmpty).toList(growable: false);
 
-    String facts;
+    // With no facts there is nothing to summarize: asking the LLM anyway would
+    // have it invent a summary from an empty evidence set, which then gets
+    // saved as if it were grounded.
     if (nonEmpty.isEmpty) {
-      facts = '';
+      throw const LlmAnalysisNoFactsFailure();
+    }
+
+    final String facts;
+    final combined = nonEmpty.join('\n');
+    if (combined.length <= maxChunkSize) {
+      facts = combined;
     } else {
-      final combined = nonEmpty.join('\n');
-      if (combined.length <= maxChunkSize) {
-        facts = combined;
-      } else {
-        // Refinement starts at depth 1 so the first emitted round is 2.
-        facts = await _extractFactsRecursive(word, nonEmpty, 1, notify);
-      }
+      // Refinement starts at depth 1 so the first emitted round is 2.
+      facts = await _extractFactsRecursive(word, nonEmpty, 1, notify);
     }
 
     notify(const AnalysisGeneratingFinalSummary());
@@ -85,7 +138,9 @@ class LlmSummaryPipeline {
       facts: facts,
       language: language,
     );
-    return _parseSummaryResponse(await llmClient.generate(prompt));
+    final parsed = await _withSingleRetry(() async => _parseSummaryResponse(
+        await llmClient.generate(prompt, schema: summarySchema)));
+    return parsed.value;
   }
 
   static void Function(AnalysisProgress) _isolatedNotifier(
@@ -127,8 +182,7 @@ class LlmSummaryPipeline {
         contextChunk: contextBlock,
         language: language,
       );
-      final response = await llmClient.generate(prompt);
-      factsList.add(_parseFactsResponse(response));
+      factsList.add((await _generateFacts(prompt)).value);
     }
 
     final combinedFacts = factsList.join('\n');
@@ -142,13 +196,32 @@ class LlmSummaryPipeline {
     return _extractFactsRecursive(word, factsList, depth + 1, notify);
   }
 
-  String _parseFactsResponse(String response) =>
+  /// Runs one Stage-1 extraction request and parses its response, retrying once
+  /// on failure.
+  Future<_ParsedValue> _generateFacts(String prompt) =>
+      _withSingleRetry(() async => _parseFactsResponse(
+          await llmClient.generate(prompt, schema: factsSchema)));
+
+  /// Retries [operation] exactly once, with no delay and no change to the
+  /// request. One retry absorbs the transient failures that remain once the
+  /// response schema rules out malformed output — a dropped connection, a 5xx,
+  /// or a one-off answer the parser rejects. A second failure is not transient,
+  /// so it propagates.
+  static Future<T> _withSingleRetry<T>(Future<T> Function() operation) async {
+    try {
+      return await operation();
+    } catch (_) {
+      return await operation();
+    }
+  }
+
+  _ParsedValue _parseFactsResponse(String response) =>
       _parseJsonResponse(response, 'facts');
 
-  String _parseSummaryResponse(String response) =>
+  _ParsedValue _parseSummaryResponse(String response) =>
       _parseJsonResponse(response, 'summary');
 
-  String _parseJsonResponse(String response, String key) {
+  _ParsedValue _parseJsonResponse(String response, String key) {
     final normalized = _stripCodeFence(response.trim());
 
     final dynamic decoded;
@@ -165,7 +238,7 @@ class LlmSummaryPipeline {
           'jsonDecode failed for $key; using raw text. length=$length prefix=$prefix',
           e,
           st);
-      return normalized;
+      return _ParsedValue(normalized, isStructured: false);
     }
 
     // Decode succeeded. A well-formed JSON object whose key holds a string is
@@ -173,7 +246,7 @@ class LlmSummaryPipeline {
     // value such as {"summary": null}) is a malformed structured response: do
     // NOT persist the raw JSON as the value (regression for F132).
     if (decoded is Map<String, dynamic> && decoded[key] is String) {
-      return decoded[key] as String;
+      return _ParsedValue(decoded[key] as String, isStructured: true);
     }
 
     final length = normalized.length;
