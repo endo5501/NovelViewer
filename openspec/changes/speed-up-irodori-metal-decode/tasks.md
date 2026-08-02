@@ -26,11 +26,11 @@
 
 ## 3. ビルドスクリプトへの測定用 CLI 追加
 
-- [ ] 3.1 🪟 `scripts/build_irodori_windows.bat` のビルドターゲットに `audiocpp_cli` を追加する。`audiocpp_ffi` と同一の configure を使い、CLI は配布先 (`build/windows/x64/runner/Release/`) にコピーしない
-- [ ] 3.2 🪟 Windows で `scripts/build_irodori_windows.bat` を実行し、`audiocpp_ffi.dll` と `audiocpp_cli.exe` の両方が生成されることを確認する
-- [ ] 3.3 🍎 **[テストファースト]** `scripts/test/verify_irodori_macos.sh` に検証項目を追加する。(a) `third_party/audio.cpp/build/ffi-metal/` 配下に `audiocpp_cli` が存在する、(b) `macos/Frameworks/audiocpp_cli` が存在しない
+- [x] 3.1 🪟 `scripts/build_irodori_windows.bat` のビルドターゲットに `audiocpp_cli` を追加する。`audiocpp_ffi` と同一の configure を使い、CLI は配布先 (`build/windows/x64/runner/Release/`) にコピーしない
+- [x] 3.2 🪟 Windows で `scripts/build_irodori_windows.bat` を実行し、`audiocpp_ffi.dll` と `audiocpp_cli.exe` の両方が生成されることを確認する
+- [x] 3.3 🍎 **[テストファースト]** `scripts/test/verify_irodori_macos.sh` に検証項目を追加する。(a) `third_party/audio.cpp/build/ffi-metal/` 配下に `audiocpp_cli` が存在する、(b) `macos/Frameworks/audiocpp_cli` が存在しない
 - [ ] 3.4 🍎 検証スクリプトを実行し、(a) が失敗することを確認する
-- [ ] 3.5 🍎 `scripts/build_irodori_macos.sh` のビルドターゲットに `audiocpp_cli` を追加する。`macos/Frameworks/` へはコピーしない
+- [x] 3.5 🍎 `scripts/build_irodori_macos.sh` のビルドターゲットに `audiocpp_cli` を追加する。`macos/Frameworks/` へはコピーしない
 - [ ] 3.6 🍎 `scripts/build_irodori_macos.sh` を実行し、`scripts/test/verify_irodori_macos.sh` が全項目通ることを確認する
 
 ## 4. ベースライン測定 (チェリーピック前) 🍎
