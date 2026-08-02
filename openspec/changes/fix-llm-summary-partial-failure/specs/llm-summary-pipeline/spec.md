@@ -49,10 +49,22 @@ The raw-text fallback (the response failed `jsonDecode`) is not a failure for th
 
 When Stage-1 fact extraction for one source file fails (after its retry), the system SHALL record that file as failed and SHALL continue extracting the remaining in-scope files, rather than aborting the run at the first failure. The purpose is to leave the successfully extracted files in the fact cache so that a later re-run pays only for the files that failed.
 
+The system SHALL stop attempting further files once three extractions have failed consecutively, because a streak that long indicates a systemic cause (an unreachable endpoint, a misconfigured model) under which every remaining file would fail too. Only a successful extraction SHALL reset the streak; a cache hit SHALL NOT, since it carries no evidence about whether the LLM is reachable. This bound matters because the HTTP client applies no timeout and the progress modal cannot be dismissed, so each additional doomed file is another pair of requests the user cannot cancel.
+
 #### Scenario: Extraction continues past a failed file
 
 - **WHEN** five files are in scope and extraction for the third file fails after its retry
 - **THEN** the system SHALL still attempt extraction for the fourth and fifth files, and their successful results SHALL be cached
+
+#### Scenario: Three consecutive failures stop the run early
+
+- **WHEN** six files are in scope and every extraction fails
+- **THEN** the system SHALL attempt only the first three files (each once plus its retry), SHALL NOT attempt the remaining three, and SHALL report three failed files
+
+#### Scenario: A success between failures keeps the run going
+
+- **WHEN** five files are in scope, the first two and the last two fail, and the third succeeds
+- **THEN** the system SHALL attempt all five files and SHALL report four failed files
 
 #### Scenario: A re-run after a partial failure only re-extracts the failed files
 

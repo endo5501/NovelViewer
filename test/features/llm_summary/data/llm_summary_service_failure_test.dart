@@ -279,6 +279,64 @@ void main() {
       expect(second.callCount, 2);
     });
 
+    test('three consecutive failures abort the run instead of attempting the '
+        'rest', () async {
+      await createEpisodes(6);
+
+      // Every file fails: the cause is systemic (endpoint down), not file-local.
+      final client = _ScriptedLlmClient(
+        {'アリス': const SocketException('connection reset')},
+        summary: jsonEncode({'summary': 'アリスは冒険者。'}),
+      );
+
+      await expectLater(
+        () => makeService(client).generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 6,
+        ),
+        throwsA(isA<LlmAnalysisPartialFailure>()
+            .having((e) => e.failedFileCount, 'failedFileCount', 3)),
+      );
+
+      // Three files attempted, each once plus its retry. Files 4-6 are never
+      // tried, so a hung endpoint blocks the modal for 6 requests, not 12.
+      expect(client.callCount, 6);
+    });
+
+    test('failures broken up by a success do not abort the run', () async {
+      await createEpisodes(5);
+
+      // Files 1,2 fail, 3 succeeds (resetting the streak), 4,5 fail: four
+      // failures but never three in a row, so every file is attempted.
+      final client = _ScriptedLlmClient(
+        {
+          'エピソード1': const SocketException('reset'),
+          'エピソード2': const SocketException('reset'),
+          'エピソード4': const SocketException('reset'),
+          'エピソード5': const SocketException('reset'),
+        },
+        summary: jsonEncode({'summary': 'アリスは冒険者。'}),
+      );
+
+      await expectLater(
+        () => makeService(client).generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 5,
+        ),
+        throwsA(isA<LlmAnalysisPartialFailure>()
+            .having((e) => e.failedFileCount, 'failedFileCount', 4)),
+      );
+
+      // 4 failures x 2 attempts + 1 success = 9 requests, no final summary.
+      expect(client.callCount, 9);
+      expect(
+        await factCache.find(word: 'アリス', fileName: '003_ch.txt'),
+        isNotNull,
+      );
+    });
+
     test('a fully successful run persists as before', () async {
       await createEpisodes(3);
 

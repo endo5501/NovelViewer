@@ -23,6 +23,19 @@ class _FileWork {
 }
 
 class LlmSummaryService {
+  /// How many extractions may fail back-to-back before the run gives up on the
+  /// remaining files.
+  ///
+  /// Continuing past a failure exists to fill the cache for files that would
+  /// otherwise be re-extracted later, which pays off when the failure is
+  /// file-local. A streak this long instead points at something systemic — the
+  /// endpoint is down, the model name is wrong — where every remaining file
+  /// would fail too. That matters because `http.Client` applies no timeout and
+  /// the progress modal cannot be dismissed: against an endpoint that accepts
+  /// connections but never answers, each extra file is another pair of hanging
+  /// requests the user cannot cancel.
+  static const int maxConsecutiveFailures = 3;
+
   final LlmClient llmClient;
   final LlmSummaryRepository repository;
   final FactCacheRepository factCacheRepository;
@@ -134,6 +147,7 @@ class LlmSummaryService {
       final perFileFacts = <String>[];
       var missDone = 0;
       var failedFileCount = 0;
+      var consecutiveFailures = 0;
       Object? firstError;
       for (final file in files) {
         final cachedFacts = cachedFactsByFile[file.fileName];
@@ -162,8 +176,13 @@ class LlmSummaryService {
           // that failed. Nothing is cached for this one, so it is retried then.
           failedFileCount++;
           firstError ??= e;
+          consecutiveFailures++;
+          if (consecutiveFailures >= maxConsecutiveFailures) break;
           continue;
         }
+        // Only a successful extraction clears the streak. A cache hit says
+        // nothing about whether the LLM is reachable, so it must not.
+        consecutiveFailures = 0;
         // Only a result that decoded structurally and carries content earns a
         // cache row. A raw-text fallback is a fragment of malformed JSON and an
         // empty result is an anomalous answer; caching either would poison
