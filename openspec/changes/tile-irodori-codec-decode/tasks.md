@@ -58,6 +58,6 @@
 
 - [ ] 6.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 6.3 `fvm flutter analyze`でリントを実行
-- [ ] 6.4 `fvm flutter test`でテストを実行
-- [ ] 6.5 `third_party/audio.cpp` のユニットテスト (`codec_tiled_decode_test` を含む) が全て通ることを確認
+- [x] 6.3 `fvm flutter analyze`でリントを実行
+- [x] 6.4 `fvm flutter test`でテストを実行
+- [x] 6.5 `third_party/audio.cpp` のユニットテスト (`codec_tiled_decode_test` を含む) が全て通ることを確認
