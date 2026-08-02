@@ -73,17 +73,35 @@ printf 'Verifying: %s\n\n' "$BENCHMARK"
 # The stub copies the sample timing log to wherever --log-file points, which is
 # what audiocpp_cli does by way of trace.cpp.
 
+# The stub rejects flags audiocpp_cli does not define. A stub that shrugs at
+# anything cannot tell a working invocation from a misspelt one: --output was
+# passed here for a while, and every check below still went green because the
+# stub ignored it while the real CLI refused to produce audio.
 cat > "$WORK/audiocpp_cli" <<STUB
 #!/usr/bin/env bash
+# Flags taken from audiocpp_cli's own usage text (app/cli/main.cpp).
+known_with_value=" --task --family --model --backend --mode --device --threads \
+--registry-config --model-spec-override --config --weight --log-file --text \
+--language --voice-id --voice-ref --reference-text --instruct --seed \
+--max-tokens --max-steps --temperature --guidance-scale --num-inference-steps \
+--text-chunk-size --text-chunk-mode --out --out-dir "
 log_file=""
+out_file=""
 while [ \$# -gt 0 ]; do
-  case "\$1" in
-    --log-file) log_file="\$2"; shift 2 ;;
-    *) shift ;;
+  case " \$known_with_value " in
+    *" \$1 "*) ;;
+    *) echo "audiocpp_cli: unrecognised option \$1" >&2; exit 2 ;;
   esac
+  case "\$1" in
+    --log-file) log_file="\$2" ;;
+    --out) out_file="\$2" ;;
+  esac
+  shift 2
 done
-[ -n "\$log_file" ] || exit 1
+[ -n "\$log_file" ] || { echo "audiocpp_cli: --log-file required by this stub" >&2; exit 2; }
+[ -n "\$out_file" ] || { echo "audiocpp_cli: --out required to write audio" >&2; exit 2; }
 cat "$FIXTURES/irodori_timing_sample.log" > "\$log_file"
+: > "\$out_file"
 STUB
 chmod +x "$WORK/audiocpp_cli"
 
@@ -197,14 +215,17 @@ fi
 cat > "$WORK/audiocpp_cli_truncated" <<STUB
 #!/usr/bin/env bash
 log_file=""
+out_file=""
 while [ \$# -gt 0 ]; do
   case "\$1" in
-    --log-file) log_file="\$2"; shift 2 ;;
-    *) shift ;;
+    --log-file) log_file="\$2" ;;
+    --out) out_file="\$2" ;;
   esac
+  shift 2
 done
-[ -n "\$log_file" ] || exit 1
+[ -n "\$log_file" ] || exit 2
 cat "$FIXTURES/irodori_timing_missing_wall.log" > "\$log_file"
+[ -n "\$out_file" ] && : > "\$out_file"
 STUB
 chmod +x "$WORK/audiocpp_cli_truncated"
 

@@ -235,7 +235,7 @@ run_once_irodori() {
         --seed "$SEED" \
         --model-spec-override "$AUDIO_DIR/model_specs" \
         --log-file "$timing_file" \
-        --output "$TMPDIR_BENCH/output.wav" \
+        --out "$TMPDIR_BENCH/output.wav" \
         >"$stdout_file" 2>&1; then
         echo "Error: CLI timed out or failed during $label (timeout=${TIMEOUT}s)" >&2
         tail -20 "$stdout_file" >&2 || true
