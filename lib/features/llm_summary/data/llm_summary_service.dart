@@ -41,11 +41,20 @@ class LlmSummaryService {
   ///
   /// Stage-1 fact extraction is assembled from the per-file fact cache: each
   /// in-scope file's cached facts are reused when still valid, and only cache
-  /// misses are extracted (and written back). When a snapshot already exists at
-  /// `coveredUpToEpisode`, this run is a re-analysis ("fix a bad result"), so
-  /// the word's whole cache is invalidated up-front to force fresh extraction.
-  /// The snapshot is then upserted at `(word, coveredUpToEpisode)` in the
-  /// folder-scoped repository.
+  /// misses are extracted (and written back) — and only when the extraction
+  /// decoded structurally and produced content. When a snapshot already exists
+  /// at `coveredUpToEpisode`, this run is a re-analysis ("fix a bad result"),
+  /// so the word's cache is invalidated up-front to force fresh extraction,
+  /// bounded to rows written no later than the word's newest snapshot (rows
+  /// newer than that came from an attempt that failed before saving and are
+  /// already fresh). The snapshot is then upserted at
+  /// `(word, coveredUpToEpisode)` in the folder-scoped repository.
+  ///
+  /// A file whose extraction fails is recorded and skipped so the rest still
+  /// reach the cache, but the run then fails without generating or saving a
+  /// summary: [LlmAnalysisPartialFailure]. A run whose files yield no facts at
+  /// all fails with [LlmAnalysisNoFactsFailure] rather than having the model
+  /// invent one.
   Future<String> generateSummary({
     required String directoryPath,
     required String word,
@@ -56,22 +65,31 @@ class LlmSummaryService {
   }) async {
     try {
       // Re-analysis detection: an existing snapshot at this exact upper bound
-      // means the user is overwriting a prior result. Invalidate the word's
-      // whole cache so every in-scope file is re-extracted rather than served
-      // from cache (restores "re-analyze = redo from scratch").
+      // means the user is overwriting a prior result, so the cache is
+      // invalidated to re-extract rather than serve the facts that produced it
+      // ("re-analyze = redo from scratch").
       final existing = await repository.findSnapshotsForWord(word: word);
-      final matching = existing
-          .where((s) => s.coveredUpToEpisode == coveredUpToEpisode)
-          .toList();
-      if (matching.isNotEmpty) {
-        // Scope the invalidation to rows that predate the snapshot being
-        // replaced. Anything newer was extracted by a re-analysis attempt that
-        // failed before saving, so it is already fresh — invalidating it too
-        // would make every retry of a failing re-analysis pay for all files
-        // again instead of only the ones that failed.
+      final isReanalysis =
+          existing.any((s) => s.coveredUpToEpisode == coveredUpToEpisode);
+      if (isReanalysis) {
+        // Scope the invalidation to rows written no later than the word's most
+        // recent successful run of ANY scope. Only a run that saved a snapshot
+        // advances that mark, so rows newer than it can only have come from an
+        // attempt that failed before saving: those are already fresh, and
+        // invalidating them would make every retry of a failing re-analysis pay
+        // for all files again instead of only the ones that failed.
+        //
+        // The bound is the newest snapshot rather than the one being replaced,
+        // because a later wider analysis can refresh a row after that snapshot
+        // was written. Bounding by the replaced snapshot alone would leave such
+        // a row valid and serve it from cache — precisely the file the user is
+        // re-analyzing to fix.
+        final lastSuccessfulRun = existing
+            .map((s) => s.updatedAt)
+            .reduce((a, b) => a.isAfter(b) ? a : b);
         await factCacheRepository.invalidateWord(
           word: word,
-          notNewerThan: matching.first.updatedAt,
+          notNewerThan: lastSuccessfulRun,
         );
       }
 

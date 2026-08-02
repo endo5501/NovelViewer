@@ -379,6 +379,53 @@ void main() {
       // scoped invalidation this would be 6 (all five files re-extracted).
       expect(retry.callCount, 2);
     });
+
+    test('a row refreshed by a later wider analysis is still re-extracted',
+        () async {
+      await createEpisodes(3);
+
+      // Snapshot at ep3.
+      await makeService(_ScriptedLlmClient(
+        const {},
+        summary: jsonEncode({'summary': 'ep3要約。'}),
+      )).generateSummary(
+        directoryPath: tempDir.path,
+        word: 'アリス',
+        coveredUpToEpisode: 3,
+      );
+
+      // 002 changes, then a wider analysis at ep6 sees it as a hash miss and
+      // rewrites its cache row with a timestamp later than the ep3 snapshot.
+      await createFile('002_ch.txt', 'アリスはエピソード2で別の行動をした。');
+      for (var i = 4; i <= 6; i++) {
+        await createFile('00${i}_ch.txt', 'アリスはエピソード$iで行動した。');
+      }
+      await makeService(_ScriptedLlmClient(
+        const {},
+        summary: jsonEncode({'summary': 'ep6要約。'}),
+      )).generateSummary(
+        directoryPath: tempDir.path,
+        word: 'アリス',
+        coveredUpToEpisode: 6,
+      );
+
+      // Re-analyzing ep3 means "redo from scratch". 002's row is newer than the
+      // ep3 snapshot but was NOT produced by a failed attempt, so it must still
+      // be re-extracted — otherwise the file the user is trying to fix is the
+      // one served from cache.
+      final reanalysis = _ScriptedLlmClient(
+        const {},
+        summary: jsonEncode({'summary': 'ep3再解析。'}),
+      );
+      await makeService(reanalysis).generateSummary(
+        directoryPath: tempDir.path,
+        word: 'アリス',
+        coveredUpToEpisode: 3,
+      );
+
+      // Three files re-extracted plus the final summary.
+      expect(reanalysis.callCount, 4);
+    });
   });
 
   group('empty aggregated facts', () {
