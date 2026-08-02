@@ -216,6 +216,41 @@ D. 効果測定 (macOS)
 
 注記: この比率は入力テキスト長に依存する。`decode_ms` は生成音声長に、`generate_ms` は RF ステップ数に比例するため、長文では比率が変わりうる。before/after は同一テキストで比較するので判定には影響しない。
 
+### 効果測定 (チェリーピック後, macOS / Metal)
+
+同一マシン・同一モデル・同一テキスト・seed 1234・直列実行。中央値:
+
+| 段階 | before (ms) | after (ms) | 変化 |
+|---|---:|---:|---:|
+| `tokenize_ms` | 0.172 | 0.170 | -1.4% |
+| `encode_ms` | 33.857 | 34.938 | +3.2% |
+| `generate_ms` (sample_rf) | 1465.910 | 1467.919 | **+0.14%** |
+| **`decode_ms` (codec)** | **6328.086** | **1140.448** | **-81.98% (5.55x)** |
+| `total_ms` | 7828.142 | 2645.455 | **-66.21% (2.96x)** |
+
+**比較の妥当性**: 変更が届かない `generate_ms` が +0.14% で再現した。`tokenize_ms` と `encode_ms` も数 % 以内に収まっている。触っていない段階が誤差以下で一致したことは、2 回の測定でマシン状態が揃っており、動いたのが codec デコード段だけであることを示す。ベースラインと効果測定は別セッションで取得したが、この対照により比較は成立している。
+
+**予測との一致**: ベースライン時に「decode が upstream の 5.6x で改善すれば total 2630 ms, 2.98x」と見積もった。実測は decode 5.55x, total 2645 ms, 2.96x で、total の予測誤差は 0.6% だった。`c810a06` の効果が Irodori の DACVAE デコードにも VoxCPM2 の AudioVAE と同程度に効いたことになる。
+
+**ボトルネックの移動**: デコードが縮んだ結果、支配的な段階が入れ替わった。
+
+```
+before                              after
+decode    80.8%  ████████████████   generate  55.5%  ███████████
+generate  18.7%  ████               decode    43.1%  ████████
+encode     0.4%                     encode     1.3%
+```
+
+次に最適化を検討するなら `sample_rf` (RF-DiT) である。`engine_timings` の内訳 (`context_cond` / `context_cfg` / `steps_cfg` / `steps_cond`) がその判断材料になる。
+
+### 判定 (D2 の基準に照らして)
+
+D2 の表の 1 行目「`decode_ms` が改善し、`total_ms` が baseline の +2% 以内」に該当する。`decode_ms` は 5.55 倍、`total_ms` は 2.96 倍の改善で、悪化した段階は無い。
+
+**結論: チェリーピックを残す。**
+
+D1 で定めた受け入れ基準「before/after が同一条件で測定でき、`decode_ms` の変化が記録されたこと」も満たしている。加えて、効果は測定ノイズに埋もれるどころか E2E で約 3 倍という規模だった。
+
 ### Windows (Vulkan) 無影響の検証
 
 タスク 5.7 は「アプリが動く」ではなく出力の同一性で確認した。同一マシン・同一モデル・同一 seed (1234)・同一テキストで `audiocpp_cli --backend vulkan` を 2 回実行した。
@@ -233,5 +268,5 @@ D. 効果測定 (macOS)
 ## Open Questions
 
 - `rtf` / `audio_duration_s` を出力 WAV ヘッダから導出するか (D5 で今回は見送り)。ベンチマークを継続的に使うなら後追いで足す価値がある。
-- ~~ベースライン測定で `codec_decode_ms / session.wall_ms` の比率が小さかった場合、`sample_rf.*` の内訳のどれを次の最適化対象にするか。~~ 解決: 比率は 80.8% で、codec デコードが支配的だった。`sample_rf` は 18.7% にとどまるため、次の最適化対象を検討するのは本 change の効果測定後でよい。
+- ~~ベースライン測定で `codec_decode_ms / session.wall_ms` の比率が小さかった場合、`sample_rf.*` の内訳のどれを次の最適化対象にするか。~~ 解決: ベースラインでは 80.8% で codec デコードが支配的だった。チェリーピック後は decode 43.1% / generate 55.5% と逆転したため、**次の最適化対象は `sample_rf` (RF-DiT)** になる。内訳のどれを狙うかは別 change で `engine_timings` を見て判断する。
 - upstream フルマージ (残り 143 コミット、特に model spec v1 移行と `AUDIOCPP_MODEL_SET=custom` によるビルド絞り込み) を別 change としていつ着手するか。

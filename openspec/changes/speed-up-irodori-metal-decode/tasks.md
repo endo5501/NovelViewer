@@ -29,9 +29,9 @@
 - [x] 3.1 🪟 `scripts/build_irodori_windows.bat` のビルドターゲットに `audiocpp_cli` を追加する。`audiocpp_ffi` と同一の configure を使い、CLI は配布先 (`build/windows/x64/runner/Release/`) にコピーしない
 - [x] 3.2 🪟 Windows で `scripts/build_irodori_windows.bat` を実行し、`audiocpp_ffi.dll` と `audiocpp_cli.exe` の両方が生成されることを確認する
 - [x] 3.3 🍎 **[テストファースト]** `scripts/test/verify_irodori_macos.sh` に検証項目を追加する。(a) `third_party/audio.cpp/build/ffi-metal/` 配下に `audiocpp_cli` が存在する、(b) `macos/Frameworks/audiocpp_cli` が存在しない
-- [ ] 3.4 🍎 検証スクリプトを実行し、(a) が失敗することを確認する
+- [x] 3.4 🍎 検証スクリプトを実行し、(a) が失敗することを確認する
 - [x] 3.5 🍎 `scripts/build_irodori_macos.sh` のビルドターゲットに `audiocpp_cli` を追加する。`macos/Frameworks/` へはコピーしない
-- [ ] 3.6 🍎 `scripts/build_irodori_macos.sh` を実行し、`scripts/test/verify_irodori_macos.sh` が全項目通ることを確認する
+- [x] 3.6 🍎 `scripts/build_irodori_macos.sh` を実行し、`scripts/test/verify_irodori_macos.sh` が全項目通ることを確認する
 
 ## 4. ベースライン測定 (チェリーピック前) 🍎
 
@@ -55,19 +55,19 @@
 
 ## 6. 効果測定と判断 🍎
 
-- [ ] 6.1 🍎 macOS で `git pull` と `git submodule update --init --recursive` を実行し、submodule が 5.8 のコミットを指していることを確認する
-- [ ] 6.2 🍎 `scripts/build_irodori_macos.sh` を実行する。`.metal` シェーダのコンパイルが通ることを確認する (失敗した場合は macOS 側で修正し submodule ブランチに追加コミットする)
-- [ ] 6.3 🍎 `scripts/test/verify_irodori_macos.sh` が全項目通ることを確認する
-- [ ] 6.4 🍎 4.1 と**同一条件** (同一マシン・同一モデル・同一テキスト・同一 seed・他アプリ停止・直列) でベンチマークを実行する。4 と 6 の間でベンチスクリプト自体を変更していないことを確認する
-- [ ] 6.5 🍎 before / after の `decode_ms` (主指標) と `total_ms` の中央値を比較し、`engine_timings` の内訳も含めて design.md に結果を追記する
-- [ ] 6.6 🍎 design.md の D2 の判断基準に照らして、チェリーピックを残すか revert するかを決定し、判断とその根拠を design.md に記録する
+- [x] 6.1 🍎 macOS で `git pull` と `git submodule update --init --recursive` を実行し、submodule が 5.8 のコミットを指していることを確認する
+- [x] 6.2 🍎 `scripts/build_irodori_macos.sh` を実行する。`.metal` シェーダのコンパイルが通ることを確認する (失敗した場合は macOS 側で修正し submodule ブランチに追加コミットする)
+- [x] 6.3 🍎 `scripts/test/verify_irodori_macos.sh` が全項目通ることを確認する
+- [x] 6.4 🍎 4.1 と**同一条件** (同一マシン・同一モデル・同一テキスト・同一 seed・他アプリ停止・直列) でベンチマークを実行する。4 と 6 の間でベンチスクリプト自体を変更していないことを確認する
+- [x] 6.5 🍎 before / after の `decode_ms` (主指標) と `total_ms` の中央値を比較し、`engine_timings` の内訳も含めて design.md に結果を追記する
+- [x] 6.6 🍎 design.md の D2 の判断基準に照らして、チェリーピックを残すか revert するかを決定し、判断とその根拠を design.md に記録する
 - [ ] 6.7 🍎 revert する場合は submodule pointer を戻し、理由を design.md に残す。残す場合は測定結果をコミットする
 
 ## 7. 最終確認
 
 - [ ] 7.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 7.3 `fvm flutter analyze`でリントを実行
-- [ ] 7.4 `fvm flutter test`でテストを実行
-- [ ] 7.5 `scripts/test/benchmark_parse_test.sh` と `scripts/test/benchmark_json_test.sh` を実行して通ることを確認
-- [ ] 7.6 🍎 `scripts/test/verify_irodori_macos.sh` を実行して通ることを確認
+- [x] 7.3 `fvm flutter analyze`でリントを実行
+- [x] 7.4 `fvm flutter test`でテストを実行
+- [x] 7.5 `scripts/test/benchmark_parse_test.sh` と `scripts/test/benchmark_json_test.sh` を実行して通ることを確認
+- [x] 7.6 🍎 `scripts/test/verify_irodori_macos.sh` を実行して通ることを確認
