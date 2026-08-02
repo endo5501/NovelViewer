@@ -185,6 +185,21 @@ D. 効果測定 (macOS)
 
 ## 測定結果
 
+### 測定条件
+
+| 項目 | 値 |
+|---|---|
+| マシン | MacBook Pro M3 Max / 96 GB |
+| バックエンド | Metal |
+| モデル | `Irodori-TTS-600M-v3-VoiceDesign` |
+| テキスト | `benchmark_tts.sh` の既定 (日本語 1 文) |
+| seed | 1234 (両測定で同一) |
+| 試行 | ウォームアップ 1 回 + 計測 3 回、中央値、直列実行 |
+| before | `benchmarks/baseline-eda8e83.json` (`engine_revision` = `eda8e83`, ggml `novelviewer-v1-15-geda8e83`) |
+| after | `benchmarks/after-7b2a3c4.json` (`engine_revision` = `7b2a3c4`, ggml `novelviewer-v1-17-g7b2a3c4`) |
+
+生の結果 JSON は本 change ディレクトリ配下に置いた。`benchmarks/` はリポジトリの `.gitignore` 対象 (各環境の一時的な計測結果を置く場所) であり方針は変えていない。この 2 ファイルは通常の計測結果ではなく後述の判定を支える証跡であり、`engine_timings` の内訳が次の最適化対象の判断材料になるため、change とともにアーカイブされる場所に残した。
+
 ### ベースライン (チェリーピック前, macOS / Metal)
 
 中央値 (ウォームアップ 1 回 + 計測 3 回, seed 1234, 既定テキスト):
@@ -241,7 +256,39 @@ generate  18.7%  ████               decode    43.1%  ██████�
 encode     0.4%                     encode     1.3%
 ```
 
-次に最適化を検討するなら `sample_rf` (RF-DiT) である。`engine_timings` の内訳 (`context_cond` / `context_cfg` / `steps_cfg` / `steps_cond`) がその判断材料になる。
+### 測定の安定性
+
+run ごとの `decode_ms`:
+
+| | run 1 | run 2 | run 3 | 幅 |
+|---|---:|---:|---:|---:|
+| before | 6325.1 | 6328.1 | 6328.8 | 0.06% |
+| after | 1138.4 | 1142.7 | 1140.4 | 0.38% |
+
+2 つの分布は重ならない (最小 6325.1 に対し最大 1142.7)。中央値の選び方や外れ値の扱いで結論が変わる余地は無い。
+
+### 次の最適化対象 (`engine_timings` より)
+
+`sample_rf` の内訳 (run 2, 単位 ms):
+
+| 内訳 | before | after |
+|---|---:|---:|
+| `context_cond_ms` | 0.000 | 0.000 |
+| `context_cfg_ms` | 17.691 | 17.874 |
+| `steps_cfg_ms` | 911.871 | 914.591 |
+| `steps_cond_ms` | 523.602 | 523.636 |
+
+チェリーピック後の総所要時間 2645 ms に対する内訳の順位:
+
+| 順位 | 区間 | ms | 全体比 |
+|---|---|---:|---:|
+| 1 | `codec_decode` | 1140.4 | 43.1% |
+| 2 | `sample_rf.steps_cfg` | 914.6 | 34.6% |
+| 3 | `sample_rf.steps_cond` | 523.6 | 19.8% |
+| 4 | `encode` (condition) | 34.9 | 1.3% |
+| 5 | `sample_rf.context_cfg` | 17.9 | 0.7% |
+
+**`steps_cfg` が `steps_cond` の 1.75 倍かかっている点は追う価値がある。** classifier-free guidance は条件付きと無条件の 2 経路を評価するため、両者が同程度になるのが素直な期待値である。この非対称が実装上の何かに由来するなら、単独で全体の 3 割を占める区間なので改善余地が大きい。ただし本 change の範囲外であり、別 change で調査する。
 
 ### 判定 (D2 の基準に照らして)
 
@@ -268,5 +315,5 @@ D1 で定めた受け入れ基準「before/after が同一条件で測定でき�
 ## Open Questions
 
 - `rtf` / `audio_duration_s` を出力 WAV ヘッダから導出するか (D5 で今回は見送り)。ベンチマークを継続的に使うなら後追いで足す価値がある。
-- ~~ベースライン測定で `codec_decode_ms / session.wall_ms` の比率が小さかった場合、`sample_rf.*` の内訳のどれを次の最適化対象にするか。~~ 解決: ベースラインでは 80.8% で codec デコードが支配的だった。チェリーピック後は decode 43.1% / generate 55.5% と逆転したため、**次の最適化対象は `sample_rf` (RF-DiT)** になる。内訳のどれを狙うかは別 change で `engine_timings` を見て判断する。
+- ~~ベースライン測定で `codec_decode_ms / session.wall_ms` の比率が小さかった場合、`sample_rf.*` の内訳のどれを次の最適化対象にするか。~~ 解決: ベースラインでは 80.8% で codec デコードが支配的だった。チェリーピック後は decode 43.1% / generate 55.5% と逆転した。内訳まで見ると **`sample_rf.steps_cfg` が単独で全体の 34.6%** を占め、`steps_cond` の 1.75 倍かかっている。次の調査対象はこの非対称である (上表を参照)。
 - upstream フルマージ (残り 143 コミット、特に model spec v1 移行と `AUDIOCPP_MODEL_SET=custom` によるビルド絞り込み) を別 change としていつ着手するか。
