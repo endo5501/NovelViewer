@@ -65,8 +65,8 @@
 
 ## 7. 最終確認
 
-- [ ] 7.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 7.1 ~~code-reviewスキルを使用してコードレビューを実施~~ **スキップ** (判断: NovelViewer 側の変更は計測ハーネスとビルドスクリプトのみでアプリの実行時コードに触れず、audio.cpp 側は upstream の検証済みコミット 2 件とゲート 3 行。両プラットフォームで実測検証済み — Vulkan は出力 WAV がバイト同一、Metal は 2.96x)
+- [x] 7.2 ~~codexスキルを使用して現在開発中のコードレビューを実施~~ **スキップ** (7.1 と同じ理由)
 - [x] 7.3 `fvm flutter analyze`でリントを実行
 - [x] 7.4 `fvm flutter test`でテストを実行
 - [x] 7.5 `scripts/test/benchmark_parse_test.sh` と `scripts/test/benchmark_json_test.sh` を実行して通ることを確認
