@@ -110,7 +110,27 @@
 
 #### Scenario: 計時ログに期待する行がない場合
 - **WHEN** `session.wall_ms` を含まない計時ログをパースする
-- **THEN** エラーメッセージを出力して非ゼロ終了し、欠損値を 0 として集計しない
+- **THEN** 欠落した計時名を挙げたエラーメッセージを出力して非ゼロ終了し、欠損値を 0 として集計しない
+
+### Requirement: 計時ログのパースが TRACE 行・CRLF・追記に耐える
+
+パーサは `[TIMING ...]` タグで始まる行のみを対象としなければならない (MUST)。`audio.cpp` は `[TRACE ts=<stamp>] <名前> <値>` を同一の行構造で出力するため、タグを見ずに名前だけで一致させてはならない (MUST NOT)。名前の比較は完全一致でなければならない (MUST)。`irodori_tts.sample_rf_ms` は `irodori_tts.sample_rf.context_cond_ms` の接頭辞であり、`irodori_tts.condition_ms` は `*_cond_ms` と部分文字列を共有するためである。
+
+パーサは値に付随する復帰文字 (CR) を除去しなければならない (MUST)。`audio.cpp` はログを `std::ofstream(path, std::ios::app)` すなわちテキストモードで開くため、Windows では CRLF で書き出される。
+
+同一の計時名が複数回現れる場合、パーサは最後の値を採用しなければならない (MUST)。同じ `std::ios::app` により、ログパスを再利用すると複数 run 分が蓄積するためである。
+
+#### Scenario: TRACE 行を TIMING と取り違えない
+- **WHEN** `[TIMING ...] irodori_tts.codec_decode_ms` と同名の `[TRACE ...]` 行を両方含むログをパースする
+- **THEN** `decode_ms` は TIMING 行の値になる
+
+#### Scenario: CRLF のログをパースする
+- **WHEN** CRLF 改行の計時ログをパースする
+- **THEN** 抽出された値に復帰文字が含まれない
+
+#### Scenario: 追記された複数 run のログをパースする
+- **WHEN** 2 回分の計時が追記されたログをパースする
+- **THEN** 後の run の値が採用される
 
 ### Requirement: Irodori のモデルスペック解決を明示する
 

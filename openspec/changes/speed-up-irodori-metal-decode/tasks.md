@@ -5,13 +5,13 @@
 
 ## 1. 計時ログパーサ (TDD ループ 1) 🌐
 
-- [ ] 1.1 🌐 `scripts/test/fixtures/irodori_timing_sample.log` を作成する。`[TIMING ts=<秒>] <名前> <値>` 形式で `irodori_tts.prepare_reference_ms` / `tokenize_ms` / `condition_ms` / `sample_rf_ms` / `sample_rf.context_cond_ms` / `sample_rf.context_cfg_ms` / `sample_rf.steps_cfg_ms` / `sample_rf.steps_cond_ms` / `codec_decode_ms` / `session.wall_ms` の全行と、無関係な非 TIMING 行を含める
-- [ ] 1.2 🌐 `scripts/test/fixtures/irodori_timing_missing_wall.log` を作成する。`session.wall_ms` を欠いた異常系フィクスチャ
-- [ ] 1.3 🌐 **[テストファースト]** `scripts/test/benchmark_parse_test.sh` を作成する。`verify_irodori_macos.sh` と同じ ok/ng カウンタ形式で、1.1 のフィクスチャから `tokenize_ms` / `encode_ms` / `generate_ms` / `decode_ms` / `total_ms` と `engine_timings` の各値が期待どおり抽出されること、および 1.2 のフィクスチャで非ゼロ終了することを検証する
-- [ ] 1.4 🌐 テストを実行し、パーサ未実装のため失敗することを確認する
-- [ ] 1.5 🌐 失敗するテストをコミットする
-- [ ] 1.6 🌐 `scripts/benchmark_tts.sh` に `parse_timing_irodori()` を実装する。マッピングは design.md D4 の表に従う。`session.wall_ms` 欠落時はエラー終了し、欠損値を 0 として集計しない
-- [ ] 1.7 🌐 `scripts/test/benchmark_parse_test.sh` が全て通ることを確認する
+- [x] 1.1 🌐 `scripts/test/fixtures/irodori_timing_sample.log` を作成する。`[TIMING ts=<秒>] <名前> <値>` 形式で `irodori_tts.prepare_reference_ms` / `tokenize_ms` / `condition_ms` / `sample_rf_ms` / `sample_rf.context_cond_ms` / `sample_rf.context_cfg_ms` / `sample_rf.steps_cfg_ms` / `sample_rf.steps_cond_ms` / `codec_decode_ms` / `session.wall_ms` の全行と、無関係な非 TIMING 行を含める
+- [x] 1.2 🌐 `scripts/test/fixtures/irodori_timing_missing_wall.log` を作成する。`session.wall_ms` を欠いた異常系フィクスチャ
+- [x] 1.3 🌐 **[テストファースト]** `scripts/test/benchmark_parse_test.sh` を作成する。`verify_irodori_macos.sh` と同じ ok/ng カウンタ形式で、1.1 のフィクスチャから `tokenize_ms` / `encode_ms` / `generate_ms` / `decode_ms` / `total_ms` と `engine_timings` の各値が期待どおり抽出されること、および 1.2 のフィクスチャで非ゼロ終了することを検証する
+- [x] 1.4 🌐 テストを実行し、パーサ未実装のため失敗することを確認する
+- [x] 1.5 🌐 失敗するテストをコミットする
+- [x] 1.6 🌐 `scripts/lib/benchmark_timing_parse.sh` に `parse_timing_irodori()` を実装し、`scripts/benchmark_tts.sh` から source する。マッピングは design.md D4 の表に従う。必須の計時が欠落した場合はエラー終了し、欠損値を 0 として集計しない (実装場所は design.md D11 を参照。`benchmark_tts.sh` はトップレベルでベンチ本体を実行するため、テストから source できない)
+- [x] 1.7 🌐 `scripts/test/benchmark_parse_test.sh` が全て通ることを確認する
 
 ## 2. ベンチマークスクリプトのエンジン選択 🪟
 
