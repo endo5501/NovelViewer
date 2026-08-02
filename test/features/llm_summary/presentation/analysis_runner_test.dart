@@ -124,11 +124,12 @@ ProviderContainer _container(_StubService stub,
 Widget _harness({
   required ProviderContainer container,
   required void Function(WidgetRef ref, BuildContext context) onPressed,
+  Locale locale = const Locale('ja'),
 }) {
   return UncontrolledProviderScope(
     container: container,
     child: MaterialApp(
-      locale: const Locale('ja'),
+      locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
@@ -296,6 +297,65 @@ void main() {
 
       expect(find.textContaining('「ボブ」'), findsOneWidget);
       expect(find.textContaining('解析失敗:'), findsNothing);
+    });
+
+    testWidgets('the partial-failure message honours the display language',
+        (tester) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            throw const LlmAnalysisPartialFailure(
+          failedFileCount: 2,
+          firstError: 'connection refused',
+        ),
+      );
+      final container = _container(stub, language: 'en');
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_harness(
+        container: container,
+        locale: const Locale('en'),
+        onPressed: (ref, context) {
+          ref.read(analysisRunnerProvider).run(
+                context: context,
+                word: 'ボブ',
+                coveredUpToEpisode: 100,
+              );
+        },
+      ));
+
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('could not be analyzed'), findsOneWidget);
+      expect(find.textContaining('解析を中止しました'), findsNothing);
+    });
+
+    testWidgets('the no-facts message honours the display language',
+        (tester) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            throw const LlmAnalysisNoFactsFailure(),
+      );
+      final container = _container(stub, language: 'zh');
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_harness(
+        container: container,
+        locale: const Locale('zh'),
+        onPressed: (ref, context) {
+          ref.read(analysisRunnerProvider).run(
+                context: context,
+                word: 'ボブ',
+                coveredUpToEpisode: 100,
+              );
+        },
+      ));
+
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('分析已中止'), findsOneWidget);
+      expect(find.textContaining('解析を中止しました'), findsNothing);
     });
 
     testWidgets('a failure raised before extraction keeps the generic message',
