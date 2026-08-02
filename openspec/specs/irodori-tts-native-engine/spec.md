@@ -1,9 +1,14 @@
 ## Purpose
 
-endo5501/audio.cpp フォークを submodule として取り込み、Irodori-TTS (600M-v3-VoiceDesign) のネイティブ推論を行う共有ライブラリ `audiocpp_ffi` (Windows: Vulkan / macOS: Metal) をビルドし、C API・Dart FFI バインディング・`IrodoriTtsEngine` ラッパーを通じて素TTS / ボイスクローン / caption 指定 / 両立の4形態の合成と安全な abort 機構を提供する。
+endo5501/audio.cpp フォークを submodule として取り込み、Irodori-TTS (600M-v3-VoiceDesign) のネイティブ推論を行う共有ライブラリ `audiocpp_ffi` (Windows: Vulkan / macOS: Metal) をビルドし、C API・Dart FFI バインディング・`IrodoriTtsEngine` ラッパーを通じて素TTS / ボイスクローン / caption 指定 / 両立の4形態の合成と安全な abort 機構を提供する。あわせて、同一構成から性能測定用の `audiocpp_cli` をビルドする (配布物には含めない)。
+
 ## Requirements
+
 ### Requirement: audio.cpp フォークの submodule 追加と共有ライブラリビルド
+
 システムは endo5501/audio.cpp フォーク (https://github.com/endo5501/audio.cpp) を `third_party/audio.cpp/` に git submodule として含めなければならない (SHALL)。フォークの CMake は `AUDIOCPP_BUILD_SHARED` オプションを提供し、有効時に `src/audiocpp_c_api.cpp` から共有ライブラリターゲット `audiocpp_ffi` (Windows: `audiocpp_ffi.dll`, macOS: `libaudiocpp_ffi.dylib`) をビルドしなければならない (SHALL)。`engine_runtime` 静的ライブラリおよび ggml は共有ライブラリに静的リンクしなければならない (SHALL)。Windows ビルドは Vulkan バックエンド有効 (`ENGINE_ENABLE_VULKAN=ON`) かつ MSVC フラグ `/utf-8` と `/openmp:experimental` を指定し、macOS ビルドは Metal バックエンド有効 (`ENGINE_ENABLE_METAL=ON`) としなければならない (MUST)。
+
+ビルドスクリプトは `audiocpp_ffi` に加えて、性能測定用の CLI ターゲット `audiocpp_cli` も同一の CMake 構成でビルドしなければならない (MUST)。両ターゲットを同一の configure から建てることで、測定対象と配布対象が同じバックエンド設定・同じ `engine_runtime` を共有することを保証する。`audiocpp_cli` はアプリケーションに同梱してはならない (MUST NOT)。
 
 #### Scenario: Windows で共有ライブラリをビルドする
 - **WHEN** `scripts/build_irodori_windows.bat` を MSVC 環境で実行する
@@ -16,6 +21,18 @@ endo5501/audio.cpp フォークを submodule として取り込み、Irodori-TTS
 #### Scenario: 日本語ロケール Windows でビルドが成功する
 - **WHEN** コードページ 932 の Windows 上でビルドスクリプトを実行する
 - **THEN** `/utf-8` フラグにより日本語文字列リテラルを含むソース (chunking.cpp 等) がエラーなくコンパイルされる
+
+#### Scenario: Windows で測定用 CLI もビルドされる
+- **WHEN** `scripts/build_irodori_windows.bat` を実行する
+- **THEN** `audiocpp_ffi.dll` と同じ CMake ビルドディレクトリに Vulkan 対応の `audiocpp_cli.exe` が生成される
+
+#### Scenario: macOS で測定用 CLI もビルドされる
+- **WHEN** `scripts/build_irodori_macos.sh` を実行する
+- **THEN** `libaudiocpp_ffi.dylib` と同じ CMake ビルドディレクトリに Metal 対応の `audiocpp_cli` が生成される
+
+#### Scenario: 測定用 CLI が配布物に混入しない
+- **WHEN** ビルドスクリプトが正常終了する
+- **THEN** `audiocpp_cli` は CMake のビルドディレクトリに留まり、`macos/Frameworks/` および Windows の配布レイアウトへコピーされない
 
 ### Requirement: C API によるコンテキストライフサイクル
 共有ライブラリは `audiocpp_c_api.h` で C ABI を公開しなければならない (SHALL)。`audiocpp_init(model_dir, n_threads, abort_handle)` は Irodori-TTS モデル一式 (600M-v3-VoiceDesign / llm-jp トークナイザ / DACVAE codec) をロードし、成功時に不透明な `audiocpp_ctx` ポインタ、失敗時に NULL を返さなければならない (SHALL)。model spec (`model_specs/irodori_tts.json`) は実行ファイル相対の同梱ファイルまたはビルド時埋め込みにより解決しなければならない (SHALL)。`audiocpp_free(ctx)` は全リソースを解放し、`audiocpp_is_loaded(ctx)` はロード済みなら非ゼロを返さなければならない (SHALL)。バックエンドは Windows では Vulkan、macOS では Metal を優先し、GPU 初期化に失敗した場合は CPU にフォールバックしなければならない (MUST)。
@@ -119,4 +136,3 @@ C API はコンテキストと独立したライフタイムを持つ abort hand
 
 - **WHEN** `月ノ美兎.txt` のような非 ASCII 名のファイルで読み込みが失敗する
 - **THEN** エラーメッセージ中のパスは UTF-8 でエンコードされ、Dart 側の UTF-8 デコードが `FormatException` を起こさない (Windows の ANSI コードページに変換されてはならない)
-
