@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-08-02T11:38:12Z",
+  "engine": "irodori",
+  "os": "macos",
+  "gpu_backend": "Metal",
+  "model": "Irodori-TTS-600M-v3-VoiceDesign",
+  "ggml_version": "novelviewer-v1-15-geda8e83",
+  "engine_revision": "eda8e83",
+  "seed": 1234,
+  "text": "これはベンチマーク用のテスト文です。音声合成の速度を測定しています。",
+  "language": "ja",
+  "warmup_runs": 1,
+  "measurement_runs": 3,
+  "runs": [{"tokenize_ms":0.172626,"encode_ms":32.640583,"generate_ms":1465.909834,"decode_ms":6325.123833,"total_ms":7824.157459,"rtf":null,"audio_duration_s":null,"engine_timings":{"prepare_reference_ms":0.001458,"sample_rf":{"context_cond_ms":0,"context_cfg_ms":17.622,"steps_cfg_ms":910.7620000000001,"steps_cond_ms":524.2981249999999}}},{"tokenize_ms":0.16891699999999998,"encode_ms":36.001125,"generate_ms":1466.240958,"decode_ms":6328.085583,"total_ms":7830.798125,"rtf":null,"audio_duration_s":null,"engine_timings":{"prepare_reference_ms":0.001458,"sample_rf":{"context_cond_ms":0,"context_cfg_ms":17.690792,"steps_cfg_ms":911.871125,"steps_cond_ms":523.6017499999999}}},{"tokenize_ms":0.172292,"encode_ms":33.857417,"generate_ms":1464.977167,"decode_ms":6328.823916,"total_ms":7828.1415,"rtf":null,"audio_duration_s":null,"engine_timings":{"prepare_reference_ms":0.001417,"sample_rf":{"context_cond_ms":0,"context_cfg_ms":17.923542,"steps_cfg_ms":909.8610819999999,"steps_cond_ms":524.2308360000001}}}],
+  "median": {
+    "tokenize_ms": 0.172292,
+    "encode_ms": 33.857417,
+    "generate_ms": 1465.909834,
+    "decode_ms": 6328.085583,
+    "total_ms": 7828.1415
+  }
+}
