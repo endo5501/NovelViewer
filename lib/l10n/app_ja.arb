@@ -364,6 +364,19 @@
       "word": { "type": "String" }
     }
   },
+  "llmAnalysis_partialFailure": "解析を中止しました: {count}件のファイルを解析できなかったため、要約は保存されていません。再実行すると失敗した分だけ再試行します。({error})",
+  "@llmAnalysis_partialFailure": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "error": { "type": "String" }
+    }
+  },
+  "llmAnalysis_noFacts": "解析を中止しました: 「{word}」に関する情報を抽出できなかったため、要約は保存されていません。",
+  "@llmAnalysis_noFacts": {
+    "placeholders": {
+      "word": { "type": "String" }
+    }
+  },
 
   "hoverPopup_snapshotLabel": "{episode}ファイル時点の要約",
   "@hoverPopup_snapshotLabel": {

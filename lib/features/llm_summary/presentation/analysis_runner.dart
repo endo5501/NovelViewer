@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/shared/episode/episode_resolver.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
@@ -135,7 +136,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
 
     final language = _ref.read(localeProvider).languageCode;
 
-    String? errorMessage;
+    String? failureMessage;
     try {
       await service.generateSummary(
         directoryPath: directory,
@@ -160,7 +161,17 @@ class DefaultAnalysisRunner implements AnalysisRunner {
         _ref.read(hoverPopupProvider.notifier).setActiveEpisode(null);
       }
     } catch (e) {
-      errorMessage = e.toString();
+      // The typed analysis failures say something actionable ("2 files could
+      // not be analyzed; re-run to retry just those"), so they get their own
+      // wording. Anything else — a configuration or storage error raised before
+      // extraction — keeps the generic message.
+      failureMessage = switch (e) {
+        LlmAnalysisPartialFailure(:final failedFileCount, :final firstError) =>
+          l10n.llmAnalysis_partialFailure(
+              failedFileCount, firstError.toString()),
+        LlmAnalysisNoFactsFailure() => l10n.llmAnalysis_noFacts(word),
+        _ => l10n.llmAnalysis_failed(e.toString()),
+      };
     } finally {
       if (modalRoute.isActive) {
         navigator.removeRoute(modalRoute);
@@ -170,9 +181,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     }
 
     if (!messenger.mounted) return;
-    final message = errorMessage != null
-        ? l10n.llmAnalysis_failed(errorMessage)
-        : l10n.llmAnalysis_savedSummary(word);
+    final message = failureMessage ?? l10n.llmAnalysis_savedSummary(word);
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 

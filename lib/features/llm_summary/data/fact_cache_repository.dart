@@ -76,11 +76,19 @@ class FactCacheRepository {
     return results.map(FactCacheEntry.fromMap).toList();
   }
 
-  /// Forces a cache miss for every file of `word` by writing the sentinel
+  /// Forces a cache miss for the files of `word` by writing the sentinel
   /// `content_hash`. The facts text is left intact; only validity is revoked,
   /// so the next analysis re-extracts and overwrites the rows.
+  ///
+  /// When [notNewerThan] is given, only rows whose `updated_at` is at or before
+  /// it are invalidated. Callers pass the timestamp of the state they mean to
+  /// discard, so rows written afterwards — by an attempt that extracted them
+  /// and then failed before saving — survive and stay reusable. Without it,
+  /// every retry of a failing re-analysis would throw away the previous
+  /// attempt's extractions and pay full price again.
   Future<void> invalidateWord({
     required String word,
+    DateTime? notNewerThan,
   }) async {
     await _db.update(
       'fact_cache',
@@ -88,8 +96,13 @@ class FactCacheRepository {
         'content_hash': sentinelHash,
         'updated_at': DateTime.now().toIso8601String(),
       },
-      where: 'word = ?',
-      whereArgs: [word],
+      where: notNewerThan == null
+          ? 'word = ?'
+          : 'word = ? AND updated_at <= ?',
+      whereArgs: [
+        word,
+        if (notNewerThan != null) notNewerThan.toIso8601String(),
+      ],
     );
   }
 

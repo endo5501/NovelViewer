@@ -6,6 +6,9 @@ import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
+
+export 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
 import 'package:novel_viewer/shared/utils/content_hash.dart';
 import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
@@ -57,10 +60,19 @@ class LlmSummaryService {
       // whole cache so every in-scope file is re-extracted rather than served
       // from cache (restores "re-analyze = redo from scratch").
       final existing = await repository.findSnapshotsForWord(word: word);
-      final isReanalysis =
-          existing.any((s) => s.coveredUpToEpisode == coveredUpToEpisode);
-      if (isReanalysis) {
-        await factCacheRepository.invalidateWord(word: word);
+      final matching = existing
+          .where((s) => s.coveredUpToEpisode == coveredUpToEpisode)
+          .toList();
+      if (matching.isNotEmpty) {
+        // Scope the invalidation to rows that predate the snapshot being
+        // replaced. Anything newer was extracted by a re-analysis attempt that
+        // failed before saving, so it is already fresh — invalidating it too
+        // would make every retry of a failing re-analysis pay for all files
+        // again instead of only the ones that failed.
+        await factCacheRepository.invalidateWord(
+          word: word,
+          notNewerThan: matching.first.updatedAt,
+        );
       }
 
       final searchResults = await searchService.searchWithContext(
@@ -103,6 +115,8 @@ class LlmSummaryService {
 
       final perFileFacts = <String>[];
       var missDone = 0;
+      var failedFileCount = 0;
+      Object? firstError;
       for (final file in files) {
         final cachedFacts = cachedFactsByFile[file.fileName];
         if (cachedFacts != null) {
@@ -118,18 +132,44 @@ class LlmSummaryService {
             total: missCount,
           ),
         );
-        final facts = await pipeline.extractFileFacts(
-          word: word,
-          contexts: file.contexts,
+        final ExtractedFileFacts extracted;
+        try {
+          extracted = await pipeline.extractFileFactsDetailed(
+            word: word,
+            contexts: file.contexts,
+          );
+        } catch (e) {
+          // Record the file and keep going. The remaining files still reach the
+          // cache, so the re-run this failure forces only pays for the files
+          // that failed. Nothing is cached for this one, so it is retried then.
+          failedFileCount++;
+          firstError ??= e;
+          continue;
+        }
+        // Only a result that decoded structurally and carries content earns a
+        // cache row. A raw-text fallback is a fragment of malformed JSON and an
+        // empty result is an anomalous answer; caching either would poison
+        // every later analysis of this word. Withholding the row makes the next
+        // run treat the file as a miss and extract it again.
+        if (extracted.isStructured && extracted.facts.trim().isNotEmpty) {
+          await factCacheRepository.upsert(
+            word: word,
+            fileName: file.fileName,
+            facts: extracted.facts,
+            contentHash: currentHashByFile[file.fileName]!,
+            promptVersion: currentPromptVersion,
+          );
+        }
+        perFileFacts.add(extracted.facts);
+      }
+
+      // An incomplete evidence set never becomes a saved summary: fail here,
+      // before spending a final-summary call whose result would be discarded.
+      if (failedFileCount > 0) {
+        throw LlmAnalysisPartialFailure(
+          failedFileCount: failedFileCount,
+          firstError: firstError!,
         );
-        await factCacheRepository.upsert(
-          word: word,
-          fileName: file.fileName,
-          facts: facts,
-          contentHash: currentHashByFile[file.fileName]!,
-          promptVersion: currentPromptVersion,
-        );
-        perFileFacts.add(facts);
       }
 
       final summary = await pipeline.summarizeFromFacts(

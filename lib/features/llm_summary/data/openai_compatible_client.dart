@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_response_format_exception.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 
 class OpenAiCompatibleClient extends LlmClient {
   final String baseUrl;
@@ -17,8 +18,12 @@ class OpenAiCompatibleClient extends LlmClient {
     http.Client? httpClient,
   }) : _httpClient = httpClient ?? http.Client();
 
+  /// [schema] is accepted for interface conformance and ignored: mapping it to
+  /// `response_format` is provider-dependent and out of scope here, so the
+  /// request body is unchanged. Response-shape validation still happens in the
+  /// caller.
   @override
-  Future<String> generate(String prompt) async {
+  Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     final headers = <String, String>{
       'Content-Type': 'application/json',
     };

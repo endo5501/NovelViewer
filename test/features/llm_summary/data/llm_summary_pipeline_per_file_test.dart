@@ -1,27 +1,64 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_response_format_exception.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
 
 class _MockLlmClient extends LlmClient {
   final List<String> responses;
   final List<String> prompts = [];
+  final List<LlmResponseSchema?> schemas = [];
   int _callIndex = 0;
 
   _MockLlmClient(this.responses);
 
   @override
-  Future<String> generate(String prompt) async {
+  Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     prompts.add(prompt);
+    schemas.add(schema);
     final response = responses[_callIndex % responses.length];
     _callIndex++;
     return response;
   }
 
   int get callCount => _callIndex;
+}
+
+/// Answers with whatever shape the caller asked for, so tests that span an
+/// implementation-dependent number of refinement rounds do not have to predict
+/// the call count.
+class _SchemaAwareLlmClient extends LlmClient {
+  final List<LlmResponseSchema?> schemas = [];
+
+  @override
+  Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
+    schemas.add(schema);
+    final field = schema?.fieldName ?? 'facts';
+    return jsonEncode({field: field == 'facts' ? '- 縮約された事実' : '最終要約'});
+  }
+}
+
+/// Returns each scripted outcome in turn: a `String` is answered, an `Object`
+/// that is not a `String` is thrown. Counts every attempt so tests can assert
+/// exactly how many requests were issued.
+class _ScriptedLlmClient extends LlmClient {
+  _ScriptedLlmClient(this.outcomes);
+
+  final List<Object> outcomes;
+  int callCount = 0;
+
+  @override
+  Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
+    final outcome = outcomes[callCount.clamp(0, outcomes.length - 1)];
+    callCount++;
+    if (outcome is String) return outcome;
+    throw outcome;
+  }
 }
 
 void main() {
@@ -133,23 +170,42 @@ void main() {
       expect(events.last, isA<AnalysisGeneratingFinalSummary>());
     });
 
-    test('empty per-file facts still emit one final-summary event and call',
-        () async {
+    test('empty per-file facts fail without reaching the LLM', () async {
+      // Summarizing an empty evidence set would have the model invent the
+      // answer, so the run fails instead of persisting a fabricated summary.
       final mock = _MockLlmClient([
         jsonEncode({'summary': '情報なし。'}),
       ]);
       final pipeline = LlmSummaryPipeline(llmClient: mock);
 
       final events = <AnalysisProgress>[];
-      final summary = await pipeline.summarizeFromFacts(
-        word: 'アリス',
-        perFileFacts: const [],
-        onProgress: events.add,
+      await expectLater(
+        () => pipeline.summarizeFromFacts(
+          word: 'アリス',
+          perFileFacts: const [],
+          onProgress: events.add,
+        ),
+        throwsA(isA<LlmAnalysisNoFactsFailure>()),
       );
 
-      expect(summary, '情報なし。');
-      expect(mock.callCount, 1);
-      expect(events.single, isA<AnalysisGeneratingFinalSummary>());
+      expect(mock.callCount, 0);
+      expect(events, isEmpty);
+    });
+
+    test('per-file facts that are all blank fail the same way', () async {
+      final mock = _MockLlmClient([
+        jsonEncode({'summary': '情報なし。'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      await expectLater(
+        () => pipeline.summarizeFromFacts(
+          word: 'アリス',
+          perFileFacts: const ['', '   '],
+        ),
+        throwsA(isA<LlmAnalysisNoFactsFailure>()),
+      );
+      expect(mock.callCount, 0);
     });
   });
 
@@ -260,7 +316,7 @@ void main() {
       final pipeline = LlmSummaryPipeline(llmClient: mock);
 
       await expectLater(
-        pipeline.summarizeFromFacts(word: 'テスト', perFileFacts: const []),
+        pipeline.summarizeFromFacts(word: 'テスト', perFileFacts: const ['- 事実']),
         throwsA(isA<LlmResponseFormatException>()),
       );
     });
@@ -272,7 +328,7 @@ void main() {
       final pipeline = LlmSummaryPipeline(llmClient: mock);
 
       await expectLater(
-        pipeline.summarizeFromFacts(word: 'テスト', perFileFacts: const []),
+        pipeline.summarizeFromFacts(word: 'テスト', perFileFacts: const ['- 事実']),
         throwsA(isA<LlmResponseFormatException>()),
       );
     });
@@ -318,6 +374,142 @@ void main() {
       );
 
       expect(summary, '隔離成功');
+    });
+  });
+
+  group('LlmSummaryPipeline structured output', () {
+    test('fact extraction requests a schema for the facts field', () async {
+      final mock = _MockLlmClient([
+        jsonEncode({'facts': '- 王国の王女'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      await pipeline.extractFileFacts(
+        word: 'アリス',
+        contexts: ['アリスは王国の王女として登場した。'],
+      );
+
+      expect(mock.schemas,
+          [const LlmResponseSchema.singleStringField('facts')]);
+    });
+
+    test('final summary generation requests a schema for the summary field',
+        () async {
+      final mock = _MockLlmClient([
+        jsonEncode({'summary': 'アリスは王国の第三王女。'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      await pipeline.summarizeFromFacts(
+        word: 'アリス',
+        perFileFacts: ['- 王国の第三王女'],
+      );
+
+      expect(mock.schemas,
+          [const LlmResponseSchema.singleStringField('summary')]);
+    });
+
+    test('recursive refinement rounds also request the facts schema', () async {
+      // Facts long enough to force a refinement round before the final summary.
+      final longFacts = List.generate(3, (i) => '- ${'あ' * 2000}$i');
+      final mock = _SchemaAwareLlmClient();
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      await pipeline.summarizeFromFacts(
+        word: 'アリス',
+        perFileFacts: longFacts,
+      );
+
+      expect(mock.schemas.length, greaterThan(1));
+      expect(
+        mock.schemas.sublist(0, mock.schemas.length - 1),
+        everyElement(const LlmResponseSchema.singleStringField('facts')),
+      );
+      expect(mock.schemas.last,
+          const LlmResponseSchema.singleStringField('summary'));
+    });
+  });
+
+  group('LlmSummaryPipeline single retry', () {
+    test('a raising Stage-1 request is recovered by one retry', () async {
+      final client = _ScriptedLlmClient([
+        const SocketException('connection reset'),
+        jsonEncode({'facts': '- 王国の王女'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: client);
+
+      final facts = await pipeline.extractFileFacts(
+        word: 'アリス',
+        contexts: ['アリスは王国の王女。'],
+      );
+
+      expect(facts, '- 王国の王女');
+      expect(client.callCount, 2);
+    });
+
+    test('a malformed Stage-1 response is recovered by one retry', () async {
+      final client = _ScriptedLlmClient([
+        // The exact shape that aborted analyses in production: a JSON array
+        // where a string is required.
+        jsonEncode({
+          'facts': ['- 王国の王女', '- 剣術の達人'],
+        }),
+        jsonEncode({'facts': '- 王国の王女'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: client);
+
+      final facts = await pipeline.extractFileFacts(
+        word: 'アリス',
+        contexts: ['アリスは王国の王女。'],
+      );
+
+      expect(facts, '- 王国の王女');
+      expect(client.callCount, 2);
+    });
+
+    test('a persistent Stage-2 failure propagates after exactly two requests',
+        () async {
+      final client = _ScriptedLlmClient([
+        const SocketException('connection reset'),
+        const SocketException('connection reset'),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: client);
+
+      await expectLater(
+        () => pipeline.summarizeFromFacts(
+          word: 'アリス',
+          perFileFacts: ['- 王国の王女'],
+        ),
+        throwsA(isA<SocketException>()),
+      );
+      expect(client.callCount, 2);
+    });
+
+    test('a call that succeeds first time is not retried', () async {
+      final client = _ScriptedLlmClient([
+        jsonEncode({'facts': '- 王国の王女'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: client);
+
+      await pipeline.extractFileFacts(
+        word: 'アリス',
+        contexts: ['アリスは王国の王女。'],
+      );
+
+      expect(client.callCount, 1);
+    });
+
+    test('the raw-text fallback does not trigger a retry', () async {
+      final client = _ScriptedLlmClient(['- 素のテキストで返ってきた事実']);
+      final pipeline = LlmSummaryPipeline(llmClient: client);
+
+      final facts = await pipeline.extractFileFacts(
+        word: 'アリス',
+        contexts: ['アリスは王国の王女。'],
+      );
+
+      expect(facts, '- 素のテキストで返ってきた事実');
+      expect(client.callCount, 1);
     });
   });
 }

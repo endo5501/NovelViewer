@@ -235,6 +235,19 @@
       "word": { "type": "String" }
     }
   },
+  "llmAnalysis_partialFailure": "分析已中止：有 {count} 个文件无法分析，因此未保存摘要。重新运行将只重试失败的文件。（{error}）",
+  "@llmAnalysis_partialFailure": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "error": { "type": "String" }
+    }
+  },
+  "llmAnalysis_noFacts": "分析已中止：未能提取关于「{word}」的信息，因此未保存摘要。",
+  "@llmAnalysis_noFacts": {
+    "placeholders": {
+      "word": { "type": "String" }
+    }
+  },
 
   "hoverPopup_snapshotLabel": "第{episode}文件时的摘要",
   "@hoverPopup_snapshotLabel": {

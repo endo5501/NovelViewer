@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
@@ -20,7 +21,8 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 // Dummy stand-ins for the dependencies of LlmSummaryService.
 class _DummyClient implements LlmClient {
   @override
-  Future<String> generate(String prompt) => throw UnimplementedError();
+  Future<String> generate(String prompt, {LlmResponseSchema? schema}) =>
+      throw UnimplementedError();
   @override
   Future<void> releaseResources() async {}
 }
@@ -233,6 +235,94 @@ void main() {
 
       expect(find.byKey(const Key('analysis_modal')), findsNothing);
       expect(find.textContaining('boom'), findsOneWidget);
+    });
+
+    testWidgets('a partial failure reports how many files could not be analyzed',
+        (tester) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            throw const LlmAnalysisPartialFailure(
+          failedFileCount: 2,
+          firstError: 'connection refused',
+        ),
+      );
+      final container = _container(stub);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_harness(
+        container: container,
+        onPressed: (ref, context) {
+          ref.read(analysisRunnerProvider).run(
+                context: context,
+                word: 'ボブ',
+                coveredUpToEpisode: 100,
+              );
+        },
+      ));
+
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('analysis_modal')), findsNothing);
+      expect(find.textContaining('2件'), findsOneWidget);
+      // The cause stays visible so the user can act on it.
+      expect(find.textContaining('connection refused'), findsOneWidget);
+      // The generic failure wording must not be used for this case.
+      expect(find.textContaining('解析失敗:'), findsNothing);
+    });
+
+    testWidgets('a no-facts failure names the word that yielded nothing',
+        (tester) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            throw const LlmAnalysisNoFactsFailure(),
+      );
+      final container = _container(stub);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_harness(
+        container: container,
+        onPressed: (ref, context) {
+          ref.read(analysisRunnerProvider).run(
+                context: context,
+                word: 'ボブ',
+                coveredUpToEpisode: 100,
+              );
+        },
+      ));
+
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('「ボブ」'), findsOneWidget);
+      expect(find.textContaining('解析失敗:'), findsNothing);
+    });
+
+    testWidgets('a failure raised before extraction keeps the generic message',
+        (tester) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            throw Exception('database is locked'),
+      );
+      final container = _container(stub);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_harness(
+        container: container,
+        onPressed: (ref, context) {
+          ref.read(analysisRunnerProvider).run(
+                context: context,
+                word: 'ボブ',
+                coveredUpToEpisode: 100,
+              );
+        },
+      ));
+
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('解析失敗:'), findsOneWidget);
+      expect(find.textContaining('database is locked'), findsOneWidget);
     });
   });
 
