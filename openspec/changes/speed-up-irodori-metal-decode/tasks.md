@@ -36,21 +36,21 @@
 ## 4. ベースライン測定 (チェリーピック前) 🍎
 
 - [ ] 4.1 🍎 測定条件を記録する。マシン、OS バージョン、モデルディレクトリ、テキスト、seed、`third_party/audio.cpp` の commit hash
-- [ ] 4.2 🍎 他アプリを停止し、`scripts/benchmark_tts.sh --engine irodori --model-dir <dir>` を**直列で**実行する (並列実行は禁止)
-- [ ] 4.3 🍎 結果 JSON が `benchmarks/` に保存されたことを確認し、ファイル名を design.md に記録する
-- [ ] 4.4 🍎 `codec_decode_ms / session.wall_ms` の比率を算出し、design.md の Open Questions に記録する。この比率が Metal 最適化の効果の上限を決める
+- [x] 4.2 🍎 他アプリを停止し、`scripts/benchmark_tts.sh --engine irodori --model-dir <dir>` を**直列で**実行する (並列実行は禁止)
+- [x] 4.3 🍎 結果 JSON が `benchmarks/` に保存されたことを確認し、ファイル名を design.md に記録する
+- [x] 4.4 🍎 `codec_decode_ms / session.wall_ms` の比率を算出し、design.md の Open Questions に記録する。この比率が Metal 最適化の効果の上限を決める
 - [ ] 4.5 🍎 ベースライン結果をコミットする
 
 ## 5. upstream Metal 最適化のチェリーピック 🪟
 
-- [ ] 5.1 🪟 submodule `third_party/audio.cpp` で `git fetch upstream` を実行し、`upstream/main` が取得できていることを確認する
-- [ ] 5.2 🪟 submodule に `feat/metal-convtranspose` ブランチを `main` から作成する
-- [ ] 5.3 🪟 `c810a06` (`metal: dispatch conv_transpose_1d with 256-thread threadgroups (#149)`) を cherry-pick する。`external/ggml/src/ggml-metal/` の 3 ファイルが clean に当たることを確認する
-- [ ] 5.4 🪟 `cdd5196` (`Enable Metal ConvTranspose fast path with MioCodec layout-safe multiplies`) を cherry-pick する。`src/framework/modules/conv_modules.cpp` の競合は `is_conv_transpose1d_col2im_fast_path_eligible()` のゲートに `BackendType::Metal` を追加する形で解決する。`src/models/miocodec/graph_ops.cpp` の変更も併せて入っていることを確認する (ゲートだけ入って本体が入らない半端な状態を作らない)
-- [ ] 5.5 🪟 upstream の `306673c` (検証レポート doc) を取り込んでいないことを確認する
-- [ ] 5.6 🪟 Windows で `scripts/build_irodori_windows.bat` を実行し、Vulkan ビルドが壊れていないことを確認する (`conv_modules.cpp` と `miocodec/graph_ops.cpp` は Vulkan ビルドでもコンパイルされる)
-- [ ] 5.7 🪟 Windows でアプリの Irodori 合成が従来どおり動作することを確認する。ゲート条件に追加したのは `Metal` のみで `Vulkan` は経路に入らないため、挙動は不変であるべき
-- [ ] 5.8 🪟 `feat/metal-convtranspose` を endo5501/audio.cpp へ push する。**NovelViewer 側の pointer 更新より先に push すること** (順序を誤ると macOS 側の `git submodule update` が失敗する)
+- [x] 5.1 🪟 submodule `third_party/audio.cpp` で `git fetch upstream` を実行し、`upstream/main` が取得できていることを確認する
+- [x] 5.2 🪟 submodule に `feat/metal-convtranspose` ブランチを `main` から作成する
+- [x] 5.3 🪟 `c810a06` (`metal: dispatch conv_transpose_1d with 256-thread threadgroups (#149)`) を cherry-pick する。`external/ggml/src/ggml-metal/` の 3 ファイルが clean に当たることを確認する
+- [x] 5.4 🪟 `cdd5196` (`Enable Metal ConvTranspose fast path with MioCodec layout-safe multiplies`) を cherry-pick する。`src/framework/modules/conv_modules.cpp` の競合は `is_conv_transpose1d_col2im_fast_path_eligible()` のゲートに `BackendType::Metal` を追加する形で解決する。`src/models/miocodec/graph_ops.cpp` の変更も併せて入っていることを確認する (ゲートだけ入って本体が入らない半端な状態を作らない)
+- [x] 5.5 🪟 upstream の `306673c` (検証レポート doc) を取り込んでいないことを確認する
+- [x] 5.6 🪟 Windows で `scripts/build_irodori_windows.bat` を実行し、Vulkan ビルドが壊れていないことを確認する (`conv_modules.cpp` と `miocodec/graph_ops.cpp` は Vulkan ビルドでもコンパイルされる)
+- [x] 5.7 🪟 Windows でアプリの Irodori 合成が従来どおり動作することを確認する。ゲート条件に追加したのは `Metal` のみで `Vulkan` は経路に入らないため、挙動は不変であるべき
+- [x] 5.8 🪟 `feat/metal-convtranspose` を endo5501/audio.cpp へ push する。**NovelViewer 側の pointer 更新より先に push すること** (順序を誤ると macOS 側の `git submodule update` が失敗する)
 - [ ] 5.9 🪟 NovelViewer 側で submodule pointer を更新してコミットし、`feat/speed-up-irodori-metal-decode` を push する
 
 ## 6. 効果測定と判断 🍎

@@ -216,6 +216,20 @@ D. 効果測定 (macOS)
 
 注記: この比率は入力テキスト長に依存する。`decode_ms` は生成音声長に、`generate_ms` は RF ステップ数に比例するため、長文では比率が変わりうる。before/after は同一テキストで比較するので判定には影響しない。
 
+### Windows (Vulkan) 無影響の検証
+
+タスク 5.7 は「アプリが動く」ではなく出力の同一性で確認した。同一マシン・同一モデル・同一 seed (1234)・同一テキストで `audiocpp_cli --backend vulkan` を 2 回実行した。
+
+| ビルド | submodule | 出力 WAV MD5 |
+|---|---|---|
+| チェリーピック前 | `eda8e83` (main) | `efd68c35169a171a622b30fbe5dc849c` |
+| チェリーピック後 | `feat/metal-convtranspose` | `efd68c35169a171a622b30fbe5dc849c` |
+
+330,284 バイトがバイト単位で一致した。理由は 2 つあり、どちらも設計どおりである。
+
+- `conv_modules.cpp` のゲートに追加したのは `Metal` のみで、`Vulkan` は fast path に入らない。
+- `cdd5196` が変更した `miocodec/graph_ops.cpp` は Irodori の経路に無い。Irodori は `src/models/irodori_tts/codec.cpp` の独自 codec を使い、MioCodec を参照しない。
+
 ## Open Questions
 
 - `rtf` / `audio_duration_s` を出力 WAV ヘッダから導出するか (D5 で今回は見送り)。ベンチマークを継続的に使うなら後追いで足す価値がある。
