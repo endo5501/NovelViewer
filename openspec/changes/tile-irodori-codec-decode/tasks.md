@@ -49,15 +49,15 @@
 
 ## 5. 統合
 
-- [ ] 5.1 `third_party/audio.cpp` の変更を endo5501/audio.cpp へ push し、NovelViewer 側の submodule pointer を更新する
-- [ ] 5.2 NovelViewer をビルドして起動し、実際に長文を含む小説で TTS 再生が最後まで通ることを確認する
-- [ ] 5.3 🍎 macOS でビルドが通り、Metal 経路でも短文・長文ともに合成できることを確認する
-- [ ] 5.4 🍎 trace の `irodori_tts.codec_decode.tile_frames` が Metal で **512** になっていることを確認する。あわせて 20.48 秒以下の発話で `tile_count = 1` (直接経路) となり、`codec_decode_ms` が変更前と一致することを確認する — **これが design.md D2 でバックエンド別既定を採った目的そのものの検証である**
+- [x] 5.1 `third_party/audio.cpp` の変更を endo5501/audio.cpp へ push し、NovelViewer 側の submodule pointer を更新する
+- [x] 5.2 NovelViewer をビルドして起動し、実際に長文を含む小説で TTS 再生が最後まで通ることを確認する
+- [x] 5.3 🍎 macOS でビルドが通り、Metal 経路でも短文・長文ともに合成できることを確認する
+- [x] 5.4 🍎 trace の `irodori_tts.codec_decode.tile_frames` が Metal で **512** になっていることを確認する。あわせて 20.48 秒以下の発話で `tile_count = 1` (直接経路) となり、`codec_decode_ms` が変更前と一致することを確認する — **これが design.md D2 でバックエンド別既定を採った目的そのものの検証である**
 
 ## 6. 最終確認
 
-- [ ] 6.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 6.1 code-reviewスキルを使用してコードレビューを実施
+- [x] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
 - [x] 6.3 `fvm flutter analyze`でリントを実行
 - [x] 6.4 `fvm flutter test`でテストを実行
 - [x] 6.5 `third_party/audio.cpp` のユニットテスト (`codec_tiled_decode_test` を含む) が全て通ることを確認
