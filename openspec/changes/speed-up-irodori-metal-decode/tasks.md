@@ -15,13 +15,14 @@
 
 ## 2. ベンチマークスクリプトのエンジン選択 🪟
 
-- [ ] 2.1 🪟 `scripts/benchmark_tts.sh` に `--engine <qwen3|irodori>` を追加する。既定は `qwen3`、未知の値はエラー終了
-- [ ] 2.2 🪟 CLI バイナリ解決をエンジン別に分岐する。`irodori` では `third_party/audio.cpp` のビルド出力から `audiocpp_cli` (Windows: `.exe`) を解決し、見つからない場合は該当ビルドスクリプト名を示してエラー終了する
-- [ ] 2.3 🪟 `run_once()` をエンジン別に分岐する。`irodori` では `--task tts --family irodori_tts --model <dir> --backend <metal|vulkan> --text <text> --language <lang> --seed <固定値> --log-file <path> --model-spec-override <audio.cpp>/model_specs` で起動し、計時ログのファイルパスを返す
-- [ ] 2.4 🪟 `parse_timing()` をエンジン別にディスパッチし、`irodori` では 1.6 の `parse_timing_irodori()` を呼ぶ
-- [ ] 2.5 🪟 結果 JSON に `engine` フィールドを追加する。`irodori` の各 run には `engine_timings` を含め、`rtf` と `audio_duration_s` は `null` を出力する
-- [ ] 2.6 🪟 既存の qwen3 経路が無変更で動作することを確認する (CLI 引数・出力 JSON スキーマが従来と一致すること)
-- [ ] 2.7 🪟 `scripts/test/benchmark_parse_test.sh` が引き続き通ることを確認する
+- [x] 2.1 🪟 `scripts/benchmark_tts.sh` に `--engine <qwen3|irodori>` を追加する。既定は `qwen3`、未知の値はエラー終了
+- [x] 2.2 🪟 CLI バイナリ解決をエンジン別に分岐する。`irodori` では `third_party/audio.cpp` のビルド出力から `audiocpp_cli` (Windows: `.exe`) を解決し、見つからない場合は該当ビルドスクリプト名を示してエラー終了する
+- [x] 2.3 🪟 `run_once()` をエンジン別に分岐する。`irodori` では `--task tts --family irodori_tts --model <dir> --backend <metal|vulkan> --text <text> --language <lang> --seed <固定値> --log-file <path> --model-spec-override <audio.cpp>/model_specs` で起動し、計時ログのファイルパスを返す
+- [x] 2.4 🪟 `parse_timing()` をエンジン別にディスパッチし、`irodori` では 1.6 の `parse_timing_irodori()` を呼ぶ
+- [x] 2.5 🪟 結果 JSON に `engine` フィールドを追加する。`irodori` の各 run には `engine_timings` を含め、`rtf` と `audio_duration_s` は `null` を出力する
+- [x] 2.6 🪟 既存の qwen3 経路が無変更で動作することを確認する (CLI 引数・出力 JSON スキーマが従来と一致すること)
+- [x] 2.7 🪟 `scripts/test/benchmark_parse_test.sh` が引き続き通ることを確認する
+- [x] 2.8 🪟 `scripts/test/benchmark_json_test.sh` を追加する。スタブ CLI で結果 JSON を検証し、qwen3 経路が無変更であること (CLI 引数・JSON 形状) を回帰として押さえる
 
 ## 3. ビルドスクリプトへの測定用 CLI 追加
 
@@ -68,5 +69,5 @@
 - [ ] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
 - [ ] 7.3 `fvm flutter analyze`でリントを実行
 - [ ] 7.4 `fvm flutter test`でテストを実行
-- [ ] 7.5 `scripts/test/benchmark_parse_test.sh` を実行して通ることを確認
+- [ ] 7.5 `scripts/test/benchmark_parse_test.sh` と `scripts/test/benchmark_json_test.sh` を実行して通ることを確認
 - [ ] 7.6 🍎 `scripts/test/verify_irodori_macos.sh` を実行して通ることを確認
