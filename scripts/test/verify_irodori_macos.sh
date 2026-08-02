@@ -9,8 +9,10 @@
 # Usage: scripts/test/verify_irodori_macos.sh [frameworks-dir]
 set -u
 
-FRAMEWORKS_DIR="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/macos/Frameworks}"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+FRAMEWORKS_DIR="${1:-$PROJECT_ROOT/macos/Frameworks}"
 DYLIB="$FRAMEWORKS_DIR/libaudiocpp_ffi.dylib"
+AUDIOCPP_BUILD_DIR="$PROJECT_ROOT/third_party/audio.cpp/build/ffi-metal"
 
 pass=0
 fail=0
@@ -105,11 +107,26 @@ check_cmd "no model_specs directory beside the dylib (would break codesign)" \
 check_cmd "no standalone default.metallib (Metal library is embedded)" \
   test ! -e "$FRAMEWORKS_DIR/default.metallib"
 
+# audiocpp_cli is the harness behind scripts/benchmark_tts.sh --engine irodori.
+# It must come out of the same configure as the dylib, so that a benchmark
+# measures the backend settings and engine_runtime the app actually ships.
+# The build scripts accept either layout, so probe both.
+if [ -f "$AUDIOCPP_BUILD_DIR/bin/audiocpp_cli" ] || [ -f "$AUDIOCPP_BUILD_DIR/audiocpp_cli" ]; then
+  ok "audiocpp_cli was built (benchmark harness)"
+else
+  ng "audiocpp_cli was built (benchmark harness) — not found under $AUDIOCPP_BUILD_DIR"
+fi
+
+# ...and it must stay in the build tree. Frameworks is sealed by codesign, and
+# an extra executable there changes what the signature has to cover.
+check_cmd "audiocpp_cli is not shipped in Frameworks (would affect codesign)" \
+  test ! -e "$FRAMEWORKS_DIR/audiocpp_cli"
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 
 # A check that dies before reaching ok/ng leaves the summary reading "0 failed"
 # while having verified nothing, so assert the count as well as the verdicts.
-EXPECTED_CHECKS=11
+EXPECTED_CHECKS=13
 if [ $((pass + fail)) -ne "$EXPECTED_CHECKS" ]; then
   printf 'FAIL - expected %d checks to run, but %d did\n' \
     "$EXPECTED_CHECKS" "$((pass + fail))"
