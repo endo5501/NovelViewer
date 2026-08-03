@@ -74,10 +74,6 @@ The system SHALL provide a `TtsAudioRepository` class with methods to: create an
 - **WHEN** `getSegments(episodeId)` is called for an episode with 15 segments
 - **THEN** a `List<TtsSegment>` of length 15 is returned ordered by segment_index, each carrying typed `audioData` (or `null` if not generated)
 
-#### Scenario: Find segment by text offset for position-based playback
-- **WHEN** `findSegmentByOffset(episodeId, 19)` is called
-- **THEN** the `TtsSegment` whose text_offset is the largest value <= 19 is returned
-
 #### Scenario: Delete episode and all audio data
 - **WHEN** `deleteEpisode(episodeId)` is called
 - **THEN** the episode record and all associated segments are deleted from the database
