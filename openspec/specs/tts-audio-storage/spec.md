@@ -64,7 +64,7 @@ The `tts_segments` table SHALL store per-sentence audio data with the following 
 - **THEN** the `tts_segments` table is recreated with `audio_data` and `sample_count` as nullable columns and `memo` column added, all existing data is preserved, and the unique index is recreated
 
 ### Requirement: TTS audio repository CRUD operations
-The system SHALL provide a `TtsAudioRepository` class with methods to: create an episode record (with text_hash), insert segment records (with or without audio_data), update a segment's text (setting audio_data and sample_count to NULL), update a segment's audio_data and sample_count, update a segment's ref_wav_path, update a segment's memo, query episode status by file_name, retrieve all segments for an episode ordered by segment_index, find a segment by text_offset, get the count of stored segments for an episode, get the count of segments with non-NULL audio_data for an episode, delete a single segment by episode_id and segment_index, delete an episode (cascading to segments), and retrieve all episode statuses as a map of file_name to TtsEpisodeStatus. All read methods that return row data SHALL return typed DTO instances (`TtsEpisode`, `TtsSegment`) or `null`/empty collections; raw `Map<String, Object?>` SHALL NOT be returned across the repository boundary.
+The system SHALL provide a `TtsAudioRepository` class with methods to: create an episode record (with text_hash), insert segment records (with or without audio_data), update a segment's text (setting audio_data and sample_count to NULL), update a segment's audio_data and sample_count, update a segment's ref_wav_path, update a segment's memo, query episode status by file_name, retrieve all segments for an episode ordered by segment_index, get the count of stored segments for an episode, get the count of segments with non-NULL audio_data for an episode, delete a single segment by episode_id and segment_index, delete an episode (cascading to segments), and retrieve all episode statuses as a map of file_name to TtsEpisodeStatus. The repository SHALL NOT provide a text-offset-based segment lookup: resolving a playback start position is the responsibility of the streaming controller, which resolves it against the freshly segmented text rather than against the sparse set of stored rows. All read methods that return row data SHALL return typed DTO instances (`TtsEpisode`, `TtsSegment`) or `null`/empty collections; raw `Map<String, Object?>` SHALL NOT be returned across the repository boundary.
 
 #### Scenario: Check if episode has audio
 - **WHEN** `findEpisodeByFileName("0001_プロローグ.txt")` is called
@@ -73,6 +73,10 @@ The system SHALL provide a `TtsAudioRepository` class with methods to: create an
 #### Scenario: Retrieve segments for playback
 - **WHEN** `getSegments(episodeId)` is called for an episode with 15 segments
 - **THEN** a `List<TtsSegment>` of length 15 is returned ordered by segment_index, each carrying typed `audioData` (or `null` if not generated)
+
+#### Scenario: No text-offset lookup is exposed
+- **WHEN** the public surface of `TtsAudioRepository` is inspected
+- **THEN** no method resolves a segment from a text offset; the start position is computed by the streaming controller from the segment list
 
 #### Scenario: Delete episode and all audio data
 - **WHEN** `deleteEpisode(episodeId)` is called

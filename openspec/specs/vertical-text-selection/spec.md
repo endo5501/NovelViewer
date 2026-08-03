@@ -1,9 +1,7 @@
 ## Purpose
 
 Mouse-drag text selection in vertical display mode: hit-test via per-character `GlobalKey` rectangles, vertical reading-order range expansion, original-character extraction (Ruby base text, unmapped originals), blue selection highlight (yielding to yellow search highlight), auto-clear on page navigation, and a right-click context menu (Copy / 辞書追加).
-
 ## Requirements
-
 ### Requirement: Vertical text selection by drag
 The system SHALL allow the user to select text in vertical display mode by click-and-drag gesture. The selection SHALL follow the vertical reading direction (top-to-bottom within a column, right-to-left across columns). The selection range SHALL be determined by mapping the pointer position to character indices using actual rendered widget rectangles collected via `GlobalKey` and `RenderBox`. During drag updates, the system SHALL snap to the nearest character region when the pointer is between characters.
 
@@ -26,9 +24,27 @@ The system SHALL allow the user to select text in vertical display mode by click
 ### Requirement: Selected text extraction in vertical mode
 The system SHALL extract the original (unmapped) text from the selected range and store it in the application state via `selectedTextProvider`. For ruby-annotated text, the base text (e.g., kanji) SHALL be used as the selected text content. When the selected range crosses a "visual line break" inserted by pagination to wrap a long line across columns, the system SHALL NOT insert a newline character at that boundary, so the extracted text remains a continuous string. A "real" paragraph break (corresponding to a `\n` in the original text) SHALL still produce a newline in the extracted text. The system SHALL distinguish the two using the set of real line-break entries (`lineBreakEntryIndices`); when that set is not provided, every newline entry SHALL be treated as a real break for backward compatibility.
 
+Together with the extracted text, the system SHALL report the selection's start offset in plain-text coordinates. The offset SHALL be computed by walking the character entries up to the selection start, counting a ruby entry as the length of its base text, counting a real line-break entry as one character, and counting a visual line-break entry as zero characters. The resulting page-local offset SHALL be added to the page's start offset (`pageStartTextOffset`) so that the value stored in application state is a document-global plain-text offset.
+
 #### Scenario: Selected text is stored in application state
 - **WHEN** the user completes a text selection in vertical mode
 - **THEN** the selected text is stored in `selectedTextProvider` and accessible to other features (e.g., search)
+
+#### Scenario: Selection start offset is stored alongside the text
+- **WHEN** the user completes a text selection in vertical mode
+- **THEN** the stored selection state carries the document-global plain-text offset of the selection start
+
+#### Scenario: Offset on a later page includes the page start offset
+- **WHEN** the user selects text on a page whose `pageStartTextOffset` is 800, at a position 40 plain-text characters into that page
+- **THEN** the stored offset is 840
+
+#### Scenario: Offset counts ruby entries as their base length
+- **WHEN** the selection start is preceded by a ruby entry whose base text is 2 characters long
+- **THEN** the offset advances by 2 for that entry, not by 1 and not by the length of the ruby reading
+
+#### Scenario: Offset ignores visual column breaks
+- **WHEN** the selection start is preceded by a visual line break inserted by pagination to wrap a long line
+- **THEN** the offset does not advance for that break, while a real paragraph break advances it by one
 
 #### Scenario: Ruby text selection extracts base text
 - **WHEN** the user selects a range that includes ruby-annotated text
@@ -98,3 +114,4 @@ The system SHALL clear the text selection when the user navigates to a different
 #### Scenario: 縦書きで辞書ダイアログを閉じると閲覧画面に戻る
 - **WHEN** 辞書ダイアログを閉じる
 - **THEN** 閲覧画面に戻り、通常の閲覧操作を継続できる
+
