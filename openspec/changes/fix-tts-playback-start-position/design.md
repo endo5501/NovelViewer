@@ -66,6 +66,8 @@
 
 `selectedTextProvider` の状態を `String?` から「選択テキスト＋座標系Bでの選択開始オフセット」を持つ不変値へ拡張する。`null` は「選択なし」を表す従来どおりの意味とする。
 
+値型 `ViewerSelection` は `selectedTextProvider` の隣ではなく `lib/features/text_viewer/data/viewer_selection.dart` に置き、`text_viewer_providers.dart` から re-export する。縦書きの `VerticalTextPage` / `VerticalTextViewer` がコールバックの型としてこれを使うため、providers 側に置くと presentation 層が Riverpod へ依存してしまうためである。
+
 **理由**: `indexOf` による位置の事後推測は原理的に復元不可能な情報を推測しているため、いくら補正しても正しくならない。選択が発生した時点では正確な位置が手元にあるので、それを捨てずに持ち回るのが唯一の正しい解。副次的に、短い一般語を選択したときに文書内の最初の出現へ誤ヒットする既存バグも消える。
 
 座標系Bを正準に選ぶのは、既に `tts_segments.text_offset` と `ttsHighlightRangeProvider` がBであり、DBに保存済みのデータと互換だからである。AやCを正準にすると既存データの意味が変わる。
@@ -84,6 +86,12 @@
 **理由**: この2つの走査規則は既にコードベースで実績があり、テストも通っている。新しい共通型を作ると、その型に合わせて既存の走査3箇所（`extractSelectedText`・`_computeTtsHighlights`・`_computeHighlights`）も書き換えたくなり、変更が肥大化する。
 
 **サロゲートペアの扱い**: 縦書きエントリは `text.runes` で構築されるため1エントリが2 UTF-16コードユニットになりうるが、変換では `entry.text.length`（コードユニット数）を積むので座標系Bと整合する。これは `_computeTtsHighlights` と同じ扱いである。
+
+**`lineBreakEntryIndices` が null の場合（レビューを受けて変更）**: 縦書きの改行の計数は、この集合に含まれる改行エントリのみを1文字と数える。ところが集合が null のときの既定解釈が、コードベース内で既に矛盾していた — `extractVerticalSelectedText` は「全ての改行が実改行」、`_computeTtsHighlights` は「全ての改行が視覚的折返し」として扱い、どちらも既存テストで固定されている。
+
+新しい変換関数は集合を必須パラメータとし、この曖昧さを関数自身からは排除する。そのうえで呼び出し側（`VerticalTextPage._notifySelectionChanged`）は、null を `realLineBreakEntries()` で「全ての改行が実改行」へ解決し、**テキスト抽出とオフセット計算の双方に同じ集合を渡す**。
+
+当初は `_computeTtsHighlights` 側（空集合）に合わせる判断だったが、それだと同一通知内で「改行を含むテキスト」と「改行を数えていないオフセット」が返り、両者が選択位置について食い違う。`ViewerSelection` はテキストとその開始位置が同じ文字列を指すことを保証するための型であり、この不変条件（`specs/vertical-text-selection` および widget テストのヘルパ `expectOffsetAddressesText` が要求）を、本番では到達しない `_computeTtsHighlights` との整合より優先する。本番ではページネーションが常に非null集合を渡すため、実挙動に差は生じない。
 
 ### D3. 縦書きはページ原点を加算してグローバルB座標にする
 
@@ -119,3 +127,11 @@
 - **[縦書きで選択後にページ送りしてから再生した場合]** → ページ送り時点で選択はクリアされる（`vertical-text-selection` の既存要件）ため、古いページ原点のオフセットが残ることはない。
 
 - **[`findSegmentByOffset` の削除]** → 現在の利用者は `TtsStreamingController` のみであることを確認済み。削除により `tts-audio-storage` 仕様の該当記述も更新が必要になる。
+
+### 実装後に判明したリスク（レビューで検出、対応済み）
+
+以下の2件は、いずれも「オフセットを推測せず直接渡す」「開始セグメントをDBに縛られず決める」という本設計の帰結として**新たに到達可能になった**欠陥である。旧実装が偶然これらを避けていたことが、設計時に見落とされていた。
+
+- **[ファイル切替後も古い選択オフセットが残る]** → オフセットは、それが作られた本文に対してのみ意味を持つ。しかし内容差し替え時に選択の消滅を通知する経路が存在しない（`VerticalTextPage.didUpdateWidget` は `_clearInternalSelection()` を呼ぶがコールバックを発火せず、`SelectableText.rich` も無言）。旧実装では古いテキストが新しい本文に見つからず `indexOf` が -1 を返して先頭再生に落ちるため、偶然安全だった。オフセットを直接渡すようになった結果、「話数末尾で選択 → 次話へ移動 → 再生」で大半をスキップする。対策として `TextContentRenderer` の既存 `selectedFileProvider` リスナで選択をクリアし、`specs/text-viewer` に要件として明記した。
+
+- **[途中から開始した実行がエピソードを `completed` にする]** → ループは `startIndex` 以降しか処理しないため、開始位置より前のセグメントは未生成のまま残る。旧実装では `startIndex` が「DBに行のある最後のセグメント」に丸められていたため、そこから最後まで生成すれば結果的に穴が埋まっていた。DB非依存化で任意位置から開始できるようになり、前半が空のまま `completed` が付く。ファイルブラウザが生成済みアイコンを表示し、MP3エクスポートが存在する行だけを連結して冒頭を無警告で欠落させる。対策として完了判定を「全セグメントが音声を持つこと」に変更した（`getGeneratedSegmentCount` を使用）。`TtsStartOutcome` は実行の結果を表すものでエピソードの状態とは独立なので変更しない。

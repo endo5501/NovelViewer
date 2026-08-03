@@ -131,6 +131,33 @@ void main() {
         reason: 'the old indexOf-on-raw-content path overshot the selection');
   });
 
+  testWidgets('a repeated word resolves to the occurrence that was selected',
+      (tester) async {
+    // Independent of ruby: searching the selected text in the content finds
+    // the FIRST occurrence, so selecting a later one used to start playback
+    // from the earlier sentence. Nothing is searched any more, and this pins
+    // that a reintroduced lookup would be caught.
+    const content = 'そうだね。あとでそうしよう。';
+    // Offsets:  そ0 う1 だ2 ね3 。4 あ5 と6 で7 そ8 う9 し10 よ11 う12 。13
+    // Segments: [0] "そうだね。" @0   [1] "あとでそうしよう。" @5
+    final container = await pumpRenderer(tester, content);
+    final segments = const TextSegmenter().splitIntoSentences(content);
+    expect(segments, hasLength(2));
+
+    // Select the SECOND "そう", at offset 8.
+    reportSelection(tester, 8, 10);
+    await tester.pump();
+
+    final selection = container.read(selectedTextProvider)!;
+    expect(selection.text, 'そう');
+    expect(selection.plainTextOffset, 8);
+    expect(startSegmentIndexForOffset(segments, selection.plainTextOffset), 1);
+    // The first occurrence would have resolved to segment 0.
+    expect(content.indexOf(selection.text), 0);
+    expect(startSegmentIndexForOffset(segments, content.indexOf(selection.text)),
+        0);
+  });
+
   testWidgets('no selection starts from the first segment', (tester) async {
     final container = await pumpRenderer(tester, rubyContent);
     final segments = const TextSegmenter().splitIntoSentences(rubyContent);
