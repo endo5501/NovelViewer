@@ -72,6 +72,51 @@ String extractSelectedText(
   return buffer.toString();
 }
 
+/// Converts a `SelectableText.rich` display offset into a plain-text offset.
+///
+/// Display offsets count each `WidgetSpan` (one ruby annotation) as a single
+/// U+FFFC character, while plain-text offsets count a ruby annotation as the
+/// length of its base text. The plain-text space is the one used by
+/// `TextSegment.offset` from the TTS segmenter, `tts_segments.text_offset`,
+/// and the TTS highlight range — so a selection position has to be converted
+/// before it can be compared against any of them.
+///
+/// A [displayOffset] that lands on a ruby segment resolves to the plain-text
+/// position of that segment's base start. Offsets outside the segments clamp
+/// to `0` / the total plain-text length.
+///
+/// By construction `plainTextOffsetFromDisplayOffset(n, segments)` equals
+/// `extractSelectedText(0, n, segments).length`; the walk here just avoids
+/// building the string.
+int plainTextOffsetFromDisplayOffset(
+  int displayOffset,
+  List<TextSegment> segments,
+) {
+  if (displayOffset <= 0) return 0;
+
+  var displayCursor = 0;
+  var plainCursor = 0;
+
+  for (final segment in segments) {
+    switch (segment) {
+      case PlainTextSegment(:final text):
+        if (displayOffset < displayCursor + text.length) {
+          return plainCursor + (displayOffset - displayCursor);
+        }
+        displayCursor += text.length;
+        plainCursor += text.length;
+      case RubyTextSegment(:final base):
+        // The whole annotation is one display character, so an offset that
+        // lands on it cannot address a position inside the base text.
+        if (displayOffset <= displayCursor) return plainCursor;
+        displayCursor += 1;
+        plainCursor += base.length;
+    }
+  }
+
+  return plainCursor;
+}
+
 /// Converts a [TextSelection] from `SelectableText.rich` (which uses display
 /// offsets where each WidgetSpan counts as one U+FFFC character) into the
 /// underlying text with ruby base expanded. Returns the empty string for

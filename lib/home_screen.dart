@@ -123,7 +123,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// selection") is what lets a second Ctrl+F close a selection-search while the
   /// same text is still highlighted, instead of re-searching it forever.
   void _onSearchShortcut() {
-    final selectedText = ref.read(selectedTextProvider);
+    // Only the text matters here; the selection's offset is for TTS.
+    final selectedText = ref.read(selectedTextProvider)?.text;
     final query = ref.read(searchQueryProvider);
 
     if (selectedText != null &&

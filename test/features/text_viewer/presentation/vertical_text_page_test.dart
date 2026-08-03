@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
+import 'package:novel_viewer/features/text_viewer/data/viewer_selection.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -11,7 +12,7 @@ Widget _buildTestWidget({
   String? query,
   int? selectionStart,
   int? selectionEnd,
-  ValueChanged<String?>? onSelectionChanged,
+  ValueChanged<ViewerSelection?>? onSelectionChanged,
   ValueChanged<SwipeDirection>? onSwipe,
   void Function(Offset position, String selectedText)? onContextMenu,
   double? columnSpacing,
@@ -130,13 +131,14 @@ void main() {
 
     testWidgets('tap calls onSelectionChanged with null', (tester) async {
       bool callbackCalled = false;
-      String? notifiedText = 'initial';
+      ViewerSelection? notifiedSelection =
+          const ViewerSelection(text: 'initial', plainTextOffset: 0);
 
       await tester.pumpWidget(_buildTestWidget(
         segments: const [PlainTextSegment('あいう')],
-        onSelectionChanged: (text) {
+        onSelectionChanged: (selection) {
           callbackCalled = true;
-          notifiedText = text;
+          notifiedSelection = selection;
         },
       ));
 
@@ -144,7 +146,7 @@ void main() {
       await tester.pump();
 
       expect(callbackCalled, isTrue);
-      expect(notifiedText, isNull);
+      expect(notifiedSelection, isNull);
     });
 
     testWidgets('onSelectionChanged parameter is accepted', (tester) async {
@@ -398,7 +400,7 @@ void main() {
     testWidgets(
         'horizontal drag does not notify selection (enters swiping mode)',
         (tester) async {
-      final selectionNotifications = <String?>[];
+      final selectionNotifications = <ViewerSelection?>[];
       final swipeNotifications = <SwipeDirection>[];
 
       await tester.pumpWidget(_buildTestWidget(
@@ -427,7 +429,7 @@ void main() {
 
     testWidgets('vertical drag triggers text selection (enters selecting mode)',
         (tester) async {
-      final selectionNotifications = <String?>[];
+      final selectionNotifications = <ViewerSelection?>[];
       final swipeNotifications = <SwipeDirection>[];
 
       await tester.pumpWidget(_buildTestWidget(
@@ -483,7 +485,7 @@ void main() {
 
     testWidgets('very short drag does not trigger swipe or selection',
         (tester) async {
-      final selectionNotifications = <String?>[];
+      final selectionNotifications = <ViewerSelection?>[];
       SwipeDirection? swipeDir;
 
       await tester.pumpWidget(_buildTestWidget(

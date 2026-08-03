@@ -10,6 +10,26 @@ class TextSegment {
   final int length;
 }
 
+/// Index of the segment playback should start from for [startOffset], a
+/// position in plain-text coordinates (the space [TextSegment.offset] uses).
+///
+/// Returns the last segment starting at or before [startOffset], or 0 when
+/// [startOffset] is null, precedes the first segment, or [segments] is empty.
+///
+/// This resolves against the freshly segmented text rather than the stored
+/// `tts_segments` rows: those exist only for segments that have been generated
+/// or edited, so a sparse table used to collapse any later selection onto the
+/// last generated segment.
+int startSegmentIndexForOffset(List<TextSegment> segments, int? startOffset) {
+  if (startOffset == null) return 0;
+  var index = 0;
+  for (var i = 0; i < segments.length; i++) {
+    if (segments[i].offset > startOffset) break;
+    index = i;
+  }
+  return index;
+}
+
 class TextSegmenter {
   const TextSegmenter();
 

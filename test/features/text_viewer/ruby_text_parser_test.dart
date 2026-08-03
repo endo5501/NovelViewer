@@ -140,6 +140,69 @@ void main() {
     });
   });
 
+  group('plainTextOffsetFromDisplayOffset', () {
+    // Converts a SelectableText.rich display offset (each WidgetSpan = 1 char)
+    // into a plain-text offset (each ruby contributes base.length), which is
+    // the coordinate space used by TextSegmenter offsets, tts_segments
+    // .text_offset and the TTS highlight range.
+
+    final segments = [
+      const PlainTextSegment('これは'),
+      const RubyTextSegment(base: '漢字', rubyText: 'かんじ'),
+      const PlainTextSegment('です'),
+    ];
+    // Display: こ(0) れ(1) は(2) [WidgetSpan=漢字](3) で(4) す(5) → length 6
+    // Plain:   こ(0) れ(1) は(2) 漢(3) 字(4) で(5) す(6)          → length 7
+
+    test('offset in plain text before any ruby is unchanged', () {
+      expect(plainTextOffsetFromDisplayOffset(0, segments), 0);
+      expect(plainTextOffsetFromDisplayOffset(2, segments), 2);
+    });
+
+    test('offset after a ruby segment skips past the full base text', () {
+      // Display 4 is で, which is at plain-text position 5.
+      expect(plainTextOffsetFromDisplayOffset(4, segments), 5);
+      expect(plainTextOffsetFromDisplayOffset(5, segments), 6);
+    });
+
+    test('offset on a ruby segment resolves to its base start', () {
+      expect(plainTextOffsetFromDisplayOffset(3, segments), 3);
+    });
+
+    test('offset at the end maps to the total plain-text length', () {
+      expect(plainTextOffsetFromDisplayOffset(6, segments), 7);
+    });
+
+    test('offset beyond the end clamps to the total plain-text length', () {
+      expect(plainTextOffsetFromDisplayOffset(100, segments), 7);
+    });
+
+    test('negative offset clamps to zero', () {
+      expect(plainTextOffsetFromDisplayOffset(-1, segments), 0);
+    });
+
+    test('returns zero for empty segments', () {
+      expect(plainTextOffsetFromDisplayOffset(3, const []), 0);
+    });
+
+    test('agrees with the length of extractSelectedText from 0', () {
+      final multi = [
+        const RubyTextSegment(base: '魔法', rubyText: 'まほう'),
+        const PlainTextSegment('の'),
+        const RubyTextSegment(base: '杖', rubyText: 'つえ'),
+        const PlainTextSegment('を振る'),
+      ];
+      // Display length: [魔法](0) の(1) [杖](2) を(3) 振(4) る(5) → 6
+      for (var n = 0; n <= 6; n++) {
+        expect(
+          plainTextOffsetFromDisplayOffset(n, multi),
+          extractSelectedText(0, n, multi).length,
+          reason: 'display offset $n',
+        );
+      }
+    });
+  });
+
   group('selectedTextFromSelection', () {
     // Helper used by the horizontal context-menu builder to convert a
     // SelectableText.rich selection (which uses display offsets where each

@@ -171,12 +171,12 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
     );
     _streamingController = controller;
 
-    final selectedText = ref.read(selectedTextProvider);
-    int? startOffset;
-    if (selectedText != null && selectedText.isNotEmpty) {
-      final index = widget.content.indexOf(selectedText);
-      if (index >= 0) startOffset = index;
-    }
+    // The selection already carries its start position in plain-text
+    // coordinates - the same space TTS segment offsets live in. Searching the
+    // selected text back out of `widget.content` (which still holds `<ruby>`
+    // markup) is what used to shift playback to a later sentence, or to the
+    // last one, on any episode with ruby.
+    final startOffset = ref.read(selectedTextProvider)?.plainTextOffset;
 
     final voiceService = ref.read(voiceReferenceServiceProvider);
 

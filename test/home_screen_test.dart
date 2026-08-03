@@ -366,7 +366,9 @@ void main() {
       final element = tester.element(find.byType(NovelViewerApp).last);
       container = ProviderScope.containerOf(element);
 
-      container.read(selectedTextProvider.notifier).setText('太郎');
+      container.read(selectedTextProvider.notifier).setSelection(
+            const ViewerSelection(text: '太郎', plainTextOffset: 0),
+          );
 
       await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
@@ -401,7 +403,9 @@ void main() {
             lineNumber: 3,
             query: '太郎',
           );
-      container.read(selectedTextProvider.notifier).setText('花子');
+      container.read(selectedTextProvider.notifier).setSelection(
+            const ViewerSelection(text: '花子', plainTextOffset: 0),
+          );
 
       await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
@@ -536,7 +540,9 @@ void main() {
       container = ProviderScope.containerOf(element);
 
       // A text selection persists across both presses (range search).
-      container.read(selectedTextProvider.notifier).setText('太郎');
+      container.read(selectedTextProvider.notifier).setSelection(
+            const ViewerSelection(text: '太郎', plainTextOffset: 0),
+          );
 
       // First Ctrl+F runs an immediate search on the selection.
       await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
@@ -572,7 +578,9 @@ void main() {
       final element = tester.element(find.byType(NovelViewerApp));
       container = ProviderScope.containerOf(element);
 
-      container.read(selectedTextProvider.notifier).setText('太郎');
+      container.read(selectedTextProvider.notifier).setSelection(
+            const ViewerSelection(text: '太郎', plainTextOffset: 0),
+          );
       await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.control);

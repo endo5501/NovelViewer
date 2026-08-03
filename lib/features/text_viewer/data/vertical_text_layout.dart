@@ -113,6 +113,47 @@ int? hitTestCharIndexFromRegions({
 /// a word straddling a column boundary is extracted as a continuous string
 /// (which then matches when sent for re-analysis). When the set is null every
 /// newline is emitted as `'\n'` (legacy behaviour).
+/// Converts a char-entry index into a page-local plain-text offset.
+///
+/// The plain-text coordinate space is the page's text with ruby replaced by
+/// its base text — the space used by `TextSegment.offset`, the TTS highlight
+/// range, and `tts_segments.text_offset`. Counting rules match
+/// `VerticalTextPage._computeTtsHighlights`, which walks the same entries in
+/// the opposite direction:
+///
+/// - a plain or ruby entry advances by `entry.text.length` (code units, so a
+///   surrogate pair counts as 2 even though it is a single entry)
+/// - a newline entry listed in [lineBreakEntryIndices] is a real paragraph
+///   break and advances by 1
+/// - any other newline entry is a visual column wrap inserted by pagination
+///   and advances by 0
+///
+/// [lineBreakEntryIndices] is required rather than nullable: an absent set
+/// would make every newline ambiguous, and the two plausible defaults produce
+/// different offsets.
+///
+/// The result is page-local. Callers holding a paginated page must add the
+/// page's `pageStartTextOffset` to obtain a document-global offset.
+int plainTextOffsetFromEntryIndex(
+  List<VerticalCharEntry> entries,
+  int entryIndex, {
+  required Set<int> lineBreakEntryIndices,
+}) {
+  if (entryIndex <= 0) return 0;
+  final end = entryIndex.clamp(0, entries.length);
+
+  var offset = 0;
+  for (var i = 0; i < end; i++) {
+    final entry = entries[i];
+    if (entry.isNewline) {
+      if (lineBreakEntryIndices.contains(i)) offset += 1;
+      continue;
+    }
+    offset += entry.text.length;
+  }
+  return offset;
+}
+
 String extractVerticalSelectedText(
   List<VerticalCharEntry> entries,
   int startIndex,

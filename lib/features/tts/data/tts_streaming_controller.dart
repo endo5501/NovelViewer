@@ -208,15 +208,11 @@ class TtsStreamingController {
   }) async {
     var playbackResult = _PlaybackResult.finished;
 
-    // Determine starting segment
-    int startIndex = 0;
-    if (startOffset != null) {
-      final segment =
-          await _repository.findSegmentByOffset(episodeId, startOffset);
-      if (segment != null) {
-        startIndex = segment.segmentIndex;
-      }
-    }
+    // Determine starting segment from the freshly segmented text. Resolving
+    // it against the stored rows instead would restrict the start position to
+    // segments that already have a DB row, which on a partially generated
+    // episode means the last generated one.
+    final startIndex = startSegmentIndexForOffset(segments, startOffset);
 
     // Count segments needing generation for progress tracking
     int totalToGenerate = 0;

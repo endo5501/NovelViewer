@@ -12,6 +12,7 @@ import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/column_splitter.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
+import 'package:novel_viewer/features/text_viewer/data/viewer_selection.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_intents.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -294,7 +295,9 @@ class VerticalTextViewer extends ConsumerStatefulWidget {
   final int? targetLineNumber;
   final int? ttsHighlightStart;
   final int? ttsHighlightEnd;
-  final ValueChanged<String?>? onSelectionChanged;
+  /// Reports the current selection (text plus its document-global plain-text
+  /// start offset), or `null` when it is cleared.
+  final ValueChanged<ViewerSelection?>? onSelectionChanged;
   final void Function(Offset position, String selectedText)? onContextMenu;
   final double columnSpacing;
   final List<int> bookmarkLineNumbers;
