@@ -76,3 +76,29 @@ The system SHALL provide a single entry point `TtsStreamingController.start()` t
 #### Scenario: Piper engine ignores refWavPath
 - **WHEN** `start()` is called with `config: PiperEngineConfig(...)` (no refWavPath field exists on Piper config)
 - **THEN** voice cloning is not used, since `PiperEngineConfig` does not carry a `refWavPath` field at all
+
+### Requirement: Synthesis failure is surfaced and never masquerades as completed
+
+The streaming pipeline SHALL distinguish a genuine synthesis/model-load failure from a user-initiated stop and from normal completion. Within the generation/playback loop, when `ensureModelLoaded` returns `false` or `synthesize` returns `null` while `_stopped` is `false`, the system SHALL treat this as a failure (not a stop). On `start()` completion the system SHALL set the episode status as follows: if the run was stopped by the user, the status SHALL be `partial`; if the run failed and at least one stored segment has audio data, the status SHALL be `partial`; if the run failed and no stored segment has audio data, the system SHALL delete the episode record so that the file's derived `TtsAudioState` reverts to `none`; if the run finished normally, the status SHALL be `completed` only when every segment of the text has stored audio, and `partial` otherwise. A run that began at a `startOffset` past segment 0 covers only that suffix, so the segments before the start position remain ungenerated and the episode SHALL NOT be reported as `completed`. The system SHALL NOT mark an episode `completed` when a failure occurred. The `start()` method SHALL return a `TtsStartOutcome` value (`completed`, `stopped`, or `failed`) describing the result so callers can react to failures; `completed` describes the run finishing without failure or stop and is independent of the persisted episode status. A failure that kept some audio and a failure with no audio both return `failed` (the difference is reflected in the persisted episode status, not the outcome).
+
+The system MUST rely on `_stopped` being set before `abort()` during `stop()`, which guarantees that any `false`/`null` returned because of an abort is observed with `_stopped` already `true`; therefore a `false`/`null` observed while `_stopped` is `false` is always a real engine failure.
+
+#### Scenario: Model-load failure with no audio deletes the episode
+- **WHEN** `start()` is called, no prior audio exists, and `ensureModelLoaded` returns `false` while the user has not stopped
+- **THEN** no segment is marked, the episode record is deleted, the derived `TtsAudioState` for the file becomes `none`, and `start()` returns `failed`
+
+#### Scenario: Mid-stream synthesis failure with partial audio yields partial
+- **WHEN** `start()` generates and stores audio for the first 2 of 5 segments, then `synthesize` returns `null` for segment 2 while the user has not stopped
+- **THEN** the episode status is set to `partial`, the 2 stored segments are preserved, and `start()` returns `failed`
+
+#### Scenario: User stop is not treated as a failure
+- **WHEN** the user stops the pipeline mid-generation so that `_stopped` is `true` before the in-flight `synthesize` completes with `null`
+- **THEN** the episode status is set to `partial`, no episode is deleted, and `start()` returns `stopped` (not `failed`)
+
+#### Scenario: Successful run completes normally
+- **WHEN** `start()` generates audio for all segments without any failure or stop
+- **THEN** the episode status is set to `completed` and `start()` returns `completed`
+
+#### Scenario: Run started past a gap stays partial
+- **WHEN** `start()` is called with a `startOffset` resolving to segment 4 of 5, segments 2 and 3 have no stored audio, and the run reaches the end without failure or stop
+- **THEN** the episode status is set to `partial` (not `completed`) so the file browser does not show it as fully generated and an MP3 export does not silently omit the ungenerated segments, while `start()` still returns `completed`

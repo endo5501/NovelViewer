@@ -263,6 +263,12 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     // Reset current view line when the user switches files.
     ref.listenManual(selectedFileProvider, (prev, next) {
       if (prev?.path != next?.path) {
+        // A selection offset only addresses the content it was made in, and
+        // neither viewer reports the selection going away when the content is
+        // swapped: VerticalTextPage clears its internal state without firing
+        // the callback, and SelectableText.rich stays silent. Left alone, the
+        // stale offset would be handed to TTS for the new episode.
+        ref.read(selectedTextProvider.notifier).setSelection(null);
         _lastScrollKey = null;
         _lastTtsScrolledRange = null;
         WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
+import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/text_content_renderer.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
@@ -121,6 +123,28 @@ void main() {
     final selection = container.read(selectedTextProvider);
     expect(selection?.text, '魔法を');
     expect(selection?.plainTextOffset, 2);
+  });
+
+  testWidgets('switching files clears the stale selection',
+      (WidgetTester tester) async {
+    // A selection offset only means anything for the content it was made in.
+    // Neither viewer reports a change when the content is swapped
+    // (VerticalTextPage._clearInternalSelection does not fire the callback,
+    // and SelectableText.rich stays silent), so the offset would otherwise be
+    // applied verbatim to the next episode and skip most of it.
+    const content = 'あいうえおかきくけこ';
+    final container = await pumpRenderer(tester, content);
+
+    reportSelection(tester, 3, 6);
+    await tester.pump();
+    expect(container.read(selectedTextProvider), isNotNull);
+
+    container.read(selectedFileProvider.notifier).selectFile(
+          const FileEntry(name: '0002.txt', path: '/novels/0002.txt'),
+        );
+    await tester.pump();
+
+    expect(container.read(selectedTextProvider), isNull);
   });
 
   testWidgets('collapsed selection clears the stored selection',

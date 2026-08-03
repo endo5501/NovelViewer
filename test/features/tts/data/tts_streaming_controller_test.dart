@@ -1531,6 +1531,84 @@ void main() {
       expect(player.playedFiles, hasLength(1));
     });
 
+    test('starting past a gap leaves the episode partial, not completed',
+        () async {
+      // Starting mid-episode only generates from that point on, so segments
+      // before the start position stay missing. Marking the episode completed
+      // would make the file browser show it as fully generated and let an MP3
+      // export silently drop the ungenerated prefix.
+      const text = '文1。文2。文3。文4。文5。';
+      final episodeId = await repository.createEpisode(
+        fileName: '0001_テスト.txt',
+        sampleRate: 24000,
+        status: TtsEpisodeStatus.partial,
+        textHash: _computeTextHash(text),
+      );
+      for (var i = 0; i < 2; i++) {
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: i,
+          text: '文${i + 1}。',
+          textOffset: i * 3,
+          textLength: 3,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+      }
+
+      final isolate = _FakeTtsIsolate();
+      final player = _AutoCompleteAudioPlayer();
+      final controller = TtsStreamingController(
+        read: container.read,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
+      );
+
+      final outcome = await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
+        text: text,
+        fileName: '0001_テスト.txt',
+        config: _qwen3Config(modelDir: '/models'),
+        startOffset: 12, // segment 4; segments 2 and 3 stay ungenerated
+      );
+
+      expect(outcome, TtsStartOutcome.completed,
+          reason: 'the run itself finished without failure or user stop');
+      final episode = await repository.findEpisodeByFileName('0001_テスト.txt');
+      expect(episode!.status, TtsEpisodeStatus.partial,
+          reason: 'segments 2 and 3 were skipped, so the episode is not done');
+    });
+
+    test('a run covering every segment still completes the episode', () async {
+      const text = '文1。文2。文3。';
+
+      final isolate = _FakeTtsIsolate();
+      final player = _AutoCompleteAudioPlayer();
+      final controller = TtsStreamingController(
+        read: container.read,
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
+      );
+
+      await controller.start(
+        resolveRefWavPath: null,
+        modelsReady: true,
+        text: text,
+        fileName: '0001_テスト.txt',
+        config: _qwen3Config(modelDir: '/models'),
+      );
+
+      final episode = await repository.findEpisodeByFileName('0001_テスト.txt');
+      expect(episode!.status, TtsEpisodeStatus.completed);
+    });
+
     test('start offset before the first segment falls back to segment 0',
         () async {
       // A leading full-width space pushes the first segment's offset to 1.

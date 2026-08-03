@@ -182,6 +182,31 @@ void main() {
     );
   });
 
+  testWidgets('without pagination metadata the text and offset still agree',
+      (tester) async {
+    // No lineBreakEntryIndices: extractVerticalSelectedText's legacy reading
+    // treats every newline as a real paragraph break, so the offset walk must
+    // count them too. Falling back to an empty set would report text holding
+    // a newline next to an offset that skipped it.
+    final notifications = <ViewerSelection?>[];
+    await tester.pumpWidget(_buildTestWidget(
+      segments: const [
+        PlainTextSegment('あい'),
+        PlainTextSegment('\n'),
+        PlainTextSegment('うえお'),
+      ],
+      onSelectionChanged: notifications.add,
+    ));
+
+    await _dragSelect(tester, 'う', 'お');
+
+    expectOffsetAddressesText(
+      notifications.last,
+      pagePlainText: 'あい\nうえお',
+      pageStartTextOffset: 0,
+    );
+  });
+
   testWidgets('carries the selected text alongside the offset', (tester) async {
     final notifications = <ViewerSelection?>[];
     await tester.pumpWidget(_buildTestWidget(

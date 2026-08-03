@@ -459,11 +459,17 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       widget.onSelectionChanged?.call(null);
       return;
     }
+    // Resolve the null (unpaginated) case once and use the SAME set for both
+    // the text and the offset. Letting each fall back on its own would report
+    // text that contains newlines alongside an offset that did not count
+    // them, so the two would disagree about where the selection starts.
+    final lineBreaks =
+        widget.lineBreakEntryIndices ?? realLineBreakEntries(_charEntries);
     final text = extractVerticalSelectedText(
       _charEntries,
       start,
       end,
-      lineBreakEntryIndices: widget.lineBreakEntryIndices,
+      lineBreakEntryIndices: lineBreaks,
     );
     if (text.isEmpty) {
       widget.onSelectionChanged?.call(null);
@@ -475,7 +481,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     final pageLocalOffset = plainTextOffsetFromEntryIndex(
       _charEntries,
       start,
-      lineBreakEntryIndices: widget.lineBreakEntryIndices ?? const {},
+      lineBreakEntryIndices: lineBreaks,
     );
     widget.onSelectionChanged?.call(
       ViewerSelection(

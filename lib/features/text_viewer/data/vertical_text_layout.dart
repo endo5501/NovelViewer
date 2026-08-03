@@ -105,14 +105,6 @@ int? hitTestCharIndexFromRegions({
   return nearest?.charIndex;
 }
 
-/// Extracts the original (unmapped) text for the selected entry range.
-///
-/// [lineBreakEntryIndices] identifies the newline entries that correspond to
-/// real paragraph breaks. Newline entries NOT in this set are "visual"
-/// column-wrap breaks inserted by pagination; they contribute no character so
-/// a word straddling a column boundary is extracted as a continuous string
-/// (which then matches when sent for re-analysis). When the set is null every
-/// newline is emitted as `'\n'` (legacy behaviour).
 /// Converts a char-entry index into a page-local plain-text offset.
 ///
 /// The plain-text coordinate space is the page's text with ruby replaced by
@@ -134,6 +126,19 @@ int? hitTestCharIndexFromRegions({
 ///
 /// The result is page-local. Callers holding a paginated page must add the
 /// page's `pageStartTextOffset` to obtain a document-global offset.
+/// The indices of every newline entry in [entries].
+///
+/// This materialises [extractVerticalSelectedText]'s legacy reading of a null
+/// `lineBreakEntryIndices` ("every newline is a real paragraph break") as a
+/// concrete set, so a caller without pagination metadata can hand the SAME set
+/// to both that function and [plainTextOffsetFromEntryIndex]. Passing one of
+/// them null and the other an empty set makes the extracted text and the
+/// offset describe different strings.
+Set<int> realLineBreakEntries(List<VerticalCharEntry> entries) => {
+      for (var i = 0; i < entries.length; i++)
+        if (entries[i].isNewline) i,
+    };
+
 int plainTextOffsetFromEntryIndex(
   List<VerticalCharEntry> entries,
   int entryIndex, {
@@ -154,6 +159,16 @@ int plainTextOffsetFromEntryIndex(
   return offset;
 }
 
+/// Extracts the original (unmapped) text for the selected entry range.
+///
+/// [lineBreakEntryIndices] identifies the newline entries that correspond to
+/// real paragraph breaks. Newline entries NOT in this set are "visual"
+/// column-wrap breaks inserted by pagination; they contribute no character so
+/// a word straddling a column boundary is extracted as a continuous string
+/// (which then matches when sent for re-analysis). When the set is null every
+/// newline is emitted as `'\n'` (legacy behaviour); [realLineBreakEntries]
+/// materialises that same reading for callers that need to pair this with
+/// [plainTextOffsetFromEntryIndex].
 String extractVerticalSelectedText(
   List<VerticalCharEntry> entries,
   int startIndex,
