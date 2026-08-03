@@ -239,4 +239,140 @@ void main() {
       expect(extractVerticalSelectedText(entries, 0, 3), 'あ\nい');
     });
   });
+
+  group('plainTextOffsetFromEntryIndex', () {
+    // Converts a char-entry index into a page-local plain-text offset, using
+    // the same counting rules as VerticalTextPage._computeTtsHighlights so the
+    // result is directly comparable with TTS segment offsets.
+
+    test('plain entries advance one code unit each', () {
+      final entries = [
+        VerticalCharEntry.plain('あ'),
+        VerticalCharEntry.plain('い'),
+        VerticalCharEntry.plain('う'),
+      ];
+      expect(
+        plainTextOffsetFromEntryIndex(entries, 0,
+            lineBreakEntryIndices: const {}),
+        0,
+      );
+      expect(
+        plainTextOffsetFromEntryIndex(entries, 2,
+            lineBreakEntryIndices: const {}),
+        2,
+      );
+    });
+
+    test('ruby entry advances by the length of its base text', () {
+      final entries = [
+        VerticalCharEntry.plain('あ'),
+        VerticalCharEntry.ruby('漢字', 'かんじ'),
+        VerticalCharEntry.plain('い'),
+      ];
+      expect(
+        plainTextOffsetFromEntryIndex(entries, 1,
+            lineBreakEntryIndices: const {}),
+        1,
+      );
+      // The ruby entry occupies 2 plain-text characters, not 1.
+      expect(
+        plainTextOffsetFromEntryIndex(entries, 2,
+            lineBreakEntryIndices: const {}),
+        3,
+      );
+      expect(
+        plainTextOffsetFromEntryIndex(entries, 3,
+            lineBreakEntryIndices: const {}),
+        4,
+      );
+    });
+
+    test('real line break advances by one character', () {
+      final entries = [
+        VerticalCharEntry.plain('ア'),
+        VerticalCharEntry.plain('リ'),
+        VerticalCharEntry.newline(),
+        VerticalCharEntry.plain('ス'),
+      ];
+      expect(
+        plainTextOffsetFromEntryIndex(entries, 3,
+            lineBreakEntryIndices: const {2}),
+        3,
+      );
+      expect(
+        plainTextOffsetFromEntryIndex(entries, 4,
+            lineBreakEntryIndices: const {2}),
+        4,
+      );
+    });
+
+    test('visual column break advances by zero characters', () {
+      final entries = [
+        VerticalCharEntry.plain('ア'),
+        VerticalCharEntry.plain('リ'),
+        VerticalCharEntry.newline(),
+        VerticalCharEntry.plain('ス'),
+      ];
+      expect(
+        plainTextOffsetFromEntryIndex(entries, 3,
+            lineBreakEntryIndices: const {}),
+        2,
+      );
+      expect(
+        plainTextOffsetFromEntryIndex(entries, 4,
+            lineBreakEntryIndices: const {}),
+        3,
+      );
+    });
+
+    test('surrogate pair entry advances by its code unit count', () {
+      // U+20B9F is one rune (so one entry) but two UTF-16 code units, and the
+      // plain-text coordinate space counts code units.
+      const surrogate = '\u{20B9F}';
+      expect(surrogate.length, 2);
+      final entries = [
+        VerticalCharEntry.plain(surrogate),
+        VerticalCharEntry.plain('る'),
+      ];
+      expect(
+        plainTextOffsetFromEntryIndex(entries, 1,
+            lineBreakEntryIndices: const {}),
+        2,
+      );
+      expect(
+        plainTextOffsetFromEntryIndex(entries, 2,
+            lineBreakEntryIndices: const {}),
+        3,
+      );
+    });
+
+    test('index beyond the entries clamps to the total length', () {
+      final entries = [
+        VerticalCharEntry.plain('あ'),
+        VerticalCharEntry.plain('い'),
+      ];
+      expect(
+        plainTextOffsetFromEntryIndex(entries, 99,
+            lineBreakEntryIndices: const {}),
+        2,
+      );
+    });
+
+    test('negative index clamps to zero', () {
+      final entries = [VerticalCharEntry.plain('あ')];
+      expect(
+        plainTextOffsetFromEntryIndex(entries, -1,
+            lineBreakEntryIndices: const {}),
+        0,
+      );
+    });
+
+    test('returns zero for empty entries', () {
+      expect(
+        plainTextOffsetFromEntryIndex(const [], 3,
+            lineBreakEntryIndices: const {}),
+        0,
+      );
+    });
+  });
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
+import 'package:novel_viewer/features/text_viewer/data/viewer_selection.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -14,7 +15,7 @@ Widget _build({
   void Function(String word, Offset position, HoverToken token)? onMarkEnter,
   void Function(HoverToken token)? onMarkExit,
   VoidCallback? onHoverHideRequest,
-  ValueChanged<String?>? onSelectionChanged,
+  ValueChanged<ViewerSelection?>? onSelectionChanged,
   double width = 200,
   double height = 400,
 }) {

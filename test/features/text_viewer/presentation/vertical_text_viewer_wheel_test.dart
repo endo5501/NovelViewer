@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
+import 'package:novel_viewer/features/text_viewer/data/viewer_selection.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -11,7 +12,7 @@ Widget _buildTestWidget({
   required List<TextSegment> segments,
   double width = 200,
   double height = 400,
-  ValueChanged<String?>? onSelectionChanged,
+  ValueChanged<ViewerSelection?>? onSelectionChanged,
 }) {
   return ProviderScope(child: MaterialApp(
         locale: const Locale('ja'),

@@ -9,6 +9,7 @@ import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_char_map.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_marked_ranges.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_text_layout.dart';
+import 'package:novel_viewer/features/text_viewer/data/viewer_selection.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_ruby_text_widget.dart';
 
@@ -62,7 +63,11 @@ class VerticalTextPage extends StatefulWidget {
   /// Newline entries not in this set are visual column-wrap breaks. When null,
   /// every newline is treated as a real break (legacy behaviour).
   final Set<int>? lineBreakEntryIndices;
-  final ValueChanged<String?>? onSelectionChanged;
+
+  /// Reports the current selection, or `null` when it is cleared. The
+  /// selection's offset is document-global: page-local plain-text position
+  /// plus [pageStartTextOffset].
+  final ValueChanged<ViewerSelection?>? onSelectionChanged;
   final ValueChanged<SwipeDirection>? onSwipe;
   final void Function(Offset position, String selectedText)? onContextMenu;
   final double columnSpacing;
@@ -454,13 +459,36 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       widget.onSelectionChanged?.call(null);
       return;
     }
+    // Resolve the null (unpaginated) case once and use the SAME set for both
+    // the text and the offset. Letting each fall back on its own would report
+    // text that contains newlines alongside an offset that did not count
+    // them, so the two would disagree about where the selection starts.
+    final lineBreaks =
+        widget.lineBreakEntryIndices ?? realLineBreakEntries(_charEntries);
     final text = extractVerticalSelectedText(
       _charEntries,
       start,
       end,
-      lineBreakEntryIndices: widget.lineBreakEntryIndices,
+      lineBreakEntryIndices: lineBreaks,
     );
-    widget.onSelectionChanged?.call(text.isEmpty ? null : text);
+    if (text.isEmpty) {
+      widget.onSelectionChanged?.call(null);
+      return;
+    }
+    // `start` is a char-entry index; TTS needs a plain-text offset. The walk
+    // is page-local, so add this page's origin to get a document-global
+    // offset — the same convention `_computeTtsHighlights` reads back.
+    final pageLocalOffset = plainTextOffsetFromEntryIndex(
+      _charEntries,
+      start,
+      lineBreakEntryIndices: lineBreaks,
+    );
+    widget.onSelectionChanged?.call(
+      ViewerSelection(
+        text: text,
+        plainTextOffset: widget.pageStartTextOffset + pageLocalOffset,
+      ),
+    );
   }
 
   int? _hitTest(Offset localPosition, {bool snapToNearest = false}) {

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
+import 'package:novel_viewer/features/text_viewer/data/viewer_selection.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -10,7 +11,7 @@ Widget _buildTestWidget({
   required List<TextSegment> segments,
   double width = 300,
   double height = 400,
-  ValueChanged<String?>? onSelectionChanged,
+  ValueChanged<ViewerSelection?>? onSelectionChanged,
 }) {
   return ProviderScope(child: MaterialApp(
         locale: const Locale('ja'),
@@ -250,14 +251,14 @@ void main() {
 
   group('VerticalTextViewer swipe selection clearing', () {
     testWidgets('swipe clears active text selection', (tester) async {
-      final notifications = <String?>[];
+      final notifications = <ViewerSelection?>[];
 
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
           width: testWidth,
           height: testHeight,
-          onSelectionChanged: (text) => notifications.add(text),
+          onSelectionChanged: notifications.add,
         ),
       );
 

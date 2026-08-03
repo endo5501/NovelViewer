@@ -469,4 +469,44 @@ void main() {
       expect(segments, isEmpty);
     });
   });
+
+  group('startSegmentIndexForOffset', () {
+    // Resolves the playback start segment from a selection offset. It works
+    // off the freshly segmented text, so a segment with no stored audio is
+    // still a valid start position.
+    // Built here rather than from the `late segmenter` above, which is only
+    // assigned in setUp and so is not available while the group body runs.
+    final segments =
+        const TextSegmenter().splitIntoSentences('文1。文2。文3。');
+    // offsets: 0, 3, 6
+
+    test('null offset starts at segment 0', () {
+      expect(startSegmentIndexForOffset(segments, null), 0);
+    });
+
+    test('offset inside a segment selects that segment', () {
+      expect(startSegmentIndexForOffset(segments, 4), 1);
+      expect(startSegmentIndexForOffset(segments, 5), 1);
+    });
+
+    test('offset exactly on a segment boundary selects that segment', () {
+      expect(startSegmentIndexForOffset(segments, 3), 1);
+      expect(startSegmentIndexForOffset(segments, 6), 2);
+    });
+
+    test('offset past the last segment selects the last segment', () {
+      expect(startSegmentIndexForOffset(segments, 9999), 2);
+    });
+
+    test('offset before the first segment falls back to segment 0', () {
+      final indented =
+          const TextSegmenter().splitIntoSentences('　文1。文2。');
+      expect(indented.first.offset, greaterThan(0));
+      expect(startSegmentIndexForOffset(indented, 0), 0);
+    });
+
+    test('empty segment list yields 0', () {
+      expect(startSegmentIndexForOffset(const [], 42), 0);
+    });
+  });
 }

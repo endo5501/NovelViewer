@@ -105,6 +105,60 @@ int? hitTestCharIndexFromRegions({
   return nearest?.charIndex;
 }
 
+/// Converts a char-entry index into a page-local plain-text offset.
+///
+/// The plain-text coordinate space is the page's text with ruby replaced by
+/// its base text — the space used by `TextSegment.offset`, the TTS highlight
+/// range, and `tts_segments.text_offset`. Counting rules match
+/// `VerticalTextPage._computeTtsHighlights`, which walks the same entries in
+/// the opposite direction:
+///
+/// - a plain or ruby entry advances by `entry.text.length` (code units, so a
+///   surrogate pair counts as 2 even though it is a single entry)
+/// - a newline entry listed in [lineBreakEntryIndices] is a real paragraph
+///   break and advances by 1
+/// - any other newline entry is a visual column wrap inserted by pagination
+///   and advances by 0
+///
+/// [lineBreakEntryIndices] is required rather than nullable: an absent set
+/// would make every newline ambiguous, and the two plausible defaults produce
+/// different offsets.
+///
+/// The result is page-local. Callers holding a paginated page must add the
+/// page's `pageStartTextOffset` to obtain a document-global offset.
+/// The indices of every newline entry in [entries].
+///
+/// This materialises [extractVerticalSelectedText]'s legacy reading of a null
+/// `lineBreakEntryIndices` ("every newline is a real paragraph break") as a
+/// concrete set, so a caller without pagination metadata can hand the SAME set
+/// to both that function and [plainTextOffsetFromEntryIndex]. Passing one of
+/// them null and the other an empty set makes the extracted text and the
+/// offset describe different strings.
+Set<int> realLineBreakEntries(List<VerticalCharEntry> entries) => {
+      for (var i = 0; i < entries.length; i++)
+        if (entries[i].isNewline) i,
+    };
+
+int plainTextOffsetFromEntryIndex(
+  List<VerticalCharEntry> entries,
+  int entryIndex, {
+  required Set<int> lineBreakEntryIndices,
+}) {
+  if (entryIndex <= 0) return 0;
+  final end = entryIndex.clamp(0, entries.length);
+
+  var offset = 0;
+  for (var i = 0; i < end; i++) {
+    final entry = entries[i];
+    if (entry.isNewline) {
+      if (lineBreakEntryIndices.contains(i)) offset += 1;
+      continue;
+    }
+    offset += entry.text.length;
+  }
+  return offset;
+}
+
 /// Extracts the original (unmapped) text for the selected entry range.
 ///
 /// [lineBreakEntryIndices] identifies the newline entries that correspond to
@@ -112,7 +166,9 @@ int? hitTestCharIndexFromRegions({
 /// column-wrap breaks inserted by pagination; they contribute no character so
 /// a word straddling a column boundary is extracted as a continuous string
 /// (which then matches when sent for re-analysis). When the set is null every
-/// newline is emitted as `'\n'` (legacy behaviour).
+/// newline is emitted as `'\n'` (legacy behaviour); [realLineBreakEntries]
+/// materialises that same reading for callers that need to pair this with
+/// [plainTextOffsetFromEntryIndex].
 String extractVerticalSelectedText(
   List<VerticalCharEntry> entries,
   int startIndex,

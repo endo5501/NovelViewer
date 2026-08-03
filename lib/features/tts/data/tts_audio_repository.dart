@@ -117,19 +117,6 @@ class TtsAudioRepository {
     return TtsSegment.fromRow(rows.first);
   }
 
-  Future<TtsSegment?> findSegmentByOffset(
-      int episodeId, int textOffset) async {
-    final db = await _database.database;
-    final rows = await db.query(
-      'tts_segments',
-      where: 'episode_id = ? AND text_offset <= ?',
-      whereArgs: [episodeId, textOffset],
-      orderBy: 'text_offset DESC',
-      limit: 1,
-    );
-    return rows.isEmpty ? null : TtsSegment.fromRow(rows.first);
-  }
-
   Future<int> getSegmentCount(int episodeId) async {
     final db = await _database.database;
     final result = await db.rawQuery(

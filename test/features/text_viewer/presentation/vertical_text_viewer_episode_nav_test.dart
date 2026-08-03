@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/episode_navigation/providers/pending_file_
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
+import 'package:novel_viewer/features/text_viewer/data/viewer_selection.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -29,7 +30,7 @@ Widget _wrap({
   required List<TextSegment> segments,
   double width = 100,
   double height = 400,
-  ValueChanged<String?>? onSelectionChanged,
+  ValueChanged<ViewerSelection?>? onSelectionChanged,
   VoidCallback? onHoverHideRequest,
 }) {
   return ProviderScope(

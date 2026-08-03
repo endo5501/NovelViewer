@@ -263,6 +263,12 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     // Reset current view line when the user switches files.
     ref.listenManual(selectedFileProvider, (prev, next) {
       if (prev?.path != next?.path) {
+        // A selection offset only addresses the content it was made in, and
+        // neither viewer reports the selection going away when the content is
+        // swapped: VerticalTextPage clears its internal state without firing
+        // the callback, and SelectableText.rich stays silent. Left alone, the
+        // stale offset would be handed to TTS for the new episode.
+        ref.read(selectedTextProvider.notifier).setSelection(null);
         _lastScrollKey = null;
         _lastTtsScrolledRange = null;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -675,8 +681,8 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         onPageLineChanged: (lineNumber) {
           ref.read(currentViewLineProvider.notifier).set(lineNumber);
         },
-        onSelectionChanged: (text) {
-          ref.read(selectedTextProvider.notifier).setText(text);
+        onSelectionChanged: (selection) {
+          ref.read(selectedTextProvider.notifier).setSelection(selection);
         },
         onContextMenu: (position, selectedText) {
           _showVerticalContextMenu(context, position, selectedText);
@@ -824,8 +830,22 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
                   onSelectionChanged: (selection, cause) {
                     final selectedText =
                         selectedTextFromSelection(selection, segments);
-                    ref.read(selectedTextProvider.notifier).setText(
-                          selectedText.isEmpty ? null : selectedText,
+                    // `selection.start` is a display offset (each ruby
+                    // WidgetSpan counts as one U+FFFC). Convert it to the
+                    // plain-text space that TTS segment offsets live in, so
+                    // playback can start here without guessing the position
+                    // back out of the raw content.
+                    ref.read(selectedTextProvider.notifier).setSelection(
+                          selectedText.isEmpty
+                              ? null
+                              : ViewerSelection(
+                                  text: selectedText,
+                                  plainTextOffset:
+                                      plainTextOffsetFromDisplayOffset(
+                                    selection.start,
+                                    segments,
+                                  ),
+                                ),
                         );
                   },
                   contextMenuBuilder: (menuContext, editableTextState) {

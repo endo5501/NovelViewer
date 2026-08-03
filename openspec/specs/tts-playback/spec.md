@@ -1,9 +1,7 @@
 ## Purpose
 
 Stored-audio TTS playback pipeline: sentence-level text segmentation (with ruby stripping), background-Isolate audio generation, Riverpod state machine (none/generating/ready × stopped/playing/paused), playback start position from selection, in-text TTS highlight, auto page turn, and Windows-specific just_audio_media_kit initialization.
-
 ## Requirements
-
 ### Requirement: Text segmentation for TTS
 The system SHALL split novel text into sentence-level segments for TTS processing. Segmentation SHALL occur at full-width sentence-ending punctuation (`。`, `！`, `？`), at half-width sentence-ending punctuation (`.`, `!`, `?`), and at newline characters. A half-width sentence-ending punctuation mark SHALL be treated as a sentence boundary only when, after skipping any run of immediately-following closing brackets, the next character is a whitespace character or the end of the text; otherwise it SHALL NOT trigger a split (so decimals such as `3.14`, mid-word periods, and an opening quote that directly follows a period such as `A."Bcd` are preserved). When a closing bracket (`」`, `』`, `）`, `"`, `)`) immediately follows sentence-ending punctuation, the split SHALL occur after the closing bracket. Empty segments SHALL be excluded. Ruby HTML tags SHALL be stripped to plain text (base text only) before segmentation. The Ruby tag stripping pattern SHALL handle all common Ruby HTML formats including those with `<rb>` tags and optional `<rp>` tags, and SHALL use the same regex pattern as `parseRubyText` to ensure consistent offset calculation. Each segment SHALL track its start offset and length relative to the stripped text. When a segment is created by splitting at a newline, the offset SHALL account for any leading whitespace that is trimmed: the offset SHALL point to the first non-whitespace character, and the length SHALL equal the trimmed text length.
 
@@ -118,15 +116,33 @@ The system SHALL expose TTS state via Riverpod providers. The state SHALL includ
 - **THEN** the TTS audio state changes to "none"
 
 ### Requirement: Playback start position
-The system SHALL determine the playback start position based on the current text selection. If text is selected, playback SHALL begin from the segment containing the start of the selection, identified by querying the database for the segment with the largest `text_offset` <= the selection offset. If no text is selected, playback SHALL begin from the first segment.
+The system SHALL determine the playback start position from the current text selection. The selection SHALL be tracked as both the selected text and the selection's start offset expressed in **plain-text coordinates** — the coordinate space of the text after ruby markup has been replaced by its base text, which is the same space used by `TtsSegment.offset`, `tts_segments.text_offset`, and the TTS highlight range. The system SHALL NOT reconstruct the offset by searching the selected text within the raw file content.
+
+When a selection offset is available, playback SHALL begin from the segment with the largest `offset` <= the selection offset, resolved against the segment list produced by segmenting the current text. Segments that have no stored audio SHALL be eligible as the start position; the resolution SHALL NOT be restricted to segments already present in the database. If no segment satisfies the condition, or if no text is selected, playback SHALL begin from segment 0.
 
 #### Scenario: Start from selected text position
-- **WHEN** the user has selected text starting at offset 50 and presses play
-- **THEN** playback begins from the segment whose text_offset is the largest value <= 50
+- **WHEN** the user has selected text whose plain-text start offset is 50 and presses play
+- **THEN** playback begins from the segment whose offset is the largest value <= 50
+
+#### Scenario: Start position is unaffected by ruby markup
+- **WHEN** the text contains ruby markup such as `<ruby>魔法<rp>《</rp><rt>まほう</rt><rp>》</rp></ruby>` before the selected position, and the user selects a sentence and presses play
+- **THEN** playback begins from the selected sentence, not from a later sentence shifted by the length of the ruby markup
+
+#### Scenario: Start from a selection that contains ruby
+- **WHEN** the user selects a range that includes a ruby-annotated word and presses play
+- **THEN** playback begins from the segment containing the start of that selection, not from segment 0
+
+#### Scenario: Start from a segment that has not been generated
+- **WHEN** the episode is in "partial" status with only segments 0-9 stored in the database, and the user selects a position inside segment 60 and presses play
+- **THEN** playback begins from segment 60, generating its audio on demand, rather than from segment 9
 
 #### Scenario: Start from beginning when no selection
 - **WHEN** no text is selected and the user presses play
 - **THEN** playback begins from segment 0
+
+#### Scenario: Repeated text does not misresolve the start position
+- **WHEN** the user selects an occurrence of a short string that also appears earlier in the same episode and presses play
+- **THEN** playback begins from the segment containing the selected occurrence, not from the segment containing the first occurrence in the text
 
 ### Requirement: Playback stop conditions
 The system SHALL stop TTS playback when the user presses the stop button or navigates to a different episode. Page navigation within the same episode (arrow keys, swipe, mouse wheel) SHALL NOT stop playback.
@@ -256,3 +272,4 @@ The system SHALL include `just_audio_media_kit` and `media_kit_libs_windows_audi
 #### Scenario: 対象状態が無いときは何もしない
 - **WHEN** フォーカスがテキストビューアにあり、TTSが再生していない状態でEscapeを押す
 - **THEN** 何も起きない
+

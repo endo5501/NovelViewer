@@ -180,8 +180,18 @@ class TtsStreamingController {
             ? TtsStartOutcome.modelNotReady
             : TtsStartOutcome.failed;
       }
+      // The loop only covers `startOffset` onward, so a run that starts
+      // mid-episode can finish with earlier segments still ungenerated.
+      // Claiming `completed` there would show the file as fully generated and
+      // let an MP3 export silently drop the missing prefix.
+      final generatedCount =
+          await _repository.getGeneratedSegmentCount(episodeId);
       await _repository.updateEpisodeStatus(
-          episodeId, TtsEpisodeStatus.completed);
+        episodeId,
+        generatedCount >= segments.length
+            ? TtsEpisodeStatus.completed
+            : TtsEpisodeStatus.partial,
+      );
       return TtsStartOutcome.completed;
     } finally {
       // Always release isolate + segment-player resources and clear temp
@@ -208,15 +218,11 @@ class TtsStreamingController {
   }) async {
     var playbackResult = _PlaybackResult.finished;
 
-    // Determine starting segment
-    int startIndex = 0;
-    if (startOffset != null) {
-      final segment =
-          await _repository.findSegmentByOffset(episodeId, startOffset);
-      if (segment != null) {
-        startIndex = segment.segmentIndex;
-      }
-    }
+    // Determine starting segment from the freshly segmented text. Resolving
+    // it against the stored rows instead would restrict the start position to
+    // segments that already have a DB row, which on a partially generated
+    // episode means the last generated one.
+    final startIndex = startSegmentIndexForOffset(segments, startOffset);
 
     // Count segments needing generation for progress tracking
     int totalToGenerate = 0;
