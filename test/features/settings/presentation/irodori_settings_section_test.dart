@@ -44,6 +44,7 @@ void main() {
   Widget buildTestWidget({
     http.Client? httpClient,
     Map<IrodoriModelVariant, int>? expectedFileSizes,
+    IrodoriLegacyAssets? legacyAssets,
   }) {
     final libraryPath = p.join(tempDir.path, 'NovelViewer');
     return ProviderScope(
@@ -59,6 +60,14 @@ void main() {
           irodoriExpectedFileSizesProvider.overrideWithValue(
             expectedFileSizes,
           ),
+        // Cases that only care how a byte total is *rendered* inject it here.
+        // Writing a real multi-gigabyte file to read its length back costs
+        // ~8 bytes of RSS per byte of file in the VM (a 2 GB file needs a
+        // 2e9-element List, i.e. ~16 GB), which pages a 16 GB CI runner to a
+        // standstill. The filesystem summation itself is covered by
+        // irodori_model_download_service_test.
+        if (legacyAssets != null)
+          irodoriLegacyAssetsProvider.overrideWithValue(legacyAssets),
       ],
       child: const MaterialApp(
         locale: Locale('ja'),
@@ -75,6 +84,7 @@ void main() {
     WidgetTester tester, {
     http.Client? httpClient,
     Map<IrodoriModelVariant, int>? expectedFileSizes,
+    IrodoriLegacyAssets? legacyAssets,
   }) async {
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1.0;
@@ -86,6 +96,7 @@ void main() {
       await tester.pumpWidget(buildTestWidget(
         httpClient: httpClient,
         expectedFileSizes: expectedFileSizes,
+        legacyAssets: legacyAssets,
       ));
     });
     await tester.pumpAndSettle();
@@ -104,11 +115,13 @@ void main() {
     WidgetTester tester, {
     http.Client? httpClient,
     Map<IrodoriModelVariant, int>? expectedFileSizes,
+    IrodoriLegacyAssets? legacyAssets,
   }) async {
     final l10n = await openTtsTab(
       tester,
       httpClient: httpClient,
       expectedFileSizes: expectedFileSizes,
+      legacyAssets: legacyAssets,
     );
     await tester.tap(find.text('Irodori-TTS'));
     await tester.pumpAndSettle();
@@ -586,14 +599,12 @@ void main() {
 
     testWidgets('reports the size in decimal GB', (tester) async {
       // 2,000,000,000 bytes is 2.00 GB decimal but 1.86 GiB; the spec quotes
-      // the model sizes in decimal GB, so the UI must match.
-      final modelsDir = p.join(tempDir.path, 'models');
-      final dir = Directory(p.join(modelsDir, 'llm-jp-3-150m'))
-        ..createSync(recursive: true);
-      File(p.join(dir.path, 'blob.bin'))
-          .writeAsBytesSync(List.filled(2000000000, 0));
-
-      await selectIrodoriEngine(tester);
+      // the model sizes in decimal GB, so the UI must match. The total is
+      // injected rather than written to disk — see buildTestWidget.
+      await selectIrodoriEngine(
+        tester,
+        legacyAssets: (present: true, bytes: 2000000000),
+      );
 
       expect(find.textContaining('2.00 GB'), findsOneWidget);
     });
