@@ -1,6 +1,5 @@
 {
   "@@locale": "en",
-
   "common_closeButton": "Close",
   "common_cancelButton": "Cancel",
   "common_changeButton": "Change",
@@ -9,7 +8,6 @@
   "common_fileDuplicateError": "A file with the same name already exists",
   "common_fileNameLabel": "File name",
   "common_unknownError": "Unknown error",
-
   "settings_title": "Settings",
   "settings_generalTabLabel": "General",
   "settings_ttsTabLabel": "Text-to-Speech",
@@ -41,6 +39,11 @@
   "settings_irodoriDownloaded": "Downloaded",
   "settings_irodoriSpeakerGuidanceScale": "Speaker guidance strength (speaker_guidance_scale)",
   "settings_irodoriCaptionGuidanceScale": "Caption guidance strength (caption_guidance_scale)",
+  "settings_irodoriModelVariant": "Model version",
+  "settings_irodoriVariantV4NoCaption": "v4 does not support captions. Supplying a reference voice and a caption together makes it append speech that is not in the text, so segment memos are not applied during synthesis.",
+  "settings_irodoriLegacyAssetsFound": "Old-format model data is still present",
+  "settings_irodoriLegacyAssetsDelete": "Delete to reclaim space",
+  "settings_irodoriLegacyAssetsConfirm": "Delete the old-format model data. This cannot be undone.",
   "settings_irodoriNumInferenceSteps": "Inference steps (num_inference_steps)",
   "settings_voiceModelTitle": "Voice model",
   "settings_voiceModelSmall": "Fast (0.6B)",
@@ -61,7 +64,6 @@
   "settings_selectModelHint": "Select a model",
   "settings_renameFileTitle": "Rename file",
   "settings_languageTitle": "Language",
-
   "voiceRecording_title": "Voice recording",
   "voiceRecording_micAccessDenied": "Microphone access is not permitted",
   "voiceRecording_startRecordingFailed": "Failed to start recording: {message}",
@@ -77,7 +79,6 @@
   "voiceRecording_invalidCharsError": "Contains invalid characters",
   "voiceRecording_enterFileNameTitle": "Enter file name",
   "voiceRecording_saveButton": "Save",
-
   "fileBrowser_selectFolderPrompt": "Please select a folder",
   "fileBrowser_goToParentFolder": "Go to parent folder",
   "fileBrowser_noFilesFound": "No text files found",
@@ -105,14 +106,13 @@
   "fileBrowser_downloadInProgressWarning": "Download in progress. Please try again later",
   "fileBrowser_renameFailed": "Failed to rename: {message}",
   "fileBrowser_deleteNovelTitle": "Delete novel",
-  "fileBrowser_deleteNovelConfirmation": "Delete \u201C{name}\u201D?\nAll episodes and data will be permanently deleted.",
+  "fileBrowser_deleteNovelConfirmation": "Delete “{name}”?\nAll episodes and data will be permanently deleted.",
   "fileBrowser_deleteFailed": "Failed to delete: {message}",
-  "fileBrowser_refreshProgressTitle": "Updating \u201C{title}\u201D",
+  "fileBrowser_refreshProgressTitle": "Updating “{title}”",
   "fileBrowser_skippedEpisodesSuffix": "({count} skipped)",
   "fileBrowser_episodeCountFormat": "{total} episodes{skipped}",
   "fileBrowser_refreshCompleted": "Update completed.{summary}",
   "fileBrowser_refreshError": "Error: {message}",
-
   "ttsEdit_title": "TTS Editor",
   "ttsEdit_dictionaryButton": "Dictionary",
   "ttsEdit_playButton": "Play",
@@ -134,7 +134,6 @@
   "ttsEdit_regenerateTooltip": "Regenerate",
   "ttsEdit_resetTooltip": "Reset",
   "ttsEdit_synthesisFailed": "Synthesis failed",
-
   "textViewer_deleteAudioTitle": "Delete audio data",
   "textViewer_deleteAudioConfirmation": "Delete audio data?",
   "textViewer_exportCompleted": "MP3 export completed",
@@ -152,7 +151,6 @@
   "textViewer_exportMp3Tooltip": "Export MP3",
   "textViewer_deleteAudioTooltip": "Delete audio data",
   "textViewer_selectFilePrompt": "Please select a file",
-
   "download_title": "Download novel",
   "download_invalidUrlError": "Please enter a valid URL",
   "download_unsupportedSiteError": "Unsupported site (supports Narou, Narou18, Kakuyomu, Aozora Bunko, and Hameln)",
@@ -178,7 +176,6 @@
   "download_createCollectionHint": "Collection name",
   "download_createCollectionButton": "Create",
   "fileBrowser_newCollection": "New collection",
-
   "ttsDictionary_title": "TTS Dictionary",
   "ttsDictionary_bothFieldsRequired": "Both surface form and reading are required",
   "ttsDictionary_duplicateEntry": "An entry with the same surface form already exists",
@@ -189,35 +186,44 @@
   "ttsDictionary_addTooltip": "Add",
   "ttsDictionary_emptyMessage": "No dictionary entries\nAdd entries using the form above",
   "ttsDictionary_deleteTooltip": "Delete",
-
   "contextMenu_addToDictionary": "Add to Dictionary",
   "contextMenu_copy": "Copy",
-
   "contextMenu_analyzeNoSpoiler": "Analyze (no spoilers)",
   "contextMenu_analyzeSpoiler": "Analyze (with spoilers)",
   "contextMenu_copySubmenu": "Copy",
   "contextMenu_copySnapshotByEpisode": "Copy summary at file {episode}",
   "@contextMenu_copySnapshotByEpisode": {
     "placeholders": {
-      "episode": { "type": "int" }
+      "episode": {
+        "type": "int"
+      }
     }
   },
   "contextMenu_copiedToClipboard": "Copied to clipboard",
-
   "llmAnalysis_inProgress": "Analyzing...",
   "llmAnalysis_extractingFacts": "Extracting facts ({current} / {total})",
   "@llmAnalysis_extractingFacts": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "llmAnalysis_refiningRound": "Refining round {round} ({current} / {total})",
   "@llmAnalysis_refiningRound": {
     "placeholders": {
-      "round": { "type": "int" },
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "round": {
+        "type": "int"
+      },
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "llmAnalysis_generatingFinal": "Generating final summary...",
@@ -226,33 +232,44 @@
   "llmAnalysis_failed": "Analysis failed: {error}",
   "@llmAnalysis_failed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "llmAnalysis_savedSummary": "Saved summary for \"{word}\"",
   "@llmAnalysis_savedSummary": {
     "placeholders": {
-      "word": { "type": "String" }
+      "word": {
+        "type": "String"
+      }
     }
   },
   "llmAnalysis_partialFailure": "Analysis stopped: {count} file(s) could not be analyzed, so no summary was saved. Run it again to retry just those files. ({error})",
   "@llmAnalysis_partialFailure": {
     "placeholders": {
-      "count": { "type": "int" },
-      "error": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "error": {
+        "type": "String"
+      }
     }
   },
   "llmAnalysis_noFacts": "Analysis stopped: no information about \"{word}\" could be extracted, so no summary was saved.",
   "@llmAnalysis_noFacts": {
     "placeholders": {
-      "word": { "type": "String" }
+      "word": {
+        "type": "String"
+      }
     }
   },
-
   "hoverPopup_snapshotLabel": "Summary at file {episode}",
   "@hoverPopup_snapshotLabel": {
     "placeholders": {
-      "episode": { "type": "int" }
+      "episode": {
+        "type": "int"
+      }
     }
   },
   "hoverPopup_futureSnapshotWarning": "Snapshot is ahead of the current page",
@@ -260,56 +277,57 @@
   "hoverPopup_reanalyzeUpToCurrent": "Up to current page (file {episode})",
   "@hoverPopup_reanalyzeUpToCurrent": {
     "placeholders": {
-      "episode": { "type": "int" }
+      "episode": {
+        "type": "int"
+      }
     }
   },
   "hoverPopup_reanalyzeUpToAll": "All chapters (file {episode})",
   "@hoverPopup_reanalyzeUpToAll": {
     "placeholders": {
-      "episode": { "type": "int" }
+      "episode": {
+        "type": "int"
+      }
     }
   },
   "hoverPopup_reanalyzeOverwriteSuffix": " (overwrite)",
   "hoverPopup_snapshotNavPrev": "Previous snapshot",
   "hoverPopup_snapshotNavNext": "Next snapshot",
-
   "bookmark_selectNovelPrompt": "Please select a novel folder",
   "bookmark_noBookmarks": "No bookmarks",
   "bookmark_deleteMenuItem": "Delete",
   "bookmark_fileNotFound": "File not found",
-
   "textSearch_hintText": "Search...",
   "textSearch_enterQueryPrompt": "Please enter a search term",
   "textSearch_noResults": "No search results",
-
   "renameTitle_title": "Rename",
   "renameTitle_newTitleLabel": "New title",
   "renameTitle_changeButton": "Change",
-
   "homeScreen_removeBookmarkTooltip": "Remove bookmark",
   "homeScreen_addBookmarkTooltip": "Add bookmark",
   "homeScreen_hideRightColumnTooltip": "Hide right column",
   "homeScreen_showRightColumnTooltip": "Show right column",
   "homeScreen_downloadTooltip": "Download novel",
-
   "leftColumn_filesTab": "Files",
   "leftColumn_bookmarksTab": "Bookmarks",
   "leftColumn_historyTab": "History",
-
   "llmHistory_noEntries": "No analysis history",
   "llmHistory_snapshotsBadge": "{count} snapshot(s)",
   "@llmHistory_snapshotsBadge": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "llmHistory_untrackedBadge": "Untracked",
-
   "contextMenu_viewDetails": "Show details",
   "historyDetail_dialogTitle": "Details: {word}",
   "@historyDetail_dialogTitle": {
     "placeholders": {
-      "word": { "type": "String" }
+      "word": {
+        "type": "String"
+      }
     }
   },
   "historyDetail_factsTab": "Facts",
@@ -317,17 +335,20 @@
   "historyDetail_invalidBadge": "Invalid",
   "historyDetail_noFacts": "No facts",
   "historyDetail_noResults": "No analysis results",
-
   "verticalText_nextEpisodePrompt": "▶ Next: \"{name}\" (press again)",
   "@verticalText_nextEpisodePrompt": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "verticalText_prevEpisodePrompt": "◀ Previous: \"{name}\" (press again)",
   "@verticalText_prevEpisodePrompt": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "update_badgeTooltip": "Update available",
@@ -335,8 +356,12 @@
   "update_versionTransition": "{current} → {newVersion}",
   "@update_versionTransition": {
     "placeholders": {
-      "current": { "type": "String" },
-      "newVersion": { "type": "String" }
+      "current": {
+        "type": "String"
+      },
+      "newVersion": {
+        "type": "String"
+      }
     }
   },
   "update_releaseNotesLabel": "Release notes",
@@ -349,7 +374,6 @@
   "update_failedChecksumMessage": "Update failed (checksum mismatch)",
   "update_missingAssetMessage": "Installer not found",
   "update_retryButton": "Retry",
-
   "settings_aboutUpdateTab": "About / Update",
   "settings_currentVersionLabel": "Current version",
   "settings_buildNumberLabel": "Build number",
@@ -365,7 +389,9 @@
   "settings_updateAvailableMessage": "{version} available",
   "@settings_updateAvailableMessage": {
     "placeholders": {
-      "version": { "type": "String" }
+      "version": {
+        "type": "String"
+      }
     }
   },
   "settings_checkFailedMessage": "Update check failed",

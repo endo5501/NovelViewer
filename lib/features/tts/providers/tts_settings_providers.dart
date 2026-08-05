@@ -3,6 +3,7 @@ import 'package:path/path.dart' as p;
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
@@ -204,12 +205,35 @@ class PiperNoiseWNotifier extends _SettingDoubleNotifier {
       (repo, value) => repo.setPiperNoiseW(value);
 }
 
+// --- Irodori model variant ---
+
+final irodoriModelVariantProvider =
+    NotifierProvider<IrodoriModelVariantNotifier, IrodoriModelVariant>(
+  IrodoriModelVariantNotifier.new,
+);
+
+class IrodoriModelVariantNotifier extends Notifier<IrodoriModelVariant> {
+  @override
+  IrodoriModelVariant build() =>
+      ref.watch(settingsRepositoryProvider).getIrodoriModelVariant();
+
+  Future<void> setValue(IrodoriModelVariant value) async {
+    await ref.read(settingsRepositoryProvider).setIrodoriModelVariant(value);
+    state = value;
+  }
+}
+
 // --- Irodori model directory ---
 
+/// Directory holding the selected variant's single GGUF.
+///
+/// Each variant gets its own directory because the native loader refuses to
+/// start when a model directory contains more than one `.gguf`.
 final irodoriModelDirProvider = Provider<String>((ref) {
   final modelsBaseDir = ref.watch(modelsDirectoryPathProvider);
   if (modelsBaseDir == null) return '';
-  return p.join(modelsBaseDir, 'Irodori-TTS-600M-v3-VoiceDesign');
+  final variant = ref.watch(irodoriModelVariantProvider);
+  return p.join(modelsBaseDir, variant.modelDirName);
 });
 
 // --- Irodori synthesis parameters ---

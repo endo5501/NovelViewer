@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
 import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
@@ -375,6 +376,7 @@ IrodoriEngineConfig _irodoriConfig({
     IrodoriEngineConfig(
       modelDir: modelDir,
       sampleRate: sampleRate,
+      variant: IrodoriModelVariant.v3,
       refWavPath: refWavPath,
       speakerGuidanceScale: speakerGuidanceScale,
       captionGuidanceScale: captionGuidanceScale,

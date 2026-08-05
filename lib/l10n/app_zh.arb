@@ -1,6 +1,5 @@
 {
   "@@locale": "zh",
-
   "common_closeButton": "关闭",
   "common_cancelButton": "取消",
   "common_changeButton": "更改",
@@ -9,7 +8,6 @@
   "common_fileDuplicateError": "已存在同名文件",
   "common_fileNameLabel": "文件名",
   "common_unknownError": "未知错误",
-
   "settings_title": "设置",
   "settings_generalTabLabel": "通用",
   "settings_ttsTabLabel": "语音朗读",
@@ -41,6 +39,11 @@
   "settings_irodoriDownloaded": "已下载",
   "settings_irodoriSpeakerGuidanceScale": "说话人引导强度 (speaker_guidance_scale)",
   "settings_irodoriCaptionGuidanceScale": "字幕引导强度 (caption_guidance_scale)",
+  "settings_irodoriModelVariant": "模型版本",
+  "settings_irodoriVariantV4NoCaption": "v4 不支持字幕。同时提供参考语音和字幕会在结尾追加正文中不存在的语音，因此片段备注不会应用于合成。",
+  "settings_irodoriLegacyAssetsFound": "仍存在旧格式的模型数据",
+  "settings_irodoriLegacyAssetsDelete": "删除以释放空间",
+  "settings_irodoriLegacyAssetsConfirm": "将删除旧格式的模型数据。此操作无法撤销。",
   "settings_irodoriNumInferenceSteps": "推理步数 (num_inference_steps)",
   "settings_voiceModelTitle": "语音模型",
   "settings_voiceModelSmall": "快速 (0.6B)",
@@ -61,7 +64,6 @@
   "settings_selectModelHint": "选择模型",
   "settings_renameFileTitle": "重命名文件",
   "settings_languageTitle": "语言",
-
   "voiceRecording_title": "录音",
   "voiceRecording_micAccessDenied": "未授权访问麦克风",
   "voiceRecording_startRecordingFailed": "开始录音失败：{message}",
@@ -77,7 +79,6 @@
   "voiceRecording_invalidCharsError": "包含无效字符",
   "voiceRecording_enterFileNameTitle": "输入文件名",
   "voiceRecording_saveButton": "保存",
-
   "fileBrowser_selectFolderPrompt": "请选择文件夹",
   "fileBrowser_goToParentFolder": "返回上级文件夹",
   "fileBrowser_noFilesFound": "未找到文本文件",
@@ -105,14 +106,13 @@
   "fileBrowser_downloadInProgressWarning": "正在下载中，请稍后再试",
   "fileBrowser_renameFailed": "重命名失败：{message}",
   "fileBrowser_deleteNovelTitle": "删除小说",
-  "fileBrowser_deleteNovelConfirmation": "确定删除\u201C{name}\u201D吗？\n所有章节和数据将被永久删除。",
+  "fileBrowser_deleteNovelConfirmation": "确定删除“{name}”吗？\n所有章节和数据将被永久删除。",
   "fileBrowser_deleteFailed": "删除失败：{message}",
-  "fileBrowser_refreshProgressTitle": "正在更新\u201C{title}\u201D",
+  "fileBrowser_refreshProgressTitle": "正在更新“{title}”",
   "fileBrowser_skippedEpisodesSuffix": "（跳过{count}章）",
   "fileBrowser_episodeCountFormat": "{total} 章节{skipped}",
   "fileBrowser_refreshCompleted": "更新完成。{summary}",
   "fileBrowser_refreshError": "错误：{message}",
-
   "ttsEdit_title": "朗读编辑",
   "ttsEdit_dictionaryButton": "词典",
   "ttsEdit_playButton": "播放",
@@ -134,7 +134,6 @@
   "ttsEdit_regenerateTooltip": "重新生成",
   "ttsEdit_resetTooltip": "重置",
   "ttsEdit_synthesisFailed": "合成失败",
-
   "textViewer_deleteAudioTitle": "删除音频数据",
   "textViewer_deleteAudioConfirmation": "确定删除音频数据吗？",
   "textViewer_exportCompleted": "MP3导出完成",
@@ -152,7 +151,6 @@
   "textViewer_exportMp3Tooltip": "导出MP3",
   "textViewer_deleteAudioTooltip": "删除音频数据",
   "textViewer_selectFilePrompt": "请选择文件",
-
   "download_title": "下载小说",
   "download_invalidUrlError": "请输入有效的URL",
   "download_unsupportedSiteError": "不支持的网站（支持Narou、Narou18、Kakuyomu、青空文库和Hameln）",
@@ -178,7 +176,6 @@
   "download_createCollectionHint": "合集名称",
   "download_createCollectionButton": "创建",
   "fileBrowser_newCollection": "新建合集",
-
   "ttsDictionary_title": "朗读词典",
   "ttsDictionary_bothFieldsRequired": "请同时输入表记和读音",
   "ttsDictionary_duplicateEntry": "已存在相同表记的条目",
@@ -189,35 +186,44 @@
   "ttsDictionary_addTooltip": "添加",
   "ttsDictionary_emptyMessage": "词典中没有条目\n请使用上方的表单添加",
   "ttsDictionary_deleteTooltip": "删除",
-
   "contextMenu_addToDictionary": "添加到词典",
   "contextMenu_copy": "复制",
-
   "contextMenu_analyzeNoSpoiler": "开始分析（无剧透）",
   "contextMenu_analyzeSpoiler": "开始分析（含剧透）",
   "contextMenu_copySubmenu": "复制",
   "contextMenu_copySnapshotByEpisode": "复制第{episode}文件时的摘要",
   "@contextMenu_copySnapshotByEpisode": {
     "placeholders": {
-      "episode": { "type": "int" }
+      "episode": {
+        "type": "int"
+      }
     }
   },
   "contextMenu_copiedToClipboard": "已复制到剪贴板",
-
   "llmAnalysis_inProgress": "正在分析…",
   "llmAnalysis_extractingFacts": "正在提取信息 ({current} / {total})",
   "@llmAnalysis_extractingFacts": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "llmAnalysis_refiningRound": "归纳第 {round} 轮 ({current} / {total})",
   "@llmAnalysis_refiningRound": {
     "placeholders": {
-      "round": { "type": "int" },
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "round": {
+        "type": "int"
+      },
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "llmAnalysis_generatingFinal": "正在生成最终摘要…",
@@ -226,33 +232,44 @@
   "llmAnalysis_failed": "分析失败：{error}",
   "@llmAnalysis_failed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "llmAnalysis_savedSummary": "已保存「{word}」的摘要",
   "@llmAnalysis_savedSummary": {
     "placeholders": {
-      "word": { "type": "String" }
+      "word": {
+        "type": "String"
+      }
     }
   },
   "llmAnalysis_partialFailure": "分析已中止：有 {count} 个文件无法分析，因此未保存摘要。重新运行将只重试失败的文件。（{error}）",
   "@llmAnalysis_partialFailure": {
     "placeholders": {
-      "count": { "type": "int" },
-      "error": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "error": {
+        "type": "String"
+      }
     }
   },
   "llmAnalysis_noFacts": "分析已中止：未能提取关于「{word}」的信息，因此未保存摘要。",
   "@llmAnalysis_noFacts": {
     "placeholders": {
-      "word": { "type": "String" }
+      "word": {
+        "type": "String"
+      }
     }
   },
-
   "hoverPopup_snapshotLabel": "第{episode}文件时的摘要",
   "@hoverPopup_snapshotLabel": {
     "placeholders": {
-      "episode": { "type": "int" }
+      "episode": {
+        "type": "int"
+      }
     }
   },
   "hoverPopup_futureSnapshotWarning": "该摘要包含尚未阅读的内容",
@@ -260,56 +277,57 @@
   "hoverPopup_reanalyzeUpToCurrent": "至当前页（第{episode}文件）",
   "@hoverPopup_reanalyzeUpToCurrent": {
     "placeholders": {
-      "episode": { "type": "int" }
+      "episode": {
+        "type": "int"
+      }
     }
   },
   "hoverPopup_reanalyzeUpToAll": "至全部（第{episode}文件）",
   "@hoverPopup_reanalyzeUpToAll": {
     "placeholders": {
-      "episode": { "type": "int" }
+      "episode": {
+        "type": "int"
+      }
     }
   },
   "hoverPopup_reanalyzeOverwriteSuffix": "（覆盖）",
   "hoverPopup_snapshotNavPrev": "上一个快照",
   "hoverPopup_snapshotNavNext": "下一个快照",
-
   "bookmark_selectNovelPrompt": "请选择作品文件夹",
   "bookmark_noBookmarks": "没有书签",
   "bookmark_deleteMenuItem": "删除",
   "bookmark_fileNotFound": "未找到文件",
-
   "textSearch_hintText": "搜索...",
   "textSearch_enterQueryPrompt": "请输入搜索词",
   "textSearch_noResults": "没有搜索结果",
-
   "renameTitle_title": "更改标题",
   "renameTitle_newTitleLabel": "新标题",
   "renameTitle_changeButton": "更改",
-
   "homeScreen_removeBookmarkTooltip": "取消书签",
   "homeScreen_addBookmarkTooltip": "添加书签",
   "homeScreen_hideRightColumnTooltip": "隐藏右栏",
   "homeScreen_showRightColumnTooltip": "显示右栏",
   "homeScreen_downloadTooltip": "下载小说",
-
   "leftColumn_filesTab": "文件",
   "leftColumn_bookmarksTab": "书签",
   "leftColumn_historyTab": "解析历史",
-
   "llmHistory_noEntries": "没有解析历史",
   "llmHistory_snapshotsBadge": "{count}个快照",
   "@llmHistory_snapshotsBadge": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "llmHistory_untrackedBadge": "未跟踪",
-
   "contextMenu_viewDetails": "显示详情",
   "historyDetail_dialogTitle": "「{word}」详情",
   "@historyDetail_dialogTitle": {
     "placeholders": {
-      "word": { "type": "String" }
+      "word": {
+        "type": "String"
+      }
     }
   },
   "historyDetail_factsTab": "事实",
@@ -317,17 +335,20 @@
   "historyDetail_invalidBadge": "无效",
   "historyDetail_noFacts": "没有事实",
   "historyDetail_noResults": "没有解析结果",
-
   "verticalText_nextEpisodePrompt": "▶ 下一话「{name}」（再按一次）",
   "@verticalText_nextEpisodePrompt": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "verticalText_prevEpisodePrompt": "◀ 上一话「{name}」（再按一次）",
   "@verticalText_prevEpisodePrompt": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "update_badgeTooltip": "有可用更新",
@@ -335,8 +356,12 @@
   "update_versionTransition": "{current} → {newVersion}",
   "@update_versionTransition": {
     "placeholders": {
-      "current": { "type": "String" },
-      "newVersion": { "type": "String" }
+      "current": {
+        "type": "String"
+      },
+      "newVersion": {
+        "type": "String"
+      }
     }
   },
   "update_releaseNotesLabel": "更新说明",
@@ -349,7 +374,6 @@
   "update_failedChecksumMessage": "更新失败（校验和不匹配）",
   "update_missingAssetMessage": "未找到安装程序",
   "update_retryButton": "重试",
-
   "settings_aboutUpdateTab": "关于 / 更新",
   "settings_currentVersionLabel": "当前版本",
   "settings_buildNumberLabel": "构建号",
@@ -365,7 +389,9 @@
   "settings_updateAvailableMessage": "{version} 可用",
   "@settings_updateAvailableMessage": {
     "placeholders": {
-      "version": { "type": "String" }
+      "version": {
+        "type": "String"
+      }
     }
   },
   "settings_checkFailedMessage": "检查更新失败",

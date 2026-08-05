@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:path/path.dart' as p;
 
+import '../data/irodori_model_variant.dart';
 import '../data/tts_engine_type.dart';
 import '../providers/tts_settings_providers.dart';
 
@@ -71,8 +72,17 @@ sealed class TtsEngineConfig {
   /// this always returns `null` so the memo never influences synthesis. A
   /// `null` or empty memo yields `null` (clone-only / plain synthesis).
   /// Centralised here so every synthesis call site applies the same rule.
+  ///
+  /// Irodori v4 additionally never receives a caption. Supplying a reference
+  /// voice and a caption together makes v4 append a short phrase that is not
+  /// in the text (measured 10/10; reference-only and caption-only are clean —
+  /// design D7). The gate lives here rather than in the settings UI because
+  /// synthesis is reached from three call sites — streaming generation, the
+  /// edit dialog's regenerate, and re-synthesis of a stored segment — and a
+  /// UI-only gate would leak through the paths that never touch the UI.
   static String? captionFromMemo(TtsEngineConfig config, String? memo) {
     if (config is! IrodoriEngineConfig) return null;
+    if (!config.supportsCaption) return null;
     if (memo == null || memo.isEmpty) return null;
     return memo;
   }
@@ -182,11 +192,22 @@ class IrodoriEngineConfig extends TtsEngineConfig {
   const IrodoriEngineConfig({
     required super.modelDir,
     required super.sampleRate,
+    required this.variant,
     this.refWavPath,
     required this.speakerGuidanceScale,
     required this.captionGuidanceScale,
     required this.numInferenceSteps,
   });
+
+  /// Which Irodori model generation is selected (v3 / v4).
+  ///
+  /// Unlike the synthesis-time knobs below, this selects a different GGUF on
+  /// disk, so it participates in [modelLoadKey].
+  final IrodoriModelVariant variant;
+
+  /// Whether the selected [variant] accepts a caption. v4 does not — see
+  /// [TtsEngineConfig.captionFromMemo].
+  bool get supportsCaption => variant.supportsCaption;
 
   /// Absolute path to a reference WAV used for voice cloning (synthesis-time,
   /// shares the same voice library as Qwen3). `null` disables cloning.
@@ -204,8 +225,9 @@ class IrodoriEngineConfig extends TtsEngineConfig {
   // refWavPath / guidance scales / steps are synthesis-time parameters
   // (passed per-call, like caption), so they are intentionally omitted from
   // the load key — changing them must not reload the model (design D8).
+  // `variant` is different: it points at a different GGUF, so it must.
   @override
-  Object get modelLoadKey => (TtsEngineType.irodori, modelDir);
+  Object get modelLoadKey => (TtsEngineType.irodori, modelDir, variant);
 }
 
 Qwen3EngineConfig _resolveQwen3(ProviderReader read) {
@@ -249,6 +271,7 @@ IrodoriEngineConfig _resolveIrodori(ProviderReader read) {
   return IrodoriEngineConfig(
     modelDir: modelDir,
     sampleRate: _irodoriSampleRate,
+    variant: read(irodoriModelVariantProvider),
     refWavPath: refWavPath,
     speakerGuidanceScale: read(irodoriSpeakerGuidanceScaleProvider),
     captionGuidanceScale: read(irodoriCaptionGuidanceScaleProvider),

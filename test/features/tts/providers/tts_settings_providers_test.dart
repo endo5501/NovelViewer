@@ -335,7 +335,7 @@ void main() {
   });
 
   group('irodoriModelDirProvider', () {
-    test('resolves to models/Irodori-TTS-600M-v3-VoiceDesign', () {
+    test('resolves to models/Irodori-TTS-600M-v3-VoiceDesign-GGUF', () {
       final container = ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
@@ -346,7 +346,7 @@ void main() {
 
       expect(
         container.read(irodoriModelDirProvider),
-        p.join('/home/user', 'models', 'Irodori-TTS-600M-v3-VoiceDesign'),
+        p.join('/home/user', 'models', 'Irodori-TTS-600M-v3-VoiceDesign-GGUF'),
       );
     });
 

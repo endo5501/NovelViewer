@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_bindings.
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
+import '../../tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/data/piper_model_download_service.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
@@ -33,6 +34,7 @@ class SettingsRepository {
   static const _piperLengthScaleKey = 'piper_length_scale';
   static const _piperNoiseScaleKey = 'piper_noise_scale';
   static const _piperNoiseWKey = 'piper_noise_w';
+  static const _irodoriModelVariantKey = 'irodori_model_variant';
   static const _irodoriSpeakerGuidanceScaleKey = 'irodori_speaker_guidance_scale';
   static const _irodoriCaptionGuidanceScaleKey = 'irodori_caption_guidance_scale';
   static const _irodoriNumInferenceStepsKey = 'irodori_num_inference_steps';
@@ -265,6 +267,21 @@ class SettingsRepository {
 
   Future<void> setPiperNoiseW(double value) async {
     await _prefs.setDouble(_piperNoiseWKey, value);
+  }
+
+  // Irodori model variant (spec irodori-model-variant)
+  //
+  // Defaults to v3 so existing users keep caption support; an unreadable or
+  // unknown stored value also resolves to v3 rather than silently moving the
+  // user onto the caption-less v4.
+  IrodoriModelVariant getIrodoriModelVariant() {
+    return IrodoriModelVariant.fromStorageKey(
+      _prefs.getString(_irodoriModelVariantKey),
+    );
+  }
+
+  Future<void> setIrodoriModelVariant(IrodoriModelVariant value) async {
+    await _prefs.setString(_irodoriModelVariantKey, value.storageKey);
   }
 
   // Irodori synthesis parameters (design D8 / spec irodori-caption-synthesis)

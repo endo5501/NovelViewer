@@ -117,8 +117,10 @@ class TtsSession {
           );
         case IrodoriEngineConfig():
           // refWavPath / guidance scales / steps / caption are synthesis-time
-          // parameters (design D8), so only modelDir is needed at load time —
-          // matching modelLoadKey = (type, modelDir).
+          // parameters (design D8), so only modelDir is needed at load time.
+          // modelDir already encodes the selected variant (each variant has
+          // its own GGUF directory), matching
+          // modelLoadKey = (type, modelDir, variant).
           _isolate.loadModel(
             config.modelDir,
             engineType: TtsEngineType.irodori,

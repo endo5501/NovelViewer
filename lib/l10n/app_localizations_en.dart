@@ -131,6 +131,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'Caption guidance strength (caption_guidance_scale)';
 
   @override
+  String get settings_irodoriModelVariant => 'Model version';
+
+  @override
+  String get settings_irodoriVariantV4NoCaption =>
+      'v4 does not support captions. Supplying a reference voice and a caption together makes it append speech that is not in the text, so segment memos are not applied during synthesis.';
+
+  @override
+  String get settings_irodoriLegacyAssetsFound =>
+      'Old-format model data is still present';
+
+  @override
+  String get settings_irodoriLegacyAssetsDelete => 'Delete to reclaim space';
+
+  @override
+  String get settings_irodoriLegacyAssetsConfirm =>
+      'Delete the old-format model data. This cannot be undone.';
+
+  @override
   String get settings_irodoriNumInferenceSteps =>
       'Inference steps (num_inference_steps)';
 

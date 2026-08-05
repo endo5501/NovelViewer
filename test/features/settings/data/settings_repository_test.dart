@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
+import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 
@@ -383,6 +384,33 @@ void main() {
       await prefs.setString('tts_language', 'invalid');
       final repo = buildRepo();
       expect(repo.getTtsLanguage(), TtsLanguage.ja);
+    });
+  });
+
+  group('SettingsRepository - Irodori model variant', () {
+    test('getIrodoriModelVariant returns v3 when nothing is stored', () {
+      // v3 is the default so existing users keep caption support and are not
+      // silently moved onto v4 (spec irodori-model-variant).
+      final repo = buildRepo();
+      expect(repo.getIrodoriModelVariant(), IrodoriModelVariant.v3);
+    });
+
+    test('setIrodoriModelVariant persists and reads back', () async {
+      final repo = buildRepo();
+      await repo.setIrodoriModelVariant(IrodoriModelVariant.v4);
+      expect(buildRepo().getIrodoriModelVariant(), IrodoriModelVariant.v4);
+
+      await repo.setIrodoriModelVariant(IrodoriModelVariant.v3);
+      expect(buildRepo().getIrodoriModelVariant(), IrodoriModelVariant.v3);
+    });
+
+    test('getIrodoriModelVariant falls back to v3 for an unknown stored value',
+        () async {
+      SharedPreferences.setMockInitialValues({
+        'irodori_model_variant': 'v99',
+      });
+      prefs = await SharedPreferences.getInstance();
+      expect(buildRepo().getIrodoriModelVariant(), IrodoriModelVariant.v3);
     });
   });
 

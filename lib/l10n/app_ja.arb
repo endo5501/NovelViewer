@@ -1,6 +1,5 @@
 {
   "@@locale": "ja",
-
   "common_closeButton": "閉じる",
   "common_cancelButton": "キャンセル",
   "common_changeButton": "変更",
@@ -8,13 +7,14 @@
   "common_errorPrefix": "エラー: {message}",
   "@common_errorPrefix": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "common_fileDuplicateError": "同名のファイルが既に存在します",
   "common_fileNameLabel": "ファイル名",
   "common_unknownError": "不明なエラー",
-
   "settings_title": "設定",
   "settings_generalTabLabel": "一般",
   "settings_ttsTabLabel": "読み上げ",
@@ -46,6 +46,11 @@
   "settings_irodoriDownloaded": "ダウンロード済み",
   "settings_irodoriSpeakerGuidanceScale": "話者ガイダンス強度 (speaker_guidance_scale)",
   "settings_irodoriCaptionGuidanceScale": "キャプションガイダンス強度 (caption_guidance_scale)",
+  "settings_irodoriModelVariant": "モデルバージョン",
+  "settings_irodoriVariantV4NoCaption": "v4 はキャプション非対応です。参照音声とキャプションを同時に与えると、末尾に本文にない発話が追加されるため、セグメントのメモは合成に反映されません。",
+  "settings_irodoriLegacyAssetsFound": "旧形式のモデルデータが残っています",
+  "settings_irodoriLegacyAssetsDelete": "削除して容量を解放",
+  "settings_irodoriLegacyAssetsConfirm": "旧形式のモデルデータを削除します。この操作は取り消せません。",
   "settings_irodoriNumInferenceSteps": "推論ステップ数 (num_inference_steps)",
   "settings_voiceModelTitle": "音声モデル",
   "settings_voiceModelSmall": "高速 (0.6B)",
@@ -63,38 +68,47 @@
   "settings_fileOperationError": "ファイル操作エラー: {message}",
   "@settings_fileOperationError": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "settings_modelListFetching": "モデル一覧を取得中...",
   "settings_modelListFetchError": "モデル一覧の取得エラー: {message}",
   "@settings_modelListFetchError": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "settings_selectModelHint": "モデルを選択",
   "settings_renameFileTitle": "ファイル名の変更",
   "settings_languageTitle": "言語",
-
   "voiceRecording_title": "音声録音",
   "voiceRecording_micAccessDenied": "マイクへのアクセスが許可されていません",
   "voiceRecording_startRecordingFailed": "録音の開始に失敗しました: {message}",
   "@voiceRecording_startRecordingFailed": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "voiceRecording_stopRecordingFailed": "録音の停止に失敗しました: {message}",
   "@voiceRecording_stopRecordingFailed": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "voiceRecording_saveFailed": "保存に失敗しました: {message}",
   "@voiceRecording_saveFailed": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "voiceRecording_discardTitle": "録音の破棄",
@@ -107,7 +121,6 @@
   "voiceRecording_invalidCharsError": "使用できない文字が含まれています",
   "voiceRecording_enterFileNameTitle": "ファイル名の入力",
   "voiceRecording_saveButton": "保存",
-
   "fileBrowser_selectFolderPrompt": "フォルダを選択してください",
   "fileBrowser_goToParentFolder": "親フォルダへ",
   "fileBrowser_noFilesFound": "テキストファイルが見つかりません",
@@ -127,7 +140,9 @@
   "fileBrowser_deleteFolderConfirmation": "フォルダ「{name}」を削除しますか？",
   "@fileBrowser_deleteFolderConfirmation": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "fileBrowser_errorInvalidName": "フォルダ名に使用できない文字が含まれています",
@@ -137,73 +152,96 @@
   "fileBrowser_createFolderFailed": "フォルダの作成に失敗しました: {message}",
   "@fileBrowser_createFolderFailed": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "fileBrowser_renameFolderFailed": "フォルダ名の変更に失敗しました: {message}",
   "@fileBrowser_renameFolderFailed": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "fileBrowser_moveFailed": "移動に失敗しました: {message}",
   "@fileBrowser_moveFailed": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "fileBrowser_downloadInProgressWarning": "ダウンロード中です。完了後に再度お試しください",
   "fileBrowser_renameFailed": "タイトル変更に失敗しました: {message}",
   "@fileBrowser_renameFailed": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "fileBrowser_deleteNovelTitle": "小説を削除",
   "fileBrowser_deleteNovelConfirmation": "「{name}」を削除しますか？\nすべてのエピソードとデータが完全に削除されます。",
   "@fileBrowser_deleteNovelConfirmation": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "fileBrowser_deleteFailed": "削除に失敗しました: {message}",
   "@fileBrowser_deleteFailed": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "fileBrowser_refreshProgressTitle": "「{title}」を更新中",
   "@fileBrowser_refreshProgressTitle": {
     "placeholders": {
-      "title": { "type": "String" }
+      "title": {
+        "type": "String"
+      }
     }
   },
   "fileBrowser_skippedEpisodesSuffix": "（{count} スキップ）",
   "@fileBrowser_skippedEpisodesSuffix": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "fileBrowser_episodeCountFormat": "{total} エピソード{skipped}",
   "@fileBrowser_episodeCountFormat": {
     "placeholders": {
-      "total": { "type": "int" },
-      "skipped": { "type": "String" }
+      "total": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "String"
+      }
     }
   },
   "fileBrowser_refreshCompleted": "更新が完了しました。{summary}",
   "@fileBrowser_refreshCompleted": {
     "placeholders": {
-      "summary": { "type": "String" }
+      "summary": {
+        "type": "String"
+      }
     }
   },
   "fileBrowser_refreshError": "エラー: {message}",
   "@fileBrowser_refreshError": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
-
   "ttsEdit_title": "読み上げ編集",
   "ttsEdit_dictionaryButton": "辞書",
   "ttsEdit_playButton": "再生",
@@ -225,7 +263,6 @@
   "ttsEdit_regenerateTooltip": "再生成",
   "ttsEdit_resetTooltip": "リセット",
   "ttsEdit_synthesisFailed": "合成に失敗しました",
-
   "textViewer_deleteAudioTitle": "音声データの削除",
   "textViewer_deleteAudioConfirmation": "音声データを削除しますか？",
   "textViewer_exportCompleted": "MP3ファイルのエクスポートが完了しました",
@@ -234,14 +271,20 @@
   "textViewer_exportError": "エクスポートエラー: {message}",
   "@textViewer_exportError": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "textViewer_generationProgressFormat": "{current}/{total}文",
   "@textViewer_generationProgressFormat": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "textViewer_editTtsTooltip": "読み上げ編集",
@@ -254,41 +297,56 @@
   "textViewer_exportMp3Tooltip": "MP3エクスポート",
   "textViewer_deleteAudioTooltip": "音声データ削除",
   "textViewer_selectFilePrompt": "ファイルを選択してください",
-
   "download_title": "小説ダウンロード",
   "download_invalidUrlError": "有効なURLを入力してください",
   "download_unsupportedSiteError": "サポートされていないサイトです（なろう・なろう18・カクヨム・青空文庫・ハーメルンに対応）",
   "download_skippedSuffix": "(スキップ: {count}件)",
   "@download_skippedSuffix": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "download_failedSuffix": "(失敗: {count}件)",
   "@download_failedSuffix": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "download_progressFormat": "ダウンロード中: {current}/{total} エピソード{skipped}",
   "@download_progressFormat": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" },
-      "skipped": { "type": "String" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "String"
+      }
     }
   },
   "download_completedFormat": "ダウンロード完了: {total} エピソード{skipped}",
   "@download_completedFormat": {
     "placeholders": {
-      "total": { "type": "int" },
-      "skipped": { "type": "String" }
+      "total": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "String"
+      }
     }
   },
   "download_errorFormat": "エラー: {message}",
   "@download_errorFormat": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "download_downloadingButton": "ダウンロード中...",
@@ -308,7 +366,6 @@
   "download_createCollectionHint": "コレクション名",
   "download_createCollectionButton": "作成",
   "fileBrowser_newCollection": "新規コレクション",
-
   "ttsDictionary_title": "読み上げ辞書",
   "ttsDictionary_bothFieldsRequired": "表記と読みの両方を入力してください",
   "ttsDictionary_duplicateEntry": "同じ表記が既に登録されています",
@@ -319,7 +376,6 @@
   "ttsDictionary_addTooltip": "追加",
   "ttsDictionary_emptyMessage": "辞書にエントリがありません\n上のフォームから追加してください",
   "ttsDictionary_deleteTooltip": "削除",
-
   "contextMenu_addToDictionary": "辞書追加",
   "contextMenu_copy": "コピー",
   "contextMenu_analyzeNoSpoiler": "解析開始(ネタバレなし)",
@@ -328,25 +384,36 @@
   "contextMenu_copySnapshotByEpisode": "{episode}ファイル時点の要約をコピー",
   "@contextMenu_copySnapshotByEpisode": {
     "placeholders": {
-      "episode": { "type": "int" }
+      "episode": {
+        "type": "int"
+      }
     }
   },
   "contextMenu_copiedToClipboard": "クリップボードにコピーしました",
-
   "llmAnalysis_inProgress": "解析中…",
   "llmAnalysis_extractingFacts": "情報を抽出中 ({current} / {total})",
   "@llmAnalysis_extractingFacts": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "llmAnalysis_refiningRound": "絞り込み {round} 周目 ({current} / {total})",
   "@llmAnalysis_refiningRound": {
     "placeholders": {
-      "round": { "type": "int" },
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "round": {
+        "type": "int"
+      },
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "llmAnalysis_generatingFinal": "最終要約を生成中…",
@@ -355,33 +422,44 @@
   "llmAnalysis_failed": "解析失敗: {error}",
   "@llmAnalysis_failed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "llmAnalysis_savedSummary": "「{word}」の要約を保存しました",
   "@llmAnalysis_savedSummary": {
     "placeholders": {
-      "word": { "type": "String" }
+      "word": {
+        "type": "String"
+      }
     }
   },
   "llmAnalysis_partialFailure": "解析を中止しました: {count}件のファイルを解析できなかったため、要約は保存されていません。再実行すると失敗した分だけ再試行します。({error})",
   "@llmAnalysis_partialFailure": {
     "placeholders": {
-      "count": { "type": "int" },
-      "error": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "error": {
+        "type": "String"
+      }
     }
   },
   "llmAnalysis_noFacts": "解析を中止しました: 「{word}」に関する情報を抽出できなかったため、要約は保存されていません。",
   "@llmAnalysis_noFacts": {
     "placeholders": {
-      "word": { "type": "String" }
+      "word": {
+        "type": "String"
+      }
     }
   },
-
   "hoverPopup_snapshotLabel": "{episode}ファイル時点の要約",
   "@hoverPopup_snapshotLabel": {
     "placeholders": {
-      "episode": { "type": "int" }
+      "episode": {
+        "type": "int"
+      }
     }
   },
   "hoverPopup_futureSnapshotWarning": "現在より先の解析です",
@@ -389,56 +467,57 @@
   "hoverPopup_reanalyzeUpToCurrent": "現在ページまで ({episode}ファイル時点)",
   "@hoverPopup_reanalyzeUpToCurrent": {
     "placeholders": {
-      "episode": { "type": "int" }
+      "episode": {
+        "type": "int"
+      }
     }
   },
   "hoverPopup_reanalyzeUpToAll": "全話まで ({episode}ファイル時点)",
   "@hoverPopup_reanalyzeUpToAll": {
     "placeholders": {
-      "episode": { "type": "int" }
+      "episode": {
+        "type": "int"
+      }
     }
   },
   "hoverPopup_reanalyzeOverwriteSuffix": " (上書き)",
   "hoverPopup_snapshotNavPrev": "前のスナップショット",
   "hoverPopup_snapshotNavNext": "次のスナップショット",
-
   "bookmark_selectNovelPrompt": "作品フォルダを選択してください",
   "bookmark_noBookmarks": "ブックマークがありません",
   "bookmark_deleteMenuItem": "削除",
   "bookmark_fileNotFound": "ファイルが見つかりません",
-
   "textSearch_hintText": "検索...",
   "textSearch_enterQueryPrompt": "検索語を入力してください",
   "textSearch_noResults": "検索結果がありません",
-
   "renameTitle_title": "タイトル変更",
   "renameTitle_newTitleLabel": "新しいタイトル",
   "renameTitle_changeButton": "変更",
-
   "homeScreen_removeBookmarkTooltip": "ブックマーク解除",
   "homeScreen_addBookmarkTooltip": "ブックマーク登録",
   "homeScreen_hideRightColumnTooltip": "右カラムを非表示",
   "homeScreen_showRightColumnTooltip": "右カラムを表示",
   "homeScreen_downloadTooltip": "小説ダウンロード",
-
   "leftColumn_filesTab": "ファイル",
   "leftColumn_bookmarksTab": "ブックマーク",
   "leftColumn_historyTab": "解析履歴",
-
   "llmHistory_noEntries": "解析履歴がありません",
   "llmHistory_snapshotsBadge": "{count}スナップショット",
   "@llmHistory_snapshotsBadge": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "llmHistory_untrackedBadge": "未追跡",
-
   "contextMenu_viewDetails": "詳細を表示",
   "historyDetail_dialogTitle": "「{word}」の詳細",
   "@historyDetail_dialogTitle": {
     "placeholders": {
-      "word": { "type": "String" }
+      "word": {
+        "type": "String"
+      }
     }
   },
   "historyDetail_factsTab": "事実",
@@ -446,17 +525,20 @@
   "historyDetail_invalidBadge": "無効",
   "historyDetail_noFacts": "事実がありません",
   "historyDetail_noResults": "解析結果がありません",
-
   "verticalText_nextEpisodePrompt": "▶ 次話「{name}」へ（もう一度）",
   "@verticalText_nextEpisodePrompt": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "verticalText_prevEpisodePrompt": "◀ 前話「{name}」へ（もう一度）",
   "@verticalText_prevEpisodePrompt": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "update_badgeTooltip": "更新があります",
@@ -464,8 +546,12 @@
   "update_versionTransition": "{current} → {newVersion}",
   "@update_versionTransition": {
     "placeholders": {
-      "current": { "type": "String" },
-      "newVersion": { "type": "String" }
+      "current": {
+        "type": "String"
+      },
+      "newVersion": {
+        "type": "String"
+      }
     }
   },
   "update_releaseNotesLabel": "リリースノート",
@@ -478,7 +564,6 @@
   "update_failedChecksumMessage": "アップデートに失敗しました（チェックサム不一致）",
   "update_missingAssetMessage": "インストーラが見つかりませんでした",
   "update_retryButton": "再試行",
-
   "settings_aboutUpdateTab": "アプリ情報 / 更新",
   "settings_currentVersionLabel": "現在のバージョン",
   "settings_buildNumberLabel": "ビルド番号",
@@ -494,7 +579,9 @@
   "settings_updateAvailableMessage": "{version} が利用可能",
   "@settings_updateAvailableMessage": {
     "placeholders": {
-      "version": { "type": "String" }
+      "version": {
+        "type": "String"
+      }
     }
   },
   "settings_checkFailedMessage": "更新の確認に失敗しました",
