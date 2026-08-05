@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/providers/irodori_model_download_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -18,12 +19,99 @@ class IrodoriSettingsSection extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _IrodoriVariantSelector(),
+        SizedBox(height: 8),
         _IrodoriModelDownloadSection(),
+        _IrodoriLegacyAssetsNotice(),
         SizedBox(height: 16),
         Divider(),
         SizedBox(height: 8),
         _IrodoriSynthesisParams(),
       ],
+    );
+  }
+}
+
+/// v3 / v4 selection.
+///
+/// v4 is a caption-less alternative, not an upgrade: supplying a reference
+/// voice and a caption together makes it append speech that is not in the
+/// text. The caption itself is gated in
+/// `TtsEngineConfig.captionFromMemo`, below the UI — this widget only
+/// explains why the caption controls are inert, so a user who writes a memo
+/// is not left wondering why it has no effect.
+class _IrodoriVariantSelector extends ConsumerWidget {
+  const _IrodoriVariantSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final variant = ref.watch(irodoriModelVariantProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.settings_irodoriModelVariant),
+          const SizedBox(height: 4),
+          DropdownButton<IrodoriModelVariant>(
+            key: const Key('irodori_variant_dropdown'),
+            value: variant,
+            isExpanded: true,
+            items: [
+              for (final v in IrodoriModelVariant.values)
+                DropdownMenuItem(value: v, child: Text(v.label)),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              ref.read(irodoriModelVariantProvider.notifier).setValue(value);
+            },
+          ),
+          if (!variant.supportsCaption) ...[
+            const SizedBox(height: 8),
+            Text(
+              l10n.settings_irodoriVariantV4NoCaption,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Offers to reclaim the pre-GGUF safetensors assets.
+///
+/// Detection and the byte total are shown by the app; the deletion itself
+/// stays an explicit user action because 2.9 GB is not recoverable and the
+/// files may still be used elsewhere (e.g. the audio.cpp CLI).
+class _IrodoriLegacyAssetsNotice extends ConsumerWidget {
+  const _IrodoriLegacyAssetsNotice();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final bytes = ref.watch(irodoriLegacyAssetBytesProvider);
+    if (bytes <= 0) return const SizedBox.shrink();
+
+    final gib = (bytes / (1024 * 1024 * 1024)).toStringAsFixed(2);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('${l10n.settings_irodoriLegacyAssetsFound} ($gib GB)'),
+          const SizedBox(height: 4),
+          OutlinedButton(
+            key: const Key('irodori_delete_legacy_assets'),
+            onPressed: () => ref
+                .read(irodoriModelDownloadProvider.notifier)
+                .deleteLegacyAssets(),
+            child: Text(l10n.settings_irodoriLegacyAssetsDelete),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -110,6 +198,10 @@ class _IrodoriSynthesisParams extends ConsumerWidget {
     final speakerGuidanceScale = ref.watch(irodoriSpeakerGuidanceScaleProvider);
     final captionGuidanceScale = ref.watch(irodoriCaptionGuidanceScaleProvider);
     final numInferenceSteps = ref.watch(irodoriNumInferenceStepsProvider);
+    // The stored value is kept so switching back to v3 restores it; only the
+    // control is disabled.
+    final captionSupported =
+        ref.watch(irodoriModelVariantProvider).supportsCaption;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -132,20 +224,31 @@ class _IrodoriSynthesisParams extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 8),
-          Text(
-            '${l10n.settings_irodoriCaptionGuidanceScale}: ${captionGuidanceScale.toStringAsFixed(1)}',
-          ),
-          Slider(
-            value: captionGuidanceScale,
-            min: 0.0,
-            max: 10.0,
-            divisions: 100,
-            label: captionGuidanceScale.toStringAsFixed(1),
-            onChanged: (value) {
-              ref
-                  .read(irodoriCaptionGuidanceScaleProvider.notifier)
-                  .setValue(value);
-            },
+          Opacity(
+            opacity: captionSupported ? 1.0 : 0.5,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${l10n.settings_irodoriCaptionGuidanceScale}: ${captionGuidanceScale.toStringAsFixed(1)}',
+                ),
+                Slider(
+                  key: const Key('irodori_caption_guidance_slider'),
+                  value: captionGuidanceScale,
+                  min: 0.0,
+                  max: 10.0,
+                  divisions: 100,
+                  label: captionGuidanceScale.toStringAsFixed(1),
+                  onChanged: captionSupported
+                      ? (value) {
+                          ref
+                              .read(irodoriCaptionGuidanceScaleProvider.notifier)
+                              .setValue(value);
+                        }
+                      : null,
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 8),
           Text(

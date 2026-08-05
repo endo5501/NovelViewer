@@ -130,6 +130,19 @@ class AppLocalizationsJa extends AppLocalizations {
       'キャプションガイダンス強度 (caption_guidance_scale)';
 
   @override
+  String get settings_irodoriModelVariant => 'モデルバージョン';
+
+  @override
+  String get settings_irodoriVariantV4NoCaption =>
+      'v4 はキャプション非対応です。参照音声とキャプションを同時に与えると、末尾に本文にない発話が追加されるため、セグメントのメモは合成に反映されません。';
+
+  @override
+  String get settings_irodoriLegacyAssetsFound => '旧形式のモデルデータが残っています';
+
+  @override
+  String get settings_irodoriLegacyAssetsDelete => '削除して容量を解放';
+
+  @override
   String get settings_irodoriNumInferenceSteps =>
       '推論ステップ数 (num_inference_steps)';
 

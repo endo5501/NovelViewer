@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/providers/irodori_model_download_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
@@ -42,7 +43,7 @@ void main() {
 
   Widget buildTestWidget({
     http.Client? httpClient,
-    Map<String, int>? expectedFileSizes,
+    Map<IrodoriModelVariant, int>? expectedFileSizes,
   }) {
     final libraryPath = p.join(tempDir.path, 'NovelViewer');
     return ProviderScope(
@@ -73,7 +74,7 @@ void main() {
   Future<AppLocalizations> openTtsTab(
     WidgetTester tester, {
     http.Client? httpClient,
-    Map<String, int>? expectedFileSizes,
+    Map<IrodoriModelVariant, int>? expectedFileSizes,
   }) async {
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1.0;
@@ -102,7 +103,7 @@ void main() {
   Future<AppLocalizations> selectIrodoriEngine(
     WidgetTester tester, {
     http.Client? httpClient,
-    Map<String, int>? expectedFileSizes,
+    Map<IrodoriModelVariant, int>? expectedFileSizes,
   }) async {
     final l10n = await openTtsTab(
       tester,
@@ -194,31 +195,18 @@ void main() {
 
     testWidgets('shows completed status when models already exist',
         (tester) async {
+      // A variant is one GGUF with no sibling directories.
+      const variant = IrodoriModelVariant.v3;
       final modelsDir = p.join(tempDir.path, 'models');
-      Directory(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign'))
-          .createSync(recursive: true);
-      Directory(p.join(modelsDir, 'llm-jp-3-150m')).createSync();
-      Directory(p.join(modelsDir, 'Semantic-DACVAE-Japanese-32dim'))
-          .createSync();
-      File(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign',
-              'model.safetensors'))
-          .writeAsStringSync('model');
-      File(p.join(modelsDir, 'Irodori-TTS-600M-v3-VoiceDesign',
-              'model_config.json'))
-          .writeAsStringSync('config');
-      File(p.join(modelsDir, 'llm-jp-3-150m', 'tokenizer.json'))
-          .writeAsStringSync('tokenizer');
-      File(p.join(
-              modelsDir, 'Semantic-DACVAE-Japanese-32dim', 'weights.safetensors'))
-          .writeAsStringSync('weights');
+      final variantDir = Directory(p.join(modelsDir, variant.modelDirName))
+        ..createSync(recursive: true);
+      File(p.join(variantDir.path, variant.ggufFileName))
+          .writeAsBytesSync(List.filled(5, 0));
 
       final l10n = await selectIrodoriEngine(
         tester,
-        expectedFileSizes: const {
-          'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 5, // 'model'
-          'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 6, // 'config'
-          'llm-jp-3-150m/tokenizer.json': 9, // 'tokenizer'
-          'Semantic-DACVAE-Japanese-32dim/weights.safetensors': 7, // 'weights'
+        expectedFileSizes: {
+          for (final v in IrodoriModelVariant.values) v: 5,
         },
       );
 
@@ -238,11 +226,8 @@ void main() {
       final l10n = await selectIrodoriEngine(
         tester,
         httpClient: mockClient,
-        expectedFileSizes: const {
-          'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 3,
-          'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 3,
-          'llm-jp-3-150m/tokenizer.json': 3,
-          'Semantic-DACVAE-Japanese-32dim/weights.safetensors': 3,
+        expectedFileSizes: {
+          for (final v in IrodoriModelVariant.values) v: 3,
         },
       );
 
@@ -365,6 +350,105 @@ void main() {
       expect(
         container.read(irodoriNumInferenceStepsProvider),
         isNot(40),
+      );
+    });
+  });
+
+  group('IrodoriSettingsSection - model variant', () {
+    testWidgets('defaults to v3 and offers both variants', (tester) async {
+      await selectIrodoriEngine(tester);
+
+      final dropdown = tester.widget<DropdownButton<IrodoriModelVariant>>(
+        find.byKey(const Key('irodori_variant_dropdown')),
+      );
+      expect(dropdown.value, IrodoriModelVariant.v3);
+      expect(
+        dropdown.items!.map((i) => i.value).toList(),
+        IrodoriModelVariant.values,
+      );
+    });
+
+    testWidgets('v3 shows no caption warning and keeps the slider enabled',
+        (tester) async {
+      final l10n = await selectIrodoriEngine(tester);
+
+      expect(find.text(l10n.settings_irodoriVariantV4NoCaption), findsNothing);
+
+      final slider = tester.widget<Slider>(
+        find.byKey(const Key('irodori_caption_guidance_slider')),
+      );
+      expect(slider.onChanged, isNotNull);
+    });
+
+    testWidgets('selecting v4 explains the limit and disables the caption '
+        'slider', (tester) async {
+      final l10n = await selectIrodoriEngine(tester);
+
+      await tester.tap(find.byKey(const Key('irodori_variant_dropdown')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(IrodoriModelVariant.v4.label).last);
+      await tester.pumpAndSettle();
+
+      // The gate itself lives below the UI; this only has to explain why the
+      // caption controls are inert.
+      expect(find.text(l10n.settings_irodoriVariantV4NoCaption), findsOneWidget);
+
+      final slider = tester.widget<Slider>(
+        find.byKey(const Key('irodori_caption_guidance_slider')),
+      );
+      expect(slider.onChanged, isNull);
+    });
+
+    testWidgets('switching back to v3 re-enables the caption slider',
+        (tester) async {
+      await selectIrodoriEngine(tester);
+
+      await tester.tap(find.byKey(const Key('irodori_variant_dropdown')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(IrodoriModelVariant.v4.label).last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('irodori_variant_dropdown')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(IrodoriModelVariant.v3.label).last);
+      await tester.pumpAndSettle();
+
+      final slider = tester.widget<Slider>(
+        find.byKey(const Key('irodori_caption_guidance_slider')),
+      );
+      expect(slider.onChanged, isNotNull);
+    });
+  });
+
+  group('IrodoriSettingsSection - legacy assets', () {
+    testWidgets('no cleanup offer when no legacy assets are present',
+        (tester) async {
+      await selectIrodoriEngine(tester);
+      expect(find.byKey(const Key('irodori_delete_legacy_assets')),
+          findsNothing);
+    });
+
+    testWidgets('offers cleanup with the reclaimable size when legacy assets '
+        'exist', (tester) async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      for (final name in [
+        'Irodori-TTS-600M-v3-VoiceDesign',
+        'llm-jp-3-150m',
+        'Semantic-DACVAE-Japanese-32dim',
+      ]) {
+        final dir = Directory(p.join(modelsDir, name))
+          ..createSync(recursive: true);
+        File(p.join(dir.path, 'blob.bin'))
+            .writeAsBytesSync(List.filled(1024, 0));
+      }
+
+      final l10n = await selectIrodoriEngine(tester);
+
+      expect(find.byKey(const Key('irodori_delete_legacy_assets')),
+          findsOneWidget);
+      expect(
+        find.textContaining(l10n.settings_irodoriLegacyAssetsFound),
+        findsOneWidget,
       );
     });
   });

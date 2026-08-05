@@ -33,23 +33,23 @@
 
 ## 4. variant の導入 (TDD)
 
-- [ ] 4.1 `IrodoriModelVariant` (v3 / v4) の enum と、既定が v3 であることを検証する失敗するテストを書く
-- [ ] 4.2 `IrodoriEngineConfig` に variant フィールドが載り、`modelLoadKey` に含まれることを検証する失敗するテストを書く
-- [ ] 4.3 variant の永続化と復元を検証する失敗するテストを書く (`settings_repository_test`)
-- [ ] 4.4 4.1〜4.3 のテストが失敗することを確認してコミットする
-- [ ] 4.5 `IrodoriModelVariant` enum と Riverpod プロバイダを実装する
-- [ ] 4.6 `IrodoriEngineConfig` に variant フィールドを追加し `modelLoadKey` に含める
-- [ ] 4.7 `SettingsRepository` に variant の永続化を実装する
-- [ ] 4.8 4.1〜4.3 のテストが通ることを確認する
+- [x] 4.1 `IrodoriModelVariant` (v3 / v4) の enum と、既定が v3 であることを検証する失敗するテストを書く
+- [x] 4.2 `IrodoriEngineConfig` に variant フィールドが載り、`modelLoadKey` に含まれることを検証する失敗するテストを書く
+- [x] 4.3 variant の永続化と復元を検証する失敗するテストを書く (`settings_repository_test`)
+- [x] 4.4 4.1〜4.3 のテストが失敗することを確認してコミットする
+- [x] 4.5 `IrodoriModelVariant` enum と Riverpod プロバイダを実装する
+- [x] 4.6 `IrodoriEngineConfig` に variant フィールドを追加し `modelLoadKey` に含める
+- [x] 4.7 `SettingsRepository` に variant の永続化を実装する
+- [x] 4.8 4.1〜4.3 のテストが通ることを確認する
 
 ## 5. caption ゲート (TDD)
 
-- [ ] 5.1 variant が v4 のとき `TtsEngineConfig.captionFromMemo()` が memo の内容にかかわらず null を返すことを検証する失敗するテストを書く
-- [ ] 5.2 variant が v3 のとき従来どおり memo が caption として返ることを検証するテストを書く (リグレッション防止)
-- [ ] 5.3 ストリーミング生成・編集ダイアログの再生成・保存済みセグメントの再合成のいずれの経路でも v4 で caption が渡らないことを検証する失敗するテストを書く
-- [ ] 5.4 5.1〜5.3 のテストが失敗することを確認してコミットする
-- [ ] 5.5 `captionFromMemo()` に variant ゲートを実装する
-- [ ] 5.6 5.1〜5.3 のテストが通ることを確認する
+- [x] 5.1 variant が v4 のとき `TtsEngineConfig.captionFromMemo()` が memo の内容にかかわらず null を返すことを検証する失敗するテストを書く
+- [x] 5.2 variant が v3 のとき従来どおり memo が caption として返ることを検証するテストを書く (リグレッション防止)
+- [x] 5.3 ストリーミング生成・編集ダイアログの再生成・保存済みセグメントの再合成のいずれの経路でも v4 で caption が渡らないことを検証する失敗するテストを書く
+- [x] 5.4 5.1〜5.3 のテストが失敗することを確認してコミットする
+- [x] 5.5 `captionFromMemo()` に variant ゲートを実装する
+- [x] 5.6 5.1〜5.3 のテストが通ることを確認する
 
 ## 6. モデルダウンロードの GGUF 化 (TDD)
 

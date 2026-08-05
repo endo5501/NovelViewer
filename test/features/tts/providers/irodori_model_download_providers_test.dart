@@ -9,7 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
-import 'package:novel_viewer/features/tts/data/irodori_model_download_service.dart';
+import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/providers/irodori_model_download_providers.dart';
 
 void main() {
@@ -33,17 +33,14 @@ void main() {
   // multi-hundred-megabyte-to-gigabyte pinned sizes
   // (IrodoriModelDownloadService.defaultExpectedFileSizes) so fixtures can
   // stay small. Provided by default; individual tests may override further.
-  const testExpectedFileSizes = {
-    'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 3,
-    'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 3,
-    'llm-jp-3-150m/tokenizer.json': 3,
-    'Semantic-DACVAE-Japanese-32dim/weights.safetensors': 3,
+  final testExpectedFileSizes = <IrodoriModelVariant, int>{
+    for (final v in IrodoriModelVariant.values) v: 5,
   };
 
   ProviderContainer createContainer({
     required http.Client httpClient,
     String? libraryPath,
-    Map<String, int> expectedFileSizes = testExpectedFileSizes,
+    Map<IrodoriModelVariant, int>? expectedFileSizes,
   }) {
     return ProviderContainer(
       overrides: [
@@ -52,31 +49,22 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
         httpClientProvider.overrideWithValue(httpClient),
         irodoriExpectedFileSizesProvider.overrideWithValue(
-          expectedFileSizes,
+          expectedFileSizes ?? testExpectedFileSizes,
         ),
       ],
     );
   }
 
-  void writeAllRequiredFiles(String modelsDir) {
-    Directory(p.join(modelsDir, IrodoriModelDownloadService.modelDirName))
-        .createSync(recursive: true);
-    Directory(p.join(modelsDir, IrodoriModelDownloadService.tokenizerDirName))
-        .createSync();
-    Directory(p.join(modelsDir, IrodoriModelDownloadService.dacvaeDirName))
-        .createSync();
-    File(p.join(modelsDir, IrodoriModelDownloadService.modelDirName,
-            'model.safetensors'))
-        .writeAsStringSync('model');
-    File(p.join(modelsDir, IrodoriModelDownloadService.modelDirName,
-            'model_config.json'))
-        .writeAsStringSync('config');
-    File(p.join(modelsDir, IrodoriModelDownloadService.tokenizerDirName,
-            'tokenizer.json'))
-        .writeAsStringSync('tokenizer');
-    File(p.join(modelsDir, IrodoriModelDownloadService.dacvaeDirName,
-            'weights.safetensors'))
-        .writeAsStringSync('weights');
+  /// Places the selected variant's single GGUF, sized to match the manifest
+  /// above. The GGUF embeds spec/config/tokenizer, so no sibling directories.
+  void writeAllRequiredFiles(
+    String modelsDir, {
+    IrodoriModelVariant variant = IrodoriModelVariant.v3,
+  }) {
+    final dir = Directory(p.join(modelsDir, variant.modelDirName))
+      ..createSync(recursive: true);
+    File(p.join(dir.path, variant.ggufFileName))
+        .writeAsBytesSync(List.filled(testExpectedFileSizes[variant]!, 0));
   }
 
   group('irodoriModelDownloadProvider', () {
@@ -95,11 +83,8 @@ void main() {
 
       final container = createContainer(
         httpClient: http.Client(),
-        expectedFileSizes: const {
-          'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 5, // 'model'
-          'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 6, // 'config'
-          'llm-jp-3-150m/tokenizer.json': 9, // 'tokenizer'
-          'Semantic-DACVAE-Japanese-32dim/weights.safetensors': 7, // 'weights'
+        expectedFileSizes: {
+          for (final v in IrodoriModelVariant.values) v: 5,
         },
       );
       addTearDown(container.dispose);
@@ -123,9 +108,9 @@ void main() {
     test('download transitions to completed', () async {
       final mockClient = MockClient.streaming((request, _) async {
         return http.StreamedResponse(
-          Stream.value([1, 2, 3]),
+          Stream.value(List.filled(5, 0)),
           200,
-          contentLength: 3,
+          contentLength: 5,
         );
       });
 
@@ -153,11 +138,8 @@ void main() {
 
       final container = createContainer(
         httpClient: mockClient,
-        expectedFileSizes: const {
-          'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 10,
-          'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 10,
-          'llm-jp-3-150m/tokenizer.json': 10,
-          'Semantic-DACVAE-Japanese-32dim/weights.safetensors': 10,
+        expectedFileSizes: {
+          for (final v in IrodoriModelVariant.values) v: 10,
         },
       );
       addTearDown(container.dispose);
@@ -177,7 +159,8 @@ void main() {
 
       expect(progressUpdates, isNotEmpty);
       expect(
-        progressUpdates.any((s) => s.currentFile == 'model.safetensors'),
+        progressUpdates
+            .any((s) => s.currentFile == IrodoriModelVariant.v3.ggufFileName),
         isTrue,
       );
     });
@@ -228,23 +211,19 @@ void main() {
         return http.StreamedResponse(
           chunkController.stream,
           200,
-          contentLength: 100,
+          contentLength: 20,
         );
       });
 
-      // The single 10-byte chunk below completes model.safetensors's
-      // transfer (with no second chunk to hit the cancel check mid-stream)
-      // before the cancel flag is observed at the next file's loop
-      // boundary, so its manifest entry must match the 10 bytes actually
-      // written or the new size-mismatch check would fire first and mask
-      // the cancellation behavior this test targets.
+      // A variant is a single file, so there is no next-file loop boundary
+      // for the cancel flag to be observed at — it has to be caught inside
+      // the stream. Two chunks are sent: the first raises progress (which
+      // triggers the cancel below), the second gives downloadFile a chunk
+      // boundary at which to notice it.
       final container = createContainer(
         httpClient: mockClient,
-        expectedFileSizes: const {
-          'Irodori-TTS-600M-v3-VoiceDesign/model.safetensors': 10,
-          'Irodori-TTS-600M-v3-VoiceDesign/model_config.json': 3,
-          'llm-jp-3-150m/tokenizer.json': 3,
-          'Semantic-DACVAE-Japanese-32dim/weights.safetensors': 3,
+        expectedFileSizes: {
+          for (final v in IrodoriModelVariant.values) v: 20,
         },
       );
       addTearDown(container.dispose);
@@ -263,6 +242,8 @@ void main() {
       final future = notifier.startDownload();
 
       chunkController.add(List.filled(10, 0));
+      await Future<void>.delayed(Duration.zero);
+      chunkController.add(List.filled(10, 0));
       await chunkController.close();
 
       await future;
@@ -275,9 +256,9 @@ void main() {
         () async {
       final mockClient = MockClient.streaming((request, _) async {
         return http.StreamedResponse(
-          Stream.value([1, 2, 3]),
+          Stream.value(List.filled(5, 0)),
           200,
-          contentLength: 3,
+          contentLength: 5,
         );
       });
 

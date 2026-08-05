@@ -130,6 +130,19 @@ class AppLocalizationsZh extends AppLocalizations {
       '字幕引导强度 (caption_guidance_scale)';
 
   @override
+  String get settings_irodoriModelVariant => '模型版本';
+
+  @override
+  String get settings_irodoriVariantV4NoCaption =>
+      'v4 不支持字幕。同时提供参考语音和字幕会在结尾追加正文中不存在的语音，因此片段备注不会应用于合成。';
+
+  @override
+  String get settings_irodoriLegacyAssetsFound => '仍存在旧格式的模型数据';
+
+  @override
+  String get settings_irodoriLegacyAssetsDelete => '删除以释放空间';
+
+  @override
   String get settings_irodoriNumInferenceSteps => '推理步数 (num_inference_steps)';
 
   @override

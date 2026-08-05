@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/tts/data/irodori_model_download_service.dart';
+import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
+import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
 
 sealed class IrodoriModelDownloadState {
@@ -36,9 +38,23 @@ class IrodoriModelDownloadError extends IrodoriModelDownloadState {
 /// Defaults to the real, hardcoded sizes; overridable in tests so download
 /// fixtures don't need to produce multi-hundred-megabyte-to-gigabyte
 /// payloads to match the real manifest.
-final irodoriExpectedFileSizesProvider = Provider<Map<String, int>>(
+final irodoriExpectedFileSizesProvider =
+    Provider<Map<IrodoriModelVariant, int>>(
   (ref) => IrodoriModelDownloadService.defaultExpectedFileSizes,
 );
+
+/// Bytes reclaimable by deleting the pre-GGUF safetensors assets, or 0 when
+/// none are present. Surfaced so the settings UI can offer the cleanup with a
+/// concrete number instead of a vague "old files found".
+final irodoriLegacyAssetBytesProvider = Provider<int>((ref) {
+  final modelsDir = ref.watch(modelsDirectoryPathProvider);
+  if (modelsDir == null) return 0;
+  final service = IrodoriModelDownloadService(
+    client: ref.read(httpClientProvider),
+    expectedFileSizes: ref.read(irodoriExpectedFileSizesProvider),
+  );
+  return service.legacyAssetBytes(modelsDir);
+});
 
 final irodoriModelDownloadProvider = NotifierProvider<
     IrodoriModelDownloadNotifier, IrodoriModelDownloadState>(
@@ -59,7 +75,10 @@ class IrodoriModelDownloadNotifier
     final modelsDir = ref.watch(modelsDirectoryPathProvider);
     if (modelsDir == null) return const IrodoriModelDownloadIdle();
 
-    if (_service.areModelsDownloaded(modelsDir)) {
+    // Judged for the selected variant only: having v3 on disk says nothing
+    // about v4, so switching the variant re-evaluates readiness.
+    final variant = ref.watch(irodoriModelVariantProvider);
+    if (_service.isModelDownloaded(modelsDir, variant)) {
       return IrodoriModelDownloadCompleted(modelsDir: modelsDir);
     }
     return const IrodoriModelDownloadIdle();
@@ -77,8 +96,9 @@ class IrodoriModelDownloadNotifier
     );
 
     try {
-      await _service.downloadModels(
+      await _service.downloadModel(
         modelsDir,
+        ref.read(irodoriModelVariantProvider),
         onProgress: (fileName, progress) {
           state = IrodoriModelDownloadDownloading(
             currentFile: fileName,
@@ -104,5 +124,16 @@ class IrodoriModelDownloadNotifier
   /// Requests the in-flight [startDownload] transfer to stop.
   void cancelDownload() {
     _service.cancel();
+  }
+
+  /// Deletes the pre-GGUF safetensors assets.
+  ///
+  /// Only ever invoked from an explicit user action — 2.9 GB is not
+  /// recoverable, and the files may still be used elsewhere.
+  Future<void> deleteLegacyAssets() async {
+    final modelsDir = ref.read(modelsDirectoryPathProvider);
+    if (modelsDir == null) return;
+    await _service.deleteLegacyAssets(modelsDir);
+    ref.invalidate(irodoriLegacyAssetBytesProvider);
   }
 }

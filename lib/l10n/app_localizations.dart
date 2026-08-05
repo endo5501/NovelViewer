@@ -334,6 +334,30 @@ abstract class AppLocalizations {
   /// **'キャプションガイダンス強度 (caption_guidance_scale)'**
   String get settings_irodoriCaptionGuidanceScale;
 
+  /// No description provided for @settings_irodoriModelVariant.
+  ///
+  /// In ja, this message translates to:
+  /// **'モデルバージョン'**
+  String get settings_irodoriModelVariant;
+
+  /// No description provided for @settings_irodoriVariantV4NoCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'v4 はキャプション非対応です。参照音声とキャプションを同時に与えると、末尾に本文にない発話が追加されるため、セグメントのメモは合成に反映されません。'**
+  String get settings_irodoriVariantV4NoCaption;
+
+  /// No description provided for @settings_irodoriLegacyAssetsFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'旧形式のモデルデータが残っています'**
+  String get settings_irodoriLegacyAssetsFound;
+
+  /// No description provided for @settings_irodoriLegacyAssetsDelete.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除して容量を解放'**
+  String get settings_irodoriLegacyAssetsDelete;
+
   /// No description provided for @settings_irodoriNumInferenceSteps.
   ///
   /// In ja, this message translates to:
