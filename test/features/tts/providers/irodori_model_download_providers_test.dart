@@ -395,4 +395,53 @@ void main() {
       );
     });
   });
+
+  group('irodoriModelDownloadProvider - legacy asset deletion', () {
+    test('a delete failure is surfaced instead of escaping as an unhandled '
+        'async error', () async {
+      // An open handle makes delete(recursive: true) throw on Windows, which
+      // is the platform the guard exists for (a memory-mapped model file is
+      // the realistic case). POSIX happily unlinks open files, so there is
+      // nothing to reproduce there.
+      final modelsDir = p.join(tempDir.path, 'models');
+      final dir = Directory(p.join(modelsDir, 'llm-jp-3-150m'))
+        ..createSync(recursive: true);
+      final locked = File(p.join(dir.path, 'locked.bin'))
+        ..writeAsBytesSync(List.filled(64, 0));
+      final handle = locked.openSync(mode: FileMode.append);
+      addTearDown(handle.closeSync);
+
+      final container = createContainer(httpClient: http.Client());
+      addTearDown(container.dispose);
+
+      await container
+          .read(irodoriModelDownloadProvider.notifier)
+          .deleteLegacyAssets();
+
+      expect(dir.existsSync(), isTrue);
+      expect(
+        container.read(irodoriModelDownloadProvider),
+        isA<IrodoriModelDownloadError>(),
+        reason: 'the user must be told the cleanup did not happen',
+      );
+    }, skip: !Platform.isWindows);
+
+    test('the reclaimable size is re-read after a delete', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final dir = Directory(p.join(modelsDir, 'llm-jp-3-150m'))
+        ..createSync(recursive: true);
+      File(p.join(dir.path, 'blob.bin')).writeAsBytesSync(List.filled(512, 0));
+
+      final container = createContainer(httpClient: http.Client());
+      addTearDown(container.dispose);
+
+      expect(container.read(irodoriLegacyAssetsProvider).present, isTrue);
+
+      await container
+          .read(irodoriModelDownloadProvider.notifier)
+          .deleteLegacyAssets();
+
+      expect(container.read(irodoriLegacyAssetsProvider).present, isFalse);
+    });
+  });
 }

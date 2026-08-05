@@ -3,7 +3,7 @@
 - [x] 1.1 Hugging Face `endo5501/audio.cpp` へ `Irodori-TTS-v4-Small-GGUF/irodori-tts-v4-small-f16.gguf` (1,762,161,536 バイト) をミラーする
 - [x] 1.2 Hugging Face `endo5501/audio.cpp` へ `Irodori-TTS-600M-v3-VoiceDesign-GGUF/irodori-tts-600m-v3-voicedesign-f16.gguf` (1,463,787,680 バイト) をミラーする
 - [x] 1.3 ミラー後の実サイズが上記 pin 値と一致することを確認する
-- [ ] 1.4 先にアップロード済みの q8_0 2本を削除する (spec で配布禁止としたため、pin の取り違えを防ぐ)
+- [x] 1.4 先にアップロード済みの q8_0 2本を削除する (spec で配布禁止としたため、pin の取り違えを防ぐ)
 
 ## 2. audio.cpp の upstream マージ
 

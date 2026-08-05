@@ -399,6 +399,63 @@ void main() {
       expect(slider.onChanged, isNull);
     });
 
+    testWidgets('the caption guidance value survives a v4 round trip',
+        (tester) async {
+      await selectIrodoriEngine(tester);
+
+      final slider = find.byKey(const Key('irodori_caption_guidance_slider'));
+      await tester.ensureVisible(slider);
+      await tester.pumpAndSettle();
+      // Move the slider off its default so a reset would be visible.
+      await tester.drag(slider, const Offset(-80, 0));
+      await tester.pumpAndSettle();
+      final moved = tester.widget<Slider>(slider).value;
+      expect(moved, isNot(3.0));
+
+      for (final v in [IrodoriModelVariant.v4, IrodoriModelVariant.v3]) {
+        // Dragging the slider scrolled the section; without this the tap
+        // lands off-screen and silently hits nothing.
+        await tester.ensureVisible(
+            find.byKey(const Key('irodori_variant_dropdown')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('irodori_variant_dropdown')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(v.label).last);
+        await tester.pumpAndSettle();
+      }
+
+      await tester.ensureVisible(slider);
+      await tester.pumpAndSettle();
+
+      // Only the control is disabled on v4; the stored value is untouched.
+      expect(tester.widget<Slider>(slider).value, moved);
+    });
+
+    testWidgets('the variant cannot be switched while a download runs',
+        (tester) async {
+      final release = StreamController<List<int>>();
+      addTearDown(() {
+        if (!release.isClosed) release.close();
+      });
+      final mockClient = MockClient.streaming((request, _) async {
+        return http.StreamedResponse(release.stream, 200, contentLength: 10);
+      });
+
+      final l10n = await selectIrodoriEngine(tester, httpClient: mockClient);
+
+      final start = find.text(l10n.settings_modelDataDownload);
+      await tester.ensureVisible(start);
+      await tester.pumpAndSettle();
+      await tester.tap(start);
+      await tester.pump();
+
+      final dropdown = tester.widget<DropdownButton<IrodoriModelVariant>>(
+        find.byKey(const Key('irodori_variant_dropdown')),
+      );
+      expect(dropdown.onChanged, isNull,
+          reason: 'switching mid-transfer would strand a multi-GB download');
+    });
+
     testWidgets('switching back to v3 re-enables the caption slider',
         (tester) async {
       await selectIrodoriEngine(tester);
