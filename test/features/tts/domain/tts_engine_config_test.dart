@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
 
@@ -62,6 +63,7 @@ void main() {
       const config = IrodoriEngineConfig(
         modelDir: '/models/irodori',
         sampleRate: 48000,
+        variant: IrodoriModelVariant.v3,
         refWavPath: '/voice/narrator.wav',
         speakerGuidanceScale: 5.0,
         captionGuidanceScale: 3.0,
@@ -80,6 +82,7 @@ void main() {
       const config = IrodoriEngineConfig(
         modelDir: '/models/irodori',
         sampleRate: 48000,
+        variant: IrodoriModelVariant.v3,
         speakerGuidanceScale: 5.0,
         captionGuidanceScale: 3.0,
         numInferenceSteps: 40,
@@ -94,6 +97,7 @@ void main() {
       const a = IrodoriEngineConfig(
         modelDir: '/models/irodori',
         sampleRate: 48000,
+        variant: IrodoriModelVariant.v3,
         refWavPath: '/voice/a.wav',
         speakerGuidanceScale: 5.0,
         captionGuidanceScale: 3.0,
@@ -102,6 +106,7 @@ void main() {
       const b = IrodoriEngineConfig(
         modelDir: '/models/irodori',
         sampleRate: 48000,
+        variant: IrodoriModelVariant.v3,
         refWavPath: '/voice/b.wav',
         speakerGuidanceScale: 4.2,
         captionGuidanceScale: 2.1,
@@ -115,6 +120,7 @@ void main() {
       const a = IrodoriEngineConfig(
         modelDir: '/models/irodori-a',
         sampleRate: 48000,
+        variant: IrodoriModelVariant.v3,
         speakerGuidanceScale: 5.0,
         captionGuidanceScale: 3.0,
         numInferenceSteps: 40,
@@ -122,6 +128,7 @@ void main() {
       const b = IrodoriEngineConfig(
         modelDir: '/models/irodori-b',
         sampleRate: 48000,
+        variant: IrodoriModelVariant.v3,
         speakerGuidanceScale: 5.0,
         captionGuidanceScale: 3.0,
         numInferenceSteps: 40,
@@ -157,6 +164,7 @@ void main() {
       const config = IrodoriEngineConfig(
         modelDir: '/models/irodori',
         sampleRate: 48000,
+        variant: IrodoriModelVariant.v3,
         refWavPath: '/voice/narrator.wav',
         speakerGuidanceScale: 5.0,
         captionGuidanceScale: 3.0,
@@ -185,6 +193,7 @@ void main() {
       const config = IrodoriEngineConfig(
         modelDir: '/models/irodori',
         sampleRate: 48000,
+        variant: IrodoriModelVariant.v3,
         speakerGuidanceScale: 4.5,
         captionGuidanceScale: 2.5,
         numInferenceSteps: 20,
@@ -244,6 +253,7 @@ void main() {
       const irodori = IrodoriEngineConfig(
         modelDir: '/m',
         sampleRate: 48000,
+        variant: IrodoriModelVariant.v3,
         speakerGuidanceScale: 5.0,
         captionGuidanceScale: 3.0,
         numInferenceSteps: 40,
@@ -346,7 +356,7 @@ void main() {
       final irodori = config as IrodoriEngineConfig;
       expect(
         irodori.modelDir,
-        p.join('/home/user', 'models', 'Irodori-TTS-600M-v3-VoiceDesign'),
+        p.join('/home/user', 'models', 'Irodori-TTS-600M-v3-VoiceDesign-GGUF'),
       );
       expect(irodori.sampleRate, 48000);
       // refWavPath is resolved through VoiceReferenceService — joins voices/,

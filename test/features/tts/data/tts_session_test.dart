@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logging/logging.dart';
+import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
@@ -268,6 +269,7 @@ void main() {
       const a = IrodoriEngineConfig(
         modelDir: '/i/m',
         sampleRate: 48000,
+        variant: IrodoriModelVariant.v3,
         refWavPath: '/voice/a.wav',
         speakerGuidanceScale: 5.0,
         captionGuidanceScale: 3.0,
@@ -276,6 +278,7 @@ void main() {
       const b = IrodoriEngineConfig(
         modelDir: '/i/m',
         sampleRate: 48000,
+        variant: IrodoriModelVariant.v3,
         refWavPath: '/voice/b.wav',
         speakerGuidanceScale: 6.0,
         captionGuidanceScale: 4.5,
@@ -770,6 +773,7 @@ Qwen3EngineConfig _qwen3() => const Qwen3EngineConfig(
 IrodoriEngineConfig _irodori() => const IrodoriEngineConfig(
       modelDir: '/i/m',
       sampleRate: 48000,
+      variant: IrodoriModelVariant.v3,
       speakerGuidanceScale: 5.0,
       captionGuidanceScale: 3.0,
       numInferenceSteps: 40,

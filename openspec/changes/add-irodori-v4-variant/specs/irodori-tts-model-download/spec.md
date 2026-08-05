@@ -1,0 +1,80 @@
+## MODIFIED Requirements
+
+### Requirement: Irodori モデル資産の一括ダウンロード
+システムは `IrodoriModelDownloadService` を提供し、endo5501 の Hugging Face リポジトリから**選択中の variant に対応する単一の GGUF ファイル**をダウンロードしなければならない (SHALL):
+
+| variant | 相対パス | バイト数 |
+|---|---|---:|
+| `v3` | `Irodori-TTS-600M-v3-VoiceDesign-GGUF/irodori-tts-600m-v3-voicedesign-f16.gguf` | 1,463,787,680 |
+| `v4` | `Irodori-TTS-v4-Small-GGUF/irodori-tts-v4-small-f16.gguf` | 1,762,161,536 |
+
+精度は **f16** でなければならない (MUST)。q8_0 パッケージを配布してはならない (MUST NOT) — ggml の Vulkan バックエンドが q8_0 重みに対して出力を定数フルスケールに飽和させるため (design D7)。
+
+GGUF は model spec / model_config / tokenizer をすべて埋め込んでいるため、兄弟ディレクトリ (`llm-jp-3-150m`, `Semantic-DACVAE-Japanese-32dim`) を配置してはならない (MUST NOT)。保存レイアウトは variant ごとのディレクトリ配下に `.gguf` を1本置く形でなければならない (MUST)。
+
+ダウンロード完了後のサイズは上表に pin した値と一致しなければならず (MUST)、一致しない場合はそのファイルを削除したうえでエラーとしなければならない (SHALL)。
+
+#### Scenario: v4 のダウンロード完了
+- **WHEN** ユーザが variant `v4` を選択してモデルダウンロードを開始し、完走する
+- **THEN** `Irodori-TTS-v4-Small-GGUF/irodori-tts-v4-small-f16.gguf` が存在し、サイズが 1,762,161,536 バイトである
+
+#### Scenario: GGUF 単体でモデルが解決できる
+- **WHEN** ダウンロード完了後に variant のディレクトリをネイティブエンジンへ渡す
+- **THEN** 兄弟ディレクトリなしでモデルのロードが成功する
+
+#### Scenario: サイズ不一致は破棄される
+- **WHEN** 転送が完了したがファイルサイズが pin 値と一致しない
+- **THEN** そのファイルは削除され、「ダウンロード済み」と判定されない
+
+### Requirement: variant ディレクトリに GGUF を複数残さない
+ネイティブローダーは variant ディレクトリに `.gguf` が複数存在するとロードを拒否する (`model directory contains N GGUF files`)。したがってダウンロードサービスは、variant ディレクトリに**目的の GGUF 以外の `.gguf` を残してはならない (MUST NOT)**。
+
+ダウンロード開始前に、目的のファイル名と異なる `.gguf` が variant ディレクトリに存在する場合は削除しなければならない (SHALL)。精度やファイル名を変更した際の旧ファイル、および中断した転送の残骸が、次回起動時にロード不能を引き起こすことを防ぐ。
+
+#### Scenario: 旧精度の GGUF が残っていると除去される
+- **WHEN** variant ディレクトリに旧いファイル名の `.gguf` が残った状態でダウンロードを実行する
+- **THEN** 旧ファイルは削除され、ディレクトリには目的の `.gguf` が1本だけ残る
+
+#### Scenario: ロード可能な状態が保たれる
+- **WHEN** ダウンロード完了後に variant ディレクトリを検査する
+- **THEN** `.gguf` はちょうど1本であり、ネイティブローダーが拒否しない
+
+### Requirement: ダウンロード進捗と状態表示
+ダウンロード中はファイル単位の進捗 (受信バイト/総バイト) を UI に通知しなければならない (SHALL)。**ダウンロード済み判定は variant ごとに独立していなければならない (MUST)。** 選択中の variant の GGUF が存在しサイズが pin 値と一致する場合に「ダウンロード済み」状態を表示し、再ダウンロードを要求してはならない (MUST NOT)。ダウンロードは既存 TTS モデルダウンロードと同様にキャンセル可能でなければならない (SHALL)。
+
+#### Scenario: 進捗の表示
+- **WHEN** 1.5GB 級の GGUF をダウンロード中
+- **THEN** 進捗インジケータが受信状況を反映して更新される
+
+#### Scenario: variant ごとに独立した判定
+- **WHEN** v3 のみダウンロード済みの状態で variant を v4 に切り替える
+- **THEN** v4 は「未ダウンロード」と表示され、v3 に戻すと「ダウンロード済み」と表示される
+
+#### Scenario: キャンセル
+- **WHEN** ダウンロード中にユーザがキャンセルする
+- **THEN** 転送が停止し、部分ファイルにより「ダウンロード済み」と誤判定されない
+
+## ADDED Requirements
+
+### Requirement: 旧 safetensors 資産の検出と後始末
+システムは旧形式 (safetensors 3ディレクトリ構成) の Irodori 資産を検出しなければならない (SHALL)。検出対象は `Irodori-TTS-600M-v3-VoiceDesign/`、`llm-jp-3-150m/`、`Semantic-DACVAE-Japanese-32dim/` である。
+
+旧資産が存在する場合、その旨と**約 2.90GB を解放できること**をユーザに提示し、**ユーザの明示的な操作によって**削除できるようにしなければならない (SHALL)。ユーザの確認なしに削除してはならない (MUST NOT)。
+
+旧資産の存在は新形式のダウンロード済み判定に影響してはならない (MUST NOT)。
+
+#### Scenario: 旧資産の検出と提示
+- **WHEN** 旧形式の safetensors 資産が残った状態で Irodori 設定セクションを開く
+- **THEN** 旧資産が残っている旨と解放可能な容量が表示され、削除操作が提供される
+
+#### Scenario: ユーザ操作による削除
+- **WHEN** ユーザが旧資産の削除を実行する
+- **THEN** 3ディレクトリが削除され、新形式の GGUF は影響を受けない
+
+#### Scenario: 確認なしには削除されない
+- **WHEN** 新形式の GGUF をダウンロードして完了する
+- **THEN** 旧資産は自動削除されず、そのまま残る
+
+#### Scenario: 旧資産があってもダウンロード済み判定は新形式で行われる
+- **WHEN** 旧 safetensors だけが存在し新形式の GGUF が無い状態で設定画面を開く
+- **THEN** 「未ダウンロード」と判定される
