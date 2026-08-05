@@ -26,6 +26,23 @@ GGUF は model spec / model_config / tokenizer をすべて埋め込んでいる
 - **WHEN** 転送が完了したがファイルサイズが pin 値と一致しない
 - **THEN** そのファイルは削除され、「ダウンロード済み」と判定されない
 
+### Requirement: ダウンロード進捗と状態表示
+ダウンロード中はファイル単位の進捗 (受信バイト/総バイト) を UI に通知しなければならない (SHALL)。**ダウンロード済み判定は variant ごとに独立していなければならない (MUST)。** 選択中の variant の GGUF が存在しサイズが pin 値と一致する場合に「ダウンロード済み」状態を表示し、再ダウンロードを要求してはならない (MUST NOT)。ダウンロードは既存 TTS モデルダウンロードと同様にキャンセル可能でなければならない (SHALL)。
+
+#### Scenario: 進捗の表示
+- **WHEN** 1.5GB 級の GGUF をダウンロード中
+- **THEN** 進捗インジケータが受信状況を反映して更新される
+
+#### Scenario: variant ごとに独立した判定
+- **WHEN** v3 のみダウンロード済みの状態で variant を v4 に切り替える
+- **THEN** v4 は「未ダウンロード」と表示され、v3 に戻すと「ダウンロード済み」と表示される
+
+#### Scenario: キャンセル
+- **WHEN** ダウンロード中にユーザがキャンセルする
+- **THEN** 転送が停止し、部分ファイルにより「ダウンロード済み」と誤判定されない
+
+## ADDED Requirements
+
 ### Requirement: variant ディレクトリに GGUF を複数残さない
 ネイティブローダーは variant ディレクトリに `.gguf` が複数存在するとロードを拒否する (`model directory contains N GGUF files`)。したがってダウンロードサービスは、variant ディレクトリに**目的の GGUF 以外の `.gguf` を残してはならない (MUST NOT)**。
 
@@ -65,23 +82,6 @@ UI はダウンロード中の variant 切替操作を無効化しなければ�
 #### Scenario: 二重ダウンロードが開始されない
 - **WHEN** 転送が実行中の状態でダウンロード開始を再度要求する
 - **THEN** 2本目の転送は開始されない
-
-### Requirement: ダウンロード進捗と状態表示
-ダウンロード中はファイル単位の進捗 (受信バイト/総バイト) を UI に通知しなければならない (SHALL)。**ダウンロード済み判定は variant ごとに独立していなければならない (MUST)。** 選択中の variant の GGUF が存在しサイズが pin 値と一致する場合に「ダウンロード済み」状態を表示し、再ダウンロードを要求してはならない (MUST NOT)。ダウンロードは既存 TTS モデルダウンロードと同様にキャンセル可能でなければならない (SHALL)。
-
-#### Scenario: 進捗の表示
-- **WHEN** 1.5GB 級の GGUF をダウンロード中
-- **THEN** 進捗インジケータが受信状況を反映して更新される
-
-#### Scenario: variant ごとに独立した判定
-- **WHEN** v3 のみダウンロード済みの状態で variant を v4 に切り替える
-- **THEN** v4 は「未ダウンロード」と表示され、v3 に戻すと「ダウンロード済み」と表示される
-
-#### Scenario: キャンセル
-- **WHEN** ダウンロード中にユーザがキャンセルする
-- **THEN** 転送が停止し、部分ファイルにより「ダウンロード済み」と誤判定されない
-
-## ADDED Requirements
 
 ### Requirement: 旧 safetensors 資産の検出と後始末
 システムは旧形式 (safetensors 3ディレクトリ構成) の Irodori 資産を検出しなければならない (SHALL)。検出対象は `Irodori-TTS-600M-v3-VoiceDesign/`、`llm-jp-3-150m/`、`Semantic-DACVAE-Japanese-32dim/` である。
