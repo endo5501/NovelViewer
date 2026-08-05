@@ -43,6 +43,7 @@
   "settings_irodoriVariantV4NoCaption": "v4 不支持字幕。同时提供参考语音和字幕会在结尾追加正文中不存在的语音，因此片段备注不会应用于合成。",
   "settings_irodoriLegacyAssetsFound": "仍存在旧格式的模型数据",
   "settings_irodoriLegacyAssetsDelete": "删除以释放空间",
+  "settings_irodoriLegacyAssetsConfirm": "将删除旧格式的模型数据。此操作无法撤销。",
   "settings_irodoriNumInferenceSteps": "推理步数 (num_inference_steps)",
   "settings_voiceModelTitle": "语音模型",
   "settings_voiceModelSmall": "快速 (0.6B)",

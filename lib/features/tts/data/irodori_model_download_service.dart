@@ -101,14 +101,20 @@ class IrodoriModelDownloadService {
   String ggufPath(String modelsDir, IrodoriModelVariant variant) =>
       p.join(modelsDir, variant.modelDirName, variant.ggufFileName);
 
-  /// Whether [variant] is present and matches its pinned size.
+  /// Whether [variant] is present, matches its pinned size, and can actually
+  /// be loaded.
   ///
-  /// Judged per variant: having v3 on disk says nothing about v4.
+  /// Judged per variant: having v3 on disk says nothing about v4. A second
+  /// `.gguf` in the directory counts as not-downloaded even when the target
+  /// file itself is intact, because the native loader refuses such a
+  /// directory outright — reporting "downloaded" there would strand the user
+  /// with a model the app cannot load.
   bool isModelDownloaded(String modelsDir, IrodoriModelVariant variant) {
     final expectedSize = _expectedFileSizes[variant];
     if (expectedSize == null) return false;
     final file = File(ggufPath(modelsDir, variant));
-    return file.existsSync() && file.lengthSync() == expectedSize;
+    if (!file.existsSync() || file.lengthSync() != expectedSize) return false;
+    return _foreignGgufs(file.parent, keep: variant.ggufFileName).isEmpty;
   }
 
   Future<void> downloadModel(
@@ -121,20 +127,22 @@ class IrodoriModelDownloadService {
     final localPath = ggufPath(modelsDir, variant);
     final fileName = variant.ggufFileName;
 
-    if (isModelDownloaded(modelsDir, variant)) {
-      onProgress?.call(fileName, 1.0);
-      return;
-    }
-
     final variantDir = Directory(p.dirname(localPath));
     if (!variantDir.existsSync()) {
       await variantDir.create(recursive: true);
     }
 
-    // The native loader refuses to start when a model directory holds more
-    // than one .gguf, so an old precision's file or a stray partial download
-    // would break loading even after this transfer succeeds.
+    // Runs before the "already downloaded" check below, not after it. The
+    // native loader refuses a directory holding more than one .gguf, so a
+    // leftover from an earlier precision leaves the model unloadable even
+    // though the target file is intact — and skipping the cleanup on the
+    // early return would leave no way to recover from inside the app.
     _removeForeignGgufs(variantDir, keep: fileName);
+
+    if (isModelDownloaded(modelsDir, variant)) {
+      onProgress?.call(fileName, 1.0);
+      return;
+    }
 
     try {
       await downloadFile(
@@ -201,13 +209,28 @@ class IrodoriModelDownloadService {
     }
   }
 
-  /// Removes every `.gguf` in [dir] other than [keep].
+  /// Files in [dir] that would stop the native loader: any `.gguf` other than
+  /// [keep], plus `.part` leftovers from an interrupted transfer.
+  ///
+  /// `.part` files are matched explicitly — `downloadFile` writes to
+  /// `<name>.gguf.part`, which does not end in `.gguf`, so a process killed
+  /// mid-transfer would otherwise strand ~1.5 GB that nothing cleans up.
+  List<File> _foreignGgufs(Directory dir, {String? keep}) {
+    if (!dir.existsSync()) return const [];
+    return [
+      for (final entity in dir.listSync(followLinks: false))
+        if (entity is File)
+          if (p.basename(entity.path) != keep &&
+              (entity.path.endsWith('.gguf') ||
+                  entity.path.endsWith('.gguf.part')))
+            entity,
+    ];
+  }
+
+  /// Removes everything [_foreignGgufs] reports for [dir].
   void _removeForeignGgufs(Directory dir, {required String keep}) {
-    for (final entity in dir.listSync(followLinks: false)) {
-      if (entity is! File) continue;
-      final name = p.basename(entity.path);
-      if (name == keep || !name.endsWith('.gguf')) continue;
-      entity.deleteSync();
+    for (final file in _foreignGgufs(dir, keep: keep)) {
+      file.deleteSync();
     }
   }
 }

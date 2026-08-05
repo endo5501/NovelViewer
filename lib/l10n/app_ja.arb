@@ -50,6 +50,7 @@
   "settings_irodoriVariantV4NoCaption": "v4 はキャプション非対応です。参照音声とキャプションを同時に与えると、末尾に本文にない発話が追加されるため、セグメントのメモは合成に反映されません。",
   "settings_irodoriLegacyAssetsFound": "旧形式のモデルデータが残っています",
   "settings_irodoriLegacyAssetsDelete": "削除して容量を解放",
+  "settings_irodoriLegacyAssetsConfirm": "旧形式のモデルデータを削除します。この操作は取り消せません。",
   "settings_irodoriNumInferenceSteps": "推論ステップ数 (num_inference_steps)",
   "settings_voiceModelTitle": "音声モデル",
   "settings_voiceModelSmall": "高速 (0.6B)",

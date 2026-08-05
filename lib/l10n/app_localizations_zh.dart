@@ -143,6 +143,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settings_irodoriLegacyAssetsDelete => '删除以释放空间';
 
   @override
+  String get settings_irodoriLegacyAssetsConfirm => '将删除旧格式的模型数据。此操作无法撤销。';
+
+  @override
   String get settings_irodoriNumInferenceSteps => '推理步数 (num_inference_steps)';
 
   @override

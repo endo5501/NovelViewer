@@ -358,6 +358,12 @@ abstract class AppLocalizations {
   /// **'削除して容量を解放'**
   String get settings_irodoriLegacyAssetsDelete;
 
+  /// No description provided for @settings_irodoriLegacyAssetsConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'旧形式のモデルデータを削除します。この操作は取り消せません。'**
+  String get settings_irodoriLegacyAssetsConfirm;
+
   /// No description provided for @settings_irodoriNumInferenceSteps.
   ///
   /// In ja, this message translates to:

@@ -143,6 +143,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settings_irodoriLegacyAssetsDelete => '削除して容量を解放';
 
   @override
+  String get settings_irodoriLegacyAssetsConfirm =>
+      '旧形式のモデルデータを削除します。この操作は取り消せません。';
+
+  @override
   String get settings_irodoriNumInferenceSteps =>
       '推論ステップ数 (num_inference_steps)';
 

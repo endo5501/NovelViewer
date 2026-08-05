@@ -47,6 +47,10 @@ class _IrodoriVariantSelector extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final variant = ref.watch(irodoriModelVariantProvider);
+    // Switching mid-transfer is guarded in the notifier too, but stopping it
+    // here keeps the user from starting something the app then has to undo.
+    final downloading =
+        ref.watch(irodoriModelDownloadProvider) is IrodoriModelDownloadDownloading;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -63,10 +67,14 @@ class _IrodoriVariantSelector extends ConsumerWidget {
               for (final v in IrodoriModelVariant.values)
                 DropdownMenuItem(value: v, child: Text(v.label)),
             ],
-            onChanged: (value) {
-              if (value == null) return;
-              ref.read(irodoriModelVariantProvider.notifier).setValue(value);
-            },
+            onChanged: downloading
+                ? null
+                : (value) {
+                    if (value == null) return;
+                    ref
+                        .read(irodoriModelVariantProvider.notifier)
+                        .setValue(value);
+                  },
           ),
           if (!variant.supportsCaption) ...[
             const SizedBox(height: 8),
@@ -92,27 +100,59 @@ class _IrodoriLegacyAssetsNotice extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final bytes = ref.watch(irodoriLegacyAssetBytesProvider);
-    if (bytes <= 0) return const SizedBox.shrink();
+    final legacy = ref.watch(irodoriLegacyAssetsProvider);
+    // Keyed off presence, not size: a directory left empty by a partial
+    // delete frees 0 bytes but must stay reachable for cleanup.
+    if (!legacy.present) return const SizedBox.shrink();
 
-    final gib = (bytes / (1024 * 1024 * 1024)).toStringAsFixed(2);
+    // Decimal GB, matching how the model sizes are quoted everywhere else
+    // (the legacy assets total 2,904,288,926 bytes = 2.90 GB).
+    final gb = (legacy.bytes / 1000000000).toStringAsFixed(2);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('${l10n.settings_irodoriLegacyAssetsFound} ($gib GB)'),
+          Text('${l10n.settings_irodoriLegacyAssetsFound} ($gb GB)'),
           const SizedBox(height: 4),
           OutlinedButton(
             key: const Key('irodori_delete_legacy_assets'),
-            onPressed: () => ref
-                .read(irodoriModelDownloadProvider.notifier)
-                .deleteLegacyAssets(),
+            onPressed: () => _confirmAndDelete(context, ref, l10n, gb),
             child: Text(l10n.settings_irodoriLegacyAssetsDelete),
           ),
         ],
       ),
     );
+  }
+
+  /// Deleting ~2.9 GB is not reversible, so a single mis-tap must not do it.
+  Future<void> _confirmAndDelete(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+    String gb,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        key: const Key('irodori_delete_legacy_confirm_dialog'),
+        title: Text(l10n.settings_irodoriLegacyAssetsDelete),
+        content: Text('${l10n.settings_irodoriLegacyAssetsConfirm} ($gb GB)'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.common_cancelButton),
+          ),
+          TextButton(
+            key: const Key('irodori_delete_legacy_confirm'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.settings_irodoriLegacyAssetsDelete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(irodoriModelDownloadProvider.notifier).deleteLegacyAssets();
   }
 }
 

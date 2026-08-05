@@ -128,6 +128,72 @@ void main() {
           File(ggufPath(modelsDir, IrodoriModelVariant.v3)).existsSync(), isTrue);
     });
 
+    test('cleans a foreign .gguf even when the target is already complete',
+        () async {
+      // The early "already downloaded" return used to skip the cleanup, so a
+      // directory holding both the correct f16 and a leftover q8_0 stayed
+      // unloadable while the UI reported "downloaded" — with no way to
+      // recover from inside the app.
+      final modelsDir = p.join(tempDir.path, 'models');
+      final service = IrodoriModelDownloadService(
+        client: okClient(),
+        expectedFileSizes: fakeManifest(),
+      );
+      await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
+
+      final stale = File(p.join(modelsDir, IrodoriModelVariant.v3.modelDirName,
+          'irodori-tts-600m-v3-voicedesign-q8_0.gguf'))
+        ..writeAsBytesSync([1, 2, 3]);
+
+      await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
+
+      expect(stale.existsSync(), isFalse);
+      expect(
+          File(ggufPath(modelsDir, IrodoriModelVariant.v3)).existsSync(), isTrue);
+    });
+
+    test('isModelDownloaded is false while a second .gguf makes it unloadable',
+        () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final service = IrodoriModelDownloadService(
+        client: okClient(),
+        expectedFileSizes: fakeManifest(),
+      );
+      await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
+      expect(
+          service.isModelDownloaded(modelsDir, IrodoriModelVariant.v3), isTrue);
+
+      File(p.join(modelsDir, IrodoriModelVariant.v3.modelDirName,
+              'irodori-tts-600m-v3-voicedesign-q8_0.gguf'))
+          .writeAsBytesSync([1, 2, 3]);
+
+      expect(
+        service.isModelDownloaded(modelsDir, IrodoriModelVariant.v3),
+        isFalse,
+        reason: 'the native loader refuses a directory with two .gguf files',
+      );
+    });
+
+    test('removes a stray .part left by a killed process', () async {
+      // downloadFile writes to "<name>.gguf.part"; a hard kill leaves ~1.5 GB
+      // of orphan behind that nothing else cleans up.
+      final modelsDir = p.join(tempDir.path, 'models');
+      final variantDir =
+          Directory(p.join(modelsDir, IrodoriModelVariant.v3.modelDirName))
+            ..createSync(recursive: true);
+      final orphan = File(p.join(
+          variantDir.path, '${IrodoriModelVariant.v3.ggufFileName}.part'))
+        ..writeAsBytesSync([1, 2, 3]);
+
+      final service = IrodoriModelDownloadService(
+        client: okClient(),
+        expectedFileSizes: fakeManifest(),
+      );
+      await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
+
+      expect(orphan.existsSync(), isFalse);
+    });
+
     test('pins the real byte sizes by default', () {
       // The service must default to the sizes pinned on the variant, not to
       // whatever a download happens to report.

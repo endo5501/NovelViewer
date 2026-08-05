@@ -451,5 +451,94 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('deleting asks for confirmation first', (tester) async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final dir = Directory(p.join(modelsDir, 'llm-jp-3-150m'))
+        ..createSync(recursive: true);
+      File(p.join(dir.path, 'tokenizer.json'))
+          .writeAsBytesSync(List.filled(1024, 0));
+
+      await selectIrodoriEngine(tester);
+      await tester.ensureVisible(
+          find.byKey(const Key('irodori_delete_legacy_assets')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('irodori_delete_legacy_assets')));
+      await tester.pumpAndSettle();
+
+      // ~2.9 GB is not recoverable, so a single mis-tap must not delete it.
+      expect(
+        find.byKey(const Key('irodori_delete_legacy_confirm_dialog')),
+        findsOneWidget,
+      );
+      expect(dir.existsSync(), isTrue);
+    });
+
+    testWidgets('dismissing the confirmation keeps the assets', (tester) async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final dir = Directory(p.join(modelsDir, 'llm-jp-3-150m'))
+        ..createSync(recursive: true);
+      File(p.join(dir.path, 'tokenizer.json'))
+          .writeAsBytesSync(List.filled(1024, 0));
+
+      final l10n = await selectIrodoriEngine(tester);
+      await tester.ensureVisible(
+          find.byKey(const Key('irodori_delete_legacy_assets')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('irodori_delete_legacy_assets')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.common_cancelButton).last);
+      await tester.pumpAndSettle();
+
+      expect(dir.existsSync(), isTrue);
+    });
+
+    testWidgets('confirming deletes the assets', (tester) async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final dir = Directory(p.join(modelsDir, 'llm-jp-3-150m'))
+        ..createSync(recursive: true);
+      File(p.join(dir.path, 'tokenizer.json'))
+          .writeAsBytesSync(List.filled(1024, 0));
+
+      await selectIrodoriEngine(tester);
+      await tester.ensureVisible(
+          find.byKey(const Key('irodori_delete_legacy_assets')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('irodori_delete_legacy_assets')));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const Key('irodori_delete_legacy_confirm')));
+      });
+      await tester.pumpAndSettle();
+
+      expect(dir.existsSync(), isFalse);
+    });
+
+    testWidgets('an empty leftover directory still offers cleanup',
+        (tester) async {
+      // A partial delete can leave the directory with no files at all; it
+      // frees 0 bytes but must stay reachable.
+      final modelsDir = p.join(tempDir.path, 'models');
+      Directory(p.join(modelsDir, 'llm-jp-3-150m')).createSync(recursive: true);
+
+      await selectIrodoriEngine(tester);
+
+      expect(find.byKey(const Key('irodori_delete_legacy_assets')),
+          findsOneWidget);
+    });
+
+    testWidgets('reports the size in decimal GB', (tester) async {
+      // 2,000,000,000 bytes is 2.00 GB decimal but 1.86 GiB; the spec quotes
+      // the model sizes in decimal GB, so the UI must match.
+      final modelsDir = p.join(tempDir.path, 'models');
+      final dir = Directory(p.join(modelsDir, 'llm-jp-3-150m'))
+        ..createSync(recursive: true);
+      File(p.join(dir.path, 'blob.bin'))
+          .writeAsBytesSync(List.filled(2000000000, 0));
+
+      await selectIrodoriEngine(tester);
+
+      expect(find.textContaining('2.00 GB'), findsOneWidget);
+    });
   });
 }

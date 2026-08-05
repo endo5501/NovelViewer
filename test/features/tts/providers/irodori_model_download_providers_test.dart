@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
+import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/features/tts/providers/irodori_model_download_providers.dart';
 
 void main() {
@@ -273,6 +274,125 @@ void main() {
       expect(state, isA<IrodoriModelDownloadCompleted>());
       final completed = state as IrodoriModelDownloadCompleted;
       expect(completed.modelsDir, p.join(tempDir.path, 'models'));
+    });
+  });
+
+  group('irodoriModelDownloadProvider - variant switched mid-download', () {
+    /// Serves a body that only completes once [release] is closed, so a
+    /// download can be held open while the variant is switched underneath it.
+    ({http.Client client, StreamController<List<int>> release}) heldClient(
+        int totalBytes) {
+      final release = StreamController<List<int>>();
+      final client = MockClient.streaming((request, _) async {
+        return http.StreamedResponse(release.stream, 200,
+            contentLength: totalBytes);
+      });
+      return (client: client, release: release);
+    }
+
+    test('an in-flight transfer must not mark the newly selected variant as '
+        'downloaded', () async {
+      // The body matches the manifest, so without the guard this transfer
+      // would complete successfully and set Completed.
+      final held = heldClient(5);
+      final container = createContainer(httpClient: held.client);
+      addTearDown(container.dispose);
+
+      // Mirrors the settings UI watching the provider: without a listener
+      // Riverpod rebuilds lazily on the next read, which would overwrite the
+      // stale write and hide the defect.
+      container.listen(irodoriModelDownloadProvider, (_, _) {});
+
+      final notifier = container.read(irodoriModelDownloadProvider.notifier);
+      final future = notifier.startDownload();
+
+      // Switching rebuilds the notifier; the transfer already running belongs
+      // to the previous variant and must not speak for the new one.
+      await container
+          .read(irodoriModelVariantProvider.notifier)
+          .setValue(IrodoriModelVariant.v4);
+
+      held.release.add(List.filled(5, 0));
+      await held.release.close();
+      await future;
+
+      expect(
+        container.read(irodoriModelDownloadProvider),
+        isNot(isA<IrodoriModelDownloadCompleted>()),
+        reason: 'v4 was never downloaded, so it must still offer the download',
+      );
+    });
+
+    test('cancel reaches the transfer that is actually running', () async {
+      // The manifest matches the full 10-byte body, so the file would exist
+      // if the transfer ran to completion — its absence is the evidence that
+      // the cancel reached the service actually on the wire.
+      final held = heldClient(10);
+      final container = createContainer(
+        httpClient: held.client,
+        expectedFileSizes: {
+          for (final v in IrodoriModelVariant.values) v: 10,
+        },
+      );
+      addTearDown(container.dispose);
+
+      container.listen(irodoriModelDownloadProvider, (_, _) {});
+
+      final notifier = container.read(irodoriModelDownloadProvider.notifier);
+      final future = notifier.startDownload();
+
+      await container
+          .read(irodoriModelVariantProvider.notifier)
+          .setValue(IrodoriModelVariant.v4);
+
+      // Cancelling after the rebuild must stop the multi-GB transfer that is
+      // still on the wire, not a fresh service that owns nothing.
+      notifier.cancelDownload();
+
+      held.release.add(List.filled(5, 0));
+      await Future<void>.delayed(Duration.zero);
+      held.release.add(List.filled(5, 0));
+      // Not awaited: once downloadFile cancels its subscription the
+      // controller's close() never completes, which would hang the test.
+      unawaited(held.release.close());
+      await future;
+
+      expect(
+        File(p.join(tempDir.path, 'models',
+                IrodoriModelVariant.v3.modelDirName,
+                IrodoriModelVariant.v3.ggufFileName))
+            .existsSync(),
+        isFalse,
+        reason: 'a cancelled transfer must not leave a finished file',
+      );
+    });
+
+    test('a second download cannot start while one is in flight', () async {
+      final held = heldClient(5);
+      final container = createContainer(httpClient: held.client);
+      addTearDown(container.dispose);
+
+      container.listen(irodoriModelDownloadProvider, (_, _) {});
+
+      final notifier = container.read(irodoriModelDownloadProvider.notifier);
+      final first = notifier.startDownload();
+
+      // The rebuild resets state to idle, which used to defeat the
+      // "already downloading" guard and allow a concurrent transfer.
+      await container
+          .read(irodoriModelVariantProvider.notifier)
+          .setValue(IrodoriModelVariant.v4);
+
+      await notifier.startDownload();
+
+      held.release.add(List.filled(5, 0));
+      await held.release.close();
+      await first;
+
+      expect(
+        container.read(irodoriModelDownloadProvider),
+        isNot(isA<IrodoriModelDownloadCompleted>()),
+      );
     });
   });
 }

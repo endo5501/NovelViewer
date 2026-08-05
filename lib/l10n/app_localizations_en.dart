@@ -145,6 +145,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings_irodoriLegacyAssetsDelete => 'Delete to reclaim space';
 
   @override
+  String get settings_irodoriLegacyAssetsConfirm =>
+      'Delete the old-format model data. This cannot be undone.';
+
+  @override
   String get settings_irodoriNumInferenceSteps =>
       'Inference steps (num_inference_steps)';
 
