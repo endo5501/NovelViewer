@@ -862,6 +862,18 @@ abstract class AppLocalizations {
   /// **'未生成'**
   String get ttsEdit_ungeneratedStatus;
 
+  /// No description provided for @ttsEdit_skippedStatus.
+  ///
+  /// In ja, this message translates to:
+  /// **'スキップ（音声生成なし）'**
+  String get ttsEdit_skippedStatus;
+
+  /// No description provided for @ttsEdit_skipToggleHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'クリックで読み上げの対象/対象外を切り替え'**
+  String get ttsEdit_skipToggleHint;
+
   /// No description provided for @ttsEdit_referenceSettingValue.
   ///
   /// In ja, this message translates to:
@@ -1167,6 +1179,24 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'表記と読みの両方を入力してください'**
   String get ttsDictionary_bothFieldsRequired;
+
+  /// No description provided for @ttsDictionary_surfaceRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'表記を入力してください'**
+  String get ttsDictionary_surfaceRequired;
+
+  /// No description provided for @ttsDictionary_noReadingLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み上げしない'**
+  String get ttsDictionary_noReadingLabel;
+
+  /// No description provided for @ttsDictionary_noReadingDisplay.
+  ///
+  /// In ja, this message translates to:
+  /// **'（読み上げなし）'**
+  String get ttsDictionary_noReadingDisplay;
 
   /// No description provided for @ttsDictionary_duplicateEntry.
   ///

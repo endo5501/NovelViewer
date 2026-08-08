@@ -443,6 +443,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ttsEdit_ungeneratedStatus => 'Not generated';
 
   @override
+  String get ttsEdit_skippedStatus => 'Skipped (no audio generated)';
+
+  @override
+  String get ttsEdit_skipToggleHint =>
+      'Click to include or exclude this line from reading';
+
+  @override
   String get ttsEdit_referenceSettingValue => 'Setting value';
 
   @override
@@ -612,6 +619,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ttsDictionary_bothFieldsRequired =>
       'Both surface form and reading are required';
+
+  @override
+  String get ttsDictionary_surfaceRequired => 'A surface form is required';
+
+  @override
+  String get ttsDictionary_noReadingLabel => 'Do not read aloud';
+
+  @override
+  String get ttsDictionary_noReadingDisplay => '(not read aloud)';
 
   @override
   String get ttsDictionary_duplicateEntry =>

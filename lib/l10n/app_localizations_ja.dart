@@ -431,6 +431,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ttsEdit_ungeneratedStatus => '未生成';
 
   @override
+  String get ttsEdit_skippedStatus => 'スキップ（音声生成なし）';
+
+  @override
+  String get ttsEdit_skipToggleHint => 'クリックで読み上げの対象/対象外を切り替え';
+
+  @override
   String get ttsEdit_referenceSettingValue => '設定値';
 
   @override
@@ -598,6 +604,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ttsDictionary_bothFieldsRequired => '表記と読みの両方を入力してください';
+
+  @override
+  String get ttsDictionary_surfaceRequired => '表記を入力してください';
+
+  @override
+  String get ttsDictionary_noReadingLabel => '読み上げしない';
+
+  @override
+  String get ttsDictionary_noReadingDisplay => '（読み上げなし）';
 
   @override
   String get ttsDictionary_duplicateEntry => '同じ表記が既に登録されています';

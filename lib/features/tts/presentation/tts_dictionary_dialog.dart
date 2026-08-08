@@ -41,6 +41,10 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
   final _readingController = TextEditingController();
   String? _addError;
 
+  /// When set, the entry being added has no reading: the surface is dropped
+  /// from the synthesis text instead of being replaced.
+  bool _noReading = false;
+
   @override
   void initState() {
     super.initState();
@@ -67,10 +71,20 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
 
   Future<void> _addEntry() async {
     final surface = _surfaceController.text.trim();
-    final reading = _readingController.text.trim();
+    // Read from the checkbox rather than the field: the field keeps showing
+    // whatever was typed before the box was ticked, and that text must not
+    // reach the database.
+    final reading = _noReading ? '' : _readingController.text.trim();
+    final l10n = AppLocalizations.of(context)!;
 
-    if (surface.isEmpty || reading.isEmpty) {
-      setState(() => _addError = AppLocalizations.of(context)!.ttsDictionary_bothFieldsRequired);
+    if (surface.isEmpty) {
+      setState(() => _addError = _noReading
+          ? l10n.ttsDictionary_surfaceRequired
+          : l10n.ttsDictionary_bothFieldsRequired);
+      return;
+    }
+    if (!_noReading && reading.isEmpty) {
+      setState(() => _addError = l10n.ttsDictionary_bothFieldsRequired);
       return;
     }
 
@@ -78,7 +92,10 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
       await widget.repository.addEntry(surface, reading);
       _surfaceController.clear();
       _readingController.clear();
-      setState(() => _addError = null);
+      setState(() {
+        _addError = null;
+        _noReading = false;
+      });
       await _loadEntries();
     } catch (e) {
       setState(() => _addError = AppLocalizations.of(context)!.ttsDictionary_duplicateEntry);
@@ -144,6 +161,7 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
         Expanded(
           child: TextField(
             controller: _readingController,
+            enabled: !_noReading,
             decoration: InputDecoration(
               labelText: AppLocalizations.of(context)!.ttsDictionary_readingLabel,
               hintText: AppLocalizations.of(context)!.ttsDictionary_readingHint,
@@ -151,6 +169,26 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
               border: const OutlineInputBorder(),
             ),
             onSubmitted: (_) => _addEntry(),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Ticking this stores an empty reading, which the substitution treats
+        // as a deletion — for symbol runs like "――‐" that carry no sound.
+        Tooltip(
+          message: AppLocalizations.of(context)!.ttsDictionary_noReadingLabel,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Checkbox(
+                value: _noReading,
+                onChanged: (value) =>
+                    setState(() => _noReading = value ?? false),
+              ),
+              Text(
+                AppLocalizations.of(context)!.ttsDictionary_noReadingLabel,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
           ),
         ),
         const SizedBox(width: 8),
@@ -183,10 +221,23 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
       separatorBuilder: (context, idx) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final entry = _entries[index];
+        final isNoReading = entry.reading.isEmpty;
         return ListTile(
           dense: true,
           title: Text(entry.surface),
-          subtitle: Text(entry.reading),
+          // An empty subtitle would read as a broken row rather than a
+          // deliberate "not read aloud" entry.
+          subtitle: Text(
+            isNoReading
+                ? AppLocalizations.of(context)!.ttsDictionary_noReadingDisplay
+                : entry.reading,
+            style: isNoReading
+                ? TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: Theme.of(context).colorScheme.outline,
+                  )
+                : null,
+          ),
           trailing: IconButton(
             icon: const Icon(Icons.delete_outline),
             tooltip: AppLocalizations.of(context)!.ttsDictionary_deleteTooltip,

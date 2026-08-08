@@ -429,6 +429,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ttsEdit_ungeneratedStatus => '未生成';
 
   @override
+  String get ttsEdit_skippedStatus => '跳过（不生成语音）';
+
+  @override
+  String get ttsEdit_skipToggleHint => '点击以切换是否朗读该句';
+
+  @override
   String get ttsEdit_referenceSettingValue => '设置值';
 
   @override
@@ -595,6 +601,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ttsDictionary_bothFieldsRequired => '请同时输入表记和读音';
+
+  @override
+  String get ttsDictionary_surfaceRequired => '请输入表记';
+
+  @override
+  String get ttsDictionary_noReadingLabel => '不朗读';
+
+  @override
+  String get ttsDictionary_noReadingDisplay => '（不朗读）';
 
   @override
   String get ttsDictionary_duplicateEntry => '已存在相同表记的条目';
