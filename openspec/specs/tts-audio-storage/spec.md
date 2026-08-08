@@ -41,7 +41,9 @@ The `tts_episodes` table SHALL store per-episode audio generation state with the
 - **THEN** the `text_hash` column is added via `ALTER TABLE` with NULL default, and existing episodes continue to function (NULL text_hash triggers regeneration on next access)
 
 ### Requirement: TTS segments table schema
-The `tts_segments` table SHALL store per-sentence audio data with the following columns: `id` (INTEGER PRIMARY KEY AUTOINCREMENT), `episode_id` (INTEGER NOT NULL — foreign key to tts_episodes), `segment_index` (INTEGER NOT NULL — 0-based sentence order), `text` (TEXT NOT NULL — the sentence text, may be edited by user for pronunciation correction), `text_offset` (INTEGER NOT NULL — position in original text), `text_length` (INTEGER NOT NULL — length in original text), `audio_data` (BLOB — WAV file bytes with header, NULL when segment has no generated audio), `sample_count` (INTEGER — number of audio samples, NULL when segment has no generated audio), `ref_wav_path` (TEXT — voice cloning reference for this segment, nullable), `memo` (TEXT — user memo for future control instruction support, nullable), `created_at` (TEXT NOT NULL). A unique index SHALL exist on `(episode_id, segment_index)`. A foreign key constraint on `episode_id` SHALL reference `tts_episodes(id)` with CASCADE delete.
+The `tts_segments` table SHALL store per-sentence audio data with the following columns: `id` (INTEGER PRIMARY KEY AUTOINCREMENT), `episode_id` (INTEGER NOT NULL — foreign key to tts_episodes), `segment_index` (INTEGER NOT NULL — 0-based sentence order), `text` (TEXT NOT NULL — the sentence text, may be edited by user for pronunciation correction), `text_offset` (INTEGER NOT NULL — position in original text), `text_length` (INTEGER NOT NULL — length in original text), `audio_data` (BLOB — WAV file bytes with header, NULL when segment has no generated audio), `sample_count` (INTEGER — number of audio samples, NULL when segment has no generated audio), `ref_wav_path` (TEXT — voice cloning reference for this segment, nullable), `memo` (TEXT — user memo for future control instruction support, nullable), `skip` (INTEGER NOT NULL DEFAULT 0 — 1 when the segment is excluded from synthesis, playback, and export; 0 otherwise), `created_at` (TEXT NOT NULL). A unique index SHALL exist on `(episode_id, segment_index)`. A foreign key constraint on `episode_id` SHALL reference `tts_episodes(id)` with CASCADE delete.
+
+A segment with `skip = 1` MAY still hold non-NULL `audio_data`: marking a segment as skipped SHALL NOT delete its stored audio, so that un-skipping restores playback without regeneration.
 
 #### Scenario: Insert segment with WAV BLOB
 - **WHEN** a sentence audio is generated and saved
@@ -63,8 +65,20 @@ The `tts_segments` table SHALL store per-sentence audio data with the following 
 - **WHEN** an existing `tts_audio.db` database at version 2 is opened
 - **THEN** the `tts_segments` table is recreated with `audio_data` and `sample_count` as nullable columns and `memo` column added, all existing data is preserved, and the unique index is recreated
 
+#### Scenario: Migrate existing database to version 4
+- **WHEN** an existing `tts_audio.db` database at version 3 is opened
+- **THEN** the `skip` column is added to `tts_segments` via `ALTER TABLE ... ADD COLUMN skip INTEGER NOT NULL DEFAULT 0`, all existing data is preserved, and every existing segment reads `skip = 0`
+
+#### Scenario: Newly inserted segments default to not skipped
+- **WHEN** `insertSegment()` is called without an explicit skip value
+- **THEN** the created record has `skip = 0`
+
+#### Scenario: Skipped segment retains its audio
+- **WHEN** a segment with non-NULL `audio_data` is marked with `skip = 1`
+- **THEN** the `audio_data` and `sample_count` columns are left unchanged
+
 ### Requirement: TTS audio repository CRUD operations
-The system SHALL provide a `TtsAudioRepository` class with methods to: create an episode record (with text_hash), insert segment records (with or without audio_data), update a segment's text (setting audio_data and sample_count to NULL), update a segment's audio_data and sample_count, update a segment's ref_wav_path, update a segment's memo, query episode status by file_name, retrieve all segments for an episode ordered by segment_index, get the count of stored segments for an episode, get the count of segments with non-NULL audio_data for an episode, delete a single segment by episode_id and segment_index, delete an episode (cascading to segments), and retrieve all episode statuses as a map of file_name to TtsEpisodeStatus. The repository SHALL NOT provide a text-offset-based segment lookup: resolving a playback start position is the responsibility of the streaming controller, which resolves it against the freshly segmented text rather than against the sparse set of stored rows. All read methods that return row data SHALL return typed DTO instances (`TtsEpisode`, `TtsSegment`) or `null`/empty collections; raw `Map<String, Object?>` SHALL NOT be returned across the repository boundary.
+The system SHALL provide a `TtsAudioRepository` class with methods to: create an episode record (with text_hash), insert segment records (with or without audio_data, and with an optional skip flag defaulting to not-skipped), update a segment's text (setting audio_data and sample_count to NULL), update a segment's audio_data and sample_count, update a segment's ref_wav_path, update a segment's memo, update a segment's skip flag, query episode status by file_name, retrieve all segments for an episode ordered by segment_index, get the count of stored segments for an episode, get the count of segments that are considered satisfied — those with non-NULL audio_data **or** `skip = 1` — for an episode, get the count of segments that hold audio (non-NULL audio_data only, regardless of skip) for an episode, delete a single segment by episode_id and segment_index, delete an episode (cascading to segments), and retrieve all episode statuses as a map of file_name to TtsEpisodeStatus. Updating a segment's skip flag SHALL NOT modify its audio_data or sample_count. The repository SHALL NOT provide a text-offset-based segment lookup: resolving a playback start position is the responsibility of the streaming controller, which resolves it against the freshly segmented text rather than against the sparse set of stored rows. All read methods that return row data SHALL return typed DTO instances (`TtsEpisode`, `TtsSegment`) or `null`/empty collections; raw `Map<String, Object?>` SHALL NOT be returned across the repository boundary.
 
 #### Scenario: Check if episode has audio
 - **WHEN** `findEpisodeByFileName("0001_プロローグ.txt")` is called
@@ -110,13 +124,41 @@ The system SHALL provide a `TtsAudioRepository` class with methods to: create an
 - **WHEN** `updateSegmentMemo(episodeId, segmentIndex, memo)` is called
 - **THEN** the segment's memo is updated
 
+#### Scenario: Update segment skip flag
+- **WHEN** `updateSegmentSkip(episodeId, segmentIndex, true)` is called
+- **THEN** the segment's skip column is set to 1
+
+#### Scenario: Updating the skip flag preserves stored audio
+- **WHEN** `updateSegmentSkip(episodeId, segmentIndex, true)` is called for a segment holding audio_data
+- **THEN** the segment's audio_data and sample_count are unchanged
+
+#### Scenario: Insert a segment already marked as skipped
+- **WHEN** `insertSegment()` is called with skip=true for a segment whose synthesis input was blank
+- **THEN** a segment record is created with `skip = 1`, audio_data=NULL, and sample_count=NULL
+
 #### Scenario: Delete single segment
 - **WHEN** `deleteSegment(episodeId, segmentIndex)` is called
 - **THEN** only the specified segment record is deleted
 
 #### Scenario: Get count of generated segments
-- **WHEN** `getGeneratedSegmentCount(episodeId)` is called for an episode with 10 segments total, 7 having audio_data
+- **WHEN** `getGeneratedSegmentCount(episodeId)` is called for an episode with 10 segments total, 7 having audio_data and no skipped segments
 - **THEN** the count 7 is returned
+
+#### Scenario: Skipped segments count as satisfied
+- **WHEN** `getGeneratedSegmentCount(episodeId)` is called for an episode with 10 segments total, 7 having audio_data and 3 having `skip = 1` with no audio_data
+- **THEN** the count 10 is returned, so the episode can reach "completed"
+
+#### Scenario: A skipped segment holding audio is counted once
+- **WHEN** `getGeneratedSegmentCount(episodeId)` is called for an episode where one segment has both audio_data and `skip = 1`
+- **THEN** that segment contributes exactly 1 to the count
+
+#### Scenario: An audio-only count excludes skipped segments without audio
+- **WHEN** `getAudioSegmentCount(episodeId)` is called for an episode with 1 segment holding audio and 1 skipped segment holding none
+- **THEN** the count 1 is returned, distinguishing "nothing playable exists" from "no work remains"
+
+#### Scenario: The audio-only count includes a skipped segment that kept its audio
+- **WHEN** `getAudioSegmentCount(episodeId)` is called for an episode whose single segment has both audio_data and `skip = 1`
+- **THEN** the count 1 is returned
 
 #### Scenario: Get all episode statuses
 - **WHEN** `getAllEpisodeStatuses()` is called on a repository with episodes in various states
@@ -153,7 +195,7 @@ The system SHALL close the `tts_audio.db` database connection when the Riverpod 
 - **THEN** the `TtsAudioDatabase.close` is invoked via `ref.onDispose` and the underlying connection is released
 
 ### Requirement: TTS audio data transfer objects
-The system SHALL expose typed data transfer objects for `tts_episodes` and `tts_segments` rows. The `TtsEpisode` class SHALL have typed fields for `id` (int), `fileName` (String), `sampleRate` (int), `status` (TtsEpisodeStatus enum), `refWavPath` (String?), `textHash` (String?), `createdAt` (DateTime), and `updatedAt` (DateTime). The `TtsSegment` class SHALL have typed fields for `id` (int), `episodeId` (int), `segmentIndex` (int), `text` (String), `textOffset` (int), `textLength` (int), `audioData` (Uint8List?), `sampleCount` (int?), `refWavPath` (String?), `memo` (String?), and `createdAt` (DateTime). Both classes SHALL provide a `fromRow(Map<String, Object?>)` factory that asserts column types and throws on unexpected schema.
+The system SHALL expose typed data transfer objects for `tts_episodes` and `tts_segments` rows. The `TtsEpisode` class SHALL have typed fields for `id` (int), `fileName` (String), `sampleRate` (int), `status` (TtsEpisodeStatus enum), `refWavPath` (String?), `textHash` (String?), `createdAt` (DateTime), and `updatedAt` (DateTime). The `TtsSegment` class SHALL have typed fields for `id` (int), `episodeId` (int), `segmentIndex` (int), `text` (String), `textOffset` (int), `textLength` (int), `audioData` (Uint8List?), `sampleCount` (int?), `refWavPath` (String?), `memo` (String?), `skip` (bool), and `createdAt` (DateTime). Both classes SHALL provide a `fromRow(Map<String, Object?>)` factory that asserts column types and throws on unexpected schema.
 
 #### Scenario: Build TtsEpisode from a complete row
 - **WHEN** `TtsEpisode.fromRow` is called with a `Map<String, Object?>` containing all expected columns with valid types
@@ -166,6 +208,14 @@ The system SHALL expose typed data transfer objects for `tts_episodes` and `tts_
 #### Scenario: Build TtsSegment with NULL audio
 - **WHEN** `TtsSegment.fromRow` is called with a row whose `audio_data` and `sample_count` are NULL
 - **THEN** the resulting `TtsSegment` has `audioData == null` and `sampleCount == null`
+
+#### Scenario: Build TtsSegment from a skipped row
+- **WHEN** `TtsSegment.fromRow` is called with a row whose `skip` column is 1
+- **THEN** the resulting `TtsSegment` has `skip == true`
+
+#### Scenario: Build TtsSegment from a non-skipped row
+- **WHEN** `TtsSegment.fromRow` is called with a row whose `skip` column is 0
+- **THEN** the resulting `TtsSegment` has `skip == false`
 
 ### Requirement: Reference WAV path tri-state resolution
 The system SHALL provide a single `TtsRefWavResolver.resolve` helper that maps the stored `ref_wav_path` value (`null`, empty string, or non-empty path) to an effective reference WAV path according to the contract: `null` → fall back to caller-supplied default; empty string → no reference (explicit "none"); non-empty path → use as-is. Both `TtsStreamingController` and `TtsEditController` SHALL use this helper rather than reimplementing the tri-state logic.
@@ -209,4 +259,3 @@ The system SHALL expose a Riverpod `Provider.family<TtsAudioDatabase, String>` k
 - **WHEN** `tts_audio.db` ハンドルが開かれる
 - **THEN** ハンドルのキーは `folderDbKey(folderPath)` を適用した値であり、ファイルブラウザの解放系（フォルダ切替・移動・リネーム・削除）と同一のキー空間に属する
 - **AND** 別綴りのパスで開かれたハンドルが解放系から取り残されることはない
-
