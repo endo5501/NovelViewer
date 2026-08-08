@@ -228,6 +228,7 @@ class TtsStreamingController {
     int totalToGenerate = 0;
     for (var i = startIndex; i < segments.length; i++) {
       final dbRow = dbSegmentMap[i];
+      if (dbRow != null && dbRow.skip) continue;
       if (dbRow == null || dbRow.audioData == null) {
         totalToGenerate++;
       }
@@ -249,6 +250,12 @@ class TtsStreamingController {
       if (_stopped) break;
 
       final dbRow = dbSegmentMap[i];
+
+      // Excluded from reading aloud: neither generate nor play, and leave the
+      // highlight where it is. Checked before `hasAudio` because skipping
+      // keeps any recording the segment already had.
+      if (dbRow != null && dbRow.skip) continue;
+
       final hasAudio = dbRow != null && dbRow.audioData != null;
 
       Uint8List audioData;
@@ -261,6 +268,28 @@ class TtsStreamingController {
         textOffset = dbRow.textOffset;
         textLength = dbRow.textLength;
       } else {
+        // Use edited text from DB if available, otherwise apply dictionary to original
+        final rawText = dbRow?.text ?? segments[i].text;
+        final synthText = dbRow == null && dictEntries != null
+            ? TtsDictionaryRepository.applyDictionaryWithEntries(dictEntries, rawText)
+            : rawText;
+
+        // A symbol-only line ("――‐") is its own segment, so a no-reading
+        // dictionary entry empties it. An empty string fails in the engine,
+        // and a synthesis failure ends the run — one such line would stop
+        // playback for the rest of the episode. Record it as skipped and
+        // move on. Checked before the model load so it never pays for one.
+        if (synthText.trim().isEmpty) {
+          await _recordBlankSegmentAsSkipped(
+            episodeId: episodeId,
+            segmentIndex: i,
+            dbRow: dbRow,
+            text: synthText,
+            segment: segments[i],
+          );
+          continue;
+        }
+
         // Generate on-demand
         _read(ttsPlaybackStateProvider.notifier)
             .set(TtsPlaybackState.waiting);
@@ -283,11 +312,6 @@ class TtsStreamingController {
         }
         if (_stopped) break;
 
-        // Use edited text from DB if available, otherwise apply dictionary to original
-        final rawText = dbRow?.text ?? segments[i].text;
-        final synthText = dbRow == null && dictEntries != null
-            ? TtsDictionaryRepository.applyDictionaryWithEntries(dictEntries, rawText)
-            : rawText;
         final synthRefWavPath = TtsRefWavResolver.resolve(
           storedPath: dbRow?.refWavPath,
           fallbackPath: fallbackRefWavPath,
@@ -380,6 +404,30 @@ class TtsStreamingController {
     }
 
     return playbackResult;
+  }
+
+  /// Persists a segment whose synthesis input turned out blank as skipped,
+  /// so later runs recognise it without re-deriving the emptiness and the
+  /// episode can still reach "completed".
+  Future<void> _recordBlankSegmentAsSkipped({
+    required int episodeId,
+    required int segmentIndex,
+    required TtsSegment? dbRow,
+    required String text,
+    required TextSegment segment,
+  }) async {
+    if (dbRow != null) {
+      await _repository.updateSegmentSkip(episodeId, segmentIndex, true);
+      return;
+    }
+    await _repository.insertSegment(
+      episodeId: episodeId,
+      segmentIndex: segmentIndex,
+      text: text,
+      textOffset: segment.offset,
+      textLength: segment.length,
+      skip: true,
+    );
   }
 
   Future<void> pause() async {
