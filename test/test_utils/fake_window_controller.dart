@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:novel_viewer/features/window_state/data/window_controller.dart';
@@ -16,8 +17,14 @@ class FakeWindowController implements WindowController {
   /// mimicking the runner showing it on Flutter's first frame.
   int visibleAfterPolls = 0;
 
-  /// Makes [getSize] fail, to exercise error paths.
+  /// Makes the corresponding call fail, to exercise error paths.
   bool throwOnGetSize = false;
+  bool throwOnDestroy = false;
+  bool throwOnSetSize = false;
+
+  /// When set, [isMaximized] blocks on it, letting a test hold one flush open
+  /// while another is queued behind it.
+  Completer<void>? flushGate;
 
   int visibilityPolls = 0;
   int destroyCount = 0;
@@ -39,7 +46,10 @@ class FakeWindowController implements WindowController {
   }
 
   @override
-  Future<bool> isMaximized() async => maximized;
+  Future<bool> isMaximized() async {
+    if (flushGate != null) await flushGate!.future;
+    return maximized;
+  }
 
   @override
   Future<bool> isVisible() async => visibilityPolls++ >= visibleAfterPolls;
@@ -47,6 +57,7 @@ class FakeWindowController implements WindowController {
   @override
   Future<void> setSize(Size size) async {
     calls.add('setSize');
+    if (throwOnSetSize) throw StateError('setSize failed');
     sizeSetByCaller = size;
     this.size = size;
   }
@@ -62,10 +73,12 @@ class FakeWindowController implements WindowController {
   Future<void> destroy() async {
     calls.add('destroy');
     destroyCount++;
+    if (throwOnDestroy) throw StateError('destroy failed');
   }
 
   @override
   Future<void> setPreventClose(bool preventClose) async {
+    calls.add('setPreventClose($preventClose)');
     this.preventClose = preventClose;
   }
 

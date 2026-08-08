@@ -23,6 +23,11 @@ class WindowStateRecorder with WindowListener {
   Timer? _timer;
   bool _disposed = false;
 
+  /// Completes when the write in flight finishes. Serializes writes: without
+  /// it a slow flush could land after a newer one and put stale state on disk.
+  /// Created lazily so it always belongs to the caller's zone.
+  Future<void>? _writeInFlight;
+
   WindowStateRecorder({
     required WindowStateRepository repository,
     required WindowController window,
@@ -79,17 +84,42 @@ class WindowStateRecorder with WindowListener {
       _timer = null;
       await _flushSafely();
     } finally {
-      await _window.destroy();
+      // Drop the interception before tearing down. If destroy() then fails the
+      // window is still closable — a second click on the close button goes
+      // through natively instead of leaving the app stuck open.
+      await _ignoringErrors(() => _window.setPreventClose(false),
+          'release the close interception');
+      await _ignoringErrors(() => _window.destroy(), 'close the window');
     }
   }
 
+  /// Queues a flush behind any that is already running and swallows failures.
+  ///
+  /// Losing the window size is never worth surfacing to the user, let alone
+  /// taking down a close in progress.
   Future<void> _flushSafely() async {
+    final previous = _writeInFlight;
+    final mine = Completer<void>();
+    _writeInFlight = mine.future;
     try {
+      if (previous != null) await previous;
       await _flush();
     } catch (e, stack) {
-      // Losing the window size is never worth surfacing to the user, let alone
-      // taking down a close in progress.
       _log.warning('Failed to persist window state', e, stack);
+    } finally {
+      mine.complete();
+      if (identical(_writeInFlight, mine.future)) _writeInFlight = null;
+    }
+  }
+
+  Future<void> _ignoringErrors(
+    Future<void> Function() action,
+    String description,
+  ) async {
+    try {
+      await action();
+    } catch (e, stack) {
+      _log.warning('Failed to $description', e, stack);
     }
   }
 

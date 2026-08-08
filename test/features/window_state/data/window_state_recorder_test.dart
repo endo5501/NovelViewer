@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:fake_async/fake_async.dart';
@@ -180,6 +181,78 @@ void main() {
     });
   });
 
+  group('WindowStateRecorder - concurrent flushes', () {
+    test('a later flush cannot be overwritten by an earlier one', () async {
+      await setUpWith({'window_width': 1400.0, 'window_height': 900.0});
+      final recorder = buildRecorder();
+      window.size = const Size(1920, 1040);
+      window.maximized = true;
+      late Completer<void> gate;
+
+      withFakeTime((async) {
+        gate = Completer<void>();
+        window.flushGate = gate;
+        // Flush A starts and blocks having decided "maximized".
+        recorder.onWindowResized();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+
+        // The user restores the window down before A finished.
+        window.flushGate = null;
+        window.maximized = false;
+        window.size = const Size(1500, 950);
+        recorder.onWindowUnmaximize();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+
+        gate.complete();
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+      });
+
+      // A's stale "maximized" must not land after B's write.
+      expect(
+        repository.load(),
+        const WindowState(width: 1500, height: 950, maximized: false),
+      );
+    });
+
+    test('closing waits for an in-flight flush', () async {
+      await setUpWith({'window_width': 1400.0, 'window_height': 900.0});
+      final recorder = buildRecorder();
+      window.maximized = true;
+      late Completer<void> gate;
+
+      withFakeTime((async) {
+        gate = Completer<void>();
+        window.flushGate = gate;
+        recorder.onWindowResized();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+        expect(window.destroyCount, 0,
+            reason: 'must not tear down mid-write');
+
+        window.flushGate = null;
+        window.maximized = false;
+        window.size = const Size(1500, 950);
+        gate.complete();
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+      });
+
+      expect(window.destroyCount, 1);
+      expect(
+        repository.load(),
+        const WindowState(width: 1500, height: 950, maximized: false),
+      );
+    });
+  });
+
   group('WindowStateRecorder - close', () {
     test('flushes a pending change before destroying the window', () async {
       await setUpWith();
@@ -262,6 +335,57 @@ void main() {
       });
 
       expect(repository.saveCount, 0);
+    });
+
+    // setPreventClose(true) is what keeps the window alive long enough to
+    // write. If destroy() then failed while interception was still on, the app
+    // would be unclosable; dropping the interception first means a second
+    // click on the close button gets through natively.
+    test('drops the close interception before destroying', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(
+        window.calls.indexOf('setPreventClose(false)') <
+            window.calls.indexOf('destroy'),
+        isTrue,
+      );
+      expect(window.preventClose, isFalse);
+    });
+
+    test('drops the interception even when the flush throws', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.throwOnGetSize = true;
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(window.preventClose, isFalse);
+      expect(window.destroyCount, 1);
+    });
+
+    test('a failing destroy does not escape as an unhandled error', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+      window.throwOnDestroy = true;
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(window.destroyCount, 1);
+      expect(window.preventClose, isFalse);
     });
 
     test('dispose cancels a pending debounce', () async {

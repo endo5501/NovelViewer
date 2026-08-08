@@ -29,7 +29,7 @@ void main() {
       isWindows: isWindows,
       // Keep the visibility poll instantaneous in tests.
       pollInterval: Duration.zero,
-      pollTimeout: const Duration(milliseconds: 100),
+      maxVisibilityPolls: 10,
     );
   }
 
@@ -82,7 +82,7 @@ void main() {
       await result.pendingMaximize;
 
       // Sizing first leaves the normal size as the OS restore target.
-      expect(window.calls, ['setSize', 'maximize']);
+      expect(window.calls, ['setSize', 'setPreventClose(true)', 'maximize']);
       expect(window.sizeSetByCaller, const Size(1400, 900));
     });
 
@@ -92,7 +92,7 @@ void main() {
         'window_height': 900.0,
         'window_maximized': true,
       });
-      window.visibleAfterPolls = 1000000;
+      window.visibleAfterPolls = 1000;
       final result = await run();
       await result.pendingMaximize;
       expect(window.maximizeCount, 0);
@@ -107,6 +107,18 @@ void main() {
       final result = await run();
       expect(result.pendingMaximize, isNull);
       expect(window.maximizeCount, 0);
+    });
+  });
+
+  group('initializeWindowState - failure handling', () {
+    test('a failing window call never blocks startup', () async {
+      await setUpWith({'window_width': 1600.0, 'window_height': 1000.0});
+      window.throwOnSetSize = true;
+      final result = await run();
+      expect(result.recorder, isNull);
+      expect(result.pendingMaximize, isNull);
+      // No listener left behind on a half-finished setup.
+      expect(window.listeners, isEmpty);
     });
   });
 

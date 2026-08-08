@@ -48,7 +48,7 @@ Future<WindowStateBootstrapResult> initializeWindowState({
   Future<DisplayInfo> Function()? displayProvider,
   bool? isWindows,
   Duration pollInterval = const Duration(milliseconds: 50),
-  Duration pollTimeout = const Duration(seconds: 2),
+  int maxVisibilityPolls = 40,
 }) async {
   if (!(isWindows ?? Platform.isWindows)) {
     return const WindowStateBootstrapResult();
@@ -56,27 +56,36 @@ Future<WindowStateBootstrapResult> initializeWindowState({
 
   final controller = window ?? const WindowManagerController();
   final repository = WindowStateRepository(prefs);
-  final saved = repository.load();
-  final display = await (displayProvider ?? _primaryDisplay)();
 
-  // Everything here is in logical pixels: the stored size, the work area
-  // (`Display.visibleSize` is `rcWork / scaleFactor`) and what setSize expects.
-  await controller.setSize(resolveWindowSize(saved, display.workArea));
+  // Restoring the window is a convenience; it must never keep the app from
+  // starting, so a failing platform channel is logged and skipped.
+  try {
+    final saved = repository.load();
+    final display = await (displayProvider ?? _primaryDisplay)();
 
-  // The recorder flushes a pending write in onWindowClose, which only has time
-  // to finish if the native close is intercepted.
-  await controller.setPreventClose(true);
+    // Everything here is in logical pixels: the stored size, the work area
+    // (`Display.visibleSize` is `rcWork / scaleFactor`) and what setSize wants.
+    await controller.setSize(resolveWindowSize(saved, display.workArea));
 
-  final recorder =
-      WindowStateRecorder(repository: repository, window: controller);
-  controller.addListener(recorder);
+    // The recorder flushes a pending write in onWindowClose, which only has
+    // time to finish if the native close is intercepted.
+    await controller.setPreventClose(true);
 
-  return WindowStateBootstrapResult(
-    recorder: recorder,
-    pendingMaximize: saved.maximized
-        ? _maximizeOnceVisible(controller, pollInterval, pollTimeout)
-        : null,
-  );
+    final recorder =
+        WindowStateRecorder(repository: repository, window: controller);
+    controller.addListener(recorder);
+
+    return WindowStateBootstrapResult(
+      recorder: recorder,
+      pendingMaximize: saved.maximized
+          ? _maximizeOnceVisible(controller, pollInterval, maxVisibilityPolls)
+          : null,
+    );
+  } catch (e, stack) {
+    _log.warning('Could not restore the window state; continuing startup', e,
+        stack);
+    return const WindowStateBootstrapResult();
+  }
 }
 
 /// Maximizes as soon as the runner has shown the window.
@@ -86,19 +95,15 @@ Future<WindowStateBootstrapResult> initializeWindowState({
 Future<void> _maximizeOnceVisible(
   WindowController controller,
   Duration interval,
-  Duration timeout,
+  int maxPolls,
 ) async {
-  final deadline = timeout.inMicroseconds;
-  var waited = 0;
   try {
-    while (waited <= deadline) {
+    for (var poll = 0; poll < maxPolls; poll++) {
       if (await controller.isVisible()) {
         await controller.maximize();
         return;
       }
       await Future<void>.delayed(interval);
-      // A zero interval still yields, so count a minimum tick to stay bounded.
-      waited += interval.inMicroseconds > 0 ? interval.inMicroseconds : 1;
     }
     _log.warning('Window never became visible; skipping restore of maximized '
         'state');
