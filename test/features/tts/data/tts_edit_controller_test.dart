@@ -3378,6 +3378,40 @@ void main() {
         expect(reported, isFalse);
       });
 
+      test('a reset dictionary-emptied segment becomes skipped again',
+          () async {
+        await dictRepository.addEntry('――‐', '');
+
+        final isolate = FakeTtsIsolate();
+        final controller = buildController(isolate, dict: dictRepository);
+        await controller.loadSegments(
+          text: '――‐\n文2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.generateAllUngenerated(
+          resolveRefWavPath: null,
+          config: _qwen3Config(modelDir: '/models'),
+        );
+        expect(controller.segments[0].skip, isTrue);
+
+        await controller.resetSegment(0);
+        expect(controller.segments[0].skip, isFalse,
+            reason: 'reset returns the segment to a generation candidate');
+
+        await controller.generateAllUngenerated(
+          resolveRefWavPath: null,
+          config: _qwen3Config(modelDir: '/models'),
+        );
+
+        // Reset restores the dictionary-converted text, which is empty
+        // again — so the cycle is self-consistent rather than oscillating.
+        expect(controller.segments[0].skip, isTrue);
+        expect(isolate.synthesizeRequests.map((r) => r.$1),
+            isNot(contains('――‐')));
+      });
+
       test('loadSegments alone writes nothing to the database', () async {
         await dictRepository.addEntry('――‐', '');
 
