@@ -18,6 +18,7 @@ void main() {
         'sample_count': 1024,
         'ref_wav_path': '/voice/ref.wav',
         'memo': '感情的に',
+        'skip': 0,
         'created_at': '2026-04-01T00:00:00.000Z',
       };
 
@@ -34,6 +35,7 @@ void main() {
       expect(segment.sampleCount, 1024);
       expect(segment.refWavPath, '/voice/ref.wav');
       expect(segment.memo, '感情的に');
+      expect(segment.skip, isFalse);
       expect(segment.createdAt, DateTime.parse('2026-04-01T00:00:00.000Z'));
     });
 
@@ -49,6 +51,7 @@ void main() {
         'sample_count': null,
         'ref_wav_path': null,
         'memo': null,
+        'skip': 0,
         'created_at': '2026-04-01T00:00:00.000Z',
       };
 
@@ -72,6 +75,7 @@ void main() {
         'sample_count': 100,
         'ref_wav_path': null,
         'memo': null,
+        'skip': 0,
         'created_at': '2026-04-01T00:00:00.000Z',
       };
 
@@ -93,6 +97,45 @@ void main() {
       };
 
       expect(() => TtsSegment.fromRow(row), throwsA(isA<FormatException>()));
+    });
+  });
+
+  group('TtsSegment.fromRow skip column', () {
+    Map<String, Object?> row({Object? skip}) => {
+          'id': 1,
+          'episode_id': 2,
+          'segment_index': 3,
+          'text': 'テスト文。',
+          'text_offset': 0,
+          'text_length': 5,
+          'audio_data': Uint8List.fromList([1, 2, 3, 4]),
+          'sample_count': 2,
+          'ref_wav_path': 'Anna.mp3',
+          'memo': 'メモ',
+          'skip': skip,
+          'created_at': '2026-01-01T00:00:00.000Z',
+        };
+
+    test('reads skip = 1 as true', () {
+      expect(TtsSegment.fromRow(row(skip: 1)).skip, isTrue);
+    });
+
+    test('reads skip = 0 as false', () {
+      expect(TtsSegment.fromRow(row(skip: 0)).skip, isFalse);
+    });
+
+    test('a skipped row keeps its audio', () {
+      final segment = TtsSegment.fromRow(row(skip: 1));
+      // Skipping never deletes audio, so the DTO must surface both.
+      expect(segment.skip, isTrue);
+      expect(segment.audioData, isNotNull);
+      expect(segment.sampleCount, 2);
+    });
+
+    test('throws when the skip column is missing', () {
+      final incomplete = row(skip: 0)..remove('skip');
+      expect(() => TtsSegment.fromRow(incomplete),
+          throwsA(isA<FormatException>()));
     });
   });
 }

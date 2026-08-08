@@ -7,7 +7,7 @@ import '../../../shared/database/db_connection_gate.dart';
 
 class TtsAudioDatabase {
   static const _databaseName = 'tts_audio.db';
-  static const _databaseVersion = 3;
+  static const _databaseVersion = 4;
   static final _log = Logger('tts.audio_db');
 
   final String _folderPath;
@@ -84,6 +84,7 @@ class TtsAudioDatabase {
         sample_count INTEGER,
         ref_wav_path TEXT,
         memo TEXT,
+        skip INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         FOREIGN KEY (episode_id) REFERENCES tts_episodes(id) ON DELETE CASCADE
       )
@@ -131,6 +132,14 @@ class TtsAudioDatabase {
         CREATE UNIQUE INDEX idx_segments_episode_index
         ON tts_segments(episode_id, segment_index)
       ''');
+    }
+    if (oldVersion < 4) {
+      // Runs after the v3 rebuild above, so it lands on the rebuilt table
+      // when upgrading from v2 or earlier. NOT NULL with a DEFAULT is the
+      // one form SQLite's ADD COLUMN accepts, so no table rebuild is needed
+      // and every existing row reads as not skipped.
+      await db.execute(
+          'ALTER TABLE tts_segments ADD COLUMN skip INTEGER NOT NULL DEFAULT 0');
     }
   }
 

@@ -26,6 +26,7 @@ class TtsEditSegmentRow extends StatefulWidget {
     required this.onGenerate,
     required this.onReset,
     required this.onCursorRequested,
+    required this.onSkipToggled,
     required this.enabled,
     this.dictRepository,
   });
@@ -50,6 +51,10 @@ class TtsEditSegmentRow extends StatefulWidget {
   /// Fired when a pointer goes down anywhere in this row, asking for the
   /// playhead. Only a request: the list decides whether to honour it.
   final VoidCallback onCursorRequested;
+
+  /// Fired when the status icon is pressed, asking to flip this segment
+  /// between "read aloud" and "skipped".
+  final VoidCallback onSkipToggled;
 
   final bool enabled;
 
@@ -98,6 +103,11 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
     if (widget.isPlaying) {
       return const Icon(Icons.volume_up, size: 20, color: Colors.blue);
     }
+    // Ahead of hasAudio: skipping keeps any recording, so a skipped row that
+    // still holds audio must not read as "generated".
+    if (widget.segment.skip) {
+      return const Icon(Icons.block, size: 20, color: Colors.orange);
+    }
     if (widget.segment.hasAudio) {
       return const Icon(Icons.check_circle, size: 20, color: Colors.green);
     }
@@ -108,8 +118,14 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
     final l10n = AppLocalizations.of(context)!;
     if (widget.isGenerating) return l10n.ttsEdit_generatingStatus;
     if (widget.isPlaying) return l10n.ttsEdit_playingStatus;
-    if (widget.segment.hasAudio) return l10n.ttsEdit_generatedStatus;
-    return l10n.ttsEdit_ungeneratedStatus;
+    final state = widget.segment.skip
+        ? l10n.ttsEdit_skippedStatus
+        : widget.segment.hasAudio
+            ? l10n.ttsEdit_generatedStatus
+            : l10n.ttsEdit_ungeneratedStatus;
+    // The toggle is not otherwise discoverable — the icon looks like a
+    // status readout, not a control.
+    return widget.enabled ? '$state\n${l10n.ttsEdit_skipToggleHint}' : state;
   }
 
   @override
@@ -130,12 +146,18 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Status icon
+          // Status icon. Doubles as the skip toggle: the row is already full
+          // (status, text, reference audio, memo, three buttons), and skip is
+          // a fourth state of what this icon already reports.
           Padding(
             padding: const EdgeInsets.only(top: 12, right: 8),
             child: Tooltip(
               message: _buildStatusTooltip(),
-              child: _buildStatusIcon(),
+              child: InkWell(
+                onTap: widget.enabled ? widget.onSkipToggled : null,
+                customBorder: const CircleBorder(),
+                child: _buildStatusIcon(),
+              ),
             ),
           ),
           // Text field
@@ -257,18 +279,26 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
             icon: Icon(
               Icons.play_arrow,
               size: 20,
-              color: widget.segment.hasAudio ? null : Colors.grey,
+              color: widget.segment.hasAudio && !widget.segment.skip
+                  ? null
+                  : Colors.grey,
             ),
             tooltip: AppLocalizations.of(context)!.ttsEdit_playTooltip,
             onPressed:
-                widget.segment.hasAudio && widget.enabled ? widget.onPlay : null,
+                widget.segment.hasAudio && !widget.segment.skip && widget.enabled
+                    ? widget.onPlay
+                    : null,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
           IconButton(
             icon: const Icon(Icons.refresh, size: 20),
             tooltip: AppLocalizations.of(context)!.ttsEdit_regenerateTooltip,
-            onPressed: widget.enabled ? widget.onGenerate : null,
+            // "Do not generate" and "generate now" cannot both hold: the user
+            // un-skips first, via the status icon.
+            onPressed: widget.enabled && !widget.segment.skip
+                ? widget.onGenerate
+                : null,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),

@@ -2134,6 +2134,409 @@ void main() {
       expect(player.isDisposed, isTrue);
     });
 
+    group('skipped segments', () {
+      /// Seeds an episode matching [text] so `start()` reuses its rows.
+      Future<int> seedEpisode(String text, String fileName) =>
+          repository.createEpisode(
+            fileName: fileName,
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.partial,
+            textHash: _computeTextHash(text),
+          );
+
+      TtsStreamingController buildController(
+        _FakeTtsIsolate isolate,
+        _AutoCompleteAudioPlayer player, {
+        TtsDictionaryRepository? dict,
+      }) =>
+          TtsStreamingController(
+            read: container.read,
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+            bufferDrainDelay: Duration.zero,
+            dictionaryRepository: dict,
+          );
+
+      test('a skipped segment without audio is not synthesized', () async {
+        const text = '文1。文2。文3。';
+        final episodeId = await seedEpisode(text, 'ep01.txt');
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 1,
+          text: '文2。',
+          textOffset: 4,
+          textLength: 3,
+          skip: true,
+        );
+
+        final isolate = _FakeTtsIsolate();
+        final controller =
+            buildController(isolate, _AutoCompleteAudioPlayer());
+
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: text,
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        expect(isolate.synthesizeRequests, ['文1。', '文3。']);
+      });
+
+      test('a skipped segment holding audio is not played', () async {
+        const text = '文1。文2。文3。';
+        final episodeId = await seedEpisode(text, 'ep01.txt');
+        for (var i = 0; i < 3; i++) {
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: i,
+            text: '文${i + 1}。',
+            textOffset: i * 4,
+            textLength: 3,
+            audioData: _makeWavBytes(),
+            sampleCount: 5,
+            skip: i == 1,
+          );
+        }
+
+        final player = _AutoCompleteAudioPlayer();
+        final controller = buildController(_FakeTtsIsolate(), player);
+
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: text,
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        // Skipping keeps the recording, so its presence cannot decide
+        // whether the segment is played.
+        expect(player.playedFiles, hasLength(2));
+        expect(player.playedFiles.any((p) => p.endsWith('_1.wav')), isFalse);
+      });
+
+      test('skipped segments are excluded from the generation total',
+          () async {
+        const text = '文1。文2。文3。';
+        final episodeId = await seedEpisode(text, 'ep01.txt');
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 1,
+          text: '文2。',
+          textOffset: 4,
+          textLength: 3,
+          skip: true,
+        );
+
+        final totals = <int>[];
+        container.listen(ttsGenerationProgressProvider, (_, next) {
+          totals.add(next.total);
+        });
+
+        final controller = buildController(
+            _FakeTtsIsolate(), _AutoCompleteAudioPlayer());
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: text,
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        expect(totals, isNotEmpty);
+        expect(totals.every((t) => t == 2), isTrue,
+            reason: 'progress must count only the work actually performed');
+      });
+
+      test('an episode containing skips still reaches completed', () async {
+        const text = '文1。文2。';
+        final episodeId = await seedEpisode(text, 'ep01.txt');
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 1,
+          text: '文2。',
+          textOffset: 4,
+          textLength: 3,
+          skip: true,
+        );
+
+        final controller = buildController(
+            _FakeTtsIsolate(), _AutoCompleteAudioPlayer());
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: text,
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        final episode = await repository.findEpisodeByFileName('ep01.txt');
+        expect(episode!.status, TtsEpisodeStatus.completed);
+      });
+
+      test('a trailing skipped segment does not steal the last-segment drain',
+          () async {
+        const text = '文1。文2。';
+        final episodeId = await seedEpisode(text, 'ep01.txt');
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: '文1。',
+          textOffset: 0,
+          textLength: 3,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 1,
+          text: '文2。',
+          textOffset: 4,
+          textLength: 3,
+          skip: true,
+        );
+
+        final player = _ManualAudioPlayer();
+        final controller = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: _FakeTtsIsolate(),
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        final future = controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: text,
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        await _pumpUntil(() => player.isPlaying);
+        player.simulateCompletion();
+        await future;
+
+        // Segment 0 is the last audible one — the skipped segment 1 never
+        // plays. Treating 0 as intermediate would pause the player instead
+        // of letting the output buffer drain, clipping its tail.
+        expect(player.playedFiles, hasLength(1));
+        expect(player.pauseCount, 0,
+            reason: 'the last audible segment must not be paused');
+      });
+
+      test('a discovered blank segment still advances generation progress',
+          () async {
+        await dictRepository.addEntry('――‐', '');
+
+        final progress = <(int, int)>[];
+        container.listen(ttsGenerationProgressProvider, (_, next) {
+          progress.add((next.current, next.total));
+        });
+
+        final controller = buildController(
+            _FakeTtsIsolate(), _AutoCompleteAudioPlayer(),
+            dict: dictRepository);
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: '文1。\n――‐\n文3。',
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        // The blank segment has no DB row, so it was counted in the total.
+        // If it does not advance the counter, progress stalls short of the
+        // total and the UI never shows completion.
+        expect(progress.last, (3, 3));
+      });
+
+      test('a failed run holding only skipped rows deletes the episode',
+          () async {
+        await dictRepository.addEntry('――‐', '');
+
+        final isolate = _FakeTtsIsolate()..failSynthesisOnCall = 1;
+        final controller = buildController(
+            isolate, _AutoCompleteAudioPlayer(),
+            dict: dictRepository);
+
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: '――‐\n文2。',
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        // Segment 0 was recorded as skipped and segment 1 failed, so no audio
+        // exists. Keeping the episode would show a "partially generated"
+        // badge for a file with nothing in it.
+        expect(await repository.findEpisodeByFileName('ep01.txt'), isNull);
+      });
+
+      test('a failed run holding real audio preserves the episode', () async {
+        const text = '文1。文2。文3。';
+        final episodeId = await seedEpisode(text, 'ep01.txt');
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 1,
+          text: '文2。',
+          textOffset: 4,
+          textLength: 3,
+          skip: true,
+        );
+
+        // Segment 0 synthesizes (call 1), segment 1 is skipped without a
+        // call, segment 2 fails (call 2).
+        final isolate = _FakeTtsIsolate()..failSynthesisOnCall = 2;
+        final controller =
+            buildController(isolate, _AutoCompleteAudioPlayer());
+
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: text,
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        // The counterpart of the delete case: real audio exists, so the
+        // episode must survive the failure rather than be thrown away.
+        final episode = await repository.findEpisodeByFileName('ep01.txt');
+        expect(episode, isNotNull);
+        expect(episode!.status, TtsEpisodeStatus.partial);
+      });
+
+      test('a skipped segment leaves the highlight untouched', () async {
+        const text = '文1。文2。文3。';
+        final episodeId = await seedEpisode(text, 'ep01.txt');
+        for (var i = 0; i < 3; i++) {
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: i,
+            text: '文${i + 1}。',
+            textOffset: i * 4,
+            textLength: 3,
+            audioData: _makeWavBytes(),
+            sampleCount: 5,
+            skip: i == 1,
+          );
+        }
+
+        final starts = <int>[];
+        container.listen(ttsHighlightRangeProvider, (_, next) {
+          if (next != null) starts.add(next.start);
+        });
+
+        final controller = buildController(
+            _FakeTtsIsolate(), _AutoCompleteAudioPlayer());
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: text,
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        // Segment 1's range (offset 4) must never be highlighted: the reader
+        // would see the cursor land on a line that is never read aloud.
+        expect(starts, [0, 8]);
+      });
+
+      test('an episode with an untouched earlier segment stays partial',
+          () async {
+        const text = '文1。文2。文3。';
+        final episodeId = await seedEpisode(text, 'ep01.txt');
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 2,
+          text: '文3。',
+          textOffset: 8,
+          textLength: 3,
+          skip: true,
+        );
+
+        final controller = buildController(
+            _FakeTtsIsolate(), _AutoCompleteAudioPlayer());
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: text,
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+          startOffset: 4, // start at segment 1, leaving segment 0 untouched
+        );
+
+        // Segments 1 (audio) and 2 (skipped) are satisfied, but segment 0
+        // was never reached — claiming "completed" would let an export
+        // silently drop the missing prefix.
+        final episode = await repository.findEpisodeByFileName('ep01.txt');
+        expect(episode!.status, TtsEpisodeStatus.partial);
+      });
+
+      test('a stored blank row also advances generation progress', () async {
+        const text = '文1。文2。';
+        final episodeId = await seedEpisode(text, 'ep01.txt');
+        // How a line was silenced before skip existed: clear its text.
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: '',
+          textOffset: 0,
+          textLength: 3,
+        );
+
+        final progress = <(int, int)>[];
+        container.listen(ttsGenerationProgressProvider, (_, next) {
+          progress.add((next.current, next.total));
+        });
+
+        final controller = buildController(
+            _FakeTtsIsolate(), _AutoCompleteAudioPlayer());
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: text,
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        // The stored blank row is unskipped, so it was counted in the total.
+        expect(progress.last, (2, 2));
+      });
+
+      test('a dictionary-emptied segment is recorded as skipped, not sent '
+          'to the engine', () async {
+        await dictRepository.addEntry('――‐', '');
+
+        final isolate = _FakeTtsIsolate();
+        final controller = buildController(
+            isolate, _AutoCompleteAudioPlayer(),
+            dict: dictRepository);
+
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: '――‐\n文2。',
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        // The blank segment must neither reach the engine nor abort the run.
+        expect(isolate.synthesizeRequests, ['文2。']);
+
+        final episode = await repository.findEpisodeByFileName('ep01.txt');
+        final stored = await repository.getSegmentByIndex(episode!.id, 0);
+        expect(stored.skip, isTrue);
+        expect(stored.audioData, isNull);
+      });
+    });
+
     group('engine config dispatch', () {
       test('start with PiperEngineConfig loads piper engine with piper params',
           () async {

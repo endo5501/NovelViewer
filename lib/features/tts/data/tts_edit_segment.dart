@@ -11,6 +11,7 @@ class TtsEditSegment {
     this.hasAudio = false,
     this.refWavPath,
     this.memo,
+    this.skip = false,
     this.dbRecordExists = false,
   });
 
@@ -22,6 +23,12 @@ class TtsEditSegment {
   bool hasAudio;
   String? refWavPath;
   String? memo;
+
+  /// Excluded from generation, playback and export. Independent of
+  /// [hasAudio]: skipping never deletes audio, so consumers must read this
+  /// rather than infer it from a missing recording.
+  bool skip;
+
   bool dbRecordExists;
 
   static List<TtsEditSegment> mergeSegments({
@@ -46,6 +53,7 @@ class TtsEditSegment {
           hasAudio: dbRow.audioData != null,
           refWavPath: dbRow.refWavPath,
           memo: dbRow.memo,
+          skip: dbRow.skip,
           dbRecordExists: true,
         );
       }

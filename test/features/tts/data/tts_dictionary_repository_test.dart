@@ -86,6 +86,45 @@ void main() {
         expect(entries, isEmpty);
       });
     });
+
+    group('no-reading entries', () {
+      test('addEntry accepts an empty reading', () async {
+        final id = await repository.addEntry('――‐', '');
+        expect(id, greaterThan(0));
+      });
+
+      test('an empty reading round-trips through the database', () async {
+        await repository.addEntry('――‐', '');
+
+        final entries = await repository.getAllEntries();
+        expect(entries.first.surface, '――‐');
+        expect(entries.first.reading, '');
+      });
+
+      test('updateEntry accepts an empty reading', () async {
+        final id = await repository.addEntry('――‐', 'だっしゅ');
+        await repository.updateEntry(id, '――‐', '');
+
+        final entries = await repository.getAllEntries();
+        expect(entries.first.reading, '');
+      });
+
+      test('addEntry still rejects an empty surface', () async {
+        // An empty surface would match at every position in the text.
+        expect(
+          () => repository.addEntry('', 'よみ'),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+
+      test('updateEntry still rejects an empty surface', () async {
+        final id = await repository.addEntry('――‐', '');
+        expect(
+          () => repository.updateEntry(id, '', ''),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+    });
   });
 
   group('applyDictionary', () {
@@ -133,25 +172,58 @@ void main() {
       final result2 = await repository.applyDictionary('aabb');
       expect(result1, result2);
     });
+
+    test('a no-reading entry is removed from the middle of a sentence',
+        () async {
+      await repository.addEntry('――‐', '');
+
+      final result = await repository.applyDictionary('――‐その時私は言ったんだ');
+      expect(result, 'その時私は言ったんだ');
+    });
+
+    test('a text consisting only of a no-reading entry becomes empty',
+        () async {
+      await repository.addEntry('――‐', '');
+
+      final result = await repository.applyDictionary('――‐');
+      expect(result, '');
+    });
+
+    test('no-reading and normal entries coexist', () async {
+      await repository.addEntry('◆◇◆', '');
+      await repository.addEntry('山田太郎', 'やまだたろう');
+
+      final result = await repository.applyDictionary('◆◇◆山田太郎は強い');
+      expect(result, 'やまだたろうは強い');
+    });
+
+    test('longest match wins over a shorter no-reading entry', () async {
+      await repository.addEntry('――', '');
+      await repository.addEntry('――‐', 'だっしゅ');
+
+      final result = await repository.applyDictionary('――‐');
+      expect(result, 'だっしゅ');
+    });
+
+    test('a no-reading entry removes every occurrence', () async {
+      await repository.addEntry('※', '');
+
+      final result = await repository.applyDictionary('※注意※');
+      expect(result, '注意');
+    });
   });
 
+  // An empty reading is no longer a validation error: it is how a
+  // "do not read this aloud" entry is expressed. Only the surface, which
+  // would otherwise match at every position, still has to be non-empty.
   group('addEntry / updateEntry validation', () {
     test('addEntry rejects empty surface', () async {
       expect(() => repository.addEntry('', 'よみ'), throwsA(anything));
     });
 
-    test('addEntry rejects empty reading', () async {
-      expect(() => repository.addEntry('表記', ''), throwsA(anything));
-    });
-
     test('updateEntry rejects empty surface', () async {
       final id = await repository.addEntry('表記', 'よみ');
       expect(() => repository.updateEntry(id, '', 'よみ'), throwsA(anything));
-    });
-
-    test('updateEntry rejects empty reading', () async {
-      final id = await repository.addEntry('表記', 'よみ');
-      expect(() => repository.updateEntry(id, '表記', ''), throwsA(anything));
     });
   });
 

@@ -27,6 +27,7 @@ class TtsEditSegmentList extends StatefulWidget {
     required this.onPlay,
     required this.onGenerate,
     required this.onReset,
+    required this.onSkipToggled,
     required this.onCursorChanged,
     this.dictRepository,
   });
@@ -54,6 +55,7 @@ class TtsEditSegmentList extends StatefulWidget {
   final void Function(int index) onPlay;
   final void Function(int index) onGenerate;
   final void Function(int index) onReset;
+  final void Function(int index) onSkipToggled;
   final void Function(int index) onCursorChanged;
 
   @override
@@ -153,6 +155,7 @@ class _TtsEditSegmentListState extends State<TtsEditSegmentList> {
             onPlay: () => widget.onPlay(index),
             onGenerate: () => widget.onGenerate(index),
             onReset: () => widget.onReset(index),
+            onSkipToggled: () => widget.onSkipToggled(index),
             // Playback owns the playhead while it runs: two writers would fight
             // over the value and the highlight would jump between them.
             onCursorRequested: () {

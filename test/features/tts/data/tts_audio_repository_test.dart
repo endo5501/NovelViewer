@@ -614,6 +614,207 @@ void main() {
         final count = await repository.getGeneratedSegmentCount(episodeId);
         expect(count, 0);
       });
+
+      test('counts skipped segments as satisfied', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.partial,
+        );
+
+        for (var i = 0; i < 7; i++) {
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: i,
+            text: 'テスト$i。',
+            textOffset: i * 5,
+            textLength: 5,
+            audioData: Uint8List(4),
+            sampleCount: 100,
+          );
+        }
+        for (var i = 7; i < 10; i++) {
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: i,
+            text: '――‐',
+            textOffset: i * 5,
+            textLength: 3,
+            skip: true,
+          );
+        }
+
+        // Skipped segments never acquire audio by design; counting only
+        // audio would leave the episode permanently "partial".
+        final count = await repository.getGeneratedSegmentCount(episodeId);
+        expect(count, 10);
+      });
+
+      test('counts a segment holding both audio and skip only once', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.partial,
+        );
+
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト0。',
+          textOffset: 0,
+          textLength: 5,
+          audioData: Uint8List(4),
+          sampleCount: 100,
+          skip: true,
+        );
+
+        final count = await repository.getGeneratedSegmentCount(episodeId);
+        expect(count, 1);
+      });
+    });
+
+    group('getAudioSegmentCount', () {
+      test('counts only segments holding audio', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.partial,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: '文1。',
+          textOffset: 0,
+          textLength: 3,
+          audioData: Uint8List(4),
+          sampleCount: 100,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 1,
+          text: '――‐',
+          textOffset: 4,
+          textLength: 3,
+          skip: true,
+        );
+
+        // Unlike getGeneratedSegmentCount, a skipped segment with no audio
+        // must not count: this answers "is there anything playable at all?"
+        expect(await repository.getAudioSegmentCount(episodeId), 1);
+        expect(await repository.getGeneratedSegmentCount(episodeId), 2);
+      });
+
+      test('returns 0 for an episode whose only rows are skipped', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.partial,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: '――‐',
+          textOffset: 0,
+          textLength: 3,
+          skip: true,
+        );
+
+        expect(await repository.getAudioSegmentCount(episodeId), 0);
+      });
+
+      test('counts a skipped segment that still holds audio', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.partial,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: '文1。',
+          textOffset: 0,
+          textLength: 3,
+          audioData: Uint8List(4),
+          sampleCount: 100,
+          skip: true,
+        );
+
+        expect(await repository.getAudioSegmentCount(episodeId), 1);
+      });
+    });
+
+    group('segment skip flag', () {
+      Future<int> createEpisodeWithSegment({
+        Uint8List? audioData,
+        int? sampleCount,
+        bool skip = false,
+      }) async {
+        final episodeId = await repository.createEpisode(
+          fileName: '0001_プロローグ.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.partial,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: 'テスト。',
+          textOffset: 0,
+          textLength: 4,
+          audioData: audioData,
+          sampleCount: sampleCount,
+          skip: skip,
+        );
+        return episodeId;
+      }
+
+      test('insertSegment defaults skip to false', () async {
+        final episodeId = await createEpisodeWithSegment();
+
+        final segment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(segment.skip, isFalse);
+      });
+
+      test('insertSegment stores skip = true', () async {
+        final episodeId = await createEpisodeWithSegment(skip: true);
+
+        final segment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(segment.skip, isTrue);
+        expect(segment.audioData, isNull);
+      });
+
+      test('updateSegmentSkip sets the flag', () async {
+        final episodeId = await createEpisodeWithSegment();
+
+        await repository.updateSegmentSkip(episodeId, 0, true);
+
+        final segment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(segment.skip, isTrue);
+      });
+
+      test('updateSegmentSkip clears the flag', () async {
+        final episodeId = await createEpisodeWithSegment(skip: true);
+
+        await repository.updateSegmentSkip(episodeId, 0, false);
+
+        final segment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(segment.skip, isFalse);
+      });
+
+      test('updateSegmentSkip preserves stored audio', () async {
+        final episodeId = await createEpisodeWithSegment(
+          audioData: Uint8List.fromList([1, 2, 3, 4]),
+          sampleCount: 100,
+        );
+
+        await repository.updateSegmentSkip(episodeId, 0, true);
+
+        // Skipping must be reversible without regenerating: a misclick
+        // costs nothing.
+        final segment = await repository.getSegmentByIndex(episodeId, 0);
+        expect(segment.skip, isTrue);
+        expect(segment.audioData, isNotNull);
+        expect(segment.sampleCount, 100);
+      });
     });
   });
 }

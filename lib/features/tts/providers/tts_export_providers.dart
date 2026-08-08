@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart'
 
 import '../data/tts_audio_export_service.dart';
 import '../data/tts_audio_repository.dart';
+import '../domain/tts_segment.dart';
 import 'tts_playback_providers.dart';
 
 // --- Export state ---
@@ -40,8 +41,27 @@ class TtsExportProgressNotifier extends Notifier<TtsGenerationProgress> {
 
 // --- Export action ---
 
+/// The WAV blobs an MP3 export should concatenate, in `segment_index` order.
+///
+/// Skipped segments are dropped even when they still hold audio: marking a
+/// segment as skipped never deletes its recording, so filtering on audio
+/// alone would splice a sentence the user excluded back into the file — and
+/// silently, since nothing about it fails.
+List<Uint8List> exportableWavSegments(List<TtsSegment> segments) {
+  final wavSegments = <Uint8List>[];
+  for (final segment in segments) {
+    if (segment.skip) continue;
+    final audioData = segment.audioData;
+    if (audioData != null) {
+      wavSegments.add(audioData);
+    }
+  }
+  return wavSegments;
+}
+
 /// Prompts user for save location and exports episode audio to MP3.
 /// Returns true if export completed, false if user cancelled.
+///
 /// Throws on error. Caller is responsible for UI feedback.
 Future<bool> exportEpisodeToMp3({
   required TtsExportStateNotifier stateNotifier,
@@ -66,13 +86,7 @@ Future<bool> exportEpisodeToMp3({
 
   try {
     final segments = await repository.getSegments(episodeId);
-    final wavSegments = <Uint8List>[];
-    for (final segment in segments) {
-      final audioData = segment.audioData;
-      if (audioData != null) {
-        wavSegments.add(audioData);
-      }
-    }
+    final wavSegments = exportableWavSegments(segments);
 
     if (wavSegments.isEmpty) {
       throw Exception('エクスポートする音声データがありません');

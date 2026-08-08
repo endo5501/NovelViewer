@@ -167,9 +167,11 @@ class TtsStreamingController {
         // stashed here or it is gone by the time the UI can ask for it.
         _lastFailureReason = _session.lastSynthesisError;
         // Use a COUNT query rather than loading every segment's WAV blob just
-        // to test for presence of audio on this (failure) path.
-        final hasAudio =
-            await _repository.getGeneratedSegmentCount(episodeId) > 0;
+        // to test for presence of audio on this (failure) path. Audio-only,
+        // NOT the satisfied-count: an episode whose only rows are skipped
+        // holds nothing playable, and keeping it would show a "partially
+        // generated" badge for a file with no audio in it.
+        final hasAudio = await _repository.getAudioSegmentCount(episodeId) > 0;
         if (hasAudio) {
           await _repository.updateEpisodeStatus(
               episodeId, TtsEpisodeStatus.partial);
@@ -228,6 +230,7 @@ class TtsStreamingController {
     int totalToGenerate = 0;
     for (var i = startIndex; i < segments.length; i++) {
       final dbRow = dbSegmentMap[i];
+      if (dbRow != null && dbRow.skip) continue;
       if (dbRow == null || dbRow.audioData == null) {
         totalToGenerate++;
       }
@@ -249,6 +252,12 @@ class TtsStreamingController {
       if (_stopped) break;
 
       final dbRow = dbSegmentMap[i];
+
+      // Excluded from reading aloud: neither generate nor play, and leave the
+      // highlight where it is. Checked before `hasAudio` because skipping
+      // keeps any recording the segment already had.
+      if (dbRow != null && dbRow.skip) continue;
+
       final hasAudio = dbRow != null && dbRow.audioData != null;
 
       Uint8List audioData;
@@ -261,6 +270,37 @@ class TtsStreamingController {
         textOffset = dbRow.textOffset;
         textLength = dbRow.textLength;
       } else {
+        // Use edited text from DB if available, otherwise apply dictionary to original
+        final rawText = dbRow?.text ?? segments[i].text;
+        final synthText = dbRow == null && dictEntries != null
+            ? TtsDictionaryRepository.applyDictionaryWithEntries(dictEntries, rawText)
+            : rawText;
+
+        // A symbol-only line ("――‐") is its own segment, so a no-reading
+        // dictionary entry empties it. An empty string fails in the engine,
+        // and a synthesis failure ends the run — one such line would stop
+        // playback for the rest of the episode. Record it as skipped and
+        // move on. Checked before the model load so it never pays for one.
+        if (synthText.trim().isEmpty) {
+          await _recordBlankSegmentAsSkipped(
+            episodeId: episodeId,
+            segmentIndex: i,
+            dbRow: dbRow,
+            text: synthText,
+            segment: segments[i],
+          );
+          // Anything reaching here was counted in `totalToGenerate`: rows
+          // already marked skipped were excluded from the count and skipped
+          // earlier in the loop, so what remains — no row at all, or a stored
+          // row the user blanked by clearing its text — was counted.
+          // Advancing keeps progress from stalling short of the total.
+          generatedSoFar++;
+          _read(ttsGenerationProgressProvider.notifier).set(
+              TtsGenerationProgress(
+                  current: generatedSoFar, total: totalToGenerate));
+          continue;
+        }
+
         // Generate on-demand
         _read(ttsPlaybackStateProvider.notifier)
             .set(TtsPlaybackState.waiting);
@@ -283,11 +323,6 @@ class TtsStreamingController {
         }
         if (_stopped) break;
 
-        // Use edited text from DB if available, otherwise apply dictionary to original
-        final rawText = dbRow?.text ?? segments[i].text;
-        final synthText = dbRow == null && dictEntries != null
-            ? TtsDictionaryRepository.applyDictionaryWithEntries(dictEntries, rawText)
-            : rawText;
         final synthRefWavPath = TtsRefWavResolver.resolve(
           storedPath: dbRow?.refWavPath,
           fallbackPath: fallbackRefWavPath,
@@ -364,7 +399,11 @@ class TtsStreamingController {
       _read(ttsPlaybackStateProvider.notifier)
           .set(TtsPlaybackState.playing);
 
-      final isLast = i == segments.length - 1;
+      // "Last" means nothing audible follows, not merely the final index: a
+      // trailing skipped segment never plays, so treating this one as
+      // intermediate would pause the player instead of letting the output
+      // buffer drain, clipping its tail.
+      final isLast = !_hasPlayableSegmentAfter(i, segments.length, dbSegmentMap);
       await _segmentPlayer.playSegment(filePath, isLast: isLast);
 
       if (_stopped) break;
@@ -380,6 +419,48 @@ class TtsStreamingController {
     }
 
     return playbackResult;
+  }
+
+  /// Whether any segment after [index] can still be played.
+  ///
+  /// Only known skips are excluded. A segment the dictionary will empty is
+  /// not detectable without applying the dictionary to it, so it can still
+  /// make this return true — a bounded imprecision that at worst restores
+  /// the old behaviour for that one case.
+  bool _hasPlayableSegmentAfter(
+    int index,
+    int segmentCount,
+    Map<int, TtsSegment> dbSegmentMap,
+  ) {
+    for (var j = index + 1; j < segmentCount; j++) {
+      if (dbSegmentMap[j]?.skip ?? false) continue;
+      return true;
+    }
+    return false;
+  }
+
+  /// Persists a segment whose synthesis input turned out blank as skipped,
+  /// so later runs recognise it without re-deriving the emptiness and the
+  /// episode can still reach "completed".
+  Future<void> _recordBlankSegmentAsSkipped({
+    required int episodeId,
+    required int segmentIndex,
+    required TtsSegment? dbRow,
+    required String text,
+    required TextSegment segment,
+  }) async {
+    if (dbRow != null) {
+      await _repository.updateSegmentSkip(episodeId, segmentIndex, true);
+      return;
+    }
+    await _repository.insertSegment(
+      episodeId: episodeId,
+      segmentIndex: segmentIndex,
+      text: text,
+      textOffset: segment.offset,
+      textLength: segment.length,
+      skip: true,
+    );
   }
 
   Future<void> pause() async {

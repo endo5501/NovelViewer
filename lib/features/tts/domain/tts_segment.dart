@@ -14,6 +14,7 @@ class TtsSegment {
     required this.sampleCount,
     required this.refWavPath,
     required this.memo,
+    required this.skip,
     required this.createdAt,
   });
 
@@ -27,6 +28,14 @@ class TtsSegment {
   final int? sampleCount;
   final String? refWavPath;
   final String? memo;
+
+  /// Whether this segment is excluded from synthesis, playback and export.
+  ///
+  /// Independent of [audioData]: marking a segment as skipped never deletes
+  /// its audio, so consumers must check this flag rather than infer the
+  /// decision from the absence of audio.
+  final bool skip;
+
   final DateTime createdAt;
 
   factory TtsSegment.fromRow(Map<String, Object?> row) {
@@ -49,6 +58,7 @@ class TtsSegment {
       sampleCount: row['sample_count'] as int?,
       refWavPath: row['ref_wav_path'] as String?,
       memo: row['memo'] as String?,
+      skip: (requireColumn(row, 'skip', 'tts_segments') as int) != 0,
       createdAt: DateTime.parse(
           requireColumn(row, 'created_at', 'tts_segments') as String),
     );
