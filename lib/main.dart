@@ -7,6 +7,7 @@ import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:novel_viewer/app.dart';
 import 'package:novel_viewer/app/startup_migrations.dart';
 import 'package:logging/logging.dart';
@@ -19,9 +20,14 @@ import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_data_migrator.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/window_state/window_state_bootstrap.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (Platform.isWindows) {
+    await windowManager.ensureInitialized();
+  }
 
   await AppLogger.initialize();
 
@@ -67,6 +73,12 @@ void main() async {
 
   // Fire-and-forget background update check; never blocks first paint.
   unawaited(container.read(updateStatusProvider.notifier).check());
+
+  // Restores the saved window size (Windows only; a no-op elsewhere). Runs as
+  // late as possible: the runner creates the window hidden and only shows it
+  // once Flutter has a frame, so anything that reveals it earlier would put a
+  // blank window on screen for the whole startup migration.
+  await initializeWindowState(prefs: prefs);
 
   runApp(
     UncontrolledProviderScope(

@@ -1,0 +1,482 @@
+import 'dart:async';
+import 'dart:ui';
+
+import 'package:fake_async/fake_async.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:novel_viewer/features/window_state/data/window_state_recorder.dart';
+import 'package:novel_viewer/features/window_state/domain/window_state.dart';
+
+import '../../../test_utils/fake_window_controller.dart';
+import '../../../test_utils/recording_window_state_repository.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late RecordingWindowStateRepository repository;
+  late FakeWindowController window;
+
+  Future<void> setUpWith([Map<String, Object> stored = const {}]) async {
+    SharedPreferences.setMockInitialValues(stored);
+    final prefs = await SharedPreferences.getInstance();
+    repository = RecordingWindowStateRepository(prefs);
+    window = FakeWindowController();
+  }
+
+  WindowStateRecorder buildRecorder() =>
+      WindowStateRecorder(repository: repository, window: window);
+
+  /// Runs [body] inside fake time, draining microtasks afterwards so the
+  /// recorder's async flush completes before assertions run.
+  void withFakeTime(void Function(FakeAsync async) body) {
+    fakeAsync((async) {
+      body(async);
+      async.flushMicrotasks();
+    });
+  }
+
+  group('WindowStateRecorder - debounce', () {
+    test('saves once, 500ms after the resize stops', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+
+      withFakeTime((async) {
+        recorder.onWindowResized();
+
+        async.elapse(const Duration(milliseconds: 499));
+        async.flushMicrotasks();
+        expect(repository.saveCount, 0,
+            reason: 'must not save before the delay elapses');
+
+        async.elapse(const Duration(milliseconds: 1));
+        async.flushMicrotasks();
+      });
+
+      expect(repository.saveCount, 1);
+      expect(repository.load(), const WindowState(width: 1600, height: 1000));
+    });
+
+    test('collapses a burst of events into a single save', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+
+      withFakeTime((async) {
+        for (var i = 0; i < 10; i++) {
+          window.size = Size(1000 + i * 50, 800);
+          recorder.onWindowResized();
+          async.elapse(const Duration(milliseconds: 100));
+        }
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+      });
+
+      expect(repository.saveCount, 1,
+          reason: 'intermediate sizes must not be persisted');
+      expect(repository.load(), const WindowState(width: 1450, height: 800));
+    });
+
+    test('onWindowResize also arms the debounce', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1500, 950);
+
+      withFakeTime((async) {
+        recorder.onWindowResize();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+      });
+
+      expect(repository.load(), const WindowState(width: 1500, height: 950));
+    });
+  });
+
+  group('WindowStateRecorder - maximized handling', () {
+    test('keeps the stored size when maximized at flush time', () async {
+      await setUpWith({'window_width': 1400.0, 'window_height': 900.0});
+      final recorder = buildRecorder();
+      // The OS reports the maximized extent, which must not overwrite the size
+      // the user restores to.
+      window.size = const Size(1920, 1040);
+      window.maximized = true;
+
+      withFakeTime((async) {
+        recorder.onWindowMaximize();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+      });
+
+      expect(
+        repository.load(),
+        const WindowState(width: 1400, height: 900, maximized: true),
+      );
+    });
+
+    test('persists the size and clears the flag when not maximized', () async {
+      await setUpWith({
+        'window_width': 1400.0,
+        'window_height': 900.0,
+        'window_maximized': true,
+      });
+      final recorder = buildRecorder();
+      window.size = const Size(1500, 950);
+      window.maximized = false;
+
+      withFakeTime((async) {
+        recorder.onWindowUnmaximize();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+      });
+
+      expect(
+        repository.load(),
+        const WindowState(width: 1500, height: 950, maximized: false),
+      );
+    });
+
+    test('result is identical whether resize or maximize fires first',
+        () async {
+      Future<WindowState> run({required bool resizeFirst}) async {
+        await setUpWith({'window_width': 1400.0, 'window_height': 900.0});
+        final recorder = buildRecorder();
+        window.size = const Size(1920, 1040);
+        window.maximized = true;
+
+        withFakeTime((async) {
+          if (resizeFirst) {
+            recorder.onWindowResized();
+            recorder.onWindowMaximize();
+          } else {
+            recorder.onWindowMaximize();
+            recorder.onWindowResized();
+          }
+          async.elapse(const Duration(milliseconds: 500));
+          async.flushMicrotasks();
+        });
+        return repository.load();
+      }
+
+      final resizeFirst = await run(resizeFirst: true);
+      final maximizeFirst = await run(resizeFirst: false);
+      expect(resizeFirst, maximizeFirst);
+      expect(
+        resizeFirst,
+        const WindowState(width: 1400, height: 900, maximized: true),
+      );
+    });
+
+    // A minimized window reports SW_SHOWMINIMIZED and an off-screen placeholder
+    // rect, so writing it would replace the user's geometry with junk.
+    test('writes nothing at all while minimized', () async {
+      await setUpWith({
+        'window_width': 1400.0,
+        'window_height': 900.0,
+        'window_maximized': true,
+      });
+      final recorder = buildRecorder();
+      window.minimized = true;
+      window.maximized = false;
+      window.size = const Size(128, 25);
+
+      withFakeTime((async) {
+        recorder.onWindowMinimize();
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(repository.saveCount, 0);
+      expect(
+        repository.load(),
+        const WindowState(width: 1400, height: 900, maximized: true),
+      );
+    });
+
+    test('ignores a degenerate size reported by the OS', () async {
+      await setUpWith({'window_width': 1400.0, 'window_height': 900.0});
+      final recorder = buildRecorder();
+      // e.g. a minimized window; storing this would destroy the real size.
+      window.size = Size.zero;
+
+      withFakeTime((async) {
+        recorder.onWindowResized();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+      });
+
+      expect(repository.load(), const WindowState(width: 1400, height: 900));
+    });
+  });
+
+  group('WindowStateRecorder - concurrent flushes', () {
+    test('a later flush cannot be overwritten by an earlier one', () async {
+      await setUpWith({'window_width': 1400.0, 'window_height': 900.0});
+      final recorder = buildRecorder();
+      window.size = const Size(1920, 1040);
+      window.maximized = true;
+      late Completer<void> gate;
+
+      withFakeTime((async) {
+        gate = Completer<void>();
+        window.flushGate = gate;
+        // Flush A starts and blocks having decided "maximized".
+        recorder.onWindowResized();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+
+        // The user restores the window down before A finished.
+        window.flushGate = null;
+        window.maximized = false;
+        window.size = const Size(1500, 950);
+        recorder.onWindowUnmaximize();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+
+        gate.complete();
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+      });
+
+      // A's stale "maximized" must not land after B's write.
+      expect(
+        repository.load(),
+        const WindowState(width: 1500, height: 950, maximized: false),
+      );
+    });
+
+    test('closing waits for an in-flight flush', () async {
+      await setUpWith({'window_width': 1400.0, 'window_height': 900.0});
+      final recorder = buildRecorder();
+      window.maximized = true;
+      late Completer<void> gate;
+
+      withFakeTime((async) {
+        gate = Completer<void>();
+        window.flushGate = gate;
+        recorder.onWindowResized();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+        expect(window.closeCount, 0,
+            reason: 'must not tear down mid-write');
+
+        window.flushGate = null;
+        window.maximized = false;
+        window.size = const Size(1500, 950);
+        gate.complete();
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+      });
+
+      expect(window.closeCount, 1);
+      expect(
+        repository.load(),
+        const WindowState(width: 1500, height: 950, maximized: false),
+      );
+    });
+  });
+
+  group('WindowStateRecorder - close', () {
+    test('flushes a pending change before destroying the window', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+
+      withFakeTime((async) {
+        recorder.onWindowResized();
+        async.elapse(const Duration(milliseconds: 100));
+        // Quit before the debounce would have fired.
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(repository.load(), const WindowState(width: 1600, height: 1000));
+      expect(window.closeCount, 1);
+    });
+
+    // Windows only emits resize events for interactive drags, so a size set by
+    // Aero Snap would never reach the debounce. Closing therefore always writes
+    // the current state rather than only a pending one.
+    test('saves the current size even with nothing pending', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(repository.saveCount, 1);
+      expect(repository.load(), const WindowState(width: 1600, height: 1000));
+      expect(window.closeCount, 1);
+    });
+
+    test('a debounced save followed by a close writes twice', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+
+      withFakeTime((async) {
+        recorder.onWindowResized();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(repository.saveCount, 2);
+      expect(repository.load(), const WindowState(width: 1600, height: 1000));
+      expect(window.closeCount, 1);
+    });
+
+    test('still destroys the window when the flush throws', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+      window.throwOnGetSize = true;
+
+      withFakeTime((async) {
+        recorder.onWindowResized();
+        async.elapse(const Duration(milliseconds: 100));
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(window.closeCount, 1, reason: 'the app must stay closable');
+    });
+
+    test('a failing debounced flush does not crash the app', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.throwOnGetSize = true;
+
+      withFakeTime((async) {
+        recorder.onWindowResized();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+      });
+
+      expect(repository.saveCount, 0);
+    });
+
+    // setPreventClose(true) is what keeps the window alive long enough to
+    // write. If destroy() then failed while interception was still on, the app
+    // would be unclosable; dropping the interception first means a second
+    // click on the close button gets through natively.
+    test('drops the close interception before destroying', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(
+        window.calls.indexOf('setPreventClose(false)') <
+            window.calls.indexOf('close'),
+        isTrue,
+      );
+      expect(window.preventClose, isFalse);
+    });
+
+    // destroy() only posts WM_QUIT and leaves the window undestroyed, which
+    // measured ~5.9s to exit against ~0.17s for the runner's normal path.
+    test('closes through the normal path instead of forcing a quit', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(window.closeCount, 1);
+      expect(window.destroyCount, 0);
+    });
+
+    test('falls back to a forced quit when close fails', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+      window.throwOnClose = true;
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(window.destroyCount, 1);
+    });
+
+    // Releasing the interception makes the window emit close again.
+    test('ignores the second close it triggers itself', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(window.closeCount, 1);
+      expect(repository.saveCount, 1);
+    });
+
+    test('drops the interception even when the flush throws', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.throwOnGetSize = true;
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(window.preventClose, isFalse);
+      expect(window.closeCount, 1);
+    });
+
+    test('a failing close and destroy do not escape as unhandled errors',
+        () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+      window.throwOnClose = true;
+      window.throwOnDestroy = true;
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(window.destroyCount, 1);
+      expect(window.preventClose, isFalse);
+    });
+
+    test('dispose cancels a pending debounce', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+
+      withFakeTime((async) {
+        recorder.onWindowResized();
+        recorder.dispose();
+        async.elapse(const Duration(milliseconds: 500));
+        async.flushMicrotasks();
+      });
+
+      expect(repository.saveCount, 0);
+      expect(repository.load(), WindowState.empty);
+    });
+  });
+}
