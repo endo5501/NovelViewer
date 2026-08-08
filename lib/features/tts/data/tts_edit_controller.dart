@@ -181,6 +181,42 @@ class TtsEditController {
     }
   }
 
+  /// Marks a segment as excluded from generation, playback and export.
+  ///
+  /// Deliberately keeps any generated audio: the toggle sits on the status
+  /// icon, so a misclick must not cost a regeneration. That means audio
+  /// presence can no longer stand in for the skip decision — every consumer
+  /// reads [TtsEditSegment.skip] explicitly.
+  Future<void> setSegmentSkip(int segmentIndex, bool skip) async {
+    if (segmentIndex < 0 || segmentIndex >= _segments.length) return;
+
+    final segment = _segments[segmentIndex];
+    if (segment.skip == skip) return;
+    segment.skip = skip;
+
+    await _ensureEpisodeExists();
+
+    if (segment.dbRecordExists) {
+      await _repository.updateSegmentSkip(_episodeId!, segmentIndex, skip);
+    } else {
+      await _repository.insertSegment(
+        episodeId: _episodeId!,
+        segmentIndex: segmentIndex,
+        text: segment.text,
+        textOffset: segment.textOffset,
+        textLength: segment.textLength,
+        refWavPath: segment.refWavPath,
+        skip: skip,
+      );
+      segment.dbRecordExists = true;
+    }
+
+    // Skipping can be what finally satisfies an episode, and un-skipping can
+    // undo that. Without this the file browser's completion mark would go
+    // stale until some unrelated generation or reset happened to run.
+    await _updateEpisodeStatus();
+  }
+
   Future<bool> _ensureModelLoaded(TtsEngineConfig config) async {
     return _session.ensureModelLoaded(config);
   }
@@ -219,8 +255,6 @@ class TtsEditController {
   }) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
 
-    if (!await _ensureModelLoaded(config)) return false;
-
     final segment = _segments[segmentIndex];
     // For new segments, apply dictionary before synthesizing and storing.
     // For segments already in DB, use their stored text as-is (already converted).
@@ -228,6 +262,20 @@ class TtsEditController {
         ? TtsDictionaryRepository.applyDictionaryWithEntries(
             dictEntries, segment.text)
         : segment.text;
+
+    // A symbol-only line ("――‐") is its own segment, so a no-reading
+    // dictionary entry empties it. An empty string fails in the engine, and
+    // generateAllUngenerated stops on the first failure — one such line would
+    // otherwise abort generation for the whole rest of the episode. Record it
+    // as skipped and report success so the run carries on. Checked before
+    // the model load so a blank segment never pays for one.
+    if (synthText.trim().isEmpty) {
+      await _markBlankSegmentSkipped(segmentIndex, segment);
+      return true;
+    }
+
+    if (!await _ensureModelLoaded(config)) return false;
+
     // For Irodori, the segment's memo becomes the caption (design D8); for
     // qwen3/piper captionFromMemo returns null so the memo never affects
     // synthesis.
@@ -265,6 +313,33 @@ class TtsEditController {
     return true;
   }
 
+  /// Persists a segment whose synthesis input turned out blank as skipped.
+  ///
+  /// Written when generation reaches the segment rather than when the dialog
+  /// loads it, so opening the edit screen stays a pure read and does not
+  /// conjure an episode row (design D4).
+  Future<void> _markBlankSegmentSkipped(
+      int segmentIndex, TtsEditSegment segment) async {
+    segment.skip = true;
+
+    await _ensureEpisodeExists();
+
+    if (segment.dbRecordExists) {
+      await _repository.updateSegmentSkip(_episodeId!, segmentIndex, true);
+    } else {
+      await _repository.insertSegment(
+        episodeId: _episodeId!,
+        segmentIndex: segmentIndex,
+        text: segment.text,
+        textOffset: segment.textOffset,
+        textLength: segment.textLength,
+        refWavPath: segment.refWavPath,
+        skip: true,
+      );
+      segment.dbRecordExists = true;
+    }
+  }
+
   Future<void> generateAllUngenerated({
     required TtsEngineConfig config,
     required String Function(String fileName)? resolveRefWavPath,
@@ -273,7 +348,9 @@ class TtsEditController {
     _cancelled = false;
     final ungenerated = <int>[];
     for (var i = 0; i < _segments.length; i++) {
-      if (!_segments[i].hasAudio) {
+      // Skipped segments are excluded whether or not they hold audio: the
+      // flag is the decision, the recording is only leftover state.
+      if (!_segments[i].hasAudio && !_segments[i].skip) {
         ungenerated.add(i);
       }
     }
@@ -360,7 +437,9 @@ class TtsEditController {
     // below zero would otherwise walk off the front of the list.
     for (var i = startIndex < 0 ? 0 : startIndex; i < _segments.length; i++) {
       if (_cancelled) break;
-      if (!_segments[i].hasAudio) continue;
+      // A skipped segment may still hold audio, so its presence cannot be
+      // the test for whether to play it.
+      if (!_segments[i].hasAudio || _segments[i].skip) continue;
       onSegmentStart?.call(i);
       // The private form: a stop mid-run must not be cleared by the next
       // segment the way a fresh preview press clears it.
@@ -398,9 +477,10 @@ class TtsEditController {
     segment.hasAudio = false;
     segment.refWavPath = null;
     segment.memo = null;
+    segment.skip = false;
     segment.dbRecordExists = false;
 
-    await _updateEpisodeStatusAfterReset();
+    await _updateEpisodeStatus();
   }
 
   Future<void> resetAll() async {
@@ -425,10 +505,11 @@ class TtsEditController {
       segment.hasAudio = false;
       segment.refWavPath = null;
       segment.memo = null;
+      segment.skip = false;
       segment.dbRecordExists = false;
     }
 
-    await _updateEpisodeStatusAfterReset();
+    await _updateEpisodeStatus();
   }
 
   Future<void> cancel() async {
@@ -455,7 +536,7 @@ class TtsEditController {
     }
   }
 
-  Future<void> _updateEpisodeStatusAfterReset() async {
+  Future<void> _updateEpisodeStatus() async {
     if (_episodeId == null) return;
 
     final hasAnyDbRecord = _segments.any((s) => s.dbRecordExists);
@@ -463,8 +544,11 @@ class TtsEditController {
       await _repository.deleteEpisode(_episodeId!);
       _episodeId = null;
     } else {
-      final allHaveAudio = _segments.every((s) => s.hasAudio);
-      final status = allHaveAudio
+      // A skipped segment is satisfied without audio — by design it never
+      // gets any. Requiring audio everywhere would leave every episode
+      // containing a skip permanently "partial".
+      final allSatisfied = _segments.every((s) => s.hasAudio || s.skip);
+      final status = allSatisfied
           ? TtsEpisodeStatus.completed
           : TtsEpisodeStatus.partial;
       await _repository.updateEpisodeStatus(_episodeId!, status);

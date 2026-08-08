@@ -35,44 +35,44 @@
 
 ## 4. 編集画面コントローラ: スキップ状態
 
-- [ ] 4.1 `test/features/tts/data/tts_edit_controller_test.dart` に以下のテストを追加する
+- [x] 4.1 `test/features/tts/data/tts_edit_controller_test.dart` に以下のテストを追加する
   - `setSegmentSkip(index, true)` でDBへ永続化される
   - DBレコードを持たないセグメントのスキップで `skip = 1` のレコードが新規作成される
   - 生成済みセグメントをスキップにしても `audio_data` が残る
   - スキップ解除で元の状態に戻る
   - 最後の未生成セグメントをスキップにするとエピソードが `completed` になる
   - `completed` のエピソードで音声なしスキップ行を解除すると `partial` へ戻る
-- [ ] 4.2 テストを実行し、失敗することを確認する
-- [ ] 4.3 `tts_edit_segment.dart` に `skip` フィールドを追加し、`mergeSegments` でDB値を反映する
-- [ ] 4.4 `tts_edit_controller.dart` に `setSegmentSkip` を実装する（`updateSegmentMemo` と同じ「レコードが無ければ作る」規約に従う）。切替後にエピソード状態更新のヘルパ（リセット系が使うものと同一）を呼ぶ — 呼ばないと、スキップで充足したエピソードが `partial` のまま取り残される
-- [ ] 4.5 テストが通ることを確認する
+- [x] 4.2 テストを実行し、失敗することを確認する
+- [x] 4.3 `tts_edit_segment.dart` に `skip` フィールドを追加し、`mergeSegments` でDB値を反映する
+- [x] 4.4 `tts_edit_controller.dart` に `setSegmentSkip` を実装する（`updateSegmentMemo` と同じ「レコードが無ければ作る」規約に従う）。切替後にエピソード状態更新のヘルパ（リセット系が使うものと同一）を呼ぶ — 呼ばないと、スキップで充足したエピソードが `partial` のまま取り残される
+- [x] 4.5 テストが通ることを確認する
 
 ## 5. 編集画面コントローラ: 生成・再生からの除外と完了判定
 
-- [ ] 5.1 テストを追加する
+- [x] 5.1 テストを追加する
   - `generateAllUngenerated` がスキップ済みセグメントを生成しない
   - 未生成セグメントがすべてスキップの場合、モデルをロードしない
   - `playAll` が音声を持つスキップ済みセグメントを再生しない
   - `resetSegment` / `resetAll` がスキップを解除する
   - 完了判定が「全セグメントが音声を持つかスキップされている」で `completed` になる
   - 音声もスキップも無いセグメントが1つ残ると `partial` のままになる
-- [ ] 5.2 テストを実行し、失敗することを確認する
-- [ ] 5.3 `generateAllUngenerated` の対象抽出を `!hasAudio && !skip` へ変更する
-- [ ] 5.4 `playAll` にスキップ判定を追加する
-- [ ] 5.5 `resetSegment` / `resetAll` でスキップを解除する
-- [ ] 5.6 `_updateEpisodeStatusAfterReset` の判定を `every((s) => s.hasAudio || s.skip)` へ変更する
-- [ ] 5.7 テストが通ることを確認する
+- [x] 5.2 テストを実行し、失敗することを確認する
+- [x] 5.3 `generateAllUngenerated` の対象抽出を `!hasAudio && !skip` へ変更する
+- [x] 5.4 `playAll` にスキップ判定を追加する
+- [x] 5.5 `resetSegment` / `resetAll` でスキップを解除する
+- [x] 5.6 `_updateEpisodeStatusAfterReset` の判定を `every((s) => s.hasAudio || s.skip)` へ変更する
+- [x] 5.7 テストが通ることを確認する
 
 ## 6. 空テキストの安全網（編集画面）
 
-- [ ] 6.1 テストを追加する
+- [x] 6.1 テストを追加する
   - 辞書で空になったセグメントを含む一括生成で、当該セグメントの合成が呼ばれず `skip = 1` が記録され、以降のセグメントの生成が継続する
   - 空白のみのテキストも同様に扱われる
   - 空テキストのスキップが `onSynthesisFailed` を発火しない
   - `loadSegments` はスキップをDBへ書き込まない（エピソードレコードも作られない）
-- [ ] 6.2 テストを実行し、失敗することを確認する
-- [ ] 6.3 `_generateSegmentWithEntries` で `synthText.trim().isEmpty` を判定し、合成を呼ばずに `skip = 1` のレコードを永続化して成功として返す
-- [ ] 6.4 テストが通ることを確認する（特に、既存の `if (!success) break;` によって一括生成が止まらないこと）
+- [x] 6.2 テストを実行し、失敗することを確認する
+- [x] 6.3 `_generateSegmentWithEntries` で `synthText.trim().isEmpty` を判定し、合成を呼ばずに `skip = 1` のレコードを永続化して成功として返す
+- [x] 6.4 テストが通ることを確認する（特に、既存の `if (!success) break;` によって一括生成が止まらないこと）
 
 ## 7. ストリーミング再生
 
