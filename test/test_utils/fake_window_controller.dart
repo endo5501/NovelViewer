@@ -5,21 +5,25 @@ import 'package:window_manager/window_manager.dart';
 
 /// In-memory [WindowController] for unit tests.
 ///
-/// Lets a test set what the "OS" reports (size, maximized) and observe what the
-/// code under test did to the window, without a method channel.
+/// Lets a test set what the "OS" reports (size, maximized, visibility) and
+/// observe what the code under test did to the window, without a method
+/// channel.
 class FakeWindowController implements WindowController {
   Size size = const Size(1280, 720);
   bool maximized = false;
 
+  /// Number of [isVisible] polls before the window reports itself visible,
+  /// mimicking the runner showing it on Flutter's first frame.
+  int visibleAfterPolls = 0;
+
   /// Makes [getSize] fail, to exercise error paths.
   bool throwOnGetSize = false;
 
+  int visibilityPolls = 0;
   int destroyCount = 0;
   int maximizeCount = 0;
-  int showCount = 0;
   bool? preventClose;
   Size? sizeSetByCaller;
-  WindowOptions? readyOptions;
 
   /// Records the order of the calls that matter for restore correctness.
   final List<String> calls = <String>[];
@@ -38,6 +42,9 @@ class FakeWindowController implements WindowController {
   Future<bool> isMaximized() async => maximized;
 
   @override
+  Future<bool> isVisible() async => visibilityPolls++ >= visibleAfterPolls;
+
+  @override
   Future<void> setSize(Size size) async {
     calls.add('setSize');
     sizeSetByCaller = size;
@@ -52,12 +59,6 @@ class FakeWindowController implements WindowController {
   }
 
   @override
-  Future<void> show() async {
-    calls.add('show');
-    showCount++;
-  }
-
-  @override
   Future<void> destroy() async {
     calls.add('destroy');
     destroyCount++;
@@ -66,19 +67,6 @@ class FakeWindowController implements WindowController {
   @override
   Future<void> setPreventClose(bool preventClose) async {
     this.preventClose = preventClose;
-  }
-
-  @override
-  Future<void> waitUntilReadyToShow(
-    WindowOptions options,
-    Future<void> Function() onReady,
-  ) async {
-    readyOptions = options;
-    calls.add('waitUntilReadyToShow');
-    if (options.size != null) {
-      size = options.size!;
-    }
-    await onReady();
   }
 
   @override

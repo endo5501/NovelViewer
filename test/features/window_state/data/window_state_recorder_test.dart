@@ -198,7 +198,25 @@ void main() {
       expect(window.destroyCount, 1);
     });
 
-    test('does not save again when nothing is pending', () async {
+    // Windows only emits resize events for interactive drags, so a size set by
+    // Aero Snap would never reach the debounce. Closing therefore always writes
+    // the current state rather than only a pending one.
+    test('saves the current size even with nothing pending', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(repository.saveCount, 1);
+      expect(repository.load(), const WindowState(width: 1600, height: 1000));
+      expect(window.destroyCount, 1);
+    });
+
+    test('a debounced save followed by a close writes twice', () async {
       await setUpWith();
       final recorder = buildRecorder();
       window.size = const Size(1600, 1000);
@@ -211,7 +229,8 @@ void main() {
         async.flushMicrotasks();
       });
 
-      expect(repository.saveCount, 1);
+      expect(repository.saveCount, 2);
+      expect(repository.load(), const WindowState(width: 1600, height: 1000));
       expect(window.destroyCount, 1);
     });
 

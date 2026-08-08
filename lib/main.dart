@@ -44,9 +44,6 @@ void main() async {
   await libraryService.migrateFromOldBundleId();
   final libraryDir = await libraryService.ensureLibraryDirectory();
   final prefs = await SharedPreferences.getInstance();
-  // Restores the saved window size before the first frame (Windows only; a
-  // no-op elsewhere).
-  await initializeWindowState(prefs: prefs);
   await runStartupMigrations(SettingsRepository(prefs));
   // Wire a real folder lister so the v4→v5 LLM summary migration can resolve
   // lexical ranks for legacy rows whose source_file lacks a numeric prefix.
@@ -76,6 +73,12 @@ void main() async {
 
   // Fire-and-forget background update check; never blocks first paint.
   unawaited(container.read(updateStatusProvider.notifier).check());
+
+  // Restores the saved window size (Windows only; a no-op elsewhere). Runs as
+  // late as possible: the runner creates the window hidden and only shows it
+  // once Flutter has a frame, so anything that reveals it earlier would put a
+  // blank window on screen for the whole startup migration.
+  await initializeWindowState(prefs: prefs);
 
   runApp(
     UncontrolledProviderScope(

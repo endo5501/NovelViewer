@@ -72,38 +72,50 @@ TDD 必須という制約下では、クランプ・不正値処理・最大化�
 
 イベント発火順（`onWindowResized` と `onWindowMaximize` のどちらが先か）はプラットフォーム実装依存だが、フラッシュ時点で状態を問い合わせる設計にすることで順序に依存しなくなる。これはデバウンスを入れる副次的な利点でもある。
 
-### 決定 4: 復元シーケンスと `window_manager` の抽象化
+### 決定 4: サイズ復元は初回フレーム前、最大化復元は可視化後（実測に基づく）
 
-`lib/main.dart` の `SharedPreferences` 取得後、`runApp()` 前に挿入する。
+`windows/runner/win32_window.cpp` はウィンドウを `WS_VISIBLE` なしで生成し、`flutter_window.cpp` が初回フレーム時に `SetNextFrameCallback` → `Show()`（= `ShowWindow(SW_SHOWNORMAL)`）で表示する。この構造から 2 つの帰結がある。
+
+- **サイズ復元は初回フレーム前に行う。** ウィンドウはまだ非表示なので、リサイズがユーザーに見えない。`show()` は自前で呼ばない。呼ぶとランナーが意図的に隠している空白ウィンドウが起動処理（DB マイグレーション等）の間ずっと表示されてしまう。
+- **最大化復元は初回フレーム前に行えない。** ランナーの `SW_SHOWNORMAL` が最大化を解除するため。実測でも `window_maximized=true` で起動したウィンドウが `Maximized: False` になることを確認した。よって `isVisible()` をポーリング（50ms 間隔・2 秒上限）し、可視化後に `maximize()` する。タイムアウト時は最大化しない（ランナーが隠しているウィンドウを強制表示しないため）。
+
+既知の制約: 最大化状態での起動時、ごく短時間だけ通常サイズのウィンドウが見えてから最大化される。これを消すには `flutter_window.cpp` の自動 `Show()` を止める必要があり、本変更では見送った。
+
+### 決定 5: 復元シーケンスと `window_manager` の抽象化
+
+`lib/main.dart` の `runApp()` 直前に挿入する。`ensureInitialized()` のみ `main()` 冒頭で呼ぶ。
 
 ```
   main()
     │
-    ├─ prefs = await SharedPreferences.getInstance()      [既存 main.dart:40]
+    ├─ if (Platform.isWindows) await windowManager.ensureInitialized()
     │
-    ├─ if (Platform.isWindows) {
-    │     await windowManager.ensureInitialized()
-    │     saved  = WindowStateRepository(prefs).load()     ← 純 Dart / テスト対象
-    │     work   = プライマリモニタの作業領域を取得
-    │     size   = resolveWindowSize(saved, work)          ← 純 Dart / テスト対象
+    ├─ prefs = await SharedPreferences.getInstance()      [既存]
+    ├─ ... 起動マイグレーション / DB オープン（重い処理）  [既存]
     │
-    │     await windowManager.waitUntilReadyToShow(
-    │       WindowOptions(size: size), () async {
-    │         if (saved.maximized) await windowManager.maximize();
-    │         await windowManager.show();
-    │       })
-    │
-    │     windowManager.addListener(WindowStateRecorder(repository))
-    │   }
+    ├─ await initializeWindowState(prefs: prefs)   ← ウィンドウはまだ非表示
+    │     saved = WindowStateRepository(prefs).load()      ← 純 Dart / テスト対象
+    │     work  = プライマリディスプレイの作業領域(論理px)
+    │     await setSize(resolveWindowSize(saved, work))    ← 純 Dart / テスト対象
+    │     await setPreventClose(true)
+    │     addListener(WindowStateRecorder(...))
+    │     if (saved.maximized) → 可視化を待って maximize()（非同期・await しない）
     │
     └─ runApp(...)                                        [既存]
+          └─ 初回フレーム → ランナーが Show() → 上のポーリングが maximize()
 ```
 
-最大化復元時に「通常サイズを設定してから `maximize()` を呼ぶ」順序が重要で、これにより OS 側の復元矩形に通常サイズが記録され、「元に戻す」で正しい寸法へ戻る。
+最大化復元時に「通常サイズを設定してから `maximize()` を呼ぶ」順序が重要で、これにより OS 側の復元矩形に通常サイズが記録され、「元に戻す」で正しい寸法へ戻る。実測で確認済み（2000×1250 物理で保存 → 最大化して終了 → 再起動で最大化 → 元に戻すで 2000×1250 に復帰）。
 
-テスト容易性のため、`window_manager` の API は薄いインターフェース（例: `WindowController`）越しに触る。単体テストではフェイク実装を注入し、`WindowStateRecorder` のデバウンス挙動を dev 依存にすでに存在する `fake_async` で検証する。
+テスト容易性のため、`window_manager` の API は薄いインターフェース `WindowController` 越しに触る。単体テストではフェイク実装を注入し、`WindowStateRecorder` のデバウンス挙動を dev 依存にすでに存在する `fake_async` で検証する。
 
-### 決定 5: 検証ロジックの仕様値
+### 決定 6: クローズ時は無条件にフラッシュする
+
+Windows プラグインは `resize` を `WM_SIZING`、`resized` を `WM_EXITSIZEMOVE` にしか紐づけていない（`window_manager_plugin.cpp`）。つまり**対話的なドラッグリサイズ以外では保存イベントが一切発火しない** — Aero Snap や他プログラムからのリサイズが該当する。
+
+そのため `onWindowClose` では「デバウンス待ちがあれば」ではなく**常に**現在の状態を書き込む。これにより「終了時の状態が次回起動時の状態」が無条件に成立する。
+
+### 決定 7: 検証ロジックの仕様値
 
 `resolveWindowSize(saved, workArea)` の規則（すべて純関数）:
 
@@ -117,13 +129,17 @@ TDD 必須という制約下では、クランプ・不正値処理・最大化�
 
 ## Risks / Trade-offs
 
-- **起動時のちらつき** → ネイティブは常に 1280×720 でウィンドウを生成するため、復元サイズが異なると一瞬既定サイズが見える可能性がある。`waitUntilReadyToShow` のコールバック内で初めて `show()` を呼ぶことで軽減を図るが、`window_manager` の Windows 実装がこれを完全に隠せるかは**未確認であり、実装フェーズで実機確認する**。隠せない場合の次善策は、`main.cpp` 側の初期ウィンドウを非表示で生成するようランナーを調整すること。
+- **起動時のちらつき（解決済み）** → ランナーはウィンドウを非表示で生成し初回フレーム後に `Show()` するため、その前にサイズを適用すればリサイズは見えない。自前で `show()` を呼ばないことが条件（呼ぶと起動処理中ずっと空白ウィンドウが表示される）。最大化復元時のみ、通常サイズが一瞬見えてから最大化される。
 
-- **論理ピクセルと物理ピクセルの単位不一致** → `main.cpp` は `Scale()` で DPI スケールを適用した物理ピクセルを扱うのに対し、`window_manager` は論理ピクセルを扱う。作業領域の取得値（`screen_retriever` 経由）がどちらの単位かを実装時に確認し、クランプ比較で単位を揃える必要がある。異なる DPI のモニタ間で移動した場合、論理サイズを保持する挙動が正しい。
+- **論理ピクセルと物理ピクセルの単位不一致（解決済み）** → `Display.visibleSize` はプラグイン実装が `rcWork / scale_factor` を返すため**論理ピクセル**（`screen_retriever_windows_plugin.cpp`）。`setSize` / `getBounds` も論理ピクセルを扱う。保存値・作業領域・setSize がすべて論理ピクセルで揃うため変換は不要。125% スケール環境で実測確認済み（1280×720 論理 = 1600×900 物理）。異なる DPI のモニタ間では論理サイズが保持される。
 
-- **新規依存の追加** → `window_manager` は推移的に `screen_retriever` を持ち込む。ビルド対象 3 プラットフォームすべてのビルドに影響する可能性があるため、macOS / Linux ビルドが壊れないことを確認する。実行時の有効化は `Platform.isWindows` でガードするが、パッケージのリンク自体は全プラットフォームで発生する。
+- **`setPreventClose(true)` によるクローズ不能化** → フラッシュが失敗してもウィンドウが閉じなくなる恐れがある。`_closeAfterFlush` は `finally` で必ず `destroy()` を呼び、フラッシュの例外はログのみとする。実測で WM_CLOSE からプロセスが正常終了することを確認済み。
 
-- **デバウンス中の終了** → リサイズ後 500ms 以内にアプリを終了すると最後の変更が保存されない。通常終了時にはフラッシュを試みるが、強制終了は救済できない。500ms という短い窓に対して許容できるトレードオフと判断する。
+- **新規依存の追加** → `window_manager` は推移的に `screen_retriever` を持ち込む（クランプで直接使うため `screen_retriever` も直接依存として宣言）。実行時の有効化は `Platform.isWindows` でガードするが、パッケージのリンク自体は全プラットフォームで発生する。macOS / Linux のビルド確認は Windows 開発機では実施できないため未検証。
+
+- **対話的リサイズ以外は即時保存されない** → Aero Snap などは `resized` イベントを発火しないため、デバウンス経路では保存されない。決定 6 のクローズ時無条件フラッシュで最終的には保存される。
+
+- **強制終了** → WM_CLOSE を経ない終了（タスクマネージャからの強制終了など）ではフラッシュが走らず、直近のデバウンス済み保存までが残る。許容するトレードオフと判断する。
 
 - **`SharedPreferences` の書き込み頻度** → デバウンスにより連続リサイズ中の書き込みは 1 回に集約されるため、実用上の負荷は無視できる。
 
@@ -133,5 +149,13 @@ TDD 必須という制約下では、クランプ・不正値処理・最大化�
 
 ## Open Questions
 
-- `window_manager` の `waitUntilReadyToShow` が Windows で起動時リサイズのちらつきを完全に隠せるか（実装フェーズで実機確認）
-- `screen_retriever` の作業領域取得値の単位（論理／物理ピクセル）
+（実装フェーズで解消済み）
+
+- ~~`waitUntilReadyToShow` がちらつきを隠せるか~~ → `waitUntilReadyToShow` は不要と判明し `setSize` 直接呼び出しに変更。Windows 側の `WaitUntilReadyToShow` はタスクバー COM 初期化のみで、Dart 側は `options.size` を同じ `setSize` に流すだけだった。ちらつきはランナーの非表示生成により発生しない。
+- ~~`screen_retriever` の作業領域の単位~~ → 論理ピクセル（プラグインソースで確認、実機でも裏付け）。
+
+未検証として残るもの:
+
+- 6.4 の視覚的なちらつき判定（自動計測ではなく目視が必要）
+- 6.6 のモニタ取り外し時の挙動（物理的な構成変更が必要）
+- macOS / Linux のビルド（Windows 開発機では実施不可）

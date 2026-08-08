@@ -62,19 +62,22 @@ class WindowStateRecorder with WindowListener {
     });
   }
 
-  /// Flushes any pending write, then closes the window.
+  /// Writes the current state, then closes the window.
   ///
-  /// `setPreventClose(true)` is what makes this possible: the native side
-  /// reports the close and waits, so the write can finish before the process
-  /// goes away. [WindowController.destroy] therefore has to run no matter what
-  /// the flush did, or the app would become unclosable.
+  /// Flushes unconditionally rather than only when the debounce is armed: the
+  /// Windows plugin only emits resize events for interactive drags, so a size
+  /// set by Aero Snap or another program would otherwise never be stored. This
+  /// makes "what you quit with is what you get" hold in every case.
+  ///
+  /// `setPreventClose(true)` is what buys the time: the native side reports the
+  /// close and waits, so the write can finish before the process goes away.
+  /// [WindowController.destroy] therefore has to run whatever the flush did, or
+  /// the app would become unclosable.
   Future<void> _closeAfterFlush() async {
     try {
-      if (_timer != null) {
-        _timer!.cancel();
-        _timer = null;
-        await _flushSafely();
-      }
+      _timer?.cancel();
+      _timer = null;
+      await _flushSafely();
     } finally {
       await _window.destroy();
     }

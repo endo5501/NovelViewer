@@ -1,10 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
 import 'package:logging/logging.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:window_manager/window_manager.dart';
 import 'package:novel_viewer/features/window_state/data/window_controller.dart';
 import 'package:novel_viewer/features/window_state/data/window_state_recorder.dart';
 import 'package:novel_viewer/features/window_state/data/window_state_repository.dart';
@@ -12,13 +12,22 @@ import 'package:novel_viewer/features/window_state/domain/window_size_resolver.d
 
 final _log = Logger('window_state');
 
+/// What the primary display reports: its visible area in logical pixels. Null
+/// when the display cannot be read.
+typedef DisplayInfo = ({Size? workArea});
+
 /// Outcome of [initializeWindowState].
 class WindowStateBootstrapResult {
-  const WindowStateBootstrapResult({this.recorder});
+  const WindowStateBootstrapResult({this.recorder, this.pendingMaximize});
 
   /// The listener that keeps the stored state up to date, or null when window
   /// state persistence is not active on this platform.
   final WindowStateRecorder? recorder;
+
+  /// Completes once the deferred maximize has run (or given up); null when the
+  /// window was not stored as maximized. Callers need not await it — it is
+  /// exposed so tests can.
+  final Future<void>? pendingMaximize;
 }
 
 /// Restores the saved window size and starts recording further changes.
@@ -26,14 +35,20 @@ class WindowStateBootstrapResult {
 /// Windows only: macOS zooms on launch (`MainFlutterWindow.swift`) and Linux is
 /// out of scope, so on those platforms this is a no-op and nothing is written.
 ///
+/// Sizing happens immediately, while the runner still has the window hidden, so
+/// the user never sees it resize. Maximizing cannot: the runner calls
+/// `ShowWindow(SW_SHOWNORMAL)` on Flutter's first frame, which would undo it —
+/// so that is deferred until the window is actually visible.
+///
 /// Call after `SharedPreferences` is available and before `runApp`. The named
-/// [window], [workAreaProvider] and [isWindows] parameters exist so tests can
-/// drive this without a real window.
+/// parameters exist so tests can drive this without a real window.
 Future<WindowStateBootstrapResult> initializeWindowState({
   required SharedPreferences prefs,
   WindowController? window,
-  Future<Size?> Function()? workAreaProvider,
+  Future<DisplayInfo> Function()? displayProvider,
   bool? isWindows,
+  Duration pollInterval = const Duration(milliseconds: 50),
+  Duration pollTimeout = const Duration(seconds: 2),
 }) async {
   if (!(isWindows ?? Platform.isWindows)) {
     return const WindowStateBootstrapResult();
@@ -42,20 +57,11 @@ Future<WindowStateBootstrapResult> initializeWindowState({
   final controller = window ?? const WindowManagerController();
   final repository = WindowStateRepository(prefs);
   final saved = repository.load();
-  final workArea = await (workAreaProvider ?? _primaryWorkArea)();
-  final size = resolveWindowSize(saved, workArea);
+  final display = await (displayProvider ?? _primaryDisplay)();
 
-  await controller.waitUntilReadyToShow(
-    WindowOptions(size: size),
-    () async {
-      // Size first, then maximize: the size the OS keeps as the restore target
-      // is whatever it had before maximizing.
-      if (saved.maximized) {
-        await controller.maximize();
-      }
-      await controller.show();
-    },
-  );
+  // Everything here is in logical pixels: the stored size, the work area
+  // (`Display.visibleSize` is `rcWork / scaleFactor`) and what setSize expects.
+  await controller.setSize(resolveWindowSize(saved, display.workArea));
 
   // The recorder flushes a pending write in onWindowClose, which only has time
   // to finish if the native close is intercepted.
@@ -65,18 +71,51 @@ Future<WindowStateBootstrapResult> initializeWindowState({
       WindowStateRecorder(repository: repository, window: controller);
   controller.addListener(recorder);
 
-  return WindowStateBootstrapResult(recorder: recorder);
+  return WindowStateBootstrapResult(
+    recorder: recorder,
+    pendingMaximize: saved.maximized
+        ? _maximizeOnceVisible(controller, pollInterval, pollTimeout)
+        : null,
+  );
 }
 
-/// Visible size of the primary display in logical pixels, or null if it can't
-/// be read (the clamp is then skipped rather than blocking startup).
-Future<Size?> _primaryWorkArea() async {
+/// Maximizes as soon as the runner has shown the window.
+///
+/// Gives up on timeout rather than maximizing a still-hidden window: that would
+/// reveal a blank frame the runner deliberately kept hidden.
+Future<void> _maximizeOnceVisible(
+  WindowController controller,
+  Duration interval,
+  Duration timeout,
+) async {
+  final deadline = timeout.inMicroseconds;
+  var waited = 0;
+  try {
+    while (waited <= deadline) {
+      if (await controller.isVisible()) {
+        await controller.maximize();
+        return;
+      }
+      await Future<void>.delayed(interval);
+      // A zero interval still yields, so count a minimum tick to stay bounded.
+      waited += interval.inMicroseconds > 0 ? interval.inMicroseconds : 1;
+    }
+    _log.warning('Window never became visible; skipping restore of maximized '
+        'state');
+  } catch (e, stack) {
+    _log.warning('Failed to restore the maximized window state', e, stack);
+  }
+}
+
+/// Primary display metrics, or null if they can't be read (the clamp is then
+/// skipped rather than blocking startup).
+Future<DisplayInfo> _primaryDisplay() async {
   try {
     final display = await screenRetriever.getPrimaryDisplay();
-    return display.visibleSize ?? display.size;
+    return (workArea: display.visibleSize ?? display.size);
   } catch (e, stack) {
     _log.warning('Could not read the primary display; skipping clamp', e,
         stack);
-    return null;
+    return (workArea: null);
   }
 }
