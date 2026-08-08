@@ -2278,6 +2278,84 @@ void main() {
         expect(episode!.status, TtsEpisodeStatus.completed);
       });
 
+      test('a trailing skipped segment does not steal the last-segment drain',
+          () async {
+        const text = '文1。文2。';
+        final episodeId = await seedEpisode(text, 'ep01.txt');
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: '文1。',
+          textOffset: 0,
+          textLength: 3,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 1,
+          text: '文2。',
+          textOffset: 4,
+          textLength: 3,
+          skip: true,
+        );
+
+        final player = _ManualAudioPlayer();
+        final controller = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: _FakeTtsIsolate(),
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+
+        final future = controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: text,
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        await _pumpUntil(() => player.isPlaying);
+        player.simulateCompletion();
+        await future;
+
+        // Segment 0 is the last audible one — the skipped segment 1 never
+        // plays. Treating 0 as intermediate would pause the player instead
+        // of letting the output buffer drain, clipping its tail.
+        expect(player.playedFiles, hasLength(1));
+        expect(player.pauseCount, 0,
+            reason: 'the last audible segment must not be paused');
+      });
+
+      test('a discovered blank segment still advances generation progress',
+          () async {
+        await dictRepository.addEntry('――‐', '');
+
+        final progress = <(int, int)>[];
+        container.listen(ttsGenerationProgressProvider, (_, next) {
+          if (next != null) progress.add((next.current, next.total));
+        });
+
+        final controller = buildController(
+            _FakeTtsIsolate(), _AutoCompleteAudioPlayer(),
+            dict: dictRepository);
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: '文1。\n――‐\n文3。',
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        // The blank segment has no DB row, so it was counted in the total.
+        // If it does not advance the counter, progress stalls short of the
+        // total and the UI never shows completion.
+        expect(progress.last, (3, 3));
+      });
+
       test('a dictionary-emptied segment is recorded as skipped, not sent '
           'to the engine', () async {
         await dictRepository.addEntry('――‐', '');

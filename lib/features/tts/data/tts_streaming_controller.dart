@@ -287,6 +287,15 @@ class TtsStreamingController {
             text: synthText,
             segment: segments[i],
           );
+          // A segment discovered blank here had no stored row, so it was
+          // counted in `totalToGenerate`. Advancing keeps progress from
+          // stalling one short of the total forever.
+          if (dbRow == null) {
+            generatedSoFar++;
+            _read(ttsGenerationProgressProvider.notifier).set(
+                TtsGenerationProgress(
+                    current: generatedSoFar, total: totalToGenerate));
+          }
           continue;
         }
 
@@ -388,7 +397,11 @@ class TtsStreamingController {
       _read(ttsPlaybackStateProvider.notifier)
           .set(TtsPlaybackState.playing);
 
-      final isLast = i == segments.length - 1;
+      // "Last" means nothing audible follows, not merely the final index: a
+      // trailing skipped segment never plays, so treating this one as
+      // intermediate would pause the player instead of letting the output
+      // buffer drain, clipping its tail.
+      final isLast = !_hasPlayableSegmentAfter(i, segments.length, dbSegmentMap);
       await _segmentPlayer.playSegment(filePath, isLast: isLast);
 
       if (_stopped) break;
@@ -404,6 +417,24 @@ class TtsStreamingController {
     }
 
     return playbackResult;
+  }
+
+  /// Whether any segment after [index] can still be played.
+  ///
+  /// Only known skips are excluded. A segment the dictionary will empty is
+  /// not detectable without applying the dictionary to it, so it can still
+  /// make this return true — a bounded imprecision that at worst restores
+  /// the old behaviour for that one case.
+  bool _hasPlayableSegmentAfter(
+    int index,
+    int segmentCount,
+    Map<int, TtsSegment> dbSegmentMap,
+  ) {
+    for (var j = index + 1; j < segmentCount; j++) {
+      if (dbSegmentMap[j]?.skip ?? false) continue;
+      return true;
+    }
+    return false;
   }
 
   /// Persists a segment whose synthesis input turned out blank as skipped,
