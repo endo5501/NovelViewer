@@ -111,22 +111,22 @@
 
 ## 10. UI: セグメント行のスキップ切替
 
-- [ ] 10.1 `test/features/tts/presentation/tts_edit_segment_row_test.dart` に以下のウィジェットテストを追加する
+- [x] 10.1 `test/features/tts/presentation/tts_edit_segment_row_test.dart` に以下のウィジェットテストを追加する
   - スキップ行の状態アイコンが未生成・生成済みのいずれとも異なる表示になる
   - 音声を持つスキップ行が「生成済み」ではなくスキップとして表示される
   - 状態アイコンの押下でコールバックが発火する
   - 再生中・一括生成中は押下しても発火しない
   - スキップ行の再生ボタンと再生成ボタンが無効になる
   - スキップ行の本文欄・メモ欄は編集可能なまま
-- [ ] 10.2 テストを実行し、失敗することを確認する
-- [ ] 10.3 `app_ja.arb` / `app_en.arb` / `app_zh.arb` にスキップ状態のツールチップキーを追加する
-- [ ] 10.4 `tts_edit_segment_row.dart` の `_buildStatusIcon` / `_buildStatusTooltip` にスキップ状態を追加し、状態アイコンを押下可能にする
-- [ ] 10.5 `tts_edit_segment_list.dart` / `tts_edit_dialog.dart` で押下を `setSegmentSkip` へ接続する（再生中・生成中は無効）
-- [ ] 10.6 テストが通ることを確認する
+- [x] 10.2 テストを実行し、失敗することを確認する
+- [x] 10.3 `app_ja.arb` / `app_en.arb` / `app_zh.arb` にスキップ状態のツールチップキーを追加する
+- [x] 10.4 `tts_edit_segment_row.dart` の `_buildStatusIcon` / `_buildStatusTooltip` にスキップ状態を追加し、状態アイコンを押下可能にする
+- [x] 10.5 `tts_edit_segment_list.dart` / `tts_edit_dialog.dart` で押下を `setSegmentSkip` へ接続する（再生中・生成中は無効）
+- [x] 10.6 テストが通ることを確認する
 
 ## 11. 最終確認
 
 - [ ] 11.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 11.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 11.3 `fvm flutter analyze`でリントを実行
-- [ ] 11.4 `fvm flutter test`でテストを実行
+- [x] 11.3 `fvm flutter analyze`でリントを実行
+- [x] 11.4 `fvm flutter test`でテストを実行

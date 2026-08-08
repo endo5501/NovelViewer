@@ -2234,7 +2234,7 @@ void main() {
 
         final totals = <int>[];
         container.listen(ttsGenerationProgressProvider, (_, next) {
-          if (next != null) totals.add(next.total);
+          totals.add(next.total);
         });
 
         final controller = buildController(
@@ -2336,7 +2336,7 @@ void main() {
 
         final progress = <(int, int)>[];
         container.listen(ttsGenerationProgressProvider, (_, next) {
-          if (next != null) progress.add((next.current, next.total));
+          progress.add((next.current, next.total));
         });
 
         final controller = buildController(

@@ -51,6 +51,7 @@ void main() {
                 onPlay: (_) {},
                 onGenerate: (_) {},
                 onReset: (_) {},
+                onSkipToggled: (_) {},
                 onCursorChanged: onCursorChanged ?? (_) {},
               ),
             ),

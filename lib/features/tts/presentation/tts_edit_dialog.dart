@@ -313,6 +313,15 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     ref.read(ttsEditSegmentsProvider.notifier).set(List.of(controller.segments));
   }
 
+  Future<void> _toggleSegmentSkip(int index) async {
+    final controller = _controller;
+    if (controller == null) return;
+
+    await controller.setSegmentSkip(index, !controller.segments[index].skip);
+    if (!mounted) return;
+    ref.read(ttsEditSegmentsProvider.notifier).set(List.of(controller.segments));
+  }
+
   Future<void> _resetAll() async {
     final controller = _controller;
     if (controller == null) return;
@@ -390,6 +399,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
                       onPlay: _playSegment,
                       onGenerate: _generateSegment,
                       onReset: _resetSegment,
+                      onSkipToggled: _toggleSegmentSkip,
                     ),
                   ),
                 ],

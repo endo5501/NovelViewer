@@ -8,7 +8,11 @@ import '../../../helpers/localized_material_app.dart';
 void main() {
   const originalText = 'セグメントの本文です。';
 
-  TtsEditSegment buildSegment({String? memo, bool hasAudio = false}) {
+  TtsEditSegment buildSegment({
+    String? memo,
+    bool hasAudio = false,
+    bool skip = false,
+  }) {
     return TtsEditSegment(
       segmentIndex: 0,
       originalText: originalText,
@@ -17,6 +21,7 @@ void main() {
       textLength: originalText.length,
       memo: memo,
       hasAudio: hasAudio,
+      skip: skip,
     );
   }
 
@@ -33,8 +38,12 @@ void main() {
     bool hasAudio = false,
     bool isCursor = false,
     bool isPlaying = false,
+    bool isGenerating = false,
+    bool skip = false,
+    bool enabled = true,
     void Function(String? memo)? onMemoEditComplete,
     VoidCallback? onCursorRequested,
+    VoidCallback? onSkipToggled,
   }) async {
     await tester.binding.setSurfaceSize(Size(rowWidth + 100, 600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -45,8 +54,9 @@ void main() {
             child: SizedBox(
               width: rowWidth,
               child: TtsEditSegmentRow(
-                segment: buildSegment(memo: memo, hasAudio: hasAudio),
-                isGenerating: false,
+                segment:
+                    buildSegment(memo: memo, hasAudio: hasAudio, skip: skip),
+                isGenerating: isGenerating,
                 isPlaying: isPlaying,
                 isCursor: isCursor,
                 voiceFiles: const [],
@@ -57,7 +67,8 @@ void main() {
                 onGenerate: () {},
                 onReset: () {},
                 onCursorRequested: onCursorRequested ?? () {},
-                enabled: true,
+                onSkipToggled: onSkipToggled ?? () {},
+                enabled: enabled,
               ),
             ),
           ),
@@ -296,6 +307,85 @@ void main() {
 
       expect(highlightColors(tester), isNotEmpty);
       expect(find.byIcon(Icons.volume_up), findsOneWidget);
+    });
+  });
+
+  group('skip state', () {
+    testWidgets('a skipped row shows a status distinct from ungenerated',
+        (tester) async {
+      await pumpRow(tester, rowWidth: 1000, skip: true);
+
+      expect(find.byIcon(Icons.block), findsOneWidget);
+      expect(find.byIcon(Icons.circle_outlined), findsNothing);
+    });
+
+    testWidgets('a skipped row holding audio still shows as skipped',
+        (tester) async {
+      await pumpRow(tester, rowWidth: 1000, skip: true, hasAudio: true);
+
+      // Skipping keeps the recording, so "generated" must not win here.
+      expect(find.byIcon(Icons.block), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle), findsNothing);
+    });
+
+    testWidgets('an ungenerated row is unaffected', (tester) async {
+      await pumpRow(tester, rowWidth: 1000);
+
+      expect(find.byIcon(Icons.circle_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.block), findsNothing);
+    });
+
+    testWidgets('tapping the status icon requests a skip toggle',
+        (tester) async {
+      var toggled = 0;
+      await pumpRow(tester, rowWidth: 1000, onSkipToggled: () => toggled++);
+
+      await tester.tap(find.byIcon(Icons.circle_outlined));
+      await tester.pump();
+
+      expect(toggled, 1);
+    });
+
+    testWidgets('the status icon is inert while the row is disabled',
+        (tester) async {
+      var toggled = 0;
+      await pumpRow(tester,
+          rowWidth: 1000, enabled: false, onSkipToggled: () => toggled++);
+
+      await tester.tap(find.byIcon(Icons.circle_outlined));
+      await tester.pump();
+
+      // `enabled` is false during playback and bulk generation alike.
+      expect(toggled, 0);
+    });
+
+    testWidgets('a skipped row disables play and regenerate', (tester) async {
+      await pumpRow(tester, rowWidth: 1000, skip: true, hasAudio: true);
+
+      final play = tester.widget<IconButton>(
+          find.widgetWithIcon(IconButton, Icons.play_arrow));
+      final regenerate = tester.widget<IconButton>(
+          find.widgetWithIcon(IconButton, Icons.refresh));
+
+      expect(play.onPressed, isNull);
+      expect(regenerate.onPressed, isNull,
+          reason: '"do not generate" and "generate now" cannot both hold');
+    });
+
+    testWidgets('a skipped row keeps its text and memo editable',
+        (tester) async {
+      await pumpRow(tester, rowWidth: 1000, skip: true);
+
+      final fields = tester.widgetList<TextField>(find.byType(TextField));
+      expect(fields.every((f) => f.enabled != false), isTrue);
+    });
+
+    testWidgets('reset stays available on a skipped row', (tester) async {
+      await pumpRow(tester, rowWidth: 1000, skip: true);
+
+      final reset = tester.widget<IconButton>(
+          find.widgetWithIcon(IconButton, Icons.restart_alt));
+      expect(reset.onPressed, isNotNull);
     });
   });
 }
