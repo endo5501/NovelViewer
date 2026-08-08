@@ -17,9 +17,12 @@ class TtsDictionaryRepository {
 
   TtsDictionaryRepository(this._database);
 
+  /// Adds an entry. An empty [reading] is valid and means "do not read this
+  /// surface aloud" — [applyDictionaryWithEntries] then drops the surface
+  /// from the synthesis text. An empty [surface] is still rejected: it would
+  /// match at every position in the text.
   Future<int> addEntry(String surface, String reading) async {
     if (surface.isEmpty) throw ArgumentError('surface must not be empty');
-    if (reading.isEmpty) throw ArgumentError('reading must not be empty');
     final db = await _database.database;
     return db.insert('tts_dictionary', {
       'surface': surface,
@@ -56,9 +59,10 @@ class TtsDictionaryRepository {
         .toList();
   }
 
+  /// Updates an entry. As with [addEntry], an empty [reading] expresses
+  /// "do not read this surface aloud"; an empty [surface] is rejected.
   Future<void> updateEntry(int id, String surface, String reading) async {
     if (surface.isEmpty) throw ArgumentError('surface must not be empty');
-    if (reading.isEmpty) throw ArgumentError('reading must not be empty');
     final db = await _database.database;
     await db.update(
       'tts_dictionary',

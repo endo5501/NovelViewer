@@ -1,27 +1,27 @@
 ## 1. データ層: `tts_segments.skip` 列の追加
 
-- [ ] 1.1 `test/features/tts/data/tts_audio_database_test.dart` に v3 → v4 マイグレーションのテストを追加する（v3スキーマのDBを手書きで作成 → 開く → `skip` 列が存在し既存行が `skip = 0` になり、既存データが保全されることを検証）。既存の手書き `CREATE TABLE`（v1 / v2 / v3 の3箇所）は移行の**入力**なので `skip` 列を追加しない
-- [ ] 1.2 テストを実行し、失敗することを確認する
-- [ ] 1.3 `tts_audio_database.dart` の `_databaseVersion` を 4 へ上げ、`_onCreate` の `tts_segments` に `skip INTEGER NOT NULL DEFAULT 0` を追加し、`_onUpgrade` に v3 → v4 の `ALTER TABLE tts_segments ADD COLUMN skip INTEGER NOT NULL DEFAULT 0` を追加する
-- [ ] 1.4 テストが通ることを確認する
+- [x] 1.1 `test/features/tts/data/tts_audio_database_test.dart` に v3 → v4 マイグレーションのテストを追加する（v3スキーマのDBを手書きで作成 → 開く → `skip` 列が存在し既存行が `skip = 0` になり、既存データが保全されることを検証）。既存の手書き `CREATE TABLE`（v1 / v2 / v3 の3箇所）は移行の**入力**なので `skip` 列を追加しない
+- [x] 1.2 テストを実行し、失敗することを確認する
+- [x] 1.3 `tts_audio_database.dart` の `_databaseVersion` を 4 へ上げ、`_onCreate` の `tts_segments` に `skip INTEGER NOT NULL DEFAULT 0` を追加し、`_onUpgrade` に v3 → v4 の `ALTER TABLE tts_segments ADD COLUMN skip INTEGER NOT NULL DEFAULT 0` を追加する
+- [x] 1.4 テストが通ることを確認する
 
 ## 2. データ層: DTO とリポジトリ
 
-- [ ] 2.1 `test/features/tts/domain/` に `TtsSegment.fromRow` が `skip` 列を bool として読むテストを追加する（1 → true、0 → false）
-- [ ] 2.2 `test/features/tts/data/tts_audio_repository_test.dart` に以下のテストを追加する
+- [x] 2.1 `test/features/tts/domain/` に `TtsSegment.fromRow` が `skip` 列を bool として読むテストを追加する（1 → true、0 → false）
+- [x] 2.2 `test/features/tts/data/tts_audio_repository_test.dart` に以下のテストを追加する
   - `updateSegmentSkip(episodeId, segmentIndex, true)` で `skip` が更新される
   - `updateSegmentSkip` が `audio_data` / `sample_count` を変更しない
   - `insertSegment(skip: true)` で `skip = 1` のレコードが作られる
   - `getGeneratedSegmentCount` がスキップ済みセグメントを充足として数える（音声7 + スキップ3 = 10）
   - 音声とスキップを両方持つセグメントが二重に数えられない
-- [ ] 2.3 テストを実行し、失敗することを確認する
-- [ ] 2.4 `tts_segment.dart` に `skip` フィールドを追加し、`fromRow` で読む
-- [ ] 2.5 `tts_audio_repository.dart` に `updateSegmentSkip` を追加し、`insertSegment` に `skip` 引数（既定 false）を追加し、`getGeneratedSegmentCount` の条件を `audio_data IS NOT NULL OR skip = 1` へ変更する
-- [ ] 2.6 テストが通ることを確認する
+- [x] 2.3 テストを実行し、失敗することを確認する
+- [x] 2.4 `tts_segment.dart` に `skip` フィールドを追加し、`fromRow` で読む
+- [x] 2.5 `tts_audio_repository.dart` に `updateSegmentSkip` を追加し、`insertSegment` に `skip` 引数（既定 false）を追加し、`getGeneratedSegmentCount` の条件を `audio_data IS NOT NULL OR skip = 1` へ変更する
+- [x] 2.6 テストが通ることを確認する
 
 ## 3. 辞書の「読み上げなし」エントリ
 
-- [ ] 3.1 `test/features/tts/data/tts_dictionary_repository_test.dart` に以下のテストを追加する
+- [x] 3.1 `test/features/tts/data/tts_dictionary_repository_test.dart` に以下のテストを追加する
   - `addEntry("――‐", "")` が例外を投げずIDを返す
   - `updateEntry(id, "――‐", "")` が例外を投げない
   - `addEntry("", "よみ")` は引き続き例外を投げる
@@ -29,9 +29,9 @@
   - `applyDictionary("――‐")` が空文字を返す
   - 読みなしエントリと通常エントリの共存
   - 読みなしエントリにも最長一致が適用される
-- [ ] 3.2 テストを実行し、失敗することを確認する
-- [ ] 3.3 `tts_dictionary_repository.dart` の `addEntry` / `updateEntry` から `reading.isEmpty` のチェックを撤廃する（`surface.isEmpty` のチェックは維持）
-- [ ] 3.4 テストが通ることを確認する
+- [x] 3.2 テストを実行し、失敗することを確認する
+- [x] 3.3 `tts_dictionary_repository.dart` の `addEntry` / `updateEntry` から `reading.isEmpty` のチェックを撤廃する（`surface.isEmpty` のチェックは維持）
+- [x] 3.4 テストが通ることを確認する
 
 ## 4. 編集画面コントローラ: スキップ状態
 

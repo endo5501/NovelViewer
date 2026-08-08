@@ -14,6 +14,7 @@ TtsSegment _seg({
   int textLength = 0,
   String? refWavPath,
   String? memo,
+  bool skip = false,
 }) {
   return TtsSegment(
     id: segmentIndex + 1,
@@ -26,6 +27,7 @@ TtsSegment _seg({
     sampleCount: sampleCount,
     refWavPath: refWavPath,
     memo: memo,
+    skip: skip,
     createdAt: DateTime.utc(2025, 1, 1),
   );
 }
