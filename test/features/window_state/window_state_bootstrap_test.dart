@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +28,8 @@ void main() {
       window: window,
       displayProvider: () async => (workArea: workArea),
       isWindows: isWindows,
+      // No real frames are pumped here, so resolve the gate immediately.
+      waitForFirstFrame: () async {},
       // Keep the visibility poll instantaneous in tests.
       pollInterval: Duration.zero,
       maxVisibilityPolls: 10,
@@ -69,6 +72,30 @@ void main() {
   });
 
   group('initializeWindowState - maximized restore', () {
+    test('waits for the first frame before polling at all', () async {
+      await setUpWith({
+        'window_width': 1400.0,
+        'window_height': 900.0,
+        'window_maximized': true,
+      });
+      final frame = Completer<void>();
+      final result = await initializeWindowState(
+        prefs: prefs,
+        window: window,
+        displayProvider: () async => (workArea: const Size(1920, 1040)),
+        waitForFirstFrame: () => frame.future,
+        pollInterval: Duration.zero,
+        maxVisibilityPolls: 10,
+      );
+      await pumpEventQueue();
+      // The budget must not be spent while startup is still running.
+      expect(window.visibilityPolls, 0);
+
+      frame.complete();
+      await result.pendingMaximize;
+      expect(window.maximizeCount, 1);
+    });
+
     test('maximizes only after the runner has shown the window', () async {
       await setUpWith({
         'window_width': 1400.0,

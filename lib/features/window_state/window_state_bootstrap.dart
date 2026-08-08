@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 
+import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -47,6 +47,7 @@ Future<WindowStateBootstrapResult> initializeWindowState({
   WindowController? window,
   Future<DisplayInfo> Function()? displayProvider,
   bool? isWindows,
+  Future<void> Function()? waitForFirstFrame,
   Duration pollInterval = const Duration(milliseconds: 50),
   int maxVisibilityPolls = 40,
 }) async {
@@ -78,7 +79,12 @@ Future<WindowStateBootstrapResult> initializeWindowState({
     return WindowStateBootstrapResult(
       recorder: recorder,
       pendingMaximize: saved.maximized
-          ? _maximizeOnceVisible(controller, pollInterval, maxVisibilityPolls)
+          ? _maximizeOnceVisible(
+              controller,
+              waitForFirstFrame ?? _firstFrame,
+              pollInterval,
+              maxVisibilityPolls,
+            )
           : null,
     );
   } catch (e, stack) {
@@ -90,14 +96,22 @@ Future<WindowStateBootstrapResult> initializeWindowState({
 
 /// Maximizes as soon as the runner has shown the window.
 ///
-/// Gives up on timeout rather than maximizing a still-hidden window: that would
-/// reveal a blank frame the runner deliberately kept hidden.
+/// Waits for Flutter's first frame before polling at all: the runner shows the
+/// window from that frame, and a slow startup would otherwise burn the whole
+/// poll budget before the window could possibly be visible — a timed-out
+/// restore is not just a missed maximize, it leaves the app running
+/// non-maximized until the user closes it and the flag is written as false.
+///
+/// Gives up after the budget rather than maximizing a still-hidden window:
+/// that would reveal a frame the runner deliberately kept hidden.
 Future<void> _maximizeOnceVisible(
   WindowController controller,
+  Future<void> Function() waitForFirstFrame,
   Duration interval,
   int maxPolls,
 ) async {
   try {
+    await waitForFirstFrame();
     for (var poll = 0; poll < maxPolls; poll++) {
       if (await controller.isVisible()) {
         await controller.maximize();
@@ -110,6 +124,13 @@ Future<void> _maximizeOnceVisible(
   } catch (e, stack) {
     _log.warning('Failed to restore the maximized window state', e, stack);
   }
+}
+
+/// Completes after the next frame, which is when the runner shows the window.
+Future<void> _firstFrame() {
+  final completer = Completer<void>();
+  WidgetsBinding.instance.addPostFrameCallback((_) => completer.complete());
+  return completer.future;
 }
 
 /// Primary display metrics, or null if they can't be read (the clamp is then

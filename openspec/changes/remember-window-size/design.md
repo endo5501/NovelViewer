@@ -109,13 +109,27 @@ TDD 必須という制約下では、クランプ・不正値処理・最大化�
 
 テスト容易性のため、`window_manager` の API は薄いインターフェース `WindowController` 越しに触る。単体テストではフェイク実装を注入し、`WindowStateRecorder` のデバウンス挙動を dev 依存にすでに存在する `fake_async` で検証する。
 
-### 決定 6: クローズ時は無条件にフラッシュする
+### 決定 6: クローズは `close()` で通常経路に戻す（実測に基づく）
+
+`setPreventClose(true)` で WM_CLOSE を横取りした後、`destroy()`（= `PostQuitMessage` のみ）で終了させると `DestroyWindow` を経ないため、ランナー本来のシャットダウン経路を外れる。実測で終了までの所要時間が **約5900ms**（main ブランチのベースラインは約170ms）に悪化し、ウィンドウが画面に残るためユーザーにはフリーズとして見えた。
+
+そのため、フラッシュ完了後は `setPreventClose(false)` → `close()` の順で閉じる。`close()` は WM_CLOSE を再送し、横取りが解除済みなので `DefWindowProc` → `DestroyWindow` の通常経路に乗る。実測で **約230ms** に回復（機能なしとの差は約60ms でフラッシュ相当）。`close()` が失敗した場合のみ `destroy()` にフォールバックする。
+
+横取り解除により WM_CLOSE が再度発火するため、`_closing` フラグで初回のみ処理する。
+
+### 決定 7: 最小化中は一切書き込まない
+
+`WindowManager::IsMaximized()` は `showCmd == SW_MAXIMIZE` を見るため、最大化から最小化したウィンドウでも false を返す。さらに `GetWindowRect` は最小化中、画面外のプレースホルダ矩形（約 128×25 論理px）を返す。これらは有限かつ正なので検証を素通りし、タスクバーから閉じただけでユーザーのサイズが破壊される。
+
+`isMinimized()` を `WindowController` に追加し、最小化中はサイズも最大化フラグも書かない。実測で「最大化 → 最小化 → 閉じる」でも保存値が保持されることを確認済み。
+
+### 決定 8: クローズ時は無条件にフラッシュする
 
 Windows プラグインは `resize` を `WM_SIZING`、`resized` を `WM_EXITSIZEMOVE` にしか紐づけていない（`window_manager_plugin.cpp`）。つまり**対話的なドラッグリサイズ以外では保存イベントが一切発火しない** — Aero Snap や他プログラムからのリサイズが該当する。
 
 そのため `onWindowClose` では「デバウンス待ちがあれば」ではなく**常に**現在の状態を書き込む。これにより「終了時の状態が次回起動時の状態」が無条件に成立する。
 
-### 決定 7: 検証ロジックの仕様値
+### 決定 9: 検証ロジックの仕様値
 
 `resolveWindowSize(saved, workArea)` の規則（すべて純関数）:
 
@@ -133,7 +147,11 @@ Windows プラグインは `resize` を `WM_SIZING`、`resized` を `WM_EXITSIZE
 
 - **論理ピクセルと物理ピクセルの単位不一致（解決済み）** → `Display.visibleSize` はプラグイン実装が `rcWork / scale_factor` を返すため**論理ピクセル**（`screen_retriever_windows_plugin.cpp`）。`setSize` / `getBounds` も論理ピクセルを扱う。保存値・作業領域・setSize がすべて論理ピクセルで揃うため変換は不要。125% スケール環境で実測確認済み（1280×720 論理 = 1600×900 物理）。異なる DPI のモニタ間では論理サイズが保持される。
 
-- **`setPreventClose(true)` によるクローズ不能化** → フラッシュが失敗してもウィンドウが閉じなくなる恐れがある。`_closeAfterFlush` は `finally` で必ず `destroy()` を呼び、フラッシュの例外はログのみとする。実測で WM_CLOSE からプロセスが正常終了することを確認済み。
+- **`setPreventClose(true)` によるクローズ不能化** → フラッシュや終了処理が失敗してもウィンドウが閉じなくなる恐れがある。`_closeAfterFlush` は `finally` で必ず横取りを解除してから `close()`（失敗時は `destroy()`）を呼び、例外はすべてログのみとする。横取りを先に解除するため、万一 `close()` が失敗しても再度閉じる操作でネイティブ経路により閉じられる。
+
+- **最大化復元のタイムアウト** → 初回フレームを待ってからポーリングするため通常は起こらないが、2 秒以内にウィンドウが可視化されない場合は最大化を諦める。その状態でユーザーが終了すると `maximized: false` が書かれ、設定が失われる。初回フレーム待ちを入れたことで現実的なシナリオはほぼ消えたが、完全には排除できない。
+
+- **起動をブロックしない** → `initializeWindowState` 全体を try/catch で囲み、プラットフォームチャネルの失敗時はログを残して復元をスキップする。ウィンドウ復元は補助機能であり、アプリの起動を止めてはならない。
 
 - **新規依存の追加** → `window_manager` は推移的に `screen_retriever` を持ち込む（クランプで直接使うため `screen_retriever` も直接依存として宣言）。実行時の有効化は `Platform.isWindows` でガードするが、パッケージのリンク自体は全プラットフォームで発生する。macOS / Linux のビルド確認は Windows 開発機では実施できないため未検証。
 
@@ -156,6 +174,5 @@ Windows プラグインは `resize` を `WM_SIZING`、`resized` を `WM_EXITSIZE
 
 未検証として残るもの:
 
-- 6.4 の視覚的なちらつき判定（自動計測ではなく目視が必要）
 - 6.6 のモニタ取り外し時の挙動（物理的な構成変更が必要）
 - macOS / Linux のビルド（Windows 開発機では実施不可）

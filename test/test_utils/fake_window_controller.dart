@@ -12,6 +12,7 @@ import 'package:window_manager/window_manager.dart';
 class FakeWindowController implements WindowController {
   Size size = const Size(1280, 720);
   bool maximized = false;
+  bool minimized = false;
 
   /// Number of [isVisible] polls before the window reports itself visible,
   /// mimicking the runner showing it on Flutter's first frame.
@@ -20,6 +21,7 @@ class FakeWindowController implements WindowController {
   /// Makes the corresponding call fail, to exercise error paths.
   bool throwOnGetSize = false;
   bool throwOnDestroy = false;
+  bool throwOnClose = false;
   bool throwOnSetSize = false;
 
   /// When set, [isMaximized] blocks on it, letting a test hold one flush open
@@ -28,6 +30,7 @@ class FakeWindowController implements WindowController {
 
   int visibilityPolls = 0;
   int destroyCount = 0;
+  int closeCount = 0;
   int maximizeCount = 0;
   bool? preventClose;
   Size? sizeSetByCaller;
@@ -53,6 +56,16 @@ class FakeWindowController implements WindowController {
 
   @override
   Future<bool> isVisible() async => visibilityPolls++ >= visibleAfterPolls;
+
+  @override
+  Future<bool> isMinimized() async => minimized;
+
+  @override
+  Future<void> close() async {
+    calls.add('close');
+    closeCount++;
+    if (throwOnClose) throw StateError('close failed');
+  }
 
   @override
   Future<void> setSize(Size size) async {

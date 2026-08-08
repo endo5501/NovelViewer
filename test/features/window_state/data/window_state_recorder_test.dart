@@ -165,6 +165,32 @@ void main() {
       );
     });
 
+    // A minimized window reports SW_SHOWMINIMIZED and an off-screen placeholder
+    // rect, so writing it would replace the user's geometry with junk.
+    test('writes nothing at all while minimized', () async {
+      await setUpWith({
+        'window_width': 1400.0,
+        'window_height': 900.0,
+        'window_maximized': true,
+      });
+      final recorder = buildRecorder();
+      window.minimized = true;
+      window.maximized = false;
+      window.size = const Size(128, 25);
+
+      withFakeTime((async) {
+        recorder.onWindowMinimize();
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(repository.saveCount, 0);
+      expect(
+        repository.load(),
+        const WindowState(width: 1400, height: 900, maximized: true),
+      );
+    });
+
     test('ignores a degenerate size reported by the OS', () async {
       await setUpWith({'window_width': 1400.0, 'window_height': 900.0});
       final recorder = buildRecorder();
@@ -233,7 +259,7 @@ void main() {
 
         recorder.onWindowClose();
         async.flushMicrotasks();
-        expect(window.destroyCount, 0,
+        expect(window.closeCount, 0,
             reason: 'must not tear down mid-write');
 
         window.flushGate = null;
@@ -245,7 +271,7 @@ void main() {
         async.flushMicrotasks();
       });
 
-      expect(window.destroyCount, 1);
+      expect(window.closeCount, 1);
       expect(
         repository.load(),
         const WindowState(width: 1500, height: 950, maximized: false),
@@ -268,7 +294,7 @@ void main() {
       });
 
       expect(repository.load(), const WindowState(width: 1600, height: 1000));
-      expect(window.destroyCount, 1);
+      expect(window.closeCount, 1);
     });
 
     // Windows only emits resize events for interactive drags, so a size set by
@@ -286,7 +312,7 @@ void main() {
 
       expect(repository.saveCount, 1);
       expect(repository.load(), const WindowState(width: 1600, height: 1000));
-      expect(window.destroyCount, 1);
+      expect(window.closeCount, 1);
     });
 
     test('a debounced save followed by a close writes twice', () async {
@@ -304,7 +330,7 @@ void main() {
 
       expect(repository.saveCount, 2);
       expect(repository.load(), const WindowState(width: 1600, height: 1000));
-      expect(window.destroyCount, 1);
+      expect(window.closeCount, 1);
     });
 
     test('still destroys the window when the flush throws', () async {
@@ -320,7 +346,7 @@ void main() {
         async.flushMicrotasks();
       });
 
-      expect(window.destroyCount, 1, reason: 'the app must stay closable');
+      expect(window.closeCount, 1, reason: 'the app must stay closable');
     });
 
     test('a failing debounced flush does not crash the app', () async {
@@ -353,10 +379,57 @@ void main() {
 
       expect(
         window.calls.indexOf('setPreventClose(false)') <
-            window.calls.indexOf('destroy'),
+            window.calls.indexOf('close'),
         isTrue,
       );
       expect(window.preventClose, isFalse);
+    });
+
+    // destroy() only posts WM_QUIT and leaves the window undestroyed, which
+    // measured ~5.9s to exit against ~0.17s for the runner's normal path.
+    test('closes through the normal path instead of forcing a quit', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(window.closeCount, 1);
+      expect(window.destroyCount, 0);
+    });
+
+    test('falls back to a forced quit when close fails', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+      window.throwOnClose = true;
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(window.destroyCount, 1);
+    });
+
+    // Releasing the interception makes the window emit close again.
+    test('ignores the second close it triggers itself', () async {
+      await setUpWith();
+      final recorder = buildRecorder();
+      window.size = const Size(1600, 1000);
+
+      withFakeTime((async) {
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+        recorder.onWindowClose();
+        async.flushMicrotasks();
+      });
+
+      expect(window.closeCount, 1);
+      expect(repository.saveCount, 1);
     });
 
     test('drops the interception even when the flush throws', () async {
@@ -370,13 +443,15 @@ void main() {
       });
 
       expect(window.preventClose, isFalse);
-      expect(window.destroyCount, 1);
+      expect(window.closeCount, 1);
     });
 
-    test('a failing destroy does not escape as an unhandled error', () async {
+    test('a failing close and destroy do not escape as unhandled errors',
+        () async {
       await setUpWith();
       final recorder = buildRecorder();
       window.size = const Size(1600, 1000);
+      window.throwOnClose = true;
       window.throwOnDestroy = true;
 
       withFakeTime((async) {

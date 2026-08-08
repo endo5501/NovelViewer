@@ -16,6 +16,13 @@ abstract class WindowController {
   /// is undone by the runner's `ShowWindow(SW_SHOWNORMAL)`.
   Future<bool> isVisible();
 
+  /// A minimized window reports a placeholder rect, not the user's size.
+  Future<bool> isMinimized();
+
+  /// Asks the window to close, which with the interception released takes the
+  /// runner's normal `DestroyWindow` path.
+  Future<void> close();
+
   Future<void> setSize(Size size);
 
   Future<void> maximize();
@@ -41,6 +48,12 @@ class WindowManagerController implements WindowController {
 
   @override
   Future<bool> isVisible() => windowManager.isVisible();
+
+  @override
+  Future<bool> isMinimized() => windowManager.isMinimized();
+
+  @override
+  Future<void> close() => windowManager.close();
 
   @override
   Future<void> setSize(Size size) => windowManager.setSize(size);
