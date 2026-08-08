@@ -393,7 +393,15 @@ class TtsEditController {
   /// Plays one segment's audio. Pressing preview is a fresh intent, so an
   /// earlier [stopPlayback] does not suppress it — [stopPlayback] is
   /// deliberately non-terminal.
+  ///
+  /// A skipped segment is refused even though it may still hold audio. The
+  /// dialog disables the button for such rows, but the rule that audio
+  /// presence is never the skip decision holds at this boundary too.
   Future<void> playSegment(int segmentIndex) {
+    if (segmentIndex < 0 || segmentIndex >= _segments.length) {
+      return Future.value();
+    }
+    if (_segments[segmentIndex].skip) return Future.value();
     _cancelled = false;
     return _playSegment(segmentIndex);
   }

@@ -196,6 +196,21 @@ class TtsAudioRepository {
     );
   }
 
+  /// Number of segments that actually hold a recording.
+  ///
+  /// Distinct from [getGeneratedSegmentCount], which also counts skipped
+  /// segments as satisfied. Use this one to answer "is there any audio at
+  /// all?" — a skipped segment contributes nothing playable or exportable.
+  Future<int> getAudioSegmentCount(int episodeId) async {
+    final db = await _database.database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM tts_segments '
+      'WHERE episode_id = ? AND audio_data IS NOT NULL',
+      [episodeId],
+    );
+    return result.first['count'] as int;
+  }
+
   /// Number of segments that need no further work: those holding audio, plus
   /// those the user (or a blank synthesis input) marked as skipped.
   ///

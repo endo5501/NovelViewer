@@ -41,8 +41,6 @@ class TtsExportProgressNotifier extends Notifier<TtsGenerationProgress> {
 
 // --- Export action ---
 
-/// Prompts user for save location and exports episode audio to MP3.
-/// Returns true if export completed, false if user cancelled.
 /// The WAV blobs an MP3 export should concatenate, in `segment_index` order.
 ///
 /// Skipped segments are dropped even when they still hold audio: marking a
@@ -61,6 +59,9 @@ List<Uint8List> exportableWavSegments(List<TtsSegment> segments) {
   return wavSegments;
 }
 
+/// Prompts user for save location and exports episode audio to MP3.
+/// Returns true if export completed, false if user cancelled.
+///
 /// Throws on error. Caller is responsible for UI feedback.
 Future<bool> exportEpisodeToMp3({
   required TtsExportStateNotifier stateNotifier,

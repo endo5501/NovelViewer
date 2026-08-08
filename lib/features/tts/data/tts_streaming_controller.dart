@@ -167,9 +167,11 @@ class TtsStreamingController {
         // stashed here or it is gone by the time the UI can ask for it.
         _lastFailureReason = _session.lastSynthesisError;
         // Use a COUNT query rather than loading every segment's WAV blob just
-        // to test for presence of audio on this (failure) path.
-        final hasAudio =
-            await _repository.getGeneratedSegmentCount(episodeId) > 0;
+        // to test for presence of audio on this (failure) path. Audio-only,
+        // NOT the satisfied-count: an episode whose only rows are skipped
+        // holds nothing playable, and keeping it would show a "partially
+        // generated" badge for a file with no audio in it.
+        final hasAudio = await _repository.getAudioSegmentCount(episodeId) > 0;
         if (hasAudio) {
           await _repository.updateEpisodeStatus(
               episodeId, TtsEpisodeStatus.partial);
@@ -287,15 +289,15 @@ class TtsStreamingController {
             text: synthText,
             segment: segments[i],
           );
-          // A segment discovered blank here had no stored row, so it was
-          // counted in `totalToGenerate`. Advancing keeps progress from
-          // stalling one short of the total forever.
-          if (dbRow == null) {
-            generatedSoFar++;
-            _read(ttsGenerationProgressProvider.notifier).set(
-                TtsGenerationProgress(
-                    current: generatedSoFar, total: totalToGenerate));
-          }
+          // Anything reaching here was counted in `totalToGenerate`: rows
+          // already marked skipped were excluded from the count and skipped
+          // earlier in the loop, so what remains — no row at all, or a stored
+          // row the user blanked by clearing its text — was counted.
+          // Advancing keeps progress from stalling short of the total.
+          generatedSoFar++;
+          _read(ttsGenerationProgressProvider.notifier).set(
+              TtsGenerationProgress(
+                  current: generatedSoFar, total: totalToGenerate));
           continue;
         }
 

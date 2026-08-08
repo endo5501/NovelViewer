@@ -3214,6 +3214,39 @@ void main() {
         expect(played, [0, 2]);
       });
 
+      test('playSegment refuses a skipped segment that holds audio', () async {
+        final episodeId = await repository.createEpisode(
+          fileName: 'test.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.partial,
+        );
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: '文1。',
+          textOffset: 0,
+          textLength: 3,
+          audioData: _makeWavBytes(),
+          sampleCount: 5,
+          skip: true,
+        );
+
+        final player = FakeAudioPlayer();
+        final controller = buildController(FakeTtsIsolate(), player);
+        await controller.loadSegments(
+          text: '文1。文2。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        await controller.playSegment(0);
+
+        // The dialog disables the button for skipped rows, but the guard
+        // belongs at the controller boundary too: audio presence is not the
+        // skip decision anywhere.
+        expect(player.currentFilePath, isNull);
+      });
+
       test('resetSegment clears the skip flag', () async {
         final controller = buildController(FakeTtsIsolate(), FakeAudioPlayer());
         await controller.loadSegments(

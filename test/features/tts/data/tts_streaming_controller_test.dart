@@ -2356,6 +2356,60 @@ void main() {
         expect(progress.last, (3, 3));
       });
 
+      test('a failed run holding only skipped rows deletes the episode',
+          () async {
+        await dictRepository.addEntry('――‐', '');
+
+        final isolate = _FakeTtsIsolate()..failSynthesisOnCall = 1;
+        final controller = buildController(
+            isolate, _AutoCompleteAudioPlayer(),
+            dict: dictRepository);
+
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: '――‐\n文2。',
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        // Segment 0 was recorded as skipped and segment 1 failed, so no audio
+        // exists. Keeping the episode would show a "partially generated"
+        // badge for a file with nothing in it.
+        expect(await repository.findEpisodeByFileName('ep01.txt'), isNull);
+      });
+
+      test('a stored blank row also advances generation progress', () async {
+        const text = '文1。文2。';
+        final episodeId = await seedEpisode(text, 'ep01.txt');
+        // How a line was silenced before skip existed: clear its text.
+        await repository.insertSegment(
+          episodeId: episodeId,
+          segmentIndex: 0,
+          text: '',
+          textOffset: 0,
+          textLength: 3,
+        );
+
+        final progress = <(int, int)>[];
+        container.listen(ttsGenerationProgressProvider, (_, next) {
+          progress.add((next.current, next.total));
+        });
+
+        final controller = buildController(
+            _FakeTtsIsolate(), _AutoCompleteAudioPlayer());
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: text,
+          fileName: 'ep01.txt',
+          config: _qwen3Config(),
+        );
+
+        // The stored blank row is unskipped, so it was counted in the total.
+        expect(progress.last, (2, 2));
+      });
+
       test('a dictionary-emptied segment is recorded as skipped, not sent '
           'to the engine', () async {
         await dictRepository.addEntry('――‐', '');

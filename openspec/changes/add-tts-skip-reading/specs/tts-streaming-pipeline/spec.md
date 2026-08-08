@@ -55,3 +55,17 @@ Reason: skipped segments never acquire audio by design. Counting only segments w
 #### Scenario: Episode with a remaining ungenerated segment stays partial
 - **WHEN** a run is stopped for a 15-segment episode where 11 segments hold audio, 3 are skipped, and 1 is neither
 - **THEN** the episode status is set to `partial`
+
+### Requirement: A failed run keeps the episode only when real audio exists
+
+When a run ends in failure, the system SHALL decide between preserving the episode as `partial` and deleting it by counting segments that hold audio — skipped segments SHALL NOT count towards that decision, even though they count as satisfied for completion.
+
+Reason: an episode whose only rows are skipped holds nothing playable or exportable. Preserving it would show a "partially generated" indicator for a file with no audio in it — the very state the delete branch exists to prevent.
+
+#### Scenario: A failure leaving only skipped rows deletes the episode
+- **WHEN** a run records a blank segment as skipped, then fails synthesizing the next segment, leaving no segment with audio
+- **THEN** the episode is deleted and the file reverts to having no TTS audio
+
+#### Scenario: A failure with some real audio preserves the episode
+- **WHEN** a run generates audio for one segment, records another as skipped, then fails
+- **THEN** the episode is preserved with status `partial`

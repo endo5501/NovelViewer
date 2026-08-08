@@ -38,7 +38,7 @@ A segment with `skip = 1` MAY still hold non-NULL `audio_data`: marking a segmen
 - **THEN** the `audio_data` and `sample_count` columns are left unchanged
 
 ### Requirement: TTS audio repository CRUD operations
-The system SHALL provide a `TtsAudioRepository` class with methods to: create an episode record (with text_hash), insert segment records (with or without audio_data, and with an optional skip flag defaulting to not-skipped), update a segment's text (setting audio_data and sample_count to NULL), update a segment's audio_data and sample_count, update a segment's ref_wav_path, update a segment's memo, update a segment's skip flag, query episode status by file_name, retrieve all segments for an episode ordered by segment_index, get the count of stored segments for an episode, get the count of segments that are considered satisfied — those with non-NULL audio_data **or** `skip = 1` — for an episode, delete a single segment by episode_id and segment_index, delete an episode (cascading to segments), and retrieve all episode statuses as a map of file_name to TtsEpisodeStatus. Updating a segment's skip flag SHALL NOT modify its audio_data or sample_count. The repository SHALL NOT provide a text-offset-based segment lookup: resolving a playback start position is the responsibility of the streaming controller, which resolves it against the freshly segmented text rather than against the sparse set of stored rows. All read methods that return row data SHALL return typed DTO instances (`TtsEpisode`, `TtsSegment`) or `null`/empty collections; raw `Map<String, Object?>` SHALL NOT be returned across the repository boundary.
+The system SHALL provide a `TtsAudioRepository` class with methods to: create an episode record (with text_hash), insert segment records (with or without audio_data, and with an optional skip flag defaulting to not-skipped), update a segment's text (setting audio_data and sample_count to NULL), update a segment's audio_data and sample_count, update a segment's ref_wav_path, update a segment's memo, update a segment's skip flag, query episode status by file_name, retrieve all segments for an episode ordered by segment_index, get the count of stored segments for an episode, get the count of segments that are considered satisfied — those with non-NULL audio_data **or** `skip = 1` — for an episode, get the count of segments that hold audio (non-NULL audio_data only, regardless of skip) for an episode, delete a single segment by episode_id and segment_index, delete an episode (cascading to segments), and retrieve all episode statuses as a map of file_name to TtsEpisodeStatus. Updating a segment's skip flag SHALL NOT modify its audio_data or sample_count. The repository SHALL NOT provide a text-offset-based segment lookup: resolving a playback start position is the responsibility of the streaming controller, which resolves it against the freshly segmented text rather than against the sparse set of stored rows. All read methods that return row data SHALL return typed DTO instances (`TtsEpisode`, `TtsSegment`) or `null`/empty collections; raw `Map<String, Object?>` SHALL NOT be returned across the repository boundary.
 
 #### Scenario: Check if episode has audio
 - **WHEN** `findEpisodeByFileName("0001_プロローグ.txt")` is called
@@ -111,6 +111,14 @@ The system SHALL provide a `TtsAudioRepository` class with methods to: create an
 #### Scenario: A skipped segment holding audio is counted once
 - **WHEN** `getGeneratedSegmentCount(episodeId)` is called for an episode where one segment has both audio_data and `skip = 1`
 - **THEN** that segment contributes exactly 1 to the count
+
+#### Scenario: An audio-only count excludes skipped segments without audio
+- **WHEN** `getAudioSegmentCount(episodeId)` is called for an episode with 1 segment holding audio and 1 skipped segment holding none
+- **THEN** the count 1 is returned, distinguishing "nothing playable exists" from "no work remains"
+
+#### Scenario: The audio-only count includes a skipped segment that kept its audio
+- **WHEN** `getAudioSegmentCount(episodeId)` is called for an episode whose single segment has both audio_data and `skip = 1`
+- **THEN** the count 1 is returned
 
 #### Scenario: Get all episode statuses
 - **WHEN** `getAllEpisodeStatuses()` is called on a repository with episodes in various states
