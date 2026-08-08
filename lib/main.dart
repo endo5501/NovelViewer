@@ -7,6 +7,7 @@ import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:novel_viewer/app.dart';
 import 'package:novel_viewer/app/startup_migrations.dart';
 import 'package:logging/logging.dart';
@@ -19,9 +20,14 @@ import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_data_migrator.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/window_state/window_state_bootstrap.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (Platform.isWindows) {
+    await windowManager.ensureInitialized();
+  }
 
   await AppLogger.initialize();
 
@@ -38,6 +44,9 @@ void main() async {
   await libraryService.migrateFromOldBundleId();
   final libraryDir = await libraryService.ensureLibraryDirectory();
   final prefs = await SharedPreferences.getInstance();
+  // Restores the saved window size before the first frame (Windows only; a
+  // no-op elsewhere).
+  await initializeWindowState(prefs: prefs);
   await runStartupMigrations(SettingsRepository(prefs));
   // Wire a real folder lister so the v4→v5 LLM summary migration can resolve
   // lexical ranks for legacy rows whose source_file lacks a numeric prefix.
