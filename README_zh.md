@@ -28,9 +28,9 @@
 1. 下载 Ollama
 2. 下载所需模型：
 ```bash
-ollama pull qwen3:8b
+ollama pull gemma4:e4b
 ```
-3. 在 NovelViewer 的设置界面中，将 LLM 提供者设为 `Ollama`，端点 URL 设为 `http://localhost:11434`，模型名称设为已下载的模型名（如 `qwen3:8b`）
+3. 在 NovelViewer 的设置界面中，将 LLM 提供者设为 `Ollama`，端点 URL 设为 `http://localhost:11434`，模型名称设为已下载的模型名（如 `gemma4:e4b`）
 
 ## 开发
 

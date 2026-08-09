@@ -28,9 +28,9 @@ A novel viewer for downloading and reading web novels locally from web novel sit
 1. Download Ollama
 2. Download your desired model:
 ```bash
-ollama pull qwen3:8b
+ollama pull gemma4:e4b
 ```
-3. In NovelViewer's settings, set the LLM provider to `Ollama`, the endpoint URL to `http://localhost:11434`, and the model name to the downloaded model (e.g., `qwen3:8b`)
+3. In NovelViewer's settings, set the LLM provider to `Ollama`, the endpoint URL to `http://localhost:11434`, and the model name to the downloaded model (e.g., `gemma4:e4b`)
 
 ## Development
 

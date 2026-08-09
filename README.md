@@ -28,9 +28,9 @@ Web小説サイトから小説をダウンロードし、ローカルで閲覧�
 1. Ollamaをダウンロード
 2. 以下のように、使用したいモデルをダウンロード
 ```bash
-ollama pull qwen3:8b
+ollama pull gemma4:e4b
 ```
-3. NovelVeiwerの設定画面にてLLMプロバイダを`Ollama`、エンドポイントURLに`http://localhost:11434`、モデル名にダウンロードしたモデル名(上記の場合、`qwen3:8b`)を設定
+3. NovelVeiwerの設定画面にてLLMプロバイダを`Ollama`、エンドポイントURLに`http://localhost:11434`、モデル名にダウンロードしたモデル名(上記の場合、`gemma4:e4b`)を設定
 
 ## 開発
 
@@ -217,5 +217,5 @@ scripts/release.sh 1.2.0
 - **設定永続化**: SharedPreferences
 - **HTTP通信**: http パッケージ
 - **HTMLパース**: html パッケージ
-- **音声読み上げ**: qwen3-tts.cpp
+- **音声読み上げ**: qwen3-tts.cpp / piper-plus / audio.cpp
 - **MP3出力**: lame
