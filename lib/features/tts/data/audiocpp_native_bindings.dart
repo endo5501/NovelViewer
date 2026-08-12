@@ -53,6 +53,36 @@ typedef _AcSynthesizeDart = int Function(
   int,
 );
 
+// audiocpp_synthesize_with_options(..., option_keys, option_values,
+// option_count) -> int (0 == success). Same as audiocpp_synthesize plus engine
+// request options as parallel key/value arrays, so a new engine option does not
+// need a new FFI signature. The engine validates the keys against the model
+// contract, so an unknown key fails loudly rather than being ignored.
+typedef _AcSynthesizeWithOptionsC = Int32 Function(
+  Pointer<Void>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  Float,
+  Float,
+  Int32,
+  Pointer<Pointer<Utf8>>,
+  Pointer<Pointer<Utf8>>,
+  Int32,
+);
+typedef _AcSynthesizeWithOptionsDart = int Function(
+  Pointer<Void>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  double,
+  double,
+  int,
+  Pointer<Pointer<Utf8>>,
+  Pointer<Pointer<Utf8>>,
+  int,
+);
+
 typedef _AcGetAudioC = Pointer<Float> Function(Pointer<Void>);
 typedef _AcGetAudioDart = Pointer<Float> Function(Pointer<Void>);
 
@@ -126,6 +156,11 @@ class AudiocppNativeBindings {
       _library.lookupFunction<_AcSynthesizeC, _AcSynthesizeDart>(
     'audiocpp_synthesize',
   );
+
+  late final synthesizeWithOptions = _library.lookupFunction<
+    _AcSynthesizeWithOptionsC,
+    _AcSynthesizeWithOptionsDart
+  >('audiocpp_synthesize_with_options');
 
   late final getAudio =
       _library.lookupFunction<_AcGetAudioC, _AcGetAudioDart>(

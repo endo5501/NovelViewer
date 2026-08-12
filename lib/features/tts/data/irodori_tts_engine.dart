@@ -67,6 +67,14 @@ class IrodoriTtsEngine {
   /// synthesis-time parameters; `null` or empty values are passed to the
   /// native layer as `nullptr`, selecting plain TTS / clone-only /
   /// caption-only / clone+caption per design D3.
+  ///
+  /// A caption additionally turns on the engine's duration correction. With a
+  /// reference voice and a caption together the duration predictor asks for
+  /// more time than the text needs, and the model fills the surplus with a
+  /// phrase that is not in the text; the correction bounds the length instead.
+  /// The two are tied together here rather than at the call sites because
+  /// every caption reaches the native layer through this method, so a caller
+  /// cannot send one and forget the correction.
   TtsSynthesisResult synthesize(
     String text, {
     String? refWavPath,
@@ -77,15 +85,25 @@ class IrodoriTtsEngine {
   }) {
     _ensureLoaded();
 
+    final hasCaption = caption != null && caption.isNotEmpty;
     final textPtr = text.toNativeUtf8();
     final refWavPtr = (refWavPath != null && refWavPath.isNotEmpty)
         ? refWavPath.toNativeUtf8()
         : nullptr;
-    final captionPtr = (caption != null && caption.isNotEmpty)
-        ? caption.toNativeUtf8()
-        : nullptr;
+    final captionPtr = hasCaption ? caption.toNativeUtf8() : nullptr;
+    final options = hasCaption
+        ? const {'duration_correction': 'true'}
+        : const <String, String>{};
+    final entries = options.entries.toList();
+    final keys = entries.isEmpty ? nullptr : calloc<Pointer<Utf8>>(entries.length);
+    final values =
+        entries.isEmpty ? nullptr : calloc<Pointer<Utf8>>(entries.length);
+    for (var i = 0; i < entries.length; i++) {
+      keys[i] = entries[i].key.toNativeUtf8();
+      values[i] = entries[i].value.toNativeUtf8();
+    }
     try {
-      final result = _bindings.synthesize(
+      final result = _bindings.synthesizeWithOptions(
         _ctx,
         textPtr,
         refWavPtr,
@@ -93,6 +111,9 @@ class IrodoriTtsEngine {
         speakerGuidanceScale,
         captionGuidanceScale,
         numInferenceSteps,
+        keys,
+        values,
+        entries.length,
       );
       if (result != 0) {
         final error = _bindings.getError(_ctx).toDartString();
@@ -102,6 +123,12 @@ class IrodoriTtsEngine {
       calloc.free(textPtr);
       if (refWavPtr != nullptr) calloc.free(refWavPtr);
       if (captionPtr != nullptr) calloc.free(captionPtr);
+      for (var i = 0; i < entries.length; i++) {
+        calloc.free(keys[i]);
+        calloc.free(values[i]);
+      }
+      if (keys != nullptr) calloc.free(keys);
+      if (values != nullptr) calloc.free(values);
     }
 
     return _extractAudio();
