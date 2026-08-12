@@ -29,7 +29,7 @@ void main() {
 
     test('exposes caption support through the variant', () {
       expect(build(variant: IrodoriModelVariant.v3).supportsCaption, isTrue);
-      expect(build(variant: IrodoriModelVariant.v4).supportsCaption, isFalse);
+      expect(build(variant: IrodoriModelVariant.v4).supportsCaption, isTrue);
     });
   });
 

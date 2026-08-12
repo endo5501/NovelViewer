@@ -40,7 +40,7 @@
   "settings_irodoriSpeakerGuidanceScale": "Speaker guidance strength (speaker_guidance_scale)",
   "settings_irodoriCaptionGuidanceScale": "Caption guidance strength (caption_guidance_scale)",
   "settings_irodoriModelVariant": "Model version",
-  "settings_irodoriVariantV4NoCaption": "v4 does not support captions. Supplying a reference voice and a caption together makes it append speech that is not in the text, so segment memos are not applied during synthesis.",
+  "settings_irodoriVariantNoCaption": "The selected model does not support captions, so segment memos are not applied during synthesis.",
   "settings_irodoriLegacyAssetsFound": "Old-format model data is still present",
   "settings_irodoriLegacyAssetsDelete": "Delete to reclaim space",
   "settings_irodoriLegacyAssetsConfirm": "Delete the old-format model data. This cannot be undone.",

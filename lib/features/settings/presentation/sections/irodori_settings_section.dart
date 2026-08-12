@@ -34,12 +34,12 @@ class IrodoriSettingsSection extends ConsumerWidget {
 
 /// v3 / v4 selection.
 ///
-/// v4 is a caption-less alternative, not an upgrade: supplying a reference
-/// voice and a caption together makes it append speech that is not in the
-/// text. The caption itself is gated in
-/// `TtsEngineConfig.captionFromMemo`, below the UI — this widget only
-/// explains why the caption controls are inert, so a user who writes a memo
-/// is not left wondering why it has no effect.
+/// Both variants take captions today. The notice below the dropdown is driven
+/// by `variant.supportsCaption`, so a future caption-less variant explains
+/// itself without touching this widget — a user who writes a memo is not left
+/// wondering why it has no effect. The caption itself is gated in
+/// `TtsEngineConfig.captionFromMemo`, below the UI, so correctness never
+/// depends on this notice being shown.
 class _IrodoriVariantSelector extends ConsumerWidget {
   const _IrodoriVariantSelector();
 
@@ -79,7 +79,7 @@ class _IrodoriVariantSelector extends ConsumerWidget {
           if (!variant.supportsCaption) ...[
             const SizedBox(height: 8),
             Text(
-              l10n.settings_irodoriVariantV4NoCaption,
+              l10n.settings_irodoriVariantNoCaption,
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],

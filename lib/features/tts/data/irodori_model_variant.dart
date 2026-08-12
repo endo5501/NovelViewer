@@ -1,13 +1,13 @@
 /// Selectable Irodori-TTS model generation.
 ///
-/// v4 is not a drop-in replacement for v3. Measured on the v4 Small release
-/// (audio.cpp `238ab6a`), v4 appends a short phrase that is not in the input
-/// text whenever a reference voice **and** a caption are supplied together —
-/// 10 out of 10 runs, while reference-only, caption-only and no-reference are
-/// all clean. This app's main path is reference x caption, so v4 is offered
-/// as a caption-less alternative rather than as an upgrade.
+/// v4 was once offered as a caption-less alternative: measured on the v4 Small
+/// release (audio.cpp `238ab6a`), it appended a short phrase that is not in the
+/// input text whenever a reference voice **and** a caption were supplied
+/// together — 10 out of 10 runs. The cause was the duration predictor asking
+/// for more time than the text needs, and the engine's duration correction
+/// bounds the length instead, so both variants take captions now.
 ///
-/// See spec `irodori-model-variant` and design D7.
+/// See spec `irodori-model-variant` and `irodori-duration-correction`.
 enum IrodoriModelVariant {
   v3(
     storageKey: 'v3',
@@ -23,7 +23,7 @@ enum IrodoriModelVariant {
     modelDirName: 'Irodori-TTS-v4-Small-GGUF',
     ggufFileName: 'irodori-tts-v4-small-f16.gguf',
     expectedFileSize: 1762161536,
-    supportsCaption: false,
+    supportsCaption: true,
   );
 
   const IrodoriModelVariant({
@@ -63,6 +63,10 @@ enum IrodoriModelVariant {
   final int expectedFileSize;
 
   /// Whether a caption may be sent to this variant's engine.
+  ///
+  /// Both variants accept one today. The flag stays so a future variant that
+  /// cannot take a caption is excluded by changing this table rather than the
+  /// synthesis call sites.
   final bool supportsCaption;
 
   /// POSIX-style path of the GGUF relative to the models root.
@@ -71,8 +75,8 @@ enum IrodoriModelVariant {
   /// Resolves a persisted [storageKey] back to a variant.
   ///
   /// Falls back to [IrodoriModelVariant.v3] for null, empty, or unrecognised
-  /// values so an unreadable preference never silently moves a user onto the
-  /// caption-less variant.
+  /// values, so an unreadable preference lands on the longer-established
+  /// variant rather than switching the user's voice generation under them.
   static IrodoriModelVariant fromStorageKey(String? key) {
     for (final variant in IrodoriModelVariant.values) {
       if (variant.storageKey == key) return variant;

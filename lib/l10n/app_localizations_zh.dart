@@ -133,8 +133,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settings_irodoriModelVariant => '模型版本';
 
   @override
-  String get settings_irodoriVariantV4NoCaption =>
-      'v4 不支持字幕。同时提供参考语音和字幕会在结尾追加正文中不存在的语音，因此片段备注不会应用于合成。';
+  String get settings_irodoriVariantNoCaption => '所选模型不支持字幕，因此片段备注不会应用于合成。';
 
   @override
   String get settings_irodoriLegacyAssetsFound => '仍存在旧格式的模型数据';
