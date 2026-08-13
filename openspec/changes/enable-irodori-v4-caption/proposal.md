@@ -2,7 +2,7 @@
 
 Irodori-TTS v4 は「参照音声 × caption」を同時に与えると、クリップ末尾にテキストへ存在しない発話を付加する。本アプリの Irodori 主経路がまさにこの組み合わせであるため、`2026-08-05-add-irodori-v4-variant` では v4 を **caption 非対応の variant** として導入し、`TtsEngineConfig.captionFromMemo()` で caption を無条件に遮断した。結果として v4 利用者はセグメントメモによる感情表現を一切使えない。
 
-その後の検証 (`tmp/irodori-eval/PLAN-duration-workaround.md`) で**原因と回避策が特定できた**。原因は「余り」= 生成尺 − 本文を読み終える時刻であり、余りが大きいとモデルがそこを喋って埋める。実測 16 セルで一貫している (余り ≲0.5 秒 → 0/10、≳1.9 秒 → 8〜9/10)。生成尺を適切に補正すれば現象は消え、**試聴で 6 条件すべてクリーンであることを確認済み**（標準 / 遅い caption / 速い caption / 短文 / 長文 / 別話者、および本番既定の steps=40）。補正なしでは同じ条件が 8〜9/10 で破綻していた。
+その後の検証 (`research/validation-plan-and-results.md`) で**原因と回避策が特定できた**。原因は「余り」= 生成尺 − 本文を読み終える時刻であり、余りが大きいとモデルがそこを喋って埋める。実測 16 セルで一貫している (余り ≲0.5 秒 → 0/10、≳1.9 秒 → 8〜9/10)。生成尺を適切に補正すれば現象は消え、**試聴で 6 条件すべてクリーンであることを確認済み**（標準 / 遅い caption / 速い caption / 短文 / 長文 / 別話者、および本番既定の steps=40）。補正なしでは同じ条件が 8〜9/10 で破綻していた。
 
 上流 (Aratako/Irodori-TTS) に修正が入る見込みは不明であり、待つ理由が無くなった。
 
@@ -48,7 +48,7 @@ Irodori-TTS v4 は「参照音声 × caption」を同時に与えると、クリ
 - `lib/features/tts/data/audiocpp_native_bindings.dart` → `irodori_tts_engine.dart` → `tts_isolate.dart` (`SynthesizeMessage`) → `tts_session.dart` → 各 controller
 - `lib/features/tts/data/irodori_model_variant.dart`、`lib/features/tts/domain/tts_engine_config.dart`
 - `lib/features/settings/presentation/sections/irodori_settings_section.dart`
-- `lib/l10n/app_ja.arb` / `app_en.arb` / `app_zh.arb` (`settings_irodoriVariantV4NoCaption`)
+- `lib/l10n/app_ja.arb` / `app_en.arb` / `app_zh.arb` (caption 非対応を告げる文言)
 - テスト: `test/features/tts/domain/irodori_caption_gate_test.dart`、`irodori_variant_config_test.dart`、`test/features/tts/data/irodori_model_variant_test.dart`、`test/features/settings/presentation/irodori_settings_section_test.dart`
 
 **非目標**

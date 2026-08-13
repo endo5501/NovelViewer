@@ -1,0 +1,21 @@
+mode,seed,steps,wall_sec,audio_sec,pred_frames_msg,used_seed,out_file
+clone,1234,24,21.46,6.52,"info: predicted duration frames=162.5, scale=1.000, using_frames=163 (6.520s).",1234,v4py-clone-seed1234.wav
+clone,1235,24,20.96,6.52,"info: predicted duration frames=162.5, scale=1.000, using_frames=163 (6.520s).",1235,v4py-clone-seed1235.wav
+clone,1236,24,21.1,6.52,"info: predicted duration frames=162.5, scale=1.000, using_frames=163 (6.520s).",1236,v4py-clone-seed1236.wav
+clone,1237,24,21.17,6.52,"info: predicted duration frames=162.5, scale=1.000, using_frames=163 (6.520s).",1237,v4py-clone-seed1237.wav
+clone,1238,24,20.82,6.52,"info: predicted duration frames=162.5, scale=1.000, using_frames=163 (6.520s).",1238,v4py-clone-seed1238.wav
+clone,1239,24,21.27,6.52,"info: predicted duration frames=162.5, scale=1.000, using_frames=163 (6.520s).",1239,v4py-clone-seed1239.wav
+clone,1240,24,21.07,6.52,"info: predicted duration frames=162.5, scale=1.000, using_frames=163 (6.520s).",1240,v4py-clone-seed1240.wav
+clone,1241,24,21.0,6.52,"info: predicted duration frames=162.5, scale=1.000, using_frames=163 (6.520s).",1241,v4py-clone-seed1241.wav
+clone,1242,24,20.97,6.52,"info: predicted duration frames=162.5, scale=1.000, using_frames=163 (6.520s).",1242,v4py-clone-seed1242.wav
+clone,1243,24,20.99,6.52,"info: predicted duration frames=162.5, scale=1.000, using_frames=163 (6.520s).",1243,v4py-clone-seed1243.wav
+clone_caption,1234,24,23.5,6.24,"info: predicted duration frames=155.5, scale=1.000, using_frames=156 (6.240s).",1234,v4py-clone_caption-seed1234.wav
+clone_caption,1235,24,23.45,6.24,"info: predicted duration frames=155.5, scale=1.000, using_frames=156 (6.240s).",1235,v4py-clone_caption-seed1235.wav
+clone_caption,1236,24,23.38,6.24,"info: predicted duration frames=155.5, scale=1.000, using_frames=156 (6.240s).",1236,v4py-clone_caption-seed1236.wav
+clone_caption,1237,24,23.31,6.24,"info: predicted duration frames=155.5, scale=1.000, using_frames=156 (6.240s).",1237,v4py-clone_caption-seed1237.wav
+clone_caption,1238,24,23.31,6.24,"info: predicted duration frames=155.5, scale=1.000, using_frames=156 (6.240s).",1238,v4py-clone_caption-seed1238.wav
+clone_caption,1239,24,23.28,6.24,"info: predicted duration frames=155.5, scale=1.000, using_frames=156 (6.240s).",1239,v4py-clone_caption-seed1239.wav
+clone_caption,1240,24,23.24,6.24,"info: predicted duration frames=155.5, scale=1.000, using_frames=156 (6.240s).",1240,v4py-clone_caption-seed1240.wav
+clone_caption,1241,24,23.35,6.24,"info: predicted duration frames=155.5, scale=1.000, using_frames=156 (6.240s).",1241,v4py-clone_caption-seed1241.wav
+clone_caption,1242,24,23.38,6.24,"info: predicted duration frames=155.5, scale=1.000, using_frames=156 (6.240s).",1242,v4py-clone_caption-seed1242.wav
+clone_caption,1243,24,23.23,6.24,"info: predicted duration frames=155.5, scale=1.000, using_frames=156 (6.240s).",1243,v4py-clone_caption-seed1243.wav

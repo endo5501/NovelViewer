@@ -60,9 +60,9 @@ caption の有無から導出**する形にした。「caption を渡すなら�
 
 ## 4. C++ / GGUF での効果確認 (有効化の前提)
 
-**ここで問題が出たら 1 に戻る。** 検証環境と参照音声は `tmp/irodori-eval/` にある。
+**ここで問題が出たら 1 に戻る。** 検証環境と参照音声は `research/` にある。
 
-生成物: `tmp/irodori-eval/out/cpp-listen/`。**本番構成** (f16 GGUF / Vulkan / steps=40) で生成した。
+生成物: `research/listening/4-cpp-production-config.md`。**本番構成** (f16 GGUF / Vulkan / steps=40) で生成した。
 それまでの検証は q8_0 + CPU + steps=24 だったため、量子化・バックエンド・ステップ数をすべて本番に寄せた。
 
 - [x] 4.1 Python 検証と同一のテキスト / caption / 参照音声で `audiocpp_cli` を回し、補正後の尺が期待値と一致することを確認する
@@ -106,7 +106,7 @@ caption の有無から導出**する形にした。「caption を渡すなら�
 - [x] 6.1 `third_party/audio.cpp/docs/models/irodori_tts.md` に補正オプションを追記する
   - あわせて既存の注記も修正した。「occasionally」は実測 8〜9/10 なので過小、
     「別の seed を試す」は予測尺が決定論的なので無効な助言だった
-- [x] 6.2 `tmp/irodori-eval/PLAN-duration-workaround.md` の検証結果のうち、判断に必要な数値が design.md に転記済みであることを確認する (tmp は gitignore 配下で失われうる)
+- [x] 6.2 検証結果のうち、判断に必要な数値が design.md に転記済みであることを確認する
   - 余りと発生率の対応表 / 3 案を却下した数値 / 秒あたり字数とトークン数の比較 / 全セルの min 表を転記済み
 
 ## 6.5 submodule ポインタの更新
