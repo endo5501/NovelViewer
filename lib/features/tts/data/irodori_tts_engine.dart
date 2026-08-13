@@ -29,10 +29,16 @@ class IrodoriTtsEngine {
 
   bool get isLoaded => _ctx != nullptr && _bindings.isLoaded(_ctx) != 0;
 
+  /// Whether captioned synthesis on the loaded model asks the engine to bound
+  /// the generated length. A property of the model, so it is set at load time
+  /// rather than per call — see [IrodoriModelVariant.needsDurationCorrection].
+  bool _durationCorrection = false;
+
   void loadModel(
     String modelDir, {
     int nThreads = 4,
     Pointer<Void>? abortHandle,
+    bool durationCorrection = false,
   }) {
     if (_ctx != nullptr) {
       dispose();
@@ -40,6 +46,7 @@ class IrodoriTtsEngine {
 
     final handle = abortHandle ?? nullptr;
     _abortHandle = handle;
+    _durationCorrection = durationCorrection;
     final modelDirPtr = modelDir.toNativeUtf8();
     try {
       _ctx = _bindings.init(modelDirPtr, nThreads, handle);
@@ -67,6 +74,15 @@ class IrodoriTtsEngine {
   /// synthesis-time parameters; `null` or empty values are passed to the
   /// native layer as `nullptr`, selecting plain TTS / clone-only /
   /// caption-only / clone+caption per design D3.
+  ///
+  /// On a model loaded with `durationCorrection`, a caption additionally turns
+  /// on the engine's duration correction. With a reference voice and a caption
+  /// together the duration predictor asks for more time than the text needs,
+  /// and the model fills the surplus with a phrase that is not in the text;
+  /// the correction bounds the length instead. The two are tied together here
+  /// rather than at the call sites because every caption reaches the native
+  /// layer through this method, so a caller cannot send one and forget the
+  /// correction.
   TtsSynthesisResult synthesize(
     String text, {
     String? refWavPath,
@@ -77,31 +93,76 @@ class IrodoriTtsEngine {
   }) {
     _ensureLoaded();
 
-    final textPtr = text.toNativeUtf8();
-    final refWavPtr = (refWavPath != null && refWavPath.isNotEmpty)
-        ? refWavPath.toNativeUtf8()
-        : nullptr;
-    final captionPtr = (caption != null && caption.isNotEmpty)
-        ? caption.toNativeUtf8()
-        : nullptr;
+    final hasCaption = caption != null && caption.isNotEmpty;
+    final options = (hasCaption && _durationCorrection)
+        ? const {'duration_correction': 'true'}
+        : const <String, String>{};
+    final entries = options.entries.toList();
+
+    // Every allocation happens inside the try so a throw partway through still
+    // reaches the finally with whatever was allocated so far. calloc zero-fills
+    // the arrays, so the unfilled slots read back as nullptr and are skipped.
+    var textPtr = nullptr as Pointer<Utf8>;
+    var refWavPtr = nullptr as Pointer<Utf8>;
+    var captionPtr = nullptr as Pointer<Utf8>;
+    var keys = nullptr as Pointer<Pointer<Utf8>>;
+    var values = nullptr as Pointer<Pointer<Utf8>>;
     try {
-      final result = _bindings.synthesize(
-        _ctx,
-        textPtr,
-        refWavPtr,
-        captionPtr,
-        speakerGuidanceScale,
-        captionGuidanceScale,
-        numInferenceSteps,
-      );
+      textPtr = text.toNativeUtf8();
+      if (refWavPath != null && refWavPath.isNotEmpty) {
+        refWavPtr = refWavPath.toNativeUtf8();
+      }
+      if (hasCaption) {
+        captionPtr = caption.toNativeUtf8();
+      }
+      if (entries.isNotEmpty) {
+        keys = calloc<Pointer<Utf8>>(entries.length);
+        values = calloc<Pointer<Utf8>>(entries.length);
+        for (var i = 0; i < entries.length; i++) {
+          keys[i] = entries[i].key.toNativeUtf8();
+          values[i] = entries[i].value.toNativeUtf8();
+        }
+      }
+      // Without options this takes the plain entry point, which keeps every
+      // caption-less path working against a native library built before
+      // audiocpp_synthesize_with_options existed. The binding is looked up
+      // lazily, so the newer symbol is only required once it is actually used.
+      final result = entries.isEmpty
+          ? _bindings.synthesize(
+              _ctx,
+              textPtr,
+              refWavPtr,
+              captionPtr,
+              speakerGuidanceScale,
+              captionGuidanceScale,
+              numInferenceSteps,
+            )
+          : _bindings.synthesizeWithOptions(
+              _ctx,
+              textPtr,
+              refWavPtr,
+              captionPtr,
+              speakerGuidanceScale,
+              captionGuidanceScale,
+              numInferenceSteps,
+              keys,
+              values,
+              entries.length,
+            );
       if (result != 0) {
         final error = _bindings.getError(_ctx).toDartString();
         throw TtsEngineException('Irodori synthesis failed: $error');
       }
     } finally {
-      calloc.free(textPtr);
+      if (textPtr != nullptr) calloc.free(textPtr);
       if (refWavPtr != nullptr) calloc.free(refWavPtr);
       if (captionPtr != nullptr) calloc.free(captionPtr);
+      for (var i = 0; i < entries.length; i++) {
+        if (keys != nullptr && keys[i] != nullptr) calloc.free(keys[i]);
+        if (values != nullptr && values[i] != nullptr) calloc.free(values[i]);
+      }
+      if (keys != nullptr) calloc.free(keys);
+      if (values != nullptr) calloc.free(values);
     }
 
     return _extractAudio();

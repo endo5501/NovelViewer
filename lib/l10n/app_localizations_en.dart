@@ -134,8 +134,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings_irodoriModelVariant => 'Model version';
 
   @override
-  String get settings_irodoriVariantV4NoCaption =>
-      'v4 does not support captions. Supplying a reference voice and a caption together makes it append speech that is not in the text, so segment memos are not applied during synthesis.';
+  String get settings_irodoriVariantNoCaption =>
+      'The selected model does not support captions, so segment memos are not applied during synthesis.';
 
   @override
   String get settings_irodoriLegacyAssetsFound =>

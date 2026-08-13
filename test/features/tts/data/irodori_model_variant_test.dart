@@ -10,13 +10,23 @@ void main() {
       ]);
     });
 
-    test('v3 supports caption, v4 does not', () {
-      // v4 adds a trailing phrase that is not in the text whenever a
-      // reference voice and a caption are supplied together (design D7 /
-      // spec irodori-model-variant). Reference-only is clean, so v4 stays
-      // usable — but caption must never reach it.
+    test('both variants support caption', () {
+      // v4 used to be excluded: it adds a trailing phrase that is not in the
+      // text when a reference voice and a caption are supplied together. The
+      // engine's duration correction removes that, so the flag is kept for a
+      // future variant that needs excluding rather than for v4.
       expect(IrodoriModelVariant.v3.supportsCaption, isTrue);
-      expect(IrodoriModelVariant.v4.supportsCaption, isFalse);
+      expect(IrodoriModelVariant.v4.supportsCaption, isTrue);
+    });
+
+    test('only v4 needs duration correction', () {
+      // The correction is calibrated on v4: 0.207 s per spoken codepoint,
+      // fitted on three v4 measurements. v3 never showed the trailing phrase,
+      // and its captioned output already ends only 0.12 s inside what the
+      // character rule would allow — applying the v4 bound to it risks cutting
+      // speech that is correct today.
+      expect(IrodoriModelVariant.v3.needsDurationCorrection, isFalse);
+      expect(IrodoriModelVariant.v4.needsDurationCorrection, isTrue);
     });
 
     test('each variant names the directory holding its single GGUF', () {

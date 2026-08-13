@@ -47,7 +47,7 @@
   "settings_irodoriSpeakerGuidanceScale": "話者ガイダンス強度 (speaker_guidance_scale)",
   "settings_irodoriCaptionGuidanceScale": "キャプションガイダンス強度 (caption_guidance_scale)",
   "settings_irodoriModelVariant": "モデルバージョン",
-  "settings_irodoriVariantV4NoCaption": "v4 はキャプション非対応です。参照音声とキャプションを同時に与えると、末尾に本文にない発話が追加されるため、セグメントのメモは合成に反映されません。",
+  "settings_irodoriVariantNoCaption": "選択中のモデルはキャプション非対応です。セグメントのメモは合成に反映されません。",
   "settings_irodoriLegacyAssetsFound": "旧形式のモデルデータが残っています",
   "settings_irodoriLegacyAssetsDelete": "削除して容量を解放",
   "settings_irodoriLegacyAssetsConfirm": "旧形式のモデルデータを削除します。この操作は取り消せません。",

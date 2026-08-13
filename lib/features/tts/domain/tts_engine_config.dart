@@ -73,13 +73,17 @@ sealed class TtsEngineConfig {
   /// `null` or empty memo yields `null` (clone-only / plain synthesis).
   /// Centralised here so every synthesis call site applies the same rule.
   ///
-  /// Irodori v4 additionally never receives a caption. Supplying a reference
-  /// voice and a caption together makes v4 append a short phrase that is not
-  /// in the text (measured 10/10; reference-only and caption-only are clean —
-  /// design D7). The gate lives here rather than in the settings UI because
-  /// synthesis is reached from three call sites — streaming generation, the
-  /// edit dialog's regenerate, and re-synthesis of a stored segment — and a
-  /// UI-only gate would leak through the paths that never touch the UI.
+  /// The variant may also refuse captions, via
+  /// [IrodoriModelVariant.supportsCaption]. No shipped variant does today: v4
+  /// used to, because a reference voice and a caption together made it append
+  /// a short phrase that is not in the text, and the engine's duration
+  /// correction removes that.
+  ///
+  /// The gate stays for the next variant that needs it, and lives here rather
+  /// than in the settings UI because synthesis is reached from three call
+  /// sites — streaming generation, the edit dialog's regenerate, and
+  /// re-synthesis of a stored segment — and a UI-only gate would leak through
+  /// the paths that never touch the UI.
   static String? captionFromMemo(TtsEngineConfig config, String? memo) {
     if (config is! IrodoriEngineConfig) return null;
     if (!config.supportsCaption) return null;

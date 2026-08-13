@@ -1,0 +1,11 @@
+mode,seed,steps,wall_sec,audio_sec,pred_frames_msg,used_seed,out_file
+clone_caption,1234,24,20.25,5.56,,1234,v4py-clone_caption-seed1234-fin.wav
+clone_caption,1235,24,20.21,5.56,,1235,v4py-clone_caption-seed1235-fin.wav
+clone_caption,1236,24,19.55,5.56,,1236,v4py-clone_caption-seed1236-fin.wav
+clone_caption,1237,24,19.59,5.56,,1237,v4py-clone_caption-seed1237-fin.wav
+clone_caption,1238,24,19.62,5.56,,1238,v4py-clone_caption-seed1238-fin.wav
+clone_caption,1239,24,19.64,5.56,,1239,v4py-clone_caption-seed1239-fin.wav
+clone_caption,1240,24,19.85,5.56,,1240,v4py-clone_caption-seed1240-fin.wav
+clone_caption,1241,24,19.58,5.56,,1241,v4py-clone_caption-seed1241-fin.wav
+clone_caption,1242,24,19.49,5.56,,1242,v4py-clone_caption-seed1242-fin.wav
+clone_caption,1243,24,19.36,5.56,,1243,v4py-clone_caption-seed1243-fin.wav

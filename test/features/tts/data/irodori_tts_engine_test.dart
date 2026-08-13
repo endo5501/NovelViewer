@@ -20,6 +20,19 @@ typedef _MockSynthesize = int Function(
   int,
 );
 
+typedef _MockSynthesizeWithOptions = int Function(
+  Pointer<Void>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  double,
+  double,
+  int,
+  Pointer<Pointer<Utf8>>,
+  Pointer<Pointer<Utf8>>,
+  int,
+);
+
 /// Mock bindings for testing IrodoriTtsEngine without loading the native
 /// library.
 class MockAudiocppNativeBindings extends AudiocppNativeBindings {
@@ -110,6 +123,41 @@ class MockAudiocppNativeBindings extends AudiocppNativeBindings {
     lastCaptionGuidanceScale = captionGuidanceScale;
     lastNumInferenceSteps = numInferenceSteps;
     return synthesizeReturnCode;
+  };
+
+  /// Request options captured from the last call, decoded eagerly for the same
+  /// reason as the strings above.
+  Map<String, String>? lastRequestOptions;
+
+  @override
+  late final _MockSynthesizeWithOptions
+  // ignore: overridden_fields
+  synthesizeWithOptions = (
+    Pointer<Void> ctx,
+    Pointer<Utf8> text,
+    Pointer<Utf8> refWavPath,
+    Pointer<Utf8> caption,
+    double speakerGuidanceScale,
+    double captionGuidanceScale,
+    int numInferenceSteps,
+    Pointer<Pointer<Utf8>> optionKeys,
+    Pointer<Pointer<Utf8>> optionValues,
+    int optionCount,
+  ) {
+    final options = <String, String>{};
+    for (var i = 0; i < optionCount; i++) {
+      options[optionKeys[i].toDartString()] = optionValues[i].toDartString();
+    }
+    lastRequestOptions = options;
+    return synthesize(
+      ctx,
+      text,
+      refWavPath,
+      caption,
+      speakerGuidanceScale,
+      captionGuidanceScale,
+      numInferenceSteps,
+    );
   };
 
   Pointer<Float> audioBuffer = nullptr;
@@ -220,6 +268,78 @@ void main() {
       mockBindings.audioBuffer = defaultBuf;
       mockBindings.audioLength = 1;
       mockBindings.sampleRateValue = 48000;
+    });
+
+    // v4 appends a phrase that is not in the text when a reference voice and a
+    // caption are supplied together, because the duration predictor asks for
+    // more time than the text needs. The engine bounds the length instead, and
+    // the invariant lives here rather than at the call sites: every caption
+    // reaches the native layer through this one method, so a caller cannot
+    // send a caption and forget the correction.
+    test('a caption turns on duration correction', () {
+      engine.loadModel('/fake/model/dir', durationCorrection: true);
+      engine.synthesize(
+        'こんにちは',
+        refWavPath: '/voices/ref.wav',
+        caption: '穏やかに話す',
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+
+      expect(mockBindings.lastRequestOptions, isNotNull);
+      expect(
+        mockBindings.lastRequestOptions!['duration_correction'],
+        'true',
+        reason: 'a caption without the correction is the broken combination',
+      );
+      expect(mockBindings.lastCaption, '穏やかに話す');
+    });
+
+    test('no caption leaves the generated length alone', () {
+      engine.loadModel('/fake/model/dir', durationCorrection: true);
+      engine.synthesize(
+        'こんにちは',
+        refWavPath: '/voices/ref.wav',
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+
+      expect(mockBindings.lastRequestOptions, isNull,
+          reason: 'no options must take the plain synthesize entry point');
+    });
+
+    test('an empty caption is treated as no caption', () {
+      engine.loadModel('/fake/model/dir', durationCorrection: true);
+      engine.synthesize(
+        'こんにちは',
+        refWavPath: '/voices/ref.wav',
+        caption: '',
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+
+      expect(mockBindings.lastCaptionWasNull, isTrue);
+      expect(mockBindings.lastRequestOptions, isNull);
+    });
+
+    // The correction is calibrated on v4. A model loaded without it must keep
+    // the length the predictor asks for, even with a caption.
+    test('a model loaded without correction never sends the option', () {
+      engine.loadModel('/fake/model/dir');
+      engine.synthesize(
+        'こんにちは',
+        refWavPath: '/voices/ref.wav',
+        caption: '穏やかに話す',
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+
+      expect(mockBindings.lastCaption, '穏やかに話す');
+      expect(mockBindings.lastRequestOptions, isNull);
     });
 
     test('returns TtsSynthesisResult with 48kHz audio', () {

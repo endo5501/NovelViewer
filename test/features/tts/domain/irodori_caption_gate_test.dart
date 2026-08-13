@@ -2,18 +2,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
 
-/// The v4 caption gate.
+/// The caption gate.
 ///
-/// Irodori v4 appends a short phrase that is not in the text whenever a
-/// reference voice and a caption are supplied together — measured at 10/10,
-/// while reference-only and caption-only are both clean (design D7). This
-/// app's main path is reference x caption, so caption must never reach v4.
+/// Irodori v4 used to be excluded here: it appends a short phrase that is not
+/// in the text whenever a reference voice and a caption are supplied together.
+/// The cause was the duration predictor asking for more time than the text
+/// needs, and the engine's duration correction removes it, so v4 now accepts
+/// captions like v3.
 ///
-/// The gate lives in [TtsEngineConfig.captionFromMemo] rather than in the
-/// settings UI because synthesis is reached from three separate call sites
-/// (streaming generation, the edit dialog's regenerate, and re-synthesis of a
-/// stored segment). A UI-only gate would leak through the paths that never
-/// touch the UI.
+/// The gate itself stays. It keeps the decision in one place below the UI —
+/// synthesis is reached from three separate call sites (streaming generation,
+/// the edit dialog's regenerate, and re-synthesis of a stored segment), and a
+/// UI-only gate would leak through the paths that never touch the UI. Today it
+/// only drops captions for the engines that have no caption conditioning at
+/// all; a future variant that needs excluding changes this one function.
 void main() {
   IrodoriEngineConfig irodori(IrodoriModelVariant variant) =>
       IrodoriEngineConfig(
@@ -44,22 +46,20 @@ void main() {
     });
   });
 
-  group('captionFromMemo - v4 drops caption', () {
-    test('returns null for a non-empty memo', () {
+  group('captionFromMemo - v4 keeps caption', () {
+    test('passes a non-empty memo through as the caption', () {
       expect(
         TtsEngineConfig.captionFromMemo(
           irodori(IrodoriModelVariant.v4),
           '怒って叫んでいる',
         ),
-        isNull,
+        '怒って叫んでいる',
       );
     });
 
-    test('returns null regardless of memo content', () {
+    test('passes the memo through whatever its content', () {
       final config = irodori(IrodoriModelVariant.v4);
-      for (final memo in <String?>[
-        null,
-        '',
+      for (final memo in <String>[
         ' ',
         'a',
         '落ち着いた大人の男性。深く響く声で丁寧に話している。',
@@ -67,16 +67,23 @@ void main() {
       ]) {
         expect(
           TtsEngineConfig.captionFromMemo(config, memo),
-          isNull,
-          reason: 'v4 must never receive a caption (memo: "$memo")',
+          memo,
+          reason: 'v4 accepts captions now (memo: "$memo")',
         );
       }
     });
 
-    test('drops the caption even when no reference voice is set', () {
-      // The measured failure needs reference x caption, but the gate is
-      // unconditional: a config without a reference today may gain one from a
-      // per-segment override before synthesis runs.
+    test('still maps null and empty memos to no caption', () {
+      final config = irodori(IrodoriModelVariant.v4);
+      expect(TtsEngineConfig.captionFromMemo(config, null), isNull);
+      expect(TtsEngineConfig.captionFromMemo(config, ''), isNull);
+    });
+
+    test('passes the caption through with no reference voice set', () {
+      // The failure this gate used to prevent needed reference x caption, but
+      // the correction covers the no-reference path too, and a config without
+      // a reference today may gain one from a per-segment override before
+      // synthesis runs.
       const config = IrodoriEngineConfig(
         modelDir: '/models/irodori',
         sampleRate: 48000,
@@ -86,7 +93,7 @@ void main() {
         captionGuidanceScale: 3.0,
         numInferenceSteps: 40,
       );
-      expect(TtsEngineConfig.captionFromMemo(config, '悲しげに'), isNull);
+      expect(TtsEngineConfig.captionFromMemo(config, '悲しげに'), '悲しげに');
     });
   });
 

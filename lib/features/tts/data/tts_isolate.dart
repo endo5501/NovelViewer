@@ -132,6 +132,7 @@ class LoadModelMessage extends TtsIsolateMessage {
     this.noiseW,
     this.embeddingCacheDir,
     this.abortHandleAddress = 0,
+    this.durationCorrection = false,
   });
   final String modelDir;
   final TtsEngineType engineType;
@@ -149,6 +150,10 @@ class LoadModelMessage extends TtsIsolateMessage {
   final double? noiseScale;
   final double? noiseW;
   final String? embeddingCacheDir;
+  // Irodori-specific: whether captioned synthesis on this model asks the
+  // engine to bound the generated length. A property of the model variant, so
+  // it travels with the load rather than with each synthesis request.
+  final bool durationCorrection;
 }
 
 class SynthesizeMessage extends TtsIsolateMessage {
@@ -375,6 +380,7 @@ class TtsIsolate {
     double? noiseScale,
     double? noiseW,
     String? embeddingCacheDir,
+    bool durationCorrection = false,
   }) {
     _sendPort?.send(LoadModelMessage(
       modelDir: modelDir,
@@ -386,6 +392,7 @@ class TtsIsolate {
       noiseScale: noiseScale,
       noiseW: noiseW,
       embeddingCacheDir: embeddingCacheDir,
+      durationCorrection: durationCorrection,
       // Send the handle allocated by THIS engine's DLL so the address is only
       // ever dereferenced by the library that created it (no cross-DLL wiring).
       abortHandleAddress: _abortHandles[engineType]?.address ?? 0,
@@ -589,6 +596,7 @@ class TtsIsolate {
                 nThreads: message.nThreads,
                 abortHandle:
                     Pointer<Void>.fromAddress(message.abortHandleAddress),
+                durationCorrection: message.durationCorrection,
               );
               irodoriEngine = next;
           }

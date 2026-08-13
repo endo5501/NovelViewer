@@ -133,8 +133,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settings_irodoriModelVariant => 'モデルバージョン';
 
   @override
-  String get settings_irodoriVariantV4NoCaption =>
-      'v4 はキャプション非対応です。参照音声とキャプションを同時に与えると、末尾に本文にない発話が追加されるため、セグメントのメモは合成に反映されません。';
+  String get settings_irodoriVariantNoCaption =>
+      '選択中のモデルはキャプション非対応です。セグメントのメモは合成に反映されません。';
 
   @override
   String get settings_irodoriLegacyAssetsFound => '旧形式のモデルデータが残っています';

@@ -76,7 +76,7 @@ class _FakeTtsIsolate implements TtsIsolate {
 
   @override
   void loadModel(String modelDir,
-      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW, String? embeddingCacheDir}) {
+      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW, String? embeddingCacheDir, bool durationCorrection = false}) {
     loadModelCalls.add(_LoadModelCall(
       modelDir: modelDir,
       engineType: engineType,

@@ -97,6 +97,14 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  assets:
+    # The Irodori model contract, copied from third_party/audio.cpp. The engine
+    # validates request options against it, and the copy embedded in a shipped
+    # GGUF outranks the one compiled into the runtime, so the app writes this
+    # beside the model where it takes priority over both. Kept in step with the
+    # submodule by test/features/tts/data/irodori_model_spec_asset_test.dart.
+    - assets/model_specs/irodori_tts.json
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

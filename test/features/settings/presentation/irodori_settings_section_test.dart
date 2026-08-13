@@ -385,7 +385,7 @@ void main() {
         (tester) async {
       final l10n = await selectIrodoriEngine(tester);
 
-      expect(find.text(l10n.settings_irodoriVariantV4NoCaption), findsNothing);
+      expect(find.text(l10n.settings_irodoriVariantNoCaption), findsNothing);
 
       final slider = tester.widget<Slider>(
         find.byKey(const Key('irodori_caption_guidance_slider')),
@@ -393,8 +393,8 @@ void main() {
       expect(slider.onChanged, isNotNull);
     });
 
-    testWidgets('selecting v4 explains the limit and disables the caption '
-        'slider', (tester) async {
+    testWidgets('selecting v4 keeps the caption controls usable',
+        (tester) async {
       final l10n = await selectIrodoriEngine(tester);
 
       await tester.tap(find.byKey(const Key('irodori_variant_dropdown')));
@@ -402,14 +402,15 @@ void main() {
       await tester.tap(find.text(IrodoriModelVariant.v4.label).last);
       await tester.pumpAndSettle();
 
-      // The gate itself lives below the UI; this only has to explain why the
-      // caption controls are inert.
-      expect(find.text(l10n.settings_irodoriVariantV4NoCaption), findsOneWidget);
+      // v4 took no captions until the engine gained duration correction. The
+      // notice is driven by the variant's supportsCaption flag, so it stays in
+      // place for a future caption-less variant without being shown here.
+      expect(find.text(l10n.settings_irodoriVariantNoCaption), findsNothing);
 
       final slider = tester.widget<Slider>(
         find.byKey(const Key('irodori_caption_guidance_slider')),
       );
-      expect(slider.onChanged, isNull);
+      expect(slider.onChanged, isNotNull);
     });
 
     testWidgets('the caption guidance value survives a v4 round trip',

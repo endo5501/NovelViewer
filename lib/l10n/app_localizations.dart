@@ -340,11 +340,11 @@ abstract class AppLocalizations {
   /// **'モデルバージョン'**
   String get settings_irodoriModelVariant;
 
-  /// No description provided for @settings_irodoriVariantV4NoCaption.
+  /// No description provided for @settings_irodoriVariantNoCaption.
   ///
   /// In ja, this message translates to:
-  /// **'v4 はキャプション非対応です。参照音声とキャプションを同時に与えると、末尾に本文にない発話が追加されるため、セグメントのメモは合成に反映されません。'**
-  String get settings_irodoriVariantV4NoCaption;
+  /// **'選択中のモデルはキャプション非対応です。セグメントのメモは合成に反映されません。'**
+  String get settings_irodoriVariantNoCaption;
 
   /// No description provided for @settings_irodoriLegacyAssetsFound.
   ///

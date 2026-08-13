@@ -1,0 +1,11 @@
+mode,seed,total_sec,n_seg,text_end,surplus,last_start,last_dur,gap_before,trail_sil,file,path
+clone_caption@fin40,1234,5.56,3,5.11,0.45,3.96,1.15,0.3,0.45,v4py-clone_caption-seed1234-fin40.wav,out\dur-FINAL\s40\v4py-clone_caption-seed1234-fin40.wav
+clone_caption@fin40,1235,5.56,3,5.1,0.46,4.01,1.09,0.35,0.46,v4py-clone_caption-seed1235-fin40.wav,out\dur-FINAL\s40\v4py-clone_caption-seed1235-fin40.wav
+clone_caption@fin40,1236,5.56,3,5.14,0.42,4.01,1.13,0.35,0.42,v4py-clone_caption-seed1236-fin40.wav,out\dur-FINAL\s40\v4py-clone_caption-seed1236-fin40.wav
+clone_caption@fin40,1237,5.56,3,5.12,0.44,4.06,1.06,0.45,0.44,v4py-clone_caption-seed1237-fin40.wav,out\dur-FINAL\s40\v4py-clone_caption-seed1237-fin40.wav
+clone_caption@fin40,1238,5.56,3,5.12,0.44,4.05,1.07,0.53,0.44,v4py-clone_caption-seed1238-fin40.wav,out\dur-FINAL\s40\v4py-clone_caption-seed1238-fin40.wav
+clone_caption@fin40,1239,5.56,3,5.12,0.44,4.01,1.11,0.39,0.44,v4py-clone_caption-seed1239-fin40.wav,out\dur-FINAL\s40\v4py-clone_caption-seed1239-fin40.wav
+clone_caption@fin40,1240,5.56,3,5.12,0.44,3.97,1.15,0.47,0.44,v4py-clone_caption-seed1240-fin40.wav,out\dur-FINAL\s40\v4py-clone_caption-seed1240-fin40.wav
+clone_caption@fin40,1241,5.56,3,5.12,0.44,3.97,1.15,0.44,0.44,v4py-clone_caption-seed1241-fin40.wav,out\dur-FINAL\s40\v4py-clone_caption-seed1241-fin40.wav
+clone_caption@fin40,1242,5.56,3,5.15,0.41,3.98,1.17,0.37,0.41,v4py-clone_caption-seed1242-fin40.wav,out\dur-FINAL\s40\v4py-clone_caption-seed1242-fin40.wav
+clone_caption@fin40,1243,5.56,3,5.11,0.45,4.08,1.03,0.58,0.45,v4py-clone_caption-seed1243-fin40.wav,out\dur-FINAL\s40\v4py-clone_caption-seed1243-fin40.wav
