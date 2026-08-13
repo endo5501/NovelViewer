@@ -16,6 +16,7 @@ enum IrodoriModelVariant {
     ggufFileName: 'irodori-tts-600m-v3-voicedesign-f16.gguf',
     expectedFileSize: 1463787680,
     supportsCaption: true,
+    needsDurationCorrection: false,
   ),
   v4(
     storageKey: 'v4',
@@ -24,6 +25,7 @@ enum IrodoriModelVariant {
     ggufFileName: 'irodori-tts-v4-small-f16.gguf',
     expectedFileSize: 1762161536,
     supportsCaption: true,
+    needsDurationCorrection: true,
   );
 
   const IrodoriModelVariant({
@@ -33,6 +35,7 @@ enum IrodoriModelVariant {
     required this.ggufFileName,
     required this.expectedFileSize,
     required this.supportsCaption,
+    required this.needsDurationCorrection,
   });
 
   /// Value persisted in SharedPreferences. Stable across releases.
@@ -68,6 +71,19 @@ enum IrodoriModelVariant {
   /// cannot take a caption is excluded by changing this table rather than the
   /// synthesis call sites.
   final bool supportsCaption;
+
+  /// Whether captioned synthesis needs the engine's duration correction.
+  ///
+  /// The correction bounds the generated length to roughly what the text
+  /// needs, using a character rule calibrated on v4 (0.207 s per spoken
+  /// codepoint, fitted on three measurements). v4 needs it: without it a
+  /// reference voice and a caption together make it append a phrase that is
+  /// not in the text.
+  ///
+  /// v3 does not. It never showed the artifact, and its captioned output ends
+  /// only ~0.12 s inside what the character rule would allow, so applying a
+  /// bound calibrated elsewhere could cut speech that is correct today.
+  final bool needsDurationCorrection;
 
   /// POSIX-style path of the GGUF relative to the models root.
   String get relativeGgufPath => '$modelDirName/$ggufFileName';

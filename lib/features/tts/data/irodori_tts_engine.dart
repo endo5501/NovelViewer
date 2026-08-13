@@ -29,10 +29,16 @@ class IrodoriTtsEngine {
 
   bool get isLoaded => _ctx != nullptr && _bindings.isLoaded(_ctx) != 0;
 
+  /// Whether captioned synthesis on the loaded model asks the engine to bound
+  /// the generated length. A property of the model, so it is set at load time
+  /// rather than per call — see [IrodoriModelVariant.needsDurationCorrection].
+  bool _durationCorrection = false;
+
   void loadModel(
     String modelDir, {
     int nThreads = 4,
     Pointer<Void>? abortHandle,
+    bool durationCorrection = false,
   }) {
     if (_ctx != nullptr) {
       dispose();
@@ -40,6 +46,7 @@ class IrodoriTtsEngine {
 
     final handle = abortHandle ?? nullptr;
     _abortHandle = handle;
+    _durationCorrection = durationCorrection;
     final modelDirPtr = modelDir.toNativeUtf8();
     try {
       _ctx = _bindings.init(modelDirPtr, nThreads, handle);
@@ -68,13 +75,14 @@ class IrodoriTtsEngine {
   /// native layer as `nullptr`, selecting plain TTS / clone-only /
   /// caption-only / clone+caption per design D3.
   ///
-  /// A caption additionally turns on the engine's duration correction. With a
-  /// reference voice and a caption together the duration predictor asks for
-  /// more time than the text needs, and the model fills the surplus with a
-  /// phrase that is not in the text; the correction bounds the length instead.
-  /// The two are tied together here rather than at the call sites because
-  /// every caption reaches the native layer through this method, so a caller
-  /// cannot send one and forget the correction.
+  /// On a model loaded with `durationCorrection`, a caption additionally turns
+  /// on the engine's duration correction. With a reference voice and a caption
+  /// together the duration predictor asks for more time than the text needs,
+  /// and the model fills the surplus with a phrase that is not in the text;
+  /// the correction bounds the length instead. The two are tied together here
+  /// rather than at the call sites because every caption reaches the native
+  /// layer through this method, so a caller cannot send one and forget the
+  /// correction.
   TtsSynthesisResult synthesize(
     String text, {
     String? refWavPath,
@@ -91,11 +99,16 @@ class IrodoriTtsEngine {
         ? refWavPath.toNativeUtf8()
         : nullptr;
     final captionPtr = hasCaption ? caption.toNativeUtf8() : nullptr;
-    final options = hasCaption
+    final options = (hasCaption && _durationCorrection)
         ? const {'duration_correction': 'true'}
         : const <String, String>{};
     final entries = options.entries.toList();
-    final keys = entries.isEmpty ? nullptr : calloc<Pointer<Utf8>>(entries.length);
+    // Without options this takes the plain entry point, which keeps every
+    // caption-less path working against a native library built before
+    // audiocpp_synthesize_with_options existed. The binding is looked up
+    // lazily, so the newer symbol is only required once it is actually used.
+    final keys =
+        entries.isEmpty ? nullptr : calloc<Pointer<Utf8>>(entries.length);
     final values =
         entries.isEmpty ? nullptr : calloc<Pointer<Utf8>>(entries.length);
     for (var i = 0; i < entries.length; i++) {
@@ -103,18 +116,28 @@ class IrodoriTtsEngine {
       values[i] = entries[i].value.toNativeUtf8();
     }
     try {
-      final result = _bindings.synthesizeWithOptions(
-        _ctx,
-        textPtr,
-        refWavPtr,
-        captionPtr,
-        speakerGuidanceScale,
-        captionGuidanceScale,
-        numInferenceSteps,
-        keys,
-        values,
-        entries.length,
-      );
+      final result = entries.isEmpty
+          ? _bindings.synthesize(
+              _ctx,
+              textPtr,
+              refWavPtr,
+              captionPtr,
+              speakerGuidanceScale,
+              captionGuidanceScale,
+              numInferenceSteps,
+            )
+          : _bindings.synthesizeWithOptions(
+              _ctx,
+              textPtr,
+              refWavPtr,
+              captionPtr,
+              speakerGuidanceScale,
+              captionGuidanceScale,
+              numInferenceSteps,
+              keys,
+              values,
+              entries.length,
+            );
       if (result != 0) {
         final error = _bindings.getError(_ctx).toDartString();
         throw TtsEngineException('Irodori synthesis failed: $error');

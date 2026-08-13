@@ -20,6 +20,7 @@ class _LoadModelCall {
     this.noiseScale,
     this.noiseW,
     this.embeddingCacheDir,
+    this.durationCorrection = false,
   });
   final String modelDir;
   final TtsEngineType engineType;
@@ -29,6 +30,7 @@ class _LoadModelCall {
   final double? noiseScale;
   final double? noiseW;
   final String? embeddingCacheDir;
+  final bool durationCorrection;
 }
 
 class _FakeTtsIsolate implements TtsIsolate {
@@ -77,6 +79,7 @@ class _FakeTtsIsolate implements TtsIsolate {
     double? noiseScale,
     double? noiseW,
     String? embeddingCacheDir,
+    bool durationCorrection = false,
   }) {
     loadModelCalls.add(_LoadModelCall(
       modelDir: modelDir,
@@ -87,6 +90,7 @@ class _FakeTtsIsolate implements TtsIsolate {
       noiseScale: noiseScale,
       noiseW: noiseW,
       embeddingCacheDir: embeddingCacheDir,
+      durationCorrection: durationCorrection,
     ));
     if (blockModelLoad) return;
     Future.microtask(() {
@@ -257,6 +261,32 @@ void main() {
       expect(call.engineType, TtsEngineType.irodori);
       expect(call.modelDir, '/i/m');
       await session.dispose();
+    });
+
+    // The duration correction is calibrated per variant, so it is sent with
+    // the load rather than with each synthesis request.
+    test('ensureModelLoaded sends the variant duration-correction flag',
+        () async {
+      for (final variant in IrodoriModelVariant.values) {
+        final isolate = _FakeTtsIsolate();
+        final session = TtsSession(isolate: isolate);
+
+        await session.ensureModelLoaded(IrodoriEngineConfig(
+          modelDir: '/i/${variant.storageKey}',
+          sampleRate: 48000,
+          variant: variant,
+          speakerGuidanceScale: 5.0,
+          captionGuidanceScale: 3.0,
+          numInferenceSteps: 40,
+        ));
+
+        expect(
+          isolate.loadModelCalls.single.durationCorrection,
+          variant.needsDurationCorrection,
+          reason: 'variant ${variant.storageKey}',
+        );
+        await session.dispose();
+      }
     });
 
     test('two distinct-but-equivalent Irodori configs reuse the loaded model',

@@ -121,9 +121,13 @@ class TtsSession {
           // modelDir already encodes the selected variant (each variant has
           // its own GGUF directory), matching
           // modelLoadKey = (type, modelDir, variant).
+          //
+          // Duration correction is the exception: it is calibrated per variant,
+          // so it travels with the load rather than with each request.
           _isolate.loadModel(
             config.modelDir,
             engineType: TtsEngineType.irodori,
+            durationCorrection: config.variant.needsDurationCorrection,
           );
       }
       final success = await completer.future.timeout(
