@@ -20,7 +20,7 @@ class HamelnSite extends NovelSite {
   static final _idPattern = RegExp(r'/novel/(\d+)');
   // Episode links are relative file references like `./4.html` (or `4.html`).
   // Anchoring the pattern excludes absolute cross-links to other novels
-  // (e.g. `//syosetu.org/novel/999/1.html` in a related-works table).
+  // (e.g. `//syosetu.org/novel/999/1.html` in a related-works list).
   static final _episodeHrefPattern = RegExp(r'^(?:\./)?\d+\.html$');
   static const _allowedHosts = {'syosetu.org', 'www.syosetu.org'};
 
@@ -30,9 +30,6 @@ class HamelnSite extends NovelSite {
   // Require a boundary after the id so `/novel/123abc` is not mistaken for
   // novel 123 (which normalizeUrl would otherwise silently rewrite).
   static final _novelPathPattern = RegExp(r'^/novel/\d+(?:/|$)');
-  // Hameln prepends a sequential display counter ("3　") to episode link text;
-  // it is not part of the author's subtitle, so strip a single leading one.
-  static final _displayCounterPattern = RegExp(r'^\d+　');
 
   @override
   bool canHandle(Uri url) {
@@ -74,23 +71,21 @@ class HamelnSite extends NovelSite {
     final title = _extractTitle(document);
 
     final episodes = <Episode>[];
-    // Table-of-contents rows are styled with the bgcolor2/bgcolor3 classes.
-    // Chapter heading rows (<tr><td colspan=2><strong>...) lack these classes
-    // and are therefore naturally skipped (chapters are flattened away).
-    final rows = document.querySelectorAll('tr').where((tr) {
-      final classes = tr.classes;
-      return classes.contains('bgcolor2') || classes.contains('bgcolor3');
-    });
+    // The table of contents is a <section class="episode-list"> whose entries
+    // are <li class="episode-list__item">. Chapter headings are
+    // <li class="episode-list__chapter"> and carry no episode link, so they
+    // drop out on their own (chapters are flattened away).
+    final entries = document.querySelectorAll('li.episode-list__item');
 
-    for (final row in rows) {
+    for (final entry in entries) {
       // Pick the anchor that points to an episode file. Use the href (the
-      // N.html file number) as the source of truth: the displayed episode
-      // number can differ from the file number when episodes are deleted or
-      // reordered, and a row may contain other anchors (e.g. an illustration
-      // link) before the episode link.
+      // N.html file number) as the source of truth: any number the author
+      // wrote into the title can differ from the file number when episodes are
+      // deleted or reordered, and an entry may contain other anchors (e.g. an
+      // illustration link) before the episode link.
       dynamic link;
       String? href;
-      for (final anchor in row.querySelectorAll('a')) {
+      for (final anchor in entry.querySelectorAll('a')) {
         final candidate = anchor.attributes['href'];
         if (candidate != null && _episodeHrefPattern.hasMatch(candidate)) {
           link = anchor;
@@ -102,15 +97,15 @@ class HamelnSite extends NovelSite {
 
       episodes.add(Episode(
         index: episodes.length + 1,
-        title: link.text.trim().replaceFirst(_displayCounterPattern, ''),
+        title: _extractEpisodeTitle(link),
         url: baseUrl.resolve(href),
-        updatedAt: _extractUpdateDate(row),
+        updatedAt: _extractUpdateDate(entry),
       ));
     }
 
     String? bodyContent;
     if (episodes.isEmpty) {
-      // Single-part (短編) work: no table-of-contents rows, body is on the
+      // Single-part (短編) work: no episode list at all, body is on the
       // index page itself.
       final text = parseEpisode(html);
       if (text.isNotEmpty) {
@@ -137,23 +132,56 @@ class HamelnSite extends NovelSite {
     return extractParagraphText(honbun).trim();
   }
 
-  /// Extracts the update date from a table-of-contents row. Prefers the
-  /// `<nobr>` date cell; falls back to the last `<td>` only when there are at
-  /// least two cells (so the title cell is never mistaken for the date).
-  /// Returns null when no date cell is present.
-  String? _extractUpdateDate(dynamic row) {
-    final nobr = row.querySelector('nobr');
-    String? text;
-    if (nobr != null) {
-      text = nobr.text.trim();
-    } else {
-      final cells = row.querySelectorAll('td');
-      if (cells.length >= 2) {
-        text = cells.last.text.trim();
-      }
+  /// Extracts the episode title from the episode link. The title lives in a
+  /// dedicated `<span class="episode-list__title">`.
+  ///
+  /// The text is stored verbatim: Hameln does NOT prepend a display counter, so
+  /// a leading number (`3　運ぶための力`) is part of the author's own title.
+  ///
+  /// If that span is ever dropped, falling back to the whole link text would
+  /// swallow the date and revision marker, which are siblings inside the *same*
+  /// anchor, and carry them into the episode file name and the episode cache.
+  /// So the fallback subtracts them first.
+  String _extractEpisodeTitle(dynamic link) {
+    final titleEl = link.querySelector('span.episode-list__title');
+    if (titleEl != null) return titleEl.text.trim();
+
+    var text = link.text as String;
+    final noise = [
+      ...link.querySelectorAll('time.episode-list__date'),
+      ...link.querySelectorAll('span.episode-list__revision'),
+    ];
+    for (final element in noise) {
+      final fragment = element.text as String;
+      if (fragment.isEmpty) continue;
+      text = text.replaceFirst(fragment, '');
     }
-    if (text == null || text.isEmpty) return null;
-    return text;
+    return text.trim();
+  }
+
+  /// Builds the `updatedAt` value of a table-of-contents entry so that every
+  /// revision changes it.
+  ///
+  /// `<time class="episode-list__date">` holds the *publication* timestamp and
+  /// does not change when an episode is revised; the visible revision marker is
+  /// the constant text `(改)`. Only the revision span's `title` attribute
+  /// (`2026/03/01 06:05改稿`) moves with each revision, so it is appended to the
+  /// time text. Returns null when the entry has no `<time>` element (the
+  /// download service then re-downloads, which is the safe fallback).
+  ///
+  /// The `<time>` element's `datetime` attribute is deliberately ignored: the
+  /// site only emits it on the entries marked `itemprop="datePublished"` /
+  /// `"dateModified"`, so most entries do not carry it.
+  String? _extractUpdateDate(dynamic entry) {
+    final time = entry.querySelector('time.episode-list__date');
+    if (time == null) return null;
+    final text = time.text.trim();
+    if (text.isEmpty) return null;
+
+    final revision = entry.querySelector('span.episode-list__revision');
+    final revisedAt = revision?.attributes['title']?.trim();
+    if (revisedAt == null || revisedAt.isEmpty) return text;
+    return '$text ($revisedAt)';
   }
 
   String _extractTitle(dynamic document) {

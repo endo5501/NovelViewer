@@ -59,8 +59,10 @@ void main() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
-  List<({int index, String title})> episodesUpTo(int n) =>
-      [for (var i = 1; i <= n; i++) (index: i, title: '第$i話')];
+  List<({int index, String title, Uri url})> episodesUpTo(int n) => [
+        for (var i = 1; i <= n; i++)
+          (index: i, title: '第$i話', url: Uri.parse('https://example.com/$i')),
+      ];
 
   group('migrateEpisodeFileNamePadding', () {
     test('pad width increase (99 -> 100) renames 2-digit files to 3-digit',
@@ -156,7 +158,10 @@ void main() {
 
       await migrateEpisodeFileNamePadding(
         directory: dir,
-        episodes: [(index: 1, title: '   ')], // safeName('   ') == ''
+        // safeName('   ') == ''
+        episodes: [
+          (index: 1, title: '   ', url: Uri.parse('https://example.com/1'))
+        ],
         totalEpisodes: 100,
       );
 
@@ -166,19 +171,175 @@ void main() {
       expect(File('${dir.path}/001_.txt').readAsStringSync(), 'empty title');
     });
 
-    test('does not migrate a file whose title (safeName) differs', () async {
-      // Same index but a different title: must be left untouched.
+    test('does not migrate a title-changed file when no cache entry exists',
+        () async {
+      // Same index but a different title, and nothing in the cache proves the
+      // file belongs to this episode (e.g. an episode was inserted mid-list and
+      // every later index shifted): must be left untouched.
       File('${dir.path}/01_古いタイトル.txt').writeAsStringSync('old title');
 
       await migrateEpisodeFileNamePadding(
         directory: dir,
-        episodes: [(index: 1, title: '新しいタイトル')],
+        episodes: [
+          (index: 1, title: '新しいタイトル', url: Uri.parse('https://example.com/1'))
+        ],
         totalEpisodes: 100,
       );
 
       final names = _txtNames(dir);
       expect(names, contains('01_古いタイトル.txt'));
       expect(names, isNot(contains('001_新しいタイトル.txt')));
+    });
+
+    test('migrates a title-changed file when the cache records the old title',
+        () async {
+      // The adapter now derives a different title for the same episode URL
+      // (e.g. Hameln stopped stripping the author's leading number). The cache
+      // says this URL was last written as "古いタイトル" at index 1, so the
+      // existing file is that episode under a stale name.
+      File('${dir.path}/01_古いタイトル.txt').writeAsStringSync('old content');
+
+      await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: [
+          (index: 1, title: '新しいタイトル', url: Uri.parse('https://example.com/1'))
+        ],
+        totalEpisodes: 100,
+        cache: {
+          'https://example.com/1': EpisodeCache(
+            url: 'https://example.com/1',
+            episodeIndex: 1,
+            title: '古いタイトル',
+            lastModified: '2025/01/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        },
+      );
+
+      final names = _txtNames(dir);
+      expect(names, contains('001_新しいタイトル.txt'));
+      expect(names, isNot(contains('01_古いタイトル.txt')));
+      expect(File('${dir.path}/001_新しいタイトル.txt').readAsStringSync(),
+          'old content');
+    });
+
+    test('deletes the stale title-changed file when the new name already exists',
+        () async {
+      File('${dir.path}/001_新しいタイトル.txt').writeAsStringSync('canonical');
+      File('${dir.path}/001_古いタイトル.txt').writeAsStringSync('garbage');
+
+      await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: [
+          (index: 1, title: '新しいタイトル', url: Uri.parse('https://example.com/1'))
+        ],
+        totalEpisodes: 100,
+        cache: {
+          'https://example.com/1': EpisodeCache(
+            url: 'https://example.com/1',
+            episodeIndex: 1,
+            title: '古いタイトル',
+            lastModified: '2025/01/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        },
+      );
+
+      final names = _txtNames(dir);
+      expect(names, contains('001_新しいタイトル.txt'));
+      expect(names, isNot(contains('001_古いタイトル.txt')));
+      expect(File('${dir.path}/001_新しいタイトル.txt').readAsStringSync(),
+          'canonical');
+    });
+
+    test('does not claim a same-titled file written for a different episode',
+        () async {
+      // Two episodes share the title "閑話". Episode Y (previously index 9)
+      // moved to index 5 and was renamed, so its cached title still matches the
+      // file name of episode X at index 5. That file is X's content, not Y's,
+      // so the migration must not rename it under Y's new title.
+      File('${dir.path}/05_閑話.txt').writeAsStringSync('episode X content');
+
+      await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: [
+          (index: 5, title: '閑話 改題', url: Uri.parse('https://example.com/y'))
+        ],
+        totalEpisodes: 99,
+        cache: {
+          'https://example.com/y': EpisodeCache(
+            url: 'https://example.com/y',
+            episodeIndex: 9, // Y was written at index 9, not 5.
+            title: '閑話',
+            lastModified: '2025/01/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        },
+      );
+
+      final names = _txtNames(dir);
+      expect(names, contains('05_閑話.txt'));
+      expect(names, isNot(contains('05_閑話 改題.txt')));
+      expect(
+          File('${dir.path}/05_閑話.txt').readAsStringSync(), 'episode X content');
+    });
+
+    test('does not pad-migrate a same-titled file of a shifted episode',
+        () async {
+      // Same failure as the title-change case, on the pad-width path: an
+      // episode was deleted above index 5, so the episode now at 5 is the one
+      // the cache recorded at 6. The file at index 5 carries the same title but
+      // is the other episode's content, so it must not be claimed.
+      File('${dir.path}/05_閑話.txt').writeAsStringSync('other episode content');
+
+      await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: [
+          (index: 5, title: '閑話', url: Uri.parse('https://example.com/y'))
+        ],
+        totalEpisodes: 100,
+        cache: {
+          'https://example.com/y': EpisodeCache(
+            url: 'https://example.com/y',
+            episodeIndex: 6,
+            title: '閑話',
+            lastModified: '2025/01/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        },
+      );
+
+      final names = _txtNames(dir);
+      expect(names, contains('05_閑話.txt'));
+      expect(names, isNot(contains('005_閑話.txt')));
+      expect(File('${dir.path}/05_閑話.txt').readAsStringSync(),
+          'other episode content');
+    });
+
+    test('leaves a title-changed file alone when the cached title differs too',
+        () async {
+      // The cache has an entry for this URL, but it does not describe the file
+      // on disk, so the file belongs to something else.
+      File('${dir.path}/01_無関係.txt').writeAsStringSync('unrelated');
+
+      await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: [
+          (index: 1, title: '新しいタイトル', url: Uri.parse('https://example.com/1'))
+        ],
+        totalEpisodes: 100,
+        cache: {
+          'https://example.com/1': EpisodeCache(
+            url: 'https://example.com/1',
+            episodeIndex: 1,
+            title: '古いタイトル',
+            lastModified: '2025/01/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        },
+      );
+
+      expect(_txtNames(dir), contains('01_無関係.txt'));
     });
   });
 
@@ -285,7 +446,10 @@ void main() {
 
       await migrateEpisodeFileNamePadding(
         directory: novelDir,
-        episodes: [for (var i = 1; i <= 100; i++) (index: i, title: '第$i話')],
+        episodes: [
+          for (var i = 1; i <= 100; i++)
+            (index: i, title: '第$i話', url: Uri.parse('https://example.com/$i')),
+        ],
         totalEpisodes: 100,
       );
 

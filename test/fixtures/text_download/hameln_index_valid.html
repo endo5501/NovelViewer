@@ -1,26 +1,75 @@
 <!DOCTYPE html>
-<!-- Sanitized snapshot of a Hameln (syosetu.org) serial index page. -->
+<!-- Sanitized snapshot of a Hameln (syosetu.org) serial index page, structure
+     captured 2026-08-13 from https://syosetu.org/novel/402955/.
+     The table of contents is a <section class="episode-list"> list; the
+     retired <tr class="bgcolor2/3"> table is kept in
+     hameln_index_legacy_table.html as a regression sample.
+     Attribute quirks are reproduced verbatim: the title span carries a stray
+     space before '>', and only the first/last <time> elements carry itemprop
+     and datetime attributes. -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <title>テスト小説 - ハーメルン</title>
 </head>
 <body>
-  <div id="maind">
-    <span itemprop="name">テスト小説</span>
-    <table>
-      <tr>
-        <td colspan="2"><strong>第一章</strong></td>
-      </tr>
-      <tr class="bgcolor2">
-        <td><a href="./1.html">1　はじまり</a></td>
-        <td><nobr>2025/01/01</nobr></td>
-      </tr>
-      <tr class="bgcolor3">
-        <td><a href="./2.html">2　つづき</a></td>
-        <td><nobr>2025/01/02</nobr></td>
-      </tr>
-    </table>
+  <div id="maind" itemscope itemtype="https://schema.org/CreativeWork">
+    <div class="ss">
+      <span style="font-size:150%" itemprop="name">テスト小説</span>
+      <div align="right">作者：<span itemprop="author"><a href="https://syosetu.org/user/482579/">テスト作者</a></span></div>
+    </div>
+    <div class="ss">
+
+<section class="episode-list" aria-label="話一覧">
+  <ul class="episode-list__items">
+
+    <li class="episode-list__chapter">
+      <div class="episode-list__chapter-title">第一章</div>
+    </li>
+
+	<li class="episode-list__item">
+	<a href="./1.html" class="episode-list__link">
+		<span class="episode-list__mark"></span>
+		<span class="episode-list__title" >プロローグ</span>
+		<time class="episode-list__date" itemprop="datePublished" datetime="2026-02-21T16:20Z">2026/02/21 16:20</time>
+		<span class="episode-list__revision" title="2026/03/01 06:05改稿">(<u>改</u>)</span>
+	</a>
+	</li>
+
+	<li class="episode-list__item">
+	<a href="./2.html" class="episode-list__link">
+		<span class="episode-list__mark"></span>
+		<span class="episode-list__title" >1　調伏の儀式</span>
+		<time class="episode-list__date">2026/02/22 04:13</time>
+		<span class="episode-list__revision"> </span>
+	</a>
+	</li>
+
+    <li class="episode-list__chapter">
+      <div class="episode-list__chapter-title">第二章</div>
+    </li>
+
+	<li class="episode-list__item">
+	<a href="./4.html" class="episode-list__link">
+		<span class="episode-list__mark"></span>
+		<span class="episode-list__title" >3　運ぶための力</span>
+		<time class="episode-list__date">2026/02/25 22:58</time>
+		<span class="episode-list__revision"> </span>
+	</a>
+	</li>
+
+	<li class="episode-list__item">
+	<a href="./11.html" class="episode-list__link">
+		<span class="episode-list__mark"></span>
+		<span class="episode-list__title" >10 　京都参戦</span>
+		<time class="episode-list__date" itemprop="dateModified" datetime="2026-03-02T09:00Z">2026/03/02 09:00</time>
+		<span class="episode-list__revision" title="2026/03/05 21:10改稿">(<u>改</u>)</span>
+	</a>
+	</li>
+
+  </ul>
+</section>
+    </div>
   </div>
 </body>
 </html>

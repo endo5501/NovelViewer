@@ -12,7 +12,7 @@
 | INV-0066 | `openai_compatible_client` | 🟢 VERIFIED OpenAI互換の chat completions API を呼び出す。[REF: lib/features/llm_summary/data/openai_compatible_client.dart:20-38] | 🟢 VERIFIED |
 | INV-0114 | `aozora_site` | 🟢 VERIFIED 青空文庫のHTMLをShift_JISで復号し、単一本文を抽出する。[REF: lib/features/text_download/data/sites/aozora_site.dart:35-72] | 🟢 VERIFIED |
 | INV-0115 | `generic_web_site` | 🟢 VERIFIED 専用アダプタが扱わないHTTP(S)ページから、タイトルと本文をヒューリスティック抽出する。[REF: lib/features/text_download/data/sites/generic_web_site.dart:11-29] | 🟢 VERIFIED |
-| INV-0116 | `hameln_site` | 🟢 VERIFIED ハーメルンの作品URLを識別し、目次行と本文要素を解析する。[REF: lib/features/text_download/data/sites/hameln_site.dart:20-38] [REF: lib/features/text_download/data/sites/hameln_site.dart:72-137] | 🟢 VERIFIED |
+| INV-0116 | `hameln_site` | 🟢 VERIFIED ハーメルンの作品URLを識別し、`episode-list` 形式の目次と本文要素を解析する。[REF: lib/features/text_download/data/sites/hameln_site.dart:17-33] [REF: lib/features/text_download/data/sites/hameln_site.dart:69-133] | 🟢 VERIFIED |
 | INV-0117 | `kakuyomu_site` | 🟢 VERIFIED カクヨムの `__NEXT_DATA__` から作品メタデータとエピソードを構成し、本文要素を抽出する。[REF: lib/features/text_download/data/sites/kakuyomu_site.dart:43-68] [REF: lib/features/text_download/data/sites/kakuyomu_site.dart:132-139] | 🟢 VERIFIED |
 | INV-0118 | `narou_site` | 🟢 VERIFIED なろうの目次、更新日、ページング、本文をDOMから解析する。[REF: lib/features/text_download/data/sites/narou_site.dart:51-116] [REF: lib/features/text_download/data/sites/narou_site.dart:131-159] | 🟢 VERIFIED |
 | INV-0119 | `novel_site` | 🟢 VERIFIED サイトアダプタ契約と、HTTP(S) URLを適合するアダプタへ振り分けるレジストリを定義する。[REF: lib/features/text_download/data/sites/novel_site.dart:65-73] [REF: lib/features/text_download/data/sites/novel_site.dart:76-99] | 🟢 VERIFIED |
