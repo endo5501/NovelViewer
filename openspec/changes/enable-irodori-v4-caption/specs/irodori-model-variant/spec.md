@@ -19,6 +19,23 @@
 - **WHEN** variant が `v4` の状態で caption 付きの合成を実行する
 - **THEN** 合成リクエストに尺補正を有効化するオプションが含まれる
 
+## ADDED Requirements
+
+### Requirement: variant ごとの尺補正の要否
+システムは variant ごとに `irodori-duration-correction` の尺補正を必要とするかを決定しなければならない (SHALL)。`v4` は必要とし、`v3` は必要としないものとして扱わなければならない (MUST)。
+
+判定は variant のテーブルに集約し、合成の呼び出し側ごとに条件を書いてはならない (MUST NOT)。補正はモデルごとの性質なので、合成リクエストごとではなく**モデルロード時**にエンジンへ与えなければならない (SHALL)。
+
+`v3` を除外する理由は、**補正の係数が v4 の実測から当てはめたものである**ことによる。v3 では末尾アーティファクトが観測されておらず、かつ caption 付きの出力は本文終端が字数則の上限まで約 0.12 秒しか余裕がない。他所で校正した上限を当てると、現に正しい出力を切る恐れがある。
+
+#### Scenario: v4 は補正を必要とする
+- **WHEN** variant が `v4` のモデルをロードする
+- **THEN** エンジンへ尺補正を有効化する指定が渡る
+
+#### Scenario: v3 は補正を必要としない
+- **WHEN** variant が `v3` のモデルをロードする
+- **THEN** エンジンへ尺補正を有効化する指定は渡らない
+
 ### Requirement: variant 選択 UI と制約の提示
 Irodori 設定セクションは variant の選択 UI を提供しなければならない (SHALL)。caption に関わる UI (caption guidance scale の調整、セグメントメモが caption として使われる旨の表示) は、選択中の variant が caption に対応しているとき有効でなければならない (SHALL)。caption 非対応の variant が選択されているときのみ、これらを無効化し理由を表示しなければならない (SHALL)。
 

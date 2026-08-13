@@ -47,13 +47,19 @@ Qwen3 / Piper エンジン選択時はメモを caption として使用しては
 ## ADDED Requirements
 
 ### Requirement: caption 併用時の尺補正の適用
-Irodori エンジンへ caption を渡す合成リクエストは、`irodori-duration-correction` の尺補正を有効化するオプションを併せて渡さなければならない (SHALL)。**caption を渡しながら補正を渡さない組み合わせが存在してはならない (MUST NOT)** — それが実測で 8〜9/10 の確率で壊れる組み合わせだからである。
+**尺補正を必要とする variant** で caption を渡す合成リクエストは、`irodori-duration-correction` の尺補正を有効化するオプションを併せて渡さなければならない (SHALL)。**その variant で caption を渡しながら補正を渡さない組み合わせが存在してはならない (MUST NOT)** — それが実測で 8〜9/10 の確率で壊れる組み合わせだからである。
+
+補正を必要とするかは variant ごとに決まる (`irodori-model-variant`)。**補正の係数は v4 の実測 3 点から当てはめたものであり、アーティファクトが観測されていない variant に当ててはならない (MUST NOT)** — v3 は caption 付きでも本文終端が字数則の上限まで約 0.12 秒しか余裕がなく、他所で校正した上限を当てると現に正しい出力を切る恐れがある。
 
 この対応づけは `irodori-tts-native-engine` の「尺補正は caption から導出する」に従い、caption が C API へ渡る唯一の地点で行う。補正は合成時パラメータであり、`IrodoriEngineConfig` の `modelLoadKey` に含めてはならない (MUST NOT)。
 
 #### Scenario: caption 付き合成では補正が有効になる
-- **WHEN** メモ記入済みセグメントを Irodori で合成する
+- **WHEN** 補正を必要とする variant でメモ記入済みセグメントを合成する
 - **THEN** 合成リクエストに尺補正を有効化するオプションが含まれる
+
+#### Scenario: 補正を必要としない variant では caption があっても尺が変わらない
+- **WHEN** 補正を必要としない variant (v3) でメモ記入済みセグメントを合成する
+- **THEN** caption は渡るが補正オプションは付かず、生成される長さは従来と変わらない
 
 #### Scenario: caption なし合成では尺が変わらない
 - **WHEN** メモが空のセグメントを Irodori で合成する

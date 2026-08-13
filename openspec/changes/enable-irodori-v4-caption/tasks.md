@@ -30,10 +30,16 @@ TDD で進める。C++ 側のテストは audio.cpp のテストハーネスに�
 
 ## 2. audio.cpp fork — C API の拡張
 
-- [ ] 2.1 オプション受け渡しの形を決める (design の Open Questions)。既存 `audiocpp_synthesize` の後方互換を壊さないこと
-- [ ] 2.2 `src/audiocpp_c_api.h` / `.cpp` に補正オプションの pass-through を実装する
-- [ ] 2.3 既存呼び出し (7 引数のまま) の出力が変化しないことをテストする
-- [ ] 2.4 `audiocpp_cli` から補正オプションを指定できるようにする (phase 5 の検証で必要)
+- [x] 2.1 オプション受け渡しの形を決める (design の Open Questions)。既存 `audiocpp_synthesize` の後方互換を壊さないこと
+  - key/value 配列を受ける `audiocpp_synthesize_with_options` を追加し、**既存の
+    `audiocpp_synthesize` はそれに count=0 で委譲**する。経路が 1 本になり ABI は不変。
+    将来オプションが増えても引数は増えない
+- [x] 2.2 `src/audiocpp_c_api.h` / `.cpp` に補正オプションの pass-through を実装する
+- [x] 2.3 既存呼び出し (7 引数のまま) の出力が変化しないことをテストする
+  - 1.8 の `cmp` によるバイト一致確認が、まさにこの経路 (オプションなし) を通っている
+- [x] 2.4 ~~`audiocpp_cli` から補正オプションを指定できるようにする~~ → **変更不要**。
+  CLI は汎用の `--request-option key=value` を既に持っており、そのまま指定できた
+  (4.x の検証はすべてこの経路)
 
 ## 3. NovelViewer — 伝搬経路の追加
 
@@ -103,9 +109,28 @@ caption の有無から導出**する形にした。「caption を渡すなら�
 - [x] 6.2 `tmp/irodori-eval/PLAN-duration-workaround.md` の検証結果のうち、判断に必要な数値が design.md に転記済みであることを確認する (tmp は gitignore 配下で失われうる)
   - 余りと発生率の対応表 / 3 案を却下した数値 / 秒あたり字数とトークン数の比較 / 全セルの min 表を転記済み
 
+## 6.5 submodule ポインタの更新
+
+- [x] 6.5.1 `third_party/audio.cpp` の gitlink を fork の新コミットへ進めて親リポジトリにコミットする
+  - **タスク一覧から漏れていた項目。** submodule 内でコミットしても親が古いコミットを指したままだと、
+    クローンし直した環境に補正が入らない。**レビュー指摘の反映が終わってから**最後に行う
+
 ## 7. 最終確認
 
-- [ ] 7.1 code-review スキルを使用してコードレビューを実施
-- [ ] 7.2 codex スキルを使用して現在開発中のコードレビューを実施
-- [ ] 7.3 `fvm flutter analyze` でリントを実行
-- [ ] 7.4 `fvm flutter test` でテストを実行
+- [x] 7.1 code-review スキルを使用してコードレビューを実施
+  - 4 件の指摘。**すべて妥当で、すべて対応済み**
+    1. HIGH: オプション 0 個でも新シンボルを呼ぶため古いネイティブライブラリで全合成が失敗
+       → オプションが空なら従来の `synthesize` を呼ぶ (バインディングは遅延解決)
+    2. HIGH: macOS は codesign の都合で spec override が効かず caption 付き合成が失敗
+       → モデルディレクトリへ契約を書き出す方式を追加 (D9)
+    3. MED: v3 にも v4 校正の補正が当たり切断の恐れ → variant テーブルで除外
+    4. LOW: 々〆〇 が句読点扱いで数から漏れる → 発話として数える
+- [x] 7.2 codex スキルを使用して現在開発中のコードレビューを実施
+  - 2 件の指摘。どちらも対応済み
+    1. minor: FFI の確保が `try` の前にあり例外時に解放漏れ → 全確保を `try` 内へ移動
+    2. nit: `captionFromMemo` のコメントが「v4 は caption を受け取らない」のまま → 更新
+  - あわせて **session.cpp の noref 再予測に use-after-free は無い**ことを確認 (release_graphs は
+    再予測の後で、かつ `run()` は `graph_ == nullptr` で遅延再構築する)
+- [x] 7.3 `fvm flutter analyze` でリントを実行 → No issues found
+- [x] 7.4 `fvm flutter test` でテストを実行 → 2799 passed
+  - あわせて C++ 側 `ctest -R irodori` → 1/1 passed

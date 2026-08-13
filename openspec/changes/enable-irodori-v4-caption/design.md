@@ -140,6 +140,16 @@
 
 - **[v4 + caption で補正を忘れると出荷事故]** → D5 のとおり spec + テストで担保する
 
+- **[「参照音声なし × 短文」は本 change のスコープ外]** → v4 にはもう 1 つ発生条件がある。
+  メモなし・参照音声なしで短い行 (「はい」等) を読ませると末尾に余計な発話が入る。
+  10 seed の実データで確認済み (`tmp/irodori-eval/out/LISTEN2/E1`)。小説には短い行が普通に出るため
+  実在の経路だが、**本 change は caption の再有効化に絞る**。補正は caption がある場合にのみ
+  有効化しているので、この条件は現状のまま残る。→ **後続の change で扱う。**
+  なお同じ補正がこの条件にも効く見込みはある (字数則が短文で効くことは実証済み) ので、
+  「caption の有無」ではなく「短文かどうか」を条件に加える形が候補になる
+
+- **[macOS は spec override が効かない]** (未解決、下記 Open Questions 参照)
+
 ## Migration Plan
 
 1. audio.cpp fork に補正を実装 (既定オフ)。この時点では NovelViewer の挙動は一切変わらない
@@ -169,6 +179,35 @@
 **したがってアプリ経路では追加作業は不要。** GGUF の再生成もユーザの再ダウンロードも要らない。
 影響を受けるのは CLI から直接叩く場合だけで、そこは `--model-spec-override` を渡せばよい
 (phase 4 の検証手順に反映済み)。
+
+### D9: macOS では spec override が効かない (未解決)
+
+D8 で「シムが DLL の隣の `model_specs/irodori_tts.json` を override に渡すので追加作業は不要」と
+結論したが、**これは Windows 限定だった**。
+
+- `scripts/build_irodori_windows.bat:77` は spec を DLL の隣にコピーする
+- `scripts/build_irodori_macos.sh:82` は逆に `rm -rf` する。Frameworks は codesign で
+  シールされるため、そこにファイルを置くと署名が壊れる。`scripts/test/verify_irodori_macos.sh:102`
+  が不在をテストしている
+- macOS は代わりに `AUDIOCPP_DEPLOYMENT_BUILD` で spec をライブラリに埋め込むが、
+  これが効くのは **builtin** であり、`default_contract_spec_path()` の優先順位
+  (override > GGUF 埋め込み > workspace > builtin) では **GGUF 埋め込みに負ける**
+
+したがって macOS では `duration_correction` が `unknown Irodori-TTS request option` で拒否され、
+**caption 付きの合成がエラーになる**。
+
+ただし現状の macOS はその手前で止まる。チェックイン済みの `macos/Frameworks/libaudiocpp_ffi.dylib`
+は本 change より前のもので `audiocpp_synthesize_with_options` を持たない。Fix 1 の
+フォールバックにより caption なしの経路は従来どおり動き、caption 付きだけが失敗する。
+**本件が実際に問題になるのは macOS で dylib を再ビルドする時点である。**
+
+対応案:
+
+| 案 | 内容 | 評価 |
+|---|---|---|
+| (a) spec を Flutter asset として同梱 | モデル DL 時 / 起動時にモデルディレクトリへ書き出す。シムの `<model_dir>/irodori_tts.json` フォールバックが両 OS で効く | Windows でも検証可能。ただしモデルディレクトリの spec は**最優先で勝つ**ので、古いファイルが残ると将来のエンジン更新時に誤検証する。**毎回上書き**し、asset はビルド時に submodule からコピーして sync-by-construction にすること |
+| (b) fork の契約解決をマージ方式にする | 埋め込み契約に無く builtin にあるオプションを許容する | 構造的には正しいが**フレームワーク層**。他エンジンへの影響評価が要る |
+| (c) macOS 対応を後続タスクに切り出す | 今回は Windows のみ | 最小。ただし macOS ビルドが壊れた状態で残る |
 
 ## Open Questions
 
