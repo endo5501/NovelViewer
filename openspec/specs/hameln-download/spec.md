@@ -1,9 +1,7 @@
 ## Purpose
 
 Hameln (ハーメルン) download support. Enables downloading works from `syosetu.org` (and its `www.syosetu.org` form), a fan-fiction novel site served behind Cloudflare bot protection, including R-18 works gated behind an age-confirmation interstitial.
-
 ## Requirements
-
 ### Requirement: Hameln URL recognition
 The system SHALL recognize URLs whose host is `syosetu.org` (or its `www.syosetu.org` form) and whose path matches a novel page pattern (`/novel/<digits>/...`) as supported download targets.
 
@@ -82,35 +80,75 @@ The system SHALL extract the novel title from the index page.
 - **WHEN** the system parses a Hameln index page whose title area shows `伏黒恵の調和　(タイトル変更)`
 - **THEN** the extracted title SHALL be `伏黒恵の調和　(タイトル変更)`
 
-### Requirement: Hameln table of contents parsing
-The system SHALL parse the table-of-contents table on the index page into a flat list of episodes. Chapter heading rows (`<tr><td colspan=2><strong>...</strong></td></tr>`) SHALL be ignored for grouping; their episodes SHALL be flattened into a single ordered list. Each episode entry SHALL derive its URL from the episode link's `href` (the `./N.html` file number), NOT from the displayed episode number, and SHALL be assigned a sequential 1-based `index` according to its order of appearance.
+### Requirement: Hameln episode list parsing
+
+The system SHALL parse the episode list on the index page into a flat list of episodes.
+
+The episode list is a `<section class="episode-list">` containing a `<ul class="episode-list__items">`. Each episode is an `<li class="episode-list__item">` holding an `<a class="episode-list__link" href="./N.html">`, whose children include `<span class="episode-list__title">` (the episode title), `<time class="episode-list__date">` (the timestamp) and `<span class="episode-list__revision">` (the revision marker). Chapter heading entries are `<li class="episode-list__chapter">` elements carrying a `<div class="episode-list__chapter-title">`; they contain no episode link.
+
+Chapter heading entries SHALL be ignored for grouping; their episodes SHALL be flattened into a single ordered list. Each episode entry SHALL derive its URL from the episode link's `href` (the `./N.html` file number), NOT from any number displayed in the title, and SHALL be assigned a sequential 1-based `index` according to its order of appearance. The system SHALL still require the `href` to match the episode-file shape (`./N.html` or `N.html`) so that cross-links to other works are never treated as episodes.
+
+The episode title SHALL be taken from the `<span class="episode-list__title">` inside the episode link, trimmed of surrounding whitespace, and stored **verbatim**. The system SHALL NOT strip a leading numeric counter from the title: the site does not prepend a display counter, so any leading number is part of the author's own title.
+
+Because the date and revision marker are siblings of the title *inside the same anchor*, a fallback to the whole link text when the title span is absent SHALL exclude the `<time class="episode-list__date">` and `<span class="episode-list__revision">` text, so that a partial markup drift cannot carry a timestamp into the episode title — and from there into the episode file name and the episode cache, where it would change on every revision.
 
 #### Scenario: Episodes are flattened across chapters
-- **WHEN** the index table contains two chapter headings each followed by episode rows
+- **WHEN** the episode list contains two `li.episode-list__chapter` headings each followed by `li.episode-list__item` entries
 - **THEN** `parseIndex` SHALL return all episodes in document order with no chapter grouping, and `index` values SHALL be a contiguous 1-based sequence
 
 #### Scenario: Episode URL uses the href file number, not the displayed number
-- **WHEN** an episode row contains `<a href=./4.html ...>3　運ぶための力</a>`
+- **WHEN** an episode entry is `<a href="./4.html" class="episode-list__link"><span class="episode-list__title">3　運ぶための力</span>…</a>`
 - **THEN** the episode URL SHALL resolve to `https://syosetu.org/novel/<id>/4.html` (file number `4`), not `3`
 
-#### Scenario: Episode title strips Hameln's leading display counter
-- **WHEN** an episode row link text is `3　運ぶための力` (where `3　` is Hameln's auto-prepended display counter, distinct from the `4.html` file number)
-- **THEN** the episode `title` SHALL be `運ぶための力`
+#### Scenario: A leading number written by the author is preserved
+- **WHEN** an episode entry's `span.episode-list__title` text is `3　運ぶための力`
+- **THEN** the episode `title` SHALL be `3　運ぶための力` (the leading `3　` SHALL NOT be stripped)
 
 #### Scenario: Named episodes without a counter are kept intact
-- **WHEN** an episode row link text is `プロローグ` (no leading numeric counter)
+- **WHEN** an episode entry's `span.episode-list__title` text is `プロローグ`
 - **THEN** the episode `title` SHALL be `プロローグ`
 
+#### Scenario: A missing title span does not leak the date into the title
+- **WHEN** an episode entry's link contains no `<span class="episode-list__title">` but does contain the date and revision elements
+- **THEN** the episode `title` SHALL contain neither the date text nor the revision marker
+
+#### Scenario: Non-episode links inside the list are not treated as episodes
+- **WHEN** an entry contains an anchor whose `href` does not match the `./N.html` episode-file shape (e.g. an absolute cross-link to another work)
+- **THEN** that anchor SHALL NOT produce an episode entry
+
+#### Scenario: The retired table markup yields no episodes
+- **WHEN** `parseIndex` is given the site's previous table-of-contents markup (`<tr class="bgcolor2">` rows with `<NOBR>` date cells)
+- **THEN** `parseIndex` SHALL return an empty `episodes` list and a null `bodyContent`, so the empty index guard reports a markup-drift error rather than silently succeeding
+
 ### Requirement: Hameln episode update date extraction
-The system SHALL extract each episode's update date from the date cell (`<NOBR>` text) and store it verbatim in the episode's `updatedAt` field, without reformatting. Any revision marker (e.g., `(改)`) present in the cell SHALL be retained so that revisions change the stored string.
+
+The system SHALL derive each episode's `updatedAt` from the episode entry so that **any revision changes the stored string**, and SHALL store the derived value verbatim without reformatting it as a date.
+
+The episode entry carries a `<time class="episode-list__date">` whose text is the **publication** timestamp (e.g. `2026/02/25 22:58`); this text does NOT change when the episode is revised. Revised episodes additionally carry a `<span class="episode-list__revision" title="2026/03/01 06:05改稿">(改)</span>`, whose visible text is the constant marker `(改)` but whose `title` attribute holds the **revision** timestamp and therefore changes on every revision. Because neither the `<time>` text nor the `(改)` marker distinguishes a second revision from a first, the system SHALL combine the `<time>` text with the revision span's `title` attribute.
+
+The system SHALL NOT rely on the `<time>` element's `datetime` attribute, which is present only on the entries marked `itemprop="datePublished"` / `itemprop="dateModified"` and therefore missing from most entries.
+
+- When a revision marker with a `title` attribute is present, `updatedAt` SHALL be the `<time>` text followed by the `title` value in parentheses (e.g. `2026/02/21 16:20 (2026/03/01 06:05改稿)`).
+- When no revision marker (or no `title` attribute) is present, `updatedAt` SHALL be the `<time>` text alone.
+- When no `<time>` element is present, `updatedAt` SHALL be null (the download service then re-downloads the episode, which is the safe fallback).
+
+This format differs from the value stored by earlier versions, so the first update of an already-downloaded Hameln work re-downloads every episode. That one-time re-download is an accepted consequence.
 
 #### Scenario: Update date is stored verbatim
-- **WHEN** an episode row's date cell contains `2026年02月25日(水) 22:58`
-- **THEN** the episode `updatedAt` SHALL be `2026年02月25日(水) 22:58`
+- **WHEN** an episode entry contains `<time class="episode-list__date">2026/02/25 22:58</time>` and a revision span with no `title` attribute
+- **THEN** the episode `updatedAt` SHALL be `2026/02/25 22:58`, stored verbatim without reformatting
 
 #### Scenario: Revision marker is retained
-- **WHEN** an episode row's date cell contains a revision marker such as `2026年02月21日(土) 16:20(改)`
-- **THEN** the stored `updatedAt` SHALL include the `(改)` marker so that the value differs from the pre-revision value
+- **WHEN** an episode entry contains `<time class="episode-list__date">2026/02/21 16:20</time>` and `<span class="episode-list__revision" title="2026/03/01 06:05改稿">(改)</span>`
+- **THEN** the episode `updatedAt` SHALL be `2026/02/21 16:20 (2026/03/01 06:05改稿)`, so the revision is reflected in the stored value
+
+#### Scenario: A second revision changes the stored value
+- **WHEN** the same episode's revision span `title` changes from `2026/02/27 23:54改稿` to `2026/03/01 06:05改稿` while its `<time>` text is unchanged
+- **THEN** the stored `updatedAt` SHALL differ from the previously stored value, so the episode is re-downloaded
+
+#### Scenario: Missing date cell yields null
+- **WHEN** an episode entry contains no `<time class="episode-list__date">` element
+- **THEN** the episode `updatedAt` SHALL be null
 
 ### Requirement: Hameln body text extraction
 The system SHALL extract the body text of an episode from the `<div id="honbun">` element, processing its child paragraph elements and preserving line breaks. The author's preface (`<div id="maegaki">`) and afterword (`<div id="atogaki">`) SHALL NOT be included in the body text.

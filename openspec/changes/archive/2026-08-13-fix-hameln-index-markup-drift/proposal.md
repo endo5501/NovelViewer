@@ -30,7 +30,7 @@
 
 ### Modified Capabilities
 
-- `hameln-download`: 目次パース（走査対象セレクタ・エピソードタイトル取得元・カウンタ除去の撤廃）と、更新日時抽出（`<time>` + 改稿 `title` 属性）の2要件を新マークアップに合わせて変更する。作品タイトル抽出（`Hameln title extraction`）は連載・短編とも現行経路が有効なため変更しない。
+- `hameln-download`: `Hameln table of contents parsing` を REMOVED とし、新マークアップに対応した `Hameln episode list parsing` を ADDED で置き換える（要件名の「table of contents」がサイト側の実態と合わなくなったこと、および「カウンタを除去する」シナリオが retired behaviour になり MODIFIED では表現できないため）。`Hameln episode update date extraction` は MODIFIED で `<time>` + 改稿 `title` 属性に対応する。作品タイトル抽出（`Hameln title extraction`）は連載・短編とも現行経路が有効なため変更しない。
 - `text-download`: `Episode filename zero-pad width migration` の同一エピソード判定を、エピソードキャッシュに記録された前回タイトルも許容するよう一般化し、「タイトル変更ファイルは移行対象外」というシナリオを差し替える。
 
 ## Impact

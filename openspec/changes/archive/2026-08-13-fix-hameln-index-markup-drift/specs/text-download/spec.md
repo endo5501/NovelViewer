@@ -51,7 +51,7 @@ To prevent this, before downloading episodes (after the full index — and there
 - **WHEN** an existing file has the same episode index but a different `safeName(title)` than the current index, AND the episode cache entry for that episode's URL records the title that produced the existing filename (e.g. the file is `0004_運ぶための力.txt`, the current title is `3　運ぶための力`, and the cached title is `運ぶための力`)
 - **THEN** the existing file is renamed to the current filename (`0004_3　運ぶための力.txt`) when that name does not yet exist, or deleted when it does, so no stale duplicate is left behind
 
-#### Scenario: Title-changed file with no matching cache entry is left untouched
+#### Scenario: Title-changed file is not migrated
 - **WHEN** an existing file has the same episode index but a different `safeName(title)` than the current index, and there is no episode cache entry for that episode's URL (or the cached title does not produce the existing filename) — for instance after an episode was inserted mid-list and every subsequent index shifted
 - **THEN** the file is NOT renamed or deleted, and the affected episode is re-downloaded under its current filename
 
