@@ -16,8 +16,8 @@ To prevent this, before downloading episodes (after the full index — and there
 - The system SHALL list the target folder once and parse each `.txt` filename as `^(\d+)_(.*)\.txt$` into `(parsedIndex, restName)`. The title group is `(.*)` (not `(.+)`) so files with an empty sanitised title (`01_.txt`, produced when `safeName(title)` is empty) are still matched.
 - For each episode in the current index `(i, title, url)`, with `newName = formatEpisodeFileName(i, title, total)`, an existing file is considered **the same episode under a stale filename** when `parsedIndex == i` AND the filename differs from `newName` AND `restName` matches either:
   - `safeName(title)` — the current title (the pad-width case); or
-  - `safeName(cachedTitle)`, where `cachedTitle` is the title recorded in the episode cache entry for this episode's `url` — the title-change case. This uses the cache as the record of what filename was last written for that URL, so a file is only claimed when the system itself wrote it for that same episode.
-- Matching a title change SHALL require a cache entry for the episode's `url`. When there is no cache entry, or its recorded title does not produce `restName`, the file SHALL be left untouched. This keeps the migration from claiming a file that belongs to a different episode — for instance after an episode is inserted mid-list and every subsequent index shifts — in which case the affected episode simply falls back to being re-downloaded under its new name.
+  - `safeName(cachedTitle)`, where `cachedTitle` is the title recorded in the episode cache entry for this episode's `url` AND that entry's recorded episode index equals `i` — the title-change case. Together these reproduce the filename the system last wrote for that URL (`{cachedIndex}_{safeName(cachedTitle)}`), so a file is only claimed when the system itself wrote it for that same episode.
+- Matching a title change SHALL require a cache entry for the episode's `url` whose recorded episode index equals `i` and whose recorded title produces `restName`. When any of those does not hold, the file SHALL be left untouched, and the affected episode simply falls back to being re-downloaded under its new name. This keeps the migration from claiming a file that belongs to a different episode in two distinct ways: an episode inserted mid-list shifts every subsequent index away from its cached index, and a file written for a *different* episode that happens to share the cached title (duplicate titles such as `閑話` are common) is rejected by the index check.
 - When `newName` does NOT exist and a stale-filename match exists, the system SHALL `rename` that file to `newName`.
 - When `newName` already exists and a stale-filename match also exists (residual garbage from a prior buggy re-download), the system SHALL delete the stale match and SHALL NOT touch `newName`.
 - The migration SHALL be idempotent: when filenames already match the current pad width and title, it is a no-op.
@@ -53,6 +53,10 @@ To prevent this, before downloading episodes (after the full index — and there
 #### Scenario: Title-changed file with no matching cache entry is left untouched
 - **WHEN** an existing file has the same episode index but a different `safeName(title)` than the current index, and there is no episode cache entry for that episode's URL (or the cached title does not produce the existing filename) — for instance after an episode was inserted mid-list and every subsequent index shifted
 - **THEN** the file is NOT renamed or deleted, and the affected episode is re-downloaded under its current filename
+
+#### Scenario: A same-titled file written for a different episode is not claimed
+- **WHEN** two episodes share a title (e.g. `閑話`), and the episode now at index `i` has a cache entry whose recorded title matches the file at index `i` but whose recorded episode index is NOT `i` (that file was written for the other episode)
+- **THEN** the file is NOT renamed or deleted, so no episode ends up stored under another episode's content
 
 #### Scenario: Migration does not touch the episode cache
 - **WHEN** the migration renames episode files to the current pad width

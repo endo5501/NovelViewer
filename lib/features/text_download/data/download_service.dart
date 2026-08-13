@@ -168,13 +168,19 @@ Future<void> migrateEpisodeFileNamePadding({
     final matches = <String>[
       ...?byKey['${episode.index}/${safeName(episode.title)}'],
     ];
-    // The episode may also be on disk under the title this code last wrote for
-    // the same URL. Only the cache can prove that, so a title-changed file with
-    // no matching cache entry is left alone.
-    final cachedTitle = cache[episode.url.toString()]?.title;
-    if (cachedTitle != null &&
-        safeName(cachedTitle) != safeName(episode.title)) {
-      final cachedMatches = byKey['${episode.index}/${safeName(cachedTitle)}'];
+    // The episode may also be on disk under the name this code last wrote for
+    // the same URL, i.e. `{cached.episodeIndex}_{safeName(cached.title)}`. Only
+    // the cache can prove that, so a title-changed file with no matching cache
+    // entry is left alone. Requiring the cached index to equal the current one
+    // matters: without it, a file belonging to a *different* episode that
+    // happens to share the cached title (duplicate titles like "閑話" are
+    // common) would be claimed whenever indices shift.
+    final cached = cache[episode.url.toString()];
+    if (cached != null &&
+        cached.episodeIndex == episode.index &&
+        safeName(cached.title) != safeName(episode.title)) {
+      final cachedMatches =
+          byKey['${episode.index}/${safeName(cached.title)}'];
       if (cachedMatches != null) matches.addAll(cachedMatches);
     }
     if (matches.isEmpty) continue;

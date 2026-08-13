@@ -252,6 +252,38 @@ void main() {
           'canonical');
     });
 
+    test('does not claim a same-titled file written for a different episode',
+        () async {
+      // Two episodes share the title "閑話". Episode Y (previously index 9)
+      // moved to index 5 and was renamed, so its cached title still matches the
+      // file name of episode X at index 5. That file is X's content, not Y's,
+      // so the migration must not rename it under Y's new title.
+      File('${dir.path}/05_閑話.txt').writeAsStringSync('episode X content');
+
+      await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: [
+          (index: 5, title: '閑話 改題', url: Uri.parse('https://example.com/y'))
+        ],
+        totalEpisodes: 99,
+        cache: {
+          'https://example.com/y': EpisodeCache(
+            url: 'https://example.com/y',
+            episodeIndex: 9, // Y was written at index 9, not 5.
+            title: '閑話',
+            lastModified: '2025/01/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        },
+      );
+
+      final names = _txtNames(dir);
+      expect(names, contains('05_閑話.txt'));
+      expect(names, isNot(contains('05_閑話 改題.txt')));
+      expect(
+          File('${dir.path}/05_閑話.txt').readAsStringSync(), 'episode X content');
+    });
+
     test('leaves a title-changed file alone when the cached title differs too',
         () async {
       // The cache has an entry for this URL, but it does not describe the file
