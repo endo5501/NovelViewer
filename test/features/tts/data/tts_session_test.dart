@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
+import 'package:novel_viewer/features/tts/data/irodori_model_spec_installer.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_session.dart';
@@ -31,6 +32,18 @@ class _LoadModelCall {
   final double? noiseW;
   final String? embeddingCacheDir;
   final bool durationCorrection;
+}
+
+/// Records the model directories the session asks for a contract copy in.
+class _RecordingSpecInstaller extends IrodoriModelSpecInstaller {
+  _RecordingSpecInstaller() : super(loadSpec: () async => '{}');
+
+  final installedIn = <String>[];
+
+  @override
+  Future<void> install(String modelDir) async {
+    installedIn.add(modelDir);
+  }
 }
 
 class _FakeTtsIsolate implements TtsIsolate {
@@ -260,6 +273,27 @@ void main() {
       final call = isolate.loadModelCalls.first;
       expect(call.engineType, TtsEngineType.irodori);
       expect(call.modelDir, '/i/m');
+      await session.dispose();
+    });
+
+    // The engine validates request options against the contract embedded in
+    // the GGUF, which predates duration_correction. Writing the runtime's own
+    // contract beside the model overrides it.
+    test('ensureModelLoaded writes the model contract for irodori only',
+        () async {
+      final installer = _RecordingSpecInstaller();
+      final isolate = _FakeTtsIsolate();
+      final session =
+          TtsSession(isolate: isolate, irodoriSpecInstaller: installer);
+
+      await session.ensureModelLoaded(_irodori());
+      expect(installer.installedIn, ['/i/m']);
+
+      await session.ensureModelLoaded(_qwen3());
+      await session.ensureModelLoaded(_piper());
+      expect(installer.installedIn, ['/i/m'],
+          reason: 'only the Irodori engine reads this contract');
+
       await session.dispose();
     });
 

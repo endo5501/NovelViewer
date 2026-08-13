@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:logging/logging.dart';
 
+import 'irodori_model_spec_installer.dart';
 import 'tts_engine_type.dart';
 import 'tts_isolate.dart';
 import '../domain/tts_engine_config.dart';
@@ -18,12 +19,16 @@ class TtsSession {
     required TtsIsolate isolate,
     Logger? logger,
     Duration modelLoadTimeout = const Duration(seconds: 120),
+    IrodoriModelSpecInstaller? irodoriSpecInstaller,
   })  : _isolate = isolate,
         _log = logger ?? Logger('tts.session'),
+        _irodoriSpecInstaller =
+            irodoriSpecInstaller ?? IrodoriModelSpecInstaller(),
         _modelLoadTimeout = modelLoadTimeout;
 
   final TtsIsolate _isolate;
   final Logger _log;
+  final IrodoriModelSpecInstaller _irodoriSpecInstaller;
 
   /// Backstop for a worker that stays alive but never replies (e.g. stuck in a
   /// native load). Worker *death* is handled deterministically via
@@ -122,8 +127,14 @@ class TtsSession {
           // its own GGUF directory), matching
           // modelLoadKey = (type, modelDir, variant).
           //
-          // Duration correction is the exception: it is calibrated per variant,
-          // so it travels with the load rather than with each request.
+          // The engine validates request options against the contract embedded
+          // in the GGUF, which predates duration_correction. Writing the
+          // runtime's own contract beside the model overrides it. Done on every
+          // load so an older copy can never outlive an engine update.
+          await _irodoriSpecInstaller.install(config.modelDir);
+          // Duration correction is the exception to load-time minimalism: it is
+          // calibrated per variant, so it travels with the load rather than
+          // with each request.
           _isolate.loadModel(
             config.modelDir,
             engineType: TtsEngineType.irodori,

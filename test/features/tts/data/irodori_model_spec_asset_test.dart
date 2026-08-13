@@ -25,9 +25,15 @@ void main() {
       reason: '${source.path} is missing — is the submodule checked out?',
     );
 
+    // Line endings are normalised because the two files live in different
+    // repositories, so a checkout can apply different EOL rules to each. Only
+    // the contract content matters here.
+    String normalise(File file) =>
+        file.readAsStringSync().replaceAll('\r\n', '\n');
+
     expect(
-      asset.readAsStringSync(),
-      source.readAsStringSync(),
+      normalise(asset),
+      normalise(source),
       reason: 'Copy third_party/audio.cpp/model_specs/irodori_tts.json over '
           'assets/model_specs/irodori_tts.json after changing the engine '
           'contract. Shipping an older copy silently narrows the options the '
