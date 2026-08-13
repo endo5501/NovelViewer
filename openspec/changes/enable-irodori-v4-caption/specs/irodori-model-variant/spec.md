@@ -1,6 +1,14 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: v4 における caption 非対応の決定`
+- TO: `### Requirement: variant ごとの caption 対応可否`
+
+v4 が caption に対応した以上、名前が中身と矛盾する。判定の仕組み自体は残るので、
+特定の variant を名指ししない名前に改める。
+
 ## MODIFIED Requirements
 
-### Requirement: v4 における caption 非対応の決定
+### Requirement: variant ごとの caption 対応可否
 システムは variant ごとに caption 対応可否を決定しなければならない (SHALL)。`v3` と `v4` はいずれも caption に対応するものとして扱わなければならない (MUST)。
 
 この判定は単一の箇所に集約し、合成の呼び出し側ごとに条件を書いてはならない (MUST NOT)。将来 caption 非対応の variant が追加された場合も、この 1 箇所の変更で対応できなければならない (SHALL)。
