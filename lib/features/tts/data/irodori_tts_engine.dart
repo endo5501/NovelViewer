@@ -94,28 +94,39 @@ class IrodoriTtsEngine {
     _ensureLoaded();
 
     final hasCaption = caption != null && caption.isNotEmpty;
-    final textPtr = text.toNativeUtf8();
-    final refWavPtr = (refWavPath != null && refWavPath.isNotEmpty)
-        ? refWavPath.toNativeUtf8()
-        : nullptr;
-    final captionPtr = hasCaption ? caption.toNativeUtf8() : nullptr;
     final options = (hasCaption && _durationCorrection)
         ? const {'duration_correction': 'true'}
         : const <String, String>{};
     final entries = options.entries.toList();
-    // Without options this takes the plain entry point, which keeps every
-    // caption-less path working against a native library built before
-    // audiocpp_synthesize_with_options existed. The binding is looked up
-    // lazily, so the newer symbol is only required once it is actually used.
-    final keys =
-        entries.isEmpty ? nullptr : calloc<Pointer<Utf8>>(entries.length);
-    final values =
-        entries.isEmpty ? nullptr : calloc<Pointer<Utf8>>(entries.length);
-    for (var i = 0; i < entries.length; i++) {
-      keys[i] = entries[i].key.toNativeUtf8();
-      values[i] = entries[i].value.toNativeUtf8();
-    }
+
+    // Every allocation happens inside the try so a throw partway through still
+    // reaches the finally with whatever was allocated so far. calloc zero-fills
+    // the arrays, so the unfilled slots read back as nullptr and are skipped.
+    var textPtr = nullptr as Pointer<Utf8>;
+    var refWavPtr = nullptr as Pointer<Utf8>;
+    var captionPtr = nullptr as Pointer<Utf8>;
+    var keys = nullptr as Pointer<Pointer<Utf8>>;
+    var values = nullptr as Pointer<Pointer<Utf8>>;
     try {
+      textPtr = text.toNativeUtf8();
+      if (refWavPath != null && refWavPath.isNotEmpty) {
+        refWavPtr = refWavPath.toNativeUtf8();
+      }
+      if (hasCaption) {
+        captionPtr = caption.toNativeUtf8();
+      }
+      if (entries.isNotEmpty) {
+        keys = calloc<Pointer<Utf8>>(entries.length);
+        values = calloc<Pointer<Utf8>>(entries.length);
+        for (var i = 0; i < entries.length; i++) {
+          keys[i] = entries[i].key.toNativeUtf8();
+          values[i] = entries[i].value.toNativeUtf8();
+        }
+      }
+      // Without options this takes the plain entry point, which keeps every
+      // caption-less path working against a native library built before
+      // audiocpp_synthesize_with_options existed. The binding is looked up
+      // lazily, so the newer symbol is only required once it is actually used.
       final result = entries.isEmpty
           ? _bindings.synthesize(
               _ctx,
@@ -143,12 +154,12 @@ class IrodoriTtsEngine {
         throw TtsEngineException('Irodori synthesis failed: $error');
       }
     } finally {
-      calloc.free(textPtr);
+      if (textPtr != nullptr) calloc.free(textPtr);
       if (refWavPtr != nullptr) calloc.free(refWavPtr);
       if (captionPtr != nullptr) calloc.free(captionPtr);
       for (var i = 0; i < entries.length; i++) {
-        calloc.free(keys[i]);
-        calloc.free(values[i]);
+        if (keys != nullptr && keys[i] != nullptr) calloc.free(keys[i]);
+        if (values != nullptr && values[i] != nullptr) calloc.free(values[i]);
       }
       if (keys != nullptr) calloc.free(keys);
       if (values != nullptr) calloc.free(values);
