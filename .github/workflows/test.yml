@@ -20,7 +20,16 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      # Submodules are needed even though no native build runs here:
+      # irodori_model_spec_asset_test compares the bundled model contract with
+      # the engine's copy under third_party/audio.cpp, and a shipped contract
+      # that has drifted from the engine silently narrows the request options
+      # the engine will accept. audio.cpp is ~95 MiB and has no nested
+      # submodules, so this costs far less than the Flutter SDK download the
+      # next step already pays for.
       - uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
