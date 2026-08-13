@@ -3,13 +3,19 @@ import 'package:novel_viewer/features/text_download/data/sites/hameln_site.dart'
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 
 // Fixtures below faithfully reproduce the real ハーメルン (syosetu.org) HTML
-// structure observed during exploration:
-// - Multi-part index: <span itemprop="name"> title, chapter heading rows
-//   (<tr><td colspan=2><strong>), and episode rows (<tr class="bgcolor2/3">)
-//   whose link href file number can differ from the displayed episode number.
+// structure observed 2026-08-13:
+// - Multi-part index: <span itemprop="name"> title and a
+//   <section class="episode-list"> list whose entries are
+//   <li class="episode-list__item"> holding an <a class="episode-list__link">.
+//   Chapter headings are <li class="episode-list__chapter">. The link's href
+//   file number can differ from any number the author wrote into the title.
+//   Each entry carries a <time class="episode-list__date"> (the publication
+//   timestamp) and a <span class="episode-list__revision"> whose title
+//   attribute holds the revision timestamp when the episode was revised.
 // - Episode body: <div id="honbun"> with <p> paragraphs, plus sibling
-//   <div id="maegaki"> / <div id="atogaki"> author notes.
-// - Single-part (短編): <div id="honbun"> present, no episode rows.
+//   <div id="maegaki"> / <div id="atogaki"> author notes. Unchanged by the
+//   2026 index redesign.
+// - Single-part (短編): <div id="honbun"> present, no episode list at all.
 
 const _multiPartIndexHtml = '''
 <html>
@@ -21,13 +27,48 @@ const _multiPartIndexHtml = '''
 <div align="right">作者：<span itemprop="author"><a href="//syosetu.org/user/482579/">テスト作者</a></span></div>
 </div>
 <div class="ss">
-<table>
-<tr><td colspan=2><strong>第一章</strong></td></tr>
-<tr bgcolor="#FFFFFF" class="bgcolor3"><td width=60%><span id="1">　</span> <a href=./1.html style="text-decoration:none;">1　始まり</a></td><td><NOBR>2026年02月21日(土) 16:20(改)</NOBR></td></tr>
-<tr bgcolor="#F5F5F5" class="bgcolor2"><td width=60%><span id="2">　</span> <a href=./2.html style="text-decoration:none;">2　出会い</a></td><td><NOBR>2026年02月22日(日) 10:00</NOBR></td></tr>
-<tr><td colspan=2><strong>第二章</strong></td></tr>
-<tr bgcolor="#FFFFFF" class="bgcolor3"><td width=60%><span id="4">　</span> <a href=./4.html style="text-decoration:none;">3　再会</a></td><td><NOBR>2026年02月25日(水) 22:58</NOBR></td></tr>
-</table>
+<section class="episode-list" aria-label="話一覧">
+  <ul class="episode-list__items">
+    <li class="episode-list__chapter">
+      <div class="episode-list__chapter-title">第一章</div>
+    </li>
+	<li class="episode-list__item">
+	<a href="./1.html" class="episode-list__link">
+		<span class="episode-list__mark"></span>
+		<span class="episode-list__title" >プロローグ</span>
+		<time class="episode-list__date" itemprop="datePublished" datetime="2026-02-21T16:20Z">2026/02/21 16:20</time>
+		<span class="episode-list__revision" title="2026/03/01 06:05改稿">(<u>改</u>)</span>
+	</a>
+	</li>
+	<li class="episode-list__item">
+	<a href="./2.html" class="episode-list__link">
+		<span class="episode-list__mark"></span>
+		<span class="episode-list__title" >1　調伏の儀式</span>
+		<time class="episode-list__date">2026/02/22 04:13</time>
+		<span class="episode-list__revision"> </span>
+	</a>
+	</li>
+    <li class="episode-list__chapter">
+      <div class="episode-list__chapter-title">第二章</div>
+    </li>
+	<li class="episode-list__item">
+	<a href="./4.html" class="episode-list__link">
+		<span class="episode-list__mark"></span>
+		<span class="episode-list__title" >3　運ぶための力</span>
+		<time class="episode-list__date">2026/02/25 22:58</time>
+		<span class="episode-list__revision"> </span>
+	</a>
+	</li>
+	<li class="episode-list__item">
+	<a href="./11.html" class="episode-list__link">
+		<span class="episode-list__mark"></span>
+		<span class="episode-list__title" >10 　京都参戦</span>
+		<time class="episode-list__date" itemprop="dateModified" datetime="2026-03-02T09:00Z">2026/03/02 09:00</time>
+		<span class="episode-list__revision" title="2026/03/05 21:10改稿">(<u>改</u>)</span>
+	</a>
+	</li>
+  </ul>
+</section>
 </div>
 </div>
 </body>
@@ -63,6 +104,30 @@ const _shortStoryHtml = '''
 </body>
 </html>
 ''';
+
+/// Builds a one-episode index page whose revision span carries [revisionTitle]
+/// (omitted entirely when null), so tests can compare `updatedAt` across
+/// successive revisions of the same episode.
+String _indexWithRevision(String? revisionTitle) {
+  final revision = revisionTitle == null
+      ? '<span class="episode-list__revision"> </span>'
+      : '<span class="episode-list__revision" title="$revisionTitle">(<u>改</u>)</span>';
+  return '''
+<html><head><title>改稿テスト - ハーメルン</title></head>
+<body><div id="maind" itemscope itemtype="https://schema.org/CreativeWork">
+<div class="ss"><span itemprop="name">改稿テスト</span></div>
+<div class="ss"><section class="episode-list"><ul class="episode-list__items">
+	<li class="episode-list__item">
+	<a href="./1.html" class="episode-list__link">
+		<span class="episode-list__title" >第一話</span>
+		<time class="episode-list__date">2026/02/21 16:20</time>
+		$revision
+	</a>
+	</li>
+</ul></section></div>
+</div></body></html>
+''';
+}
 
 void main() {
   late HamelnSite site;
@@ -202,21 +267,15 @@ void main() {
     });
 
     test('flattens episodes across chapters', () {
-      expect(index.episodes.length, 3);
+      expect(index.episodes.length, 4);
     });
 
     test('assigns sequential 1-based index', () {
-      expect(index.episodes.map((e) => e.index), [1, 2, 3]);
+      expect(index.episodes.map((e) => e.index), [1, 2, 3, 4]);
     });
 
-    test('episode title strips Hameln\'s leading display counter', () {
-      // Link text is "3　再会"; the leading "3　" is Hameln's display counter
-      // (the file number is 4.html), so the stored title is just "再会".
-      expect(index.episodes[2].title, '再会');
-    });
-
-    test('URL uses href file number, not displayed episode number', () {
-      // Displayed as "3　再会" but the link href is ./4.html
+    test('URL uses href file number, not the number written in the title', () {
+      // Title reads "3　運ぶための力" but the link href is ./4.html
       expect(index.episodes[2].url.toString(),
           'https://syosetu.org/novel/402955/4.html');
     });
@@ -226,16 +285,75 @@ void main() {
           'https://syosetu.org/novel/402955/1.html');
     });
 
-    test('stores updatedAt verbatim including revision marker', () {
-      expect(index.episodes[0].updatedAt, '2026年02月21日(土) 16:20(改)');
-    });
-
-    test('stores updatedAt verbatim without revision marker', () {
-      expect(index.episodes[1].updatedAt, '2026年02月22日(日) 10:00');
-    });
-
     test('does not populate bodyContent for multi-part work', () {
       expect(index.bodyContent, isNull);
+    });
+  });
+
+  group('parseIndex - episode titles are stored verbatim', () {
+    late NovelIndex index;
+
+    setUp(() {
+      index = site.parseIndex(
+          _multiPartIndexHtml, Uri.parse('https://syosetu.org/novel/402955/'));
+    });
+
+    test('keeps a leading number written by the author', () {
+      // Hameln does not prepend a display counter: the leading "3　" is part
+      // of the author's own title and must survive.
+      expect(index.episodes[2].title, '3　運ぶための力');
+    });
+
+    test('keeps a title that has no leading number', () {
+      expect(index.episodes[0].title, 'プロローグ');
+    });
+
+    test('keeps a leading number followed by a half-width space', () {
+      expect(index.episodes[3].title, '10 　京都参戦');
+    });
+
+    test('keeps a leading number directly followed by an ideographic space',
+        () {
+      expect(index.episodes[1].title, '1　調伏の儀式');
+    });
+  });
+
+  group('parseIndex - updatedAt', () {
+    late NovelIndex index;
+
+    setUp(() {
+      index = site.parseIndex(
+          _multiPartIndexHtml, Uri.parse('https://syosetu.org/novel/402955/'));
+    });
+
+    test('stores the time text alone when the episode was never revised', () {
+      expect(index.episodes[1].updatedAt, '2026/02/22 04:13');
+    });
+
+    test('appends the revision timestamp when the episode was revised', () {
+      // <time> holds the publication timestamp and never changes on revision,
+      // so the revision span's title attribute has to be part of the value.
+      expect(index.episodes[0].updatedAt,
+          '2026/02/21 16:20 (2026/03/01 06:05改稿)');
+    });
+
+    test('a second revision produces a different value', () {
+      final first = site.parseIndex(_indexWithRevision('2026/02/27 23:54改稿'),
+          Uri.parse('https://syosetu.org/novel/1/'));
+      final second = site.parseIndex(_indexWithRevision('2026/03/01 06:05改稿'),
+          Uri.parse('https://syosetu.org/novel/1/'));
+      expect(first.episodes.single.updatedAt,
+          isNot(second.episodes.single.updatedAt));
+    });
+
+    test('an unrevised episode differs from its later revised value', () {
+      final unrevised = site.parseIndex(
+          _indexWithRevision(null), Uri.parse('https://syosetu.org/novel/1/'));
+      final revised = site.parseIndex(_indexWithRevision('2026/03/01 06:05改稿'),
+          Uri.parse('https://syosetu.org/novel/1/'));
+      expect(unrevised.episodes.single.updatedAt, '2026/02/21 16:20');
+      expect(revised.episodes.single.updatedAt,
+          isNot(unrevised.episodes.single.updatedAt));
     });
   });
 
@@ -298,10 +416,21 @@ void main() {
 <html><head><title>堅牢テスト - ハーメルン</title></head>
 <body><div id="maind" itemscope itemtype="https://schema.org/CreativeWork">
 <div class="ss"><span itemprop="name">堅牢テスト</span></div>
-<div class="ss"><table width=100%>
-<tr bgcolor="#FFFFFF" class="bgcolor3"><td width=60%><span id="1">　</span> <a href=./1.html>1　通常</a></td><td><NOBR>2026年03月01日(日) 12:00</NOBR></td></tr>
-<tr bgcolor="#F5F5F5" class="bgcolor2"><td width=60%><a href="//syosetu.org/?mode=ss_view&uid=1">挿絵</a> <a href=./3.html>2　挿絵回</a></td><td><NOBR>2026年03月02日(月) 09:00</NOBR></td></tr>
-</table></div>
+<div class="ss"><section class="episode-list"><ul class="episode-list__items">
+	<li class="episode-list__item">
+	<a href="./1.html" class="episode-list__link">
+		<span class="episode-list__title" >通常</span>
+		<time class="episode-list__date">2026/03/01 12:00</time>
+	</a>
+	</li>
+	<li class="episode-list__item">
+	<a href="//syosetu.org/?mode=ss_view&uid=1">挿絵</a>
+	<a href="./3.html" class="episode-list__link">
+		<span class="episode-list__title" >挿絵回</span>
+		<time class="episode-list__date">2026/03/02 09:00</time>
+	</a>
+	</li>
+</ul></section></div>
 </div></body></html>
 ''';
       final index = site.parseIndex(html, baseUrl);
@@ -311,17 +440,26 @@ void main() {
           'https://syosetu.org/novel/402955/3.html');
     });
 
-    test('excludes phantom rows linking to other novels (absolute href)', () {
+    test('excludes phantom entries linking to other novels (absolute href)',
+        () {
       const html = '''
 <html><head><title>堅牢テスト - ハーメルン</title></head>
 <body><div id="maind" itemscope itemtype="https://schema.org/CreativeWork">
 <div class="ss"><span itemprop="name">堅牢テスト</span></div>
-<div class="ss"><table width=100%>
-<tr bgcolor="#FFFFFF" class="bgcolor3"><td width=60%><a href=./1.html>1　通常</a></td><td><NOBR>2026年03月01日(日) 12:00</NOBR></td></tr>
-</table></div>
-<div class="ss"><table width=100%>
-<tr bgcolor="#FFFFFF" class="bgcolor3"><td><a href="//syosetu.org/novel/999999/1.html">関連作品</a></td><td>2020年01月01日</td></tr>
-</table></div>
+<div class="ss"><section class="episode-list"><ul class="episode-list__items">
+	<li class="episode-list__item">
+	<a href="./1.html" class="episode-list__link">
+		<span class="episode-list__title" >通常</span>
+		<time class="episode-list__date">2026/03/01 12:00</time>
+	</a>
+	</li>
+	<li class="episode-list__item">
+	<a href="//syosetu.org/novel/999999/1.html" class="episode-list__link">
+		<span class="episode-list__title" >関連作品</span>
+		<time class="episode-list__date">2020/01/01 00:00</time>
+	</a>
+	</li>
+</ul></section></div>
 </div></body></html>
 ''';
       final index = site.parseIndex(html, baseUrl);
@@ -330,38 +468,43 @@ void main() {
           'https://syosetu.org/novel/402955/1.html');
     });
 
-    test('handles episode row without a date cell without crashing', () {
+    test('handles an episode entry without a date cell without crashing', () {
       const html = '''
 <html><head><title>堅牢テスト - ハーメルン</title></head>
 <body><div id="maind" itemscope itemtype="https://schema.org/CreativeWork">
 <div class="ss"><span itemprop="name">堅牢テスト</span></div>
-<div class="ss"><table width=100%>
-<tr bgcolor="#FFFFFF" class="bgcolor3"><td><a href=./4.html>4　日付なし</a></td></tr>
-</table></div>
+<div class="ss"><section class="episode-list"><ul class="episode-list__items">
+	<li class="episode-list__item">
+	<a href="./4.html" class="episode-list__link">
+		<span class="episode-list__title" >日付なし</span>
+	</a>
+	</li>
+</ul></section></div>
 </div></body></html>
 ''';
       final index = site.parseIndex(html, baseUrl);
       expect(index.episodes.length, 1);
       expect(index.episodes[0].updatedAt, isNull);
     });
-  });
 
-  group('parseIndex - display counter stripping', () {
-    test('strips the leading counter but keeps named/unnumbered episodes', () {
+    test('the retired bgcolor table markup yields no episodes and no body', () {
+      // Regression guard: the adapter must not silently fall back to the
+      // markup syosetu.org retired in 2026 — a page in that shape has to reach
+      // the empty-index guard so the drift is reported.
       const html = '''
-<html><head><title>連番テスト - ハーメルン</title></head>
+<html><head><title>旧マークアップ - ハーメルン</title></head>
 <body><div id="maind" itemscope itemtype="https://schema.org/CreativeWork">
-<div class="ss"><span itemprop="name">連番テスト</span></div>
+<div class="ss"><span itemprop="name">旧マークアップ</span></div>
 <div class="ss"><table width=100%>
-<tr bgcolor="#FFFFFF" class="bgcolor3"><td><a href=./1.html>プロローグ</a></td><td><NOBR>2026年01月01日(木) 00:00</NOBR></td></tr>
-<tr bgcolor="#F5F5F5" class="bgcolor2"><td><a href=./2.html>24　京都姉妹校交流会</a></td><td><NOBR>2026年01月02日(金) 00:00</NOBR></td></tr>
+<tr><td colspan=2><strong>第一章</strong></td></tr>
+<tr bgcolor="#FFFFFF" class="bgcolor3"><td width=60%><a href=./1.html>1　はじまり</a></td><td><NOBR>2026年02月21日(土) 16:20(改)</NOBR></td></tr>
+<tr bgcolor="#F5F5F5" class="bgcolor2"><td width=60%><a href=./2.html>2　つづき</a></td><td><NOBR>2026年02月22日(日) 10:00</NOBR></td></tr>
 </table></div>
 </div></body></html>
 ''';
-      final index =
-          site.parseIndex(html, Uri.parse('https://syosetu.org/novel/1/'));
-      expect(index.episodes[0].title, 'プロローグ');
-      expect(index.episodes[1].title, '京都姉妹校交流会');
+      final index = site.parseIndex(html, baseUrl);
+      expect(index.episodes, isEmpty);
+      expect(index.bodyContent, isNull);
     });
   });
 
@@ -369,7 +512,9 @@ void main() {
     test('uses the self-link heading when work title != episode label', () {
       // The <title> tag is "<work> - <episode> - ハーメルン" with distinct
       // work/episode, so de-duplication cannot recover the work title; the
-      // body heading <a href="./"> carries the clean work title.
+      // body heading <a href="./"> carries the clean work title. Note the
+      // site writes the attribute unquoted (href=./), which the HTML parser
+      // still resolves to "./".
       const html = '''
 <html><head><title>ある日の日常 - 第1話 - ハーメルン</title></head>
 <body><div id="maind">

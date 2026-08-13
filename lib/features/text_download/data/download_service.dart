@@ -92,31 +92,47 @@ class CollectionAppendResult {
 /// (`01_.txt`, produced when `safeName(title)` is empty) are still matched.
 final RegExp _episodeFileNamePattern = RegExp(r'^(\d+)_(.*)\.txt$');
 
-/// Migrates existing episode files in [directory] to the zero-pad width implied
-/// by [totalEpisodes], so that crossing a power-of-ten boundary (e.g. 99 -> 100)
-/// does not cause a spurious full re-download or leave old-width files behind
-/// (F104).
+/// Migrates existing episode files in [directory] to the file name implied by
+/// the current index, so that neither a change of zero-pad width nor a change of
+/// an episode's title causes a spurious full re-download or leaves stale files
+/// behind (F104).
 ///
-/// The pad width of [formatEpisodeFileName] depends on the digit count of the
-/// current total episode count, so when the total grows/shrinks across a
-/// boundary every episode's expected file name changes (`01_` <-> `001_`).
-/// [DownloadService._canSkipEpisode] recomputes the file name with the *current*
-/// total, so without this migration it would not find the existing (old-width)
-/// files and would re-download everything, leaving the old files as garbage.
+/// Two independent causes make the expected file name change for an episode
+/// that is already on disk:
+/// - **Pad width**: the pad width of [formatEpisodeFileName] depends on the
+///   digit count of the current total episode count, so when the total
+///   grows/shrinks across a power-of-ten boundary every episode's expected file
+///   name changes (`01_` <-> `001_`).
+/// - **Title**: the title itself changes when the author renames an episode, or
+///   when a site adapter changes how it derives titles from the page.
 ///
-/// For each episode in the current index, this finds an existing file that
-/// represents the same episode at a different pad width (same parsed index and
-/// same `safeName(title)`, but a different file name) and:
-/// - renames it to the current-width name when that name does not yet exist;
-/// - deletes it (residual garbage) when the current-width name already exists.
-/// It never touches the canonical current-width file, is idempotent, handles
-/// both width increase and decrease, and does not modify the episode cache.
+/// [DownloadService._canSkipEpisode] recomputes the file name from the *current*
+/// index, so without this migration it would not find the existing files and
+/// would re-download, leaving the old files as garbage.
+///
+/// For each episode in the current index, this finds an existing file that is
+/// the same episode under a stale name — same parsed index, a different file
+/// name, and a `restName` equal to either `safeName(title)` (the pad-width case)
+/// or `safeName(cache[url].title)` (the title-change case) — and:
+/// - renames it to the current name when that name does not yet exist;
+/// - deletes it (residual garbage) when the current name already exists.
+///
+/// The title-change case requires a [cache] entry for the episode's URL, i.e.
+/// the record of what this code last wrote for that same episode. Without such
+/// proof the file is left untouched, so the migration never claims a file that
+/// belongs to a different episode (as happens after an episode is inserted
+/// mid-list and every later index shifts); that episode simply falls back to
+/// being re-downloaded under its new name.
+///
+/// It never touches the canonical current file, is idempotent, handles both
+/// width increase and decrease, and does not modify the episode cache.
 /// Individual rename/delete failures are logged and skipped (that episode falls
 /// back to being re-downloaded) rather than aborting the whole download.
 Future<void> migrateEpisodeFileNamePadding({
   required Directory directory,
-  required List<({int index, String title})> episodes,
+  required List<({int index, String title, Uri url})> episodes,
   required int totalEpisodes,
+  Map<String, EpisodeCache> cache = const {},
 }) async {
   if (!directory.existsSync()) return;
 
@@ -149,8 +165,19 @@ Future<void> migrateEpisodeFileNamePadding({
 
   for (final episode in episodes) {
     final newName = formatEpisodeFileName(episode.index, episode.title, totalEpisodes);
-    final matches = byKey['${episode.index}/${safeName(episode.title)}'];
-    if (matches == null) continue;
+    final matches = <String>[
+      ...?byKey['${episode.index}/${safeName(episode.title)}'],
+    ];
+    // The episode may also be on disk under the title this code last wrote for
+    // the same URL. Only the cache can prove that, so a title-changed file with
+    // no matching cache entry is left alone.
+    final cachedTitle = cache[episode.url.toString()]?.title;
+    if (cachedTitle != null &&
+        safeName(cachedTitle) != safeName(episode.title)) {
+      final cachedMatches = byKey['${episode.index}/${safeName(cachedTitle)}'];
+      if (cachedMatches != null) matches.addAll(cachedMatches);
+    }
+    if (matches.isEmpty) continue;
 
     for (final existing in matches) {
       // Never delete or overwrite the canonical current-width file.
@@ -597,21 +624,25 @@ class DownloadService {
   }) async {
     final total = novelIndex.episodes.length;
 
-    // Before the skip/download loop, align any existing episode files to the
-    // current zero-pad width so crossing a power-of-ten boundary (e.g. 99->100)
-    // does not trigger a spurious full re-download or leave old-width files
-    // behind (F104). Uses the merged index total (= the new pad width).
-    await migrateEpisodeFileNamePadding(
-      directory: dir,
-      episodes: [
-        for (final e in novelIndex.episodes) (index: e.index, title: e.title),
-      ],
-      totalEpisodes: total,
-    );
-
     final cache = episodeCacheRepository != null
         ? await episodeCacheRepository.getAllAsMap()
         : <String, EpisodeCache>{};
+
+    // Before the skip/download loop, align any existing episode files to the
+    // file name the current index implies, so that neither a pad-width boundary
+    // (e.g. 99->100) nor a changed episode title triggers a spurious full
+    // re-download or leaves stale files behind (F104). Uses the merged index
+    // total (= the new pad width) and the cache (= what was last written for
+    // each episode URL, which is what identifies a title-changed file).
+    await migrateEpisodeFileNamePadding(
+      directory: dir,
+      episodes: [
+        for (final e in novelIndex.episodes)
+          (index: e.index, title: e.title, url: e.url),
+      ],
+      totalEpisodes: total,
+      cache: cache,
+    );
 
     var skippedCount = 0;
     var failedCount = 0;
