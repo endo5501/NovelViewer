@@ -233,6 +233,51 @@ void main() {
       expect(_columnText(columns[1]), 'おかきく');
     });
 
+    test('親文字が空のRubyTextSegmentは後続の行頭禁則文字を隠さない', () {
+      // 空ルビは文字を持たないので、禁則判定は「読者が最初に見る文字」まで
+      // 読み飛ばす必要がある。さもないと '。' が視覚的なカラム先頭に来る。
+      final withEmptyRuby = flattenSegments(<TextSegment>[
+        const PlainTextSegment('あいうえ'),
+        const RubyTextSegment(base: '', rubyText: 'る'),
+        const PlainTextSegment('。かきく'),
+      ]);
+      final baseline = flattenSegments(
+        [const PlainTextSegment('あいうえ。かきく')],
+      );
+
+      final columns = splitWithKinsoku(withEmptyRuby, 4);
+
+      expect(columns.map(_columnText).toList(),
+          splitWithKinsoku(baseline, 4).map(_columnText).toList());
+      expect(_columnText(columns[0]), 'あいう');
+      expect(_columnText(columns[1]), 'え。かき');
+      expect(_columnText(columns[2]), 'く');
+    });
+
+    test('連続する親文字が空のRubyTextSegmentも後続の行頭禁則文字を隠さない', () {
+      final entries = flattenSegments(<TextSegment>[
+        const PlainTextSegment('あいうえ'),
+        const RubyTextSegment(base: '', rubyText: 'る'),
+        const RubyTextSegment(base: '', rubyText: 'び'),
+        const PlainTextSegment('。かきく'),
+      ]);
+      final columns = splitWithKinsoku(entries, 4);
+
+      expect(columns.map(_columnText).toList(), ['あいう', 'え。かき', 'く']);
+    });
+
+    test('親文字が空のRubyTextSegmentは行末禁則の判定を妨げない', () {
+      // 行末禁則側は空ルビがあってもベースラインと一致する（回帰ガード）。
+      final entries = flattenSegments(<TextSegment>[
+        const PlainTextSegment('あいう「'),
+        const RubyTextSegment(base: '', rubyText: 'る'),
+        const PlainTextSegment('かきくけ'),
+      ]);
+      final columns = splitWithKinsoku(entries, 4);
+
+      expect(columns.map(_columnText).toList(), ['あいう', '「かきく', 'け']);
+    });
+
     test('親文字が空のRubyTextSegmentを含む行の分割が停止しエントリを失わない', () {
       // 空ルビは charCount が 0 なので、追い出し (moveLastEntryToNext) の
       // 対象になっても currentCount が減らない。無限ループしないこと、
