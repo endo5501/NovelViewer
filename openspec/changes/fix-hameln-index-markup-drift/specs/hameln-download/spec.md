@@ -10,6 +10,8 @@ Chapter heading entries SHALL be ignored for grouping; their episodes SHALL be f
 
 The episode title SHALL be taken from the `<span class="episode-list__title">` inside the episode link, trimmed of surrounding whitespace, and stored **verbatim**. The system SHALL NOT strip a leading numeric counter from the title: the site does not prepend a display counter, so any leading number is part of the author's own title.
 
+Because the date and revision marker are siblings of the title *inside the same anchor*, a fallback to the whole link text when the title span is absent SHALL exclude the `<time class="episode-list__date">` and `<span class="episode-list__revision">` text, so that a partial markup drift cannot carry a timestamp into the episode title — and from there into the episode file name and the episode cache, where it would change on every revision.
+
 #### Scenario: Episodes are flattened across chapters
 - **WHEN** the episode list contains two `li.episode-list__chapter` headings each followed by `li.episode-list__item` entries
 - **THEN** `parseIndex` SHALL return all episodes in document order with no chapter grouping, and `index` values SHALL be a contiguous 1-based sequence
@@ -25,6 +27,10 @@ The episode title SHALL be taken from the `<span class="episode-list__title">` i
 #### Scenario: Titles without a leading number are kept intact
 - **WHEN** an episode entry's `span.episode-list__title` text is `プロローグ`
 - **THEN** the episode `title` SHALL be `プロローグ`
+
+#### Scenario: A missing title span does not leak the date into the title
+- **WHEN** an episode entry's link contains no `<span class="episode-list__title">` but does contain the date and revision elements
+- **THEN** the episode `title` SHALL contain neither the date text nor the revision marker
 
 #### Scenario: Non-episode links inside the list are not treated as episodes
 - **WHEN** an entry contains an anchor whose `href` does not match the `./N.html` episode-file shape (e.g. an absolute cross-link to another work)

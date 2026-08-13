@@ -284,6 +284,38 @@ void main() {
           File('${dir.path}/05_閑話.txt').readAsStringSync(), 'episode X content');
     });
 
+    test('does not pad-migrate a same-titled file of a shifted episode',
+        () async {
+      // Same failure as the title-change case, on the pad-width path: an
+      // episode was deleted above index 5, so the episode now at 5 is the one
+      // the cache recorded at 6. The file at index 5 carries the same title but
+      // is the other episode's content, so it must not be claimed.
+      File('${dir.path}/05_閑話.txt').writeAsStringSync('other episode content');
+
+      await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: [
+          (index: 5, title: '閑話', url: Uri.parse('https://example.com/y'))
+        ],
+        totalEpisodes: 100,
+        cache: {
+          'https://example.com/y': EpisodeCache(
+            url: 'https://example.com/y',
+            episodeIndex: 6,
+            title: '閑話',
+            lastModified: '2025/01/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        },
+      );
+
+      final names = _txtNames(dir);
+      expect(names, contains('05_閑話.txt'));
+      expect(names, isNot(contains('005_閑話.txt')));
+      expect(File('${dir.path}/05_閑話.txt').readAsStringSync(),
+          'other episode content');
+    });
+
     test('leaves a title-changed file alone when the cached title differs too',
         () async {
       // The cache has an entry for this URL, but it does not describe the file

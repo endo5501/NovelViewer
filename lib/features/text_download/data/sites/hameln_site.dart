@@ -133,15 +133,30 @@ class HamelnSite extends NovelSite {
   }
 
   /// Extracts the episode title from the episode link. The title lives in a
-  /// dedicated `<span class="episode-list__title">`; falling back to the whole
-  /// link text would swallow the date and revision marker, which are siblings
-  /// inside the same anchor.
+  /// dedicated `<span class="episode-list__title">`.
   ///
   /// The text is stored verbatim: Hameln does NOT prepend a display counter, so
   /// a leading number (`3　運ぶための力`) is part of the author's own title.
+  ///
+  /// If that span is ever dropped, falling back to the whole link text would
+  /// swallow the date and revision marker, which are siblings inside the *same*
+  /// anchor, and carry them into the episode file name and the episode cache.
+  /// So the fallback subtracts them first.
   String _extractEpisodeTitle(dynamic link) {
     final titleEl = link.querySelector('span.episode-list__title');
-    return (titleEl ?? link).text.trim();
+    if (titleEl != null) return titleEl.text.trim();
+
+    var text = link.text as String;
+    final noise = [
+      ...link.querySelectorAll('time.episode-list__date'),
+      ...link.querySelectorAll('span.episode-list__revision'),
+    ];
+    for (final element in noise) {
+      final fragment = element.text as String;
+      if (fragment.isEmpty) continue;
+      text = text.replaceFirst(fragment, '');
+    }
+    return text.trim();
   }
 
   /// Builds the `updatedAt` value of a table-of-contents entry so that every

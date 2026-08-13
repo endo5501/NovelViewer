@@ -487,6 +487,32 @@ void main() {
       expect(index.episodes[0].updatedAt, isNull);
     });
 
+    test('a missing title span does not leak the date into the title', () {
+      // The date and the revision marker live INSIDE the episode link, so a
+      // fallback to the whole link text would put them in the title — and from
+      // there into the file name and the episode cache.
+      const html = '''
+<html><head><title>堅牢テスト - ハーメルン</title></head>
+<body><div id="maind" itemscope itemtype="https://schema.org/CreativeWork">
+<div class="ss"><span itemprop="name">堅牢テスト</span></div>
+<div class="ss"><section class="episode-list"><ul class="episode-list__items">
+	<li class="episode-list__item">
+	<a href="./1.html" class="episode-list__link">
+		<span class="episode-list__mark"></span>
+		タイトルspanなし
+		<time class="episode-list__date">2026/03/01 12:00</time>
+		<span class="episode-list__revision" title="2026/03/04 08:00改稿">(<u>改</u>)</span>
+	</a>
+	</li>
+</ul></section></div>
+</div></body></html>
+''';
+      final index = site.parseIndex(html, baseUrl);
+      expect(index.episodes.single.title, 'タイトルspanなし');
+      expect(index.episodes.single.updatedAt,
+          '2026/03/01 12:00 (2026/03/04 08:00改稿)');
+    });
+
     test('the retired bgcolor table markup yields no episodes and no body', () {
       // Regression guard: the adapter must not silently fall back to the
       // markup syosetu.org retired in 2026 — a page in that shape has to reach

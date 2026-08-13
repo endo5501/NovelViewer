@@ -165,19 +165,24 @@ Future<void> migrateEpisodeFileNamePadding({
 
   for (final episode in episodes) {
     final newName = formatEpisodeFileName(episode.index, episode.title, totalEpisodes);
+    final cached = cache[episode.url.toString()];
+    // A cache entry placing this episode at a *different* index means the files
+    // sitting at the current index were written for another episode (indices
+    // shift when episodes are inserted or deleted). Claiming one of them by
+    // title would rename another episode's content under this episode's name —
+    // reachable whenever two episodes share a title, which is common ("閑話").
+    // Without a cache entry there is nothing to contradict, so the historical
+    // best-effort behaviour is kept.
+    if (cached != null && cached.episodeIndex != episode.index) continue;
+
     final matches = <String>[
       ...?byKey['${episode.index}/${safeName(episode.title)}'],
     ];
     // The episode may also be on disk under the name this code last wrote for
     // the same URL, i.e. `{cached.episodeIndex}_{safeName(cached.title)}`. Only
     // the cache can prove that, so a title-changed file with no matching cache
-    // entry is left alone. Requiring the cached index to equal the current one
-    // matters: without it, a file belonging to a *different* episode that
-    // happens to share the cached title (duplicate titles like "閑話" are
-    // common) would be claimed whenever indices shift.
-    final cached = cache[episode.url.toString()];
+    // entry is left alone.
     if (cached != null &&
-        cached.episodeIndex == episode.index &&
         safeName(cached.title) != safeName(episode.title)) {
       final cachedMatches =
           byKey['${episode.index}/${safeName(cached.title)}'];
