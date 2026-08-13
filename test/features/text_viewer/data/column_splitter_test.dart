@@ -266,6 +266,23 @@ void main() {
       expect(columns.map(_columnText).toList(), ['あいう', 'え。かき', 'く']);
     });
 
+    test('カラム境界の直後に来た親文字が空のRubyTextSegmentは本文0文字の列を作る', () {
+      // 既知の制限として意図的に固定する。満杯になったカラムの直後に空ルビが
+      // 来ると、ルビだけを載せた本文0文字の列が1本できる。クラッシュではなく
+      // 体裁の問題で、解消には「孤立した注記をどちらの列に寄せるか」という
+      // 組版上の判断が要るため、今回は現状の挙動を記録するに留める。
+      final entries = flattenSegments(<TextSegment>[
+        const PlainTextSegment('あいうえ'),
+        const RubyTextSegment(base: '', rubyText: 'ルビ'),
+      ]);
+      final columns = splitWithKinsoku(entries, 4);
+
+      expect(columns.length, 2);
+      expect(_columnText(columns[0]), 'あいうえ');
+      expect(_columnText(columns[1]), '');
+      expect(columns[1].single.isRuby, isTrue);
+    });
+
     test('親文字が空のRubyTextSegmentは行末禁則の判定を妨げない', () {
       // 行末禁則側は空ルビがあってもベースラインと一致する（回帰ガード）。
       final entries = flattenSegments(<TextSegment>[

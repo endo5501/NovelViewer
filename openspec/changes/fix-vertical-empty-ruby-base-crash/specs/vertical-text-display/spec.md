@@ -19,7 +19,7 @@ RubyTextSegment SHALL be treated as an indivisible unit during kinsoku processin
 
 A RubyTextSegment whose base text is empty SHALL be accepted without raising an exception. Such a segment SHALL contribute a character count of 0 to its column, and SHALL have no character available for the line-head or line-end forbidden character checks, so neither check SHALL be satisfied by it. Column splitting SHALL proceed as if the segment occupied no column space, while the segment itself SHALL still be emitted into the column so its ruby annotation remains visible.
 
-Because such a segment carries no character, it SHALL NOT hide a neighbouring character from the forbidden character checks. The line-head check at a column boundary SHALL use the first character of the first entry at or after the boundary that has a character, and the line-end check SHALL use the last character of the last entry in the column that has a character. Consequently the column structure of a line containing empty-base ruby segments SHALL have the same character-per-column layout as the same line with those segments removed.
+Because such a segment carries no character, it SHALL NOT hide a neighbouring character from the forbidden character checks. The line-head check at a column boundary SHALL use the first character of the first entry at or after the boundary that has a character, and the line-end check SHALL use the last character of the last entry in the column that has a character. Consequently the characters of a line containing empty-base ruby segments SHALL be distributed across the columns that contain characters exactly as they are when those segments are removed. An empty-base ruby segment that falls on a column boundary MAY additionally occupy a column that contains no characters of its own; such a column carries only the ruby annotation.
 
 #### Scenario: Line-head forbidden character triggers push-out of last column character
 - **WHEN** a column split would place a line-head forbidden character (e.g., `。`, `、`, `）`, `」`) as the first character of a new column
@@ -65,6 +65,10 @@ Because such a segment carries no character, it SHALL NOT hide a neighbouring ch
 - **WHEN** one or more empty-base RubyTextSegments sit at a column boundary immediately before a line-head forbidden character
 - **THEN** the line-head check SHALL read past those segments to that forbidden character, and the push-out SHALL be applied, so the forbidden character does not become the first character a reader sees in the new column
 
-#### Scenario: Empty-base RubyTextSegments do not change the character layout of a line
-- **WHEN** a line containing empty-base RubyTextSegments is split into columns
-- **THEN** the characters in each column SHALL be identical to the columns produced from the same line with those segments removed
+#### Scenario: Empty-base RubyTextSegments do not change how characters are distributed
+- **WHEN** a line containing empty-base RubyTextSegments between characters is split into columns
+- **THEN** the characters of the columns that contain characters SHALL be identical to the columns produced from the same line with those segments removed
+
+#### Scenario: An empty-base RubyTextSegment on a column boundary may occupy its own column
+- **WHEN** an empty-base RubyTextSegment immediately follows a column that has just been filled to `charsPerColumn`
+- **THEN** the segment SHALL open a column that contains no characters, carrying only its ruby annotation, and the preceding characters SHALL keep their column assignment
