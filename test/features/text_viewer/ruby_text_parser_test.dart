@@ -82,6 +82,18 @@ void main() {
       final result = parseRubyText(input);
       expect(result, [const RubyTextSegment(base: '八百万', rubyText: 'やおよろず')]);
     });
+
+    test('parses ruby tag with an empty rb element', () {
+      // Real markup from a hosting site: the rb element carries no base text
+      // and the reading follows as body text. This is valid input, not a
+      // download defect, so the parser keeps the annotation with base ''.
+      const input =
+          '<ruby><rb></rb><rp>(</rp><rt>戦術的優位性</rt><rp>)</rp></ruby>';
+      final result = parseRubyText(input);
+      expect(result, [
+        const RubyTextSegment(base: '', rubyText: '戦術的優位性'),
+      ]);
+    });
   });
 
   group('extractSelectedText', () {
@@ -115,6 +127,14 @@ void main() {
     test('returns empty string when start equals end', () {
       final segments = [const PlainTextSegment('テスト')];
       expect(extractSelectedText(2, 2, segments), '');
+    });
+
+    test('an empty-base ruby contributes nothing to the extracted text', () {
+      final segments = parseRubyText(
+        '何の<ruby><rb></rb><rp>(</rp><rt>ルビ</rt><rp>)</rp></ruby>もなかった',
+      );
+      // Display: 何(0) の(1) [WidgetSpan=''](2) も(3) な(4) か(5) っ(6) た(7)
+      expect(extractSelectedText(0, 8, segments), '何のもなかった');
     });
 
     test('handles multiple ruby segments', () {

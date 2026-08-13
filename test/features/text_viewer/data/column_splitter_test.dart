@@ -48,6 +48,30 @@ void main() {
       final entries = flattenSegments([]);
       expect(entries, isEmpty);
     });
+
+    test('親文字が空のRubyTextSegmentでも例外を投げない', () {
+      // 掲載サイト由来の正当な入力:
+      // <ruby><rb></rb><rp>(</rp><rt>戦術的優位性</rt><rp>)</rp></ruby>
+      // 親文字が無いので runes.first / .last が呼べない。
+      final segments = [
+        const RubyTextSegment(base: '', rubyText: '戦術的優位性'),
+      ];
+
+      expect(() => flattenSegments(segments), returnsNormally);
+    });
+
+    test('親文字が空のRubyTextSegmentは文字数0の不可分ユニットになる', () {
+      final entries = flattenSegments([
+        const RubyTextSegment(base: '', rubyText: '戦術的優位性'),
+      ]);
+
+      expect(entries.length, 1);
+      expect(entries[0].isRuby, isTrue);
+      expect(entries[0].charCount, 0);
+      expect(entries[0].firstChar, '');
+      expect(entries[0].lastChar, '');
+      expect(entries[0].rubySegment!.rubyText, '戦術的優位性');
+    });
   });
 
   group('splitWithKinsoku', () {
@@ -168,6 +192,67 @@ void main() {
       expect(_columnText(columns[0]), 'あいう');
       expect(_columnText(columns[1]), '漢字。」');
       expect(_columnText(columns[2]), 'かきくけ');
+    });
+
+    test('親文字が空のRubyTextSegmentはカラムの文字数を消費しない', () {
+      // 実データの形: 行の途中に親文字が空のルビが現れる。
+      // 平文の分割結果は、そのルビが無い場合と一致しなければならない。
+      final withEmptyRuby = flattenSegments(<TextSegment>[
+        const PlainTextSegment('あい'),
+        const RubyTextSegment(base: '', rubyText: 'ルビ'),
+        const PlainTextSegment('うえおか'),
+      ]);
+      final withoutRuby = flattenSegments(
+        [const PlainTextSegment('あいうえおか')],
+      );
+
+      final columns = splitWithKinsoku(withEmptyRuby, 4);
+      final baseline = splitWithKinsoku(withoutRuby, 4);
+
+      expect(columns.map(_columnText).toList(),
+          baseline.map(_columnText).toList());
+      expect(_columnText(columns[0]), 'あいうえ');
+      expect(_columnText(columns[1]), 'おか');
+      // ルビ自体は消えず、1カラム目に残っている
+      expect(columns[0].where((e) => e.isRuby).length, 1);
+    });
+
+    test('親文字が空のRubyTextSegmentがカラム境界に来ても禁則の押し出しを誘発しない', () {
+      // 'あいうえ' でカラムが満杯になった直後に空ルビが来るケース。
+      // 空ルビは行頭禁則文字ではないので押し出しは起きず、平文の分割は
+      // 空ルビが無い場合と一致する。
+      final entries = flattenSegments(<TextSegment>[
+        const PlainTextSegment('あいうえ'),
+        const RubyTextSegment(base: '', rubyText: 'ルビ'),
+        const PlainTextSegment('おかきく'),
+      ]);
+      final columns = splitWithKinsoku(entries, 4);
+
+      expect(columns.length, 2);
+      expect(_columnText(columns[0]), 'あいうえ');
+      expect(_columnText(columns[1]), 'おかきく');
+    });
+
+    test('親文字が空のRubyTextSegmentを含む行の分割が停止しエントリを失わない', () {
+      // 空ルビは charCount が 0 なので、追い出し (moveLastEntryToNext) の
+      // 対象になっても currentCount が減らない。無限ループしないこと、
+      // 全エントリが保存されることを、禁則文字と交互に並べた行で確認する。
+      final entries = flattenSegments(<TextSegment>[
+        const PlainTextSegment('あいうえ'),
+        const RubyTextSegment(base: '', rubyText: 'る'),
+        const PlainTextSegment('。」かき'),
+        const RubyTextSegment(base: '', rubyText: 'び'),
+        const PlainTextSegment('「くけこ'),
+        const RubyTextSegment(base: '', rubyText: 'ふ'),
+      ]);
+
+      late List<List<FlatCharEntry>> columns;
+      expect(() => columns = splitWithKinsoku(entries, 4), returnsNormally);
+
+      // 平文はすべて保持され、空ルビ3件も失われていない
+      expect(columns.map(_columnText).join(), 'あいうえ。」かき「くけこ');
+      expect(columns.expand((c) => c).where((e) => e.isRuby).length, 3);
+      expect(columns.expand((c) => c).length, entries.length);
     });
 
     test('空のエントリリストは空のカラムリストを返す', () {
