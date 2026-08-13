@@ -277,6 +277,7 @@ void main() {
     // reaches the native layer through this one method, so a caller cannot
     // send a caption and forget the correction.
     test('a caption turns on duration correction', () {
+      engine.loadModel('/fake/model/dir', durationCorrection: true);
       engine.synthesize(
         'こんにちは',
         refWavPath: '/voices/ref.wav',
@@ -296,6 +297,7 @@ void main() {
     });
 
     test('no caption leaves the generated length alone', () {
+      engine.loadModel('/fake/model/dir', durationCorrection: true);
       engine.synthesize(
         'こんにちは',
         refWavPath: '/voices/ref.wav',
@@ -304,10 +306,12 @@ void main() {
         numInferenceSteps: 40,
       );
 
-      expect(mockBindings.lastRequestOptions, isEmpty);
+      expect(mockBindings.lastRequestOptions, isNull,
+          reason: 'no options must take the plain synthesize entry point');
     });
 
     test('an empty caption is treated as no caption', () {
+      engine.loadModel('/fake/model/dir', durationCorrection: true);
       engine.synthesize(
         'こんにちは',
         refWavPath: '/voices/ref.wav',
@@ -318,7 +322,24 @@ void main() {
       );
 
       expect(mockBindings.lastCaptionWasNull, isTrue);
-      expect(mockBindings.lastRequestOptions, isEmpty);
+      expect(mockBindings.lastRequestOptions, isNull);
+    });
+
+    // The correction is calibrated on v4. A model loaded without it must keep
+    // the length the predictor asks for, even with a caption.
+    test('a model loaded without correction never sends the option', () {
+      engine.loadModel('/fake/model/dir');
+      engine.synthesize(
+        'こんにちは',
+        refWavPath: '/voices/ref.wav',
+        caption: '穏やかに話す',
+        speakerGuidanceScale: 5.0,
+        captionGuidanceScale: 3.0,
+        numInferenceSteps: 40,
+      );
+
+      expect(mockBindings.lastCaption, '穏やかに話す');
+      expect(mockBindings.lastRequestOptions, isNull);
     });
 
     test('returns TtsSynthesisResult with 48kHz audio', () {

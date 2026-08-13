@@ -19,6 +19,16 @@ void main() {
       expect(IrodoriModelVariant.v4.supportsCaption, isTrue);
     });
 
+    test('only v4 needs duration correction', () {
+      // The correction is calibrated on v4: 0.207 s per spoken codepoint,
+      // fitted on three v4 measurements. v3 never showed the trailing phrase,
+      // and its captioned output already ends only 0.12 s inside what the
+      // character rule would allow — applying the v4 bound to it risks cutting
+      // speech that is correct today.
+      expect(IrodoriModelVariant.v3.needsDurationCorrection, isFalse);
+      expect(IrodoriModelVariant.v4.needsDurationCorrection, isTrue);
+    });
+
     test('each variant names the directory holding its single GGUF', () {
       expect(
         IrodoriModelVariant.v3.modelDirName,
