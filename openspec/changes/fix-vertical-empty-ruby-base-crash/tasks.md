@@ -11,15 +11,15 @@
 
 ## 2. 実装（TDD: Green）
 
-- [ ] 2.1 `lib/features/text_viewer/data/column_splitter.dart` の `FlatCharEntry.ruby` を、空の親文字に対して `firstChar` / `lastChar` を空文字列、`charCount` を 0 とするようガードする
-- [ ] 2.2 `FlatCharEntry.ruby` の変更意図（空親文字ルビはサイト由来の正当な入力であること、プレーンテキスト座標系を動かさないこと）をコメントとして残す
-- [ ] 2.3 `fvm flutter test` を実行し、1.3〜1.6 を含む全テストが通ることを確認する
-- [ ] 2.4 禁則処理・ページネーション関連の既存テストに回帰がないことを確認する
+- [x] 2.1 `lib/features/text_viewer/data/column_splitter.dart` の `FlatCharEntry.ruby` を、空の親文字に対して `firstChar` / `lastChar` を空文字列、`charCount` を 0 とするようガードする
+- [x] 2.2 `FlatCharEntry.ruby` の変更意図（空親文字ルビはサイト由来の正当な入力であること、プレーンテキスト座標系を動かさないこと）をコメントとして残す
+- [x] 2.3 `fvm flutter test` を実行し、1.3〜1.6 を含む全テストが通ることを確認する（対象2ファイル 55件パス）
+- [x] 2.4 禁則処理・ページネーション関連の既存テストに回帰がないことを確認する（`test/features/text_viewer` 486件パス）
 
 ## 3. 縦書き描画の確認
 
-- [ ] 3.1 `test/features/text_viewer/presentation/vertical_ruby_text_widget_test.dart` に、空 base のルビを `VerticalRubyTextWidget` に渡してもエラーにならず、ルビ文字が描画されることを確認するテストを追加する
-- [ ] 3.2 空 base ルビを含むセグメント列を縦書きビューアに与えたとき、`ErrorWidget` にフォールバックせずページ内容が描画されることを確認するウィジェットテストを追加する
+- [x] 3.1 `test/features/text_viewer/presentation/vertical_ruby_text_widget_test.dart` に、空 base のルビを `VerticalRubyTextWidget` に渡してもエラーにならず、ルビ文字が描画されることを確認するテストを追加する（このウィジェット自体は修正前から空 base 耐性があったため、修正の有無に関わらず通る。回帰ガードとして残す）
+- [x] 3.2 空 base ルビを含むセグメント列を縦書きビューアに与えたとき、`ErrorWidget` にフォールバックせずページ内容が描画されることを確認するウィジェットテストを追加する（修正を一時退避して 2 件とも `StateError` で失敗することを確認済み）
 
 ## 4. 実データによる手動検証
 
@@ -32,5 +32,5 @@
 
 - [ ] 5.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 5.3 `fvm flutter analyze`でリントを実行
-- [ ] 5.4 `fvm flutter test`でテストを実行
+- [x] 5.3 `fvm flutter analyze`でリントを実行（No issues found）
+- [x] 5.4 `fvm flutter test`でテストを実行（2823件パス / 1件 skip）

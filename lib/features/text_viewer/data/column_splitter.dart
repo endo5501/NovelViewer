@@ -12,11 +12,25 @@ class FlatCharEntry {
       charCount = 1,
       rubySegment = null;
 
+  /// A ruby annotation with an EMPTY base text is valid input: hosting sites
+  /// publish ruby markup with an empty `rb` element, and the downloader keeps
+  /// the element verbatim (see `blockToText`). Such a segment has no character
+  /// to feed the kinsoku checks, so [firstChar] and [lastChar] are empty ?
+  /// they belong to neither forbidden set, which is exactly the "no check
+  /// applies" behaviour we want ? and [charCount] is 0, so the entry occupies
+  /// no column space. The entry is still emitted, so the ruby text stays
+  /// visible, and the plain-text coordinate space (shared by TTS highlights,
+  /// selection offsets and mark matching, all keyed on `base.length`) is
+  /// unchanged.
   FlatCharEntry.ruby(RubyTextSegment segment)
-    : firstChar = String.fromCharCode(segment.base.runes.first),
-      lastChar = String.fromCharCode(segment.base.runes.last),
-      charCount = segment.base.runes.length,
-      rubySegment = segment;
+      : firstChar = segment.base.isEmpty
+            ? ''
+            : String.fromCharCode(segment.base.runes.first),
+        lastChar = segment.base.isEmpty
+            ? ''
+            : String.fromCharCode(segment.base.runes.last),
+        charCount = segment.base.runes.length,
+        rubySegment = segment;
 
   final String firstChar;
   final String lastChar;

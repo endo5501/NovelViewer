@@ -161,4 +161,51 @@ void main() {
       expect(notifications, contains(null));
     });
   });
+
+  group('VerticalTextViewer with empty-base ruby', () {
+    // Regression guard: a ruby element whose base text is empty is valid
+    // markup on the hosting site. It used to throw StateError inside the
+    // column splitter during build, which the release build renders as a
+    // blank gray ErrorWidget.
+    const segments = <TextSegment>[
+      PlainTextSegment('何の'),
+      RubyTextSegment(base: '', rubyText: '戦術的優位性'),
+      PlainTextSegment('もなかった'),
+    ];
+
+    testWidgets('renders the page instead of falling back to ErrorWidget',
+        (tester) async {
+      await tester.pumpWidget(_buildTestWidget(
+        segments: segments,
+        width: 600,
+        height: 400,
+      ));
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ErrorWidget), findsNothing);
+      expect(find.byType(VerticalTextViewer), findsOneWidget);
+      // Surrounding body text is still laid out.
+      expect(find.text('何'), findsOneWidget);
+      expect(find.text('た'), findsOneWidget);
+    });
+
+    testWidgets('paginates a long line containing an empty-base ruby',
+        (tester) async {
+      final longSegments = <TextSegment>[
+        PlainTextSegment('あ' * 250),
+        const RubyTextSegment(base: '', rubyText: 'ルビ'),
+        PlainTextSegment('い' * 250),
+      ];
+
+      await tester.pumpWidget(_buildTestWidget(
+        segments: longSegments,
+        width: 100,
+        height: 400,
+      ));
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ErrorWidget), findsNothing);
+      expect(find.textContaining('/'), findsOneWidget);
+    });
+  });
 }
