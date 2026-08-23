@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_response_format_exception.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart';
 
@@ -112,6 +114,95 @@ void main() {
       expect(result.facts, '');
       expect(result.isStructured, isTrue);
       expect(callCount, 0);
+    });
+
+    test('a string array facts value is joined with newlines and stays '
+        'structured', () async {
+      // MLX runners ignore the requested `format`, so a capable model returns
+      // {"facts": [...]} even though a single string was requested.
+      final pipeline = LlmSummaryPipeline(
+        llmClient: _FixedLlmClient(jsonEncode({
+          'facts': ['王国の王女である。', '剣術の達人である。'],
+        })),
+      );
+
+      final result = await pipeline.extractFileFactsDetailed(
+        word: 'アリス',
+        contexts: ['アリスは王国の王女。'],
+      );
+
+      expect(result.facts, '王国の王女である。\n剣術の達人である。');
+      expect(result.isStructured, isTrue);
+    });
+
+    test('array elements already carrying a bullet prefix are not '
+        'double-prefixed', () async {
+      final pipeline = LlmSummaryPipeline(
+        llmClient: _FixedLlmClient(jsonEncode({
+          'facts': ['- 王国の王女である。', '- 剣術の達人である。'],
+        })),
+      );
+
+      final result = await pipeline.extractFileFactsDetailed(
+        word: 'アリス',
+        contexts: ['アリスは王国の王女。'],
+      );
+
+      expect(result.facts, '- 王国の王女である。\n- 剣術の達人である。');
+      expect(result.isStructured, isTrue);
+    });
+  });
+
+  group('summarizeFromFacts array normalization', () {
+    test('a string array summary value is joined with newlines', () async {
+      final pipeline = LlmSummaryPipeline(
+        llmClient: _FixedLlmClient(jsonEncode({
+          'summary': ['アリスは王女。', '剣術に秀でる。'],
+        })),
+      );
+
+      final summary = await pipeline.summarizeFromFacts(
+        word: 'アリス',
+        perFileFacts: ['- 王女', '- 剣士'],
+      );
+
+      expect(summary, 'アリスは王女。\n剣術に秀でる。');
+    });
+  });
+
+  group('array values that are not normalizable are rejected', () {
+    test('an empty array throws LlmResponseFormatException and logs WARNING',
+        () async {
+      final records = <LogRecord>[];
+      final sub = Logger.root.onRecord.listen(records.add);
+      addTearDown(sub.cancel);
+
+      final pipeline = LlmSummaryPipeline(
+        llmClient: _FixedLlmClient(jsonEncode({'summary': <String>[]})),
+      );
+
+      await expectLater(
+        pipeline.summarizeFromFacts(word: 'アリス', perFileFacts: const ['- 王女']),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
+      expect(records.any((r) => r.level == Level.WARNING), isTrue);
+    });
+
+    test('an array containing a non-string element throws '
+        'LlmResponseFormatException and logs WARNING', () async {
+      final records = <LogRecord>[];
+      final sub = Logger.root.onRecord.listen(records.add);
+      addTearDown(sub.cancel);
+
+      final pipeline = LlmSummaryPipeline(
+        llmClient: _FixedLlmClient('{"summary": ["ok", 123]}'),
+      );
+
+      await expectLater(
+        pipeline.summarizeFromFacts(word: 'アリス', perFileFacts: const ['- 王女']),
+        throwsA(isA<LlmResponseFormatException>()),
+      );
+      expect(records.any((r) => r.level == Level.WARNING), isTrue);
     });
   });
 }
