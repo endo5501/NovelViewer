@@ -449,11 +449,9 @@ void main() {
 
     test('a malformed Stage-1 response is recovered by one retry', () async {
       final client = _ScriptedLlmClient([
-        // The exact shape that aborted analyses in production: a JSON array
-        // where a string is required.
-        jsonEncode({
-          'facts': ['- 王国の王女', '- 剣術の達人'],
-        }),
+        // A valid-JSON-but-wrong-shape response: the required key holds null,
+        // which cannot be normalized to a string.
+        jsonEncode({'facts': null}),
         jsonEncode({'facts': '- 王国の王女'}),
       ]);
       final pipeline = LlmSummaryPipeline(llmClient: client);
@@ -465,6 +463,27 @@ void main() {
 
       expect(facts, '- 王国の王女');
       expect(client.callCount, 2);
+    });
+
+    test('a string array Stage-1 response is accepted without a retry',
+        () async {
+      // MLX runners ignore the requested `format`, so a capable model returns
+      // {"facts": [...]}. This is a valid response, not a malformed one: it is
+      // normalized and accepted on the first call.
+      final client = _ScriptedLlmClient([
+        jsonEncode({
+          'facts': ['- 王国の王女', '- 剣術の達人'],
+        }),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: client);
+
+      final facts = await pipeline.extractFileFacts(
+        word: 'アリス',
+        contexts: ['アリスは王国の王女。'],
+      );
+
+      expect(facts, '- 王国の王女\n- 剣術の達人');
+      expect(client.callCount, 1);
     });
 
     test('a persistent Stage-2 failure propagates after exactly two requests',

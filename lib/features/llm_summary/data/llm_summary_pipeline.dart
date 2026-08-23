@@ -249,6 +249,19 @@ class LlmSummaryPipeline {
       return _ParsedValue(decoded[key] as String, isStructured: true);
     }
 
+    // Runtimes that ignore the requested `format` (e.g. Ollama's MLX runner)
+    // let a capable model return a string array where a string was requested,
+    // e.g. {"facts": ["fact1", "fact2"]}. The content is valid, so normalize a
+    // non-empty array of strings into a single newline-joined string (no bullet
+    // prefix is added or stripped) and treat it as a structured decode. An
+    // empty array or one with a non-string element is not normalizable and
+    // falls through to the malformed-response rejection below.
+    final value = decoded is Map<String, dynamic> ? decoded[key] : null;
+    if (value is List && value.isNotEmpty && value.every((e) => e is String)) {
+      final joined = value.cast<String>().join('\n');
+      return _ParsedValue(joined, isStructured: true);
+    }
+
     final length = normalized.length;
     final prefix = length <= 200 ? normalized : normalized.substring(0, 200);
     _log.warning(
