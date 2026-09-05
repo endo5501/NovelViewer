@@ -30,7 +30,6 @@ OpenSpecのスキルでtasks.mdを作成する際、最終確認のため以下�
 ## X. 最終確認
 
 - [ ] X.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] X.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] X.3 `fvm flutter analyze`でリントを実行
-- [ ] X.4 `fvm flutter test`でテストを実行
+- [ ] X.2 `fvm flutter analyze`でリントを実行
+- [ ] X.3 `fvm flutter test`でテストを実行
 ```
