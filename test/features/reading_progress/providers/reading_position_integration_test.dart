@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -58,7 +59,9 @@ void main() {
       await h.container.read(readingProgressStartupProvider.future);
       expect(
         h.container.read(currentDirectoryProvider),
-        '${h.root.path}/nested/book',
+        // The provider stores the path as `Directory.list` reports it, so the
+        // expectation must use the platform separator (`\` on Windows).
+        p.join(h.root.path, 'nested', 'book'),
       );
       expect(h.container.read(selectedFileProvider)!.name, 'a.txt');
       final saved = await h.container.read(

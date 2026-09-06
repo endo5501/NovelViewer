@@ -157,6 +157,10 @@ Line-end forbidden characters (行末禁則文字):
 
 RubyTextSegment SHALL be treated as an indivisible unit during kinsoku processing. The first base character of a RubyTextSegment SHALL be used for line-head forbidden character check, and the last base character SHALL be used for line-end forbidden character check.
 
+A RubyTextSegment whose base text is empty SHALL be accepted without raising an exception. Such a segment SHALL contribute a character count of 0 to its column, and SHALL have no character available for the line-head or line-end forbidden character checks, so neither check SHALL be satisfied by it. Column splitting SHALL proceed as if the segment occupied no column space, while the segment itself SHALL still be emitted into the column so its ruby annotation remains visible.
+
+Because such a segment carries no character, it SHALL NOT hide a neighbouring character from the forbidden character checks. The line-head check at a column boundary SHALL use the first character of the first entry at or after the boundary that has a character, and the line-end check SHALL use the last character of the last entry in the column that has a character. Consequently the characters of a line containing empty-base ruby segments SHALL be distributed across the columns that contain characters exactly as they are when those segments are removed. An empty-base ruby segment that falls on a column boundary MAY additionally occupy a column that contains no characters of its own; such a column carries only the ruby annotation.
+
 #### Scenario: Line-head forbidden character triggers push-out of last column character
 - **WHEN** a column split would place a line-head forbidden character (e.g., `。`, `、`, `）`, `」`) as the first character of a new column
 - **THEN** the system SHALL move the last character of the current column to the start of the next column, making the current column one character shorter than `charsPerColumn`, so the forbidden character becomes the second character of the next column
@@ -184,6 +188,30 @@ RubyTextSegment SHALL be treated as an indivisible unit during kinsoku processin
 #### Scenario: Column at end of line is not affected by line-end kinsoku
 - **WHEN** the last column of a line ends with a line-end forbidden character and no more text follows in the line
 - **THEN** no adjustment SHALL be made because no subsequent column exists within the same line
+
+#### Scenario: RubyTextSegment with empty base text does not raise
+- **WHEN** a line containing a RubyTextSegment whose base text is empty (e.g. parsed from `<ruby><rb></rb><rp>(</rp><rt>戦術的優位性</rt><rp>)</rp></ruby>`) is split into columns
+- **THEN** column splitting SHALL complete without raising an exception, and the empty-base segment SHALL be present in the resulting columns
+
+#### Scenario: Empty-base RubyTextSegment consumes no column space
+- **WHEN** a line contains exactly `charsPerColumn` plain characters plus one RubyTextSegment with empty base text
+- **THEN** the resulting columns SHALL be split as if only the plain characters were present, because the empty-base segment contributes a character count of 0
+
+#### Scenario: Empty-base RubyTextSegment at a column boundary is not subject to kinsoku
+- **WHEN** an empty-base RubyTextSegment sits at a column boundary, either as the entry that would start the next column or as the last entry of the current column
+- **THEN** neither the line-head nor the line-end forbidden character check SHALL be satisfied by that segment, and no push-out adjustment SHALL be triggered by it
+
+#### Scenario: Empty-base RubyTextSegment does not hide a following line-head forbidden character
+- **WHEN** one or more empty-base RubyTextSegments sit at a column boundary immediately before a line-head forbidden character
+- **THEN** the line-head check SHALL read past those segments to that forbidden character, and the push-out SHALL be applied, so the forbidden character does not become the first character a reader sees in the new column
+
+#### Scenario: Empty-base RubyTextSegments do not change how characters are distributed
+- **WHEN** a line containing empty-base RubyTextSegments between characters is split into columns
+- **THEN** the characters of the columns that contain characters SHALL be identical to the columns produced from the same line with those segments removed
+
+#### Scenario: An empty-base RubyTextSegment on a column boundary may occupy its own column
+- **WHEN** an empty-base RubyTextSegment immediately follows a column that has just been filled to `charsPerColumn`
+- **THEN** the segment SHALL open a column that contains no characters, carrying only its ruby annotation, and the preceding characters SHALL keep their column assignment
 
 ### Requirement: Vertical text pagination
 The system SHALL display vertical text in pages rather than as a scrollable area. Page boundaries SHALL be calculated dynamically based on both the available width and height of the display area. The pagination SHALL account for the fact that a single logical line (newline-separated text) may occupy multiple visual columns when its character count exceeds the available vertical height. Character dimensions (width and height) used for pagination calculations SHALL be measured from actual font metrics using TextPainter with a representative CJK character, rather than estimated from fontSize alone, to ensure pagination matches the Wrap widget's rendering across all font families and sizes. The maximum columns per page calculation SHALL account for the Wrap widget's runSpacing being applied on both sides of column-break sentinel widgets, resulting in an effective inter-column spacing of `2 * runSpacing` rather than `1 * runSpacing`. The `VerticalTextViewer` SHALL accept a `columnSpacing` parameter and use it in pagination calculations instead of a hardcoded constant. The vertical text display area SHALL be clipped to prevent any overflow from becoming visible beyond the display boundaries. Column character counts SHALL NOT exceed `charsPerColumn` but MAY be shorter (typically by 1 character) due to kinsoku push-out adjustments. The pagination SHALL compute a global text offset for each page based on the original text line structure. The per-page text offset SHALL count only actual text characters (PlainTextSegment.text.length and RubyTextSegment.base.length) and original newlines between lines, and SHALL NOT include synthetic newline separators inserted between wrapped columns of the same line. The computed per-page text offset SHALL be passed to each VerticalTextPage as a `pageStartTextOffset` property. When the VerticalTextViewer receives updated widget properties that do not change the segments list (reference equality), it SHALL NOT reset the current page number.

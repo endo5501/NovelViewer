@@ -155,6 +155,19 @@ void main() {
     );
   });
 
+  group('VerticalRubyTextWidget with empty base text', () {
+    testWidgets('renders the ruby text without raising', (tester) async {
+      // Hosting sites publish ruby elements whose rb element is empty; the
+      // annotation must still render, with no base characters beside it.
+      await tester.pumpWidget(_buildTestWidget(base: '', rubyText: '戦術的優位性'));
+
+      expect(tester.takeException(), isNull);
+      for (final char in ['戦', '術', '的', '優', '位', '性']) {
+        expect(find.text(char), findsOneWidget);
+      }
+    });
+  });
+
   group('VerticalRubyTextWidget punctuation rotation', () {
     testWidgets('rotation-target char in base is rotated via Transform', (
       tester,
