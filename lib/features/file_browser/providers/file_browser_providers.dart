@@ -239,12 +239,36 @@ class SelectedFileNotifier extends Notifier<FileEntry?> {
   @override
   FileEntry? build() => null;
 
-  void selectFile(FileEntry file) => state = file;
+  void selectFile(FileEntry file) {
+    state = file;
+    ref.read(fileOpenRequestProvider.notifier).request();
+  }
+
   void clear() => state = null;
 }
 
 final selectedFileProvider = NotifierProvider<SelectedFileNotifier, FileEntry?>(
   SelectedFileNotifier.new,
+);
+
+/// Counts requests to open a file, including a request for the file already
+/// open.
+///
+/// [selectedFileProvider] alone cannot express that: the file browser hands
+/// back the `FileEntry` cached in the directory listing, so tapping the episode
+/// already being read assigns an unchanged value and notifies nobody. A
+/// listener that must react to the act of opening — rather than to the
+/// identity of what is open — watches this instead. Entering a folder clears
+/// the selection without opening anything, and does not bump it.
+class FileOpenRequestNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void request() => state = state + 1;
+}
+
+final fileOpenRequestProvider = NotifierProvider<FileOpenRequestNotifier, int>(
+  FileOpenRequestNotifier.new,
 );
 
 class DirectoryContents {

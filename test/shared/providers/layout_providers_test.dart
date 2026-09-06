@@ -43,11 +43,13 @@ void main() {
     );
 
     test(
-      'the default matches the minimum window size the desktop enforces',
+      'the default matches the size the desktop build restores no smaller than',
       () {
-        // Not a coincidence to be kept in sync by hand: below that width a
-        // desktop window could not show the three columns either, which is what
-        // makes 800 the principled place to fold them away.
+        // Not a coincidence to be kept in sync by hand: the desktop build
+        // already treats that width as the smallest the three columns fit in,
+        // which is what makes 800 the principled place to fold them away. It
+        // is not a floor on the window itself — a reader can drag one
+        // narrower, and then gets the narrow layout.
         final container = ProviderContainer();
         addTearDown(container.dispose);
 

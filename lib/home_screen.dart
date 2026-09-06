@@ -73,6 +73,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// Lets the narrow layout drive its drawers from provider state.
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  /// The layout the last build produced, so a crossing of the breakpoint can
+  /// be told apart from an ordinary rebuild.
+  ShellLayout? _lastLayout;
+
   @override
   void initState() {
     super.initState();
@@ -163,13 +167,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     scaffold.closeDrawer();
   }
 
-  /// Writes a dismissal the reader performed on the drawer itself — a tap on
-  /// the scrim, a back gesture — back into the provider, so the next shortcut
-  /// press opens it again instead of toggling it shut.
+  /// Ends the search session when the reader dismisses the drawer themselves —
+  /// a tap on the scrim, a back gesture.
+  ///
+  /// The whole session goes, not just the column's visibility: the search box
+  /// and the query are what `_onSearchShortcut` looks at to decide whether a
+  /// press opens or closes. Clearing only the visibility would leave the
+  /// session "active" with nothing on screen, so the next press would take the
+  /// closing branch and appear to do nothing — on the one entry point a tablet
+  /// without a keyboard has.
+  ///
+  /// Note this fires only for a dismissal, not when the drawer is torn down
+  /// with the narrow layout; a rotation therefore keeps the search open, and
+  /// the wide layout shows it as the right column.
   void _onEndDrawerChanged(bool isOpened) {
     if (isOpened) return;
     if (!ref.read(rightColumnVisibleProvider)) return;
-    ref.read(rightColumnVisibleProvider.notifier).toggle();
+    closeSearchSession(ref);
   }
 
   /// Toggles focus between the file browser and novel panes (Tab).
@@ -311,9 +325,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.listen(rightColumnVisibleProvider, (_, visible) {
       _syncEndDrawer(visible);
     });
-    ref.listen(selectedFileProvider, (_, _) {
+    // The act of opening a file closes the drawer, not a change of which file
+    // is open: tapping the episode already being read hands back the cached
+    // FileEntry and would notify nobody. Entering a folder only clears the
+    // selection — the reader is still choosing — and does not count.
+    ref.listen(fileOpenRequestProvider, (_, _) {
       _closeDrawerIfOpen();
     });
+    // Crossing the breakpoint replaces the end drawer without any change to
+    // the provider, so nothing above would open a drawer for a search that was
+    // already showing — and the scaffold hands its remembered "was open" flag
+    // to the replacement, which can resurrect a search the reader has since
+    // closed. Reconcile once, whenever the narrow layout is entered.
+    if (_lastLayout != layout) {
+      _lastLayout = layout;
+      if (isNarrow) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _syncEndDrawer(ref.read(rightColumnVisibleProvider));
+        });
+      }
+    }
     final bindings = ref.watch(keyBindingsProvider);
     // Where TTS is unavailable the controls bar that listens for the toggle
     // request is never mounted, so registering the binding would consume the

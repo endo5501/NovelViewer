@@ -69,10 +69,20 @@
 - [ ] 10.6 左カラムのタブが「ファイル」「ブックマーク」の 2 つであること
 - [ ] 10.7 AppBar のボタンが 744pt に収まり、タイトルが読めること
 
+## 11. レビュー指摘の反映
+
+- [x] 11a.1 wide で検索を開いたまま narrow に入ると endDrawer が開かない件を修正（レビュー指摘。narrow 進入時に provider と突き合わせる）
+- [x] 11a.2 Scaffold が保持する開閉フラグで、閉じた検索が narrow 復帰時に復活する件を修正（同上）
+- [x] 11a.3 フォルダに入るときの `selectedFileProvider.clear()` で Drawer が閉じる件を修正（`next != null` のときだけ閉じる）
+- [x] 11a.4 3 件とも、修正を外すとテストが落ちることを確認
+- [x] 11a.5 endDrawer をスクリムで閉じても検索セッションが残り、次の 🔍 が無反応になる件を修正（`closeSearchSession` を呼ぶ）
+- [x] 11a.6 「デスクトップは 800pt 未満にならない」という誤った前提を design.md / proposal.md / 差分仕様 / README / コード注釈で訂正（`setMinimumSize` は呼ばれていない）
+- [x] 11a.7 同じファイルの再選択で Drawer が閉じない件を修正（`fileOpenRequestProvider` を導入）
+
 ## 11. 最終確認
 
-- [ ] 11.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 11.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 11.3 `fvm dart format .`でフォーマットを実行
-- [ ] 11.4 `fvm flutter analyze`でリントを実行
-- [ ] 11.5 `fvm flutter test`でテストを実行
+- [x] 11.1 code-reviewスキルを使用してコードレビューを実施
+- [x] 11.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 11.3 `fvm dart format .`でフォーマットを実行
+- [x] 11.4 `fvm flutter analyze`でリントを実行
+- [x] 11.5 `fvm flutter test`でテストを実行

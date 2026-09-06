@@ -18,7 +18,7 @@ The system SHALL decide which of two shell layouts to present — narrow or wide
 ### Requirement: The width is read in one place and the breakpoint is injectable
 The application SHALL read the display width for the purpose of choosing a shell layout in exactly one place — the home screen — and SHALL distribute the resolved layout to the surfaces that need it rather than letting each of them consult `MediaQuery`. The breakpoint SHALL be exposed as a Riverpod provider so a widget test can select either layout by overriding it, without resizing the test viewport.
 
-The default breakpoint SHALL be 800 logical pixels, which is the minimum window width the desktop build allows; below that width the three-column layout was never guaranteed to fit.
+The default breakpoint SHALL be 800 logical pixels, the width the desktop build already restores no window smaller than, because below it the three-column layout was never guaranteed to fit. No minimum size is imposed on the native window, so a reader may make one narrower and receive the narrow layout there too.
 
 #### Scenario: Only the home screen resolves the layout
 - **WHEN** the widgets that change with the shell layout are inspected
@@ -28,9 +28,13 @@ The default breakpoint SHALL be 800 logical pixels, which is the minimum window 
 - **WHEN** a widget test overrides the breakpoint provider with a value greater than the test viewport width
 - **THEN** the narrow layout is rendered, and overriding it with a smaller value renders the wide layout
 
-#### Scenario: The default breakpoint matches the minimum desktop window width
-- **WHEN** the default breakpoint is compared with the minimum window size the desktop build enforces
-- **THEN** they are the same width, so no desktop window can be narrower than the width the wide layout requires
+#### Scenario: The default breakpoint matches the desktop's own minimum
+- **WHEN** the default breakpoint is compared with the minimum size the desktop build restores a window to
+- **THEN** they are the same width, so the fold continues a judgement the desktop build already makes rather than introducing a new one
+
+#### Scenario: A desktop window narrowed past the breakpoint gets the narrow layout
+- **WHEN** a desktop window is resized below the breakpoint
+- **THEN** the narrow layout is presented there as well, because the columns would crowd the body text at that width whatever the platform
 
 ### Requirement: The narrow layout moves the side panels into drawers
 In the narrow layout the application SHALL present the left column as a `Drawer` and the right column as an `endDrawer`, and the text viewer SHALL occupy the full width of the body with no column dividers. The drawer holding the left column SHALL use the same width as the left column of the wide layout, so the panel is laid out identically in both layouts.

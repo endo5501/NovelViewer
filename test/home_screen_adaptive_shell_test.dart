@@ -245,6 +245,57 @@ void main() {
       expect(find.byKey(const Key('left_column')), findsNothing);
     });
 
+    testWidgets('re-selecting the same file still closes the drawer', (
+      tester,
+    ) async {
+      // The file list hands back the cached FileEntry, so tapping the episode
+      // already open sets the provider to a value it considers unchanged and
+      // no listener fires. The reader would be left staring at the list.
+      await pumpApp(tester, breakpoint: 900);
+      final container = containerOf(tester);
+      const entry = FileEntry(name: '001.txt', path: '/library/001.txt');
+      container.read(selectedFileProvider.notifier).selectFile(entry);
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+
+      container.read(selectedFileProvider.notifier).selectFile(entry);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byKey(const Key('left_column')), findsNothing);
+    });
+
+    testWidgets('clearing the selection leaves the drawer open', (
+      tester,
+    ) async {
+      // Entering a folder clears the selection (file_browser_panel), and the
+      // reader is still choosing. Closing there would shut the drawer under
+      // the very tap that opened the folder.
+      await pumpApp(tester, breakpoint: 900);
+      final container = containerOf(tester);
+      container
+          .read(selectedFileProvider.notifier)
+          .selectFile(
+            const FileEntry(name: '001.txt', path: '/library/001.txt'),
+          );
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.menu));
+      // Not pumpAndSettle: the selected file leaves a progress indicator
+      // spinning, so the frame stream never quiesces.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+
+      container.read(selectedFileProvider.notifier).clear();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+    });
+
     testWidgets('widening past the breakpoint closes an open drawer', (
       tester,
     ) async {
@@ -286,6 +337,63 @@ void main() {
       expect(find.byKey(const Key('right_column')), findsOneWidget);
       expect(find.byType(Drawer), findsNothing);
       expect(find.byType(VerticalDivider), findsNWidgets(2));
+    });
+  });
+
+  group('crossing the breakpoint', () {
+    Future<void> resize(WidgetTester tester, double width) async {
+      tester.view.physicalSize = Size(width, 600);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('narrowing shows an already-open search as the end drawer', (
+      tester,
+    ) async {
+      // The visibility state does not change across the rotation, so nothing
+      // tells the newly created drawer to open. Without a reconcile the reader
+      // is left with a search that the app believes is showing and that is
+      // nowhere on screen.
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1000, 600);
+      addTearDown(tester.view.reset);
+      await pumpApp(tester, breakpoint: 900);
+      final container = containerOf(tester);
+
+      container.read(rightColumnVisibleProvider.notifier).toggle();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('right_column')), findsOneWidget);
+
+      await resize(tester, 800);
+
+      expect(container.read(rightColumnVisibleProvider), isTrue);
+      expect(find.byKey(const Key('right_column')), findsOneWidget);
+    });
+
+    testWidgets('returning to narrow does not resurrect a closed search', (
+      tester,
+    ) async {
+      // The scaffold remembers that its end drawer was open and hands that
+      // flag to the replacement it builds, so a drawer torn down while open
+      // can come back open even though the reader has since closed the search.
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 600);
+      addTearDown(tester.view.reset);
+      await pumpApp(tester, breakpoint: 900);
+      final container = containerOf(tester);
+
+      container.read(rightColumnVisibleProvider.notifier).toggle();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('right_column')), findsOneWidget);
+
+      await resize(tester, 1000);
+      container.read(rightColumnVisibleProvider.notifier).toggle();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('right_column')), findsNothing);
+
+      await resize(tester, 800);
+
+      expect(container.read(rightColumnVisibleProvider), isFalse);
+      expect(find.byKey(const Key('right_column')), findsNothing);
     });
   });
 
@@ -331,6 +439,30 @@ void main() {
       await tester.pumpAndSettle();
       expect(container.read(rightColumnVisibleProvider), isFalse);
       expect(find.byKey(const Key('right_column')), findsNothing);
+    });
+
+    testWidgets('the search button reopens after the drawer was dismissed', (
+      tester,
+    ) async {
+      // Dismissing the drawer must end the whole search session. If only the
+      // column visibility were cleared, the next press would take the "close
+      // an active search" branch and appear to do nothing — on the one entry
+      // point a tablet without a keyboard has.
+      await pumpApp(tester, breakpoint: 900);
+      final container = containerOf(tester);
+
+      await tester.tap(find.byKey(const Key('search_button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('right_column')), findsOneWidget);
+
+      await tester.tapAt(const Offset(100, 300));
+      await tester.pumpAndSettle();
+      expect(container.read(searchBoxVisibleProvider), isFalse);
+
+      await tester.tap(find.byKey(const Key('search_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('right_column')), findsOneWidget);
     });
 
     testWidgets('the search button searches the current selection', (
