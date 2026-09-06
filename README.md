@@ -99,7 +99,43 @@ scripts/build_lame_windows.bat
 scripts/build_piper_windows.bat
 scripts/build_irodori_windows.bat
 fvm flutter build windows
+
+# iPad向けビルド（ビューア機能のみ。TTS / LLM は非対応）
+fvm flutter run -d <iPadのデバイスID>
 ```
+
+#### iPad ビルドの前提
+
+iPad 版は小説ビューアとしての機能のみを対象とし、読み上げ（TTS）と LLM 要約は利用できません。読み上げの UI は表示されません。
+
+**1. Xcode の iOS platform component**
+
+`xcodebuild -showsdks` が iOS SDK を表示していても、platform component が未導入だとビルドは `iOS ... is not installed` で失敗します。Xcode > Settings > Components から導入するか、以下を実行してください（数 GB のダウンロードが発生します）。
+
+```bash
+xcodebuild -downloadPlatform iOS
+xcrun simctl list runtimes   # iOS のランタイムが列挙されれば導入済み
+```
+
+**2. 署名設定**
+
+Team ID をリポジトリに含めないため、`ios/Flutter/Local.xcconfig`（Git 管理外）を各自で作成します。
+
+```
+DEVELOPMENT_TEAM = XXXXXXXXXX
+```
+
+Team ID は Xcode > Settings > Accounts、または `security find-identity -v -p codesigning` で確認できます。このファイルが無い状態でもビルド構成は壊れず、署名時にのみ失敗します。
+
+無料プロビジョニング（Apple ID のみ、有料の Developer Program に未加入）でインストールしたアプリは **7 日で失効**します。失効後は Xcode から再インストールしてください。
+
+**3. 依存の管理方式**
+
+iOS は Swift Package Manager 単独構成です（CocoaPods は使用しません）。`ios/Podfile` は存在せず、依存のピンは 2 つの `xcshareddata/swiftpm/Package.resolved` が保持します。macOS は従来どおり CocoaPods です。
+
+**4. ライブラリの場所**
+
+小説は端末内の `Documents/NovelViewer/` に保存され、Files アプリの「このiPad内 > NovelViewer」から参照・追加・削除できます。アプリ内部のデータベースは Files アプリに露出しない `Library/Application Support/` に置かれます。
 
 ### テスト
 

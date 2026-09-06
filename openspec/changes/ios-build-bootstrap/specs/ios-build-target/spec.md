@@ -35,7 +35,11 @@ Every plugin the project depends on resolves as a Swift Package for iOS, so the 
 
 #### Scenario: Swift Package pins are tracked
 - **WHEN** the repository is inspected
-- **THEN** `ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` is tracked by Git
+- **THEN** the `xcshareddata/swiftpm/Package.resolved` file under both `ios/Runner.xcodeproj/project.xcworkspace/` and `ios/Runner.xcworkspace/` is tracked by Git
+
+#### Scenario: The two pin files agree
+- **WHEN** the two tracked `Package.resolved` files are compared
+- **THEN** their contents are identical, so the resolved plugin versions do not depend on which container the project is opened through
 
 #### Scenario: macOS keeps CocoaPods
 - **WHEN** the `macos/` directory is inspected

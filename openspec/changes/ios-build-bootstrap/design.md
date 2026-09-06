@@ -159,9 +159,11 @@ Podfile      が存在しないこと（CocoaPods 除去の回帰ガード）
 
 これらは「設定が意図せず巻き戻ったこと」を検出するためのもので、ビルドの成功を保証するものではない。TDD としては RED → 設定変更 → GREEN が成立する。
 
-### D10. `swiftpm/Package.resolved` を追跡する
+### D10. `swiftpm/Package.resolved` を 2 つとも追跡する
 
 SPM の依存ピンであり、`Podfile.lock` と同じ役割を果たす。macOS 側で `Podfile.lock` を追跡している方針と整合する。
+
+Xcode はコンテナごとに解決結果の写しを持つため、`Runner.xcodeproj/project.xcworkspace/` と `Runner.xcworkspace/` の両方に `xcshareddata/swiftpm/Package.resolved` が生成される（後者は CocoaPods 除去によりワークスペースがビルドコンテナになったことで現れる）。片方だけを追跡すると、もう片方を経由した更新で追跡側が黙って陳腐化する。両方を追跡し、内容が一致していることをドリフトガードで検証する。
 
 ## Risks / Trade-offs
 

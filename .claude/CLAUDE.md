@@ -12,6 +12,7 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `scripts/build_tts_windows.bat` - TTSエンジンビルド(windows)
  - `scripts/build_lame_windows.bat` - LAMEビルド(windows)
  - `fvm flutter build windows` - 本番ビルド(windows)
+ - `fvm flutter build ios` - ビルド(iPad。ビューア機能のみでTTS/LLMは非対応。Xcodeのplatform componentと`ios/Flutter/Local.xcconfig`のDEVELOPMENT_TEAMが必要。詳細はREADME参照)
  - `fvm flutter test` - テスト実行
  - `fvm dart format .` - フォーマット実行(lib/とtest/が対象)
  - `fvm flutter analyze` - リント実行

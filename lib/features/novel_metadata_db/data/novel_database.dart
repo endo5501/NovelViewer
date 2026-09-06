@@ -4,10 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../../../shared/database/database_opener.dart';
 import '../../../shared/database/db_connection_gate.dart';
 import '../../../shared/episode/episode_resolver.dart' as episode;
+import '../domain/database_location.dart';
 import 'novel_data_migrator.dart';
 
 /// Returns the list of source-text file names for `folderName`, sorted
@@ -96,8 +98,18 @@ class NovelDatabase {
   Future<String> _resolveDatabaseDirPath() async {
     final dirPath = _dbDirPath;
     if (dirPath != null) return dirPath;
-    if (Platform.isWindows) return p.dirname(Platform.resolvedExecutable);
-    return getDatabasesPath();
+    final location = resolveDatabaseLocation(
+      isWindows: Platform.isWindows,
+      isIOS: Platform.isIOS,
+    );
+    switch (location) {
+      case DatabaseLocation.executableDirectory:
+        return p.dirname(Platform.resolvedExecutable);
+      case DatabaseLocation.applicationSupport:
+        return (await getApplicationSupportDirectory()).path;
+      case DatabaseLocation.platformDefault:
+        return getDatabasesPath();
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
