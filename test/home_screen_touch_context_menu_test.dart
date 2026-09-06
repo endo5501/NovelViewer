@@ -95,6 +95,8 @@ void main() {
     await tester.longPress(find.text('テスト小説'));
     await tester.pumpAndSettle();
 
+    // Both halves, or this passes on a long press that did nothing at all.
+    expect(find.text('更新'), findsOneWidget);
     expect(find.byKey(const Key('left_column')), findsOneWidget);
   });
 }

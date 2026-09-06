@@ -54,7 +54,9 @@ The tooltip SHALL keep its hover behaviour on a pointer that hovers. Only its to
 ### Requirement: The vertical viewer's selection menu opens on a touch tap inside the selection
 In vertical display mode, a tap that lands inside the current selection SHALL open the selection context menu, anchored at the tap position, and SHALL leave the selection intact. A tap that lands outside the selection SHALL keep its existing meaning and clear the selection.
 
-This trigger SHALL apply only to a tap from a touch pointer. A tap already means "clear the selection", and that meaning SHALL be preserved for every other pointer kind, so that a mouse click behaves exactly as it did before. The distinction SHALL be made from the pointer's device kind rather than from the running platform, so that a tablet with a trackpad keeps the pointer behaviour and a touchscreen desktop gains the touch behaviour.
+This trigger SHALL apply only to a tap from a pointer that has no secondary button — touch and stylus. A tap already means "clear the selection", and that meaning SHALL be preserved for a mouse, so that a mouse click behaves exactly as it did before. The distinction SHALL be made from the pointer's device kind rather than from the running platform, so that a tablet with a trackpad keeps the pointer behaviour and a touchscreen desktop gains the touch behaviour.
+
+A tap that lands in the gap between two columns SHALL be resolved to the nearest character within that gap's width, rather than being treated as landing outside the text. Nothing is painted in those gaps and they are as wide as the spacing between columns, so a finger aimed at a character lands in one often; treating that as a tap outside would destroy a selection the reader had just made. A tap further away than that SHALL still resolve to nothing, so that a tap out in the margin keeps clearing the selection.
 
 The gesture recognizers of the vertical viewer SHALL NOT be changed. In particular no long-press recognizer SHALL be added there: a long press accepted after its deadline forcibly removes the pan recognizer from the arena, which would abandon a selection drag that began with the finger held still.
 
@@ -71,8 +73,21 @@ The gesture recognizers of the vertical viewer SHALL NOT be changed. In particul
 - **WHEN** the reader taps with a finger while no text is selected
 - **THEN** no menu SHALL appear
 
+#### Scenario: A stylus tap inside the selection opens the menu
+- **WHEN** a stylus taps inside the selected range
+- **THEN** the selection context menu SHALL appear, as it does for a finger
+
 #### Scenario: A mouse click inside the selection still clears it
 - **WHEN** a mouse click lands inside the selected range
+- **THEN** the selection SHALL be cleared and no menu SHALL appear
+
+#### Scenario: A tap in the gap between two selected columns opens the menu
+- **WHEN** the reader taps with a finger in the unpainted gap between two columns that are both inside the selection
+- **THEN** the selection context menu SHALL appear
+- **AND** the selection SHALL remain
+
+#### Scenario: A tap in the margin still clears the selection
+- **WHEN** the reader taps with a finger well outside the text, further from any character than the width of a column gap
 - **THEN** the selection SHALL be cleared and no menu SHALL appear
 
 #### Scenario: Drag selection and swipe page turning are unaffected

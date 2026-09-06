@@ -95,6 +95,20 @@ enum _GestureMode { undecided, selecting, swiping }
 /// Minimum displacement in pixels before the gesture mode is decided.
 const _kGestureDecisionThreshold = 10.0;
 
+/// Pointer kinds for which a tap inside the selection opens the context menu.
+///
+/// These are the kinds that have no secondary button, so a tap is the only
+/// gesture left that can reach the menu. A mouse — and a trackpad, whose
+/// clicks arrive as one — keeps the older meaning of a tap, which is to clear
+/// the selection. `unknown` is deliberately left out: a platform reporting a
+/// real mouse that way would silently lose the clearing behaviour, and the
+/// menu is still reachable there with the secondary button.
+const _kSelectionMenuTapKinds = <PointerDeviceKind>{
+  PointerDeviceKind.touch,
+  PointerDeviceKind.stylus,
+  PointerDeviceKind.invertedStylus,
+};
+
 class _VerticalTextPageState extends State<VerticalTextPage> {
   int? _anchorIndex;
   int? _selectionStart;
@@ -442,8 +456,19 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   /// began with the finger held still. Reusing the tap leaves the recognizer
   /// set of this detector, and therefore the drag/swipe arbitration, untouched.
   void _onTapUp(TapUpDetails details) {
-    if (details.kind == PointerDeviceKind.touch) {
-      final index = _hitTest(details.localPosition);
+    if (_kSelectionMenuTapKinds.contains(details.kind)) {
+      // Nothing is painted in the gap between two columns, but a finger aimed
+      // at a character lands there often enough — the gap is columnSpacing
+      // wide, so its midpoint is only half that from either column. Snapping
+      // within the gap width keeps such a tap on the character it was aimed
+      // at, while a tap out in the margin still resolves to nothing and so
+      // still clears, which is what the reader means by tapping there. The
+      // drag path snaps for the same reason, though without a bound.
+      final index = _hitTest(
+        details.localPosition,
+        snapToNearest: true,
+        maxSnapDistance: widget.columnSpacing,
+      );
       if (index != null && _isInSelection(index)) {
         _openContextMenuAt(details.globalPosition);
         return;
@@ -522,7 +547,11 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     );
   }
 
-  int? _hitTest(Offset localPosition, {bool snapToNearest = false}) {
+  int? _hitTest(
+    Offset localPosition, {
+    bool snapToNearest = false,
+    double? maxSnapDistance,
+  }) {
     if (_hitRegions.isEmpty) {
       _rebuildHitRegions();
     }
@@ -530,6 +559,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       localPosition: localPosition,
       hitRegions: _hitRegions,
       snapToNearest: snapToNearest,
+      maxSnapDistance: maxSnapDistance,
     );
   }
 
