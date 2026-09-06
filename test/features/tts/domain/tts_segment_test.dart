@@ -102,19 +102,19 @@ void main() {
 
   group('TtsSegment.fromRow skip column', () {
     Map<String, Object?> row({Object? skip}) => {
-          'id': 1,
-          'episode_id': 2,
-          'segment_index': 3,
-          'text': 'テスト文。',
-          'text_offset': 0,
-          'text_length': 5,
-          'audio_data': Uint8List.fromList([1, 2, 3, 4]),
-          'sample_count': 2,
-          'ref_wav_path': 'Anna.mp3',
-          'memo': 'メモ',
-          'skip': skip,
-          'created_at': '2026-01-01T00:00:00.000Z',
-        };
+      'id': 1,
+      'episode_id': 2,
+      'segment_index': 3,
+      'text': 'テスト文。',
+      'text_offset': 0,
+      'text_length': 5,
+      'audio_data': Uint8List.fromList([1, 2, 3, 4]),
+      'sample_count': 2,
+      'ref_wav_path': 'Anna.mp3',
+      'memo': 'メモ',
+      'skip': skip,
+      'created_at': '2026-01-01T00:00:00.000Z',
+    };
 
     test('reads skip = 1 as true', () {
       expect(TtsSegment.fromRow(row(skip: 1)).skip, isTrue);
@@ -134,8 +134,10 @@ void main() {
 
     test('throws when the skip column is missing', () {
       final incomplete = row(skip: 0)..remove('skip');
-      expect(() => TtsSegment.fromRow(incomplete),
-          throwsA(isA<FormatException>()));
+      expect(
+        () => TtsSegment.fromRow(incomplete),
+        throwsA(isA<FormatException>()),
+      );
     });
   });
 }

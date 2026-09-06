@@ -19,15 +19,17 @@ void main() {
     prefs = await SharedPreferences.getInstance();
     secureStorageMock = FlutterSecureStorageMock();
     secureStorageMock.install();
-    repo = SettingsRepository(prefs, secureStorage: const FlutterSecureStorage());
+    repo = SettingsRepository(
+      prefs,
+      secureStorage: const FlutterSecureStorage(),
+    );
   });
 
   tearDown(() {
     secureStorageMock.uninstall();
   });
 
-  test(
-      'runStartupMigrations transfers a legacy SharedPreferences API key into '
+  test('runStartupMigrations transfers a legacy SharedPreferences API key into '
       'secure storage on first run', () async {
     await prefs.setString('llm_api_key', 'sk-legacy');
 
@@ -37,8 +39,7 @@ void main() {
     expect(prefs.containsKey('llm_api_key'), isFalse);
   });
 
-  test(
-      'runStartupMigrations swallows exceptions so app startup is never '
+  test('runStartupMigrations swallows exceptions so app startup is never '
       'blocked and records the failure via AppLogger', () async {
     await prefs.setString('llm_api_key', 'sk-legacy');
     secureStorageMock.forceWriteFailure = true;

@@ -10,10 +10,7 @@ import 'package:novel_viewer/features/text_viewer/presentation/widgets/text_cont
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _wrap({
-  required ProviderContainer container,
-  required String content,
-}) {
+Widget _wrap({required ProviderContainer container, required String content}) {
   return UncontrolledProviderScope(
     container: container,
     child: MaterialApp(
@@ -33,9 +30,10 @@ Widget _wrap({
 
 void main() {
   // A content blob tall enough that horizontal-mode scrolling is meaningful.
-  final longContent =
-      List.generate(200, (i) => 'これは ${i + 1} 行目の内容です。')
-          .join('\n');
+  final longContent = List.generate(
+    200,
+    (i) => 'これは ${i + 1} 行目の内容です。',
+  ).join('\n');
 
   late SharedPreferences prefs;
 
@@ -49,14 +47,14 @@ void main() {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         displayModeProvider.overrideWith(
-            () => _StubDisplayMode(TextDisplayMode.horizontal)),
+          () => _StubDisplayMode(TextDisplayMode.horizontal),
+        ),
       ],
     );
     return container;
   }
 
-  group('TextContentRenderer file-entry intent consumption (horizontal mode)',
-      () {
+  group('TextContentRenderer file-entry intent consumption (horizontal mode)', () {
     testWidgets('intent=fromStart leaves scroll at offset 0', (tester) async {
       final container = makeContainer();
       addTearDown(container.dispose);
@@ -64,8 +62,9 @@ void main() {
           .read(pendingFileEntryIntentProvider.notifier)
           .set(FileEntryStartIntent.fromStart);
 
-      await tester.pumpWidget(_wrap(
-          container: container, content: longContent));
+      await tester.pumpWidget(
+        _wrap(container: container, content: longContent),
+      );
       await tester.pumpAndSettle();
 
       // The outer scrollable belongs to SingleChildScrollView; nested ones
@@ -76,8 +75,10 @@ void main() {
             matching: find.byType(Scrollable),
           )
           .first;
-      final position =
-          tester.state<ScrollableState>(scrollable).position.pixels;
+      final position = tester
+          .state<ScrollableState>(scrollable)
+          .position
+          .pixels;
       expect(position, 0.0);
       // Intent should have been consumed and cleared.
       expect(container.read(pendingFileEntryIntentProvider), isNull);
@@ -88,8 +89,9 @@ void main() {
       addTearDown(container.dispose);
       // No intent.
 
-      await tester.pumpWidget(_wrap(
-          container: container, content: longContent));
+      await tester.pumpWidget(
+        _wrap(container: container, content: longContent),
+      );
       await tester.pumpAndSettle();
 
       // The outer scrollable belongs to SingleChildScrollView; nested ones
@@ -100,8 +102,10 @@ void main() {
             matching: find.byType(Scrollable),
           )
           .first;
-      final position =
-          tester.state<ScrollableState>(scrollable).position.pixels;
+      final position = tester
+          .state<ScrollableState>(scrollable)
+          .position
+          .pixels;
       expect(position, 0.0);
       expect(container.read(pendingFileEntryIntentProvider), isNull);
     });
@@ -113,8 +117,9 @@ void main() {
           .read(pendingFileEntryIntentProvider.notifier)
           .set(FileEntryStartIntent.fromEnd);
 
-      await tester.pumpWidget(_wrap(
-          container: container, content: longContent));
+      await tester.pumpWidget(
+        _wrap(container: container, content: longContent),
+      );
       await tester.pumpAndSettle();
 
       // The outer scrollable belongs to SingleChildScrollView; nested ones
@@ -126,122 +131,141 @@ void main() {
           )
           .first;
       final state = tester.state<ScrollableState>(scrollable);
-      expect(state.position.pixels, state.position.maxScrollExtent,
-          reason: 'fromEnd intent should scroll to the bottom');
+      expect(
+        state.position.pixels,
+        state.position.maxScrollExtent,
+        reason: 'fromEnd intent should scroll to the bottom',
+      );
       expect(container.read(pendingFileEntryIntentProvider), isNull);
     });
 
     testWidgets(
-        'vertical mode does not latch _jumpToEndPending — no leak on mode '
-        'toggle to horizontal', (tester) async {
-      // The bug: in vertical mode TextContentRenderer used to consume the
-      // intent and set _jumpToEndPending, which only fires inside the
-      // horizontal-mode build branch. Toggling to horizontal later would
-      // unexpectedly scroll to maxScrollExtent.
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          displayModeProvider.overrideWith(
-              () => _StubDisplayMode(TextDisplayMode.vertical)),
-        ],
-      );
-      addTearDown(container.dispose);
-      container
-          .read(pendingFileEntryIntentProvider.notifier)
-          .set(FileEntryStartIntent.fromEnd);
+      'vertical mode does not latch _jumpToEndPending — no leak on mode '
+      'toggle to horizontal',
+      (tester) async {
+        // The bug: in vertical mode TextContentRenderer used to consume the
+        // intent and set _jumpToEndPending, which only fires inside the
+        // horizontal-mode build branch. Toggling to horizontal later would
+        // unexpectedly scroll to maxScrollExtent.
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            displayModeProvider.overrideWith(
+              () => _StubDisplayMode(TextDisplayMode.vertical),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        container
+            .read(pendingFileEntryIntentProvider.notifier)
+            .set(FileEntryStartIntent.fromEnd);
 
-      await tester.pumpWidget(_wrap(
-          container: container, content: longContent));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          _wrap(container: container, content: longContent),
+        );
+        await tester.pumpAndSettle();
 
-      // The vertical viewer legitimately honours `fromEnd` by opening on the
-      // last page. Page back to the very first page so the logical reading
-      // anchor it hands to the horizontal renderer is the top of the file —
-      // that separates the two mechanisms: position preservation across a
-      // mode toggle must land at 0, while a latched _jumpToEndPending would
-      // still drive a jumpTo(maxScrollExtent) regardless of the anchor.
-      // ArrowRight is "previous page" in the RTL vertical layout; the page
-      // index clamps at 0 and the boundary handler is inert with no adjacent
-      // files, so over-pressing is safe.
-      for (var i = 0; i < 100; i++) {
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-        await tester.pump();
-      }
-      await tester.pumpAndSettle();
+        // The vertical viewer legitimately honours `fromEnd` by opening on the
+        // last page. Page back to the very first page so the logical reading
+        // anchor it hands to the horizontal renderer is the top of the file —
+        // that separates the two mechanisms: position preservation across a
+        // mode toggle must land at 0, while a latched _jumpToEndPending would
+        // still drive a jumpTo(maxScrollExtent) regardless of the anchor.
+        // ArrowRight is "previous page" in the RTL vertical layout; the page
+        // index clamps at 0 and the boundary handler is inert with no adjacent
+        // files, so over-pressing is safe.
+        for (var i = 0; i < 100; i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
 
-      // Toggle to horizontal — if the bug were present, this rebuild would
-      // observe _jumpToEndPending=true and schedule a jumpTo(maxScrollExtent).
-      await container
-          .read(displayModeProvider.notifier)
-          .setMode(TextDisplayMode.horizontal);
-      await tester.pumpAndSettle();
+        // Toggle to horizontal — if the bug were present, this rebuild would
+        // observe _jumpToEndPending=true and schedule a jumpTo(maxScrollExtent).
+        await container
+            .read(displayModeProvider.notifier)
+            .setMode(TextDisplayMode.horizontal);
+        await tester.pumpAndSettle();
 
-      final scrollable = find
-          .descendant(
-            of: find.byType(TextContentRenderer),
-            matching: find.byType(Scrollable),
-          )
-          .first;
-      final state = tester.state<ScrollableState>(scrollable);
-      expect(state.position.pixels, 0.0,
+        final scrollable = find
+            .descendant(
+              of: find.byType(TextContentRenderer),
+              matching: find.byType(Scrollable),
+            )
+            .first;
+        final state = tester.state<ScrollableState>(scrollable);
+        expect(
+          state.position.pixels,
+          0.0,
           reason:
               'After a vertical-mode mount, toggling to horizontal must not '
-              'scroll to the bottom (no _jumpToEndPending leak)');
-    });
+              'scroll to the bottom (no _jumpToEndPending leak)',
+        );
+      },
+    );
 
     testWidgets(
-        'intent=fromStart on content swap resets scroll to 0 (regression: '
-        'previous-file scroll position must not leak into the next file)',
-        (tester) async {
-      final container = makeContainer();
-      addTearDown(container.dispose);
+      'intent=fromStart on content swap resets scroll to 0 (regression: '
+      'previous-file scroll position must not leak into the next file)',
+      (tester) async {
+        final container = makeContainer();
+        addTearDown(container.dispose);
 
-      // Mount, then manually scroll to the bottom — simulating a user
-      // parked at end-of-file before pressing "Next →".
-      await tester.pumpWidget(_wrap(
-          container: container, content: longContent));
-      await tester.pumpAndSettle();
+        // Mount, then manually scroll to the bottom — simulating a user
+        // parked at end-of-file before pressing "Next →".
+        await tester.pumpWidget(
+          _wrap(container: container, content: longContent),
+        );
+        await tester.pumpAndSettle();
 
-      final scrollable = find
-          .descendant(
-            of: find.byType(TextContentRenderer),
-            matching: find.byType(Scrollable),
-          )
-          .first;
-      final state = tester.state<ScrollableState>(scrollable);
-      state.position.jumpTo(state.position.maxScrollExtent);
-      await tester.pump();
-      expect(state.position.pixels, greaterThan(0));
+        final scrollable = find
+            .descendant(
+              of: find.byType(TextContentRenderer),
+              matching: find.byType(Scrollable),
+            )
+            .first;
+        final state = tester.state<ScrollableState>(scrollable);
+        state.position.jumpTo(state.position.maxScrollExtent);
+        await tester.pump();
+        expect(state.position.pixels, greaterThan(0));
 
-      // Simulate "Next →" click: set fromStart intent, then swap content.
-      container
-          .read(pendingFileEntryIntentProvider.notifier)
-          .set(FileEntryStartIntent.fromStart);
-      final newContent = List.generate(
-              200, (i) => '別ファイル ${i + 1} 行目')
-          .join('\n');
-      await tester.pumpWidget(
-          _wrap(container: container, content: newContent));
-      await tester.pumpAndSettle();
+        // Simulate "Next →" click: set fromStart intent, then swap content.
+        container
+            .read(pendingFileEntryIntentProvider.notifier)
+            .set(FileEntryStartIntent.fromStart);
+        final newContent = List.generate(
+          200,
+          (i) => '別ファイル ${i + 1} 行目',
+        ).join('\n');
+        await tester.pumpWidget(
+          _wrap(container: container, content: newContent),
+        );
+        await tester.pumpAndSettle();
 
-      final state2 = tester.state<ScrollableState>(find
-          .descendant(
-            of: find.byType(TextContentRenderer),
-            matching: find.byType(Scrollable),
-          )
-          .first);
-      expect(state2.position.pixels, 0.0,
+        final state2 = tester.state<ScrollableState>(
+          find
+              .descendant(
+                of: find.byType(TextContentRenderer),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        expect(
+          state2.position.pixels,
+          0.0,
           reason:
               'fromStart intent after content swap must reset scroll to top — '
               'otherwise the previous file\'s scroll offset leaks into the '
-              'new file and the user appears in the middle of it');
-      expect(container.read(pendingFileEntryIntentProvider), isNull);
-    });
+              'new file and the user appears in the middle of it',
+        );
+        expect(container.read(pendingFileEntryIntentProvider), isNull);
+      },
+    );
 
-    testWidgets(
-        'null intent on content swap resets scroll to 0 (regression: '
-        'file-browser click must not leak previous file scroll offset)',
-        (tester) async {
+    testWidgets('null intent on content swap resets scroll to 0 (regression: '
+        'file-browser click must not leak previous file scroll offset)', (
+      tester,
+    ) async {
       // Mirrors the fromStart-on-content-swap regression test but for the
       // case where no intent was ever set — i.e., the user picks a file
       // directly from the file browser. The spec
@@ -253,8 +277,9 @@ void main() {
 
       // Mount, then manually scroll into the middle of the file — the user
       // is mid-reading when they click a different file in the browser.
-      await tester.pumpWidget(_wrap(
-          container: container, content: longContent));
+      await tester.pumpWidget(
+        _wrap(container: container, content: longContent),
+      );
       await tester.pumpAndSettle();
 
       final scrollable = find
@@ -272,72 +297,86 @@ void main() {
 
       // Simulate the file-browser click: content swap with no intent.
       final newContent = List.generate(
-              200, (i) => '別ファイル ${i + 1} 行目')
-          .join('\n');
-      await tester.pumpWidget(
-          _wrap(container: container, content: newContent));
+        200,
+        (i) => '別ファイル ${i + 1} 行目',
+      ).join('\n');
+      await tester.pumpWidget(_wrap(container: container, content: newContent));
       await tester.pumpAndSettle();
 
-      final state2 = tester.state<ScrollableState>(find
-          .descendant(
-            of: find.byType(TextContentRenderer),
-            matching: find.byType(Scrollable),
-          )
-          .first);
-      expect(state2.position.pixels, 0.0,
-          reason:
-              'A content swap with no pending intent (file browser click) '
-              'must reset scroll to top — otherwise the previous file\'s '
-              'offset leaks through the persisted ScrollController and the '
-              'user appears in the middle of the new file');
+      final state2 = tester.state<ScrollableState>(
+        find
+            .descendant(
+              of: find.byType(TextContentRenderer),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(
+        state2.position.pixels,
+        0.0,
+        reason:
+            'A content swap with no pending intent (file browser click) '
+            'must reset scroll to top — otherwise the previous file\'s '
+            'offset leaks through the persisted ScrollController and the '
+            'user appears in the middle of the new file',
+      );
     });
 
     testWidgets(
-        '_jumpToEndPending is cleared after a single build (no leak into '
-        'later rebuilds)', (tester) async {
-      // After fromEnd is consumed and the scroll jumped to the bottom, a
-      // later rebuild with no fresh intent must not jump again — the flag
-      // must have been cleared in the original build, regardless of which
-      // branch of the if/else if chain ultimately fired.
-      final container = makeContainer();
-      addTearDown(container.dispose);
-      container
-          .read(pendingFileEntryIntentProvider.notifier)
-          .set(FileEntryStartIntent.fromEnd);
+      '_jumpToEndPending is cleared after a single build (no leak into '
+      'later rebuilds)',
+      (tester) async {
+        // After fromEnd is consumed and the scroll jumped to the bottom, a
+        // later rebuild with no fresh intent must not jump again — the flag
+        // must have been cleared in the original build, regardless of which
+        // branch of the if/else if chain ultimately fired.
+        final container = makeContainer();
+        addTearDown(container.dispose);
+        container
+            .read(pendingFileEntryIntentProvider.notifier)
+            .set(FileEntryStartIntent.fromEnd);
 
-      await tester.pumpWidget(_wrap(
-          container: container, content: longContent));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          _wrap(container: container, content: longContent),
+        );
+        await tester.pumpAndSettle();
 
-      final scrollable = find
-          .descendant(
-            of: find.byType(TextContentRenderer),
-            matching: find.byType(Scrollable),
-          )
-          .first;
-      final state = tester.state<ScrollableState>(scrollable);
-      // First build jumped to end as designed.
-      expect(state.position.pixels, state.position.maxScrollExtent);
+        final scrollable = find
+            .descendant(
+              of: find.byType(TextContentRenderer),
+              matching: find.byType(Scrollable),
+            )
+            .first;
+        final state = tester.state<ScrollableState>(scrollable);
+        // First build jumped to end as designed.
+        expect(state.position.pixels, state.position.maxScrollExtent);
 
-      // Manually scroll back to top, then pump a fresh build (no intent
-      // change). The flag must NOT re-fire and pull us back to the bottom.
-      state.position.jumpTo(0);
-      await tester.pump();
-      await tester.pumpWidget(_wrap(
-          container: container, content: longContent));
-      await tester.pumpAndSettle();
+        // Manually scroll back to top, then pump a fresh build (no intent
+        // change). The flag must NOT re-fire and pull us back to the bottom.
+        state.position.jumpTo(0);
+        await tester.pump();
+        await tester.pumpWidget(
+          _wrap(container: container, content: longContent),
+        );
+        await tester.pumpAndSettle();
 
-      final state2 = tester.state<ScrollableState>(find
-          .descendant(
-            of: find.byType(TextContentRenderer),
-            matching: find.byType(Scrollable),
-          )
-          .first);
-      expect(state2.position.pixels, 0.0,
+        final state2 = tester.state<ScrollableState>(
+          find
+              .descendant(
+                of: find.byType(TextContentRenderer),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        expect(
+          state2.position.pixels,
+          0.0,
           reason:
               '_jumpToEndPending must be cleared after the first build so a '
-              'later rebuild does not jump again');
-    });
+              'later rebuild does not jump again',
+        );
+      },
+    );
   });
 }
 

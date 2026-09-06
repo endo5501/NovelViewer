@@ -42,8 +42,9 @@ class ReleaseInfo {
       assets.firstWhereOrNull((a) => a.name == name);
 
   /// The Inno Setup installer EXE (`novel_viewer-setup-v*.exe`), if present.
-  ReleaseAsset? installerAsset() => assets.firstWhereOrNull((a) =>
-      a.name.startsWith('novel_viewer-setup-') && a.name.endsWith('.exe'));
+  ReleaseAsset? installerAsset() => assets.firstWhereOrNull(
+    (a) => a.name.startsWith('novel_viewer-setup-') && a.name.endsWith('.exe'),
+  );
 
   /// The SHA256 sidecar matching the chosen installer EXE, so the EXE and its
   /// checksum are always a matched pair even if a release ships several EXEs.

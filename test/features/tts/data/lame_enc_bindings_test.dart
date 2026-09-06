@@ -92,8 +92,7 @@ void main() {
       const mp3BufSize = 37200;
       final mp3Buf = calloc<Uint8>(mp3BufSize);
 
-      final bytesWritten =
-          bindings.encode(pcm, numSamples, mp3Buf, mp3BufSize);
+      final bytesWritten = bindings.encode(pcm, numSamples, mp3Buf, mp3BufSize);
       expect(bytesWritten, greaterThanOrEqualTo(0));
 
       final flushBytes = bindings.flush(mp3Buf, mp3BufSize);

@@ -49,13 +49,16 @@ void main() async {
   // Wire a real folder lister so the v4→v5 LLM summary migration can resolve
   // lexical ranks for legacy rows whose source_file lacks a numeric prefix.
   final novelDatabase = NovelDatabase(
-    snapshotResolver:
-        NovelDatabaseSnapshotResolver.fromLibraryRoot(libraryDir.path),
+    snapshotResolver: NovelDatabaseSnapshotResolver.fromLibraryRoot(
+      libraryDir.path,
+    ),
     // v8→v9: move per-novel tables into each folder's novel_data.db. Locating
     // novel folders (incl. nested) needs the library root; the logger surfaces
     // ambiguous/missing-folder skips.
-    dataMigrator: NovelDataMigrator.fromLibraryRoot(libraryDir.path,
-        logger: Logger('novel_metadata_db')),
+    dataMigrator: NovelDataMigrator.fromLibraryRoot(
+      libraryDir.path,
+      logger: Logger('novel_metadata_db'),
+    ),
   );
   await novelDatabase.database;
 
@@ -63,8 +66,9 @@ void main() async {
 
   final container = ProviderContainer(
     overrides: [
-      currentDirectoryProvider
-          .overrideWith(() => CurrentDirectoryNotifier(libraryDir.path)),
+      currentDirectoryProvider.overrideWith(
+        () => CurrentDirectoryNotifier(libraryDir.path),
+      ),
       libraryPathProvider.overrideWithValue(libraryDir.path),
       sharedPreferencesProvider.overrideWithValue(prefs),
       novelDatabaseProvider.overrideWithValue(novelDatabase),
@@ -79,8 +83,10 @@ void main() async {
   // late as possible: the runner creates the window hidden and only shows it
   // once Flutter has a frame, so anything that reveals it earlier would put a
   // blank window on screen for the whole startup migration.
-  await initializeWindowState(prefs: prefs,
-      beforeClose: () => container.read(readingPositionWriterProvider).flush());
+  await initializeWindowState(
+    prefs: prefs,
+    beforeClose: () => container.read(readingPositionWriterProvider).flush(),
+  );
 
   runApp(
     UncontrolledProviderScope(

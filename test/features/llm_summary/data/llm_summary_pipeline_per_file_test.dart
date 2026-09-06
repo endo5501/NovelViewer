@@ -78,25 +78,30 @@ void main() {
       expect(mock.callCount, 1);
     });
 
-    test('a file whose contexts exceed the chunk size is chunked internally',
-        () async {
-      // 3 entries of 20 chars each, maxChunkSize 25 → 3 internal chunks.
-      final mock = _MockLlmClient([
-        jsonEncode({'facts': '- f1'}),
-        jsonEncode({'facts': '- f2'}),
-        jsonEncode({'facts': '- f3'}),
-      ]);
-      final pipeline = LlmSummaryPipeline(llmClient: mock, maxChunkSize: 25);
+    test(
+      'a file whose contexts exceed the chunk size is chunked internally',
+      () async {
+        // 3 entries of 20 chars each, maxChunkSize 25 → 3 internal chunks.
+        final mock = _MockLlmClient([
+          jsonEncode({'facts': '- f1'}),
+          jsonEncode({'facts': '- f2'}),
+          jsonEncode({'facts': '- f3'}),
+        ]);
+        final pipeline = LlmSummaryPipeline(llmClient: mock, maxChunkSize: 25);
 
-      final facts = await pipeline.extractFileFacts(
-        word: 'アリス',
-        contexts: ['あ' * 20, 'い' * 20, 'う' * 20],
-      );
+        final facts = await pipeline.extractFileFacts(
+          word: 'アリス',
+          contexts: ['あ' * 20, 'い' * 20, 'う' * 20],
+        );
 
-      expect(mock.callCount, 3, reason: 'one extraction per internal chunk');
-      expect(facts, '- f1\n- f2\n- f3',
-          reason: 'per-chunk facts are combined into the file facts');
-    });
+        expect(mock.callCount, 3, reason: 'one extraction per internal chunk');
+        expect(
+          facts,
+          '- f1\n- f2\n- f3',
+          reason: 'per-chunk facts are combined into the file facts',
+        );
+      },
+    );
 
     test('an oversized single entry is its own chunk (one call)', () async {
       final mock = _MockLlmClient([
@@ -114,7 +119,9 @@ void main() {
     });
 
     test('empty contexts make no LLM call and return empty facts', () async {
-      final mock = _MockLlmClient([jsonEncode({'facts': '- x'})]);
+      final mock = _MockLlmClient([
+        jsonEncode({'facts': '- x'}),
+      ]);
       final pipeline = LlmSummaryPipeline(llmClient: mock);
 
       final facts = await pipeline.extractFileFacts(word: 'アリス', contexts: []);
@@ -140,35 +147,40 @@ void main() {
       expect(mock.callCount, 1, reason: 'no refinement needed; only final');
     });
 
-    test('combined facts over the chunk size trigger a refinement round',
-        () async {
-      // Two file-facts of ~30 chars each (combined ~60 > maxChunkSize 40) →
-      // a round-2 refinement pass, then the final summary.
-      final mock = _MockLlmClient([
-        jsonEncode({'facts': '- 短縮1'}),
-        jsonEncode({'facts': '- 短縮2'}),
-        jsonEncode({'summary': '最終要約。'}),
-      ]);
-      final pipeline = LlmSummaryPipeline(llmClient: mock, maxChunkSize: 40);
+    test(
+      'combined facts over the chunk size trigger a refinement round',
+      () async {
+        // Two file-facts of ~30 chars each (combined ~60 > maxChunkSize 40) →
+        // a round-2 refinement pass, then the final summary.
+        final mock = _MockLlmClient([
+          jsonEncode({'facts': '- 短縮1'}),
+          jsonEncode({'facts': '- 短縮2'}),
+          jsonEncode({'summary': '最終要約。'}),
+        ]);
+        final pipeline = LlmSummaryPipeline(llmClient: mock, maxChunkSize: 40);
 
-      final events = <AnalysisProgress>[];
-      final summary = await pipeline.summarizeFromFacts(
-        word: 'アリス',
-        perFileFacts: ['- ${'あ' * 28}', '- ${'い' * 28}'],
-        onProgress: events.add,
-      );
+        final events = <AnalysisProgress>[];
+        final summary = await pipeline.summarizeFromFacts(
+          word: 'アリス',
+          perFileFacts: ['- ${'あ' * 28}', '- ${'い' * 28}'],
+          onProgress: events.add,
+        );
 
-      expect(summary, '最終要約。');
-      expect(mock.callCount, greaterThan(1), reason: 'refinement happened');
+        expect(summary, '最終要約。');
+        expect(mock.callCount, greaterThan(1), reason: 'refinement happened');
 
-      final round2 = events
-          .whereType<AnalysisExtractingFacts>()
-          .where((e) => e.round == 2)
-          .toList();
-      expect(round2, isNotEmpty,
-          reason: 'refinement emits round>=2 fact-extraction events');
-      expect(events.last, isA<AnalysisGeneratingFinalSummary>());
-    });
+        final round2 = events
+            .whereType<AnalysisExtractingFacts>()
+            .where((e) => e.round == 2)
+            .toList();
+        expect(
+          round2,
+          isNotEmpty,
+          reason: 'refinement emits round>=2 fact-extraction events',
+        );
+        expect(events.last, isA<AnalysisGeneratingFinalSummary>());
+      },
+    );
 
     test('empty per-file facts fail without reaching the LLM', () async {
       // Summarizing an empty evidence set would have the model invent the
@@ -230,10 +242,7 @@ void main() {
       ]);
       final pipeline = LlmSummaryPipeline(llmClient: mock, language: 'zh');
 
-      await pipeline.summarizeFromFacts(
-        word: 'アリス',
-        perFileFacts: ['- 王女'],
-      );
+      await pipeline.summarizeFromFacts(word: 'アリス', perFileFacts: ['- 王女']);
 
       expect(mock.prompts.single, contains('Chinese'));
     });
@@ -244,10 +253,7 @@ void main() {
       ]);
       final pipeline = LlmSummaryPipeline(llmClient: mock);
 
-      await pipeline.summarizeFromFacts(
-        word: 'アリス',
-        perFileFacts: ['- 王女'],
-      );
+      await pipeline.summarizeFromFacts(word: 'アリス', perFileFacts: ['- 王女']);
 
       expect(mock.prompts.single, contains('Japanese'));
     });
@@ -287,32 +293,35 @@ void main() {
       expect(mock.callCount, 3); // 2 refinement extractions + 1 summary
     });
 
-    test('refinement stops when a round makes no compression progress',
-        () async {
-      // Combined facts (60ch) exceed maxChunkSize(50) → refinement at depth 1,
-      // but the round returns LARGER facts (no progress) so it must stop
-      // immediately instead of recursing on the bigger output.
-      final mock = _MockLlmClient([
-        jsonEncode({'facts': '- ${'あ' * 200}'}),
-        jsonEncode({'summary': '圧縮不可の要約。'}),
-      ]);
-      final pipeline = LlmSummaryPipeline(llmClient: mock, maxChunkSize: 50);
-
-      final summary = await pipeline.summarizeFromFacts(
-        word: 'テスト',
-        perFileFacts: ['あ' * 60],
-      );
-
-      expect(summary, '圧縮不可の要約。');
-      expect(mock.callCount, 2); // 1 extraction (no progress) + 1 summary
-    });
-
     test(
-        'valid JSON whose summary value is null throws '
+      'refinement stops when a round makes no compression progress',
+      () async {
+        // Combined facts (60ch) exceed maxChunkSize(50) → refinement at depth 1,
+        // but the round returns LARGER facts (no progress) so it must stop
+        // immediately instead of recursing on the bigger output.
+        final mock = _MockLlmClient([
+          jsonEncode({'facts': '- ${'あ' * 200}'}),
+          jsonEncode({'summary': '圧縮不可の要約。'}),
+        ]);
+        final pipeline = LlmSummaryPipeline(llmClient: mock, maxChunkSize: 50);
+
+        final summary = await pipeline.summarizeFromFacts(
+          word: 'テスト',
+          perFileFacts: ['あ' * 60],
+        );
+
+        expect(summary, '圧縮不可の要約。');
+        expect(mock.callCount, 2); // 1 extraction (no progress) + 1 summary
+      },
+    );
+
+    test('valid JSON whose summary value is null throws '
         'LlmResponseFormatException (raw JSON is never persisted)', () async {
       // Regression for F132: a CastError must not be swallowed and the raw JSON
       // must never be returned/persisted as the summary.
-      final mock = _MockLlmClient([jsonEncode({'summary': null})]);
+      final mock = _MockLlmClient([
+        jsonEncode({'summary': null}),
+      ]);
       final pipeline = LlmSummaryPipeline(llmClient: mock);
 
       await expectLater(
@@ -321,10 +330,11 @@ void main() {
       );
     });
 
-    test(
-        'valid JSON object missing the summary key throws '
+    test('valid JSON object missing the summary key throws '
         'LlmResponseFormatException', () async {
-      final mock = _MockLlmClient([jsonEncode({'unexpected': 'value'})]);
+      final mock = _MockLlmClient([
+        jsonEncode({'unexpected': 'value'}),
+      ]);
       final pipeline = LlmSummaryPipeline(llmClient: mock);
 
       await expectLater(
@@ -359,22 +369,26 @@ void main() {
       expect(summary, 'コードフェンス対応済み。');
     });
 
-    test('a throwing onProgress callback does not abort summarization',
-        () async {
-      // A buggy UI callback must NOT break data-layer summarization: the
-      // final-summary progress event fires even with no refinement, and its
-      // failure is isolated so the summary still completes.
-      final mock = _MockLlmClient([jsonEncode({'summary': '隔離成功'})]);
-      final pipeline = LlmSummaryPipeline(llmClient: mock);
+    test(
+      'a throwing onProgress callback does not abort summarization',
+      () async {
+        // A buggy UI callback must NOT break data-layer summarization: the
+        // final-summary progress event fires even with no refinement, and its
+        // failure is isolated so the summary still completes.
+        final mock = _MockLlmClient([
+          jsonEncode({'summary': '隔離成功'}),
+        ]);
+        final pipeline = LlmSummaryPipeline(llmClient: mock);
 
-      final summary = await pipeline.summarizeFromFacts(
-        word: 'テスト',
-        perFileFacts: ['- 王女'],
-        onProgress: (_) => throw StateError('callback boom'),
-      );
+        final summary = await pipeline.summarizeFromFacts(
+          word: 'テスト',
+          perFileFacts: ['- 王女'],
+          onProgress: (_) => throw StateError('callback boom'),
+        );
 
-      expect(summary, '隔離成功');
-    });
+        expect(summary, '隔離成功');
+      },
+    );
   });
 
   group('LlmSummaryPipeline structured output', () {
@@ -389,25 +403,29 @@ void main() {
         contexts: ['アリスは王国の王女として登場した。'],
       );
 
-      expect(mock.schemas,
-          [const LlmResponseSchema.singleStringField('facts')]);
-    });
-
-    test('final summary generation requests a schema for the summary field',
-        () async {
-      final mock = _MockLlmClient([
-        jsonEncode({'summary': 'アリスは王国の第三王女。'}),
+      expect(mock.schemas, [
+        const LlmResponseSchema.singleStringField('facts'),
       ]);
-      final pipeline = LlmSummaryPipeline(llmClient: mock);
-
-      await pipeline.summarizeFromFacts(
-        word: 'アリス',
-        perFileFacts: ['- 王国の第三王女'],
-      );
-
-      expect(mock.schemas,
-          [const LlmResponseSchema.singleStringField('summary')]);
     });
+
+    test(
+      'final summary generation requests a schema for the summary field',
+      () async {
+        final mock = _MockLlmClient([
+          jsonEncode({'summary': 'アリスは王国の第三王女。'}),
+        ]);
+        final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+        await pipeline.summarizeFromFacts(
+          word: 'アリス',
+          perFileFacts: ['- 王国の第三王女'],
+        );
+
+        expect(mock.schemas, [
+          const LlmResponseSchema.singleStringField('summary'),
+        ]);
+      },
+    );
 
     test('recursive refinement rounds also request the facts schema', () async {
       // Facts long enough to force a refinement round before the final summary.
@@ -415,18 +433,17 @@ void main() {
       final mock = _SchemaAwareLlmClient();
       final pipeline = LlmSummaryPipeline(llmClient: mock);
 
-      await pipeline.summarizeFromFacts(
-        word: 'アリス',
-        perFileFacts: longFacts,
-      );
+      await pipeline.summarizeFromFacts(word: 'アリス', perFileFacts: longFacts);
 
       expect(mock.schemas.length, greaterThan(1));
       expect(
         mock.schemas.sublist(0, mock.schemas.length - 1),
         everyElement(const LlmResponseSchema.singleStringField('facts')),
       );
-      expect(mock.schemas.last,
-          const LlmResponseSchema.singleStringField('summary'));
+      expect(
+        mock.schemas.last,
+        const LlmResponseSchema.singleStringField('summary'),
+      );
     });
   });
 
@@ -465,44 +482,48 @@ void main() {
       expect(client.callCount, 2);
     });
 
-    test('a string array Stage-1 response is accepted without a retry',
-        () async {
-      // MLX runners ignore the requested `format`, so a capable model returns
-      // {"facts": [...]}. This is a valid response, not a malformed one: it is
-      // normalized and accepted on the first call.
-      final client = _ScriptedLlmClient([
-        jsonEncode({
-          'facts': ['- 王国の王女', '- 剣術の達人'],
-        }),
-      ]);
-      final pipeline = LlmSummaryPipeline(llmClient: client);
+    test(
+      'a string array Stage-1 response is accepted without a retry',
+      () async {
+        // MLX runners ignore the requested `format`, so a capable model returns
+        // {"facts": [...]}. This is a valid response, not a malformed one: it is
+        // normalized and accepted on the first call.
+        final client = _ScriptedLlmClient([
+          jsonEncode({
+            'facts': ['- 王国の王女', '- 剣術の達人'],
+          }),
+        ]);
+        final pipeline = LlmSummaryPipeline(llmClient: client);
 
-      final facts = await pipeline.extractFileFacts(
-        word: 'アリス',
-        contexts: ['アリスは王国の王女。'],
-      );
-
-      expect(facts, '- 王国の王女\n- 剣術の達人');
-      expect(client.callCount, 1);
-    });
-
-    test('a persistent Stage-2 failure propagates after exactly two requests',
-        () async {
-      final client = _ScriptedLlmClient([
-        const SocketException('connection reset'),
-        const SocketException('connection reset'),
-      ]);
-      final pipeline = LlmSummaryPipeline(llmClient: client);
-
-      await expectLater(
-        () => pipeline.summarizeFromFacts(
+        final facts = await pipeline.extractFileFacts(
           word: 'アリス',
-          perFileFacts: ['- 王国の王女'],
-        ),
-        throwsA(isA<SocketException>()),
-      );
-      expect(client.callCount, 2);
-    });
+          contexts: ['アリスは王国の王女。'],
+        );
+
+        expect(facts, '- 王国の王女\n- 剣術の達人');
+        expect(client.callCount, 1);
+      },
+    );
+
+    test(
+      'a persistent Stage-2 failure propagates after exactly two requests',
+      () async {
+        final client = _ScriptedLlmClient([
+          const SocketException('connection reset'),
+          const SocketException('connection reset'),
+        ]);
+        final pipeline = LlmSummaryPipeline(llmClient: client);
+
+        await expectLater(
+          () => pipeline.summarizeFromFacts(
+            word: 'アリス',
+            perFileFacts: ['- 王国の王女'],
+          ),
+          throwsA(isA<SocketException>()),
+        );
+        expect(client.callCount, 2);
+      },
+    );
 
     test('a call that succeeds first time is not retried', () async {
       final client = _ScriptedLlmClient([
@@ -510,10 +531,7 @@ void main() {
       ]);
       final pipeline = LlmSummaryPipeline(llmClient: client);
 
-      await pipeline.extractFileFacts(
-        word: 'アリス',
-        contexts: ['アリスは王国の王女。'],
-      );
+      await pipeline.extractFileFacts(word: 'アリス', contexts: ['アリスは王国の王女。']);
 
       expect(client.callCount, 1);
     });

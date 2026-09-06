@@ -51,50 +51,54 @@ void main() {
       }
     });
 
-    test('with deleteOnFailure=true, deletes corrupt file and recreates',
-        () async {
-      final path = p.join(tempDir.path, 'corrupt.db');
-      // Write a file that is not a valid sqlite database
-      File(path).writeAsBytesSync([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    test(
+      'with deleteOnFailure=true, deletes corrupt file and recreates',
+      () async {
+        final path = p.join(tempDir.path, 'corrupt.db');
+        // Write a file that is not a valid sqlite database
+        File(path).writeAsBytesSync([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 
-      final db = await openOrResetDatabase(
-        path: path,
-        version: 1,
-        onCreate: onCreate,
-        deleteOnFailure: true,
-      );
-      try {
-        // Schema should have been created fresh
-        final rows = await db.query('items');
-        expect(rows, isEmpty);
-      } finally {
-        await db.close();
-      }
-    });
-
-    test('with deleteOnFailure=false, rethrows and preserves the file',
-        () async {
-      final path = p.join(tempDir.path, 'preserved.db');
-      final corrupt = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-      File(path).writeAsBytesSync(corrupt);
-
-      Object? error;
-      try {
-        await openOrResetDatabase(
+        final db = await openOrResetDatabase(
           path: path,
           version: 1,
           onCreate: onCreate,
-          deleteOnFailure: false,
+          deleteOnFailure: true,
         );
-      } catch (e) {
-        error = e;
-      }
-      expect(error, isNotNull);
+        try {
+          // Schema should have been created fresh
+          final rows = await db.query('items');
+          expect(rows, isEmpty);
+        } finally {
+          await db.close();
+        }
+      },
+    );
 
-      // File preserved with original content
-      expect(File(path).existsSync(), isTrue);
-      expect(File(path).readAsBytesSync(), corrupt);
-    });
+    test(
+      'with deleteOnFailure=false, rethrows and preserves the file',
+      () async {
+        final path = p.join(tempDir.path, 'preserved.db');
+        final corrupt = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+        File(path).writeAsBytesSync(corrupt);
+
+        Object? error;
+        try {
+          await openOrResetDatabase(
+            path: path,
+            version: 1,
+            onCreate: onCreate,
+            deleteOnFailure: false,
+          );
+        } catch (e) {
+          error = e;
+        }
+        expect(error, isNotNull);
+
+        // File preserved with original content
+        expect(File(path).existsSync(), isTrue);
+        expect(File(path).readAsBytesSync(), corrupt);
+      },
+    );
 
     test('logs a WARNING via supplied Logger when open fails', () async {
       final path = p.join(tempDir.path, 'corrupt2.db');
@@ -119,9 +123,11 @@ void main() {
       }
 
       final warnings = records
-          .where((r) =>
-              r.level == Level.WARNING &&
-              r.loggerName == 'database_opener_test')
+          .where(
+            (r) =>
+                r.level == Level.WARNING &&
+                r.loggerName == 'database_opener_test',
+          )
           .toList();
       expect(warnings, isNotEmpty);
       expect(warnings.first.message, contains(path));

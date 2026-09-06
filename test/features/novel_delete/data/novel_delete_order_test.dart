@@ -25,9 +25,10 @@ class _RecordingNovelRepo extends Fake implements NovelRepository {
   final List<String> log;
   _RecordingNovelRepo(this.log);
   @override
-  Future<void> deleteByFolderName(String folderName,
-          {DatabaseExecutor? txn}) async =>
-      log.add('novel');
+  Future<void> deleteByFolderName(
+    String folderName, {
+    DatabaseExecutor? txn,
+  }) async => log.add('novel');
 }
 
 class _RecordingProgressRepo extends Fake implements ReadingProgressRepository {
@@ -45,9 +46,10 @@ class _FakeTransaction extends Fake implements Transaction {}
 
 class _FakeTxnDatabase extends Fake implements Database {
   @override
-  Future<T> transaction<T>(Future<T> Function(Transaction txn) action,
-          {bool? exclusive}) async =>
-      action(_FakeTransaction());
+  Future<T> transaction<T>(
+    Future<T> Function(Transaction txn) action, {
+    bool? exclusive,
+  }) async => action(_FakeTransaction());
 }
 
 class _FakeNovelDatabase extends Fake implements NovelDatabase {
@@ -67,8 +69,10 @@ void main() {
       novelDatabase: _FakeNovelDatabase(),
       novelRepository: _RecordingNovelRepo(log),
       readingProgressRepository: _RecordingProgressRepo(log),
-      fileSystemService:
-          _RecordingFileSystemService(log, throwOnDelete: throwOnDelete),
+      fileSystemService: _RecordingFileSystemService(
+        log,
+        throwOnDelete: throwOnDelete,
+      ),
       releaseFolderHandles: releaseFolderHandles,
     );
   }
@@ -78,17 +82,22 @@ void main() {
   group('NovelDeleteService deletion order', () {
     test('releases handles (awaited) before file system deletion', () async {
       var releaseFinished = false;
-      final service = buildService(releaseFolderHandles: (dir) async {
-        await Future<void>.delayed(Duration.zero);
-        releaseFinished = true;
-        log.add('release');
-      });
+      final service = buildService(
+        releaseFolderHandles: (dir) async {
+          await Future<void>.delayed(Duration.zero);
+          releaseFinished = true;
+          log.add('release');
+        },
+      );
 
       await service.delete('narou_n1', '/lib/narou_n1');
 
       expect(log.first, 'release');
-      expect(log.indexOf('release'), lessThan(log.indexOf('deleteDirectory')),
-          reason: 'handle release SHALL complete before file deletion');
+      expect(
+        log.indexOf('release'),
+        lessThan(log.indexOf('deleteDirectory')),
+        reason: 'handle release SHALL complete before file deletion',
+      );
       expect(releaseFinished, isTrue);
     });
 
@@ -97,23 +106,32 @@ void main() {
 
       await service.delete('narou_n1', '/lib/narou_n1');
 
-      expect(log.indexOf('deleteDirectory'), lessThan(log.indexOf('novel')),
-          reason: 'file system deletion SHALL precede DB record deletion');
+      expect(
+        log.indexOf('deleteDirectory'),
+        lessThan(log.indexOf('novel')),
+        reason: 'file system deletion SHALL precede DB record deletion',
+      );
       expect(log, containsAll(['novel', 'progress']));
     });
 
     test('releases handles for the target directory (delete flow)', () async {
       String? received;
-      final service = buildService(releaseFolderHandles: (dir) async {
-        received = dir;
-        log.add('release');
-      });
+      final service = buildService(
+        releaseFolderHandles: (dir) async {
+          received = dir;
+          log.add('release');
+        },
+      );
 
       await service.delete('narou_n1', '/lib/narou_n1');
 
-      expect(received, '/lib/narou_n1',
-          reason: 'the novel delete flow SHALL release per-folder handles for '
-              'the folder being deleted, like move/rename/folder-delete');
+      expect(
+        received,
+        '/lib/narou_n1',
+        reason:
+            'the novel delete flow SHALL release per-folder handles for '
+            'the folder being deleted, like move/rename/folder-delete',
+      );
     });
 
     test('does not delete DB rows when file system deletion fails', () async {
@@ -124,9 +142,13 @@ void main() {
         throwsA(isA<Exception>()),
       );
 
-      expect(log, isNot(contains('novel')),
-          reason: 'metadata MUST be preserved so the folder stays a novel '
-              'folder and the delete can be retried');
+      expect(
+        log,
+        isNot(contains('novel')),
+        reason:
+            'metadata MUST be preserved so the folder stays a novel '
+            'folder and the delete can be retried',
+      );
       expect(log, isNot(contains('progress')));
     });
   });

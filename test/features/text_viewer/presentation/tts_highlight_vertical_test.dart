@@ -6,13 +6,14 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   group('VerticalTextPage - TTS highlight', () {
-    testWidgets('applies green highlight to characters in TTS range',
-        (tester) async {
+    testWidgets('applies green highlight to characters in TTS range', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 300,
@@ -33,10 +34,12 @@ void main() {
       // Characters 'え', 'お' should have no background
       final texts = tester.widgetList<Text>(find.byType(Text)).toList();
       final greenTexts = texts
-          .where((t) =>
-              t.style?.backgroundColor != null &&
-              t.style!.backgroundColor!.toARGB32() ==
-                  Colors.green.withValues(alpha: 0.3).toARGB32())
+          .where(
+            (t) =>
+                t.style?.backgroundColor != null &&
+                t.style!.backgroundColor!.toARGB32() ==
+                    Colors.green.withValues(alpha: 0.3).toARGB32(),
+          )
           .toList();
       expect(greenTexts.length, 3);
     });
@@ -44,9 +47,9 @@ void main() {
     testWidgets('no TTS highlight when range is null', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 300,
@@ -63,21 +66,24 @@ void main() {
 
       final texts = tester.widgetList<Text>(find.byType(Text)).toList();
       final greenTexts = texts
-          .where((t) =>
-              t.style?.backgroundColor != null &&
-              t.style!.backgroundColor!.toARGB32() ==
-                  Colors.green.withValues(alpha: 0.3).toARGB32())
+          .where(
+            (t) =>
+                t.style?.backgroundColor != null &&
+                t.style!.backgroundColor!.toARGB32() ==
+                    Colors.green.withValues(alpha: 0.3).toARGB32(),
+          )
           .toList();
       expect(greenTexts, isEmpty);
     });
 
-    testWidgets('search highlight takes priority over TTS highlight',
-        (tester) async {
+    testWidgets('search highlight takes priority over TTS highlight', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 300,
@@ -98,29 +104,32 @@ void main() {
       final texts = tester.widgetList<Text>(find.byType(Text)).toList();
       // 'あ' should have yellow (search highlight), not green
       final yellowTexts = texts
-          .where((t) =>
-              t.style?.backgroundColor != null &&
-              t.style!.backgroundColor == Colors.yellow)
+          .where(
+            (t) =>
+                t.style?.backgroundColor != null &&
+                t.style!.backgroundColor == Colors.yellow,
+          )
           .toList();
       expect(yellowTexts.length, 1);
 
       // 'い', 'う' should have green (TTS highlight)
       final greenTexts = texts
-          .where((t) =>
-              t.style?.backgroundColor != null &&
-              t.style!.backgroundColor!.toARGB32() ==
-                  Colors.green.withValues(alpha: 0.3).toARGB32())
+          .where(
+            (t) =>
+                t.style?.backgroundColor != null &&
+                t.style!.backgroundColor!.toARGB32() ==
+                    Colors.green.withValues(alpha: 0.3).toARGB32(),
+          )
           .toList();
       expect(greenTexts.length, 2);
     });
 
-    testWidgets('search highlight uses amber in dark mode',
-        (tester) async {
+    testWidgets('search highlight uses amber in dark mode', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-              locale: const Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: ThemeData(brightness: Brightness.dark),
           home: const Scaffold(
             body: SizedBox(
@@ -142,9 +151,11 @@ void main() {
       final texts = tester.widgetList<Text>(find.byType(Text)).toList();
       // 'あ' should have amber (dark mode search highlight)
       final amberTexts = texts
-          .where((t) =>
-              t.style?.backgroundColor != null &&
-              t.style!.backgroundColor == Colors.amber.shade700)
+          .where(
+            (t) =>
+                t.style?.backgroundColor != null &&
+                t.style!.backgroundColor == Colors.amber.shade700,
+          )
           .toList();
       expect(amberTexts.length, 1);
     });

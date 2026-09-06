@@ -73,10 +73,8 @@ void main() {
       expect(computeTextPainterLineStartOffsets(segments), [0, 6]);
     });
 
-    test(
-        'multiple rubies before a line shift its caret offset down to one '
-        'caret unit per ruby, NOT one per markup character',
-        () {
+    test('multiple rubies before a line shift its caret offset down to one '
+        'caret unit per ruby, NOT one per markup character', () {
       // Two rubies before the newline. Raw content offsets would put line 2
       // at much larger position, but caret offsets count ruby = 1 each.
       //   'a'          : caret 0
@@ -101,8 +99,9 @@ void main() {
     const baseStyle = TextStyle(fontSize: fontSize, height: 1.5);
     const lineHeight = fontSize * 1.5;
 
-    testWidgets('plain second line Y matches single line height',
-        (tester) async {
+    testWidgets('plain second line Y matches single line height', (
+      tester,
+    ) async {
       const content = 'line1\nline2\nline3';
       final lineStarts = computeLineStartOffsets(content);
 
@@ -120,48 +119,56 @@ void main() {
     });
 
     testWidgets(
-        'ruby segment on line 1 pushes line 2 Y down compared to plain text',
-        (tester) async {
-      const content = 'ruby_line\nplain';
-      const lineStarts = [0, 'ruby_line\n'.length];
+      'ruby segment on line 1 pushes line 2 Y down compared to plain text',
+      (tester) async {
+        const content = 'ruby_line\nplain';
+        const lineStarts = [0, 'ruby_line\n'.length];
 
-      const plainSpan = TextSpan(text: content, style: baseStyle);
-      final rubyBaseStyle = baseStyle.copyWith(height: 1.0);
-      final rubySpan = TextSpan(style: baseStyle, children: [
-        WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          child: RubyTextWidget(
-            base: 'ruby',
-            rubyText: 'るび',
-            baseStyle: rubyBaseStyle,
-          ),
-        ),
-        const TextSpan(text: '_line\nplain', style: baseStyle),
-      ]);
+        const plainSpan = TextSpan(text: content, style: baseStyle);
+        final rubyBaseStyle = baseStyle.copyWith(height: 1.0);
+        final rubySpan = TextSpan(
+          style: baseStyle,
+          children: [
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: RubyTextWidget(
+                base: 'ruby',
+                rubyText: 'るび',
+                baseStyle: rubyBaseStyle,
+              ),
+            ),
+            const TextSpan(text: '_line\nplain', style: baseStyle),
+          ],
+        );
 
-      final plainY = measureCharOffsetY(
-        textSpan: plainSpan,
-        globalCharOffset: lineStarts[1],
-        maxWidth: 1000,
-        fontSize: fontSize,
-      );
-      final rubyY = measureCharOffsetY(
-        textSpan: rubySpan,
-        globalCharOffset: lineStarts[1],
-        maxWidth: 1000,
-        fontSize: fontSize,
-      );
+        final plainY = measureCharOffsetY(
+          textSpan: plainSpan,
+          globalCharOffset: lineStarts[1],
+          maxWidth: 1000,
+          fontSize: fontSize,
+        );
+        final rubyY = measureCharOffsetY(
+          textSpan: rubySpan,
+          globalCharOffset: lineStarts[1],
+          maxWidth: 1000,
+          fontSize: fontSize,
+        );
 
-      // Ruby segment makes line 1 taller (ruby gloss above base), so line 2
-      // starts further down than in the plain-text variant.
-      expect(rubyY, greaterThan(plainY + 1.0),
+        // Ruby segment makes line 1 taller (ruby gloss above base), so line 2
+        // starts further down than in the plain-text variant.
+        expect(
+          rubyY,
+          greaterThan(plainY + 1.0),
           reason:
               'ruby annotation on line 1 should push line 2 strictly below the '
-              'plain-text line 2 Y (rubyY=$rubyY, plainY=$plainY)');
-    });
+              'plain-text line 2 Y (rubyY=$rubyY, plainY=$plainY)',
+        );
+      },
+    );
 
-    testWidgets('wrapping long line pushes next line down further',
-        (tester) async {
+    testWidgets('wrapping long line pushes next line down further', (
+      tester,
+    ) async {
       final longLine = 'x' * 200;
       final content = '$longLine\nshort';
       final lineStarts = computeLineStartOffsets(content);
@@ -180,14 +187,18 @@ void main() {
       );
 
       expect(yNoWrap, closeTo(lineHeight, 2.0));
-      expect(yNarrow, greaterThan(yNoWrap + lineHeight),
-          reason:
-              'narrow maxWidth should wrap line 1 into multiple rows, pushing '
-              'line 2 well below the no-wrap baseline');
+      expect(
+        yNarrow,
+        greaterThan(yNoWrap + lineHeight),
+        reason:
+            'narrow maxWidth should wrap line 1 into multiple rows, pushing '
+            'line 2 well below the no-wrap baseline',
+      );
     });
 
-    testWidgets('plain content Y scales linearly across many lines',
-        (tester) async {
+    testWidgets('plain content Y scales linearly across many lines', (
+      tester,
+    ) async {
       final lines = List.generate(100, (i) => 'line${i + 1}');
       final content = lines.join('\n');
       final lineStarts = computeLineStartOffsets(content);
@@ -199,47 +210,54 @@ void main() {
           maxWidth: 1000,
           fontSize: fontSize,
         );
-        expect(y, closeTo((n - 1) * lineHeight, 2.0),
-            reason: 'line $n should be at ~${(n - 1) * lineHeight}, got $y');
+        expect(
+          y,
+          closeTo((n - 1) * lineHeight, 2.0),
+          reason: 'line $n should be at ~${(n - 1) * lineHeight}, got $y',
+        );
       }
     });
 
     testWidgets(
-        'placeholder height matches actual RubyTextWidget Column height',
-        (tester) async {
-      const fs = 14.0;
-      const baseStyle = TextStyle(fontSize: fs, height: 1.5);
+      'placeholder height matches actual RubyTextWidget Column height',
+      (tester) async {
+        const fs = 14.0;
+        const baseStyle = TextStyle(fontSize: fs, height: 1.5);
 
-      // Pump a stand-alone RubyTextWidget so we can measure its actual
-      // rendered size — this is what RenderEditable feeds into its internal
-      // TextPainter as a placeholder dimension.
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: UnconstrainedBox(
-              child: RubyTextWidget(
-                base: '漢字',
-                rubyText: 'かんじ',
-                baseStyle: baseStyle,
+        // Pump a stand-alone RubyTextWidget so we can measure its actual
+        // rendered size — this is what RenderEditable feeds into its internal
+        // TextPainter as a placeholder dimension.
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(
+              body: UnconstrainedBox(
+                child: RubyTextWidget(
+                  base: '漢字',
+                  rubyText: 'かんじ',
+                  baseStyle: baseStyle,
+                ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final actualSize =
-          tester.getSize(find.byType(RubyTextWidget));
+        );
+        await tester.pumpAndSettle();
+        final actualSize = tester.getSize(find.byType(RubyTextWidget));
 
-      // The estimate `_placeholderDimensionsFor` uses for height.
-      const estimatedHeight = fs * 1.5;
-      expect(actualSize.height, closeTo(estimatedHeight, 2.0),
+        // The estimate `_placeholderDimensionsFor` uses for height.
+        const estimatedHeight = fs * 1.5;
+        expect(
+          actualSize.height,
+          closeTo(estimatedHeight, 2.0),
           reason:
               'placeholder height estimate ($estimatedHeight) should match '
-              'actual RubyTextWidget height (${actualSize.height}) within 2 px');
-    });
+              'actual RubyTextWidget height (${actualSize.height}) within 2 px',
+        );
+      },
+    );
 
-    testWidgets('larger font size scales Y of subsequent lines',
-        (tester) async {
+    testWidgets('larger font size scales Y of subsequent lines', (
+      tester,
+    ) async {
       const content = 'line1\nline2';
       final lineStarts = computeLineStartOffsets(content);
 
@@ -262,8 +280,11 @@ void main() {
         fontSize: 28,
       );
 
-      expect(yLarge, greaterThan(ySmall * 1.5),
-          reason: 'doubling the font size should at least 1.5x line 2 Y');
+      expect(
+        yLarge,
+        greaterThan(ySmall * 1.5),
+        reason: 'doubling the font size should at least 1.5x line 2 Y',
+      );
     });
   });
 
@@ -312,8 +333,7 @@ void main() {
   }
 
   group('TextContentRenderer', () {
-    testWidgets('horizontal mode renders SelectableText.rich',
-        (tester) async {
+    testWidgets('horizontal mode renders SelectableText.rich', (tester) async {
       await pumpRenderer(tester, content: 'テスト小説の内容です。');
       expect(find.byType(SelectableText), findsOneWidget);
       expect(find.byType(VerticalTextViewer), findsNothing);
@@ -329,83 +349,25 @@ void main() {
       expect(find.byType(SelectableText), findsNothing);
     });
 
-    testWidgets('horizontal mode wraps text in SingleChildScrollView',
-        (tester) async {
+    testWidgets('horizontal mode wraps text in SingleChildScrollView', (
+      tester,
+    ) async {
       await pumpRenderer(tester, content: 'テスト');
       expect(find.byType(SingleChildScrollView), findsOneWidget);
     });
 
     testWidgets(
-        'TextContentRenderer never hosts the HoverPopupWidget itself — the '
-        'overlay insertion is HoverPopupHost\'s responsibility',
-        (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
-            // Pretend there's a cached word so the renderer treats the
-            // text as having marks.
-            markedWordsProvider
-                .overrideWithValue({'アリス': MarkStyle.solid}),
-          ],
-          child: const MaterialApp(
-            locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: SizedBox(
-                height: 400,
-                child: TextContentRenderer(content: 'アリスは旅に出た。'),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final element = tester.element(find.byType(TextContentRenderer));
-      final container = ProviderScope.containerOf(element);
-      await container
-          .read(displayModeProvider.notifier)
-          .setMode(TextDisplayMode.vertical);
-      await tester.pumpAndSettle();
-
-      // Vertical viewer still receives the marked words map.
-      final vertical =
-          tester.widget<VerticalTextViewer>(find.byType(VerticalTextViewer));
-      expect(vertical.markedWords.keys, contains('アリス'));
-      expect(find.byType(SelectableText), findsNothing);
-
-      // Forcing the notifier visible does NOT cause TextContentRenderer to
-      // render a popup — there is no Overlay in this widget subtree because
-      // TextContentRenderer is not a HoverPopupHost.
-      container.read(hoverPopupProvider.notifier).show(
-            word: 'アリス',
-            position: const Offset(0, 0),
-            token: const (start: 0, end: 3),
-          );
-      await tester.pumpAndSettle();
-      expect(
-        find.descendant(
-          of: find.byType(TextContentRenderer),
-          matching: find.byType(HoverPopupWidget),
-        ),
-        findsNothing,
-      );
-    });
-
-    testWidgets(
-      'vertical mode wires onMarkEnter / onMarkExit / onHoverHideRequest into '
-      'VerticalTextViewer, and invoking them drives hoverPopupProvider',
+      'TextContentRenderer never hosts the HoverPopupWidget itself — the '
+      'overlay insertion is HoverPopupHost\'s responsibility',
       (tester) async {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
               libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
-              markedWordsProvider
-                  .overrideWithValue({'アリス': MarkStyle.solid}),
+              // Pretend there's a cached word so the renderer treats the
+              // text as having marks.
+              markedWordsProvider.overrideWithValue({'アリス': MarkStyle.solid}),
             ],
             child: const MaterialApp(
               locale: Locale('ja'),
@@ -429,14 +391,85 @@ void main() {
             .setMode(TextDisplayMode.vertical);
         await tester.pumpAndSettle();
 
-        final vertical =
-            tester.widget<VerticalTextViewer>(find.byType(VerticalTextViewer));
-        expect(vertical.onMarkEnter, isNotNull,
-            reason: 'vertical wiring must include onMarkEnter');
-        expect(vertical.onMarkExit, isNotNull,
-            reason: 'vertical wiring must include onMarkExit');
-        expect(vertical.onHoverHideRequest, isNotNull,
-            reason: 'vertical wiring must include onHoverHideRequest');
+        // Vertical viewer still receives the marked words map.
+        final vertical = tester.widget<VerticalTextViewer>(
+          find.byType(VerticalTextViewer),
+        );
+        expect(vertical.markedWords.keys, contains('アリス'));
+        expect(find.byType(SelectableText), findsNothing);
+
+        // Forcing the notifier visible does NOT cause TextContentRenderer to
+        // render a popup — there is no Overlay in this widget subtree because
+        // TextContentRenderer is not a HoverPopupHost.
+        container
+            .read(hoverPopupProvider.notifier)
+            .show(
+              word: 'アリス',
+              position: const Offset(0, 0),
+              token: const (start: 0, end: 3),
+            );
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(
+            of: find.byType(TextContentRenderer),
+            matching: find.byType(HoverPopupWidget),
+          ),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'vertical mode wires onMarkEnter / onMarkExit / onHoverHideRequest into '
+      'VerticalTextViewer, and invoking them drives hoverPopupProvider',
+      (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
+              markedWordsProvider.overrideWithValue({'アリス': MarkStyle.solid}),
+            ],
+            child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: SizedBox(
+                  height: 400,
+                  child: TextContentRenderer(content: 'アリスは旅に出た。'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final element = tester.element(find.byType(TextContentRenderer));
+        final container = ProviderScope.containerOf(element);
+        await container
+            .read(displayModeProvider.notifier)
+            .setMode(TextDisplayMode.vertical);
+        await tester.pumpAndSettle();
+
+        final vertical = tester.widget<VerticalTextViewer>(
+          find.byType(VerticalTextViewer),
+        );
+        expect(
+          vertical.onMarkEnter,
+          isNotNull,
+          reason: 'vertical wiring must include onMarkEnter',
+        );
+        expect(
+          vertical.onMarkExit,
+          isNotNull,
+          reason: 'vertical wiring must include onMarkExit',
+        );
+        expect(
+          vertical.onHoverHideRequest,
+          isNotNull,
+          reason: 'vertical wiring must include onHoverHideRequest',
+        );
 
         // Drive the wired callbacks and verify they affect the provider.
         const token = (start: 0, end: 3);
@@ -468,22 +501,21 @@ void main() {
         final controlNotifier = _BookmarkListNotifier([1, 3, 5]);
         final controlProvider =
             NotifierProvider<_BookmarkListNotifier, List<int>>(
-                () => controlNotifier);
+              () => controlNotifier,
+            );
 
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
-              libraryPathProvider
-                  .overrideWithValue('/tmp/test/NovelViewer'),
+              libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
               bookmarkLineNumbersForFileProvider.overrideWith(
                 (ref) async => ref.watch(controlProvider),
               ),
             ],
             child: const MaterialApp(
               locale: Locale('ja'),
-              localizationsDelegates:
-                  AppLocalizations.localizationsDelegates,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: SizedBox(
@@ -504,10 +536,13 @@ void main() {
         container.read(controlProvider.notifier).set(const [1, 3]);
         await tester.pumpAndSettle();
 
-        expect(find.byIcon(Icons.bookmark), findsNWidgets(2),
-            reason:
-                'after shrinking bookmark list from [1,3,5] to [1,3], only '
-                'two icons should remain — no ghost icon from line 5');
+        expect(
+          find.byIcon(Icons.bookmark),
+          findsNWidgets(2),
+          reason:
+              'after shrinking bookmark list from [1,3,5] to [1,3], only '
+              'two icons should remain — no ghost icon from line 5',
+        );
       },
     );
 
@@ -525,15 +560,14 @@ void main() {
           ProviderScope(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
-              libraryPathProvider
-                  .overrideWithValue('/tmp/test/NovelViewer'),
-              bookmarkLineNumbersForFileProvider
-                  .overrideWith((ref) async => const [2]),
+              libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
+              bookmarkLineNumbersForFileProvider.overrideWith(
+                (ref) async => const [2],
+              ),
             ],
             child: MaterialApp(
               locale: const Locale('ja'),
-              localizationsDelegates:
-                  AppLocalizations.localizationsDelegates,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: SizedBox(
@@ -548,23 +582,30 @@ void main() {
         await tester.pumpAndSettle();
 
         final bookmarkFinder = find.byIcon(Icons.bookmark);
-        expect(bookmarkFinder, findsOneWidget,
-            reason: 'a single bookmark icon should render for line 2');
+        expect(
+          bookmarkFinder,
+          findsOneWidget,
+          reason: 'a single bookmark icon should render for line 2',
+        );
 
         // The Y of the bookmark icon, relative to the renderer's top.
         final iconTop = tester.getTopLeft(bookmarkFinder).dy;
-        final rendererTop =
-            tester.getTopLeft(find.byType(TextContentRenderer)).dy;
+        final rendererTop = tester
+            .getTopLeft(find.byType(TextContentRenderer))
+            .dy;
         final relY = iconTop - rendererTop;
 
         // The old broken formula would place the line-2 bookmark at
         // 16 (top padding) + 1 × (14 × 1.5) ≈ 37 px from the renderer top.
         // With wrapping, the actual line-2 Y must be much greater.
         const oldBrokenY = 16.0 + 14.0 * 1.5;
-        expect(relY, greaterThan(oldBrokenY + 14.0),
-            reason:
-                'bookmark must reflect the wrapped layout of line 1, not the '
-                'naive line-height formula (relY=$relY, oldBrokenY=$oldBrokenY)');
+        expect(
+          relY,
+          greaterThan(oldBrokenY + 14.0),
+          reason:
+              'bookmark must reflect the wrapped layout of line 1, not the '
+              'naive line-height formula (relY=$relY, oldBrokenY=$oldBrokenY)',
+        );
       },
     );
   });

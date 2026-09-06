@@ -17,7 +17,8 @@ List<FileEntry> _files(int count) {
     count,
     (i) => FileEntry(
       name: '${(i + 1).toString().padLeft(3, '0')}-ep${i + 1}.txt',
-      path: '/library/novel/${(i + 1).toString().padLeft(3, '0')}-ep${i + 1}.txt',
+      path:
+          '/library/novel/${(i + 1).toString().padLeft(3, '0')}-ep${i + 1}.txt',
     ),
   );
 }
@@ -31,8 +32,9 @@ ProviderContainer _makeContainer({
       directoryContentsProvider.overrideWith((ref) async {
         return DirectoryContents(files: files, subdirectories: const []);
       }),
-      selectedFileProvider
-          .overrideWith(() => _StubSelectedFileNotifier(selected)),
+      selectedFileProvider.overrideWith(
+        () => _StubSelectedFileNotifier(selected),
+      ),
     ],
   );
 }

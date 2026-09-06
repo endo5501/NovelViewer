@@ -24,8 +24,9 @@ Future<Map<String, String>> _schemaObjects(Database db) async {
   return {
     for (final row in rows)
       if (row['sql'] != null)
-        row['name'] as String:
-            (row['sql'] as String).replaceAll(RegExp(r'\s+'), ' ').trim(),
+        row['name'] as String: (row['sql'] as String)
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim(),
   };
 }
 
@@ -36,34 +37,39 @@ void main() {
   });
 
   test(
-      'shared in-memory test fixture has the same schema as production NovelDatabase',
-      () async {
-    final tempDir = Directory.systemTemp.createTempSync('schema_fidelity_');
-    try {
-      // Production schema: a fresh NovelDatabase runs the real _onCreate.
-      final production = NovelDatabase(dbDirPath: tempDir.path);
-      late final Map<String, String> productionSchema;
+    'shared in-memory test fixture has the same schema as production NovelDatabase',
+    () async {
+      final tempDir = Directory.systemTemp.createTempSync('schema_fidelity_');
       try {
-        productionSchema = await _schemaObjects(await production.database);
-      } finally {
-        await production.close();
-      }
+        // Production schema: a fresh NovelDatabase runs the real _onCreate.
+        final production = NovelDatabase(dbDirPath: tempDir.path);
+        late final Map<String, String> productionSchema;
+        try {
+          productionSchema = await _schemaObjects(await production.database);
+        } finally {
+          await production.close();
+        }
 
-      // Test fixture schema: built via the shared helper that delegates to the
-      // production schema definition — no hand-written DDL.
-      final fixtureDb = await openInMemoryNovelMetadataDb();
-      late final Map<String, String> fixtureSchema;
-      try {
-        fixtureSchema = await _schemaObjects(fixtureDb);
-      } finally {
-        await fixtureDb.close();
-      }
+        // Test fixture schema: built via the shared helper that delegates to the
+        // production schema definition — no hand-written DDL.
+        final fixtureDb = await openInMemoryNovelMetadataDb();
+        late final Map<String, String> fixtureSchema;
+        try {
+          fixtureSchema = await _schemaObjects(fixtureDb);
+        } finally {
+          await fixtureDb.close();
+        }
 
-      expect(fixtureSchema, productionSchema,
-          reason: 'test fixtures MUST inherit the production schema so that a '
-              'production schema change cannot drift away from tests');
-    } finally {
-      tempDir.deleteSync(recursive: true);
-    }
-  });
+        expect(
+          fixtureSchema,
+          productionSchema,
+          reason:
+              'test fixtures MUST inherit the production schema so that a '
+              'production schema change cannot drift away from tests',
+        );
+      } finally {
+        tempDir.deleteSync(recursive: true);
+      }
+    },
+  );
 }

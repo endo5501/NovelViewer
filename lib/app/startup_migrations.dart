@@ -11,6 +11,10 @@ Future<void> runStartupMigrations(SettingsRepository repo) async {
   try {
     await repo.migrateApiKeyToSecureStorage();
   } catch (e, stack) {
-    _log.warning('runStartupMigrations: API key migration failed: $e', e, stack);
+    _log.warning(
+      'runStartupMigrations: API key migration failed: $e',
+      e,
+      stack,
+    );
   }
 }

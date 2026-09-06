@@ -13,10 +13,7 @@ void main() {
 
     test('splits contexts into multiple chunks at context boundaries', () {
       // Create contexts that together exceed 4000 chars
-      final contexts = List.generate(
-        10,
-        (i) => 'コンテキスト$i: ${'あ' * 500}',
-      );
+      final contexts = List.generate(10, (i) => 'コンテキスト$i: ${'あ' * 500}');
 
       final chunks = ContextChunker.split(contexts);
 
@@ -33,8 +30,9 @@ void main() {
       final chunks = ContextChunker.split(contexts);
 
       // The large entry should be in its own chunk
-      final chunkWithLarge =
-          chunks.where((c) => c.contains(largeEntry)).toList();
+      final chunkWithLarge = chunks
+          .where((c) => c.contains(largeEntry))
+          .toList();
       expect(chunkWithLarge.length, 1);
       expect(chunkWithLarge[0], [largeEntry]);
     });

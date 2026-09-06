@@ -51,10 +51,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// Focus scopes for the two panes that `switchPane` (Tab) cycles between.
   /// The debug labels are also used by widget tests to assert which pane holds
   /// focus.
-  final FocusScopeNode _fileBrowserPaneFocus =
-      FocusScopeNode(debugLabel: 'fileBrowserPane');
-  final FocusScopeNode _novelPaneFocus =
-      FocusScopeNode(debugLabel: 'novelPane');
+  final FocusScopeNode _fileBrowserPaneFocus = FocusScopeNode(
+    debugLabel: 'fileBrowserPane',
+  );
+  final FocusScopeNode _novelPaneFocus = FocusScopeNode(
+    debugLabel: 'novelPane',
+  );
 
   @override
   void initState() {
@@ -88,7 +90,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // (focused novel body) is not a text field, so Escape still works there.
     if (isTextInputFocused()) return false;
 
-    final searchActive = ref.read(searchBoxVisibleProvider) ||
+    final searchActive =
+        ref.read(searchBoxVisibleProvider) ||
         ref.read(searchQueryProvider) != null;
     if (searchActive) {
       closeSearchSession(ref);
@@ -165,8 +168,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           key: const Key('create_collection_name_field'),
           controller: controller,
           autofocus: true,
-          decoration:
-              InputDecoration(hintText: l10n.download_createCollectionHint),
+          decoration: InputDecoration(
+            hintText: l10n.download_createCollectionHint,
+          ),
           onSubmitted: (v) => Navigator.of(dialogContext).pop(v.trim()),
         ),
         actions: [
@@ -185,10 +189,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     controller.dispose();
 
     if (name == null || name.isEmpty) return;
-    await ref.read(downloadProvider.notifier).createEmptyCollection(
-          name: name,
-          libraryPath: libraryPath,
-        );
+    await ref
+        .read(downloadProvider.notifier)
+        .createEmptyCollection(name: name, libraryPath: libraryPath);
     ref.invalidate(directoryContentsProvider);
   }
 
@@ -202,7 +205,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       key: const Key('bookmark_button'),
       icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border),
       onPressed: isEnabled ? () => _toggleBookmark() : null,
-      tooltip: isBookmarked ? AppLocalizations.of(context)!.homeScreen_removeBookmarkTooltip : AppLocalizations.of(context)!.homeScreen_addBookmarkTooltip,
+      tooltip: isBookmarked
+          ? AppLocalizations.of(context)!.homeScreen_removeBookmarkTooltip
+          : AppLocalizations.of(context)!.homeScreen_addBookmarkTooltip,
     );
   }
 
@@ -213,8 +218,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final lineNumber = ref.read(currentViewLineProvider);
     final isBookmarked = ref.read(isBookmarkedProvider);
-    final repository =
-        await ref.read(bookmarkRepositoryProvider(folderPath).future);
+    final repository = await ref.read(
+      bookmarkRepositoryProvider(folderPath).future,
+    );
 
     await toggleBookmark(
       repository,
@@ -299,20 +305,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             .read(rightColumnVisibleProvider.notifier)
                             .toggle(),
                         tooltip: ref.watch(rightColumnVisibleProvider)
-                            ? AppLocalizations.of(context)!.homeScreen_hideRightColumnTooltip
-                            : AppLocalizations.of(context)!.homeScreen_showRightColumnTooltip,
+                            ? AppLocalizations.of(
+                                context,
+                              )!.homeScreen_hideRightColumnTooltip
+                            : AppLocalizations.of(
+                                context,
+                              )!.homeScreen_showRightColumnTooltip,
                       ),
                       IconButton(
                         key: const Key('new_collection_button'),
                         icon: const Icon(Icons.create_new_folder_outlined),
                         onPressed: _showCreateCollectionDialog,
-                        tooltip:
-                            AppLocalizations.of(context)!.fileBrowser_newCollection,
+                        tooltip: AppLocalizations.of(
+                          context,
+                        )!.fileBrowser_newCollection,
                       ),
                       IconButton(
                         icon: const Icon(Icons.download),
                         onPressed: () => DownloadDialog.show(context),
-                        tooltip: AppLocalizations.of(context)!.homeScreen_downloadTooltip,
+                        tooltip: AppLocalizations.of(
+                          context,
+                        )!.homeScreen_downloadTooltip,
                       ),
                       IconButton(
                         icon: const Icon(Icons.settings),

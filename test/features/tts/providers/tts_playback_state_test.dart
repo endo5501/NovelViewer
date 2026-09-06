@@ -38,8 +38,9 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container.read(ttsGenerationProgressProvider.notifier).set(
-          const TtsGenerationProgress(current: 5, total: 10));
+      container
+          .read(ttsGenerationProgressProvider.notifier)
+          .set(const TtsGenerationProgress(current: 5, total: 10));
       final progress = container.read(ttsGenerationProgressProvider);
       expect(progress.current, 5);
       expect(progress.total, 10);
@@ -61,39 +62,49 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(ttsPlaybackStateProvider), TtsPlaybackState.stopped);
+      expect(
+        container.read(ttsPlaybackStateProvider),
+        TtsPlaybackState.stopped,
+      );
     });
 
     test('can transition to playing', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container.read(ttsPlaybackStateProvider.notifier).set(
-          TtsPlaybackState.playing);
+      container
+          .read(ttsPlaybackStateProvider.notifier)
+          .set(TtsPlaybackState.playing);
       expect(
-          container.read(ttsPlaybackStateProvider), TtsPlaybackState.playing);
+        container.read(ttsPlaybackStateProvider),
+        TtsPlaybackState.playing,
+      );
     });
 
     test('can transition to paused', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container.read(ttsPlaybackStateProvider.notifier).set(
-          TtsPlaybackState.paused);
-      expect(
-          container.read(ttsPlaybackStateProvider), TtsPlaybackState.paused);
+      container
+          .read(ttsPlaybackStateProvider.notifier)
+          .set(TtsPlaybackState.paused);
+      expect(container.read(ttsPlaybackStateProvider), TtsPlaybackState.paused);
     });
 
     test('can transition back to stopped', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container.read(ttsPlaybackStateProvider.notifier).set(
-          TtsPlaybackState.playing);
-      container.read(ttsPlaybackStateProvider.notifier).set(
-          TtsPlaybackState.stopped);
+      container
+          .read(ttsPlaybackStateProvider.notifier)
+          .set(TtsPlaybackState.playing);
+      container
+          .read(ttsPlaybackStateProvider.notifier)
+          .set(TtsPlaybackState.stopped);
       expect(
-          container.read(ttsPlaybackStateProvider), TtsPlaybackState.stopped);
+        container.read(ttsPlaybackStateProvider),
+        TtsPlaybackState.stopped,
+      );
     });
   });
 
@@ -118,8 +129,9 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container.read(ttsHighlightRangeProvider.notifier).set(
-          const TextRange(start: 0, end: 5));
+      container
+          .read(ttsHighlightRangeProvider.notifier)
+          .set(const TextRange(start: 0, end: 5));
       container.read(ttsHighlightRangeProvider.notifier).set(null);
       expect(container.read(ttsHighlightRangeProvider), isNull);
     });

@@ -14,21 +14,23 @@ Widget _buildTestWidget({
   double height = 400,
   ValueChanged<ViewerSelection?>? onSelectionChanged,
 }) {
-  return ProviderScope(child: MaterialApp(
-        locale: const Locale('ja'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-    home: Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints.tightFor(width: width, height: height),
-        child: VerticalTextViewer(
-          segments: segments,
-          baseStyle: const TextStyle(fontSize: 14.0),
-          onSelectionChanged: onSelectionChanged,
+  return ProviderScope(
+    child: MaterialApp(
+      locale: const Locale('ja'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints.tightFor(width: width, height: height),
+          child: VerticalTextViewer(
+            segments: segments,
+            baseStyle: const TextStyle(fontSize: 14.0),
+            onSelectionChanged: onSelectionChanged,
+          ),
         ),
       ),
     ),
-  ));
+  );
 }
 
 /// Extract current page number from page indicator text (e.g., "1 / 5" → 1)
@@ -45,23 +47,17 @@ int? _extractCurrentPage(WidgetTester tester) {
 List<TextSegment> _multiPageSegments() => [PlainTextSegment('あ' * 500)];
 
 /// Send a scroll event to the center of the VerticalTextViewer.
-Future<void> _sendScrollEvent(
-  WidgetTester tester, {
-  required double dy,
-}) async {
+Future<void> _sendScrollEvent(WidgetTester tester, {required double dy}) async {
   final center = tester.getCenter(find.byType(VerticalTextViewer));
-  await tester.sendEventToBinding(PointerScrollEvent(
-    position: center,
-    scrollDelta: Offset(0, dy),
-  ));
+  await tester.sendEventToBinding(
+    PointerScrollEvent(position: center, scrollDelta: Offset(0, dy)),
+  );
 }
 
 void main() {
   group('VerticalTextViewer wheel page navigation', () {
     testWidgets('wheel scroll down advances to next page', (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
       expect(_extractCurrentPage(tester), 1);
 
       // Scroll down (positive dy) should advance to next page
@@ -72,9 +68,7 @@ void main() {
     });
 
     testWidgets('wheel scroll up returns to previous page', (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
 
       // First navigate to page 2 using arrow key
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
@@ -90,8 +84,7 @@ void main() {
   });
 
   group('VerticalTextViewer wheel boundary conditions', () {
-    testWidgets('wheel scroll down on last page has no effect',
-        (tester) async {
+    testWidgets('wheel scroll down on last page has no effect', (tester) async {
       final segments = [PlainTextSegment('あ' * 60)];
 
       await tester.pumpWidget(
@@ -118,9 +111,7 @@ void main() {
     });
 
     testWidgets('wheel scroll up on first page has no effect', (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
       expect(_extractCurrentPage(tester), 1);
 
       // Scroll up on first page should have no effect
@@ -132,11 +123,10 @@ void main() {
   });
 
   group('VerticalTextViewer wheel animation guard', () {
-    testWidgets('wheel events are ignored during page transition animation',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+    testWidgets('wheel events are ignored during page transition animation', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
       expect(_extractCurrentPage(tester), 1);
 
       // Start page transition with arrow key
@@ -155,17 +145,14 @@ void main() {
 
   group('VerticalTextViewer wheel event filtering', () {
     testWidgets('non-scroll pointer signals are ignored', (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
       expect(_extractCurrentPage(tester), 1);
 
       // Send a PointerScaleEvent (not PointerScrollEvent)
       final center = tester.getCenter(find.byType(VerticalTextViewer));
-      await tester.sendEventToBinding(PointerScaleEvent(
-        position: center,
-        scale: 1.5,
-      ));
+      await tester.sendEventToBinding(
+        PointerScaleEvent(position: center, scale: 1.5),
+      );
       await tester.pumpAndSettle();
 
       // Page should not change
@@ -174,11 +161,10 @@ void main() {
   });
 
   group('VerticalTextViewer wheel coexistence with other navigation', () {
-    testWidgets('wheel navigation coexists with arrow key navigation',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+    testWidgets('wheel navigation coexists with arrow key navigation', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
       expect(_extractCurrentPage(tester), 1);
 
       // Wheel scroll to page 2

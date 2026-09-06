@@ -133,9 +133,18 @@ void main() {
 
         final result = await repository.getAllAsMap();
         expect(result, hasLength(3));
-        expect(result.containsKey('https://ncode.syosetu.com/n9669bk/1/'), isTrue);
-        expect(result.containsKey('https://ncode.syosetu.com/n9669bk/2/'), isTrue);
-        expect(result.containsKey('https://ncode.syosetu.com/n9669bk/3/'), isTrue);
+        expect(
+          result.containsKey('https://ncode.syosetu.com/n9669bk/1/'),
+          isTrue,
+        );
+        expect(
+          result.containsKey('https://ncode.syosetu.com/n9669bk/2/'),
+          isTrue,
+        );
+        expect(
+          result.containsKey('https://ncode.syosetu.com/n9669bk/3/'),
+          isTrue,
+        );
         expect(result['https://ncode.syosetu.com/n9669bk/2/']!.title, '第一話');
       });
     });

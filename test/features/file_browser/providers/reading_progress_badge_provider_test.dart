@@ -13,10 +13,7 @@ import 'package:novel_viewer/features/reading_progress/providers/reading_progres
 
 import '../../../helpers/novel_metadata_db_fixture.dart';
 
-NovelMetadata _novel({
-  required String folderName,
-  required int episodeCount,
-}) {
+NovelMetadata _novel({required String folderName, required int episodeCount}) {
   return NovelMetadata(
     siteType: 'narou',
     novelId: folderName,
@@ -46,46 +43,50 @@ void main() {
 
   ProviderContainer makeContainer() {
     final container = ProviderContainer(
-      overrides: [
-        novelDatabaseProvider.overrideWithValue(novelDatabase),
-      ],
+      overrides: [novelDatabaseProvider.overrideWithValue(novelDatabase)],
     );
     addTearDown(container.dispose);
     return container;
   }
 
-  test('combines episode_count and reading_progress per registered novel',
-      () async {
-    final novelRepo = NovelRepository(novelDatabase);
-    await novelRepo.upsert(_novel(folderName: 'narou_n1234ab', episodeCount: 120));
-    await novelRepo.upsert(_novel(folderName: 'kakuyomu_1689', episodeCount: 80));
+  test(
+    'combines episode_count and reading_progress per registered novel',
+    () async {
+      final novelRepo = NovelRepository(novelDatabase);
+      await novelRepo.upsert(
+        _novel(folderName: 'narou_n1234ab', episodeCount: 120),
+      );
+      await novelRepo.upsert(
+        _novel(folderName: 'kakuyomu_1689', episodeCount: 80),
+      );
 
-    final progressRepo = ReadingProgressRepository(novelDatabase);
-    await progressRepo.upsert(
-      novelId: 'narou_n1234ab',
-      fileName: '003_chapter3.txt',
-    );
+      final progressRepo = ReadingProgressRepository(novelDatabase);
+      await progressRepo.upsert(
+        novelId: 'narou_n1234ab',
+        fileName: '003_chapter3.txt',
+      );
 
-    final container = makeContainer();
-    final badges =
-        await container.read(readingProgressBadgesProvider.future);
+      final container = makeContainer();
+      final badges = await container.read(readingProgressBadgesProvider.future);
 
-    // Reading-in-progress novel.
-    expect(badges['narou_n1234ab']!.read, 3);
-    expect(badges['narou_n1234ab']!.total, 120);
+      // Reading-in-progress novel.
+      expect(badges['narou_n1234ab']!.read, 3);
+      expect(badges['narou_n1234ab']!.total, 120);
 
-    // Unread novel: 0 / N from episode_count.
-    expect(badges['kakuyomu_1689']!.read, 0);
-    expect(badges['kakuyomu_1689']!.total, 80);
-  });
+      // Unread novel: 0 / N from episode_count.
+      expect(badges['kakuyomu_1689']!.read, 0);
+      expect(badges['kakuyomu_1689']!.total, 80);
+    },
+  );
 
   test('does not include folders that are not registered novels', () async {
     final novelRepo = NovelRepository(novelDatabase);
-    await novelRepo.upsert(_novel(folderName: 'narou_n1234ab', episodeCount: 10));
+    await novelRepo.upsert(
+      _novel(folderName: 'narou_n1234ab', episodeCount: 10),
+    );
 
     final container = makeContainer();
-    final badges =
-        await container.read(readingProgressBadgesProvider.future);
+    final badges = await container.read(readingProgressBadgesProvider.future);
 
     expect(badges.containsKey('narou_n1234ab'), isTrue);
     expect(badges.containsKey('manual_folder'), isFalse);
@@ -93,7 +94,9 @@ void main() {
 
   test('degrades to unread and logs WARNING when bulk read fails', () async {
     final novelRepo = NovelRepository(novelDatabase);
-    await novelRepo.upsert(_novel(folderName: 'narou_n1234ab', episodeCount: 50));
+    await novelRepo.upsert(
+      _novel(folderName: 'narou_n1234ab', episodeCount: 50),
+    );
 
     // Break the reading_progress read path so findAll throws.
     final db = await novelDatabase.database;
@@ -104,8 +107,7 @@ void main() {
     addTearDown(sub.cancel);
 
     final container = makeContainer();
-    final badges =
-        await container.read(readingProgressBadgesProvider.future);
+    final badges = await container.read(readingProgressBadgesProvider.future);
 
     // Still renders totals; progress degrades to 0 (unread).
     expect(badges['narou_n1234ab']!.read, 0);
@@ -119,15 +121,16 @@ void main() {
 
   test('recomputes when the reading-progress revision is bumped', () async {
     final novelRepo = NovelRepository(novelDatabase);
-    await novelRepo.upsert(_novel(folderName: 'narou_n1234ab', episodeCount: 120));
+    await novelRepo.upsert(
+      _novel(folderName: 'narou_n1234ab', episodeCount: 120),
+    );
 
     final progressRepo = ReadingProgressRepository(novelDatabase);
 
     final container = makeContainer();
 
     // Initially unread.
-    final before =
-        await container.read(readingProgressBadgesProvider.future);
+    final before = await container.read(readingProgressBadgesProvider.future);
     expect(before['narou_n1234ab']!.read, 0);
 
     // Simulate the user advancing inside the novel: progress is saved and the
@@ -138,20 +141,22 @@ void main() {
     );
     container.read(readingProgressRevisionProvider.notifier).bump();
 
-    final after =
-        await container.read(readingProgressBadgesProvider.future);
+    final after = await container.read(readingProgressBadgesProvider.future);
     expect(after['narou_n1234ab']!.read, 5);
   });
 
-  test('returns badge values usable by the UI (ReadingProgressBadge)',
-      () async {
-    final novelRepo = NovelRepository(novelDatabase);
-    await novelRepo.upsert(_novel(folderName: 'narou_n1234ab', episodeCount: 120));
+  test(
+    'returns badge values usable by the UI (ReadingProgressBadge)',
+    () async {
+      final novelRepo = NovelRepository(novelDatabase);
+      await novelRepo.upsert(
+        _novel(folderName: 'narou_n1234ab', episodeCount: 120),
+      );
 
-    final container = makeContainer();
-    final badges =
-        await container.read(readingProgressBadgesProvider.future);
+      final container = makeContainer();
+      final badges = await container.read(readingProgressBadgesProvider.future);
 
-    expect(badges['narou_n1234ab'], isA<ReadingProgressBadge>());
-  });
+      expect(badges['narou_n1234ab'], isA<ReadingProgressBadge>());
+    },
+  );
 }

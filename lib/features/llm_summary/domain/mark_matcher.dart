@@ -32,10 +32,9 @@ List<MarkSpan> findMarks({
 }) {
   if (text.isEmpty || wordsByStyle.isEmpty) return const [];
 
-  final candidates = wordsByStyle.entries
-      .where((e) => e.key.length >= minWordLength)
-      .toList()
-    ..sort((a, b) => b.key.length.compareTo(a.key.length));
+  final candidates =
+      wordsByStyle.entries.where((e) => e.key.length >= minWordLength).toList()
+        ..sort((a, b) => b.key.length.compareTo(a.key.length));
   if (candidates.isEmpty) return const [];
 
   final marks = <MarkSpan>[];
@@ -53,12 +52,14 @@ List<MarkSpan> findMarks({
       }
     }
     if (matchedWord != null) {
-      marks.add(MarkSpan(
-        start: i,
-        end: i + matchedWord.length,
-        style: matchedStyle!,
-        word: matchedWord,
-      ));
+      marks.add(
+        MarkSpan(
+          start: i,
+          end: i + matchedWord.length,
+          style: matchedStyle!,
+          word: matchedWord,
+        ),
+      );
       i += matchedWord.length;
     } else {
       i += 1;
@@ -67,8 +68,10 @@ List<MarkSpan> findMarks({
   return marks;
 }
 
-final _rubyTagPattern = RegExp(r'<rt>.*?</rt>|<rp>.*?</rp>|<ruby>|</ruby>',
-    caseSensitive: false);
+final _rubyTagPattern = RegExp(
+  r'<rt>.*?</rt>|<rp>.*?</rp>|<ruby>|</ruby>',
+  caseSensitive: false,
+);
 
 /// Like [findMarks] but operates on the base text only — ruby annotations
 /// (`<rt>...</rt>`), parenthesis tags (`<rp>...</rp>`), and the outer

@@ -83,22 +83,25 @@ void main() {
       final tempDir = Directory.systemTemp.createTempSync('migration_v4_bm_');
       try {
         final dbPath = p.join(tempDir.path, 'novel_metadata.db');
-        await _seedV3Database(dbPath, seed: (db) async {
-          // Distinct file_name so the later v7→v8 (novel_id, file_name)
-          // re-keying preserves both rows rather than deduplicating them.
-          await db.insert('bookmarks', {
-            'novel_id': 'narou_n1234ab',
-            'file_name': '001_chapter1.txt',
-            'file_path': '/library/narou_n1234ab/001_chapter1.txt',
-            'created_at': '2026-05-01T01:00:00.000Z',
-          });
-          await db.insert('bookmarks', {
-            'novel_id': 'narou_n1234ab',
-            'file_name': '002_chapter2.txt',
-            'file_path': '/library/narou_n1234ab/002_chapter2.txt',
-            'created_at': '2026-05-01T01:05:00.000Z',
-          });
-        });
+        await _seedV3Database(
+          dbPath,
+          seed: (db) async {
+            // Distinct file_name so the later v7→v8 (novel_id, file_name)
+            // re-keying preserves both rows rather than deduplicating them.
+            await db.insert('bookmarks', {
+              'novel_id': 'narou_n1234ab',
+              'file_name': '001_chapter1.txt',
+              'file_path': '/library/narou_n1234ab/001_chapter1.txt',
+              'created_at': '2026-05-01T01:00:00.000Z',
+            });
+            await db.insert('bookmarks', {
+              'novel_id': 'narou_n1234ab',
+              'file_name': '002_chapter2.txt',
+              'file_path': '/library/narou_n1234ab/002_chapter2.txt',
+              'created_at': '2026-05-01T01:05:00.000Z',
+            });
+          },
+        );
 
         // The novel's folder + its novel_data.db destination for the v9 move.
         final folderDir = Directory(p.join(tempDir.path, 'narou_n1234ab'))
@@ -118,8 +121,10 @@ void main() {
         // Open through the production upgrade path (real _onUpgrade ordering),
         // which runs v3→v4 (adds line_number) … → v9 (moves bookmarks into the
         // folder's novel_data.db and drops the global table).
-        final novelDatabase =
-            NovelDatabase(dbDirPath: tempDir.path, dataMigrator: migrator);
+        final novelDatabase = NovelDatabase(
+          dbDirPath: tempDir.path,
+          dataMigrator: migrator,
+        );
         try {
           final db = await novelDatabase.database;
           expect(await db.getVersion(), NovelDatabase.currentSchemaVersion);
@@ -144,15 +149,22 @@ void main() {
           ),
         );
         try {
-          final columns = await folderDb.rawQuery('PRAGMA table_info(bookmarks)');
+          final columns = await folderDb.rawQuery(
+            'PRAGMA table_info(bookmarks)',
+          );
           final names = columns.map((c) => c['name']).toSet();
           expect(names, contains('line_number'));
           expect(names, isNot(contains('novel_id')));
 
-          final rows =
-              await folderDb.query('bookmarks', orderBy: 'file_name ASC');
-          expect(rows.length, 2,
-              reason: 'pre-v4 bookmark rows SHALL be preserved + migrated');
+          final rows = await folderDb.query(
+            'bookmarks',
+            orderBy: 'file_name ASC',
+          );
+          expect(
+            rows.length,
+            2,
+            reason: 'pre-v4 bookmark rows SHALL be preserved + migrated',
+          );
           expect(rows[0]['file_name'], '001_chapter1.txt');
           expect(rows[0]['created_at'], '2026-05-01T01:00:00.000Z');
           expect(rows[0]['line_number'], isNull);

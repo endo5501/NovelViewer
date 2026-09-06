@@ -16,8 +16,8 @@ class TtsGenerationProgress {
 
 final ttsGenerationProgressProvider =
     NotifierProvider<TtsGenerationProgressNotifier, TtsGenerationProgress>(
-  TtsGenerationProgressNotifier.new,
-);
+      TtsGenerationProgressNotifier.new,
+    );
 
 class TtsGenerationProgressNotifier extends Notifier<TtsGenerationProgress> {
   @override
@@ -32,8 +32,8 @@ enum TtsPlaybackState { stopped, playing, paused, waiting }
 
 final ttsPlaybackStateProvider =
     NotifierProvider<TtsPlaybackStateNotifier, TtsPlaybackState>(
-  TtsPlaybackStateNotifier.new,
-);
+      TtsPlaybackStateNotifier.new,
+    );
 
 class TtsPlaybackStateNotifier extends Notifier<TtsPlaybackState> {
   @override
@@ -46,8 +46,8 @@ class TtsPlaybackStateNotifier extends Notifier<TtsPlaybackState> {
 
 final ttsHighlightRangeProvider =
     NotifierProvider<TtsHighlightRangeNotifier, TextRange?>(
-  TtsHighlightRangeNotifier.new,
-);
+      TtsHighlightRangeNotifier.new,
+    );
 
 class TtsHighlightRangeNotifier extends Notifier<TextRange?> {
   @override
@@ -62,8 +62,7 @@ class TtsHighlightRangeNotifier extends Notifier<TextRange?> {
 /// `TtsControlsBar` stop the active streaming session (e.g. when the user
 /// manually scrolls during playback). Listeners observe value changes via
 /// `ref.listen`/`listenManual` and react to the new value.
-final ttsStopRequestProvider =
-    NotifierProvider<TtsStopRequestNotifier, int>(
+final ttsStopRequestProvider = NotifierProvider<TtsStopRequestNotifier, int>(
   TtsStopRequestNotifier.new,
 );
 
@@ -83,8 +82,8 @@ class TtsStopRequestNotifier extends Notifier<int> {
 /// rather than calling it directly.
 final ttsToggleRequestProvider =
     NotifierProvider<TtsToggleRequestNotifier, int>(
-  TtsToggleRequestNotifier.new,
-);
+      TtsToggleRequestNotifier.new,
+    );
 
 class TtsToggleRequestNotifier extends Notifier<int> {
   @override

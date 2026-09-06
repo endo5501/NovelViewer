@@ -15,13 +15,17 @@ void main() {
     });
 
     test('returns the headline alone when there is no cause', () {
-      expect(formatTtsFailureMessage('Synthesis failed', null),
-          'Synthesis failed');
+      expect(
+        formatTtsFailureMessage('Synthesis failed', null),
+        'Synthesis failed',
+      );
     });
 
     test('treats a blank cause as no cause', () {
-      expect(formatTtsFailureMessage('Synthesis failed', '   '),
-          'Synthesis failed');
+      expect(
+        formatTtsFailureMessage('Synthesis failed', '   '),
+        'Synthesis failed',
+      );
     });
 
     test('trims surrounding whitespace from the cause', () {

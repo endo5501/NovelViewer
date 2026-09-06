@@ -12,10 +12,7 @@ import 'package:record/record.dart';
 class VoiceRecordingDialog extends ConsumerStatefulWidget {
   final List<String> existingFiles;
 
-  const VoiceRecordingDialog({
-    super.key,
-    required this.existingFiles,
-  });
+  const VoiceRecordingDialog({super.key, required this.existingFiles});
 
   /// Shows the dialog and returns the saved file name, or null if cancelled.
   static Future<String?> show(
@@ -65,7 +62,11 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
       if (!hasPermission) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.voiceRecording_micAccessDenied)),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context)!.voiceRecording_micAccessDenied,
+              ),
+            ),
           );
         }
         return;
@@ -76,7 +77,13 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.voiceRecording_startRecordingFailed(e.toString()))),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(
+                context,
+              )!.voiceRecording_startRecordingFailed(e.toString()),
+            ),
+          ),
         );
       }
       return;
@@ -85,12 +92,12 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
     _amplitudeSubscription = _recordingService
         .onAmplitudeChanged(const Duration(milliseconds: 200))
         .listen((amp) {
-      if (mounted) {
-        setState(() {
-          _currentAmplitude = amp.current;
+          if (mounted) {
+            setState(() {
+              _currentAmplitude = amp.current;
+            });
+          }
         });
-      }
-    });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
@@ -124,7 +131,13 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.voiceRecording_stopRecordingFailed(e.toString()))),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(
+                context,
+              )!.voiceRecording_stopRecordingFailed(e.toString()),
+            ),
+          ),
         );
         setState(() {
           _state = _RecordingState.idle;
@@ -136,9 +149,8 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
   Future<void> _showSaveDialog() async {
     final result = await showDialog<String>(
       context: context,
-      builder: (context) => _SaveFileNameDialog(
-        existingFiles: widget.existingFiles,
-      ),
+      builder: (context) =>
+          _SaveFileNameDialog(existingFiles: widget.existingFiles),
     );
 
     if (result != null && _recordedFilePath != null) {
@@ -154,21 +166,39 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
       } on StateError catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.voiceRecording_saveFailed(e.message))),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(
+                  context,
+                )!.voiceRecording_saveFailed(e.message),
+              ),
+            ),
           );
           _showSaveDialog();
         }
       } on ArgumentError catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.voiceRecording_saveFailed(e.message))),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(
+                  context,
+                )!.voiceRecording_saveFailed(e.message),
+              ),
+            ),
           );
           _showSaveDialog();
         }
       } on FileSystemException catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.voiceRecording_saveFailed(e.message))),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(
+                  context,
+                )!.voiceRecording_saveFailed(e.message),
+              ),
+            ),
           );
           _showSaveDialog();
         }
@@ -188,8 +218,12 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
       final shouldDiscard = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(AppLocalizations.of(context)!.voiceRecording_discardTitle),
-          content: Text(AppLocalizations.of(context)!.voiceRecording_discardConfirmation),
+          title: Text(
+            AppLocalizations.of(context)!.voiceRecording_discardTitle,
+          ),
+          content: Text(
+            AppLocalizations.of(context)!.voiceRecording_discardConfirmation,
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -197,7 +231,9 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: Text(AppLocalizations.of(context)!.voiceRecording_discardButton),
+              child: Text(
+                AppLocalizations.of(context)!.voiceRecording_discardButton,
+              ),
             ),
           ],
         ),
@@ -257,9 +293,7 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 16),
-                LinearProgressIndicator(
-                  value: _normalizeAmplitude(),
-                ),
+                LinearProgressIndicator(value: _normalizeAmplitude()),
                 const SizedBox(height: 8),
                 Text(AppLocalizations.of(context)!.voiceRecording_recording),
               ] else ...[
@@ -269,7 +303,11 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(height: 16),
-                Text(AppLocalizations.of(context)!.voiceRecording_startInstructions),
+                Text(
+                  AppLocalizations.of(
+                    context,
+                  )!.voiceRecording_startInstructions,
+                ),
               ],
             ],
           ),
@@ -289,13 +327,17 @@ class _VoiceRecordingDialogState extends ConsumerState<VoiceRecordingDialog> {
             ElevatedButton.icon(
               onPressed: _startRecording,
               icon: const Icon(Icons.fiber_manual_record, color: Colors.red),
-              label: Text(AppLocalizations.of(context)!.voiceRecording_startButton),
+              label: Text(
+                AppLocalizations.of(context)!.voiceRecording_startButton,
+              ),
             ),
           if (_state == _RecordingState.recording)
             ElevatedButton.icon(
               onPressed: _stopRecording,
               icon: const Icon(Icons.stop),
-              label: Text(AppLocalizations.of(context)!.voiceRecording_stopButton),
+              label: Text(
+                AppLocalizations.of(context)!.voiceRecording_stopButton,
+              ),
             ),
         ],
       ),
@@ -348,7 +390,9 @@ class _SaveFileNameDialogState extends State<_SaveFileNameDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(AppLocalizations.of(context)!.voiceRecording_enterFileNameTitle),
+      title: Text(
+        AppLocalizations.of(context)!.voiceRecording_enterFileNameTitle,
+      ),
       content: Row(
         children: [
           Expanded(
@@ -363,10 +407,7 @@ class _SaveFileNameDialogState extends State<_SaveFileNameDialog> {
           ),
           Padding(
             padding: const EdgeInsets.only(left: 8, top: 16),
-            child: Text(
-              '.wav',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
+            child: Text('.wav', style: Theme.of(context).textTheme.bodyLarge),
           ),
         ],
       ),
@@ -376,7 +417,9 @@ class _SaveFileNameDialogState extends State<_SaveFileNameDialog> {
           child: Text(AppLocalizations.of(context)!.common_cancelButton),
         ),
         TextButton(
-          onPressed: _canSave ? () => Navigator.of(context).pop(_fileName) : null,
+          onPressed: _canSave
+              ? () => Navigator.of(context).pop(_fileName)
+              : null,
           child: Text(AppLocalizations.of(context)!.voiceRecording_saveButton),
         ),
       ],

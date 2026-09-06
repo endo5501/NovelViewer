@@ -165,18 +165,19 @@ class ViewerEffects {
 
   @override
   int get hashCode => Object.hash(
-        targetJumpToPage,
-        lastJumpToPage,
-        animatedGoToPage,
-        reportLine,
-        cancelAnimation,
-        newScheduledTargetPage,
-        consumeJumpToLastPage,
-        consumeTtsOffset,
-      );
+    targetJumpToPage,
+    lastJumpToPage,
+    animatedGoToPage,
+    reportLine,
+    cancelAnimation,
+    newScheduledTargetPage,
+    consumeJumpToLastPage,
+    consumeTtsOffset,
+  );
 
   @override
-  String toString() => 'ViewerEffects('
+  String toString() =>
+      'ViewerEffects('
       'targetJumpToPage: $targetJumpToPage, '
       'lastJumpToPage: $lastJumpToPage, '
       'animatedGoToPage: $animatedGoToPage, '
@@ -212,7 +213,8 @@ ViewerEffects resolveViewerEffects(ViewerEffectInputs i) {
   // post-frame fires.
   int? targetJumpToPage;
   int? newScheduledTargetPage;
-  final targetFires = i.targetPage != null &&
+  final targetFires =
+      i.targetPage != null &&
       i.targetPage != i.currentPage &&
       i.targetPage != i.scheduledTargetPage;
   if (targetFires) {
@@ -239,7 +241,10 @@ ViewerEffects resolveViewerEffects(ViewerEffectInputs i) {
   var consumeTtsOffset = false;
   if (i.pendingTtsOffset != null && i.totalPages > 1) {
     consumeTtsOffset = true;
-    final ttsPage = _findPageForOffset(i.pendingTtsOffset!, i.charOffsetPerPage);
+    final ttsPage = _findPageForOffset(
+      i.pendingTtsOffset!,
+      i.charOffsetPerPage,
+    );
     if (ttsPage != null && ttsPage != safePage) {
       animatedGoToPage = ttsPage;
     }
@@ -299,6 +304,7 @@ class VerticalTextViewer extends ConsumerStatefulWidget {
   final int? targetLineNumber;
   final int? ttsHighlightStart;
   final int? ttsHighlightEnd;
+
   /// Reports the current selection (text plus its document-global plain-text
   /// start offset), or `null` when it is cleared.
   final ValueChanged<ViewerSelection?>? onSelectionChanged;
@@ -312,7 +318,7 @@ class VerticalTextViewer extends ConsumerStatefulWidget {
   final bool bodyPositionReady;
   final Map<String, MarkStyle> markedWords;
   final void Function(String word, Offset globalPosition, HoverToken token)?
-      onMarkEnter;
+  onMarkEnter;
   final void Function(HoverToken token)? onMarkExit;
 
   /// Fired when the viewer-level hover state should be dropped wholesale —
@@ -320,8 +326,7 @@ class VerticalTextViewer extends ConsumerStatefulWidget {
   final VoidCallback? onHoverHideRequest;
 
   @override
-  ConsumerState<VerticalTextViewer> createState() =>
-      _VerticalTextViewerState();
+  ConsumerState<VerticalTextViewer> createState() => _VerticalTextViewerState();
 }
 
 // Layout constants
@@ -435,7 +440,8 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   @override
   void didUpdateWidget(VerticalTextViewer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.bodyPositionReady && !oldWidget.bodyPositionReady) _bodyReportedPage = null;
+    if (widget.bodyPositionReady && !oldWidget.bodyPositionReady)
+      _bodyReportedPage = null;
     if (oldWidget.segments != widget.segments) {
       _readingAnchor = null;
       _lastBodyRequest = null;
@@ -457,7 +463,9 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     }
     if (widget.targetLineNumber != null &&
         widget.targetLineNumber != oldWidget.targetLineNumber) {
-      setState(() { _targetLine = widget.targetLineNumber; });
+      setState(() {
+        _targetLine = widget.targetLineNumber;
+      });
     }
     if (widget.ttsHighlightStart != null &&
         widget.ttsHighlightStart != oldWidget.ttsHighlightStart) {
@@ -525,168 +533,191 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
             behavior: HitTestBehavior.opaque,
             onPointerDown: _handlePointerDown,
             onPointerSignal: _handlePointerSignal,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final oldHeavy = _cachedHeavy;
-            final result = _paginateLines(constraints);
-            final pages = result.pages;
-            final totalPages = pages.length;
-            _pageCount = totalPages;
-            final newRequest = widget.bodyOffset != null && widget.bodyOffset != _lastBodyRequest;
-            if (newRequest) {
-              _readingAnchor = widget.bodyOffset;
-              _lastBodyRequest = widget.bodyOffset;
-            }
-            final explicitTarget = result.targetPage != null ||
-                _jumpToLastPagePending || _pendingTtsOffset != null;
-            if (explicitTarget) _readingAnchor = null;
-            if (!explicitTarget && _readingAnchor != null &&
-                (newRequest || !identical(oldHeavy, _cachedHeavy))) {
-              _currentPage = _findPageForOffset(_readingAnchor!, result.charOffsetPerPage) ?? 0;
-            }
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final oldHeavy = _cachedHeavy;
+                final result = _paginateLines(constraints);
+                final pages = result.pages;
+                final totalPages = pages.length;
+                _pageCount = totalPages;
+                final newRequest =
+                    widget.bodyOffset != null &&
+                    widget.bodyOffset != _lastBodyRequest;
+                if (newRequest) {
+                  _readingAnchor = widget.bodyOffset;
+                  _lastBodyRequest = widget.bodyOffset;
+                }
+                final explicitTarget =
+                    result.targetPage != null ||
+                    _jumpToLastPagePending ||
+                    _pendingTtsOffset != null;
+                if (explicitTarget) _readingAnchor = null;
+                if (!explicitTarget &&
+                    _readingAnchor != null &&
+                    (newRequest || !identical(oldHeavy, _cachedHeavy))) {
+                  _currentPage =
+                      _findPageForOffset(
+                        _readingAnchor!,
+                        result.charOffsetPerPage,
+                      ) ??
+                      0;
+                }
 
-            // Resolve every layout-derived side effect as a pure decision over
-            // an immutable snapshot, then apply them in one place
-            // (_applyViewerEffects). This keeps build() free of the scattered
-            // in-layout flag mutations and post-frame schedulers it used to
-            // orchestrate inline (F156).
-            final constraintsChanged = _lastConstraints != constraints;
-            final effects = resolveViewerEffects(ViewerEffectInputs(
-              totalPages: totalPages,
-              currentPage: _currentPage,
-              targetPage: result.targetPage,
-              scheduledTargetPage: _scheduledTargetPage,
-              jumpToLastPagePending: _jumpToLastPagePending,
-              pendingTtsOffset: _pendingTtsOffset,
-              charOffsetPerPage: result.charOffsetPerPage,
-              firstLinePerPage: result.firstLinePerPage,
-              lastReportedLine: _lastReportedLine,
-              constraintsChanged: constraintsChanged,
-              isAnimating: _animationController.isAnimating,
-            ));
-            _applyViewerEffects(effects);
-
-            _lastConstraints = constraints;
-
-            final safePage = totalPages == 0
-                ? 0
-                : _currentPage.clamp(0, totalPages - 1);
-
-            final currentSegments =
-                totalPages > 0 ? pages[safePage] : <TextSegment>[];
-            _currentPageSegments = currentSegments;
-
-            final pageTextOffset = result.charOffsetPerPage[safePage];
-            if (_bodyReportedPage != safePage || newRequest || !identical(oldHeavy, _cachedHeavy)) {
-              _bodyReportedPage = safePage;
-              final anchor = _readingAnchor ?? pageTextOffset;
-              _readingAnchor = anchor;
-              final generation = ++_bodyReportGeneration;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted || generation != _bodyReportGeneration) return;
-                widget.onBodyPositionChanged?.call(anchor);
-              });
-            }
-            final lineBreakIndices = result.lineBreakIndicesPerPage[safePage];
-
-            final incomingPage = Align(
-              alignment: Alignment.topRight,
-              child: VerticalTextPage(
-                segments: currentSegments,
-                baseStyle: widget.baseStyle,
-                query: widget.query,
-                ttsHighlightStart: widget.ttsHighlightStart,
-                ttsHighlightEnd: widget.ttsHighlightEnd,
-                pageStartTextOffset: pageTextOffset,
-                lineBreakEntryIndices: lineBreakIndices,
-                onSelectionChanged: widget.onSelectionChanged,
-                onContextMenu: widget.onContextMenu,
-                onSwipe: _handleSwipe,
-                columnSpacing: widget.columnSpacing,
-                markedWords: widget.markedWords,
-                onMarkEnter: widget.onMarkEnter,
-                onMarkExit: widget.onMarkExit,
-                onHoverHideRequest: widget.onHoverHideRequest,
-              ),
-            );
-
-            final Widget pageContent;
-            if (_outgoingSegments != null) {
-              final slideOut = Tween<Offset>(
-                begin: Offset.zero,
-                end: Offset(_slideDirection.toDouble(), 0),
-              ).animate(_curvedAnimation);
-              final slideIn = Tween<Offset>(
-                begin: Offset(-_slideDirection.toDouble(), 0),
-                end: Offset.zero,
-              ).animate(_curvedAnimation);
-              pageContent = Stack(
-                children: [
-                  SlideTransition(
-                    position: slideOut,
-                    child: Align(
-                      alignment: Alignment.topRight,
-                      child: VerticalTextPage(
-                        segments: _outgoingSegments!,
-                        baseStyle: widget.baseStyle,
-                        query: widget.query,
-                        columnSpacing: widget.columnSpacing,
-                        markedWords: widget.markedWords,
-                        // Symmetric wiring with the incoming page: if the
-                        // pointer briefly hovers the outgoing page during
-                        // the slide animation, callbacks still route to
-                        // the notifier so no orphan token leaks.
-                        onMarkEnter: widget.onMarkEnter,
-                        onMarkExit: widget.onMarkExit,
-                        onHoverHideRequest: widget.onHoverHideRequest,
-                      ),
-                    ),
+                // Resolve every layout-derived side effect as a pure decision over
+                // an immutable snapshot, then apply them in one place
+                // (_applyViewerEffects). This keeps build() free of the scattered
+                // in-layout flag mutations and post-frame schedulers it used to
+                // orchestrate inline (F156).
+                final constraintsChanged = _lastConstraints != constraints;
+                final effects = resolveViewerEffects(
+                  ViewerEffectInputs(
+                    totalPages: totalPages,
+                    currentPage: _currentPage,
+                    targetPage: result.targetPage,
+                    scheduledTargetPage: _scheduledTargetPage,
+                    jumpToLastPagePending: _jumpToLastPagePending,
+                    pendingTtsOffset: _pendingTtsOffset,
+                    charOffsetPerPage: result.charOffsetPerPage,
+                    firstLinePerPage: result.firstLinePerPage,
+                    lastReportedLine: _lastReportedLine,
+                    constraintsChanged: constraintsChanged,
+                    isAnimating: _animationController.isAnimating,
                   ),
-                  SlideTransition(
-                    position: slideIn,
-                    child: incomingPage,
+                );
+                _applyViewerEffects(effects);
+
+                _lastConstraints = constraints;
+
+                final safePage = totalPages == 0
+                    ? 0
+                    : _currentPage.clamp(0, totalPages - 1);
+
+                final currentSegments = totalPages > 0
+                    ? pages[safePage]
+                    : <TextSegment>[];
+                _currentPageSegments = currentSegments;
+
+                final pageTextOffset = result.charOffsetPerPage[safePage];
+                if (_bodyReportedPage != safePage ||
+                    newRequest ||
+                    !identical(oldHeavy, _cachedHeavy)) {
+                  _bodyReportedPage = safePage;
+                  final anchor = _readingAnchor ?? pageTextOffset;
+                  _readingAnchor = anchor;
+                  final generation = ++_bodyReportGeneration;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted || generation != _bodyReportGeneration) return;
+                    widget.onBodyPositionChanged?.call(anchor);
+                  });
+                }
+                final lineBreakIndices =
+                    result.lineBreakIndicesPerPage[safePage];
+
+                final incomingPage = Align(
+                  alignment: Alignment.topRight,
+                  child: VerticalTextPage(
+                    segments: currentSegments,
+                    baseStyle: widget.baseStyle,
+                    query: widget.query,
+                    ttsHighlightStart: widget.ttsHighlightStart,
+                    ttsHighlightEnd: widget.ttsHighlightEnd,
+                    pageStartTextOffset: pageTextOffset,
+                    lineBreakEntryIndices: lineBreakIndices,
+                    onSelectionChanged: widget.onSelectionChanged,
+                    onContextMenu: widget.onContextMenu,
+                    onSwipe: _handleSwipe,
+                    columnSpacing: widget.columnSpacing,
+                    markedWords: widget.markedWords,
+                    onMarkEnter: widget.onMarkEnter,
+                    onMarkExit: widget.onMarkExit,
+                    onHoverHideRequest: widget.onHoverHideRequest,
                   ),
-                ],
-              );
-            } else {
-              pageContent = incomingPage;
-            }
+                );
 
-            final hasBookmarkOnPage = result.bookmarkPages.contains(safePage);
-
-            return Column(
-              children: [
-                Expanded(
-                  child: Stack(
+                final Widget pageContent;
+                if (_outgoingSegments != null) {
+                  final slideOut = Tween<Offset>(
+                    begin: Offset.zero,
+                    end: Offset(_slideDirection.toDouble(), 0),
+                  ).animate(_curvedAnimation);
+                  final slideIn = Tween<Offset>(
+                    begin: Offset(-_slideDirection.toDouble(), 0),
+                    end: Offset.zero,
+                  ).animate(_curvedAnimation);
+                  pageContent = Stack(
                     children: [
-                      ClipRect(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: pageContent,
+                      SlideTransition(
+                        position: slideOut,
+                        child: Align(
+                          alignment: Alignment.topRight,
+                          child: VerticalTextPage(
+                            segments: _outgoingSegments!,
+                            baseStyle: widget.baseStyle,
+                            query: widget.query,
+                            columnSpacing: widget.columnSpacing,
+                            markedWords: widget.markedWords,
+                            // Symmetric wiring with the incoming page: if the
+                            // pointer briefly hovers the outgoing page during
+                            // the slide animation, callbacks still route to
+                            // the notifier so no orphan token leaks.
+                            onMarkEnter: widget.onMarkEnter,
+                            onMarkExit: widget.onMarkExit,
+                            onHoverHideRequest: widget.onHoverHideRequest,
+                          ),
                         ),
                       ),
-                      if (hasBookmarkOnPage)
-                        const Positioned(
-                          left: 4,
-                          top: 4,
-                          child: Icon(Icons.bookmark, color: Colors.orange, size: 20),
-                        ),
+                      SlideTransition(position: slideIn, child: incomingPage),
                     ],
-                  ),
-                ),
-                if (totalPages > 1 ||
-                    _pendingNextFilePrompt ||
-                    _pendingPrevFilePrompt)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Text(
-                      _buildIndicatorText(context, safePage + 1, totalPages),
-                      style: Theme.of(context).textTheme.bodySmall,
+                  );
+                } else {
+                  pageContent = incomingPage;
+                }
+
+                final hasBookmarkOnPage = result.bookmarkPages.contains(
+                  safePage,
+                );
+
+                return Column(
+                  children: [
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          ClipRect(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: pageContent,
+                            ),
+                          ),
+                          if (hasBookmarkOnPage)
+                            const Positioned(
+                              left: 4,
+                              top: 4,
+                              child: Icon(
+                                Icons.bookmark,
+                                color: Colors.orange,
+                                size: 20,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-              ],
-            );
-          },
+                    if (totalPages > 1 ||
+                        _pendingNextFilePrompt ||
+                        _pendingPrevFilePrompt)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Text(
+                          _buildIndicatorText(
+                            context,
+                            safePage + 1,
+                            totalPages,
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -760,7 +791,8 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       if (_pendingNextFilePrompt) {
         if (_inConfirmCooldown) return;
         _confirmFileNavigation(
-            ref.read(episodeNavigationControllerProvider).navigateToNext);
+          ref.read(episodeNavigationControllerProvider).navigateToNext,
+        );
       } else {
         _showFileNavigationPrompt(next: true);
       }
@@ -770,7 +802,8 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       if (_pendingPrevFilePrompt) {
         if (_inConfirmCooldown) return;
         _confirmFileNavigation(
-            ref.read(episodeNavigationControllerProvider).navigateToPrevious);
+          ref.read(episodeNavigationControllerProvider).navigateToPrevious,
+        );
       } else {
         _showFileNavigationPrompt(next: false);
       }
@@ -793,16 +826,17 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     _promptTimeoutTimer?.cancel();
     _confirmCooldownTimer?.cancel();
     _inConfirmCooldown = true;
-    _confirmCooldownTimer =
-        Timer(_kFileNavigationConfirmCooldown, () {
+    _confirmCooldownTimer = Timer(_kFileNavigationConfirmCooldown, () {
       _inConfirmCooldown = false;
     });
     setState(() {
       _pendingNextFilePrompt = next;
       _pendingPrevFilePrompt = !next;
     });
-    _promptTimeoutTimer =
-        Timer(_kFileNavigationPromptTimeout, _clearPendingPrompts);
+    _promptTimeoutTimer = Timer(
+      _kFileNavigationPromptTimeout,
+      _clearPendingPrompts,
+    );
   }
 
   void _clearPendingPrompts() {
@@ -838,8 +872,7 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     return '$currentPage / $total';
   }
 
-  void _goToPage(int page) =>
-      _changePage(page - _currentPage);
+  void _goToPage(int page) => _changePage(page - _currentPage);
 
   /// Applies the [ViewerEffects] decided by [resolveViewerEffects].
   ///
@@ -871,7 +904,8 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       _lastReportedLine = effects.reportLine!;
     }
 
-    final hasPostFrameWork = effects.targetJumpToPage != null ||
+    final hasPostFrameWork =
+        effects.targetJumpToPage != null ||
         effects.lastJumpToPage != null ||
         effects.animatedGoToPage != null ||
         effects.reportLine != null;
@@ -929,7 +963,8 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   int? _targetLine;
 
   _PaginationResult _paginateLines(BoxConstraints constraints) {
-    final style = widget.baseStyle?.copyWith(height: _kTextHeight) ??
+    final style =
+        widget.baseStyle?.copyWith(height: _kTextHeight) ??
         const TextStyle(fontSize: _kDefaultFontSize, height: _kTextHeight);
 
     // Reuse cached painter if style hasn't changed
@@ -949,11 +984,19 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     final availableWidth = constraints.maxWidth - _kHorizontalPadding;
     final availableHeight = constraints.maxHeight - _kVerticalPadding;
 
-    final charsPerColumn =
-        availableHeight > 0 ? (availableHeight / charHeight).floor() : 1;
+    final charsPerColumn = availableHeight > 0
+        ? (availableHeight / charHeight).floor()
+        : 1;
 
     if (availableWidth <= 0 || charsPerColumn <= 0) {
-      return _PaginationResult([widget.segments], null, const [0], const [{}], const {}, const [1]);
+      return _PaginationResult(
+        [widget.segments],
+        null,
+        const [0],
+        const [{}],
+        const {},
+        const [1],
+      );
     }
 
     final heavy = _heavyPagination(
@@ -965,7 +1008,14 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     );
 
     if (heavy == null) {
-      return _PaginationResult([widget.segments], null, const [0], const [{}], const {}, const [1]);
+      return _PaginationResult(
+        [widget.segments],
+        null,
+        const [0],
+        const [{}],
+        const {},
+        const [1],
+      );
     }
 
     final pages = heavy.pages;
@@ -977,8 +1027,11 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     // heavy layer. Their inputs (target line, bookmark line set) change
     // independently of the document layout, so keeping them out of the cache
     // means a bookmark add or target-line jump never re-paginates.
-    final targetPage =
-        _findTargetPage(lineStartColumns, pageStarts, pages.length);
+    final targetPage = _findTargetPage(
+      lineStartColumns,
+      pageStarts,
+      pages.length,
+    );
 
     // Compute which pages have bookmarks
     final bookmarkPages = <int>{};
@@ -1008,8 +1061,14 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       firstLinePerPage.add(lineNum);
     }
 
-    return _PaginationResult(pages, targetPage, heavy.charOffsetPerPage,
-        heavy.lineBreakIndicesPerPage, bookmarkPages, firstLinePerPage);
+    return _PaginationResult(
+      pages,
+      targetPage,
+      heavy.charOffsetPerPage,
+      heavy.lineBreakIndicesPerPage,
+      bookmarkPages,
+      firstLinePerPage,
+    );
   }
 
   /// Expensive, full-document pagination layer (column splitting, kinsoku line
@@ -1038,13 +1097,20 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     final columns = <List<TextSegment>>[];
     final lineStartColumns = _buildColumns(charsPerColumn, columns);
     final lineStartSet = lineStartColumns.skip(1).toSet();
-    final (pages, pageStarts, lineBreakIndicesPerPage) =
-        _groupColumnsIntoPages(columns, charWidth, availableWidth, lineStartSet);
+    final (pages, pageStarts, lineBreakIndicesPerPage) = _groupColumnsIntoPages(
+      columns,
+      charWidth,
+      availableWidth,
+      lineStartSet,
+    );
 
     if (pages.isEmpty) return null;
 
-    final charOffsetPerPage =
-        computeCharOffsetPerPage(columns, pageStarts, lineStartColumns);
+    final charOffsetPerPage = computeCharOffsetPerPage(
+      columns,
+      pageStarts,
+      lineStartColumns,
+    );
 
     final heavy = _HeavyPagination(
       pages: pages,
@@ -1084,7 +1150,6 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       }
     }
   }
-
 
   List<int> _buildColumns(int charsPerColumn, List<List<TextSegment>> columns) {
     final lineStartColumns = <int>[];
@@ -1136,7 +1201,8 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
         // Text columns add an extra run for characters
         if (hasText) runs += 1;
 
-        final totalWidth = width + (runs > 1 ? (runs - 1) * widget.columnSpacing : 0.0);
+        final totalWidth =
+            width + (runs > 1 ? (runs - 1) * widget.columnSpacing : 0.0);
 
         if (end > start && totalWidth > availableWidth) break;
 
@@ -1195,7 +1261,6 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     }
     return null;
   }
-
 }
 
 /// The memoized "heavy" pagination layer: everything that depends only on the
@@ -1219,7 +1284,14 @@ class _HeavyPagination {
 }
 
 class _PaginationResult {
-  const _PaginationResult(this.pages, this.targetPage, this.charOffsetPerPage, this.lineBreakIndicesPerPage, this.bookmarkPages, this.firstLinePerPage);
+  const _PaginationResult(
+    this.pages,
+    this.targetPage,
+    this.charOffsetPerPage,
+    this.lineBreakIndicesPerPage,
+    this.bookmarkPages,
+    this.firstLinePerPage,
+  );
   final List<List<TextSegment>> pages;
   final int? targetPage;
   final List<int> charOffsetPerPage;

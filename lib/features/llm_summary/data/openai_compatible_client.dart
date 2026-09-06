@@ -24,9 +24,7 @@ class OpenAiCompatibleClient extends LlmClient {
   /// caller.
   @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
     if (apiKey.isNotEmpty) {
       headers['Authorization'] = 'Bearer $apiKey';
     }
@@ -50,27 +48,31 @@ class OpenAiCompatibleClient extends LlmClient {
     final body = utf8.decode(response.bodyBytes, allowMalformed: true);
 
     if (response.statusCode != 200) {
-      throw Exception(
-        'OpenAI API error: ${response.statusCode} $body',
-      );
+      throw Exception('OpenAI API error: ${response.statusCode} $body');
     }
 
     final decoded = jsonDecode(body);
     if (decoded is! Map<String, dynamic>) {
       throw LlmResponseFormatException.withBody(
-        'expected a JSON object at the top level', body);
+        'expected a JSON object at the top level',
+        body,
+      );
     }
     final choices = decoded['choices'];
     if (choices is! List || choices.isEmpty) {
       throw LlmResponseFormatException.withBody(
-        'response has no choices', body);
+        'response has no choices',
+        body,
+      );
     }
     final first = choices[0];
     final message = first is Map<String, dynamic> ? first['message'] : null;
     final content = message is Map<String, dynamic> ? message['content'] : null;
     if (content is! String) {
       throw LlmResponseFormatException.withBody(
-        'choices[0].message.content is missing or not a string', body);
+        'choices[0].message.content is missing or not a string',
+        body,
+      );
     }
     return content;
   }

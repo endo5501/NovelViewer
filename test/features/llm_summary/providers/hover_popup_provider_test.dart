@@ -18,8 +18,7 @@ void main() {
       expect(state.activeEpisode, isNull);
     });
 
-    test('visible() factory produces a visible state with default episode',
-        () {
+    test('visible() factory produces a visible state with default episode', () {
       const state = HoverPopupState.visible(
         word: 'アリス',
         position: Offset(100, 200),
@@ -30,9 +29,11 @@ void main() {
       expect(state.word, 'アリス');
       expect(state.position, const Offset(100, 200));
       expect(state.hoverToken, _tokenA);
-      expect(state.activeEpisode, isNull,
-          reason:
-              'activeEpisode defaults to null, signalling "use default rule"');
+      expect(
+        state.activeEpisode,
+        isNull,
+        reason: 'activeEpisode defaults to null, signalling "use default rule"',
+      );
     });
 
     test('visible() factory honors explicit activeEpisode', () {
@@ -47,8 +48,10 @@ void main() {
     });
 
     test('equal hidden states compare equal', () {
-      expect(const HoverPopupState.hidden(),
-          equals(const HoverPopupState.hidden()));
+      expect(
+        const HoverPopupState.hidden(),
+        equals(const HoverPopupState.hidden()),
+      );
     });
 
     test('equal visible states compare equal', () {
@@ -114,30 +117,35 @@ void main() {
     });
 
     test(
-        'show() makes the state visible with the given word, position, and token',
-        () {
-      final container = makeContainer();
-      container.read(hoverPopupProvider.notifier).show(
-            word: 'アリス',
-            position: const Offset(50, 75),
-            token: _tokenA,
-          );
+      'show() makes the state visible with the given word, position, and token',
+      () {
+        final container = makeContainer();
+        container
+            .read(hoverPopupProvider.notifier)
+            .show(word: 'アリス', position: const Offset(50, 75), token: _tokenA);
 
-      final state = container.read(hoverPopupProvider);
-      expect(state.isVisible, isTrue);
-      expect(state.word, 'アリス');
-      expect(state.position, const Offset(50, 75));
-      expect(state.hoverToken, _tokenA);
-      expect(state.activeEpisode, isNull,
-          reason: 'show() leaves activeEpisode at null (default rule)');
-    });
+        final state = container.read(hoverPopupProvider);
+        expect(state.isVisible, isTrue);
+        expect(state.word, 'アリス');
+        expect(state.position, const Offset(50, 75));
+        expect(state.hoverToken, _tokenA);
+        expect(
+          state.activeEpisode,
+          isNull,
+          reason: 'show() leaves activeEpisode at null (default rule)',
+        );
+      },
+    );
 
     test('hide() returns the state to hidden', () {
       final container = makeContainer();
       final notifier = container.read(hoverPopupProvider.notifier);
 
       notifier.show(
-          word: 'アリス', position: const Offset(50, 75), token: _tokenA);
+        word: 'アリス',
+        position: const Offset(50, 75),
+        token: _tokenA,
+      );
       notifier.hide();
 
       final state = container.read(hoverPopupProvider);
@@ -145,35 +153,45 @@ void main() {
       expect(state.word, isNull);
     });
 
-    test('setActiveEpisode updates active snapshot while preserving identity',
-        () {
-      final container = makeContainer();
-      final notifier = container.read(hoverPopupProvider.notifier);
+    test(
+      'setActiveEpisode updates active snapshot while preserving identity',
+      () {
+        final container = makeContainer();
+        final notifier = container.read(hoverPopupProvider.notifier);
 
-      notifier.show(
-          word: 'アリス', position: const Offset(50, 75), token: _tokenA);
-      notifier.setActiveEpisode(60);
+        notifier.show(
+          word: 'アリス',
+          position: const Offset(50, 75),
+          token: _tokenA,
+        );
+        notifier.setActiveEpisode(60);
 
-      final state = container.read(hoverPopupProvider);
-      expect(state.isVisible, isTrue);
-      expect(state.word, 'アリス');
-      expect(state.position, const Offset(50, 75));
-      expect(state.hoverToken, _tokenA);
-      expect(state.activeEpisode, 60);
-    });
+        final state = container.read(hoverPopupProvider);
+        expect(state.isVisible, isTrue);
+        expect(state.word, 'アリス');
+        expect(state.position, const Offset(50, 75));
+        expect(state.hoverToken, _tokenA);
+        expect(state.activeEpisode, 60);
+      },
+    );
 
-    test('setActiveEpisode(null) clears the override (re-apply default rule)',
-        () {
-      final container = makeContainer();
-      final notifier = container.read(hoverPopupProvider.notifier);
+    test(
+      'setActiveEpisode(null) clears the override (re-apply default rule)',
+      () {
+        final container = makeContainer();
+        final notifier = container.read(hoverPopupProvider.notifier);
 
-      notifier.show(
-          word: 'アリス', position: const Offset(50, 75), token: _tokenA);
-      notifier.setActiveEpisode(30);
-      notifier.setActiveEpisode(null);
+        notifier.show(
+          word: 'アリス',
+          position: const Offset(50, 75),
+          token: _tokenA,
+        );
+        notifier.setActiveEpisode(30);
+        notifier.setActiveEpisode(null);
 
-      expect(container.read(hoverPopupProvider).activeEpisode, isNull);
-    });
+        expect(container.read(hoverPopupProvider).activeEpisode, isNull);
+      },
+    );
 
     test('setActiveEpisode is a no-op when the popup is hidden', () {
       final container = makeContainer();
@@ -190,29 +208,41 @@ void main() {
       final notifier = container.read(hoverPopupProvider.notifier);
 
       notifier.show(
-          word: 'アリス', position: const Offset(50, 75), token: _tokenA);
+        word: 'アリス',
+        position: const Offset(50, 75),
+        token: _tokenA,
+      );
       notifier.setActiveEpisode(60);
       notifier.show(
-          word: 'ボブ', position: const Offset(100, 200), token: _tokenB);
+        word: 'ボブ',
+        position: const Offset(100, 200),
+        token: _tokenB,
+      );
 
       final state = container.read(hoverPopupProvider);
       expect(state.word, 'ボブ');
       expect(state.hoverToken, _tokenB);
-      expect(state.activeEpisode, isNull,
-          reason: 'New occurrence starts with the default snapshot rule');
+      expect(
+        state.activeEpisode,
+        isNull,
+        reason: 'New occurrence starts with the default snapshot rule',
+      );
     });
 
-    test('show() with the same token is a no-op (position is NOT updated)',
-        () {
+    test('show() with the same token is a no-op (position is NOT updated)', () {
       final container = makeContainer();
       final notifier = container.read(hoverPopupProvider.notifier);
 
       notifier.show(
-          word: 'アリス', position: const Offset(50, 75), token: _tokenA);
+        word: 'アリス',
+        position: const Offset(50, 75),
+        token: _tokenA,
+      );
       notifier.show(
-          word: 'アリス',
-          position: const Offset(999, 999),
-          token: _tokenA);
+        word: 'アリス',
+        position: const Offset(999, 999),
+        token: _tokenA,
+      );
 
       final state = container.read(hoverPopupProvider);
       expect(state.position, const Offset(50, 75));
@@ -225,7 +255,10 @@ void main() {
         final notifier = container.read(hoverPopupProvider.notifier);
 
         notifier.show(
-            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+          word: 'アリス',
+          position: const Offset(0, 0),
+          token: _tokenA,
+        );
         notifier.hideIfShowing(_tokenB);
         async.elapse(const Duration(milliseconds: 500));
         expect(container.read(hoverPopupProvider).hoverToken, _tokenA);
@@ -236,8 +269,7 @@ void main() {
       });
     });
 
-    test(
-        'pointer moving between two occurrences of the SAME word switches '
+    test('pointer moving between two occurrences of the SAME word switches '
         'the popup to the new occurrence', () {
       final container = makeContainer();
       final notifier = container.read(hoverPopupProvider.notifier);
@@ -246,9 +278,15 @@ void main() {
       const tokenAlice2 = (start: 20, end: 23);
 
       notifier.show(
-          word: 'アリス', position: const Offset(10, 10), token: tokenAlice1);
+        word: 'アリス',
+        position: const Offset(10, 10),
+        token: tokenAlice1,
+      );
       notifier.show(
-          word: 'アリス', position: const Offset(30, 10), token: tokenAlice2);
+        word: 'アリス',
+        position: const Offset(30, 10),
+        token: tokenAlice2,
+      );
       notifier.hideIfShowing(tokenAlice1);
 
       final state = container.read(hoverPopupProvider);
@@ -266,7 +304,10 @@ void main() {
         final notifier = container.read(hoverPopupProvider.notifier);
 
         notifier.show(
-            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+          word: 'アリス',
+          position: const Offset(0, 0),
+          token: _tokenA,
+        );
         notifier.hideIfShowing(_tokenA);
 
         expect(container.read(hoverPopupProvider).isVisible, isTrue);
@@ -284,7 +325,10 @@ void main() {
         final notifier = container.read(hoverPopupProvider.notifier);
 
         notifier.show(
-            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+          word: 'アリス',
+          position: const Offset(0, 0),
+          token: _tokenA,
+        );
         notifier.hideIfShowing(_tokenA);
 
         async.elapse(const Duration(milliseconds: 149));
@@ -302,7 +346,10 @@ void main() {
         final notifier = container.read(hoverPopupProvider.notifier);
 
         notifier.show(
-            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+          word: 'アリス',
+          position: const Offset(0, 0),
+          token: _tokenA,
+        );
         notifier.hideIfShowing(_tokenA);
         async.elapse(const Duration(milliseconds: 80));
         notifier.onPopupEnter();
@@ -319,7 +366,10 @@ void main() {
         final notifier = container.read(hoverPopupProvider.notifier);
 
         notifier.show(
-            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+          word: 'アリス',
+          position: const Offset(0, 0),
+          token: _tokenA,
+        );
         notifier.onPopupEnter();
         async.flushMicrotasks();
         notifier.onPopupExit();
@@ -335,12 +385,18 @@ void main() {
         final notifier = container.read(hoverPopupProvider.notifier);
 
         notifier.show(
-            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+          word: 'アリス',
+          position: const Offset(0, 0),
+          token: _tokenA,
+        );
         notifier.onPopupEnter();
         notifier.hide();
 
         notifier.show(
-            word: 'ボブ', position: const Offset(20, 20), token: _tokenB);
+          word: 'ボブ',
+          position: const Offset(20, 20),
+          token: _tokenB,
+        );
         notifier.hideIfShowing(_tokenB);
         async.elapse(const Duration(milliseconds: 300));
 
@@ -355,11 +411,17 @@ void main() {
         final notifier = container.read(hoverPopupProvider.notifier);
 
         notifier.show(
-            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+          word: 'アリス',
+          position: const Offset(0, 0),
+          token: _tokenA,
+        );
         notifier.hideIfShowing(_tokenA);
         async.elapse(const Duration(milliseconds: 50));
         notifier.show(
-            word: 'ボブ', position: const Offset(20, 0), token: _tokenB);
+          word: 'ボブ',
+          position: const Offset(20, 0),
+          token: _tokenB,
+        );
         async.elapse(const Duration(milliseconds: 500));
 
         final state = container.read(hoverPopupProvider);
@@ -375,7 +437,10 @@ void main() {
         final notifier = container.read(hoverPopupProvider.notifier);
 
         notifier.show(
-            word: 'アリス', position: const Offset(0, 0), token: _tokenA);
+          word: 'アリス',
+          position: const Offset(0, 0),
+          token: _tokenA,
+        );
         notifier.onPopupEnter();
         notifier.hideIfShowing(_tokenA);
         async.elapse(const Duration(milliseconds: 500));
@@ -393,11 +458,17 @@ void main() {
         final notifier = container.read(hoverPopupProvider.notifier);
 
         notifier.show(
-            word: 'A', position: const Offset(10, 10), token: _tokenA);
+          word: 'A',
+          position: const Offset(10, 10),
+          token: _tokenA,
+        );
 
         notifier.hideIfShowing(_tokenA);
         notifier.show(
-            word: 'B', position: const Offset(20, 20), token: _tokenB);
+          word: 'B',
+          position: const Offset(20, 20),
+          token: _tokenB,
+        );
         async.elapse(const Duration(milliseconds: 500));
 
         final state = container.read(hoverPopupProvider);
@@ -413,10 +484,16 @@ void main() {
         final notifier = container.read(hoverPopupProvider.notifier);
 
         notifier.show(
-            word: 'A', position: const Offset(10, 10), token: _tokenA);
+          word: 'A',
+          position: const Offset(10, 10),
+          token: _tokenA,
+        );
 
         notifier.show(
-            word: 'B', position: const Offset(20, 20), token: _tokenB);
+          word: 'B',
+          position: const Offset(20, 20),
+          token: _tokenB,
+        );
         notifier.hideIfShowing(_tokenA);
         async.elapse(const Duration(milliseconds: 500));
 

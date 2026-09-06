@@ -8,15 +8,14 @@ WordSummary _snap({
   required String summary,
   String? sourceFile,
   required DateTime updatedAt,
-}) =>
-    WordSummary(
-      word: word,
-      coveredUpToEpisode: episode,
-      summary: summary,
-      sourceFile: sourceFile,
-      createdAt: updatedAt,
-      updatedAt: updatedAt,
-    );
+}) => WordSummary(
+  word: word,
+  coveredUpToEpisode: episode,
+  summary: summary,
+  sourceFile: sourceFile,
+  createdAt: updatedAt,
+  updatedAt: updatedAt,
+);
 
 void main() {
   group('HistoryEntry.mergeRows', () {
@@ -73,9 +72,10 @@ void main() {
       expect(entries.first.word, 'アリス');
       expect(entries.first.snapshotCount, 3);
       expect(
-          entries.first.snapshots.map((s) => s.coveredUpToEpisode).toList(),
-          [30, 60, 120],
-          reason: 'snapshots SHALL be ordered ascending by episode');
+        entries.first.snapshots.map((s) => s.coveredUpToEpisode).toList(),
+        [30, 60, 120],
+        reason: 'snapshots SHALL be ordered ascending by episode',
+      );
     });
 
     test('updatedAt is the latest across all snapshots', () {
@@ -131,8 +131,7 @@ void main() {
       expect(entries.first.summaryPreview, '新しい要約');
     });
 
-    test(
-        'sourceFile resolution: pick non-null source_file from the largest '
+    test('sourceFile resolution: pick non-null source_file from the largest '
         'coveredUpToEpisode downward', () {
       final rows = [
         // Largest episode but source_file is NULL → fall back

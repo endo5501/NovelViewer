@@ -94,9 +94,7 @@ MockClient sequencedClient(
       final seq = sequences[matchedKey]!;
       final i = counters[matchedKey] ?? 0;
       counters[matchedKey] = i + 1;
-      route = seq.isEmpty
-          ? fallback
-          : (i < seq.length ? seq[i] : seq.last);
+      route = seq.isEmpty ? fallback : (i < seq.length ? seq[i] : seq.last);
     }
 
     if (route.delay != null) {
@@ -262,8 +260,7 @@ class FakePagedSite extends NovelSite {
 
     Uri? nextPageUrl;
     if (currentPage < totalPages) {
-      nextPageUrl =
-          Uri.parse('https://example.com/index?p=${currentPage + 1}');
+      nextPageUrl = Uri.parse('https://example.com/index?p=${currentPage + 1}');
     }
 
     return NovelIndex(

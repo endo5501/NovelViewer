@@ -30,14 +30,13 @@ Qwen3EngineConfig _qwen3Config({
   int languageId = TtsLanguage.defaultLanguageId,
   String? refWavPath,
   String? embeddingCacheDir,
-}) =>
-    Qwen3EngineConfig(
-      modelDir: modelDir,
-      sampleRate: sampleRate,
-      languageId: languageId,
-      refWavPath: refWavPath,
-      embeddingCacheDir: embeddingCacheDir,
-    );
+}) => Qwen3EngineConfig(
+  modelDir: modelDir,
+  sampleRate: sampleRate,
+  languageId: languageId,
+  refWavPath: refWavPath,
+  embeddingCacheDir: embeddingCacheDir,
+);
 
 /// Test helper that builds an Irodori engine config with sensible defaults.
 IrodoriEngineConfig _irodoriConfig({
@@ -47,22 +46,20 @@ IrodoriEngineConfig _irodoriConfig({
   double speakerGuidanceScale = 5.0,
   double captionGuidanceScale = 3.0,
   int numInferenceSteps = 40,
-}) =>
-    IrodoriEngineConfig(
-      modelDir: modelDir,
-      sampleRate: sampleRate,
-      variant: IrodoriModelVariant.v3,
-      refWavPath: refWavPath,
-      speakerGuidanceScale: speakerGuidanceScale,
-      captionGuidanceScale: captionGuidanceScale,
-      numInferenceSteps: numInferenceSteps,
-    );
+}) => IrodoriEngineConfig(
+  modelDir: modelDir,
+  sampleRate: sampleRate,
+  variant: IrodoriModelVariant.v3,
+  refWavPath: refWavPath,
+  speakerGuidanceScale: speakerGuidanceScale,
+  captionGuidanceScale: captionGuidanceScale,
+  numInferenceSteps: numInferenceSteps,
+);
 
 class FakeTtsIsolate implements TtsIsolate {
   FakeTtsIsolate({this.modelLoadSuccess = true});
 
-  final _responseController =
-      StreamController<TtsIsolateResponse>.broadcast();
+  final _responseController = StreamController<TtsIsolateResponse>.broadcast();
   final bool modelLoadSuccess;
   bool spawned = false;
   bool disposed = false;
@@ -88,14 +85,22 @@ class FakeTtsIsolate implements TtsIsolate {
   }
 
   @override
-  void loadModel(String modelDir,
-      {TtsEngineType engineType = TtsEngineType.qwen3, int nThreads = 4, int languageId = TtsLanguage.defaultLanguageId, String? dicDir, double? lengthScale, double? noiseScale, double? noiseW, String? embeddingCacheDir, bool durationCorrection = false}) {
+  void loadModel(
+    String modelDir, {
+    TtsEngineType engineType = TtsEngineType.qwen3,
+    int nThreads = 4,
+    int languageId = TtsLanguage.defaultLanguageId,
+    String? dicDir,
+    double? lengthScale,
+    double? noiseScale,
+    double? noiseW,
+    String? embeddingCacheDir,
+    bool durationCorrection = false,
+  }) {
     if (blockModelLoad) return;
     Future.microtask(() {
       if (!_responseController.isClosed) {
-        _responseController.add(
-          ModelLoadedResponse(success: modelLoadSuccess),
-        );
+        _responseController.add(ModelLoadedResponse(success: modelLoadSuccess));
       }
     });
   }
@@ -117,29 +122,31 @@ class FakeTtsIsolate implements TtsIsolate {
     }
     Future.microtask(() {
       if (!_responseController.isClosed) {
-        _responseController.add(SynthesisResultResponse(
-          audio: Float32List.fromList([0.1, 0.2, 0.3]),
-          sampleRate: 24000,
-        ));
+        _responseController.add(
+          SynthesisResultResponse(
+            audio: Float32List.fromList([0.1, 0.2, 0.3]),
+            sampleRate: 24000,
+          ),
+        );
       }
     });
   }
 
   void completeSynthesis() {
-    _responseController.add(SynthesisResultResponse(
-      audio: Float32List.fromList([0.1, 0.2, 0.3]),
-      sampleRate: 24000,
-    ));
+    _responseController.add(
+      SynthesisResultResponse(
+        audio: Float32List.fromList([0.1, 0.2, 0.3]),
+        sampleRate: 24000,
+      ),
+    );
   }
 
   /// Replies to the pending synthesize with a failure. [error] is the native
   /// engine's message, or null for a failure it could not describe.
   void failSynthesis({String? error}) {
-    _responseController.add(SynthesisResultResponse(
-      audio: null,
-      sampleRate: 24000,
-      error: error,
-    ));
+    _responseController.add(
+      SynthesisResultResponse(audio: null, sampleRate: 24000, error: error),
+    );
   }
 
   @override
@@ -313,7 +320,7 @@ class NeverCompletingAudioPlayer implements TtsAudioPlayer {
 /// disposes the player BEFORE deleting temporary preview files (F110).
 class _OrderSpySegmentPlayer extends SegmentPlayer {
   _OrderSpySegmentPlayer({required super.player, required this.previewPath})
-      : super(bufferDrainDelay: Duration.zero);
+    : super(bufferDrainDelay: Duration.zero);
 
   final String previewPath;
   bool? previewExistedAtDispose;
@@ -329,7 +336,7 @@ class _OrderSpySegmentPlayer extends SegmentPlayer {
 /// controller still cleans up temporary files when player teardown fails.
 class _ThrowingSegmentPlayer extends SegmentPlayer {
   _ThrowingSegmentPlayer({required super.player})
-      : super(bufferDrainDelay: Duration.zero);
+    : super(bufferDrainDelay: Duration.zero);
 
   @override
   Future<void> dispose() async {
@@ -372,70 +379,73 @@ void main() {
 
   group('TtsEditController', () {
     group('dictionary integration', () {
-      test('applies dictionary to new segment text before inserting to DB',
-          () async {
-        await dictRepository.addEntry('エルリック', 'えるりっく');
+      test(
+        'applies dictionary to new segment text before inserting to DB',
+        () async {
+          await dictRepository.addEntry('エルリック', 'えるりっく');
 
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-          dictionaryRepository: dictRepository,
-        );
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+            dictionaryRepository: dictRepository,
+          );
 
-        await controller.loadSegments(
-          text: 'エルリックは勇者だ。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: 'エルリックは勇者だ。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        await controller.generateSegment(
-          resolveRefWavPath: null,
-          segmentIndex: 0,
-          config: _qwen3Config(),
-        );
+          await controller.generateSegment(
+            resolveRefWavPath: null,
+            segmentIndex: 0,
+            config: _qwen3Config(),
+          );
 
-        // Isolate should receive dictionary-converted text
-        expect(isolate.synthesizeRequests.first.$1, contains('えるりっく'));
-        expect(isolate.synthesizeRequests.first.$1, isNot(contains('エルリック')));
+          // Isolate should receive dictionary-converted text
+          expect(isolate.synthesizeRequests.first.$1, contains('えるりっく'));
+          expect(isolate.synthesizeRequests.first.$1, isNot(contains('エルリック')));
 
-        // DB should store dictionary-converted text
-        final episode = await repository.findEpisodeByFileName('test.txt');
-        final segments = await repository.getSegments(episode!.id);
-        expect(segments.first.text, contains('えるりっく'));
-      });
+          // DB should store dictionary-converted text
+          final episode = await repository.findEpisodeByFileName('test.txt');
+          final segments = await repository.getSegments(episode!.id);
+          expect(segments.first.text, contains('えるりっく'));
+        },
+      );
 
-      test('does not apply dictionary when dictionaryRepository is null',
-          () async {
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+      test(
+        'does not apply dictionary when dictionaryRepository is null',
+        () async {
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        await controller.loadSegments(
-          text: 'エルリックは勇者だ。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: 'エルリックは勇者だ。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        await controller.generateSegment(
-          resolveRefWavPath: null,
-          segmentIndex: 0,
-          config: _qwen3Config(),
-        );
+          await controller.generateSegment(
+            resolveRefWavPath: null,
+            segmentIndex: 0,
+            config: _qwen3Config(),
+          );
 
-        expect(isolate.synthesizeRequests.first.$1, contains('エルリック'));
-      });
+          expect(isolate.synthesizeRequests.first.$1, contains('エルリック'));
+        },
+      );
 
-      test('does not re-apply dictionary for segments already in DB',
-          () async {
+      test('does not re-apply dictionary for segments already in DB', () async {
         await dictRepository.addEntry('エルリック', 'えるりっく');
 
         // Pre-insert a segment with already-converted text
@@ -478,117 +488,125 @@ void main() {
         expect(isolate.synthesizeRequests.first.$1, 'えるりっくは勇者だ。');
       });
 
-      test('loadSegments applies dictionary to ungenerated segment text',
-          () async {
-        await dictRepository.addEntry('天鳥船', 'アメノトリフネ');
+      test(
+        'loadSegments applies dictionary to ungenerated segment text',
+        () async {
+          await dictRepository.addEntry('天鳥船', 'アメノトリフネ');
 
-        final controller = TtsEditController(
-          ttsIsolate: FakeTtsIsolate(),
-          audioPlayer: FakeAudioPlayer(),
-          repository: repository,
-          tempDirPath: tempDir.path,
-          dictionaryRepository: dictRepository,
-        );
+          final controller = TtsEditController(
+            ttsIsolate: FakeTtsIsolate(),
+            audioPlayer: FakeAudioPlayer(),
+            repository: repository,
+            tempDirPath: tempDir.path,
+            dictionaryRepository: dictRepository,
+          );
 
-        await controller.loadSegments(
-          text: '天鳥船が飛ぶ。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: '天鳥船が飛ぶ。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        expect(controller.segments[0].text, 'アメノトリフネが飛ぶ。');
-      });
+          expect(controller.segments[0].text, 'アメノトリフネが飛ぶ。');
+        },
+      );
 
-      test('generateSegment updates segment.text to dictionary-converted text',
-          () async {
-        await dictRepository.addEntry('天鳥船', 'アメノトリフネ');
+      test(
+        'generateSegment updates segment.text to dictionary-converted text',
+        () async {
+          await dictRepository.addEntry('天鳥船', 'アメノトリフネ');
 
-        final isolate = FakeTtsIsolate();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: FakeAudioPlayer(),
-          repository: repository,
-          tempDirPath: tempDir.path,
-          dictionaryRepository: dictRepository,
-        );
+          final isolate = FakeTtsIsolate();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: FakeAudioPlayer(),
+            repository: repository,
+            tempDirPath: tempDir.path,
+            dictionaryRepository: dictRepository,
+          );
 
-        await controller.loadSegments(
-          text: '天鳥船が飛ぶ。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
-        await controller.generateSegment(
-          resolveRefWavPath: null,
-          segmentIndex: 0,
-          config: _qwen3Config(),
-        );
+          await controller.loadSegments(
+            text: '天鳥船が飛ぶ。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
+          await controller.generateSegment(
+            resolveRefWavPath: null,
+            segmentIndex: 0,
+            config: _qwen3Config(),
+          );
 
-        expect(controller.segments[0].text, 'アメノトリフネが飛ぶ。');
-      });
+          expect(controller.segments[0].text, 'アメノトリフネが飛ぶ。');
+        },
+      );
 
-      test('resetSegment restores dictionary-converted text, not raw text',
-          () async {
-        await dictRepository.addEntry('天鳥船', 'アメノトリフネ');
+      test(
+        'resetSegment restores dictionary-converted text, not raw text',
+        () async {
+          await dictRepository.addEntry('天鳥船', 'アメノトリフネ');
 
-        final isolate = FakeTtsIsolate();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: FakeAudioPlayer(),
-          repository: repository,
-          tempDirPath: tempDir.path,
-          dictionaryRepository: dictRepository,
-        );
+          final isolate = FakeTtsIsolate();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: FakeAudioPlayer(),
+            repository: repository,
+            tempDirPath: tempDir.path,
+            dictionaryRepository: dictRepository,
+          );
 
-        await controller.loadSegments(
-          text: '天鳥船が飛ぶ。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
-        await controller.generateSegment(
-          resolveRefWavPath: null,
-          segmentIndex: 0,
-          config: _qwen3Config(),
-        );
-        await controller.resetSegment(0);
+          await controller.loadSegments(
+            text: '天鳥船が飛ぶ。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
+          await controller.generateSegment(
+            resolveRefWavPath: null,
+            segmentIndex: 0,
+            config: _qwen3Config(),
+          );
+          await controller.resetSegment(0);
 
-        expect(controller.segments[0].text, 'アメノトリフネが飛ぶ。');
-        expect(controller.segments[0].hasAudio, false);
-        expect(controller.segments[0].dbRecordExists, false);
-      });
+          expect(controller.segments[0].text, 'アメノトリフネが飛ぶ。');
+          expect(controller.segments[0].hasAudio, false);
+          expect(controller.segments[0].dbRecordExists, false);
+        },
+      );
 
-      test('resetAll restores dictionary-converted text for all segments',
-          () async {
-        await dictRepository.addEntry('天鳥船', 'アメノトリフネ');
+      test(
+        'resetAll restores dictionary-converted text for all segments',
+        () async {
+          await dictRepository.addEntry('天鳥船', 'アメノトリフネ');
 
-        final isolate = FakeTtsIsolate();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: FakeAudioPlayer(),
-          repository: repository,
-          tempDirPath: tempDir.path,
-          dictionaryRepository: dictRepository,
-        );
+          final isolate = FakeTtsIsolate();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: FakeAudioPlayer(),
+            repository: repository,
+            tempDirPath: tempDir.path,
+            dictionaryRepository: dictRepository,
+          );
 
-        await controller.loadSegments(
-          text: '天鳥船が飛ぶ。天鳥船は速い。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
-        await controller.generateSegment(
-          resolveRefWavPath: null,
-          segmentIndex: 0,
-          config: _qwen3Config(),
-        );
-        await controller.generateSegment(
-          resolveRefWavPath: null,
-          segmentIndex: 1,
-          config: _qwen3Config(),
-        );
-        await controller.resetAll();
+          await controller.loadSegments(
+            text: '天鳥船が飛ぶ。天鳥船は速い。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
+          await controller.generateSegment(
+            resolveRefWavPath: null,
+            segmentIndex: 0,
+            config: _qwen3Config(),
+          );
+          await controller.generateSegment(
+            resolveRefWavPath: null,
+            segmentIndex: 1,
+            config: _qwen3Config(),
+          );
+          await controller.resetAll();
 
-        expect(controller.segments[0].text, 'アメノトリフネが飛ぶ。');
-        expect(controller.segments[1].text, 'アメノトリフネは速い。');
-      });
+          expect(controller.segments[0].text, 'アメノトリフネが飛ぶ。');
+          expect(controller.segments[1].text, 'アメノトリフネは速い。');
+        },
+      );
     });
 
     group('loadSegments', () {
@@ -724,20 +742,22 @@ void main() {
         );
       });
 
-      test('an explicit "none" does not fall back to the global setting',
-          () async {
-        final isolate = FakeTtsIsolate();
-        final controller = await loadedController(isolate);
-        await controller.updateSegmentRefWavPath(0, '');
+      test(
+        'an explicit "none" does not fall back to the global setting',
+        () async {
+          final isolate = FakeTtsIsolate();
+          final controller = await loadedController(isolate);
+          await controller.updateSegmentRefWavPath(0, '');
 
-        await controller.generateSegment(
-          segmentIndex: 0,
-          config: _qwen3Config(refWavPath: '/voices/Global.wav'),
-          resolveRefWavPath: resolve,
-        );
+          await controller.generateSegment(
+            segmentIndex: 0,
+            config: _qwen3Config(refWavPath: '/voices/Global.wav'),
+            resolveRefWavPath: resolve,
+          );
 
-        expect(isolate.synthesizeRequests.single.$2, isNull);
-      });
+          expect(isolate.synthesizeRequests.single.$2, isNull);
+        },
+      );
 
       test('"設定値" uses the resolved global reference path', () async {
         final isolate = FakeTtsIsolate();
@@ -855,92 +875,104 @@ void main() {
         await controller.generateSegment(
           resolveRefWavPath: null,
           segmentIndex: 0,
-          config: _qwen3Config(modelDir: '/models', refWavPath: '/voices/female.wav'),
+          config: _qwen3Config(
+            modelDir: '/models',
+            refWavPath: '/voices/female.wav',
+          ),
         );
 
         expect(isolate.synthesizeRequests.first.$2, '/voices/female.wav');
       });
 
-      test('stores segment metadata refWavPath in DB, not resolved synthesis path',
-          () async {
-        final episodeId = await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.partial,
-        );
+      test(
+        'stores segment metadata refWavPath in DB, not resolved synthesis path',
+        () async {
+          final episodeId = await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.partial,
+          );
 
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        await controller.loadSegments(
-          text: '今日は天気です。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: '今日は天気です。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        // segment.refWavPath is null (meaning "設定値")
-        expect(controller.segments[0].refWavPath, isNull);
-        expect(controller.segments[0].dbRecordExists, false);
+          // segment.refWavPath is null (meaning "設定値")
+          expect(controller.segments[0].refWavPath, isNull);
+          expect(controller.segments[0].dbRecordExists, false);
 
-        // Generate with a resolved full path (as the UI would pass)
-        await controller.generateSegment(
-          resolveRefWavPath: null,
-          segmentIndex: 0,
-          config: _qwen3Config(modelDir: '/models', refWavPath: '/Users/someone/voices/voice.wav'),
-        );
+          // Generate with a resolved full path (as the UI would pass)
+          await controller.generateSegment(
+            resolveRefWavPath: null,
+            segmentIndex: 0,
+            config: _qwen3Config(
+              modelDir: '/models',
+              refWavPath: '/Users/someone/voices/voice.wav',
+            ),
+          );
 
-        // DB should store segment.refWavPath (null), NOT the resolved path
-        final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(dbSegment.refWavPath, isNull);
-      });
+          // DB should store segment.refWavPath (null), NOT the resolved path
+          final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
+          expect(dbSegment.refWavPath, isNull);
+        },
+      );
 
-      test('stores explicit segment refWavPath in DB on first insert',
-          () async {
-        final episodeId = await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.partial,
-        );
+      test(
+        'stores explicit segment refWavPath in DB on first insert',
+        () async {
+          final episodeId = await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.partial,
+          );
 
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        await controller.loadSegments(
-          text: '今日は天気です。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: '今日は天気です。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        // Directly set refWavPath without creating a DB record
-        controller.segments[0].refWavPath = 'custom_voice.wav';
-        expect(controller.segments[0].dbRecordExists, false);
+          // Directly set refWavPath without creating a DB record
+          controller.segments[0].refWavPath = 'custom_voice.wav';
+          expect(controller.segments[0].dbRecordExists, false);
 
-        // Generate with a resolved full path (insertSegment path)
-        await controller.generateSegment(
-          resolveRefWavPath: null,
-          segmentIndex: 0,
-          config: _qwen3Config(modelDir: '/models', refWavPath: '/Users/someone/voices/custom_voice.wav'),
-        );
+          // Generate with a resolved full path (insertSegment path)
+          await controller.generateSegment(
+            resolveRefWavPath: null,
+            segmentIndex: 0,
+            config: _qwen3Config(
+              modelDir: '/models',
+              refWavPath: '/Users/someone/voices/custom_voice.wav',
+            ),
+          );
 
-        // DB should store the metadata value, not the resolved path
-        final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
-        expect(dbSegment.refWavPath, 'custom_voice.wav');
-      });
+          // DB should store the metadata value, not the resolved path
+          final dbSegment = await repository.getSegmentByIndex(episodeId, 0);
+          expect(dbSegment.refWavPath, 'custom_voice.wav');
+        },
+      );
 
-      test('stores empty-string refWavPath in DB on first insert',
-          () async {
+      test('stores empty-string refWavPath in DB on first insert', () async {
         final episodeId = await repository.createEpisode(
           fileName: 'test.txt',
           sampleRate: 24000,
@@ -1208,51 +1240,55 @@ void main() {
         expect(player.currentFilePath, isNull);
       });
 
-      test('stopPlayback is non-terminal — preview still works after stop',
-          () async {
-        final episodeId = await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.completed,
-        );
-        await repository.insertSegment(
-          episodeId: episodeId,
-          segmentIndex: 0,
-          text: 'テスト。',
-          textOffset: 0,
-          textLength: 4,
-          audioData: _makeWavBytes(),
-          sampleCount: 5,
-        );
+      test(
+        'stopPlayback is non-terminal — preview still works after stop',
+        () async {
+          final episodeId = await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.completed,
+          );
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: 0,
+            text: 'テスト。',
+            textOffset: 0,
+            textLength: 4,
+            audioData: _makeWavBytes(),
+            sampleCount: 5,
+          );
 
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        await controller.loadSegments(
-          text: 'テスト。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: 'テスト。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        await controller.playSegment(0);
-        expect(player.currentFilePath, isNotNull);
+          await controller.playSegment(0);
+          expect(player.currentFilePath, isNotNull);
 
-        // User presses stop in the middle of playback…
-        player.currentFilePath = null;
-        await controller.stopPlayback();
+          // User presses stop in the middle of playback…
+          player.currentFilePath = null;
+          await controller.stopPlayback();
 
-        // …and then presses play on a segment again — must still work.
-        await controller.playSegment(0);
-        expect(player.currentFilePath, isNotNull,
-            reason:
-                'stopPlayback must be non-terminal so preview works again');
-      });
+          // …and then presses play on a segment again — must still work.
+          await controller.playSegment(0);
+          expect(
+            player.currentFilePath,
+            isNotNull,
+            reason: 'stopPlayback must be non-terminal so preview works again',
+          );
+        },
+      );
     });
 
     group('playAll', () {
@@ -1306,59 +1342,62 @@ void main() {
     });
 
     group('playAll with realistic player', () {
-      test('plays all segments when pause is called between segments', () async {
-        final episodeId = await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.completed,
-        );
-        await repository.insertSegment(
-          episodeId: episodeId,
-          segmentIndex: 0,
-          text: 'セグメント0。',
-          textOffset: 0,
-          textLength: 6,
-          audioData: _makeWavBytes(),
-          sampleCount: 5,
-        );
-        await repository.insertSegment(
-          episodeId: episodeId,
-          segmentIndex: 1,
-          text: 'セグメント1。',
-          textOffset: 6,
-          textLength: 6,
-          audioData: _makeWavBytes(),
-          sampleCount: 5,
-        );
-        await repository.insertSegment(
-          episodeId: episodeId,
-          segmentIndex: 2,
-          text: 'セグメント2。',
-          textOffset: 12,
-          textLength: 6,
-          audioData: _makeWavBytes(),
-          sampleCount: 5,
-        );
+      test(
+        'plays all segments when pause is called between segments',
+        () async {
+          final episodeId = await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.completed,
+          );
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: 0,
+            text: 'セグメント0。',
+            textOffset: 0,
+            textLength: 6,
+            audioData: _makeWavBytes(),
+            sampleCount: 5,
+          );
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: 1,
+            text: 'セグメント1。',
+            textOffset: 6,
+            textLength: 6,
+            audioData: _makeWavBytes(),
+            sampleCount: 5,
+          );
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: 2,
+            text: 'セグメント2。',
+            textOffset: 12,
+            textLength: 6,
+            audioData: _makeWavBytes(),
+            sampleCount: 5,
+          );
 
-        final isolate = FakeTtsIsolate();
-        final player = RealisticFakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+          final isolate = FakeTtsIsolate();
+          final player = RealisticFakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        await controller.loadSegments(
-          text: 'セグメント0。セグメント1。セグメント2。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: 'セグメント0。セグメント1。セグメント2。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        await controller.playAll();
+          await controller.playAll();
 
-        expect(player.playedFiles, hasLength(3));
-      });
+          expect(player.playedFiles, hasLength(3));
+        },
+      );
     });
 
     group('playAll from a start index', () {
@@ -1410,15 +1449,17 @@ void main() {
             .toList();
       }
 
-      test('starts at the given index and leaves earlier segments unplayed',
-          () async {
-        final player = RealisticFakeAudioPlayer();
-        final controller = await loadedController(count: 4, player: player);
+      test(
+        'starts at the given index and leaves earlier segments unplayed',
+        () async {
+          final player = RealisticFakeAudioPlayer();
+          final controller = await loadedController(count: 4, player: player);
 
-        await controller.playAll(startIndex: 2);
+          await controller.playAll(startIndex: 2);
 
-        expect(playedIndices(player), [2, 3]);
-      });
+          expect(playedIndices(player), [2, 3]);
+        },
+      );
 
       test('starts at the first segment when no index is given', () async {
         final player = RealisticFakeAudioPlayer();
@@ -1442,19 +1483,21 @@ void main() {
         expect(playedIndices(player), [2, 4]);
       });
 
-      test('starts at the next generated segment when the start index has none',
-          () async {
-        final player = RealisticFakeAudioPlayer();
-        final controller = await loadedController(
-          count: 4,
-          player: player,
-          withoutAudio: {2},
-        );
+      test(
+        'starts at the next generated segment when the start index has none',
+        () async {
+          final player = RealisticFakeAudioPlayer();
+          final controller = await loadedController(
+            count: 4,
+            player: player,
+            withoutAudio: {2},
+          );
 
-        await controller.playAll(startIndex: 2);
+          await controller.playAll(startIndex: 2);
 
-        expect(playedIndices(player), [3]);
-      });
+          expect(playedIndices(player), [3]);
+        },
+      );
 
       test('notifies onSegmentStart only for the segments it plays', () async {
         final player = RealisticFakeAudioPlayer();
@@ -1477,20 +1520,22 @@ void main() {
         expect(await controller.playAll(), true);
       });
 
-      test('returns true when no generated segment remains from the start index',
-          () async {
-        final player = RealisticFakeAudioPlayer();
-        final controller = await loadedController(
-          count: 4,
-          player: player,
-          withoutAudio: {2, 3},
-        );
+      test(
+        'returns true when no generated segment remains from the start index',
+        () async {
+          final player = RealisticFakeAudioPlayer();
+          final controller = await loadedController(
+            count: 4,
+            player: player,
+            withoutAudio: {2, 3},
+          );
 
-        final reachedEnd = await controller.playAll(startIndex: 2);
+          final reachedEnd = await controller.playAll(startIndex: 2);
 
-        expect(reachedEnd, true);
-        expect(playedIndices(player), isEmpty);
-      });
+          expect(reachedEnd, true);
+          expect(playedIndices(player), isEmpty);
+        },
+      );
 
       test('treats a negative start index as the first segment', () async {
         // playSegment already ignores out-of-range indices; playAll would
@@ -1504,49 +1549,51 @@ void main() {
         expect(playedIndices(player), [0, 1, 2]);
       });
 
-      test('does not start a segment that was stopped during its read',
-          () async {
-        // stopPlayback interrupts the player, but in this window the player is
-        // not holding anything yet — so without a check the segment starts
-        // playing after the UI has already returned to idle.
-        final gated = GatedReadRepository(database);
-        final player = RealisticFakeAudioPlayer();
+      test(
+        'does not start a segment that was stopped during its read',
+        () async {
+          // stopPlayback interrupts the player, but in this window the player is
+          // not holding anything yet — so without a check the segment starts
+          // playing after the UI has already returned to idle.
+          final gated = GatedReadRepository(database);
+          final player = RealisticFakeAudioPlayer();
 
-        final episodeId = await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.partial,
-        );
-        await repository.insertSegment(
-          episodeId: episodeId,
-          segmentIndex: 0,
-          text: 'セグメント0。',
-          textOffset: 0,
-          textLength: 7,
-          audioData: _makeWavBytes(),
-          sampleCount: 5,
-        );
+          final episodeId = await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.partial,
+          );
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: 0,
+            text: 'セグメント0。',
+            textOffset: 0,
+            textLength: 7,
+            audioData: _makeWavBytes(),
+            sampleCount: 5,
+          );
 
-        final controller = TtsEditController(
-          ttsIsolate: FakeTtsIsolate(),
-          audioPlayer: player,
-          repository: gated,
-          tempDirPath: tempDir.path,
-        );
-        await controller.loadSegments(
-          text: 'セグメント0。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          final controller = TtsEditController(
+            ttsIsolate: FakeTtsIsolate(),
+            audioPlayer: player,
+            repository: gated,
+            tempDirPath: tempDir.path,
+          );
+          await controller.loadSegments(
+            text: 'セグメント0。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        final playing = controller.playAll();
-        await gated.reachedRead.future;
-        await controller.stopPlayback();
-        gated.releaseRead.complete();
+          final playing = controller.playAll();
+          await gated.reachedRead.future;
+          await controller.stopPlayback();
+          gated.releaseRead.complete();
 
-        expect(await playing, false);
-        expect(player.playedFiles, isEmpty);
-      });
+          expect(await playing, false);
+          expect(player.playedFiles, isEmpty);
+        },
+      );
 
       test('returns false when the user stops playback midway', () async {
         final player = NeverCompletingAudioPlayer();
@@ -1719,45 +1766,47 @@ void main() {
     });
 
     group('irodori memo -> caption propagation', () {
-      test('irodori: segment memo is passed as caption on regenerate',
-          () async {
-        final episodeId = await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 48000,
-          status: TtsEpisodeStatus.partial,
-        );
-        await repository.insertSegment(
-          episodeId: episodeId,
-          segmentIndex: 0,
-          text: 'テスト。',
-          textOffset: 0,
-          textLength: 4,
-        );
-        await repository.updateSegmentMemo(episodeId, 0, '怒って叫んでいる');
+      test(
+        'irodori: segment memo is passed as caption on regenerate',
+        () async {
+          final episodeId = await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 48000,
+            status: TtsEpisodeStatus.partial,
+          );
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: 0,
+            text: 'テスト。',
+            textOffset: 0,
+            textLength: 4,
+          );
+          await repository.updateSegmentMemo(episodeId, 0, '怒って叫んでいる');
 
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        await controller.loadSegments(
-          text: 'テスト。',
-          fileName: 'test.txt',
-          sampleRate: 48000,
-        );
+          await controller.loadSegments(
+            text: 'テスト。',
+            fileName: 'test.txt',
+            sampleRate: 48000,
+          );
 
-        await controller.generateSegment(
-          resolveRefWavPath: null,
-          segmentIndex: 0,
-          config: _irodoriConfig(),
-        );
+          await controller.generateSegment(
+            resolveRefWavPath: null,
+            segmentIndex: 0,
+            config: _irodoriConfig(),
+          );
 
-        expect(isolate.synthesizeCaptions.single, '怒って叫んでいる');
-      });
+          expect(isolate.synthesizeCaptions.single, '怒って叫んでいる');
+        },
+      );
 
       test('irodori: empty memo yields no caption', () async {
         final isolate = FakeTtsIsolate();
@@ -1811,34 +1860,36 @@ void main() {
         expect(isolate.synthesizeCaptions.single, isNull);
       });
 
-      test('irodori: generateAllUngenerated passes each memo as caption',
-          () async {
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+      test(
+        'irodori: generateAllUngenerated passes each memo as caption',
+        () async {
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        await controller.loadSegments(
-          text: '一文目。二文目。',
-          fileName: 'test.txt',
-          sampleRate: 48000,
-        );
-        await controller.updateSegmentMemo(0, 'ささやくように');
-        await controller.updateSegmentMemo(1, '');
+          await controller.loadSegments(
+            text: '一文目。二文目。',
+            fileName: 'test.txt',
+            sampleRate: 48000,
+          );
+          await controller.updateSegmentMemo(0, 'ささやくように');
+          await controller.updateSegmentMemo(1, '');
 
-        await controller.generateAllUngenerated(
-          config: _irodoriConfig(),
-          resolveRefWavPath: null,
-        );
+          await controller.generateAllUngenerated(
+            config: _irodoriConfig(),
+            resolveRefWavPath: null,
+          );
 
-        expect(isolate.synthesizeCaptions, hasLength(2));
-        expect(isolate.synthesizeCaptions[0], 'ささやくように');
-        expect(isolate.synthesizeCaptions[1], isNull);
-      });
+          expect(isolate.synthesizeCaptions, hasLength(2));
+          expect(isolate.synthesizeCaptions[0], 'ささやくように');
+          expect(isolate.synthesizeCaptions[1], isNull);
+        },
+      );
     });
 
     group('resetSegment', () {
@@ -1947,7 +1998,10 @@ void main() {
 
         await controller.generateAllUngenerated(
           resolveRefWavPath: null,
-          config: _qwen3Config(modelDir: '/models', refWavPath: '/voices/global.wav'),
+          config: _qwen3Config(
+            modelDir: '/models',
+            refWavPath: '/voices/global.wav',
+          ),
         );
 
         expect(isolate.synthesizeRequests, hasLength(2));
@@ -1985,14 +2039,16 @@ void main() {
         controller.segments[0].refWavPath = 'custom_voice.wav';
 
         await controller.generateAllUngenerated(
-          config: _qwen3Config(modelDir: '/models', refWavPath: '/voices/global.wav'),
+          config: _qwen3Config(
+            modelDir: '/models',
+            refWavPath: '/voices/global.wav',
+          ),
           resolveRefWavPath: (fileName) => '/voices/$fileName',
         );
 
         expect(isolate.synthesizeRequests, hasLength(2));
         // Segment 0: per-segment ref resolved via callback
-        expect(
-            isolate.synthesizeRequests[0].$2, '/voices/custom_voice.wav');
+        expect(isolate.synthesizeRequests[0].$2, '/voices/custom_voice.wav');
         // Segment 1: null ref falls back to global
         expect(isolate.synthesizeRequests[1].$2, '/voices/global.wav');
       });
@@ -2023,7 +2079,10 @@ void main() {
 
         await controller.generateAllUngenerated(
           resolveRefWavPath: null,
-          config: _qwen3Config(modelDir: '/models', refWavPath: '/voices/global.wav'),
+          config: _qwen3Config(
+            modelDir: '/models',
+            refWavPath: '/voices/global.wav',
+          ),
         );
 
         expect(isolate.synthesizeRequests, hasLength(2));
@@ -2058,7 +2117,10 @@ void main() {
         controller.segments[0].refWavPath = '';
 
         await controller.generateAllUngenerated(
-          config: _qwen3Config(modelDir: '/models', refWavPath: '/voices/global.wav'),
+          config: _qwen3Config(
+            modelDir: '/models',
+            refWavPath: '/voices/global.wav',
+          ),
           resolveRefWavPath: (fileName) => '/voices/$fileName',
         );
 
@@ -2208,54 +2270,56 @@ void main() {
         expect(episode, isNull);
       });
 
-      test('keeps episode with partial status when some segments remain',
-          () async {
-        final episodeId = await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.completed,
-        );
-        await repository.insertSegment(
-          episodeId: episodeId,
-          segmentIndex: 0,
-          text: 'セグメント0。',
-          textOffset: 0,
-          textLength: 6,
-          audioData: _makeWavBytes(),
-          sampleCount: 5,
-        );
-        await repository.insertSegment(
-          episodeId: episodeId,
-          segmentIndex: 1,
-          text: 'セグメント1。',
-          textOffset: 7,
-          textLength: 6,
-          audioData: _makeWavBytes(),
-          sampleCount: 5,
-        );
+      test(
+        'keeps episode with partial status when some segments remain',
+        () async {
+          final episodeId = await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.completed,
+          );
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: 0,
+            text: 'セグメント0。',
+            textOffset: 0,
+            textLength: 6,
+            audioData: _makeWavBytes(),
+            sampleCount: 5,
+          );
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: 1,
+            text: 'セグメント1。',
+            textOffset: 7,
+            textLength: 6,
+            audioData: _makeWavBytes(),
+            sampleCount: 5,
+          );
 
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        await controller.loadSegments(
-          text: 'セグメント0。セグメント1。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: 'セグメント0。セグメント1。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        await controller.resetSegment(0);
+          await controller.resetSegment(0);
 
-        // Episode should remain with partial status
-        final episode = await repository.findEpisodeByFileName('test.txt');
-        expect(episode, isNotNull);
-        expect(episode!.status, TtsEpisodeStatus.partial);
-      });
+          // Episode should remain with partial status
+          final episode = await repository.findEpisodeByFileName('test.txt');
+          expect(episode, isNotNull);
+          expect(episode!.status, TtsEpisodeStatus.partial);
+        },
+      );
     });
 
     group('cancel', () {
@@ -2394,14 +2458,16 @@ void main() {
 
         // Start generation - will block on model loading
         var generateCompleted = false;
-        final generateFuture = controller.generateSegment(
-          resolveRefWavPath: null,
-          segmentIndex: 0,
-          config: _qwen3Config(modelDir: '/models'),
-        ).then((result) {
-          generateCompleted = true;
-          return result;
-        });
+        final generateFuture = controller
+            .generateSegment(
+              resolveRefWavPath: null,
+              segmentIndex: 0,
+              config: _qwen3Config(modelDir: '/models'),
+            )
+            .then((result) {
+              generateCompleted = true;
+              return result;
+            });
 
         // Let event loop process until spawn is called
         await Future.delayed(Duration.zero);
@@ -2418,255 +2484,294 @@ void main() {
         expect(result, false);
       });
 
-      test('cancel disposes spawned isolate even when model not loaded',
-          () async {
-        await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.partial,
-        );
+      test(
+        'cancel disposes spawned isolate even when model not loaded',
+        () async {
+          await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.partial,
+          );
 
-        final isolate = FakeTtsIsolate();
-        isolate.blockModelLoad = true;
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+          final isolate = FakeTtsIsolate();
+          isolate.blockModelLoad = true;
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        await controller.loadSegments(
-          text: 'テスト。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: 'テスト。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        // Start generation to trigger spawn
-        unawaited(controller.generateSegment(
-          resolveRefWavPath: null,
-          segmentIndex: 0,
-          config: _qwen3Config(modelDir: '/models'),
-        ));
-        await Future.delayed(Duration.zero);
-        await Future.delayed(Duration.zero);
-        expect(isolate.spawned, true);
-        expect(controller.modelLoaded, false);
+          // Start generation to trigger spawn
+          unawaited(
+            controller.generateSegment(
+              resolveRefWavPath: null,
+              segmentIndex: 0,
+              config: _qwen3Config(modelDir: '/models'),
+            ),
+          );
+          await Future.delayed(Duration.zero);
+          await Future.delayed(Duration.zero);
+          expect(isolate.spawned, true);
+          expect(controller.modelLoaded, false);
 
-        // Cancel should dispose the spawned but not-loaded isolate
-        await controller.cancel();
+          // Cancel should dispose the spawned but not-loaded isolate
+          await controller.cancel();
 
-        expect(isolate.disposed, true);
-      });
+          expect(isolate.disposed, true);
+        },
+      );
     });
 
     group('cancel during synthesis', () {
-      test('cancel during _synthesize resolves generateAllUngenerated immediately',
-          () async {
-        await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.partial,
-        );
+      test(
+        'cancel during _synthesize resolves generateAllUngenerated immediately',
+        () async {
+          await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.partial,
+          );
 
-        final isolate = FakeTtsIsolate();
-        isolate.synthesizeGate = Completer<void>();
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+          final isolate = FakeTtsIsolate();
+          isolate.synthesizeGate = Completer<void>();
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        await controller.loadSegments(
-          text: '文1。文2。文3。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: '文1。文2。文3。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        // Start generateAllUngenerated - will block on first synthesize
-        var generateCompleted = false;
-        final generateFuture = controller.generateAllUngenerated(
-          resolveRefWavPath: null,
-          config: _qwen3Config(modelDir: '/models'),
-        ).then((_) {
-          generateCompleted = true;
-        });
+          // Start generateAllUngenerated - will block on first synthesize
+          var generateCompleted = false;
+          final generateFuture = controller
+              .generateAllUngenerated(
+                resolveRefWavPath: null,
+                config: _qwen3Config(modelDir: '/models'),
+              )
+              .then((_) {
+                generateCompleted = true;
+              });
 
-        // Let the event loop process until synthesize is called
-        await Future.delayed(Duration.zero);
-        await Future.delayed(Duration.zero);
-        expect(isolate.synthesizeRequests, hasLength(1));
-        expect(generateCompleted, false);
+          // Let the event loop process until synthesize is called
+          await Future.delayed(Duration.zero);
+          await Future.delayed(Duration.zero);
+          expect(isolate.synthesizeRequests, hasLength(1));
+          expect(generateCompleted, false);
 
-        // Cancel while synthesize is pending
-        await controller.cancel();
+          // Cancel while synthesize is pending
+          await controller.cancel();
 
-        // generateAllUngenerated should now complete
-        await generateFuture;
-        expect(generateCompleted, true);
+          // generateAllUngenerated should now complete
+          await generateFuture;
+          expect(generateCompleted, true);
 
-        // Only first segment was attempted, none completed
-        expect(controller.segments[0].hasAudio, false);
-        expect(controller.segments[1].hasAudio, false);
-        expect(controller.segments[2].hasAudio, false);
-      });
+          // Only first segment was attempted, none completed
+          expect(controller.segments[0].hasAudio, false);
+          expect(controller.segments[1].hasAudio, false);
+          expect(controller.segments[2].hasAudio, false);
+        },
+      );
     });
 
     group('episode sample rate', () {
-      test('episode is created with the sample rate passed to loadSegments',
-          () async {
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+      test(
+        'episode is created with the sample rate passed to loadSegments',
+        () async {
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        // Simulate the Piper engine (22050 Hz) being active: the dialog
-        // resolves config.sampleRate and passes it to loadSegments.
-        await controller.loadSegments(
-          text: 'テスト。',
-          fileName: 'test.txt',
-          sampleRate: 22050,
-        );
+          // Simulate the Piper engine (22050 Hz) being active: the dialog
+          // resolves config.sampleRate and passes it to loadSegments.
+          await controller.loadSegments(
+            text: 'テスト。',
+            fileName: 'test.txt',
+            sampleRate: 22050,
+          );
 
-        // Trigger episode creation via a segment operation.
-        await controller.generateSegment(
-          resolveRefWavPath: null,
-          segmentIndex: 0,
-          config: _qwen3Config(sampleRate: 22050),
-        );
+          // Trigger episode creation via a segment operation.
+          await controller.generateSegment(
+            resolveRefWavPath: null,
+            segmentIndex: 0,
+            config: _qwen3Config(sampleRate: 22050),
+          );
 
-        final episode = await repository.findEpisodeByFileName('test.txt');
-        expect(episode, isNotNull);
-        expect(episode!.sampleRate, 22050,
+          final episode = await repository.findEpisodeByFileName('test.txt');
+          expect(episode, isNotNull);
+          expect(
+            episode!.sampleRate,
+            22050,
             reason:
                 'episode sample_rate must reflect the value passed to '
-                'loadSegments (the active engine), not a hard-coded 24000');
-      });
+                'loadSegments (the active engine), not a hard-coded 24000',
+          );
+        },
+      );
     });
 
     group('dispose', () {
-      test('disposes the SegmentPlayer (and underlying audio player) on dispose',
-          () async {
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+      test(
+        'disposes the SegmentPlayer (and underlying audio player) on dispose',
+        () async {
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        await controller.loadSegments(
-          text: 'テスト。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: 'テスト。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        await controller.dispose();
+          await controller.dispose();
 
-        expect(player.isDisposed, true,
-            reason: 'dispose() must dispose the SegmentPlayer so the platform '
-                'audio player is released and does not leak');
-      });
+          expect(
+            player.isDisposed,
+            true,
+            reason:
+                'dispose() must dispose the SegmentPlayer so the platform '
+                'audio player is released and does not leak',
+          );
+        },
+      );
 
-      test('disposes SegmentPlayer before deleting temporary preview files',
-          () async {
-        final episodeId = await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.completed,
-        );
-        await repository.insertSegment(
-          episodeId: episodeId,
-          segmentIndex: 0,
-          text: 'テスト。',
-          textOffset: 0,
-          textLength: 4,
-          audioData: _makeWavBytes(),
-          sampleCount: 5,
-        );
+      test(
+        'disposes SegmentPlayer before deleting temporary preview files',
+        () async {
+          final episodeId = await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.completed,
+          );
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: 0,
+            text: 'テスト。',
+            textOffset: 0,
+            textLength: 4,
+            audioData: _makeWavBytes(),
+            sampleCount: 5,
+          );
 
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final previewPath = '${tempDir.path}/tts_edit_preview_0.wav';
-        final spyPlayer =
-            _OrderSpySegmentPlayer(player: player, previewPath: previewPath);
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-          segmentPlayer: spyPlayer,
-        );
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final previewPath = '${tempDir.path}/tts_edit_preview_0.wav';
+          final spyPlayer = _OrderSpySegmentPlayer(
+            player: player,
+            previewPath: previewPath,
+          );
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+            segmentPlayer: spyPlayer,
+          );
 
-        await controller.loadSegments(
-          text: 'テスト。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: 'テスト。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        await controller.playSegment(0);
-        expect(File(previewPath).existsSync(), true,
-            reason: 'sanity: preview file should be written by playSegment');
+          await controller.playSegment(0);
+          expect(
+            File(previewPath).existsSync(),
+            true,
+            reason: 'sanity: preview file should be written by playSegment',
+          );
 
-        await controller.dispose();
+          await controller.dispose();
 
-        expect(spyPlayer.previewExistedAtDispose, true,
-            reason: 'SegmentPlayer must be disposed before temporary preview '
-                'files are deleted (Windows file-lock safety)');
-        expect(File(previewPath).existsSync(), false,
-            reason: 'preview files must be cleaned up after dispose');
-      });
+          expect(
+            spyPlayer.previewExistedAtDispose,
+            true,
+            reason:
+                'SegmentPlayer must be disposed before temporary preview '
+                'files are deleted (Windows file-lock safety)',
+          );
+          expect(
+            File(previewPath).existsSync(),
+            false,
+            reason: 'preview files must be cleaned up after dispose',
+          );
+        },
+      );
 
-      test('cleans up temporary files even if SegmentPlayer.dispose throws',
-          () async {
-        final episodeId = await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.completed,
-        );
-        await repository.insertSegment(
-          episodeId: episodeId,
-          segmentIndex: 0,
-          text: 'テスト。',
-          textOffset: 0,
-          textLength: 4,
-          audioData: _makeWavBytes(),
-          sampleCount: 5,
-        );
+      test(
+        'cleans up temporary files even if SegmentPlayer.dispose throws',
+        () async {
+          final episodeId = await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.completed,
+          );
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: 0,
+            text: 'テスト。',
+            textOffset: 0,
+            textLength: 4,
+            audioData: _makeWavBytes(),
+            sampleCount: 5,
+          );
 
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final previewPath = '${tempDir.path}/tts_edit_preview_0.wav';
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-          segmentPlayer: _ThrowingSegmentPlayer(player: player),
-        );
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final previewPath = '${tempDir.path}/tts_edit_preview_0.wav';
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+            segmentPlayer: _ThrowingSegmentPlayer(player: player),
+          );
 
-        await controller.loadSegments(
-          text: 'テスト。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: 'テスト。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        await controller.playSegment(0);
-        expect(File(previewPath).existsSync(), true);
+          await controller.playSegment(0);
+          expect(File(previewPath).existsSync(), true);
 
-        await expectLater(controller.dispose(), throwsA(isA<StateError>()));
+          await expectLater(controller.dispose(), throwsA(isA<StateError>()));
 
-        expect(File(previewPath).existsSync(), false,
-            reason: 'temp files must be cleaned up even when player dispose '
-                'throws (cleanup runs in finally)');
-      });
+          expect(
+            File(previewPath).existsSync(),
+            false,
+            reason:
+                'temp files must be cleaned up even when player dispose '
+                'throws (cleanup runs in finally)',
+          );
+        },
+      );
 
       test('disposes TtsIsolate if model was loaded', () async {
         await repository.createEpisode(
@@ -2724,76 +2829,75 @@ void main() {
     });
 
     group('text hash storage', () {
-      test('stores text_hash when episode is created via segment operation',
-          () async {
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+      test(
+        'stores text_hash when episode is created via segment operation',
+        () async {
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        const text = '今日は天気です。散歩に出かけよう。';
-        final expectedHash =
-            sha256.convert(utf8.encode(text)).toString();
+          const text = '今日は天気です。散歩に出かけよう。';
+          final expectedHash = sha256.convert(utf8.encode(text)).toString();
 
-        await controller.loadSegments(
-          text: text,
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: text,
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        // Trigger episode creation via segment ref_wav_path update
-        await controller.updateSegmentRefWavPath(0, 'voice.wav');
+          // Trigger episode creation via segment ref_wav_path update
+          await controller.updateSegmentRefWavPath(0, 'voice.wav');
 
-        final episode =
-            await repository.findEpisodeByFileName('test.txt');
-        expect(episode, isNotNull);
-        expect(episode!.textHash, expectedHash);
+          final episode = await repository.findEpisodeByFileName('test.txt');
+          expect(episode, isNotNull);
+          expect(episode!.textHash, expectedHash);
 
-        await controller.dispose();
-      });
+          await controller.dispose();
+        },
+      );
 
-      test('updates text_hash when existing episode has null text_hash',
-          () async {
-        // Create episode without text_hash (simulating pre-fix state)
-        await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.partial,
-        );
+      test(
+        'updates text_hash when existing episode has null text_hash',
+        () async {
+          // Create episode without text_hash (simulating pre-fix state)
+          await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.partial,
+          );
 
-        final isolate = FakeTtsIsolate();
-        final player = FakeAudioPlayer();
-        final controller = TtsEditController(
-          ttsIsolate: isolate,
-          audioPlayer: player,
-          repository: repository,
-          tempDirPath: tempDir.path,
-        );
+          final isolate = FakeTtsIsolate();
+          final player = FakeAudioPlayer();
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
 
-        const text = '今日は天気です。散歩に出かけよう。';
-        final expectedHash =
-            sha256.convert(utf8.encode(text)).toString();
+          const text = '今日は天気です。散歩に出かけよう。';
+          final expectedHash = sha256.convert(utf8.encode(text)).toString();
 
-        await controller.loadSegments(
-          text: text,
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.loadSegments(
+            text: text,
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        final episode =
-            await repository.findEpisodeByFileName('test.txt');
-        expect(episode, isNotNull);
-        expect(episode!.textHash, expectedHash);
+          final episode = await repository.findEpisodeByFileName('test.txt');
+          expect(episode, isNotNull);
+          expect(episode!.textHash, expectedHash);
 
-        await controller.dispose();
-      });
+          await controller.dispose();
+        },
+      );
 
-      test('preserves existing non-null text_hash on loadSegments',
-          () async {
+      test('preserves existing non-null text_hash on loadSegments', () async {
         const existingHash = 'existing_hash_value';
         await repository.createEpisode(
           fileName: 'test.txt',
@@ -2817,16 +2921,14 @@ void main() {
           sampleRate: 24000,
         );
 
-        final episode =
-            await repository.findEpisodeByFileName('test.txt');
+        final episode = await repository.findEpisodeByFileName('test.txt');
         expect(episode, isNotNull);
         expect(episode!.textHash, existingHash);
 
         await controller.dispose();
       });
 
-      test(
-          'edit-created episode is reused by streaming controller '
+      test('edit-created episode is reused by streaming controller '
           'with matching text', () async {
         final isolate = FakeTtsIsolate();
         final player = FakeAudioPlayer();
@@ -2855,12 +2957,10 @@ void main() {
         await controller.dispose();
 
         // Verify episode exists with correct text_hash
-        final episode =
-            await repository.findEpisodeByFileName('test.txt');
+        final episode = await repository.findEpisodeByFileName('test.txt');
         expect(episode, isNotNull);
 
-        final textHash =
-            sha256.convert(utf8.encode(text)).toString();
+        final textHash = sha256.convert(utf8.encode(text)).toString();
         final storedHash = episode!.textHash;
         expect(storedHash, textHash);
 
@@ -2914,17 +3014,20 @@ void main() {
 
       test('reports the native cause held by the session', () async {
         final reason = await captureFailureReason(
-          nativeError: 'unsupported WAV encoding '
+          nativeError:
+              'unsupported WAV encoding '
               '(need PCM16, PCM24, or float32)',
         );
 
         expect(reason, contains('unsupported WAV encoding'));
       });
 
-      test('reports a null cause when the failure carried no message',
-          () async {
-        expect(await captureFailureReason(), isNull);
-      });
+      test(
+        'reports a null cause when the failure carried no message',
+        () async {
+          expect(await captureFailureReason(), isNull);
+        },
+      );
 
       test('a user cancel is not reported as a synthesis failure', () async {
         final isolate = FakeTtsIsolate();
@@ -2957,8 +3060,11 @@ void main() {
         await controller.cancel();
         await generateFuture;
 
-        expect(reported, isFalse,
-            reason: 'a deliberate cancel must not surface a failure toast');
+        expect(
+          reported,
+          isFalse,
+          reason: 'a deliberate cancel must not surface a failure toast',
+        );
       });
     });
 
@@ -2967,14 +3073,13 @@ void main() {
         FakeTtsIsolate isolate,
         FakeAudioPlayer player, {
         TtsDictionaryRepository? dict,
-      }) =>
-          TtsEditController(
-            ttsIsolate: isolate,
-            audioPlayer: player,
-            repository: repository,
-            tempDirPath: tempDir.path,
-            dictionaryRepository: dict,
-          );
+      }) => TtsEditController(
+        ttsIsolate: isolate,
+        audioPlayer: player,
+        repository: repository,
+        tempDirPath: tempDir.path,
+        dictionaryRepository: dict,
+      );
 
       test('persists the skip flag for a segment with no DB record', () async {
         final controller = buildController(FakeTtsIsolate(), FakeAudioPlayer());
@@ -3068,37 +3173,42 @@ void main() {
         expect(controller.segments[1].skip, isTrue);
       });
 
-      test('skipping the last ungenerated segment completes the episode',
-          () async {
-        final episodeId = await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.partial,
-        );
-        await repository.insertSegment(
-          episodeId: episodeId,
-          segmentIndex: 0,
-          text: '文1。',
-          textOffset: 0,
-          textLength: 3,
-          audioData: _makeWavBytes(),
-          sampleCount: 5,
-        );
+      test(
+        'skipping the last ungenerated segment completes the episode',
+        () async {
+          final episodeId = await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.partial,
+          );
+          await repository.insertSegment(
+            episodeId: episodeId,
+            segmentIndex: 0,
+            text: '文1。',
+            textOffset: 0,
+            textLength: 3,
+            audioData: _makeWavBytes(),
+            sampleCount: 5,
+          );
 
-        final controller = buildController(FakeTtsIsolate(), FakeAudioPlayer());
-        await controller.loadSegments(
-          text: '文1。文2。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          final controller = buildController(
+            FakeTtsIsolate(),
+            FakeAudioPlayer(),
+          );
+          await controller.loadSegments(
+            text: '文1。文2。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        await controller.setSegmentSkip(1, true);
+          await controller.setSegmentSkip(1, true);
 
-        // Without this the file browser's completion mark would never
-        // appear for an episode the user has finished with.
-        final episode = await repository.findEpisodeByFileName('test.txt');
-        expect(episode!.status, TtsEpisodeStatus.completed);
-      });
+          // Without this the file browser's completion mark would never
+          // appear for an episode the user has finished with.
+          final episode = await repository.findEpisodeByFileName('test.txt');
+          expect(episode!.status, TtsEpisodeStatus.completed);
+        },
+      );
 
       test('un-skipping drops a completed episode back to partial', () async {
         final episodeId = await repository.createEpisode(
@@ -3137,82 +3247,93 @@ void main() {
         expect(episode!.status, TtsEpisodeStatus.partial);
       });
 
-      test('generateAllUngenerated does not generate skipped segments',
-          () async {
-        final isolate = FakeTtsIsolate();
-        final controller = buildController(isolate, FakeAudioPlayer());
-        await controller.loadSegments(
-          text: '文1。文2。文3。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
-        await controller.setSegmentSkip(1, true);
-
-        await controller.generateAllUngenerated(
-          resolveRefWavPath: null,
-          config: _qwen3Config(modelDir: '/models'),
-        );
-
-        expect(isolate.synthesizeRequests.map((r) => r.$1),
-            ['文1。', '文3。']);
-        expect(controller.segments[1].hasAudio, isFalse);
-      });
-
-      test('generateAllUngenerated does nothing when every gap is skipped',
-          () async {
-        final isolate = FakeTtsIsolate();
-        final controller = buildController(isolate, FakeAudioPlayer());
-        await controller.loadSegments(
-          text: '文1。文2。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
-        await controller.setSegmentSkip(0, true);
-        await controller.setSegmentSkip(1, true);
-
-        await controller.generateAllUngenerated(
-          resolveRefWavPath: null,
-          config: _qwen3Config(modelDir: '/models'),
-        );
-
-        expect(isolate.synthesizeRequests, isEmpty);
-        expect(controller.modelLoaded, isFalse,
-            reason: 'no work means the model must not be loaded');
-      });
-
-      test('playAll does not play a skipped segment that holds audio',
-          () async {
-        final episodeId = await repository.createEpisode(
-          fileName: 'test.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.partial,
-        );
-        for (var i = 0; i < 3; i++) {
-          await repository.insertSegment(
-            episodeId: episodeId,
-            segmentIndex: i,
-            text: '文$i。',
-            textOffset: i * 4,
-            textLength: 3,
-            audioData: _makeWavBytes(),
-            sampleCount: 5,
-            skip: i == 1,
+      test(
+        'generateAllUngenerated does not generate skipped segments',
+        () async {
+          final isolate = FakeTtsIsolate();
+          final controller = buildController(isolate, FakeAudioPlayer());
+          await controller.loadSegments(
+            text: '文1。文2。文3。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
           );
-        }
+          await controller.setSegmentSkip(1, true);
 
-        final controller = buildController(FakeTtsIsolate(), FakeAudioPlayer());
-        await controller.loadSegments(
-          text: '文0。文1。文2。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          await controller.generateAllUngenerated(
+            resolveRefWavPath: null,
+            config: _qwen3Config(modelDir: '/models'),
+          );
 
-        final played = <int>[];
-        await controller.playAll(onSegmentStart: played.add);
+          expect(isolate.synthesizeRequests.map((r) => r.$1), ['文1。', '文3。']);
+          expect(controller.segments[1].hasAudio, isFalse);
+        },
+      );
 
-        // Audio presence cannot stand in for the skip decision.
-        expect(played, [0, 2]);
-      });
+      test(
+        'generateAllUngenerated does nothing when every gap is skipped',
+        () async {
+          final isolate = FakeTtsIsolate();
+          final controller = buildController(isolate, FakeAudioPlayer());
+          await controller.loadSegments(
+            text: '文1。文2。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
+          await controller.setSegmentSkip(0, true);
+          await controller.setSegmentSkip(1, true);
+
+          await controller.generateAllUngenerated(
+            resolveRefWavPath: null,
+            config: _qwen3Config(modelDir: '/models'),
+          );
+
+          expect(isolate.synthesizeRequests, isEmpty);
+          expect(
+            controller.modelLoaded,
+            isFalse,
+            reason: 'no work means the model must not be loaded',
+          );
+        },
+      );
+
+      test(
+        'playAll does not play a skipped segment that holds audio',
+        () async {
+          final episodeId = await repository.createEpisode(
+            fileName: 'test.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.partial,
+          );
+          for (var i = 0; i < 3; i++) {
+            await repository.insertSegment(
+              episodeId: episodeId,
+              segmentIndex: i,
+              text: '文$i。',
+              textOffset: i * 4,
+              textLength: 3,
+              audioData: _makeWavBytes(),
+              sampleCount: 5,
+              skip: i == 1,
+            );
+          }
+
+          final controller = buildController(
+            FakeTtsIsolate(),
+            FakeAudioPlayer(),
+          );
+          await controller.loadSegments(
+            text: '文0。文1。文2。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
+
+          final played = <int>[];
+          await controller.playAll(onSegmentStart: played.add);
+
+          // Audio presence cannot stand in for the skip decision.
+          expect(played, [0, 2]);
+        },
+      );
 
       test('playSegment refuses a skipped segment that holds audio', () async {
         final episodeId = await repository.createEpisode(
@@ -3281,44 +3402,47 @@ void main() {
       TtsEditController buildController(
         FakeTtsIsolate isolate, {
         TtsDictionaryRepository? dict,
-      }) =>
-          TtsEditController(
-            ttsIsolate: isolate,
-            audioPlayer: FakeAudioPlayer(),
-            repository: repository,
-            tempDirPath: tempDir.path,
-            dictionaryRepository: dict,
+      }) => TtsEditController(
+        ttsIsolate: isolate,
+        audioPlayer: FakeAudioPlayer(),
+        repository: repository,
+        tempDirPath: tempDir.path,
+        dictionaryRepository: dict,
+      );
+
+      test(
+        'a dictionary-emptied segment is skipped, not synthesized',
+        () async {
+          await dictRepository.addEntry('――‐', '');
+
+          final isolate = FakeTtsIsolate();
+          final controller = buildController(isolate, dict: dictRepository);
+          await controller.loadSegments(
+            text: '――‐\n文2。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
           );
 
-      test('a dictionary-emptied segment is skipped, not synthesized',
-          () async {
-        await dictRepository.addEntry('――‐', '');
+          await controller.generateAllUngenerated(
+            resolveRefWavPath: null,
+            config: _qwen3Config(modelDir: '/models'),
+          );
 
-        final isolate = FakeTtsIsolate();
-        final controller = buildController(isolate, dict: dictRepository);
-        await controller.loadSegments(
-          text: '――‐\n文2。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
-
-        await controller.generateAllUngenerated(
-          resolveRefWavPath: null,
-          config: _qwen3Config(modelDir: '/models'),
-        );
-
-        // The blank segment must not reach the engine, and — critically —
-        // must not abort the run for everything after it.
-        expect(isolate.synthesizeRequests.map((r) => r.$1), ['文2。']);
-        expect(controller.segments[0].skip, isTrue);
-        expect(controller.segments[1].hasAudio, isTrue);
-      });
+          // The blank segment must not reach the engine, and — critically —
+          // must not abort the run for everything after it.
+          expect(isolate.synthesizeRequests.map((r) => r.$1), ['文2。']);
+          expect(controller.segments[0].skip, isTrue);
+          expect(controller.segments[1].hasAudio, isTrue);
+        },
+      );
 
       test('records the blank segment as skipped in the database', () async {
         await dictRepository.addEntry('――‐', '');
 
-        final controller = buildController(FakeTtsIsolate(),
-            dict: dictRepository);
+        final controller = buildController(
+          FakeTtsIsolate(),
+          dict: dictRepository,
+        );
         await controller.loadSegments(
           text: '――‐\n文2。',
           fileName: 'test.txt',
@@ -3360,8 +3484,10 @@ void main() {
       test('a blank segment does not report a synthesis failure', () async {
         await dictRepository.addEntry('――‐', '');
 
-        final controller = buildController(FakeTtsIsolate(),
-            dict: dictRepository);
+        final controller = buildController(
+          FakeTtsIsolate(),
+          dict: dictRepository,
+        );
         var reported = false;
         controller.onSynthesisFailed = (_) => reported = true;
 
@@ -3378,45 +3504,54 @@ void main() {
         expect(reported, isFalse);
       });
 
-      test('a reset dictionary-emptied segment becomes skipped again',
-          () async {
-        await dictRepository.addEntry('――‐', '');
+      test(
+        'a reset dictionary-emptied segment becomes skipped again',
+        () async {
+          await dictRepository.addEntry('――‐', '');
 
-        final isolate = FakeTtsIsolate();
-        final controller = buildController(isolate, dict: dictRepository);
-        await controller.loadSegments(
-          text: '――‐\n文2。',
-          fileName: 'test.txt',
-          sampleRate: 24000,
-        );
+          final isolate = FakeTtsIsolate();
+          final controller = buildController(isolate, dict: dictRepository);
+          await controller.loadSegments(
+            text: '――‐\n文2。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
 
-        await controller.generateAllUngenerated(
-          resolveRefWavPath: null,
-          config: _qwen3Config(modelDir: '/models'),
-        );
-        expect(controller.segments[0].skip, isTrue);
+          await controller.generateAllUngenerated(
+            resolveRefWavPath: null,
+            config: _qwen3Config(modelDir: '/models'),
+          );
+          expect(controller.segments[0].skip, isTrue);
 
-        await controller.resetSegment(0);
-        expect(controller.segments[0].skip, isFalse,
-            reason: 'reset returns the segment to a generation candidate');
+          await controller.resetSegment(0);
+          expect(
+            controller.segments[0].skip,
+            isFalse,
+            reason: 'reset returns the segment to a generation candidate',
+          );
 
-        await controller.generateAllUngenerated(
-          resolveRefWavPath: null,
-          config: _qwen3Config(modelDir: '/models'),
-        );
+          await controller.generateAllUngenerated(
+            resolveRefWavPath: null,
+            config: _qwen3Config(modelDir: '/models'),
+          );
 
-        // Reset restores the dictionary-converted text, which is empty
-        // again — so the cycle is self-consistent rather than oscillating.
-        expect(controller.segments[0].skip, isTrue);
-        expect(isolate.synthesizeRequests.map((r) => r.$1),
-            isNot(contains('――‐')));
-      });
+          // Reset restores the dictionary-converted text, which is empty
+          // again — so the cycle is self-consistent rather than oscillating.
+          expect(controller.segments[0].skip, isTrue);
+          expect(
+            isolate.synthesizeRequests.map((r) => r.$1),
+            isNot(contains('――‐')),
+          );
+        },
+      );
 
       test('loadSegments alone writes nothing to the database', () async {
         await dictRepository.addEntry('――‐', '');
 
-        final controller = buildController(FakeTtsIsolate(),
-            dict: dictRepository);
+        final controller = buildController(
+          FakeTtsIsolate(),
+          dict: dictRepository,
+        );
         await controller.loadSegments(
           text: '――‐\n文2。',
           fileName: 'test.txt',

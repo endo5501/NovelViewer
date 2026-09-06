@@ -37,7 +37,11 @@ void main() {
 
     // A write before teardown succeeds.
     await repo.saveSnapshot(
-        word: 'アリス', coveredUpToEpisode: 1, summary: 'ok', sourceFile: '001.txt');
+      word: 'アリス',
+      coveredUpToEpisode: 1,
+      summary: 'ok',
+      sourceFile: '001.txt',
+    );
 
     // Folder teardown (move/delete) releases the handle.
     await registry.closeAll(folder.path);
@@ -46,7 +50,11 @@ void main() {
     // silently succeed against a released file.
     await expectLater(
       repo.saveSnapshot(
-          word: 'ボブ', coveredUpToEpisode: 1, summary: 'late', sourceFile: '001.txt'),
+        word: 'ボブ',
+        coveredUpToEpisode: 1,
+        summary: 'late',
+        sourceFile: '001.txt',
+      ),
       throwsA(anything),
     );
   });

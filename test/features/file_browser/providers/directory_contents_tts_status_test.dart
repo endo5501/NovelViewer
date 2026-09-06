@@ -93,14 +93,17 @@ void main() {
       );
       addDbContainerTearDown(container);
 
-      final contents =
-          await container.read(directoryContentsProvider.future);
+      final contents = await container.read(directoryContentsProvider.future);
 
       expect(contents.ttsStatuses, hasLength(2));
-      expect(contents.ttsStatuses['0001_chapter1.txt'],
-          TtsEpisodeStatus.completed);
-      expect(contents.ttsStatuses['0002_chapter2.txt'],
-          TtsEpisodeStatus.partial);
+      expect(
+        contents.ttsStatuses['0001_chapter1.txt'],
+        TtsEpisodeStatus.completed,
+      );
+      expect(
+        contents.ttsStatuses['0002_chapter2.txt'],
+        TtsEpisodeStatus.partial,
+      );
     });
 
     test('returns empty ttsStatuses when no tts_audio.db exists', () async {
@@ -118,8 +121,7 @@ void main() {
       );
       addDbContainerTearDown(container);
 
-      final contents =
-          await container.read(directoryContentsProvider.future);
+      final contents = await container.read(directoryContentsProvider.future);
 
       expect(contents.ttsStatuses, isEmpty);
     });

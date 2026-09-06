@@ -73,8 +73,11 @@ Future<WindowStateBootstrapResult> initializeWindowState({
     // time to finish if the native close is intercepted.
     await controller.setPreventClose(true);
 
-    final recorder =
-        WindowStateRecorder(repository: repository, window: controller, beforeClose: beforeClose);
+    final recorder = WindowStateRecorder(
+      repository: repository,
+      window: controller,
+      beforeClose: beforeClose,
+    );
     controller.addListener(recorder);
 
     return WindowStateBootstrapResult(
@@ -89,8 +92,11 @@ Future<WindowStateBootstrapResult> initializeWindowState({
           : null,
     );
   } catch (e, stack) {
-    _log.warning('Could not restore the window state; continuing startup', e,
-        stack);
+    _log.warning(
+      'Could not restore the window state; continuing startup',
+      e,
+      stack,
+    );
     return const WindowStateBootstrapResult();
   }
 }
@@ -120,8 +126,10 @@ Future<void> _maximizeOnceVisible(
       }
       await Future<void>.delayed(interval);
     }
-    _log.warning('Window never became visible; skipping restore of maximized '
-        'state');
+    _log.warning(
+      'Window never became visible; skipping restore of maximized '
+      'state',
+    );
   } catch (e, stack) {
     _log.warning('Failed to restore the maximized window state', e, stack);
   }
@@ -141,8 +149,11 @@ Future<DisplayInfo> _primaryDisplay() async {
     final display = await screenRetriever.getPrimaryDisplay();
     return (workArea: display.visibleSize ?? display.size);
   } catch (e, stack) {
-    _log.warning('Could not read the primary display; skipping clamp', e,
-        stack);
+    _log.warning(
+      'Could not read the primary display; skipping clamp',
+      e,
+      stack,
+    );
     return (workArea: null);
   }
 }

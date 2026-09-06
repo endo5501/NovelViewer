@@ -28,13 +28,16 @@ class TtsEpisode {
       fileName: requireColumn(row, 'file_name', 'tts_episodes') as String,
       sampleRate: requireColumn(row, 'sample_rate', 'tts_episodes') as int,
       status: TtsEpisodeStatus.fromDb(
-          requireColumn(row, 'status', 'tts_episodes') as String),
+        requireColumn(row, 'status', 'tts_episodes') as String,
+      ),
       refWavPath: row['ref_wav_path'] as String?,
       textHash: row['text_hash'] as String?,
       createdAt: DateTime.parse(
-          requireColumn(row, 'created_at', 'tts_episodes') as String),
+        requireColumn(row, 'created_at', 'tts_episodes') as String,
+      ),
       updatedAt: DateTime.parse(
-          requireColumn(row, 'updated_at', 'tts_episodes') as String),
+        requireColumn(row, 'updated_at', 'tts_episodes') as String,
+      ),
     );
   }
 }

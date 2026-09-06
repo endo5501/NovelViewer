@@ -9,8 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// [PlatformException], simulating a backend failure (e.g. libsecret missing
 /// on Linux). Reads continue to work against the underlying map.
 class FlutterSecureStorageMock {
-  static const _channel =
-      MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+  static const _channel = MethodChannel(
+    'plugins.it_nomads.com/flutter_secure_storage',
+  );
 
   final Map<String, String> store;
   bool forceWriteFailure;

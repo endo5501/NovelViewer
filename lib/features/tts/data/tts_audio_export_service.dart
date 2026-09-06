@@ -33,17 +33,25 @@ void _encodePcmChunks(
 
   while (samplesProcessed < totalSamples) {
     final remaining = totalSamples - samplesProcessed;
-    final chunkSamples =
-        remaining < _encodeChunkSize ? remaining : _encodeChunkSize;
+    final chunkSamples = remaining < _encodeChunkSize
+        ? remaining
+        : _encodeChunkSize;
 
     final srcOffset = pcmData.offsetInBytes + samplesProcessed * 2;
     final byteCount = chunkSamples * 2;
     final nativeBytes = pcmPtr.cast<Uint8>().asTypedList(byteCount);
     nativeBytes.setRange(
-        0, byteCount, pcmData.buffer.asUint8List(srcOffset, byteCount));
+      0,
+      byteCount,
+      pcmData.buffer.asUint8List(srcOffset, byteCount),
+    );
 
-    final bytesWritten =
-        bindings.encode(pcmPtr, chunkSamples, mp3Buf, _mp3BufSize);
+    final bytesWritten = bindings.encode(
+      pcmPtr,
+      chunkSamples,
+      mp3Buf,
+      _mp3BufSize,
+    );
     if (bytesWritten < 0) {
       throw Exception('LAME encode error: $bytesWritten');
     }
@@ -140,17 +148,13 @@ Future<void> exportToMp3WithProgress({
   // Listen before spawn to avoid race if isolate exits immediately.
   exitPort.listen((_) => receivePort.close());
 
-  await Isolate.spawn(
-    _exportWorker,
-    (
-      sendPort: receivePort.sendPort,
-      wavSegments: wavSegments,
-      outputPath: outputPath,
-      sampleRate: sampleRate,
-      bitrate: bitrate,
-    ),
-    onExit: exitPort.sendPort,
-  );
+  await Isolate.spawn(_exportWorker, (
+    sendPort: receivePort.sendPort,
+    wavSegments: wavSegments,
+    outputPath: outputPath,
+    sampleRate: sampleRate,
+    bitrate: bitrate,
+  ), onExit: exitPort.sendPort);
 
   String? error;
   var done = false;
@@ -185,7 +189,8 @@ void _exportWorker(
     String outputPath,
     int sampleRate,
     int bitrate,
-  }) params,
+  })
+  params,
 ) async {
   try {
     await encodeSegmentsToMp3(

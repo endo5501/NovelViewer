@@ -144,14 +144,17 @@ class _TtsEditSegmentListState extends State<TtsEditSegmentList> {
           key: _rowKeys.putIfAbsent(index, GlobalKey.new),
           child: TtsEditSegmentRow(
             segment: widget.segments[index],
-            isGenerating: widget.isGenerating && widget.generatingIndex == index,
+            isGenerating:
+                widget.isGenerating && widget.generatingIndex == index,
             isPlaying: widget.isPlaying && widget.cursorIndex == index,
             isCursor: widget.cursorIndex == index,
             voiceFiles: widget.voiceFiles,
-            onTextEditComplete: (text) => widget.onTextEditComplete(index, text),
+            onTextEditComplete: (text) =>
+                widget.onTextEditComplete(index, text),
             onRefWavPathChanged: (value) =>
                 widget.onRefWavPathChanged(index, value),
-            onMemoEditComplete: (memo) => widget.onMemoEditComplete(index, memo),
+            onMemoEditComplete: (memo) =>
+                widget.onMemoEditComplete(index, memo),
             onPlay: () => widget.onPlay(index),
             onGenerate: () => widget.onGenerate(index),
             onReset: () => widget.onReset(index),

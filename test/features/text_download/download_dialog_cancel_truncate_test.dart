@@ -25,8 +25,9 @@ void main() {
     return ProviderScope(
       overrides: [
         libraryPathProvider.overrideWithValue('/tmp/test_novels'),
-        currentDirectoryProvider
-            .overrideWith(() => CurrentDirectoryNotifier('/tmp/test_novels')),
+        currentDirectoryProvider.overrideWith(
+          () => CurrentDirectoryNotifier('/tmp/test_novels'),
+        ),
         downloadProvider.overrideWith(() => notifier),
       ],
       child: MaterialApp(
@@ -48,34 +49,36 @@ void main() {
   group('DownloadDialog cancellation & truncation UI', () {
     testWidgets('shows an enabled cancel button while downloading and calls '
         'cancel() when tapped', (tester) async {
-      final notifier = _StateNotifier(const DownloadState(
-        status: DownloadStatus.downloading,
-        currentEpisode: 2,
-        totalEpisodes: 5,
-      ));
+      final notifier = _StateNotifier(
+        const DownloadState(
+          status: DownloadStatus.downloading,
+          currentEpisode: 2,
+          totalEpisodes: 5,
+        ),
+      );
       await tester.pumpWidget(app(notifier));
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
       final cancelButton = find.widgetWithText(TextButton, 'キャンセル');
       expect(cancelButton, findsOneWidget);
-      expect(
-        tester.widget<TextButton>(cancelButton).onPressed,
-        isNotNull,
-      );
+      expect(tester.widget<TextButton>(cancelButton).onPressed, isNotNull);
 
       await tester.tap(cancelButton);
       await tester.pumpAndSettle();
       expect(notifier.cancelCalled, isTrue);
     });
 
-    testWidgets('shows the index-truncation warning on completion',
-        (tester) async {
-      final notifier = _StateNotifier(const DownloadState(
-        status: DownloadStatus.completed,
-        totalEpisodes: 3,
-        indexTruncated: true,
-      ));
+    testWidgets('shows the index-truncation warning on completion', (
+      tester,
+    ) async {
+      final notifier = _StateNotifier(
+        const DownloadState(
+          status: DownloadStatus.completed,
+          totalEpisodes: 3,
+          indexTruncated: true,
+        ),
+      );
       await tester.pumpWidget(app(notifier));
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
@@ -87,10 +90,9 @@ void main() {
     });
 
     testWidgets('does not show the warning when not truncated', (tester) async {
-      final notifier = _StateNotifier(const DownloadState(
-        status: DownloadStatus.completed,
-        totalEpisodes: 3,
-      ));
+      final notifier = _StateNotifier(
+        const DownloadState(status: DownloadStatus.completed, totalEpisodes: 3),
+      );
       await tester.pumpWidget(app(notifier));
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
@@ -101,13 +103,16 @@ void main() {
       );
     });
 
-    testWidgets('shows the cancelled message in the cancelled state',
-        (tester) async {
-      final notifier = _StateNotifier(const DownloadState(
-        status: DownloadStatus.cancelled,
-        currentEpisode: 2,
-        totalEpisodes: 5,
-      ));
+    testWidgets('shows the cancelled message in the cancelled state', (
+      tester,
+    ) async {
+      final notifier = _StateNotifier(
+        const DownloadState(
+          status: DownloadStatus.cancelled,
+          currentEpisode: 2,
+          totalEpisodes: 5,
+        ),
+      );
       await tester.pumpWidget(app(notifier));
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();

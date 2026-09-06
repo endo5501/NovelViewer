@@ -39,7 +39,9 @@ void main() {
     final existing = File(p.join(tempDir.path, 'irodori_tts.json'))
       ..writeAsStringSync('{"family":"irodori_tts","old":true}');
 
-    await installer('{"family":"irodori_tts","new":true}').install(tempDir.path);
+    await installer(
+      '{"family":"irodori_tts","new":true}',
+    ).install(tempDir.path);
 
     expect(existing.readAsStringSync(), '{"family":"irodori_tts","new":true}');
   });

@@ -91,8 +91,7 @@ void main() {
       expect(config.refWavPath, isNull);
     });
 
-    test(
-        'modelLoadKey excludes refWavPath/guidance/steps — two configs '
+    test('modelLoadKey excludes refWavPath/guidance/steps — two configs '
         'differing only in those fields share the same modelLoadKey', () {
       const a = IrodoriEngineConfig(
         modelDir: '/models/irodori',
@@ -241,7 +240,10 @@ void main() {
       }
 
       const qwen3 = Qwen3EngineConfig(
-        modelDir: '/m', sampleRate: 24000, languageId: 2058);
+        modelDir: '/m',
+        sampleRate: 24000,
+        languageId: 2058,
+      );
       const piper = PiperEngineConfig(
         modelDir: '/m',
         sampleRate: 22050,
@@ -276,10 +278,12 @@ void main() {
     ProviderContainer createContainer({
       String libraryPath = '/home/user/NovelViewer',
     }) {
-      return ProviderContainer(overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        libraryPathProvider.overrideWithValue(libraryPath),
-      ]);
+      return ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue(libraryPath),
+        ],
+      );
     }
 
     test('returns Qwen3EngineConfig for qwen3 type', () async {
@@ -300,17 +304,19 @@ void main() {
       expect(qwen3.languageId, 2058); // ja
       // refWavPath is resolved through VoiceReferenceService — joins voices/.
       expect(qwen3.refWavPath, p.join('/home/user', 'voices', 'narrator.wav'));
-      expect(qwen3.embeddingCacheDir, p.join('/home/user', 'cache', 'embeddings'));
+      expect(
+        qwen3.embeddingCacheDir,
+        p.join('/home/user', 'cache', 'embeddings'),
+      );
     });
 
     test('Qwen3 refWavPath is null when no global ref wav is set', () async {
       final container = createContainer();
       addTearDown(container.dispose);
 
-      final config = TtsEngineConfig.resolveFromReader(
-        container.read,
-        TtsEngineType.qwen3,
-      ) as Qwen3EngineConfig;
+      final config =
+          TtsEngineConfig.resolveFromReader(container.read, TtsEngineType.qwen3)
+              as Qwen3EngineConfig;
       expect(config.refWavPath, isNull);
     });
 
@@ -329,11 +335,15 @@ void main() {
 
       expect(config, isA<PiperEngineConfig>());
       final piper = config as PiperEngineConfig;
-      expect(piper.modelDir,
-          p.join('/home/user', 'models', 'piper', 'jp_JP-test-model.onnx'));
+      expect(
+        piper.modelDir,
+        p.join('/home/user', 'models', 'piper', 'jp_JP-test-model.onnx'),
+      );
       expect(piper.sampleRate, 22050);
-      expect(piper.dicDir,
-          p.join('/home/user', 'models', 'piper', 'open_jtalk_dic'));
+      expect(
+        piper.dicDir,
+        p.join('/home/user', 'models', 'piper', 'open_jtalk_dic'),
+      );
       expect(piper.lengthScale, 0.9);
       expect(piper.noiseScale, 0.5);
       expect(piper.noiseW, 0.7);
@@ -361,7 +371,10 @@ void main() {
       expect(irodori.sampleRate, 48000);
       // refWavPath is resolved through VoiceReferenceService — joins voices/,
       // same shared voice library as Qwen3.
-      expect(irodori.refWavPath, p.join('/home/user', 'voices', 'narrator.wav'));
+      expect(
+        irodori.refWavPath,
+        p.join('/home/user', 'voices', 'narrator.wav'),
+      );
       expect(irodori.speakerGuidanceScale, 4.5);
       expect(irodori.captionGuidanceScale, 2.5);
       expect(irodori.numInferenceSteps, 20);
@@ -371,10 +384,12 @@ void main() {
       final container = createContainer();
       addTearDown(container.dispose);
 
-      final config = TtsEngineConfig.resolveFromReader(
-        container.read,
-        TtsEngineType.irodori,
-      ) as IrodoriEngineConfig;
+      final config =
+          TtsEngineConfig.resolveFromReader(
+                container.read,
+                TtsEngineType.irodori,
+              )
+              as IrodoriEngineConfig;
       expect(config.refWavPath, isNull);
     });
 
@@ -382,46 +397,54 @@ void main() {
       final container = createContainer();
       addTearDown(container.dispose);
 
-      final config = TtsEngineConfig.resolveFromReader(
-        container.read,
-        TtsEngineType.irodori,
-      ) as IrodoriEngineConfig;
+      final config =
+          TtsEngineConfig.resolveFromReader(
+                container.read,
+                TtsEngineType.irodori,
+              )
+              as IrodoriEngineConfig;
       expect(config.speakerGuidanceScale, 5.0);
       expect(config.captionGuidanceScale, 3.0);
       expect(config.numInferenceSteps, 40);
     });
 
-    test('does not subscribe — repeated reads yield current values without notifications',
-        () async {
-      // Establish that the function returns a snapshot — calling it twice
-      // and observing different values after a setter call confirms it uses
-      // `read` (not `watch`) and is not caching a subscription.
-      await prefs.setString('tts_ref_wav_path', 'first.wav');
-      final container = createContainer();
-      addTearDown(container.dispose);
+    test(
+      'does not subscribe — repeated reads yield current values without notifications',
+      () async {
+        // Establish that the function returns a snapshot — calling it twice
+        // and observing different values after a setter call confirms it uses
+        // `read` (not `watch`) and is not caching a subscription.
+        await prefs.setString('tts_ref_wav_path', 'first.wav');
+        final container = createContainer();
+        addTearDown(container.dispose);
 
-      final first = TtsEngineConfig.resolveFromReader(
-        container.read,
-        TtsEngineType.qwen3,
-      ) as Qwen3EngineConfig;
-      expect(first.refWavPath, p.join('/home/user', 'voices', 'first.wav'));
+        final first =
+            TtsEngineConfig.resolveFromReader(
+                  container.read,
+                  TtsEngineType.qwen3,
+                )
+                as Qwen3EngineConfig;
+        expect(first.refWavPath, p.join('/home/user', 'voices', 'first.wav'));
 
-      // Mutate via the actual setter; the next resolve should pick it up.
-      // resolveFromReader does not subscribe to anything — it just reads.
-      // Read it again and expect the new value.
-      // (We test that `resolveFromReader` does not register a long-lived
-      // listener; the cleanest behavioral observation is "second call sees
-      // updated value" with no widget/listener machinery in between.)
-      await prefs.setString('tts_ref_wav_path', 'second.wav');
-      // Force the notifier to rebuild by re-creating the container — sets
-      // the bar that there is no stale subscription leaked across calls.
-      final container2 = createContainer();
-      addTearDown(container2.dispose);
-      final second = TtsEngineConfig.resolveFromReader(
-        container2.read,
-        TtsEngineType.qwen3,
-      ) as Qwen3EngineConfig;
-      expect(second.refWavPath, p.join('/home/user', 'voices', 'second.wav'));
-    });
+        // Mutate via the actual setter; the next resolve should pick it up.
+        // resolveFromReader does not subscribe to anything — it just reads.
+        // Read it again and expect the new value.
+        // (We test that `resolveFromReader` does not register a long-lived
+        // listener; the cleanest behavioral observation is "second call sees
+        // updated value" with no widget/listener machinery in between.)
+        await prefs.setString('tts_ref_wav_path', 'second.wav');
+        // Force the notifier to rebuild by re-creating the container — sets
+        // the bar that there is no stale subscription leaked across calls.
+        final container2 = createContainer();
+        addTearDown(container2.dispose);
+        final second =
+            TtsEngineConfig.resolveFromReader(
+                  container2.read,
+                  TtsEngineType.qwen3,
+                )
+                as Qwen3EngineConfig;
+        expect(second.refWavPath, p.join('/home/user', 'voices', 'second.wav'));
+      },
+    );
   });
 }

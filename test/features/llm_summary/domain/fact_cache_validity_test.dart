@@ -36,8 +36,11 @@ void main() {
 
     test('null entry is invalid', () {
       expect(
-        isFactCacheValid(null,
-            currentHash: hash, currentPromptVersion: promptVersion),
+        isFactCacheValid(
+          null,
+          currentHash: hash,
+          currentPromptVersion: promptVersion,
+        ),
         isFalse,
       );
     });
@@ -79,8 +82,9 @@ void main() {
       expect(
         isFactCacheValid(
           _entry(
-              contentHash: FactCacheRepository.sentinelHash,
-              promptVersion: promptVersion),
+            contentHash: FactCacheRepository.sentinelHash,
+            promptVersion: promptVersion,
+          ),
           currentHash: FactCacheRepository.sentinelHash,
           currentPromptVersion: promptVersion,
         ),

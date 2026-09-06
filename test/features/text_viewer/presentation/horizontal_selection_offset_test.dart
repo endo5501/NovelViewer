@@ -29,9 +29,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
         child: MaterialApp(
           locale: const Locale('ja'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -63,8 +61,9 @@ void main() {
     );
   }
 
-  testWidgets('stores the selection offset for ruby-free content',
-      (WidgetTester tester) async {
+  testWidgets('stores the selection offset for ruby-free content', (
+    WidgetTester tester,
+  ) async {
     const content = 'あいうえおかきくけこ';
     final container = await pumpRenderer(tester, content);
 
@@ -76,12 +75,12 @@ void main() {
     expect(selection?.plainTextOffset, 3);
   });
 
-  testWidgets('offset counts ruby as its base text, not as one character',
-      (WidgetTester tester) async {
+  testWidgets('offset counts ruby as its base text, not as one character', (
+    WidgetTester tester,
+  ) async {
     // Raw content: 51 characters. Plain text: "彼は魔法を使った" (8 chars).
     // Display offsets: 彼(0) は(1) [ruby=魔法](2) を(3) 使(4) っ(5) た(6)
-    const content =
-        '彼は<ruby>魔法<rp>《</rp><rt>まほう</rt><rp>》</rp></ruby>を使った';
+    const content = '彼は<ruby>魔法<rp>《</rp><rt>まほう</rt><rp>》</rp></ruby>を使った';
     final container = await pumpRenderer(tester, content);
 
     // Select "使った" — display offset 4, plain-text offset 5.
@@ -90,14 +89,17 @@ void main() {
 
     final selection = container.read(selectedTextProvider);
     expect(selection?.text, '使った');
-    expect(selection?.plainTextOffset, 5,
-        reason: 'ruby contributes base.length (2), not 1 and not the markup');
+    expect(
+      selection?.plainTextOffset,
+      5,
+      reason: 'ruby contributes base.length (2), not 1 and not the markup',
+    );
   });
 
-  testWidgets('offset is not a raw-content offset',
-      (WidgetTester tester) async {
-    const content =
-        '彼は<ruby>魔法<rp>《</rp><rt>まほう</rt><rp>》</rp></ruby>を使った';
+  testWidgets('offset is not a raw-content offset', (
+    WidgetTester tester,
+  ) async {
+    const content = '彼は<ruby>魔法<rp>《</rp><rt>まほう</rt><rp>》</rp></ruby>を使った';
     final container = await pumpRenderer(tester, content);
 
     reportSelection(tester, 4, 7);
@@ -110,10 +112,10 @@ void main() {
     expect(offset, lessThan(content.length));
   });
 
-  testWidgets('selection that starts inside ruby uses the ruby base start',
-      (WidgetTester tester) async {
-    const content =
-        '彼は<ruby>魔法<rp>《</rp><rt>まほう</rt><rp>》</rp></ruby>を使った';
+  testWidgets('selection that starts inside ruby uses the ruby base start', (
+    WidgetTester tester,
+  ) async {
+    const content = '彼は<ruby>魔法<rp>《</rp><rt>まほう</rt><rp>》</rp></ruby>を使った';
     final container = await pumpRenderer(tester, content);
 
     // Display offset 2 is the ruby WidgetSpan itself.
@@ -125,8 +127,9 @@ void main() {
     expect(selection?.plainTextOffset, 2);
   });
 
-  testWidgets('switching files clears the stale selection',
-      (WidgetTester tester) async {
+  testWidgets('switching files clears the stale selection', (
+    WidgetTester tester,
+  ) async {
     // A selection offset only means anything for the content it was made in.
     // Neither viewer reports a change when the content is swapped
     // (VerticalTextPage._clearInternalSelection does not fire the callback,
@@ -139,7 +142,9 @@ void main() {
     await tester.pump();
     expect(container.read(selectedTextProvider), isNotNull);
 
-    container.read(selectedFileProvider.notifier).selectFile(
+    container
+        .read(selectedFileProvider.notifier)
+        .selectFile(
           const FileEntry(name: '0002.txt', path: '/novels/0002.txt'),
         );
     await tester.pump();
@@ -147,8 +152,9 @@ void main() {
     expect(container.read(selectedTextProvider), isNull);
   });
 
-  testWidgets('collapsed selection clears the stored selection',
-      (WidgetTester tester) async {
+  testWidgets('collapsed selection clears the stored selection', (
+    WidgetTester tester,
+  ) async {
     const content = 'あいうえおかきくけこ';
     final container = await pumpRenderer(tester, content);
 

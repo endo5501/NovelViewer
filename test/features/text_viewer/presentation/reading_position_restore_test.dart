@@ -157,9 +157,7 @@ void main() {
     expect(second, first);
   });
 
-  testWidgets('repeated layout changes never shift the anchor', (
-    tester,
-  ) async {
+  testWidgets('repeated layout changes never shift the anchor', (tester) async {
     // The spec allows the *visible* top to move by up to a line, because the
     // new layout shows the line containing the anchor. What must not happen is
     // the anchor itself being re-rounded to each new layout's line start: that
@@ -287,7 +285,6 @@ Future<int> _restoreThenCapture(WidgetTester tester, int savedOffset) async {
   harness.dispose();
   return saves.last.offset;
 }
-
 
 Future<ProviderContainer> _reader(
   WidgetTester tester,

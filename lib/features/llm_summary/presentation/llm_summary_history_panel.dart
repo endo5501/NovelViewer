@@ -19,7 +19,8 @@ class LlmSummaryHistoryPanel extends ConsumerWidget {
     final directory = ref.watch(currentDirectoryProvider);
     final libraryPath = ref.watch(libraryPathProvider);
 
-    final isAtRoot = directory == null ||
+    final isAtRoot =
+        directory == null ||
         (libraryPath != null && p.equals(directory, libraryPath));
     if (isAtRoot) {
       return Center(child: Text(l10n.bookmark_selectNovelPrompt));
@@ -74,7 +75,9 @@ class _HistoryEntryTile extends ConsumerWidget {
                 if (!entry.isJumpable) ...[
                   const SizedBox(width: 8),
                   OutlinedTextBadge(
-                    label: AppLocalizations.of(context)!.llmHistory_untrackedBadge,
+                    label: AppLocalizations.of(
+                      context,
+                    )!.llmHistory_untrackedBadge,
                   ),
                 ],
               ],
@@ -120,17 +123,14 @@ class _HistoryEntryTile extends ConsumerWidget {
           SnackBar(content: Text(l10n.contextMenu_copiedToClipboard)),
         );
       },
-      onDelete: () => ref
-          .read(llmSummaryHistoryProvider.notifier)
-          .deleteEntry(entry.word),
+      onDelete: () =>
+          ref.read(llmSummaryHistoryProvider.notifier).deleteEntry(entry.word),
       onViewDetails: () {
         if (directory == null || !context.mounted) return;
         showDialog<void>(
           context: context,
-          builder: (_) => LlmSummaryDetailDialog(
-            folderPath: directory,
-            word: entry.word,
-          ),
+          builder: (_) =>
+              LlmSummaryDetailDialog(folderPath: directory, word: entry.word),
         );
       },
     );
@@ -172,4 +172,3 @@ class _SnapshotsBadge extends StatelessWidget {
     );
   }
 }
-

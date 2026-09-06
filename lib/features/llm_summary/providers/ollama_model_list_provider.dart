@@ -8,13 +8,8 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 /// and `autoDispose` releases the previous entry once nothing watches it,
 /// replacing the ad-hoc generation counter that the dialog previously used to
 /// cancel stale requests.
-final ollamaModelListProvider =
-    FutureProvider.autoDispose.family<List<String>, String>(
-  (ref, baseUrl) async {
-    final httpClient = ref.watch(httpClientProvider);
-    return OllamaClient.fetchModels(
-      baseUrl: baseUrl,
-      httpClient: httpClient,
-    );
-  },
-);
+final ollamaModelListProvider = FutureProvider.autoDispose
+    .family<List<String>, String>((ref, baseUrl) async {
+      final httpClient = ref.watch(httpClientProvider);
+      return OllamaClient.fetchModels(baseUrl: baseUrl, httpClient: httpClient);
+    });

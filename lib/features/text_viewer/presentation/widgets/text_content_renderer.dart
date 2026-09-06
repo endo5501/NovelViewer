@@ -121,7 +121,9 @@ double measureCharOffsetY({
 }
 
 List<PlaceholderDimensions> _placeholderDimensionsFor(
-    InlineSpan span, double fontSize) {
+  InlineSpan span,
+  double fontSize,
+) {
   final dims = <PlaceholderDimensions>[];
   span.visitChildren((child) {
     if (child is WidgetSpan) {
@@ -132,8 +134,9 @@ List<PlaceholderDimensions> _placeholderDimensionsFor(
         // Measure both base and ruby text via TextPainter so the placeholder
         // matches the actual `Column[rubyText, base]` width exactly, which
         // keeps line wrap aligned with SelectableText.rich.
-        final baseLineStyle = (w.baseStyle ?? const TextStyle())
-            .copyWith(height: 1.0);
+        final baseLineStyle = (w.baseStyle ?? const TextStyle()).copyWith(
+          height: 1.0,
+        );
         final basePainter = TextPainter(
           text: TextSpan(text: w.base, style: baseLineStyle),
           textDirection: TextDirection.ltr,
@@ -152,15 +155,16 @@ List<PlaceholderDimensions> _placeholderDimensionsFor(
         final width = baseWidth > rubyWidth ? baseWidth : rubyWidth;
         // Ruby (≈0.5 × fontSize) stacked above base (≈1.0 × fontSize).
         final height = fontSize * 1.5;
-        dims.add(PlaceholderDimensions(
-          size: Size(width, height),
-          alignment: child.alignment,
-        ));
+        dims.add(
+          PlaceholderDimensions(
+            size: Size(width, height),
+            alignment: child.alignment,
+          ),
+        );
       } else {
-        dims.add(PlaceholderDimensions(
-          size: Size.zero,
-          alignment: child.alignment,
-        ));
+        dims.add(
+          PlaceholderDimensions(size: Size.zero, alignment: child.alignment),
+        );
       }
     }
     return true;
@@ -244,9 +248,16 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     final anchor = _bodyAnchor;
     if (record == null || anchor == null || !_positionLoaded) return;
     if (ref.read(selectedFileProvider)?.path != _positionFile) return;
-    ref.read(readingPositionWriterProvider).observe(PositionSnapshot(
-      record.novelId, record.fileName, anchor, _bodyMap!.hash,
-    ));
+    ref
+        .read(readingPositionWriterProvider)
+        .observe(
+          PositionSnapshot(
+            record.novelId,
+            record.fileName,
+            anchor,
+            _bodyMap!.hash,
+          ),
+        );
   }
 
   void _captureBodyPosition() {
@@ -254,23 +265,31 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     // element is gone; every `ref.read` below would throw then.
     if (!mounted) return;
     if (ref.read(displayModeProvider) != TextDisplayMode.horizontal) return;
-    if (!_positionLoaded || _positionAdjusting || !_scrollController.hasClients) return;
+    if (!_positionLoaded || _positionAdjusting || !_scrollController.hasClients)
+      return;
     final body = _bodyMap;
     if (body == null) return;
     final painter = _ensurePositionPainter();
     if (painter == null) return;
-    final position = painter.getPositionForOffset(Offset(
-      0,
-      (_scrollController.offset - _scrollPadding).clamp(0, double.infinity) +
-          painter.preferredLineHeight / 2,
-    ));
-    _bodyAnchor = body.fromDisplayOffset(painter.getLineBoundary(position).start);
+    final position = painter.getPositionForOffset(
+      Offset(
+        0,
+        (_scrollController.offset - _scrollPadding).clamp(0, double.infinity) +
+            painter.preferredLineHeight / 2,
+      ),
+    );
+    _bodyAnchor = body.fromDisplayOffset(
+      painter.getLineBoundary(position).start,
+    );
     _saveBodyAnchor();
   }
+
   final ScrollController _scrollController = ScrollController();
   // Focus for the horizontal viewer so the page-scroll arrow keys only act
   // while this viewer holds focus (scoped, not global).
-  final FocusNode _horizontalFocusNode = FocusNode(debugLabel: 'horizontalViewer');
+  final FocusNode _horizontalFocusNode = FocusNode(
+    debugLabel: 'horizontalViewer',
+  );
   String? _lastScrollKey;
   bool _isTtsScrolling = false;
   int _lastReportedViewLine = 0;
@@ -434,8 +453,10 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
     final viewport = position.viewportDimension;
-    final target = (position.pixels + direction * viewport)
-        .clamp(position.minScrollExtent, position.maxScrollExtent);
+    final target = (position.pixels + direction * viewport).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
     if (target == position.pixels) {
       // At the scroll boundary in this direction: hand off to episode
       // navigation (mirrors the vertical viewer's page-boundary handoff).
@@ -494,10 +515,12 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   }
 
   void _showVerticalContextMenu(
-      BuildContext context, Offset position, String selectedText) {
+    BuildContext context,
+    Offset position,
+    String selectedText,
+  ) {
     final l10n = AppLocalizations.of(context)!;
-    final renderObject =
-        Overlay.maybeOf(context)?.context.findRenderObject();
+    final renderObject = Overlay.maybeOf(context)?.context.findRenderObject();
     if (renderObject is! RenderBox) return;
     final overlay = renderObject;
     showMenu<VerticalContextAction>(
@@ -529,7 +552,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   void _openDictionaryDialog(String selectedText) {
     final folderPath = ref.read(currentDirectoryProvider);
     if (folderPath == null) return;
-    final dictDb = ref.read(ttsDictionaryDatabaseProvider(folderDbKey(folderPath)));
+    final dictDb = ref.read(
+      ttsDictionaryDatabaseProvider(folderDbKey(folderPath)),
+    );
     final dictRepo = TtsDictionaryRepository(dictDb);
     TtsDictionaryDialog.show(
       context,
@@ -539,11 +564,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   }
 
   void _runAnalysis(String word, AnalysisScope scope) {
-    ref.read(analysisRunnerProvider).runWithScope(
-          context: context,
-          word: word,
-          scope: scope,
-        );
+    ref
+        .read(analysisRunnerProvider)
+        .runWithScope(context: context, word: word, scope: scope);
   }
 
   void _onMarkEnter(String word, Offset position, HoverToken token) {
@@ -561,12 +584,17 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   }
 
   void _scrollToTtsHighlight(
-      String content, TextRange range, TextStyle? textStyle) {
+    String content,
+    TextRange range,
+    TextStyle? textStyle,
+  ) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
 
-      final textBefore =
-          content.substring(0, range.start.clamp(0, content.length));
+      final textBefore = content.substring(
+        0,
+        range.start.clamp(0, content.length),
+      );
       final lineNumber = '\n'.allMatches(textBefore).length;
 
       final fs = textStyle?.fontSize ?? 14.0;
@@ -577,13 +605,13 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       _isTtsScrolling = true;
       _scrollController
           .animateTo(
-        clampedOffset,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-      )
+            clampedOffset,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+          )
           .then((_) {
-        _isTtsScrolling = false;
-      });
+            _isTtsScrolling = false;
+          });
     });
   }
 
@@ -593,9 +621,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     final fontSize = ref.read(fontSizeProvider);
     final fontFamily = ref.read(fontFamilyProvider);
     final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          fontSize: fontSize,
-          fontFamily: fontFamily.effectiveFontFamilyName,
-        );
+      fontSize: fontSize,
+      fontFamily: fontFamily.effectiveFontFamilyName,
+    );
     final fs = textStyle?.fontSize ?? 14.0;
     final lineHeight = (textStyle?.height ?? 1.5) * fs;
     if (lineHeight <= 0) return;
@@ -616,8 +644,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     required double maxWidth,
     required double fontSize,
   }) {
-    final lineStarts =
-        _lineStartOffsets ??= computeTextPainterLineStartOffsets(segments);
+    final lineStarts = _lineStartOffsets ??= computeTextPainterLineStartOffsets(
+      segments,
+    );
     final idx = lineNumber - 1;
     if (idx < 0 || idx >= lineStarts.length) return 0.0;
     return measureCharOffsetY(
@@ -656,8 +685,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       return {for (final l in lines) l: cached[l]!};
     }
 
-    final lineStarts =
-        _lineStartOffsets ??= computeTextPainterLineStartOffsets(segments);
+    final lineStarts = _lineStartOffsets ??= computeTextPainterLineStartOffsets(
+      segments,
+    );
     final dims = _placeholderDimensionsFor(textSpan, fontSize);
     final painter = TextPainter(
       text: textSpan,
@@ -672,10 +702,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       final idx = line - 1;
       if (idx < 0 || idx >= lineStarts.length) continue;
       result[line] = painter
-          .getOffsetForCaret(
-            TextPosition(offset: lineStarts[idx]),
-            Rect.zero,
-          )
+          .getOffsetForCaret(TextPosition(offset: lineStarts[idx]), Rect.zero)
           .dy;
     }
     painter.dispose();
@@ -722,16 +749,16 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
 
     final activeMatch =
         searchMatch != null && selectedFile?.path == searchMatch.filePath
-            ? searchMatch
-            : null;
+        ? searchMatch
+        : null;
 
     final playbackState = ref.watch(ttsPlaybackStateProvider);
     final ttsHighlightRange = ref.watch(ttsHighlightRangeProvider);
 
     final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          fontSize: fontSize,
-          fontFamily: fontFamily.effectiveFontFamilyName,
-        );
+      fontSize: fontSize,
+      fontFamily: fontFamily.effectiveFontFamilyName,
+    );
     final hash = _contentHash ??= computeContentHash(widget.content);
     final segments = ref
         .watch(parsedSegmentsCacheProvider)
@@ -743,26 +770,33 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         ref.watch(bookmarkLineNumbersForFileProvider).value ?? [];
     final markedWords = ref.watch(markedWordsProvider);
 
-    if (_positionFile != selectedFile?.path || _positionContent != widget.content) {
+    if (_positionFile != selectedFile?.path ||
+        _positionContent != widget.content) {
       _positionFile = selectedFile?.path;
       _positionContent = widget.content;
       _bodyMap = BodyPositionMap(segments);
       _positionRecord = null;
       _bodyAnchor = null;
       _positionLoaded = selectedFile == null;
-      _positionCancelled = ref.read(pendingFileEntryIntentProvider) != null ||
-          _jumpToEndPending;
+      _positionCancelled =
+          ref.read(pendingFileEntryIntentProvider) != null || _jumpToEndPending;
       _positionLayout = null;
     }
-    if (activeMatch != null || bookmarkJumpLine != null) _positionCancelled = true;
+    if (activeMatch != null || bookmarkJumpLine != null)
+      _positionCancelled = true;
     if (selectedFile != null) {
-      final position = ref.watch(readingPositionForFileProvider(selectedFile.path));
+      final position = ref.watch(
+        readingPositionForFileProvider(selectedFile.path),
+      );
       if (!_positionLoaded && !position.isLoading) {
         _positionLoaded = true;
         _positionRecord = position.asData?.value;
         _positionCapturePending = _positionCancelled;
         if (!_positionCancelled && _positionRecord != null) {
-          _bodyAnchor = _bodyMap!.restore(_positionRecord!.bodyOffset, _positionRecord!.bodyHash);
+          _bodyAnchor = _bodyMap!.restore(
+            _positionRecord!.bodyOffset,
+            _positionRecord!.bodyHash,
+          );
           _positionLayout = null;
         }
       }
@@ -858,7 +892,8 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
 
     final scrollView = NotificationListener<ScrollNotification>(
       onNotification: (notification) {
-        if (notification is ScrollStartNotification && notification.dragDetails != null) {
+        if (notification is ScrollStartNotification &&
+            notification.dragDetails != null) {
           _cancelPositionRestore();
         }
         if (!_isTtsScrolling &&
@@ -872,216 +907,235 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       child: SingleChildScrollView(
         controller: _scrollController,
         padding: const EdgeInsets.all(_scrollPadding),
-        child: LayoutBuilder(builder: (context, constraints) {
-          final bookmarkGutter = bookmarkLines.isEmpty ? 0.0 : 20.0;
-          final textMaxWidth = constraints.maxWidth - bookmarkGutter;
-          final layoutKey = (textMaxWidth, textStyle, widget.content, displayMode);
-          final layoutChanged = _positionLayout != layoutKey;
-          if (layoutChanged) {
-            _positionPainter?.dispose();
-            _positionPainter = null;
-            _positionSpan = textSpan;
-            _positionMaxWidth = textMaxWidth;
-            _positionFontSize = fontSize;
-            _positionLayout = layoutKey;
-          }
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bookmarkGutter = bookmarkLines.isEmpty ? 0.0 : 20.0;
+            final textMaxWidth = constraints.maxWidth - bookmarkGutter;
+            final layoutKey = (
+              textMaxWidth,
+              textStyle,
+              widget.content,
+              displayMode,
+            );
+            final layoutChanged = _positionLayout != layoutKey;
+            if (layoutChanged) {
+              _positionPainter?.dispose();
+              _positionPainter = null;
+              _positionSpan = textSpan;
+              _positionMaxWidth = textMaxWidth;
+              _positionFontSize = fontSize;
+              _positionLayout = layoutKey;
+            }
 
-          // Capture the content reference used to build textSpan/textMaxWidth
-          // so the post-frame callback can detect a swap (file switch /
-          // content reload) between scheduling and execution and skip
-          // scrolling against a stale layout.
-          final scheduledContent = widget.content;
-          if (activeMatch != null) {
-            final scrollKey =
-                '${activeMatch.filePath}:${activeMatch.lineNumber}:${activeMatch.query}';
-            if (scrollKey != _lastScrollKey) {
-              _lastScrollKey = scrollKey;
+            // Capture the content reference used to build textSpan/textMaxWidth
+            // so the post-frame callback can detect a swap (file switch /
+            // content reload) between scheduling and execution and skip
+            // scrolling against a stale layout.
+            final scheduledContent = widget.content;
+            if (activeMatch != null) {
+              final scrollKey =
+                  '${activeMatch.filePath}:${activeMatch.lineNumber}:${activeMatch.query}';
+              if (scrollKey != _lastScrollKey) {
+                _lastScrollKey = scrollKey;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  if (!identical(widget.content, scheduledContent)) return;
+                  _scrollToLineNumber(
+                    lineNumber: activeMatch.lineNumber,
+                    segments: segments,
+                    textSpan: textSpan,
+                    maxWidth: textMaxWidth,
+                    fontSize: fontSize,
+                  );
+                });
+              }
+            } else if (bookmarkJumpLine != null && !_bookmarkScrollPending) {
+              _bookmarkScrollPending = true;
+              final targetLine = bookmarkJumpLine;
               WidgetsBinding.instance.addPostFrameCallback((_) {
+                _bookmarkScrollPending = false;
                 if (!mounted) return;
                 if (!identical(widget.content, scheduledContent)) return;
                 _scrollToLineNumber(
-                  lineNumber: activeMatch.lineNumber,
+                  lineNumber: targetLine,
                   segments: segments,
                   textSpan: textSpan,
                   maxWidth: textMaxWidth,
                   fontSize: fontSize,
                 );
+                ref.read(bookmarkJumpLineProvider.notifier).clear();
               });
             }
-          } else if (bookmarkJumpLine != null && !_bookmarkScrollPending) {
-            _bookmarkScrollPending = true;
-            final targetLine = bookmarkJumpLine;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _bookmarkScrollPending = false;
-              if (!mounted) return;
-              if (!identical(widget.content, scheduledContent)) return;
-              _scrollToLineNumber(
-                lineNumber: targetLine,
-                segments: segments,
-                textSpan: textSpan,
-                maxWidth: textMaxWidth,
-                fontSize: fontSize,
-              );
-              ref.read(bookmarkJumpLineProvider.notifier).clear();
-            });
-          }
 
-          // An explicit FileEntryStartIntent outranks the saved reading
-          // position, so record it before the blocks below clear the flags:
-          // the anchor restore further down registers its post-frame callback
-          // last and would otherwise silently overwrite the intent's jump.
-          final explicitScrollPending = _jumpToEndPending || _jumpToStartPending;
+            // An explicit FileEntryStartIntent outranks the saved reading
+            // position, so record it before the blocks below clear the flags:
+            // the anchor restore further down registers its post-frame callback
+            // last and would otherwise silently overwrite the intent's jump.
+            final explicitScrollPending =
+                _jumpToEndPending || _jumpToStartPending;
 
-          // `_jumpToEndPending` is consumed as its own block (not chained to
-          // the if/else if above) so that, when a higher-priority scroll
-          // target (search match / bookmark jump) is also pending, the flag
-          // is still cleared in this build rather than leaking into a later
-          // unrelated rebuild and surprising the user with a jump-to-bottom.
-          if (_jumpToEndPending) {
-            _jumpToEndPending = false;
-            final hasHigherPriority =
-                activeMatch != null || bookmarkJumpLine != null;
-            if (!hasHigherPriority) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted || !_scrollController.hasClients) return;
-                if (!identical(widget.content, scheduledContent)) return;
-                _scrollController
-                    .jumpTo(_scrollController.position.maxScrollExtent);
-              });
-            }
-          }
-
-          // Mirror of the `_jumpToEndPending` block for the fromStart intent:
-          // ensure the previous file's scroll offset does not leak into the
-          // new file's layout when the user enters via the "Next →" button.
-          if (_jumpToStartPending) {
-            _jumpToStartPending = false;
-            final hasHigherPriority =
-                activeMatch != null || bookmarkJumpLine != null;
-            if (!hasHigherPriority) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted || !_scrollController.hasClients) return;
-                if (!identical(widget.content, scheduledContent)) return;
-                _scrollController.jumpTo(0);
-              });
-            }
-          }
-
-          if (layoutChanged && _bodyAnchor != null && !explicitScrollPending &&
-              activeMatch == null && bookmarkJumpLine == null) {
-            final anchor = _bodyAnchor!;
-            final file = _positionFile;
-            _positionAdjusting = true;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!_positionAdjusting) return;
-              // Anything else that invalidated this restore leaves capture
-              // enabled: holding _positionAdjusting would silently stop the
-              // reading position from ever being recorded again.
-              if (!mounted ||
-                  !_scrollController.hasClients ||
-                  _positionFile != file ||
-                  widget.content != scheduledContent ||
-                  _positionLayout != layoutKey) {
-                _positionAdjusting = false;
-                return;
+            // `_jumpToEndPending` is consumed as its own block (not chained to
+            // the if/else if above) so that, when a higher-priority scroll
+            // target (search match / bookmark jump) is also pending, the flag
+            // is still cleared in this build rather than leaking into a later
+            // unrelated rebuild and surprising the user with a jump-to-bottom.
+            if (_jumpToEndPending) {
+              _jumpToEndPending = false;
+              final hasHigherPriority =
+                  activeMatch != null || bookmarkJumpLine != null;
+              if (!hasHigherPriority) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted || !_scrollController.hasClients) return;
+                  if (!identical(widget.content, scheduledContent)) return;
+                  _scrollController.jumpTo(
+                    _scrollController.position.maxScrollExtent,
+                  );
+                });
               }
-              final painter = _ensurePositionPainter();
-              if (painter == null) {
-                _positionAdjusting = false;
-                return;
+            }
+
+            // Mirror of the `_jumpToEndPending` block for the fromStart intent:
+            // ensure the previous file's scroll offset does not leak into the
+            // new file's layout when the user enters via the "Next →" button.
+            if (_jumpToStartPending) {
+              _jumpToStartPending = false;
+              final hasHigherPriority =
+                  activeMatch != null || bookmarkJumpLine != null;
+              if (!hasHigherPriority) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted || !_scrollController.hasClients) return;
+                  if (!identical(widget.content, scheduledContent)) return;
+                  _scrollController.jumpTo(0);
+                });
               }
-              final y = painter
-                  .getOffsetForCaret(
-                    TextPosition(offset: _bodyMap!.toDisplayOffset(anchor)),
-                    Rect.zero,
-                  )
-                  .dy;
-              // Capture clamps painter-y at 0, so every scroll offset in the
-              // padding band reports the first line. Restoring it to the very
-              // top (rather than y + padding = 16) picks the smallest offset
-              // that captures back to the same anchor and keeps the document's
-              // top padding visible.
-              final target = y <= 0 ? 0.0 : y + _scrollPadding;
-              _scrollController.jumpTo(
-                target.clamp(0, _scrollController.position.maxScrollExtent),
-              );
-              _positionAdjusting = false;
-              _saveBodyAnchor();
-            });
-          }
+            }
 
-          if (_positionCapturePending) {
-            _positionCapturePending = false;
-            final file = _positionFile;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted || _positionFile != file || widget.content != scheduledContent) return;
-              _captureBodyPosition();
-            });
-          }
+            if (layoutChanged &&
+                _bodyAnchor != null &&
+                !explicitScrollPending &&
+                activeMatch == null &&
+                bookmarkJumpLine == null) {
+              final anchor = _bodyAnchor!;
+              final file = _positionFile;
+              _positionAdjusting = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!_positionAdjusting) return;
+                // Anything else that invalidated this restore leaves capture
+                // enabled: holding _positionAdjusting would silently stop the
+                // reading position from ever being recorded again.
+                if (!mounted ||
+                    !_scrollController.hasClients ||
+                    _positionFile != file ||
+                    widget.content != scheduledContent ||
+                    _positionLayout != layoutKey) {
+                  _positionAdjusting = false;
+                  return;
+                }
+                final painter = _ensurePositionPainter();
+                if (painter == null) {
+                  _positionAdjusting = false;
+                  return;
+                }
+                final y = painter
+                    .getOffsetForCaret(
+                      TextPosition(offset: _bodyMap!.toDisplayOffset(anchor)),
+                      Rect.zero,
+                    )
+                    .dy;
+                // Capture clamps painter-y at 0, so every scroll offset in the
+                // padding band reports the first line. Restoring it to the very
+                // top (rather than y + padding = 16) picks the smallest offset
+                // that captures back to the same anchor and keeps the document's
+                // top padding visible.
+                final target = y <= 0 ? 0.0 : y + _scrollPadding;
+                _scrollController.jumpTo(
+                  target.clamp(0, _scrollController.position.maxScrollExtent),
+                );
+                _positionAdjusting = false;
+                _saveBodyAnchor();
+              });
+            }
 
-          return Stack(
-            children: [
-              Padding(
-                padding: EdgeInsets.only(left: bookmarkGutter),
-                child: SelectableText.rich(
-                  textSpan,
-                  onSelectionChanged: (selection, cause) {
-                    final selectedText =
-                        selectedTextFromSelection(selection, segments);
-                    // `selection.start` is a display offset (each ruby
-                    // WidgetSpan counts as one U+FFFC). Convert it to the
-                    // plain-text space that TTS segment offsets live in, so
-                    // playback can start here without guessing the position
-                    // back out of the raw content.
-                    ref.read(selectedTextProvider.notifier).setSelection(
-                          selectedText.isEmpty
-                              ? null
-                              : ViewerSelection(
-                                  text: selectedText,
-                                  plainTextOffset:
-                                      plainTextOffsetFromDisplayOffset(
-                                    selection.start,
-                                    segments,
+            if (_positionCapturePending) {
+              _positionCapturePending = false;
+              final file = _positionFile;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted ||
+                    _positionFile != file ||
+                    widget.content != scheduledContent)
+                  return;
+                _captureBodyPosition();
+              });
+            }
+
+            return Stack(
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(left: bookmarkGutter),
+                  child: SelectableText.rich(
+                    textSpan,
+                    onSelectionChanged: (selection, cause) {
+                      final selectedText = selectedTextFromSelection(
+                        selection,
+                        segments,
+                      );
+                      // `selection.start` is a display offset (each ruby
+                      // WidgetSpan counts as one U+FFFC). Convert it to the
+                      // plain-text space that TTS segment offsets live in, so
+                      // playback can start here without guessing the position
+                      // back out of the raw content.
+                      ref
+                          .read(selectedTextProvider.notifier)
+                          .setSelection(
+                            selectedText.isEmpty
+                                ? null
+                                : ViewerSelection(
+                                    text: selectedText,
+                                    plainTextOffset:
+                                        plainTextOffsetFromDisplayOffset(
+                                          selection.start,
+                                          segments,
+                                        ),
                                   ),
-                                ),
-                        );
-                  },
-                  contextMenuBuilder: (menuContext, editableTextState) {
-                    final selectedText = selectedTextFromSelection(
-                      editableTextState.textEditingValue.selection,
-                      segments,
-                    );
-                    return buildDictionaryContextMenu(
-                      context,
-                      editableTextState,
-                      selectedText: selectedText,
-                      onAddToDictionary: _openDictionaryDialog,
-                      onAnalyze: _runAnalysis,
-                    );
-                  },
+                          );
+                    },
+                    contextMenuBuilder: (menuContext, editableTextState) {
+                      final selectedText = selectedTextFromSelection(
+                        editableTextState.textEditingValue.selection,
+                        segments,
+                      );
+                      return buildDictionaryContextMenu(
+                        context,
+                        editableTextState,
+                        selectedText: selectedText,
+                        onAddToDictionary: _openDictionaryDialog,
+                        onAnalyze: _runAnalysis,
+                      );
+                    },
+                  ),
                 ),
-              ),
-              ..._bookmarkLineYsFor(
-                lines: bookmarkLines,
-                segments: segments,
-                textSpan: textSpan,
-                textStyle: textStyle,
-                maxWidth: textMaxWidth,
-                fontSize: fontSize,
-              ).entries.map(
-                    (e) => Positioned(
-                      left: 0,
-                      top: e.value,
-                      child: Icon(
-                        Icons.bookmark,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                ..._bookmarkLineYsFor(
+                  lines: bookmarkLines,
+                  segments: segments,
+                  textSpan: textSpan,
+                  textStyle: textStyle,
+                  maxWidth: textMaxWidth,
+                  fontSize: fontSize,
+                ).entries.map(
+                  (e) => Positioned(
+                    left: 0,
+                    top: e.value,
+                    child: Icon(
+                      Icons.bookmark,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
-            ],
-          );
-        }),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
 

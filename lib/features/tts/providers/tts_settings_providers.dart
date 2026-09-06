@@ -39,8 +39,8 @@ abstract class _SettingStringNotifier extends Notifier<String> {
 
 final ttsModelSizeProvider =
     NotifierProvider<TtsModelSizeNotifier, TtsModelSize>(
-  TtsModelSizeNotifier.new,
-);
+      TtsModelSizeNotifier.new,
+    );
 
 class TtsModelSizeNotifier extends Notifier<TtsModelSize> {
   @override
@@ -66,15 +66,13 @@ final embeddingCacheDirProvider = Provider<String?>((ref) {
   return p.join(p.dirname(libraryPath), 'cache', 'embeddings');
 });
 
-final ttsLanguageProvider =
-    NotifierProvider<TtsLanguageNotifier, TtsLanguage>(
+final ttsLanguageProvider = NotifierProvider<TtsLanguageNotifier, TtsLanguage>(
   TtsLanguageNotifier.new,
 );
 
 class TtsLanguageNotifier extends Notifier<TtsLanguage> {
   @override
-  TtsLanguage build() =>
-      ref.watch(settingsRepositoryProvider).getTtsLanguage();
+  TtsLanguage build() => ref.watch(settingsRepositoryProvider).getTtsLanguage();
 
   Future<void> setLanguage(TtsLanguage language) async {
     await ref.read(settingsRepositoryProvider).setTtsLanguage(language);
@@ -82,8 +80,9 @@ class TtsLanguageNotifier extends Notifier<TtsLanguage> {
   }
 }
 
-final ttsRefWavPathProvider =
-    NotifierProvider<TtsRefWavPathNotifier, String>(TtsRefWavPathNotifier.new);
+final ttsRefWavPathProvider = NotifierProvider<TtsRefWavPathNotifier, String>(
+  TtsRefWavPathNotifier.new,
+);
 
 class TtsRefWavPathNotifier extends _SettingStringNotifier {
   @override
@@ -101,8 +100,8 @@ class TtsRefWavPathNotifier extends _SettingStringNotifier {
 
 final ttsEngineTypeProvider =
     NotifierProvider<TtsEngineTypeNotifier, TtsEngineType>(
-  TtsEngineTypeNotifier.new,
-);
+      TtsEngineTypeNotifier.new,
+    );
 
 class TtsEngineTypeNotifier extends Notifier<TtsEngineType> {
   @override
@@ -117,8 +116,7 @@ class TtsEngineTypeNotifier extends Notifier<TtsEngineType> {
 
 // --- Piper model name ---
 
-final piperModelNameProvider =
-    NotifierProvider<PiperModelNameNotifier, String>(
+final piperModelNameProvider = NotifierProvider<PiperModelNameNotifier, String>(
   PiperModelNameNotifier.new,
 );
 
@@ -165,8 +163,8 @@ abstract class _SettingDoubleNotifier extends Notifier<double> {
 
 final piperLengthScaleProvider =
     NotifierProvider<PiperLengthScaleNotifier, double>(
-  PiperLengthScaleNotifier.new,
-);
+      PiperLengthScaleNotifier.new,
+    );
 
 class PiperLengthScaleNotifier extends _SettingDoubleNotifier {
   @override
@@ -179,8 +177,8 @@ class PiperLengthScaleNotifier extends _SettingDoubleNotifier {
 
 final piperNoiseScaleProvider =
     NotifierProvider<PiperNoiseScaleNotifier, double>(
-  PiperNoiseScaleNotifier.new,
-);
+      PiperNoiseScaleNotifier.new,
+    );
 
 class PiperNoiseScaleNotifier extends _SettingDoubleNotifier {
   @override
@@ -191,8 +189,7 @@ class PiperNoiseScaleNotifier extends _SettingDoubleNotifier {
       (repo, value) => repo.setPiperNoiseScale(value);
 }
 
-final piperNoiseWProvider =
-    NotifierProvider<PiperNoiseWNotifier, double>(
+final piperNoiseWProvider = NotifierProvider<PiperNoiseWNotifier, double>(
   PiperNoiseWNotifier.new,
 );
 
@@ -209,8 +206,8 @@ class PiperNoiseWNotifier extends _SettingDoubleNotifier {
 
 final irodoriModelVariantProvider =
     NotifierProvider<IrodoriModelVariantNotifier, IrodoriModelVariant>(
-  IrodoriModelVariantNotifier.new,
-);
+      IrodoriModelVariantNotifier.new,
+    );
 
 class IrodoriModelVariantNotifier extends Notifier<IrodoriModelVariant> {
   @override
@@ -253,8 +250,8 @@ abstract class _SettingIntNotifier extends Notifier<int> {
 
 final irodoriSpeakerGuidanceScaleProvider =
     NotifierProvider<IrodoriSpeakerGuidanceScaleNotifier, double>(
-  IrodoriSpeakerGuidanceScaleNotifier.new,
-);
+      IrodoriSpeakerGuidanceScaleNotifier.new,
+    );
 
 class IrodoriSpeakerGuidanceScaleNotifier extends _SettingDoubleNotifier {
   @override
@@ -267,8 +264,8 @@ class IrodoriSpeakerGuidanceScaleNotifier extends _SettingDoubleNotifier {
 
 final irodoriCaptionGuidanceScaleProvider =
     NotifierProvider<IrodoriCaptionGuidanceScaleNotifier, double>(
-  IrodoriCaptionGuidanceScaleNotifier.new,
-);
+      IrodoriCaptionGuidanceScaleNotifier.new,
+    );
 
 class IrodoriCaptionGuidanceScaleNotifier extends _SettingDoubleNotifier {
   @override
@@ -281,8 +278,8 @@ class IrodoriCaptionGuidanceScaleNotifier extends _SettingDoubleNotifier {
 
 final irodoriNumInferenceStepsProvider =
     NotifierProvider<IrodoriNumInferenceStepsNotifier, int>(
-  IrodoriNumInferenceStepsNotifier.new,
-);
+      IrodoriNumInferenceStepsNotifier.new,
+    );
 
 class IrodoriNumInferenceStepsNotifier extends _SettingIntNotifier {
   @override

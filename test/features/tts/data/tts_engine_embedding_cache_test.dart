@@ -44,8 +44,8 @@ class MockEmbeddingBindings extends TtsNativeBindings {
           _fakeCtx;
 
   @override
-  late final int Function(Pointer<Void>) isLoaded =
-      (Pointer<Void> ctx) => _isLoadedResult;
+  late final int Function(Pointer<Void>) isLoaded = (Pointer<Void> ctx) =>
+      _isLoadedResult;
 
   @override
   late final void Function(Pointer<Void>) free = (Pointer<Void> ctx) {};
@@ -53,21 +53,21 @@ class MockEmbeddingBindings extends TtsNativeBindings {
   @override
   late final Pointer<Float> Function(Pointer<Void>) getAudio =
       (Pointer<Void> ctx) {
-    // Return a small valid audio buffer
-    final ptr = calloc<Float>(10);
-    for (var i = 0; i < 10; i++) {
-      ptr[i] = 0.0;
-    }
-    return ptr;
-  };
+        // Return a small valid audio buffer
+        final ptr = calloc<Float>(10);
+        for (var i = 0; i < 10; i++) {
+          ptr[i] = 0.0;
+        }
+        return ptr;
+      };
 
   @override
-  late final int Function(Pointer<Void>) getAudioLength =
-      (Pointer<Void> ctx) => 10;
+  late final int Function(Pointer<Void>) getAudioLength = (Pointer<Void> ctx) =>
+      10;
 
   @override
-  late final int Function(Pointer<Void>) getSampleRate =
-      (Pointer<Void> ctx) => 24000;
+  late final int Function(Pointer<Void>) getSampleRate = (Pointer<Void> ctx) =>
+      24000;
 
   @override
   late final Pointer<Utf8> Function(Pointer<Void>) getError =
@@ -75,12 +75,16 @@ class MockEmbeddingBindings extends TtsNativeBindings {
 
   @override
   late final int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, int)
-      synthesizeWithVoice =
-      (Pointer<Void> ctx, Pointer<Utf8> text, Pointer<Utf8> wav,
-          int maxTokens) {
-    synthesizeWithVoiceCallCount++;
-    return 0;
-  };
+  synthesizeWithVoice =
+      (
+        Pointer<Void> ctx,
+        Pointer<Utf8> text,
+        Pointer<Utf8> wav,
+        int maxTokens,
+      ) {
+        synthesizeWithVoiceCallCount++;
+        return 0;
+      };
 
   @override
   late final int Function(
@@ -88,45 +92,49 @@ class MockEmbeddingBindings extends TtsNativeBindings {
     Pointer<Utf8>,
     Pointer<Pointer<Float>>,
     Pointer<Int32>,
-  ) extractSpeakerEmbedding = (
-    Pointer<Void> ctx,
-    Pointer<Utf8> path,
-    Pointer<Pointer<Float>> outData,
-    Pointer<Int32> outSize,
-  ) {
-    extractCallCount++;
-    if (extractResult != 0) return extractResult;
-    // Allocate and fill mock embedding
-    final ptr = calloc<Float>(embeddingSize);
-    for (var i = 0; i < embeddingSize; i++) {
-      ptr[i] = (i + 1).toDouble() / embeddingSize;
-    }
-    outData.value = ptr;
-    outSize.value = embeddingSize;
-    return 0;
-  };
+  )
+  extractSpeakerEmbedding =
+      (
+        Pointer<Void> ctx,
+        Pointer<Utf8> path,
+        Pointer<Pointer<Float>> outData,
+        Pointer<Int32> outSize,
+      ) {
+        extractCallCount++;
+        if (extractResult != 0) return extractResult;
+        // Allocate and fill mock embedding
+        final ptr = calloc<Float>(embeddingSize);
+        for (var i = 0; i < embeddingSize; i++) {
+          ptr[i] = (i + 1).toDouble() / embeddingSize;
+        }
+        outData.value = ptr;
+        outSize.value = embeddingSize;
+        return 0;
+      };
 
   @override
   late final int Function(
-          Pointer<Void>, Pointer<Utf8>, Pointer<Float>, int, int)
-      synthesizeWithEmbedding = (
-    Pointer<Void> ctx,
-    Pointer<Utf8> text,
-    Pointer<Float> embData,
-    int embSize,
-    int maxTokens,
-  ) {
-    synthesizeWithEmbeddingCallCount++;
-    return synthesizeWithEmbeddingResult;
-  };
+    Pointer<Void>,
+    Pointer<Utf8>,
+    Pointer<Float>,
+    int,
+    int,
+  )
+  synthesizeWithEmbedding =
+      (
+        Pointer<Void> ctx,
+        Pointer<Utf8> text,
+        Pointer<Float> embData,
+        int embSize,
+        int maxTokens,
+      ) {
+        synthesizeWithEmbeddingCallCount++;
+        return synthesizeWithEmbeddingResult;
+      };
 
   @override
   late final int Function(Pointer<Utf8>, Pointer<Float>, int)
-      saveSpeakerEmbedding = (
-    Pointer<Utf8> path,
-    Pointer<Float> data,
-    int size,
-  ) {
+  saveSpeakerEmbedding = (Pointer<Utf8> path, Pointer<Float> data, int size) {
     saveCallCount++;
     if (saveResult != 0) return saveResult;
     // Actually write the file so cache hit detection works
@@ -141,33 +149,35 @@ class MockEmbeddingBindings extends TtsNativeBindings {
     Pointer<Utf8>,
     Pointer<Pointer<Float>>,
     Pointer<Int32>,
-  ) loadSpeakerEmbedding = (
-    Pointer<Utf8> path,
-    Pointer<Pointer<Float>> outData,
-    Pointer<Int32> outSize,
-  ) {
-    loadCallCount++;
-    if (loadResult != 0) return loadResult;
-    // Read from actual file (written by save mock)
-    final filePath = path.toDartString();
-    final file = File(filePath);
-    if (!file.existsSync()) return -1;
-    final bytes = file.readAsBytesSync();
-    if (bytes.length % 4 != 0) return -1;
-    final nFloats = bytes.length ~/ 4;
-    final ptr = calloc<Float>(nFloats);
-    ptr.cast<Uint8>().asTypedList(bytes.length).setAll(0, bytes);
-    outData.value = ptr;
-    outSize.value = nFloats;
-    return 0;
-  };
+  )
+  loadSpeakerEmbedding =
+      (
+        Pointer<Utf8> path,
+        Pointer<Pointer<Float>> outData,
+        Pointer<Int32> outSize,
+      ) {
+        loadCallCount++;
+        if (loadResult != 0) return loadResult;
+        // Read from actual file (written by save mock)
+        final filePath = path.toDartString();
+        final file = File(filePath);
+        if (!file.existsSync()) return -1;
+        final bytes = file.readAsBytesSync();
+        if (bytes.length % 4 != 0) return -1;
+        final nFloats = bytes.length ~/ 4;
+        final ptr = calloc<Float>(nFloats);
+        ptr.cast<Uint8>().asTypedList(bytes.length).setAll(0, bytes);
+        outData.value = ptr;
+        outSize.value = nFloats;
+        return 0;
+      };
 
   @override
   late final void Function(Pointer<Float>) freeSpeakerEmbedding =
       (Pointer<Float> data) {
-    freeCallCount++;
-    calloc.free(data);
-  };
+        freeCallCount++;
+        calloc.free(data);
+      };
 }
 
 void main() {
@@ -218,37 +228,39 @@ void main() {
       expect(cacheFiles.first.path, endsWith('.emb'));
     });
 
-    test('cache hit: loads cached embedding and synthesizes without extraction',
-        () {
-      final refFile = File('${tempDir.path}/voice.wav');
-      refFile.writeAsBytesSync(List.filled(100, 0));
-      final cacheDir = '${tempDir.path}/cache/embeddings';
+    test(
+      'cache hit: loads cached embedding and synthesizes without extraction',
+      () {
+        final refFile = File('${tempDir.path}/voice.wav');
+        refFile.writeAsBytesSync(List.filled(100, 0));
+        final cacheDir = '${tempDir.path}/cache/embeddings';
 
-      // First call: cache miss
-      engine.synthesizeWithVoiceCached(
-        'hello',
-        refFile.path,
-        embeddingCacheDir: cacheDir,
-      );
+        // First call: cache miss
+        engine.synthesizeWithVoiceCached(
+          'hello',
+          refFile.path,
+          embeddingCacheDir: cacheDir,
+        );
 
-      // Reset counters
-      mockBindings.extractCallCount = 0;
-      mockBindings.saveCallCount = 0;
-      mockBindings.synthesizeWithEmbeddingCallCount = 0;
-      mockBindings.loadCallCount = 0;
+        // Reset counters
+        mockBindings.extractCallCount = 0;
+        mockBindings.saveCallCount = 0;
+        mockBindings.synthesizeWithEmbeddingCallCount = 0;
+        mockBindings.loadCallCount = 0;
 
-      // Second call: cache hit
-      engine.synthesizeWithVoiceCached(
-        'world',
-        refFile.path,
-        embeddingCacheDir: cacheDir,
-      );
+        // Second call: cache hit
+        engine.synthesizeWithVoiceCached(
+          'world',
+          refFile.path,
+          embeddingCacheDir: cacheDir,
+        );
 
-      expect(mockBindings.extractCallCount, 0);
-      expect(mockBindings.loadCallCount, 1);
-      expect(mockBindings.synthesizeWithEmbeddingCallCount, 1);
-      expect(mockBindings.saveCallCount, 0);
-    });
+        expect(mockBindings.extractCallCount, 0);
+        expect(mockBindings.loadCallCount, 1);
+        expect(mockBindings.synthesizeWithEmbeddingCallCount, 1);
+        expect(mockBindings.saveCallCount, 0);
+      },
+    );
 
     test('corrupted cache file triggers re-extraction', () {
       final refFile = File('${tempDir.path}/voice.wav');

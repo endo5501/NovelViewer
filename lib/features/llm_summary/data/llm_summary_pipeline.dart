@@ -113,8 +113,9 @@ class LlmSummaryPipeline {
   }) async {
     final notify = _isolatedNotifier(onProgress);
 
-    final nonEmpty =
-        perFileFacts.where((f) => f.trim().isNotEmpty).toList(growable: false);
+    final nonEmpty = perFileFacts
+        .where((f) => f.trim().isNotEmpty)
+        .toList(growable: false);
 
     // With no facts there is nothing to summarize: asking the LLM anyway would
     // have it invent a summary from an empty evidence set, which then gets
@@ -138,8 +139,11 @@ class LlmSummaryPipeline {
       facts: facts,
       language: language,
     );
-    final parsed = await _withSingleRetry(() async => _parseSummaryResponse(
-        await llmClient.generate(prompt, schema: summarySchema)));
+    final parsed = await _withSingleRetry(
+      () async => _parseSummaryResponse(
+        await llmClient.generate(prompt, schema: summarySchema),
+      ),
+    );
     return parsed.value;
   }
 
@@ -171,11 +175,13 @@ class LlmSummaryPipeline {
 
     final factsList = <String>[];
     for (var i = 0; i < chunks.length; i++) {
-      notify(AnalysisExtractingFacts(
-        round: round,
-        current: i + 1,
-        total: chunks.length,
-      ));
+      notify(
+        AnalysisExtractingFacts(
+          round: round,
+          current: i + 1,
+          total: chunks.length,
+        ),
+      );
       final contextBlock = chunks[i].join('\n---\n');
       final prompt = LlmPromptBuilder.buildFactExtractionPrompt(
         word: word,
@@ -198,9 +204,11 @@ class LlmSummaryPipeline {
 
   /// Runs one Stage-1 extraction request and parses its response, retrying once
   /// on failure.
-  Future<_ParsedValue> _generateFacts(String prompt) =>
-      _withSingleRetry(() async => _parseFactsResponse(
-          await llmClient.generate(prompt, schema: factsSchema)));
+  Future<_ParsedValue> _generateFacts(String prompt) => _withSingleRetry(
+    () async => _parseFactsResponse(
+      await llmClient.generate(prompt, schema: factsSchema),
+    ),
+  );
 
   /// Retries [operation] exactly once, with no delay and no change to the
   /// request. One retry absorbs the transient failures that remain once the
@@ -235,9 +243,10 @@ class LlmSummaryPipeline {
       final length = normalized.length;
       final prefix = length <= 200 ? normalized : normalized.substring(0, 200);
       _log.warning(
-          'jsonDecode failed for $key; using raw text. length=$length prefix=$prefix',
-          e,
-          st);
+        'jsonDecode failed for $key; using raw text. length=$length prefix=$prefix',
+        e,
+        st,
+      );
       return _ParsedValue(normalized, isStructured: false);
     }
 
@@ -265,10 +274,13 @@ class LlmSummaryPipeline {
     final length = normalized.length;
     final prefix = length <= 200 ? normalized : normalized.substring(0, 200);
     _log.warning(
-        'LLM response for $key decoded as JSON but had no string value; '
-        'rejecting. length=$length prefix=$prefix');
+      'LLM response for $key decoded as JSON but had no string value; '
+      'rejecting. length=$length prefix=$prefix',
+    );
     throw LlmResponseFormatException.withBody(
-      'LLM response for "$key" has no string value', normalized);
+      'LLM response for "$key" has no string value',
+      normalized,
+    );
   }
 
   static String _stripCodeFence(String s) {

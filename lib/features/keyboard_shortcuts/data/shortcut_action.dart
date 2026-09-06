@@ -6,9 +6,4 @@
 /// orientation (vertical = left/right, horizontal = up/down), so it cannot be
 /// expressed as a single rebindable activator. Page navigation is handled by
 /// fixed, viewer-scoped shortcuts instead (see `NextPageIntent`/`PrevPageIntent`).
-enum ShortcutAction {
-  search,
-  bookmark,
-  ttsToggle,
-  switchPane,
-}
+enum ShortcutAction { search, bookmark, ttsToggle, switchPane }

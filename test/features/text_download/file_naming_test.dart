@@ -24,18 +24,9 @@ void main() {
     });
 
     test('sanitizes invalid characters in title', () {
-      expect(
-        formatEpisodeFileName(1, '第一話:始まり', 10),
-        '01_第一話_始まり.txt',
-      );
-      expect(
-        formatEpisodeFileName(1, 'test/name', 10),
-        '01_test_name.txt',
-      );
-      expect(
-        formatEpisodeFileName(1, 'a*b?c', 10),
-        '01_a_b_c.txt',
-      );
+      expect(formatEpisodeFileName(1, '第一話:始まり', 10), '01_第一話_始まり.txt');
+      expect(formatEpisodeFileName(1, 'test/name', 10), '01_test_name.txt');
+      expect(formatEpisodeFileName(1, 'a*b?c', 10), '01_a_b_c.txt');
     });
 
     test('preserves Japanese characters in title', () {
@@ -46,10 +37,7 @@ void main() {
     });
 
     test('trims and normalizes whitespace in title', () {
-      expect(
-        formatEpisodeFileName(1, '  第一話   始まり  ', 10),
-        '01_第一話 始まり.txt',
-      );
+      expect(formatEpisodeFileName(1, '  第一話   始まり  ', 10), '01_第一話 始まり.txt');
     });
   });
 }

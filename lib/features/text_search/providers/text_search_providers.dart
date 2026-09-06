@@ -30,8 +30,8 @@ class SearchBoxVisibleNotifier extends Notifier<bool> {
 
 final searchBoxVisibleProvider =
     NotifierProvider<SearchBoxVisibleNotifier, bool>(
-  SearchBoxVisibleNotifier.new,
-);
+      SearchBoxVisibleNotifier.new,
+    );
 
 class SearchQueryNotifier extends Notifier<String?> {
   @override
@@ -40,15 +40,15 @@ class SearchQueryNotifier extends Notifier<String?> {
   void setQuery(String? query) => state = query;
 }
 
-final searchQueryProvider =
-    NotifierProvider<SearchQueryNotifier, String?>(SearchQueryNotifier.new);
+final searchQueryProvider = NotifierProvider<SearchQueryNotifier, String?>(
+  SearchQueryNotifier.new,
+);
 
 final textSearchServiceProvider = Provider<TextSearchService>((ref) {
   return TextSearchService();
 });
 
-final searchResultsProvider =
-    FutureProvider<List<SearchResult>?>((ref) async {
+final searchResultsProvider = FutureProvider<List<SearchResult>?>((ref) async {
   final query = ref.watch(searchQueryProvider);
   final directory = ref.watch(currentDirectoryProvider);
 
@@ -80,7 +80,8 @@ class SelectedSearchMatchNotifier extends Notifier<SelectedSearchMatch?> {
 
 final selectedSearchMatchProvider =
     NotifierProvider<SelectedSearchMatchNotifier, SelectedSearchMatch?>(
-        SelectedSearchMatchNotifier.new);
+      SelectedSearchMatchNotifier.new,
+    );
 
 List<SearchResult> _sortByNumericPrefix(List<SearchResult> results) {
   final numericPrefixRegExp = RegExp(r'^(\d+)');

@@ -6,8 +6,8 @@ import '../data/tts_edit_segment.dart';
 
 final ttsEditSegmentsProvider =
     NotifierProvider<TtsEditSegmentsNotifier, List<TtsEditSegment>>(
-  TtsEditSegmentsNotifier.new,
-);
+      TtsEditSegmentsNotifier.new,
+    );
 
 class TtsEditSegmentsNotifier extends Notifier<List<TtsEditSegment>> {
   @override
@@ -16,11 +16,7 @@ class TtsEditSegmentsNotifier extends Notifier<List<TtsEditSegment>> {
   void set(List<TtsEditSegment> segments) => state = segments;
 
   void updateSegment(int index, TtsEditSegment segment) {
-    state = [
-      ...state.sublist(0, index),
-      segment,
-      ...state.sublist(index + 1),
-    ];
+    state = [...state.sublist(0, index), segment, ...state.sublist(index + 1)];
   }
 
   void refresh() {
@@ -34,8 +30,8 @@ enum TtsEditGenerationState { idle, generating }
 
 final ttsEditGenerationStateProvider =
     NotifierProvider<TtsEditGenerationStateNotifier, TtsEditGenerationState>(
-  TtsEditGenerationStateNotifier.new,
-);
+      TtsEditGenerationStateNotifier.new,
+    );
 
 class TtsEditGenerationStateNotifier extends Notifier<TtsEditGenerationState> {
   @override
@@ -48,8 +44,8 @@ class TtsEditGenerationStateNotifier extends Notifier<TtsEditGenerationState> {
 
 final ttsEditGeneratingIndexProvider =
     NotifierProvider<TtsEditGeneratingIndexNotifier, int?>(
-  TtsEditGeneratingIndexNotifier.new,
-);
+      TtsEditGeneratingIndexNotifier.new,
+    );
 
 class TtsEditGeneratingIndexNotifier extends Notifier<int?> {
   @override
@@ -68,8 +64,8 @@ class TtsEditGeneratingIndexNotifier extends Notifier<int?> {
 /// exactly the old "play all" behaviour.
 final ttsEditCursorIndexProvider =
     NotifierProvider<TtsEditCursorIndexNotifier, int>(
-  TtsEditCursorIndexNotifier.new,
-);
+      TtsEditCursorIndexNotifier.new,
+    );
 
 class TtsEditCursorIndexNotifier extends Notifier<int> {
   @override
@@ -82,8 +78,7 @@ class TtsEditCursorIndexNotifier extends Notifier<int> {
 
 /// Whether preview playback is currently running. The position it is at lives
 /// in [ttsEditCursorIndexProvider].
-final ttsEditPlayingProvider =
-    NotifierProvider<TtsEditPlayingNotifier, bool>(
+final ttsEditPlayingProvider = NotifierProvider<TtsEditPlayingNotifier, bool>(
   TtsEditPlayingNotifier.new,
 );
 

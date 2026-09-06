@@ -10,7 +10,9 @@ import 'per_folder_db_registry_provider.dart';
 /// via `closeAll(folder)`. This provider never closes the handle in
 /// `onDispose`: ownership lives in one place so a new consumer cannot
 /// reintroduce the Windows file-lock bug.
-final novelDataDatabaseProvider =
-    Provider.family<NovelDataDatabase, String>((ref, folderPath) {
+final novelDataDatabaseProvider = Provider.family<NovelDataDatabase, String>((
+  ref,
+  folderPath,
+) {
   return ref.watch(perFolderDbRegistryProvider).novelData(folderPath);
 });

@@ -109,8 +109,10 @@ void main() {
       expect(index.episodes.length, 3);
       expect(index.episodes[0].index, 1);
       expect(index.episodes[0].title, '第一話 始まり');
-      expect(index.episodes[0].url.toString(),
-          'https://ncode.syosetu.com/n9669bk/1/');
+      expect(
+        index.episodes[0].url.toString(),
+        'https://ncode.syosetu.com/n9669bk/1/',
+      );
       expect(index.episodes[2].index, 3);
       expect(index.episodes[2].title, '第三話 結末');
     });
@@ -145,8 +147,10 @@ void main() {
       expect(index.episodes, isEmpty);
     });
 
-    test('extracts bodyContent for short story (no episode links, body text present)', () {
-      const html = '''
+    test(
+      'extracts bodyContent for short story (no episode links, body text present)',
+      () {
+        const html = '''
 <html>
 <body>
   <h1 class="p-novel__title">短編小説タイトル</h1>
@@ -157,15 +161,16 @@ void main() {
 </body>
 </html>
 ''';
-      final baseUrl = Uri.parse('https://ncode.syosetu.com/n5983ls/');
-      final index = site.parseIndex(html, baseUrl);
+        final baseUrl = Uri.parse('https://ncode.syosetu.com/n5983ls/');
+        final index = site.parseIndex(html, baseUrl);
 
-      expect(index.title, '短編小説タイトル');
-      expect(index.episodes, isEmpty);
-      expect(index.bodyContent, isNotNull);
-      expect(index.bodyContent, contains('短編の本文です。'));
-      expect(index.bodyContent, contains('二段落目です。'));
-    });
+        expect(index.title, '短編小説タイトル');
+        expect(index.episodes, isEmpty);
+        expect(index.bodyContent, isNotNull);
+        expect(index.bodyContent, contains('短編の本文です。'));
+        expect(index.bodyContent, contains('二段落目です。'));
+      },
+    );
 
     test('returns null bodyContent when no episodes and no body text', () {
       const html = '''
@@ -203,8 +208,10 @@ void main() {
       expect(index.bodyContent, isNull);
     });
 
-    test('extracts revision date as updatedAt when episode has been revised', () {
-      const html = '''
+    test(
+      'extracts revision date as updatedAt when episode has been revised',
+      () {
+        const html = '''
 <html>
 <body>
   <h1 class="p-novel__title">テスト小説</h1>
@@ -218,12 +225,13 @@ void main() {
 </body>
 </html>
 ''';
-      final baseUrl = Uri.parse('https://ncode.syosetu.com/n9669bk/');
-      final index = site.parseIndex(html, baseUrl);
+        final baseUrl = Uri.parse('https://ncode.syosetu.com/n9669bk/');
+        final index = site.parseIndex(html, baseUrl);
 
-      expect(index.episodes.length, 1);
-      expect(index.episodes[0].updatedAt, '2013/11/27 13:06');
-    });
+        expect(index.episodes.length, 1);
+        expect(index.episodes[0].updatedAt, '2013/11/27 13:06');
+      },
+    );
 
     test('extracts publish date as updatedAt when episode has no revision', () {
       const html = '''
@@ -283,8 +291,10 @@ void main() {
       final index = site.parseIndex(html, baseUrl);
 
       expect(index.nextPageUrl, isNotNull);
-      expect(index.nextPageUrl.toString(),
-          'https://ncode.syosetu.com/n8281jr/?p=2');
+      expect(
+        index.nextPageUrl.toString(),
+        'https://ncode.syosetu.com/n8281jr/?p=2',
+      );
     });
 
     test('sets nextPageUrl to null on last page (no next link)', () {
@@ -325,8 +335,10 @@ void main() {
       expect(index.title, 'Novel18 Test');
       expect(index.episodes.length, 2);
       expect(index.episodes[0].url.host, 'novel18.syosetu.com');
-      expect(index.episodes[0].url.toString(),
-          'https://novel18.syosetu.com/n1234ab/1/');
+      expect(
+        index.episodes[0].url.toString(),
+        'https://novel18.syosetu.com/n1234ab/1/',
+      );
     });
 
     test('sets nextPageUrl to null when no pagination exists', () {

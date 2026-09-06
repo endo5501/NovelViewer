@@ -10,10 +10,7 @@ enum TtsLanguage {
   it(languageId: 2070, displayName: 'Italiano'),
   pt(languageId: 2071, displayName: 'Português');
 
-  const TtsLanguage({
-    required this.languageId,
-    required this.displayName,
-  });
+  const TtsLanguage({required this.languageId, required this.displayName});
 
   final int languageId;
   final String displayName;

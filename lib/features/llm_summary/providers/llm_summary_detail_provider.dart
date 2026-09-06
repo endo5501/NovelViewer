@@ -14,10 +14,10 @@ typedef HistoryDetailKey = ({String folderPath, String word});
 /// `autoDispose` because this is parameterized by user data (the word) and is
 /// only watched while the detail dialog is open; without it every inspected
 /// word would leave a cached entry alive for the app's lifetime.
-final historyDetailFactsProvider =
-    FutureProvider.autoDispose.family<List<FactCacheEntry>, HistoryDetailKey>(
-        (ref, key) async {
-  final repo =
-      await ref.watch(factCacheRepositoryProvider(key.folderPath).future);
-  return repo.findForWord(word: key.word);
-});
+final historyDetailFactsProvider = FutureProvider.autoDispose
+    .family<List<FactCacheEntry>, HistoryDetailKey>((ref, key) async {
+      final repo = await ref.watch(
+        factCacheRepositoryProvider(key.folderPath).future,
+      );
+      return repo.findForWord(word: key.word);
+    });

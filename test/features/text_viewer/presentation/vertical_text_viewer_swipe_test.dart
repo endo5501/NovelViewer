@@ -13,21 +13,23 @@ Widget _buildTestWidget({
   double height = 400,
   ValueChanged<ViewerSelection?>? onSelectionChanged,
 }) {
-  return ProviderScope(child: MaterialApp(
-        locale: const Locale('ja'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-    home: Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints.tightFor(width: width, height: height),
-        child: VerticalTextViewer(
-          segments: segments,
-          baseStyle: const TextStyle(fontSize: 14.0),
-          onSelectionChanged: onSelectionChanged,
+  return ProviderScope(
+    child: MaterialApp(
+      locale: const Locale('ja'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints.tightFor(width: width, height: height),
+          child: VerticalTextViewer(
+            segments: segments,
+            baseStyle: const TextStyle(fontSize: 14.0),
+            onSelectionChanged: onSelectionChanged,
+          ),
         ),
       ),
     ),
-  ));
+  );
 }
 
 /// Extract current page number from page indicator text (e.g., "1 / 5" → 1)
@@ -54,8 +56,7 @@ Future<void> _simulateSwipe(
 void main() {
   // Create multi-page content for swipe tests.
   // Use wider viewport (200px) so swipe gestures stay within widget bounds.
-  List<TextSegment> multiPageSegments() =>
-      [PlainTextSegment('あ' * 500)];
+  List<TextSegment> multiPageSegments() => [PlainTextSegment('あ' * 500)];
 
   const testWidth = 200.0;
   const testHeight = 400.0;
@@ -142,11 +143,7 @@ void main() {
       final segments = [PlainTextSegment('あ' * 60)];
 
       await tester.pumpWidget(
-        _buildTestWidget(
-          segments: segments,
-          width: 80,
-          height: testHeight,
-        ),
+        _buildTestWidget(segments: segments, width: 80, height: testHeight),
       );
 
       // Navigate to last page using arrow keys
@@ -175,8 +172,9 @@ void main() {
   });
 
   group('VerticalTextViewer swipe rejection', () {
-    testWidgets('slow horizontal drag is not recognized as swipe',
-        (tester) async {
+    testWidgets('slow horizontal drag is not recognized as swipe', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
@@ -200,8 +198,9 @@ void main() {
       expect(_extractCurrentPage(tester), 1);
     });
 
-    testWidgets('short horizontal movement is not recognized as swipe',
-        (tester) async {
+    testWidgets('short horizontal movement is not recognized as swipe', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
@@ -224,8 +223,9 @@ void main() {
       expect(_extractCurrentPage(tester), 1);
     });
 
-    testWidgets('primarily vertical drag is not recognized as swipe',
-        (tester) async {
+    testWidgets('primarily vertical drag is not recognized as swipe', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
@@ -276,8 +276,9 @@ void main() {
   });
 
   group('VerticalTextViewer desktop-like swipe', () {
-    testWidgets('drag with pause before release still triggers swipe',
-        (tester) async {
+    testWidgets('drag with pause before release still triggers swipe', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),
@@ -302,8 +303,9 @@ void main() {
   });
 
   group('VerticalTextViewer arrow key navigation with swipe', () {
-    testWidgets('arrow keys still work after swipe implementation',
-        (tester) async {
+    testWidgets('arrow keys still work after swipe implementation', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildTestWidget(
           segments: multiPageSegments(),

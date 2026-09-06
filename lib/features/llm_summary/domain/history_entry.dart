@@ -34,8 +34,9 @@ class HistoryEntry {
       final group = [...entry.value]
         ..sort((a, b) => a.coveredUpToEpisode.compareTo(b.coveredUpToEpisode));
 
-      final mostRecent =
-          group.reduce((a, b) => a.updatedAt.isAfter(b.updatedAt) ? a : b);
+      final mostRecent = group.reduce(
+        (a, b) => a.updatedAt.isAfter(b.updatedAt) ? a : b,
+      );
 
       // Jump resolution: search downward from the largest episode and use
       // the first non-null source_file. NULL on the largest snapshot is

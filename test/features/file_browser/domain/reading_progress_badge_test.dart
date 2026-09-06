@@ -17,22 +17,21 @@ void main() {
   });
 
   group('ReadingProgressBadge.from', () {
-    test('reading-in-progress: read derived from file name, total from count',
-        () {
-      final badge = ReadingProgressBadge.from(
-        episodeCount: 120,
-        fileName: '003_chapter3.txt',
-      );
-      expect(badge.read, 3);
-      expect(badge.total, 120);
-      expect(badge.fraction, closeTo(3 / 120, 1e-9));
-    });
+    test(
+      'reading-in-progress: read derived from file name, total from count',
+      () {
+        final badge = ReadingProgressBadge.from(
+          episodeCount: 120,
+          fileName: '003_chapter3.txt',
+        );
+        expect(badge.read, 3);
+        expect(badge.total, 120);
+        expect(badge.fraction, closeTo(3 / 120, 1e-9));
+      },
+    );
 
     test('unread (no progress row): 0 / N with a 0% bar', () {
-      final badge = ReadingProgressBadge.from(
-        episodeCount: 80,
-        fileName: null,
-      );
+      final badge = ReadingProgressBadge.from(episodeCount: 80, fileName: null);
       expect(badge.read, 0);
       expect(badge.total, 80);
       expect(badge.fraction, 0.0);

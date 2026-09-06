@@ -54,8 +54,11 @@ void main() {
             child: SizedBox(
               width: rowWidth,
               child: TtsEditSegmentRow(
-                segment:
-                    buildSegment(memo: memo, hasAudio: hasAudio, skip: skip),
+                segment: buildSegment(
+                  memo: memo,
+                  hasAudio: hasAudio,
+                  skip: skip,
+                ),
                 isGenerating: isGenerating,
                 isPlaying: isPlaying,
                 isCursor: isCursor,
@@ -81,14 +84,17 @@ void main() {
   // The two text fields are told apart by their hint text: the body field hints
   // with the segment's original text, the memo field with the localized label.
   Finder findBodyField() => find.byWidgetPredicate(
-      (w) => w is TextField && w.decoration?.hintText == originalText);
+    (w) => w is TextField && w.decoration?.hintText == originalText,
+  );
 
   Finder findMemoField() => find.byWidgetPredicate(
-      (w) => w is TextField && w.decoration?.hintText == 'メモ');
+    (w) => w is TextField && w.decoration?.hintText == 'メモ',
+  );
 
   group('TtsEditSegmentRow width distribution', () {
-    testWidgets('body and memo share the free space at a 5:2 ratio',
-        (tester) async {
+    testWidgets('body and memo share the free space at a 5:2 ratio', (
+      tester,
+    ) async {
       await pumpRow(tester, rowWidth: 1000);
 
       final bodyWidth = tester.getSize(findBodyField()).width;
@@ -113,8 +119,9 @@ void main() {
       expect(wideMemo, greaterThan(narrowMemo));
     });
 
-    testWidgets('memo keeps shrinking with the body, with no minimum width',
-        (tester) async {
+    testWidgets('memo keeps shrinking with the body, with no minimum width', (
+      tester,
+    ) async {
       await pumpRow(tester, rowWidth: 700);
 
       final bodyWidth = tester.getSize(findBodyField()).width;
@@ -129,8 +136,9 @@ void main() {
     const longMemo = '落ち着いた女性の声で、ゆっくりと悲しげに読み上げてください';
     final veryLongMemo = longMemo * 5;
 
-    testWidgets('a memo too long for one line wraps to a second line',
-        (tester) async {
+    testWidgets('a memo too long for one line wraps to a second line', (
+      tester,
+    ) async {
       await pumpRow(tester, rowWidth: 1000);
       final emptyHeight = tester.getSize(findMemoField()).height;
 
@@ -150,8 +158,9 @@ void main() {
       expect(overflowingHeight, wrappedHeight);
     });
 
-    testWidgets('Enter still commits the memo instead of inserting a newline',
-        (tester) async {
+    testWidgets('Enter still commits the memo instead of inserting a newline', (
+      tester,
+    ) async {
       // Wrapping the memo made the field multiline, which by default turns
       // Enter into a newline. The memo feeds the Irodori caption, so Enter must
       // keep committing the value as it did when the field was single-line.
@@ -201,9 +210,15 @@ void main() {
     // Pressing anywhere in the row claims the playhead, so the segment the user
     // just edited is the one playback starts from — whichever part of the row
     // they happened to touch.
-    testWidgets('pressing the body field requests the playhead', (tester) async {
+    testWidgets('pressing the body field requests the playhead', (
+      tester,
+    ) async {
       var requests = 0;
-      await pumpRow(tester, rowWidth: 1000, onCursorRequested: () => requests++);
+      await pumpRow(
+        tester,
+        rowWidth: 1000,
+        onCursorRequested: () => requests++,
+      );
 
       await tester.tap(findBodyField());
       await tester.pump();
@@ -211,9 +226,15 @@ void main() {
       expect(requests, 1);
     });
 
-    testWidgets('pressing the memo field requests the playhead', (tester) async {
+    testWidgets('pressing the memo field requests the playhead', (
+      tester,
+    ) async {
       var requests = 0;
-      await pumpRow(tester, rowWidth: 1000, onCursorRequested: () => requests++);
+      await pumpRow(
+        tester,
+        rowWidth: 1000,
+        onCursorRequested: () => requests++,
+      );
 
       await tester.tap(findMemoField());
       await tester.pump();
@@ -221,10 +242,15 @@ void main() {
       expect(requests, 1);
     });
 
-    testWidgets('pressing the reference audio selector requests the playhead',
-        (tester) async {
+    testWidgets('pressing the reference audio selector requests the playhead', (
+      tester,
+    ) async {
       var requests = 0;
-      await pumpRow(tester, rowWidth: 1000, onCursorRequested: () => requests++);
+      await pumpRow(
+        tester,
+        rowWidth: 1000,
+        onCursorRequested: () => requests++,
+      );
 
       await tester.tap(find.byType(DropdownButtonFormField<String?>));
       await tester.pump();
@@ -236,8 +262,9 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('pressing an action button requests the playhead',
-        (tester) async {
+    testWidgets('pressing an action button requests the playhead', (
+      tester,
+    ) async {
       var requests = 0;
       await pumpRow(
         tester,
@@ -264,18 +291,21 @@ void main() {
       await tester.tap(findBodyField());
       await tester.pump();
 
-      final editable =
-          tester.state<EditableTextState>(find.byType(EditableText).first);
+      final editable = tester.state<EditableTextState>(
+        find.byType(EditableText).first,
+      );
       expect(editable.widget.focusNode.hasFocus, true);
     });
   });
 
   group('TtsEditSegmentRow playhead highlight', () {
     List<Color> highlightColors(WidgetTester tester) => tester
-        .widgetList<ColoredBox>(find.descendant(
-          of: find.byType(TtsEditSegmentRow),
-          matching: find.byType(ColoredBox),
-        ))
+        .widgetList<ColoredBox>(
+          find.descendant(
+            of: find.byType(TtsEditSegmentRow),
+            matching: find.byType(ColoredBox),
+          ),
+        )
         .map((box) => box.color)
         .where((color) => color.a > 0)
         .toList();
@@ -292,8 +322,9 @@ void main() {
       expect(highlightColors(tester), isEmpty);
     });
 
-    testWidgets('the highlight shows without the speaker icon when idle',
-        (tester) async {
+    testWidgets('the highlight shows without the speaker icon when idle', (
+      tester,
+    ) async {
       // The background means "playback starts here"; the speaker icon means
       // "sound is coming out now". A stopped playhead shows only the former.
       await pumpRow(tester, rowWidth: 1000, isCursor: true, isPlaying: false);
@@ -302,7 +333,9 @@ void main() {
       expect(find.byIcon(Icons.volume_up), findsNothing);
     });
 
-    testWidgets('both appear while the playhead row is playing', (tester) async {
+    testWidgets('both appear while the playhead row is playing', (
+      tester,
+    ) async {
       await pumpRow(tester, rowWidth: 1000, isCursor: true, isPlaying: true);
 
       expect(highlightColors(tester), isNotEmpty);
@@ -311,16 +344,18 @@ void main() {
   });
 
   group('skip state', () {
-    testWidgets('a skipped row shows a status distinct from ungenerated',
-        (tester) async {
+    testWidgets('a skipped row shows a status distinct from ungenerated', (
+      tester,
+    ) async {
       await pumpRow(tester, rowWidth: 1000, skip: true);
 
       expect(find.byIcon(Icons.block), findsOneWidget);
       expect(find.byIcon(Icons.circle_outlined), findsNothing);
     });
 
-    testWidgets('a skipped row holding audio still shows as skipped',
-        (tester) async {
+    testWidgets('a skipped row holding audio still shows as skipped', (
+      tester,
+    ) async {
       await pumpRow(tester, rowWidth: 1000, skip: true, hasAudio: true);
 
       // Skipping keeps the recording, so "generated" must not win here.
@@ -335,8 +370,9 @@ void main() {
       expect(find.byIcon(Icons.block), findsNothing);
     });
 
-    testWidgets('tapping the status icon requests a skip toggle',
-        (tester) async {
+    testWidgets('tapping the status icon requests a skip toggle', (
+      tester,
+    ) async {
       var toggled = 0;
       await pumpRow(tester, rowWidth: 1000, onSkipToggled: () => toggled++);
 
@@ -346,11 +382,16 @@ void main() {
       expect(toggled, 1);
     });
 
-    testWidgets('the status icon is inert while the row is disabled',
-        (tester) async {
+    testWidgets('the status icon is inert while the row is disabled', (
+      tester,
+    ) async {
       var toggled = 0;
-      await pumpRow(tester,
-          rowWidth: 1000, enabled: false, onSkipToggled: () => toggled++);
+      await pumpRow(
+        tester,
+        rowWidth: 1000,
+        enabled: false,
+        onSkipToggled: () => toggled++,
+      );
 
       await tester.tap(find.byIcon(Icons.circle_outlined));
       await tester.pump();
@@ -363,17 +404,23 @@ void main() {
       await pumpRow(tester, rowWidth: 1000, skip: true, hasAudio: true);
 
       final play = tester.widget<IconButton>(
-          find.widgetWithIcon(IconButton, Icons.play_arrow));
+        find.widgetWithIcon(IconButton, Icons.play_arrow),
+      );
       final regenerate = tester.widget<IconButton>(
-          find.widgetWithIcon(IconButton, Icons.refresh));
+        find.widgetWithIcon(IconButton, Icons.refresh),
+      );
 
       expect(play.onPressed, isNull);
-      expect(regenerate.onPressed, isNull,
-          reason: '"do not generate" and "generate now" cannot both hold');
+      expect(
+        regenerate.onPressed,
+        isNull,
+        reason: '"do not generate" and "generate now" cannot both hold',
+      );
     });
 
-    testWidgets('a skipped row keeps its text and memo editable',
-        (tester) async {
+    testWidgets('a skipped row keeps its text and memo editable', (
+      tester,
+    ) async {
       await pumpRow(tester, rowWidth: 1000, skip: true);
 
       final fields = tester.widgetList<TextField>(find.byType(TextField));
@@ -384,7 +431,8 @@ void main() {
       await pumpRow(tester, rowWidth: 1000, skip: true);
 
       final reset = tester.widget<IconButton>(
-          find.widgetWithIcon(IconButton, Icons.restart_alt));
+        find.widgetWithIcon(IconButton, Icons.restart_alt),
+      );
       expect(reset.onPressed, isNotNull);
     });
   });

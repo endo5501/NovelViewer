@@ -8,8 +8,7 @@ class PlainTextSegment extends TextSegment {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is PlainTextSegment && text == other.text;
+      identical(this, other) || other is PlainTextSegment && text == other.text;
 
   @override
   int get hashCode => text.hashCode;

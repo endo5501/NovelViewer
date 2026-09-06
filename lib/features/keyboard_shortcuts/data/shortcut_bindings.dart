@@ -29,36 +29,36 @@ class KeyBinding {
   LogicalKeyboardKey get key => LogicalKeyboardKey(keyId);
 
   SingleActivator toActivator() => SingleActivator(
-        LogicalKeyboardKey(keyId),
-        control: control,
-        meta: meta,
-        shift: shift,
-        alt: alt,
-      );
+    LogicalKeyboardKey(keyId),
+    control: control,
+    meta: meta,
+    shift: shift,
+    alt: alt,
+  );
 
   factory KeyBinding.fromActivator(SingleActivator a) => KeyBinding(
-        keyId: a.trigger.keyId,
-        control: a.control,
-        meta: a.meta,
-        shift: a.shift,
-        alt: a.alt,
-      );
+    keyId: a.trigger.keyId,
+    control: a.control,
+    meta: a.meta,
+    shift: a.shift,
+    alt: a.alt,
+  );
 
   Map<String, dynamic> toJson() => {
-        'key': keyId,
-        'control': control,
-        'meta': meta,
-        'shift': shift,
-        'alt': alt,
-      };
+    'key': keyId,
+    'control': control,
+    'meta': meta,
+    'shift': shift,
+    'alt': alt,
+  };
 
   factory KeyBinding.fromJson(Map<String, dynamic> json) => KeyBinding(
-        keyId: json['key'] as int,
-        control: json['control'] as bool? ?? false,
-        meta: json['meta'] as bool? ?? false,
-        shift: json['shift'] as bool? ?? false,
-        alt: json['alt'] as bool? ?? false,
-      );
+    keyId: json['key'] as int,
+    control: json['control'] as bool? ?? false,
+    meta: json['meta'] as bool? ?? false,
+    shift: json['shift'] as bool? ?? false,
+    alt: json['alt'] as bool? ?? false,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -106,7 +106,8 @@ class ShortcutBindingCodec {
 
   static String encode(Map<ShortcutAction, KeyBinding> bindings) {
     final map = <String, dynamic>{
-      for (final entry in bindings.entries) entry.key.name: entry.value.toJson(),
+      for (final entry in bindings.entries)
+        entry.key.name: entry.value.toJson(),
     };
     return jsonEncode(map);
   }
@@ -130,7 +131,9 @@ class ShortcutBindingCodec {
       final entry = parsed[action.name];
       if (entry is Map) {
         try {
-          result[action] = KeyBinding.fromJson(Map<String, dynamic>.from(entry));
+          result[action] = KeyBinding.fromJson(
+            Map<String, dynamic>.from(entry),
+          );
         } catch (_) {
           // Keep the default for this action on a malformed entry.
         }

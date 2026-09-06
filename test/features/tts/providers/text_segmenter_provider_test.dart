@@ -13,8 +13,11 @@ void main() {
       final second = container.read(textSegmenterProvider);
 
       expect(first, isA<TextSegmenter>());
-      expect(identical(first, second), isTrue,
-          reason: 'singleton — Riverpod should cache the value');
+      expect(
+        identical(first, second),
+        isTrue,
+        reason: 'singleton — Riverpod should cache the value',
+      );
     });
   });
 }

@@ -19,8 +19,7 @@ void main() {
   });
 
   group('TextViewerPanel - font settings', () {
-    testWidgets('applies custom font size to horizontal text',
-        (tester) async {
+    testWidgets('applies custom font size to horizontal text', (tester) async {
       await prefs.setDouble('font_size', 24.0);
 
       await tester.pumpWidget(
@@ -28,26 +27,28 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
-            fileContentProvider
-                .overrideWith((ref) async => 'テスト小説の内容です。'),
+            fileContentProvider.overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: TextViewerPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: TextViewerPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
 
-      final selectableText =
-          tester.widget<SelectableText>(find.byType(SelectableText));
+      final selectableText = tester.widget<SelectableText>(
+        find.byType(SelectableText),
+      );
       final textSpan = selectableText.textSpan!;
       expect(textSpan.style?.fontSize, 24.0);
     });
 
-    testWidgets('applies custom font family to horizontal text',
-        (tester) async {
+    testWidgets('applies custom font family to horizontal text', (
+      tester,
+    ) async {
       await prefs.setString('font_family', 'hiraginoMincho');
 
       await tester.pumpWidget(
@@ -55,20 +56,21 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
-            fileContentProvider
-                .overrideWith((ref) async => 'テスト小説の内容です。'),
+            fileContentProvider.overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: TextViewerPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: TextViewerPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
 
-      final selectableText =
-          tester.widget<SelectableText>(find.byType(SelectableText));
+      final selectableText = tester.widget<SelectableText>(
+        find.byType(SelectableText),
+      );
       final textSpan = selectableText.textSpan!;
       expect(textSpan.style?.fontFamily, 'Hiragino Mincho ProN');
     });
@@ -82,14 +84,14 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
-            fileContentProvider
-                .overrideWith((ref) async => 'テスト小説の内容です。'),
+            fileContentProvider.overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: TextViewerPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: TextViewerPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -100,8 +102,7 @@ void main() {
       expect(viewer.baseStyle?.fontSize, 20.0);
     });
 
-    testWidgets('applies custom font family to vertical text',
-        (tester) async {
+    testWidgets('applies custom font family to vertical text', (tester) async {
       await prefs.setString('font_family', 'yuGothic');
       await prefs.setString('text_display_mode', 'vertical');
 
@@ -110,14 +111,14 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
-            fileContentProvider
-                .overrideWith((ref) async => 'テスト小説の内容です。'),
+            fileContentProvider.overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: TextViewerPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: TextViewerPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -125,31 +126,36 @@ void main() {
       final viewer = tester.widget<VerticalTextViewer>(
         find.byType(VerticalTextViewer),
       );
-      expect(viewer.baseStyle?.fontFamily, FontFamily.yuGothic.effectiveFontFamilyName);
+      expect(
+        viewer.baseStyle?.fontFamily,
+        FontFamily.yuGothic.effectiveFontFamilyName,
+      );
     });
 
-    testWidgets('system font family preserves theme default fontFamily',
-        (tester) async {
+    testWidgets('system font family preserves theme default fontFamily', (
+      tester,
+    ) async {
       // Default is system, so no need to set anything
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
-            fileContentProvider
-                .overrideWith((ref) async => 'テスト小説の内容です。'),
+            fileContentProvider.overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: TextViewerPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: TextViewerPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
 
-      final selectableText =
-          tester.widget<SelectableText>(find.byType(SelectableText));
+      final selectableText = tester.widget<SelectableText>(
+        find.byType(SelectableText),
+      );
       final textSpan = selectableText.textSpan!;
       // System default preserves the theme's fontFamily (not overriding with a custom one)
       expect(textSpan.style?.fontFamily, isNot('Hiragino Mincho ProN'));

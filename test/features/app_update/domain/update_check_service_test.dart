@@ -11,18 +11,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  GithubReleaseClient clientReturning(String tag,
-      {List<Map<String, String>> assets = const []}) {
+  GithubReleaseClient clientReturning(
+    String tag, {
+    List<Map<String, String>> assets = const [],
+  }) {
     final mock = MockClient((request) async {
       return http.Response(
         jsonEncode({
           'tag_name': tag,
           'body': 'notes',
           'assets': assets
-              .map((a) => {
-                    'name': a['name'],
-                    'browser_download_url': a['url'],
-                  })
+              .map((a) => {'name': a['name'], 'browser_download_url': a['url']})
               .toList(),
         }),
         200,
@@ -36,7 +35,9 @@ void main() {
     return GithubReleaseClient(httpClient: mock, userAgent: 'ua');
   }
 
-  Future<UpdatePreferences> prefs([Map<String, Object> initial = const {}]) async {
+  Future<UpdatePreferences> prefs([
+    Map<String, Object> initial = const {},
+  ]) async {
     SharedPreferences.setMockInitialValues(initial);
     return UpdatePreferences(await SharedPreferences.getInstance());
   }
@@ -147,21 +148,20 @@ void main() {
     expect(await s.check(), isA<UpdateAvailable>());
   });
 
-  test('snooze ignores build metadata (v2.0.0+5 stays snoozed as 2.0.0)',
-      () async {
-    final s = service(
-      client: clientReturning('v2.0.0+5'),
-      currentVersion: '1.0.0',
-      preferences: await prefs({'app_update.dismissed_version': '2.0.0'}),
-    );
-    expect(await s.check(), isA<UpdateNotAvailable>());
-  });
+  test(
+    'snooze ignores build metadata (v2.0.0+5 stays snoozed as 2.0.0)',
+    () async {
+      final s = service(
+        client: clientReturning('v2.0.0+5'),
+        currentVersion: '1.0.0',
+        preferences: await prefs({'app_update.dismissed_version': '2.0.0'}),
+      );
+      expect(await s.check(), isA<UpdateNotAvailable>());
+    },
+  );
 
   test('returns error status when the fetch fails', () async {
-    final s = service(
-      client: failingClient(),
-      preferences: await prefs(),
-    );
+    final s = service(client: failingClient(), preferences: await prefs());
     expect(await s.check(manual: true), isA<UpdateCheckError>());
   });
 }

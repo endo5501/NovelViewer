@@ -31,8 +31,11 @@ class WindowStateRepository {
       height = _prefs.getDouble(heightKey);
       maximized = _prefs.getBool(maximizedKey);
     } catch (e, stack) {
-      _log.warning('Stored window state has an unexpected type; ignoring', e,
-          stack);
+      _log.warning(
+        'Stored window state has an unexpected type; ignoring',
+        e,
+        stack,
+      );
       return WindowState.empty;
     }
 

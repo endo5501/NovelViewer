@@ -58,9 +58,10 @@ void main() {
 
       final container = makeContainer();
       final result = await container.read(
-        hoverPopupCacheProvider(
-          (folderPath: '/lib/novel_a', word: 'アリス'),
-        ).future,
+        hoverPopupCacheProvider((
+          folderPath: '/lib/novel_a',
+          word: 'アリス',
+        )).future,
       );
 
       expect(result.map((s) => s.coveredUpToEpisode).toList(), [10, 60, 120]);
@@ -69,9 +70,10 @@ void main() {
     test('returns empty list when no cache exists', () async {
       final container = makeContainer();
       final result = await container.read(
-        hoverPopupCacheProvider(
-          (folderPath: '/lib/novel_a', word: 'メアリ'),
-        ).future,
+        hoverPopupCacheProvider((
+          folderPath: '/lib/novel_a',
+          word: 'メアリ',
+        )).future,
       );
 
       expect(result, isEmpty);
@@ -80,11 +82,17 @@ void main() {
     test('equal keys produce identical provider entries', () {
       final container = makeContainer();
       final a = container.read(
-          hoverPopupCacheProvider((folderPath: '/lib/novel_a', word: 'アリス'))
-              .future);
+        hoverPopupCacheProvider((
+          folderPath: '/lib/novel_a',
+          word: 'アリス',
+        )).future,
+      );
       final b = container.read(
-          hoverPopupCacheProvider((folderPath: '/lib/novel_a', word: 'アリス'))
-              .future);
+        hoverPopupCacheProvider((
+          folderPath: '/lib/novel_a',
+          word: 'アリス',
+        )).future,
+      );
 
       expect(identical(a, b), isTrue);
     });
@@ -92,39 +100,35 @@ void main() {
 
   group('chooseDefaultSnapshot', () {
     WordSummary snap(int episode) => WordSummary(
-          word: 'w',
-          coveredUpToEpisode: episode,
-          summary: 's$episode',
-          sourceFile: '$episode.txt',
-          createdAt: DateTime.utc(2026),
-          updatedAt: DateTime.utc(2026),
-        );
+      word: 'w',
+      coveredUpToEpisode: episode,
+      summary: 's$episode',
+      sourceFile: '$episode.txt',
+      createdAt: DateTime.utc(2026),
+      updatedAt: DateTime.utc(2026),
+    );
 
     test('returns null when list is empty', () {
       expect(chooseDefaultSnapshot(const [], 5), isNull);
     });
 
     test('picks max snapshot <= current when one exists', () {
-      final result = chooseDefaultSnapshot(
-        [snap(3), snap(9), snap(10), snap(20)],
-        6,
-      );
+      final result = chooseDefaultSnapshot([
+        snap(3),
+        snap(9),
+        snap(10),
+        snap(20),
+      ], 6);
       expect(result?.coveredUpToEpisode, 3);
     });
 
     test('picks earliest snapshot when all are in the future', () {
-      final result = chooseDefaultSnapshot(
-        [snap(9), snap(10), snap(20)],
-        6,
-      );
+      final result = chooseDefaultSnapshot([snap(9), snap(10), snap(20)], 6);
       expect(result?.coveredUpToEpisode, 9);
     });
 
     test('exact-match snapshot wins', () {
-      final result = chooseDefaultSnapshot(
-        [snap(3), snap(6), snap(9)],
-        6,
-      );
+      final result = chooseDefaultSnapshot([snap(3), snap(6), snap(9)], 6);
       expect(result?.coveredUpToEpisode, 6);
     });
 

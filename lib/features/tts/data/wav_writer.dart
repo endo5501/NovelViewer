@@ -52,8 +52,9 @@ class WavWriter {
     // Convert float samples to 16-bit PCM
     for (var i = 0; i < audio.length; i++) {
       final clamped = audio[i].clamp(-1.0, 1.0);
-      final sample =
-          clamped >= 0 ? (clamped * 32767).round() : (clamped * 32768).round();
+      final sample = clamped >= 0
+          ? (clamped * 32767).round()
+          : (clamped * 32768).round();
       buffer.setInt16(offset, sample, Endian.little);
       offset += 2;
     }

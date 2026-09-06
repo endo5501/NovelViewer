@@ -19,8 +19,7 @@ class _NoopDownloader implements InstallerDownloader {
   Future<DownloadedInstaller> download(
     ReleaseInfo info, {
     void Function(double progress)? onProgress,
-  }) async =>
-      const DownloadedInstaller(exePath: 'x', sha256Path: 'y');
+  }) async => const DownloadedInstaller(exePath: 'x', sha256Path: 'y');
 }
 
 class _NoopStarter implements ProcessStarter {
@@ -31,12 +30,12 @@ class _NoopStarter implements ProcessStarter {
 /// Returns a pre-set [UpdateResult] without performing any real work.
 class _StubUpdater extends InstallerUpdater {
   _StubUpdater(this._result)
-      : super(
-          downloader: _NoopDownloader(),
-          verifier: const InstallerVerifier(),
-          processStarter: _NoopStarter(),
-          onExit: (_) {},
-        );
+    : super(
+        downloader: _NoopDownloader(),
+        verifier: const InstallerVerifier(),
+        processStarter: _NoopStarter(),
+        onExit: (_) {},
+      );
 
   final UpdateResult _result;
 
@@ -44,22 +43,18 @@ class _StubUpdater extends InstallerUpdater {
   Future<UpdateResult> apply(
     ReleaseInfo info, {
     void Function(double progress)? onProgress,
-  }) async =>
-      _result;
+  }) async => _result;
 }
 
-ReleaseInfo _release() => const ReleaseInfo(
-      tagName: 'v1.3.0',
-      body: 'notes',
-      assets: [],
-    );
+ReleaseInfo _release() =>
+    const ReleaseInfo(tagName: 'v1.3.0', body: 'notes', assets: []);
 
 PackageInfo _packageInfo() => PackageInfo(
-      appName: 'NovelViewer',
-      packageName: 'com.example.novelviewer',
-      version: '1.0.0',
-      buildNumber: '1',
-    );
+  appName: 'NovelViewer',
+  packageName: 'com.example.novelviewer',
+  version: '1.0.0',
+  buildNumber: '1',
+);
 
 Future<void> _openDialog(WidgetTester tester) async {
   await tester.tap(find.text('open-dialog'));
@@ -67,90 +62,105 @@ Future<void> _openDialog(WidgetTester tester) async {
 }
 
 Widget _host() => LocalizedMaterialApp(
-      home: Builder(
-        builder: (context) => Scaffold(
-          body: Center(
-            child: ElevatedButton(
-              onPressed: () => UpdateDialog.show(context, _release()),
-              child: const Text('open-dialog'),
-            ),
-          ),
+  home: Builder(
+    builder: (context) => Scaffold(
+      body: Center(
+        child: ElevatedButton(
+          onPressed: () => UpdateDialog.show(context, _release()),
+          child: const Text('open-dialog'),
         ),
       ),
-    );
+    ),
+  ),
+);
 
 void main() {
   testWidgets(
-      'logs a WARNING and closes the dialog when opening the release page fails',
-      (tester) async {
-    final records = <LogRecord>[];
-    final sub = Logger.root.onRecord.listen(records.add);
-    addTearDown(sub.cancel);
+    'logs a WARNING and closes the dialog when opening the release page fails',
+    (tester) async {
+      final records = <LogRecord>[];
+      final sub = Logger.root.onRecord.listen(records.add);
+      addTearDown(sub.cancel);
 
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        packageInfoProvider.overrideWithValue(_packageInfo()),
-        distributionTypeProvider.overrideWithValue(DistributionType.portable),
-      ],
-      child: _host(),
-    ));
-    await _openDialog(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            packageInfoProvider.overrideWithValue(_packageInfo()),
+            distributionTypeProvider.overrideWithValue(
+              DistributionType.portable,
+            ),
+          ],
+          child: _host(),
+        ),
+      );
+      await _openDialog(tester);
 
-    expect(find.byType(UpdateDialog), findsOneWidget);
+      expect(find.byType(UpdateDialog), findsOneWidget);
 
-    // url_launcher has no platform handler in tests, so launchUrl throws and
-    // the dialog's catch must log the failure, then close. runAsync lets the
-    // real plugin call reject; poll (rather than a fixed sleep) until the catch
-    // has logged, so the test is not timing-fragile on a loaded runner.
-    await tester.runAsync(() async {
-      await tester.tap(find.text('リリースページを開く'));
-      for (var i = 0;
-          i < 200 &&
-              !records.any((r) => r.loggerName == 'app_update.dialog');
-          i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
-    await tester.pumpAndSettle();
+      // url_launcher has no platform handler in tests, so launchUrl throws and
+      // the dialog's catch must log the failure, then close. runAsync lets the
+      // real plugin call reject; poll (rather than a fixed sleep) until the catch
+      // has logged, so the test is not timing-fragile on a loaded runner.
+      await tester.runAsync(() async {
+        await tester.tap(find.text('リリースページを開く'));
+        for (
+          var i = 0;
+          i < 200 && !records.any((r) => r.loggerName == 'app_update.dialog');
+          i++
+        ) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+      });
+      await tester.pumpAndSettle();
 
-    expect(find.byType(UpdateDialog), findsNothing);
-    expect(
-      records.any((r) =>
-          r.loggerName == 'app_update.dialog' && r.level == Level.WARNING),
-      isTrue,
-    );
-  });
+      expect(find.byType(UpdateDialog), findsNothing);
+      expect(
+        records.any(
+          (r) =>
+              r.loggerName == 'app_update.dialog' && r.level == Level.WARNING,
+        ),
+        isTrue,
+      );
+    },
+  );
 
   testWidgets(
-      'logs a WARNING including the UpdateResult message when an update fails',
-      (tester) async {
-    final records = <LogRecord>[];
-    final sub = Logger.root.onRecord.listen(records.add);
-    addTearDown(sub.cancel);
+    'logs a WARNING including the UpdateResult message when an update fails',
+    (tester) async {
+      final records = <LogRecord>[];
+      final sub = Logger.root.onRecord.listen(records.add);
+      addTearDown(sub.cancel);
 
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        packageInfoProvider.overrideWithValue(_packageInfo()),
-        distributionTypeProvider.overrideWithValue(DistributionType.installer),
-        installerUpdaterProvider.overrideWithValue(
-          _StubUpdater(
-            const UpdateResult(UpdateOutcome.downloadFailed, 'boom-detail'),
-          ),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            packageInfoProvider.overrideWithValue(_packageInfo()),
+            distributionTypeProvider.overrideWithValue(
+              DistributionType.installer,
+            ),
+            installerUpdaterProvider.overrideWithValue(
+              _StubUpdater(
+                const UpdateResult(UpdateOutcome.downloadFailed, 'boom-detail'),
+              ),
+            ),
+          ],
+          child: _host(),
         ),
-      ],
-      child: _host(),
-    ));
-    await _openDialog(tester);
+      );
+      await _openDialog(tester);
 
-    await tester.tap(find.text('更新する'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('更新する'));
+      await tester.pumpAndSettle();
 
-    expect(
-      records.any((r) =>
-          r.loggerName == 'app_update.dialog' &&
-          r.level == Level.WARNING &&
-          r.message.contains('boom-detail')),
-      isTrue,
-    );
-  });
+      expect(
+        records.any(
+          (r) =>
+              r.loggerName == 'app_update.dialog' &&
+              r.level == Level.WARNING &&
+              r.message.contains('boom-detail'),
+        ),
+        isTrue,
+      );
+    },
+  );
 }

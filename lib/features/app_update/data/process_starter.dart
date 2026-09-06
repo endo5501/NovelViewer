@@ -12,10 +12,6 @@ class Win32ProcessStarter implements ProcessStarter {
 
   @override
   Future<void> start(String executable, List<String> arguments) async {
-    await Process.start(
-      executable,
-      arguments,
-      mode: ProcessStartMode.detached,
-    );
+    await Process.start(executable, arguments, mode: ProcessStartMode.detached);
   }
 }

@@ -10,28 +10,30 @@ import 'package:novel_viewer/features/tts/data/audiocpp_native_bindings.dart';
 import 'package:novel_viewer/features/tts/data/irodori_tts_engine.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine.dart';
 
-typedef _MockSynthesize = int Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  double,
-  double,
-  int,
-);
+typedef _MockSynthesize =
+    int Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      double,
+      double,
+      int,
+    );
 
-typedef _MockSynthesizeWithOptions = int Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  double,
-  double,
-  int,
-  Pointer<Pointer<Utf8>>,
-  Pointer<Pointer<Utf8>>,
-  int,
-);
+typedef _MockSynthesizeWithOptions =
+    int Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      double,
+      double,
+      int,
+      Pointer<Pointer<Utf8>>,
+      Pointer<Pointer<Utf8>>,
+      int,
+    );
 
 /// Mock bindings for testing IrodoriTtsEngine without loading the native
 /// library.
@@ -52,14 +54,14 @@ class MockAudiocppNativeBindings extends AudiocppNativeBindings {
   // ignore: overridden_fields
   late final Pointer<Void> Function(Pointer<Utf8>, int, Pointer<Void>) init =
       (Pointer<Utf8> modelDir, int nThreads, Pointer<Void> abortHandle) {
-    lastInitAbortHandle = abortHandle;
-    return _fakeCtx;
-  };
+        lastInitAbortHandle = abortHandle;
+        return _fakeCtx;
+      };
 
   @override
   // ignore: overridden_fields
-  late final int Function(Pointer<Void>) isLoaded =
-      (Pointer<Void> ctx) => _isLoadedResult;
+  late final int Function(Pointer<Void>) isLoaded = (Pointer<Void> ctx) =>
+      _isLoadedResult;
 
   bool freeCalled = false;
 
@@ -104,26 +106,29 @@ class MockAudiocppNativeBindings extends AudiocppNativeBindings {
 
   @override
   late final _MockSynthesize
-  // ignore: overridden_fields
-  synthesize = (
-    Pointer<Void> ctx,
-    Pointer<Utf8> text,
-    Pointer<Utf8> refWavPath,
-    Pointer<Utf8> caption,
-    double speakerGuidanceScale,
-    double captionGuidanceScale,
-    int numInferenceSteps,
-  ) {
-    lastText = text.toDartString();
-    lastRefWavPathWasNull = refWavPath == nullptr;
-    lastRefWavPath = refWavPath == nullptr ? null : refWavPath.toDartString();
-    lastCaptionWasNull = caption == nullptr;
-    lastCaption = caption == nullptr ? null : caption.toDartString();
-    lastSpeakerGuidanceScale = speakerGuidanceScale;
-    lastCaptionGuidanceScale = captionGuidanceScale;
-    lastNumInferenceSteps = numInferenceSteps;
-    return synthesizeReturnCode;
-  };
+      // ignore: overridden_fields
+      synthesize =
+      (
+        Pointer<Void> ctx,
+        Pointer<Utf8> text,
+        Pointer<Utf8> refWavPath,
+        Pointer<Utf8> caption,
+        double speakerGuidanceScale,
+        double captionGuidanceScale,
+        int numInferenceSteps,
+      ) {
+        lastText = text.toDartString();
+        lastRefWavPathWasNull = refWavPath == nullptr;
+        lastRefWavPath = refWavPath == nullptr
+            ? null
+            : refWavPath.toDartString();
+        lastCaptionWasNull = caption == nullptr;
+        lastCaption = caption == nullptr ? null : caption.toDartString();
+        lastSpeakerGuidanceScale = speakerGuidanceScale;
+        lastCaptionGuidanceScale = captionGuidanceScale;
+        lastNumInferenceSteps = numInferenceSteps;
+        return synthesizeReturnCode;
+      };
 
   /// Request options captured from the last call, decoded eagerly for the same
   /// reason as the strings above.
@@ -131,34 +136,36 @@ class MockAudiocppNativeBindings extends AudiocppNativeBindings {
 
   @override
   late final _MockSynthesizeWithOptions
-  // ignore: overridden_fields
-  synthesizeWithOptions = (
-    Pointer<Void> ctx,
-    Pointer<Utf8> text,
-    Pointer<Utf8> refWavPath,
-    Pointer<Utf8> caption,
-    double speakerGuidanceScale,
-    double captionGuidanceScale,
-    int numInferenceSteps,
-    Pointer<Pointer<Utf8>> optionKeys,
-    Pointer<Pointer<Utf8>> optionValues,
-    int optionCount,
-  ) {
-    final options = <String, String>{};
-    for (var i = 0; i < optionCount; i++) {
-      options[optionKeys[i].toDartString()] = optionValues[i].toDartString();
-    }
-    lastRequestOptions = options;
-    return synthesize(
-      ctx,
-      text,
-      refWavPath,
-      caption,
-      speakerGuidanceScale,
-      captionGuidanceScale,
-      numInferenceSteps,
-    );
-  };
+      // ignore: overridden_fields
+      synthesizeWithOptions =
+      (
+        Pointer<Void> ctx,
+        Pointer<Utf8> text,
+        Pointer<Utf8> refWavPath,
+        Pointer<Utf8> caption,
+        double speakerGuidanceScale,
+        double captionGuidanceScale,
+        int numInferenceSteps,
+        Pointer<Pointer<Utf8>> optionKeys,
+        Pointer<Pointer<Utf8>> optionValues,
+        int optionCount,
+      ) {
+        final options = <String, String>{};
+        for (var i = 0; i < optionCount; i++) {
+          options[optionKeys[i].toDartString()] = optionValues[i]
+              .toDartString();
+        }
+        lastRequestOptions = options;
+        return synthesize(
+          ctx,
+          text,
+          refWavPath,
+          caption,
+          speakerGuidanceScale,
+          captionGuidanceScale,
+          numInferenceSteps,
+        );
+      };
 
   Pointer<Float> audioBuffer = nullptr;
   int audioLength = 0;
@@ -171,13 +178,13 @@ class MockAudiocppNativeBindings extends AudiocppNativeBindings {
 
   @override
   // ignore: overridden_fields
-  late final int Function(Pointer<Void>) getAudioLength =
-      (Pointer<Void> ctx) => audioLength;
+  late final int Function(Pointer<Void>) getAudioLength = (Pointer<Void> ctx) =>
+      audioLength;
 
   @override
   // ignore: overridden_fields
-  late final int Function(Pointer<Void>) getSampleRate =
-      (Pointer<Void> ctx) => sampleRateValue;
+  late final int Function(Pointer<Void>) getSampleRate = (Pointer<Void> ctx) =>
+      sampleRateValue;
 
   String errorMessage = 'synthesis failed';
 
@@ -190,8 +197,8 @@ class MockAudiocppNativeBindings extends AudiocppNativeBindings {
 
   @override
   // ignore: overridden_fields
-  late final Pointer<Utf8> Function() getInitError =
-      () => initErrorMessage.toNativeUtf8();
+  late final Pointer<Utf8> Function() getInitError = () =>
+      initErrorMessage.toNativeUtf8();
 }
 
 void main() {
@@ -243,11 +250,13 @@ void main() {
 
       expect(
         () => engine.loadModel('/fake/model/dir'),
-        throwsA(isA<TtsEngineException>().having(
-          (e) => e.message,
-          'message',
-          contains('irodori_tts.json'),
-        )),
+        throwsA(
+          isA<TtsEngineException>().having(
+            (e) => e.message,
+            'message',
+            contains('irodori_tts.json'),
+          ),
+        ),
       );
     });
   });
@@ -306,8 +315,11 @@ void main() {
         numInferenceSteps: 40,
       );
 
-      expect(mockBindings.lastRequestOptions, isNull,
-          reason: 'no options must take the plain synthesize entry point');
+      expect(
+        mockBindings.lastRequestOptions,
+        isNull,
+        reason: 'no options must take the plain synthesize entry point',
+      );
     });
 
     test('an empty caption is treated as no caption', () {
@@ -367,20 +379,22 @@ void main() {
       }
     });
 
-    test('passes text and guidance/steps parameters through to native call',
-        () {
-      engine.synthesize(
-        'テスト',
-        speakerGuidanceScale: 4.2,
-        captionGuidanceScale: 2.1,
-        numInferenceSteps: 25,
-      );
+    test(
+      'passes text and guidance/steps parameters through to native call',
+      () {
+        engine.synthesize(
+          'テスト',
+          speakerGuidanceScale: 4.2,
+          captionGuidanceScale: 2.1,
+          numInferenceSteps: 25,
+        );
 
-      expect(mockBindings.lastText, 'テスト');
-      expect(mockBindings.lastSpeakerGuidanceScale, 4.2);
-      expect(mockBindings.lastCaptionGuidanceScale, 2.1);
-      expect(mockBindings.lastNumInferenceSteps, 25);
-    });
+        expect(mockBindings.lastText, 'テスト');
+        expect(mockBindings.lastSpeakerGuidanceScale, 4.2);
+        expect(mockBindings.lastCaptionGuidanceScale, 2.1);
+        expect(mockBindings.lastNumInferenceSteps, 25);
+      },
+    );
 
     test('null refWavPath and caption are passed as nullptr', () {
       engine.synthesize(
@@ -408,8 +422,7 @@ void main() {
       expect(mockBindings.lastCaptionWasNull, true);
     });
 
-    test('non-null refWavPath and caption are forwarded as native strings',
-        () {
+    test('non-null refWavPath and caption are forwarded as native strings', () {
       engine.synthesize(
         'テスト',
         refWavPath: '/voices/ref.wav',
@@ -425,8 +438,7 @@ void main() {
       expect(mockBindings.lastCaption, '落ち着いた大人の女性の声');
     });
 
-    test('throws TtsEngineException with native error message on failure',
-        () {
+    test('throws TtsEngineException with native error message on failure', () {
       mockBindings.synthesizeReturnCode = 1;
       mockBindings.errorMessage = 'boom';
 
@@ -437,11 +449,13 @@ void main() {
           captionGuidanceScale: 3.0,
           numInferenceSteps: 40,
         ),
-        throwsA(isA<TtsEngineException>().having(
-          (e) => e.message,
-          'message',
-          contains('boom'),
-        )),
+        throwsA(
+          isA<TtsEngineException>().having(
+            (e) => e.message,
+            'message',
+            contains('boom'),
+          ),
+        ),
       );
     });
   });
@@ -471,18 +485,20 @@ void main() {
       engine = IrodoriTtsEngine(mockBindings);
     });
 
-    test('abort calls native binding with the abort handle (not the context)',
-        () {
-      final fakeCtx = Pointer<Void>.fromAddress(0x1234);
-      final fakeHandle = Pointer<Void>.fromAddress(0xABCD);
-      mockBindings.setFakeContext(fakeCtx);
-      engine.loadModel('/fake/model/dir', abortHandle: fakeHandle);
+    test(
+      'abort calls native binding with the abort handle (not the context)',
+      () {
+        final fakeCtx = Pointer<Void>.fromAddress(0x1234);
+        final fakeHandle = Pointer<Void>.fromAddress(0xABCD);
+        mockBindings.setFakeContext(fakeCtx);
+        engine.loadModel('/fake/model/dir', abortHandle: fakeHandle);
 
-      engine.abort();
+        engine.abort();
 
-      expect(mockBindings.abortCallCount, 1);
-      expect(mockBindings.lastAbortHandle, fakeHandle);
-    });
+        expect(mockBindings.abortCallCount, 1);
+        expect(mockBindings.lastAbortHandle, fakeHandle);
+      },
+    );
 
     test('abort is no-op when no abort handle is wired', () {
       final fakeCtx = Pointer<Void>.fromAddress(0x1234);
@@ -506,20 +522,22 @@ void main() {
       expect(mockBindings.lastResetAbortHandle, fakeHandle);
     });
 
-    test('abort after dispose is safe and a no-op (handle reference dropped)',
-        () {
-      final fakeCtx = Pointer<Void>.fromAddress(0x1234);
-      final fakeHandle = Pointer<Void>.fromAddress(0xABCD);
-      mockBindings.setFakeContext(fakeCtx);
-      engine.loadModel('/fake/model/dir', abortHandle: fakeHandle);
+    test(
+      'abort after dispose is safe and a no-op (handle reference dropped)',
+      () {
+        final fakeCtx = Pointer<Void>.fromAddress(0x1234);
+        final fakeHandle = Pointer<Void>.fromAddress(0xABCD);
+        mockBindings.setFakeContext(fakeCtx);
+        engine.loadModel('/fake/model/dir', abortHandle: fakeHandle);
 
-      engine.dispose();
-      engine.abort();
-      engine.resetAbort();
+        engine.dispose();
+        engine.abort();
+        engine.resetAbort();
 
-      expect(mockBindings.abortCallCount, 0);
-      expect(mockBindings.resetAbortCallCount, 0);
-    });
+        expect(mockBindings.abortCallCount, 0);
+        expect(mockBindings.resetAbortCallCount, 0);
+      },
+    );
   });
 
   group('IrodoriTtsEngine - dispose', () {

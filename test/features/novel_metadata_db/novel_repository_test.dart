@@ -57,7 +57,9 @@ void main() {
 
     test('updates existing novel with same site type and novel ID', () async {
       await repository.upsert(createMetadata(title: '古いタイトル'));
-      await repository.upsert(createMetadata(title: '新しいタイトル', episodeCount: 20));
+      await repository.upsert(
+        createMetadata(title: '新しいタイトル', episodeCount: 20),
+      );
 
       final all = await repository.findAll();
       expect(all.length, 1);
@@ -74,16 +76,20 @@ void main() {
     });
 
     test('returns novels ordered by title', () async {
-      await repository.upsert(createMetadata(
-        novelId: 'n0002',
-        title: 'Bの小説',
-        folderName: 'narou_n0002',
-      ));
-      await repository.upsert(createMetadata(
-        novelId: 'n0001',
-        title: 'Aの小説',
-        folderName: 'narou_n0001',
-      ));
+      await repository.upsert(
+        createMetadata(
+          novelId: 'n0002',
+          title: 'Bの小説',
+          folderName: 'narou_n0002',
+        ),
+      );
+      await repository.upsert(
+        createMetadata(
+          novelId: 'n0001',
+          title: 'Aの小説',
+          folderName: 'narou_n0001',
+        ),
+      );
 
       final all = await repository.findAll();
       expect(all.length, 2);
@@ -119,7 +125,10 @@ void main() {
     test('returns null for non-existent combination', () async {
       await repository.upsert(createMetadata());
 
-      final found = await repository.findBySiteAndNovelId('kakuyomu', 'n1234ab');
+      final found = await repository.findBySiteAndNovelId(
+        'kakuyomu',
+        'n1234ab',
+      );
       expect(found, isNull);
     });
   });
@@ -136,11 +145,13 @@ void main() {
 
     test('does not affect other novels', () async {
       await repository.upsert(createMetadata());
-      await repository.upsert(createMetadata(
-        novelId: 'n5678cd',
-        title: '別の小説',
-        folderName: 'narou_n5678cd',
-      ));
+      await repository.upsert(
+        createMetadata(
+          novelId: 'n5678cd',
+          title: '別の小説',
+          folderName: 'narou_n5678cd',
+        ),
+      );
 
       await repository.deleteByFolderName('narou_n1234ab');
 
@@ -172,10 +183,9 @@ void main() {
     });
 
     test('does not affect other fields', () async {
-      await repository.upsert(createMetadata(
-        title: '古いタイトル',
-        episodeCount: 10,
-      ));
+      await repository.upsert(
+        createMetadata(title: '古いタイトル', episodeCount: 10),
+      );
 
       await repository.updateTitle('narou_n1234ab', '新しいタイトル');
 

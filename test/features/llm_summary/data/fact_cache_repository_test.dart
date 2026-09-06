@@ -96,49 +96,52 @@ void main() {
 
         final rows = await repository.findForWord(word: 'アリス');
         expect(rows, hasLength(2));
-        expect(
-          rows.map((r) => r.fileName).toSet(),
-          {'001.txt', '002.txt'},
-        );
+        expect(rows.map((r) => r.fileName).toSet(), {'001.txt', '002.txt'});
       });
     });
 
     group('invalidateWord', () {
-      test('sets content_hash to the empty-string sentinel for the word',
-          () async {
-        await repository.upsert(
-          word: 'アリス',
-          fileName: '001.txt',
-          facts: 'a',
-          contentHash: 'h1',
-          promptVersion: 1,
-        );
-        await repository.upsert(
-          word: 'アリス',
-          fileName: '002.txt',
-          facts: 'b',
-          contentHash: 'h2',
-          promptVersion: 1,
-        );
-        await repository.upsert(
-          word: 'ボブ',
-          fileName: '001.txt',
-          facts: 'c',
-          contentHash: 'h3',
-          promptVersion: 1,
-        );
+      test(
+        'sets content_hash to the empty-string sentinel for the word',
+        () async {
+          await repository.upsert(
+            word: 'アリス',
+            fileName: '001.txt',
+            facts: 'a',
+            contentHash: 'h1',
+            promptVersion: 1,
+          );
+          await repository.upsert(
+            word: 'アリス',
+            fileName: '002.txt',
+            facts: 'b',
+            contentHash: 'h2',
+            promptVersion: 1,
+          );
+          await repository.upsert(
+            word: 'ボブ',
+            fileName: '001.txt',
+            facts: 'c',
+            contentHash: 'h3',
+            promptVersion: 1,
+          );
 
-        await repository.invalidateWord(word: 'アリス');
+          await repository.invalidateWord(word: 'アリス');
 
-        final alice = await repository.findForWord(word: 'アリス');
-        expect(alice.every((r) => r.contentHash == FactCacheRepository.sentinelHash),
-            isTrue);
-        expect(FactCacheRepository.sentinelHash, '');
+          final alice = await repository.findForWord(word: 'アリス');
+          expect(
+            alice.every(
+              (r) => r.contentHash == FactCacheRepository.sentinelHash,
+            ),
+            isTrue,
+          );
+          expect(FactCacheRepository.sentinelHash, '');
 
-        // Other words must be untouched.
-        final bob = await repository.findForWord(word: 'ボブ');
-        expect(bob.single.contentHash, 'h3');
-      });
+          // Other words must be untouched.
+          final bob = await repository.findForWord(word: 'ボブ');
+          expect(bob.single.contentHash, 'h3');
+        },
+      );
 
       Future<void> seed(String fileName, String updatedAt) async {
         await repository.upsert(
@@ -157,8 +160,7 @@ void main() {
       }
 
       Future<String?> hashOf(String fileName) async =>
-          (await repository.find(word: 'アリス', fileName: fileName))
-              ?.contentHash;
+          (await repository.find(word: 'アリス', fileName: fileName))?.contentHash;
 
       test('rows newer than the reference timestamp are preserved', () async {
         await seed('old.txt', '2026-08-01T00:00:00.000Z');

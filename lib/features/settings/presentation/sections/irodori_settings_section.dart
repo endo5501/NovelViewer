@@ -50,7 +50,8 @@ class _IrodoriVariantSelector extends ConsumerWidget {
     // Switching mid-transfer is guarded in the notifier too, but stopping it
     // here keeps the user from starting something the app then has to undo.
     final downloading =
-        ref.watch(irodoriModelDownloadProvider) is IrodoriModelDownloadDownloading;
+        ref.watch(irodoriModelDownloadProvider)
+            is IrodoriModelDownloadDownloading;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -168,12 +169,12 @@ class _IrodoriModelDownloadSection extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: switch (downloadState) {
         IrodoriModelDownloadIdle() => ElevatedButton.icon(
-            icon: const Icon(Icons.download),
-            label: Text(l10n.settings_modelDataDownload),
-            onPressed: () {
-              ref.read(irodoriModelDownloadProvider.notifier).startDownload();
-            },
-          ),
+          icon: const Icon(Icons.download),
+          label: Text(l10n.settings_modelDataDownload),
+          onPressed: () {
+            ref.read(irodoriModelDownloadProvider.notifier).startDownload();
+          },
+        ),
         IrodoriModelDownloadDownloading(:final currentFile, :final progress) =>
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,35 +196,35 @@ class _IrodoriModelDownloadSection extends ConsumerWidget {
             ],
           ),
         IrodoriModelDownloadCompleted(:final modelsDir) => Row(
-            children: [
-              Icon(Icons.check_circle,
-                  color: Theme.of(context).colorScheme.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '${l10n.settings_irodoriDownloaded}${modelsDir != null ? '\n$modelsDir' : ''}',
-                ),
+          children: [
+            Icon(
+              Icons.check_circle,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${l10n.settings_irodoriDownloaded}${modelsDir != null ? '\n$modelsDir' : ''}',
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
         IrodoriModelDownloadError(:final message) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                message,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () {
-                  ref
-                      .read(irodoriModelDownloadProvider.notifier)
-                      .startDownload();
-                },
-                child: Text(l10n.settings_retryButton),
-              ),
-            ],
-          ),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                ref.read(irodoriModelDownloadProvider.notifier).startDownload();
+              },
+              child: Text(l10n.settings_retryButton),
+            ),
+          ],
+        ),
       },
     );
   }
@@ -240,8 +241,9 @@ class _IrodoriSynthesisParams extends ConsumerWidget {
     final numInferenceSteps = ref.watch(irodoriNumInferenceStepsProvider);
     // The stored value is kept so switching back to v3 restores it; only the
     // control is disabled.
-    final captionSupported =
-        ref.watch(irodoriModelVariantProvider).supportsCaption;
+    final captionSupported = ref
+        .watch(irodoriModelVariantProvider)
+        .supportsCaption;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -282,7 +284,9 @@ class _IrodoriSynthesisParams extends ConsumerWidget {
                   onChanged: captionSupported
                       ? (value) {
                           ref
-                              .read(irodoriCaptionGuidanceScaleProvider.notifier)
+                              .read(
+                                irodoriCaptionGuidanceScaleProvider.notifier,
+                              )
                               .setValue(value);
                         }
                       : null,
@@ -291,9 +295,7 @@ class _IrodoriSynthesisParams extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            '${l10n.settings_irodoriNumInferenceSteps}: $numInferenceSteps',
-          ),
+          Text('${l10n.settings_irodoriNumInferenceSteps}: $numInferenceSteps'),
           Slider(
             value: numInferenceSteps.toDouble(),
             min: 10.0,

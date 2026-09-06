@@ -25,53 +25,57 @@ void main() {
     // runner, NOT from a mutable ref like `/resolve/main` (which would pull a
     // newer, incompatible model that requires inputs the runner cannot supply,
     // e.g. `speaker_embedding_mask`). See spec: piper-tts-model-download.
-    test('downloadModels requests files from a fixed revision, not main',
-        () async {
-      final modelsDir = p.join(tempDir.path, 'models', 'piper');
-      final requestedUrls = <String>[];
+    test(
+      'downloadModels requests files from a fixed revision, not main',
+      () async {
+        final modelsDir = p.join(tempDir.path, 'models', 'piper');
+        final requestedUrls = <String>[];
 
-      final mockClient = MockClient.streaming((request, _) async {
-        requestedUrls.add(request.url.toString());
-        return http.StreamedResponse(
-          Stream.value([1, 2, 3]),
-          200,
-          contentLength: 3,
+        final mockClient = MockClient.streaming((request, _) async {
+          requestedUrls.add(request.url.toString());
+          return http.StreamedResponse(
+            Stream.value([1, 2, 3]),
+            200,
+            contentLength: 3,
+          );
+        });
+
+        final service = PiperModelDownloadService(client: mockClient);
+        await service.downloadModels(
+          modelsDir,
+          PiperModelDownloadService.defaultModelName,
         );
-      });
 
-      final service = PiperModelDownloadService(client: mockClient);
-      await service.downloadModels(
-        modelsDir,
-        PiperModelDownloadService.defaultModelName,
-      );
+        // At least one model file must have been requested.
+        expect(requestedUrls, isNotEmpty);
 
-      // At least one model file must have been requested.
-      expect(requestedUrls, isNotEmpty);
+        // No request may target a mutable ref (branch/tag): `/resolve/main/`.
+        for (final url in requestedUrls) {
+          expect(
+            url.contains('/resolve/main/'),
+            isFalse,
+            reason:
+                'Model must be pinned to a fixed revision, not `main`: $url',
+          );
+        }
 
-      // No request may target a mutable ref (branch/tag): `/resolve/main/`.
-      for (final url in requestedUrls) {
+        // The model and its config must come from the pinned revision. Deriving
+        // the URLs from `modelRevision` is what ties the marker written on disk
+        // to the bytes actually fetched: if they drifted apart, a stale local
+        // model would still be accepted as current.
+        const modelName = PiperModelDownloadService.defaultModelName;
+        const base =
+            'https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan'
+            '/resolve/${PiperModelDownloadService.modelRevision}';
+        expect(requestedUrls, contains('$base/$modelName.onnx'));
+        expect(requestedUrls, contains('$base/config.json'));
         expect(
-          url.contains('/resolve/main/'),
-          isFalse,
-          reason: 'Model must be pinned to a fixed revision, not `main`: $url',
+          PiperModelDownloadService.modelRevision,
+          'eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a',
+          reason: 'The pin must stay on the last runner-compatible revision',
         );
-      }
-
-      // The model and its config must come from the pinned revision. Deriving
-      // the URLs from `modelRevision` is what ties the marker written on disk
-      // to the bytes actually fetched: if they drifted apart, a stale local
-      // model would still be accepted as current.
-      const modelName = PiperModelDownloadService.defaultModelName;
-      const base = 'https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan'
-          '/resolve/${PiperModelDownloadService.modelRevision}';
-      expect(requestedUrls, contains('$base/$modelName.onnx'));
-      expect(requestedUrls, contains('$base/config.json'));
-      expect(
-        PiperModelDownloadService.modelRevision,
-        'eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a',
-        reason: 'The pin must stay on the last runner-compatible revision',
-      );
-    });
+      },
+    );
   });
 
   group('completion marker binds the local model to its revision', () {
@@ -82,19 +86,18 @@ void main() {
     // the revision the files came from, and a mismatch triggers a re-download.
     late Directory modelsDir;
 
-    File markerFile() =>
-        File(p.join(modelsDir.path, '.piper_models_complete'));
+    File markerFile() => File(p.join(modelsDir.path, '.piper_models_complete'));
 
     // The models are already on disk in these cases, so any HTTP traffic means
     // the check under test decided to re-fetch when it should not have.
     PiperModelDownloadService offlineService() => PiperModelDownloadService(
-          client: MockClient((_) async => throw StateError('no request expected')),
-        );
+      client: MockClient((_) async => throw StateError('no request expected')),
+    );
 
     bool areModelsDownloaded() => offlineService().areModelsDownloaded(
-          modelsDir.path,
-          PiperModelDownloadService.defaultModelName,
-        );
+      modelsDir.path,
+      PiperModelDownloadService.defaultModelName,
+    );
 
     void writeModelFiles() {
       modelsDir.createSync(recursive: true);
@@ -142,22 +145,29 @@ void main() {
       );
     });
 
-    test('areModelsDownloaded is false when the marker holds another revision',
-        () {
-      writeModelFiles();
-      markerFile().writeAsStringSync('0000000000000000000000000000000000000000');
+    test(
+      'areModelsDownloaded is false when the marker holds another revision',
+      () {
+        writeModelFiles();
+        markerFile().writeAsStringSync(
+          '0000000000000000000000000000000000000000',
+        );
 
-      expect(areModelsDownloaded(), isFalse);
-    });
+        expect(areModelsDownloaded(), isFalse);
+      },
+    );
 
     test('areModelsDownloaded is true when the marker matches the pin', () {
       writeModelFiles();
-      File(p.join(modelsDir.path, '.piper_models_complete'))
-          .writeAsStringSync('${PiperModelDownloadService.modelRevision}\n');
+      File(
+        p.join(modelsDir.path, '.piper_models_complete'),
+      ).writeAsStringSync('${PiperModelDownloadService.modelRevision}\n');
 
-      final service = PiperModelDownloadService(client: MockClient((_) async {
-        throw StateError('no request expected');
-      }));
+      final service = PiperModelDownloadService(
+        client: MockClient((_) async {
+          throw StateError('no request expected');
+        }),
+      );
 
       expect(
         service.areModelsDownloaded(

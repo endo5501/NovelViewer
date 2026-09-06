@@ -4,9 +4,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 
 void main() {
   group('File browser refresh after download', () {
-    test(
-        'directoryContentsProvider can be invalidated to trigger refresh',
-        () {
+    test('directoryContentsProvider can be invalidated to trigger refresh', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

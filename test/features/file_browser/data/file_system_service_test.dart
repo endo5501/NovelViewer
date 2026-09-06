@@ -25,7 +25,10 @@ void main() {
       final files = await service.listTextFiles(tempDir.path);
 
       expect(files.length, 2);
-      expect(files.map((f) => f.name), containsAll(['001_chapter1.txt', '002_chapter2.txt']));
+      expect(
+        files.map((f) => f.name),
+        containsAll(['001_chapter1.txt', '002_chapter2.txt']),
+      );
     });
 
     test('returns empty list for directory with no .txt files', () async {
@@ -40,9 +43,18 @@ void main() {
   group('sortByNumericPrefix', () {
     test('sorts files by numeric prefix in ascending order', () {
       final files = [
-        const FileEntry(name: '010_chapter10.txt', path: '/test/010_chapter10.txt'),
-        const FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt'),
-        const FileEntry(name: '002_chapter2.txt', path: '/test/002_chapter2.txt'),
+        const FileEntry(
+          name: '010_chapter10.txt',
+          path: '/test/010_chapter10.txt',
+        ),
+        const FileEntry(
+          name: '001_chapter1.txt',
+          path: '/test/001_chapter1.txt',
+        ),
+        const FileEntry(
+          name: '002_chapter2.txt',
+          path: '/test/002_chapter2.txt',
+        ),
       ];
 
       final sorted = service.sortByNumericPrefix(files);
@@ -57,8 +69,14 @@ void main() {
     test('places files without numeric prefix after numbered files', () {
       final files = [
         const FileEntry(name: 'readme.txt', path: '/test/readme.txt'),
-        const FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt'),
-        const FileEntry(name: '002_chapter2.txt', path: '/test/002_chapter2.txt'),
+        const FileEntry(
+          name: '001_chapter1.txt',
+          path: '/test/001_chapter1.txt',
+        ),
+        const FileEntry(
+          name: '002_chapter2.txt',
+          path: '/test/002_chapter2.txt',
+        ),
       ];
 
       final sorted = service.sortByNumericPrefix(files);
@@ -78,10 +96,7 @@ void main() {
 
       final sorted = service.sortByNumericPrefix(files);
 
-      expect(sorted.map((f) => f.name).toList(), [
-        'apple.txt',
-        'zebra.txt',
-      ]);
+      expect(sorted.map((f) => f.name).toList(), ['apple.txt', 'zebra.txt']);
     });
   });
 
@@ -98,7 +113,10 @@ void main() {
     });
 
     test('DirectoryEntry displayName defaults to name', () {
-      const entry = DirectoryEntry(name: 'narou_n1234', path: '/test/narou_n1234');
+      const entry = DirectoryEntry(
+        name: 'narou_n1234',
+        path: '/test/narou_n1234',
+      );
       expect(entry.displayName, 'narou_n1234');
     });
 
@@ -121,38 +139,40 @@ void main() {
   });
 
   group('listOrganizationalFolderTree', () {
-    test('returns organizational folders recursively, skipping novel folders',
-        () async {
-      Directory('${tempDir.path}/完結済み').createSync();
-      Directory('${tempDir.path}/完結済み/2024').createSync();
-      Directory('${tempDir.path}/連載中').createSync();
-      // A novel folder must not be descended into.
-      final novel = Directory('${tempDir.path}/narou_n1')..createSync();
-      Directory('${novel.path}/should_not_appear').createSync();
-      File('${novel.path}/001.txt').writeAsStringSync('x');
+    test(
+      'returns organizational folders recursively, skipping novel folders',
+      () async {
+        Directory('${tempDir.path}/完結済み').createSync();
+        Directory('${tempDir.path}/完結済み/2024').createSync();
+        Directory('${tempDir.path}/連載中').createSync();
+        // A novel folder must not be descended into.
+        final novel = Directory('${tempDir.path}/narou_n1')..createSync();
+        Directory('${novel.path}/should_not_appear').createSync();
+        File('${novel.path}/001.txt').writeAsStringSync('x');
 
-      final paths = await service.listOrganizationalFolderTree(
-        tempDir.path,
-        {'narou_n1'},
-      );
+        final paths = await service.listOrganizationalFolderTree(tempDir.path, {
+          'narou_n1',
+        });
 
-      final names = paths.map((path) => p.basename(path)).toSet();
-      expect(names, containsAll(<String>['完結済み', '2024', '連載中']));
-      expect(names, isNot(contains('narou_n1')));
-      expect(names, isNot(contains('should_not_appear')));
-    });
+        final names = paths.map((path) => p.basename(path)).toSet();
+        expect(names, containsAll(<String>['完結済み', '2024', '連載中']));
+        expect(names, isNot(contains('narou_n1')));
+        expect(names, isNot(contains('should_not_appear')));
+      },
+    );
 
-    test('returns empty list when there are no organizational folders',
-        () async {
-      Directory('${tempDir.path}/narou_n1').createSync();
+    test(
+      'returns empty list when there are no organizational folders',
+      () async {
+        Directory('${tempDir.path}/narou_n1').createSync();
 
-      final paths = await service.listOrganizationalFolderTree(
-        tempDir.path,
-        {'narou_n1'},
-      );
+        final paths = await service.listOrganizationalFolderTree(tempDir.path, {
+          'narou_n1',
+        });
 
-      expect(paths, isEmpty);
-    });
+        expect(paths, isEmpty);
+      },
+    );
   });
 
   group('createDirectory', () {
@@ -164,42 +184,68 @@ void main() {
       expect(p.equals(entry.path, p.join(tempDir.path, '完結済み')), true);
     });
 
-    test('throws nameCollision when a directory with the same name exists',
-        () async {
-      Directory('${tempDir.path}/連載中').createSync();
+    test(
+      'throws nameCollision when a directory with the same name exists',
+      () async {
+        Directory('${tempDir.path}/連載中').createSync();
 
-      expect(
-        () => service.createDirectory(tempDir.path, '連載中'),
-        throwsA(isA<DirectoryOpException>()
-            .having((e) => e.error, 'error', DirectoryOpError.nameCollision)),
-      );
-    });
+        expect(
+          () => service.createDirectory(tempDir.path, '連載中'),
+          throwsA(
+            isA<DirectoryOpException>().having(
+              (e) => e.error,
+              'error',
+              DirectoryOpError.nameCollision,
+            ),
+          ),
+        );
+      },
+    );
 
-    test('throws nameCollision when a file with the same name exists',
-        () async {
-      File('${tempDir.path}/memo').writeAsStringSync('x');
+    test(
+      'throws nameCollision when a file with the same name exists',
+      () async {
+        File('${tempDir.path}/memo').writeAsStringSync('x');
 
-      expect(
-        () => service.createDirectory(tempDir.path, 'memo'),
-        throwsA(isA<DirectoryOpException>()
-            .having((e) => e.error, 'error', DirectoryOpError.nameCollision)),
-      );
-    });
+        expect(
+          () => service.createDirectory(tempDir.path, 'memo'),
+          throwsA(
+            isA<DirectoryOpException>().having(
+              (e) => e.error,
+              'error',
+              DirectoryOpError.nameCollision,
+            ),
+          ),
+        );
+      },
+    );
 
-    test('throws invalidName when the name contains invalid characters',
-        () async {
-      expect(
-        () => service.createDirectory(tempDir.path, 'a/b'),
-        throwsA(isA<DirectoryOpException>()
-            .having((e) => e.error, 'error', DirectoryOpError.invalidName)),
-      );
-    });
+    test(
+      'throws invalidName when the name contains invalid characters',
+      () async {
+        expect(
+          () => service.createDirectory(tempDir.path, 'a/b'),
+          throwsA(
+            isA<DirectoryOpException>().having(
+              (e) => e.error,
+              'error',
+              DirectoryOpError.invalidName,
+            ),
+          ),
+        );
+      },
+    );
 
     test('throws invalidName when the name is blank', () async {
       expect(
         () => service.createDirectory(tempDir.path, '   '),
-        throwsA(isA<DirectoryOpException>()
-            .having((e) => e.error, 'error', DirectoryOpError.invalidName)),
+        throwsA(
+          isA<DirectoryOpException>().having(
+            (e) => e.error,
+            'error',
+            DirectoryOpError.invalidName,
+          ),
+        ),
       );
     });
   });
@@ -223,8 +269,13 @@ void main() {
 
       expect(
         () => service.renameDirectory('${tempDir.path}/old', 'taken'),
-        throwsA(isA<DirectoryOpException>()
-            .having((e) => e.error, 'error', DirectoryOpError.nameCollision)),
+        throwsA(
+          isA<DirectoryOpException>().having(
+            (e) => e.error,
+            'error',
+            DirectoryOpError.nameCollision,
+          ),
+        ),
       );
     });
 
@@ -233,35 +284,47 @@ void main() {
 
       expect(
         () => service.renameDirectory('${tempDir.path}/old', 'a:b'),
-        throwsA(isA<DirectoryOpException>()
-            .having((e) => e.error, 'error', DirectoryOpError.invalidName)),
+        throwsA(
+          isA<DirectoryOpException>().having(
+            (e) => e.error,
+            'error',
+            DirectoryOpError.invalidName,
+          ),
+        ),
       );
     });
 
     test('throws sourceNotFound when the directory does not exist', () async {
       expect(
         () => service.renameDirectory('${tempDir.path}/missing', 'new'),
-        throwsA(isA<DirectoryOpException>()
-            .having((e) => e.error, 'error', DirectoryOpError.sourceNotFound)),
+        throwsA(
+          isA<DirectoryOpException>().having(
+            (e) => e.error,
+            'error',
+            DirectoryOpError.sourceNotFound,
+          ),
+        ),
       );
     });
   });
 
   group('moveDirectory', () {
-    test('moves a directory into the destination keeping its leaf name',
-        () async {
-      final src = Directory('${tempDir.path}/narou_n1234')..createSync();
-      File('${src.path}/001.txt').writeAsStringSync('content');
-      final dest = Directory('${tempDir.path}/完結済み')..createSync();
+    test(
+      'moves a directory into the destination keeping its leaf name',
+      () async {
+        final src = Directory('${tempDir.path}/narou_n1234')..createSync();
+        File('${src.path}/001.txt').writeAsStringSync('content');
+        final dest = Directory('${tempDir.path}/完結済み')..createSync();
 
-      final newPath = await service.moveDirectory(src.path, dest.path);
+        final newPath = await service.moveDirectory(src.path, dest.path);
 
-      expect(src.existsSync(), false);
-      expect(p.basename(newPath), 'narou_n1234');
-      expect(p.equals(newPath, p.join(dest.path, 'narou_n1234')), true);
-      expect(Directory(newPath).existsSync(), true);
-      expect(File(p.join(newPath, '001.txt')).existsSync(), true);
-    });
+        expect(src.existsSync(), false);
+        expect(p.basename(newPath), 'narou_n1234');
+        expect(p.equals(newPath, p.join(dest.path, 'narou_n1234')), true);
+        expect(Directory(newPath).existsSync(), true);
+        expect(File(p.join(newPath, '001.txt')).existsSync(), true);
+      },
+    );
 
     test('moves the folder-local tts_audio.db along with the folder', () async {
       final src = Directory('${tempDir.path}/narou_n1234')..createSync();
@@ -277,26 +340,38 @@ void main() {
       expect(p.basename(newPath), 'narou_n1234');
     });
 
-    test('throws nameCollision when destination already has same leaf name',
-        () async {
-      final src = Directory('${tempDir.path}/narou_n1234')..createSync();
-      final dest = Directory('${tempDir.path}/完結済み')..createSync();
-      Directory('${dest.path}/narou_n1234').createSync();
+    test(
+      'throws nameCollision when destination already has same leaf name',
+      () async {
+        final src = Directory('${tempDir.path}/narou_n1234')..createSync();
+        final dest = Directory('${tempDir.path}/完結済み')..createSync();
+        Directory('${dest.path}/narou_n1234').createSync();
 
-      expect(
-        () => service.moveDirectory(src.path, dest.path),
-        throwsA(isA<DirectoryOpException>()
-            .having((e) => e.error, 'error', DirectoryOpError.nameCollision)),
-      );
-    });
+        expect(
+          () => service.moveDirectory(src.path, dest.path),
+          throwsA(
+            isA<DirectoryOpException>().having(
+              (e) => e.error,
+              'error',
+              DirectoryOpError.nameCollision,
+            ),
+          ),
+        );
+      },
+    );
 
     test('throws intoSelfOrDescendant when moving into itself', () async {
       final src = Directory('${tempDir.path}/folder')..createSync();
 
       expect(
         () => service.moveDirectory(src.path, src.path),
-        throwsA(isA<DirectoryOpException>().having(
-            (e) => e.error, 'error', DirectoryOpError.intoSelfOrDescendant)),
+        throwsA(
+          isA<DirectoryOpException>().having(
+            (e) => e.error,
+            'error',
+            DirectoryOpError.intoSelfOrDescendant,
+          ),
+        ),
       );
     });
 
@@ -306,8 +381,13 @@ void main() {
 
       expect(
         () => service.moveDirectory(src.path, child.path),
-        throwsA(isA<DirectoryOpException>().having(
-            (e) => e.error, 'error', DirectoryOpError.intoSelfOrDescendant)),
+        throwsA(
+          isA<DirectoryOpException>().having(
+            (e) => e.error,
+            'error',
+            DirectoryOpError.intoSelfOrDescendant,
+          ),
+        ),
       );
     });
 
@@ -316,8 +396,13 @@ void main() {
 
       expect(
         () => service.moveDirectory('${tempDir.path}/missing', dest.path),
-        throwsA(isA<DirectoryOpException>()
-            .having((e) => e.error, 'error', DirectoryOpError.sourceNotFound)),
+        throwsA(
+          isA<DirectoryOpException>().having(
+            (e) => e.error,
+            'error',
+            DirectoryOpError.sourceNotFound,
+          ),
+        ),
       );
     });
 
@@ -327,10 +412,14 @@ void main() {
       final src = Directory('${tempDir.path}/narou_n1234')..createSync();
 
       expect(
-        () => service.moveDirectory(
-            src.path, '${tempDir.path}/does_not_exist'),
-        throwsA(isA<DirectoryOpException>()
-            .having((e) => e.error, 'error', DirectoryOpError.ioFailure)),
+        () => service.moveDirectory(src.path, '${tempDir.path}/does_not_exist'),
+        throwsA(
+          isA<DirectoryOpException>().having(
+            (e) => e.error,
+            'error',
+            DirectoryOpError.ioFailure,
+          ),
+        ),
       );
     });
   });
@@ -350,8 +439,13 @@ void main() {
 
       expect(
         () => service.deleteEmptyDirectory(dir.path),
-        throwsA(isA<DirectoryOpException>()
-            .having((e) => e.error, 'error', DirectoryOpError.notEmpty)),
+        throwsA(
+          isA<DirectoryOpException>().having(
+            (e) => e.error,
+            'error',
+            DirectoryOpError.notEmpty,
+          ),
+        ),
       );
       expect(dir.existsSync(), true);
     });
@@ -362,16 +456,26 @@ void main() {
 
       expect(
         () => service.deleteEmptyDirectory(dir.path),
-        throwsA(isA<DirectoryOpException>()
-            .having((e) => e.error, 'error', DirectoryOpError.notEmpty)),
+        throwsA(
+          isA<DirectoryOpException>().having(
+            (e) => e.error,
+            'error',
+            DirectoryOpError.notEmpty,
+          ),
+        ),
       );
     });
 
     test('throws sourceNotFound when the directory does not exist', () async {
       expect(
         () => service.deleteEmptyDirectory('${tempDir.path}/missing'),
-        throwsA(isA<DirectoryOpException>()
-            .having((e) => e.error, 'error', DirectoryOpError.sourceNotFound)),
+        throwsA(
+          isA<DirectoryOpException>().having(
+            (e) => e.error,
+            'error',
+            DirectoryOpError.sourceNotFound,
+          ),
+        ),
       );
     });
   });

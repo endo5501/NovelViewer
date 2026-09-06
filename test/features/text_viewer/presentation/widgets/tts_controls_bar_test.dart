@@ -53,8 +53,7 @@ void main() {
     String content = 'テスト内容',
     bool fileSelected = true,
   }) async {
-    final filePath =
-        fileSelected ? '${tempDir.path}/test.txt' : null;
+    final filePath = fileSelected ? '${tempDir.path}/test.txt' : null;
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -67,9 +66,7 @@ void main() {
           locale: const Locale('ja'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: TtsControlsBar(content: content),
-          ),
+          home: Scaffold(body: TtsControlsBar(content: content)),
         ),
       ),
     );
@@ -82,9 +79,9 @@ void main() {
       container
           .read(currentDirectoryProvider.notifier)
           .setDirectory(tempDir.path);
-      container.read(selectedFileProvider.notifier).selectFile(
-            FileEntry(name: 'test.txt', path: filePath!),
-          );
+      container
+          .read(selectedFileProvider.notifier)
+          .selectFile(FileEntry(name: 'test.txt', path: filePath!));
     }
     container.read(ttsPlaybackStateProvider.notifier).set(playbackState);
     // Use pump() rather than pumpAndSettle: the waiting/generating states
@@ -96,32 +93,39 @@ void main() {
   }
 
   group('TtsControlsBar visibility gating', () {
-    testWidgets('hides everything when ttsModelDir is empty',
-        (tester) async {
-      await pumpBar(tester,
-          audioState: TtsAudioState.ready,
-          playbackState: TtsPlaybackState.stopped,
-          modelDir: '');
+    testWidgets('hides everything when ttsModelDir is empty', (tester) async {
+      await pumpBar(
+        tester,
+        audioState: TtsAudioState.ready,
+        playbackState: TtsPlaybackState.stopped,
+        modelDir: '',
+      );
       expect(find.byType(FloatingActionButton), findsNothing);
     });
   });
 
   group('TtsControlsBar state machine', () {
-    testWidgets('(none, stopped): shows edit + play (record_voice_over)',
-        (tester) async {
-      await pumpBar(tester,
-          audioState: TtsAudioState.none,
-          playbackState: TtsPlaybackState.stopped);
+    testWidgets('(none, stopped): shows edit + play (record_voice_over)', (
+      tester,
+    ) async {
+      await pumpBar(
+        tester,
+        audioState: TtsAudioState.none,
+        playbackState: TtsPlaybackState.stopped,
+      );
       expect(find.byIcon(Icons.edit_note), findsOneWidget);
       expect(find.byIcon(Icons.record_voice_over), findsOneWidget);
       expect(find.byIcon(Icons.stop), findsNothing);
     });
 
-    testWidgets('(ready, stopped): shows edit + play + export + delete',
-        (tester) async {
-      await pumpBar(tester,
-          audioState: TtsAudioState.ready,
-          playbackState: TtsPlaybackState.stopped);
+    testWidgets('(ready, stopped): shows edit + play + export + delete', (
+      tester,
+    ) async {
+      await pumpBar(
+        tester,
+        audioState: TtsAudioState.ready,
+        playbackState: TtsPlaybackState.stopped,
+      );
       expect(find.byIcon(Icons.edit_note), findsOneWidget);
       expect(find.byIcon(Icons.play_arrow), findsOneWidget);
       expect(find.byIcon(Icons.download), findsOneWidget);
@@ -129,9 +133,11 @@ void main() {
     });
 
     testWidgets('(ready, playing): shows pause + stop only', (tester) async {
-      await pumpBar(tester,
-          audioState: TtsAudioState.ready,
-          playbackState: TtsPlaybackState.playing);
+      await pumpBar(
+        tester,
+        audioState: TtsAudioState.ready,
+        playbackState: TtsPlaybackState.playing,
+      );
       expect(find.byIcon(Icons.pause), findsOneWidget);
       expect(find.byIcon(Icons.stop), findsOneWidget);
       expect(find.byIcon(Icons.play_arrow), findsNothing);
@@ -139,73 +145,94 @@ void main() {
     });
 
     testWidgets('(ready, paused): shows resume + stop only', (tester) async {
-      await pumpBar(tester,
-          audioState: TtsAudioState.ready,
-          playbackState: TtsPlaybackState.paused);
+      await pumpBar(
+        tester,
+        audioState: TtsAudioState.ready,
+        playbackState: TtsPlaybackState.paused,
+      );
       expect(find.byIcon(Icons.play_arrow), findsOneWidget);
       expect(find.byIcon(Icons.stop), findsOneWidget);
       expect(find.byIcon(Icons.pause), findsNothing);
     });
 
-    testWidgets('(ready, waiting): shows pause + stop with spinner',
-        (tester) async {
-      await pumpBar(tester,
-          audioState: TtsAudioState.ready,
-          playbackState: TtsPlaybackState.waiting);
+    testWidgets('(ready, waiting): shows pause + stop with spinner', (
+      tester,
+    ) async {
+      await pumpBar(
+        tester,
+        audioState: TtsAudioState.ready,
+        playbackState: TtsPlaybackState.waiting,
+      );
       expect(find.byIcon(Icons.pause), findsOneWidget);
       expect(find.byIcon(Icons.stop), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('(generating, stopped): shows progress + cancel only',
-        (tester) async {
-      await pumpBar(tester,
-          audioState: TtsAudioState.generating,
-          playbackState: TtsPlaybackState.stopped);
+    testWidgets('(generating, stopped): shows progress + cancel only', (
+      tester,
+    ) async {
+      await pumpBar(
+        tester,
+        audioState: TtsAudioState.generating,
+        playbackState: TtsPlaybackState.stopped,
+      );
       expect(find.byIcon(Icons.close), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
       expect(find.byIcon(Icons.play_arrow), findsNothing);
       expect(find.byIcon(Icons.pause), findsNothing);
     });
 
-    testWidgets('(generating, playing): shows progress + pause + stop',
-        (tester) async {
-      await pumpBar(tester,
-          audioState: TtsAudioState.generating,
-          playbackState: TtsPlaybackState.playing);
+    testWidgets('(generating, playing): shows progress + pause + stop', (
+      tester,
+    ) async {
+      await pumpBar(
+        tester,
+        audioState: TtsAudioState.generating,
+        playbackState: TtsPlaybackState.playing,
+      );
       expect(find.byIcon(Icons.pause), findsOneWidget);
       expect(find.byIcon(Icons.stop), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
     });
 
-    testWidgets('(generating, paused): shows progress + resume + stop',
-        (tester) async {
-      await pumpBar(tester,
-          audioState: TtsAudioState.generating,
-          playbackState: TtsPlaybackState.paused);
+    testWidgets('(generating, paused): shows progress + resume + stop', (
+      tester,
+    ) async {
+      await pumpBar(
+        tester,
+        audioState: TtsAudioState.generating,
+        playbackState: TtsPlaybackState.paused,
+      );
       expect(find.byIcon(Icons.play_arrow), findsOneWidget);
       expect(find.byIcon(Icons.stop), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
     });
 
-    testWidgets('(generating, waiting): shows progress + spinner + pause + stop',
-        (tester) async {
-      await pumpBar(tester,
+    testWidgets(
+      '(generating, waiting): shows progress + spinner + pause + stop',
+      (tester) async {
+        await pumpBar(
+          tester,
           audioState: TtsAudioState.generating,
-          playbackState: TtsPlaybackState.waiting);
-      expect(find.byIcon(Icons.pause), findsOneWidget);
-      expect(find.byIcon(Icons.stop), findsOneWidget);
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsAtLeastNWidgets(1));
-    });
+          playbackState: TtsPlaybackState.waiting,
+        );
+        expect(find.byIcon(Icons.pause), findsOneWidget);
+        expect(find.byIcon(Icons.stop), findsOneWidget);
+        expect(find.byType(LinearProgressIndicator), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsAtLeastNWidgets(1));
+      },
+    );
   });
 
   group('TtsControlsBar export progress indicator', () {
-    testWidgets('replaces export icon with circular progress while exporting',
-        (tester) async {
-      final container = await pumpBar(tester,
-          audioState: TtsAudioState.ready,
-          playbackState: TtsPlaybackState.stopped);
+    testWidgets('replaces export icon with circular progress while exporting', (
+      tester,
+    ) async {
+      final container = await pumpBar(
+        tester,
+        audioState: TtsAudioState.ready,
+        playbackState: TtsPlaybackState.stopped,
+      );
       container
           .read(ttsExportStateProvider.notifier)
           .set(TtsExportState.exporting);

@@ -60,21 +60,20 @@ void main() {
       expect(config.isConfigured, false);
     });
 
-    test('does not expose an apiKey field (secrets live in secure storage)',
-        () {
-      const config = LlmConfig(
-        provider: LlmProvider.openai,
-        baseUrl: 'https://api.openai.com/v1',
-        model: 'gpt-4o-mini',
-      );
+    test(
+      'does not expose an apiKey field (secrets live in secure storage)',
+      () {
+        const config = LlmConfig(
+          provider: LlmProvider.openai,
+          baseUrl: 'https://api.openai.com/v1',
+          model: 'gpt-4o-mini',
+        );
 
-      // The intent is that LlmConfig has no apiKey accessor at all. Casting
-      // to dynamic and probing keeps the test compilable while still failing
-      // (NoSuchMethodError) if someone reintroduces the field.
-      expect(
-        () => (config as dynamic).apiKey,
-        throwsNoSuchMethodError,
-      );
-    });
+        // The intent is that LlmConfig has no apiKey accessor at all. Casting
+        // to dynamic and probing keeps the test compilable while still failing
+        // (NoSuchMethodError) if someone reintroduces the field.
+        expect(() => (config as dynamic).apiKey, throwsNoSuchMethodError);
+      },
+    );
   });
 }

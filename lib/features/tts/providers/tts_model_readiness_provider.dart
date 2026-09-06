@@ -27,16 +27,17 @@ enum TtsModelReadiness {
 /// half-written model is most likely, and the user is one retry away.
 final ttsModelReadinessProvider =
     Provider.family<TtsModelReadiness, TtsEngineType>((ref, engineType) {
-  final complete = switch (engineType) {
-    TtsEngineType.piper =>
-      ref.watch(piperModelDownloadProvider) is PiperModelDownloadCompleted,
-    TtsEngineType.qwen3 =>
-      ref.watch(ttsModelDownloadProvider) is TtsModelDownloadCompleted,
-    TtsEngineType.irodori =>
-      ref.watch(irodoriModelDownloadProvider) is IrodoriModelDownloadCompleted,
-  };
+      final complete = switch (engineType) {
+        TtsEngineType.piper =>
+          ref.watch(piperModelDownloadProvider) is PiperModelDownloadCompleted,
+        TtsEngineType.qwen3 =>
+          ref.watch(ttsModelDownloadProvider) is TtsModelDownloadCompleted,
+        TtsEngineType.irodori =>
+          ref.watch(irodoriModelDownloadProvider)
+              is IrodoriModelDownloadCompleted,
+      };
 
-  return complete
-      ? TtsModelReadiness.ready
-      : TtsModelReadiness.needsDownload;
-});
+      return complete
+          ? TtsModelReadiness.ready
+          : TtsModelReadiness.needsDownload;
+    });

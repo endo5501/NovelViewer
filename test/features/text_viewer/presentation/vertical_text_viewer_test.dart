@@ -14,43 +14,48 @@ Widget _buildTestWidget({
   ValueChanged<ViewerSelection?>? onSelectionChanged,
   double columnSpacing = 8.0,
 }) {
-  return ProviderScope(child: MaterialApp(
-        locale: const Locale('ja'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-    home: Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints.tightFor(width: width, height: height),
-        child: VerticalTextViewer(
-          segments: segments,
-          baseStyle: const TextStyle(fontSize: 14.0),
-          onSelectionChanged: onSelectionChanged,
-          columnSpacing: columnSpacing,
+  return ProviderScope(
+    child: MaterialApp(
+      locale: const Locale('ja'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints.tightFor(width: width, height: height),
+          child: VerticalTextViewer(
+            segments: segments,
+            baseStyle: const TextStyle(fontSize: 14.0),
+            onSelectionChanged: onSelectionChanged,
+            columnSpacing: columnSpacing,
+          ),
         ),
       ),
     ),
-  ));
+  );
 }
 
 void main() {
   group('VerticalTextViewer pagination', () {
-    testWidgets('long line spanning multiple visual columns shows page indicator',
-        (tester) async {
-      // A single line with 500 characters in a narrow viewport
-      // should require multiple pages.
-      final longText = 'あ' * 500;
-      final segments = [PlainTextSegment(longText)];
+    testWidgets(
+      'long line spanning multiple visual columns shows page indicator',
+      (tester) async {
+        // A single line with 500 characters in a narrow viewport
+        // should require multiple pages.
+        final longText = 'あ' * 500;
+        final segments = [PlainTextSegment(longText)];
 
-      await tester.pumpWidget(
-        _buildTestWidget(segments: segments, width: 100, height: 400),
-      );
+        await tester.pumpWidget(
+          _buildTestWidget(segments: segments, width: 100, height: 400),
+        );
 
-      // Should display page indicator (e.g., "1 / N")
-      expect(find.textContaining('/'), findsOneWidget);
-    });
+        // Should display page indicator (e.g., "1 / N")
+        expect(find.textContaining('/'), findsOneWidget);
+      },
+    );
 
-    testWidgets('short lines fit in a single page without indicator',
-        (tester) async {
+    testWidgets('short lines fit in a single page without indicator', (
+      tester,
+    ) async {
       final segments = [const PlainTextSegment('あいう\nかきく')];
 
       await tester.pumpWidget(
@@ -82,59 +87,68 @@ void main() {
       final segments = [PlainTextSegment(longText)];
 
       // Render with small spacing
-      await tester.pumpWidget(_buildTestWidget(
-        segments: segments,
-        width: 200,
-        height: 400,
-        columnSpacing: 2.0,
-      ));
-      final smallSpacingIndicator =
-          tester.widget<Text>(find.textContaining('/'));
+      await tester.pumpWidget(
+        _buildTestWidget(
+          segments: segments,
+          width: 200,
+          height: 400,
+          columnSpacing: 2.0,
+        ),
+      );
+      final smallSpacingIndicator = tester.widget<Text>(
+        find.textContaining('/'),
+      );
       final smallSpacingPages = smallSpacingIndicator.data!;
 
       // Render with large spacing
-      await tester.pumpWidget(_buildTestWidget(
-        segments: segments,
-        width: 200,
-        height: 400,
-        columnSpacing: 20.0,
-      ));
-      final largeSpacingIndicator =
-          tester.widget<Text>(find.textContaining('/'));
+      await tester.pumpWidget(
+        _buildTestWidget(
+          segments: segments,
+          width: 200,
+          height: 400,
+          columnSpacing: 20.0,
+        ),
+      );
+      final largeSpacingIndicator = tester.widget<Text>(
+        find.textContaining('/'),
+      );
       final largeSpacingPages = largeSpacingIndicator.data!;
 
       // More spacing = fewer columns per page = more pages
-      final smallTotal =
-          int.parse(smallSpacingPages.split('/').last.trim());
-      final largeTotal =
-          int.parse(largeSpacingPages.split('/').last.trim());
+      final smallTotal = int.parse(smallSpacingPages.split('/').last.trim());
+      final largeTotal = int.parse(largeSpacingPages.split('/').last.trim());
       expect(largeTotal, greaterThan(smallTotal));
     });
   });
 
   group('VerticalTextViewer selection', () {
     testWidgets('onSelectionChanged parameter is accepted', (tester) async {
-      await tester.pumpWidget(_buildTestWidget(
-        segments: const [PlainTextSegment('あいう')],
-        onSelectionChanged: (text) {},
-      ));
+      await tester.pumpWidget(
+        _buildTestWidget(
+          segments: const [PlainTextSegment('あいう')],
+          onSelectionChanged: (text) {},
+        ),
+      );
 
       expect(find.byType(VerticalTextViewer), findsOneWidget);
     });
 
-    testWidgets('page navigation calls onSelectionChanged with null',
-        (tester) async {
+    testWidgets('page navigation calls onSelectionChanged with null', (
+      tester,
+    ) async {
       // Create multi-page content
       final longText = 'あ' * 500;
       final segments = [PlainTextSegment(longText)];
       final notifications = <ViewerSelection?>[];
 
-      await tester.pumpWidget(_buildTestWidget(
-        segments: segments,
-        width: 100,
-        height: 400,
-        onSelectionChanged: notifications.add,
-      ));
+      await tester.pumpWidget(
+        _buildTestWidget(
+          segments: segments,
+          width: 100,
+          height: 400,
+          onSelectionChanged: notifications.add,
+        ),
+      );
 
       // Verify we have multiple pages
       expect(find.textContaining('/'), findsOneWidget);

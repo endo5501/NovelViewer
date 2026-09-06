@@ -8,11 +8,7 @@ import 'package:flutter/foundation.dart';
 /// flag rather than being folded into the size.
 @immutable
 class WindowState {
-  const WindowState({
-    this.width,
-    this.height,
-    this.maximized = false,
-  });
+  const WindowState({this.width, this.height, this.maximized = false});
 
   /// Nothing has ever been persisted (or what was persisted was unusable).
   static const WindowState empty = WindowState();
@@ -24,11 +20,7 @@ class WindowState {
   /// Both axes are present, so the size can be restored.
   bool get hasSize => width != null && height != null;
 
-  WindowState copyWith({
-    double? width,
-    double? height,
-    bool? maximized,
-  }) {
+  WindowState copyWith({double? width, double? height, bool? maximized}) {
     return WindowState(
       width: width ?? this.width,
       height: height ?? this.height,

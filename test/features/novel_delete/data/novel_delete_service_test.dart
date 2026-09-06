@@ -86,20 +86,22 @@ void main() {
       expect(novel, isNull);
     });
 
-    test('deletes directory from file system (carrying novel_data.db with it)',
-        () async {
-      await novelRepository.upsert(createMetadata());
-      final novelDir = Directory('${tempDir.path}/narou_n1234ab');
-      novelDir.createSync();
-      File('${novelDir.path}/001_chapter.txt').writeAsStringSync('content');
-      // A novel_data.db (word_summaries/fact_cache/bookmarks) would live here;
-      // deleting the directory removes it — no per-row cascade is run.
-      File('${novelDir.path}/novel_data.db').writeAsStringSync('x');
+    test(
+      'deletes directory from file system (carrying novel_data.db with it)',
+      () async {
+        await novelRepository.upsert(createMetadata());
+        final novelDir = Directory('${tempDir.path}/narou_n1234ab');
+        novelDir.createSync();
+        File('${novelDir.path}/001_chapter.txt').writeAsStringSync('content');
+        // A novel_data.db (word_summaries/fact_cache/bookmarks) would live here;
+        // deleting the directory removes it — no per-row cascade is run.
+        File('${novelDir.path}/novel_data.db').writeAsStringSync('x');
 
-      await deleteService.delete('narou_n1234ab', novelDir.path);
+        await deleteService.delete('narou_n1234ab', novelDir.path);
 
-      expect(novelDir.existsSync(), false);
-    });
+        expect(novelDir.existsSync(), false);
+      },
+    );
 
     test('deletes reading_progress row for the folder', () async {
       await novelRepository.upsert(createMetadata());
@@ -112,8 +114,9 @@ void main() {
 
       await deleteService.delete('narou_n1234ab', novelDir.path);
 
-      final progress =
-          await readingProgressRepository.findByNovelId('narou_n1234ab');
+      final progress = await readingProgressRepository.findByNovelId(
+        'narou_n1234ab',
+      );
       expect(progress, isNull);
     });
 
@@ -148,12 +151,12 @@ void main() {
 
       await serviceWithRelease.delete('narou_n1234ab', novelDir.path);
 
-      expect(novelDir.existsSync(), isFalse,
-          reason: 'the folder SHALL be deleted once the handle is released');
       expect(
-        await novelRepository.findByFolderName('narou_n1234ab'),
-        isNull,
+        novelDir.existsSync(),
+        isFalse,
+        reason: 'the folder SHALL be deleted once the handle is released',
       );
+      expect(await novelRepository.findByFolderName('narou_n1234ab'), isNull);
     });
 
     test('DB row deletion is atomic — a mid-transaction failure rolls back '
@@ -169,8 +172,9 @@ void main() {
       final failingService = NovelDeleteService(
         novelDatabase: novelDatabase,
         novelRepository: novelRepository,
-        readingProgressRepository:
-            _ThrowingReadingProgressRepository(novelDatabase),
+        readingProgressRepository: _ThrowingReadingProgressRepository(
+          novelDatabase,
+        ),
         fileSystemService: fileSystemService,
       );
 
@@ -181,8 +185,11 @@ void main() {
 
       // Folder was deleted (fs deletion precedes the DB transaction), but every
       // DB row SHALL survive the rolled-back transaction.
-      expect(await novelRepository.findByFolderName('narou_n1234ab'), isNotNull,
-          reason: 'novels row SHALL be rolled back');
+      expect(
+        await novelRepository.findByFolderName('narou_n1234ab'),
+        isNotNull,
+        reason: 'novels row SHALL be rolled back',
+      );
       expect(
         await readingProgressRepository.findByNovelId('narou_n1234ab'),
         isNotNull,
@@ -192,11 +199,13 @@ void main() {
 
     test('does not affect other novels', () async {
       await novelRepository.upsert(createMetadata());
-      await novelRepository.upsert(createMetadata(
-        folderName: 'narou_n5678cd',
-        novelId: 'n5678cd',
-        title: '別の小説',
-      ));
+      await novelRepository.upsert(
+        createMetadata(
+          folderName: 'narou_n5678cd',
+          novelId: 'n5678cd',
+          title: '別の小説',
+        ),
+      );
       await readingProgressRepository.upsert(
         novelId: 'narou_n5678cd',
         fileName: '002_chapter2.txt',

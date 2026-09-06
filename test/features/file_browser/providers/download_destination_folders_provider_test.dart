@@ -8,14 +8,14 @@ import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata
 import 'package:path/path.dart' as p;
 
 NovelMetadata _novel(String folderName) => NovelMetadata(
-      siteType: 'narou',
-      novelId: folderName,
-      title: 'title-$folderName',
-      url: 'https://ncode.syosetu.com/$folderName/',
-      folderName: folderName,
-      episodeCount: 1,
-      downloadedAt: DateTime(2024, 1, 1),
-    );
+  siteType: 'narou',
+  novelId: folderName,
+  title: 'title-$folderName',
+  url: 'https://ncode.syosetu.com/$folderName/',
+  folderName: folderName,
+  episodeCount: 1,
+  downloadedAt: DateTime(2024, 1, 1),
+);
 
 void main() {
   late Directory tempDir;
@@ -50,44 +50,48 @@ void main() {
 
       final container = makeContainer([_novel('narou_n1234ab')]);
 
-      final result = await container
-          .read(downloadDestinationFoldersProvider.future);
+      final result = await container.read(
+        downloadDestinationFoldersProvider.future,
+      );
 
       expect(result.map((e) => e.name).toList(), ['完結済み']);
     });
 
-    test('sets displayName to the path relative to the library root',
-        () async {
+    test('sets displayName to the path relative to the library root', () async {
       mkdir(p.join('完結済み', '異世界'));
 
       final container = makeContainer(const []);
 
-      final result = await container
-          .read(downloadDestinationFoldersProvider.future);
+      final result = await container.read(
+        downloadDestinationFoldersProvider.future,
+      );
 
       final nested = result.firstWhere((e) => e.name == '異世界');
       expect(nested.displayName, p.join('完結済み', '異世界'));
     });
 
-    test('returns empty list when there are no organizational folders',
-        () async {
-      mkdir('narou_n1234ab');
-
-      final container = makeContainer([_novel('narou_n1234ab')]);
-
-      final result = await container
-          .read(downloadDestinationFoldersProvider.future);
-
-      expect(result, isEmpty);
-    });
-
     test(
-        'recomputes candidates between reads so folders created after the '
+      'returns empty list when there are no organizational folders',
+      () async {
+        mkdir('narou_n1234ab');
+
+        final container = makeContainer([_novel('narou_n1234ab')]);
+
+        final result = await container.read(
+          downloadDestinationFoldersProvider.future,
+        );
+
+        expect(result, isEmpty);
+      },
+    );
+
+    test('recomputes candidates between reads so folders created after the '
         'first read are not served stale (autoDispose)', () async {
       final container = makeContainer(const []);
 
-      final first =
-          await container.read(downloadDestinationFoldersProvider.future);
+      final first = await container.read(
+        downloadDestinationFoldersProvider.future,
+      );
       expect(first, isEmpty);
 
       // A folder is created via the file browser after the dialog's first read.
@@ -96,8 +100,9 @@ void main() {
       // run so the next read recomputes from the current filesystem.
       await Future<void>.delayed(Duration.zero);
 
-      final second =
-          await container.read(downloadDestinationFoldersProvider.future);
+      final second = await container.read(
+        downloadDestinationFoldersProvider.future,
+      );
       expect(second.map((e) => e.name), ['完結済み']);
     });
   });

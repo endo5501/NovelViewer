@@ -66,8 +66,9 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
     });
     await tester.pumpAndSettle();
-    final l10n =
-        AppLocalizations.of(tester.element(find.byType(SettingsDialog)))!;
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SettingsDialog)),
+    )!;
     await tester.tap(find.text(l10n.settings_ttsTabLabel));
     await tester.pumpAndSettle();
     await tester.runAsync(
@@ -78,8 +79,9 @@ void main() {
   }
 
   group('Engine selector (Phase A 2.8)', () {
-    testWidgets('shows SegmentedButton with Qwen3 and Piper segments',
-        (tester) async {
+    testWidgets('shows SegmentedButton with Qwen3 and Piper segments', (
+      tester,
+    ) async {
       await openTtsTab(tester);
 
       expect(find.byType(SegmentedButton<TtsEngineType>), findsOneWidget);
@@ -119,9 +121,14 @@ void main() {
       final l10n = await selectPiperEngine(tester);
 
       expect(find.byType(Slider), findsNWidgets(3));
-      expect(find.textContaining(l10n.settings_piperLengthScale),
-          findsOneWidget);
-      expect(find.textContaining(l10n.settings_piperNoiseScale), findsOneWidget);
+      expect(
+        find.textContaining(l10n.settings_piperLengthScale),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(l10n.settings_piperNoiseScale),
+        findsOneWidget,
+      );
       expect(find.textContaining(l10n.settings_piperNoiseW), findsOneWidget);
     });
 
@@ -133,34 +140,39 @@ void main() {
   });
 
   group('Drag-drop ingestion (Phase A 2.12)', () {
-    testWidgets('dropping audio files into voice reference target ingests them',
-        (tester) async {
-      await openTtsTab(tester);
+    testWidgets(
+      'dropping audio files into voice reference target ingests them',
+      (tester) async {
+        await openTtsTab(tester);
 
-      // Prepare a source audio file outside the voices dir
-      final src = File(p.join(tempDir.path, 'dropped.wav'));
-      src.writeAsStringSync('fake-audio');
+        // Prepare a source audio file outside the voices dir
+        final src = File(p.join(tempDir.path, 'dropped.wav'));
+        src.writeAsStringSync('fake-audio');
 
-      // Locate the DropTarget and dispatch the drop event
-      final dropTarget = find.byType(DropTarget);
-      expect(dropTarget, findsOneWidget);
-      final widget = tester.widget<DropTarget>(dropTarget);
-      await tester.runAsync(() async {
-        widget.onDragDone?.call(
-          DropDoneDetails(
-            files: [DropItemFile(src.path)],
-            localPosition: Offset.zero,
-            globalPosition: Offset.zero,
-          ),
+        // Locate the DropTarget and dispatch the drop event
+        final dropTarget = find.byType(DropTarget);
+        expect(dropTarget, findsOneWidget);
+        final widget = tester.widget<DropTarget>(dropTarget);
+        await tester.runAsync(() async {
+          widget.onDragDone?.call(
+            DropDoneDetails(
+              files: [DropItemFile(src.path)],
+              localPosition: Offset.zero,
+              globalPosition: Offset.zero,
+            ),
+          );
+          await Future.delayed(const Duration(milliseconds: 300));
+        });
+        await tester.pumpAndSettle();
+
+        final voicesDir = Directory(p.join(tempDir.path, 'voices'));
+        final ingested = File(p.join(voicesDir.path, 'dropped.wav'));
+        expect(
+          ingested.existsSync(),
+          isTrue,
+          reason: 'dropped audio file should be copied into the voices dir',
         );
-        await Future.delayed(const Duration(milliseconds: 300));
-      });
-      await tester.pumpAndSettle();
-
-      final voicesDir = Directory(p.join(tempDir.path, 'voices'));
-      final ingested = File(p.join(voicesDir.path, 'dropped.wav'));
-      expect(ingested.existsSync(), isTrue,
-          reason: 'dropped audio file should be copied into the voices dir');
-    });
+      },
+    );
   });
 }

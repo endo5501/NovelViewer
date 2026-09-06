@@ -17,45 +17,50 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_provider
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
-  testWidgets('HoverPopupWidget renders a card given a snapshot via the cache',
-      (tester) async {
-    final snap = WordSummary(
-      word: 'アリス',
-      coveredUpToEpisode: 1,
-      summary: 'アリスは旅人です。',
-      sourceFile: 'chapter01.txt',
-      createdAt: DateTime.parse('2026-05-24T10:00:00Z'),
-      updatedAt: DateTime.parse('2026-05-24T10:00:00Z'),
-    );
+  testWidgets(
+    'HoverPopupWidget renders a card given a snapshot via the cache',
+    (tester) async {
+      final snap = WordSummary(
+        word: 'アリス',
+        coveredUpToEpisode: 1,
+        summary: 'アリスは旅人です。',
+        sourceFile: 'chapter01.txt',
+        createdAt: DateTime.parse('2026-05-24T10:00:00Z'),
+        updatedAt: DateTime.parse('2026-05-24T10:00:00Z'),
+      );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          hoverPopupCacheProvider((folderPath: 'novel_a', word: 'アリス'))
-              .overrideWith((_) async => [snap]),
-          llmSummaryRepositoryProvider.overrideWith(
-            (ref, folderPath) async => throw UnsupportedError('not used in this test'),
-          ),
-        ],
-        child: const MaterialApp(
-          locale: Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Material(
-            child: HoverPopupWidget(
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            hoverPopupCacheProvider((
               folderPath: 'novel_a',
               word: 'アリス',
-              currentEpisode: 1,
-              currentFileName: 'chapter01.txt',
-              maxEpisodeInFolder: 1,
-              maxEpisodeFileName: 'chapter01.txt',
+            )).overrideWith((_) async => [snap]),
+            llmSummaryRepositoryProvider.overrideWith(
+              (ref, folderPath) async =>
+                  throw UnsupportedError('not used in this test'),
+            ),
+          ],
+          child: const MaterialApp(
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Material(
+              child: HoverPopupWidget(
+                folderPath: 'novel_a',
+                word: 'アリス',
+                currentEpisode: 1,
+                currentFileName: 'chapter01.txt',
+                maxEpisodeInFolder: 1,
+                maxEpisodeFileName: 'chapter01.txt',
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
-    expect(find.text('アリスは旅人です。'), findsOneWidget);
-  });
+      await tester.pumpAndSettle();
+      expect(find.text('アリスは旅人です。'), findsOneWidget);
+    },
+  );
 }

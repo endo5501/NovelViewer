@@ -45,33 +45,42 @@ void main() {
   const leftPaneLabel = 'fileBrowserPane';
   const centerPaneLabel = 'novelPane';
 
-  testWidgets('file browser pane has focus on launch',
-      (WidgetTester tester) async {
+  testWidgets('file browser pane has focus on launch', (
+    WidgetTester tester,
+  ) async {
     await pumpApp(tester);
     expect(paneHasFocus(tester, leftPaneLabel), isTrue);
     expect(paneHasFocus(tester, centerPaneLabel), isFalse);
   });
 
-  testWidgets('Tab toggles focus between file browser and novel panes',
-      (WidgetTester tester) async {
+  testWidgets('Tab toggles focus between file browser and novel panes', (
+    WidgetTester tester,
+  ) async {
     await pumpApp(tester);
 
     expect(paneHasFocus(tester, leftPaneLabel), isTrue);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.pump();
-    expect(paneHasFocus(tester, centerPaneLabel), isTrue,
-        reason: 'Tab moves focus to the novel pane');
+    expect(
+      paneHasFocus(tester, centerPaneLabel),
+      isTrue,
+      reason: 'Tab moves focus to the novel pane',
+    );
     expect(paneHasFocus(tester, leftPaneLabel), isFalse);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.pump();
-    expect(paneHasFocus(tester, leftPaneLabel), isTrue,
-        reason: 'Tab moves focus back to the file browser pane');
+    expect(
+      paneHasFocus(tester, leftPaneLabel),
+      isTrue,
+      reason: 'Tab moves focus back to the file browser pane',
+    );
   });
 
-  testWidgets('Tab in the search field does not switch panes',
-      (WidgetTester tester) async {
+  testWidgets('Tab in the search field does not switch panes', (
+    WidgetTester tester,
+  ) async {
     await pumpApp(tester);
 
     // Open the search box (Ctrl+F) and let the field take focus.

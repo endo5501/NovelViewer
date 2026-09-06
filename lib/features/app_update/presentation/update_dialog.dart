@@ -58,8 +58,7 @@ class _UpdateDialogState extends ConsumerState<UpdateDialog> {
     if (result.outcome != UpdateOutcome.launched) {
       // Surface the concrete failure detail that the UI only shows as a
       // generic localized message.
-      _log.warning(
-          'Update failed (${result.outcome.name}): ${result.message}');
+      _log.warning('Update failed (${result.outcome.name}): ${result.message}');
     }
     switch (result.outcome) {
       case UpdateOutcome.launched:
@@ -179,15 +178,13 @@ class _UpdateDialogState extends ConsumerState<UpdateDialog> {
       return [later, openPage];
     }
 
-    final primaryLabel =
-        _error == null ? l10n.update_updateButton : l10n.update_retryButton;
+    final primaryLabel = _error == null
+        ? l10n.update_updateButton
+        : l10n.update_retryButton;
     return [
       later,
       openPage,
-      FilledButton(
-        onPressed: _startUpdate,
-        child: Text(primaryLabel),
-      ),
+      FilledButton(onPressed: _startUpdate, child: Text(primaryLabel)),
     ];
   }
 }

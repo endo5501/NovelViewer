@@ -44,7 +44,10 @@ class VerticalRubyTextWidget extends StatelessWidget {
   }
 
   Widget _buildBaseText(
-      List<String> baseChars, double charWidth, Brightness brightness) {
+    List<String> baseChars,
+    double charWidth,
+    Brightness brightness,
+  ) {
     // Search highlight takes precedence over selection (blue)
     final Color? bgColor;
     final Color? fgColor;
@@ -79,15 +82,15 @@ class VerticalRubyTextWidget extends StatelessWidget {
   }
 
   Widget _buildVerticalText(
-      List<String> chars, TextStyle? style, double charWidth) {
+    List<String> chars,
+    TextStyle? style,
+    double charWidth,
+  ) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         for (final char in chars)
-          SizedBox(
-            width: charWidth,
-            child: _buildVerticalChar(char, style),
-          ),
+          SizedBox(width: charWidth, child: _buildVerticalChar(char, style)),
       ],
     );
   }

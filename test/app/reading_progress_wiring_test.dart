@@ -20,8 +20,12 @@ class _RecordingRepository implements ReadingProgressRepository {
   Future<ReadingProgress?> findLatest() async => null;
 
   @override
-  Future<void> savePosition({required String novelId, required String fileName,
-    required int bodyOffset, required String bodyHash}) async {}
+  Future<void> savePosition({
+    required String novelId,
+    required String fileName,
+    required int bodyOffset,
+    required String bodyHash,
+  }) async {}
 
   final List<String> upsertCalls = [];
   ReadingProgress? Function(String) lookup;
@@ -90,8 +94,9 @@ void main() {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         libraryPathProvider.overrideWithValue('/library'),
-        currentDirectoryProvider
-            .overrideWith(() => CurrentDirectoryNotifier(initialDirectory)),
+        currentDirectoryProvider.overrideWith(
+          () => CurrentDirectoryNotifier(initialDirectory),
+        ),
         novelDatabaseProvider.overrideWithValue(novelDatabase),
         readingProgressRepositoryProvider.overrideWithValue(repository),
         directoryContentsProvider.overrideWith((ref) async {
@@ -123,7 +128,9 @@ void main() {
           tester.element(find.byType(NovelViewerApp)),
         );
 
-        container.read(selectedFileProvider.notifier).selectFile(
+        container
+            .read(selectedFileProvider.notifier)
+            .selectFile(
               const FileEntry(
                 name: '003_chapter3.txt',
                 path: '/library/narou_n1234ab/003_chapter3.txt',
@@ -133,10 +140,7 @@ void main() {
         await Future<void>.delayed(Duration.zero);
         await Future<void>.delayed(Duration.zero);
 
-        expect(
-          repo.upsertCalls,
-          contains('narou_n1234ab|003_chapter3.txt'),
-        );
+        expect(repo.upsertCalls, contains('narou_n1234ab|003_chapter3.txt'));
       });
     },
   );

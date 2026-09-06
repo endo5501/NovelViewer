@@ -1,7 +1,6 @@
 const verticalCharMap = <String, String>{
   // スペース
   ' ': '\u3000', // half-width → full-width ideographic space
-
   // 矢印（90°回転）
   '↑': '→',
   '↓': '←',
@@ -13,7 +12,6 @@ const verticalCharMap = <String, String>{
   '、': '︑',
   ',': '︐',
   '､': '︑', // half-width ideographic comma
-
   // 長音・ダッシュ類
   'ー': '丨', // katakana long vowel mark
   'ｰ': '丨', // half-width katakana long vowel mark
@@ -27,11 +25,9 @@ const verticalCharMap = <String, String>{
   '‐': '丨', // another hyphen-minus (U+2010)
   '‑': '丨', // another hyphen-minus (U+2011)
   '–': '丨', // EN dash(U+2013)
-
   // 波線
   '〜': '丨', // wave dash
   '～': '丨', // fullwidth tilde
-
   // スラッシュ
   '／': '＼',
 
@@ -54,7 +50,6 @@ const verticalCharMap = <String, String>{
   '』': '﹄',
   '｢': '﹁', // half-width left corner bracket
   '｣': '﹂', // half-width right corner bracket
-
   // 括弧（丸括弧）
   '（': '︵',
   '）': '︶',
@@ -110,21 +105,17 @@ const verticalRotateChars = <String>{
   '＂', // U+FF02 fullwidth quotation mark
   '“', // U+201C left double quotation mark
   '”', // U+201D right double quotation mark
-
   // シングルクオート・アポストロフィ
   "'", // U+0027 apostrophe
   '＇', // U+FF07 fullwidth apostrophe
   '‘', // U+2018 left single quotation mark
   '’', // U+2019 right single quotation mark
-
   // バッククォート
   '`', // U+0060 grave accent
   '｀', // U+FF40 fullwidth grave accent
-
   // コロン
   ':', // U+003A
   '：', // U+FF1A
-
   // セミコロン
   ';', // U+003B
   '；', // U+FF1B

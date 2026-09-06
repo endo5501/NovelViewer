@@ -62,8 +62,7 @@ void main() {
       final numSamples = (sampleRate * duration).toInt();
       final audio = Float32List(numSamples);
       for (var i = 0; i < numSamples; i++) {
-        audio[i] =
-            (0.5 * _sin(2 * 3.14159265358979 * 440 * i / sampleRate));
+        audio[i] = (0.5 * _sin(2 * 3.14159265358979 * 440 * i / sampleRate));
       }
 
       final third = numSamples ~/ 3;
@@ -131,7 +130,11 @@ void main() {
 
       const sampleRate = 24000;
       final audio = Float32List.fromList(
-          List.generate(2400, (i) => 0.5 * _sin(2 * 3.14159265358979 * 440 * i / sampleRate)));
+        List.generate(
+          2400,
+          (i) => 0.5 * _sin(2 * 3.14159265358979 * 440 * i / sampleRate),
+        ),
+      );
       final wav = WavWriter.toBytes(audio: audio, sampleRate: sampleRate);
 
       final outputPath =

@@ -64,10 +64,7 @@ class SummarySnapshotView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        Text(
-          displayed.summary,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
+        Text(displayed.summary, style: Theme.of(context).textTheme.bodyMedium),
       ],
     );
   }
@@ -93,7 +90,8 @@ class _SnapshotSelector extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final currentIndex = snapshots.indexWhere(
-        (s) => s.coveredUpToEpisode == displayed.coveredUpToEpisode);
+      (s) => s.coveredUpToEpisode == displayed.coveredUpToEpisode,
+    );
     final hasPrev = currentIndex > 0;
     final hasNext = currentIndex >= 0 && currentIndex < snapshots.length - 1;
 
@@ -109,8 +107,9 @@ class _SnapshotSelector extends StatelessWidget {
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
           onPressed: hasPrev
-              ? () =>
-                  onSelectEpisode(snapshots[currentIndex - 1].coveredUpToEpisode)
+              ? () => onSelectEpisode(
+                  snapshots[currentIndex - 1].coveredUpToEpisode,
+                )
               : null,
         ),
         const SizedBox(width: 4),
@@ -127,8 +126,9 @@ class _SnapshotSelector extends StatelessWidget {
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
           onPressed: hasNext
-              ? () =>
-                  onSelectEpisode(snapshots[currentIndex + 1].coveredUpToEpisode)
+              ? () => onSelectEpisode(
+                  snapshots[currentIndex + 1].coveredUpToEpisode,
+                )
               : null,
         ),
         if (showWarning) ...[

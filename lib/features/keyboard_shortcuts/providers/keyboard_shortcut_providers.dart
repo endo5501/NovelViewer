@@ -15,8 +15,8 @@ final shortcutDefaultsProvider = Provider<Map<ShortcutAction, KeyBinding>>(
 /// Current keyboard shortcut bindings for the customizable actions.
 final keyBindingsProvider =
     NotifierProvider<KeyBindingsNotifier, Map<ShortcutAction, KeyBinding>>(
-  KeyBindingsNotifier.new,
-);
+      KeyBindingsNotifier.new,
+    );
 
 class KeyBindingsNotifier extends Notifier<Map<ShortcutAction, KeyBinding>> {
   @override
@@ -31,8 +31,9 @@ class KeyBindingsNotifier extends Notifier<Map<ShortcutAction, KeyBinding>> {
   /// never silently overwrites an existing assignment. Reassigning an action to
   /// its own current binding is allowed.
   Future<bool> rebind(ShortcutAction action, KeyBinding binding) async {
-    final conflict = state.entries
-        .any((entry) => entry.key != action && entry.value == binding);
+    final conflict = state.entries.any(
+      (entry) => entry.key != action && entry.value == binding,
+    );
     if (conflict) return false;
 
     final updated = Map<ShortcutAction, KeyBinding>.from(state)

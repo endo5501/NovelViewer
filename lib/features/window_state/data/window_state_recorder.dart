@@ -34,8 +34,8 @@ class WindowStateRecorder with WindowListener {
     required WindowStateRepository repository,
     required WindowController window,
     this.beforeClose,
-  })  : _repository = repository,
-        _window = window;
+  }) : _repository = repository,
+       _window = window;
 
   @override
   void onWindowResize() => _schedule();
@@ -102,8 +102,10 @@ class WindowStateRecorder with WindowListener {
       // the window undestroyed — measured at ~5.9s to exit versus ~0.17s for
       // the normal path, which the user sees as the app hanging on Alt+F4.
       // destroy() stays as the fallback so the app is always closable.
-      await _ignoringErrors(() => _window.setPreventClose(false),
-          'release the close interception');
+      await _ignoringErrors(
+        () => _window.setPreventClose(false),
+        'release the close interception',
+      );
       try {
         await _window.close();
       } catch (e, stack) {

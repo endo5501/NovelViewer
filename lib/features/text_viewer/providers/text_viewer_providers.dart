@@ -22,7 +22,8 @@ class SelectedTextNotifier extends Notifier<ViewerSelection?> {
 
 final selectedTextProvider =
     NotifierProvider<SelectedTextNotifier, ViewerSelection?>(
-        SelectedTextNotifier.new);
+      SelectedTextNotifier.new,
+    );
 
 final fileContentProvider = FutureProvider<String?>((ref) async {
   final selectedFile = ref.watch(selectedFileProvider);

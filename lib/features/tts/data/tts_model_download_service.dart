@@ -26,8 +26,7 @@ class TtsModelDownloadService {
     final baseDir = Directory(modelsBaseDir);
     if (!baseDir.existsSync()) return;
 
-    final legacyModel =
-        File(p.join(modelsBaseDir, 'qwen3-tts-0.6b-f16.gguf'));
+    final legacyModel = File(p.join(modelsBaseDir, 'qwen3-tts-0.6b-f16.gguf'));
     if (!legacyModel.existsSync()) return;
 
     final newDir = Directory(p.join(modelsBaseDir, '0.6b'));

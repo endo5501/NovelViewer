@@ -31,10 +31,10 @@ class InstallerUpdater {
     required InstallerVerifier verifier,
     required ProcessStarter processStarter,
     void Function(int code)? onExit,
-  })  : _downloader = downloader,
-        _verifier = verifier,
-        _processStarter = processStarter,
-        _onExit = onExit ?? exit;
+  }) : _downloader = downloader,
+       _verifier = verifier,
+       _processStarter = processStarter,
+       _onExit = onExit ?? exit;
 
   static const installerArgs = ['/SILENT', '/SP-', '/UPDATELAUNCH'];
 
@@ -49,7 +49,9 @@ class InstallerUpdater {
   }) async {
     if (info.installerAsset() == null || info.installerSha256Asset() == null) {
       return const UpdateResult(
-          UpdateOutcome.missingAsset, 'installer assets not found in release');
+        UpdateOutcome.missingAsset,
+        'installer assets not found in release',
+      );
     }
 
     DownloadedInstaller downloaded;
@@ -67,7 +69,9 @@ class InstallerUpdater {
       await _deleteQuietly(downloaded.exePath);
       await _deleteQuietly(downloaded.sha256Path);
       return const UpdateResult(
-          UpdateOutcome.checksumMismatch, 'checksum verification failed');
+        UpdateOutcome.checksumMismatch,
+        'checksum verification failed',
+      );
     }
 
     try {

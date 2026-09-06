@@ -35,7 +35,10 @@ const double kHoverPopupGap = 16.0;
   if (mode == TextDisplayMode.horizontal) {
     // Horizontal mode keeps the simple "down-right of pointer" anchor with
     // no flipping and no clamping — this matches the archived behavior.
-    return (left: pointer.dx + kHoverPopupGap, top: pointer.dy + kHoverPopupGap);
+    return (
+      left: pointer.dx + kHoverPopupGap,
+      top: pointer.dy + kHoverPopupGap,
+    );
   }
 
   // Vertical mode defaults.

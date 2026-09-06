@@ -29,8 +29,8 @@ void main() {
   /// success-path fixtures stay small instead of needing 1.5 GB of fake bytes
   /// to satisfy the real pinned sizes.
   Map<IrodoriModelVariant, int> fakeManifest() => {
-        for (final v in IrodoriModelVariant.values) v: payloadFor(v).length,
-      };
+    for (final v in IrodoriModelVariant.values) v: payloadFor(v).length,
+  };
 
   http.Client okClient({List<String>? requestedUrls}) =>
       MockClient.streaming((request, _) async {
@@ -61,12 +61,15 @@ void main() {
       await service.downloadModel(modelsDir, IrodoriModelVariant.v4);
 
       expect(
-          File(ggufPath(modelsDir, IrodoriModelVariant.v4)).existsSync(), isTrue);
+        File(ggufPath(modelsDir, IrodoriModelVariant.v4)).existsSync(),
+        isTrue,
+      );
       expect(urls.single, endsWith(IrodoriModelVariant.v4.relativeGgufPath));
 
       // No sibling directories: the GGUF embeds spec, config and tokenizer.
-      final entries =
-          Directory(modelsDir).listSync().map((e) => p.basename(e.path));
+      final entries = Directory(
+        modelsDir,
+      ).listSync().map((e) => p.basename(e.path));
       expect(entries, [IrodoriModelVariant.v4.modelDirName]);
     });
 
@@ -98,92 +101,117 @@ void main() {
 
       await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
 
-      final dir =
-          Directory(p.join(modelsDir, IrodoriModelVariant.v3.modelDirName));
-      final ggufs =
-          dir.listSync().where((e) => e.path.endsWith('.gguf')).toList();
+      final dir = Directory(
+        p.join(modelsDir, IrodoriModelVariant.v3.modelDirName),
+      );
+      final ggufs = dir
+          .listSync()
+          .where((e) => e.path.endsWith('.gguf'))
+          .toList();
       expect(ggufs, hasLength(1));
     });
 
-    test('removes a stale .gguf left by an earlier precision or a partial run',
-        () async {
-      final modelsDir = p.join(tempDir.path, 'models');
-      final variantDir =
-          Directory(p.join(modelsDir, IrodoriModelVariant.v3.modelDirName))
-            ..createSync(recursive: true);
-      final stale = File(p.join(
-          variantDir.path, 'irodori-tts-600m-v3-voicedesign-q8_0.gguf'))
-        ..writeAsBytesSync([1, 2, 3]);
+    test(
+      'removes a stale .gguf left by an earlier precision or a partial run',
+      () async {
+        final modelsDir = p.join(tempDir.path, 'models');
+        final variantDir = Directory(
+          p.join(modelsDir, IrodoriModelVariant.v3.modelDirName),
+        )..createSync(recursive: true);
+        final stale = File(
+          p.join(variantDir.path, 'irodori-tts-600m-v3-voicedesign-q8_0.gguf'),
+        )..writeAsBytesSync([1, 2, 3]);
 
-      final service = IrodoriModelDownloadService(
-        client: okClient(),
-        expectedFileSizes: fakeManifest(),
-      );
-      await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
+        final service = IrodoriModelDownloadService(
+          client: okClient(),
+          expectedFileSizes: fakeManifest(),
+        );
+        await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
 
-      expect(stale.existsSync(), isFalse,
-          reason:
-              'a second .gguf would make the native loader refuse to start');
-      expect(
-          File(ggufPath(modelsDir, IrodoriModelVariant.v3)).existsSync(), isTrue);
-    });
+        expect(
+          stale.existsSync(),
+          isFalse,
+          reason: 'a second .gguf would make the native loader refuse to start',
+        );
+        expect(
+          File(ggufPath(modelsDir, IrodoriModelVariant.v3)).existsSync(),
+          isTrue,
+        );
+      },
+    );
 
-    test('cleans a foreign .gguf even when the target is already complete',
-        () async {
-      // The early "already downloaded" return used to skip the cleanup, so a
-      // directory holding both the correct f16 and a leftover q8_0 stayed
-      // unloadable while the UI reported "downloaded" — with no way to
-      // recover from inside the app.
-      final modelsDir = p.join(tempDir.path, 'models');
-      final service = IrodoriModelDownloadService(
-        client: okClient(),
-        expectedFileSizes: fakeManifest(),
-      );
-      await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
+    test(
+      'cleans a foreign .gguf even when the target is already complete',
+      () async {
+        // The early "already downloaded" return used to skip the cleanup, so a
+        // directory holding both the correct f16 and a leftover q8_0 stayed
+        // unloadable while the UI reported "downloaded" — with no way to
+        // recover from inside the app.
+        final modelsDir = p.join(tempDir.path, 'models');
+        final service = IrodoriModelDownloadService(
+          client: okClient(),
+          expectedFileSizes: fakeManifest(),
+        );
+        await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
 
-      final stale = File(p.join(modelsDir, IrodoriModelVariant.v3.modelDirName,
-          'irodori-tts-600m-v3-voicedesign-q8_0.gguf'))
-        ..writeAsBytesSync([1, 2, 3]);
+        final stale = File(
+          p.join(
+            modelsDir,
+            IrodoriModelVariant.v3.modelDirName,
+            'irodori-tts-600m-v3-voicedesign-q8_0.gguf',
+          ),
+        )..writeAsBytesSync([1, 2, 3]);
 
-      await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
+        await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
 
-      expect(stale.existsSync(), isFalse);
-      expect(
-          File(ggufPath(modelsDir, IrodoriModelVariant.v3)).existsSync(), isTrue);
-    });
+        expect(stale.existsSync(), isFalse);
+        expect(
+          File(ggufPath(modelsDir, IrodoriModelVariant.v3)).existsSync(),
+          isTrue,
+        );
+      },
+    );
 
-    test('isModelDownloaded is false while a second .gguf makes it unloadable',
-        () async {
-      final modelsDir = p.join(tempDir.path, 'models');
-      final service = IrodoriModelDownloadService(
-        client: okClient(),
-        expectedFileSizes: fakeManifest(),
-      );
-      await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
-      expect(
-          service.isModelDownloaded(modelsDir, IrodoriModelVariant.v3), isTrue);
+    test(
+      'isModelDownloaded is false while a second .gguf makes it unloadable',
+      () async {
+        final modelsDir = p.join(tempDir.path, 'models');
+        final service = IrodoriModelDownloadService(
+          client: okClient(),
+          expectedFileSizes: fakeManifest(),
+        );
+        await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
+        expect(
+          service.isModelDownloaded(modelsDir, IrodoriModelVariant.v3),
+          isTrue,
+        );
 
-      File(p.join(modelsDir, IrodoriModelVariant.v3.modelDirName,
-              'irodori-tts-600m-v3-voicedesign-q8_0.gguf'))
-          .writeAsBytesSync([1, 2, 3]);
+        File(
+          p.join(
+            modelsDir,
+            IrodoriModelVariant.v3.modelDirName,
+            'irodori-tts-600m-v3-voicedesign-q8_0.gguf',
+          ),
+        ).writeAsBytesSync([1, 2, 3]);
 
-      expect(
-        service.isModelDownloaded(modelsDir, IrodoriModelVariant.v3),
-        isFalse,
-        reason: 'the native loader refuses a directory with two .gguf files',
-      );
-    });
+        expect(
+          service.isModelDownloaded(modelsDir, IrodoriModelVariant.v3),
+          isFalse,
+          reason: 'the native loader refuses a directory with two .gguf files',
+        );
+      },
+    );
 
     test('removes a stray .part left by a killed process', () async {
       // downloadFile writes to "<name>.gguf.part"; a hard kill leaves ~1.5 GB
       // of orphan behind that nothing else cleans up.
       final modelsDir = p.join(tempDir.path, 'models');
-      final variantDir =
-          Directory(p.join(modelsDir, IrodoriModelVariant.v3.modelDirName))
-            ..createSync(recursive: true);
-      final orphan = File(p.join(
-          variantDir.path, '${IrodoriModelVariant.v3.ggufFileName}.part'))
-        ..writeAsBytesSync([1, 2, 3]);
+      final variantDir = Directory(
+        p.join(modelsDir, IrodoriModelVariant.v3.modelDirName),
+      )..createSync(recursive: true);
+      final orphan = File(
+        p.join(variantDir.path, '${IrodoriModelVariant.v3.ggufFileName}.part'),
+      )..writeAsBytesSync([1, 2, 3]);
 
       final service = IrodoriModelDownloadService(
         client: okClient(),
@@ -197,13 +225,10 @@ void main() {
     test('pins the real byte sizes by default', () {
       // The service must default to the sizes pinned on the variant, not to
       // whatever a download happens to report.
-      expect(
-        IrodoriModelDownloadService.defaultExpectedFileSizes,
-        {
-          IrodoriModelVariant.v3: 1463787680,
-          IrodoriModelVariant.v4: 1762161536,
-        },
-      );
+      expect(IrodoriModelDownloadService.defaultExpectedFileSizes, {
+        IrodoriModelVariant.v3: 1463787680,
+        IrodoriModelVariant.v4: 1762161536,
+      });
     });
   });
 
@@ -218,89 +243,116 @@ void main() {
       }
     });
 
-    test('one variant being present does not mark the other as downloaded',
-        () async {
-      final modelsDir = p.join(tempDir.path, 'models');
-      final service = IrodoriModelDownloadService(
-        client: okClient(),
-        expectedFileSizes: fakeManifest(),
-      );
+    test(
+      'one variant being present does not mark the other as downloaded',
+      () async {
+        final modelsDir = p.join(tempDir.path, 'models');
+        final service = IrodoriModelDownloadService(
+          client: okClient(),
+          expectedFileSizes: fakeManifest(),
+        );
 
-      await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
+        await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
 
-      expect(
-          service.isModelDownloaded(modelsDir, IrodoriModelVariant.v3), isTrue);
-      expect(
-          service.isModelDownloaded(modelsDir, IrodoriModelVariant.v4), isFalse);
-    });
+        expect(
+          service.isModelDownloaded(modelsDir, IrodoriModelVariant.v3),
+          isTrue,
+        );
+        expect(
+          service.isModelDownloaded(modelsDir, IrodoriModelVariant.v4),
+          isFalse,
+        );
+      },
+    );
 
-    test('a size that does not match the manifest reads as not downloaded',
-        () async {
-      final modelsDir = p.join(tempDir.path, 'models');
-      Directory(p.join(modelsDir, IrodoriModelVariant.v4.modelDirName))
-          .createSync(recursive: true);
-      File(ggufPath(modelsDir, IrodoriModelVariant.v4))
-          .writeAsBytesSync([1, 2, 3]);
+    test(
+      'a size that does not match the manifest reads as not downloaded',
+      () async {
+        final modelsDir = p.join(tempDir.path, 'models');
+        Directory(
+          p.join(modelsDir, IrodoriModelVariant.v4.modelDirName),
+        ).createSync(recursive: true);
+        File(
+          ggufPath(modelsDir, IrodoriModelVariant.v4),
+        ).writeAsBytesSync([1, 2, 3]);
 
-      final service = IrodoriModelDownloadService(
-        client: okClient(),
-        expectedFileSizes: fakeManifest(),
-      );
-      expect(
-          service.isModelDownloaded(modelsDir, IrodoriModelVariant.v4), isFalse);
-    });
+        final service = IrodoriModelDownloadService(
+          client: okClient(),
+          expectedFileSizes: fakeManifest(),
+        );
+        expect(
+          service.isModelDownloaded(modelsDir, IrodoriModelVariant.v4),
+          isFalse,
+        );
+      },
+    );
   });
 
   group('downloadModel - failure handling', () {
-    test('a completed transfer whose size misses the manifest is deleted',
-        () async {
-      final modelsDir = p.join(tempDir.path, 'models');
-      final client = MockClient.streaming((request, _) async {
-        final bytes = 'unexpectedly different payload'.codeUnits;
-        return http.StreamedResponse(Stream.value(bytes), 200,
-            contentLength: bytes.length);
-      });
-      final service = IrodoriModelDownloadService(
-        client: client,
-        expectedFileSizes: fakeManifest(),
-      );
+    test(
+      'a completed transfer whose size misses the manifest is deleted',
+      () async {
+        final modelsDir = p.join(tempDir.path, 'models');
+        final client = MockClient.streaming((request, _) async {
+          final bytes = 'unexpectedly different payload'.codeUnits;
+          return http.StreamedResponse(
+            Stream.value(bytes),
+            200,
+            contentLength: bytes.length,
+          );
+        });
+        final service = IrodoriModelDownloadService(
+          client: client,
+          expectedFileSizes: fakeManifest(),
+        );
 
-      await expectLater(
-        service.downloadModel(modelsDir, IrodoriModelVariant.v4),
-        throwsA(isA<IrodoriDownloadSizeMismatchException>()),
-      );
-      expect(
-        File(ggufPath(modelsDir, IrodoriModelVariant.v4)).existsSync(),
-        isFalse,
-        reason: 'a corrupt-but-complete transfer must not read as downloaded',
-      );
-    });
+        await expectLater(
+          service.downloadModel(modelsDir, IrodoriModelVariant.v4),
+          throwsA(isA<IrodoriDownloadSizeMismatchException>()),
+        );
+        expect(
+          File(ggufPath(modelsDir, IrodoriModelVariant.v4)).existsSync(),
+          isFalse,
+          reason: 'a corrupt-but-complete transfer must not read as downloaded',
+        );
+      },
+    );
 
-    test('cancel stops the transfer and leaves nothing that reads as complete',
-        () async {
-      final modelsDir = p.join(tempDir.path, 'models');
-      late IrodoriModelDownloadService service;
-      final controller = StreamController<List<int>>();
-      final client = MockClient.streaming((request, _) async {
-        service.cancel();
-        unawaited(Future(() async {
-          controller.add([1, 2, 3]);
-          await controller.close();
-        }));
-        return http.StreamedResponse(controller.stream, 200, contentLength: 3);
-      });
-      service = IrodoriModelDownloadService(
-        client: client,
-        expectedFileSizes: fakeManifest(),
-      );
+    test(
+      'cancel stops the transfer and leaves nothing that reads as complete',
+      () async {
+        final modelsDir = p.join(tempDir.path, 'models');
+        late IrodoriModelDownloadService service;
+        final controller = StreamController<List<int>>();
+        final client = MockClient.streaming((request, _) async {
+          service.cancel();
+          unawaited(
+            Future(() async {
+              controller.add([1, 2, 3]);
+              await controller.close();
+            }),
+          );
+          return http.StreamedResponse(
+            controller.stream,
+            200,
+            contentLength: 3,
+          );
+        });
+        service = IrodoriModelDownloadService(
+          client: client,
+          expectedFileSizes: fakeManifest(),
+        );
 
-      await expectLater(
-        service.downloadModel(modelsDir, IrodoriModelVariant.v4),
-        throwsA(isA<IrodoriDownloadCancelledException>()),
-      );
-      expect(
-          service.isModelDownloaded(modelsDir, IrodoriModelVariant.v4), isFalse);
-    });
+        await expectLater(
+          service.downloadModel(modelsDir, IrodoriModelVariant.v4),
+          throwsA(isA<IrodoriDownloadCancelledException>()),
+        );
+        expect(
+          service.isModelDownloaded(modelsDir, IrodoriModelVariant.v4),
+          isFalse,
+        );
+      },
+    );
 
     test('a retry skips a variant that is already complete', () async {
       final modelsDir = p.join(tempDir.path, 'models');
@@ -314,8 +366,11 @@ void main() {
       expect(urls, hasLength(1));
 
       await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
-      expect(urls, hasLength(1),
-          reason: 'a complete file must not be fetched again');
+      expect(
+        urls,
+        hasLength(1),
+        reason: 'a complete file must not be fetched again',
+      );
     });
 
     test('reports progress for the variant being downloaded', () async {
@@ -346,8 +401,9 @@ void main() {
       }.entries) {
         final dir = Directory(p.join(modelsDir, entry.key))
           ..createSync(recursive: true);
-        File(p.join(dir.path, entry.value))
-            .writeAsBytesSync(List.filled(bytesPerFile, 0));
+        File(
+          p.join(dir.path, entry.value),
+        ).writeAsBytesSync(List.filled(bytesPerFile, 0));
       }
     }
 
@@ -392,20 +448,22 @@ void main() {
       );
     });
 
-    test('a completed download does not delete legacy assets on its own',
-        () async {
-      // Deleting 2.9 GB is not reversible, so it stays an explicit user action.
-      final modelsDir = p.join(tempDir.path, 'models');
-      createLegacy(modelsDir);
-      final service = IrodoriModelDownloadService(
-        client: okClient(),
-        expectedFileSizes: fakeManifest(),
-      );
+    test(
+      'a completed download does not delete legacy assets on its own',
+      () async {
+        // Deleting 2.9 GB is not reversible, so it stays an explicit user action.
+        final modelsDir = p.join(tempDir.path, 'models');
+        createLegacy(modelsDir);
+        final service = IrodoriModelDownloadService(
+          client: okClient(),
+          expectedFileSizes: fakeManifest(),
+        );
 
-      await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
+        await service.downloadModel(modelsDir, IrodoriModelVariant.v3);
 
-      expect(service.hasLegacyAssets(modelsDir), isTrue);
-    });
+        expect(service.hasLegacyAssets(modelsDir), isTrue);
+      },
+    );
 
     test('legacy assets alone do not make a variant read as downloaded', () {
       final modelsDir = p.join(tempDir.path, 'models');

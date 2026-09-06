@@ -54,29 +54,32 @@ void main() {
     },
   );
 
-  test('a failed write is retried by the next flush of the same position', () async {
-    // A transient DB lock must not lose the position outright: the reader may
-    // be sitting still, so if the failed snapshot is neither re-armed nor
-    // allowed past the dedupe guard, nothing is ever written again and the
-    // exit flush finds an empty queue.
-    var attempts = 0;
-    final saved = <int>[];
-    final writer = ReadingPositionWriter(
-      save: (snapshot) async {
-        attempts++;
-        if (attempts == 1) throw StateError('locked');
-        saved.add(snapshot.offset);
-      },
-    );
-    writer.observe(const PositionSnapshot('book', 'a', 42, 'hash'));
-    await writer.flush();
-    expect(saved, isEmpty);
-    // Same position observed again (the reader has not moved).
-    writer.observe(const PositionSnapshot('book', 'a', 42, 'hash'));
-    await writer.flush();
-    expect(saved, [42]);
-    writer.dispose();
-  });
+  test(
+    'a failed write is retried by the next flush of the same position',
+    () async {
+      // A transient DB lock must not lose the position outright: the reader may
+      // be sitting still, so if the failed snapshot is neither re-armed nor
+      // allowed past the dedupe guard, nothing is ever written again and the
+      // exit flush finds an empty queue.
+      var attempts = 0;
+      final saved = <int>[];
+      final writer = ReadingPositionWriter(
+        save: (snapshot) async {
+          attempts++;
+          if (attempts == 1) throw StateError('locked');
+          saved.add(snapshot.offset);
+        },
+      );
+      writer.observe(const PositionSnapshot('book', 'a', 42, 'hash'));
+      await writer.flush();
+      expect(saved, isEmpty);
+      // Same position observed again (the reader has not moved).
+      writer.observe(const PositionSnapshot('book', 'a', 42, 'hash'));
+      await writer.flush();
+      expect(saved, [42]);
+      writer.dispose();
+    },
+  );
 
   test(
     'failed writes do not break later saves and deletion discards dirty data',

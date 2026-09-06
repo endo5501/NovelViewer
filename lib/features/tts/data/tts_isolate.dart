@@ -47,7 +47,11 @@ typedef TtsAbortHandleFactory = Map<TtsEngineType, TtsAbortHandle> Function();
 /// irodori handle); a handle is never wired into a different engine's DLL, so
 /// no cross-DLL handle sharing occurs.
 class _NativeAbortHandle implements TtsAbortHandle {
-  _NativeAbortHandle(this._handle, {required this.abortFn, required this.freeFn});
+  _NativeAbortHandle(
+    this._handle, {
+    required this.abortFn,
+    required this.freeFn,
+  });
 
   final Pointer<Void> _handle;
   final void Function(Pointer<Void>) abortFn;
@@ -219,7 +223,7 @@ class WorkerDiedResponse extends TtsIsolateResponse {
 
 class TtsIsolate {
   TtsIsolate({TtsAbortHandleFactory? abortHandleFactory})
-      : _abortHandleFactory = abortHandleFactory ?? _defaultAbortHandleFactory;
+    : _abortHandleFactory = abortHandleFactory ?? _defaultAbortHandleFactory;
 
   final TtsAbortHandleFactory _abortHandleFactory;
 
@@ -382,21 +386,23 @@ class TtsIsolate {
     String? embeddingCacheDir,
     bool durationCorrection = false,
   }) {
-    _sendPort?.send(LoadModelMessage(
-      modelDir: modelDir,
-      engineType: engineType,
-      nThreads: nThreads,
-      languageId: languageId,
-      dicDir: dicDir,
-      lengthScale: lengthScale,
-      noiseScale: noiseScale,
-      noiseW: noiseW,
-      embeddingCacheDir: embeddingCacheDir,
-      durationCorrection: durationCorrection,
-      // Send the handle allocated by THIS engine's DLL so the address is only
-      // ever dereferenced by the library that created it (no cross-DLL wiring).
-      abortHandleAddress: _abortHandles[engineType]?.address ?? 0,
-    ));
+    _sendPort?.send(
+      LoadModelMessage(
+        modelDir: modelDir,
+        engineType: engineType,
+        nThreads: nThreads,
+        languageId: languageId,
+        dicDir: dicDir,
+        lengthScale: lengthScale,
+        noiseScale: noiseScale,
+        noiseW: noiseW,
+        embeddingCacheDir: embeddingCacheDir,
+        durationCorrection: durationCorrection,
+        // Send the handle allocated by THIS engine's DLL so the address is only
+        // ever dereferenced by the library that created it (no cross-DLL wiring).
+        abortHandleAddress: _abortHandles[engineType]?.address ?? 0,
+      ),
+    );
   }
 
   void synthesize(
@@ -407,14 +413,16 @@ class TtsIsolate {
     double? captionGuidanceScale,
     int? numInferenceSteps,
   }) {
-    _sendPort?.send(SynthesizeMessage(
-      text: text,
-      refWavPath: refWavPath,
-      caption: caption,
-      speakerGuidanceScale: speakerGuidanceScale,
-      captionGuidanceScale: captionGuidanceScale,
-      numInferenceSteps: numInferenceSteps,
-    ));
+    _sendPort?.send(
+      SynthesizeMessage(
+        text: text,
+        refWavPath: refWavPath,
+        caption: caption,
+        speakerGuidanceScale: speakerGuidanceScale,
+        captionGuidanceScale: captionGuidanceScale,
+        numInferenceSteps: numInferenceSteps,
+      ),
+    );
   }
 
   /// Abort any in-progress synthesis by setting the native abort flag directly.
@@ -569,8 +577,9 @@ class TtsIsolate {
               next.loadModel(
                 message.modelDir,
                 nThreads: message.nThreads,
-                abortHandle:
-                    Pointer<Void>.fromAddress(message.abortHandleAddress),
+                abortHandle: Pointer<Void>.fromAddress(
+                  message.abortHandleAddress,
+                ),
               );
               next.setLanguage(message.languageId);
               qwen3Engine = next;
@@ -594,8 +603,9 @@ class TtsIsolate {
               next.loadModel(
                 message.modelDir,
                 nThreads: message.nThreads,
-                abortHandle:
-                    Pointer<Void>.fromAddress(message.abortHandleAddress),
+                abortHandle: Pointer<Void>.fromAddress(
+                  message.abortHandleAddress,
+                ),
                 durationCorrection: message.durationCorrection,
               );
               irodoriEngine = next;
@@ -622,11 +632,13 @@ class TtsIsolate {
       } else if (message is SynthesizeMessage) {
         try {
           if (!isEngineLoaded()) {
-            mainSendPort.send(SynthesisResultResponse(
-              audio: null,
-              sampleRate: 0,
-              error: 'Model not loaded',
-            ));
+            mainSendPort.send(
+              SynthesisResultResponse(
+                audio: null,
+                sampleRate: 0,
+                error: 'Model not loaded',
+              ),
+            );
             return;
           }
 
@@ -640,18 +652,23 @@ class TtsIsolate {
           // the bytes out eagerly, so this is a plain copy — NOT the zero-copy
           // handoff TransferableTypedData enables when the receiver
           // materializes. (Transfer semantics intentionally unchanged.)
-          final transferable =
-              TransferableTypedData.fromList([result.audio.buffer.asByteData()]);
-          mainSendPort.send(SynthesisResultResponse(
-            audio: transferable.materialize().asFloat32List(),
-            sampleRate: result.sampleRate,
-          ));
+          final transferable = TransferableTypedData.fromList([
+            result.audio.buffer.asByteData(),
+          ]);
+          mainSendPort.send(
+            SynthesisResultResponse(
+              audio: transferable.materialize().asFloat32List(),
+              sampleRate: result.sampleRate,
+            ),
+          );
         } catch (e) {
-          mainSendPort.send(SynthesisResultResponse(
-            audio: null,
-            sampleRate: 0,
-            error: e.toString(),
-          ));
+          mainSendPort.send(
+            SynthesisResultResponse(
+              audio: null,
+              sampleRate: 0,
+              error: e.toString(),
+            ),
+          );
         }
       } else if (message is DisposeMessage) {
         disposeEngines();

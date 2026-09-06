@@ -54,28 +54,34 @@ List<ContextMenuButtonItem> buildAnalysisButtonItems({
         }).toList();
   if (selectedText.isEmpty) return items;
 
-  items.add(ContextMenuButtonItem(
-    label: addToDictionaryLabel,
-    onPressed: () {
-      ContextMenuController.removeAny();
-      onAddToDictionary(selectedText);
-    },
-  ));
+  items.add(
+    ContextMenuButtonItem(
+      label: addToDictionaryLabel,
+      onPressed: () {
+        ContextMenuController.removeAny();
+        onAddToDictionary(selectedText);
+      },
+    ),
+  );
   if (onAnalyze != null) {
-    items.add(ContextMenuButtonItem(
-      label: analyzeNoSpoilerLabel,
-      onPressed: () {
-        ContextMenuController.removeAny();
-        onAnalyze(selectedText, AnalysisScope.upToCurrent);
-      },
-    ));
-    items.add(ContextMenuButtonItem(
-      label: analyzeSpoilerLabel,
-      onPressed: () {
-        ContextMenuController.removeAny();
-        onAnalyze(selectedText, AnalysisScope.upToAll);
-      },
-    ));
+    items.add(
+      ContextMenuButtonItem(
+        label: analyzeNoSpoilerLabel,
+        onPressed: () {
+          ContextMenuController.removeAny();
+          onAnalyze(selectedText, AnalysisScope.upToCurrent);
+        },
+      ),
+    );
+    items.add(
+      ContextMenuButtonItem(
+        label: analyzeSpoilerLabel,
+        onPressed: () {
+          ContextMenuController.removeAny();
+          onAnalyze(selectedText, AnalysisScope.upToAll);
+        },
+      ),
+    );
   }
   return items;
 }

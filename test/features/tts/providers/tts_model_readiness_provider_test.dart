@@ -42,9 +42,9 @@ void main() {
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
 
-  void writeMarker(String content) =>
-      File(p.join(piperDir, '.piper_models_complete'))
-          .writeAsStringSync(content);
+  void writeMarker(String content) => File(
+    p.join(piperDir, '.piper_models_complete'),
+  ).writeAsStringSync(content);
 
   TtsModelReadiness readinessFor(TtsEngineType engine) {
     final container = ProviderContainer(
@@ -54,8 +54,9 @@ void main() {
         // path; pointing it at the empty temp tree keeps them "not downloaded".
         libraryPathProvider.overrideWithValue(p.join(tempDir.path, 'library')),
         piperModelDirProvider.overrideWithValue(piperDir),
-        piperDicDirProvider
-            .overrideWithValue(p.join(piperDir, 'open_jtalk_dic')),
+        piperDicDirProvider.overrideWithValue(
+          p.join(piperDir, 'open_jtalk_dic'),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -100,12 +101,14 @@ void main() {
 
     test('needs a download when a model file is missing', () {
       writeMarker(PiperModelDownloadService.modelRevision);
-      File(p.join(
-        piperDir,
-        PiperModelDownloadService.onnxFileName(
-          PiperModelDownloadService.defaultModelName,
+      File(
+        p.join(
+          piperDir,
+          PiperModelDownloadService.onnxFileName(
+            PiperModelDownloadService.defaultModelName,
+          ),
         ),
-      )).deleteSync();
+      ).deleteSync();
 
       expect(
         readinessFor(TtsEngineType.piper),
@@ -123,10 +126,13 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          libraryPathProvider.overrideWithValue(p.join(tempDir.path, 'library')),
+          libraryPathProvider.overrideWithValue(
+            p.join(tempDir.path, 'library'),
+          ),
           piperModelDirProvider.overrideWithValue(piperDir),
-          piperDicDirProvider
-              .overrideWithValue(p.join(piperDir, 'open_jtalk_dic')),
+          piperDicDirProvider.overrideWithValue(
+            p.join(piperDir, 'open_jtalk_dic'),
+          ),
         ],
       );
       addTearDown(container.dispose);

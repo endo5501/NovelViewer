@@ -15,7 +15,9 @@ void main() {
       final pageStarts = [0];
       final lineStartColumns = [0]; // single line
 
-      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [0]);
+      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [
+        0,
+      ]);
     });
 
     test('computes offset for two pages (same line, column wrap)', () {
@@ -27,7 +29,10 @@ void main() {
       final lineStartColumns = [0]; // both columns from same line
 
       // No newlines between columns (column wrap)
-      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [0, 3]);
+      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [
+        0,
+        3,
+      ]);
     });
 
     test('computes offset with Ruby text', () {
@@ -42,7 +47,10 @@ void main() {
       final lineStartColumns = [0]; // same line
 
       // Page 0: 'あ'(1) + '漢字'(2) = 3 chars
-      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [0, 3]);
+      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [
+        0,
+        3,
+      ]);
     });
 
     test('computes offset with empty columns (blank lines)', () {
@@ -56,7 +64,10 @@ void main() {
       final lineStartColumns = [0, 1, 2];
 
       // Page 0: col 0 = 3 chars + 1 newline + col 1 = 0 chars + 1 newline = 5
-      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [0, 5]);
+      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [
+        0,
+        5,
+      ]);
     });
 
     test('computes offset for three pages (same line)', () {
@@ -68,7 +79,11 @@ void main() {
       final pageStarts = [0, 1, 2];
       final lineStartColumns = [0]; // all from same line (column wrap)
 
-      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [0, 2, 4]);
+      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [
+        0,
+        2,
+        4,
+      ]);
     });
 
     test('computes offset with multiple columns per page', () {
@@ -82,7 +97,10 @@ void main() {
       final lineStartColumns = [0]; // all from same line
 
       // Page 0: 3 + 2 = 5 chars
-      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [0, 5]);
+      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [
+        0,
+        5,
+      ]);
     });
 
     test('includes original newlines between different lines', () {
@@ -97,7 +115,10 @@ void main() {
 
       // Page 0 offset: 0
       // Page 1 offset: 3 (text) + 1 (newline between lines) = 4
-      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [0, 4]);
+      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [
+        0,
+        4,
+      ]);
     });
 
     test('includes multiple newlines for multiple lines', () {
@@ -113,7 +134,11 @@ void main() {
       // Page 0: 0
       // Page 1: 1 (text) + 1 (newline) = 2
       // Page 2: 1 + 1 + 1 + 1 = 4
-      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [0, 2, 4]);
+      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [
+        0,
+        2,
+        4,
+      ]);
     });
 
     test('mixes line breaks and column wraps correctly', () {
@@ -131,33 +156,39 @@ void main() {
 
       // Page 0: 0
       // Page 1: 2+2 (text) + 1 (newline between lines) = 5
-      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [0, 5]);
+      expect(computeCharOffsetPerPage(columns, pageStarts, lineStartColumns), [
+        0,
+        5,
+      ]);
     });
   });
 
   group('VerticalTextViewer didUpdateWidget with memoized segments', () {
-    testWidgets('does not reset page when same segment reference is provided',
-        (tester) async {
+    testWidgets('does not reset page when same segment reference is provided', (
+      tester,
+    ) async {
       // Create enough text to span multiple pages in narrow width
       final longText = List.generate(200, (i) => 'あ').join();
       final segments = [PlainTextSegment(longText)];
 
       await tester.pumpWidget(
-        ProviderScope(child: MaterialApp(
-              locale: const Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: SizedBox(
-              width: 100,
-              height: 400,
-              child: VerticalTextViewer(
-                segments: segments,
-                baseStyle: const TextStyle(fontSize: 14),
+        ProviderScope(
+          child: MaterialApp(
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(
+                width: 100,
+                height: 400,
+                child: VerticalTextViewer(
+                  segments: segments,
+                  baseStyle: const TextStyle(fontSize: 14),
+                ),
               ),
             ),
           ),
-        )),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -173,21 +204,23 @@ void main() {
 
       // Rebuild with SAME segment reference (simulating memoized cache)
       await tester.pumpWidget(
-        ProviderScope(child: MaterialApp(
-              locale: const Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: SizedBox(
-              width: 100,
-              height: 400,
-              child: VerticalTextViewer(
-                segments: segments, // same reference
-                baseStyle: const TextStyle(fontSize: 14),
+        ProviderScope(
+          child: MaterialApp(
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(
+                width: 100,
+                height: 400,
+                child: VerticalTextViewer(
+                  segments: segments, // same reference
+                  baseStyle: const TextStyle(fontSize: 14),
+                ),
               ),
             ),
           ),
-        )),
+        ),
       );
       await tester.pumpAndSettle();
 

@@ -28,12 +28,15 @@ ProviderContainer _containerFor({
   return ProviderContainer(
     overrides: [
       // Folder-scoped families: any folder path resolves to the in-memory repos.
-      llmSummaryRepositoryProvider
-          .overrideWith((ref, folderPath) async => repository),
-      factCacheRepositoryProvider
-          .overrideWith((ref, folderPath) async => factCacheRepository),
-      currentDirectoryProvider
-          .overrideWith(() => CurrentDirectoryNotifier(directoryPath)),
+      llmSummaryRepositoryProvider.overrideWith(
+        (ref, folderPath) async => repository,
+      ),
+      factCacheRepositoryProvider.overrideWith(
+        (ref, folderPath) async => factCacheRepository,
+      ),
+      currentDirectoryProvider.overrideWith(
+        () => CurrentDirectoryNotifier(directoryPath),
+      ),
     ],
   );
 }
@@ -74,9 +77,10 @@ void main() {
   group('llmSummaryHistoryProvider', () {
     test('returns empty list when no current directory is set', () async {
       final container = _containerFor(
-          repository: repository,
-          factCacheRepository: factCacheRepository,
-          directoryPath: null);
+        repository: repository,
+        factCacheRepository: factCacheRepository,
+        directoryPath: null,
+      );
       addTearDown(container.dispose);
 
       final entries = await container.read(llmSummaryHistoryProvider.future);
@@ -89,11 +93,26 @@ void main() {
       final newer = DateTime.utc(2026, 5, 20, 14).toIso8601String();
 
       await insert(
-          word: '中間', episode: 30, sourceFile: '030.txt', summary: 'm', updatedAt: middle);
+        word: '中間',
+        episode: 30,
+        sourceFile: '030.txt',
+        summary: 'm',
+        updatedAt: middle,
+      );
       await insert(
-          word: '新しい', episode: 50, sourceFile: '050.txt', summary: 'n', updatedAt: newer);
+        word: '新しい',
+        episode: 50,
+        sourceFile: '050.txt',
+        summary: 'n',
+        updatedAt: newer,
+      );
       await insert(
-          word: '古い', episode: 10, sourceFile: '010.txt', summary: 'o', updatedAt: older);
+        word: '古い',
+        episode: 10,
+        sourceFile: '010.txt',
+        summary: 'o',
+        updatedAt: older,
+      );
 
       final container = _containerFor(
         repository: repository,
@@ -107,35 +126,55 @@ void main() {
       expect(entries.map((e) => e.word).toList(), ['新しい', '中間', '古い']);
     });
 
-    test('multiple snapshots of the same word collapse into one entry',
-        () async {
-      final t1 = DateTime.utc(2026, 5, 20, 10).toIso8601String();
-      final t2 = DateTime.utc(2026, 5, 20, 16).toIso8601String();
-      final t3 = DateTime.utc(2026, 5, 20, 18).toIso8601String();
+    test(
+      'multiple snapshots of the same word collapse into one entry',
+      () async {
+        final t1 = DateTime.utc(2026, 5, 20, 10).toIso8601String();
+        final t2 = DateTime.utc(2026, 5, 20, 16).toIso8601String();
+        final t3 = DateTime.utc(2026, 5, 20, 18).toIso8601String();
 
-      await insert(
-          word: 'アリス', episode: 30, sourceFile: '030.txt', summary: '序盤', updatedAt: t1);
-      await insert(
-          word: 'アリス', episode: 60, sourceFile: '060.txt', summary: '中盤', updatedAt: t2);
-      await insert(
-          word: 'アリス', episode: 120, sourceFile: '120.txt', summary: '全話', updatedAt: t3);
+        await insert(
+          word: 'アリス',
+          episode: 30,
+          sourceFile: '030.txt',
+          summary: '序盤',
+          updatedAt: t1,
+        );
+        await insert(
+          word: 'アリス',
+          episode: 60,
+          sourceFile: '060.txt',
+          summary: '中盤',
+          updatedAt: t2,
+        );
+        await insert(
+          word: 'アリス',
+          episode: 120,
+          sourceFile: '120.txt',
+          summary: '全話',
+          updatedAt: t3,
+        );
 
-      final container = _containerFor(
-        repository: repository,
-        factCacheRepository: factCacheRepository,
-        directoryPath: '/library/my_novel',
-      );
-      addTearDown(container.dispose);
+        final container = _containerFor(
+          repository: repository,
+          factCacheRepository: factCacheRepository,
+          directoryPath: '/library/my_novel',
+        );
+        addTearDown(container.dispose);
 
-      final entries = await container.read(llmSummaryHistoryProvider.future);
+        final entries = await container.read(llmSummaryHistoryProvider.future);
 
-      expect(entries, hasLength(1));
-      expect(entries.first.word, 'アリス');
-      expect(entries.first.snapshotCount, 3);
-      expect(entries.first.sourceFile, '120.txt',
-          reason: 'jump target is the largest-episode non-null source_file');
-      expect(entries.first.updatedAt, DateTime.utc(2026, 5, 20, 18));
-    });
+        expect(entries, hasLength(1));
+        expect(entries.first.word, 'アリス');
+        expect(entries.first.snapshotCount, 3);
+        expect(
+          entries.first.sourceFile,
+          '120.txt',
+          reason: 'jump target is the largest-episode non-null source_file',
+        );
+        expect(entries.first.updatedAt, DateTime.utc(2026, 5, 20, 18));
+      },
+    );
   });
 
   group('LlmSummaryHistoryNotifier.deleteEntry', () {
@@ -245,8 +284,11 @@ void main() {
       );
 
       entries = await container.read(llmSummaryHistoryProvider.future);
-      expect(entries, isEmpty,
-          reason: 'cached value remains until externally invalidated');
+      expect(
+        entries,
+        isEmpty,
+        reason: 'cached value remains until externally invalidated',
+      );
 
       container.invalidate(llmSummaryHistoryProvider);
       entries = await container.read(llmSummaryHistoryProvider.future);
@@ -256,9 +298,10 @@ void main() {
 
     test('no-op when no current directory is set', () async {
       final container = _containerFor(
-          repository: repository,
-          factCacheRepository: factCacheRepository,
-          directoryPath: null);
+        repository: repository,
+        factCacheRepository: factCacheRepository,
+        directoryPath: null,
+      );
       addTearDown(container.dispose);
 
       await container.read(llmSummaryHistoryProvider.future);
@@ -269,19 +312,15 @@ void main() {
     });
   });
 
-  HistoryEntry entry({
-    required String word,
-    String? sourceFile,
-  }) {
+  HistoryEntry entry({required String word, String? sourceFile}) {
     final snap = WordSummary(
       word: word,
       coveredUpToEpisode: sourceFile == null
           ? 1
-          : int.tryParse(sourceFile.split('_').first.replaceAll(
-                    RegExp(r'[^0-9]'),
-                    '',
-                  )) ??
-              1,
+          : int.tryParse(
+                  sourceFile.split('_').first.replaceAll(RegExp(r'[^0-9]'), ''),
+                ) ??
+                1,
       summary: 'summary',
       sourceFile: sourceFile,
       createdAt: DateTime.utc(2026, 5, 21),
@@ -310,9 +349,9 @@ void main() {
 
       await container.read(llmSummaryHistoryProvider.future);
 
-      await container.read(llmSummaryHistoryProvider.notifier).openEntry(
-            entry(word: 'アリス', sourceFile: '040_chapter.txt'),
-          );
+      await container
+          .read(llmSummaryHistoryProvider.notifier)
+          .openEntry(entry(word: 'アリス', sourceFile: '040_chapter.txt'));
 
       final selected = container.read(selectedFileProvider);
       expect(selected?.name, '040_chapter.txt');
@@ -321,8 +360,7 @@ void main() {
     });
 
     test('opens but skips jump when word not in file', () async {
-      final tempDir =
-          await Directory.systemTemp.createTemp('open_entry_miss_');
+      final tempDir = await Directory.systemTemp.createTemp('open_entry_miss_');
       addTearDown(() async {
         if (tempDir.existsSync()) {
           await tempDir.delete(recursive: true);
@@ -340,15 +378,12 @@ void main() {
 
       await container.read(llmSummaryHistoryProvider.future);
 
-      await container.read(llmSummaryHistoryProvider.notifier).openEntry(
-            entry(word: 'いない単語', sourceFile: '050_chapter.txt'),
-          );
+      await container
+          .read(llmSummaryHistoryProvider.notifier)
+          .openEntry(entry(word: 'いない単語', sourceFile: '050_chapter.txt'));
 
       expect(
-        p.equals(
-          container.read(selectedFileProvider)?.path ?? '',
-          file.path,
-        ),
+        p.equals(container.read(selectedFileProvider)?.path ?? '', file.path),
         isTrue,
       );
       expect(container.read(bookmarkJumpLineProvider), isNull);
@@ -364,9 +399,9 @@ void main() {
 
       await container.read(llmSummaryHistoryProvider.future);
 
-      await container.read(llmSummaryHistoryProvider.notifier).openEntry(
-            entry(word: 'アリス', sourceFile: null),
-          );
+      await container
+          .read(llmSummaryHistoryProvider.notifier)
+          .openEntry(entry(word: 'アリス', sourceFile: null));
 
       expect(container.read(selectedFileProvider), isNull);
       expect(container.read(bookmarkJumpLineProvider), isNull);
@@ -382,9 +417,9 @@ void main() {
 
       await container.read(llmSummaryHistoryProvider.future);
 
-      await container.read(llmSummaryHistoryProvider.notifier).openEntry(
-            entry(word: 'アリス', sourceFile: '040_chapter.txt'),
-          );
+      await container
+          .read(llmSummaryHistoryProvider.notifier)
+          .openEntry(entry(word: 'アリス', sourceFile: '040_chapter.txt'));
 
       expect(container.read(selectedFileProvider), isNull);
       expect(container.read(bookmarkJumpLineProvider), isNull);

@@ -22,18 +22,18 @@ class _EmptyHistoryNotifier extends LlmSummaryHistoryNotifier {
 
 void main() {
   group('LeftColumnPanel', () {
-    testWidgets('shows three tabs: ファイル, ブックマーク, 解析履歴',
-        (WidgetTester tester) async {
+    testWidgets('shows three tabs: ファイル, ブックマーク, 解析履歴', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
+          overrides: [libraryPathProvider.overrideWithValue('/library')],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: LeftColumnPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: LeftColumnPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -43,24 +43,27 @@ void main() {
       expect(find.text('解析履歴'), findsOneWidget);
     });
 
-    testWidgets('switching to 解析履歴 tab shows history panel',
-        (WidgetTester tester) async {
+    testWidgets('switching to 解析履歴 tab shows history panel', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
             currentDirectoryProvider.overrideWith(
-                () => _TestCurrentDirectoryNotifier('/library/my_novel')),
+              () => _TestCurrentDirectoryNotifier('/library/my_novel'),
+            ),
             directoryContentsProvider.overrideWith((ref) async {
               return DirectoryContents.empty();
             }),
             llmSummaryHistoryProvider.overrideWith(_EmptyHistoryNotifier.new),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: LeftColumnPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: LeftColumnPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -73,18 +76,16 @@ void main() {
       expect(find.text('解析履歴がありません'), findsOneWidget);
     });
 
-    testWidgets('ファイル tab is selected by default',
-        (WidgetTester tester) async {
+    testWidgets('ファイル tab is selected by default', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
+          overrides: [libraryPathProvider.overrideWithValue('/library')],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: LeftColumnPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: LeftColumnPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -93,23 +94,26 @@ void main() {
       expect(find.text('フォルダを選択してください'), findsOneWidget);
     });
 
-    testWidgets('switching to ブックマーク tab shows bookmark panel',
-        (WidgetTester tester) async {
+    testWidgets('switching to ブックマーク tab shows bookmark panel', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
-            currentDirectoryProvider
-                .overrideWith(() => _TestCurrentDirectoryNotifier('/library')),
+            currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/library'),
+            ),
             directoryContentsProvider.overrideWith((ref) async {
               return DirectoryContents.empty();
             }),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: LeftColumnPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: LeftColumnPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -121,19 +125,18 @@ void main() {
       expect(find.text('作品フォルダを選択してください'), findsOneWidget);
     });
 
-    testWidgets(
-        'switching back to ファイル tab preserves file browser',
-        (WidgetTester tester) async {
+    testWidgets('switching back to ファイル tab preserves file browser', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
+          overrides: [libraryPathProvider.overrideWithValue('/library')],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: LeftColumnPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: LeftColumnPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();

@@ -45,27 +45,29 @@ void main() {
       expect(progressReports.last, 1.0);
     });
 
-    test('throws HttpException and cleans up the partial file on HTTP error',
-        () async {
-      final filePath = p.join(tempDir.path, 'model.bin');
-      final mockClient = MockClient.streaming((request, _) async {
-        return http.StreamedResponse(Stream.value([]), 404);
-      });
+    test(
+      'throws HttpException and cleans up the partial file on HTTP error',
+      () async {
+        final filePath = p.join(tempDir.path, 'model.bin');
+        final mockClient = MockClient.streaming((request, _) async {
+          return http.StreamedResponse(Stream.value([]), 404);
+        });
 
-      await expectLater(
-        downloadFile(
-          mockClient,
-          'https://example.com/model.bin',
-          filePath,
-          'model.bin',
-          null,
-        ),
-        throwsA(isA<HttpException>()),
-      );
+        await expectLater(
+          downloadFile(
+            mockClient,
+            'https://example.com/model.bin',
+            filePath,
+            'model.bin',
+            null,
+          ),
+          throwsA(isA<HttpException>()),
+        );
 
-      expect(File(filePath).existsSync(), isFalse);
-      expect(File('$filePath.part').existsSync(), isFalse);
-    });
+        expect(File(filePath).existsSync(), isFalse);
+        expect(File('$filePath.part').existsSync(), isFalse);
+      },
+    );
   });
 
   group('downloadFile shouldCancel', () {
@@ -100,47 +102,49 @@ void main() {
       expect(File('$filePath.part').existsSync(), isFalse);
     });
 
-    test('shouldCancel() becoming true mid-stream stops the transfer, '
-        'cleans up the temp file, and throws DownloadCancelledException',
-        () async {
-      final filePath = p.join(tempDir.path, 'model.bin');
-      final chunkController = StreamController<List<int>>();
-      var cancelled = false;
+    test(
+      'shouldCancel() becoming true mid-stream stops the transfer, '
+      'cleans up the temp file, and throws DownloadCancelledException',
+      () async {
+        final filePath = p.join(tempDir.path, 'model.bin');
+        final chunkController = StreamController<List<int>>();
+        var cancelled = false;
 
-      final mockClient = MockClient.streaming((request, _) async {
-        return http.StreamedResponse(
-          chunkController.stream,
-          200,
-          contentLength: 100,
+        final mockClient = MockClient.streaming((request, _) async {
+          return http.StreamedResponse(
+            chunkController.stream,
+            200,
+            contentLength: 100,
+          );
+        });
+
+        final future = downloadFile(
+          mockClient,
+          'https://example.com/model.bin',
+          filePath,
+          'model.bin',
+          (fileName, progress) {
+            if (progress != null && progress > 0) {
+              cancelled = true;
+            }
+          },
+          shouldCancel: () => cancelled,
         );
-      });
+        final expectation = expectLater(
+          future,
+          throwsA(isA<DownloadCancelledException>()),
+        );
 
-      final future = downloadFile(
-        mockClient,
-        'https://example.com/model.bin',
-        filePath,
-        'model.bin',
-        (fileName, progress) {
-          if (progress != null && progress > 0) {
-            cancelled = true;
-          }
-        },
-        shouldCancel: () => cancelled,
-      );
-      final expectation = expectLater(
-        future,
-        throwsA(isA<DownloadCancelledException>()),
-      );
+        chunkController.add(List.filled(10, 0));
+        await Future<void>.delayed(Duration.zero);
+        chunkController.add(List.filled(10, 0));
+        await chunkController.close();
+        await expectation;
 
-      chunkController.add(List.filled(10, 0));
-      await Future<void>.delayed(Duration.zero);
-      chunkController.add(List.filled(10, 0));
-      await chunkController.close();
-      await expectation;
-
-      expect(File(filePath).existsSync(), isFalse);
-      expect(File('$filePath.part').existsSync(), isFalse);
-    });
+        expect(File(filePath).existsSync(), isFalse);
+        expect(File('$filePath.part').existsSync(), isFalse);
+      },
+    );
 
     test('default (shouldCancel omitted) behaves exactly as before — no '
         'cancellation checks performed', () async {

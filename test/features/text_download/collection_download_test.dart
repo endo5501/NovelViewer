@@ -45,13 +45,14 @@ class _ArticleSite extends NovelSite {
 MockClient _okClient() =>
     MockClient((request) async => http.Response('ok', 200));
 
-List<String> _txtFiles(Directory dir) => dir
-    .listSync()
-    .whereType<File>()
-    .map((f) => f.uri.pathSegments.last)
-    .where((n) => n.endsWith('.txt'))
-    .toList()
-  ..sort();
+List<String> _txtFiles(Directory dir) =>
+    dir
+        .listSync()
+        .whereType<File>()
+        .map((f) => f.uri.pathSegments.last)
+        .where((n) => n.endsWith('.txt'))
+        .toList()
+      ..sort();
 
 void main() {
   setUpAll(() {
@@ -73,12 +74,18 @@ void main() {
 
     setUp(() {
       root = Directory.systemTemp.createTempSync('coll_dir_test_');
-      service = DownloadService(client: _okClient(), requestDelay: Duration.zero);
+      service = DownloadService(
+        client: _okClient(),
+        requestDelay: Duration.zero,
+      );
     });
     tearDown(() => root.deleteSync(recursive: true));
 
     test('creates a web_<slug> folder from the collection name', () async {
-      final collection = await service.createCollectionDirectory(root.path, 'AI論文まとめ');
+      final collection = await service.createCollectionDirectory(
+        root.path,
+        'AI論文まとめ',
+      );
       expect(collection.folderName, 'web_AI論文まとめ');
       expect(collection.novelId, 'AI論文まとめ');
       expect(Directory(collection.dir.path).existsSync(), isTrue);
@@ -110,15 +117,14 @@ void main() {
       root.deleteSync(recursive: true);
     });
 
-    DownloadService serviceFor(Map<String, ({String title, String? body})> pages) =>
-        DownloadService(client: _okClient(), requestDelay: Duration.zero);
+    DownloadService serviceFor(
+      Map<String, ({String title, String? body})> pages,
+    ) => DownloadService(client: _okClient(), requestDelay: Duration.zero);
 
     test('saves the first article as episode 1 with its own title', () async {
       const url = 'https://blog.example.com/basic';
       final service = serviceFor({});
-      final site = _ArticleSite({
-        url: (title: '基礎編', body: '基礎的な内容の記事本文です。'),
-      });
+      final site = _ArticleSite({url: (title: '基礎編', body: '基礎的な内容の記事本文です。')});
 
       final result = await service.downloadArticleIntoCollection(
         site: site,
@@ -160,97 +166,104 @@ void main() {
       expect(_txtFiles(collectionDir), ['0001_基礎編.txt', '0002_応用編.txt']);
     });
 
-    test('re-downloading the same URL updates the episode without duplicating',
-        () async {
-      const url = 'https://blog.example.com/basic';
-      final service = serviceFor({});
-      final site = _ArticleSite({
-        url: (title: '基礎編', body: '初版の本文。'),
-      });
+    test(
+      're-downloading the same URL updates the episode without duplicating',
+      () async {
+        const url = 'https://blog.example.com/basic';
+        final service = serviceFor({});
+        final site = _ArticleSite({url: (title: '基礎編', body: '初版の本文。')});
 
-      await service.downloadArticleIntoCollection(
-        site: site,
-        url: Uri.parse(url),
-        collectionDir: collectionDir,
-        episodeCacheRepository: cacheRepo,
-      );
-
-      final site2 = _ArticleSite({
-        url: (title: '基礎編', body: '改訂版の本文。'),
-      });
-      final again = await service.downloadArticleIntoCollection(
-        site: site2,
-        url: Uri.parse(url),
-        collectionDir: collectionDir,
-        episodeCacheRepository: cacheRepo,
-      );
-
-      expect(again.episodeIndex, 1);
-      expect(again.updated, isTrue);
-      expect(_txtFiles(collectionDir), ['0001_基礎編.txt']);
-      final saved = File('${collectionDir.path}/0001_基礎編.txt').readAsStringSync();
-      expect(saved, contains('改訂版'));
-    });
-
-    test('updating with a changed title removes the old episode file', () async {
-      const url = 'https://blog.example.com/basic';
-      final service = serviceFor({});
-      await service.downloadArticleIntoCollection(
-        site: _ArticleSite({url: (title: '旧タイトル', body: '本文。')}),
-        url: Uri.parse(url),
-        collectionDir: collectionDir,
-        episodeCacheRepository: cacheRepo,
-      );
-      await service.downloadArticleIntoCollection(
-        site: _ArticleSite({url: (title: '新タイトル', body: '本文。')}),
-        url: Uri.parse(url),
-        collectionDir: collectionDir,
-        episodeCacheRepository: cacheRepo,
-      );
-
-      expect(_txtFiles(collectionDir), ['0001_新タイトル.txt']);
-    });
-
-    test('next index also accounts for on-disk files (stale/missing cache)',
-        () async {
-      // Simulate a folder that already has an episode file but whose cache row
-      // is missing (deleted episode_cache.db / out-of-band folder): a new
-      // article must NOT reuse index 1 and overwrite the existing file.
-      File('${collectionDir.path}/0001_既存記事.txt').writeAsStringSync('既存本文。');
-
-      const url = 'https://blog.example.com/new';
-      final service = serviceFor({});
-      final site = _ArticleSite({url: (title: '新規記事', body: '新規本文。')});
-
-      final result = await service.downloadArticleIntoCollection(
-        site: site,
-        url: Uri.parse(url),
-        collectionDir: collectionDir,
-        episodeCacheRepository: cacheRepo,
-      );
-
-      expect(result.episodeIndex, 2);
-      expect(_txtFiles(collectionDir), ['0001_既存記事.txt', '0002_新規記事.txt']);
-    });
-
-    test('throws EmptyIndexException and saves nothing when body is empty',
-        () async {
-      const url = 'https://blog.example.com/spa';
-      final service = serviceFor({});
-      final site = _ArticleSite({url: (title: 'JSページ', body: null)});
-
-      await expectLater(
-        service.downloadArticleIntoCollection(
+        await service.downloadArticleIntoCollection(
           site: site,
           url: Uri.parse(url),
           collectionDir: collectionDir,
           episodeCacheRepository: cacheRepo,
-        ),
-        throwsA(isA<EmptyIndexException>()),
-      );
-      expect(_txtFiles(collectionDir), isEmpty);
-      expect(await cacheRepo.findByUrl(url), isNull);
-    });
+        );
+
+        final site2 = _ArticleSite({url: (title: '基礎編', body: '改訂版の本文。')});
+        final again = await service.downloadArticleIntoCollection(
+          site: site2,
+          url: Uri.parse(url),
+          collectionDir: collectionDir,
+          episodeCacheRepository: cacheRepo,
+        );
+
+        expect(again.episodeIndex, 1);
+        expect(again.updated, isTrue);
+        expect(_txtFiles(collectionDir), ['0001_基礎編.txt']);
+        final saved = File(
+          '${collectionDir.path}/0001_基礎編.txt',
+        ).readAsStringSync();
+        expect(saved, contains('改訂版'));
+      },
+    );
+
+    test(
+      'updating with a changed title removes the old episode file',
+      () async {
+        const url = 'https://blog.example.com/basic';
+        final service = serviceFor({});
+        await service.downloadArticleIntoCollection(
+          site: _ArticleSite({url: (title: '旧タイトル', body: '本文。')}),
+          url: Uri.parse(url),
+          collectionDir: collectionDir,
+          episodeCacheRepository: cacheRepo,
+        );
+        await service.downloadArticleIntoCollection(
+          site: _ArticleSite({url: (title: '新タイトル', body: '本文。')}),
+          url: Uri.parse(url),
+          collectionDir: collectionDir,
+          episodeCacheRepository: cacheRepo,
+        );
+
+        expect(_txtFiles(collectionDir), ['0001_新タイトル.txt']);
+      },
+    );
+
+    test(
+      'next index also accounts for on-disk files (stale/missing cache)',
+      () async {
+        // Simulate a folder that already has an episode file but whose cache row
+        // is missing (deleted episode_cache.db / out-of-band folder): a new
+        // article must NOT reuse index 1 and overwrite the existing file.
+        File('${collectionDir.path}/0001_既存記事.txt').writeAsStringSync('既存本文。');
+
+        const url = 'https://blog.example.com/new';
+        final service = serviceFor({});
+        final site = _ArticleSite({url: (title: '新規記事', body: '新規本文。')});
+
+        final result = await service.downloadArticleIntoCollection(
+          site: site,
+          url: Uri.parse(url),
+          collectionDir: collectionDir,
+          episodeCacheRepository: cacheRepo,
+        );
+
+        expect(result.episodeIndex, 2);
+        expect(_txtFiles(collectionDir), ['0001_既存記事.txt', '0002_新規記事.txt']);
+      },
+    );
+
+    test(
+      'throws EmptyIndexException and saves nothing when body is empty',
+      () async {
+        const url = 'https://blog.example.com/spa';
+        final service = serviceFor({});
+        final site = _ArticleSite({url: (title: 'JSページ', body: null)});
+
+        await expectLater(
+          service.downloadArticleIntoCollection(
+            site: site,
+            url: Uri.parse(url),
+            collectionDir: collectionDir,
+            episodeCacheRepository: cacheRepo,
+          ),
+          throwsA(isA<EmptyIndexException>()),
+        );
+        expect(_txtFiles(collectionDir), isEmpty);
+        expect(await cacheRepo.findByUrl(url), isNull);
+      },
+    );
   });
 
   group('same URL across separate collections is independent', () {
@@ -262,15 +275,19 @@ void main() {
       final dbB = EpisodeCacheDatabase(dirB.path);
       final cacheA = EpisodeCacheRepository(dbA);
       final cacheB = EpisodeCacheRepository(dbB);
-      final service =
-          DownloadService(client: _okClient(), requestDelay: Duration.zero);
+      final service = DownloadService(
+        client: _okClient(),
+        requestDelay: Duration.zero,
+      );
 
       const shared = 'https://blog.example.com/shared';
       final site = _ArticleSite({shared: (title: '共有記事', body: '本文。')});
 
       // Pre-seed collection A with one other article so its next index is 2.
       await service.downloadArticleIntoCollection(
-        site: _ArticleSite({'https://blog.example.com/other': (title: '別記事', body: '本文。')}),
+        site: _ArticleSite({
+          'https://blog.example.com/other': (title: '別記事', body: '本文。'),
+        }),
         url: Uri.parse('https://blog.example.com/other'),
         collectionDir: dirA,
         episodeCacheRepository: cacheA,

@@ -8,21 +8,20 @@ TtsSegment _segment({
   required int index,
   Uint8List? audioData,
   bool skip = false,
-}) =>
-    TtsSegment(
-      id: index + 1,
-      episodeId: 1,
-      segmentIndex: index,
-      text: '文$index。',
-      textOffset: index * 4,
-      textLength: 3,
-      audioData: audioData,
-      sampleCount: audioData == null ? null : 5,
-      refWavPath: null,
-      memo: null,
-      skip: skip,
-      createdAt: DateTime.utc(2026, 1, 1),
-    );
+}) => TtsSegment(
+  id: index + 1,
+  episodeId: 1,
+  segmentIndex: index,
+  text: '文$index。',
+  textOffset: index * 4,
+  textLength: 3,
+  audioData: audioData,
+  sampleCount: audioData == null ? null : 5,
+  refWavPath: null,
+  memo: null,
+  skip: skip,
+  createdAt: DateTime.utc(2026, 1, 1),
+);
 
 Uint8List _wav(int marker) => Uint8List.fromList([marker, marker, marker]);
 

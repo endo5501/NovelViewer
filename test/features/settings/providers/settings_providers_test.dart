@@ -80,18 +80,22 @@ void main() {
       expect(prefs.getDouble('column_spacing'), isNull);
     });
 
-    test('persistColumnSpacing saves current state to SharedPreferences',
-        () async {
-      final container = createContainer();
-      addTearDown(container.dispose);
+    test(
+      'persistColumnSpacing saves current state to SharedPreferences',
+      () async {
+        final container = createContainer();
+        addTearDown(container.dispose);
 
-      container.read(columnSpacingProvider.notifier).previewColumnSpacing(12.0);
-      await container
-          .read(columnSpacingProvider.notifier)
-          .persistColumnSpacing();
-      expect(container.read(columnSpacingProvider), 12.0);
-      expect(prefs.getDouble('column_spacing'), 12.0);
-    });
+        container
+            .read(columnSpacingProvider.notifier)
+            .previewColumnSpacing(12.0);
+        await container
+            .read(columnSpacingProvider.notifier)
+            .persistColumnSpacing();
+        expect(container.read(columnSpacingProvider), 12.0);
+        expect(prefs.getDouble('column_spacing'), 12.0);
+      },
+    );
   });
 
   group('themeModeProvider', () {

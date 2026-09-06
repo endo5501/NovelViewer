@@ -52,10 +52,11 @@ void main() {
               httpClientProvider.overrideWithValue(httpClient),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: SettingsDialog())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: SettingsDialog()),
+          ),
         ),
       );
     }
@@ -76,10 +77,11 @@ void main() {
           httpClientProvider.overrideWithValue(httpClient),
         ],
         child: const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(body: SettingsDialog())),
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: SettingsDialog()),
+        ),
       );
 
       await tester.runAsync(() async {
@@ -115,8 +117,9 @@ void main() {
       expect(find.text(labelUnset), findsOneWidget);
     });
 
-    testWidgets('shows OpenAI fields when OpenAI provider selected',
-        (tester) async {
+    testWidgets('shows OpenAI fields when OpenAI provider selected', (
+      tester,
+    ) async {
       await pumpSettingsDialog(
         tester,
         prefsValues: {
@@ -131,8 +134,9 @@ void main() {
       expect(find.text(labelModel), findsOneWidget);
     });
 
-    testWidgets('shows Ollama model dropdown when Ollama provider selected',
-        (tester) async {
+    testWidgets('shows Ollama model dropdown when Ollama provider selected', (
+      tester,
+    ) async {
       final mockClient = createMockOllamaClient();
       await pumpSettingsDialogWithOllama(
         tester,
@@ -158,8 +162,7 @@ void main() {
       expect(find.text('qwen3:8b'), findsOneWidget);
     });
 
-    testWidgets('auto-fetches models when Ollama is selected',
-        (tester) async {
+    testWidgets('auto-fetches models when Ollama is selected', (tester) async {
       final mockClient = createMockOllamaClient();
       await pumpSettingsDialog(tester, httpClient: mockClient);
 
@@ -256,8 +259,9 @@ void main() {
       expect(find.text('qwen3:8b'), findsOneWidget);
     });
 
-    testWidgets('clears selection when saved model is not in list',
-        (tester) async {
+    testWidgets('clears selection when saved model is not in list', (
+      tester,
+    ) async {
       final mockClient = createMockOllamaClient();
       await pumpSettingsDialogWithOllama(
         tester,

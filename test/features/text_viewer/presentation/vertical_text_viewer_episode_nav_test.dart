@@ -38,8 +38,9 @@ Widget _wrap({
       directoryContentsProvider.overrideWith((ref) async {
         return DirectoryContents(files: files, subdirectories: const []);
       }),
-      selectedFileProvider
-          .overrideWith(() => _StubSelectedFileNotifier(selected)),
+      selectedFileProvider.overrideWith(
+        () => _StubSelectedFileNotifier(selected),
+      ),
     ],
     child: MaterialApp(
       locale: const Locale('ja'),
@@ -72,7 +73,8 @@ Widget _wrap({
 /// see `AdjacentFiles.empty`.
 Future<void> _primeAdjacentFiles(WidgetTester tester) async {
   final container = ProviderScope.containerOf(
-      tester.element(find.byType(VerticalTextViewer)));
+    tester.element(find.byType(VerticalTextViewer)),
+  );
   await container.read(directoryContentsProvider.future);
   await tester.pumpAndSettle();
   container.read(adjacentFilesProvider);
@@ -111,11 +113,13 @@ void main() {
 
   group('VerticalTextViewer 2-step next-episode navigation', () {
     testWidgets('arrow on last page shows next-episode prompt', (tester) async {
-      await tester.pumpWidget(_wrap(
-        files: const [_ep1, _ep2, _ep3],
-        selected: _ep2,
-        segments: longSegments,
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          files: const [_ep1, _ep2, _ep3],
+          selected: _ep2,
+          segments: longSegments,
+        ),
+      );
       await tester.pumpAndSettle();
       await _primeAdjacentFiles(tester);
 
@@ -129,23 +133,33 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pump();
 
-      expect(find.textContaining('003-ep3.txt'), findsOneWidget,
-          reason: 'Prompt should mention the next episode name');
-      expect(find.textContaining('もう一度'), findsOneWidget,
-          reason: 'Prompt should hint to press again');
+      expect(
+        find.textContaining('003-ep3.txt'),
+        findsOneWidget,
+        reason: 'Prompt should mention the next episode name',
+      );
+      expect(
+        find.textContaining('もう一度'),
+        findsOneWidget,
+        reason: 'Prompt should hint to press again',
+      );
     });
 
-    testWidgets('second press confirms and sets intent=fromStart',
-        (tester) async {
+    testWidgets('second press confirms and sets intent=fromStart', (
+      tester,
+    ) async {
       late ProviderContainer container;
-      await tester.pumpWidget(_wrap(
-        files: const [_ep1, _ep2, _ep3],
-        selected: _ep2,
-        segments: longSegments,
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          files: const [_ep1, _ep2, _ep3],
+          selected: _ep2,
+          segments: longSegments,
+        ),
+      );
       await tester.pumpAndSettle();
       container = ProviderScope.containerOf(
-          tester.element(find.byType(VerticalTextViewer)));
+        tester.element(find.byType(VerticalTextViewer)),
+      );
       await _primeAdjacentFiles(tester);
 
       await _navigateToLastPage(tester);
@@ -157,17 +171,21 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pumpAndSettle();
 
-      expect(container.read(pendingFileEntryIntentProvider),
-          FileEntryStartIntent.fromStart);
+      expect(
+        container.read(pendingFileEntryIntentProvider),
+        FileEntryStartIntent.fromStart,
+      );
       expect(container.read(selectedFileProvider), _ep3);
     });
 
     testWidgets('prompt disappears after timeout', (tester) async {
-      await tester.pumpWidget(_wrap(
-        files: const [_ep1, _ep2, _ep3],
-        selected: _ep2,
-        segments: longSegments,
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          files: const [_ep1, _ep2, _ep3],
+          selected: _ep2,
+          segments: longSegments,
+        ),
+      );
       await tester.pumpAndSettle();
       await _primeAdjacentFiles(tester);
       await _navigateToLastPage(tester);
@@ -180,41 +198,54 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
       expect(find.textContaining('もう一度'), findsNothing);
       final indicator = _pageIndicator(tester);
-      expect(indicator, isNotNull,
-          reason: 'Page number indicator should return after timeout');
+      expect(
+        indicator,
+        isNotNull,
+        reason: 'Page number indicator should return after timeout',
+      );
     });
 
-    testWidgets('on the very last episode the prompt does not appear',
-        (tester) async {
+    testWidgets('on the very last episode the prompt does not appear', (
+      tester,
+    ) async {
       late ProviderContainer container;
-      await tester.pumpWidget(_wrap(
-        files: const [_ep1, _ep2, _ep3],
-        selected: _ep3,
-        segments: longSegments,
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          files: const [_ep1, _ep2, _ep3],
+          selected: _ep3,
+          segments: longSegments,
+        ),
+      );
       await tester.pumpAndSettle();
       container = ProviderScope.containerOf(
-          tester.element(find.byType(VerticalTextViewer)));
+        tester.element(find.byType(VerticalTextViewer)),
+      );
 
       await _navigateToLastPage(tester);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pump();
 
-      expect(find.textContaining('もう一度'), findsNothing,
-          reason: 'No next episode → no prompt');
+      expect(
+        find.textContaining('もう一度'),
+        findsNothing,
+        reason: 'No next episode → no prompt',
+      );
       expect(container.read(pendingFileEntryIntentProvider), isNull);
       expect(container.read(selectedFileProvider), _ep3);
     });
   });
 
   group('VerticalTextViewer 2-step previous-episode navigation', () {
-    testWidgets('arrow on first page shows previous-episode prompt',
-        (tester) async {
-      await tester.pumpWidget(_wrap(
-        files: const [_ep1, _ep2, _ep3],
-        selected: _ep2,
-        segments: longSegments,
-      ));
+    testWidgets('arrow on first page shows previous-episode prompt', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          files: const [_ep1, _ep2, _ep3],
+          selected: _ep2,
+          segments: longSegments,
+        ),
+      );
       await tester.pumpAndSettle();
       await _primeAdjacentFiles(tester);
 
@@ -226,17 +257,21 @@ void main() {
       expect(find.textContaining('もう一度'), findsOneWidget);
     });
 
-    testWidgets('second press confirms and sets intent=fromEnd',
-        (tester) async {
+    testWidgets('second press confirms and sets intent=fromEnd', (
+      tester,
+    ) async {
       late ProviderContainer container;
-      await tester.pumpWidget(_wrap(
-        files: const [_ep1, _ep2, _ep3],
-        selected: _ep2,
-        segments: longSegments,
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          files: const [_ep1, _ep2, _ep3],
+          selected: _ep2,
+          segments: longSegments,
+        ),
+      );
       await tester.pumpAndSettle();
       container = ProviderScope.containerOf(
-          tester.element(find.byType(VerticalTextViewer)));
+        tester.element(find.byType(VerticalTextViewer)),
+      );
       await _primeAdjacentFiles(tester);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
@@ -244,22 +279,28 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pumpAndSettle();
 
-      expect(container.read(pendingFileEntryIntentProvider),
-          FileEntryStartIntent.fromEnd);
+      expect(
+        container.read(pendingFileEntryIntentProvider),
+        FileEntryStartIntent.fromEnd,
+      );
       expect(container.read(selectedFileProvider), _ep1);
     });
 
-    testWidgets('on the very first episode the prompt does not appear',
-        (tester) async {
+    testWidgets('on the very first episode the prompt does not appear', (
+      tester,
+    ) async {
       late ProviderContainer container;
-      await tester.pumpWidget(_wrap(
-        files: const [_ep1, _ep2, _ep3],
-        selected: _ep1,
-        segments: longSegments,
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          files: const [_ep1, _ep2, _ep3],
+          selected: _ep1,
+          segments: longSegments,
+        ),
+      );
       await tester.pumpAndSettle();
       container = ProviderScope.containerOf(
-          tester.element(find.byType(VerticalTextViewer)));
+        tester.element(find.byType(VerticalTextViewer)),
+      );
       await _primeAdjacentFiles(tester);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
@@ -272,81 +313,105 @@ void main() {
   });
 
   group('VerticalTextViewer boundary navigation clears stale UI state', () {
-    testWidgets('confirming next-episode navigation drops selection and hover',
-        (tester) async {
-      var selectionResetCount = 0;
-      var hoverHideCount = 0;
-      await tester.pumpWidget(_wrap(
-        files: const [_ep1, _ep2, _ep3],
-        selected: _ep2,
-        segments: longSegments,
-        onSelectionChanged: (text) {
-          if (text == null) selectionResetCount++;
-        },
-        onHoverHideRequest: () => hoverHideCount++,
-      ));
-      await tester.pumpAndSettle();
-      await _primeAdjacentFiles(tester);
-      await _navigateToLastPage(tester);
-      // Reset counters: only count what happens during the confirmation.
-      selectionResetCount = 0;
-      hoverHideCount = 0;
+    testWidgets(
+      'confirming next-episode navigation drops selection and hover',
+      (tester) async {
+        var selectionResetCount = 0;
+        var hoverHideCount = 0;
+        await tester.pumpWidget(
+          _wrap(
+            files: const [_ep1, _ep2, _ep3],
+            selected: _ep2,
+            segments: longSegments,
+            onSelectionChanged: (text) {
+              if (text == null) selectionResetCount++;
+            },
+            onHoverHideRequest: () => hoverHideCount++,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await _primeAdjacentFiles(tester);
+        await _navigateToLastPage(tester);
+        // Reset counters: only count what happens during the confirmation.
+        selectionResetCount = 0;
+        hoverHideCount = 0;
 
-      // First press → prompt
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-      await tester.pump(const Duration(milliseconds: 350));
-      // Second press → confirm navigation
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-      await tester.pumpAndSettle();
+        // First press → prompt
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+        await tester.pump(const Duration(milliseconds: 350));
+        // Second press → confirm navigation
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+        await tester.pumpAndSettle();
 
-      expect(selectionResetCount, greaterThanOrEqualTo(1),
-          reason: 'Confirming file switch must clear active selection');
-      expect(hoverHideCount, greaterThanOrEqualTo(1),
-          reason: 'Confirming file switch must drop any hover popup');
-    });
+        expect(
+          selectionResetCount,
+          greaterThanOrEqualTo(1),
+          reason: 'Confirming file switch must clear active selection',
+        );
+        expect(
+          hoverHideCount,
+          greaterThanOrEqualTo(1),
+          reason: 'Confirming file switch must drop any hover popup',
+        );
+      },
+    );
 
-    testWidgets('confirming previous-episode navigation drops selection and hover',
-        (tester) async {
-      var selectionResetCount = 0;
-      var hoverHideCount = 0;
-      await tester.pumpWidget(_wrap(
-        files: const [_ep1, _ep2, _ep3],
-        selected: _ep2,
-        segments: longSegments,
-        onSelectionChanged: (text) {
-          if (text == null) selectionResetCount++;
-        },
-        onHoverHideRequest: () => hoverHideCount++,
-      ));
-      await tester.pumpAndSettle();
-      await _primeAdjacentFiles(tester);
-      selectionResetCount = 0;
-      hoverHideCount = 0;
+    testWidgets(
+      'confirming previous-episode navigation drops selection and hover',
+      (tester) async {
+        var selectionResetCount = 0;
+        var hoverHideCount = 0;
+        await tester.pumpWidget(
+          _wrap(
+            files: const [_ep1, _ep2, _ep3],
+            selected: _ep2,
+            segments: longSegments,
+            onSelectionChanged: (text) {
+              if (text == null) selectionResetCount++;
+            },
+            onHoverHideRequest: () => hoverHideCount++,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await _primeAdjacentFiles(tester);
+        selectionResetCount = 0;
+        hoverHideCount = 0;
 
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-      await tester.pump(const Duration(milliseconds: 350));
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-      await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pumpAndSettle();
 
-      expect(selectionResetCount, greaterThanOrEqualTo(1),
-          reason: 'Confirming prev-episode navigation must clear selection');
-      expect(hoverHideCount, greaterThanOrEqualTo(1),
-          reason: 'Confirming prev-episode navigation must drop hover popup');
-    });
+        expect(
+          selectionResetCount,
+          greaterThanOrEqualTo(1),
+          reason: 'Confirming prev-episode navigation must clear selection',
+        );
+        expect(
+          hoverHideCount,
+          greaterThanOrEqualTo(1),
+          reason: 'Confirming prev-episode navigation must drop hover popup',
+        );
+      },
+    );
   });
 
   group('VerticalTextViewer boundary navigation rate-limiting', () {
-    testWidgets('held arrow key (rapid repeats) does not auto-confirm',
-        (tester) async {
+    testWidgets('held arrow key (rapid repeats) does not auto-confirm', (
+      tester,
+    ) async {
       late ProviderContainer container;
-      await tester.pumpWidget(_wrap(
-        files: const [_ep1, _ep2, _ep3],
-        selected: _ep2,
-        segments: longSegments,
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          files: const [_ep1, _ep2, _ep3],
+          selected: _ep2,
+          segments: longSegments,
+        ),
+      );
       await tester.pumpAndSettle();
       container = ProviderScope.containerOf(
-          tester.element(find.byType(VerticalTextViewer)));
+        tester.element(find.byType(VerticalTextViewer)),
+      );
       await _primeAdjacentFiles(tester);
       await _navigateToLastPage(tester);
 
@@ -364,23 +429,33 @@ void main() {
       await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pumpAndSettle();
 
-      expect(container.read(selectedFileProvider), _ep2,
-          reason: 'Rapid repeats within cooldown must not navigate');
-      expect(container.read(pendingFileEntryIntentProvider), isNull,
-          reason: 'Intent must not be set by rapid repeats');
+      expect(
+        container.read(selectedFileProvider),
+        _ep2,
+        reason: 'Rapid repeats within cooldown must not navigate',
+      );
+      expect(
+        container.read(pendingFileEntryIntentProvider),
+        isNull,
+        reason: 'Intent must not be set by rapid repeats',
+      );
     });
 
-    testWidgets('deliberate second press AFTER the cooldown confirms',
-        (tester) async {
+    testWidgets('deliberate second press AFTER the cooldown confirms', (
+      tester,
+    ) async {
       late ProviderContainer container;
-      await tester.pumpWidget(_wrap(
-        files: const [_ep1, _ep2, _ep3],
-        selected: _ep2,
-        segments: longSegments,
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          files: const [_ep1, _ep2, _ep3],
+          selected: _ep2,
+          segments: longSegments,
+        ),
+      );
       await tester.pumpAndSettle();
       container = ProviderScope.containerOf(
-          tester.element(find.byType(VerticalTextViewer)));
+        tester.element(find.byType(VerticalTextViewer)),
+      );
       await _primeAdjacentFiles(tester);
       await _navigateToLastPage(tester);
 
@@ -393,8 +468,11 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pumpAndSettle();
 
-      expect(container.read(selectedFileProvider), _ep3,
-          reason: 'Deliberate press after cooldown must confirm navigation');
+      expect(
+        container.read(selectedFileProvider),
+        _ep3,
+        reason: 'Deliberate press after cooldown must confirm navigation',
+      );
     });
   });
 }

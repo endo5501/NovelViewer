@@ -232,17 +232,21 @@ class DownloadNotifier extends Notifier<DownloadState> {
       if (existingCollectionPath != null) {
         collectionDir = Directory(existingCollectionPath);
         folderName = p.basename(existingCollectionPath);
-        novelId =
-            folderName.startsWith('web_') ? folderName.substring(4) : folderName;
-        final existingMeta =
-            await ref.read(novelRepositoryProvider).findByFolderName(folderName);
+        novelId = folderName.startsWith('web_')
+            ? folderName.substring(4)
+            : folderName;
+        final existingMeta = await ref
+            .read(novelRepositoryProvider)
+            .findByFolderName(folderName);
         collectionTitle = existingMeta?.title ?? novelId;
       } else {
         final name = (newCollectionName?.trim().isNotEmpty ?? false)
             ? newCollectionName!.trim()
             : article.title;
-        final created =
-            await service.createCollectionDirectory(libraryPath, name);
+        final created = await service.createCollectionDirectory(
+          libraryPath,
+          name,
+        );
         collectionDir = created.dir;
         folderName = created.folderName;
         novelId = created.novelId;
@@ -266,7 +270,9 @@ class DownloadNotifier extends Notifier<DownloadState> {
           .where((f) => f.path.endsWith('.txt'))
           .length;
 
-      await ref.read(novelRepositoryProvider).upsert(
+      await ref
+          .read(novelRepositoryProvider)
+          .upsert(
             NovelMetadata(
               siteType: GenericWebSite.siteTypeId,
               novelId: novelId,
@@ -289,8 +295,7 @@ class DownloadNotifier extends Notifier<DownloadState> {
       } else if (e is EmptyIndexException) {
         state = state.copyWith(
           status: DownloadStatus.error,
-          errorMessage:
-              '本文を抽出できませんでした。JavaScriptで描画されるページか、本文の少ないページの可能性があります',
+          errorMessage: '本文を抽出できませんでした。JavaScriptで描画されるページか、本文の少ないページの可能性があります',
         );
       } else {
         state = state.copyWith(
@@ -317,9 +322,13 @@ class DownloadNotifier extends Notifier<DownloadState> {
   }) async {
     final service = ref.read(downloadServiceFactoryProvider)();
     try {
-      final created =
-          await service.createCollectionDirectory(libraryPath, name);
-      await ref.read(novelRepositoryProvider).upsert(
+      final created = await service.createCollectionDirectory(
+        libraryPath,
+        name,
+      );
+      await ref
+          .read(novelRepositoryProvider)
+          .upsert(
             NovelMetadata(
               siteType: GenericWebSite.siteTypeId,
               novelId: created.novelId,
@@ -377,10 +386,7 @@ class DownloadNotifier extends Notifier<DownloadState> {
         return;
       }
 
-      await startDownload(
-        url: Uri.parse(metadata.url),
-        outputPath: parentPath,
-      );
+      await startDownload(url: Uri.parse(metadata.url), outputPath: parentPath);
     } catch (e) {
       state = DownloadState(
         status: DownloadStatus.error,

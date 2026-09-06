@@ -11,8 +11,7 @@ class SearchResultsPanel extends ConsumerStatefulWidget {
   const SearchResultsPanel({super.key});
 
   @override
-  ConsumerState<SearchResultsPanel> createState() =>
-      _SearchResultsPanelState();
+  ConsumerState<SearchResultsPanel> createState() => _SearchResultsPanelState();
 }
 
 class _SearchResultsPanelState extends ConsumerState<SearchResultsPanel> {
@@ -30,8 +29,7 @@ class _SearchResultsPanelState extends ConsumerState<SearchResultsPanel> {
       }
       // Swallow Tab while the search field is focused so it neither switches
       // panes nor moves focus away mid-typing.
-      if (event is KeyDownEvent &&
-          event.logicalKey == LogicalKeyboardKey.tab) {
+      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.tab) {
         return KeyEventResult.handled;
       }
       return KeyEventResult.ignored;
@@ -75,7 +73,8 @@ class _SearchResultsPanelState extends ConsumerState<SearchResultsPanel> {
   void _onSubmitted(String value) {
     final trimmed = value.trim();
     ref.read(selectedSearchMatchProvider.notifier).clear();
-    ref.read(searchQueryProvider.notifier)
+    ref
+        .read(searchQueryProvider.notifier)
         .setQuery(trimmed.isEmpty ? null : trimmed);
   }
 
@@ -109,14 +108,28 @@ class _SearchResultsPanelState extends ConsumerState<SearchResultsPanel> {
         Expanded(
           child: resultsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(child: Text(AppLocalizations.of(context)!.common_errorPrefix(error.toString()))),
+            error: (error, _) => Center(
+              child: Text(
+                AppLocalizations.of(
+                  context,
+                )!.common_errorPrefix(error.toString()),
+              ),
+            ),
             data: (results) {
               if (results == null) {
-                return Center(child: Text(AppLocalizations.of(context)!.textSearch_enterQueryPrompt));
+                return Center(
+                  child: Text(
+                    AppLocalizations.of(context)!.textSearch_enterQueryPrompt,
+                  ),
+                );
               }
 
               if (results.isEmpty) {
-                return Center(child: Text(AppLocalizations.of(context)!.textSearch_noResults));
+                return Center(
+                  child: Text(
+                    AppLocalizations.of(context)!.textSearch_noResults,
+                  ),
+                );
               }
 
               return ListView.builder(
@@ -141,10 +154,7 @@ class _SearchResultFileGroup extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final fileEntry = FileEntry(
-      name: result.fileName,
-      path: result.filePath,
-    );
+    final fileEntry = FileEntry(name: result.fileName, path: result.filePath);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,40 +165,45 @@ class _SearchResultFileGroup extends ConsumerWidget {
             ref.read(selectedSearchMatchProvider.notifier).clear();
           },
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             child: Text(
               result.fileName,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
           ),
         ),
-        ...result.matches.map((match) => InkWell(
-              onTap: () {
-                ref.read(selectedFileProvider.notifier).selectFile(fileEntry);
-                final query = ref.read(searchQueryProvider);
-                if (query != null) {
-                  ref.read(selectedSearchMatchProvider.notifier).select(
-                        filePath: result.filePath,
-                        lineNumber: match.lineNumber,
-                        query: query,
-                      );
-                }
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12.0, vertical: 2.0),
-                child: Text(
-                  'L${match.lineNumber}: ${match.contextText}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+        ...result.matches.map(
+          (match) => InkWell(
+            onTap: () {
+              ref.read(selectedFileProvider.notifier).selectFile(fileEntry);
+              final query = ref.read(searchQueryProvider);
+              if (query != null) {
+                ref
+                    .read(selectedSearchMatchProvider.notifier)
+                    .select(
+                      filePath: result.filePath,
+                      lineNumber: match.lineNumber,
+                      query: query,
+                    );
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 2.0,
               ),
-            )),
+              child: Text(
+                'L${match.lineNumber}: ${match.contextText}',
+                style: Theme.of(context).textTheme.bodySmall,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ),
         const Divider(height: 8),
       ],
     );

@@ -35,13 +35,17 @@ class OllamaClient extends LlmClient {
     final models = decoded is Map<String, dynamic> ? decoded['models'] : null;
     if (models is! List) {
       throw LlmResponseFormatException.withBody(
-        'Ollama /api/tags response has no models list', body);
+        'Ollama /api/tags response has no models list',
+        body,
+      );
     }
     return models.map((m) {
       final name = m is Map<String, dynamic> ? m['name'] : null;
       if (name is! String) {
         throw LlmResponseFormatException.withBody(
-          'Ollama model entry has a missing or non-string name', body);
+          'Ollama model entry has a missing or non-string name',
+          body,
+        );
       }
       return name;
     }).toList();
@@ -82,7 +86,8 @@ class OllamaClient extends LlmClient {
     final response = json['response'];
     if (response is! String) {
       throw LlmResponseFormatException(
-        'Ollama /api/generate response field is missing or not a string');
+        'Ollama /api/generate response field is missing or not a string',
+      );
     }
     return response;
   }
@@ -98,12 +103,12 @@ class OllamaClient extends LlmClient {
 
   /// Translates a response schema into Ollama's `format` field (a JSON Schema).
   static Map<String, dynamic> _formatFor(LlmResponseSchema schema) => {
-        'type': 'object',
-        'properties': {
-          schema.fieldName: const {'type': 'string'},
-        },
-        'required': [schema.fieldName],
-      };
+    'type': 'object',
+    'properties': {
+      schema.fieldName: const {'type': 'string'},
+    },
+    'required': [schema.fieldName],
+  };
 
   Future<Map<String, dynamic>> _postJson(
     String path,
@@ -118,7 +123,9 @@ class OllamaClient extends LlmClient {
     final decoded = jsonDecode(decodedBody);
     if (decoded is! Map<String, dynamic>) {
       throw LlmResponseFormatException.withBody(
-        'expected a JSON object at the top level', decodedBody);
+        'expected a JSON object at the top level',
+        decodedBody,
+      );
     }
     return decoded;
   }

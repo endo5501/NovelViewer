@@ -19,24 +19,23 @@ void main() {
   });
 
   Episode ep(int i) => Episode(
-        index: i,
-        title: '第$i話',
-        url: Uri.parse('https://example.com/ep/$i'),
-        updatedAt: '2025/01/01 00:00',
-      );
+    index: i,
+    title: '第$i話',
+    url: Uri.parse('https://example.com/ep/$i'),
+    updatedAt: '2025/01/01 00:00',
+  );
 
-  List<File> txtFiles() => Directory('${tempDir.path}/test_novel1')
-      .listSync()
-      .whereType<File>()
-      .where((f) => f.path.endsWith('.txt'))
-      .toList();
+  List<File> txtFiles() => Directory(
+    '${tempDir.path}/test_novel1',
+  ).listSync().whereType<File>().where((f) => f.path.endsWith('.txt')).toList();
 
   group('Download cancellation (F103)', () {
     test('cancelling mid-download stops further downloads, keeps partial, '
         'and closes the client', () async {
       final token = CancellationToken();
-      final recording =
-          RecordingClient(routingClient(const [FakeRoute('', body: 'ok')]));
+      final recording = RecordingClient(
+        routingClient(const [FakeRoute('', body: 'ok')]),
+      );
       final service = DownloadService(
         client: recording,
         requestDelay: Duration.zero,
@@ -116,28 +115,32 @@ void main() {
       expect(txtFiles(), hasLength(3));
     });
 
-    test('cancelling before the first index fetch aborts immediately',
-        () async {
-      final token = CancellationToken()..cancel();
-      final service = DownloadService(
-        client: routingClient(const [FakeRoute('', body: 'ok')]),
-        requestDelay: Duration.zero,
-      );
+    test(
+      'cancelling before the first index fetch aborts immediately',
+      () async {
+        final token = CancellationToken()..cancel();
+        final service = DownloadService(
+          client: routingClient(const [FakeRoute('', body: 'ok')]),
+          requestDelay: Duration.zero,
+        );
 
-      await expectLater(
-        service.downloadNovel(
-          site: FakeNovelSite(episodes: [ep(1)]),
-          url: Uri.parse('https://example.com/index'),
-          outputPath: tempDir.path,
-          cancelToken: token,
-        ),
-        throwsA(isA<CancelledException>()),
-      );
-      // Nothing was created.
-      expect(Directory('${tempDir.path}/test_novel1').existsSync()
+        await expectLater(
+          service.downloadNovel(
+            site: FakeNovelSite(episodes: [ep(1)]),
+            url: Uri.parse('https://example.com/index'),
+            outputPath: tempDir.path,
+            cancelToken: token,
+          ),
+          throwsA(isA<CancelledException>()),
+        );
+        // Nothing was created.
+        expect(
+          Directory('${tempDir.path}/test_novel1').existsSync()
               ? txtFiles()
               : <File>[],
-          isEmpty);
-    });
+          isEmpty,
+        );
+      },
+    );
   });
 }

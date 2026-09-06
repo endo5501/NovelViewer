@@ -15,8 +15,8 @@ enum TtsExportState { idle, exporting }
 
 final ttsExportStateProvider =
     NotifierProvider<TtsExportStateNotifier, TtsExportState>(
-  TtsExportStateNotifier.new,
-);
+      TtsExportStateNotifier.new,
+    );
 
 class TtsExportStateNotifier extends Notifier<TtsExportState> {
   @override
@@ -29,8 +29,8 @@ class TtsExportStateNotifier extends Notifier<TtsExportState> {
 
 final ttsExportProgressProvider =
     NotifierProvider<TtsExportProgressNotifier, TtsGenerationProgress>(
-  TtsExportProgressNotifier.new,
-);
+      TtsExportProgressNotifier.new,
+    );
 
 class TtsExportProgressNotifier extends Notifier<TtsGenerationProgress> {
   @override
@@ -98,8 +98,9 @@ Future<bool> exportEpisodeToMp3({
       sampleRate: sampleRate,
       bitrate: 128,
       onProgress: (current, total) {
-        progressNotifier
-            .set(TtsGenerationProgress(current: current, total: total));
+        progressNotifier.set(
+          TtsGenerationProgress(current: current, total: total),
+        );
       },
     );
     return true;

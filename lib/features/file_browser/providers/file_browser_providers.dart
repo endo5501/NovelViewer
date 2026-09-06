@@ -54,14 +54,16 @@ class CurrentDirectoryNotifier extends Notifier<String?> {
 
 final currentDirectoryProvider =
     NotifierProvider<CurrentDirectoryNotifier, String?>(
-        CurrentDirectoryNotifier.new);
+      CurrentDirectoryNotifier.new,
+    );
 
 final libraryPathProvider = Provider<String?>((ref) {
   throw UnimplementedError('libraryPathProvider must be overridden at startup');
 });
 
-final directoryContentsProvider =
-    FutureProvider<DirectoryContents>((ref) async {
+final directoryContentsProvider = FutureProvider<DirectoryContents>((
+  ref,
+) async {
   final dirPath = ref.watch(currentDirectoryProvider);
   if (dirPath == null) {
     return DirectoryContents.empty();
@@ -82,11 +84,13 @@ final directoryContentsProvider =
   };
 
   subdirectories = subdirectories
-      .map((dir) => DirectoryEntry(
-            name: dir.name,
-            path: dir.path,
-            displayName: folderToTitle[dir.name],
-          ))
+      .map(
+        (dir) => DirectoryEntry(
+          name: dir.name,
+          path: dir.path,
+          displayName: folderToTitle[dir.name],
+        ),
+      )
       .toList();
 
   // Skip TTS lookup when no DB file is present so we don't materialize a
@@ -100,10 +104,11 @@ final directoryContentsProvider =
       ttsStatuses = await repo.getAllEpisodeStatuses();
     } catch (e, st) {
       _fileBrowserLog.warning(
-          'Failed to read TTS statuses for $dirPath; '
-          'falling back to no-status listing',
-          e,
-          st);
+        'Failed to read TTS statuses for $dirPath; '
+        'falling back to no-status listing',
+        e,
+        st,
+      );
       ttsStatuses = const {};
     }
   }
@@ -129,39 +134,42 @@ final directoryContentsProvider =
 /// listing stays usable.
 final readingProgressBadgesProvider =
     FutureProvider<Map<String, ReadingProgressBadge>>((ref) async {
-  final novels = await ref.watch(allNovelsProvider.future);
-  // Recompute after any reading-progress write so a parent folder's badge
-  // refreshes once the user advances inside the novel (the auto-save listener
-  // bumps this revision after each successful upsert).
-  ref.watch(readingProgressRevisionProvider);
+      final novels = await ref.watch(allNovelsProvider.future);
+      // Recompute after any reading-progress write so a parent folder's badge
+      // refreshes once the user advances inside the novel (the auto-save listener
+      // bumps this revision after each successful upsert).
+      ref.watch(readingProgressRevisionProvider);
 
-  // NOTE: despite its name, `reading_progress.novel_id` stores the registered
-  // novel's `folder_name` — the auto-save path keys rows by `resolveNovelId`,
-  // which returns the nearest registered folder's leaf name (= folder_name),
-  // NOT the site-specific `NovelMetadata.novelId`. So this map is keyed by
-  // folder_name and the lookup below correctly uses `novel.folderName`.
-  var fileNameByFolderName = const <String, String>{};
-  try {
-    final progress =
-        await ref.watch(readingProgressRepositoryProvider).findAll();
-    fileNameByFolderName = {for (final p in progress) p.novelId: p.fileName};
-  } catch (e, st) {
-    _readingProgressLog.warning(
-      'Failed to bulk-read reading progress for file browser badges; '
-      'falling back to unread for all novels',
-      e,
-      st,
-    );
-  }
+      // NOTE: despite its name, `reading_progress.novel_id` stores the registered
+      // novel's `folder_name` — the auto-save path keys rows by `resolveNovelId`,
+      // which returns the nearest registered folder's leaf name (= folder_name),
+      // NOT the site-specific `NovelMetadata.novelId`. So this map is keyed by
+      // folder_name and the lookup below correctly uses `novel.folderName`.
+      var fileNameByFolderName = const <String, String>{};
+      try {
+        final progress = await ref
+            .watch(readingProgressRepositoryProvider)
+            .findAll();
+        fileNameByFolderName = {
+          for (final p in progress) p.novelId: p.fileName,
+        };
+      } catch (e, st) {
+        _readingProgressLog.warning(
+          'Failed to bulk-read reading progress for file browser badges; '
+          'falling back to unread for all novels',
+          e,
+          st,
+        );
+      }
 
-  return {
-    for (final novel in novels)
-      novel.folderName: ReadingProgressBadge.from(
-        episodeCount: novel.episodeCount,
-        fileName: fileNameByFolderName[novel.folderName],
-      ),
-  };
-});
+      return {
+        for (final novel in novels)
+          novel.folderName: ReadingProgressBadge.from(
+            episodeCount: novel.episodeCount,
+            fileName: fileNameByFolderName[novel.folderName],
+          ),
+      };
+    });
 
 /// Candidate download destination folders: organizational (non-novel) folders
 /// under the library root, each with [DirectoryEntry.displayName] set to its
@@ -179,24 +187,26 @@ final readingProgressBadgesProvider =
 /// reflected (rather than served from a stale container-level cache).
 final downloadDestinationFoldersProvider =
     FutureProvider.autoDispose<List<DirectoryEntry>>((ref) async {
-  final libraryPath = ref.watch(libraryPathProvider);
-  if (libraryPath == null) return const [];
+      final libraryPath = ref.watch(libraryPathProvider);
+      if (libraryPath == null) return const [];
 
-  final service = ref.watch(fileSystemServiceProvider);
-  final novels = await ref.watch(allNovelsProvider.future);
-  final registered = {for (final novel in novels) novel.folderName};
+      final service = ref.watch(fileSystemServiceProvider);
+      final novels = await ref.watch(allNovelsProvider.future);
+      final registered = {for (final novel in novels) novel.folderName};
 
-  final folders =
-      await service.listDownloadDestinationFolders(libraryPath, registered);
-  return [
-    for (final folder in folders)
-      DirectoryEntry(
-        name: folder.name,
-        path: folder.path,
-        displayName: p.relative(folder.path, from: libraryPath),
-      ),
-  ];
-});
+      final folders = await service.listDownloadDestinationFolders(
+        libraryPath,
+        registered,
+      );
+      return [
+        for (final folder in folders)
+          DirectoryEntry(
+            name: folder.name,
+            path: folder.path,
+            displayName: p.relative(folder.path, from: libraryPath),
+          ),
+      ];
+    });
 
 final selectedNovelTitleProvider = FutureProvider<String?>((ref) async {
   final currentDir = ref.watch(currentDirectoryProvider);
@@ -216,8 +226,11 @@ final selectedNovelTitleProvider = FutureProvider<String?>((ref) async {
   // of nesting depth. If no ancestor is a registered novel, fall back to the
   // first component's folder name (legacy title-based / organizational
   // folders) — the one piece of behavior unique to the title display.
-  final novelId =
-      resolveNovelId(libraryPath, currentDir, titleByFolder.keys.toSet());
+  final novelId = resolveNovelId(
+    libraryPath,
+    currentDir,
+    titleByFolder.keys.toSet(),
+  );
   if (novelId != null) return titleByFolder[novelId];
   return p.split(p.relative(currentDir, from: libraryPath)).first;
 });
@@ -230,9 +243,9 @@ class SelectedFileNotifier extends Notifier<FileEntry?> {
   void clear() => state = null;
 }
 
-final selectedFileProvider =
-    NotifierProvider<SelectedFileNotifier, FileEntry?>(
-        SelectedFileNotifier.new);
+final selectedFileProvider = NotifierProvider<SelectedFileNotifier, FileEntry?>(
+  SelectedFileNotifier.new,
+);
 
 class DirectoryContents {
   final List<FileEntry> files;

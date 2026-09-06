@@ -29,10 +29,7 @@ class _ControlledDownloadNotifier extends DownloadNotifier {
   }
 
   void setErrorState(String message) {
-    state = DownloadState(
-      status: DownloadStatus.error,
-      errorMessage: message,
-    );
+    state = DownloadState(status: DownloadStatus.error, errorMessage: message);
   }
 }
 
@@ -47,13 +44,11 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            downloadProvider.overrideWith(() => notifier),
-          ],
+          overrides: [downloadProvider.overrideWith(() => notifier)],
           child: MaterialApp(
-                locale: const Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
@@ -89,13 +84,11 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            downloadProvider.overrideWith(() => notifier),
-          ],
+          overrides: [downloadProvider.overrideWith(() => notifier)],
           child: MaterialApp(
-                locale: const Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
@@ -124,13 +117,11 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            downloadProvider.overrideWith(() => notifier),
-          ],
+          overrides: [downloadProvider.overrideWith(() => notifier)],
           child: MaterialApp(
-                locale: const Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {

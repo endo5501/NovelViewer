@@ -54,27 +54,33 @@ List<PopupMenuEntry<HistoryContextAction>> buildHistoryContextMenuItems({
   final items = <PopupMenuEntry<HistoryContextAction>>[];
   final snapshots = pickTopSnapshotsForCopyMenu(entry.snapshots);
   for (final s in snapshots) {
-    items.add(PopupMenuItem(
-      value: CopySnapshotAction(s.coveredUpToEpisode),
-      child: Text(
-        l10n.contextMenu_copySnapshotByEpisode(s.coveredUpToEpisode),
+    items.add(
+      PopupMenuItem(
+        value: CopySnapshotAction(s.coveredUpToEpisode),
+        child: Text(
+          l10n.contextMenu_copySnapshotByEpisode(s.coveredUpToEpisode),
+        ),
       ),
-    ));
+    );
   }
   if (items.isNotEmpty) {
     items.add(const PopupMenuDivider());
   }
-  items.add(PopupMenuItem(
-    value: const ViewDetailsAction(),
-    child: Text(l10n.contextMenu_viewDetails),
-  ));
-  items.add(PopupMenuItem(
-    value: const DeleteEntryAction(),
-    child: Text(
-      l10n.bookmark_deleteMenuItem,
-      style: const TextStyle(color: Colors.red),
+  items.add(
+    PopupMenuItem(
+      value: const ViewDetailsAction(),
+      child: Text(l10n.contextMenu_viewDetails),
     ),
-  ));
+  );
+  items.add(
+    PopupMenuItem(
+      value: const DeleteEntryAction(),
+      child: Text(
+        l10n.bookmark_deleteMenuItem,
+        style: const TextStyle(color: Colors.red),
+      ),
+    ),
+  );
   return items;
 }
 

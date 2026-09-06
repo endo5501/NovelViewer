@@ -19,8 +19,10 @@ void main() {
 
   group('TextViewerPanel - TTS auto scroll (horizontal)', () {
     testWidgets('scrolls to TTS highlight position', (tester) async {
-      final longText =
-          List.generate(200, (i) => '行${i + 1}: テストテキスト内容').join('\n');
+      final longText = List.generate(
+        200,
+        (i) => '行${i + 1}: テストテキスト内容',
+      ).join('\n');
 
       await tester.pumpWidget(
         ProviderScope(
@@ -30,9 +32,9 @@ void main() {
             ttsModelDirProvider.overrideWithValue('/models'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SizedBox(height: 400, child: TextViewerPanel()),
             ),
@@ -43,7 +45,8 @@ void main() {
 
       // Get initial scroll offset
       final scrollView = tester.widget<SingleChildScrollView>(
-          find.byType(SingleChildScrollView));
+        find.byType(SingleChildScrollView),
+      );
       expect(scrollView.controller!.offset, 0.0);
 
       // Set TTS highlight to a position deep in the text
@@ -52,8 +55,9 @@ void main() {
 
       // Calculate offset for line ~150
       final offset = longText.indexOf('行150');
-      container.read(ttsHighlightRangeProvider.notifier).set(
-          TextRange(start: offset, end: offset + 10));
+      container
+          .read(ttsHighlightRangeProvider.notifier)
+          .set(TextRange(start: offset, end: offset + 10));
       await tester.pumpAndSettle();
 
       // Should have scrolled down

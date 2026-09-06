@@ -34,18 +34,9 @@ class GeneralSettingsSection extends ConsumerWidget {
               }
             },
             items: const [
-              DropdownMenuItem(
-                value: Locale('ja'),
-                child: Text('日本語'),
-              ),
-              DropdownMenuItem(
-                value: Locale('en'),
-                child: Text('English'),
-              ),
-              DropdownMenuItem(
-                value: Locale('zh'),
-                child: Text('中文'),
-              ),
+              DropdownMenuItem(value: Locale('ja'), child: Text('日本語')),
+              DropdownMenuItem(value: Locale('en'), child: Text('English')),
+              DropdownMenuItem(value: Locale('zh'), child: Text('中文')),
             ],
           ),
         ),
@@ -58,10 +49,10 @@ class GeneralSettingsSection extends ConsumerWidget {
           ),
           value: displayMode == TextDisplayMode.vertical,
           onChanged: (value) {
-            ref.read(displayModeProvider.notifier).setMode(
-                  value
-                      ? TextDisplayMode.vertical
-                      : TextDisplayMode.horizontal,
+            ref
+                .read(displayModeProvider.notifier)
+                .setMode(
+                  value ? TextDisplayMode.vertical : TextDisplayMode.horizontal,
                 );
           },
         ),
@@ -74,9 +65,9 @@ class GeneralSettingsSection extends ConsumerWidget {
           ),
           value: themeMode == ThemeMode.dark,
           onChanged: (value) {
-            ref.read(themeModeProvider.notifier).setThemeMode(
-                  value ? ThemeMode.dark : ThemeMode.light,
-                );
+            ref
+                .read(themeModeProvider.notifier)
+                .setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
           },
         ),
         ListTile(
@@ -85,9 +76,10 @@ class GeneralSettingsSection extends ConsumerWidget {
             value: fontSize,
             min: SettingsRepository.minFontSize,
             max: SettingsRepository.maxFontSize,
-            divisions: (SettingsRepository.maxFontSize -
-                    SettingsRepository.minFontSize)
-                .toInt(),
+            divisions:
+                (SettingsRepository.maxFontSize -
+                        SettingsRepository.minFontSize)
+                    .toInt(),
             label: fontSize.toStringAsFixed(1),
             onChanged: (value) {
               ref.read(fontSizeProvider.notifier).previewFontSize(value);
@@ -122,9 +114,10 @@ class GeneralSettingsSection extends ConsumerWidget {
             value: columnSpacing,
             min: SettingsRepository.minColumnSpacing,
             max: SettingsRepository.maxColumnSpacing,
-            divisions: (SettingsRepository.maxColumnSpacing -
-                    SettingsRepository.minColumnSpacing)
-                .toInt(),
+            divisions:
+                (SettingsRepository.maxColumnSpacing -
+                        SettingsRepository.minColumnSpacing)
+                    .toInt(),
             label: columnSpacing.toStringAsFixed(1),
             onChanged: (value) {
               ref
@@ -132,9 +125,7 @@ class GeneralSettingsSection extends ConsumerWidget {
                   .previewColumnSpacing(value);
             },
             onChangeEnd: (_) {
-              ref
-                  .read(columnSpacingProvider.notifier)
-                  .persistColumnSpacing();
+              ref.read(columnSpacingProvider.notifier).persistColumnSpacing();
             },
           ),
           trailing: Text(columnSpacing.toStringAsFixed(1)),

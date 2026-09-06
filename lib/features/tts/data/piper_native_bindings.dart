@@ -56,20 +56,16 @@ class PiperNativeBindings {
     'piper_tts_free',
   );
 
-  late final synthesize =
-      _library.lookupFunction<_PSynthesizeC, _PSynthesizeDart>(
-    'piper_tts_synthesize',
-  );
+  late final synthesize = _library
+      .lookupFunction<_PSynthesizeC, _PSynthesizeDart>('piper_tts_synthesize');
 
-  late final setLengthScale =
-      _library.lookupFunction<_PSetFloatC, _PSetFloatDart>(
-    'piper_tts_set_length_scale',
-  );
+  late final setLengthScale = _library
+      .lookupFunction<_PSetFloatC, _PSetFloatDart>(
+        'piper_tts_set_length_scale',
+      );
 
-  late final setNoiseScale =
-      _library.lookupFunction<_PSetFloatC, _PSetFloatDart>(
-    'piper_tts_set_noise_scale',
-  );
+  late final setNoiseScale = _library
+      .lookupFunction<_PSetFloatC, _PSetFloatDart>('piper_tts_set_noise_scale');
 
   late final setNoiseW = _library.lookupFunction<_PSetFloatC, _PSetFloatDart>(
     'piper_tts_set_noise_w',
@@ -79,13 +75,11 @@ class PiperNativeBindings {
     'piper_tts_get_audio',
   );
 
-  late final getAudioLength =
-      _library.lookupFunction<_PGetIntC, _PGetIntDart>(
+  late final getAudioLength = _library.lookupFunction<_PGetIntC, _PGetIntDart>(
     'piper_tts_get_audio_length',
   );
 
-  late final getSampleRate =
-      _library.lookupFunction<_PGetIntC, _PGetIntDart>(
+  late final getSampleRate = _library.lookupFunction<_PGetIntC, _PGetIntDart>(
     'piper_tts_get_sample_rate',
   );
 

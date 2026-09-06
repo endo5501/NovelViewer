@@ -50,8 +50,9 @@ void main() {
           refWavPath: '/path/to/ref.wav',
         );
 
-        final episode =
-            await repository.findEpisodeByFileName('0001_プロローグ.txt');
+        final episode = await repository.findEpisodeByFileName(
+          '0001_プロローグ.txt',
+        );
         expect(episode, isNotNull);
         expect(episode, isA<TtsEpisode>());
         expect(episode!.fileName, '0001_プロローグ.txt');
@@ -68,8 +69,9 @@ void main() {
           textHash: 'abc123hash',
         );
 
-        final episode =
-            await repository.findEpisodeByFileName('0001_プロローグ.txt');
+        final episode = await repository.findEpisodeByFileName(
+          '0001_プロローグ.txt',
+        );
         expect(episode, isNotNull);
         expect(episode!.textHash, 'abc123hash');
       });
@@ -81,8 +83,9 @@ void main() {
           status: TtsEpisodeStatus.generating,
         );
 
-        final episode =
-            await repository.findEpisodeByFileName('0001_プロローグ.txt');
+        final episode = await repository.findEpisodeByFileName(
+          '0001_プロローグ.txt',
+        );
         expect(episode, isNotNull);
         expect(episode!.textHash, isNull);
       });
@@ -98,8 +101,9 @@ void main() {
 
         await repository.updateEpisodeStatus(id, TtsEpisodeStatus.partial);
 
-        final episode =
-            await repository.findEpisodeByFileName('0001_プロローグ.txt');
+        final episode = await repository.findEpisodeByFileName(
+          '0001_プロローグ.txt',
+        );
         expect(episode!.status, TtsEpisodeStatus.partial);
       });
 
@@ -112,16 +116,18 @@ void main() {
 
         await repository.updateEpisodeStatus(id, TtsEpisodeStatus.completed);
 
-        final episode =
-            await repository.findEpisodeByFileName('0001_プロローグ.txt');
+        final episode = await repository.findEpisodeByFileName(
+          '0001_プロローグ.txt',
+        );
         expect(episode!.status, TtsEpisodeStatus.completed);
       });
     });
 
     group('findEpisodeByFileName', () {
       test('returns null for non-existent file name', () async {
-        final result =
-            await repository.findEpisodeByFileName('nonexistent.txt');
+        final result = await repository.findEpisodeByFileName(
+          'nonexistent.txt',
+        );
         expect(result, isNull);
       });
 
@@ -132,8 +138,7 @@ void main() {
           status: TtsEpisodeStatus.completed,
         );
 
-        final result =
-            await repository.findEpisodeByFileName('0001_プロローグ.txt');
+        final result = await repository.findEpisodeByFileName('0001_プロローグ.txt');
         expect(result, isA<TtsEpisode>());
         expect(result!.fileName, '0001_プロローグ.txt');
       });
@@ -265,8 +270,9 @@ void main() {
 
         await repository.deleteEpisode(episodeId);
 
-        final episode =
-            await repository.findEpisodeByFileName('0001_プロローグ.txt');
+        final episode = await repository.findEpisodeByFileName(
+          '0001_プロローグ.txt',
+        );
         expect(episode, isNull);
 
         final segments = await repository.getSegments(episodeId);
@@ -330,23 +336,25 @@ void main() {
         expect(sizeAfterReclaim, lessThan(sizeBeforeDelete));
       });
 
-      test('invokes onEpisodeDeleted callback so the lifecycle can mark dirty',
-          () async {
-        var callbackCount = 0;
-        final repoWithCallback = TtsAudioRepository(
-          database,
-          onEpisodeDeleted: () => callbackCount++,
-        );
-        final episodeId = await repoWithCallback.createEpisode(
-          fileName: '0001_プロローグ.txt',
-          sampleRate: 24000,
-          status: TtsEpisodeStatus.completed,
-        );
+      test(
+        'invokes onEpisodeDeleted callback so the lifecycle can mark dirty',
+        () async {
+          var callbackCount = 0;
+          final repoWithCallback = TtsAudioRepository(
+            database,
+            onEpisodeDeleted: () => callbackCount++,
+          );
+          final episodeId = await repoWithCallback.createEpisode(
+            fileName: '0001_プロローグ.txt',
+            sampleRate: 24000,
+            status: TtsEpisodeStatus.completed,
+          );
 
-        await repoWithCallback.deleteEpisode(episodeId);
+          await repoWithCallback.deleteEpisode(episodeId);
 
-        expect(callbackCount, 1);
-      });
+          expect(callbackCount, 1);
+        },
+      );
     });
 
     group('insertSegment with nullable audio', () {
@@ -465,7 +473,10 @@ void main() {
         );
 
         await repository.updateSegmentRefWavPath(
-            episodeId, 0, '/path/to/voice.wav');
+          episodeId,
+          0,
+          '/path/to/voice.wav',
+        );
 
         final segment = await repository.getSegmentByIndex(episodeId, 0);
         expect(segment.refWavPath, '/path/to/voice.wav');

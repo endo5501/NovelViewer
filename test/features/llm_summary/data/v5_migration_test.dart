@@ -97,8 +97,11 @@ void main() {
       );
 
       expect(result, hasLength(1));
-      expect(result.first['covered_up_to_episode'], 2,
-          reason: 'part1.txt is the 2nd file in lexical order');
+      expect(
+        result.first['covered_up_to_episode'],
+        2,
+        reason: 'part1.txt is the 2nd file in lexical order',
+      );
     });
 
     test('no_spoiler row with NULL source_file falls back to 1', () async {
@@ -124,30 +127,32 @@ void main() {
       expect(result.first['covered_up_to_episode'], 1);
     });
 
-    test('spoiler row with NULL source_file uses novels.episode_count',
-        () async {
-      final result = await NovelDatabase.runMigrationForTesting(
-        snapshotResolver: NovelDatabaseSnapshotResolver(
-          folderFileLister: (_) => const [],
-        ),
-        seedV4: (db) async {
-          await _insertNovel(db, folderName: 'my_novel', episodeCount: 10);
-          await _insertV4Summary(
-            db,
-            folder: 'my_novel',
-            word: 'アリス',
-            summaryType: 'spoiler',
-            sourceFile: null,
-            summary: 'ネタバレあり',
-            updatedAt: '2026-01-01T00:00:00.000',
-          );
-        },
-      );
+    test(
+      'spoiler row with NULL source_file uses novels.episode_count',
+      () async {
+        final result = await NovelDatabase.runMigrationForTesting(
+          snapshotResolver: NovelDatabaseSnapshotResolver(
+            folderFileLister: (_) => const [],
+          ),
+          seedV4: (db) async {
+            await _insertNovel(db, folderName: 'my_novel', episodeCount: 10);
+            await _insertV4Summary(
+              db,
+              folder: 'my_novel',
+              word: 'アリス',
+              summaryType: 'spoiler',
+              sourceFile: null,
+              summary: 'ネタバレあり',
+              updatedAt: '2026-01-01T00:00:00.000',
+            );
+          },
+        );
 
-      expect(result, hasLength(1));
-      expect(result.first['covered_up_to_episode'], 10);
-      expect(result.first['source_file'], isNull);
-    });
+        expect(result, hasLength(1));
+        expect(result.first['covered_up_to_episode'], 10);
+        expect(result.first['source_file'], isNull);
+      },
+    );
 
     test('spoiler row with episode_count=0 falls back to 1', () async {
       final result = await NovelDatabase.runMigrationForTesting(
@@ -172,8 +177,7 @@ void main() {
       expect(result.first['covered_up_to_episode'], 1);
     });
 
-    test(
-        'spoiler row with non-null source_file uses '
+    test('spoiler row with non-null source_file uses '
         'max(prefix, episode_count)', () async {
       final result = await NovelDatabase.runMigrationForTesting(
         snapshotResolver: NovelDatabaseSnapshotResolver(
@@ -204,46 +208,50 @@ void main() {
 
       final aliceRow = result.firstWhere((r) => r['word'] == 'アリス');
       final bobRow = result.firstWhere((r) => r['word'] == 'ボブ');
-      expect(aliceRow['covered_up_to_episode'], 40,
-          reason: 'max(25, 40) = 40');
+      expect(aliceRow['covered_up_to_episode'], 40, reason: 'max(25, 40) = 40');
       expect(bobRow['covered_up_to_episode'], 60, reason: 'max(60, 40) = 60');
     });
 
-    test('collision: same (folder, word, episode) keeps latest updated_at',
-        () async {
-      final result = await NovelDatabase.runMigrationForTesting(
-        snapshotResolver: NovelDatabaseSnapshotResolver(
-          folderFileLister: (_) => const [],
-        ),
-        seedV4: (db) async {
-          await _insertNovel(db, folderName: 'my_novel', episodeCount: 30);
-          // Two rows that both convert to covered_up_to_episode=30.
-          await _insertV4Summary(
-            db,
-            folder: 'my_novel',
-            word: 'アリス',
-            summaryType: 'no_spoiler',
-            sourceFile: '030_chapter.txt',
-            summary: '古い (10:00)',
-            updatedAt: '2026-01-01T10:00:00.000',
-          );
-          await _insertV4Summary(
-            db,
-            folder: 'my_novel',
-            word: 'アリス',
-            summaryType: 'spoiler',
-            sourceFile: '030_chapter.txt',
-            summary: '新しい (12:00)',
-            updatedAt: '2026-01-01T12:00:00.000',
-          );
-        },
-      );
+    test(
+      'collision: same (folder, word, episode) keeps latest updated_at',
+      () async {
+        final result = await NovelDatabase.runMigrationForTesting(
+          snapshotResolver: NovelDatabaseSnapshotResolver(
+            folderFileLister: (_) => const [],
+          ),
+          seedV4: (db) async {
+            await _insertNovel(db, folderName: 'my_novel', episodeCount: 30);
+            // Two rows that both convert to covered_up_to_episode=30.
+            await _insertV4Summary(
+              db,
+              folder: 'my_novel',
+              word: 'アリス',
+              summaryType: 'no_spoiler',
+              sourceFile: '030_chapter.txt',
+              summary: '古い (10:00)',
+              updatedAt: '2026-01-01T10:00:00.000',
+            );
+            await _insertV4Summary(
+              db,
+              folder: 'my_novel',
+              word: 'アリス',
+              summaryType: 'spoiler',
+              sourceFile: '030_chapter.txt',
+              summary: '新しい (12:00)',
+              updatedAt: '2026-01-01T12:00:00.000',
+            );
+          },
+        );
 
-      expect(result, hasLength(1),
-          reason: 'colliding rows SHALL collapse to one');
-      expect(result.first['summary'], '新しい (12:00)');
-      expect(result.first['covered_up_to_episode'], 30);
-    });
+        expect(
+          result,
+          hasLength(1),
+          reason: 'colliding rows SHALL collapse to one',
+        );
+        expect(result.first['summary'], '新しい (12:00)');
+        expect(result.first['covered_up_to_episode'], 30);
+      },
+    );
 
     test('non-conflicting rows for the same word are preserved', () async {
       final result = await NovelDatabase.runMigrationForTesting(
@@ -274,10 +282,8 @@ void main() {
       );
 
       expect(result, hasLength(2));
-      final episodes = result
-          .map((r) => r['covered_up_to_episode'] as int)
-          .toList()
-        ..sort();
+      final episodes =
+          result.map((r) => r['covered_up_to_episode'] as int).toList()..sort();
       expect(episodes, [30, 100]);
     });
 
@@ -295,7 +301,8 @@ void main() {
       );
 
       final indices = await db.rawQuery(
-          "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='word_summaries'");
+        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='word_summaries'",
+      );
       expect(
         indices.any((row) => row['name'] == 'idx_word_summaries_unique'),
         isTrue,
@@ -303,13 +310,14 @@ void main() {
 
       // Schema sanity: covered_up_to_episode column must exist with NOT NULL.
       final pragma = await db.rawQuery('PRAGMA table_info(word_summaries)');
-      final cols = {
-        for (final row in pragma) row['name'] as String: row,
-      };
+      final cols = {for (final row in pragma) row['name'] as String: row};
       expect(cols.containsKey('covered_up_to_episode'), isTrue);
       expect(cols['covered_up_to_episode']!['notnull'], 1);
-      expect(cols.containsKey('summary_type'), isFalse,
-          reason: 'v5 SHALL NOT carry summary_type');
+      expect(
+        cols.containsKey('summary_type'),
+        isFalse,
+        reason: 'v5 SHALL NOT carry summary_type',
+      );
 
       await db.close();
     });

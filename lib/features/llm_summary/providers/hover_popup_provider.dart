@@ -24,10 +24,10 @@ class HoverPopupState {
   final int? activeEpisode;
 
   const HoverPopupState.hidden()
-      : word = null,
-        position = null,
-        hoverToken = null,
-        activeEpisode = null;
+    : word = null,
+      position = null,
+      hoverToken = null,
+      activeEpisode = null;
 
   const HoverPopupState.visible({
     required String this.word,
@@ -156,5 +156,5 @@ class HoverPopupNotifier extends Notifier<HoverPopupState> {
 
 final hoverPopupProvider =
     NotifierProvider<HoverPopupNotifier, HoverPopupState>(
-  HoverPopupNotifier.new,
-);
+      HoverPopupNotifier.new,
+    );

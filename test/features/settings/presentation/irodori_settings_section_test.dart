@@ -57,9 +57,7 @@ void main() {
         // constants; tests that exercise a real download/completion state
         // override this with small sizes matching their fixture bytes.
         if (expectedFileSizes != null)
-          irodoriExpectedFileSizesProvider.overrideWithValue(
-            expectedFileSizes,
-          ),
+          irodoriExpectedFileSizesProvider.overrideWithValue(expectedFileSizes),
         // Cases that only care how a byte total is *rendered* inject it here.
         // Writing a real multi-gigabyte file to read its length back costs
         // ~8 bytes of RSS per byte of file in the VM (a 2 GB file needs a
@@ -93,15 +91,18 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
     await tester.runAsync(() async {
-      await tester.pumpWidget(buildTestWidget(
-        httpClient: httpClient,
-        expectedFileSizes: expectedFileSizes,
-        legacyAssets: legacyAssets,
-      ));
+      await tester.pumpWidget(
+        buildTestWidget(
+          httpClient: httpClient,
+          expectedFileSizes: expectedFileSizes,
+          legacyAssets: legacyAssets,
+        ),
+      );
     });
     await tester.pumpAndSettle();
-    final l10n =
-        AppLocalizations.of(tester.element(find.byType(SettingsDialog)))!;
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SettingsDialog)),
+    )!;
     await tester.tap(find.text(l10n.settings_ttsTabLabel));
     await tester.pumpAndSettle();
     await tester.runAsync(
@@ -129,8 +130,9 @@ void main() {
   }
 
   group('Engine selector', () {
-    testWidgets('shows three segments: Qwen3-TTS, Piper, Irodori-TTS',
-        (tester) async {
+    testWidgets('shows three segments: Qwen3-TTS, Piper, Irodori-TTS', (
+      tester,
+    ) async {
       await openTtsTab(tester);
 
       expect(find.byType(SegmentedButton<TtsEngineType>), findsOneWidget);
@@ -154,33 +156,44 @@ void main() {
 
   group('Section visibility', () {
     testWidgets(
-        'selecting Irodori shows IrodoriSettingsSection and voice reference, '
-        'hides qwen3/piper settings', (tester) async {
-      final l10n = await selectIrodoriEngine(tester);
+      'selecting Irodori shows IrodoriSettingsSection and voice reference, '
+      'hides qwen3/piper settings',
+      (tester) async {
+        final l10n = await selectIrodoriEngine(tester);
 
-      // Irodori-specific controls are visible.
-      expect(find.text(l10n.settings_modelDataDownload), findsOneWidget);
-      expect(
+        // Irodori-specific controls are visible.
+        expect(find.text(l10n.settings_modelDataDownload), findsOneWidget);
+        expect(
           find.textContaining(l10n.settings_irodoriSpeakerGuidanceScale),
-          findsOneWidget);
-      expect(
+          findsOneWidget,
+        );
+        expect(
           find.textContaining(l10n.settings_irodoriCaptionGuidanceScale),
-          findsOneWidget);
-      expect(
+          findsOneWidget,
+        );
+        expect(
           find.textContaining(l10n.settings_irodoriNumInferenceSteps),
-          findsOneWidget);
-      // Shared voice reference selector is shown (same as qwen3).
-      expect(find.text(l10n.settings_referenceAudioLabel), findsOneWidget);
+          findsOneWidget,
+        );
+        // Shared voice reference selector is shown (same as qwen3).
+        expect(find.text(l10n.settings_referenceAudioLabel), findsOneWidget);
 
-      // qwen3-specific settings are hidden.
-      expect(find.text(l10n.settings_ttsLanguageLabel), findsNothing);
-      expect(find.text(l10n.settings_voiceModelTitle), findsNothing);
+        // qwen3-specific settings are hidden.
+        expect(find.text(l10n.settings_ttsLanguageLabel), findsNothing);
+        expect(find.text(l10n.settings_voiceModelTitle), findsNothing);
 
-      // piper-specific settings are hidden.
-      expect(find.textContaining(l10n.settings_piperLengthScale), findsNothing);
-      expect(find.textContaining(l10n.settings_piperNoiseScale), findsNothing);
-      expect(find.textContaining(l10n.settings_piperNoiseW), findsNothing);
-    });
+        // piper-specific settings are hidden.
+        expect(
+          find.textContaining(l10n.settings_piperLengthScale),
+          findsNothing,
+        );
+        expect(
+          find.textContaining(l10n.settings_piperNoiseScale),
+          findsNothing,
+        );
+        expect(find.textContaining(l10n.settings_piperNoiseW), findsNothing);
+      },
+    );
 
     testWidgets('selecting qwen3 hides Irodori settings', (tester) async {
       final l10n = await selectIrodoriEngine(tester);
@@ -188,14 +201,17 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-          find.textContaining(l10n.settings_irodoriSpeakerGuidanceScale),
-          findsNothing);
+        find.textContaining(l10n.settings_irodoriSpeakerGuidanceScale),
+        findsNothing,
+      );
       expect(
-          find.textContaining(l10n.settings_irodoriCaptionGuidanceScale),
-          findsNothing);
+        find.textContaining(l10n.settings_irodoriCaptionGuidanceScale),
+        findsNothing,
+      );
       expect(
-          find.textContaining(l10n.settings_irodoriNumInferenceSteps),
-          findsNothing);
+        find.textContaining(l10n.settings_irodoriNumInferenceSteps),
+        findsNothing,
+      );
     });
   });
 
@@ -206,25 +222,27 @@ void main() {
       expect(find.text(l10n.settings_modelDataDownload), findsOneWidget);
     });
 
-    testWidgets('shows completed status when models already exist',
-        (tester) async {
+    testWidgets('shows completed status when models already exist', (
+      tester,
+    ) async {
       // A variant is one GGUF with no sibling directories.
       const variant = IrodoriModelVariant.v3;
       final modelsDir = p.join(tempDir.path, 'models');
       final variantDir = Directory(p.join(modelsDir, variant.modelDirName))
         ..createSync(recursive: true);
-      File(p.join(variantDir.path, variant.ggufFileName))
-          .writeAsBytesSync(List.filled(5, 0));
+      File(
+        p.join(variantDir.path, variant.ggufFileName),
+      ).writeAsBytesSync(List.filled(5, 0));
 
       final l10n = await selectIrodoriEngine(
         tester,
-        expectedFileSizes: {
-          for (final v in IrodoriModelVariant.values) v: 5,
-        },
+        expectedFileSizes: {for (final v in IrodoriModelVariant.values) v: 5},
       );
 
       expect(
-          find.textContaining(l10n.settings_irodoriDownloaded), findsOneWidget);
+        find.textContaining(l10n.settings_irodoriDownloaded),
+        findsOneWidget,
+      );
     });
 
     testWidgets('starts download when button is pressed', (tester) async {
@@ -239,9 +257,7 @@ void main() {
       final l10n = await selectIrodoriEngine(
         tester,
         httpClient: mockClient,
-        expectedFileSizes: {
-          for (final v in IrodoriModelVariant.values) v: 3,
-        },
+        expectedFileSizes: {for (final v in IrodoriModelVariant.values) v: 3},
       );
 
       await tester.runAsync(() async {
@@ -253,58 +269,60 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-          find.textContaining(l10n.settings_irodoriDownloaded), findsOneWidget);
+        find.textContaining(l10n.settings_irodoriDownloaded),
+        findsOneWidget,
+      );
     });
 
     testWidgets(
-        'shows a cancel button while downloading, and tapping it returns '
-        'to the idle (download) state', (tester) async {
-      final chunkController = StreamController<List<int>>();
-      final mockClient = MockClient.streaming((request, _) async {
-        return http.StreamedResponse(
-          chunkController.stream,
-          200,
-          contentLength: 100,
-        );
-      });
+      'shows a cancel button while downloading, and tapping it returns '
+      'to the idle (download) state',
+      (tester) async {
+        final chunkController = StreamController<List<int>>();
+        final mockClient = MockClient.streaming((request, _) async {
+          return http.StreamedResponse(
+            chunkController.stream,
+            200,
+            contentLength: 100,
+          );
+        });
 
-      final l10n =
-          await selectIrodoriEngine(tester, httpClient: mockClient);
+        final l10n = await selectIrodoriEngine(tester, httpClient: mockClient);
 
-      await tester.runAsync(() async {
-        await tester.tap(find.text(l10n.settings_modelDataDownload));
-        // Give the download time to reach the Downloading state and start
-        // awaiting the (empty, still-open) response stream.
-        await Future.delayed(const Duration(milliseconds: 300));
-      });
-      await tester.pumpAndSettle();
+        await tester.runAsync(() async {
+          await tester.tap(find.text(l10n.settings_modelDataDownload));
+          // Give the download time to reach the Downloading state and start
+          // awaiting the (empty, still-open) response stream.
+          await Future.delayed(const Duration(milliseconds: 300));
+        });
+        await tester.pumpAndSettle();
 
-      expect(find.text(l10n.common_cancelButton), findsOneWidget);
+        expect(find.text(l10n.common_cancelButton), findsOneWidget);
 
-      // Cancellation is only observed once the download's stream loop wakes
-      // up on a chunk (or close), same as the service-level cancel test —
-      // so the tap, the wake-up chunk, and the close all happen inside a
-      // single runAsync call (a second, separate runAsync call while one is
-      // still pending is rejected by the test framework).
-      await tester.runAsync(() async {
-        await tester.tap(find.text(l10n.common_cancelButton));
-        chunkController.add(List.filled(10, 0));
-        await Future.delayed(const Duration(milliseconds: 300));
-        await chunkController.close();
-      });
-      await tester.pumpAndSettle();
+        // Cancellation is only observed once the download's stream loop wakes
+        // up on a chunk (or close), same as the service-level cancel test —
+        // so the tap, the wake-up chunk, and the close all happen inside a
+        // single runAsync call (a second, separate runAsync call while one is
+        // still pending is rejected by the test framework).
+        await tester.runAsync(() async {
+          await tester.tap(find.text(l10n.common_cancelButton));
+          chunkController.add(List.filled(10, 0));
+          await Future.delayed(const Duration(milliseconds: 300));
+          await chunkController.close();
+        });
+        await tester.pumpAndSettle();
 
-      expect(find.text(l10n.settings_modelDataDownload), findsOneWidget);
-      expect(find.text(l10n.common_cancelButton), findsNothing);
-    });
+        expect(find.text(l10n.settings_modelDataDownload), findsOneWidget);
+        expect(find.text(l10n.common_cancelButton), findsNothing);
+      },
+    );
 
     testWidgets('shows error with retry on download failure', (tester) async {
       final mockClient = MockClient.streaming((request, _) async {
         return http.StreamedResponse(Stream.value([]), 404);
       });
 
-      final l10n =
-          await selectIrodoriEngine(tester, httpClient: mockClient);
+      final l10n = await selectIrodoriEngine(tester, httpClient: mockClient);
 
       await tester.runAsync(() async {
         await tester.tap(find.text(l10n.settings_modelDataDownload));
@@ -327,28 +345,27 @@ void main() {
       expect(find.textContaining('40'), findsOneWidget);
     });
 
-    testWidgets('changing speaker_guidance_scale slider persists via provider',
-        (tester) async {
-      await selectIrodoriEngine(tester);
-
-      final slider = find.byType(Slider).first;
-      await tester.ensureVisible(slider);
-      await tester.pumpAndSettle();
-      await tester.drag(slider, const Offset(80, 0));
-      await tester.pumpAndSettle();
-
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(SettingsDialog)),
-      );
-      expect(
-        container.read(irodoriSpeakerGuidanceScaleProvider),
-        isNot(5.0),
-      );
-    });
-
     testWidgets(
-        'changing num_inference_steps slider persists via provider',
-        (tester) async {
+      'changing speaker_guidance_scale slider persists via provider',
+      (tester) async {
+        await selectIrodoriEngine(tester);
+
+        final slider = find.byType(Slider).first;
+        await tester.ensureVisible(slider);
+        await tester.pumpAndSettle();
+        await tester.drag(slider, const Offset(80, 0));
+        await tester.pumpAndSettle();
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SettingsDialog)),
+        );
+        expect(container.read(irodoriSpeakerGuidanceScaleProvider), isNot(5.0));
+      },
+    );
+
+    testWidgets('changing num_inference_steps slider persists via provider', (
+      tester,
+    ) async {
       await selectIrodoriEngine(tester);
 
       final slider = find.byType(Slider).at(2);
@@ -360,10 +377,7 @@ void main() {
       final container = ProviderScope.containerOf(
         tester.element(find.byType(SettingsDialog)),
       );
-      expect(
-        container.read(irodoriNumInferenceStepsProvider),
-        isNot(40),
-      );
+      expect(container.read(irodoriNumInferenceStepsProvider), isNot(40));
     });
   });
 
@@ -381,8 +395,9 @@ void main() {
       );
     });
 
-    testWidgets('v3 shows no caption warning and keeps the slider enabled',
-        (tester) async {
+    testWidgets('v3 shows no caption warning and keeps the slider enabled', (
+      tester,
+    ) async {
       final l10n = await selectIrodoriEngine(tester);
 
       expect(find.text(l10n.settings_irodoriVariantNoCaption), findsNothing);
@@ -393,8 +408,9 @@ void main() {
       expect(slider.onChanged, isNotNull);
     });
 
-    testWidgets('selecting v4 keeps the caption controls usable',
-        (tester) async {
+    testWidgets('selecting v4 keeps the caption controls usable', (
+      tester,
+    ) async {
       final l10n = await selectIrodoriEngine(tester);
 
       await tester.tap(find.byKey(const Key('irodori_variant_dropdown')));
@@ -413,8 +429,9 @@ void main() {
       expect(slider.onChanged, isNotNull);
     });
 
-    testWidgets('the caption guidance value survives a v4 round trip',
-        (tester) async {
+    testWidgets('the caption guidance value survives a v4 round trip', (
+      tester,
+    ) async {
       await selectIrodoriEngine(tester);
 
       final slider = find.byKey(const Key('irodori_caption_guidance_slider'));
@@ -430,7 +447,8 @@ void main() {
         // Dragging the slider scrolled the section; without this the tap
         // lands off-screen and silently hits nothing.
         await tester.ensureVisible(
-            find.byKey(const Key('irodori_variant_dropdown')));
+          find.byKey(const Key('irodori_variant_dropdown')),
+        );
         await tester.pumpAndSettle();
         await tester.tap(find.byKey(const Key('irodori_variant_dropdown')));
         await tester.pumpAndSettle();
@@ -445,8 +463,9 @@ void main() {
       expect(tester.widget<Slider>(slider).value, moved);
     });
 
-    testWidgets('the variant cannot be switched while a download runs',
-        (tester) async {
+    testWidgets('the variant cannot be switched while a download runs', (
+      tester,
+    ) async {
       final release = StreamController<List<int>>();
       addTearDown(() {
         if (!release.isClosed) release.close();
@@ -466,12 +485,16 @@ void main() {
       final dropdown = tester.widget<DropdownButton<IrodoriModelVariant>>(
         find.byKey(const Key('irodori_variant_dropdown')),
       );
-      expect(dropdown.onChanged, isNull,
-          reason: 'switching mid-transfer would strand a multi-GB download');
+      expect(
+        dropdown.onChanged,
+        isNull,
+        reason: 'switching mid-transfer would strand a multi-GB download',
+      );
     });
 
-    testWidgets('switching back to v3 re-enables the caption slider',
-        (tester) async {
+    testWidgets('switching back to v3 re-enables the caption slider', (
+      tester,
+    ) async {
       await selectIrodoriEngine(tester);
 
       await tester.tap(find.byKey(const Key('irodori_variant_dropdown')));
@@ -492,11 +515,14 @@ void main() {
   });
 
   group('IrodoriSettingsSection - legacy assets', () {
-    testWidgets('no cleanup offer when no legacy assets are present',
-        (tester) async {
+    testWidgets('no cleanup offer when no legacy assets are present', (
+      tester,
+    ) async {
       await selectIrodoriEngine(tester);
-      expect(find.byKey(const Key('irodori_delete_legacy_assets')),
-          findsNothing);
+      expect(
+        find.byKey(const Key('irodori_delete_legacy_assets')),
+        findsNothing,
+      );
     });
 
     testWidgets('offers cleanup with the reclaimable size when legacy assets '
@@ -509,14 +535,17 @@ void main() {
       ]) {
         final dir = Directory(p.join(modelsDir, name))
           ..createSync(recursive: true);
-        File(p.join(dir.path, 'blob.bin'))
-            .writeAsBytesSync(List.filled(1024, 0));
+        File(
+          p.join(dir.path, 'blob.bin'),
+        ).writeAsBytesSync(List.filled(1024, 0));
       }
 
       final l10n = await selectIrodoriEngine(tester);
 
-      expect(find.byKey(const Key('irodori_delete_legacy_assets')),
-          findsOneWidget);
+      expect(
+        find.byKey(const Key('irodori_delete_legacy_assets')),
+        findsOneWidget,
+      );
       expect(
         find.textContaining(l10n.settings_irodoriLegacyAssetsFound),
         findsOneWidget,
@@ -527,12 +556,14 @@ void main() {
       final modelsDir = p.join(tempDir.path, 'models');
       final dir = Directory(p.join(modelsDir, 'llm-jp-3-150m'))
         ..createSync(recursive: true);
-      File(p.join(dir.path, 'tokenizer.json'))
-          .writeAsBytesSync(List.filled(1024, 0));
+      File(
+        p.join(dir.path, 'tokenizer.json'),
+      ).writeAsBytesSync(List.filled(1024, 0));
 
       await selectIrodoriEngine(tester);
       await tester.ensureVisible(
-          find.byKey(const Key('irodori_delete_legacy_assets')));
+        find.byKey(const Key('irodori_delete_legacy_assets')),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('irodori_delete_legacy_assets')));
       await tester.pumpAndSettle();
@@ -549,12 +580,14 @@ void main() {
       final modelsDir = p.join(tempDir.path, 'models');
       final dir = Directory(p.join(modelsDir, 'llm-jp-3-150m'))
         ..createSync(recursive: true);
-      File(p.join(dir.path, 'tokenizer.json'))
-          .writeAsBytesSync(List.filled(1024, 0));
+      File(
+        p.join(dir.path, 'tokenizer.json'),
+      ).writeAsBytesSync(List.filled(1024, 0));
 
       final l10n = await selectIrodoriEngine(tester);
       await tester.ensureVisible(
-          find.byKey(const Key('irodori_delete_legacy_assets')));
+        find.byKey(const Key('irodori_delete_legacy_assets')),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('irodori_delete_legacy_assets')));
       await tester.pumpAndSettle();
@@ -568,25 +601,30 @@ void main() {
       final modelsDir = p.join(tempDir.path, 'models');
       final dir = Directory(p.join(modelsDir, 'llm-jp-3-150m'))
         ..createSync(recursive: true);
-      File(p.join(dir.path, 'tokenizer.json'))
-          .writeAsBytesSync(List.filled(1024, 0));
+      File(
+        p.join(dir.path, 'tokenizer.json'),
+      ).writeAsBytesSync(List.filled(1024, 0));
 
       await selectIrodoriEngine(tester);
       await tester.ensureVisible(
-          find.byKey(const Key('irodori_delete_legacy_assets')));
+        find.byKey(const Key('irodori_delete_legacy_assets')),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('irodori_delete_legacy_assets')));
       await tester.pumpAndSettle();
       await tester.runAsync(() async {
-        await tester.tap(find.byKey(const Key('irodori_delete_legacy_confirm')));
+        await tester.tap(
+          find.byKey(const Key('irodori_delete_legacy_confirm')),
+        );
       });
       await tester.pumpAndSettle();
 
       expect(dir.existsSync(), isFalse);
     });
 
-    testWidgets('an empty leftover directory still offers cleanup',
-        (tester) async {
+    testWidgets('an empty leftover directory still offers cleanup', (
+      tester,
+    ) async {
       // A partial delete can leave the directory with no files at all; it
       // frees 0 bytes but must stay reachable.
       final modelsDir = p.join(tempDir.path, 'models');
@@ -594,8 +632,10 @@ void main() {
 
       await selectIrodoriEngine(tester);
 
-      expect(find.byKey(const Key('irodori_delete_legacy_assets')),
-          findsOneWidget);
+      expect(
+        find.byKey(const Key('irodori_delete_legacy_assets')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('reports the size in decimal GB', (tester) async {

@@ -16,8 +16,8 @@ class DistributionDetector {
   DistributionDetector({
     RegistryReader registryReader = const Win32RegistryReader(),
     bool? isWindows,
-  })  : _registryReader = registryReader,
-        _isWindows = isWindows ?? Platform.isWindows;
+  }) : _registryReader = registryReader,
+       _isWindows = isWindows ?? Platform.isWindows;
 
   static const registryKeyPath = r'Software\NovelViewer';
   static const registryValueName = 'InstallType';

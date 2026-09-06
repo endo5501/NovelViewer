@@ -150,7 +150,8 @@ void main() {
     });
 
     test('produces same ruby text for rb format', () {
-      const input = '<ruby><rb>東京</rb><rt>とうきょう</rt></ruby>の<ruby>空<rt>そら</rt></ruby>。';
+      const input =
+          '<ruby><rb>東京</rb><rt>とうきょう</rt></ruby>の<ruby>空<rt>そら</rt></ruby>。';
       final segments = segmenter.splitIntoSentences(input);
 
       final plainText = segments.map((s) => s.text).join();
@@ -283,16 +284,19 @@ void main() {
       expect(segments[0].text.length, lessThanOrEqualTo(201));
     });
 
-    test('sentence-ending punctuation takes priority over length splitting', () {
-      // Period at position 120, total 250 chars
-      final text = '${'あ' * 120}。${'い' * 129}';
-      final segments = segmenter.splitIntoSentences(text);
+    test(
+      'sentence-ending punctuation takes priority over length splitting',
+      () {
+        // Period at position 120, total 250 chars
+        final text = '${'あ' * 120}。${'い' * 129}';
+        final segments = segmenter.splitIntoSentences(text);
 
-      expect(segments.length, 2);
-      expect(segments[0].text, '${'あ' * 120}。');
-      // Second segment is 129 chars, under 200, so no further split
-      expect(segments[1].text, 'い' * 129);
-    });
+        expect(segments.length, 2);
+        expect(segments[0].text, '${'あ' * 120}。');
+        // Second segment is 129 chars, under 200, so no further split
+        expect(segments[1].text, 'い' * 129);
+      },
+    );
 
     test('recursively splits very long sentence (500+ chars)', () {
       // 500 chars with commas at 150 and 320
@@ -321,8 +325,9 @@ void main() {
 
   group('TextSegmenter - English sentence splitting', () {
     test('splits English text at period followed by space', () {
-      final segments =
-          segmenter.splitIntoSentences('Hello world. Goodbye world.');
+      final segments = segmenter.splitIntoSentences(
+        'Hello world. Goodbye world.',
+      );
 
       expect(segments.length, 2);
       expect(segments[0].text, 'Hello world.');
@@ -330,8 +335,9 @@ void main() {
     });
 
     test('splits at question mark and exclamation mark', () {
-      final segments =
-          segmenter.splitIntoSentences('Who are you? Run away! Now.');
+      final segments = segmenter.splitIntoSentences(
+        'Who are you? Run away! Now.',
+      );
 
       expect(segments.length, 3);
       expect(segments[0].text, 'Who are you?');
@@ -340,8 +346,7 @@ void main() {
     });
 
     test('does not split at a decimal point', () {
-      final segments =
-          segmenter.splitIntoSentences('The value is 3.14 today.');
+      final segments = segmenter.splitIntoSentences('The value is 3.14 today.');
 
       expect(segments.length, 1);
       expect(segments[0].text, 'The value is 3.14 today.');
@@ -375,8 +380,9 @@ void main() {
     });
 
     test('splits dialogue at period before closing quote', () {
-      final segments =
-          segmenter.splitIntoSentences('He said "OK." She replied.');
+      final segments = segmenter.splitIntoSentences(
+        'He said "OK." She replied.',
+      );
 
       expect(segments.length, 2);
       expect(segments[0].text, 'He said "OK."');
@@ -384,8 +390,9 @@ void main() {
     });
 
     test('splits after closing paren that follows a period', () {
-      final segments =
-          segmenter.splitIntoSentences('(Note: optional.) Continue on.');
+      final segments = segmenter.splitIntoSentences(
+        '(Note: optional.) Continue on.',
+      );
 
       expect(segments.length, 2);
       expect(segments[0].text, '(Note: optional.)');
@@ -396,8 +403,9 @@ void main() {
       // Period + closing quote immediately followed by a letter (no space):
       // the bracket-skipped lookahead is not whitespace, so it is not a
       // sentence boundary and the text stays as one segment.
-      final segments =
-          segmenter.splitIntoSentences('A."Bcd and more text follows here.');
+      final segments = segmenter.splitIntoSentences(
+        'A."Bcd and more text follows here.',
+      );
 
       expect(segments.length, 1);
       expect(segments[0].text, 'A."Bcd and more text follows here.');
@@ -434,8 +442,10 @@ void main() {
       final segments = segmenter.splitIntoSentences(text);
 
       // First sentence is short and must stand alone.
-      expect(segments.first.text,
-          'Getting an agent into production takes more than a good prompt.');
+      expect(
+        segments.first.text,
+        'Getting an agent into production takes more than a good prompt.',
+      );
 
       // Every non-final segment must end at a clause/sentence boundary
       // (period or comma), never in the middle of a word.
@@ -476,8 +486,7 @@ void main() {
     // still a valid start position.
     // Built here rather than from the `late segmenter` above, which is only
     // assigned in setUp and so is not available while the group body runs.
-    final segments =
-        const TextSegmenter().splitIntoSentences('文1。文2。文3。');
+    final segments = const TextSegmenter().splitIntoSentences('文1。文2。文3。');
     // offsets: 0, 3, 6
 
     test('null offset starts at segment 0', () {
@@ -499,8 +508,7 @@ void main() {
     });
 
     test('offset before the first segment falls back to segment 0', () {
-      final indented =
-          const TextSegmenter().splitIntoSentences('　文1。文2。');
+      final indented = const TextSegmenter().splitIntoSentences('　文1。文2。');
       expect(indented.first.offset, greaterThan(0));
       expect(startSegmentIndexForOffset(indented, 0), 0);
     });

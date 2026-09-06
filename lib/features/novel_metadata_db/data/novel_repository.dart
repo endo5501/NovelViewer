@@ -56,20 +56,16 @@ class NovelRepository {
   Future<NovelMetadata?> findBySiteAndNovelId(
     String siteType,
     String novelId,
-  ) =>
-      _findOne(
-        where: 'site_type = ? AND novel_id = ?',
-        whereArgs: [siteType, novelId],
-      );
+  ) => _findOne(
+    where: 'site_type = ? AND novel_id = ?',
+    whereArgs: [siteType, novelId],
+  );
 
   Future<void> updateTitle(String folderName, String newTitle) async {
     final db = await _novelDatabase.database;
     final count = await db.update(
       'novels',
-      {
-        'title': newTitle,
-        'updated_at': DateTime.now().toIso8601String(),
-      },
+      {'title': newTitle, 'updated_at': DateTime.now().toIso8601String()},
       where: 'folder_name = ?',
       whereArgs: [folderName],
     );
@@ -78,8 +74,10 @@ class NovelRepository {
     }
   }
 
-  Future<void> deleteByFolderName(String folderName,
-      {DatabaseExecutor? txn}) async {
+  Future<void> deleteByFolderName(
+    String folderName, {
+    DatabaseExecutor? txn,
+  }) async {
     final executor = txn ?? await _novelDatabase.database;
     await executor.delete(
       'novels',

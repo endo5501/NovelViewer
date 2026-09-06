@@ -20,8 +20,9 @@ void main() {
         }
         return http.Response(
           jsonEncode({
-            'models':
-                models.map((name) => {'name': name, 'size': 1000}).toList(),
+            'models': models
+                .map((name) => {'name': name, 'size': 1000})
+                .toList(),
           }),
           200,
         );
@@ -53,8 +54,9 @@ void main() {
     final sub = keepAlive(container, 'http://localhost:11434');
     addTearDown(sub.close);
 
-    final result = await container
-        .read(ollamaModelListProvider('http://localhost:11434').future);
+    final result = await container.read(
+      ollamaModelListProvider('http://localhost:11434').future,
+    );
 
     expect(result, ['gemma3', 'qwen3:8b']);
   });
@@ -65,19 +67,17 @@ void main() {
 
     final provider = ollamaModelListProvider('http://localhost:11434');
     final completer = Completer<AsyncValue<List<String>>>();
-    final sub = container.listen<AsyncValue<List<String>>>(
-      provider,
-      (_, next) {
-        if (next.hasError && !completer.isCompleted) {
-          completer.complete(next);
-        }
-      },
-      fireImmediately: true,
-    );
+    final sub = container.listen<AsyncValue<List<String>>>(provider, (_, next) {
+      if (next.hasError && !completer.isCompleted) {
+        completer.complete(next);
+      }
+    }, fireImmediately: true);
     addTearDown(sub.close);
 
-    final state = await completer.future
-        .timeout(const Duration(seconds: 2), onTimeout: () => sub.read());
+    final state = await completer.future.timeout(
+      const Duration(seconds: 2),
+      onTimeout: () => sub.read(),
+    );
 
     expect(state.hasError, isTrue);
     expect(state.error.toString(), contains('Ollama API error'));
@@ -90,7 +90,7 @@ void main() {
       return http.Response(
         jsonEncode({
           'models': [
-            {'name': 'm-${request.url.host}', 'size': 1}
+            {'name': 'm-${request.url.host}', 'size': 1},
           ],
         }),
         200,
@@ -115,10 +115,7 @@ void main() {
     addTearDown(container.dispose);
 
     final provider = ollamaModelListProvider('http://localhost:11434');
-    final sub = container.listen<AsyncValue<List<String>>>(
-      provider,
-      (_, _) {},
-    );
+    final sub = container.listen<AsyncValue<List<String>>>(provider, (_, _) {});
     await container.read(provider.future);
 
     sub.close();
@@ -138,7 +135,7 @@ void main() {
       return http.Response(
         jsonEncode({
           'models': [
-            {'name': 'm$callCount', 'size': 1}
+            {'name': 'm$callCount', 'size': 1},
           ],
         }),
         200,

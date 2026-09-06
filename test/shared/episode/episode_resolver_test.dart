@@ -24,10 +24,11 @@ void main() {
       await File(p.join(tempDir.path, '020_b.txt')).writeAsString('b');
       await File(p.join(tempDir.path, 'note.md')).writeAsString('m');
 
-      expect(
-        listSortedTextFileNames(tempDir.path),
-        ['010_a.txt', '020_b.txt', '030_c.txt'],
-      );
+      expect(listSortedTextFileNames(tempDir.path), [
+        '010_a.txt',
+        '020_b.txt',
+        '030_c.txt',
+      ]);
     });
 
     test('returns empty list for a non-existent directory', () {
@@ -53,8 +54,11 @@ void main() {
         p.join(tempDir.path, 'missing'),
         onError: (_, _) => errors++,
       );
-      expect(errors, 0,
-          reason: 'a missing directory returns empty without erroring');
+      expect(
+        errors,
+        0,
+        reason: 'a missing directory returns empty without erroring',
+      );
     });
   });
 
@@ -121,8 +125,11 @@ void main() {
         },
       );
       expect(bound, 40);
-      expect(listed, isFalse,
-          reason: 'prefix-present files must not trigger a directory listing');
+      expect(
+        listed,
+        isFalse,
+        reason: 'prefix-present files must not trigger a directory listing',
+      );
     });
 
     test('uses lexical rank for a prefix-less current file', () {
@@ -145,21 +152,26 @@ void main() {
   group('resolveUpperBoundForAllFiles (ネタバレあり上限)', () {
     test('returns the highest prefix for a fully-numbered folder', () {
       final files = [
-        for (var i = 1; i <= 120; i++) '${i.toString().padLeft(3, '0')}_c.txt'
+        for (var i = 1; i <= 120; i++) '${i.toString().padLeft(3, '0')}_c.txt',
       ];
       expect(resolveUpperBoundForAllFiles(files), 120);
     });
 
-    test('uses file count when it exceeds the highest prefix (mixed folder)',
-        () {
-      final files = [
-        for (var i = 1; i <= 40; i++) '${i.toString().padLeft(3, '0')}_c.txt',
-        'afterword.txt',
-        'prologue.txt',
-      ];
-      expect(resolveUpperBoundForAllFiles(files), 42,
-          reason: 'max(highest prefix 40, total count 42) = 42');
-    });
+    test(
+      'uses file count when it exceeds the highest prefix (mixed folder)',
+      () {
+        final files = [
+          for (var i = 1; i <= 40; i++) '${i.toString().padLeft(3, '0')}_c.txt',
+          'afterword.txt',
+          'prologue.txt',
+        ];
+        expect(
+          resolveUpperBoundForAllFiles(files),
+          42,
+          reason: 'max(highest prefix 40, total count 42) = 42',
+        );
+      },
+    );
 
     test('returns 1 for an empty folder', () {
       expect(resolveUpperBoundForAllFiles(const []), 1);
@@ -169,8 +181,11 @@ void main() {
   group('resolveSourceFileForAllFiles (jump link target)', () {
     test('prefers the highest-prefix file', () {
       expect(
-        resolveSourceFileForAllFiles(
-            const ['010_a.txt', '100_c.txt', '020_b.txt']),
+        resolveSourceFileForAllFiles(const [
+          '010_a.txt',
+          '100_c.txt',
+          '020_b.txt',
+        ]),
         '100_c.txt',
       );
     });

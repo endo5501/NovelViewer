@@ -25,11 +25,7 @@ List<MoveDestination> buildMoveDestinations({
   required String sourcePath,
 }) {
   final destinations = <MoveDestination>[
-    MoveDestination(
-      path: libraryPath,
-      name: p.basename(libraryPath),
-      depth: 0,
-    ),
+    MoveDestination(path: libraryPath, name: p.basename(libraryPath), depth: 0),
   ];
 
   final sorted = [...organizationalFolderPaths]..sort();
@@ -38,11 +34,13 @@ List<MoveDestination> buildMoveDestinations({
     if (p.isWithin(sourcePath, folder)) continue;
     if (!p.isWithin(libraryPath, folder)) continue;
     final relative = p.relative(folder, from: libraryPath);
-    destinations.add(MoveDestination(
-      path: folder,
-      name: p.basename(folder),
-      depth: p.split(relative).length,
-    ));
+    destinations.add(
+      MoveDestination(
+        path: folder,
+        name: p.basename(folder),
+        depth: p.split(relative).length,
+      ),
+    );
   }
 
   return destinations;

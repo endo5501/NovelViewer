@@ -128,10 +128,12 @@ class PiperModelDownloadService {
     );
 
     // Extract tar.gz
-    final result = await Process.run(
-      'tar',
-      ['xzf', tarGzPath, '-C', parentDir.path],
-    );
+    final result = await Process.run('tar', [
+      'xzf',
+      tarGzPath,
+      '-C',
+      parentDir.path,
+    ]);
 
     if (result.exitCode != 0) {
       throw Exception('Failed to extract dictionary: ${result.stderr}');
@@ -151,5 +153,4 @@ class PiperModelDownloadService {
       await tarGzFile.delete();
     }
   }
-
 }

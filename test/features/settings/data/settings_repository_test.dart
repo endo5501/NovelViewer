@@ -205,17 +205,19 @@ void main() {
       expect(config.provider, LlmProvider.none);
     });
 
-    test('setLlmConfig does not write API key into SharedPreferences',
-        () async {
-      final repo = buildRepo();
-      const config = LlmConfig(
-        provider: LlmProvider.openai,
-        baseUrl: 'https://api.openai.com/v1',
-        model: 'gpt-4o-mini',
-      );
-      await repo.setLlmConfig(config);
-      expect(prefs.containsKey('llm_api_key'), isFalse);
-    });
+    test(
+      'setLlmConfig does not write API key into SharedPreferences',
+      () async {
+        final repo = buildRepo();
+        const config = LlmConfig(
+          provider: LlmProvider.openai,
+          baseUrl: 'https://api.openai.com/v1',
+          model: 'gpt-4o-mini',
+        );
+        await repo.setLlmConfig(config);
+        expect(prefs.containsKey('llm_api_key'), isFalse);
+      },
+    );
   });
 
   group('SettingsRepository - API key (secure storage)', () {
@@ -230,26 +232,29 @@ void main() {
       expect(await repo.getApiKey(), 'sk-from-secure');
     });
 
-    test('setApiKey writes to flutter_secure_storage, not SharedPreferences',
-        () async {
-      final repo = buildRepo();
-      await repo.setApiKey('sk-test-key');
-      expect(secureStorageMock.store['llm_api_key'], 'sk-test-key');
-      expect(prefs.containsKey('llm_api_key'), isFalse);
-    });
+    test(
+      'setApiKey writes to flutter_secure_storage, not SharedPreferences',
+      () async {
+        final repo = buildRepo();
+        await repo.setApiKey('sk-test-key');
+        expect(secureStorageMock.store['llm_api_key'], 'sk-test-key');
+        expect(prefs.containsKey('llm_api_key'), isFalse);
+      },
+    );
 
-    test('setApiKey with empty string deletes the secure storage entry',
-        () async {
-      secureStorageMock.store['llm_api_key'] = 'sk-existing';
-      final repo = buildRepo();
-      await repo.setApiKey('');
-      expect(secureStorageMock.store.containsKey('llm_api_key'), isFalse);
-    });
+    test(
+      'setApiKey with empty string deletes the secure storage entry',
+      () async {
+        secureStorageMock.store['llm_api_key'] = 'sk-existing';
+        final repo = buildRepo();
+        await repo.setApiKey('');
+        expect(secureStorageMock.store.containsKey('llm_api_key'), isFalse);
+      },
+    );
   });
 
   group('SettingsRepository - migrateApiKeyToSecureStorage', () {
-    test(
-        'transfers an existing SharedPreferences key into secure storage and '
+    test('transfers an existing SharedPreferences key into secure storage and '
         'removes the SharedPreferences entry', () async {
       await prefs.setString('llm_api_key', 'sk-legacy');
       final repo = buildRepo();
@@ -260,15 +265,17 @@ void main() {
       expect(prefs.containsKey('llm_api_key'), isFalse);
     });
 
-    test('does nothing when SharedPreferences has no llm_api_key entry',
-        () async {
-      final repo = buildRepo();
+    test(
+      'does nothing when SharedPreferences has no llm_api_key entry',
+      () async {
+        final repo = buildRepo();
 
-      await repo.migrateApiKeyToSecureStorage();
+        await repo.migrateApiKeyToSecureStorage();
 
-      expect(secureStorageMock.store.containsKey('llm_api_key'), isFalse);
-      expect(prefs.containsKey('llm_api_key'), isFalse);
-    });
+        expect(secureStorageMock.store.containsKey('llm_api_key'), isFalse);
+        expect(prefs.containsKey('llm_api_key'), isFalse);
+      },
+    );
 
     test('is idempotent: a second invocation is a no-op', () async {
       await prefs.setString('llm_api_key', 'sk-legacy');
@@ -284,8 +291,7 @@ void main() {
       expect(prefs.containsKey('llm_api_key'), isFalse);
     });
 
-    test(
-        'preserves the existing secure storage value when both stores have '
+    test('preserves the existing secure storage value when both stores have '
         'a key (e.g. a previous prefs.remove failed) and clears the legacy '
         'SharedPreferences entry', () async {
       await prefs.setString('llm_api_key', 'sk-stale-legacy');
@@ -298,8 +304,7 @@ void main() {
       expect(prefs.containsKey('llm_api_key'), isFalse);
     });
 
-    test(
-        'leaves the SharedPreferences entry intact and does not throw '
+    test('leaves the SharedPreferences entry intact and does not throw '
         'when the secure storage write fails', () async {
       await prefs.setString('llm_api_key', 'sk-legacy');
       secureStorageMock.forceWriteFailure = true;
@@ -311,25 +316,24 @@ void main() {
       expect(secureStorageMock.store.containsKey('llm_api_key'), isFalse);
     });
 
-    test('logs a WARNING via AppLogger when the secure storage write fails',
-        () async {
-      final records = <LogRecord>[];
-      final sub = Logger.root.onRecord.listen(records.add);
-      addTearDown(sub.cancel);
+    test(
+      'logs a WARNING via AppLogger when the secure storage write fails',
+      () async {
+        final records = <LogRecord>[];
+        final sub = Logger.root.onRecord.listen(records.add);
+        addTearDown(sub.cancel);
 
-      await prefs.setString('llm_api_key', 'sk-legacy');
-      secureStorageMock.forceWriteFailure = true;
-      final repo = buildRepo();
+        await prefs.setString('llm_api_key', 'sk-legacy');
+        secureStorageMock.forceWriteFailure = true;
+        final repo = buildRepo();
 
-      await repo.migrateApiKeyToSecureStorage();
+        await repo.migrateApiKeyToSecureStorage();
 
-      // Plaintext key remaining in SharedPreferences is a security-relevant
-      // diagnostic, so it must surface at WARNING (retained in release logs).
-      expect(
-        records.any((r) => r.level == Level.WARNING),
-        isTrue,
-      );
-    });
+        // Plaintext key remaining in SharedPreferences is a security-relevant
+        // diagnostic, so it must surface at WARNING (retained in release logs).
+        expect(records.any((r) => r.level == Level.WARNING), isTrue);
+      },
+    );
   });
 
   group('SettingsRepository - TTS settings', () {
@@ -404,14 +408,16 @@ void main() {
       expect(buildRepo().getIrodoriModelVariant(), IrodoriModelVariant.v3);
     });
 
-    test('getIrodoriModelVariant falls back to v3 for an unknown stored value',
-        () async {
-      SharedPreferences.setMockInitialValues({
-        'irodori_model_variant': 'v99',
-      });
-      prefs = await SharedPreferences.getInstance();
-      expect(buildRepo().getIrodoriModelVariant(), IrodoriModelVariant.v3);
-    });
+    test(
+      'getIrodoriModelVariant falls back to v3 for an unknown stored value',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'irodori_model_variant': 'v99',
+        });
+        prefs = await SharedPreferences.getInstance();
+        expect(buildRepo().getIrodoriModelVariant(), IrodoriModelVariant.v3);
+      },
+    );
   });
 
   group('SettingsRepository - Irodori synthesis parameters', () {

@@ -36,10 +36,8 @@ class TtsAudioDatabase {
   }
 
   Future<void> _migrateAutoVacuum(Database db) async {
-    final mode = Sqflite.firstIntValue(
-          await db.rawQuery('PRAGMA auto_vacuum'),
-        ) ??
-        0;
+    final mode =
+        Sqflite.firstIntValue(await db.rawQuery('PRAGMA auto_vacuum')) ?? 0;
     // auto_vacuum: 0=NONE, 1=FULL, 2=INCREMENTAL
     if (mode != 2) {
       await db.execute('PRAGMA auto_vacuum = INCREMENTAL');
@@ -126,8 +124,7 @@ class TtsAudioDatabase {
         FROM tts_segments
       ''');
       await db.execute('DROP TABLE tts_segments');
-      await db.execute(
-          'ALTER TABLE tts_segments_new RENAME TO tts_segments');
+      await db.execute('ALTER TABLE tts_segments_new RENAME TO tts_segments');
       await db.execute('''
         CREATE UNIQUE INDEX idx_segments_episode_index
         ON tts_segments(episode_id, segment_index)
@@ -139,7 +136,8 @@ class TtsAudioDatabase {
       // one form SQLite's ADD COLUMN accepts, so no table rebuild is needed
       // and every existing row reads as not skipped.
       await db.execute(
-          'ALTER TABLE tts_segments ADD COLUMN skip INTEGER NOT NULL DEFAULT 0');
+        'ALTER TABLE tts_segments ADD COLUMN skip INTEGER NOT NULL DEFAULT 0',
+      );
     }
   }
 

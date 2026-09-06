@@ -28,31 +28,35 @@ void main() {
   }
 
   group('listDownloadDestinationFolders', () {
-    test('returns empty list when the library root has no subfolders',
-        () async {
-      final result = await service.listDownloadDestinationFolders(
-        tempDir.path,
-        const <String>{},
-      );
+    test(
+      'returns empty list when the library root has no subfolders',
+      () async {
+        final result = await service.listDownloadDestinationFolders(
+          tempDir.path,
+          const <String>{},
+        );
 
-      expect(result, isEmpty);
-    });
+        expect(result, isEmpty);
+      },
+    );
 
-    test('includes organizational folders at multiple nesting depths',
-        () async {
-      mkdir('完結済み');
-      mkdir(p.join('完結済み', '異世界'));
-      mkdir('お気に入り');
+    test(
+      'includes organizational folders at multiple nesting depths',
+      () async {
+        mkdir('完結済み');
+        mkdir(p.join('完結済み', '異世界'));
+        mkdir('お気に入り');
 
-      final result = await service.listDownloadDestinationFolders(
-        tempDir.path,
-        const <String>{},
-      );
+        final result = await service.listDownloadDestinationFolders(
+          tempDir.path,
+          const <String>{},
+        );
 
-      final names = result.map((e) => e.name).toList();
-      expect(names, containsAll(['完結済み', '異世界', 'お気に入り']));
-      expect(result.length, 3);
-    });
+        final names = result.map((e) => e.name).toList();
+        expect(names, containsAll(['完結済み', '異世界', 'お気に入り']));
+        expect(result.length, 3);
+      },
+    );
 
     test('excludes a registered novel folder', () async {
       mkdir('完結済み');
@@ -84,8 +88,7 @@ void main() {
       expect(names, isNot(contains('assets')));
     });
 
-    test(
-        'includes an organizational folder that contains a novel folder, '
+    test('includes an organizational folder that contains a novel folder, '
         'but not the novel folder itself', () async {
       mkdir('完結済み');
       mkdir(p.join('完結済み', 'kakuyomu_r000001'));
@@ -99,21 +102,25 @@ void main() {
       expect(names, ['完結済み']);
     });
 
-    test('returns absolute paths that resolve under the library root',
-        () async {
-      mkdir(p.join('完結済み', '異世界'));
+    test(
+      'returns absolute paths that resolve under the library root',
+      () async {
+        mkdir(p.join('完結済み', '異世界'));
 
-      final result = await service.listDownloadDestinationFolders(
-        tempDir.path,
-        const <String>{},
-      );
+        final result = await service.listDownloadDestinationFolders(
+          tempDir.path,
+          const <String>{},
+        );
 
-      for (final entry in result) {
-        expect(p.isWithin(tempDir.path, entry.path), isTrue);
-      }
-      final nested = result.firstWhere((e) => e.name == '異世界');
-      expect(p.equals(nested.path, p.join(tempDir.path, '完結済み', '異世界')),
-          isTrue);
-    });
+        for (final entry in result) {
+          expect(p.isWithin(tempDir.path, entry.path), isTrue);
+        }
+        final nested = result.firstWhere((e) => e.name == '異世界');
+        expect(
+          p.equals(nested.path, p.join(tempDir.path, '完結済み', '異世界')),
+          isTrue,
+        );
+      },
+    );
   });
 }

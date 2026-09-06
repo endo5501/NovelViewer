@@ -10,7 +10,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 /// Builds a migrator that routes the seeded novel's rows into a real
 /// `novel_data.db` under [tempPath]/narou_n1234ab, plus a helper to reopen it.
 ({NovelDataMigrator migrator, Directory folderDir}) _folderMigrator(
-    String tempPath) {
+  String tempPath,
+) {
   final folderDir = Directory(p.join(tempPath, 'narou_n1234ab'))..createSync();
   final migrator = NovelDataMigrator(
     resolveFolderPath: (f) => f == 'narou_n1234ab' ? folderDir.path : null,
@@ -143,12 +144,16 @@ void main() {
           expect(bm, isEmpty);
 
           // reading_progress: retained, no file_path column.
-          final rpColumns =
-              await db.rawQuery('PRAGMA table_info(reading_progress)');
+          final rpColumns = await db.rawQuery(
+            'PRAGMA table_info(reading_progress)',
+          );
           final rpNames = rpColumns.map((c) => c['name']).toSet();
           expect(rpNames, containsAll(['novel_id', 'file_name', 'updated_at']));
-          expect(rpNames, isNot(contains('file_path')),
-              reason: 'fresh v9 reading_progress SHALL NOT have file_path');
+          expect(
+            rpNames,
+            isNot(contains('file_path')),
+            reason: 'fresh v9 reading_progress SHALL NOT have file_path',
+          );
         } finally {
           await novelDatabase.close();
         }
@@ -157,192 +162,241 @@ void main() {
       }
     });
 
-    test('v7 → v8 drops file_path then v9 migrates rows to novel_data.db',
-        () async {
-      final tempDir = Directory.systemTemp.createTempSync('relpath_v8_bm_');
-      try {
-        final dbPath = p.join(tempDir.path, 'novel_metadata.db');
-        await _seedV7Database(dbPath, seed: (db) async {
-          await db.insert('bookmarks', {
-            'novel_id': 'narou_n1234ab',
-            'file_name': '001_chapter1.txt',
-            'file_path': '/library/narou_n1234ab/001_chapter1.txt',
-            'line_number': 42,
-            'created_at': '2026-05-01T01:00:00.000Z',
-          });
-          await db.insert('bookmarks', {
-            'novel_id': 'narou_n1234ab',
-            'file_name': '002_chapter2.txt',
-            'file_path': '/library/narou_n1234ab/002_chapter2.txt',
-            'line_number': null,
-            'created_at': '2026-05-01T01:05:00.000Z',
-          });
-        });
-
-        final m = _folderMigrator(tempDir.path);
-        final novelDatabase =
-            NovelDatabase(dbDirPath: tempDir.path, dataMigrator: m.migrator);
+    test(
+      'v7 → v8 drops file_path then v9 migrates rows to novel_data.db',
+      () async {
+        final tempDir = Directory.systemTemp.createTempSync('relpath_v8_bm_');
         try {
-          await novelDatabase.database;
-        } finally {
-          await novelDatabase.close();
-        }
+          final dbPath = p.join(tempDir.path, 'novel_metadata.db');
+          await _seedV7Database(
+            dbPath,
+            seed: (db) async {
+              await db.insert('bookmarks', {
+                'novel_id': 'narou_n1234ab',
+                'file_name': '001_chapter1.txt',
+                'file_path': '/library/narou_n1234ab/001_chapter1.txt',
+                'line_number': 42,
+                'created_at': '2026-05-01T01:00:00.000Z',
+              });
+              await db.insert('bookmarks', {
+                'novel_id': 'narou_n1234ab',
+                'file_name': '002_chapter2.txt',
+                'file_path': '/library/narou_n1234ab/002_chapter2.txt',
+                'line_number': null,
+                'created_at': '2026-05-01T01:05:00.000Z',
+              });
+            },
+          );
 
-        final folderDb = await _openFolderDb(m.folderDir);
+          final m = _folderMigrator(tempDir.path);
+          final novelDatabase = NovelDatabase(
+            dbDirPath: tempDir.path,
+            dataMigrator: m.migrator,
+          );
+          try {
+            await novelDatabase.database;
+          } finally {
+            await novelDatabase.close();
+          }
+
+          final folderDb = await _openFolderDb(m.folderDir);
+          try {
+            final names = (await folderDb.rawQuery(
+              'PRAGMA table_info(bookmarks)',
+            )).map((c) => c['name']).toSet();
+            expect(names, isNot(contains('file_path')));
+            expect(names, isNot(contains('novel_id')));
+
+            final rows = await folderDb.query(
+              'bookmarks',
+              orderBy: 'file_name ASC',
+            );
+            expect(rows.length, 2, reason: 'both rows preserved + migrated');
+            expect(rows[0]['file_name'], '001_chapter1.txt');
+            expect(rows[0]['line_number'], 42);
+            expect(rows[0]['created_at'], '2026-05-01T01:00:00.000Z');
+            expect(rows[1]['file_name'], '002_chapter2.txt');
+            expect(rows[1]['line_number'], isNull);
+          } finally {
+            await folderDb.close();
+          }
+        } finally {
+          tempDir.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'v7 → v8 dedup (keep earliest) survives the move to novel_data.db',
+      () async {
+        final tempDir = Directory.systemTemp.createTempSync(
+          'relpath_v8_dedup_',
+        );
         try {
-          final names = (await folderDb.rawQuery('PRAGMA table_info(bookmarks)'))
-              .map((c) => c['name'])
-              .toSet();
-          expect(names, isNot(contains('file_path')));
-          expect(names, isNot(contains('novel_id')));
+          final dbPath = p.join(tempDir.path, 'novel_metadata.db');
+          await _seedV7Database(
+            dbPath,
+            seed: (db) async {
+              await db.insert('bookmarks', {
+                'novel_id': 'narou_n1234ab',
+                'file_name': '001_chapter1.txt',
+                'file_path': '/old/narou_n1234ab/001_chapter1.txt',
+                'line_number': 42,
+                'created_at': '2026-05-01T01:00:00.000Z',
+              });
+              await db.insert('bookmarks', {
+                'novel_id': 'narou_n1234ab',
+                'file_name': '001_chapter1.txt',
+                'file_path': '/new/narou_n1234ab/001_chapter1.txt',
+                'line_number': 42,
+                'created_at': '2026-05-02T09:00:00.000Z',
+              });
+            },
+          );
 
-          final rows = await folderDb.query('bookmarks', orderBy: 'file_name ASC');
-          expect(rows.length, 2, reason: 'both rows preserved + migrated');
-          expect(rows[0]['file_name'], '001_chapter1.txt');
-          expect(rows[0]['line_number'], 42);
-          expect(rows[0]['created_at'], '2026-05-01T01:00:00.000Z');
-          expect(rows[1]['file_name'], '002_chapter2.txt');
-          expect(rows[1]['line_number'], isNull);
+          final m = _folderMigrator(tempDir.path);
+          final novelDatabase = NovelDatabase(
+            dbDirPath: tempDir.path,
+            dataMigrator: m.migrator,
+          );
+          try {
+            await novelDatabase.database;
+          } finally {
+            await novelDatabase.close();
+          }
+
+          final folderDb = await _openFolderDb(m.folderDir);
+          try {
+            final rows = await folderDb.query('bookmarks');
+            expect(
+              rows.length,
+              1,
+              reason: 'colliding rows SHALL be deduplicated to one',
+            );
+            expect(
+              rows.first['created_at'],
+              '2026-05-01T01:00:00.000Z',
+              reason: 'the earliest created_at SHALL be kept',
+            );
+          } finally {
+            await folderDb.close();
+          }
         } finally {
-          await folderDb.close();
+          tempDir.deleteSync(recursive: true);
         }
-      } finally {
-        tempDir.deleteSync(recursive: true);
-      }
-    });
+      },
+    );
 
-    test('v7 → v8 dedup (keep earliest) survives the move to novel_data.db',
-        () async {
-      final tempDir = Directory.systemTemp.createTempSync('relpath_v8_dedup_');
-      try {
-        final dbPath = p.join(tempDir.path, 'novel_metadata.db');
-        await _seedV7Database(dbPath, seed: (db) async {
-          await db.insert('bookmarks', {
-            'novel_id': 'narou_n1234ab',
-            'file_name': '001_chapter1.txt',
-            'file_path': '/old/narou_n1234ab/001_chapter1.txt',
-            'line_number': 42,
-            'created_at': '2026-05-01T01:00:00.000Z',
-          });
-          await db.insert('bookmarks', {
-            'novel_id': 'narou_n1234ab',
-            'file_name': '001_chapter1.txt',
-            'file_path': '/new/narou_n1234ab/001_chapter1.txt',
-            'line_number': 42,
-            'created_at': '2026-05-02T09:00:00.000Z',
-          });
-        });
-
-        final m = _folderMigrator(tempDir.path);
-        final novelDatabase =
-            NovelDatabase(dbDirPath: tempDir.path, dataMigrator: m.migrator);
+    test(
+      'v7 → v8 NULL-line dedup survives the move to novel_data.db',
+      () async {
+        final tempDir = Directory.systemTemp.createTempSync(
+          'relpath_v8_dedup_null_',
+        );
         try {
-          await novelDatabase.database;
-        } finally {
-          await novelDatabase.close();
-        }
+          final dbPath = p.join(tempDir.path, 'novel_metadata.db');
+          await _seedV7Database(
+            dbPath,
+            seed: (db) async {
+              await db.insert('bookmarks', {
+                'novel_id': 'narou_n1234ab',
+                'file_name': '001_chapter1.txt',
+                'file_path': '/old/narou_n1234ab/001_chapter1.txt',
+                'line_number': null,
+                'created_at': '2026-05-01T01:00:00.000Z',
+              });
+              await db.insert('bookmarks', {
+                'novel_id': 'narou_n1234ab',
+                'file_name': '001_chapter1.txt',
+                'file_path': '/new/narou_n1234ab/001_chapter1.txt',
+                'line_number': null,
+                'created_at': '2026-05-02T09:00:00.000Z',
+              });
+            },
+          );
 
-        final folderDb = await _openFolderDb(m.folderDir);
+          final m = _folderMigrator(tempDir.path);
+          final novelDatabase = NovelDatabase(
+            dbDirPath: tempDir.path,
+            dataMigrator: m.migrator,
+          );
+          try {
+            await novelDatabase.database;
+          } finally {
+            await novelDatabase.close();
+          }
+
+          final folderDb = await _openFolderDb(m.folderDir);
+          try {
+            final rows = await folderDb.query('bookmarks');
+            expect(
+              rows.length,
+              1,
+              reason: 'NULL-line collisions SHALL be deduplicated to one',
+            );
+            expect(rows.first['created_at'], '2026-05-01T01:00:00.000Z');
+          } finally {
+            await folderDb.close();
+          }
+        } finally {
+          tempDir.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'upgrade v7 → v8 drops reading_progress.file_path and preserves rows',
+      () async {
+        final tempDir = Directory.systemTemp.createTempSync('relpath_v8_rp_');
         try {
-          final rows = await folderDb.query('bookmarks');
-          expect(rows.length, 1,
-              reason: 'colliding rows SHALL be deduplicated to one');
-          expect(rows.first['created_at'], '2026-05-01T01:00:00.000Z',
-              reason: 'the earliest created_at SHALL be kept');
+          final dbPath = p.join(tempDir.path, 'novel_metadata.db');
+          await _seedV7Database(
+            dbPath,
+            seed: (db) async {
+              await db.insert('reading_progress', {
+                'novel_id': 'narou_n1234ab',
+                'file_path': '/library/narou_n1234ab/003_chapter3.txt',
+                'file_name': '003_chapter3.txt',
+                'updated_at': '2026-05-01T03:00:00.000Z',
+              });
+            },
+          );
+
+          final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
+          try {
+            final db = await novelDatabase.database;
+
+            final columns = await db.rawQuery(
+              'PRAGMA table_info(reading_progress)',
+            );
+            final names = columns.map((c) => c['name']).toSet();
+            expect(
+              names,
+              isNot(contains('file_path')),
+              reason: 'v7 → v8 SHALL drop reading_progress.file_path',
+            );
+            final pkColumns = columns
+                .where((c) => (c['pk'] as int) > 0)
+                .map((c) => c['name'])
+                .toList();
+            expect(pkColumns, ['novel_id']);
+
+            final rows = await db.query('reading_progress');
+            expect(
+              rows.length,
+              1,
+              reason: 'the progress row SHALL be preserved',
+            );
+            expect(rows.first['novel_id'], 'narou_n1234ab');
+            expect(rows.first['file_name'], '003_chapter3.txt');
+            expect(rows.first['updated_at'], '2026-05-01T03:00:00.000Z');
+          } finally {
+            await novelDatabase.close();
+          }
         } finally {
-          await folderDb.close();
+          tempDir.deleteSync(recursive: true);
         }
-      } finally {
-        tempDir.deleteSync(recursive: true);
-      }
-    });
-
-    test('v7 → v8 NULL-line dedup survives the move to novel_data.db',
-        () async {
-      final tempDir =
-          Directory.systemTemp.createTempSync('relpath_v8_dedup_null_');
-      try {
-        final dbPath = p.join(tempDir.path, 'novel_metadata.db');
-        await _seedV7Database(dbPath, seed: (db) async {
-          await db.insert('bookmarks', {
-            'novel_id': 'narou_n1234ab',
-            'file_name': '001_chapter1.txt',
-            'file_path': '/old/narou_n1234ab/001_chapter1.txt',
-            'line_number': null,
-            'created_at': '2026-05-01T01:00:00.000Z',
-          });
-          await db.insert('bookmarks', {
-            'novel_id': 'narou_n1234ab',
-            'file_name': '001_chapter1.txt',
-            'file_path': '/new/narou_n1234ab/001_chapter1.txt',
-            'line_number': null,
-            'created_at': '2026-05-02T09:00:00.000Z',
-          });
-        });
-
-        final m = _folderMigrator(tempDir.path);
-        final novelDatabase =
-            NovelDatabase(dbDirPath: tempDir.path, dataMigrator: m.migrator);
-        try {
-          await novelDatabase.database;
-        } finally {
-          await novelDatabase.close();
-        }
-
-        final folderDb = await _openFolderDb(m.folderDir);
-        try {
-          final rows = await folderDb.query('bookmarks');
-          expect(rows.length, 1,
-              reason: 'NULL-line collisions SHALL be deduplicated to one');
-          expect(rows.first['created_at'], '2026-05-01T01:00:00.000Z');
-        } finally {
-          await folderDb.close();
-        }
-      } finally {
-        tempDir.deleteSync(recursive: true);
-      }
-    });
-
-    test('upgrade v7 → v8 drops reading_progress.file_path and preserves rows',
-        () async {
-      final tempDir = Directory.systemTemp.createTempSync('relpath_v8_rp_');
-      try {
-        final dbPath = p.join(tempDir.path, 'novel_metadata.db');
-        await _seedV7Database(dbPath, seed: (db) async {
-          await db.insert('reading_progress', {
-            'novel_id': 'narou_n1234ab',
-            'file_path': '/library/narou_n1234ab/003_chapter3.txt',
-            'file_name': '003_chapter3.txt',
-            'updated_at': '2026-05-01T03:00:00.000Z',
-          });
-        });
-
-        final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
-        try {
-          final db = await novelDatabase.database;
-
-          final columns =
-              await db.rawQuery('PRAGMA table_info(reading_progress)');
-          final names = columns.map((c) => c['name']).toSet();
-          expect(names, isNot(contains('file_path')),
-              reason: 'v7 → v8 SHALL drop reading_progress.file_path');
-          final pkColumns = columns
-              .where((c) => (c['pk'] as int) > 0)
-              .map((c) => c['name'])
-              .toList();
-          expect(pkColumns, ['novel_id']);
-
-          final rows = await db.query('reading_progress');
-          expect(rows.length, 1, reason: 'the progress row SHALL be preserved');
-          expect(rows.first['novel_id'], 'narou_n1234ab');
-          expect(rows.first['file_name'], '003_chapter3.txt');
-          expect(rows.first['updated_at'], '2026-05-01T03:00:00.000Z');
-        } finally {
-          await novelDatabase.close();
-        }
-      } finally {
-        tempDir.deleteSync(recursive: true);
-      }
-    });
+      },
+    );
   });
 }

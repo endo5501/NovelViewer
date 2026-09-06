@@ -45,8 +45,9 @@ void main() {
   }) {
     return ProviderContainer(
       overrides: [
-        libraryPathProvider
-            .overrideWithValue(libraryPath ?? '${tempDir.path}/NovelViewer'),
+        libraryPathProvider.overrideWithValue(
+          libraryPath ?? '${tempDir.path}/NovelViewer',
+        ),
         sharedPreferencesProvider.overrideWithValue(prefs),
         httpClientProvider.overrideWithValue(httpClient),
         irodoriExpectedFileSizesProvider.overrideWithValue(
@@ -64,8 +65,9 @@ void main() {
   }) {
     final dir = Directory(p.join(modelsDir, variant.modelDirName))
       ..createSync(recursive: true);
-    File(p.join(dir.path, variant.ggufFileName))
-        .writeAsBytesSync(List.filled(testExpectedFileSizes[variant]!, 0));
+    File(
+      p.join(dir.path, variant.ggufFileName),
+    ).writeAsBytesSync(List.filled(testExpectedFileSizes[variant]!, 0));
   }
 
   group('irodoriModelDownloadProvider', () {
@@ -77,23 +79,23 @@ void main() {
       expect(state, isA<IrodoriModelDownloadIdle>());
     });
 
-    test('initial state is completed when all required files already exist',
-        () {
-      final modelsDir = p.join(tempDir.path, 'models');
-      writeAllRequiredFiles(modelsDir);
+    test(
+      'initial state is completed when all required files already exist',
+      () {
+        final modelsDir = p.join(tempDir.path, 'models');
+        writeAllRequiredFiles(modelsDir);
 
-      final container = createContainer(
-        httpClient: http.Client(),
-        expectedFileSizes: {
-          for (final v in IrodoriModelVariant.values) v: 5,
-        },
-      );
-      addTearDown(container.dispose);
+        final container = createContainer(
+          httpClient: http.Client(),
+          expectedFileSizes: {for (final v in IrodoriModelVariant.values) v: 5},
+        );
+        addTearDown(container.dispose);
 
-      final state = container.read(irodoriModelDownloadProvider);
-      expect(state, isA<IrodoriModelDownloadCompleted>());
-      expect((state as IrodoriModelDownloadCompleted).modelsDir, modelsDir);
-    });
+        final state = container.read(irodoriModelDownloadProvider);
+        expect(state, isA<IrodoriModelDownloadCompleted>());
+        expect((state as IrodoriModelDownloadCompleted).modelsDir, modelsDir);
+      },
+    );
 
     test('initial state is idle when library path is not set', () {
       final container = createContainer(
@@ -139,20 +141,15 @@ void main() {
 
       final container = createContainer(
         httpClient: mockClient,
-        expectedFileSizes: {
-          for (final v in IrodoriModelVariant.values) v: 10,
-        },
+        expectedFileSizes: {for (final v in IrodoriModelVariant.values) v: 10},
       );
       addTearDown(container.dispose);
 
-      container.listen(
-        irodoriModelDownloadProvider,
-        (previous, next) {
-          if (next is IrodoriModelDownloadDownloading) {
-            progressUpdates.add(next);
-          }
-        },
-      );
+      container.listen(irodoriModelDownloadProvider, (previous, next) {
+        if (next is IrodoriModelDownloadDownloading) {
+          progressUpdates.add(next);
+        }
+      });
 
       await container
           .read(irodoriModelDownloadProvider.notifier)
@@ -160,8 +157,9 @@ void main() {
 
       expect(progressUpdates, isNotEmpty);
       expect(
-        progressUpdates
-            .any((s) => s.currentFile == IrodoriModelVariant.v3.ggufFileName),
+        progressUpdates.any(
+          (s) => s.currentFile == IrodoriModelVariant.v3.ggufFileName,
+        ),
         isTrue,
       );
     });
@@ -223,9 +221,7 @@ void main() {
       // boundary at which to notice it.
       final container = createContainer(
         httpClient: mockClient,
-        expectedFileSizes: {
-          for (final v in IrodoriModelVariant.values) v: 20,
-        },
+        expectedFileSizes: {for (final v in IrodoriModelVariant.values) v: 20},
       );
       addTearDown(container.dispose);
 
@@ -253,8 +249,7 @@ void main() {
       expect(state, isA<IrodoriModelDownloadIdle>());
     });
 
-    test('completed state includes the models root directory path',
-        () async {
+    test('completed state includes the models root directory path', () async {
       final mockClient = MockClient.streaming((request, _) async {
         return http.StreamedResponse(
           Stream.value(List.filled(5, 0)),
@@ -281,11 +276,15 @@ void main() {
     /// Serves a body that only completes once [release] is closed, so a
     /// download can be held open while the variant is switched underneath it.
     ({http.Client client, StreamController<List<int>> release}) heldClient(
-        int totalBytes) {
+      int totalBytes,
+    ) {
       final release = StreamController<List<int>>();
       final client = MockClient.streaming((request, _) async {
-        return http.StreamedResponse(release.stream, 200,
-            contentLength: totalBytes);
+        return http.StreamedResponse(
+          release.stream,
+          200,
+          contentLength: totalBytes,
+        );
       });
       return (client: client, release: release);
     }
@@ -330,9 +329,7 @@ void main() {
       final held = heldClient(10);
       final container = createContainer(
         httpClient: held.client,
-        expectedFileSizes: {
-          for (final v in IrodoriModelVariant.values) v: 10,
-        },
+        expectedFileSizes: {for (final v in IrodoriModelVariant.values) v: 10},
       );
       addTearDown(container.dispose);
 
@@ -358,10 +355,14 @@ void main() {
       await future;
 
       expect(
-        File(p.join(tempDir.path, 'models',
-                IrodoriModelVariant.v3.modelDirName,
-                IrodoriModelVariant.v3.ggufFileName))
-            .existsSync(),
+        File(
+          p.join(
+            tempDir.path,
+            'models',
+            IrodoriModelVariant.v3.modelDirName,
+            IrodoriModelVariant.v3.ggufFileName,
+          ),
+        ).existsSync(),
         isFalse,
         reason: 'a cancelled transfer must not leave a finished file',
       );

@@ -1,4 +1,1 @@
-enum TextDisplayMode {
-  horizontal,
-  vertical,
-}
+enum TextDisplayMode { horizontal, vertical }

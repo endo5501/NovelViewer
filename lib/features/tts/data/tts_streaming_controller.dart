@@ -54,15 +54,16 @@ class TtsStreamingController {
     TtsDictionaryRepository? dictionaryRepository,
     TtsSession? session,
     SegmentPlayer? segmentPlayer,
-  })  : _read = read,
-        _repository = repository,
-        _dictionaryRepository = dictionaryRepository,
-        _session = session ?? TtsSession(isolate: ttsIsolate),
-        _segmentPlayer = segmentPlayer ??
-            SegmentPlayer(
-              player: audioPlayer,
-              bufferDrainDelay: bufferDrainDelay,
-            );
+  }) : _read = read,
+       _repository = repository,
+       _dictionaryRepository = dictionaryRepository,
+       _session = session ?? TtsSession(isolate: ttsIsolate),
+       _segmentPlayer =
+           segmentPlayer ??
+           SegmentPlayer(
+             player: audioPlayer,
+             bufferDrainDelay: bufferDrainDelay,
+           );
 
   final Reader _read;
   final TtsSession _session;
@@ -158,7 +159,9 @@ class TtsStreamingController {
       // a phantom "ready" episode.
       if (_stopped) {
         await _repository.updateEpisodeStatus(
-            episodeId, TtsEpisodeStatus.partial);
+          episodeId,
+          TtsEpisodeStatus.partial,
+        );
         return TtsStartOutcome.stopped;
       }
       if (result != _PlaybackResult.finished) {
@@ -174,7 +177,9 @@ class TtsStreamingController {
         final hasAudio = await _repository.getAudioSegmentCount(episodeId) > 0;
         if (hasAudio) {
           await _repository.updateEpisodeStatus(
-              episodeId, TtsEpisodeStatus.partial);
+            episodeId,
+            TtsEpisodeStatus.partial,
+          );
         } else {
           await _repository.deleteEpisode(episodeId);
         }
@@ -186,8 +191,9 @@ class TtsStreamingController {
       // mid-episode can finish with earlier segments still ungenerated.
       // Claiming `completed` there would show the file as fully generated and
       // let an MP3 export silently drop the missing prefix.
-      final generatedCount =
-          await _repository.getGeneratedSegmentCount(episodeId);
+      final generatedCount = await _repository.getGeneratedSegmentCount(
+        episodeId,
+      );
       await _repository.updateEpisodeStatus(
         episodeId,
         generatedCount >= segments.length
@@ -238,8 +244,9 @@ class TtsStreamingController {
     int generatedSoFar = 0;
 
     if (totalToGenerate > 0) {
-      _read(ttsGenerationProgressProvider.notifier).set(
-          TtsGenerationProgress(current: 0, total: totalToGenerate));
+      _read(
+        ttsGenerationProgressProvider.notifier,
+      ).set(TtsGenerationProgress(current: 0, total: totalToGenerate));
     }
 
     // Pre-load dictionary entries once to avoid N+1 DB queries in the segment loop.
@@ -273,7 +280,10 @@ class TtsStreamingController {
         // Use edited text from DB if available, otherwise apply dictionary to original
         final rawText = dbRow?.text ?? segments[i].text;
         final synthText = dbRow == null && dictEntries != null
-            ? TtsDictionaryRepository.applyDictionaryWithEntries(dictEntries, rawText)
+            ? TtsDictionaryRepository.applyDictionaryWithEntries(
+                dictEntries,
+                rawText,
+              )
             : rawText;
 
         // A symbol-only line ("――‐") is its own segment, so a no-reading
@@ -296,14 +306,16 @@ class TtsStreamingController {
           // Advancing keeps progress from stalling short of the total.
           generatedSoFar++;
           _read(ttsGenerationProgressProvider.notifier).set(
-              TtsGenerationProgress(
-                  current: generatedSoFar, total: totalToGenerate));
+            TtsGenerationProgress(
+              current: generatedSoFar,
+              total: totalToGenerate,
+            ),
+          );
           continue;
         }
 
         // Generate on-demand
-        _read(ttsPlaybackStateProvider.notifier)
-            .set(TtsPlaybackState.waiting);
+        _read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.waiting);
 
         // Checked here rather than at the caller: playing back segments that
         // already have audio needs no model, so refusing earlier would block
@@ -363,7 +375,11 @@ class TtsStreamingController {
         // Store in DB
         if (dbRow != null) {
           await _repository.updateSegmentAudio(
-              episodeId, i, wavBytes, result.audio!.length);
+            episodeId,
+            i,
+            wavBytes,
+            result.audio!.length,
+          );
         } else {
           await _repository.insertSegment(
             episodeId: episodeId,
@@ -379,8 +395,11 @@ class TtsStreamingController {
         audioData = wavBytes;
         generatedSoFar++;
         _read(ttsGenerationProgressProvider.notifier).set(
-            TtsGenerationProgress(
-                current: generatedSoFar, total: totalToGenerate));
+          TtsGenerationProgress(
+            current: generatedSoFar,
+            total: totalToGenerate,
+          ),
+        );
       }
 
       // Write to temp file
@@ -392,18 +411,21 @@ class TtsStreamingController {
       if (_stopped) break;
 
       // Update highlight
-      _read(ttsHighlightRangeProvider.notifier).set(
-            TextRange(start: textOffset, end: textOffset + textLength),
-          );
+      _read(
+        ttsHighlightRangeProvider.notifier,
+      ).set(TextRange(start: textOffset, end: textOffset + textLength));
 
-      _read(ttsPlaybackStateProvider.notifier)
-          .set(TtsPlaybackState.playing);
+      _read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.playing);
 
       // "Last" means nothing audible follows, not merely the final index: a
       // trailing skipped segment never plays, so treating this one as
       // intermediate would pause the player instead of letting the output
       // buffer drain, clipping its tail.
-      final isLast = !_hasPlayableSegmentAfter(i, segments.length, dbSegmentMap);
+      final isLast = !_hasPlayableSegmentAfter(
+        i,
+        segments.length,
+        dbSegmentMap,
+      );
       await _segmentPlayer.playSegment(filePath, isLast: isLast);
 
       if (_stopped) break;
@@ -413,8 +435,7 @@ class TtsStreamingController {
       // All segments played — clear UI state. The segment player and temp
       // files are disposed by `start()`'s outer finally so this branch and
       // the exception path stay symmetric.
-      _read(ttsPlaybackStateProvider.notifier)
-          .set(TtsPlaybackState.stopped);
+      _read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.stopped);
       _read(ttsHighlightRangeProvider.notifier).set(null);
     }
 
@@ -494,11 +515,11 @@ class TtsStreamingController {
       _log.warning('Error during stop() cleanup', e, st);
     } finally {
       // Always clear state even if cleanup throws
-      _read(ttsPlaybackStateProvider.notifier)
-          .set(TtsPlaybackState.stopped);
+      _read(ttsPlaybackStateProvider.notifier).set(TtsPlaybackState.stopped);
       _read(ttsHighlightRangeProvider.notifier).set(null);
-      _read(ttsGenerationProgressProvider.notifier)
-          .set(TtsGenerationProgress.zero);
+      _read(
+        ttsGenerationProgressProvider.notifier,
+      ).set(TtsGenerationProgress.zero);
     }
 
     await _cleanupFiles();

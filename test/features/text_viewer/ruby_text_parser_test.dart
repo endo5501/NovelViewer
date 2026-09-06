@@ -6,20 +6,15 @@ import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 void main() {
   group('parseRubyText', () {
     test('parses standard ruby tag with rp elements', () {
-      const input =
-          '<ruby>漢字<rp>(</rp><rt>かんじ</rt><rp>)</rp></ruby>';
+      const input = '<ruby>漢字<rp>(</rp><rt>かんじ</rt><rp>)</rp></ruby>';
       final result = parseRubyText(input);
-      expect(result, [
-        const RubyTextSegment(base: '漢字', rubyText: 'かんじ'),
-      ]);
+      expect(result, [const RubyTextSegment(base: '漢字', rubyText: 'かんじ')]);
     });
 
     test('parses ruby tag without rp elements', () {
       const input = '<ruby>漢字<rt>かんじ</rt></ruby>';
       final result = parseRubyText(input);
-      expect(result, [
-        const RubyTextSegment(base: '漢字', rubyText: 'かんじ'),
-      ]);
+      expect(result, [const RubyTextSegment(base: '漢字', rubyText: 'かんじ')]);
     });
 
     test('parses multiple ruby tags in a line', () {
@@ -36,14 +31,11 @@ void main() {
     test('returns single plain text segment when no ruby tags', () {
       const input = '普通のテキスト';
       final result = parseRubyText(input);
-      expect(result, [
-        const PlainTextSegment('普通のテキスト'),
-      ]);
+      expect(result, [const PlainTextSegment('普通のテキスト')]);
     });
 
     test('parses mixed content with text before and after ruby', () {
-      const input =
-          'これは<ruby>漢字<rp>(</rp><rt>かんじ</rt><rp>)</rp></ruby>です';
+      const input = 'これは<ruby>漢字<rp>(</rp><rt>かんじ</rt><rp>)</rp></ruby>です';
       final result = parseRubyText(input);
       expect(result, [
         const PlainTextSegment('これは'),
@@ -69,8 +61,7 @@ void main() {
     });
 
     test('parses ruby tag with multi-character ruby text', () {
-      const input =
-          '<ruby>魔法杖職人<rp>(</rp><rt>ワンドメーカー</rt><rp>)</rp></ruby>';
+      const input = '<ruby>魔法杖職人<rp>(</rp><rt>ワンドメーカー</rt><rp>)</rp></ruby>';
       final result = parseRubyText(input);
       expect(result, [
         const RubyTextSegment(base: '魔法杖職人', rubyText: 'ワンドメーカー'),
@@ -78,8 +69,7 @@ void main() {
     });
 
     test('parses ruby tag with fullwidth parentheses in rp', () {
-      const input =
-          '<ruby>魔法杖職人<rp>（</rp><rt>ワンドメーカー</rt><rp>）</rp></ruby>';
+      const input = '<ruby>魔法杖職人<rp>（</rp><rt>ワンドメーカー</rt><rp>）</rp></ruby>';
       final result = parseRubyText(input);
       expect(result, [
         const RubyTextSegment(base: '魔法杖職人', rubyText: 'ワンドメーカー'),
@@ -90,9 +80,7 @@ void main() {
       const input =
           '<ruby><rb>八百万</rb><rp>（</rp><rt>やおよろず</rt><rp>）</rp></ruby>';
       final result = parseRubyText(input);
-      expect(result, [
-        const RubyTextSegment(base: '八百万', rubyText: 'やおよろず'),
-      ]);
+      expect(result, [const RubyTextSegment(base: '八百万', rubyText: 'やおよろず')]);
     });
   });
 
@@ -290,8 +278,10 @@ void main() {
       // Regression guard: the pre-fix code used
       // selection.textInside(value.text) which leaks U+FFFC for each ruby
       // segment. Any return from this helper MUST be free of U+FFFC.
-      const fullDisplaySelection =
-          TextSelection(baseOffset: 0, extentOffset: 7);
+      const fullDisplaySelection = TextSelection(
+        baseOffset: 0,
+        extentOffset: 7,
+      );
       final result = selectedTextFromSelection(fullDisplaySelection, segments);
       expect(result, '我は宇宙の支配者なり');
       expect(result.contains('￼'), isFalse);

@@ -60,10 +60,11 @@ void main() {
           }),
         ],
         child: const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(body: TextViewerPanel())),
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: TextViewerPanel()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -74,7 +75,9 @@ void main() {
     container
         .read(currentDirectoryProvider.notifier)
         .setDirectory(tempDir.path);
-    container.read(selectedFileProvider.notifier).selectFile(
+    container
+        .read(selectedFileProvider.notifier)
+        .selectFile(
           FileEntry(name: 'test.txt', path: '${tempDir.path}/test.txt'),
         );
     await tester.pumpAndSettle();
@@ -85,8 +88,9 @@ void main() {
   }
 
   group('TTS Export Button', () {
-    testWidgets('shows download button when audioState is ready and stopped',
-        (WidgetTester tester) async {
+    testWidgets('shows download button when audioState is ready and stopped', (
+      WidgetTester tester,
+    ) async {
       await setupReadyState(tester);
       await tester.pump();
 
@@ -94,8 +98,9 @@ void main() {
       expect(find.byTooltip('MP3エクスポート'), findsOneWidget);
     });
 
-    testWidgets('does not show download button when audioState is none',
-        (WidgetTester tester) async {
+    testWidgets('does not show download button when audioState is none', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -104,10 +109,11 @@ void main() {
             fileContentProvider.overrideWith((ref) async => 'テスト内容'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: TextViewerPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: TextViewerPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -115,8 +121,9 @@ void main() {
       expect(find.byIcon(Icons.download), findsNothing);
     });
 
-    testWidgets('does not show download button when audioState is generating',
-        (WidgetTester tester) async {
+    testWidgets('does not show download button when audioState is generating', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -132,10 +139,11 @@ void main() {
             }),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: TextViewerPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: TextViewerPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -145,7 +153,9 @@ void main() {
       container
           .read(currentDirectoryProvider.notifier)
           .setDirectory(tempDir.path);
-      container.read(selectedFileProvider.notifier).selectFile(
+      container
+          .read(selectedFileProvider.notifier)
+          .selectFile(
             FileEntry(name: 'test.txt', path: '${tempDir.path}/test.txt'),
           );
       await tester.pumpAndSettle();
@@ -154,42 +164,45 @@ void main() {
     });
 
     testWidgets(
-        'shows progress indicator instead of download button during export',
-        (WidgetTester tester) async {
-      await setupReadyState(tester);
+      'shows progress indicator instead of download button during export',
+      (WidgetTester tester) async {
+        await setupReadyState(tester);
 
-      final element = tester.element(find.byType(TextViewerPanel));
-      final container = ProviderScope.containerOf(element);
-      container
-          .read(ttsExportStateProvider.notifier)
-          .set(TtsExportState.exporting);
-      await tester.pump();
+        final element = tester.element(find.byType(TextViewerPanel));
+        final container = ProviderScope.containerOf(element);
+        container
+            .read(ttsExportStateProvider.notifier)
+            .set(TtsExportState.exporting);
+        await tester.pump();
 
-      expect(find.byIcon(Icons.download), findsNothing);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    });
+        expect(find.byIcon(Icons.download), findsNothing);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      },
+    );
 
     testWidgets(
-        'shows determinate progress when export progress is available',
-        (WidgetTester tester) async {
-      await setupReadyState(tester);
+      'shows determinate progress when export progress is available',
+      (WidgetTester tester) async {
+        await setupReadyState(tester);
 
-      final element = tester.element(find.byType(TextViewerPanel));
-      final container = ProviderScope.containerOf(element);
-      container
-          .read(ttsExportStateProvider.notifier)
-          .set(TtsExportState.exporting);
-      container
-          .read(ttsExportProgressProvider.notifier)
-          .set(const TtsGenerationProgress(current: 3, total: 10));
-      await tester.pump();
+        final element = tester.element(find.byType(TextViewerPanel));
+        final container = ProviderScope.containerOf(element);
+        container
+            .read(ttsExportStateProvider.notifier)
+            .set(TtsExportState.exporting);
+        container
+            .read(ttsExportProgressProvider.notifier)
+            .set(const TtsGenerationProgress(current: 3, total: 10));
+        await tester.pump();
 
-      final progressFinder = find.byType(CircularProgressIndicator);
-      expect(progressFinder, findsOneWidget);
+        final progressFinder = find.byType(CircularProgressIndicator);
+        expect(progressFinder, findsOneWidget);
 
-      final progressWidget =
-          tester.widget<CircularProgressIndicator>(progressFinder);
-      expect(progressWidget.value, closeTo(0.3, 0.01));
-    });
+        final progressWidget = tester.widget<CircularProgressIndicator>(
+          progressFinder,
+        );
+        expect(progressWidget.value, closeTo(0.3, 0.01));
+      },
+    );
   });
 }

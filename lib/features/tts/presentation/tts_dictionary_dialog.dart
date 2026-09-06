@@ -48,8 +48,9 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
   @override
   void initState() {
     super.initState();
-    _surfaceController =
-        TextEditingController(text: widget.initialSurface ?? '');
+    _surfaceController = TextEditingController(
+      text: widget.initialSurface ?? '',
+    );
     _loadEntries();
   }
 
@@ -78,9 +79,11 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
     final l10n = AppLocalizations.of(context)!;
 
     if (surface.isEmpty) {
-      setState(() => _addError = _noReading
-          ? l10n.ttsDictionary_surfaceRequired
-          : l10n.ttsDictionary_bothFieldsRequired);
+      setState(
+        () => _addError = _noReading
+            ? l10n.ttsDictionary_surfaceRequired
+            : l10n.ttsDictionary_bothFieldsRequired,
+      );
       return;
     }
     if (!_noReading && reading.isEmpty) {
@@ -98,7 +101,11 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
       });
       await _loadEntries();
     } catch (e) {
-      setState(() => _addError = AppLocalizations.of(context)!.ttsDictionary_duplicateEntry);
+      setState(
+        () => _addError = AppLocalizations.of(
+          context,
+        )!.ttsDictionary_duplicateEntry,
+      );
     }
   }
 
@@ -124,8 +131,9 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
                 child: Text(
                   _addError!,
                   style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                      fontSize: 12),
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             const SizedBox(height: 12),
@@ -149,7 +157,9 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
           child: TextField(
             controller: _surfaceController,
             decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.ttsDictionary_surfaceLabel,
+              labelText: AppLocalizations.of(
+                context,
+              )!.ttsDictionary_surfaceLabel,
               hintText: AppLocalizations.of(context)!.ttsDictionary_surfaceHint,
               isDense: true,
               border: const OutlineInputBorder(),
@@ -163,7 +173,9 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
             controller: _readingController,
             enabled: !_noReading,
             decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.ttsDictionary_readingLabel,
+              labelText: AppLocalizations.of(
+                context,
+              )!.ttsDictionary_readingLabel,
               hintText: AppLocalizations.of(context)!.ttsDictionary_readingHint,
               isDense: true,
               border: const OutlineInputBorder(),

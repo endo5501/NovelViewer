@@ -26,12 +26,15 @@ void main() {
       );
 
       final byPath = {for (final d in dests) d.path: d};
-      expect(byPath.keys, containsAll(<String>[
-        '/library',
-        '/library/完結済み',
-        '/library/完結済み/2024',
-        '/library/連載中',
-      ]));
+      expect(
+        byPath.keys,
+        containsAll(<String>[
+          '/library',
+          '/library/完結済み',
+          '/library/完結済み/2024',
+          '/library/連載中',
+        ]),
+      );
       expect(byPath['/library/完結済み']!.depth, 1);
       expect(byPath['/library/完結済み/2024']!.depth, 2);
     });
@@ -39,9 +42,7 @@ void main() {
     test('excludes the source folder itself', () {
       final dests = buildMoveDestinations(
         libraryPath: '/library',
-        organizationalFolderPaths: const [
-          '/library/完結済み',
-        ],
+        organizationalFolderPaths: const ['/library/完結済み'],
         sourcePath: '/library/完結済み',
       );
 
@@ -75,8 +76,10 @@ void main() {
       );
 
       final paths = dests.map((d) => d.path).toList();
-      expect(paths.indexOf('/library/完結済み'),
-          lessThan(paths.indexOf('/library/完結済み/2024')));
+      expect(
+        paths.indexOf('/library/完結済み'),
+        lessThan(paths.indexOf('/library/完結済み/2024')),
+      );
     });
   });
 }

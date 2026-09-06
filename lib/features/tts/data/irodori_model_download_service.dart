@@ -60,8 +60,8 @@ class IrodoriModelDownloadService {
   IrodoriModelDownloadService({
     required http.Client client,
     Map<IrodoriModelVariant, int>? expectedFileSizes,
-  })  : _client = client,
-        _expectedFileSizes = expectedFileSizes ?? defaultExpectedFileSizes;
+  }) : _client = client,
+       _expectedFileSizes = expectedFileSizes ?? defaultExpectedFileSizes;
 
   static const _baseUrl =
       'https://huggingface.co/endo5501/audio.cpp/resolve/main';

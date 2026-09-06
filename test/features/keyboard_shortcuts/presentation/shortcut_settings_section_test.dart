@@ -21,11 +21,14 @@ void main() {
   });
 
   Future<ProviderContainer> pumpSection(WidgetTester tester) async {
-    final container = ProviderContainer(overrides: [
-      sharedPreferencesProvider.overrideWithValue(prefs),
-      shortcutDefaultsProvider
-          .overrideWithValue(defaultShortcutBindings(isMacOS: false)),
-    ]);
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        shortcutDefaultsProvider.overrideWithValue(
+          defaultShortcutBindings(isMacOS: false),
+        ),
+      ],
+    );
     addTearDown(container.dispose);
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -56,8 +59,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('lists each action with its current binding',
-      (WidgetTester tester) async {
+  testWidgets('lists each action with its current binding', (
+    WidgetTester tester,
+  ) async {
     await pumpSection(tester);
 
     expect(find.byKey(const Key('shortcut_row_search')), findsOneWidget);
@@ -66,13 +70,18 @@ void main() {
     expect(find.text('Tab'), findsOneWidget);
   });
 
-  testWidgets('rebinds an action to an unused key', (WidgetTester tester) async {
+  testWidgets('rebinds an action to an unused key', (
+    WidgetTester tester,
+  ) async {
     final container = await pumpSection(tester);
 
     await tester.tap(find.byKey(const Key('shortcut_reassign_bookmark')));
     await tester.pumpAndSettle();
-    await capture(tester,
-        modifier: LogicalKeyboardKey.controlLeft, key: LogicalKeyboardKey.keyJ);
+    await capture(
+      tester,
+      modifier: LogicalKeyboardKey.controlLeft,
+      key: LogicalKeyboardKey.keyJ,
+    );
 
     expect(
       container.read(keyBindingsProvider)[ShortcutAction.bookmark],
@@ -80,30 +89,41 @@ void main() {
     );
   });
 
-  testWidgets('rejects a duplicate key and shows a message',
-      (WidgetTester tester) async {
+  testWidgets('rejects a duplicate key and shows a message', (
+    WidgetTester tester,
+  ) async {
     final container = await pumpSection(tester);
-    final originalBookmark =
-        container.read(keyBindingsProvider)[ShortcutAction.bookmark];
+    final originalBookmark = container.read(
+      keyBindingsProvider,
+    )[ShortcutAction.bookmark];
 
     // Try to assign Ctrl+F (already used by search) to bookmark.
     await tester.tap(find.byKey(const Key('shortcut_reassign_bookmark')));
     await tester.pumpAndSettle();
-    await capture(tester,
-        modifier: LogicalKeyboardKey.controlLeft, key: LogicalKeyboardKey.keyF);
+    await capture(
+      tester,
+      modifier: LogicalKeyboardKey.controlLeft,
+      key: LogicalKeyboardKey.keyF,
+    );
 
-    expect(find.text('That key is already assigned to another action'),
-        findsOneWidget);
-    expect(container.read(keyBindingsProvider)[ShortcutAction.bookmark],
-        originalBookmark,
-        reason: 'Duplicate is rejected; bookmark keeps its binding');
+    expect(
+      find.text('That key is already assigned to another action'),
+      findsOneWidget,
+    );
+    expect(
+      container.read(keyBindingsProvider)[ShortcutAction.bookmark],
+      originalBookmark,
+      reason: 'Duplicate is rejected; bookmark keeps its binding',
+    );
   });
 
-  testWidgets('rejects a bare printable key without a modifier',
-      (WidgetTester tester) async {
+  testWidgets('rejects a bare printable key without a modifier', (
+    WidgetTester tester,
+  ) async {
     final container = await pumpSection(tester);
-    final original =
-        container.read(keyBindingsProvider)[ShortcutAction.bookmark];
+    final original = container.read(
+      keyBindingsProvider,
+    )[ShortcutAction.bookmark];
 
     await tester.tap(find.byKey(const Key('shortcut_reassign_bookmark')));
     await tester.pumpAndSettle();
@@ -111,34 +131,45 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
     await tester.pumpAndSettle();
 
-    expect(find.text('Shortcuts need a modifier key (Ctrl/Cmd/Alt)'),
-        findsOneWidget);
-    expect(container.read(keyBindingsProvider)[ShortcutAction.bookmark],
-        original,
-        reason: 'A bare printable key is rejected; binding unchanged');
+    expect(
+      find.text('Shortcuts need a modifier key (Ctrl/Cmd/Alt)'),
+      findsOneWidget,
+    );
+    expect(
+      container.read(keyBindingsProvider)[ShortcutAction.bookmark],
+      original,
+      reason: 'A bare printable key is rejected; binding unchanged',
+    );
   });
 
-  testWidgets('Escape cancels the capture without rebinding',
-      (WidgetTester tester) async {
+  testWidgets('Escape cancels the capture without rebinding', (
+    WidgetTester tester,
+  ) async {
     final container = await pumpSection(tester);
-    final original =
-        container.read(keyBindingsProvider)[ShortcutAction.bookmark];
+    final original = container.read(
+      keyBindingsProvider,
+    )[ShortcutAction.bookmark];
 
     await tester.tap(find.byKey(const Key('shortcut_reassign_bookmark')));
     await tester.pumpAndSettle();
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
 
-    expect(container.read(keyBindingsProvider)[ShortcutAction.bookmark],
-        original,
-        reason: 'Escape cancels capture; Escape is not bound');
+    expect(
+      container.read(keyBindingsProvider)[ShortcutAction.bookmark],
+      original,
+      reason: 'Escape cancels capture; Escape is not bound',
+    );
   });
 
-  testWidgets('reset to defaults restores bindings',
-      (WidgetTester tester) async {
+  testWidgets('reset to defaults restores bindings', (
+    WidgetTester tester,
+  ) async {
     final container = await pumpSection(tester);
 
-    await container.read(keyBindingsProvider.notifier).rebind(
+    await container
+        .read(keyBindingsProvider.notifier)
+        .rebind(
           ShortcutAction.bookmark,
           KeyBinding(keyId: LogicalKeyboardKey.keyJ.keyId, control: true),
         );
@@ -147,7 +178,9 @@ void main() {
     await tester.tap(find.byKey(const Key('shortcut_reset_defaults')));
     await tester.pumpAndSettle();
 
-    expect(container.read(keyBindingsProvider),
-        defaultShortcutBindings(isMacOS: false));
+    expect(
+      container.read(keyBindingsProvider),
+      defaultShortcutBindings(isMacOS: false),
+    );
   });
 }

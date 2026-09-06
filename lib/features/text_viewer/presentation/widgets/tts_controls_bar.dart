@@ -75,7 +75,7 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
     final audio = selectedFile == null
         ? TtsAudioState.none
         : ref.read(ttsAudioStateProvider(selectedFile.path)).value ??
-            TtsAudioState.none;
+              TtsAudioState.none;
     final playback = ref.read(ttsPlaybackStateProvider);
     switch (resolveTtsToggle(audio, playback)) {
       case TtsToggleResolution.start:
@@ -134,7 +134,7 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
     // all. The controller refuses only when it actually has to synthesize.
     final modelsReady =
         ref.read(ttsModelReadinessProvider(engineType)) ==
-            TtsModelReadiness.ready;
+        TtsModelReadiness.ready;
 
     // Use selectedFile.path verbatim so it matches the family key the build
     // watches via `ttsAudioStateProvider(selectedFile.path)`. Building the
@@ -334,15 +334,19 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
       if (!mounted || exported != true) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content:
-                Text(AppLocalizations.of(context)!.textViewer_exportCompleted)),
+          content: Text(
+            AppLocalizations.of(context)!.textViewer_exportCompleted,
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(AppLocalizations.of(context)!
-                .textViewer_exportError(e.toString()))),
+          content: Text(
+            AppLocalizations.of(context)!.textViewer_exportError(e.toString()),
+          ),
+        ),
       );
     }
   }
@@ -380,8 +384,9 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
 
   Widget _buildGenerationProgress() {
     final progress = ref.watch(ttsGenerationProgressProvider);
-    final fraction =
-        progress.total > 0 ? progress.current / progress.total : 0.0;
+    final fraction = progress.total > 0
+        ? progress.current / progress.total
+        : 0.0;
     return SizedBox(
       width: 120,
       child: Column(
@@ -392,7 +397,9 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
           const SizedBox(height: 2),
           Text(
             AppLocalizations.of(context)!.textViewer_generationProgressFormat(
-                progress.current, progress.total),
+              progress.current,
+              progress.total,
+            ),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -511,89 +518,77 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
   Widget _buildButtons(TtsAudioState audio, TtsPlaybackState playback) {
     return switch ((audio, playback)) {
       (TtsAudioState.none, _) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _editButton(),
-            const SizedBox(width: 8),
-            _generateButton(),
-          ],
-        ),
+        mainAxisSize: MainAxisSize.min,
+        children: [_editButton(), const SizedBox(width: 8), _generateButton()],
+      ),
       (TtsAudioState.generating, TtsPlaybackState.stopped) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildGenerationProgress(),
-            const SizedBox(width: 8),
-            _cancelButton(),
-          ],
-        ),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildGenerationProgress(),
+          const SizedBox(width: 8),
+          _cancelButton(),
+        ],
+      ),
       (TtsAudioState.generating, TtsPlaybackState.playing) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildGenerationProgress(),
-            const SizedBox(width: 8),
-            _pauseButton(),
-            const SizedBox(width: 8),
-            _stopButton(),
-          ],
-        ),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildGenerationProgress(),
+          const SizedBox(width: 8),
+          _pauseButton(),
+          const SizedBox(width: 8),
+          _stopButton(),
+        ],
+      ),
       (TtsAudioState.generating, TtsPlaybackState.waiting) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _waitingSpinner,
-            _buildGenerationProgress(),
-            const SizedBox(width: 8),
-            _pauseButton(),
-            const SizedBox(width: 8),
-            _stopButton(),
-          ],
-        ),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _waitingSpinner,
+          _buildGenerationProgress(),
+          const SizedBox(width: 8),
+          _pauseButton(),
+          const SizedBox(width: 8),
+          _stopButton(),
+        ],
+      ),
       (TtsAudioState.generating, TtsPlaybackState.paused) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildGenerationProgress(),
-            const SizedBox(width: 8),
-            _resumeButton(),
-            const SizedBox(width: 8),
-            _stopButton(),
-          ],
-        ),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildGenerationProgress(),
+          const SizedBox(width: 8),
+          _resumeButton(),
+          const SizedBox(width: 8),
+          _stopButton(),
+        ],
+      ),
       (TtsAudioState.ready, TtsPlaybackState.playing) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _pauseButton(),
-            const SizedBox(width: 8),
-            _stopButton(),
-          ],
-        ),
+        mainAxisSize: MainAxisSize.min,
+        children: [_pauseButton(), const SizedBox(width: 8), _stopButton()],
+      ),
       (TtsAudioState.ready, TtsPlaybackState.waiting) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _waitingSpinner,
-            _pauseButton(),
-            const SizedBox(width: 8),
-            _stopButton(),
-          ],
-        ),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _waitingSpinner,
+          _pauseButton(),
+          const SizedBox(width: 8),
+          _stopButton(),
+        ],
+      ),
       (TtsAudioState.ready, TtsPlaybackState.paused) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _resumeButton(),
-            const SizedBox(width: 8),
-            _stopButton(),
-          ],
-        ),
+        mainAxisSize: MainAxisSize.min,
+        children: [_resumeButton(), const SizedBox(width: 8), _stopButton()],
+      ),
       (TtsAudioState.ready, TtsPlaybackState.stopped) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _editButton(),
-            const SizedBox(width: 8),
-            _playButton(),
-            const SizedBox(width: 8),
-            _exportButtonOrProgress(),
-            const SizedBox(width: 8),
-            _deleteButton(),
-          ],
-        ),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _editButton(),
+          const SizedBox(width: 8),
+          _playButton(),
+          const SizedBox(width: 8),
+          _exportButtonOrProgress(),
+          const SizedBox(width: 8),
+          _deleteButton(),
+        ],
+      ),
     };
   }
 }

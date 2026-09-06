@@ -17,9 +17,7 @@ void main() {
     });
 
     test('RubyTextSegmentは1つの不可分ユニットとしてフラット化する', () {
-      final segments = [
-        const RubyTextSegment(base: '漢字', rubyText: 'かんじ'),
-      ];
+      final segments = [const RubyTextSegment(base: '漢字', rubyText: 'かんじ')];
       final entries = flattenSegments(segments);
 
       expect(entries.length, 1);
@@ -55,9 +53,7 @@ void main() {
   group('splitWithKinsoku', () {
     test('禁則違反がない場合はcharsPerColumnで分割する', () {
       // 'あいうえおかきく' (8文字) を charsPerColumn=4 で分割
-      final entries = flattenSegments(
-        [const PlainTextSegment('あいうえおかきく')],
-      );
+      final entries = flattenSegments([const PlainTextSegment('あいうえおかきく')]);
       final columns = splitWithKinsoku(entries, 4);
 
       expect(columns.length, 2);
@@ -69,9 +65,7 @@ void main() {
       // 'あいうえ。かきく' (8文字) を charsPerColumn=4 で分割
       // '。' が5文字目 = 2番目カラムの先頭に来るはず → 末尾の'え'を押し出し
       // 結果: 'あいう'(3), 'え。かき'(4), 'く'(1)
-      final entries = flattenSegments(
-        [const PlainTextSegment('あいうえ。かきく')],
-      );
+      final entries = flattenSegments([const PlainTextSegment('あいうえ。かきく')]);
       final columns = splitWithKinsoku(entries, 4);
 
       expect(columns.length, 3);
@@ -84,9 +78,7 @@ void main() {
       // 'あいう「かきくけ' (8文字) を charsPerColumn=4 で分割
       // '「' が4文字目 = 1番目カラムの末尾に来るはず → 次カラムに移動
       // 結果: 'あいう'(3), '「かきく'(4), 'け'(1)
-      final entries = flattenSegments(
-        [const PlainTextSegment('あいう「かきくけ')],
-      );
+      final entries = flattenSegments([const PlainTextSegment('あいう「かきくけ')]);
       final columns = splitWithKinsoku(entries, 4);
 
       expect(columns.length, 3);
@@ -98,9 +90,7 @@ void main() {
     test('最初のカラムの先頭が行頭禁則文字でも調整されない', () {
       // '。あいうえおかき' を charsPerColumn=4 で分割
       // 最初のカラムの先頭が '。' でも調整しない（前のカラムがない）
-      final entries = flattenSegments(
-        [const PlainTextSegment('。あいうえおかき')],
-      );
+      final entries = flattenSegments([const PlainTextSegment('。あいうえおかき')]);
       final columns = splitWithKinsoku(entries, 4);
 
       expect(columns.length, 2);
@@ -111,9 +101,7 @@ void main() {
     test('行末の最後のカラムが行末禁則文字で終わっても調整されない', () {
       // 'あいう「' を charsPerColumn=4 で分割
       // '「' が最後のカラムの末尾 → 次のカラムがないので調整しない
-      final entries = flattenSegments(
-        [const PlainTextSegment('あいう「')],
-      );
+      final entries = flattenSegments([const PlainTextSegment('あいう「')]);
       final columns = splitWithKinsoku(entries, 4);
 
       expect(columns.length, 1);
@@ -141,9 +129,7 @@ void main() {
       // 'あいうえ。」かきく' (9文字) を charsPerColumn=4 で分割
       // '。」' が連続する行頭禁則文字 → 末尾の'え'を押し出し
       // 結果: 'あいう'(3), 'え。」か'(4), 'きく'(2)
-      final entries = flattenSegments(
-        [const PlainTextSegment('あいうえ。」かきく')],
-      );
+      final entries = flattenSegments([const PlainTextSegment('あいうえ。」かきく')]);
       final columns = splitWithKinsoku(entries, 4);
 
       expect(columns.length, 3);
@@ -156,9 +142,7 @@ void main() {
       // 'あいうえ！？」かき' (9文字) を charsPerColumn=4 で分割
       // '！？」' が連続する行頭禁則文字 → 末尾の'え'を押し出し
       // 結果: 'あいう'(3), 'え！？」'(4), 'かき'(2)
-      final entries = flattenSegments(
-        [const PlainTextSegment('あいうえ！？」かき')],
-      );
+      final entries = flattenSegments([const PlainTextSegment('あいうえ！？」かき')]);
       final columns = splitWithKinsoku(entries, 4);
 
       expect(columns.length, 3);
@@ -223,17 +207,14 @@ void main() {
       expect(segments.length, 1);
       expect(segments[0].length, 3);
       expect(segments[0][0], const PlainTextSegment('あ'));
-      expect(segments[0][1],
-          const RubyTextSegment(base: '漢', rubyText: 'かん'));
+      expect(segments[0][1], const RubyTextSegment(base: '漢', rubyText: 'かん'));
       expect(segments[0][2], const PlainTextSegment('い'));
     });
 
     test('禁則処理後のカラム分割結果を正しくセグメント化する', () {
       // 'あいうえ。かきく' を charsPerColumn=4 で分割
       // → ['あいう', 'え。かき', 'く'] (押し出し方式)
-      final entries = flattenSegments(
-        [const PlainTextSegment('あいうえ。かきく')],
-      );
+      final entries = flattenSegments([const PlainTextSegment('あいうえ。かきく')]);
       final columnEntries = splitWithKinsoku(entries, 4);
       final segments = buildColumnsFromEntries(columnEntries);
 

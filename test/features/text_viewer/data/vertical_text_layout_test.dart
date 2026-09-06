@@ -28,9 +28,7 @@ void main() {
     });
 
     test('builds entries from ruby text segments', () {
-      final segments = [
-        const RubyTextSegment(base: '漢字', rubyText: 'かんじ'),
-      ];
+      final segments = [const RubyTextSegment(base: '漢字', rubyText: 'かんじ')];
       final entries = buildVerticalCharEntries(segments);
 
       expect(entries.length, 1);
@@ -101,18 +99,12 @@ void main() {
 
   group('hitTestCharIndexFromRegions', () {
     final hitRegions = [
-      const VerticalHitRegion(
-        charIndex: 0,
-        rect: Rect.fromLTWH(80, 0, 12, 16),
-      ),
+      const VerticalHitRegion(charIndex: 0, rect: Rect.fromLTWH(80, 0, 12, 16)),
       const VerticalHitRegion(
         charIndex: 1,
         rect: Rect.fromLTWH(80, 16, 12, 16),
       ),
-      const VerticalHitRegion(
-        charIndex: 4,
-        rect: Rect.fromLTWH(60, 0, 12, 16),
-      ),
+      const VerticalHitRegion(charIndex: 4, rect: Rect.fromLTWH(60, 0, 12, 16)),
     ];
 
     test('hits by actual region bounds', () {
@@ -210,8 +202,12 @@ void main() {
         VerticalCharEntry.plain('ス'),
       ];
       expect(
-        extractVerticalSelectedText(entries, 0, 4,
-            lineBreakEntryIndices: const {}),
+        extractVerticalSelectedText(
+          entries,
+          0,
+          4,
+          lineBreakEntryIndices: const {},
+        ),
         'アリス',
       );
     });
@@ -224,8 +220,12 @@ void main() {
         VerticalCharEntry.plain('ス'),
       ];
       expect(
-        extractVerticalSelectedText(entries, 0, 4,
-            lineBreakEntryIndices: const {2}),
+        extractVerticalSelectedText(
+          entries,
+          0,
+          4,
+          lineBreakEntryIndices: const {2},
+        ),
         'アリ\nス',
       );
     });
@@ -252,13 +252,19 @@ void main() {
         VerticalCharEntry.plain('う'),
       ];
       expect(
-        plainTextOffsetFromEntryIndex(entries, 0,
-            lineBreakEntryIndices: const {}),
+        plainTextOffsetFromEntryIndex(
+          entries,
+          0,
+          lineBreakEntryIndices: const {},
+        ),
         0,
       );
       expect(
-        plainTextOffsetFromEntryIndex(entries, 2,
-            lineBreakEntryIndices: const {}),
+        plainTextOffsetFromEntryIndex(
+          entries,
+          2,
+          lineBreakEntryIndices: const {},
+        ),
         2,
       );
     });
@@ -270,19 +276,28 @@ void main() {
         VerticalCharEntry.plain('い'),
       ];
       expect(
-        plainTextOffsetFromEntryIndex(entries, 1,
-            lineBreakEntryIndices: const {}),
+        plainTextOffsetFromEntryIndex(
+          entries,
+          1,
+          lineBreakEntryIndices: const {},
+        ),
         1,
       );
       // The ruby entry occupies 2 plain-text characters, not 1.
       expect(
-        plainTextOffsetFromEntryIndex(entries, 2,
-            lineBreakEntryIndices: const {}),
+        plainTextOffsetFromEntryIndex(
+          entries,
+          2,
+          lineBreakEntryIndices: const {},
+        ),
         3,
       );
       expect(
-        plainTextOffsetFromEntryIndex(entries, 3,
-            lineBreakEntryIndices: const {}),
+        plainTextOffsetFromEntryIndex(
+          entries,
+          3,
+          lineBreakEntryIndices: const {},
+        ),
         4,
       );
     });
@@ -295,13 +310,19 @@ void main() {
         VerticalCharEntry.plain('ス'),
       ];
       expect(
-        plainTextOffsetFromEntryIndex(entries, 3,
-            lineBreakEntryIndices: const {2}),
+        plainTextOffsetFromEntryIndex(
+          entries,
+          3,
+          lineBreakEntryIndices: const {2},
+        ),
         3,
       );
       expect(
-        plainTextOffsetFromEntryIndex(entries, 4,
-            lineBreakEntryIndices: const {2}),
+        plainTextOffsetFromEntryIndex(
+          entries,
+          4,
+          lineBreakEntryIndices: const {2},
+        ),
         4,
       );
     });
@@ -314,13 +335,19 @@ void main() {
         VerticalCharEntry.plain('ス'),
       ];
       expect(
-        plainTextOffsetFromEntryIndex(entries, 3,
-            lineBreakEntryIndices: const {}),
+        plainTextOffsetFromEntryIndex(
+          entries,
+          3,
+          lineBreakEntryIndices: const {},
+        ),
         2,
       );
       expect(
-        plainTextOffsetFromEntryIndex(entries, 4,
-            lineBreakEntryIndices: const {}),
+        plainTextOffsetFromEntryIndex(
+          entries,
+          4,
+          lineBreakEntryIndices: const {},
+        ),
         3,
       );
     });
@@ -335,13 +362,19 @@ void main() {
         VerticalCharEntry.plain('る'),
       ];
       expect(
-        plainTextOffsetFromEntryIndex(entries, 1,
-            lineBreakEntryIndices: const {}),
+        plainTextOffsetFromEntryIndex(
+          entries,
+          1,
+          lineBreakEntryIndices: const {},
+        ),
         2,
       );
       expect(
-        plainTextOffsetFromEntryIndex(entries, 2,
-            lineBreakEntryIndices: const {}),
+        plainTextOffsetFromEntryIndex(
+          entries,
+          2,
+          lineBreakEntryIndices: const {},
+        ),
         3,
       );
     });
@@ -352,8 +385,11 @@ void main() {
         VerticalCharEntry.plain('い'),
       ];
       expect(
-        plainTextOffsetFromEntryIndex(entries, 99,
-            lineBreakEntryIndices: const {}),
+        plainTextOffsetFromEntryIndex(
+          entries,
+          99,
+          lineBreakEntryIndices: const {},
+        ),
         2,
       );
     });
@@ -361,16 +397,22 @@ void main() {
     test('negative index clamps to zero', () {
       final entries = [VerticalCharEntry.plain('あ')];
       expect(
-        plainTextOffsetFromEntryIndex(entries, -1,
-            lineBreakEntryIndices: const {}),
+        plainTextOffsetFromEntryIndex(
+          entries,
+          -1,
+          lineBreakEntryIndices: const {},
+        ),
         0,
       );
     });
 
     test('returns zero for empty entries', () {
       expect(
-        plainTextOffsetFromEntryIndex(const [], 3,
-            lineBreakEntryIndices: const {}),
+        plainTextOffsetFromEntryIndex(
+          const [],
+          3,
+          lineBreakEntryIndices: const {},
+        ),
         0,
       );
     });

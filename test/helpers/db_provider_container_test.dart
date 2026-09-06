@@ -41,20 +41,22 @@ void main() {
       container.read(ttsAudioDatabaseProvider('/tmp/does-not-need-to-exist'));
     });
 
-    test('returns only after every per-folder database handle is closed',
-        () async {
-      await disposeContainerWithDatabases(container);
-
-      expect(
-        closed,
-        isTrue,
-        reason: 'the file lock must be gone before the caller deletes the '
-            'folder, otherwise deleteSync fails with errno 32 on Windows',
-      );
-    });
-
     test(
-        'container.dispose() alone leaves the handle open '
+      'returns only after every per-folder database handle is closed',
+      () async {
+        await disposeContainerWithDatabases(container);
+
+        expect(
+          closed,
+          isTrue,
+          reason:
+              'the file lock must be gone before the caller deletes the '
+              'folder, otherwise deleteSync fails with errno 32 on Windows',
+        );
+      },
+    );
+
+    test('container.dispose() alone leaves the handle open '
         '(why this helper exists)', () async {
       // Riverpod does not await the Future returned by an onDispose callback,
       // so the registry close is still in flight when dispose() returns.

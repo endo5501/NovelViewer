@@ -16,4 +16,5 @@ class PendingFileEntryIntentNotifier extends Notifier<FileEntryStartIntent?> {
 
 final pendingFileEntryIntentProvider =
     NotifierProvider<PendingFileEntryIntentNotifier, FileEntryStartIntent?>(
-        PendingFileEntryIntentNotifier.new);
+      PendingFileEntryIntentNotifier.new,
+    );

@@ -10,7 +10,9 @@ import 'package:pub_semver/pub_semver.dart';
 /// `1.2.3` and must not prompt an update (pub_semver otherwise ranks build
 /// metadata as newer).
 bool isNewer({required String current, required String tagName}) {
-  final normalizedTag = tagName.startsWith('v') ? tagName.substring(1) : tagName;
+  final normalizedTag = tagName.startsWith('v')
+      ? tagName.substring(1)
+      : tagName;
   final Version currentVersion;
   final Version tagVersion;
   try {
@@ -25,5 +27,9 @@ bool isNewer({required String current, required String tagName}) {
 
 Version _stripBuild(Version v) => v.build.isEmpty
     ? v
-    : Version(v.major, v.minor, v.patch,
-        pre: v.preRelease.isEmpty ? null : v.preRelease.join('.'));
+    : Version(
+        v.major,
+        v.minor,
+        v.patch,
+        pre: v.preRelease.isEmpty ? null : v.preRelease.join('.'),
+      );

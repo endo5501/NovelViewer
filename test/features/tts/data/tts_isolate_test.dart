@@ -39,10 +39,7 @@ class _FakeAbortHandleFactory {
     created
       ..add(qwen3)
       ..add(audiocpp);
-    return {
-      TtsEngineType.qwen3: qwen3,
-      TtsEngineType.irodori: audiocpp,
-    };
+    return {TtsEngineType.qwen3: qwen3, TtsEngineType.irodori: audiocpp};
   }
 }
 
@@ -159,10 +156,7 @@ void main() {
 
     test('SynthesisResultResponse holds audio data', () {
       final audio = Float32List.fromList([0.1, 0.2, 0.3]);
-      final response = SynthesisResultResponse(
-        audio: audio,
-        sampleRate: 24000,
-      );
+      final response = SynthesisResultResponse(audio: audio, sampleRate: 24000);
       expect(response.audio!.length, 3);
       expect(response.sampleRate, 24000);
       expect(response.error, isNull);
@@ -216,23 +210,29 @@ void main() {
   });
 
   group('TtsIsolate - abort handle lifecycle (F111)', () {
-    test('spawn creates per-engine abort handles available before loadModel',
-        () async {
-      final factory = _FakeAbortHandleFactory();
-      final iso = TtsIsolate(abortHandleFactory: factory.create);
+    test(
+      'spawn creates per-engine abort handles available before loadModel',
+      () async {
+        final factory = _FakeAbortHandleFactory();
+        final iso = TtsIsolate(abortHandleFactory: factory.create);
 
-      await iso.spawn();
+        await iso.spawn();
 
-      // One handle per engine family (qwen3 + audiocpp/irodori); piper has none.
-      expect(factory.created, hasLength(2));
-      expect(iso.debugAbortHandleAddressFor(TtsEngineType.qwen3),
-          factory.qwen3Address);
-      expect(iso.debugAbortHandleAddressFor(TtsEngineType.irodori),
-          factory.audiocppAddress);
-      expect(iso.debugAbortHandleAddressFor(TtsEngineType.piper), isNull);
+        // One handle per engine family (qwen3 + audiocpp/irodori); piper has none.
+        expect(factory.created, hasLength(2));
+        expect(
+          iso.debugAbortHandleAddressFor(TtsEngineType.qwen3),
+          factory.qwen3Address,
+        );
+        expect(
+          iso.debugAbortHandleAddressFor(TtsEngineType.irodori),
+          factory.audiocppAddress,
+        );
+        expect(iso.debugAbortHandleAddressFor(TtsEngineType.piper), isNull);
 
-      await iso.dispose();
-    });
+        await iso.dispose();
+      },
+    );
 
     test('qwen3 abort target address is stable across model reloads', () async {
       final factory = _FakeAbortHandleFactory();
@@ -253,8 +253,11 @@ void main() {
 
       expect(addrBefore, isNotNull);
       expect(addrAfter, addrBefore, reason: 'handle address must be stable');
-      expect(factory.created, hasLength(2),
-          reason: 'reloads must not create new handles');
+      expect(
+        factory.created,
+        hasLength(2),
+        reason: 'reloads must not create new handles',
+      );
 
       iso.abort();
       // abort() sets ALL live handles (harmless for the inactive engine).
@@ -265,67 +268,86 @@ void main() {
       await iso.dispose();
     });
 
-    test('irodori abort target address is stable across an irodori reload',
-        () async {
-      final factory = _FakeAbortHandleFactory();
-      final iso = TtsIsolate(abortHandleFactory: factory.create);
-      await iso.spawn();
+    test(
+      'irodori abort target address is stable across an irodori reload',
+      () async {
+        final factory = _FakeAbortHandleFactory();
+        final iso = TtsIsolate(abortHandleFactory: factory.create);
+        await iso.spawn();
 
-      final addrBefore = iso.debugAbortHandleAddressFor(TtsEngineType.irodori);
+        final addrBefore = iso.debugAbortHandleAddressFor(
+          TtsEngineType.irodori,
+        );
 
-      // Switch between engines including the third (irodori) branch. The
-      // worker fails to load (no native library in tests) but the abort
-      // target must stay stable and no new handle may be created.
-      iso.loadModel('/nonexistent/qwen3');
-      iso.loadModel('/nonexistent/irodori',
-          engineType: TtsEngineType.irodori);
-      iso.loadModel('/nonexistent/qwen3-again');
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+        // Switch between engines including the third (irodori) branch. The
+        // worker fails to load (no native library in tests) but the abort
+        // target must stay stable and no new handle may be created.
+        iso.loadModel('/nonexistent/qwen3');
+        iso.loadModel(
+          '/nonexistent/irodori',
+          engineType: TtsEngineType.irodori,
+        );
+        iso.loadModel('/nonexistent/qwen3-again');
+        await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      expect(iso.debugAbortHandleAddressFor(TtsEngineType.irodori), addrBefore);
-      expect(factory.created, hasLength(2),
-          reason: 'switching to irodori must not create a new handle');
+        expect(
+          iso.debugAbortHandleAddressFor(TtsEngineType.irodori),
+          addrBefore,
+        );
+        expect(
+          factory.created,
+          hasLength(2),
+          reason: 'switching to irodori must not create a new handle',
+        );
 
-      iso.abort();
-      for (final handle in factory.created) {
-        expect(handle.abortCount, 1);
-      }
+        iso.abort();
+        for (final handle in factory.created) {
+          expect(handle.abortCount, 1);
+        }
 
-      await iso.dispose();
-    });
+        await iso.dispose();
+      },
+    );
 
-    test('abort before any loadModel is safe (handles exist at spawn)',
-        () async {
-      final factory = _FakeAbortHandleFactory();
-      final iso = TtsIsolate(abortHandleFactory: factory.create);
-      await iso.spawn();
+    test(
+      'abort before any loadModel is safe (handles exist at spawn)',
+      () async {
+        final factory = _FakeAbortHandleFactory();
+        final iso = TtsIsolate(abortHandleFactory: factory.create);
+        await iso.spawn();
 
-      iso.abort();
+        iso.abort();
 
-      for (final handle in factory.created) {
-        expect(handle.abortCount, 1);
-      }
+        for (final handle in factory.created) {
+          expect(handle.abortCount, 1);
+        }
 
-      await iso.dispose();
-    });
+        await iso.dispose();
+      },
+    );
 
-    test('dispose frees all abort handles (after worker termination)',
-        () async {
-      final factory = _FakeAbortHandleFactory();
-      final iso = TtsIsolate(abortHandleFactory: factory.create);
-      await iso.spawn();
+    test(
+      'dispose frees all abort handles (after worker termination)',
+      () async {
+        final factory = _FakeAbortHandleFactory();
+        final iso = TtsIsolate(abortHandleFactory: factory.create);
+        await iso.spawn();
 
-      for (final handle in factory.created) {
-        expect(handle.freeCount, 0,
-            reason: 'handles must not be freed before dispose');
-      }
+        for (final handle in factory.created) {
+          expect(
+            handle.freeCount,
+            0,
+            reason: 'handles must not be freed before dispose',
+          );
+        }
 
-      await iso.dispose();
+        await iso.dispose();
 
-      for (final handle in factory.created) {
-        expect(handle.freeCount, 1);
-      }
-    });
+        for (final handle in factory.created) {
+          expect(handle.freeCount, 1);
+        }
+      },
+    );
 
     test('dispose without spawn does not create or free a handle', () async {
       final factory = _FakeAbortHandleFactory();
@@ -350,33 +372,38 @@ void main() {
       iso.debugCrashWorker();
       await Future<void>.delayed(const Duration(milliseconds: 300));
 
-      expect(deaths, hasLength(1),
-          reason: 'an abnormally terminated worker must surface a death signal');
+      expect(
+        deaths,
+        hasLength(1),
+        reason: 'an abnormally terminated worker must surface a death signal',
+      );
 
       await sub.cancel();
       await iso.dispose();
     });
 
-    test('error and exit listeners coalesce to a single WorkerDiedResponse',
-        () async {
-      final iso = TtsIsolate();
-      await iso.spawn();
+    test(
+      'error and exit listeners coalesce to a single WorkerDiedResponse',
+      () async {
+        final iso = TtsIsolate();
+        await iso.spawn();
 
-      final deaths = <WorkerDiedResponse>[];
-      final sub = iso.responses.listen((r) {
-        if (r is WorkerDiedResponse) deaths.add(r);
-      });
+        final deaths = <WorkerDiedResponse>[];
+        final sub = iso.responses.listen((r) {
+          if (r is WorkerDiedResponse) deaths.add(r);
+        });
 
-      // A fatal uncaught error fires BOTH addErrorListener and
-      // addOnExitListener; the death signal must still be emitted only once.
-      iso.debugCrashWorker();
-      await Future<void>.delayed(const Duration(milliseconds: 400));
+        // A fatal uncaught error fires BOTH addErrorListener and
+        // addOnExitListener; the death signal must still be emitted only once.
+        iso.debugCrashWorker();
+        await Future<void>.delayed(const Duration(milliseconds: 400));
 
-      expect(deaths, hasLength(1));
+        expect(deaths, hasLength(1));
 
-      await sub.cancel();
-      await iso.dispose();
-    });
+        await sub.cancel();
+        await iso.dispose();
+      },
+    );
 
     test('normal dispose does not emit WorkerDiedResponse', () async {
       final iso = TtsIsolate();
@@ -390,28 +417,37 @@ void main() {
       await iso.dispose();
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      expect(deaths, isEmpty,
-          reason: 'graceful dispose is not an abnormal worker death');
+      expect(
+        deaths,
+        isEmpty,
+        reason: 'graceful dispose is not an abnormal worker death',
+      );
 
       await sub.cancel();
     });
 
-    test('worker death path still frees all abort handles on dispose',
-        () async {
-      final factory = _FakeAbortHandleFactory();
-      final iso = TtsIsolate(abortHandleFactory: factory.create);
-      await iso.spawn();
+    test(
+      'worker death path still frees all abort handles on dispose',
+      () async {
+        final factory = _FakeAbortHandleFactory();
+        final iso = TtsIsolate(abortHandleFactory: factory.create);
+        await iso.spawn();
 
-      iso.debugCrashWorker();
-      await Future<void>.delayed(const Duration(milliseconds: 300));
+        iso.debugCrashWorker();
+        await Future<void>.delayed(const Duration(milliseconds: 300));
 
-      await iso.dispose();
+        await iso.dispose();
 
-      for (final handle in factory.created) {
-        expect(handle.freeCount, 1,
-            reason: 'a Dart-level worker death leaves no native call in flight, '
-                'so the handles are safe to free (no F111 regression)');
-      }
-    });
+        for (final handle in factory.created) {
+          expect(
+            handle.freeCount,
+            1,
+            reason:
+                'a Dart-level worker death leaves no native call in flight, '
+                'so the handles are safe to free (no F111 regression)',
+          );
+        }
+      },
+    );
   });
 }

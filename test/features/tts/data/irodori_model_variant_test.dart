@@ -34,10 +34,7 @@ void main() {
         IrodoriModelVariant.v3.modelDirName,
         'Irodori-TTS-600M-v3-VoiceDesign-GGUF',
       );
-      expect(
-        IrodoriModelVariant.v4.modelDirName,
-        'Irodori-TTS-v4-Small-GGUF',
-      );
+      expect(IrodoriModelVariant.v4.modelDirName, 'Irodori-TTS-v4-Small-GGUF');
     });
 
     test('each variant names its f16 GGUF file', () {
@@ -70,10 +67,7 @@ void main() {
 
     test('round-trips through its storage key', () {
       for (final variant in IrodoriModelVariant.values) {
-        expect(
-          IrodoriModelVariant.fromStorageKey(variant.storageKey),
-          variant,
-        );
+        expect(IrodoriModelVariant.fromStorageKey(variant.storageKey), variant);
       }
     });
 
@@ -82,10 +76,7 @@ void main() {
       // user onto the caption-less variant.
       expect(IrodoriModelVariant.fromStorageKey(null), IrodoriModelVariant.v3);
       expect(IrodoriModelVariant.fromStorageKey(''), IrodoriModelVariant.v3);
-      expect(
-        IrodoriModelVariant.fromStorageKey('v99'),
-        IrodoriModelVariant.v3,
-      );
+      expect(IrodoriModelVariant.fromStorageKey('v99'), IrodoriModelVariant.v3);
     });
 
     test('has a human-readable label for the settings UI', () {

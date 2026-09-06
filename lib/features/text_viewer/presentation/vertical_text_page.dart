@@ -73,7 +73,7 @@ class VerticalTextPage extends StatefulWidget {
   final double columnSpacing;
   final Map<String, MarkStyle> markedWords;
   final void Function(String word, Offset globalPosition, HoverToken token)?
-      onMarkEnter;
+  onMarkEnter;
   final void Function(HoverToken token)? onMarkExit;
 
   /// Coarse "drop any active popup" signal — fired when the page's overall
@@ -520,7 +520,8 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     final regions = <VerticalHitRegion>[];
     for (final column in _columns) {
       for (final index in column) {
-        final renderObject = _entryKeys[index]?.currentContext?.findRenderObject();
+        final renderObject = _entryKeys[index]?.currentContext
+            ?.findRenderObject();
         if (renderObject is! RenderBox || !renderObject.hasSize) continue;
         final topLeft = renderObject.localToGlobal(
           Offset.zero,
@@ -537,12 +538,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
             rect.bottom,
           );
         }
-        regions.add(
-          VerticalHitRegion(
-            charIndex: index,
-            rect: rect,
-          ),
-        );
+        regions.add(VerticalHitRegion(charIndex: index, rect: rect));
       }
     }
 
@@ -592,10 +588,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
               textAlign: TextAlign.center,
               style: style,
             );
-      core = SizedBox(
-        width: fontSize,
-        child: inner,
-      );
+      core = SizedBox(width: fontSize, child: inner);
     }
     if (markStyle == null) return core;
     return CustomPaint(
@@ -630,15 +623,16 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       foregroundColor = null;
     }
 
-    return widget.baseStyle
-            ?.copyWith(
-                backgroundColor: backgroundColor,
-                color: foregroundColor,
-                height: _kTextHeight) ??
+    return widget.baseStyle?.copyWith(
+          backgroundColor: backgroundColor,
+          color: foregroundColor,
+          height: _kTextHeight,
+        ) ??
         TextStyle(
-            backgroundColor: backgroundColor,
-            color: foregroundColor,
-            height: _kTextHeight);
+          backgroundColor: backgroundColor,
+          color: foregroundColor,
+          height: _kTextHeight,
+        );
   }
 
   /// Returns the mark map, recomputing only when the entries, marked words, or
@@ -734,9 +728,11 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     final highlights = <int>{};
     final searchText = buffer.toString().toLowerCase();
 
-    for (var pos = searchText.indexOf(queryLower);
-        pos != -1;
-        pos = searchText.indexOf(queryLower, pos + 1)) {
+    for (
+      var pos = searchText.indexOf(queryLower);
+      pos != -1;
+      pos = searchText.indexOf(queryLower, pos + 1)
+    ) {
       for (var j = pos; j < pos + queryLower.length; j++) {
         final entryIndex = indexMap[j];
         if (entryIndex != null) highlights.add(entryIndex);

@@ -208,8 +208,10 @@ void main() {
       final container = createContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(piperModelNameProvider),
-          'tsukuyomi-chan-6lang-fp16');
+      expect(
+        container.read(piperModelNameProvider),
+        'tsukuyomi-chan-6lang-fp16',
+      );
     });
 
     test('setPiperModelName persists', () async {
@@ -283,9 +285,7 @@ void main() {
       final container = createContainer();
       addTearDown(container.dispose);
 
-      await container
-          .read(piperLengthScaleProvider.notifier)
-          .setValue(0.8);
+      await container.read(piperLengthScaleProvider.notifier).setValue(0.8);
 
       expect(container.read(piperLengthScaleProvider), 0.8);
       expect(prefs.getDouble('piper_length_scale'), 0.8);
@@ -304,9 +304,7 @@ void main() {
       final container = createContainer();
       addTearDown(container.dispose);
 
-      await container
-          .read(piperNoiseScaleProvider.notifier)
-          .setValue(0.5);
+      await container.read(piperNoiseScaleProvider.notifier).setValue(0.5);
 
       expect(container.read(piperNoiseScaleProvider), 0.5);
       expect(prefs.getDouble('piper_noise_scale'), 0.5);
@@ -325,9 +323,7 @@ void main() {
       final container = createContainer();
       addTearDown(container.dispose);
 
-      await container
-          .read(piperNoiseWProvider.notifier)
-          .setValue(0.6);
+      await container.read(piperNoiseWProvider.notifier).setValue(0.6);
 
       expect(container.read(piperNoiseWProvider), 0.6);
       expect(prefs.getDouble('piper_noise_w'), 0.6);

@@ -9,8 +9,10 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 
 class _FakeDownloadNotifier extends DownloadNotifier {
   @override
-  Future<void> startDownload(
-      {required Uri url, required String outputPath}) async {
+  Future<void> startDownload({
+    required Uri url,
+    required String outputPath,
+  }) async {
     state = DownloadState(
       status: DownloadStatus.completed,
       outputPath: outputPath,
@@ -26,11 +28,13 @@ void main() {
     return ProviderScope(
       overrides: [
         libraryPathProvider.overrideWithValue(root),
-        currentDirectoryProvider
-            .overrideWith(() => CurrentDirectoryNotifier(root)),
+        currentDirectoryProvider.overrideWith(
+          () => CurrentDirectoryNotifier(root),
+        ),
         downloadProvider.overrideWith(() => _FakeDownloadNotifier()),
-        downloadDestinationFoldersProvider
-            .overrideWith((ref) async => destinations),
+        downloadDestinationFoldersProvider.overrideWith(
+          (ref) async => destinations,
+        ),
       ],
       child: MaterialApp(
         locale: const Locale('ja'),
@@ -54,26 +58,44 @@ void main() {
   }
 
   group('DownloadDialog destination selector', () {
-    testWidgets('shows a destination dropdown listing root and subfolders',
-        (tester) async {
-      await tester.pumpWidget(createApp(destinations: const [
-        DirectoryEntry(
-            name: '完結済み', path: '$root/完結済み', displayName: '完結済み'),
-      ]));
+    testWidgets('shows a destination dropdown listing root and subfolders', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createApp(
+          destinations: const [
+            DirectoryEntry(
+              name: '完結済み',
+              path: '$root/完結済み',
+              displayName: '完結済み',
+            ),
+          ],
+        ),
+      );
       await openDialog(tester);
 
-      expect(find.byKey(const Key('download_destination_dropdown')),
-          findsOneWidget);
+      expect(
+        find.byKey(const Key('download_destination_dropdown')),
+        findsOneWidget,
+      );
       // The currently-selected value (root, the default) is visible.
       expect(find.text('ライブラリルート（既定）'), findsWidgets);
     });
 
-    testWidgets('defaults to library root when nothing is selected',
-        (tester) async {
-      await tester.pumpWidget(createApp(destinations: const [
-        DirectoryEntry(
-            name: '完結済み', path: '$root/完結済み', displayName: '完結済み'),
-      ]));
+    testWidgets('defaults to library root when nothing is selected', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createApp(
+          destinations: const [
+            DirectoryEntry(
+              name: '完結済み',
+              path: '$root/完結済み',
+              displayName: '完結済み',
+            ),
+          ],
+        ),
+      );
       await openDialog(tester);
 
       await tester.enterText(
@@ -86,16 +108,25 @@ void main() {
       await tester.pumpAndSettle();
 
       final container = ProviderScope.containerOf(
-          tester.element(find.byType(AlertDialog)));
+        tester.element(find.byType(AlertDialog)),
+      );
       expect(container.read(downloadProvider).outputPath, root);
     });
 
-    testWidgets('passes the selected subfolder as the download outputPath',
-        (tester) async {
-      await tester.pumpWidget(createApp(destinations: const [
-        DirectoryEntry(
-            name: '完結済み', path: '$root/完結済み', displayName: '完結済み'),
-      ]));
+    testWidgets('passes the selected subfolder as the download outputPath', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createApp(
+          destinations: const [
+            DirectoryEntry(
+              name: '完結済み',
+              path: '$root/完結済み',
+              displayName: '完結済み',
+            ),
+          ],
+        ),
+      );
       await openDialog(tester);
 
       await tester.enterText(
@@ -114,12 +145,14 @@ void main() {
       await tester.pumpAndSettle();
 
       final container = ProviderScope.containerOf(
-          tester.element(find.byType(AlertDialog)));
+        tester.element(find.byType(AlertDialog)),
+      );
       expect(container.read(downloadProvider).outputPath, '$root/完結済み');
     });
 
-    testWidgets('shows only the root option when there are no subfolders',
-        (tester) async {
+    testWidgets('shows only the root option when there are no subfolders', (
+      tester,
+    ) async {
       await tester.pumpWidget(createApp(destinations: const []));
       await openDialog(tester);
 

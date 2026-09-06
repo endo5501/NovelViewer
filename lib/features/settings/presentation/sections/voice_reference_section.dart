@@ -71,9 +71,9 @@ class _VoiceReferenceSectionState extends ConsumerState<VoiceReferenceSection> {
     await _loadVoiceFiles();
 
     if (errors.isNotEmpty && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errors.join('\n'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errors.join('\n'))));
     }
   }
 
@@ -112,9 +112,9 @@ class _VoiceReferenceSectionState extends ConsumerState<VoiceReferenceSection> {
         await _loadVoiceFiles();
       } on StateError catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.message)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(e.message)));
         }
       }
     }
@@ -126,8 +126,9 @@ class _VoiceReferenceSectionState extends ConsumerState<VoiceReferenceSection> {
     final currentFileName = ref.watch(ttsRefWavPathProvider);
     final hasFiles = _voiceFiles.isNotEmpty;
 
-    final effectiveValue =
-        _voiceFiles.contains(currentFileName) ? currentFileName : '';
+    final effectiveValue = _voiceFiles.contains(currentFileName)
+        ? currentFileName
+        : '';
 
     return DropTarget(
       onDragEntered: (_) => setState(() => _isDragging = true),
@@ -140,7 +141,9 @@ class _VoiceReferenceSectionState extends ConsumerState<VoiceReferenceSection> {
         decoration: BoxDecoration(
           border: _isDragging
               ? Border.all(
-                  color: Theme.of(context).colorScheme.primary, width: 2)
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                )
               : null,
           borderRadius: BorderRadius.circular(8),
         ),

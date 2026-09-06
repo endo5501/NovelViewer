@@ -31,8 +31,7 @@ class EpisodeCacheRepository {
     final db = await _database.database;
     final rows = await db.query('episode_cache');
     return {
-      for (final row in rows)
-        row['url'] as String: EpisodeCache.fromMap(row),
+      for (final row in rows) row['url'] as String: EpisodeCache.fromMap(row),
     };
   }
 }

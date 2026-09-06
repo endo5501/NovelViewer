@@ -14,7 +14,7 @@ class TtsAudioRepository {
   /// so the underlying SQLite file is reclaimed at app exit instead of
   /// blocking the UI thread inside the delete call.
   TtsAudioRepository(this._database, {void Function()? onEpisodeDeleted})
-      : _onEpisodeDeleted = onEpisodeDeleted;
+    : _onEpisodeDeleted = onEpisodeDeleted;
 
   Future<int> createEpisode({
     required String fileName,
@@ -37,7 +37,9 @@ class TtsAudioRepository {
   }
 
   Future<void> updateEpisodeStatus(
-      int episodeId, TtsEpisodeStatus status) async {
+    int episodeId,
+    TtsEpisodeStatus status,
+  ) async {
     final db = await _database.database;
     final now = DateTime.now().toUtc().toIso8601String();
     await db.update(
@@ -129,7 +131,10 @@ class TtsAudioRepository {
   }
 
   Future<void> updateSegmentText(
-      int episodeId, int segmentIndex, String newText) async {
+    int episodeId,
+    int segmentIndex,
+    String newText,
+  ) async {
     final db = await _database.database;
     await db.update(
       'tts_segments',
@@ -140,7 +145,11 @@ class TtsAudioRepository {
   }
 
   Future<void> updateSegmentAudio(
-      int episodeId, int segmentIndex, Uint8List audioData, int sampleCount) async {
+    int episodeId,
+    int segmentIndex,
+    Uint8List audioData,
+    int sampleCount,
+  ) async {
     final db = await _database.database;
     await db.update(
       'tts_segments',
@@ -151,7 +160,10 @@ class TtsAudioRepository {
   }
 
   Future<void> updateSegmentRefWavPath(
-      int episodeId, int segmentIndex, String? refWavPath) async {
+    int episodeId,
+    int segmentIndex,
+    String? refWavPath,
+  ) async {
     final db = await _database.database;
     await db.update(
       'tts_segments',
@@ -162,7 +174,10 @@ class TtsAudioRepository {
   }
 
   Future<void> updateSegmentMemo(
-      int episodeId, int segmentIndex, String? memo) async {
+    int episodeId,
+    int segmentIndex,
+    String? memo,
+  ) async {
     final db = await _database.database;
     await db.update(
       'tts_segments',
@@ -177,7 +192,10 @@ class TtsAudioRepository {
   /// Deliberately leaves `audio_data` and `sample_count` untouched: skipping
   /// is a one-click action, so it must be reversible without regenerating.
   Future<void> updateSegmentSkip(
-      int episodeId, int segmentIndex, bool skip) async {
+    int episodeId,
+    int segmentIndex,
+    bool skip,
+  ) async {
     final db = await _database.database;
     await db.update(
       'tts_segments',
@@ -234,18 +252,15 @@ class TtsAudioRepository {
     );
     return {
       for (final row in rows)
-        row['file_name'] as String:
-            TtsEpisodeStatus.fromDb(row['status'] as String),
+        row['file_name'] as String: TtsEpisodeStatus.fromDb(
+          row['status'] as String,
+        ),
     };
   }
 
   Future<void> deleteEpisode(int episodeId) async {
     final db = await _database.database;
-    await db.delete(
-      'tts_episodes',
-      where: 'id = ?',
-      whereArgs: [episodeId],
-    );
+    await db.delete('tts_episodes', where: 'id = ?', whereArgs: [episodeId]);
     // Defer reclaim to app exit via VacuumLifecycle to avoid blocking the
     // UI thread (incremental_vacuum on a 100MB+ DB stalls hundreds of ms).
     _onEpisodeDeleted?.call();
