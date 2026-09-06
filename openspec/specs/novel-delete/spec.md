@@ -1,17 +1,29 @@
 ## Purpose
 
-ライブラリ画面で右クリックから小説フォルダを削除する機能。確認ダイアログで誤操作を防ぎ、`NovelDeleteService` 経由で novels テーブル / word_summaries テーブル / ファイルシステムの3層を一貫して削除し、削除後にファイルブラウザを自動更新する。
+ライブラリ画面で右クリックまたは長押しから小説フォルダを削除する機能。確認ダイアログで誤操作を防ぎ、`NovelDeleteService` 経由で novels テーブル / word_summaries テーブル / ファイルシステムの3層を一貫して削除し、削除後にファイルブラウザを自動更新する。
 ## Requirements
 ### Requirement: Context menu on novel folder
-ライブラリルートでの小説フォルダ表示時、フォルダのListTileを右クリック（セカンダリタップ）すると「削除」オプションを含むコンテキストメニューが表示されなければならない（SHALL）。
+ライブラリルートでの小説フォルダ表示時、フォルダのListTileを右クリック（セカンダリタップ）または長押しすると「削除」オプションを含むコンテキストメニューが表示されなければならない（SHALL）。長押しで開いたメニューは、右クリックで開いたものと項目・並び・動作が同一でなければならない（SHALL）。長押しは副ボタンを持たないポインタ（touch / stylus）に限らなければならない（SHALL）——マウスで長押しを有効にすると、遅い左クリックでフォルダを開く既存の操作が失われるためである。
 
 #### Scenario: Right-click on novel folder at library root
 - **WHEN** ユーザーがライブラリルートで小説フォルダを右クリックする
 - **THEN** 「削除」オプションを含むコンテキストメニューが表示される
 
+#### Scenario: Long-press on novel folder at library root
+- **WHEN** ユーザーがライブラリルートで小説フォルダを長押しする
+- **THEN** 右クリック時と同じ「削除」オプションを含むコンテキストメニューが長押し位置に表示される
+
 #### Scenario: No context menu inside novel folder
 - **WHEN** ユーザーが小説フォルダ内のエピソードファイルを右クリックする
 - **THEN** コンテキストメニューは表示されない
+
+#### Scenario: No context menu inside novel folder on long press either
+- **WHEN** ユーザーが小説フォルダ内のエピソードファイルを長押しする
+- **THEN** コンテキストメニューは表示されない
+
+#### Scenario: A slow mouse click still enters the folder
+- **WHEN** ユーザーが小説フォルダを左ボタンで長押しの閾値を超えて押し続けてから離す
+- **THEN** コンテキストメニューは表示されず、そのフォルダに移動する
 
 ### Requirement: Delete confirmation dialog
 「削除」メニュー項目を選択した際、小説タイトルを含む確認ダイアログが表示されなければならない（SHALL）。ダイアログには「削除」（赤色）と「キャンセル」ボタンを配置しなければならない（SHALL）。
