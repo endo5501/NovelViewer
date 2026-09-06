@@ -52,6 +52,13 @@
 - [x] 7.2 `openspec/changes/episode-boundary-two-step/specs/text-viewer/spec.md` の MODIFIED / ADDED の全シナリオが 5・6 のテストで網羅されていることを突き合わせる
 - [x] 7.3 `openspec validate episode-boundary-two-step` を実行して通ることを確認する
 
+## 9. トラックパッド／タッチによる境界入力（実機確認で判明した既存の欠落）
+
+- [x] 9.1 `resolveScrollBoundary` のユニットテストを書く（bouncing の位置超過／clamping のオーバースクロール／慣性の戻りは無視／境界ちょうどは無視／範囲内は reset）
+- [x] 9.2 `lib/features/text_viewer/data/scroll_boundary_detection.dart` に判定関数を実装する
+- [x] 9.3 トラックパッド操作の widget テストを書く（macOS の bouncing physics 下でスワイプ 2 回により遷移／中間位置では無反応／戻りでヒントが消えない）
+- [x] 9.4 `text_content_renderer.dart` の `ScrollNotification` 処理を判定関数経由に置き換え、`OverscrollNotification` も受けるようにする
+
 ## 8. 最終確認
 
 - [x] 8.1 code-reviewスキルを使用してコードレビューを実施

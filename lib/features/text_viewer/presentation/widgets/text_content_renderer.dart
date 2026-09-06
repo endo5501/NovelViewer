@@ -23,6 +23,7 @@ import 'package:novel_viewer/features/llm_summary/providers/marked_words_provide
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
+import 'package:novel_viewer/features/text_viewer/data/scroll_boundary_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/parsed_segments_cache_provider.dart';
 import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
@@ -493,6 +494,35 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       _navigateEpisodeAtEdge(1);
     } else if (dy < 0 && position.pixels <= position.minScrollExtent) {
       _navigateEpisodeAtEdge(-1);
+    }
+  }
+
+  /// Routes one scroll notification through [resolveScrollBoundary].
+  void _handleScrollBoundary(ScrollNotification notification) {
+    final overscroll = notification is OverscrollNotification
+        ? notification.overscroll
+        : null;
+    final isDragging = switch (notification) {
+      OverscrollNotification(:final dragDetails) => dragDetails != null,
+      ScrollUpdateNotification(:final dragDetails) => dragDetails != null,
+      _ => false,
+    };
+    final metrics = notification.metrics;
+    switch (resolveScrollBoundary(
+      pixels: metrics.pixels,
+      minScrollExtent: metrics.minScrollExtent,
+      maxScrollExtent: metrics.maxScrollExtent,
+      isDragging: isDragging,
+      overscroll: overscroll,
+    )) {
+      case ScrollBoundaryOutcome.crossToNext:
+        _navigateEpisodeAtEdge(1);
+      case ScrollBoundaryOutcome.crossToPrevious:
+        _navigateEpisodeAtEdge(-1);
+      case ScrollBoundaryOutcome.dropHint:
+        _boundaryPrompt.reset();
+      case ScrollBoundaryOutcome.ignore:
+        break;
     }
   }
 
@@ -969,13 +999,15 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
             playbackState == TtsPlaybackState.playing) {
           ref.read(ttsStopRequestProvider.notifier).request();
         }
-        // The body moved inside the file, so an armed boundary hint no longer
-        // applies. Catching it here (rather than only in the key/wheel paths)
-        // also covers a scrollbar drag, a fling, and the search/bookmark/TTS
-        // jumps — none of which route through _pageScroll. A boundary input
-        // that arms the hint moves nothing, so this cannot clear it on arm.
-        if (notification is ScrollUpdateNotification) {
-          _boundaryPrompt.reset();
+        // Scroll notifications are where every input converges, so this is
+        // both how drag-driven boundary input (trackpad, touch) is seen at all
+        // — a swipe arrives as PointerPanZoomUpdateEvent, which never reaches
+        // onPointerSignal — and how an armed hint is dropped when the reader
+        // moves inside the file by any route (scrollbar, fling, search or
+        // bookmark jump), none of which go through _pageScroll.
+        if (notification is ScrollUpdateNotification ||
+            notification is OverscrollNotification) {
+          _handleScrollBoundary(notification);
         }
         return false;
       },
