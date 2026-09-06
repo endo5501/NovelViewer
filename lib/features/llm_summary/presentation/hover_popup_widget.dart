@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.d
 import 'package:novel_viewer/features/llm_summary/presentation/summary_snapshot_view.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
+import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 /// Inline popup shown above a marked word when the pointer hovers it. Reads
@@ -137,14 +138,21 @@ class _Card extends ConsumerWidget {
             onSelectEpisode: onSelectEpisode,
             keyPrefix: 'hover_popup',
             showWarning: showWarning,
-            trailing: _ReanalyzeMenuButton(
-              word: displayed.word,
-              snapshots: snapshots,
-              currentEpisode: currentEpisode,
-              currentFileName: currentFileName,
-              maxEpisodeInFolder: maxEpisodeInFolder,
-              maxEpisodeFileName: maxEpisodeFileName,
-            ),
+            // Reading a stored summary stays available everywhere — a folder
+            // carried over from a desktop install keeps its analysis
+            // readable. Starting a new one does not: this popup is reachable
+            // on an iPad whenever a trackpad is attached, since iPadOS
+            // delivers hover events then.
+            trailing: ref.watch(llmSummarySupportedProvider)
+                ? _ReanalyzeMenuButton(
+                    word: displayed.word,
+                    snapshots: snapshots,
+                    currentEpisode: currentEpisode,
+                    currentFileName: currentFileName,
+                    maxEpisodeInFolder: maxEpisodeInFolder,
+                    maxEpisodeFileName: maxEpisodeFileName,
+                  )
+                : null,
           ),
         ),
       ),

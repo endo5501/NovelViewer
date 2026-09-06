@@ -651,8 +651,8 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         value,
         selectedText: selectedText,
         onCopy: (t) => Clipboard.setData(ClipboardData(text: t)),
-        onAddToDictionary: _openDictionaryDialog,
-        onAnalyze: _runAnalysis,
+        onAddToDictionary: ttsSupported ? _openDictionaryDialog : null,
+        onAnalyze: llmSupported ? _runAnalysis : null,
       );
     });
   }

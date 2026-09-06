@@ -53,16 +53,20 @@ void main() {
     });
   });
 
-  test('the default implementation resolves the running platform', () {
+  test('the default implementation reports a desktop host as fully capable', () {
+    // Asserted as a literal rather than as `!Platform.isIOS`: deriving the
+    // expectation from the same expression the implementation uses would let a
+    // provider hardcoded to one platform pass. Tests only ever run on desktop,
+    // where all three features exist; the iOS branch is covered by the model's
+    // own test, which needs no platform at all.
+    expect(Platform.isIOS, isFalse, reason: 'tests run on a desktop host');
+
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    // The test host is a desktop platform, so every feature is available. The
-    // iOS branch is covered by the model's own test, which needs no platform.
-    expect(
-      container.read(platformCapabilitiesProvider).textToSpeech,
-      !Platform.isIOS,
-    );
-    expect(container.read(ttsSupportedProvider), !Platform.isIOS);
+    expect(container.read(platformCapabilitiesProvider).textToSpeech, isTrue);
+    expect(container.read(platformCapabilitiesProvider).appUpdate, isTrue);
+    expect(container.read(platformCapabilitiesProvider).llmSummary, isTrue);
+    expect(container.read(ttsSupportedProvider), isTrue);
   });
 }

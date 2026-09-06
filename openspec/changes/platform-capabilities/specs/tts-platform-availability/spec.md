@@ -49,3 +49,30 @@ When TTS is unavailable, the UI SHALL NOT present any control that would load th
 #### Scenario: The dictionary item is present when TTS is available
 - **WHEN** text is selected in either horizontal or vertical display mode and the context menu is opened while TTS is available
 - **THEN** the "add to dictionary" item is present, unchanged
+
+### Requirement: TTS keyboard commands are inert and unlisted when TTS is unavailable
+The playback toggle binding SHALL NOT be registered at all when TTS is unavailable. Leaving it registered would consume the key press and do nothing, since the controls bar that owns the toggle is not mounted — and the reader could neither see that binding nor change it, because the shortcut settings list omits the row too. Unregistered, the combination falls through to whatever else may handle it.
+
+#### Scenario: The binding is not registered
+- **WHEN** the shortcut map is built while TTS is unavailable
+- **THEN** it contains no entry for the TTS playback toggle, so the combination is left for another handler rather than consumed
+
+#### Scenario: Toggle shortcut does nothing
+- **WHEN** the TTS playback toggle shortcut is pressed while TTS is unavailable
+- **THEN** no playback starts, no toggle request is issued, and no native library is loaded
+
+#### Scenario: The TTS shortcut is not listed
+- **WHEN** the shortcut settings list is displayed while TTS is unavailable
+- **THEN** no row for the TTS playback toggle is present, and the other shortcut rows are unaffected
+
+#### Scenario: The TTS shortcut is listed where TTS is available
+- **WHEN** the shortcut settings list is displayed while TTS is available
+- **THEN** a row for the TTS playback toggle is present, and pressing its binding issues a toggle request
+
+#### Scenario: The hidden binding does not block another rebinding
+- **WHEN** the reader assigns to a visible action the key combination currently held by the TTS playback toggle, while TTS is unavailable
+- **THEN** the assignment succeeds, because refusing it would report a conflict with a row the reader cannot see or change
+
+#### Scenario: Conflicts between available actions are still refused
+- **WHEN** the reader assigns to one visible action the key combination held by another visible action
+- **THEN** the assignment is refused, whether or not TTS is available

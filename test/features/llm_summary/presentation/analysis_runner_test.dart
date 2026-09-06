@@ -104,9 +104,11 @@ ProviderContainer _container(
   String directory = '/library/novel_a',
   FileEntry? file,
   String language = 'ja',
+  bool llmSupported = true,
 }) {
   final container = ProviderContainer(
     overrides: [
+      llmSummarySupportedProvider.overrideWithValue(llmSupported),
       currentDirectoryProvider.overrideWith(
         () => CurrentDirectoryNotifier(directory),
       ),
@@ -847,6 +849,60 @@ void main() {
         await tester.pumpAndSettle();
       },
     );
+  });
+
+  group('where LLM summary is unavailable', () {
+    // The popup's re-analyze control is withheld there, so nothing in the UI
+    // reaches this runner. Refusing here as well is the second layer: a
+    // surface added later without a capability check must still not reach an
+    // LLM server.
+    testWidgets('run() performs no analysis', (tester) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            fail('the summary service was invoked'),
+      );
+      final container = _container(stub, llmSupported: false);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) => ref
+              .read(analysisRunnerProvider)
+              .run(context: context, word: 'アリス', coveredUpToEpisode: 5),
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+
+      expect(stub.callCount, 0);
+    });
+
+    testWidgets('runWithScope() performs no analysis', (tester) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            fail('the summary service was invoked'),
+      );
+      final container = _container(stub, llmSupported: false);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) => ref
+              .read(analysisRunnerProvider)
+              .runWithScope(
+                context: context,
+                word: 'アリス',
+                scope: AnalysisScope.upToAll,
+              ),
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+
+      expect(stub.callCount, 0);
+    });
   });
 }
 

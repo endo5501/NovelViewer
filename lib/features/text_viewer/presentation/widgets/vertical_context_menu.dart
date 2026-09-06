@@ -44,21 +44,27 @@ List<PopupMenuEntry<VerticalContextAction>> buildVerticalContextMenuItems({
   ];
 }
 
+/// Routes a chosen menu entry to its handler.
+///
+/// Every handler but [onCopy] is optional, and a withheld one makes its action
+/// a no-op. The builder above already omits an entry whose label is absent, so
+/// this is the second layer: an entry that somehow survives without its handler
+/// must do nothing rather than reach the speech engine or an LLM server.
 void dispatchVerticalContextAction(
   VerticalContextAction action, {
   required String selectedText,
   required void Function(String selectedText) onCopy,
-  required void Function(String selectedText) onAddToDictionary,
-  required void Function(String selectedText, AnalysisScope scope) onAnalyze,
+  void Function(String selectedText)? onAddToDictionary,
+  void Function(String selectedText, AnalysisScope scope)? onAnalyze,
 }) {
   switch (action) {
     case VerticalContextAction.copy:
       onCopy(selectedText);
     case VerticalContextAction.addToDictionary:
-      onAddToDictionary(selectedText);
+      onAddToDictionary?.call(selectedText);
     case VerticalContextAction.analyzeNoSpoiler:
-      onAnalyze(selectedText, AnalysisScope.upToCurrent);
+      onAnalyze?.call(selectedText, AnalysisScope.upToCurrent);
     case VerticalContextAction.analyzeSpoiler:
-      onAnalyze(selectedText, AnalysisScope.upToAll);
+      onAnalyze?.call(selectedText, AnalysisScope.upToAll);
   }
 }

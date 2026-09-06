@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 
 void main() {
@@ -19,12 +20,16 @@ void main() {
     prefs = await SharedPreferences.getInstance();
   });
 
-  Future<ProviderContainer> pumpApp(WidgetTester tester) async {
+  Future<ProviderContainer> pumpApp(
+    WidgetTester tester, {
+    bool ttsSupported = true,
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           libraryPathProvider.overrideWithValue('/library'),
+          ttsSupportedProvider.overrideWithValue(ttsSupported),
         ],
         child: const NovelViewerApp(),
       ),
@@ -134,4 +139,65 @@ void main() {
       reason: 'No stop request when nothing is playing',
     );
   });
+
+  testWidgets(
+    'the toggle shortcut is not registered at all where TTS is unavailable',
+    (tester) async {
+      // The controls bar that listens for the request is not mounted there, so
+      // leaving the binding registered would swallow the key press and give the
+      // reader a combination that does nothing — one they cannot even see in
+      // the shortcut settings, since that row is hidden too.
+      final container = await pumpApp(tester, ttsSupported: false);
+      final before = container.read(ttsToggleRequestProvider);
+
+      await pressCtrlT(tester);
+
+      expect(container.read(ttsToggleRequestProvider), before);
+    },
+  );
+
+  testWidgets('the key press is left for anyone else to handle', (
+    tester,
+  ) async {
+    var seenByFallback = false;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue('/library'),
+          ttsSupportedProvider.overrideWithValue(false),
+        ],
+        child: Shortcuts(
+          shortcuts: {
+            const SingleActivator(LogicalKeyboardKey.keyT, control: true):
+                _ProbeIntent(),
+          },
+          child: Actions(
+            actions: {
+              _ProbeIntent: CallbackAction<_ProbeIntent>(
+                onInvoke: (_) {
+                  seenByFallback = true;
+                  return null;
+                },
+              ),
+            },
+            child: const NovelViewerApp(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await pressCtrlT(tester);
+
+    expect(
+      seenByFallback,
+      isTrue,
+      reason:
+          'an unregistered combination must fall through rather than be '
+          'consumed by a handler that does nothing',
+    );
+  });
 }
+
+class _ProbeIntent extends Intent {}

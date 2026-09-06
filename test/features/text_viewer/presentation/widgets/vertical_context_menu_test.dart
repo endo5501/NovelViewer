@@ -156,4 +156,58 @@ void main() {
       expect(capturedType, AnalysisScope.upToAll);
     });
   });
+
+  group('dispatchVerticalContextAction with withheld handlers', () {
+    // The builder already omits an entry whose label is absent, so these
+    // actions cannot be chosen through the UI. The dispatcher tolerating a
+    // missing handler is the second layer: if a future change ever emits an
+    // entry whose handler was withheld, it must do nothing rather than reach
+    // the speech engine or an LLM server.
+    test('a withheld dictionary handler makes the action a no-op', () {
+      var analyzed = false;
+
+      expect(
+        () => dispatchVerticalContextAction(
+          VerticalContextAction.addToDictionary,
+          selectedText: 'アリス',
+          onCopy: (_) {},
+          onAnalyze: (_, _) => analyzed = true,
+        ),
+        returnsNormally,
+      );
+      expect(analyzed, isFalse);
+    });
+
+    test('a withheld analysis handler makes both actions no-ops', () {
+      var addedToDictionary = false;
+
+      for (final action in [
+        VerticalContextAction.analyzeNoSpoiler,
+        VerticalContextAction.analyzeSpoiler,
+      ]) {
+        expect(
+          () => dispatchVerticalContextAction(
+            action,
+            selectedText: 'アリス',
+            onCopy: (_) {},
+            onAddToDictionary: (_) => addedToDictionary = true,
+          ),
+          returnsNormally,
+        );
+      }
+      expect(addedToDictionary, isFalse);
+    });
+
+    test('copy still works when every optional handler is withheld', () {
+      String? copied;
+
+      dispatchVerticalContextAction(
+        VerticalContextAction.copy,
+        selectedText: 'アリス',
+        onCopy: (t) => copied = t,
+      );
+
+      expect(copied, 'アリス');
+    });
+  });
 }
