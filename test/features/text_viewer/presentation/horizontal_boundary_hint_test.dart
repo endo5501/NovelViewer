@@ -155,6 +155,55 @@ void main() {
     expect(find.textContaining('003.txt'), findsNothing);
   });
 
+  testWidgets('scrolling away from the boundary by any means hides the hint', (
+    tester,
+  ) async {
+    final container = makeContainer();
+    addTearDown(container.dispose);
+    await tester.pumpWidget(wrap(container: container, content: longContent));
+    await tester.pumpAndSettle();
+
+    await armNextHint(tester);
+    expect(find.textContaining('003.txt'), findsOneWidget);
+
+    // Not a key or wheel input: a scrollbar drag, a search-result jump or a
+    // bookmark jump all move the body this way.
+    final state = tester.state<ScrollableState>(outerScrollable());
+    state.position.jumpTo(state.position.maxScrollExtent / 2);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('003.txt'), findsNothing);
+  });
+
+  testWidgets('a hint dropped by an unrelated scroll cannot be confirmed', (
+    tester,
+  ) async {
+    final container = makeContainer();
+    addTearDown(container.dispose);
+    await tester.pumpWidget(wrap(container: container, content: longContent));
+    await tester.pumpAndSettle();
+
+    await armNextHint(tester);
+
+    // Scroll away and straight back inside the 4s window. The earlier hint is
+    // gone, so returning to the edge must arm a fresh one rather than confirm.
+    final state = tester.state<ScrollableState>(outerScrollable());
+    state.position.jumpTo(state.position.maxScrollExtent / 2);
+    await tester.pumpAndSettle();
+    state.position.jumpTo(state.position.maxScrollExtent);
+    await tester.pumpAndSettle();
+
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('003.txt'),
+      findsOneWidget,
+      reason: 'This press re-arms the hint; it does not confirm the old one',
+    );
+  });
+
   testWidgets('no hint when there is no adjacent file in that direction', (
     tester,
   ) async {

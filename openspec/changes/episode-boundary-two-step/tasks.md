@@ -44,7 +44,7 @@
 - [x] 6.1 ヒント表示の widget test を追加する（ヒント状態で隣接ファイル名を含む文言が表示される／待機状態では描画されない／タイムアウトで消える／no-op ケースでは表示されない／表示前後で本文のスクロール位置と `maxScrollExtent` が変化しない）
 - [x] 6.2 テストが失敗（赤）することを確認する
 - [x] 6.3 `text_content_renderer.dart` のスクロールビューを `Stack` で包み、`Positioned(bottom: 8, left: 0, right: 0)` + `Center` にヒントを配置する（書体は `textTheme.bodySmall`、背景は `colorScheme.surfaceContainerHighest` 相当＋角丸＋左右パディング、`TextOverflow.ellipsis`）
-- [x] 6.4 `TtsControlsBar` と重ならないよう水平パディングを設定し、6.1 のテストが緑になることを確認する
+- [x] 6.4 ヒントを `IgnorePointer` で包み、`TtsControlsBar` のボタンがヒントの下でも操作可能なことを保証する（両者は別 Stack にあり幅も不明なため、視覚的な重なりは許容。TTS モデル未設定時はバーが描画されないので実際の重なりは限定的）。6.1 のテストが緑になることを確認する
 
 ## 7. 仕様の整合確認
 

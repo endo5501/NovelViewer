@@ -461,9 +461,8 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       _navigateEpisodeAtEdge(direction);
       return;
     }
-    // A page move inside the file means the user is reading on, not crossing a
-    // boundary: drop any armed hint.
-    _boundaryPrompt.reset();
+    // The resulting scroll fires a ScrollUpdateNotification, which drops any
+    // armed hint (see the NotificationListener in build).
     _scrollController.animateTo(
       target,
       duration: const Duration(milliseconds: 200),
@@ -487,10 +486,6 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       _navigateEpisodeAtEdge(1);
     } else if (dy < 0 && position.pixels <= position.minScrollExtent) {
       _navigateEpisodeAtEdge(-1);
-    } else {
-      // The scroll view still had room, so this wheel tick scrolls inside the
-      // file and any armed hint no longer applies.
-      _boundaryPrompt.reset();
     }
   }
 
@@ -966,6 +961,14 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
             notification.dragDetails != null &&
             playbackState == TtsPlaybackState.playing) {
           ref.read(ttsStopRequestProvider.notifier).request();
+        }
+        // The body moved inside the file, so an armed boundary hint no longer
+        // applies. Catching it here (rather than only in the key/wheel paths)
+        // also covers a scrollbar drag, a fling, and the search/bookmark/TTS
+        // jumps — none of which route through _pageScroll. A boundary input
+        // that arms the hint moves nothing, so this cannot clear it on arm.
+        if (notification is ScrollUpdateNotification) {
+          _boundaryPrompt.reset();
         }
         return false;
       },

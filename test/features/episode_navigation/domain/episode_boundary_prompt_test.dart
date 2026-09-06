@@ -288,6 +288,28 @@ void main() {
       });
     });
 
+    test('confirming notifies that the hint went away', () {
+      fakeAsync((clock) {
+        final prompt = EpisodeBoundaryPrompt();
+        prompt.hitBoundary(EpisodeBoundaryDirection.next, hasAdjacent: true);
+        clock.elapse(const Duration(milliseconds: 300));
+
+        final listener = _Listener();
+        prompt.addListener(listener.call);
+        prompt.hitBoundary(EpisodeBoundaryDirection.next, hasAdjacent: true);
+
+        expect(
+          listener.count,
+          1,
+          reason:
+              'Every pending transition publishes, so a viewer that renders '
+              'the hint can drop it without relying on the navigation to '
+              'rebuild it',
+        );
+        prompt.dispose();
+      });
+    });
+
     test('the input right after a confirm arms again instead of moving', () {
       fakeAsync((clock) {
         final prompt = EpisodeBoundaryPrompt();

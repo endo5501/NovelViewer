@@ -58,7 +58,11 @@ class EpisodeBoundaryPrompt extends ChangeNotifier {
       // touching the timeout — the hint expires 4s after arming, not 4s after
       // the last event of a fling.
       if (_inCooldown) return false;
+      // Publish the disarm like every other transition, so a viewer that
+      // paints the hint drops it on its own rather than relying on the
+      // navigation that follows to rebuild it.
       _disarm();
+      notifyListeners();
       return true;
     }
 
