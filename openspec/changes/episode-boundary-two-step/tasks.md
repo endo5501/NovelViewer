@@ -1,32 +1,32 @@
 ## 1. 状態機械のテスト（TDD: 赤）
 
-- [ ] 1.1 `test/features/episode_navigation/domain/episode_boundary_prompt_test.dart` を新規作成し、2 段階確認の基本フロー（1 回目でヒント状態へ遷移し遷移しない／確定クールダウン経過後の 2 回目で `true` を返す）を次話・前話の両方向で記述する
-- [ ] 1.2 タイムアウトのテストを追加する（`fake_async` で 4 秒経過後にヒント解除・リスナー通知／タイムアウト後の入力は再び 1 回目扱い）
-- [ ] 1.3 確定クールダウンのテストを追加する（300ms 未満の連続入力では確定しない／クールダウン中の入力でタイムアウトタイマーがリセットされず、初回ヒントから 4 秒でタイムアウトする）
-- [ ] 1.4 向き切り替えのテストを追加する（`次話待ち` で前話方向の境界入力→`前話待ち` に切り替わり遷移しない／切り替え直後は確定クールダウンで確定できない）
-- [ ] 1.5 隣接ファイルなしの no-op テストを追加する（待機状態で `hasAdjacent: false` の入力→ヒント状態へ遷移しない／ヒント状態で逆方向かつ `hasAdjacent: false` の入力→状態が変化しない）
-- [ ] 1.6 確定時リセットと `reset()` のテストを追加する（`true` を返した直後は `pending` が null／`reset()` でタイマーが解除される／`dispose()` で保留中のタイマーが解放される）
-- [ ] 1.7 `fvm flutter test test/features/episode_navigation/domain/episode_boundary_prompt_test.dart` を実行し、すべて失敗（赤）することを確認する
+- [x] 1.1 `test/features/episode_navigation/domain/episode_boundary_prompt_test.dart` を新規作成し、2 段階確認の基本フロー（1 回目でヒント状態へ遷移し遷移しない／確定クールダウン経過後の 2 回目で `true` を返す）を次話・前話の両方向で記述する
+- [x] 1.2 タイムアウトのテストを追加する（`fake_async` で 4 秒経過後にヒント解除・リスナー通知／タイムアウト後の入力は再び 1 回目扱い）
+- [x] 1.3 確定クールダウンのテストを追加する（300ms 未満の連続入力では確定しない／クールダウン中の入力でタイムアウトタイマーがリセットされず、初回ヒントから 4 秒でタイムアウトする）
+- [x] 1.4 向き切り替えのテストを追加する（`次話待ち` で前話方向の境界入力→`前話待ち` に切り替わり遷移しない／切り替え直後は確定クールダウンで確定できない）
+- [x] 1.5 隣接ファイルなしの no-op テストを追加する（待機状態で `hasAdjacent: false` の入力→ヒント状態へ遷移しない／ヒント状態で逆方向かつ `hasAdjacent: false` の入力→状態が変化しない）
+- [x] 1.6 確定時リセットと `reset()` のテストを追加する（`true` を返した直後は `pending` が null／`reset()` でタイマーが解除される／`dispose()` で保留中のタイマーが解放される）
+- [x] 1.7 `fvm flutter test test/features/episode_navigation/domain/episode_boundary_prompt_test.dart` を実行し、すべて失敗（赤）することを確認する
 
 ## 2. 状態機械の実装（TDD: 緑）
 
-- [ ] 2.1 `lib/features/episode_navigation/domain/episode_boundary_prompt.dart` に `EpisodeBoundaryDirection` enum と `EpisodeBoundaryPrompt extends ChangeNotifier` を実装する（`pending` / `hitBoundary(direction, {required hasAdjacent})` / `reset()` / `dispose()`、タイムアウトと確定クールダウンは注入可能なコンストラクタ引数）
-- [ ] 2.2 1 のテストがすべて緑になることを確認する（テストは変更しない）
+- [x] 2.1 `lib/features/episode_navigation/domain/episode_boundary_prompt.dart` に `EpisodeBoundaryDirection` enum と `EpisodeBoundaryPrompt extends ChangeNotifier` を実装する（`pending` / `hitBoundary(direction, {required hasAdjacent})` / `reset()` / `dispose()`、タイムアウトと確定クールダウンは注入可能なコンストラクタ引数）
+- [x] 2.2 1 のテストがすべて緑になることを確認する（テストは変更しない）
 
 ## 3. l10n キーの改名
 
-- [ ] 3.1 `lib/l10n/app_ja.arb` の `verticalText_nextEpisodePrompt` / `verticalText_prevEpisodePrompt` を `episodeBoundary_nextPrompt` / `episodeBoundary_prevPrompt` へ改名する（文言は既に入力デバイス中立なため変更なし）
-- [ ] 3.2 `lib/l10n/app_en.arb` を同様に改名し、`press again` を入力デバイス中立な表現へ改める
-- [ ] 3.3 `lib/l10n/app_zh.arb` を同様に改名し、`再按一次` を入力デバイス中立な表現へ改める
-- [ ] 3.4 `fvm flutter pub get`（または `fvm flutter gen-l10n`）で `app_localizations*.dart` を再生成し、旧キーの参照が残っていないことを `grep -rn "verticalText_.*EpisodePrompt" lib test` で確認する
+- [x] 3.1 `lib/l10n/app_ja.arb` の `verticalText_nextEpisodePrompt` / `verticalText_prevEpisodePrompt` を `episodeBoundary_nextPrompt` / `episodeBoundary_prevPrompt` へ改名する（文言は既に入力デバイス中立なため変更なし）
+- [x] 3.2 `lib/l10n/app_en.arb` を同様に改名し、`press again` を入力デバイス中立な表現へ改める
+- [x] 3.3 `lib/l10n/app_zh.arb` を同様に改名し、`再按一次` を入力デバイス中立な表現へ改める
+- [x] 3.4 `fvm flutter pub get`（または `fvm flutter gen-l10n`）で `app_localizations*.dart` を再生成し、旧キーの参照が残っていないことを `grep -rn "verticalText_.*EpisodePrompt" lib test` で確認する
 
 ## 4. 縦書きビューアの載せ替え（挙動不変）
 
-- [ ] 4.1 `vertical_text_viewer.dart` の `_pendingNextFilePrompt` / `_pendingPrevFilePrompt` / `_promptTimeoutTimer` / `_confirmCooldownTimer` / `_inConfirmCooldown` と定数 `_kFileNavigationPromptTimeout` / `_kFileNavigationConfirmCooldown` を `EpisodeBoundaryPrompt` のインスタンスへ置き換える（`initState` で生成、`dispose` で破棄）
-- [ ] 4.2 `_handleBoundaryNavigation(delta)` を `hitBoundary` 呼び出しへ置き換え、戻り値が `true` のときのみ `episodeNavigationControllerProvider` の遷移操作を呼ぶよう書き換える（`_showFileNavigationPrompt` / `_confirmFileNavigation` / `_clearPendingPrompts` は状態機械側へ集約）
-- [ ] 4.3 `_changePage` のファイル内移動成立時の `_clearPendingPrompts()` を `prompt.reset()` へ置き換える
-- [ ] 4.4 `_buildIndicatorText` を `prompt.pending` と改名後の l10n キーで参照するよう書き換え、ヒント状態の変化で再描画されるよう `ChangeNotifier` を購読する
-- [ ] 4.5 `vertical_text_viewer_episode_nav_test.dart` / `vertical_text_viewer_swipe_test.dart` / `vertical_text_viewer_wheel_test.dart` を**一切変更せずに**緑であることを確認する（変更が必要になった場合は挙動が変わった証拠として原因を特定する）
+- [x] 4.1 `vertical_text_viewer.dart` の `_pendingNextFilePrompt` / `_pendingPrevFilePrompt` / `_promptTimeoutTimer` / `_confirmCooldownTimer` / `_inConfirmCooldown` と定数 `_kFileNavigationPromptTimeout` / `_kFileNavigationConfirmCooldown` を `EpisodeBoundaryPrompt` のインスタンスへ置き換える（`initState` で生成、`dispose` で破棄）
+- [x] 4.2 `_handleBoundaryNavigation(delta)` を `hitBoundary` 呼び出しへ置き換え、戻り値が `true` のときのみ `episodeNavigationControllerProvider` の遷移操作を呼ぶよう書き換える（`_showFileNavigationPrompt` / `_confirmFileNavigation` / `_clearPendingPrompts` は状態機械側へ集約）
+- [x] 4.3 `_changePage` のファイル内移動成立時の `_clearPendingPrompts()` を `prompt.reset()` へ置き換える
+- [x] 4.4 `_buildIndicatorText` を `prompt.pending` と改名後の l10n キーで参照するよう書き換え、ヒント状態の変化で再描画されるよう `ChangeNotifier` を購読する
+- [x] 4.5 `vertical_text_viewer_episode_nav_test.dart` / `vertical_text_viewer_swipe_test.dart` / `vertical_text_viewer_wheel_test.dart` を**一切変更せずに**緑であることを確認する（変更が必要になった場合は挙動が変わった証拠として原因を特定する）
 
 ## 5. 横書きビューアの 2 段階化（TDD: 赤 → 緑）
 

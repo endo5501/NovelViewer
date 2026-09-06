@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/episode_navigation/domain/episode_boundary_prompt.dart';
 import 'package:novel_viewer/features/episode_navigation/domain/file_entry_start_intent.dart';
 import 'package:novel_viewer/features/episode_navigation/providers/adjacent_files_provider.dart';
 import 'package:novel_viewer/features/episode_navigation/providers/episode_navigation_controller.dart';
@@ -339,16 +340,6 @@ const _kDefaultFontSize = 14.0;
 const _kPageTransitionDuration = Duration(milliseconds: 250);
 const _kPageTransitionCurve = Curves.easeInOut;
 
-// Two-step file-navigation confirmation window. After the user attempts to
-// cross a file boundary the prompt is shown for this long; a second
-// same-direction press within the window confirms the switch.
-const _kFileNavigationPromptTimeout = Duration(seconds: 4);
-
-// Minimum delay between showing the prompt and accepting a confirming press.
-// Without this, holding an arrow key (KeyRepeatEvent) or rapidly spinning
-// the mouse wheel would auto-confirm the file switch on the very next tick.
-const _kFileNavigationConfirmCooldown = Duration(milliseconds: 300);
-
 class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     with SingleTickerProviderStateMixin {
   int _currentPage = 0;
@@ -360,16 +351,10 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   int _lastReportedLine = 0;
   final FocusNode _focusNode = FocusNode();
 
-  // Two-step file boundary navigation state. Only one direction can be
-  // pending at a time; switching direction (or any unrelated input) cancels
-  // the pending prompt.
-  bool _pendingNextFilePrompt = false;
-  bool _pendingPrevFilePrompt = false;
-  Timer? _promptTimeoutTimer;
-  // While true, additional boundary inputs are ignored even if a prompt is
-  // pending — prevents KeyRepeat / wheel bursts from auto-confirming.
-  bool _inConfirmCooldown = false;
-  Timer? _confirmCooldownTimer;
+  // Two-step file boundary navigation, shared with the horizontal viewer.
+  // Only one direction can be pending at a time; switching direction re-arms
+  // and any in-file page move clears it.
+  final EpisodeBoundaryPrompt _boundaryPrompt = EpisodeBoundaryPrompt();
 
   // True when the next non-null `pendingFileEntryIntent` should still be
   // consumed by this viewer's first build. Cleared after consumption to
@@ -417,7 +402,14 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       parent: _animationController,
       curve: _kPageTransitionCurve,
     );
+    // The prompt drives the page-number area, so a state change (arm, switch,
+    // timeout) has to repaint it.
+    _boundaryPrompt.addListener(_onBoundaryPromptChanged);
     _consumePendingIntent();
+  }
+
+  void _onBoundaryPromptChanged() {
+    if (mounted) setState(() {});
   }
 
   void _consumePendingIntent() {
@@ -456,7 +448,7 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       }
       // A new segments stream means the file changed: drop any pending
       // boundary prompt to avoid carrying it across files.
-      _clearPendingPrompts();
+      _boundaryPrompt.reset();
       // Allow consuming a fresh intent (e.g., the navigation that drove the
       // file switch).
       _intentAlreadyConsumed = false;
@@ -483,8 +475,8 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
 
   @override
   void dispose() {
-    _promptTimeoutTimer?.cancel();
-    _confirmCooldownTimer?.cancel();
+    _boundaryPrompt.removeListener(_onBoundaryPromptChanged);
+    _boundaryPrompt.dispose();
     _curvedAnimation.dispose();
     _animationController.dispose();
     _focusNode.dispose();
@@ -702,9 +694,7 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
                         ],
                       ),
                     ),
-                    if (totalPages > 1 ||
-                        _pendingNextFilePrompt ||
-                        _pendingPrevFilePrompt)
+                    if (totalPages > 1 || _boundaryPrompt.pending != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: Text(
@@ -764,7 +754,7 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     }
 
     // Any successful in-file page move cancels a pending boundary prompt.
-    _clearPendingPrompts();
+    _boundaryPrompt.reset();
 
     setState(() {
       _outgoingSegments = _currentPageSegments;
@@ -780,35 +770,28 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   }
 
   /// Resolves a page-turn input that hit a file boundary (first or last page).
-  /// Surfaces the prompt on the first press, confirms file switch on the
-  /// second press within the timeout, and ignores both when there is no
-  /// adjacent file in the directory.
+  /// The shared prompt decides whether this arms the hint or confirms the
+  /// switch; it also handles the no-adjacent-file no-op.
   void _handleBoundaryNavigation(int delta) {
     if (delta == 0) return;
     final adjacent = ref.read(adjacentFilesProvider);
-    if (delta > 0) {
-      // "Next page" at the last page → next episode candidate.
-      if (adjacent.next == null) return;
-      if (_pendingNextFilePrompt) {
-        if (_inConfirmCooldown) return;
-        _confirmFileNavigation(
-          ref.read(episodeNavigationControllerProvider).navigateToNext,
-        );
-      } else {
-        _showFileNavigationPrompt(next: true);
-      }
-    } else {
-      // "Previous page" at the first page → previous episode candidate.
-      if (adjacent.prev == null) return;
-      if (_pendingPrevFilePrompt) {
-        if (_inConfirmCooldown) return;
-        _confirmFileNavigation(
-          ref.read(episodeNavigationControllerProvider).navigateToPrevious,
-        );
-      } else {
-        _showFileNavigationPrompt(next: false);
-      }
+    // "Next page" at the last page → next episode; "previous page" at the
+    // first page → previous episode.
+    final direction = delta > 0
+        ? EpisodeBoundaryDirection.next
+        : EpisodeBoundaryDirection.previous;
+    final hasAdjacent = delta > 0
+        ? adjacent.next != null
+        : adjacent.prev != null;
+
+    if (!_boundaryPrompt.hitBoundary(direction, hasAdjacent: hasAdjacent)) {
+      return;
     }
+    _confirmFileNavigation(
+      delta > 0
+          ? ref.read(episodeNavigationControllerProvider).navigateToNext
+          : ref.read(episodeNavigationControllerProvider).navigateToPrevious,
+    );
   }
 
   /// Runs the actual file swap after a confirming second press. Beyond
@@ -817,40 +800,9 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   /// coordinates from the prior episode would otherwise leak visually into
   /// the new page.
   void _confirmFileNavigation(VoidCallback navigate) {
-    _clearPendingPrompts();
     widget.onSelectionChanged?.call(null);
     widget.onHoverHideRequest?.call();
     navigate();
-  }
-
-  void _showFileNavigationPrompt({required bool next}) {
-    _promptTimeoutTimer?.cancel();
-    _confirmCooldownTimer?.cancel();
-    _inConfirmCooldown = true;
-    _confirmCooldownTimer = Timer(_kFileNavigationConfirmCooldown, () {
-      _inConfirmCooldown = false;
-    });
-    setState(() {
-      _pendingNextFilePrompt = next;
-      _pendingPrevFilePrompt = !next;
-    });
-    _promptTimeoutTimer = Timer(
-      _kFileNavigationPromptTimeout,
-      _clearPendingPrompts,
-    );
-  }
-
-  void _clearPendingPrompts() {
-    _promptTimeoutTimer?.cancel();
-    _promptTimeoutTimer = null;
-    _confirmCooldownTimer?.cancel();
-    _confirmCooldownTimer = null;
-    _inConfirmCooldown = false;
-    if (!_pendingNextFilePrompt && !_pendingPrevFilePrompt) return;
-    setState(() {
-      _pendingNextFilePrompt = false;
-      _pendingPrevFilePrompt = false;
-    });
   }
 
   void _nextPage() => _changePage(1);
@@ -858,17 +810,16 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
 
   String _buildIndicatorText(BuildContext context, int currentPage, int total) {
     final l10n = AppLocalizations.of(context)!;
-    if (_pendingNextFilePrompt) {
-      final name = ref.read(adjacentFilesProvider).next?.name;
-      if (name != null) {
-        return l10n.verticalText_nextEpisodePrompt(name);
-      }
-    }
-    if (_pendingPrevFilePrompt) {
-      final name = ref.read(adjacentFilesProvider).prev?.name;
-      if (name != null) {
-        return l10n.verticalText_prevEpisodePrompt(name);
-      }
+    final adjacent = ref.read(adjacentFilesProvider);
+    switch (_boundaryPrompt.pending) {
+      case EpisodeBoundaryDirection.next:
+        final name = adjacent.next?.name;
+        if (name != null) return l10n.episodeBoundary_nextPrompt(name);
+      case EpisodeBoundaryDirection.previous:
+        final name = adjacent.prev?.name;
+        if (name != null) return l10n.episodeBoundary_prevPrompt(name);
+      case null:
+        break;
     }
     return '$currentPage / $total';
   }

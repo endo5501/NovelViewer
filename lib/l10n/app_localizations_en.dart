@@ -840,13 +840,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get historyDetail_noResults => 'No analysis results';
 
   @override
-  String verticalText_nextEpisodePrompt(String name) {
-    return '▶ Next: \"$name\" (press again)';
+  String episodeBoundary_nextPrompt(String name) {
+    return '▶ Next: \"$name\" (again to confirm)';
   }
 
   @override
-  String verticalText_prevEpisodePrompt(String name) {
-    return '◀ Previous: \"$name\" (press again)';
+  String episodeBoundary_prevPrompt(String name) {
+    return '◀ Previous: \"$name\" (again to confirm)';
   }
 
   @override
