@@ -530,16 +530,16 @@
   "historyDetail_invalidBadge": "無効",
   "historyDetail_noFacts": "事実がありません",
   "historyDetail_noResults": "解析結果がありません",
-  "verticalText_nextEpisodePrompt": "▶ 次話「{name}」へ（もう一度）",
-  "@verticalText_nextEpisodePrompt": {
+  "episodeBoundary_nextPrompt": "▶ 次話「{name}」へ（もう一度）",
+  "@episodeBoundary_nextPrompt": {
     "placeholders": {
       "name": {
         "type": "String"
       }
     }
   },
-  "verticalText_prevEpisodePrompt": "◀ 前話「{name}」へ（もう一度）",
-  "@verticalText_prevEpisodePrompt": {
+  "episodeBoundary_prevPrompt": "◀ 前話「{name}」へ（もう一度）",
+  "@episodeBoundary_prevPrompt": {
     "placeholders": {
       "name": {
         "type": "String"

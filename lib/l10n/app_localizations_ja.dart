@@ -822,12 +822,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get historyDetail_noResults => '解析結果がありません';
 
   @override
-  String verticalText_nextEpisodePrompt(String name) {
+  String episodeBoundary_nextPrompt(String name) {
     return '▶ 次話「$name」へ（もう一度）';
   }
 
   @override
-  String verticalText_prevEpisodePrompt(String name) {
+  String episodeBoundary_prevPrompt(String name) {
     return '◀ 前話「$name」へ（もう一度）';
   }
 

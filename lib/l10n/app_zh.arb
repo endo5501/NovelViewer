@@ -340,16 +340,16 @@
   "historyDetail_invalidBadge": "无效",
   "historyDetail_noFacts": "没有事实",
   "historyDetail_noResults": "没有解析结果",
-  "verticalText_nextEpisodePrompt": "▶ 下一话「{name}」（再按一次）",
-  "@verticalText_nextEpisodePrompt": {
+  "episodeBoundary_nextPrompt": "▶ 下一话「{name}」（再操作一次）",
+  "@episodeBoundary_nextPrompt": {
     "placeholders": {
       "name": {
         "type": "String"
       }
     }
   },
-  "verticalText_prevEpisodePrompt": "◀ 上一话「{name}」（再按一次）",
-  "@verticalText_prevEpisodePrompt": {
+  "episodeBoundary_prevPrompt": "◀ 上一话「{name}」（再操作一次）",
+  "@episodeBoundary_prevPrompt": {
     "placeholders": {
       "name": {
         "type": "String"

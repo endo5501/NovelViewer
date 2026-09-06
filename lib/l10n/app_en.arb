@@ -340,16 +340,16 @@
   "historyDetail_invalidBadge": "Invalid",
   "historyDetail_noFacts": "No facts",
   "historyDetail_noResults": "No analysis results",
-  "verticalText_nextEpisodePrompt": "▶ Next: \"{name}\" (press again)",
-  "@verticalText_nextEpisodePrompt": {
+  "episodeBoundary_nextPrompt": "▶ Next: \"{name}\" (again to confirm)",
+  "@episodeBoundary_nextPrompt": {
     "placeholders": {
       "name": {
         "type": "String"
       }
     }
   },
-  "verticalText_prevEpisodePrompt": "◀ Previous: \"{name}\" (press again)",
-  "@verticalText_prevEpisodePrompt": {
+  "episodeBoundary_prevPrompt": "◀ Previous: \"{name}\" (again to confirm)",
+  "@episodeBoundary_prevPrompt": {
     "placeholders": {
       "name": {
         "type": "String"

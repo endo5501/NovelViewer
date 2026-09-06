@@ -818,13 +818,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get historyDetail_noResults => '没有解析结果';
 
   @override
-  String verticalText_nextEpisodePrompt(String name) {
-    return '▶ 下一话「$name」（再按一次）';
+  String episodeBoundary_nextPrompt(String name) {
+    return '▶ 下一话「$name」（再操作一次）';
   }
 
   @override
-  String verticalText_prevEpisodePrompt(String name) {
-    return '◀ 上一话「$name」（再按一次）';
+  String episodeBoundary_prevPrompt(String name) {
+    return '◀ 上一话「$name」（再操作一次）';
   }
 
   @override

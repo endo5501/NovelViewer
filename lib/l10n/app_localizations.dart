@@ -1564,17 +1564,17 @@ abstract class AppLocalizations {
   /// **'解析結果がありません'**
   String get historyDetail_noResults;
 
-  /// No description provided for @verticalText_nextEpisodePrompt.
+  /// No description provided for @episodeBoundary_nextPrompt.
   ///
   /// In ja, this message translates to:
   /// **'▶ 次話「{name}」へ（もう一度）'**
-  String verticalText_nextEpisodePrompt(String name);
+  String episodeBoundary_nextPrompt(String name);
 
-  /// No description provided for @verticalText_prevEpisodePrompt.
+  /// No description provided for @episodeBoundary_prevPrompt.
   ///
   /// In ja, this message translates to:
   /// **'◀ 前話「{name}」へ（もう一度）'**
-  String verticalText_prevEpisodePrompt(String name);
+  String episodeBoundary_prevPrompt(String name);
 
   /// No description provided for @update_badgeTooltip.
   ///

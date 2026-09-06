@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
+import 'package:novel_viewer/features/episode_navigation/domain/episode_boundary_prompt.dart';
 import 'package:novel_viewer/features/episode_navigation/domain/file_entry_start_intent.dart';
 import 'package:novel_viewer/features/episode_navigation/providers/adjacent_files_provider.dart';
 import 'package:novel_viewer/features/episode_navigation/providers/episode_navigation_controller.dart';
@@ -22,6 +23,7 @@ import 'package:novel_viewer/features/llm_summary/providers/marked_words_provide
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
+import 'package:novel_viewer/features/text_viewer/data/scroll_boundary_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/parsed_segments_cache_provider.dart';
 import 'package:novel_viewer/features/text_viewer/data/ruby_text_parser.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
@@ -171,11 +173,6 @@ List<PlaceholderDimensions> _placeholderDimensionsFor(
   });
   return dims;
 }
-
-/// Cooldown after a boundary episode switch during which further key/wheel
-/// boundary inputs are ignored. Sized to outlast a key-repeat burst / a single
-/// wheel gesture's discrete events so neither can skip multiple episodes.
-const _kEdgeNavCooldown = Duration(milliseconds: 350);
 
 /// Renders the text content of the currently open file in either horizontal
 /// (SelectableText.rich) or vertical (VerticalTextViewer) mode. Owns the
@@ -352,18 +349,23 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   // of at the top.
   bool _jumpToStartPending = false;
 
-  // Two-step runaway guard for boundary episode navigation. After a key/wheel
-  // gesture at a scroll edge triggers a file switch, further boundary
-  // navigation is ignored until this Timer elapses — so a held arrow key
-  // (KeyRepeat) or a single wheel gesture (many discrete events) cannot skip
-  // several episodes at once.
-  bool _edgeNavCooldownActive = false;
-  Timer? _edgeNavCooldownTimer;
+  // Two-step boundary confirmation, shared with the vertical viewer. A
+  // key/wheel input at a scroll edge arms a hint; only a second, deliberate
+  // input in the same direction switches the file.
+  final EpisodeBoundaryPrompt _boundaryPrompt = EpisodeBoundaryPrompt();
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_updateCurrentViewLine);
+    _boundaryPrompt.addListener(_onBoundaryPromptChanged);
+    // One State serves both modes, so the prompt would otherwise survive a
+    // switch: the vertical viewer has its own, and with single-screen content
+    // re-attaching the horizontal scroll view emits no scroll notification to
+    // clear this one incidentally.
+    ref.listenManual(displayModeProvider, (prev, next) {
+      if (prev != next) _boundaryPrompt.reset();
+    });
     // Reset current view line when the user switches files.
     ref.listenManual(selectedFileProvider, (prev, next) {
       if (prev?.path != next?.path) {
@@ -441,7 +443,8 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   @override
   void dispose() {
     _positionPainter?.dispose();
-    _edgeNavCooldownTimer?.cancel();
+    _boundaryPrompt.removeListener(_onBoundaryPromptChanged);
+    _boundaryPrompt.dispose();
     _scrollController.dispose();
     _horizontalFocusNode.dispose();
     super.dispose();
@@ -466,6 +469,8 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       _navigateEpisodeAtEdge(direction);
       return;
     }
+    // The resulting scroll fires a ScrollUpdateNotification, which drops any
+    // armed hint (see the NotificationListener in build).
     _scrollController.animateTo(
       target,
       duration: const Duration(milliseconds: 200),
@@ -492,25 +497,113 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     }
   }
 
+  /// Routes one scroll notification through [resolveScrollBoundary].
+  void _handleScrollBoundary(ScrollNotification notification) {
+    final overscroll = notification is OverscrollNotification
+        ? notification.overscroll
+        : null;
+    final isDragging = switch (notification) {
+      OverscrollNotification(:final dragDetails) => dragDetails != null,
+      ScrollUpdateNotification(:final dragDetails) => dragDetails != null,
+      _ => false,
+    };
+    final metrics = notification.metrics;
+    switch (resolveScrollBoundary(
+      pixels: metrics.pixels,
+      minScrollExtent: metrics.minScrollExtent,
+      maxScrollExtent: metrics.maxScrollExtent,
+      isDragging: isDragging,
+      overscroll: overscroll,
+    )) {
+      case ScrollBoundaryOutcome.crossToNext:
+        _navigateEpisodeAtEdge(1);
+      case ScrollBoundaryOutcome.crossToPrevious:
+        _navigateEpisodeAtEdge(-1);
+      case ScrollBoundaryOutcome.dropHint:
+        _boundaryPrompt.reset();
+      case ScrollBoundaryOutcome.ignore:
+        break;
+    }
+  }
+
+  void _onBoundaryPromptChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// The boundary hint, or null while the prompt is idle.
+  ///
+  /// Horizontal mode has no page-number area to borrow, so this is overlaid on
+  /// the body instead of laid out beside it — putting it in the scroll view's
+  /// column would change `maxScrollExtent` and shift the reader's position.
+  /// [IgnorePointer] keeps it from stealing taps from the text or from the TTS
+  /// controls that sit in the panel's own stack.
+  Widget? _buildBoundaryHint(BuildContext context) {
+    final pending = _boundaryPrompt.pending;
+    if (pending == null) return null;
+
+    final adjacent = ref.read(adjacentFilesProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final label = switch (pending) {
+      EpisodeBoundaryDirection.next =>
+        adjacent.next?.name == null
+            ? null
+            : l10n.episodeBoundary_nextPrompt(adjacent.next!.name),
+      EpisodeBoundaryDirection.previous =>
+        adjacent.prev?.name == null
+            ? null
+            : l10n.episodeBoundary_prevPrompt(adjacent.prev!.name),
+    };
+    if (label == null) return null;
+
+    final theme = Theme.of(context);
+    return Positioned(
+      left: 8,
+      right: 8,
+      bottom: 8,
+      child: IgnorePointer(
+        child: Center(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.9,
+              ),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              child: Text(
+                label,
+                style: theme.textTheme.bodySmall,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Routes a boundary input to the next ([direction] > 0) or previous
-  /// ([direction] < 0) episode. No-op when no adjacent file exists in that
-  /// direction, or while the runaway cooldown from a recent switch is active.
+  /// ([direction] < 0) episode through the shared two-step confirmation: the
+  /// first input arms a hint, a second one in the same direction confirms.
+  /// The prompt also absorbs the no-adjacent-file no-op.
+  ///
   /// Only user input (keys/wheel) reaches here — the TTS auto-scroll path never
   /// calls this, so playback cannot trigger an episode switch.
   void _navigateEpisodeAtEdge(int direction) {
-    if (_edgeNavCooldownActive) return;
     final adjacent = ref.read(adjacentFilesProvider);
-    final target = direction > 0 ? adjacent.next : adjacent.prev;
-    if (target == null) return;
-
-    _edgeNavCooldownActive = true;
-    _edgeNavCooldownTimer?.cancel();
-    _edgeNavCooldownTimer = Timer(_kEdgeNavCooldown, () {
-      _edgeNavCooldownActive = false;
-    });
+    final forward = direction > 0;
+    final confirmed = _boundaryPrompt.hitBoundary(
+      forward
+          ? EpisodeBoundaryDirection.next
+          : EpisodeBoundaryDirection.previous,
+      hasAdjacent: (forward ? adjacent.next : adjacent.prev) != null,
+    );
+    if (!confirmed) return;
 
     final controller = ref.read(episodeNavigationControllerProvider);
-    if (direction > 0) {
+    if (forward) {
       controller.navigateToNext();
     } else {
       controller.navigateToPrevious();
@@ -906,6 +999,16 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
             playbackState == TtsPlaybackState.playing) {
           ref.read(ttsStopRequestProvider.notifier).request();
         }
+        // Scroll notifications are where every input converges, so this is
+        // both how drag-driven boundary input (trackpad, touch) is seen at all
+        // — a swipe arrives as PointerPanZoomUpdateEvent, which never reaches
+        // onPointerSignal — and how an armed hint is dropped when the reader
+        // moves inside the file by any route (scrollbar, fling, search or
+        // bookmark jump), none of which go through _pageScroll.
+        if (notification is ScrollUpdateNotification ||
+            notification is OverscrollNotification) {
+          _handleScrollBoundary(notification);
+        }
         return false;
       },
       child: SingleChildScrollView(
@@ -1179,7 +1282,10 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
               _cancelPositionRestore();
               _handleViewerPointerSignal(event);
             },
-            child: scrollView,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [scrollView, ?_buildBoundaryHint(context)],
+            ),
           ),
         ),
       ),
