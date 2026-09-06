@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:novel_viewer/app.dart';
+import 'package:novel_viewer/features/reading_progress/providers/reading_position_providers.dart';
 import 'package:novel_viewer/app/startup_migrations.dart';
 import 'package:logging/logging.dart';
 import 'package:novel_viewer/shared/logging/app_logger.dart';
@@ -78,7 +79,8 @@ void main() async {
   // late as possible: the runner creates the window hidden and only shows it
   // once Flutter has a frame, so anything that reveals it earlier would put a
   // blank window on screen for the whole startup migration.
-  await initializeWindowState(prefs: prefs);
+  await initializeWindowState(prefs: prefs,
+      beforeClose: () => container.read(readingPositionWriterProvider).flush());
 
   runApp(
     UncontrolledProviderScope(

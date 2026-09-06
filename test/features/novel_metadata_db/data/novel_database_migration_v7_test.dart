@@ -123,7 +123,7 @@ void main() {
         try {
           final db = await novelDatabase.database;
 
-          expect(await db.getVersion(), 9);
+          expect(await db.getVersion(), NovelDatabase.currentSchemaVersion);
 
           // The per-novel tables are dropped at v9 (migrated into each folder's
           // novel_data.db; the data-move itself is covered by

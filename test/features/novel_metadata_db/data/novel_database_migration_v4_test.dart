@@ -122,7 +122,7 @@ void main() {
             NovelDatabase(dbDirPath: tempDir.path, dataMigrator: migrator);
         try {
           final db = await novelDatabase.database;
-          expect(await db.getVersion(), 9);
+          expect(await db.getVersion(), NovelDatabase.currentSchemaVersion);
 
           // The global bookmarks table is dropped at v9.
           final globalBm = await db.rawQuery(

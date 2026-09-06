@@ -283,6 +283,10 @@ class VerticalTextViewer extends ConsumerStatefulWidget {
     this.columnSpacing = 8.0,
     this.bookmarkLineNumbers = const [],
     this.onPageLineChanged,
+    this.bodyOffset,
+    this.onBodyPositionChanged,
+    this.onReadingMovement,
+    this.bodyPositionReady = true,
     this.markedWords = const {},
     this.onMarkEnter,
     this.onMarkExit,
@@ -302,6 +306,10 @@ class VerticalTextViewer extends ConsumerStatefulWidget {
   final double columnSpacing;
   final List<int> bookmarkLineNumbers;
   final ValueChanged<int>? onPageLineChanged;
+  final int? bodyOffset;
+  final ValueChanged<int>? onBodyPositionChanged;
+  final VoidCallback? onReadingMovement;
+  final bool bodyPositionReady;
   final Map<String, MarkStyle> markedWords;
   final void Function(String word, Offset globalPosition, HoverToken token)?
       onMarkEnter;
@@ -339,6 +347,10 @@ const _kFileNavigationConfirmCooldown = Duration(milliseconds: 300);
 class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     with SingleTickerProviderStateMixin {
   int _currentPage = 0;
+  int? _readingAnchor;
+  int? _lastBodyRequest;
+  int _bodyReportGeneration = 0;
+  int? _bodyReportedPage;
   int _pageCount = 1;
   int _lastReportedLine = 0;
   final FocusNode _focusNode = FocusNode();
@@ -423,7 +435,12 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   @override
   void didUpdateWidget(VerticalTextViewer oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.bodyPositionReady && !oldWidget.bodyPositionReady) _bodyReportedPage = null;
     if (oldWidget.segments != widget.segments) {
+      _readingAnchor = null;
+      _lastBodyRequest = null;
+      _bodyReportedPage = null;
+      _bodyReportGeneration++;
       _lines = _splitIntoLines(widget.segments);
       _currentPage = 0;
       if (_animationController.isAnimating) {
@@ -510,10 +527,23 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
             onPointerSignal: _handlePointerSignal,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final oldHeavy = _cachedHeavy;
             final result = _paginateLines(constraints);
             final pages = result.pages;
             final totalPages = pages.length;
             _pageCount = totalPages;
+            final newRequest = widget.bodyOffset != null && widget.bodyOffset != _lastBodyRequest;
+            if (newRequest) {
+              _readingAnchor = widget.bodyOffset;
+              _lastBodyRequest = widget.bodyOffset;
+            }
+            final explicitTarget = result.targetPage != null ||
+                _jumpToLastPagePending || _pendingTtsOffset != null;
+            if (explicitTarget) _readingAnchor = null;
+            if (!explicitTarget && _readingAnchor != null &&
+                (newRequest || !identical(oldHeavy, _cachedHeavy))) {
+              _currentPage = _findPageForOffset(_readingAnchor!, result.charOffsetPerPage) ?? 0;
+            }
 
             // Resolve every layout-derived side effect as a pure decision over
             // an immutable snapshot, then apply them in one place
@@ -547,6 +577,16 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
             _currentPageSegments = currentSegments;
 
             final pageTextOffset = result.charOffsetPerPage[safePage];
+            if (_bodyReportedPage != safePage || newRequest || !identical(oldHeavy, _cachedHeavy)) {
+              _bodyReportedPage = safePage;
+              final anchor = _readingAnchor ?? pageTextOffset;
+              _readingAnchor = anchor;
+              final generation = ++_bodyReportGeneration;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted || generation != _bodyReportGeneration) return;
+                widget.onBodyPositionChanged?.call(anchor);
+              });
+            }
             final lineBreakIndices = result.lineBreakIndicesPerPage[safePage];
 
             final incomingPage = Align(
@@ -676,6 +716,9 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   }
 
   void _changePage(int delta) {
+    widget.onReadingMovement?.call();
+    _readingAnchor = null;
+    _bodyReportGeneration++;
     if (_pageCount <= 0) return;
 
     final newPage = (_currentPage + delta).clamp(0, _pageCount - 1);
@@ -849,6 +892,9 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       final targetJump = effects.targetJumpToPage;
       if (targetJump != null && targetJump != _currentPage) {
         setState(() {
+          _readingAnchor = null;
+          _bodyReportGeneration++;
+          _bodyReportedPage = null;
           _currentPage = targetJump;
           _targetLine = null;
         });
@@ -860,6 +906,9 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       final lastJump = effects.lastJumpToPage;
       if (lastJump != null) {
         setState(() {
+          _readingAnchor = null;
+          _bodyReportGeneration++;
+          _bodyReportedPage = null;
           _currentPage = lastJump;
         });
         widget.onHoverHideRequest?.call();

@@ -50,6 +50,7 @@ Future<WindowStateBootstrapResult> initializeWindowState({
   Future<void> Function()? waitForFirstFrame,
   Duration pollInterval = const Duration(milliseconds: 50),
   int maxVisibilityPolls = 40,
+  Future<void> Function()? beforeClose,
 }) async {
   if (!(isWindows ?? Platform.isWindows)) {
     return const WindowStateBootstrapResult();
@@ -73,7 +74,7 @@ Future<WindowStateBootstrapResult> initializeWindowState({
     await controller.setPreventClose(true);
 
     final recorder =
-        WindowStateRecorder(repository: repository, window: controller);
+        WindowStateRecorder(repository: repository, window: controller, beforeClose: beforeClose);
     controller.addListener(recorder);
 
     return WindowStateBootstrapResult(

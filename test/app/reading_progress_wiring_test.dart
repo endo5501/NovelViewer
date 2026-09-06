@@ -16,6 +16,13 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 import '../helpers/novel_metadata_db_fixture.dart';
 
 class _RecordingRepository implements ReadingProgressRepository {
+  @override
+  Future<ReadingProgress?> findLatest() async => null;
+
+  @override
+  Future<void> savePosition({required String novelId, required String fileName,
+    required int bodyOffset, required String bodyHash}) async {}
+
   final List<String> upsertCalls = [];
   ReadingProgress? Function(String) lookup;
 

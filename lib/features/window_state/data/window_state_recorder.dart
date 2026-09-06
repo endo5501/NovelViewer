@@ -19,6 +19,7 @@ class WindowStateRecorder with WindowListener {
 
   final WindowStateRepository _repository;
   final WindowController _window;
+  final Future<void> Function()? beforeClose;
 
   Timer? _timer;
   bool _disposed = false;
@@ -32,6 +33,7 @@ class WindowStateRecorder with WindowListener {
   WindowStateRecorder({
     required WindowStateRepository repository,
     required WindowController window,
+    this.beforeClose,
   })  : _repository = repository,
         _window = window;
 
@@ -88,6 +90,10 @@ class WindowStateRecorder with WindowListener {
       _timer?.cancel();
       _timer = null;
       await _flushSafely();
+      final flushOtherState = beforeClose;
+      if (flushOtherState != null) {
+        await _ignoringErrors(flushOtherState, 'persist reading progress');
+      }
     } finally {
       // Release the interception, then let the close run its normal course.
       //

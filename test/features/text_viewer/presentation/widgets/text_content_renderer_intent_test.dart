@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/episode_navigation/domain/file_entry_start_intent.dart';
@@ -151,6 +152,21 @@ void main() {
 
       await tester.pumpWidget(_wrap(
           container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      // The vertical viewer legitimately honours `fromEnd` by opening on the
+      // last page. Page back to the very first page so the logical reading
+      // anchor it hands to the horizontal renderer is the top of the file —
+      // that separates the two mechanisms: position preservation across a
+      // mode toggle must land at 0, while a latched _jumpToEndPending would
+      // still drive a jumpTo(maxScrollExtent) regardless of the anchor.
+      // ArrowRight is "previous page" in the RTL vertical layout; the page
+      // index clamps at 0 and the boundary handler is inert with no adjacent
+      // files, so over-pressing is safe.
+      for (var i = 0; i < 100; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump();
+      }
       await tester.pumpAndSettle();
 
       // Toggle to horizontal — if the bug were present, this rebuild would

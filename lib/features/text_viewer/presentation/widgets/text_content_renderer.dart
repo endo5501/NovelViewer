@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'package:novel_viewer/features/reading_progress/domain/body_position.dart';
+import 'package:novel_viewer/features/reading_progress/domain/reading_progress.dart';
+import 'package:novel_viewer/features/reading_progress/data/reading_position_writer.dart';
+import 'package:novel_viewer/features/reading_progress/providers/reading_position_providers.dart';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -185,6 +189,84 @@ class TextContentRenderer extends ConsumerStatefulWidget {
 }
 
 class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
+  /// Vertical inset between the scroll view's origin and the first text line
+  /// (the `SingleChildScrollView`'s `EdgeInsets.all(16)`). Painter coordinates
+  /// are relative to the text, scroll offsets to the scroll view, so every
+  /// conversion between the two has to cross this gap — capture subtracts it,
+  /// restore adds it back. Skipping either side makes the saved position creep
+  /// by a line on each round trip.
+  static const double _scrollPadding = 16.0;
+
+  BodyPositionMap? _bodyMap;
+  ReadingProgress? _positionRecord;
+  String? _positionFile;
+  String? _positionContent;
+  bool _positionLoaded = false;
+  bool _positionCancelled = false;
+  bool _positionAdjusting = false;
+  bool _positionCapturePending = false;
+  int? _bodyAnchor;
+  Object? _positionLayout;
+  TextPainter? _positionPainter;
+  InlineSpan? _positionSpan;
+  double? _positionMaxWidth;
+  double _positionFontSize = 14.0;
+
+  /// Lays out a second copy of the document only when a body position actually
+  /// has to be resolved. Measuring the whole chapter is as expensive as the
+  /// SelectableText layout itself, so doing it unconditionally on every layout
+  /// key change (font-size drag, window resize) would double that cost even
+  /// when nothing is restoring or capturing.
+  TextPainter? _ensurePositionPainter() {
+    final existing = _positionPainter;
+    if (existing != null) return existing;
+    final span = _positionSpan;
+    final maxWidth = _positionMaxWidth;
+    if (span == null || maxWidth == null) return null;
+    final painter = TextPainter(
+      text: span,
+      textDirection: TextDirection.ltr,
+      textWidthBasis: TextWidthBasis.parent,
+    );
+    final dims = _placeholderDimensionsFor(span, _positionFontSize);
+    if (dims.isNotEmpty) painter.setPlaceholderDimensions(dims);
+    painter.layout(maxWidth: maxWidth);
+    return _positionPainter = painter;
+  }
+
+  void _cancelPositionRestore() {
+    _positionCancelled = true;
+    _positionAdjusting = false;
+  }
+
+  void _saveBodyAnchor() {
+    final record = _positionRecord;
+    final anchor = _bodyAnchor;
+    if (record == null || anchor == null || !_positionLoaded) return;
+    if (ref.read(selectedFileProvider)?.path != _positionFile) return;
+    ref.read(readingPositionWriterProvider).observe(PositionSnapshot(
+      record.novelId, record.fileName, anchor, _bodyMap!.hash,
+    ));
+  }
+
+  void _captureBodyPosition() {
+    // Runs from the _scrollController listener, which can fire after the
+    // element is gone; every `ref.read` below would throw then.
+    if (!mounted) return;
+    if (ref.read(displayModeProvider) != TextDisplayMode.horizontal) return;
+    if (!_positionLoaded || _positionAdjusting || !_scrollController.hasClients) return;
+    final body = _bodyMap;
+    if (body == null) return;
+    final painter = _ensurePositionPainter();
+    if (painter == null) return;
+    final position = painter.getPositionForOffset(Offset(
+      0,
+      (_scrollController.offset - _scrollPadding).clamp(0, double.infinity) +
+          painter.preferredLineHeight / 2,
+    ));
+    _bodyAnchor = body.fromDisplayOffset(painter.getLineBoundary(position).start);
+    _saveBodyAnchor();
+  }
   final ScrollController _scrollController = ScrollController();
   // Focus for the horizontal viewer so the page-scroll arrow keys only act
   // while this viewer holds focus (scoped, not global).
@@ -314,6 +396,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   void _consumeFileEntryIntent() {
     if (ref.read(displayModeProvider) != TextDisplayMode.horizontal) return;
     final intent = ref.read(pendingFileEntryIntentProvider);
+    if (intent != null) _positionCancelled = true;
     if (intent == FileEntryStartIntent.fromEnd) {
       _jumpToEndPending = true;
     } else {
@@ -335,6 +418,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
 
   @override
   void dispose() {
+    _positionPainter?.dispose();
     _edgeNavCooldownTimer?.cancel();
     _scrollController.dispose();
     _horizontalFocusNode.dispose();
@@ -346,6 +430,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   /// is already parked at the boundary in [direction] (cannot scroll further),
   /// the input is routed to boundary episode navigation instead.
   void _pageScroll(int direction) {
+    _cancelPositionRestore();
     if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
     final viewport = position.viewportDimension;
@@ -503,6 +588,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   }
 
   void _updateCurrentViewLine() {
+    _captureBodyPosition();
     if (!mounted || !_scrollController.hasClients) return;
     final fontSize = ref.read(fontSizeProvider);
     final fontFamily = ref.read(fontFamilyProvider);
@@ -657,7 +743,33 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         ref.watch(bookmarkLineNumbersForFileProvider).value ?? [];
     final markedWords = ref.watch(markedWordsProvider);
 
+    if (_positionFile != selectedFile?.path || _positionContent != widget.content) {
+      _positionFile = selectedFile?.path;
+      _positionContent = widget.content;
+      _bodyMap = BodyPositionMap(segments);
+      _positionRecord = null;
+      _bodyAnchor = null;
+      _positionLoaded = selectedFile == null;
+      _positionCancelled = ref.read(pendingFileEntryIntentProvider) != null ||
+          _jumpToEndPending;
+      _positionLayout = null;
+    }
+    if (activeMatch != null || bookmarkJumpLine != null) _positionCancelled = true;
+    if (selectedFile != null) {
+      final position = ref.watch(readingPositionForFileProvider(selectedFile.path));
+      if (!_positionLoaded && !position.isLoading) {
+        _positionLoaded = true;
+        _positionRecord = position.asData?.value;
+        _positionCapturePending = _positionCancelled;
+        if (!_positionCancelled && _positionRecord != null) {
+          _bodyAnchor = _bodyMap!.restore(_positionRecord!.bodyOffset, _positionRecord!.bodyHash);
+          _positionLayout = null;
+        }
+      }
+    }
+
     if (displayMode == TextDisplayMode.vertical) {
+      _positionLayout = null;
       // Clear bookmark jump after consuming in vertical mode.
       if (bookmarkJumpLine != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -667,6 +779,20 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       final columnSpacing = ref.watch(columnSpacingProvider);
       return VerticalTextViewer(
         segments: segments,
+        bodyOffset: _bodyAnchor,
+        bodyPositionReady: _positionLoaded,
+        onReadingMovement: _cancelPositionRestore,
+        onBodyPositionChanged: (offset) {
+          if (!_positionLoaded ||
+              ref.read(selectedFileProvider)?.path != _positionFile) {
+            return;
+          }
+          // Kept exactly as reported: it is a page start in the vertical
+          // layout's own rune-based coordinates, and snapping it to the
+          // previous grapheme boundary would send the viewer back a page.
+          _bodyAnchor = _bodyMap!.restore(offset, _bodyMap!.hash);
+          _saveBodyAnchor();
+        },
         baseStyle: textStyle,
         query: activeMatch?.query,
         targetLineNumber: targetLineNumber,
@@ -725,12 +851,16 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
 
     if (ttsHighlightRange != null &&
         ttsHighlightRange != _lastTtsScrolledRange) {
+      _cancelPositionRestore();
       _lastTtsScrolledRange = ttsHighlightRange;
       _scrollToTtsHighlight(widget.content, ttsHighlightRange, textStyle);
     }
 
     final scrollView = NotificationListener<ScrollNotification>(
       onNotification: (notification) {
+        if (notification is ScrollStartNotification && notification.dragDetails != null) {
+          _cancelPositionRestore();
+        }
         if (!_isTtsScrolling &&
             notification is ScrollStartNotification &&
             notification.dragDetails != null &&
@@ -741,10 +871,20 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       },
       child: SingleChildScrollView(
         controller: _scrollController,
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(_scrollPadding),
         child: LayoutBuilder(builder: (context, constraints) {
           final bookmarkGutter = bookmarkLines.isEmpty ? 0.0 : 20.0;
           final textMaxWidth = constraints.maxWidth - bookmarkGutter;
+          final layoutKey = (textMaxWidth, textStyle, widget.content, displayMode);
+          final layoutChanged = _positionLayout != layoutKey;
+          if (layoutChanged) {
+            _positionPainter?.dispose();
+            _positionPainter = null;
+            _positionSpan = textSpan;
+            _positionMaxWidth = textMaxWidth;
+            _positionFontSize = fontSize;
+            _positionLayout = layoutKey;
+          }
 
           // Capture the content reference used to build textSpan/textMaxWidth
           // so the post-frame callback can detect a swap (file switch /
@@ -786,6 +926,12 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
             });
           }
 
+          // An explicit FileEntryStartIntent outranks the saved reading
+          // position, so record it before the blocks below clear the flags:
+          // the anchor restore further down registers its post-frame callback
+          // last and would otherwise silently overwrite the intent's jump.
+          final explicitScrollPending = _jumpToEndPending || _jumpToStartPending;
+
           // `_jumpToEndPending` is consumed as its own block (not chained to
           // the if/else if above) so that, when a higher-priority scroll
           // target (search match / bookmark jump) is also pending, the flag
@@ -819,6 +965,58 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
                 _scrollController.jumpTo(0);
               });
             }
+          }
+
+          if (layoutChanged && _bodyAnchor != null && !explicitScrollPending &&
+              activeMatch == null && bookmarkJumpLine == null) {
+            final anchor = _bodyAnchor!;
+            final file = _positionFile;
+            _positionAdjusting = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!_positionAdjusting) return;
+              // Anything else that invalidated this restore leaves capture
+              // enabled: holding _positionAdjusting would silently stop the
+              // reading position from ever being recorded again.
+              if (!mounted ||
+                  !_scrollController.hasClients ||
+                  _positionFile != file ||
+                  widget.content != scheduledContent ||
+                  _positionLayout != layoutKey) {
+                _positionAdjusting = false;
+                return;
+              }
+              final painter = _ensurePositionPainter();
+              if (painter == null) {
+                _positionAdjusting = false;
+                return;
+              }
+              final y = painter
+                  .getOffsetForCaret(
+                    TextPosition(offset: _bodyMap!.toDisplayOffset(anchor)),
+                    Rect.zero,
+                  )
+                  .dy;
+              // Capture clamps painter-y at 0, so every scroll offset in the
+              // padding band reports the first line. Restoring it to the very
+              // top (rather than y + padding = 16) picks the smallest offset
+              // that captures back to the same anchor and keeps the document's
+              // top padding visible.
+              final target = y <= 0 ? 0.0 : y + _scrollPadding;
+              _scrollController.jumpTo(
+                target.clamp(0, _scrollController.position.maxScrollExtent),
+              );
+              _positionAdjusting = false;
+              _saveBodyAnchor();
+            });
+          }
+
+          if (_positionCapturePending) {
+            _positionCapturePending = false;
+            final file = _positionFile;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted || _positionFile != file || widget.content != scheduledContent) return;
+              _captureBodyPosition();
+            });
           }
 
           return Stack(
@@ -918,7 +1116,10 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
           focusNode: _horizontalFocusNode,
           autofocus: true,
           child: Listener(
-            onPointerSignal: _handleViewerPointerSignal,
+            onPointerSignal: (event) {
+              _cancelPositionRestore();
+              _handleViewerPointerSignal(event);
+            },
             child: scrollView,
           ),
         ),
@@ -926,4 +1127,3 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     );
   }
 }
-

@@ -68,7 +68,7 @@ void main() {
 
         // Reaches the current version.
         final version = await db.getVersion();
-        expect(version, 9, reason: 'full chain SHALL land on the current version');
+        expect(version, NovelDatabase.currentSchemaVersion, reason: 'full chain SHALL land on the current version');
 
         // v9 drops the per-novel tables (moved into each folder's
         // novel_data.db). They MUST be absent in the global schema.

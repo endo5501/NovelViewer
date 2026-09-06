@@ -71,10 +71,7 @@ void main() {
       );
       final second = await repository.findByNovelId('narou_n1234ab');
 
-      expect(
-        second!.updatedAt.isAfter(first!.updatedAt),
-        isTrue,
-      );
+      expect(second!.updatedAt.isAfter(first!.updatedAt), isTrue);
     });
 
     test('rows for different novels are independent', () async {
@@ -198,10 +195,7 @@ void main() {
 
     test('findAll propagates DB errors to the caller', () async {
       await dropTable();
-      await expectLater(
-        repository.findAll(),
-        throwsA(isA<Object>()),
-      );
+      await expectLater(repository.findAll(), throwsA(isA<Object>()));
     });
   });
 }

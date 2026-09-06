@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
@@ -7,11 +9,13 @@ import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
 import 'package:novel_viewer/features/reading_progress/domain/reading_progress.dart';
 import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
+import 'package:novel_viewer/features/reading_progress/providers/reading_position_providers.dart';
 
 final _log = Logger('reading_progress');
 
-final readingProgressRepositoryProvider =
-    Provider<ReadingProgressRepository>((ref) {
+final readingProgressRepositoryProvider = Provider<ReadingProgressRepository>((
+  ref,
+) {
   return ReadingProgressRepository(ref.watch(novelDatabaseProvider));
 });
 
@@ -34,34 +38,101 @@ final readingProgressRevisionProvider =
 /// folder. Failures are logged at WARNING and otherwise swallowed so a
 /// transient DB issue cannot bubble up into the UI mid-read.
 final readingProgressAutoSaveListenerProvider = Provider<void>((ref) {
-  ref.listen<FileEntry?>(selectedFileProvider, (_, next) async {
+  final writer = ref.read(readingPositionWriterProvider);
+  ref.listen<FileEntry?>(selectedFileProvider, (_, next) {
+    unawaited(writer.flush());
     if (next == null) return;
+    unawaited(
+      writer.enqueue(() async {
+        if (!ref.mounted) return;
 
-    // Resolve the novel id from the selected file's own path using the shared
-    // nesting-aware rule (nearest registered ancestor folder's leaf name).
-    // Deriving it from `next.path` rather than a derived provider avoids any
-    // dependency on Riverpod's invalidation order inside this callback.
-    final libraryPath = ref.read(libraryPathProvider);
-    if (libraryPath == null) return;
-    final novels = await ref.read(allNovelsProvider.future);
-    final registeredFolderNames = {for (final n in novels) n.folderName};
-    final novelId = resolveNovelId(libraryPath, next.path, registeredFolderNames);
-    if (novelId == null) return;
-    try {
-      await ref.read(readingProgressRepositoryProvider).upsert(
-            novelId: novelId,
-            fileName: next.name,
+        // Resolve the novel id from the selected file's own path using the shared
+        // nesting-aware rule (nearest registered ancestor folder's leaf name).
+        // Deriving it from `next.path` rather than a derived provider avoids any
+        // dependency on Riverpod's invalidation order inside this callback.
+        final libraryPath = ref.read(libraryPathProvider);
+        if (libraryPath == null) return;
+        final novels = await ref.read(allNovelsProvider.future);
+        if (!ref.mounted) return;
+        final registeredFolderNames = {for (final n in novels) n.folderName};
+        final novelId = resolveNovelId(
+          libraryPath,
+          next.path,
+          registeredFolderNames,
+        );
+        if (novelId == null) return;
+        try {
+          await ref
+              .read(readingProgressRepositoryProvider)
+              .upsert(novelId: novelId, fileName: next.name);
+          // Signal cached progress aggregates (folder badges) to refresh.
+          ref.read(readingProgressRevisionProvider.notifier).bump();
+        } catch (e, st) {
+          _log.warning(
+            'Failed to save reading progress for $novelId at ${next.path}',
+            e,
+            st,
           );
-      // Signal cached progress aggregates (folder badges) to refresh.
-      ref.read(readingProgressRevisionProvider.notifier).bump();
-    } catch (e, st) {
-      _log.warning(
-        'Failed to save reading progress for $novelId at ${next.path}',
-        e,
-        st,
-      );
-    }
+        }
+      }),
+    );
   });
+});
+
+final readingProgressStartupProvider = FutureProvider<void>((ref) async {
+  var interrupted = false;
+  ref.listen(currentDirectoryProvider, (_, _) => interrupted = true);
+  ref.listen(selectedFileProvider, (_, _) => interrupted = true);
+  try {
+    final root = ref.read(libraryPathProvider);
+    if (root == null ||
+        ref.read(selectedFileProvider) != null ||
+        ref.read(currentDirectoryProvider) != root) {
+      return;
+    }
+    final novels = await ref.read(allNovelsProvider.future);
+    if (!ref.mounted || interrupted) return;
+    final progress = await ref
+        .read(readingProgressRepositoryProvider)
+        .findLatest();
+    if (progress == null ||
+        !ref.mounted ||
+        interrupted ||
+        !novels.any((n) => n.folderName == progress.novelId)) {
+      return;
+    }
+    // Walk directories only, and stop as soon as the result is decided: an
+    // ambiguous name (2 matches) is rejected just like a missing one, so there
+    // is nothing to learn from the rest of the tree. Enumerating every episode
+    // file under the library would stat tens of thousands of entries on the UI
+    // isolate before the last-read file could be opened.
+    final matches = <String>[];
+    final pending = <String>[root];
+    while (pending.isNotEmpty && matches.length < 2) {
+      final directory = Directory(pending.removeLast());
+      await for (final entity in directory.list(followLinks: false)) {
+        if (entity is! Directory) continue;
+        pending.add(entity.path);
+        if (p.basename(entity.path) == progress.novelId) {
+          matches.add(entity.path);
+          if (matches.length >= 2) break;
+        }
+      }
+    }
+    if (matches.length != 1 || !ref.mounted || interrupted) return;
+    final folder = matches.single;
+    final files = await ref
+        .read(fileSystemServiceProvider)
+        .listTextFiles(folder);
+    final matching = files.where(
+      (file) => p.equals(file.name, progress.fileName),
+    );
+    if (matching.isEmpty || !ref.mounted || interrupted) return;
+    ref.read(currentDirectoryProvider.notifier).setDirectory(folder);
+    ref.read(selectedFileProvider.notifier).selectFile(matching.first);
+  } catch (e, st) {
+    _log.warning('Failed to restore the last reading session', e, st);
+  }
 });
 
 /// One-shot auto-open: when [currentDirectoryProvider] transitions into a
@@ -92,11 +163,7 @@ final readingProgressAutoOpenListenerProvider = Provider<void>((ref) {
           .read(readingProgressRepositoryProvider)
           .findByNovelId(novelId);
     } catch (e, st) {
-      _log.warning(
-        'Failed to read reading progress for $novelId',
-        e,
-        st,
-      );
+      _log.warning('Failed to read reading progress for $novelId', e, st);
       return;
     }
     if (progress == null) return;

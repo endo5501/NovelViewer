@@ -50,7 +50,7 @@ class NovelDatabaseSnapshotResolver {
 
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
-  static const _databaseVersion = 9;
+  static const _databaseVersion = 10;
 
   /// The current `novel_metadata.db` schema version. Exposed so test fixtures
   /// open in-memory databases at the same version the production schema targets.
@@ -129,6 +129,7 @@ class NovelDatabase {
     // only the global catalog (`novels`) and `reading_progress` (kept global
     // for the cross-novel "how far read" view).
     await _createReadingProgressTableV8(db);
+    await _addReadingPositionColumns(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -165,6 +166,18 @@ class NovelDatabase {
       // (idempotent via INSERT OR IGNORE).
       await migrateV8ToV9(db, _dataMigrator, logger: _log);
     }
+    if (oldVersion < 10) {
+      await _addReadingPositionColumns(db);
+    }
+  }
+
+  static Future<void> _addReadingPositionColumns(Database db) async {
+    await db.execute(
+      'ALTER TABLE reading_progress ADD COLUMN body_offset INTEGER NOT NULL DEFAULT 0',
+    );
+    await db.execute(
+      'ALTER TABLE reading_progress ADD COLUMN body_hash TEXT',
+    );
   }
 
   static Future<void> _createV5WordSummariesTable(Database db) async {

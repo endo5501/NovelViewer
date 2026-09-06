@@ -280,6 +280,20 @@ void main() {
   });
 
   group('WindowStateRecorder - close', () {
+    test('waits for pending reading progress before closing', () async {
+      await setUpWith();
+      final gate = Completer<void>();
+      final recorder = WindowStateRecorder(repository: repository, window: window,
+          beforeClose: () => gate.future);
+      recorder.onWindowClose();
+      await Future<void>.delayed(Duration.zero);
+      expect(window.closeCount, 0);
+      gate.complete();
+      await Future<void>.delayed(Duration.zero);
+      expect(window.closeCount, 1);
+      recorder.dispose();
+    });
+
     test('flushes a pending change before destroying the window', () async {
       await setUpWith();
       final recorder = buildRecorder();
