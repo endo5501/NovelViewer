@@ -141,6 +141,31 @@ void main() {
     },
   );
 
+  test('a file other than the saved one resolves to the start', () async {
+    // The saved row belongs to a.txt, so opening b.txt must not inherit its
+    // offset: the provider hands back a fresh record for b.txt at offset 0.
+    final h = await _harness();
+    addTearDown(h.close);
+    await h.repo.upsert(novelId: 'book', fileName: 'a.txt');
+    await h.repo.savePosition(
+      novelId: 'book',
+      fileName: 'a.txt',
+      bodyOffset: 40,
+      bodyHash: 'hash',
+    );
+    final other = await h.container.read(
+      readingPositionForFileProvider('${h.root.path}/nested/book/b.txt').future,
+    );
+    expect(other!.fileName, 'b.txt');
+    expect(other.bodyOffset, 0);
+    expect(other.bodyHash, isNull);
+    // The saved file still resolves to its stored position.
+    final saved = await h.container.read(
+      readingPositionForFileProvider('${h.root.path}/nested/book/a.txt').future,
+    );
+    expect(saved!.bodyOffset, 40);
+  });
+
   test('application exit commits pending reading position', () async {
     final h = await _harness();
     addTearDown(h.close);

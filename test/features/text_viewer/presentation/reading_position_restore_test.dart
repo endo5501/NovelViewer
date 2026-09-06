@@ -157,6 +157,40 @@ void main() {
     expect(second, first);
   });
 
+  testWidgets('repeated layout changes never shift the anchor', (
+    tester,
+  ) async {
+    // The spec allows the *visible* top to move by up to a line, because the
+    // new layout shows the line containing the anchor. What must not happen is
+    // the anchor itself being re-rounded to each new layout's line start: that
+    // would walk the stored position backwards a line per display change.
+    final saves = <PositionSnapshot>[];
+    final harness = await _reader(
+      tester,
+      Future.value(_progress()),
+      saves: saves,
+    );
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 2));
+    final scroll = tester.state<ScrollableState>(find.byType(Scrollable).first);
+    final restored = scroll.position.pixels;
+
+    for (final size in [18.0, 22.0, 30.0, 14.0, 22.0, 14.0]) {
+      harness.read(fontSizeProvider.notifier).previewFontSize(size);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
+      expect(
+        saves.last.offset,
+        1000,
+        reason: 'the anchor must survive a font size of $size unchanged',
+      );
+    }
+    // Back at the original font the viewport lands exactly where it started.
+    expect(scroll.position.pixels, closeTo(restored, 1));
+    await tester.pumpWidget(const SizedBox());
+    harness.dispose();
+  });
+
   testWidgets('horizontal restoration survives a narrower wrapped layout', (
     tester,
   ) async {
