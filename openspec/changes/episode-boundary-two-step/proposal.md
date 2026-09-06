@@ -7,44 +7,48 @@
 
 横書き側のクールダウンは「1 回で遷移すると事故る」ことへの対症療法であり、実装コメントも複数話を一気に飛ばす暴走の防止だと明言している。縦書きで既に成立している 2 段階確認のほうが素直な解であり、モード間で挙動が割れている理由もない。
 
-加えて、iPad 対応で横書きモードにタッチ入力（境界でのオーバースクロール）を足す計画がある。入力ソースを増やす前に、境界確認のロジックを両モードで共有できる形に整理しておく必要がある。
+加えて、横書きモードはトラックパッドやタッチのスワイプで話送りができない。これらは `PointerPanZoomUpdateEvent` として届き、横書きが唯一の境界フックにしていた `onPointerSignal` には構造上到達しないためで、横書きの境界ナビを導入した時点からの欠落である（縦書きはページに `GestureDetector` があるため動く）。iPad 対応でも同じ経路が必要になるため、境界確認のロジックを両モードで共有できる形へ整理したうえで、入力ソースとして接続する。
 
 ## What Changes
 
 - 2 段階確認の状態機械を、縦書き／横書きの両ビューアから共有できる独立したユニットとして切り出す（タイムアウト・確定クールダウン・遷移時クリアを内包し、`fake_async` でテスト可能な純粋ロジック）
-- 縦書きビューアを共有ユニットに載せ替える。**観測される挙動は変わらない**
+- 縦書きビューアを共有ユニットに載せ替える。載せ替え自体は挙動を変えない（既存の縦書きテスト 3 ファイルを変更せずに通ることが受け入れ条件）
 - **BREAKING**: 横書きモードの境界ナビゲーションを 2 段階確認に変更する。本文末尾で下カーソルキー／下方向ホイールを 1 回操作しても次話へ遷移せず、ヒント表示を挟んで 2 回目の同方向操作で確定する（前話方向も対称）
 - **BREAKING**: 横書きモードの「境界ナビゲーション暴発防止クールダウン」要件を削除する。2 段階確認が同じ目的を満たすため不要になる
+- **BREAKING**: 確定クールダウンを「ヒント表示から 300ms」ではなく「**直前の境界入力から 300ms**」で測るよう変更する。macOS のトラックパッドや慣性ホイールは指を離した後も約 1 秒イベントを送り続けるため、前者では 1 回のフリックが確定に達してしまう。**縦書きモードにも同じ穴があり**、共有ユニット化によって両モードまとめて塞がる（縦書きの挙動が変わる唯一の点）
+- **横書きモードでトラックパッド／タッチのスワイプを境界入力として受け付ける**。これらは `PointerPanZoomUpdateEvent` として届き `PointerSignalEvent` ではないため、従来の `onPointerSignal` 経路では検出できなかった（横書きの境界ナビ導入時からの欠落で、実機確認で判明）。検出はスクロール通知に基づき、境界超過を許容する physics（macOS / iOS の bouncing）と境界で固定する physics（Windows / Linux の clamping）の両方を扱う純粋関数に切り出す
 - 横書きモードにヒント表示領域を新設する。縦書きのページ番号領域と同じ位置（本文下部中央）に、プロンプト中のみ薄いバナーとして表示する
 - ヒント文言の l10n キーをモード中立な名前へ改名する（現行 `verticalText_nextEpisodePrompt` / `verticalText_prevEpisodePrompt` は縦書き専用を示唆するため）。ja / en / zh の 3 ロケールが対象
 
 ### 含まないもの
 
-- 横書きモードのタッチ入力（境界でのオーバースクロール検出）。本変更で共有ユニットに入力ソースを 1 つ足せる形にしておき、実際の接続は iPad 対応の後続変更で行う
-- 縦書きモードの挙動変更
+- 縦書きモードの挙動変更（確定クールダウンの起点を除く。上記参照）
+- iPad 対応そのもの。タッチのスワイプはトラックパッドと同じ経路で動くようになるが、レイアウトやタッチ向けの UI 導線は後続変更で扱う
 
 ## Capabilities
 
 ### New Capabilities
-- `episode-boundary-prompt`: 境界での話送りに対する 2 段階確認の共通規則。ヒント表示状態の遷移、タイムアウト、確定クールダウン、隣接ファイルが無い場合の no-op、遷移時のクリアを定義する。縦書き・横書きの両ビューアと、将来のタッチ入力がこの capability を共有する
+- `episode-boundary-prompt`: 境界での話送りに対する 2 段階確認の共通規則。ヒント表示状態の遷移、タイムアウト、確定クールダウン、隣接ファイルが無い場合の no-op、遷移時のクリアを定義する。縦書き・横書きの両ビューアが、入力ソース（キー／ホイール／スワイプ／ドラッグ）を問わずこの capability を共有する
 
 ### Modified Capabilities
-- `text-viewer`: 「横書きモードの境界エピソードナビゲーション」を 1 段階即遷移から 2 段階確認へ変更。「横書きモードの境界ナビゲーション暴発防止クールダウン」要件を削除。ヒント表示領域の要件を追加
+- `text-viewer`: 「横書きモードの境界エピソードナビゲーション」を 1 段階即遷移から 2 段階確認へ変更し、ドラッグ由来（トラックパッド／タッチ）の境界入力を受け付ける要件を追加。「横書きモードの境界ナビゲーション暴発防止クールダウン」要件を削除。ヒント表示領域の要件を追加
 
 ## Impact
 
 **コード**
 
-- `lib/features/text_viewer/presentation/vertical_text_viewer.dart` — 私有の 2 段階確認状態（`_pendingNextFilePrompt` / `_pendingPrevFilePrompt` / `_promptTimeoutTimer` / `_confirmCooldownTimer`）を共有ユニットへ移譲
-- `lib/features/text_viewer/presentation/widgets/text_content_renderer.dart` — `_navigateEpisodeAtEdge` の 1 段階遷移と `_edgeNavCooldownTimer` を共有ユニットに置換、ヒントバナーを追加
-- 共有ユニットの新規追加（配置先は design.md で決定）
+- `lib/features/text_viewer/presentation/vertical_text_viewer.dart` — 私有の 2 段階確認状態（`_pendingNextFilePrompt` / `_pendingPrevFilePrompt` / `_promptTimeoutTimer` / `_confirmCooldownTimer`）を共有ユニットへ移譲。検索・しおりジャンプの経路でもヒントを解除
+- `lib/features/text_viewer/presentation/widgets/text_content_renderer.dart` — `_navigateEpisodeAtEdge` の 1 段階遷移と `_edgeNavCooldownTimer` を共有ユニットに置換、ヒントバナーを追加、スクロール通知からドラッグ由来の境界入力を検出
+- 共有ユニットとスクロール境界判定関数の新規追加（配置先は design.md で決定）
 - `lib/l10n/app_ja.arb` / `app_en.arb` / `app_zh.arb` — ヒント文言キーの改名
 
 **テスト**
 
 - `test/features/text_viewer/presentation/horizontal_edge_episode_nav_test.dart`（375 行）— 1 段階遷移前提のケースを 2 段階へ書き換え。`runaway cooldown` グループは削除し、2 段階確認のケースに置き換える
-- `test/features/text_viewer/presentation/vertical_text_viewer_episode_nav_test.dart` / `vertical_text_viewer_swipe_test.dart` / `vertical_text_viewer_wheel_test.dart` — 挙動不変のため回帰確認として維持
-- 共有ユニットのユニットテストを新規追加（`fake_async` 使用）
+- `test/features/text_viewer/presentation/vertical_text_viewer_episode_nav_test.dart` / `vertical_text_viewer_swipe_test.dart` / `vertical_text_viewer_wheel_test.dart` — 載せ替えの受け入れ条件として、変更せずに通ることを確認する
+- 共有ユニットとスクロール境界判定関数のユニットテストを新規追加（`fake_async` 使用）
+- ヒント表示、縦書きのジャンプ経路、トラックパッド操作の widget テストを新規追加（トラックパッドは macOS の bouncing physics 下で検証）
+- ヒント文言の全ロケール解決を検証する l10n テストを新規追加
 
 **依存関係**
 
@@ -53,3 +57,5 @@
 **ユーザーへの影響**
 
 - 横書きモードで読んでいるユーザーは、境界での話送りに操作が 1 回増える。リリースノートに記載する
+- 縦書き・横書きとも、慣性の効いた 1 回のフリックでは話送りが確定しなくなる（意図した挙動。従来は縦書きで確定し得た）
+- 横書きモードでトラックパッド／タッチのスワイプによる話送りが新たに使えるようになる
