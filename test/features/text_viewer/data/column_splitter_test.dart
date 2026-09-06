@@ -53,9 +53,7 @@ void main() {
       // 掲載サイト由来の正当な入力:
       // <ruby><rb></rb><rp>(</rp><rt>戦術的優位性</rt><rp>)</rp></ruby>
       // 親文字が無いので runes.first / .last が呼べない。
-      final segments = [
-        const RubyTextSegment(base: '', rubyText: '戦術的優位性'),
-      ];
+      final segments = [const RubyTextSegment(base: '', rubyText: '戦術的優位性')];
 
       expect(() => flattenSegments(segments), returnsNormally);
     });
@@ -202,15 +200,15 @@ void main() {
         const RubyTextSegment(base: '', rubyText: 'ルビ'),
         const PlainTextSegment('うえおか'),
       ]);
-      final withoutRuby = flattenSegments(
-        [const PlainTextSegment('あいうえおか')],
-      );
+      final withoutRuby = flattenSegments([const PlainTextSegment('あいうえおか')]);
 
       final columns = splitWithKinsoku(withEmptyRuby, 4);
       final baseline = splitWithKinsoku(withoutRuby, 4);
 
-      expect(columns.map(_columnText).toList(),
-          baseline.map(_columnText).toList());
+      expect(
+        columns.map(_columnText).toList(),
+        baseline.map(_columnText).toList(),
+      );
       expect(_columnText(columns[0]), 'あいうえ');
       expect(_columnText(columns[1]), 'おか');
       // ルビ自体は消えず、1カラム目に残っている
@@ -241,14 +239,14 @@ void main() {
         const RubyTextSegment(base: '', rubyText: 'る'),
         const PlainTextSegment('。かきく'),
       ]);
-      final baseline = flattenSegments(
-        [const PlainTextSegment('あいうえ。かきく')],
-      );
+      final baseline = flattenSegments([const PlainTextSegment('あいうえ。かきく')]);
 
       final columns = splitWithKinsoku(withEmptyRuby, 4);
 
-      expect(columns.map(_columnText).toList(),
-          splitWithKinsoku(baseline, 4).map(_columnText).toList());
+      expect(
+        columns.map(_columnText).toList(),
+        splitWithKinsoku(baseline, 4).map(_columnText).toList(),
+      );
       expect(_columnText(columns[0]), 'あいう');
       expect(_columnText(columns[1]), 'え。かき');
       expect(_columnText(columns[2]), 'く');

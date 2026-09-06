@@ -159,10 +159,7 @@ void main() {
     testWidgets('renders the ruby text without raising', (tester) async {
       // Hosting sites publish ruby elements whose rb element is empty; the
       // annotation must still render, with no base characters beside it.
-      await tester.pumpWidget(_buildTestWidget(
-        base: '',
-        rubyText: '戦術的優位性',
-      ));
+      await tester.pumpWidget(_buildTestWidget(base: '', rubyText: '戦術的優位性'));
 
       expect(tester.takeException(), isNull);
       for (final char in ['戦', '術', '的', '優', '位', '性']) {

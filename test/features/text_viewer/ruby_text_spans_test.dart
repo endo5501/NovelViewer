@@ -30,25 +30,26 @@ void main() {
     });
 
     test('renders a ruby segment with an empty base as a WidgetSpan', () {
-      final segments = [
-        const RubyTextSegment(base: '', rubyText: '戦術的優位性'),
-      ];
+      final segments = [const RubyTextSegment(base: '', rubyText: '戦術的優位性')];
       final result = buildRubyTextSpans(segments, baseStyle, null);
       expect(result.children, hasLength(1));
       expect(result.children!.first, isA<WidgetSpan>());
     });
 
-    testWidgets('an empty-base ruby renders its annotation without raising',
-        (tester) async {
-      await tester.pumpWidget(const MaterialApp(
-        home: Scaffold(
-          body: RubyTextWidget(
-            base: '',
-            rubyText: 'ルビ',
-            baseStyle: baseStyle,
+    testWidgets('an empty-base ruby renders its annotation without raising', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: RubyTextWidget(
+              base: '',
+              rubyText: 'ルビ',
+              baseStyle: baseStyle,
+            ),
           ),
         ),
-      ));
+      );
 
       expect(tester.takeException(), isNull);
       expect(find.text('ルビ'), findsOneWidget);

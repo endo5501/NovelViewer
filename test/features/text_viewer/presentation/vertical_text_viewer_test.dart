@@ -173,13 +173,12 @@ void main() {
       PlainTextSegment('もなかった'),
     ];
 
-    testWidgets('renders the page instead of falling back to ErrorWidget',
-        (tester) async {
-      await tester.pumpWidget(_buildTestWidget(
-        segments: segments,
-        width: 600,
-        height: 400,
-      ));
+    testWidgets('renders the page instead of falling back to ErrorWidget', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildTestWidget(segments: segments, width: 600, height: 400),
+      );
 
       expect(tester.takeException(), isNull);
       expect(find.byType(ErrorWidget), findsNothing);
@@ -189,19 +188,18 @@ void main() {
       expect(find.text('た'), findsOneWidget);
     });
 
-    testWidgets('paginates a long line containing an empty-base ruby',
-        (tester) async {
+    testWidgets('paginates a long line containing an empty-base ruby', (
+      tester,
+    ) async {
       final longSegments = <TextSegment>[
         PlainTextSegment('あ' * 250),
         const RubyTextSegment(base: '', rubyText: 'ルビ'),
         PlainTextSegment('い' * 250),
       ];
 
-      await tester.pumpWidget(_buildTestWidget(
-        segments: longSegments,
-        width: 100,
-        height: 400,
-      ));
+      await tester.pumpWidget(
+        _buildTestWidget(segments: longSegments, width: 100, height: 400),
+      );
 
       expect(tester.takeException(), isNull);
       expect(find.byType(ErrorWidget), findsNothing);

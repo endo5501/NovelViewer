@@ -23,14 +23,14 @@ class FlatCharEntry {
   /// selection offsets and mark matching, all keyed on `base.length`) is
   /// unchanged.
   FlatCharEntry.ruby(RubyTextSegment segment)
-      : firstChar = segment.base.isEmpty
-            ? ''
-            : String.fromCharCode(segment.base.runes.first),
-        lastChar = segment.base.isEmpty
-            ? ''
-            : String.fromCharCode(segment.base.runes.last),
-        charCount = segment.base.runes.length,
-        rubySegment = segment;
+    : firstChar = segment.base.isEmpty
+          ? ''
+          : String.fromCharCode(segment.base.runes.first),
+      lastChar = segment.base.isEmpty
+          ? ''
+          : String.fromCharCode(segment.base.runes.last),
+      charCount = segment.base.runes.length,
+      rubySegment = segment;
 
   final String firstChar;
   final String lastChar;

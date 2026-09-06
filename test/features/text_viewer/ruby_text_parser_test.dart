@@ -87,12 +87,9 @@ void main() {
       // Real markup from a hosting site: the rb element carries no base text
       // and the reading follows as body text. This is valid input, not a
       // download defect, so the parser keeps the annotation with base ''.
-      const input =
-          '<ruby><rb></rb><rp>(</rp><rt>戦術的優位性</rt><rp>)</rp></ruby>';
+      const input = '<ruby><rb></rb><rp>(</rp><rt>戦術的優位性</rt><rp>)</rp></ruby>';
       final result = parseRubyText(input);
-      expect(result, [
-        const RubyTextSegment(base: '', rubyText: '戦術的優位性'),
-      ]);
+      expect(result, [const RubyTextSegment(base: '', rubyText: '戦術的優位性')]);
     });
   });
 
