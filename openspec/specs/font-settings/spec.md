@@ -1,6 +1,6 @@
 ## Purpose
 
-User-configurable font size (10–32px) and font family (with platform-specific lists for macOS/Windows) for the text viewer. Settings are persisted via SharedPreferences, exposed through Riverpod providers, and apply to both horizontal and vertical display modes including Ruby/furigana scaling.
+User-configurable font size (10–32px) and font family (with platform-specific lists, the Hiragino faces being Apple-only: macOS/iOS) for the text viewer. Settings are persisted via SharedPreferences, exposed through Riverpod providers, and apply to both horizontal and vertical display modes including Ruby/furigana scaling.
 
 ## Requirements
 
@@ -38,7 +38,9 @@ The available font families SHALL be:
 - **THEN** the text viewer immediately re-renders text using the selected font family
 
 ### Requirement: Platform-specific font availability
-The system SHALL define platform availability for each font family. Hiragino Mincho ProN and Hiragino Kaku Gothic ProN SHALL be marked as macOS-only. System default, YuMincho, and YuGothic SHALL be marked as available on both macOS and Windows. The font family selection UI SHALL only display fonts that are available on the current platform.
+The system SHALL define platform availability for each font family. Hiragino Mincho ProN and Hiragino Kaku Gothic ProN ship with every Apple platform and SHALL be marked as Apple-only — available on macOS and iOS, withheld elsewhere. System default, YuMincho, and YuGothic SHALL be marked as available on all platforms. The font family selection UI SHALL only display fonts that are available on the current platform.
+
+The availability decision SHALL be expressed as a function taking the platform family as a parameter, so both outcomes are testable without `dart:io`.
 
 #### Scenario: Windows shows only compatible fonts
 - **WHEN** the settings dialog is opened on Windows
@@ -47,6 +49,14 @@ The system SHALL define platform availability for each font family. Hiragino Min
 #### Scenario: macOS shows all fonts
 - **WHEN** the settings dialog is opened on macOS
 - **THEN** the font family dropdown SHALL display all font families: システムデフォルト, ヒラギノ明朝, ヒラギノ角ゴ, 游明朝, 游ゴシック
+
+#### Scenario: iOS shows the Hiragino faces
+- **WHEN** the settings dialog is opened on iOS
+- **THEN** the font family dropdown SHALL display ヒラギノ明朝 and ヒラギノ角ゴ alongside the cross-platform entries
+
+#### Scenario: Availability is resolvable without dart:io
+- **WHEN** the availability function is called for an Apple platform and for a non-Apple platform
+- **THEN** it returns every font family for the former and omits the Apple-only faces for the latter
 
 ### Requirement: Windows system default font fallback
 The system SHALL fall back to Yu Mincho (`'Yu Mincho'`) when the system default font is selected on Windows. This ensures that vertical text punctuation characters (U+FE11, U+FE12) are rendered with correct positioning (upper-right of the character cell) rather than centered. On Windows, font family names SHALL be mapped to their Windows-specific format (e.g., `'YuMincho'` → `'Yu Mincho'`, `'YuGothic'` → `'Yu Gothic'`).
