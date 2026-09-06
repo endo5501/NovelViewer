@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/settings/presentation/sections/piper_setti
 import 'package:novel_viewer/features/settings/presentation/sections/qwen3_settings_section.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/voice_reference_section.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/presentation/shortcut_settings_section.dart';
+import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
@@ -84,21 +85,24 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   }
 }
 
-class _GeneralTab extends StatelessWidget {
+class _GeneralTab extends ConsumerWidget {
   const _GeneralTab();
 
   @override
-  Widget build(BuildContext context) {
-    return const SingleChildScrollView(
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Withheld where the LLM cannot be reached: the endpoint this section
+    // configures is plaintext HTTP, which the platform blocks.
+    final llmSupported = ref.watch(llmSummarySupportedProvider);
+
+    return SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GeneralSettingsSection(),
-          Divider(),
-          ShortcutSettingsSection(),
-          Divider(),
-          LlmSettingsSection(),
+          const GeneralSettingsSection(),
+          const Divider(),
+          const ShortcutSettingsSection(),
+          if (llmSupported) ...[const Divider(), const LlmSettingsSection()],
         ],
       ),
     );

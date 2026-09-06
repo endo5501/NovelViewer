@@ -11,6 +11,7 @@ import 'package:novel_viewer/features/app_update/domain/distribution_type.dart';
 import 'package:novel_viewer/features/app_update/domain/update_check_service.dart';
 import 'package:novel_viewer/features/app_update/domain/update_constants.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 /// Overridden in ProviderScope with the value resolved at startup.
@@ -41,6 +42,7 @@ final updateCheckServiceProvider = Provider<UpdateCheckService>((ref) {
     preferences: ref.watch(updatePreferencesProvider),
     currentVersion: info.version,
     isDebug: kDebugMode,
+    isSupported: ref.watch(appUpdateSupportedProvider),
   );
 });
 
@@ -89,3 +91,13 @@ final updateAvailableProvider = Provider<UpdateAvailable?>((ref) {
   final status = ref.watch(updateStatusProvider);
   return status is UpdateAvailable ? status : null;
 });
+
+/// Whether the app can update itself on this platform.
+///
+/// The update flow ends either in a Windows installer or in a release page
+/// listing desktop artifacts. iPad builds are installed through Xcode and
+/// carry no channel the app could offer an update through, so the check is
+/// not performed there at all — see [UpdateCheckService].
+final appUpdateSupportedProvider = Provider<bool>(
+  (ref) => ref.watch(platformCapabilitiesProvider).appUpdate,
+);

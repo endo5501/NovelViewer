@@ -12,26 +12,35 @@ enum VerticalContextAction {
   analyzeSpoiler,
 }
 
+/// Builds the vertical-mode selection menu.
+///
+/// Copy is always offered; every other entry appears only when its label is
+/// supplied. The caller withholds the dictionary label where speech synthesis
+/// is unavailable and the analysis labels where LLM summary is, which keeps
+/// this builder a pure function that knows nothing about platforms.
 List<PopupMenuEntry<VerticalContextAction>> buildVerticalContextMenuItems({
   required String copyLabel,
-  required String addToDictionaryLabel,
-  required String analyzeNoSpoilerLabel,
-  required String analyzeSpoilerLabel,
+  String? addToDictionaryLabel,
+  String? analyzeNoSpoilerLabel,
+  String? analyzeSpoilerLabel,
 }) {
   return [
     PopupMenuItem(value: VerticalContextAction.copy, child: Text(copyLabel)),
-    PopupMenuItem(
-      value: VerticalContextAction.addToDictionary,
-      child: Text(addToDictionaryLabel),
-    ),
-    PopupMenuItem(
-      value: VerticalContextAction.analyzeNoSpoiler,
-      child: Text(analyzeNoSpoilerLabel),
-    ),
-    PopupMenuItem(
-      value: VerticalContextAction.analyzeSpoiler,
-      child: Text(analyzeSpoilerLabel),
-    ),
+    if (addToDictionaryLabel != null)
+      PopupMenuItem(
+        value: VerticalContextAction.addToDictionary,
+        child: Text(addToDictionaryLabel),
+      ),
+    if (analyzeNoSpoilerLabel != null)
+      PopupMenuItem(
+        value: VerticalContextAction.analyzeNoSpoiler,
+        child: Text(analyzeNoSpoilerLabel),
+      ),
+    if (analyzeSpoilerLabel != null)
+      PopupMenuItem(
+        value: VerticalContextAction.analyzeSpoiler,
+        child: Text(analyzeSpoilerLabel),
+      ),
   ];
 }
 

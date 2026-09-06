@@ -54,6 +54,47 @@ void main() {
       expect(find.text('解析開始(ネタバレなし)'), findsOneWidget);
       expect(find.text('解析開始(ネタバレあり)'), findsOneWidget);
     });
+
+    test('omits the dictionary entry when its label is absent', () {
+      final items = buildVerticalContextMenuItems(
+        copyLabel: 'コピー',
+        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
+      );
+      final values = items
+          .whereType<PopupMenuItem<VerticalContextAction>>()
+          .map((i) => i.value)
+          .toList();
+      expect(values, [
+        VerticalContextAction.copy,
+        VerticalContextAction.analyzeNoSpoiler,
+        VerticalContextAction.analyzeSpoiler,
+      ]);
+    });
+
+    test('omits both analysis entries when their labels are absent', () {
+      final items = buildVerticalContextMenuItems(
+        copyLabel: 'コピー',
+        addToDictionaryLabel: '辞書追加',
+      );
+      final values = items
+          .whereType<PopupMenuItem<VerticalContextAction>>()
+          .map((i) => i.value)
+          .toList();
+      expect(values, [
+        VerticalContextAction.copy,
+        VerticalContextAction.addToDictionary,
+      ]);
+    });
+
+    test('copy alone remains when every optional label is absent', () {
+      final items = buildVerticalContextMenuItems(copyLabel: 'コピー');
+      final values = items
+          .whereType<PopupMenuItem<VerticalContextAction>>()
+          .map((i) => i.value)
+          .toList();
+      expect(values, [VerticalContextAction.copy]);
+    });
   });
 
   group('dispatchVerticalContextAction', () {

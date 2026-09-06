@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dart';
 
 /// Whether text-to-speech can run on this platform.
 ///
@@ -9,13 +8,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// no microphone usage description for the recording flow, and no
 /// registration for the drag-and-drop plugin the voice-reference UI uses — so
 /// every TTS surface is withheld there rather than shown in a state that would
-/// fail when touched.
+/// fail when touched. The reading dictionary is withheld with them: its only
+/// consumer is the speech engine.
 ///
-/// This is the single place the platform is read. Consumers watch the provider
-/// so their behaviour can be exercised for both outcomes: `dart:io`'s
-/// `Platform` cannot be overridden from a widget test, but a provider can.
-///
-/// The wider "which features does this platform support" question is out of
-/// scope here; this provider is expected to be folded into that capability
-/// model when it arrives, without its consumers changing.
-final ttsSupportedProvider = Provider<bool>((ref) => !Platform.isIOS);
+/// The platform itself is read once, in [platformCapabilitiesProvider]; this
+/// provider only names the feature. Consumers watch it so their behaviour can
+/// be exercised for both outcomes in a widget test.
+final ttsSupportedProvider = Provider<bool>(
+  (ref) => ref.watch(platformCapabilitiesProvider).textToSpeech,
+);

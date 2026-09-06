@@ -10,6 +10,7 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'package:novel_viewer/shared/database/novel_data_database_provider.dart';
+import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dart';
 
 final llmConfigProvider = Provider<LlmConfig>((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
@@ -99,3 +100,16 @@ final llmSummaryServiceProvider = Provider.family<LlmSummaryService?, String>((
     searchService: searchService,
   );
 });
+
+/// Whether word summaries can be produced on this platform.
+///
+/// Analysis reaches an LLM server the reader runs themselves, addressed by
+/// default at a plaintext `http://` endpoint. iOS blocks that transport, so
+/// no configuration entered on an iPad could succeed; the settings section
+/// and the context-menu triggers are withheld instead of failing on use.
+///
+/// Reading already-stored summaries is not gated: a library folder carried
+/// over from a desktop install keeps its analysis history browsable.
+final llmSummarySupportedProvider = Provider<bool>(
+  (ref) => ref.watch(platformCapabilitiesProvider).llmSummary,
+);

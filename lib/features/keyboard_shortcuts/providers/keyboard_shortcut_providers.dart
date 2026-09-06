@@ -7,9 +7,16 @@ import 'package:novel_viewer/features/tts/providers/tts_availability_provider.da
 
 /// Platform-aware default bindings. Overridable in tests to pin the modifier
 /// (Control vs Meta) regardless of the host platform.
+///
+/// This reads `defaultTargetPlatform` rather than `dart:io`'s `Platform`, so it
+/// is already overridable and stays outside the capability model: which
+/// modifier a keyboard uses is a platform convention, not a feature the
+/// platform either has or lacks.
 final shortcutDefaultsProvider = Provider<Map<ShortcutAction, KeyBinding>>(
   (ref) => defaultShortcutBindings(
-    isMacOS: defaultTargetPlatform == TargetPlatform.macOS,
+    isApplePlatform:
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.iOS,
   ),
 );
 
