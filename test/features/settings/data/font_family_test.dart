@@ -43,16 +43,42 @@ void main() {
     });
   });
 
-  group('FontFamily.macOSOnly', () {
-    test('hiragino fonts are macOS-only', () {
-      expect(FontFamily.hiraginoMincho.macOSOnly, isTrue);
-      expect(FontFamily.hiraginoKaku.macOSOnly, isTrue);
+  group('FontFamily.appleOnly', () {
+    test('hiragino fonts are Apple-only', () {
+      expect(FontFamily.hiraginoMincho.appleOnly, isTrue);
+      expect(FontFamily.hiraginoKaku.appleOnly, isTrue);
     });
 
     test('system, yumincho, yuGothic are cross-platform', () {
-      expect(FontFamily.system.macOSOnly, isFalse);
-      expect(FontFamily.yumincho.macOSOnly, isFalse);
-      expect(FontFamily.yuGothic.macOSOnly, isFalse);
+      expect(FontFamily.system.appleOnly, isFalse);
+      expect(FontFamily.yumincho.appleOnly, isFalse);
+      expect(FontFamily.yuGothic.appleOnly, isFalse);
+    });
+  });
+
+  // Hiragino ships with iOS just as it does with macOS, so the gate is
+  // "Apple platform", not "macOS". Reading a novel vertically is what the iPad
+  // build is for, and the serif face is the setting that decides how that
+  // looks — an iPad that can only offer fonts it does not have makes the
+  // whole font setting inert.
+  //
+  // The platform is passed in rather than read from `dart:io`, which cannot be
+  // overridden from a test.
+  group('FontFamily.availableFontsFor', () {
+    test('Apple platforms offer every font', () {
+      final available = FontFamily.availableFontsFor(isApplePlatform: true);
+      expect(available, hasLength(5));
+      expect(available, contains(FontFamily.hiraginoMincho));
+      expect(available, contains(FontFamily.hiraginoKaku));
+    });
+
+    test('other platforms drop the Apple-only fonts', () {
+      final available = FontFamily.availableFontsFor(isApplePlatform: false);
+      expect(available, contains(FontFamily.system));
+      expect(available, contains(FontFamily.yumincho));
+      expect(available, contains(FontFamily.yuGothic));
+      expect(available, isNot(contains(FontFamily.hiraginoMincho)));
+      expect(available, isNot(contains(FontFamily.hiraginoKaku)));
     });
   });
 

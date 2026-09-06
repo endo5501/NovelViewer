@@ -128,7 +128,11 @@ iPad から TTS ネイティブに到達する経路は 2 つだけであるこ�
 
 iOS ユーザーはまだ存在しないため、移行処理は不要。
 
-各小説フォルダ内の `novel_data.db` はフォルダごと持ち運ぶ設計のため、ライブラリ内に残す。Files アプリから見えることは許容する。
+各小説フォルダ内の `novel_data.db` / `episode_cache.db` / `tts_audio.db` はフォルダごと持ち運ぶ設計（`per-novel-folder-database`）のため、ライブラリ内に残す。Files アプリから見えることは許容する。
+
+ただしこれは無害な露出ではない。`novel_data.db` はブックマークと LLM 要約という再生成不可能なデータを持ち、`novel_metadata.db` と同じく `deleteOnFailure: false` で開く。Files アプリで小説フォルダを整理する過程でこのファイルだけを削除したり、`-wal` を欠いた状態でコピーし直したりすると、その小説のブックマークが失われるか、開くたびに例外が出る状態になり得る。
+
+フォルダ内 DB を移設すると「小説フォルダが自己完結する」という既存 spec の前提そのものを覆すことになり、本 change の範囲を大きく超える。したがってここでは移設せず、README に注意書きを置くことで対処する。恒久的な対策（フォルダ単位のバックアップ、あるいは破損時の再構築）は別 change の題材とする。
 
 ### D8. プラットフォーム判定を純粋関数に切り出す
 
@@ -165,6 +169,18 @@ SPM の依存ピンであり、`Podfile.lock` と同じ役割を果たす。macO
 
 Xcode はコンテナごとに解決結果の写しを持つため、`Runner.xcodeproj/project.xcworkspace/` と `Runner.xcworkspace/` の両方に `xcshareddata/swiftpm/Package.resolved` が生成される（後者は CocoaPods 除去によりワークスペースがビルドコンテナになったことで現れる）。片方だけを追跡すると、もう片方を経由した更新で追跡側が黙って陳腐化する。両方を追跡し、内容が一致していることをドリフトガードで検証する。
 
+### D11. ヒラギノの提供条件を Apple プラットフォームに読み替える
+
+`FontFamily.macOSOnly` は「macOS にしか無いフォント」を意味するフラグだったが、ヒラギノ明朝・ヒラギノ角ゴは iOS にも標準搭載されている。この名前のまま `Platform.isMacOS` で判定していたため、iPad ではヒラギノが候補から消え、残る YuMincho / YuGothic は iOS に存在しないので、フォント設定が実質何も効かない状態になっていた。
+
+縦書きで読むことが iPad 版の目的であり、書体はその見た目を決める唯一の設定なので、新対応プラットフォームでそこが最も貧弱になるのは受け入れられない。フラグを `appleOnly` に改名したうえで、判定を `isMacOS || isIOS` に広げる。
+
+判定は D5 / D8 と同じく純粋関数 `availableFontsFor({required bool isApplePlatform})` に切り出し、`Platform` の読み出しは既存の `availableFonts` ゲッター 1 行に残す。
+
+改名は既存テスト `font_family_test.dart` の変更を伴うが、アサーションの内容は変えず識別子を追随させるだけである。名前を残すと「macOS のみ」という誤った意味が次のプラットフォーム追加でも同じ罠を仕掛けることになる。
+
+なお iOS には YuMincho / YuGothic が無いため、この 2 つは iPad でも選べるが実際にはシステムフォントにフォールバックする。真の可用性はプラットフォームごとの一覧で表すべきだが、それは本 change の範囲を超えるため単一の真偽値のままとする。
+
 ## Risks / Trade-offs
 
 **[`file_picker` が iOS で写真ライブラリ一式を引き込む]** → `Package.resolved` に `DKImagePickerController` / `DKCamera` / `DKPhotoGallery` / `SDWebImage` / `SwiftyGif` / `TOCropViewController` が入る。`file_picker` の使用箇所は `tts_export_providers.dart` の `FilePicker.saveFile` 1 箇所（TTS 音声エクスポート専用）のみで、本 change では到達不能になる。ビルドサイズの増加を許容し、将来 `NSPhotoLibraryUsageDescription` が要求された時点で対処する。依存自体の削減は別 change とする。
@@ -178,5 +194,7 @@ Xcode はコンテナごとに解決結果の写しを持つため、`Runner.xco
 **[SPM 単独化により CocoaPods 専用プラグインを追加できなくなる]** → 将来そのようなプラグインが必要になった場合、`Podfile` を復活させる手戻りが生じる。現在の依存構成では全プラグインが Swift Package として解決されており、可能性は低いと判断する。
 
 **[iOS platform component が未導入だとビルドできない]** → SDK が存在していても `iOS 26.5 is not installed` で失敗する。数 GB のダウンロードを要する環境前提であり、コードでは解決できない。docs に前提条件として記載する。
+
+**[フォルダ内 DB が Files アプリに露出する]** → D7 のとおり移設しない。README に「`.txt` 以外を消さない、フォルダごと移動する」旨の注意書きを置く。実機での Files 連携確認（タスク 6.5）で実際の見え方を確認し、注意書きで足りるかを判断する。
 
 **[シミュレータでの確認は実機の代替にならない]** → トラックパッド/タッチ入力、Files アプリ連携、無料プロビジョニングでの署名は実機でしか検証できない。実装完了後に実機確認を挟む。

@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/keyboard_shortcuts/data/key_binding_label.
 import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_action.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_bindings.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/providers/keyboard_shortcut_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 /// Settings section that lists the customizable shortcut actions, shows the
@@ -57,6 +58,12 @@ class ShortcutSettingsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final bindings = ref.watch(keyBindingsProvider);
+    // A shortcut for a feature the platform cannot run is worse than a missing
+    // one: rebinding it looks like it should work, and then nothing happens.
+    final ttsSupported = ref.watch(ttsSupportedProvider);
+    final actions = ShortcutAction.values.where(
+      (action) => action != ShortcutAction.ttsToggle || ttsSupported,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -68,7 +75,7 @@ class ShortcutSettingsSection extends ConsumerWidget {
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 8),
-          for (final action in ShortcutAction.values)
+          for (final action in actions)
             ListTile(
               key: Key('shortcut_row_${action.name}'),
               contentPadding: EdgeInsets.zero,

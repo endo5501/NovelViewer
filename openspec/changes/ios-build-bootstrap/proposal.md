@@ -39,6 +39,7 @@ NovelViewer は現在 Windows / macOS のみを対象としており、iPad で�
 - `novel-metadata-db`: 「Database initialization」に iOS でのデータベース配置を追加する
 - `text-viewer-composition`: 「3 つの widget で構成される」という規定に、TTS 非対応プラットフォームでは `TtsControlsBar` が配置されないという条件を加える
 - `tts-settings`: 「タブは 一般 と 読み上げ の 2 つ」という規定に、TTS 非対応プラットフォームでは読み上げタブが現れないという条件を加える
+- `font-settings`: ヒラギノの提供条件を「macOS のみ」から「Apple プラットフォーム（macOS と iOS）」に改める
 
 ## Impact
 
@@ -49,6 +50,8 @@ NovelViewer は現在 Windows / macOS のみを対象としており、iPad で�
 - `lib/features/text_viewer/presentation/text_viewer_panel.dart`: `TtsControlsBar` の設置を条件化
 - `lib/features/settings/presentation/settings_dialog.dart`: タブ構成を条件化（3 → 2）
 - `lib/features/novel_metadata_db/data/novel_database.dart`: `_resolveDatabaseDirPath()` に iOS 分岐
+- `lib/features/settings/data/font_family.dart`: `macOSOnly` を `appleOnly` に改め、iOS でもヒラギノを提供
+- `lib/features/keyboard_shortcuts/presentation/shortcut_settings_section.dart`: TTS ショートカット行を条件化
 
 ### 影響を受けないことを確認済みの範囲
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
+import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_action.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
@@ -83,5 +84,37 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('音声モデル'), findsNothing);
+  });
+
+  testWidgets('the TTS shortcut row is absent where TTS is unsupported', (
+    tester,
+  ) async {
+    // The shortcut lives on the general tab, so hiding the TTS tab does not
+    // hide it. Rebinding a key that can never fire is worse than not offering
+    // it: the reader would conclude the feature exists and is broken.
+    await tester.pumpWidget(build(ttsSupported: false));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(Key('shortcut_row_${ShortcutAction.ttsToggle.name}')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(Key('shortcut_row_${ShortcutAction.search.name}')),
+      findsOneWidget,
+      reason: 'the other shortcuts must stay listed',
+    );
+  });
+
+  testWidgets('the TTS shortcut row is listed where TTS is supported', (
+    tester,
+  ) async {
+    await tester.pumpWidget(build(ttsSupported: true));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(Key('shortcut_row_${ShortcutAction.ttsToggle.name}')),
+      findsOneWidget,
+    );
   });
 }

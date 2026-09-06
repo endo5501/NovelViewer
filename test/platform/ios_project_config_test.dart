@@ -29,6 +29,17 @@ void main() {
     return file.readAsStringSync();
   }
 
+  /// Runs `git` with [args], or returns null when git is unavailable — a
+  /// checkout without `.git`, or an image with no git installed. A missing git
+  /// must not masquerade as a misconfigured project.
+  ProcessResult? git(List<String> args) {
+    try {
+      return Process.runSync('git', args);
+    } on ProcessException {
+      return null;
+    }
+  }
+
   setUpAll(() {
     infoPlist = read('ios/Runner/Info.plist');
     pbxproj = read('ios/Runner.xcodeproj/project.pbxproj');
@@ -147,11 +158,8 @@ void main() {
               'Package.resolved pins the plugin dependencies, the way '
               'macos/Podfile.lock does for CocoaPods',
         );
-        final tracked = Process.runSync('git', [
-          'ls-files',
-          '--error-unmatch',
-          path,
-        ]);
+        final tracked = git(['ls-files', '--error-unmatch', path]);
+        if (tracked == null) continue;
         expect(
           tracked.exitCode,
           0,
@@ -190,11 +198,11 @@ void main() {
     });
 
     test('the local override is ignored by git', () {
-      final ignored = Process.runSync('git', [
-        'check-ignore',
-        '-q',
-        'ios/Flutter/Local.xcconfig',
-      ]);
+      final ignored = git(['check-ignore', '-q', 'ios/Flutter/Local.xcconfig']);
+      if (ignored == null) {
+        markTestSkipped('git is not available');
+        return;
+      }
       expect(
         ignored.exitCode,
         0,

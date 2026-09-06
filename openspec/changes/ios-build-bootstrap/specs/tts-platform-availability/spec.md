@@ -38,9 +38,17 @@ When TTS is unavailable, the UI SHALL NOT present any control that would load th
 - **WHEN** the settings dialog is opened and TTS is unavailable
 - **THEN** the general tab and the about/update tab display their contents and can be switched between
 
-### Requirement: TTS keyboard commands are inert when TTS is unavailable
-The playback toggle shortcut SHALL NOT start synthesis when TTS is unavailable, since the controls bar that owns the toggle is not mounted.
+### Requirement: TTS keyboard commands are inert and unlisted when TTS is unavailable
+The playback toggle shortcut SHALL NOT start synthesis when TTS is unavailable, since the controls bar that owns the toggle is not mounted. The shortcut settings list SHALL also omit that action, so the reader is not offered a rebinding for a command that can never fire.
 
 #### Scenario: Toggle shortcut does nothing
 - **WHEN** the TTS playback toggle shortcut is pressed while TTS is unavailable
 - **THEN** no playback starts and no native library is loaded
+
+#### Scenario: The TTS shortcut is not listed
+- **WHEN** the shortcut settings list is displayed while TTS is unavailable
+- **THEN** no row for the TTS playback toggle is present, and the other shortcut rows are unaffected
+
+#### Scenario: The TTS shortcut is listed where TTS is available
+- **WHEN** the shortcut settings list is displayed while TTS is available
+- **THEN** a row for the TTS playback toggle is present

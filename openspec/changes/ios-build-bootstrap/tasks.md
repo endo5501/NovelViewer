@@ -64,4 +64,4 @@
 - [x] 8.4 `fvm flutter analyze`でリントを実行
 - [x] 8.5 `fvm flutter test`でテストを実行
 - [x] 8.6 `fvm flutter build macos` が通り、macOS 側に回帰がないことを確認する
-- [ ] 8.7 クリーンな作業ツリーで `fvm flutter build ios --config-only` を実行し、`ios/` の追跡ファイルが書き換わらないことを確認する
+- [x] 8.7 クリーンな作業ツリーで `fvm flutter build ios --config-only` を実行し、`ios/` の追跡ファイルが書き換わらないことを確認する
