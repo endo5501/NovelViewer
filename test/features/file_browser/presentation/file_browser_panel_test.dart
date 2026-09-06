@@ -926,6 +926,34 @@ void main() {
       expect(find.text('削除'), findsOneWidget);
     });
 
+    testWidgets('a slow mouse click still enters the folder', (
+      WidgetTester tester,
+    ) async {
+      // A mouse has the secondary button and does not need the long press; it
+      // must not lose the ability to complete a click it held for a moment.
+      await _pumpBrowserAtLibraryRoot(tester);
+
+      final target = tester.getCenter(find.text('テスト小説'));
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryMouseButton,
+      );
+      await gesture.addPointer(location: target);
+      await tester.pump();
+      await gesture.down(target);
+      await tester.pump(const Duration(milliseconds: 700));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(find.text('更新'), findsNothing);
+      expect(
+        ProviderScope.containerOf(
+          tester.element(find.byType(FileBrowserPanel)),
+        ).read(currentDirectoryProvider),
+        '/library/narou_n1234ab',
+      );
+    });
+
     testWidgets('hovering the title still shows the tooltip', (
       WidgetTester tester,
     ) async {

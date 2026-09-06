@@ -12,6 +12,7 @@ import 'package:novel_viewer/features/text_viewer/data/vertical_text_layout.dart
 import 'package:novel_viewer/features/text_viewer/data/viewer_selection.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_ruby_text_widget.dart';
+import 'package:novel_viewer/shared/gestures/pointer_kinds.dart';
 
 export 'package:novel_viewer/features/llm_summary/domain/hover_token.dart'
     show HoverToken;
@@ -94,20 +95,6 @@ enum _GestureMode { undecided, selecting, swiping }
 
 /// Minimum displacement in pixels before the gesture mode is decided.
 const _kGestureDecisionThreshold = 10.0;
-
-/// Pointer kinds for which a tap inside the selection opens the context menu.
-///
-/// These are the kinds that have no secondary button, so a tap is the only
-/// gesture left that can reach the menu. A mouse — and a trackpad, whose
-/// clicks arrive as one — keeps the older meaning of a tap, which is to clear
-/// the selection. `unknown` is deliberately left out: a platform reporting a
-/// real mouse that way would silently lose the clearing behaviour, and the
-/// menu is still reachable there with the secondary button.
-const _kSelectionMenuTapKinds = <PointerDeviceKind>{
-  PointerDeviceKind.touch,
-  PointerDeviceKind.stylus,
-  PointerDeviceKind.invertedStylus,
-};
 
 class _VerticalTextPageState extends State<VerticalTextPage> {
   int? _anchorIndex;
@@ -456,7 +443,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   /// began with the finger held still. Reusing the tap leaves the recognizer
   /// set of this detector, and therefore the drag/swipe arbitration, untouched.
   void _onTapUp(TapUpDetails details) {
-    if (_kSelectionMenuTapKinds.contains(details.kind)) {
+    if (kNoSecondaryButtonPointerKinds.contains(details.kind)) {
       // Nothing is painted in the gap between two columns, but a finger aimed
       // at a character lands there often enough — the gap is columnSpacing
       // wide, so its midpoint is only half that from either column. Snapping

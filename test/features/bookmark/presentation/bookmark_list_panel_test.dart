@@ -359,6 +359,30 @@ void main() {
       // This bookmark's file does not exist, so opening it would report so.
       expect(find.text('ファイルが見つかりません'), findsNothing);
     });
+
+    testWidgets('a slow mouse click still opens the bookmark', (
+      WidgetTester tester,
+    ) async {
+      // A mouse has the secondary button, so it does not need the long press
+      // and must not lose the ability to complete a click it held for a
+      // moment. This bookmark's file does not exist, so opening it reports so.
+      await _pumpPanelWithOneBookmark(tester);
+
+      final target = tester.getCenter(find.text('001_chapter1.txt'));
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryMouseButton,
+      );
+      await gesture.addPointer(location: target);
+      await tester.pump();
+      await gesture.down(target);
+      await tester.pump(const Duration(milliseconds: 700));
+      await gesture.up();
+      await tester.pump();
+
+      expect(find.text('削除'), findsNothing);
+      expect(find.text('ファイルが見つかりません'), findsOneWidget);
+    });
   });
 }
 

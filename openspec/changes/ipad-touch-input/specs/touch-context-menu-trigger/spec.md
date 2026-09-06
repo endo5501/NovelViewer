@@ -17,9 +17,9 @@ The touch trigger SHALL open the same menu as the secondary tap: the same entrie
 ### Requirement: List items open their context menu on a long press
 A list item that offers a context menu on a secondary tap SHALL also offer it on a long press. The menu SHALL be anchored at the position the press began.
 
-This trigger SHALL NOT be restricted by pointer device kind. A long press carries no other meaning anywhere in the application, so adding it takes nothing away from a mouse user, and a single unconditional trigger is simpler to reason about and to test than one that branches.
+This trigger SHALL apply only to pointers that have no secondary button — touch and stylus. A mouse held down past the long-press deadline would otherwise open the menu instead of completing the click, taking away the reader's ability to activate the item with a slow click; and a mouse gains no reach from the long press, because it can already open the same menu with its secondary button.
 
-The existing secondary tap SHALL continue to work unchanged.
+The existing secondary tap SHALL continue to work unchanged, for every pointer kind that has one.
 
 #### Scenario: Long-pressing a novel folder opens its menu
 - **WHEN** the reader long-presses a novel folder in the file browser at the library root
@@ -29,9 +29,14 @@ The existing secondary tap SHALL continue to work unchanged.
 - **WHEN** the reader long-presses an item in the bookmark list
 - **THEN** the same context menu the secondary tap produces SHALL appear at the press position
 
-#### Scenario: A long press with a mouse opens the menu too
-- **WHEN** a mouse pointer holds the primary button down on such a list item past the long-press threshold
-- **THEN** the context menu SHALL appear, exactly as it does for a finger
+#### Scenario: Long-pressing an analysis-history entry opens its menu
+- **WHEN** the reader long-presses an entry in the LLM analysis history list
+- **THEN** the same context menu the secondary tap produces SHALL appear at the press position
+
+#### Scenario: A slow mouse click still activates the item
+- **WHEN** a mouse pointer holds the primary button down on such a list item past the long-press threshold and then releases
+- **THEN** no context menu SHALL appear
+- **AND** the item SHALL be activated, exactly as it is by a quick click
 
 #### Scenario: The secondary tap keeps working
 - **WHEN** the reader secondary-taps a list item that now also responds to a long press

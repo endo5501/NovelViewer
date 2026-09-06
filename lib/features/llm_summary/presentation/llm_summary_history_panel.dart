@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/shared/gestures/pointer_kinds.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -55,36 +56,44 @@ class _HistoryEntryTile extends ConsumerWidget {
     final tile = GestureDetector(
       onSecondaryTapUp: (details) =>
           _showContextMenu(context, ref, details.globalPosition),
-      child: ListTile(
-        leading: _SnapshotsBadge(count: entry.snapshotCount),
-        title: Text(entry.word),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              entry.summaryPreview,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Row(
-              children: [
-                Text(
-                  _formatDate(entry.updatedAt),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                if (!entry.isJumpable) ...[
-                  const SizedBox(width: 8),
-                  OutlinedTextBadge(
-                    label: AppLocalizations.of(
-                      context,
-                    )!.llmHistory_untrackedBadge,
+      // The same menu, reached without a secondary mouse button. This tab is
+      // hidden where LLM summary is unavailable, so it is not an iPad path —
+      // but a touchscreen desktop shows it and has no secondary tap either.
+      child: GestureDetector(
+        supportedDevices: kNoSecondaryButtonPointerKinds,
+        onLongPressStart: (details) =>
+            _showContextMenu(context, ref, details.globalPosition),
+        child: ListTile(
+          leading: _SnapshotsBadge(count: entry.snapshotCount),
+          title: Text(entry.word),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                entry.summaryPreview,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Row(
+                children: [
+                  Text(
+                    _formatDate(entry.updatedAt),
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
+                  if (!entry.isJumpable) ...[
+                    const SizedBox(width: 8),
+                    OutlinedTextBadge(
+                      label: AppLocalizations.of(
+                        context,
+                      )!.llmHistory_untrackedBadge,
+                    ),
+                  ],
                 ],
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
+          onTap: entry.isJumpable ? () => _jumpToEntry(context, ref) : null,
         ),
-        onTap: entry.isJumpable ? () => _jumpToEntry(context, ref) : null,
       ),
     );
 

@@ -2,6 +2,7 @@ import 'dart:io' show FileSystemException;
 
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/shared/gestures/pointer_kinds.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
@@ -341,13 +342,17 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       onSecondaryTapUp: (details) {
         _showContextMenu(context, details.globalPosition, dir, isNovel);
       },
-      // The same menu, reached without a secondary mouse button. Not limited
-      // to touch: a long press means nothing else anywhere in the app, so an
-      // unconditional trigger takes nothing away from a mouse user.
-      onLongPressStart: (details) {
-        _showContextMenu(context, details.globalPosition, dir, isNovel);
-      },
-      child: tile,
+      // The same menu, reached without a secondary mouse button. Restricted to
+      // the pointers that need it: a mouse held down past the long-press
+      // deadline would otherwise open the menu instead of entering the folder,
+      // and it can already reach the menu with its secondary button.
+      child: GestureDetector(
+        supportedDevices: kNoSecondaryButtonPointerKinds,
+        onLongPressStart: (details) {
+          _showContextMenu(context, details.globalPosition, dir, isNovel);
+        },
+        child: tile,
+      ),
     );
   }
 
