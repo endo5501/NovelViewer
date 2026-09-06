@@ -6,13 +6,14 @@ import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_action.da
 import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_bindings.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/providers/keyboard_shortcut_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late SharedPreferences prefs;
 
-  Future<ProviderContainer> makeContainer() async {
+  Future<ProviderContainer> makeContainer({bool ttsSupported = true}) async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(
@@ -22,6 +23,7 @@ void main() {
         shortcutDefaultsProvider.overrideWithValue(
           defaultShortcutBindings(isMacOS: false),
         ),
+        ttsSupportedProvider.overrideWithValue(ttsSupported),
       ],
     );
     addTearDown(container.dispose);
@@ -101,5 +103,54 @@ void main() {
       container.read(keyBindingsProvider),
       defaultShortcutBindings(isMacOS: false),
     );
+  });
+
+  // The TTS action keeps its binding in storage on a platform that cannot run
+  // TTS, but its row is not shown — so a conflict against it is a dead end:
+  // the user is told the key is taken and has no way to free it.
+  test(
+    'a binding held only by an unavailable action does not block a rebind',
+    () async {
+      final container = await makeContainer(ttsSupported: false);
+      final notifier = container.read(keyBindingsProvider.notifier);
+      final ttsBinding = container.read(
+        keyBindingsProvider,
+      )[ShortcutAction.ttsToggle]!;
+
+      final applied = await notifier.rebind(ShortcutAction.search, ttsBinding);
+
+      expect(applied, isTrue);
+      expect(
+        container.read(keyBindingsProvider)[ShortcutAction.search],
+        ttsBinding,
+      );
+    },
+  );
+
+  test('an available action still blocks a rebind', () async {
+    final container = await makeContainer(ttsSupported: false);
+    final notifier = container.read(keyBindingsProvider.notifier);
+    final bookmarkBinding = container.read(
+      keyBindingsProvider,
+    )[ShortcutAction.bookmark]!;
+
+    final applied = await notifier.rebind(
+      ShortcutAction.search,
+      bookmarkBinding,
+    );
+
+    expect(applied, isFalse);
+  });
+
+  test('the TTS action still blocks a rebind where TTS is available', () async {
+    final container = await makeContainer();
+    final notifier = container.read(keyBindingsProvider.notifier);
+    final ttsBinding = container.read(
+      keyBindingsProvider,
+    )[ShortcutAction.ttsToggle]!;
+
+    final applied = await notifier.rebind(ShortcutAction.search, ttsBinding);
+
+    expect(applied, isFalse);
   });
 }

@@ -99,7 +99,61 @@ scripts/build_lame_windows.bat
 scripts/build_piper_windows.bat
 scripts/build_irodori_windows.bat
 fvm flutter build windows
+
+# iPad向けビルド（ビューア機能のみ。TTS / LLM は非対応）
+fvm flutter build ios --release
+xcrun devicectl device install app --device <デバイスUDID> build/ios/iphoneos/Runner.app
 ```
+
+#### iPad ビルドの前提
+
+iPad 版は小説ビューアとしての機能のみを対象とし、読み上げ（TTS）と LLM 要約は利用できません。読み上げの UI は表示されません。
+
+**1. Xcode の iOS platform component**
+
+`xcodebuild -showsdks` が iOS SDK を表示していても、platform component が未導入だとビルドは `iOS ... is not installed` で失敗します。Xcode > Settings > Components から導入するか、以下を実行してください（数 GB のダウンロードが発生します）。
+
+```bash
+xcodebuild -downloadPlatform iOS
+xcrun simctl list runtimes   # iOS のランタイムが列挙されれば導入済み
+```
+
+**2. 署名設定**
+
+Team ID をリポジトリに含めないため、`ios/Flutter/Local.xcconfig`（Git 管理外）を各自で作成します。
+
+```
+DEVELOPMENT_TEAM = XXXXXXXXXX
+```
+
+Team ID は Xcode > Settings > Accounts、または `security find-identity -v -p codesigning` で確認できます。このファイルが無い状態でもビルド構成は壊れず、署名時にのみ失敗します。
+
+無料プロビジョニング（Apple ID のみ、有料の Developer Program に未加入）でインストールしたアプリは **7 日で失効**します。失効後は Xcode から再インストールしてください。
+
+**3. debug ビルドは実機のホーム画面から起動できない**
+
+iOS 14 以降、debug ビルドは JIT を必要とするため Flutter ツール経由でしか起動できません。ホーム画面のアイコンから起動すると次のメッセージだけが表示されます。
+
+```
+In iOS 14+, debug mode Flutter apps can only be launched from Flutter tooling,
+IDEs with Flutter plugins or from Xcode.
+```
+
+常用する場合は上記のとおり `--release` でビルドしてインストールしてください。開発中にホットリロードを使いたい場合は `fvm flutter run -d <デバイスUDID>` で、ツールに接続したまま起動します。
+
+デバイスの UDID は `xcrun devicectl list devices` の Identifier 列で確認できます。
+
+**4. 依存の管理方式**
+
+iOS は Swift Package Manager 単独構成です（CocoaPods は使用しません）。`ios/Podfile` は存在せず、依存のピンは 2 つの `xcshareddata/swiftpm/Package.resolved` が保持します。macOS は従来どおり CocoaPods です。
+
+**5. ライブラリの場所**
+
+小説は端末内の `Documents/NovelViewer/` に保存され、Files アプリの「このiPad内 > NovelViewer」から参照・追加・削除できます。
+
+蔵書全体のメタデータ（`novel_metadata.db`）は Files アプリに露出しない `Library/Application Support/` に置かれます。一方、各小説フォルダの中にある `novel_data.db` / `episode_cache.db` / `tts_audio.db` は、小説フォルダごと持ち運ぶ設計のため Files アプリからも見えます。
+
+> **注意:** `novel_data.db` にはブックマークと LLM 要約が入っており、破損時に自動復旧しません（意図的な設計です）。Files アプリで小説フォルダを整理する際は、`.txt` 以外のファイルを消したり、`-wal` / `-shm` を欠いた状態でコピーし直したりしないでください。フォルダごと丸ごと移動・コピーするのは安全です。
 
 ### テスト
 

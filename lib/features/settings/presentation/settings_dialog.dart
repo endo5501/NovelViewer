@@ -9,6 +9,7 @@ import 'package:novel_viewer/features/settings/presentation/sections/qwen3_setti
 import 'package:novel_viewer/features/settings/presentation/sections/voice_reference_section.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/presentation/shortcut_settings_section.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
+import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -25,8 +26,12 @@ class SettingsDialog extends ConsumerStatefulWidget {
 
 class _SettingsDialogState extends ConsumerState<SettingsDialog>
     with SingleTickerProviderStateMixin {
+  /// Read once: the platform does not change mid-session, and the tab count
+  /// has to be fixed before the controller exists.
+  late final bool _ttsSupported = ref.read(ttsSupportedProvider);
+
   late final TabController _tabController = TabController(
-    length: 3,
+    length: _ttsSupported ? 3 : 2,
     vsync: this,
   );
 
@@ -50,17 +55,19 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
               controller: _tabController,
               tabs: [
                 Tab(text: l10n.settings_generalTabLabel),
-                Tab(text: l10n.settings_ttsTabLabel),
+                // Withheld where TTS cannot run: this tab reaches the native
+                // engine, the microphone, and a desktop-only drop target.
+                if (_ttsSupported) Tab(text: l10n.settings_ttsTabLabel),
                 Tab(text: l10n.settings_aboutUpdateTab),
               ],
             ),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: const [
-                  _GeneralTab(),
-                  _TtsTab(),
-                  SingleChildScrollView(child: AboutAndUpdateSection()),
+                children: [
+                  const _GeneralTab(),
+                  if (_ttsSupported) const _TtsTab(),
+                  const SingleChildScrollView(child: AboutAndUpdateSection()),
                 ],
               ),
             ),

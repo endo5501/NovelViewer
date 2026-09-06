@@ -1,15 +1,21 @@
 ## Purpose
 
-Tabbed (一般 / 読み上げ) settings dialog for TTS configuration: engine selector (Qwen3-TTS / Piper), model size, model download status/progress, voice cloning reference selection (with drop zone, refresh, rename, folder open), and SharedPreferences persistence of all TTS settings.
+Tabbed (一般 / 読み上げ, the 読み上げ tab present only where the platform supports TTS) settings dialog for TTS configuration: engine selector (Qwen3-TTS / Piper), model size, model download status/progress, voice cloning reference selection (with drop zone, refresh, rename, folder open), and SharedPreferences persistence of all TTS settings.
 
 ## Requirements
 
 ### Requirement: Tabbed settings dialog
-The settings dialog SHALL use a tabbed layout with `TabBar` and `TabBarView`. The tabs SHALL be: "一般" (General) containing all existing settings, and "読み上げ" (TTS) containing TTS-specific settings. All existing settings functionality SHALL be preserved in the "一般" tab. The TTS tab SHALL display an engine selector (`SegmentedButton<TtsEngineType>`) at the top, followed by engine-specific settings that change based on the selected engine.
+The settings dialog SHALL use a tabbed layout with `TabBar` and `TabBarView`. On a platform where text-to-speech is available, the TTS tabs SHALL be: "一般" (General) containing all existing settings, and "読み上げ" (TTS) containing TTS-specific settings. All existing settings functionality SHALL be preserved in the "一般" tab. The TTS tab SHALL display an engine selector (`SegmentedButton<TtsEngineType>`) at the top, followed by engine-specific settings that change based on the selected engine.
+
+On a platform where text-to-speech is unavailable, the "読み上げ" tab SHALL NOT be listed and its content SHALL NOT be built, so that no control capable of loading the TTS native library, requesting microphone access, or invoking a desktop-only drag-and-drop plugin is reachable. The "一般" tab SHALL retain all of its settings unchanged.
 
 #### Scenario: Display tabbed settings dialog
-- **WHEN** the user opens the settings dialog
-- **THEN** the dialog displays two tabs: "一般" and "読み上げ"
+- **WHEN** the user opens the settings dialog on a platform where TTS is available
+- **THEN** the dialog displays the "一般" and "読み上げ" tabs
+
+#### Scenario: TTS tab is absent where TTS is unavailable
+- **WHEN** the user opens the settings dialog on a platform where TTS is unavailable
+- **THEN** no "読み上げ" tab is listed and its content is not built
 
 #### Scenario: General tab contains existing settings
 - **WHEN** the user views the "一般" tab

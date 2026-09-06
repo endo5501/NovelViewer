@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/text_content_renderer.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/tts_controls_bar.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 /// Shell that lays out the text viewer: file content rendering on top,
-/// TTS controls bar overlaid in the bottom-right. Owns no scroll, controller,
+/// TTS controls bar overlaid in the bottom-right where the platform supports
+/// TTS at all. Owns no scroll, controller,
 /// or rendering state — those live inside `TextContentRenderer` and
 /// `TtsControlsBar` respectively. Horizontal-mode episode navigation has no
 /// on-screen buttons: it is driven by cursor keys / mouse wheel at the scroll
@@ -33,14 +35,18 @@ class TextViewerPanel extends ConsumerWidget {
             ),
           );
         }
+        // The controls bar is omitted, not disabled, where TTS cannot run:
+        // every control it owns leads to a native library that is not there.
+        final ttsSupported = ref.watch(ttsSupportedProvider);
         return Stack(
           children: [
             TextContentRenderer(content: content),
-            Positioned(
-              right: 8,
-              bottom: 8,
-              child: TtsControlsBar(content: content),
-            ),
+            if (ttsSupported)
+              Positioned(
+                right: 8,
+                bottom: 8,
+                child: TtsControlsBar(content: content),
+              ),
           ],
         );
       },

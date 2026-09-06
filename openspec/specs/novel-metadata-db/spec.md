@@ -3,7 +3,9 @@
 Persist non-reproducible novel metadata (titles, library entries, bookmarks, word summaries) in a SQLite database whose corruption must surface to the user rather than be silently reset.
 ## Requirements
 ### Requirement: Database initialization
-The system SHALL initialize a SQLite database on application startup to manage novel metadata. On Windows, the database file SHALL be placed in the same directory as the exe file. On macOS/Linux, the system SHALL use the default `getDatabasesPath()` location.
+The system SHALL initialize a SQLite database on application startup to manage novel metadata. On Windows, the database file SHALL be placed in the same directory as the exe file. On iOS, the database file SHALL be placed in the application support directory, NOT in the documents directory, because the documents directory is exposed to the Files app and this database holds non-reproducible data that is deliberately not auto-recovered on corruption. On macOS/Linux, the system SHALL use the default `getDatabasesPath()` location.
+
+The platform-to-location mapping SHALL be expressed as a pure function that takes the platform flags as parameters, so every branch is testable without `dart:io`.
 
 #### Scenario: First launch creates database
 - **WHEN** the application starts for the first time and no database file exists
@@ -20,6 +22,18 @@ The system SHALL initialize a SQLite database on application startup to manage n
 #### Scenario: macOS database location unchanged
 - **WHEN** the application starts on macOS
 - **THEN** the database file SHALL be created in the `getDatabasesPath()` directory (existing behavior)
+
+#### Scenario: iOS database location
+- **WHEN** the application starts on iOS
+- **THEN** the database file SHALL be created in the application support directory
+
+#### Scenario: iOS database is not exposed to the Files app
+- **WHEN** the application has started on iOS and the Files app is opened
+- **THEN** `novel_metadata.db` is not listed alongside the novel library
+
+#### Scenario: Location resolution is testable without dart:io
+- **WHEN** the location-resolving function is called with each combination of platform flags
+- **THEN** it returns the executable-directory location for Windows, the application-support location for iOS, and the platform-default location otherwise
 
 ### Requirement: Novel metadata storage
 The system SHALL store novel metadata in a `novels` table with the following fields: auto-increment ID, site type, novel ID, title, URL, folder name, episode count, downloaded timestamp, and updated timestamp. The system SHALL provide a method to delete a novel record by folder name. Deleting a novel record SHALL NOT cascade to `word_summaries`, `fact_cache`, or `bookmarks`, because those tables no longer live in `novel_metadata.db` (they are removed with the novel's folder via its `novel_data.db`).
