@@ -20,6 +20,12 @@ NovelViewer は現在 Windows / macOS のみを対象としており、iPad で�
   - TTS 再生は存在しない `.dylib` を `DynamicLibrary.open` する
   - 音声リファレンス欄の `DropTarget` は iOS 未登録の `desktop_drop` に依存する
   - 録音ダイアログはマイクを要求するが `NSMicrophoneUsageDescription` が無く、iOS はプロセスを即時終了させる
+- 一般タブのショートカット一覧からも読み上げ切り替えの行を外す。押しても何も起きないキーを再割り当てできる状態は、機能が無いことより「あるのに壊れている」と読める
+- あわせて、利用できないアクションをキー衝突の判定対象から除外する。行を隠すだけでは、そのバインドが他アクションへの割り当てを「重複」として拒否し、しかも解放する手段が無い袋小路が生じる
+
+### iPad で使える書体の確保
+
+- `FontFamily.macOSOnly` を `appleOnly` に改め、判定を `isMacOS || isIOS` に広げる。ヒラギノ明朝・ヒラギノ角ゴは iOS にも標準搭載されているのに「macOS のみ」として候補から外れており、残る游明朝・游ゴシックは iOS に存在しないため、**iPad ではフォント設定が実質何も効かない**状態だった。縦書きで読むことが iPad 版の目的であり、書体はその見た目を決める唯一の設定であるため、対象外にはできない
 
 ### データ配置の是正
 
@@ -50,8 +56,11 @@ NovelViewer は現在 Windows / macOS のみを対象としており、iPad で�
 - `lib/features/text_viewer/presentation/text_viewer_panel.dart`: `TtsControlsBar` の設置を条件化
 - `lib/features/settings/presentation/settings_dialog.dart`: タブ構成を条件化（3 → 2）
 - `lib/features/novel_metadata_db/data/novel_database.dart`: `_resolveDatabaseDirPath()` に iOS 分岐
+- `lib/features/novel_metadata_db/domain/database_location.dart`: 配置決定の純粋関数を新設
 - `lib/features/settings/data/font_family.dart`: `macOSOnly` を `appleOnly` に改め、iOS でもヒラギノを提供
 - `lib/features/keyboard_shortcuts/presentation/shortcut_settings_section.dart`: TTS ショートカット行を条件化
+- `lib/features/keyboard_shortcuts/providers/keyboard_shortcut_providers.dart`: 利用できないアクションをキー衝突の判定から除外
+- `README.md` / `.claude/CLAUDE.md`: iPad ビルドの前提と手順
 
 ### 影響を受けないことを確認済みの範囲
 

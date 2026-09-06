@@ -71,9 +71,17 @@ The committed `ios/` project SHALL be the state Flutter's toolchain produces for
 - **WHEN** an iOS build is run against a clean working tree
 - **THEN** no tracked file under `ios/` is modified by the build
 
-### Requirement: iOS toolchain prerequisites are documented
-Building for iOS requires Xcode's iOS platform component in addition to the SDK; without it the build fails with `iOS ... is not installed` even though `xcodebuild -showsdks` lists the SDK. This prerequisite SHALL be documented for developers.
+### Requirement: iOS build prerequisites and constraints are documented
+Building for iOS requires Xcode's iOS platform component in addition to the SDK; without it the build fails with `iOS ... is not installed` even though `xcodebuild -showsdks` lists the SDK. A debug build cannot be launched from the device's home screen at all, because it needs JIT, which iOS permits only under Flutter's tooling. Both constraints SHALL be documented for developers, along with how to supply the signing identity.
 
-#### Scenario: Prerequisite is discoverable
+#### Scenario: Platform component prerequisite is discoverable
 - **WHEN** a developer reads the project's build documentation
 - **THEN** it states that the Xcode iOS platform component must be installed before an iOS build can run
+
+#### Scenario: The release-only launch constraint is discoverable
+- **WHEN** a developer reads the project's build documentation
+- **THEN** it states that installing on a device for ordinary use requires a release build, and that a debug build launched from the home screen only reports that it cannot start
+
+#### Scenario: The signing setup is discoverable
+- **WHEN** a developer reads the project's build documentation
+- **THEN** it explains how to create the untracked `Local.xcconfig` with a development team, and that a free provisioning profile expires after seven days
