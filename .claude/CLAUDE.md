@@ -13,6 +13,7 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `scripts/build_lame_windows.bat` - LAMEビルド(windows)
  - `fvm flutter build windows` - 本番ビルド(windows)
  - `fvm flutter test` - テスト実行
+ - `fvm dart format .` - フォーマット実行(lib/とtest/が対象)
  - `fvm flutter analyze` - リント実行
  - `fvm flutter pub get` - 依存パッケージ取得
  - `scripts/benchmark_tts.sh --model-dir <dir> --max-tokens 200` - TTSベンチマーク実行（結果はbenchmarks/に保存）
@@ -33,6 +34,7 @@ OpenSpecのスキルでtasks.mdを作成する際、最終確認のため以下�
 
 - [ ] X.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] X.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] X.3 `fvm flutter analyze`でリントを実行
-- [ ] X.4 `fvm flutter test`でテストを実行
+- [ ] X.3 `fvm dart format .`でフォーマットを実行
+- [ ] X.4 `fvm flutter analyze`でリントを実行
+- [ ] X.5 `fvm flutter test`でテストを実行
 ```

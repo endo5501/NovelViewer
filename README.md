@@ -132,6 +132,13 @@ fvm dart format --output=none --set-exit-if-changed .
 
 設定ファイルはありません。行長などは `dart format` の既定に従います。
 
+リポジトリ全体を整形したコミットは `.git-blame-ignore-revs` に登録してあります。
+`git blame` から除外するには一度だけ次を設定してください（GitHub 上では自動で適用されます）。
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 `dart format` は 1 行に収まっていた `if` 文を折り返すことがあり、その結果
 `curly_braces_in_flow_control_structures` に該当する場合があります。整形後は
 リンターも実行してください。
