@@ -35,12 +35,20 @@ The application SHALL read `dart:io`'s `Platform` for the purpose of feature ava
 - **THEN** that feature's boolean provider reports `false` and the other features' providers are unaffected
 
 ### Requirement: An unavailable feature presents no surface and issues no request
-Where an optional feature is unavailable, the application SHALL NOT present a control that would invoke it, and the service behind the feature SHALL NOT perform the work the feature implies — in particular it SHALL NOT open a network connection on the feature's behalf. Hiding the control alone is not sufficient: the entry point SHALL refuse the work as well, so that a surface added later without a guard cannot reach it.
+Where an optional feature is unavailable, the application SHALL NOT present a control that would invoke it. A control SHALL be absent from the widget tree rather than merely disabled, and a keyboard binding for it SHALL NOT be registered — a registered binding would consume the key press and do nothing, for an action the reader can neither see nor rebind.
+
+Where the feature is reached through a single service entry point, that entry point SHALL refuse the work as well, so that a surface added later without a guard cannot reach it. Hiding the control alone is not sufficient there. This applies to the two features that would otherwise open a network connection: the update check and the summary analysis runner.
+
+Speech synthesis has no such entry point — its native library is loaded lazily by several data-layer classes that hold no reference to the capability model — so it is protected by the absence of every invoking surface instead, which is why the keyboard binding matters there.
 
 #### Scenario: No control is presented
 - **WHEN** a screen that would host a control for an unavailable feature is rendered
 - **THEN** that control is absent from the widget tree, not merely disabled
 
-#### Scenario: The entry point refuses the work
-- **WHEN** the service behind an unavailable feature is invoked directly, bypassing the UI
-- **THEN** it returns without performing the feature's work and without issuing a network request
+#### Scenario: No keyboard binding is registered
+- **WHEN** the shortcut map is built while a feature that owns an action is unavailable
+- **THEN** the map holds no entry for that action, and its key combination falls through to any other handler
+
+#### Scenario: A network-reaching entry point refuses the work
+- **WHEN** the update check or the analysis runner is invoked directly on a platform where its feature is unavailable, bypassing the UI
+- **THEN** it returns without performing the work and without issuing a network request

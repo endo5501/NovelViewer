@@ -64,6 +64,11 @@
 - [x] 11.5 capability provider のテストが実装と同じ式を期待値にしていた点を、リテラル比較に改める（low）
 - [x] 11.6 D9 / D10 と spec 差分（`llm-summary-hover-popup` 追加、`tts-platform-availability` のショートカット要件）を更新
 
+## 12. verify での是正
+
+- [x] 12.1 縦書きの capability 配線を、レンダラを載せて検証するテストを追加（横書きのみ覆われていた）
+- [x] 12.2 `platform-capabilities` の包括要件が「全機能にサービス層の拒否がある」と過剰に約束していた点を、実態に合わせて限定する
+
 ## 10. 最終確認
 
 - [x] 10.1 code-reviewスキルを使用してコードレビューを実施
