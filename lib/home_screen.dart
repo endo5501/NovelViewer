@@ -21,7 +21,18 @@ import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
+import 'package:novel_viewer/shared/layout/shell_layout.dart';
 import 'package:novel_viewer/shared/providers/layout_providers.dart';
+
+/// Width of the left column, in both shell layouts.
+///
+/// The narrow layout puts the same panel in a drawer of this width rather than
+/// the material default, so the panel never lays out at a width the wide
+/// layout does not also produce.
+const double kLeftColumnWidth = 250;
+
+/// Width of the right column, in both shell layouts.
+const double kRightColumnWidth = 300;
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -59,14 +70,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     debugLabel: 'novelPane',
   );
 
+  /// Lets the narrow layout drive its drawers from provider state.
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_handleGlobalEscape);
     // Start with the file browser focused so the user can immediately navigate
     // files. A post-frame request wins over the descendant viewer's autofocus.
+    //
+    // In the narrow layout that pane is inside a closed drawer and its scope is
+    // not in the tree, so there is nothing to focus; asking anyway happens to
+    // be ignored, but only because an unattached node has no focus manager to
+    // ask. MediaQuery is unavailable in initState and available here.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _fileBrowserPaneFocus.requestFocus();
+      if (!mounted) return;
+      final layout = resolveShellLayout(
+        width: MediaQuery.sizeOf(context).width,
+        breakpoint: ref.read(shellBreakpointProvider),
+      );
+      if (layout == ShellLayout.narrow) return;
+      _fileBrowserPaneFocus.requestFocus();
     });
   }
 
@@ -107,6 +132,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return true;
     }
     return false;
+  }
+
+  /// Opens or closes the end drawer to match the right column's visibility.
+  ///
+  /// `rightColumnVisibleProvider` stays the single source of truth in both
+  /// layouts: the shortcut, the selection search and Escape all go on setting
+  /// it, and the drawer follows. Without this the narrow layout would carry a
+  /// second, competing notion of whether the search results are showing.
+  void _syncEndDrawer(bool visible) {
+    final scaffold = _scaffoldKey.currentState;
+    if (scaffold == null || !scaffold.hasEndDrawer) return;
+    if (visible && !scaffold.isEndDrawerOpen) {
+      scaffold.openEndDrawer();
+    } else if (!visible && scaffold.isEndDrawerOpen) {
+      scaffold.closeEndDrawer();
+    }
+  }
+
+  /// Closes the left drawer once the reader has picked something from it.
+  ///
+  /// The drawer covers the text it was used to choose, so leaving it open
+  /// would make every selection take a second dismissal. Listening to the
+  /// selection rather than passing a callback into the panel means the
+  /// bookmark tab — and any later tab — closes it too, without any of them
+  /// knowing they are inside a drawer.
+  void _closeDrawerIfOpen() {
+    final scaffold = _scaffoldKey.currentState;
+    if (scaffold == null || !scaffold.isDrawerOpen) return;
+    scaffold.closeDrawer();
+  }
+
+  /// Writes a dismissal the reader performed on the drawer itself — a tap on
+  /// the scrim, a back gesture — back into the provider, so the next shortcut
+  /// press opens it again instead of toggling it shut.
+  void _onEndDrawerChanged(bool isOpened) {
+    if (isOpened) return;
+    if (!ref.read(rightColumnVisibleProvider)) return;
+    ref.read(rightColumnVisibleProvider.notifier).toggle();
   }
 
   /// Toggles focus between the file browser and novel panes (Tab).
@@ -237,6 +300,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // The only place the display width is read to choose a shell shape. The
+    // resolved layout is passed down; no other widget consults MediaQuery for
+    // it.
+    final layout = resolveShellLayout(
+      width: MediaQuery.sizeOf(context).width,
+      breakpoint: ref.watch(shellBreakpointProvider),
+    );
+    final isNarrow = layout == ShellLayout.narrow;
+    ref.listen(rightColumnVisibleProvider, (_, visible) {
+      _syncEndDrawer(visible);
+    });
+    ref.listen(selectedFileProvider, (_, _) {
+      _closeDrawerIfOpen();
+    });
     final bindings = ref.watch(keyBindingsProvider);
     // Where TTS is unavailable the controls bar that listens for the toggle
     // request is never mounted, so registering the binding would consume the
@@ -249,7 +326,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       for (final action in [
         ShortcutAction.search,
         ShortcutAction.bookmark,
-        ShortcutAction.switchPane,
+        // The narrow layout keeps the file browser pane in a closed drawer,
+        // so a registered binding would swallow Tab and move focus nowhere.
+        // Unregistered, it falls through to normal focus traversal.
+        if (!isNarrow) ShortcutAction.switchPane,
         if (ttsSupported) ShortcutAction.ttsToggle,
       ])
         if (bindings[action] != null)
@@ -283,6 +363,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Focus(
           autofocus: true,
           child: Scaffold(
+            key: _scaffoldKey,
+            // The vertical viewer already reads a horizontal drag as a page
+            // turn (see _tryDecideGestureMode in vertical_text_page.dart), so
+            // leaving the edge-drag gestures on would take page turning away
+            // at exactly the edges of the screen. The app bar's buttons are
+            // the only way to open either drawer.
+            drawerEnableOpenDragGesture: false,
+            endDrawerEnableOpenDragGesture: false,
+            drawer: isNarrow
+                ? const Drawer(
+                    width: kLeftColumnWidth,
+                    child: LeftColumnPanel(key: Key('left_column')),
+                  )
+                : null,
+            endDrawer: isNarrow
+                ? const Drawer(
+                    width: kRightColumnWidth,
+                    child: SearchResultsPanel(key: Key('right_column')),
+                  )
+                : null,
+            onEndDrawerChanged: _onEndDrawerChanged,
             appBar: AppBar(
               title: Text(
                 ref.watch(selectedFileProgressTitleProvider),
@@ -299,24 +400,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     children: [
                       const UpdateBadge(),
                       _buildBookmarkButton(),
-                      IconButton(
-                        key: const Key('toggle_right_column_button'),
-                        icon: Icon(
-                          ref.watch(rightColumnVisibleProvider)
-                              ? Icons.vertical_split
-                              : Icons.view_sidebar,
+                      // In the narrow layout the right pane is the search
+                      // results drawer, which the search button opens; a
+                      // second button for the same drawer, labelled as showing
+                      // a column, would describe a layout that is not there.
+                      if (!isNarrow)
+                        IconButton(
+                          key: const Key('toggle_right_column_button'),
+                          icon: Icon(
+                            ref.watch(rightColumnVisibleProvider)
+                                ? Icons.vertical_split
+                                : Icons.view_sidebar,
+                          ),
+                          onPressed: () => ref
+                              .read(rightColumnVisibleProvider.notifier)
+                              .toggle(),
+                          tooltip: ref.watch(rightColumnVisibleProvider)
+                              ? AppLocalizations.of(
+                                  context,
+                                )!.homeScreen_hideRightColumnTooltip
+                              : AppLocalizations.of(
+                                  context,
+                                )!.homeScreen_showRightColumnTooltip,
                         ),
-                        onPressed: () => ref
-                            .read(rightColumnVisibleProvider.notifier)
-                            .toggle(),
-                        tooltip: ref.watch(rightColumnVisibleProvider)
-                            ? AppLocalizations.of(
-                                context,
-                              )!.homeScreen_hideRightColumnTooltip
-                            : AppLocalizations.of(
-                                context,
-                              )!.homeScreen_showRightColumnTooltip,
-                      ),
                       IconButton(
                         key: const Key('new_collection_button'),
                         icon: const Icon(Icons.create_new_folder_outlined),
@@ -324,6 +430,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         tooltip: AppLocalizations.of(
                           context,
                         )!.fileBrowser_newCollection,
+                      ),
+                      // Always present: a tablet without a keyboard has no
+                      // Ctrl/Cmd+F, so the shortcut cannot be the only way to
+                      // reach search.
+                      IconButton(
+                        key: const Key('search_button'),
+                        icon: const Icon(Icons.search),
+                        onPressed: _onSearchShortcut,
+                        tooltip: AppLocalizations.of(
+                          context,
+                        )!.homeScreen_searchTooltip,
                       ),
                       IconButton(
                         icon: const Icon(Icons.download),
@@ -342,31 +459,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
             body: HoverPopupHost(
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 250,
-                    child: FocusScope(
-                      node: _fileBrowserPaneFocus,
-                      child: const LeftColumnPanel(key: Key('left_column')),
-                    ),
-                  ),
-                  const VerticalDivider(width: 1),
-                  Expanded(
-                    child: FocusScope(
+              child: isNarrow
+                  ? FocusScope(
                       node: _novelPaneFocus,
                       child: const TextViewerPanel(key: Key('center_column')),
+                    )
+                  : Row(
+                      children: [
+                        SizedBox(
+                          width: kLeftColumnWidth,
+                          child: FocusScope(
+                            node: _fileBrowserPaneFocus,
+                            child: const LeftColumnPanel(
+                              key: Key('left_column'),
+                            ),
+                          ),
+                        ),
+                        const VerticalDivider(width: 1),
+                        Expanded(
+                          child: FocusScope(
+                            node: _novelPaneFocus,
+                            child: const TextViewerPanel(
+                              key: Key('center_column'),
+                            ),
+                          ),
+                        ),
+                        if (ref.watch(rightColumnVisibleProvider)) ...[
+                          const VerticalDivider(width: 1),
+                          const SizedBox(
+                            width: kRightColumnWidth,
+                            child: SearchResultsPanel(key: Key('right_column')),
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                  if (ref.watch(rightColumnVisibleProvider)) ...[
-                    const VerticalDivider(width: 1),
-                    const SizedBox(
-                      width: 300,
-                      child: SearchResultsPanel(key: Key('right_column')),
-                    ),
-                  ],
-                ],
-              ),
             ),
           ),
         ),

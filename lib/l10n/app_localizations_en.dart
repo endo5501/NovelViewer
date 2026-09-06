@@ -797,6 +797,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeScreen_downloadTooltip => 'Download novel';
 
   @override
+  String get homeScreen_searchTooltip => 'Search';
+
+  @override
   String get leftColumn_filesTab => 'Files';
 
   @override

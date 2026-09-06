@@ -45,6 +45,12 @@ The application SHALL manage the right column visibility state using a Riverpod 
 - **THEN** the end drawer SHALL open showing the search results panel
 - **AND** the text viewer SHALL keep the full body width beneath it
 
+#### Scenario: Changing to the wide layout keeps the search session
+- **WHEN** the display grows past the breakpoint while the end drawer is open
+- **THEN** the right column visibility state SHALL remain true
+- **AND** the search results SHALL be shown as the wide layout's right column
+- **AND** the disappearance of the drawer SHALL NOT be treated as the reader dismissing it
+
 #### Scenario: Dismissing the drawer clears the visibility state
 - **WHEN** the reader dismisses the end drawer in the narrow layout by tapping the scrim or by a system back gesture
 - **THEN** the right column visibility state SHALL become false

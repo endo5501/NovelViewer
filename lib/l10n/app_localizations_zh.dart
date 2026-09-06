@@ -775,6 +775,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeScreen_downloadTooltip => '下载小说';
 
   @override
+  String get homeScreen_searchTooltip => '搜索';
+
+  @override
   String get leftColumn_filesTab => '文件';
 
   @override

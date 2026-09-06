@@ -313,6 +313,7 @@
   "homeScreen_hideRightColumnTooltip": "隐藏右栏",
   "homeScreen_showRightColumnTooltip": "显示右栏",
   "homeScreen_downloadTooltip": "下载小说",
+  "homeScreen_searchTooltip": "搜索",
   "leftColumn_filesTab": "文件",
   "leftColumn_bookmarksTab": "书签",
   "leftColumn_historyTab": "解析历史",

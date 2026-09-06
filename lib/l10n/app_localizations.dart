@@ -1486,6 +1486,12 @@ abstract class AppLocalizations {
   /// **'小説ダウンロード'**
   String get homeScreen_downloadTooltip;
 
+  /// No description provided for @homeScreen_searchTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索'**
+  String get homeScreen_searchTooltip;
+
   /// No description provided for @leftColumn_filesTab.
   ///
   /// In ja, this message translates to:
