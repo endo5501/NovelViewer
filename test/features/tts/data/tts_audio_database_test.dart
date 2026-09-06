@@ -111,49 +111,51 @@ void main() {
       await db.close();
     });
 
-    test('tts_segments has unique index on (episode_id, segment_index)',
-        () async {
-      final db = TtsAudioDatabase(tempDir.path);
-      final database = await db.database;
+    test(
+      'tts_segments has unique index on (episode_id, segment_index)',
+      () async {
+        final db = TtsAudioDatabase(tempDir.path);
+        final database = await db.database;
 
-      final episodeId = await database.insert('tts_episodes', {
-        'file_name': '0001_プロローグ.txt',
-        'sample_rate': 24000,
-        'status': 'generating',
-        'ref_wav_path': null,
-        'created_at': '2026-01-01T00:00:00.000Z',
-        'updated_at': '2026-01-01T00:00:00.000Z',
-      });
+        final episodeId = await database.insert('tts_episodes', {
+          'file_name': '0001_プロローグ.txt',
+          'sample_rate': 24000,
+          'status': 'generating',
+          'ref_wav_path': null,
+          'created_at': '2026-01-01T00:00:00.000Z',
+          'updated_at': '2026-01-01T00:00:00.000Z',
+        });
 
-      await database.insert('tts_segments', {
-        'episode_id': episodeId,
-        'segment_index': 0,
-        'text': 'テスト文。',
-        'text_offset': 0,
-        'text_length': 5,
-        'audio_data': Uint8List(10),
-        'sample_count': 5,
-        'ref_wav_path': null,
-        'created_at': '2026-01-01T00:00:00.000Z',
-      });
-
-      expect(
-        () async => await database.insert('tts_segments', {
+        await database.insert('tts_segments', {
           'episode_id': episodeId,
           'segment_index': 0,
-          'text': '重複テスト。',
-          'text_offset': 5,
-          'text_length': 6,
+          'text': 'テスト文。',
+          'text_offset': 0,
+          'text_length': 5,
           'audio_data': Uint8List(10),
           'sample_count': 5,
           'ref_wav_path': null,
           'created_at': '2026-01-01T00:00:00.000Z',
-        }),
-        throwsA(isA<Exception>()),
-      );
+        });
 
-      await db.close();
-    });
+        expect(
+          () async => await database.insert('tts_segments', {
+            'episode_id': episodeId,
+            'segment_index': 0,
+            'text': '重複テスト。',
+            'text_offset': 5,
+            'text_length': 6,
+            'audio_data': Uint8List(10),
+            'sample_count': 5,
+            'ref_wav_path': null,
+            'created_at': '2026-01-01T00:00:00.000Z',
+          }),
+          throwsA(isA<Exception>()),
+        );
+
+        await db.close();
+      },
+    );
 
     test('cascade delete removes segments when episode is deleted', () async {
       final db = TtsAudioDatabase(tempDir.path);
@@ -316,56 +318,59 @@ void main() {
       await db.close();
     });
 
-    test('creates tts_segments table with skip column defaulting to 0',
-        () async {
-      final db = TtsAudioDatabase(tempDir.path);
-      final database = await db.database;
+    test(
+      'creates tts_segments table with skip column defaulting to 0',
+      () async {
+        final db = TtsAudioDatabase(tempDir.path);
+        final database = await db.database;
 
-      final columns = await database.rawQuery(
-        "PRAGMA table_info('tts_segments')",
-      );
-      final skipCol = columns.firstWhere((c) => c['name'] == 'skip');
-      // notnull == 1 means NOT NULL
-      expect(skipCol['notnull'], 1);
-      expect(skipCol['dflt_value'], '0');
+        final columns = await database.rawQuery(
+          "PRAGMA table_info('tts_segments')",
+        );
+        final skipCol = columns.firstWhere((c) => c['name'] == 'skip');
+        // notnull == 1 means NOT NULL
+        expect(skipCol['notnull'], 1);
+        expect(skipCol['dflt_value'], '0');
 
-      final episodeId = await database.insert('tts_episodes', {
-        'file_name': '0001_プロローグ.txt',
-        'sample_rate': 24000,
-        'status': 'generating',
-        'ref_wav_path': null,
-        'created_at': '2026-01-01T00:00:00.000Z',
-        'updated_at': '2026-01-01T00:00:00.000Z',
-      });
-      // Insert without naming `skip` — the default must fill it in, so
-      // existing call sites keep working unchanged.
-      await database.insert('tts_segments', {
-        'episode_id': episodeId,
-        'segment_index': 0,
-        'text': 'テスト文。',
-        'text_offset': 0,
-        'text_length': 5,
-        'created_at': '2026-01-01T00:00:00.000Z',
-      });
+        final episodeId = await database.insert('tts_episodes', {
+          'file_name': '0001_プロローグ.txt',
+          'sample_rate': 24000,
+          'status': 'generating',
+          'ref_wav_path': null,
+          'created_at': '2026-01-01T00:00:00.000Z',
+          'updated_at': '2026-01-01T00:00:00.000Z',
+        });
+        // Insert without naming `skip` — the default must fill it in, so
+        // existing call sites keep working unchanged.
+        await database.insert('tts_segments', {
+          'episode_id': episodeId,
+          'segment_index': 0,
+          'text': 'テスト文。',
+          'text_offset': 0,
+          'text_length': 5,
+          'created_at': '2026-01-01T00:00:00.000Z',
+        });
 
-      final segments = await database.query('tts_segments');
-      expect(segments.first['skip'], 0);
+        final segments = await database.query('tts_segments');
+        expect(segments.first['skip'], 0);
 
-      await db.close();
-    });
+        await db.close();
+      },
+    );
 
-    test('migrates v3 database to v4 adding skip column preserving data',
-        () async {
-      final dbPath = '${tempDir.path}/tts_audio.db';
-      // A v3 fixture: the migration's INPUT, so it must NOT carry `skip`.
-      final oldDb = await openDatabase(
-        dbPath,
-        version: 3,
-        onConfigure: (db) async {
-          await db.execute('PRAGMA foreign_keys = ON');
-        },
-        onCreate: (db, version) async {
-          await db.execute('''
+    test(
+      'migrates v3 database to v4 adding skip column preserving data',
+      () async {
+        final dbPath = '${tempDir.path}/tts_audio.db';
+        // A v3 fixture: the migration's INPUT, so it must NOT carry `skip`.
+        final oldDb = await openDatabase(
+          dbPath,
+          version: 3,
+          onConfigure: (db) async {
+            await db.execute('PRAGMA foreign_keys = ON');
+          },
+          onCreate: (db, version) async {
+            await db.execute('''
             CREATE TABLE tts_episodes (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               file_name TEXT NOT NULL UNIQUE,
@@ -377,7 +382,7 @@ void main() {
               updated_at TEXT NOT NULL
             )
           ''');
-          await db.execute('''
+            await db.execute('''
             CREATE TABLE tts_segments (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               episode_id INTEGER NOT NULL,
@@ -393,62 +398,63 @@ void main() {
               FOREIGN KEY (episode_id) REFERENCES tts_episodes(id) ON DELETE CASCADE
             )
           ''');
-          await db.execute('''
+            await db.execute('''
             CREATE UNIQUE INDEX idx_segments_episode_index
             ON tts_segments(episode_id, segment_index)
           ''');
-        },
-      );
+          },
+        );
 
-      final episodeId = await oldDb.insert('tts_episodes', {
-        'file_name': '0001_プロローグ.txt',
-        'sample_rate': 24000,
-        'status': 'partial',
-        'ref_wav_path': null,
-        'text_hash': 'abc123',
-        'created_at': '2026-01-01T00:00:00.000Z',
-        'updated_at': '2026-01-01T00:00:00.000Z',
-      });
-      await oldDb.insert('tts_segments', {
-        'episode_id': episodeId,
-        'segment_index': 0,
-        'text': '既存の文。',
-        'text_offset': 0,
-        'text_length': 5,
-        'audio_data': Uint8List.fromList([1, 2, 3, 4]),
-        'sample_count': 2,
-        'ref_wav_path': 'Anna.mp3',
-        'memo': '既存メモ',
-        'created_at': '2026-01-01T00:00:00.000Z',
-      });
-      await oldDb.close();
+        final episodeId = await oldDb.insert('tts_episodes', {
+          'file_name': '0001_プロローグ.txt',
+          'sample_rate': 24000,
+          'status': 'partial',
+          'ref_wav_path': null,
+          'text_hash': 'abc123',
+          'created_at': '2026-01-01T00:00:00.000Z',
+          'updated_at': '2026-01-01T00:00:00.000Z',
+        });
+        await oldDb.insert('tts_segments', {
+          'episode_id': episodeId,
+          'segment_index': 0,
+          'text': '既存の文。',
+          'text_offset': 0,
+          'text_length': 5,
+          'audio_data': Uint8List.fromList([1, 2, 3, 4]),
+          'sample_count': 2,
+          'ref_wav_path': 'Anna.mp3',
+          'memo': '既存メモ',
+          'created_at': '2026-01-01T00:00:00.000Z',
+        });
+        await oldDb.close();
 
-      final db = TtsAudioDatabase(tempDir.path);
-      final database = await db.database;
+        final db = TtsAudioDatabase(tempDir.path);
+        final database = await db.database;
 
-      final columns = await database.rawQuery(
-        "PRAGMA table_info('tts_segments')",
-      );
-      final columnNames = columns.map((c) => c['name'] as String).toList();
-      expect(columnNames, contains('skip'));
+        final columns = await database.rawQuery(
+          "PRAGMA table_info('tts_segments')",
+        );
+        final columnNames = columns.map((c) => c['name'] as String).toList();
+        expect(columnNames, contains('skip'));
 
-      final segments = await database.query('tts_segments');
-      expect(segments, hasLength(1));
-      // Every pre-existing row must read as not skipped, so an upgrade
-      // cannot silently drop segments out of generation and playback.
-      expect(segments.first['skip'], 0);
-      expect(segments.first['text'], '既存の文。');
-      expect(segments.first['sample_count'], 2);
-      expect(segments.first['ref_wav_path'], 'Anna.mp3');
-      expect(segments.first['memo'], '既存メモ');
-      expect(segments.first['audio_data'], isNotNull);
+        final segments = await database.query('tts_segments');
+        expect(segments, hasLength(1));
+        // Every pre-existing row must read as not skipped, so an upgrade
+        // cannot silently drop segments out of generation and playback.
+        expect(segments.first['skip'], 0);
+        expect(segments.first['text'], '既存の文。');
+        expect(segments.first['sample_count'], 2);
+        expect(segments.first['ref_wav_path'], 'Anna.mp3');
+        expect(segments.first['memo'], '既存メモ');
+        expect(segments.first['audio_data'], isNotNull);
 
-      final episodes = await database.query('tts_episodes');
-      expect(episodes, hasLength(1));
-      expect(episodes.first['text_hash'], 'abc123');
+        final episodes = await database.query('tts_episodes');
+        expect(episodes, hasLength(1));
+        expect(episodes.first['text_hash'], 'abc123');
 
-      await db.close();
-    });
+        await db.close();
+      },
+    );
 
     test('tts_segments audio_data and sample_count are nullable', () async {
       final db = TtsAudioDatabase(tempDir.path);
@@ -458,9 +464,7 @@ void main() {
         "PRAGMA table_info('tts_segments')",
       );
 
-      final audioDataCol = columns.firstWhere(
-        (c) => c['name'] == 'audio_data',
-      );
+      final audioDataCol = columns.firstWhere((c) => c['name'] == 'audio_data');
       final sampleCountCol = columns.firstWhere(
         (c) => c['name'] == 'sample_count',
       );
@@ -602,9 +606,7 @@ void main() {
       expect(columnNames, contains('memo'));
 
       // Verify audio_data is now nullable
-      final audioDataCol = columns.firstWhere(
-        (c) => c['name'] == 'audio_data',
-      );
+      final audioDataCol = columns.firstWhere((c) => c['name'] == 'audio_data');
       expect(audioDataCol['notnull'], 0);
 
       // Verify sample_count is now nullable
@@ -662,18 +664,19 @@ void main() {
       await db.close();
     });
 
-    test('migrates existing database without auto_vacuum to INCREMENTAL',
-        () async {
-      // Create a v3 database without auto_vacuum (simulating pre-migration DB)
-      final dbPath = '${tempDir.path}/tts_audio.db';
-      final oldDb = await openDatabase(
-        dbPath,
-        version: 3,
-        onConfigure: (db) async {
-          await db.execute('PRAGMA foreign_keys = ON');
-        },
-        onCreate: (db, version) async {
-          await db.execute('''
+    test(
+      'migrates existing database without auto_vacuum to INCREMENTAL',
+      () async {
+        // Create a v3 database without auto_vacuum (simulating pre-migration DB)
+        final dbPath = '${tempDir.path}/tts_audio.db';
+        final oldDb = await openDatabase(
+          dbPath,
+          version: 3,
+          onConfigure: (db) async {
+            await db.execute('PRAGMA foreign_keys = ON');
+          },
+          onCreate: (db, version) async {
+            await db.execute('''
             CREATE TABLE tts_episodes (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               file_name TEXT NOT NULL UNIQUE,
@@ -685,7 +688,7 @@ void main() {
               updated_at TEXT NOT NULL
             )
           ''');
-          await db.execute('''
+            await db.execute('''
             CREATE TABLE tts_segments (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               episode_id INTEGER NOT NULL,
@@ -701,44 +704,45 @@ void main() {
               FOREIGN KEY (episode_id) REFERENCES tts_episodes(id) ON DELETE CASCADE
             )
           ''');
-          await db.execute('''
+            await db.execute('''
             CREATE UNIQUE INDEX idx_segments_episode_index
             ON tts_segments(episode_id, segment_index)
           ''');
-        },
-      );
+          },
+        );
 
-      // Verify auto_vacuum is NONE before migration
-      final preCheck = await oldDb.rawQuery('PRAGMA auto_vacuum');
-      expect(preCheck.first.values.first, 0);
+        // Verify auto_vacuum is NONE before migration
+        final preCheck = await oldDb.rawQuery('PRAGMA auto_vacuum');
+        expect(preCheck.first.values.first, 0);
 
-      // Insert test data to verify preservation
-      await oldDb.insert('tts_episodes', {
-        'file_name': '0001_プロローグ.txt',
-        'sample_rate': 24000,
-        'status': 'completed',
-        'ref_wav_path': null,
-        'text_hash': 'abc123',
-        'created_at': '2026-01-01T00:00:00.000Z',
-        'updated_at': '2026-01-01T00:00:00.000Z',
-      });
-      await oldDb.close();
+        // Insert test data to verify preservation
+        await oldDb.insert('tts_episodes', {
+          'file_name': '0001_プロローグ.txt',
+          'sample_rate': 24000,
+          'status': 'completed',
+          'ref_wav_path': null,
+          'text_hash': 'abc123',
+          'created_at': '2026-01-01T00:00:00.000Z',
+          'updated_at': '2026-01-01T00:00:00.000Z',
+        });
+        await oldDb.close();
 
-      // Open with TtsAudioDatabase which should migrate auto_vacuum
-      final db = TtsAudioDatabase(tempDir.path);
-      final database = await db.database;
+        // Open with TtsAudioDatabase which should migrate auto_vacuum
+        final db = TtsAudioDatabase(tempDir.path);
+        final database = await db.database;
 
-      // Verify auto_vacuum is INCREMENTAL
-      final result = await database.rawQuery('PRAGMA auto_vacuum');
-      expect(result.first.values.first, 2);
+        // Verify auto_vacuum is INCREMENTAL
+        final result = await database.rawQuery('PRAGMA auto_vacuum');
+        expect(result.first.values.first, 2);
 
-      // Verify data preserved
-      final episodes = await database.query('tts_episodes');
-      expect(episodes, hasLength(1));
-      expect(episodes.first['file_name'], '0001_プロローグ.txt');
+        // Verify data preserved
+        final episodes = await database.query('tts_episodes');
+        expect(episodes, hasLength(1));
+        expect(episodes.first['file_name'], '0001_プロローグ.txt');
 
-      await db.close();
-    });
+        await db.close();
+      },
+    );
 
     test('handles corrupted database by recreating', () async {
       final dbFile = File('${tempDir.path}/tts_audio.db');

@@ -38,14 +38,9 @@ class _LanguageSelector extends ConsumerWidget {
       child: DropdownButtonFormField<TtsLanguage>(
         initialValue: language,
         isExpanded: true,
-        decoration: InputDecoration(
-          labelText: l10n.settings_ttsLanguageLabel,
-        ),
+        decoration: InputDecoration(labelText: l10n.settings_ttsLanguageLabel),
         items: TtsLanguage.values.map((lang) {
-          return DropdownMenuItem(
-            value: lang,
-            child: Text(lang.displayName),
-          );
+          return DropdownMenuItem(value: lang, child: Text(lang.displayName));
         }).toList(),
         onChanged: (value) {
           if (value != null) {
@@ -70,8 +65,10 @@ class _ModelSizeSelector extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.settings_voiceModelTitle,
-              style: Theme.of(context).textTheme.titleSmall),
+          Text(
+            l10n.settings_voiceModelTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
@@ -112,12 +109,12 @@ class _ModelDownloadSection extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: switch (downloadState) {
         TtsModelDownloadIdle() => ElevatedButton.icon(
-            onPressed: () {
-              ref.read(ttsModelDownloadProvider.notifier).startDownload();
-            },
-            icon: const Icon(Icons.download),
-            label: Text(l10n.settings_modelDataDownload),
-          ),
+          onPressed: () {
+            ref.read(ttsModelDownloadProvider.notifier).startDownload();
+          },
+          icon: const Icon(Icons.download),
+          label: Text(l10n.settings_modelDataDownload),
+        ),
         TtsModelDownloadDownloading(:final currentFile, :final progress) =>
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,41 +131,41 @@ class _ModelDownloadSection extends ConsumerWidget {
             ],
           ),
         TtsModelDownloadCompleted(:final modelsDir) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.check_circle,
-                      color: Theme.of(context).colorScheme.primary, size: 20),
-                  const SizedBox(width: 8),
-                  Text(l10n.settings_modelDownloadCompleted),
-                ],
-              ),
-              if (modelsDir != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  modelsDir,
-                  style: Theme.of(context).textTheme.bodySmall,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
                 ),
+                const SizedBox(width: 8),
+                Text(l10n.settings_modelDownloadCompleted),
               ],
+            ),
+            if (modelsDir != null) ...[
+              const SizedBox(height: 4),
+              Text(modelsDir, style: Theme.of(context).textTheme.bodySmall),
             ],
-          ),
+          ],
+        ),
         TtsModelDownloadError(:final message) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.common_errorPrefix(message),
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () {
-                  ref.read(ttsModelDownloadProvider.notifier).startDownload();
-                },
-                child: Text(l10n.settings_retryButton),
-              ),
-            ],
-          ),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.common_errorPrefix(message),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                ref.read(ttsModelDownloadProvider.notifier).startDownload();
+              },
+              child: Text(l10n.settings_retryButton),
+            ),
+          ],
+        ),
       },
     );
   }

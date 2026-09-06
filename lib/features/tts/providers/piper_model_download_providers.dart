@@ -34,16 +34,15 @@ class PiperModelDownloadError extends PiperModelDownloadState {
 
 final piperModelDownloadProvider =
     NotifierProvider<PiperModelDownloadNotifier, PiperModelDownloadState>(
-  PiperModelDownloadNotifier.new,
-);
+      PiperModelDownloadNotifier.new,
+    );
 
 class PiperModelDownloadNotifier extends Notifier<PiperModelDownloadState> {
   late PiperModelDownloadService _service;
 
   @override
   PiperModelDownloadState build() {
-    _service =
-        PiperModelDownloadService(client: ref.read(httpClientProvider));
+    _service = PiperModelDownloadService(client: ref.read(httpClientProvider));
 
     final modelsDir = ref.watch(piperModelDirProvider);
     if (modelsDir.isEmpty) return const PiperModelDownloadIdle();
@@ -68,10 +67,7 @@ class PiperModelDownloadNotifier extends Notifier<PiperModelDownloadState> {
     final modelName = ref.read(piperModelNameProvider);
     final dicDir = ref.read(piperDicDirProvider);
 
-    state = const PiperModelDownloadDownloading(
-      currentFile: '',
-      progress: 0,
-    );
+    state = const PiperModelDownloadDownloading(currentFile: '', progress: 0);
 
     try {
       // Download model files

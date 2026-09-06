@@ -47,8 +47,7 @@ class _RecordingSpecInstaller extends IrodoriModelSpecInstaller {
 }
 
 class _FakeTtsIsolate implements TtsIsolate {
-  final _responseController =
-      StreamController<TtsIsolateResponse>.broadcast();
+  final _responseController = StreamController<TtsIsolateResponse>.broadcast();
   bool spawned = false;
   bool disposed = false;
   bool aborted = false;
@@ -94,17 +93,19 @@ class _FakeTtsIsolate implements TtsIsolate {
     String? embeddingCacheDir,
     bool durationCorrection = false,
   }) {
-    loadModelCalls.add(_LoadModelCall(
-      modelDir: modelDir,
-      engineType: engineType,
-      languageId: languageId,
-      dicDir: dicDir,
-      lengthScale: lengthScale,
-      noiseScale: noiseScale,
-      noiseW: noiseW,
-      embeddingCacheDir: embeddingCacheDir,
-      durationCorrection: durationCorrection,
-    ));
+    loadModelCalls.add(
+      _LoadModelCall(
+        modelDir: modelDir,
+        engineType: engineType,
+        languageId: languageId,
+        dicDir: dicDir,
+        lengthScale: lengthScale,
+        noiseScale: noiseScale,
+        noiseW: noiseW,
+        embeddingCacheDir: embeddingCacheDir,
+        durationCorrection: durationCorrection,
+      ),
+    );
     if (blockModelLoad) return;
     Future.microtask(() {
       if (!_responseController.isClosed) {
@@ -131,10 +132,12 @@ class _FakeTtsIsolate implements TtsIsolate {
     if (!autoSucceedSynthesis) return;
     Future.microtask(() {
       if (!_responseController.isClosed) {
-        _responseController.add(SynthesisResultResponse(
-          audio: Float32List.fromList([0.1, 0.2]),
-          sampleRate: 24000,
-        ));
+        _responseController.add(
+          SynthesisResultResponse(
+            audio: Float32List.fromList([0.1, 0.2]),
+            sampleRate: 24000,
+          ),
+        );
       }
     });
   }
@@ -160,19 +163,20 @@ class _FakeTtsIsolate implements TtsIsolate {
   }
 
   void completeSynthesis({String? error}) {
-    _responseController.add(SynthesisResultResponse(
-      audio: error == null ? Float32List.fromList([0.1, 0.2]) : null,
-      sampleRate: 24000,
-      error: error,
-    ));
+    _responseController.add(
+      SynthesisResultResponse(
+        audio: error == null ? Float32List.fromList([0.1, 0.2]) : null,
+        sampleRate: 24000,
+        error: error,
+      ),
+    );
   }
 
   /// A failure the native side could not describe: no audio, no error string.
   void completeSynthesisWithoutAudio() {
-    _responseController.add(SynthesisResultResponse(
-      audio: null,
-      sampleRate: 24000,
-    ));
+    _responseController.add(
+      SynthesisResultResponse(audio: null, sampleRate: 24000),
+    );
   }
 
   void emitModelLoaded({bool success = true, String? error}) {
@@ -205,23 +209,25 @@ void main() {
       await session.dispose();
     });
 
-    test('ensureModelLoaded sends piper params when piper config is given',
-        () async {
-      final isolate = _FakeTtsIsolate();
-      final session = TtsSession(isolate: isolate);
+    test(
+      'ensureModelLoaded sends piper params when piper config is given',
+      () async {
+        final isolate = _FakeTtsIsolate();
+        final session = TtsSession(isolate: isolate);
 
-      await session.ensureModelLoaded(_piper());
+        await session.ensureModelLoaded(_piper());
 
-      expect(isolate.loadModelCalls, hasLength(1));
-      final call = isolate.loadModelCalls.first;
-      expect(call.engineType, TtsEngineType.piper);
-      expect(call.modelDir, '/p/m.onnx');
-      expect(call.dicDir, '/p/dic');
-      expect(call.lengthScale, 0.9);
-      expect(call.noiseScale, 0.5);
-      expect(call.noiseW, 0.7);
-      await session.dispose();
-    });
+        expect(isolate.loadModelCalls, hasLength(1));
+        final call = isolate.loadModelCalls.first;
+        expect(call.engineType, TtsEngineType.piper);
+        expect(call.modelDir, '/p/m.onnx');
+        expect(call.dicDir, '/p/dic');
+        expect(call.lengthScale, 0.9);
+        expect(call.noiseScale, 0.5);
+        expect(call.noiseW, 0.7);
+        await session.dispose();
+      },
+    );
 
     test('second ensureModelLoaded with same config is a no-op', () async {
       final isolate = _FakeTtsIsolate();
@@ -235,33 +241,37 @@ void main() {
       await session.dispose();
     });
 
-    test('two distinct-but-equivalent Qwen3 configs reuse the loaded model',
-        () async {
-      final isolate = _FakeTtsIsolate();
-      final session = TtsSession(isolate: isolate);
+    test(
+      'two distinct-but-equivalent Qwen3 configs reuse the loaded model',
+      () async {
+        final isolate = _FakeTtsIsolate();
+        final session = TtsSession(isolate: isolate);
 
-      // Same modelDir/languageId — only refWavPath (synthesis-time) differs.
-      const a = Qwen3EngineConfig(
-        modelDir: '/q/m',
-        sampleRate: 24000,
-        languageId: 2058,
-        refWavPath: '/voice/a.wav',
-      );
-      const b = Qwen3EngineConfig(
-        modelDir: '/q/m',
-        sampleRate: 24000,
-        languageId: 2058,
-        refWavPath: '/voice/b.wav',
-      );
+        // Same modelDir/languageId — only refWavPath (synthesis-time) differs.
+        const a = Qwen3EngineConfig(
+          modelDir: '/q/m',
+          sampleRate: 24000,
+          languageId: 2058,
+          refWavPath: '/voice/a.wav',
+        );
+        const b = Qwen3EngineConfig(
+          modelDir: '/q/m',
+          sampleRate: 24000,
+          languageId: 2058,
+          refWavPath: '/voice/b.wav',
+        );
 
-      await session.ensureModelLoaded(a);
-      await session.ensureModelLoaded(b);
+        await session.ensureModelLoaded(a);
+        await session.ensureModelLoaded(b);
 
-      expect(isolate.loadModelCalls, hasLength(1),
-          reason:
-              'changing only synthesis-time fields must not trigger reload');
-      await session.dispose();
-    });
+        expect(
+          isolate.loadModelCalls,
+          hasLength(1),
+          reason: 'changing only synthesis-time fields must not trigger reload',
+        );
+        await session.dispose();
+      },
+    );
 
     test('ensureModelLoaded sends loadModel for irodori config', () async {
       final isolate = _FakeTtsIsolate();
@@ -279,106 +289,123 @@ void main() {
     // The engine validates request options against the contract embedded in
     // the GGUF, which predates duration_correction. Writing the runtime's own
     // contract beside the model overrides it.
-    test('ensureModelLoaded writes the model contract for irodori only',
-        () async {
-      final installer = _RecordingSpecInstaller();
-      final isolate = _FakeTtsIsolate();
-      final session =
-          TtsSession(isolate: isolate, irodoriSpecInstaller: installer);
+    test(
+      'ensureModelLoaded writes the model contract for irodori only',
+      () async {
+        final installer = _RecordingSpecInstaller();
+        final isolate = _FakeTtsIsolate();
+        final session = TtsSession(
+          isolate: isolate,
+          irodoriSpecInstaller: installer,
+        );
 
-      await session.ensureModelLoaded(_irodori());
-      expect(installer.installedIn, ['/i/m']);
+        await session.ensureModelLoaded(_irodori());
+        expect(installer.installedIn, ['/i/m']);
 
-      await session.ensureModelLoaded(_qwen3());
-      await session.ensureModelLoaded(_piper());
-      expect(installer.installedIn, ['/i/m'],
-          reason: 'only the Irodori engine reads this contract');
+        await session.ensureModelLoaded(_qwen3());
+        await session.ensureModelLoaded(_piper());
+        expect(
+          installer.installedIn,
+          ['/i/m'],
+          reason: 'only the Irodori engine reads this contract',
+        );
 
-      await session.dispose();
-    });
+        await session.dispose();
+      },
+    );
 
     // The duration correction is calibrated per variant, so it is sent with
     // the load rather than with each synthesis request.
-    test('ensureModelLoaded sends the variant duration-correction flag',
-        () async {
-      for (final variant in IrodoriModelVariant.values) {
+    test(
+      'ensureModelLoaded sends the variant duration-correction flag',
+      () async {
+        for (final variant in IrodoriModelVariant.values) {
+          final isolate = _FakeTtsIsolate();
+          final session = TtsSession(isolate: isolate);
+
+          await session.ensureModelLoaded(
+            IrodoriEngineConfig(
+              modelDir: '/i/${variant.storageKey}',
+              sampleRate: 48000,
+              variant: variant,
+              speakerGuidanceScale: 5.0,
+              captionGuidanceScale: 3.0,
+              numInferenceSteps: 40,
+            ),
+          );
+
+          expect(
+            isolate.loadModelCalls.single.durationCorrection,
+            variant.needsDurationCorrection,
+            reason: 'variant ${variant.storageKey}',
+          );
+          await session.dispose();
+        }
+      },
+    );
+
+    test(
+      'two distinct-but-equivalent Irodori configs reuse the loaded model',
+      () async {
         final isolate = _FakeTtsIsolate();
         final session = TtsSession(isolate: isolate);
 
-        await session.ensureModelLoaded(IrodoriEngineConfig(
-          modelDir: '/i/${variant.storageKey}',
+        // Same modelDir — only synthesis-time fields (refWavPath / guidance /
+        // steps) differ. modelLoadKey is (type, modelDir), so no reload.
+        const a = IrodoriEngineConfig(
+          modelDir: '/i/m',
           sampleRate: 48000,
-          variant: variant,
+          variant: IrodoriModelVariant.v3,
+          refWavPath: '/voice/a.wav',
           speakerGuidanceScale: 5.0,
           captionGuidanceScale: 3.0,
           numInferenceSteps: 40,
-        ));
+        );
+        const b = IrodoriEngineConfig(
+          modelDir: '/i/m',
+          sampleRate: 48000,
+          variant: IrodoriModelVariant.v3,
+          refWavPath: '/voice/b.wav',
+          speakerGuidanceScale: 6.0,
+          captionGuidanceScale: 4.5,
+          numInferenceSteps: 32,
+        );
+
+        await session.ensureModelLoaded(a);
+        await session.ensureModelLoaded(b);
 
         expect(
-          isolate.loadModelCalls.single.durationCorrection,
-          variant.needsDurationCorrection,
-          reason: 'variant ${variant.storageKey}',
+          isolate.loadModelCalls,
+          hasLength(1),
+          reason: 'changing only synthesis-time fields must not trigger reload',
         );
         await session.dispose();
-      }
-    });
+      },
+    );
 
-    test('two distinct-but-equivalent Irodori configs reuse the loaded model',
-        () async {
-      final isolate = _FakeTtsIsolate();
-      final session = TtsSession(isolate: isolate);
+    test(
+      'synthesize forwards caption and guidance/steps to the isolate',
+      () async {
+        final isolate = _FakeTtsIsolate();
+        final session = TtsSession(isolate: isolate);
+        await session.ensureModelLoaded(_irodori());
 
-      // Same modelDir — only synthesis-time fields (refWavPath / guidance /
-      // steps) differ. modelLoadKey is (type, modelDir), so no reload.
-      const a = IrodoriEngineConfig(
-        modelDir: '/i/m',
-        sampleRate: 48000,
-        variant: IrodoriModelVariant.v3,
-        refWavPath: '/voice/a.wav',
-        speakerGuidanceScale: 5.0,
-        captionGuidanceScale: 3.0,
-        numInferenceSteps: 40,
-      );
-      const b = IrodoriEngineConfig(
-        modelDir: '/i/m',
-        sampleRate: 48000,
-        variant: IrodoriModelVariant.v3,
-        refWavPath: '/voice/b.wav',
-        speakerGuidanceScale: 6.0,
-        captionGuidanceScale: 4.5,
-        numInferenceSteps: 32,
-      );
+        await session.synthesize(
+          text: 'こんにちは',
+          refWavPath: '/voice/ref.wav',
+          caption: '落ち着いた大人の女性の声',
+          speakerGuidanceScale: 5.0,
+          captionGuidanceScale: 3.0,
+          numInferenceSteps: 40,
+        );
 
-      await session.ensureModelLoaded(a);
-      await session.ensureModelLoaded(b);
-
-      expect(isolate.loadModelCalls, hasLength(1),
-          reason:
-              'changing only synthesis-time fields must not trigger reload');
-      await session.dispose();
-    });
-
-    test('synthesize forwards caption and guidance/steps to the isolate',
-        () async {
-      final isolate = _FakeTtsIsolate();
-      final session = TtsSession(isolate: isolate);
-      await session.ensureModelLoaded(_irodori());
-
-      await session.synthesize(
-        text: 'こんにちは',
-        refWavPath: '/voice/ref.wav',
-        caption: '落ち着いた大人の女性の声',
-        speakerGuidanceScale: 5.0,
-        captionGuidanceScale: 3.0,
-        numInferenceSteps: 40,
-      );
-
-      expect(isolate.synthesizeCaptions.single, '落ち着いた大人の女性の声');
-      expect(isolate.synthesizeSpeakerGuidance.single, 5.0);
-      expect(isolate.synthesizeCaptionGuidance.single, 3.0);
-      expect(isolate.synthesizeSteps.single, 40);
-      await session.dispose();
-    });
+        expect(isolate.synthesizeCaptions.single, '落ち着いた大人の女性の声');
+        expect(isolate.synthesizeSpeakerGuidance.single, 5.0);
+        expect(isolate.synthesizeCaptionGuidance.single, 3.0);
+        expect(isolate.synthesizeSteps.single, 40);
+        await session.dispose();
+      },
+    );
 
     test('synthesize resolves with audio result on happy path', () async {
       final isolate = _FakeTtsIsolate();
@@ -392,25 +419,27 @@ void main() {
       await session.dispose();
     });
 
-    test('abort completes in-flight synthesize with null and aborts isolate',
-        () async {
-      final isolate = _FakeTtsIsolate();
-      isolate.synthesizeGate = Completer<void>();
-      final session = TtsSession(isolate: isolate);
-      await session.ensureModelLoaded(_qwen3());
+    test(
+      'abort completes in-flight synthesize with null and aborts isolate',
+      () async {
+        final isolate = _FakeTtsIsolate();
+        isolate.synthesizeGate = Completer<void>();
+        final session = TtsSession(isolate: isolate);
+        await session.ensureModelLoaded(_qwen3());
 
-      final synthesisFuture = session.synthesize(text: 'pending');
-      // Let event loop process so synthesize is sent
-      await Future.delayed(Duration.zero);
-      expect(isolate.synthesizeRequests, hasLength(1));
+        final synthesisFuture = session.synthesize(text: 'pending');
+        // Let event loop process so synthesize is sent
+        await Future.delayed(Duration.zero);
+        expect(isolate.synthesizeRequests, hasLength(1));
 
-      session.abort();
-      final result = await synthesisFuture;
+        session.abort();
+        final result = await synthesisFuture;
 
-      expect(result, isNull);
-      expect(isolate.aborted, isTrue);
-      await session.dispose();
-    });
+        expect(result, isNull);
+        expect(isolate.aborted, isTrue);
+        await session.dispose();
+      },
+    );
 
     test('synthesize retains the native error for the caller', () async {
       final isolate = _FakeTtsIsolate();
@@ -427,10 +456,7 @@ void main() {
       final result = await synthesisFuture;
 
       expect(result, isNull, reason: 'return contract must stay nullable');
-      expect(
-        session.lastSynthesisError,
-        contains('unsupported WAV encoding'),
-      );
+      expect(session.lastSynthesisError, contains('unsupported WAV encoding'));
       await session.dispose();
     });
 
@@ -471,30 +497,35 @@ void main() {
       await session.dispose();
     });
 
-    test('the worker-died fast path does not leak the previous reason',
-        () async {
-      final isolate = _FakeTtsIsolate();
-      isolate.autoSucceedSynthesis = false;
-      final session = TtsSession(isolate: isolate);
-      await session.ensureModelLoaded(_qwen3());
+    test(
+      'the worker-died fast path does not leak the previous reason',
+      () async {
+        final isolate = _FakeTtsIsolate();
+        isolate.autoSucceedSynthesis = false;
+        final session = TtsSession(isolate: isolate);
+        await session.ensureModelLoaded(_qwen3());
 
-      final failing = session.synthesize(text: 'bad ref');
-      await Future.delayed(Duration.zero);
-      isolate.completeSynthesis(error: 'unsupported WAV encoding');
-      await failing;
-      expect(session.lastSynthesisError, isNotNull);
+        final failing = session.synthesize(text: 'bad ref');
+        await Future.delayed(Duration.zero);
+        isolate.completeSynthesis(error: 'unsupported WAV encoding');
+        await failing;
+        expect(session.lastSynthesisError, isNotNull);
 
-      // The worker dies with no synthesize in flight, so the next call takes
-      // the fail-fast path that returns before any response arrives.
-      isolate.emitWorkerDied('boom');
-      await Future.delayed(Duration.zero);
-      final result = await session.synthesize(text: 'again');
+        // The worker dies with no synthesize in flight, so the next call takes
+        // the fail-fast path that returns before any response arrives.
+        isolate.emitWorkerDied('boom');
+        await Future.delayed(Duration.zero);
+        final result = await session.synthesize(text: 'again');
 
-      expect(result, isNull);
-      expect(session.lastSynthesisError, isNull,
-          reason: 'this failure was not explained by the previous WAV error');
-      await session.dispose();
-    });
+        expect(result, isNull);
+        expect(
+          session.lastSynthesisError,
+          isNull,
+          reason: 'this failure was not explained by the previous WAV error',
+        );
+        await session.dispose();
+      },
+    );
 
     test('a failure with no error string retains no reason', () async {
       final isolate = _FakeTtsIsolate();
@@ -525,14 +556,10 @@ void main() {
       final session = TtsSession(isolate: isolate);
       await session.dispose();
 
-      expect(
-        () => session.ensureModelLoaded(_qwen3()),
-        throwsStateError,
-      );
+      expect(() => session.ensureModelLoaded(_qwen3()), throwsStateError);
     });
 
-    test(
-        'ensureModelLoaded logs a WARNING carrying the native error string '
+    test('ensureModelLoaded logs a WARNING carrying the native error string '
         'when model load fails', () async {
       final isolate = _FakeTtsIsolate();
       final logger = Logger('tts.session.test.modelload');
@@ -551,9 +578,11 @@ void main() {
 
         expect(result, isFalse, reason: 'return contract must stay bool');
         final warnings = records
-            .where((r) =>
-                r.level == Level.WARNING &&
-                r.loggerName == 'tts.session.test.modelload')
+            .where(
+              (r) =>
+                  r.level == Level.WARNING &&
+                  r.loggerName == 'tts.session.test.modelload',
+            )
             .toList();
         expect(warnings, isNotEmpty);
         expect(warnings.first.message, contains('model file not found'));
@@ -563,8 +592,7 @@ void main() {
       }
     });
 
-    test(
-        'synthesize logs a WARNING carrying the native error string and still '
+    test('synthesize logs a WARNING carrying the native error string and still '
         'returns null', () async {
       final isolate = _FakeTtsIsolate();
       isolate.autoSucceedSynthesis = false;
@@ -584,9 +612,11 @@ void main() {
 
         expect(result, isNull, reason: 'return contract must stay nullable');
         final warnings = records
-            .where((r) =>
-                r.level == Level.WARNING &&
-                r.loggerName == 'tts.session.test.synth')
+            .where(
+              (r) =>
+                  r.level == Level.WARNING &&
+                  r.loggerName == 'tts.session.test.synth',
+            )
             .toList();
         expect(warnings, isNotEmpty);
         expect(warnings.first.message, contains('vocab load failed'));
@@ -611,9 +641,11 @@ void main() {
         expect(result, isNotNull);
 
         final warnings = records
-            .where((r) =>
-                r.level == Level.WARNING &&
-                r.loggerName == 'tts.session.test.happy')
+            .where(
+              (r) =>
+                  r.level == Level.WARNING &&
+                  r.loggerName == 'tts.session.test.happy',
+            )
             .toList();
         expect(warnings, isEmpty);
       } finally {
@@ -622,8 +654,7 @@ void main() {
       }
     });
 
-    test(
-        'synthesize resolves with null and logs WARNING when worker dies '
+    test('synthesize resolves with null and logs WARNING when worker dies '
         'mid-flight (F144)', () async {
       final isolate = _FakeTtsIsolate();
       isolate.autoSucceedSynthesis = false; // never replies on its own
@@ -641,16 +672,20 @@ void main() {
         expect(isolate.synthesizeRequests, hasLength(1));
 
         isolate.emitWorkerDied('worker crashed: RangeError');
-        final result = await synthFuture
-            .timeout(const Duration(seconds: 1), onTimeout: () {
-          fail('synthesize hung after worker death (F144 regression)');
-        });
+        final result = await synthFuture.timeout(
+          const Duration(seconds: 1),
+          onTimeout: () {
+            fail('synthesize hung after worker death (F144 regression)');
+          },
+        );
 
         expect(result, isNull, reason: 'return contract must stay nullable');
         final warnings = records
-            .where((r) =>
-                r.level == Level.WARNING &&
-                r.loggerName == 'tts.session.test.death.synth')
+            .where(
+              (r) =>
+                  r.level == Level.WARNING &&
+                  r.loggerName == 'tts.session.test.death.synth',
+            )
             .toList();
         expect(warnings, isNotEmpty);
         expect(warnings.first.message, contains('worker crashed'));
@@ -660,8 +695,7 @@ void main() {
       }
     });
 
-    test(
-        'ensureModelLoaded resolves with false and logs WARNING when worker '
+    test('ensureModelLoaded resolves with false and logs WARNING when worker '
         'dies mid-load (F144)', () async {
       final isolate = _FakeTtsIsolate();
       isolate.blockModelLoad = true; // never replies on its own
@@ -678,16 +712,20 @@ void main() {
         expect(isolate.loadModelCalls, hasLength(1));
 
         isolate.emitWorkerDied('worker crashed during load');
-        final result = await loadFuture
-            .timeout(const Duration(seconds: 1), onTimeout: () {
-          fail('ensureModelLoaded hung after worker death (F144 regression)');
-        });
+        final result = await loadFuture.timeout(
+          const Duration(seconds: 1),
+          onTimeout: () {
+            fail('ensureModelLoaded hung after worker death (F144 regression)');
+          },
+        );
 
         expect(result, isFalse, reason: 'return contract must stay bool');
         final warnings = records
-            .where((r) =>
-                r.level == Level.WARNING &&
-                r.loggerName == 'tts.session.test.death.load')
+            .where(
+              (r) =>
+                  r.level == Level.WARNING &&
+                  r.loggerName == 'tts.session.test.death.load',
+            )
             .toList();
         expect(warnings, isNotEmpty);
         expect(warnings.first.message, contains('worker crashed during load'));
@@ -697,8 +735,7 @@ void main() {
       }
     });
 
-    test(
-        'ensureModelLoaded times out to false with WARNING when no response '
+    test('ensureModelLoaded times out to false with WARNING when no response '
         'arrives (F144 backstop)', () async {
       final isolate = _FakeTtsIsolate();
       isolate.blockModelLoad = true; // worker alive but stuck, never replies
@@ -718,12 +755,17 @@ void main() {
 
         expect(result, isFalse);
         final warnings = records
-            .where((r) =>
-                r.level == Level.WARNING &&
-                r.loggerName == 'tts.session.test.timeout')
+            .where(
+              (r) =>
+                  r.level == Level.WARNING &&
+                  r.loggerName == 'tts.session.test.timeout',
+            )
             .toList();
-        expect(warnings, isNotEmpty,
-            reason: 'timeout must be logged for field diagnosis');
+        expect(
+          warnings,
+          isNotEmpty,
+          reason: 'timeout must be logged for field diagnosis',
+        );
       } finally {
         await sub.cancel();
         await session.dispose();
@@ -742,8 +784,7 @@ void main() {
       await session.dispose();
     });
 
-    test(
-        'synthesize after a prior worker death fails fast with null, not a '
+    test('synthesize after a prior worker death fails fast with null, not a '
         'second hang (F144 follow-up)', () async {
       final isolate = _FakeTtsIsolate();
       isolate.autoSucceedSynthesis = false;
@@ -758,7 +799,9 @@ void main() {
 
       // Second synthesis on the now-dead session must NOT hang waiting for a
       // WorkerDiedResponse that will never be re-emitted.
-      final second = await session.synthesize(text: 'second').timeout(
+      final second = await session
+          .synthesize(text: 'second')
+          .timeout(
             const Duration(seconds: 1),
             onTimeout: () => fail('synthesize hung after worker already died'),
           );
@@ -767,87 +810,98 @@ void main() {
     });
 
     test(
-        'ensureModelLoaded after a prior worker death fails fast with false',
-        () async {
-      final isolate = _FakeTtsIsolate();
-      final session = TtsSession(isolate: isolate);
-      await session.ensureModelLoaded(_qwen3());
+      'ensureModelLoaded after a prior worker death fails fast with false',
+      () async {
+        final isolate = _FakeTtsIsolate();
+        final session = TtsSession(isolate: isolate);
+        await session.ensureModelLoaded(_qwen3());
 
-      isolate.emitWorkerDied('crash while idle');
-      await Future.delayed(Duration.zero);
+        isolate.emitWorkerDied('crash while idle');
+        await Future.delayed(Duration.zero);
 
-      // Same config would normally short-circuit to true; a dead worker must
-      // not be reported as loaded.
-      final result = await session.ensureModelLoaded(_qwen3()).timeout(
-            const Duration(seconds: 1),
-            onTimeout: () => fail('ensureModelLoaded hung after worker died'),
-          );
-      expect(result, isFalse);
-      await session.dispose();
-    });
+        // Same config would normally short-circuit to true; a dead worker must
+        // not be reported as loaded.
+        final result = await session
+            .ensureModelLoaded(_qwen3())
+            .timeout(
+              const Duration(seconds: 1),
+              onTimeout: () => fail('ensureModelLoaded hung after worker died'),
+            );
+        expect(result, isFalse);
+        await session.dispose();
+      },
+    );
 
-    test('ensureModelLoaded returns false (not throws) when spawn fails',
-        () async {
-      final isolate = _FakeTtsIsolate()..spawnThrows = true;
-      final session = TtsSession(isolate: isolate);
+    test(
+      'ensureModelLoaded returns false (not throws) when spawn fails',
+      () async {
+        final isolate = _FakeTtsIsolate()..spawnThrows = true;
+        final session = TtsSession(isolate: isolate);
 
-      final result = await session.ensureModelLoaded(_qwen3());
-      expect(result, isFalse,
-          reason: 'a spawn-time worker death must surface as false, not throw '
-              'or hang');
-      await session.dispose();
-    });
+        final result = await session.ensureModelLoaded(_qwen3());
+        expect(
+          result,
+          isFalse,
+          reason:
+              'a spawn-time worker death must surface as false, not throw '
+              'or hang',
+        );
+        await session.dispose();
+      },
+    );
 
-    test('ensureModelLoaded after abort waits and proceeds with new config',
-        () async {
-      final isolate = _FakeTtsIsolate();
-      final session = TtsSession(isolate: isolate);
+    test(
+      'ensureModelLoaded after abort waits and proceeds with new config',
+      () async {
+        final isolate = _FakeTtsIsolate();
+        final session = TtsSession(isolate: isolate);
 
-      // Start an in-flight load that we'll abort.
-      isolate.blockModelLoad = true;
-      final firstLoad = session.ensureModelLoaded(_qwen3());
-      // Wait until the spawn happened.
-      await Future.delayed(Duration.zero);
-      expect(isolate.spawned, isTrue);
+        // Start an in-flight load that we'll abort.
+        isolate.blockModelLoad = true;
+        final firstLoad = session.ensureModelLoaded(_qwen3());
+        // Wait until the spawn happened.
+        await Future.delayed(Duration.zero);
+        expect(isolate.spawned, isTrue);
 
-      session.abort();
-      // Allow the abort path to complete the in-flight load with `false`.
-      // The first load should resolve to `false`.
-      isolate.emitModelLoaded(success: false);
-      final firstResult = await firstLoad;
-      expect(firstResult, isFalse);
+        session.abort();
+        // Allow the abort path to complete the in-flight load with `false`.
+        // The first load should resolve to `false`.
+        isolate.emitModelLoaded(success: false);
+        final firstResult = await firstLoad;
+        expect(firstResult, isFalse);
 
-      // Now a fresh ensureModelLoaded should succeed when the isolate replies.
-      isolate.blockModelLoad = false;
-      final secondResult = await session.ensureModelLoaded(_qwen3());
-      expect(secondResult, isTrue);
+        // Now a fresh ensureModelLoaded should succeed when the isolate replies.
+        isolate.blockModelLoad = false;
+        final secondResult = await session.ensureModelLoaded(_qwen3());
+        expect(secondResult, isTrue);
 
-      await session.dispose();
-    });
+        await session.dispose();
+      },
+    );
   });
 }
 
 Qwen3EngineConfig _qwen3() => const Qwen3EngineConfig(
-      modelDir: '/q/m',
-      sampleRate: 24000,
-      languageId: 2058,
-      embeddingCacheDir: '/cache',
-    );
+  modelDir: '/q/m',
+  sampleRate: 24000,
+  languageId: 2058,
+  embeddingCacheDir: '/cache',
+);
 
 IrodoriEngineConfig _irodori() => const IrodoriEngineConfig(
-      modelDir: '/i/m',
-      sampleRate: 48000,
-      variant: IrodoriModelVariant.v3,
-      speakerGuidanceScale: 5.0,
-      captionGuidanceScale: 3.0,
-      numInferenceSteps: 40,
-    );
+  modelDir: '/i/m',
+  sampleRate: 48000,
+  variant: IrodoriModelVariant.v3,
+  speakerGuidanceScale: 5.0,
+  captionGuidanceScale: 3.0,
+  numInferenceSteps: 40,
+);
 
 PiperEngineConfig _piper() => const PiperEngineConfig(
-      modelDir: '/p/m.onnx',
-      sampleRate: 22050,
-      dicDir: '/p/dic',
-      lengthScale: 0.9,
-      noiseScale: 0.5,
-      noiseW: 0.7,
-    );
+  modelDir: '/p/m.onnx',
+  sampleRate: 22050,
+  dicDir: '/p/dic',
+  lengthScale: 0.9,
+  noiseScale: 0.5,
+  noiseW: 0.7,
+);

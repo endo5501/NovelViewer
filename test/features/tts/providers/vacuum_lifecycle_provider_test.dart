@@ -16,8 +16,11 @@ void main() {
       lifecycle.markDirty('/path/B');
 
       expect(lifecycle.pendingFolders, containsAll(['/path/A', '/path/B']));
-      expect(vacuumed, isEmpty,
-          reason: 'markDirty must NOT trigger vacuum synchronously');
+      expect(
+        vacuumed,
+        isEmpty,
+        reason: 'markDirty must NOT trigger vacuum synchronously',
+      );
     });
 
     test('detached lifecycle vacuums every pending folder', () async {

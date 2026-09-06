@@ -66,8 +66,7 @@ void main() {
   test('returns false when the hash does not match', () async {
     final files = await writeFiles(
       exeBytes: [1, 2, 3],
-      sha256Content:
-          '${'0' * 64}  setup.exe\n',
+      sha256Content: '${'0' * 64}  setup.exe\n',
     );
 
     expect(
@@ -116,8 +115,10 @@ void main() {
 
     expect(result, isFalse);
     expect(
-      records.any((r) =>
-          r.loggerName == 'app_update.verifier' && r.level == Level.WARNING),
+      records.any(
+        (r) =>
+            r.loggerName == 'app_update.verifier' && r.level == Level.WARNING,
+      ),
       isTrue,
     );
   });

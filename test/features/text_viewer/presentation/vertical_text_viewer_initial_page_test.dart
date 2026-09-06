@@ -41,7 +41,7 @@ Widget _wrap({
   final parts = text.split('/');
   return (
     current: int.parse(parts[0].trim()),
-    total: int.parse(parts[1].trim())
+    total: int.parse(parts[1].trim()),
   );
 }
 
@@ -56,10 +56,9 @@ void main() {
           .read(pendingFileEntryIntentProvider.notifier)
           .set(FileEntryStartIntent.fromStart);
 
-      await tester.pumpWidget(_wrap(
-        container: container,
-        segments: longSegments,
-      ));
+      await tester.pumpWidget(
+        _wrap(container: container, segments: longSegments),
+      );
       await tester.pumpAndSettle();
 
       final indicator = _readIndicator(tester);
@@ -76,16 +75,18 @@ void main() {
           .read(pendingFileEntryIntentProvider.notifier)
           .set(FileEntryStartIntent.fromEnd);
 
-      await tester.pumpWidget(_wrap(
-        container: container,
-        segments: longSegments,
-      ));
+      await tester.pumpWidget(
+        _wrap(container: container, segments: longSegments),
+      );
       await tester.pumpAndSettle();
 
       final indicator = _readIndicator(tester);
       expect(indicator, isNotNull);
-      expect(indicator!.current, indicator.total,
-          reason: 'fromEnd intent should land the viewer on the last page');
+      expect(
+        indicator!.current,
+        indicator.total,
+        reason: 'fromEnd intent should land the viewer on the last page',
+      );
       // Intent must be cleared after the viewer consumes it once.
       expect(container.read(pendingFileEntryIntentProvider), isNull);
     });
@@ -95,10 +96,9 @@ void main() {
       addTearDown(container.dispose);
       // No intent set.
 
-      await tester.pumpWidget(_wrap(
-        container: container,
-        segments: longSegments,
-      ));
+      await tester.pumpWidget(
+        _wrap(container: container, segments: longSegments),
+      );
       await tester.pumpAndSettle();
 
       final indicator = _readIndicator(tester);
@@ -107,18 +107,18 @@ void main() {
       expect(container.read(pendingFileEntryIntentProvider), isNull);
     });
 
-    testWidgets('intent=fromEnd is consumed exactly once across rebuilds',
-        (tester) async {
+    testWidgets('intent=fromEnd is consumed exactly once across rebuilds', (
+      tester,
+    ) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       container
           .read(pendingFileEntryIntentProvider.notifier)
           .set(FileEntryStartIntent.fromEnd);
 
-      await tester.pumpWidget(_wrap(
-        container: container,
-        segments: longSegments,
-      ));
+      await tester.pumpWidget(
+        _wrap(container: container, segments: longSegments),
+      );
       await tester.pumpAndSettle();
 
       // Already cleared.
@@ -130,10 +130,9 @@ void main() {
       container
           .read(pendingFileEntryIntentProvider.notifier)
           .set(FileEntryStartIntent.fromStart);
-      await tester.pumpWidget(_wrap(
-        container: container,
-        segments: longSegments,
-      ));
+      await tester.pumpWidget(
+        _wrap(container: container, segments: longSegments),
+      );
       await tester.pumpAndSettle();
 
       expect(

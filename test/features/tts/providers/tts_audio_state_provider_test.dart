@@ -21,8 +21,9 @@ void main() {
   late Directory tempDir;
 
   setUp(() {
-    tempDir =
-        Directory.systemTemp.createTempSync('tts_audio_state_provider_test_');
+    tempDir = Directory.systemTemp.createTempSync(
+      'tts_audio_state_provider_test_',
+    );
   });
 
   tearDown(() {
@@ -32,7 +33,9 @@ void main() {
   });
 
   Future<TtsAudioState> readState(
-      ProviderContainer container, String filePath) async {
+    ProviderContainer container,
+    String filePath,
+  ) async {
     return container.read(ttsAudioStateProvider(filePath).future);
   }
 
@@ -80,49 +83,53 @@ void main() {
       expect(state, TtsAudioState.ready);
     });
 
-    test('returns TtsAudioState.generating when episode status is generating',
-        () async {
-      final container = ProviderContainer();
-      addDbContainerTearDown(container);
+    test(
+      'returns TtsAudioState.generating when episode status is generating',
+      () async {
+        final container = ProviderContainer();
+        addDbContainerTearDown(container);
 
-      final db = container.read(ttsAudioDatabaseProvider(tempDir.path));
-      final repo = TtsAudioRepository(db);
-      await repo.createEpisode(
-        fileName: '0001_chapter1.txt',
-        sampleRate: 24000,
-        status: TtsEpisodeStatus.generating,
-      );
+        final db = container.read(ttsAudioDatabaseProvider(tempDir.path));
+        final repo = TtsAudioRepository(db);
+        await repo.createEpisode(
+          fileName: '0001_chapter1.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.generating,
+        );
 
-      final filePath = p.join(tempDir.path, '0001_chapter1.txt');
-      final state = await readState(container, filePath);
-      expect(state, TtsAudioState.generating);
-    });
+        final filePath = p.join(tempDir.path, '0001_chapter1.txt');
+        final state = await readState(container, filePath);
+        expect(state, TtsAudioState.generating);
+      },
+    );
 
-    test('invalidate causes re-query (state updates after DB change)',
-        () async {
-      final container = ProviderContainer();
-      addDbContainerTearDown(container);
+    test(
+      'invalidate causes re-query (state updates after DB change)',
+      () async {
+        final container = ProviderContainer();
+        addDbContainerTearDown(container);
 
-      final filePath = p.join(tempDir.path, '0001_chapter1.txt');
+        final filePath = p.join(tempDir.path, '0001_chapter1.txt');
 
-      // Initially no episode → none
-      var state = await readState(container, filePath);
-      expect(state, TtsAudioState.none);
+        // Initially no episode → none
+        var state = await readState(container, filePath);
+        expect(state, TtsAudioState.none);
 
-      // Create completed episode in DB
-      final db = container.read(ttsAudioDatabaseProvider(tempDir.path));
-      final repo = TtsAudioRepository(db);
-      await repo.createEpisode(
-        fileName: '0001_chapter1.txt',
-        sampleRate: 24000,
-        status: TtsEpisodeStatus.completed,
-      );
+        // Create completed episode in DB
+        final db = container.read(ttsAudioDatabaseProvider(tempDir.path));
+        final repo = TtsAudioRepository(db);
+        await repo.createEpisode(
+          fileName: '0001_chapter1.txt',
+          sampleRate: 24000,
+          status: TtsEpisodeStatus.completed,
+        );
 
-      // Without invalidate, cached value is still none.
-      // After invalidate, re-query yields ready.
-      container.invalidate(ttsAudioStateProvider(filePath));
-      state = await readState(container, filePath);
-      expect(state, TtsAudioState.ready);
-    });
+        // Without invalidate, cached value is still none.
+        // After invalidate, re-query yields ready.
+        container.invalidate(ttsAudioStateProvider(filePath));
+        state = await readState(container, filePath);
+        expect(state, TtsAudioState.ready);
+      },
+    );
   });
 }

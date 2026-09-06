@@ -43,12 +43,13 @@ class ShortcutSettingsSection extends ConsumerWidget {
       return;
     }
 
-    final applied =
-        await ref.read(keyBindingsProvider.notifier).rebind(action, binding);
+    final applied = await ref
+        .read(keyBindingsProvider.notifier)
+        .rebind(action, binding);
     if (!applied && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settings_shortcutDuplicate)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.settings_shortcutDuplicate)));
     }
   }
 
@@ -62,8 +63,10 @@ class ShortcutSettingsSection extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.settings_shortcutsSection,
-              style: Theme.of(context).textTheme.titleSmall),
+          Text(
+            l10n.settings_shortcutsSection,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
           const SizedBox(height: 8),
           for (final action in ShortcutAction.values)
             ListTile(
@@ -132,12 +135,18 @@ Future<KeyBinding?> _captureKeyBinding(BuildContext context) {
 
             final binding = KeyBinding(
               keyId: key.keyId,
-              control: any(LogicalKeyboardKey.controlLeft,
-                  LogicalKeyboardKey.controlRight),
+              control: any(
+                LogicalKeyboardKey.controlLeft,
+                LogicalKeyboardKey.controlRight,
+              ),
               meta: any(
-                  LogicalKeyboardKey.metaLeft, LogicalKeyboardKey.metaRight),
+                LogicalKeyboardKey.metaLeft,
+                LogicalKeyboardKey.metaRight,
+              ),
               shift: any(
-                  LogicalKeyboardKey.shiftLeft, LogicalKeyboardKey.shiftRight),
+                LogicalKeyboardKey.shiftLeft,
+                LogicalKeyboardKey.shiftRight,
+              ),
               alt: any(LogicalKeyboardKey.altLeft, LogicalKeyboardKey.altRight),
             );
             Navigator.of(dialogContext).pop(binding);

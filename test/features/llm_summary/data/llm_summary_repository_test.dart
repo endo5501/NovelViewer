@@ -53,8 +53,11 @@ void main() {
 
         final snapshots = await repository.findSnapshotsForWord(word: 'アリス');
 
-        expect(snapshots, hasLength(1),
-            reason: 'colliding PK SHALL upsert, not duplicate');
+        expect(
+          snapshots,
+          hasLength(1),
+          reason: 'colliding PK SHALL upsert, not duplicate',
+        );
         expect(snapshots.first.summary, '上書き');
       });
 
@@ -75,8 +78,7 @@ void main() {
         final snapshots = await repository.findSnapshotsForWord(word: 'アリス');
 
         expect(snapshots, hasLength(2));
-        expect(
-            snapshots.map((s) => s.coveredUpToEpisode).toList(), [30, 120]);
+        expect(snapshots.map((s) => s.coveredUpToEpisode).toList(), [30, 120]);
       });
 
       test('rejects 1-character word', () async {
@@ -113,31 +115,37 @@ void main() {
     });
 
     group('findSnapshotsForWord', () {
-      test('returns snapshots sorted by coveredUpToEpisode ascending', () async {
-        await repository.saveSnapshot(
-          word: 'アリス',
-          coveredUpToEpisode: 60,
-          summary: 'b',
-          sourceFile: '060.txt',
-        );
-        await repository.saveSnapshot(
-          word: 'アリス',
-          coveredUpToEpisode: 10,
-          summary: 'a',
-          sourceFile: '010.txt',
-        );
-        await repository.saveSnapshot(
-          word: 'アリス',
-          coveredUpToEpisode: 30,
-          summary: 'm',
-          sourceFile: '030.txt',
-        );
+      test(
+        'returns snapshots sorted by coveredUpToEpisode ascending',
+        () async {
+          await repository.saveSnapshot(
+            word: 'アリス',
+            coveredUpToEpisode: 60,
+            summary: 'b',
+            sourceFile: '060.txt',
+          );
+          await repository.saveSnapshot(
+            word: 'アリス',
+            coveredUpToEpisode: 10,
+            summary: 'a',
+            sourceFile: '010.txt',
+          );
+          await repository.saveSnapshot(
+            word: 'アリス',
+            coveredUpToEpisode: 30,
+            summary: 'm',
+            sourceFile: '030.txt',
+          );
 
-        final snapshots = await repository.findSnapshotsForWord(word: 'アリス');
+          final snapshots = await repository.findSnapshotsForWord(word: 'アリス');
 
-        expect(
-            snapshots.map((s) => s.coveredUpToEpisode).toList(), [10, 30, 60]);
-      });
+          expect(snapshots.map((s) => s.coveredUpToEpisode).toList(), [
+            10,
+            30,
+            60,
+          ]);
+        },
+      );
 
       test('returns empty list when no snapshots exist', () async {
         final snapshots = await repository.findSnapshotsForWord(word: '未知');
@@ -208,40 +216,42 @@ void main() {
     });
 
     group('findAll', () {
-      test('returns rows ordered by (word, coveredUpToEpisode) ascending',
-          () async {
-        await repository.saveSnapshot(
-          word: 'ボブ',
-          coveredUpToEpisode: 5,
-          summary: 'bob5',
-          sourceFile: '005.txt',
-        );
-        await repository.saveSnapshot(
-          word: 'アリス',
-          coveredUpToEpisode: 30,
-          summary: 'a30',
-          sourceFile: '030.txt',
-        );
-        await repository.saveSnapshot(
-          word: 'アリス',
-          coveredUpToEpisode: 10,
-          summary: 'a10',
-          sourceFile: '010.txt',
-        );
-        await repository.saveSnapshot(
-          word: 'ボブ',
-          coveredUpToEpisode: 50,
-          summary: 'bob50',
-          sourceFile: '050.txt',
-        );
+      test(
+        'returns rows ordered by (word, coveredUpToEpisode) ascending',
+        () async {
+          await repository.saveSnapshot(
+            word: 'ボブ',
+            coveredUpToEpisode: 5,
+            summary: 'bob5',
+            sourceFile: '005.txt',
+          );
+          await repository.saveSnapshot(
+            word: 'アリス',
+            coveredUpToEpisode: 30,
+            summary: 'a30',
+            sourceFile: '030.txt',
+          );
+          await repository.saveSnapshot(
+            word: 'アリス',
+            coveredUpToEpisode: 10,
+            summary: 'a10',
+            sourceFile: '010.txt',
+          );
+          await repository.saveSnapshot(
+            word: 'ボブ',
+            coveredUpToEpisode: 50,
+            summary: 'bob50',
+            sourceFile: '050.txt',
+          );
 
-        final rows = await repository.findAll();
+          final rows = await repository.findAll();
 
-        expect(
-          rows.map((r) => '${r.word}/${r.coveredUpToEpisode}').toList(),
-          ['アリス/10', 'アリス/30', 'ボブ/5', 'ボブ/50'],
-        );
-      });
+          expect(
+            rows.map((r) => '${r.word}/${r.coveredUpToEpisode}').toList(),
+            ['アリス/10', 'アリス/30', 'ボブ/5', 'ボブ/50'],
+          );
+        },
+      );
 
       test('returns empty list when there are no rows', () async {
         final rows = await repository.findAll();

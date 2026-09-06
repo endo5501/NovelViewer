@@ -33,7 +33,8 @@ void main() {
     test('setLanguage binding is accessible from shared library', () {
       if (!Platform.isMacOS) return;
 
-      final libPath = '${Directory.current.path}/macos/Frameworks/libqwen3_tts_ffi.dylib';
+      final libPath =
+          '${Directory.current.path}/macos/Frameworks/libqwen3_tts_ffi.dylib';
       if (!File(libPath).existsSync()) return;
 
       final library = DynamicLibrary.open(libPath);

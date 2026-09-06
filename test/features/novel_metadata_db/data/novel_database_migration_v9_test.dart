@@ -121,57 +121,59 @@ void main() {
     );
   }
 
-  test('copies each folder\'s rows into its novel_data.db then drops globals',
-      () async {
-    await global.insert('word_summaries', {
-      'folder_name': 'novelA',
-      'word': 'アリス',
-      'covered_up_to_episode': 30,
-      'summary': '要約',
-      'source_file': '030.txt',
-      'created_at': 't',
-      'updated_at': 't',
-    });
-    await global.insert('fact_cache', {
-      'folder_name': 'novelA',
-      'word': 'アリス',
-      'file_name': '030.txt',
-      'facts': '- 事実',
-      'content_hash': 'h',
-      'prompt_version': 1,
-      'updated_at': 't',
-    });
-    await global.insert('bookmarks', {
-      'novel_id': 'novelA',
-      'file_name': '030.txt',
-      'line_number': 5,
-      'created_at': 't',
-    });
+  test(
+    'copies each folder\'s rows into its novel_data.db then drops globals',
+    () async {
+      await global.insert('word_summaries', {
+        'folder_name': 'novelA',
+        'word': 'アリス',
+        'covered_up_to_episode': 30,
+        'summary': '要約',
+        'source_file': '030.txt',
+        'created_at': 't',
+        'updated_at': 't',
+      });
+      await global.insert('fact_cache', {
+        'folder_name': 'novelA',
+        'word': 'アリス',
+        'file_name': '030.txt',
+        'facts': '- 事実',
+        'content_hash': 'h',
+        'prompt_version': 1,
+        'updated_at': 't',
+      });
+      await global.insert('bookmarks', {
+        'novel_id': 'novelA',
+        'file_name': '030.txt',
+        'line_number': 5,
+        'created_at': 't',
+      });
 
-    final migrator = buildMigrator({'novelA'});
-    await migrateV8ToV9(global, migrator);
+      final migrator = buildMigrator({'novelA'});
+      await migrateV8ToV9(global, migrator);
 
-    final folderDb = await openFolderDb('novelA');
-    addTearDown(folderDb.close);
-    final ws = await folderDb.query('word_summaries');
-    expect(ws, hasLength(1));
-    expect(ws.first['word'], 'アリス');
-    expect(ws.first.containsKey('folder_name'), isFalse);
+      final folderDb = await openFolderDb('novelA');
+      addTearDown(folderDb.close);
+      final ws = await folderDb.query('word_summaries');
+      expect(ws, hasLength(1));
+      expect(ws.first['word'], 'アリス');
+      expect(ws.first.containsKey('folder_name'), isFalse);
 
-    final fc = await folderDb.query('fact_cache');
-    expect(fc, hasLength(1));
-    expect(fc.first['file_name'], '030.txt');
+      final fc = await folderDb.query('fact_cache');
+      expect(fc, hasLength(1));
+      expect(fc.first['file_name'], '030.txt');
 
-    final bm = await folderDb.query('bookmarks');
-    expect(bm, hasLength(1));
-    expect(bm.first['line_number'], 5);
+      final bm = await folderDb.query('bookmarks');
+      expect(bm, hasLength(1));
+      expect(bm.first['line_number'], 5);
 
-    // Global per-novel tables dropped; reading_progress retained.
-    expect(await _tableExists(global, 'word_summaries'), isFalse);
-    expect(await _tableExists(global, 'fact_cache'), isFalse);
-    expect(await _tableExists(global, 'bookmarks'), isFalse);
-    expect(await _tableExists(global, 'reading_progress'), isTrue);
-  });
+      // Global per-novel tables dropped; reading_progress retained.
+      expect(await _tableExists(global, 'word_summaries'), isFalse);
+      expect(await _tableExists(global, 'fact_cache'), isFalse);
+      expect(await _tableExists(global, 'bookmarks'), isFalse);
+      expect(await _tableExists(global, 'reading_progress'), isTrue);
+    },
+  );
 
   test('discards rows for folders missing on disk (orphans)', () async {
     await global.insert('word_summaries', {
@@ -192,93 +194,114 @@ void main() {
     expect(await _tableExists(global, 'word_summaries'), isFalse);
   });
 
-  test('re-running over a partially-copied folder does not duplicate (idempotent)',
-      () async {
-    await global.insert('word_summaries', {
-      'folder_name': 'novelA',
-      'word': 'アリス',
-      'covered_up_to_episode': 30,
-      'summary': '要約',
-      'source_file': '030.txt',
-      'created_at': 't',
-      'updated_at': 't',
-    });
+  test(
+    're-running over a partially-copied folder does not duplicate (idempotent)',
+    () async {
+      await global.insert('word_summaries', {
+        'folder_name': 'novelA',
+        'word': 'アリス',
+        'covered_up_to_episode': 30,
+        'summary': '要約',
+        'source_file': '030.txt',
+        'created_at': 't',
+        'updated_at': 't',
+      });
 
-    final migrator = buildMigrator({'novelA'});
-    // Simulate a prior interrupted run that already copied the row.
-    final pre = await openFolderDb('novelA');
-    await pre.insert('word_summaries', {
-      'word': 'アリス',
-      'covered_up_to_episode': 30,
-      'summary': '要約',
-      'source_file': '030.txt',
-      'created_at': 't',
-      'updated_at': 't',
-    });
-    await pre.close();
+      final migrator = buildMigrator({'novelA'});
+      // Simulate a prior interrupted run that already copied the row.
+      final pre = await openFolderDb('novelA');
+      await pre.insert('word_summaries', {
+        'word': 'アリス',
+        'covered_up_to_episode': 30,
+        'summary': '要約',
+        'source_file': '030.txt',
+        'created_at': 't',
+        'updated_at': 't',
+      });
+      await pre.close();
 
-    await migrateV8ToV9(global, migrator);
+      await migrateV8ToV9(global, migrator);
 
-    final folderDb = await openFolderDb('novelA');
-    addTearDown(folderDb.close);
-    final ws = await folderDb.query('word_summaries');
-    expect(ws, hasLength(1), reason: 'INSERT OR IGNORE dedups the re-copy');
-  });
+      final folderDb = await openFolderDb('novelA');
+      addTearDown(folderDb.close);
+      final ws = await folderDb.query('word_summaries');
+      expect(ws, hasLength(1), reason: 'INSERT OR IGNORE dedups the re-copy');
+    },
+  );
 
-  test('re-running does not duplicate whole-file (NULL line) bookmarks',
-      () async {
-    await global.insert('bookmarks', {
-      'novel_id': 'novelA',
-      'file_name': '001.txt',
-      'line_number': null,
-      'created_at': 't',
-    });
+  test(
+    're-running does not duplicate whole-file (NULL line) bookmarks',
+    () async {
+      await global.insert('bookmarks', {
+        'novel_id': 'novelA',
+        'file_name': '001.txt',
+        'line_number': null,
+        'created_at': 't',
+      });
 
-    final migrator = buildMigrator({'novelA'});
-    // Simulate a prior interrupted run that already copied the NULL-line
-    // bookmark into the folder db.
-    final pre = await openFolderDb('novelA');
-    await pre.insert('bookmarks', {
-      'file_name': '001.txt',
-      'line_number': null,
-      'created_at': 't',
-    });
-    await pre.close();
+      final migrator = buildMigrator({'novelA'});
+      // Simulate a prior interrupted run that already copied the NULL-line
+      // bookmark into the folder db.
+      final pre = await openFolderDb('novelA');
+      await pre.insert('bookmarks', {
+        'file_name': '001.txt',
+        'line_number': null,
+        'created_at': 't',
+      });
+      await pre.close();
 
-    await migrateV8ToV9(global, migrator);
+      await migrateV8ToV9(global, migrator);
 
-    final folderDb = await openFolderDb('novelA');
-    addTearDown(folderDb.close);
-    final bm = await folderDb.query('bookmarks');
-    expect(bm, hasLength(1),
-        reason: 'the clear-then-copy migration SHALL not append a duplicate '
-            'whole-file (NULL line) bookmark on re-run');
-  });
+      final folderDb = await openFolderDb('novelA');
+      addTearDown(folderDb.close);
+      final bm = await folderDb.query('bookmarks');
+      expect(
+        bm,
+        hasLength(1),
+        reason:
+            'the clear-then-copy migration SHALL not append a duplicate '
+            'whole-file (NULL line) bookmark on re-run',
+      );
+    },
+  );
 
   group('NovelDataMigrator.fromLibraryRoot folder resolution', () {
     test('resolves a unique folder by leaf name (flat and nested)', () {
       Directory(p.join(libRoot.path, 'flatNovel')).createSync();
-      Directory(p.join(libRoot.path, 'Org', 'nestedNovel'))
-          .createSync(recursive: true);
+      Directory(
+        p.join(libRoot.path, 'Org', 'nestedNovel'),
+      ).createSync(recursive: true);
       final m = NovelDataMigrator.fromLibraryRoot(libRoot.path);
 
-      expect(m.resolveFolderPath('flatNovel'),
-          p.join(libRoot.path, 'flatNovel'));
-      expect(m.resolveFolderPath('nestedNovel'),
-          p.join(libRoot.path, 'Org', 'nestedNovel'));
+      expect(
+        m.resolveFolderPath('flatNovel'),
+        p.join(libRoot.path, 'flatNovel'),
+      );
+      expect(
+        m.resolveFolderPath('nestedNovel'),
+        p.join(libRoot.path, 'Org', 'nestedNovel'),
+      );
       expect(m.resolveFolderPath('missing'), isNull);
     });
 
-    test('returns null (skip, no mis-target) when the leaf name is ambiguous',
-        () {
-      // A registered novel and an unrelated same-named directory elsewhere.
-      Directory(p.join(libRoot.path, 'dup')).createSync();
-      Directory(p.join(libRoot.path, 'Org', 'dup')).createSync(recursive: true);
-      final m = NovelDataMigrator.fromLibraryRoot(libRoot.path);
+    test(
+      'returns null (skip, no mis-target) when the leaf name is ambiguous',
+      () {
+        // A registered novel and an unrelated same-named directory elsewhere.
+        Directory(p.join(libRoot.path, 'dup')).createSync();
+        Directory(
+          p.join(libRoot.path, 'Org', 'dup'),
+        ).createSync(recursive: true);
+        final m = NovelDataMigrator.fromLibraryRoot(libRoot.path);
 
-      expect(m.resolveFolderPath('dup'), isNull,
-          reason: 'an ambiguous leaf name SHALL NOT resolve to a guessed '
-              'folder; writing to the wrong folder is worse than skipping');
-    });
+        expect(
+          m.resolveFolderPath('dup'),
+          isNull,
+          reason:
+              'an ambiguous leaf name SHALL NOT resolve to a guessed '
+              'folder; writing to the wrong folder is worse than skipping',
+        );
+      },
+    );
   });
 }

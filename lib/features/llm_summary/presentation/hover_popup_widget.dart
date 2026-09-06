@@ -198,16 +198,20 @@ class _ReanalyzeMenuButtonState extends ConsumerState<_ReanalyzeMenuButton> {
     final l10n = AppLocalizations.of(context)!;
     final overwriteSuffix = l10n.hoverPopup_reanalyzeOverwriteSuffix;
 
-    String labelUpToCurrent =
-        l10n.hoverPopup_reanalyzeUpToCurrent(widget.currentEpisode);
+    String labelUpToCurrent = l10n.hoverPopup_reanalyzeUpToCurrent(
+      widget.currentEpisode,
+    );
     if (shouldAppendOverwriteSuffix(widget.snapshots, widget.currentEpisode)) {
       labelUpToCurrent += overwriteSuffix;
     }
 
-    String labelUpToAll =
-        l10n.hoverPopup_reanalyzeUpToAll(widget.maxEpisodeInFolder);
+    String labelUpToAll = l10n.hoverPopup_reanalyzeUpToAll(
+      widget.maxEpisodeInFolder,
+    );
     if (shouldAppendOverwriteSuffix(
-        widget.snapshots, widget.maxEpisodeInFolder)) {
+      widget.snapshots,
+      widget.maxEpisodeInFolder,
+    )) {
       labelUpToAll += overwriteSuffix;
     }
 

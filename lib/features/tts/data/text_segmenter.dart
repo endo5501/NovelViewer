@@ -153,13 +153,17 @@ class TextSegmenter {
 
       final splitDisplayLen = totalTextLen == totalDisplayLen
           ? splitPos
-          : (splitPos / totalTextLen * totalDisplayLen).round()
-              .clamp(0, displayRemaining);
-      result.add(TextSegment(
-        text: text.substring(0, splitPos),
-        offset: displayOffset,
-        length: splitDisplayLen,
-      ));
+          : (splitPos / totalTextLen * totalDisplayLen).round().clamp(
+              0,
+              displayRemaining,
+            );
+      result.add(
+        TextSegment(
+          text: text.substring(0, splitPos),
+          offset: displayOffset,
+          length: splitDisplayLen,
+        ),
+      );
       // For plain text the dropped whitespace maps 1:1 to display positions;
       // for ruby-substituted text the proportional estimate already covers it.
       final displayAdvance = totalTextLen == totalDisplayLen
@@ -171,11 +175,13 @@ class TextSegmenter {
     }
 
     if (text.isNotEmpty) {
-      result.add(TextSegment(
-        text: text,
-        offset: displayOffset,
-        length: displayRemaining,
-      ));
+      result.add(
+        TextSegment(
+          text: text,
+          offset: displayOffset,
+          length: displayRemaining,
+        ),
+      );
     }
 
     return result;
@@ -218,11 +224,13 @@ class TextSegmenter {
     final leadingSpaces = raw.length - trimmedLeft.length;
     final chunk = trimmedLeft.trimRight();
     if (chunk.isNotEmpty) {
-      segments.add(TextSegment(
-        text: chunk,
-        offset: start + leadingSpaces,
-        length: chunk.length,
-      ));
+      segments.add(
+        TextSegment(
+          text: chunk,
+          offset: start + leadingSpaces,
+          length: chunk.length,
+        ),
+      );
     }
   }
 

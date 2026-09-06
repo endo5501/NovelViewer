@@ -11,13 +11,13 @@ import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 /// `novel_data.db`. The family argument is the novel folder's absolute path.
 final bookmarkRepositoryProvider =
     FutureProvider.family<BookmarkRepository, String>((ref, folderPath) async {
-  // Normalize via folderDbKey so the resolved novel_data.db thin-view matches
-  // the one the registry/folder-switch flow evicts & invalidates.
-  final db = await ref
-      .watch(novelDataDatabaseProvider(folderDbKey(folderPath)))
-      .database;
-  return BookmarkRepository(db);
-});
+      // Normalize via folderDbKey so the resolved novel_data.db thin-view matches
+      // the one the registry/folder-switch flow evicts & invalidates.
+      final db = await ref
+          .watch(novelDataDatabaseProvider(folderDbKey(folderPath)))
+          .database;
+      return BookmarkRepository(db);
+    });
 
 /// Resolves the **absolute path of the current novel's folder** (the folder
 /// that owns its `novel_data.db`) using the shared nesting-aware rule
@@ -38,11 +38,14 @@ final currentNovelFolderPathProvider = FutureProvider<String?>((ref) async {
 /// All bookmarks for the current novel (resolved via
 /// [currentNovelFolderPathProvider]), most-recent first. Empty when not inside
 /// a registered novel folder.
-final bookmarksForCurrentNovelProvider =
-    FutureProvider<List<Bookmark>>((ref) async {
+final bookmarksForCurrentNovelProvider = FutureProvider<List<Bookmark>>((
+  ref,
+) async {
   final folderPath = await ref.watch(currentNovelFolderPathProvider.future);
   if (folderPath == null) return const [];
-  final repository = await ref.watch(bookmarkRepositoryProvider(folderPath).future);
+  final repository = await ref.watch(
+    bookmarkRepositoryProvider(folderPath).future,
+  );
   return repository.findAll();
 });
 
@@ -62,15 +65,9 @@ Future<void> toggleBookmark(
   int? lineNumber,
 }) async {
   if (isCurrentlyBookmarked) {
-    await repository.remove(
-      fileName: fileName,
-      lineNumber: lineNumber,
-    );
+    await repository.remove(fileName: fileName, lineNumber: lineNumber);
   } else {
-    await repository.add(
-      fileName: fileName,
-      lineNumber: lineNumber,
-    );
+    await repository.add(fileName: fileName, lineNumber: lineNumber);
   }
 }
 
@@ -82,9 +79,9 @@ class CurrentViewLineNotifier extends Notifier<int?> {
   void reset() => state = null;
 }
 
-final currentViewLineProvider =
-    NotifierProvider<CurrentViewLineNotifier, int?>(
-        CurrentViewLineNotifier.new);
+final currentViewLineProvider = NotifierProvider<CurrentViewLineNotifier, int?>(
+  CurrentViewLineNotifier.new,
+);
 
 class BookmarkJumpLineNotifier extends Notifier<int?> {
   @override
@@ -96,17 +93,20 @@ class BookmarkJumpLineNotifier extends Notifier<int?> {
 
 final bookmarkJumpLineProvider =
     NotifierProvider<BookmarkJumpLineNotifier, int?>(
-        BookmarkJumpLineNotifier.new);
+      BookmarkJumpLineNotifier.new,
+    );
 
-final bookmarkLineNumbersForFileProvider =
-    FutureProvider<List<int>>((ref) async {
+final bookmarkLineNumbersForFileProvider = FutureProvider<List<int>>((
+  ref,
+) async {
   final folderPath = await ref.watch(currentNovelFolderPathProvider.future);
   final selectedFile = ref.watch(selectedFileProvider);
 
   if (folderPath == null || selectedFile == null) return [];
 
-  final repository =
-      await ref.watch(bookmarkRepositoryProvider(folderPath).future);
+  final repository = await ref.watch(
+    bookmarkRepositoryProvider(folderPath).future,
+  );
   final bookmarks = await repository.findByFile(fileName: selectedFile.name);
   return bookmarks
       .where((b) => b.lineNumber != null)

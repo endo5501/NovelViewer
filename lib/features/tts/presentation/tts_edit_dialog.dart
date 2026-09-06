@@ -131,8 +131,11 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
 
     if (!mounted) return;
 
-    ref.read(ttsEditSegmentsProvider.notifier).set(List.of(controller.segments));
-    ref.read(ttsEditGenerationStateProvider.notifier)
+    ref
+        .read(ttsEditSegmentsProvider.notifier)
+        .set(List.of(controller.segments));
+    ref
+        .read(ttsEditGenerationStateProvider.notifier)
         .set(TtsEditGenerationState.idle);
     ref.read(ttsEditGeneratingIndexProvider.notifier).set(null);
     ref.read(ttsEditCursorIndexProvider.notifier).set(0);
@@ -233,7 +236,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     );
 
     if (!mounted) return;
-    ref.read(ttsEditSegmentsProvider.notifier).set(List.of(controller.segments));
+    ref
+        .read(ttsEditSegmentsProvider.notifier)
+        .set(List.of(controller.segments));
     ref
         .read(ttsEditGenerationStateProvider.notifier)
         .set(TtsEditGenerationState.idle);
@@ -293,9 +298,13 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   Future<void> _cancelGeneration() async {
     await _controller?.cancel();
     if (!mounted) return;
-    ref.read(ttsEditGenerationStateProvider.notifier).set(TtsEditGenerationState.idle);
+    ref
+        .read(ttsEditGenerationStateProvider.notifier)
+        .set(TtsEditGenerationState.idle);
     ref.read(ttsEditGeneratingIndexProvider.notifier).set(null);
-    ref.read(ttsEditSegmentsProvider.notifier).set(List.of(_controller?.segments ?? []));
+    ref
+        .read(ttsEditSegmentsProvider.notifier)
+        .set(List.of(_controller?.segments ?? []));
   }
 
   Future<void> _stopPlayback() async {
@@ -310,7 +319,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
 
     await controller.resetSegment(index);
     if (!mounted) return;
-    ref.read(ttsEditSegmentsProvider.notifier).set(List.of(controller.segments));
+    ref
+        .read(ttsEditSegmentsProvider.notifier)
+        .set(List.of(controller.segments));
   }
 
   Future<void> _toggleSegmentSkip(int index) async {
@@ -319,7 +330,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
 
     await controller.setSegmentSkip(index, !controller.segments[index].skip);
     if (!mounted) return;
-    ref.read(ttsEditSegmentsProvider.notifier).set(List.of(controller.segments));
+    ref
+        .read(ttsEditSegmentsProvider.notifier)
+        .set(List.of(controller.segments));
   }
 
   Future<void> _resetAll() async {
@@ -328,7 +341,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
 
     await controller.resetAll();
     if (!mounted) return;
-    ref.read(ttsEditSegmentsProvider.notifier).set(List.of(controller.segments));
+    ref
+        .read(ttsEditSegmentsProvider.notifier)
+        .set(List.of(controller.segments));
   }
 
   Future<void> _onTextEditComplete(int index, String newText) async {
@@ -340,7 +355,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
 
     await controller.updateSegmentText(index, newText);
     if (!mounted) return;
-    ref.read(ttsEditSegmentsProvider.notifier).set(List.of(controller.segments));
+    ref
+        .read(ttsEditSegmentsProvider.notifier)
+        .set(List.of(controller.segments));
   }
 
   Future<void> _onRefWavPathChanged(int index, String? value) async {
@@ -349,7 +366,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
 
     await controller.updateSegmentRefWavPath(index, value);
     if (!mounted) return;
-    ref.read(ttsEditSegmentsProvider.notifier).set(List.of(controller.segments));
+    ref
+        .read(ttsEditSegmentsProvider.notifier)
+        .set(List.of(controller.segments));
   }
 
   Future<void> _onMemoEditComplete(int index, String? memo) async {
@@ -359,7 +378,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final effectiveMemo = (memo != null && memo.isEmpty) ? null : memo;
     await controller.updateSegmentMemo(index, effectiveMemo);
     if (!mounted) return;
-    ref.read(ttsEditSegmentsProvider.notifier).set(List.of(controller.segments));
+    ref
+        .read(ttsEditSegmentsProvider.notifier)
+        .set(List.of(controller.segments));
   }
 
   @override
@@ -389,8 +410,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
                       generatingIndex: generatingIndex,
                       isPlaying: isPlaying,
                       cursorIndex: cursorIndex,
-                      onCursorChanged: (index) =>
-                          ref.read(ttsEditCursorIndexProvider.notifier).set(index),
+                      onCursorChanged: (index) => ref
+                          .read(ttsEditCursorIndexProvider.notifier)
+                          .set(index),
                       voiceFiles: _voiceFiles,
                       dictRepository: _dictRepository,
                       onTextEditComplete: _onTextEditComplete,
@@ -459,7 +481,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
             // run would clear a stop.
             onPressed: isPlaying ? null : _generateAll,
             icon: const Icon(Icons.auto_fix_high, size: 18),
-            label: Text(AppLocalizations.of(context)!.ttsEdit_generateAllButton),
+            label: Text(
+              AppLocalizations.of(context)!.ttsEdit_generateAllButton,
+            ),
           ),
         const SizedBox(width: 8),
         TextButton.icon(
@@ -471,17 +495,26 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      title: Text(AppLocalizations.of(context)!.ttsEdit_resetAllTitle),
-                      content:
-                          Text(AppLocalizations.of(context)!.ttsEdit_resetAllConfirmation),
+                      title: Text(
+                        AppLocalizations.of(context)!.ttsEdit_resetAllTitle,
+                      ),
+                      content: Text(
+                        AppLocalizations.of(
+                          context,
+                        )!.ttsEdit_resetAllConfirmation,
+                      ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(false),
-                          child: Text(AppLocalizations.of(context)!.common_cancelButton),
+                          child: Text(
+                            AppLocalizations.of(context)!.common_cancelButton,
+                          ),
                         ),
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(true),
-                          child: Text(AppLocalizations.of(context)!.ttsEdit_resetButton),
+                          child: Text(
+                            AppLocalizations.of(context)!.ttsEdit_resetButton,
+                          ),
                         ),
                       ],
                     ),

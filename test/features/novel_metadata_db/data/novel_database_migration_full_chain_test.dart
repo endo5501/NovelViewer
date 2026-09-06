@@ -17,9 +17,10 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  test('v1 → v9 full chain reaches the v9 schema and preserves novels',
-      () async {
-    final tempDir = Directory.systemTemp.createTempSync('migration_full_chain_');
+  test('v1 → v9 full chain reaches the v9 schema and preserves novels', () async {
+    final tempDir = Directory.systemTemp.createTempSync(
+      'migration_full_chain_',
+    );
     try {
       final dbPath = p.join(tempDir.path, 'novel_metadata.db');
 
@@ -68,21 +69,26 @@ void main() {
 
         // Reaches the current version.
         final version = await db.getVersion();
-        expect(version, 9, reason: 'full chain SHALL land on the current version');
+        expect(
+          version,
+          NovelDatabase.currentSchemaVersion,
+          reason: 'full chain SHALL land on the current version',
+        );
 
         // v9 drops the per-novel tables (moved into each folder's
         // novel_data.db). They MUST be absent in the global schema.
         Future<bool> tableExists(String name) async => (await db.rawQuery(
-              "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-              [name],
-            )).isNotEmpty;
+          "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+          [name],
+        )).isNotEmpty;
         expect(await tableExists('word_summaries'), isFalse);
         expect(await tableExists('fact_cache'), isFalse);
         expect(await tableExists('bookmarks'), isFalse);
 
         // reading_progress is retained at the v8 shape: no file_path.
-        final rpColumns =
-            await db.rawQuery('PRAGMA table_info(reading_progress)');
+        final rpColumns = await db.rawQuery(
+          'PRAGMA table_info(reading_progress)',
+        );
         final rpNames = rpColumns.map((c) => c['name']).toSet();
         expect(rpNames, isNot(contains('file_path')));
         expect(rpNames, containsAll(['novel_id', 'file_name', 'updated_at']));

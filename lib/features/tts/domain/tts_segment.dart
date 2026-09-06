@@ -43,14 +43,13 @@ class TtsSegment {
     final Uint8List? audioData = rawAudio == null
         ? null
         : (rawAudio is Uint8List
-            ? rawAudio
-            : Uint8List.fromList(rawAudio as List<int>));
+              ? rawAudio
+              : Uint8List.fromList(rawAudio as List<int>));
 
     return TtsSegment(
       id: requireColumn(row, 'id', 'tts_segments') as int,
       episodeId: requireColumn(row, 'episode_id', 'tts_segments') as int,
-      segmentIndex:
-          requireColumn(row, 'segment_index', 'tts_segments') as int,
+      segmentIndex: requireColumn(row, 'segment_index', 'tts_segments') as int,
       text: requireColumn(row, 'text', 'tts_segments') as String,
       textOffset: requireColumn(row, 'text_offset', 'tts_segments') as int,
       textLength: requireColumn(row, 'text_length', 'tts_segments') as int,
@@ -60,7 +59,8 @@ class TtsSegment {
       memo: row['memo'] as String?,
       skip: (requireColumn(row, 'skip', 'tts_segments') as int) != 0,
       createdAt: DateTime.parse(
-          requireColumn(row, 'created_at', 'tts_segments') as String),
+        requireColumn(row, 'created_at', 'tts_segments') as String,
+      ),
     );
   }
 }

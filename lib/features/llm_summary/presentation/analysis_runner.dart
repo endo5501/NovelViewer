@@ -151,7 +151,8 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       );
       _ref.invalidate(llmSummaryHistoryProvider);
       _ref.invalidate(
-          hoverPopupCacheProvider((folderPath: directory, word: word)));
+        hoverPopupCacheProvider((folderPath: directory, word: word)),
+      );
       // The popup's manual activeEpisode override may now point at a
       // snapshot that no longer exists post-overwrite — reset it so the
       // widget falls back to the default-selection rule against the fresh
@@ -168,7 +169,9 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       failureMessage = switch (e) {
         LlmAnalysisPartialFailure(:final failedFileCount, :final firstError) =>
           l10n.llmAnalysis_partialFailure(
-              failedFileCount, firstError.toString()),
+            failedFileCount,
+            firstError.toString(),
+          ),
         LlmAnalysisNoFactsFailure() => l10n.llmAnalysis_noFacts(word),
         _ => l10n.llmAnalysis_failed(e.toString()),
       };
@@ -187,9 +190,9 @@ class DefaultAnalysisRunner implements AnalysisRunner {
 
   void _snack(BuildContext context, String message) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

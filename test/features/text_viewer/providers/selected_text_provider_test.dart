@@ -36,7 +36,9 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container.read(selectedTextProvider.notifier).setSelection(
+      container
+          .read(selectedTextProvider.notifier)
+          .setSelection(
             const ViewerSelection(text: '太郎', plainTextOffset: 120),
           );
 
@@ -49,7 +51,9 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container.read(selectedTextProvider.notifier).setSelection(
+      container
+          .read(selectedTextProvider.notifier)
+          .setSelection(
             const ViewerSelection(text: '太郎', plainTextOffset: 120),
           );
       container.read(selectedTextProvider.notifier).setSelection(null);
@@ -61,10 +65,14 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container.read(selectedTextProvider.notifier).setSelection(
+      container
+          .read(selectedTextProvider.notifier)
+          .setSelection(
             const ViewerSelection(text: '太郎', plainTextOffset: 120),
           );
-      container.read(selectedTextProvider.notifier).setSelection(
+      container
+          .read(selectedTextProvider.notifier)
+          .setSelection(
             const ViewerSelection(text: '次郎', plainTextOffset: 300),
           );
 
@@ -77,7 +85,9 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container.read(selectedTextProvider.notifier).setSelection(
+      container
+          .read(selectedTextProvider.notifier)
+          .setSelection(
             const ViewerSelection(text: '太郎', plainTextOffset: 120),
           );
 

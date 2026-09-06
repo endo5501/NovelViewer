@@ -36,11 +36,11 @@ class UpdateCheckService {
     required String currentVersion,
     bool isDebug = false,
     DateTime Function()? now,
-  })  : _releaseClient = releaseClient,
-        _preferences = preferences,
-        _currentVersion = currentVersion,
-        _isDebug = isDebug,
-        _now = now ?? DateTime.now;
+  }) : _releaseClient = releaseClient,
+       _preferences = preferences,
+       _currentVersion = currentVersion,
+       _isDebug = isDebug,
+       _now = now ?? DateTime.now;
 
   static const _minInterval = Duration(hours: 24);
   static final _log = Logger('app_update.check');

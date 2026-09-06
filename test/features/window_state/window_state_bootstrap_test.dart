@@ -84,6 +84,7 @@ void main() {
         window: window,
         displayProvider: () async => (workArea: const Size(1920, 1040)),
         waitForFirstFrame: () => frame.future,
+        isWindows: true,
         pollInterval: Duration.zero,
         maxVisibilityPolls: 10,
       );

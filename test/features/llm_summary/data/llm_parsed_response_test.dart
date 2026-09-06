@@ -47,20 +47,23 @@ void main() {
       expect(result.isStructured, isFalse);
     });
 
-    test('reports a fallback when a broken JSON fragment is returned', () async {
-      // The shape observed in production: a string value containing an
-      // unescaped quote, which fails jsonDecode.
-      const broken = '{"facts": "- "ダプラ" は見習いの身分である。"}';
-      final pipeline = LlmSummaryPipeline(llmClient: _FixedLlmClient(broken));
+    test(
+      'reports a fallback when a broken JSON fragment is returned',
+      () async {
+        // The shape observed in production: a string value containing an
+        // unescaped quote, which fails jsonDecode.
+        const broken = '{"facts": "- "ダプラ" は見習いの身分である。"}';
+        final pipeline = LlmSummaryPipeline(llmClient: _FixedLlmClient(broken));
 
-      final result = await pipeline.extractFileFactsDetailed(
-        word: 'ダプラ',
-        contexts: ['ダプラという身分がある。'],
-      );
+        final result = await pipeline.extractFileFactsDetailed(
+          word: 'ダプラ',
+          contexts: ['ダプラという身分がある。'],
+        );
 
-      expect(result.facts, broken);
-      expect(result.isStructured, isFalse);
-    });
+        expect(result.facts, broken);
+        expect(result.isStructured, isFalse);
+      },
+    );
 
     test('a file whose chunks all decode cleanly stays structured', () async {
       final pipeline = LlmSummaryPipeline(
@@ -81,9 +84,7 @@ void main() {
       final pipeline = LlmSummaryPipeline(
         llmClient: _AlternatingLlmClient(() {
           callCount++;
-          return callCount == 1
-              ? jsonEncode({'facts': '- 事実'})
-              : '- 素のテキスト';
+          return callCount == 1 ? jsonEncode({'facts': '- 事実'}) : '- 素のテキスト';
         }),
         maxChunkSize: 50,
       );
@@ -96,34 +97,38 @@ void main() {
       expect(result.isStructured, isFalse);
     });
 
-    test('empty contexts yield an empty, structured result with no LLM call',
-        () async {
-      var callCount = 0;
-      final pipeline = LlmSummaryPipeline(
-        llmClient: _AlternatingLlmClient(() {
-          callCount++;
-          return jsonEncode({'facts': '- 事実'});
-        }),
-      );
+    test(
+      'empty contexts yield an empty, structured result with no LLM call',
+      () async {
+        var callCount = 0;
+        final pipeline = LlmSummaryPipeline(
+          llmClient: _AlternatingLlmClient(() {
+            callCount++;
+            return jsonEncode({'facts': '- 事実'});
+          }),
+        );
 
-      final result = await pipeline.extractFileFactsDetailed(
-        word: 'アリス',
-        contexts: [],
-      );
+        final result = await pipeline.extractFileFactsDetailed(
+          word: 'アリス',
+          contexts: [],
+        );
 
-      expect(result.facts, '');
-      expect(result.isStructured, isTrue);
-      expect(callCount, 0);
-    });
+        expect(result.facts, '');
+        expect(result.isStructured, isTrue);
+        expect(callCount, 0);
+      },
+    );
 
     test('a string array facts value is joined with newlines and stays '
         'structured', () async {
       // MLX runners ignore the requested `format`, so a capable model returns
       // {"facts": [...]} even though a single string was requested.
       final pipeline = LlmSummaryPipeline(
-        llmClient: _FixedLlmClient(jsonEncode({
-          'facts': ['王国の王女である。', '剣術の達人である。'],
-        })),
+        llmClient: _FixedLlmClient(
+          jsonEncode({
+            'facts': ['王国の王女である。', '剣術の達人である。'],
+          }),
+        ),
       );
 
       final result = await pipeline.extractFileFactsDetailed(
@@ -138,9 +143,11 @@ void main() {
     test('array elements already carrying a bullet prefix are not '
         'double-prefixed', () async {
       final pipeline = LlmSummaryPipeline(
-        llmClient: _FixedLlmClient(jsonEncode({
-          'facts': ['- 王国の王女である。', '- 剣術の達人である。'],
-        })),
+        llmClient: _FixedLlmClient(
+          jsonEncode({
+            'facts': ['- 王国の王女である。', '- 剣術の達人である。'],
+          }),
+        ),
       );
 
       final result = await pipeline.extractFileFactsDetailed(
@@ -156,9 +163,11 @@ void main() {
   group('summarizeFromFacts array normalization', () {
     test('a string array summary value is joined with newlines', () async {
       final pipeline = LlmSummaryPipeline(
-        llmClient: _FixedLlmClient(jsonEncode({
-          'summary': ['アリスは王女。', '剣術に秀でる。'],
-        })),
+        llmClient: _FixedLlmClient(
+          jsonEncode({
+            'summary': ['アリスは王女。', '剣術に秀でる。'],
+          }),
+        ),
       );
 
       final summary = await pipeline.summarizeFromFacts(
@@ -171,22 +180,27 @@ void main() {
   });
 
   group('array values that are not normalizable are rejected', () {
-    test('an empty array throws LlmResponseFormatException and logs WARNING',
-        () async {
-      final records = <LogRecord>[];
-      final sub = Logger.root.onRecord.listen(records.add);
-      addTearDown(sub.cancel);
+    test(
+      'an empty array throws LlmResponseFormatException and logs WARNING',
+      () async {
+        final records = <LogRecord>[];
+        final sub = Logger.root.onRecord.listen(records.add);
+        addTearDown(sub.cancel);
 
-      final pipeline = LlmSummaryPipeline(
-        llmClient: _FixedLlmClient(jsonEncode({'summary': <String>[]})),
-      );
+        final pipeline = LlmSummaryPipeline(
+          llmClient: _FixedLlmClient(jsonEncode({'summary': <String>[]})),
+        );
 
-      await expectLater(
-        pipeline.summarizeFromFacts(word: 'アリス', perFileFacts: const ['- 王女']),
-        throwsA(isA<LlmResponseFormatException>()),
-      );
-      expect(records.any((r) => r.level == Level.WARNING), isTrue);
-    });
+        await expectLater(
+          pipeline.summarizeFromFacts(
+            word: 'アリス',
+            perFileFacts: const ['- 王女'],
+          ),
+          throwsA(isA<LlmResponseFormatException>()),
+        );
+        expect(records.any((r) => r.level == Level.WARNING), isTrue);
+      },
+    );
 
     test('an array containing a non-string element throws '
         'LlmResponseFormatException and logs WARNING', () async {

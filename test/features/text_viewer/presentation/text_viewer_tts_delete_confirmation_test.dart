@@ -61,10 +61,11 @@ void main() {
         }),
       ],
       child: const MaterialApp(
-            locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: TextViewerPanel())),
+        locale: Locale('ja'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: TextViewerPanel()),
+      ),
     );
   }
 
@@ -75,28 +76,31 @@ void main() {
     required SharedPreferences prefs,
     required String tempDirPath,
   }) async {
-    await tester.pumpWidget(buildTestWidget(
-      prefs: prefs,
-      tempDirPath: tempDirPath,
-    ));
+    await tester.pumpWidget(
+      buildTestWidget(prefs: prefs, tempDirPath: tempDirPath),
+    );
     await tester.pumpAndSettle();
 
     final element = tester.element(find.byType(TextViewerPanel));
     final container = ProviderScope.containerOf(element);
 
-    container.read(selectedFileProvider.notifier).selectFile(
-          const FileEntry(name: 'test.txt', path: '/tmp/test.txt'),
-        );
+    container
+        .read(selectedFileProvider.notifier)
+        .selectFile(const FileEntry(name: 'test.txt', path: '/tmp/test.txt'));
     await tester.pumpAndSettle();
 
     return container;
   }
 
   group('TTS delete confirmation dialog', () {
-    testWidgets('shows confirmation dialog when delete button is tapped',
-        (WidgetTester tester) async {
-      await pumpWithReadyAudioState(tester,
-          prefs: prefs, tempDirPath: tempDir.path);
+    testWidgets('shows confirmation dialog when delete button is tapped', (
+      WidgetTester tester,
+    ) async {
+      await pumpWithReadyAudioState(
+        tester,
+        prefs: prefs,
+        tempDirPath: tempDir.path,
+      );
 
       // Find and tap the delete button
       final deleteButton = find.byIcon(Icons.delete_outline);
@@ -110,10 +114,14 @@ void main() {
       expect(find.text('音声データを削除しますか？'), findsOneWidget);
     });
 
-    testWidgets('does not delete when cancel is tapped',
-        (WidgetTester tester) async {
-      final container = await pumpWithReadyAudioState(tester,
-          prefs: prefs, tempDirPath: tempDir.path);
+    testWidgets('does not delete when cancel is tapped', (
+      WidgetTester tester,
+    ) async {
+      final container = await pumpWithReadyAudioState(
+        tester,
+        prefs: prefs,
+        tempDirPath: tempDir.path,
+      );
 
       // Tap delete button
       await tester.tap(find.byIcon(Icons.delete_outline));
@@ -128,15 +136,20 @@ void main() {
 
       // Audio state should remain ready (not deleted) — the override is global
       // for the family, so any file path returns ready until it's invalidated.
-      final state = await container
-          .read(ttsAudioStateProvider('/tmp/test.txt').future);
+      final state = await container.read(
+        ttsAudioStateProvider('/tmp/test.txt').future,
+      );
       expect(state, TtsAudioState.ready);
     });
 
-    testWidgets('proceeds with deletion when confirm is tapped',
-        (WidgetTester tester) async {
-      await pumpWithReadyAudioState(tester,
-          prefs: prefs, tempDirPath: tempDir.path);
+    testWidgets('proceeds with deletion when confirm is tapped', (
+      WidgetTester tester,
+    ) async {
+      await pumpWithReadyAudioState(
+        tester,
+        prefs: prefs,
+        tempDirPath: tempDir.path,
+      );
 
       // Tap delete button
       await tester.tap(find.byIcon(Icons.delete_outline));

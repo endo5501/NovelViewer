@@ -6,15 +6,12 @@ import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_intents.d
 void main() {
   group('ShortcutAction', () {
     test('contains exactly the customizable actions', () {
-      expect(
-        ShortcutAction.values,
-        [
-          ShortcutAction.search,
-          ShortcutAction.bookmark,
-          ShortcutAction.ttsToggle,
-          ShortcutAction.switchPane,
-        ],
-      );
+      expect(ShortcutAction.values, [
+        ShortcutAction.search,
+        ShortcutAction.bookmark,
+        ShortcutAction.ttsToggle,
+        ShortcutAction.switchPane,
+      ]);
     });
 
     test('does not include page-navigation (fixed, not customizable)', () {
@@ -36,10 +33,7 @@ void main() {
     });
 
     test('page-navigation intents are const Intents', () {
-      const intents = <Intent>[
-        NextPageIntent(),
-        PrevPageIntent(),
-      ];
+      const intents = <Intent>[NextPageIntent(), PrevPageIntent()];
       expect(intents, everyElement(isA<Intent>()));
     });
 

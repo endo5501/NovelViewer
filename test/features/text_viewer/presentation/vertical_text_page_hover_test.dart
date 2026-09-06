@@ -51,21 +51,24 @@ void main() {
     testWidgets(
       'accepts onMarkEnter / onMarkExit / onHoverHideRequest callbacks as optional props',
       (tester) async {
-        await tester.pumpWidget(_build(
-          markedWords: const {'アリス': MarkStyle.solid},
-          onMarkEnter: (_, _, _) {},
-          onMarkExit: (_) {},
-          onHoverHideRequest: () {},
-        ));
+        await tester.pumpWidget(
+          _build(
+            markedWords: const {'アリス': MarkStyle.solid},
+            onMarkEnter: (_, _, _) {},
+            onMarkExit: (_) {},
+            onHoverHideRequest: () {},
+          ),
+        );
         expect(find.byType(VerticalTextPage), findsOneWidget);
       },
     );
 
-    testWidgets('all hover callbacks default to null without error',
-        (tester) async {
-      await tester.pumpWidget(_build(
-        markedWords: const {'アリス': MarkStyle.solid},
-      ));
+    testWidgets('all hover callbacks default to null without error', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _build(markedWords: const {'アリス': MarkStyle.solid}),
+      );
       expect(find.byType(VerticalTextPage), findsOneWidget);
     });
   });
@@ -74,11 +77,13 @@ void main() {
     testWidgets('hovering on a marked char fires onMarkEnter once with word, '
         'global position, and entry-range token', (tester) async {
       final calls = <MarkEnterCall>[];
-      await tester.pumpWidget(_build(
-        markedWords: const {'アリス': MarkStyle.solid},
-        onMarkEnter: (word, pos, token) =>
-            calls.add((word: word, position: pos, token: token)),
-      ));
+      await tester.pumpWidget(
+        _build(
+          markedWords: const {'アリス': MarkStyle.solid},
+          onMarkEnter: (word, pos, token) =>
+              calls.add((word: word, position: pos, token: token)),
+        ),
+      );
       await tester.pumpAndSettle();
 
       final riCenter = tester.getCenter(find.text('リ'));
@@ -97,11 +102,13 @@ void main() {
       'hovering on different chars within the same mark does NOT re-fire onMarkEnter',
       (tester) async {
         final calls = <MarkEnterCall>[];
-        await tester.pumpWidget(_build(
-          markedWords: const {'アリス': MarkStyle.solid},
-          onMarkEnter: (word, pos, token) =>
-              calls.add((word: word, position: pos, token: token)),
-        ));
+        await tester.pumpWidget(
+          _build(
+            markedWords: const {'アリス': MarkStyle.solid},
+            onMarkEnter: (word, pos, token) =>
+                calls.add((word: word, position: pos, token: token)),
+          ),
+        );
         await tester.pumpAndSettle();
 
         final mouse = await _setUpMouse(tester);
@@ -119,41 +126,44 @@ void main() {
       },
     );
 
-    testWidgets('moving hover from marked char to unmarked char fires onMarkExit',
-        (tester) async {
-      final exits = <HoverToken>[];
-      await tester.pumpWidget(_build(
-        markedWords: const {'アリス': MarkStyle.solid},
-        onMarkExit: exits.add,
-      ));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'moving hover from marked char to unmarked char fires onMarkExit',
+      (tester) async {
+        final exits = <HoverToken>[];
+        await tester.pumpWidget(
+          _build(
+            markedWords: const {'アリス': MarkStyle.solid},
+            onMarkExit: exits.add,
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      final mouse = await _setUpMouse(tester);
-      await mouse.moveTo(tester.getCenter(find.text('ア')));
-      await tester.pumpAndSettle();
-      await mouse.moveTo(tester.getCenter(find.text('が')));
-      await tester.pumpAndSettle();
+        final mouse = await _setUpMouse(tester);
+        await mouse.moveTo(tester.getCenter(find.text('ア')));
+        await tester.pumpAndSettle();
+        await mouse.moveTo(tester.getCenter(find.text('が')));
+        await tester.pumpAndSettle();
 
-      expect(exits, hasLength(1));
-      expect(exits.first, (start: 0, end: 3));
-    });
+        expect(exits, hasLength(1));
+        expect(exits.first, (start: 0, end: 3));
+      },
+    );
 
     testWidgets(
       'moving hover from one mark to a different mark fires onMarkExit(old) '
       'then onMarkEnter(new) in that order',
       (tester) async {
         final events = <String>[];
-        await tester.pumpWidget(_build(
-          segments: const [PlainTextSegment('アリスとボブが歩く')],
-          markedWords: const {
-            'アリス': MarkStyle.solid,
-            'ボブ': MarkStyle.solid,
-          },
-          onMarkEnter: (word, _, token) =>
-              events.add('enter:$word@${token.start}-${token.end}'),
-          onMarkExit: (token) =>
-              events.add('exit:${token.start}-${token.end}'),
-        ));
+        await tester.pumpWidget(
+          _build(
+            segments: const [PlainTextSegment('アリスとボブが歩く')],
+            markedWords: const {'アリス': MarkStyle.solid, 'ボブ': MarkStyle.solid},
+            onMarkEnter: (word, _, token) =>
+                events.add('enter:$word@${token.start}-${token.end}'),
+            onMarkExit: (token) =>
+                events.add('exit:${token.start}-${token.end}'),
+          ),
+        );
         await tester.pumpAndSettle();
 
         final mouse = await _setUpMouse(tester);
@@ -163,23 +173,22 @@ void main() {
         await tester.pumpAndSettle();
 
         // Layout: ア(0) リ(1) ス(2) と(3) ボ(4) ブ(5) が(6) 歩(7) く(8)
-        expect(events, [
-          'enter:アリス@0-3',
-          'exit:0-3',
-          'enter:ボブ@4-6',
-        ]);
+        expect(events, ['enter:アリス@0-3', 'exit:0-3', 'enter:ボブ@4-6']);
       },
     );
 
-    testWidgets('hovering only on unmarked text fires no callbacks',
-        (tester) async {
+    testWidgets('hovering only on unmarked text fires no callbacks', (
+      tester,
+    ) async {
       var entered = 0;
       var exited = 0;
-      await tester.pumpWidget(_build(
-        markedWords: const {'アリス': MarkStyle.solid},
-        onMarkEnter: (_, _, _) => entered++,
-        onMarkExit: (_) => exited++,
-      ));
+      await tester.pumpWidget(
+        _build(
+          markedWords: const {'アリス': MarkStyle.solid},
+          onMarkEnter: (_, _, _) => entered++,
+          onMarkExit: (_) => exited++,
+        ),
+      );
       await tester.pumpAndSettle();
 
       final mouse = await _setUpMouse(tester);
@@ -198,10 +207,12 @@ void main() {
       'when mouse leaves the page region after entering a mark, onMarkExit fires',
       (tester) async {
         final exits = <HoverToken>[];
-        await tester.pumpWidget(_build(
-          markedWords: const {'アリス': MarkStyle.solid},
-          onMarkExit: exits.add,
-        ));
+        await tester.pumpWidget(
+          _build(
+            markedWords: const {'アリス': MarkStyle.solid},
+            onMarkExit: exits.add,
+          ),
+        );
         await tester.pumpAndSettle();
 
         final mouse = await _setUpMouse(tester);
@@ -221,11 +232,13 @@ void main() {
       'starting a primary drag (selection) fires onHoverHideRequest',
       (tester) async {
         var hideRequests = 0;
-        await tester.pumpWidget(_build(
-          markedWords: const {'アリス': MarkStyle.solid},
-          onHoverHideRequest: () => hideRequests++,
-          onSelectionChanged: (_) {},
-        ));
+        await tester.pumpWidget(
+          _build(
+            markedWords: const {'アリス': MarkStyle.solid},
+            onHoverHideRequest: () => hideRequests++,
+            onSelectionChanged: (_) {},
+          ),
+        );
         await tester.pumpAndSettle();
 
         // Use a Listener-friendly drag: press, drag, release.
@@ -246,20 +259,25 @@ void main() {
       'drags should dismiss the popup',
       (tester) async {
         var hideRequests = 0;
-        await tester.pumpWidget(_build(
-          markedWords: const {'アリス': MarkStyle.solid},
-          onHoverHideRequest: () => hideRequests++,
-          onSelectionChanged: (_) {},
-        ));
+        await tester.pumpWidget(
+          _build(
+            markedWords: const {'アリス': MarkStyle.solid},
+            onHoverHideRequest: () => hideRequests++,
+            onSelectionChanged: (_) {},
+          ),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('リ'));
         await tester.pumpAndSettle();
 
-        expect(hideRequests, 0,
-            reason:
-                'Pan-down on a tap should not be treated as a drag for popup '
-                'lifecycle — pure clicks must leave the popup alone');
+        expect(
+          hideRequests,
+          0,
+          reason:
+              'Pan-down on a tap should not be treated as a drag for popup '
+              'lifecycle — pure clicks must leave the popup alone',
+        );
       },
     );
 
@@ -268,13 +286,15 @@ void main() {
       'the popup (the drag teardown also clears the hover diff state)',
       (tester) async {
         final events = <String>[];
-        await tester.pumpWidget(_build(
-          markedWords: const {'アリス': MarkStyle.solid},
-          onMarkEnter: (word, _, _) => events.add('enter:$word'),
-          onMarkExit: (_) => events.add('exit'),
-          onHoverHideRequest: () => events.add('hide'),
-          onSelectionChanged: (_) {},
-        ));
+        await tester.pumpWidget(
+          _build(
+            markedWords: const {'アリス': MarkStyle.solid},
+            onMarkEnter: (word, _, _) => events.add('enter:$word'),
+            onMarkExit: (_) => events.add('exit'),
+            onHoverHideRequest: () => events.add('hide'),
+            onSelectionChanged: (_) {},
+          ),
+        );
         await tester.pumpAndSettle();
 
         // Hover to enter the mark.
@@ -300,10 +320,13 @@ void main() {
         // onMarkEnter even though the charIndex is unchanged.
         await mouse.moveTo(markCenter + const Offset(0.5, 0.5));
         await tester.pumpAndSettle();
-        expect(events, contains('enter:アリス'),
-            reason:
-                'After the drag-driven hide, the next hover on the same '
-                'charIndex must re-fire onMarkEnter');
+        expect(
+          events,
+          contains('enter:アリス'),
+          reason:
+              'After the drag-driven hide, the next hover on the same '
+              'charIndex must re-fire onMarkEnter',
+        );
       },
     );
   });
@@ -316,11 +339,13 @@ void main() {
         final events = <String>[];
 
         Future<void> pumpWith(Map<String, MarkStyle> markedWords) async {
-          await tester.pumpWidget(_build(
-            markedWords: markedWords,
-            onMarkEnter: (word, _, _) => events.add('enter:$word'),
-            onMarkExit: (_) => events.add('exit'),
-          ));
+          await tester.pumpWidget(
+            _build(
+              markedWords: markedWords,
+              onMarkEnter: (word, _, _) => events.add('enter:$word'),
+              onMarkExit: (_) => events.add('exit'),
+            ),
+          );
           await tester.pumpAndSettle();
         }
 
@@ -342,11 +367,14 @@ void main() {
         // would swallow this event.
         await mouse.moveTo(markCenter + const Offset(0.5, 0.5));
         await tester.pumpAndSettle();
-        expect(events, contains('exit'),
-            reason:
-                'Removing the hovered mark must trigger onMarkExit on the '
-                'next hover event, otherwise the popup lingers over '
-                'unmarked text');
+        expect(
+          events,
+          contains('exit'),
+          reason:
+              'Removing the hovered mark must trigger onMarkExit on the '
+              'next hover event, otherwise the popup lingers over '
+              'unmarked text',
+        );
       },
     );
   });
@@ -357,11 +385,13 @@ void main() {
       'fires onMarkEnter again (state was reset)',
       (tester) async {
         var enterCount = 0;
-        await tester.pumpWidget(_build(
-          segments: const [PlainTextSegment('アリスが歩く')],
-          markedWords: const {'アリス': MarkStyle.solid},
-          onMarkEnter: (_, _, _) => enterCount++,
-        ));
+        await tester.pumpWidget(
+          _build(
+            segments: const [PlainTextSegment('アリスが歩く')],
+            markedWords: const {'アリス': MarkStyle.solid},
+            onMarkEnter: (_, _, _) => enterCount++,
+          ),
+        );
         await tester.pumpAndSettle();
 
         final mouse = await _setUpMouse(tester);
@@ -371,11 +401,13 @@ void main() {
 
         // Same marked word in different surrounding text → triggers
         // didUpdateWidget segments-changed branch.
-        await tester.pumpWidget(_build(
-          segments: const [PlainTextSegment('やあアリスです')],
-          markedWords: const {'アリス': MarkStyle.solid},
-          onMarkEnter: (_, _, _) => enterCount++,
-        ));
+        await tester.pumpWidget(
+          _build(
+            segments: const [PlainTextSegment('やあアリスです')],
+            markedWords: const {'アリス': MarkStyle.solid},
+            onMarkEnter: (_, _, _) => enterCount++,
+          ),
+        );
         await tester.pumpAndSettle();
 
         // Move into the new mark. Without the reset, the stale
@@ -392,9 +424,9 @@ void main() {
       'hovering immediately on first frame (before hit regions are built) '
       'does not throw',
       (tester) async {
-        await tester.pumpWidget(_build(
-          markedWords: const {'アリス': MarkStyle.solid},
-        ));
+        await tester.pumpWidget(
+          _build(markedWords: const {'アリス': MarkStyle.solid}),
+        );
         // NO pumpAndSettle — only the initial frame. _hitRegions is still empty.
         final mouse = await _setUpMouse(tester);
         await mouse.moveTo(const Offset(100, 100));

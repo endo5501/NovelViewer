@@ -22,11 +22,13 @@ class _MinimalLlmClient extends LlmClient {
 
 void main() {
   group('LlmClient default behavior', () {
-    test('default releaseResources is a no-op that completes successfully',
-        () async {
-      final client = _MinimalLlmClient();
-      await expectLater(client.releaseResources(), completes);
-    });
+    test(
+      'default releaseResources is a no-op that completes successfully',
+      () async {
+        final client = _MinimalLlmClient();
+        await expectLater(client.releaseResources(), completes);
+      },
+    );
 
     test('generate accepts an optional response schema', () async {
       final client = _MinimalLlmClient();
@@ -42,14 +44,16 @@ void main() {
       );
     });
 
-    test('generate defaults to no schema when the argument is omitted',
-        () async {
-      final client = _MinimalLlmClient();
+    test(
+      'generate defaults to no schema when the argument is omitted',
+      () async {
+        final client = _MinimalLlmClient();
 
-      await client.generate('p');
+        await client.generate('p');
 
-      expect(client.receivedSchema, isNull);
-    });
+        expect(client.receivedSchema, isNull);
+      },
+    );
   });
 
   group('OllamaClient', () {
@@ -61,10 +65,7 @@ void main() {
         expect(body['model'], 'llama3');
         expect(body['prompt'], 'test prompt');
         expect(body['stream'], false);
-        return http.Response(
-          jsonEncode({'response': 'test response'}),
-          200,
-        );
+        return http.Response(jsonEncode({'response': 'test response'}), 200);
       });
 
       final client = OllamaClient(
@@ -88,42 +89,40 @@ void main() {
         httpClient: mockClient,
       );
 
-      expect(
-        () => client.generate('test prompt'),
-        throwsException,
-      );
+      expect(() => client.generate('test prompt'), throwsException);
     });
 
     group('releaseResources', () {
       test(
-          'sends POST with model, keep_alive=0, stream=false, and no prompt field',
-          () async {
-        Uri? capturedUrl;
-        String? capturedMethod;
-        Map<String, dynamic>? capturedBody;
+        'sends POST with model, keep_alive=0, stream=false, and no prompt field',
+        () async {
+          Uri? capturedUrl;
+          String? capturedMethod;
+          Map<String, dynamic>? capturedBody;
 
-        final mockClient = MockClient((request) async {
-          capturedUrl = request.url;
-          capturedMethod = request.method;
-          capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
-          return http.Response(jsonEncode({'done': true}), 200);
-        });
+          final mockClient = MockClient((request) async {
+            capturedUrl = request.url;
+            capturedMethod = request.method;
+            capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
+            return http.Response(jsonEncode({'done': true}), 200);
+          });
 
-        final client = OllamaClient(
-          baseUrl: 'http://localhost:11434',
-          model: 'llama3',
-          httpClient: mockClient,
-        );
+          final client = OllamaClient(
+            baseUrl: 'http://localhost:11434',
+            model: 'llama3',
+            httpClient: mockClient,
+          );
 
-        await client.releaseResources();
+          await client.releaseResources();
 
-        expect(capturedUrl.toString(), 'http://localhost:11434/api/generate');
-        expect(capturedMethod, 'POST');
-        expect(capturedBody!['model'], 'llama3');
-        expect(capturedBody!['keep_alive'], 0);
-        expect(capturedBody!['stream'], false);
-        expect(capturedBody!.containsKey('prompt'), isFalse);
-      });
+          expect(capturedUrl.toString(), 'http://localhost:11434/api/generate');
+          expect(capturedMethod, 'POST');
+          expect(capturedBody!['model'], 'llama3');
+          expect(capturedBody!['keep_alive'], 0);
+          expect(capturedBody!['stream'], false);
+          expect(capturedBody!.containsKey('prompt'), isFalse);
+        },
+      );
 
       test('throws when server returns non-success status', () async {
         final mockClient = MockClient((request) async {
@@ -181,10 +180,7 @@ void main() {
 
       test('returns empty list when no models installed', () async {
         final mockClient = MockClient((request) async {
-          return http.Response(
-            jsonEncode({'models': []}),
-            200,
-          );
+          return http.Response(jsonEncode({'models': []}), 200);
         });
 
         final result = await OllamaClient.fetchModels(
@@ -213,10 +209,10 @@ void main() {
 
   group('OllamaClient generation efficiency', () {
     OllamaClient clientWith(MockClient mockClient) => OllamaClient(
-          baseUrl: 'http://localhost:11434',
-          model: 'gemma4:e4b',
-          httpClient: mockClient,
-        );
+      baseUrl: 'http://localhost:11434',
+      model: 'gemma4:e4b',
+      httpClient: mockClient,
+    );
 
     http.Response okResponse() =>
         http.Response(jsonEncode({'response': 'ok'}), 200);
@@ -248,17 +244,13 @@ void main() {
       expect(capturedBody!.containsKey('options'), isFalse);
     });
 
-    test('think-related error triggers a single retry without think',
-        () async {
+    test('think-related error triggers a single retry without think', () async {
       final bodies = <Map<String, dynamic>>[];
       final mockClient = MockClient((request) async {
         final body = jsonDecode(request.body) as Map<String, dynamic>;
         bodies.add(body);
         if (body.containsKey('think')) {
-          return http.Response(
-            '"gemma4:e4b" does not support thinking',
-            400,
-          );
+          return http.Response('"gemma4:e4b" does not support thinking', 400);
         }
         return okResponse();
       });
@@ -305,19 +297,18 @@ void main() {
       var requestCount = 0;
       final mockClient = MockClient((request) async {
         requestCount++;
-        return http.Response(
-          'model "qwen3:30b-thinking" not found',
-          404,
-        );
+        return http.Response('model "qwen3:30b-thinking" not found', 404);
       });
 
       await expectLater(
         () => clientWith(mockClient).generate('p'),
-        throwsA(isA<Exception>().having(
-          (e) => e.toString(),
-          'toString',
-          contains('404'),
-        )),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'toString',
+            contains('404'),
+          ),
+        ),
       );
       expect(requestCount, 1);
     });
@@ -331,11 +322,13 @@ void main() {
 
       await expectLater(
         () => clientWith(mockClient).generate('p'),
-        throwsA(isA<Exception>().having(
-          (e) => e.toString(),
-          'toString',
-          contains('500'),
-        )),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'toString',
+            contains('500'),
+          ),
+        ),
       );
       expect(requestCount, 1);
     });
@@ -343,41 +336,43 @@ void main() {
 
   group('OllamaClient structured output', () {
     OllamaClient clientWith(MockClient mockClient) => OllamaClient(
-          baseUrl: 'http://localhost:11434',
-          model: 'gemma4:e4b',
-          httpClient: mockClient,
-        );
+      baseUrl: 'http://localhost:11434',
+      model: 'gemma4:e4b',
+      httpClient: mockClient,
+    );
 
     http.Response okResponse() =>
         http.Response(jsonEncode({'response': 'ok'}), 200);
 
-    test('generate with a schema sends format as a JSON Schema object',
-        () async {
-      Map<String, dynamic>? capturedBody;
-      final mockClient = MockClient((request) async {
-        capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
-        return okResponse();
-      });
+    test(
+      'generate with a schema sends format as a JSON Schema object',
+      () async {
+        Map<String, dynamic>? capturedBody;
+        final mockClient = MockClient((request) async {
+          capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
+          return okResponse();
+        });
 
-      await clientWith(mockClient).generate(
-        'p',
-        schema: const LlmResponseSchema.singleStringField('facts'),
-      );
+        await clientWith(mockClient).generate(
+          'p',
+          schema: const LlmResponseSchema.singleStringField('facts'),
+        );
 
-      expect(capturedBody!['format'], {
-        'type': 'object',
-        'properties': {
-          'facts': {'type': 'string'},
-        },
-        'required': ['facts'],
-      });
-      // The efficiency parameters stay in place alongside the schema.
-      expect(capturedBody!['think'], false);
-      expect(
-        (capturedBody!['options'] as Map<String, dynamic>)['num_predict'],
-        1024,
-      );
-    });
+        expect(capturedBody!['format'], {
+          'type': 'object',
+          'properties': {
+            'facts': {'type': 'string'},
+          },
+          'required': ['facts'],
+        });
+        // The efficiency parameters stay in place alongside the schema.
+        expect(capturedBody!['think'], false);
+        expect(
+          (capturedBody!['options'] as Map<String, dynamic>)['num_predict'],
+          1024,
+        );
+      },
+    );
 
     test('generate without a schema omits format', () async {
       Map<String, dynamic>? capturedBody;
@@ -421,10 +416,9 @@ void main() {
 
       expect(bodies, hasLength(2));
       expect(bodies[1].containsKey('think'), isFalse);
-      expect(
-        (bodies[1]['format'] as Map<String, dynamic>)['required'],
-        ['summary'],
-      );
+      expect((bodies[1]['format'] as Map<String, dynamic>)['required'], [
+        'summary',
+      ]);
     });
 
     test('a 400 mentioning format is propagated without retry', () async {
@@ -439,81 +433,87 @@ void main() {
           'p',
           schema: const LlmResponseSchema.singleStringField('facts'),
         ),
-        throwsA(isA<Exception>().having(
-          (e) => e.toString(),
-          'toString',
-          contains('400'),
-        )),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'toString',
+            contains('400'),
+          ),
+        ),
       );
       expect(requestCount, 1);
     });
 
-    test('a format-related failure does not disable the schema for later calls',
-        () async {
-      final bodies = <Map<String, dynamic>>[];
-      var failFirst = true;
-      final mockClient = MockClient((request) async {
-        bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
-        if (failFirst) {
-          failFirst = false;
-          return http.Response('unknown parameter "format"', 400);
-        }
-        return okResponse();
-      });
+    test(
+      'a format-related failure does not disable the schema for later calls',
+      () async {
+        final bodies = <Map<String, dynamic>>[];
+        var failFirst = true;
+        final mockClient = MockClient((request) async {
+          bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+          if (failFirst) {
+            failFirst = false;
+            return http.Response('unknown parameter "format"', 400);
+          }
+          return okResponse();
+        });
 
-      final client = clientWith(mockClient);
-      const schema = LlmResponseSchema.singleStringField('facts');
-      await expectLater(
-        () => client.generate('first', schema: schema),
-        throwsA(isA<Exception>()),
-      );
+        final client = clientWith(mockClient);
+        const schema = LlmResponseSchema.singleStringField('facts');
+        await expectLater(
+          () => client.generate('first', schema: schema),
+          throwsA(isA<Exception>()),
+        );
 
-      await client.generate('second', schema: schema);
+        await client.generate('second', schema: schema);
 
-      expect(bodies, hasLength(2));
-      expect(bodies[1].containsKey('format'), isTrue);
-    });
+        expect(bodies, hasLength(2));
+        expect(bodies[1].containsKey('format'), isTrue);
+      },
+    );
   });
 
   group('OpenAiCompatibleClient', () {
-    test('generate sends correct request with auth and returns response',
-        () async {
-      final mockClient = MockClient((request) async {
-        expect(
-          request.url.toString(),
-          'https://api.openai.com/v1/chat/completions',
-        );
-        expect(request.method, 'POST');
-        expect(request.headers['Authorization'], 'Bearer sk-test');
-        expect(request.headers['Content-Type'], 'application/json');
-        final body = jsonDecode(request.body) as Map<String, dynamic>;
-        expect(body['model'], 'gpt-4o-mini');
-        final messages = body['messages'] as List;
-        expect(messages.length, 1);
-        expect(messages[0]['role'], 'user');
-        expect(messages[0]['content'], 'test prompt');
-        return http.Response(
-          jsonEncode({
-            'choices': [
-              {
-                'message': {'content': 'test response'},
-              }
-            ],
-          }),
-          200,
-        );
-      });
+    test(
+      'generate sends correct request with auth and returns response',
+      () async {
+        final mockClient = MockClient((request) async {
+          expect(
+            request.url.toString(),
+            'https://api.openai.com/v1/chat/completions',
+          );
+          expect(request.method, 'POST');
+          expect(request.headers['Authorization'], 'Bearer sk-test');
+          expect(request.headers['Content-Type'], 'application/json');
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body['model'], 'gpt-4o-mini');
+          final messages = body['messages'] as List;
+          expect(messages.length, 1);
+          expect(messages[0]['role'], 'user');
+          expect(messages[0]['content'], 'test prompt');
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {'content': 'test response'},
+                },
+              ],
+            }),
+            200,
+          );
+        });
 
-      final client = OpenAiCompatibleClient(
-        baseUrl: 'https://api.openai.com/v1',
-        apiKey: 'sk-test',
-        model: 'gpt-4o-mini',
-        httpClient: mockClient,
-      );
+        final client = OpenAiCompatibleClient(
+          baseUrl: 'https://api.openai.com/v1',
+          apiKey: 'sk-test',
+          model: 'gpt-4o-mini',
+          httpClient: mockClient,
+        );
 
-      final result = await client.generate('test prompt');
-      expect(result, 'test response');
-    });
+        final result = await client.generate('test prompt');
+        expect(result, 'test response');
+      },
+    );
 
     test('generate works without apiKey', () async {
       final mockClient = MockClient((request) async {
@@ -523,7 +523,7 @@ void main() {
             'choices': [
               {
                 'message': {'content': 'response'},
-              }
+              },
             ],
           }),
           200,
@@ -553,44 +553,43 @@ void main() {
         httpClient: mockClient,
       );
 
-      expect(
-        () => client.generate('test prompt'),
-        throwsException,
-      );
+      expect(() => client.generate('test prompt'), throwsException);
     });
 
-    test('generate accepts a schema and leaves the request body unchanged',
-        () async {
-      Map<String, dynamic>? capturedBody;
-      final mockClient = MockClient((request) async {
-        capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
-        return http.Response(
-          jsonEncode({
-            'choices': [
-              {
-                'message': {'content': 'response'},
-              }
-            ],
-          }),
-          200,
+    test(
+      'generate accepts a schema and leaves the request body unchanged',
+      () async {
+        Map<String, dynamic>? capturedBody;
+        final mockClient = MockClient((request) async {
+          capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {'content': 'response'},
+                },
+              ],
+            }),
+            200,
+          );
+        });
+
+        final client = OpenAiCompatibleClient(
+          baseUrl: 'https://api.openai.com/v1',
+          apiKey: 'sk-test',
+          model: 'gpt-4o-mini',
+          httpClient: mockClient,
         );
-      });
 
-      final client = OpenAiCompatibleClient(
-        baseUrl: 'https://api.openai.com/v1',
-        apiKey: 'sk-test',
-        model: 'gpt-4o-mini',
-        httpClient: mockClient,
-      );
+        final result = await client.generate(
+          'test prompt',
+          schema: const LlmResponseSchema.singleStringField('summary'),
+        );
 
-      final result = await client.generate(
-        'test prompt',
-        schema: const LlmResponseSchema.singleStringField('summary'),
-      );
-
-      expect(result, 'response');
-      expect(capturedBody!.keys, unorderedEquals(['model', 'messages']));
-    });
+        expect(result, 'response');
+        expect(capturedBody!.keys, unorderedEquals(['model', 'messages']));
+      },
+    );
 
     test('releaseResources sends no HTTP request and completes', () async {
       var requestCount = 0;
@@ -620,39 +619,45 @@ void main() {
           httpClient: mockClient,
         );
 
-    test('decodes UTF-8 body without a charset declaration (no mojibake)',
-        () async {
-      const japanese = 'アリスは王国の第三王女。';
-      final mockClient = MockClient((request) async {
-        // Real OpenAI-compatible endpoints return a bare application/json with
-        // no charset. http.Response.body would latin1-decode these bytes.
-        return http.Response.bytes(
-          utf8.encode(jsonEncode({
-            'choices': [
-              {
-                'message': {'content': japanese},
-              }
-            ],
-          })),
-          200,
+    test(
+      'decodes UTF-8 body without a charset declaration (no mojibake)',
+      () async {
+        const japanese = 'アリスは王国の第三王女。';
+        final mockClient = MockClient((request) async {
+          // Real OpenAI-compatible endpoints return a bare application/json with
+          // no charset. http.Response.body would latin1-decode these bytes.
+          return http.Response.bytes(
+            utf8.encode(
+              jsonEncode({
+                'choices': [
+                  {
+                    'message': {'content': japanese},
+                  },
+                ],
+              }),
+            ),
+            200,
+          );
+        });
+
+        final result = await clientWith(mockClient).generate('p');
+        expect(result, japanese);
+      },
+    );
+
+    test(
+      'empty choices array throws LlmResponseFormatException (not RangeError)',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'choices': []}), 200);
+        });
+
+        expect(
+          () => clientWith(mockClient).generate('p'),
+          throwsA(isA<LlmResponseFormatException>()),
         );
-      });
-
-      final result = await clientWith(mockClient).generate('p');
-      expect(result, japanese);
-    });
-
-    test('empty choices array throws LlmResponseFormatException (not RangeError)',
-        () async {
-      final mockClient = MockClient((request) async {
-        return http.Response(jsonEncode({'choices': []}), 200);
-      });
-
-      expect(
-        () => clientWith(mockClient).generate('p'),
-        throwsA(isA<LlmResponseFormatException>()),
-      );
-    });
+      },
+    );
 
     test('missing message content throws LlmResponseFormatException', () async {
       final mockClient = MockClient((request) async {
@@ -672,57 +677,63 @@ void main() {
       );
     });
 
-    test('non-string message content throws LlmResponseFormatException',
-        () async {
-      final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({
-            'choices': [
-              {
-                'message': {'content': null},
-              }
-            ],
-          }),
-          200,
+    test(
+      'non-string message content throws LlmResponseFormatException',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {'content': null},
+                },
+              ],
+            }),
+            200,
+          );
+        });
+
+        expect(
+          () => clientWith(mockClient).generate('p'),
+          throwsA(isA<LlmResponseFormatException>()),
         );
-      });
+      },
+    );
 
-      expect(
-        () => clientWith(mockClient).generate('p'),
-        throwsA(isA<LlmResponseFormatException>()),
-      );
-    });
+    test(
+      'non-object top-level JSON throws LlmResponseFormatException',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode([1, 2, 3]), 200);
+        });
 
-    test('non-object top-level JSON throws LlmResponseFormatException',
-        () async {
-      final mockClient = MockClient((request) async {
-        return http.Response(jsonEncode([1, 2, 3]), 200);
-      });
+        expect(
+          () => clientWith(mockClient).generate('p'),
+          throwsA(isA<LlmResponseFormatException>()),
+        );
+      },
+    );
 
-      expect(
-        () => clientWith(mockClient).generate('p'),
-        throwsA(isA<LlmResponseFormatException>()),
-      );
-    });
+    test(
+      'non-200 error body is decoded as UTF-8 in the exception message',
+      () async {
+        const japaneseError = 'エラーが発生しました';
+        final mockClient = MockClient((request) async {
+          return http.Response.bytes(utf8.encode(japaneseError), 500);
+        });
 
-    test('non-200 error body is decoded as UTF-8 in the exception message',
-        () async {
-      const japaneseError = 'エラーが発生しました';
-      final mockClient = MockClient((request) async {
-        return http.Response.bytes(utf8.encode(japaneseError), 500);
-      });
-
-      await expectLater(
-        () => clientWith(mockClient).generate('p'),
-        throwsA(
-          isA<Exception>().having(
-            (e) => e.toString(),
-            'toString',
-            contains(japaneseError),
+        await expectLater(
+          () => clientWith(mockClient).generate('p'),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'toString',
+              contains(japaneseError),
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
 
     test('non-200 with a non-UTF-8 body still throws the status error '
         '(not FormatException)', () async {
@@ -735,8 +746,11 @@ void main() {
         () => clientWith(mockClient).generate('p'),
         throwsA(
           isA<Exception>()
-              .having((e) => e, 'not FormatException',
-                  isNot(isA<FormatException>()))
+              .having(
+                (e) => e,
+                'not FormatException',
+                isNot(isA<FormatException>()),
+              )
               .having((e) => e.toString(), 'toString', contains('502')),
         ),
       );
@@ -745,10 +759,10 @@ void main() {
 
   group('OllamaClient robustness', () {
     OllamaClient generateClient(MockClient mockClient) => OllamaClient(
-          baseUrl: 'http://localhost:11434',
-          model: 'llama3',
-          httpClient: mockClient,
-        );
+      baseUrl: 'http://localhost:11434',
+      model: 'llama3',
+      httpClient: mockClient,
+    );
 
     test('generate decodes UTF-8 body without a charset declaration', () async {
       const japanese = 'これは日本語の応答です。';
@@ -787,26 +801,30 @@ void main() {
       );
     });
 
-    test('fetchModels decodes UTF-8 model names without a charset declaration',
-        () async {
-      const japaneseModel = 'モデル名:latest';
-      final mockClient = MockClient((request) async {
-        return http.Response.bytes(
-          utf8.encode(jsonEncode({
-            'models': [
-              {'name': japaneseModel},
-            ],
-          })),
-          200,
-        );
-      });
+    test(
+      'fetchModels decodes UTF-8 model names without a charset declaration',
+      () async {
+        const japaneseModel = 'モデル名:latest';
+        final mockClient = MockClient((request) async {
+          return http.Response.bytes(
+            utf8.encode(
+              jsonEncode({
+                'models': [
+                  {'name': japaneseModel},
+                ],
+              }),
+            ),
+            200,
+          );
+        });
 
-      final result = await OllamaClient.fetchModels(
-        baseUrl: 'http://localhost:11434',
-        httpClient: mockClient,
-      );
-      expect(result, [japaneseModel]);
-    });
+        final result = await OllamaClient.fetchModels(
+          baseUrl: 'http://localhost:11434',
+          httpClient: mockClient,
+        );
+        expect(result, [japaneseModel]);
+      },
+    );
 
     test('fetchModels with non-list models field throws '
         'LlmResponseFormatException (not TypeError)', () async {
@@ -845,23 +863,25 @@ void main() {
       );
     });
 
-    test('non-200 error body is decoded as UTF-8 in the exception message',
-        () async {
-      const japaneseError = 'サーバエラー';
-      final mockClient = MockClient((request) async {
-        return http.Response.bytes(utf8.encode(japaneseError), 500);
-      });
+    test(
+      'non-200 error body is decoded as UTF-8 in the exception message',
+      () async {
+        const japaneseError = 'サーバエラー';
+        final mockClient = MockClient((request) async {
+          return http.Response.bytes(utf8.encode(japaneseError), 500);
+        });
 
-      await expectLater(
-        () => generateClient(mockClient).generate('p'),
-        throwsA(
-          isA<Exception>().having(
-            (e) => e.toString(),
-            'toString',
-            contains(japaneseError),
+        await expectLater(
+          () => generateClient(mockClient).generate('p'),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'toString',
+              contains(japaneseError),
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   });
 }

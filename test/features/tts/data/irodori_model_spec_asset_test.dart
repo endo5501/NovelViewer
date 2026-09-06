@@ -34,7 +34,8 @@ void main() {
     expect(
       normalise(asset),
       normalise(source),
-      reason: 'Copy third_party/audio.cpp/model_specs/irodori_tts.json over '
+      reason:
+          'Copy third_party/audio.cpp/model_specs/irodori_tts.json over '
           'assets/model_specs/irodori_tts.json after changing the engine '
           'contract. Shipping an older copy silently narrows the options the '
           'engine will accept.',

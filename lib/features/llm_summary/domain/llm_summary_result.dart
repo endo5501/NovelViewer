@@ -30,21 +30,21 @@ class WordSummary {
   });
 
   Map<String, dynamic> toMap() => {
-        'word': word,
-        'covered_up_to_episode': coveredUpToEpisode,
-        'summary': summary,
-        'source_file': sourceFile,
-        'created_at': createdAt.toIso8601String(),
-        'updated_at': updatedAt.toIso8601String(),
-      };
+    'word': word,
+    'covered_up_to_episode': coveredUpToEpisode,
+    'summary': summary,
+    'source_file': sourceFile,
+    'created_at': createdAt.toIso8601String(),
+    'updated_at': updatedAt.toIso8601String(),
+  };
 
   factory WordSummary.fromMap(Map<String, dynamic> map) => WordSummary(
-        id: map['id'] as int?,
-        word: map['word'] as String,
-        coveredUpToEpisode: map['covered_up_to_episode'] as int,
-        summary: map['summary'] as String,
-        sourceFile: map['source_file'] as String?,
-        createdAt: DateTime.parse(map['created_at'] as String),
-        updatedAt: DateTime.parse(map['updated_at'] as String),
-      );
+    id: map['id'] as int?,
+    word: map['word'] as String,
+    coveredUpToEpisode: map['covered_up_to_episode'] as int,
+    summary: map['summary'] as String,
+    sourceFile: map['source_file'] as String?,
+    createdAt: DateTime.parse(map['created_at'] as String),
+    updatedAt: DateTime.parse(map['updated_at'] as String),
+  );
 }

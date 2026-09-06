@@ -57,7 +57,7 @@ void main() {
   /// to a fresh in-memory database so the folder-scoped bookmark repository
   /// resolves without touching the filesystem.
   Future<({ProviderContainer container, NovelDataDatabase? novelData})>
-      createContainer({
+  createContainer({
     String? libraryPath,
     String? currentDirectory,
     String? seededFolderPath,
@@ -68,7 +68,8 @@ void main() {
       libraryPathProvider.overrideWithValue(libraryPath ?? '/library'),
       if (currentDirectory != null)
         currentDirectoryProvider.overrideWith(
-            () => CurrentDirectoryNotifier(currentDirectory)),
+          () => CurrentDirectoryNotifier(currentDirectory),
+        ),
     ];
     if (seededFolderPath != null) {
       // Back every per-folder novel_data.db handle with one shared in-memory
@@ -76,8 +77,8 @@ void main() {
       // the folder path is spelled/normalized — no filesystem access.
       final inMemory = await openInMemoryNovelDataDb();
       final registry = PerFolderDbRegistry(
-        novelDataFactory: (_) => NovelDataDatabase('unused')
-          ..setDatabase(inMemory),
+        novelDataFactory: (_) =>
+            NovelDataDatabase('unused')..setDatabase(inMemory),
       );
       novelData = registry.novelData(seededFolderPath);
       overrides.add(perFolderDbRegistryProvider.overrideWithValue(registry));
@@ -94,23 +95,27 @@ void main() {
       );
       addTearDown(c.container.dispose);
 
-      final path =
-          await c.container.read(currentNovelFolderPathProvider.future);
+      final path = await c.container.read(
+        currentNovelFolderPathProvider.future,
+      );
       expect(path, isNull);
     });
 
-    test('returns the folder path when inside a registered novel directory',
-        () async {
-      final c = await createContainer(
-        libraryPath: '/library',
-        currentDirectory: '/library/narou_n1234',
-      );
-      addTearDown(c.container.dispose);
+    test(
+      'returns the folder path when inside a registered novel directory',
+      () async {
+        final c = await createContainer(
+          libraryPath: '/library',
+          currentDirectory: '/library/narou_n1234',
+        );
+        addTearDown(c.container.dispose);
 
-      final path =
-          await c.container.read(currentNovelFolderPathProvider.future);
-      expect(path, lib('narou_n1234'));
-    });
+        final path = await c.container.read(
+          currentNovelFolderPathProvider.future,
+        );
+        expect(path, lib('narou_n1234'));
+      },
+    );
 
     test('returns the novel folder path when in a subdirectory', () async {
       final c = await createContainer(
@@ -119,23 +124,27 @@ void main() {
       );
       addTearDown(c.container.dispose);
 
-      final path =
-          await c.container.read(currentNovelFolderPathProvider.future);
+      final path = await c.container.read(
+        currentNovelFolderPathProvider.future,
+      );
       expect(path, lib('narou_n1234'));
     });
 
-    test('resolves the registered folder path for a nested novel folder',
-        () async {
-      final c = await createContainer(
-        libraryPath: '/library',
-        currentDirectory: '/library/お気に入り/narou_n1234',
-      );
-      addTearDown(c.container.dispose);
+    test(
+      'resolves the registered folder path for a nested novel folder',
+      () async {
+        final c = await createContainer(
+          libraryPath: '/library',
+          currentDirectory: '/library/お気に入り/narou_n1234',
+        );
+        addTearDown(c.container.dispose);
 
-      final path =
-          await c.container.read(currentNovelFolderPathProvider.future);
-      expect(path, lib('お気に入り', 'narou_n1234'));
-    });
+        final path = await c.container.read(
+          currentNovelFolderPathProvider.future,
+        );
+        expect(path, lib('お気に入り', 'narou_n1234'));
+      },
+    );
 
     test('returns null inside an unregistered organizational folder', () async {
       final c = await createContainer(
@@ -144,8 +153,9 @@ void main() {
       );
       addTearDown(c.container.dispose);
 
-      final path =
-          await c.container.read(currentNovelFolderPathProvider.future);
+      final path = await c.container.read(
+        currentNovelFolderPathProvider.future,
+      );
       expect(path, isNull);
     });
 
@@ -153,8 +163,9 @@ void main() {
       final c = await createContainer(libraryPath: '/library');
       addTearDown(c.container.dispose);
 
-      final path =
-          await c.container.read(currentNovelFolderPathProvider.future);
+      final path = await c.container.read(
+        currentNovelFolderPathProvider.future,
+      );
       expect(path, isNull);
     });
   });
@@ -164,8 +175,9 @@ void main() {
       final c = await createContainer(seededFolderPath: lib('n1234'));
       addTearDown(c.container.dispose);
 
-      final repository = await c.container
-          .read(bookmarkRepositoryProvider(lib('n1234')).future);
+      final repository = await c.container.read(
+        bookmarkRepositoryProvider(lib('n1234')).future,
+      );
       expect(repository, isA<BookmarkRepository>());
     });
   });
@@ -179,12 +191,14 @@ void main() {
       );
       addTearDown(c.container.dispose);
 
-      final repository = await c.container
-          .read(bookmarkRepositoryProvider(lib('n1234')).future);
+      final repository = await c.container.read(
+        bookmarkRepositoryProvider(lib('n1234')).future,
+      );
       await repository.add(fileName: '001_chapter1.txt');
 
-      final bookmarks =
-          await c.container.read(bookmarksForCurrentNovelProvider.future);
+      final bookmarks = await c.container.read(
+        bookmarksForCurrentNovelProvider.future,
+      );
       expect(bookmarks.length, 1);
       expect(bookmarks.first.fileName, '001_chapter1.txt');
     });
@@ -196,8 +210,9 @@ void main() {
       );
       addTearDown(c.container.dispose);
 
-      final bookmarks =
-          await c.container.read(bookmarksForCurrentNovelProvider.future);
+      final bookmarks = await c.container.read(
+        bookmarksForCurrentNovelProvider.future,
+      );
       expect(bookmarks, isEmpty);
     });
   });
@@ -211,14 +226,18 @@ void main() {
       );
       addTearDown(c.container.dispose);
 
-      final repository = await c.container
-          .read(bookmarkRepositoryProvider(lib('n1234')).future);
+      final repository = await c.container.read(
+        bookmarkRepositoryProvider(lib('n1234')).future,
+      );
       await repository.add(fileName: '001_chapter1.txt', lineNumber: 10);
 
-      c.container.read(selectedFileProvider.notifier).selectFile(
+      c.container
+          .read(selectedFileProvider.notifier)
+          .selectFile(
             const FileEntry(
-                name: '001_chapter1.txt',
-                path: '/library/n1234/001_chapter1.txt'),
+              name: '001_chapter1.txt',
+              path: '/library/n1234/001_chapter1.txt',
+            ),
           );
       c.container.read(currentViewLineProvider.notifier).set(10);
 
@@ -235,10 +254,13 @@ void main() {
       );
       addTearDown(c.container.dispose);
 
-      c.container.read(selectedFileProvider.notifier).selectFile(
+      c.container
+          .read(selectedFileProvider.notifier)
+          .selectFile(
             const FileEntry(
-                name: '001_chapter1.txt',
-                path: '/library/n1234/001_chapter1.txt'),
+              name: '001_chapter1.txt',
+              path: '/library/n1234/001_chapter1.txt',
+            ),
           );
 
       await c.container.read(bookmarkLineNumbersForFileProvider.future);
@@ -252,8 +274,9 @@ void main() {
       final c = await createContainer(seededFolderPath: lib('n1234'));
       addTearDown(c.container.dispose);
 
-      final repository = await c.container
-          .read(bookmarkRepositoryProvider(lib('n1234')).future);
+      final repository = await c.container.read(
+        bookmarkRepositoryProvider(lib('n1234')).future,
+      );
 
       await toggleBookmark(
         repository,
@@ -288,19 +311,24 @@ void main() {
       );
       addTearDown(c.container.dispose);
 
-      final repository = await c.container
-          .read(bookmarkRepositoryProvider(lib('n1234')).future);
+      final repository = await c.container.read(
+        bookmarkRepositoryProvider(lib('n1234')).future,
+      );
       await repository.add(fileName: '001_chapter1.txt', lineNumber: 10);
       await repository.add(fileName: '001_chapter1.txt', lineNumber: 42);
 
-      c.container.read(selectedFileProvider.notifier).selectFile(
+      c.container
+          .read(selectedFileProvider.notifier)
+          .selectFile(
             const FileEntry(
-                name: '001_chapter1.txt',
-                path: '/library/n1234/001_chapter1.txt'),
+              name: '001_chapter1.txt',
+              path: '/library/n1234/001_chapter1.txt',
+            ),
           );
 
-      final lineNumbers =
-          await c.container.read(bookmarkLineNumbersForFileProvider.future);
+      final lineNumbers = await c.container.read(
+        bookmarkLineNumbersForFileProvider.future,
+      );
       expect(lineNumbers, containsAll([10, 42]));
     });
   });

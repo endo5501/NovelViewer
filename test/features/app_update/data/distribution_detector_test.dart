@@ -21,16 +21,18 @@ class _FakeRegistryReader implements RegistryReader {
 
 void main() {
   group('DistributionDetector', () {
-    test('returns installer when InstallType registry value is "installer"',
-        () {
-      final reader = _FakeRegistryReader(value: 'installer');
-      final detector = DistributionDetector(
-        registryReader: reader,
-        isWindows: true,
-      );
+    test(
+      'returns installer when InstallType registry value is "installer"',
+      () {
+        final reader = _FakeRegistryReader(value: 'installer');
+        final detector = DistributionDetector(
+          registryReader: reader,
+          isWindows: true,
+        );
 
-      expect(detector.detect(), DistributionType.installer);
-    });
+        expect(detector.detect(), DistributionType.installer);
+      },
+    );
 
     test('returns portable when the registry key is missing (null value)', () {
       final reader = _FakeRegistryReader(value: null);
@@ -73,32 +75,34 @@ void main() {
       expect(detector.detect(), DistributionType.portable);
     });
 
-    test('logs the registry-read failure at FINE (not WARNING) and falls back',
-        () {
-      final previousLevel = Logger.root.level;
-      Logger.root.level = Level.ALL;
-      final records = <LogRecord>[];
-      final sub = Logger.root.onRecord.listen(records.add);
-      addTearDown(() {
-        sub.cancel();
-        Logger.root.level = previousLevel;
-      });
+    test(
+      'logs the registry-read failure at FINE (not WARNING) and falls back',
+      () {
+        final previousLevel = Logger.root.level;
+        Logger.root.level = Level.ALL;
+        final records = <LogRecord>[];
+        final sub = Logger.root.onRecord.listen(records.add);
+        addTearDown(() {
+          sub.cancel();
+          Logger.root.level = previousLevel;
+        });
 
-      final reader = _FakeRegistryReader(throwOnRead: true);
-      final detector = DistributionDetector(
-        registryReader: reader,
-        isWindows: true,
-      );
+        final reader = _FakeRegistryReader(throwOnRead: true);
+        final detector = DistributionDetector(
+          registryReader: reader,
+          isWindows: true,
+        );
 
-      expect(detector.detect(), DistributionType.portable);
+        expect(detector.detect(), DistributionType.portable);
 
-      final detected = records.where(
-        (r) => r.loggerName == 'app_update.distribution',
-      );
-      expect(detected, isNotEmpty);
-      // Expected fallback: must stay below the release threshold (Level.INFO)
-      // so portable installs do not pollute the release log on every launch.
-      expect(detected.every((r) => r.level < Level.INFO), isTrue);
-    });
+        final detected = records.where(
+          (r) => r.loggerName == 'app_update.distribution',
+        );
+        expect(detected, isNotEmpty);
+        // Expected fallback: must stay below the release threshold (Level.INFO)
+        // so portable installs do not pollute the release log on every launch.
+        expect(detected.every((r) => r.level < Level.INFO), isTrue);
+      },
+    );
   });
 }

@@ -31,10 +31,7 @@ void main() {
         ),
       ];
 
-      final index = NovelIndex(
-        title: 'テスト小説',
-        episodes: episodes,
-      );
+      final index = NovelIndex(title: 'テスト小説', episodes: episodes);
 
       expect(index.title, 'テスト小説');
       expect(index.episodes.length, 2);
@@ -43,20 +40,14 @@ void main() {
     });
 
     test('creates empty NovelIndex', () {
-      const index = NovelIndex(
-        title: '空の小説',
-        episodes: [],
-      );
+      const index = NovelIndex(title: '空の小説', episodes: []);
 
       expect(index.title, '空の小説');
       expect(index.episodes, isEmpty);
     });
 
     test('bodyContent defaults to null', () {
-      const index = NovelIndex(
-        title: 'テスト小説',
-        episodes: [],
-      );
+      const index = NovelIndex(title: 'テスト小説', episodes: []);
 
       expect(index.bodyContent, isNull);
     });

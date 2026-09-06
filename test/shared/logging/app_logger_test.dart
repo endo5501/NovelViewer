@@ -67,19 +67,17 @@ void main() {
     });
 
     test(
-        'routes records to debugPrint sink with [LEVEL] name: message format in debug mode',
-        () async {
-      final printed = <String>[];
-      await AppLogger.initialize(
-        debug: true,
-        debugSink: printed.add,
-      );
+      'routes records to debugPrint sink with [LEVEL] name: message format in debug mode',
+      () async {
+        final printed = <String>[];
+        await AppLogger.initialize(debug: true, debugSink: printed.add);
 
-      Logger('foo').info('bar');
-      await Future<void>.delayed(Duration.zero);
+        Logger('foo').info('bar');
+        await Future<void>.delayed(Duration.zero);
 
-      expect(printed, contains('[INFO] foo: bar'));
-    });
+        expect(printed, contains('[INFO] foo: bar'));
+      },
+    );
 
     test('routes records to file sink in release mode', () async {
       final sink = _RecordingSink();
@@ -105,61 +103,70 @@ void main() {
     });
 
     test(
-        'does not throw and does not block startup when file sink initialization fails',
-        () async {
-      final sink = _ThrowingSink();
+      'does not throw and does not block startup when file sink initialization fails',
+      () async {
+        final sink = _ThrowingSink();
 
-      await expectLater(
-        AppLogger.initialize(debug: false, fileSink: sink),
-        completes,
-      );
-    });
-
-    test(
-        'records emitted during async sink setup reach the debug sink, not the file sink',
-        () async {
-      final printed = <String>[];
-      final sink = _ControllableSink();
-
-      final initFuture = AppLogger.initialize(
-        debug: false,
-        fileSink: sink,
-        debugSink: printed.add,
-      );
-
-      // Yield once so initialize() reaches `await sink.initialize()` and the
-      // dispatcher listener is attached but _useFileSink is still false.
-      await Future<void>.delayed(Duration.zero);
-
-      Logger('feature').info('mid-init');
-      await Future<void>.delayed(Duration.zero);
-
-      expect(printed.any((m) => m.contains('mid-init')), isTrue,
-          reason: 'record during async setup should reach debug sink');
-      expect(sink.records, isEmpty,
-          reason: 'file sink must not receive records before it is ready');
-
-      sink.initGate.complete();
-      await initFuture;
-    });
+        await expectLater(
+          AppLogger.initialize(debug: false, fileSink: sink),
+          completes,
+        );
+      },
+    );
 
     test(
-        'still routes records to debugPrint fallback when release sink fails to initialize',
-        () async {
-      final printed = <String>[];
+      'records emitted during async sink setup reach the debug sink, not the file sink',
+      () async {
+        final printed = <String>[];
+        final sink = _ControllableSink();
 
-      await AppLogger.initialize(
-        debug: false,
-        fileSink: _ThrowingSink(),
-        debugSink: printed.add,
-      );
+        final initFuture = AppLogger.initialize(
+          debug: false,
+          fileSink: sink,
+          debugSink: printed.add,
+        );
 
-      Logger('foo').info('bar');
-      await Future<void>.delayed(Duration.zero);
+        // Yield once so initialize() reaches `await sink.initialize()` and the
+        // dispatcher listener is attached but _useFileSink is still false.
+        await Future<void>.delayed(Duration.zero);
 
-      expect(printed, isNotEmpty);
-      expect(printed.first, contains('foo'));
-      expect(printed.first, contains('bar'));
-    });
+        Logger('feature').info('mid-init');
+        await Future<void>.delayed(Duration.zero);
+
+        expect(
+          printed.any((m) => m.contains('mid-init')),
+          isTrue,
+          reason: 'record during async setup should reach debug sink',
+        );
+        expect(
+          sink.records,
+          isEmpty,
+          reason: 'file sink must not receive records before it is ready',
+        );
+
+        sink.initGate.complete();
+        await initFuture;
+      },
+    );
+
+    test(
+      'still routes records to debugPrint fallback when release sink fails to initialize',
+      () async {
+        final printed = <String>[];
+
+        await AppLogger.initialize(
+          debug: false,
+          fileSink: _ThrowingSink(),
+          debugSink: printed.add,
+        );
+
+        Logger('foo').info('bar');
+        await Future<void>.delayed(Duration.zero);
+
+        expect(printed, isNotEmpty);
+        expect(printed.first, contains('foo'));
+        expect(printed.first, contains('bar'));
+      },
+    );
   });
 }

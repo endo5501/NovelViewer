@@ -35,10 +35,7 @@ void main() {
 
       test('throws on duplicate surface', () async {
         await repository.addEntry('山田太郎', 'やまだたろう');
-        expect(
-          () => repository.addEntry('山田太郎', 'べつのよみ'),
-          throwsA(anything),
-        );
+        expect(() => repository.addEntry('山田太郎', 'べつのよみ'), throwsA(anything));
       });
     });
 
@@ -54,8 +51,7 @@ void main() {
 
         final entries = await repository.getAllEntries();
         expect(entries.length, 2);
-        expect(entries.map((e) => e.surface),
-            containsAll(['山田太郎', 'エルリック']));
+        expect(entries.map((e) => e.surface), containsAll(['山田太郎', 'エルリック']));
       });
 
       test('entry has correct surface and reading', () async {
@@ -152,8 +148,7 @@ void main() {
       await repository.addEntry('シャルロット', 'しゃるろっと');
       await repository.addEntry('アルベルト', 'あるべると');
 
-      final result =
-          await repository.applyDictionary('シャルロット姫とアルベルト王');
+      final result = await repository.applyDictionary('シャルロット姫とアルベルト王');
       expect(result, 'しゃるろっと姫とあるべると王');
     });
 
@@ -173,21 +168,25 @@ void main() {
       expect(result1, result2);
     });
 
-    test('a no-reading entry is removed from the middle of a sentence',
-        () async {
-      await repository.addEntry('――‐', '');
+    test(
+      'a no-reading entry is removed from the middle of a sentence',
+      () async {
+        await repository.addEntry('――‐', '');
 
-      final result = await repository.applyDictionary('――‐その時私は言ったんだ');
-      expect(result, 'その時私は言ったんだ');
-    });
+        final result = await repository.applyDictionary('――‐その時私は言ったんだ');
+        expect(result, 'その時私は言ったんだ');
+      },
+    );
 
-    test('a text consisting only of a no-reading entry becomes empty',
-        () async {
-      await repository.addEntry('――‐', '');
+    test(
+      'a text consisting only of a no-reading entry becomes empty',
+      () async {
+        await repository.addEntry('――‐', '');
 
-      final result = await repository.applyDictionary('――‐');
-      expect(result, '');
-    });
+        final result = await repository.applyDictionary('――‐');
+        expect(result, '');
+      },
+    );
 
     test('no-reading and normal entries coexist', () async {
       await repository.addEntry('◆◇◆', '');
@@ -234,7 +233,9 @@ void main() {
         const TtsDictionaryEntry(id: 2, surface: 'abc', reading: 'ABC'),
       ];
       final result = TtsDictionaryRepository.applyDictionaryWithEntries(
-          entries, 'xabcx');
+        entries,
+        'xabcx',
+      );
       expect(result, 'xABCx');
     });
   });

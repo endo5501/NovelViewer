@@ -59,8 +59,8 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
 
 final displayModeProvider =
     NotifierProvider<DisplayModeNotifier, TextDisplayMode>(
-  DisplayModeNotifier.new,
-);
+      DisplayModeNotifier.new,
+    );
 
 class DisplayModeNotifier extends Notifier<TextDisplayMode> {
   @override

@@ -43,7 +43,9 @@ void main() {
 
     test('drops fragment', () {
       expect(
-        site.normalizeUrl(Uri.parse('https://example.com/a#section')).toString(),
+        site
+            .normalizeUrl(Uri.parse('https://example.com/a#section'))
+            .toString(),
         'https://example.com/a',
       );
     });
@@ -163,12 +165,14 @@ void main() {
 
   group('parseIndex - title', () {
     Uri base() => Uri.parse('https://example.com/article');
-    const body = '<article><p>'
+    const body =
+        '<article><p>'
         '記事本文が十分な長さで入っています。これはタイトル判定用のダミー本文。'
         '</p></article>';
 
     test('prefers og:title', () {
-      const html = '''
+      const html =
+          '''
 <html>
 <head>
   <title>記事タイトル - ブログ名</title>
@@ -182,7 +186,8 @@ void main() {
     });
 
     test('falls back to h1 when no og:title', () {
-      const html = '''
+      const html =
+          '''
 <html>
 <head><title>記事タイトル - ブログ名</title></head>
 <body><h1>見出しタイトル</h1>$body</body>
@@ -193,7 +198,8 @@ void main() {
     });
 
     test('falls back to title tag when no og:title or h1', () {
-      const html = '''
+      const html =
+          '''
 <html>
 <head><title>タイトルタグの値</title></head>
 <body>$body</body>
@@ -216,7 +222,8 @@ void main() {
 
     test('keeps bodyContent when extracted text meets the minimum length', () {
       final longText = 'あ' * GenericWebSite.minBodyLength;
-      final html = '<html><body><article><p>$longText</p></article></body></html>';
+      final html =
+          '<html><body><article><p>$longText</p></article></body></html>';
       final index = site.parseIndex(html, base());
       expect(index.bodyContent, isNotNull);
       expect(index.bodyContent, contains(longText));
@@ -235,8 +242,10 @@ void main() {
     test('uses charset from Content-Type header', () {
       const text = '見出しと本文のサンプルテキスト';
       final bytes = ShiftJIS().encode(text);
-      final response = responseWith(bytes,
-          contentType: 'text/html; charset=Shift_JIS');
+      final response = responseWith(
+        bytes,
+        contentType: 'text/html; charset=Shift_JIS',
+      );
       expect(site.decodeBody(response), text);
     });
 
@@ -245,11 +254,7 @@ void main() {
       final inner = ShiftJIS().encode(text);
       const prefix = '<html><head><meta charset="Shift_JIS"></head><body><p>';
       const suffix = '</p></body></html>';
-      final bytes = <int>[
-        ...prefix.codeUnits,
-        ...inner,
-        ...suffix.codeUnits,
-      ];
+      final bytes = <int>[...prefix.codeUnits, ...inner, ...suffix.codeUnits];
       final response = responseWith(bytes, contentType: 'text/html');
       expect(site.decodeBody(response), contains(text));
     });
@@ -259,11 +264,7 @@ void main() {
       final inner = EucJP().encode(text);
       const prefix = '<html><head><meta charset="euc-jp"></head><body><p>';
       const suffix = '</p></body></html>';
-      final bytes = <int>[
-        ...prefix.codeUnits,
-        ...inner,
-        ...suffix.codeUnits,
-      ];
+      final bytes = <int>[...prefix.codeUnits, ...inner, ...suffix.codeUnits];
       final response = responseWith(bytes);
       expect(site.decodeBody(response), contains(text));
     });

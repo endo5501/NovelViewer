@@ -53,9 +53,11 @@ class SegmentPlayer {
 
     // (2) Fire-and-forget play; route any exceptions into the completer so
     //     callers see them as a Future error from playSegment.
-    unawaited(_player.play().catchError((Object e, StackTrace st) {
-      if (!playCompleter.isCompleted) playCompleter.completeError(e, st);
-    }));
+    unawaited(
+      _player.play().catchError((Object e, StackTrace st) {
+        if (!playCompleter.isCompleted) playCompleter.completeError(e, st);
+      }),
+    );
 
     try {
       await playCompleter.future;

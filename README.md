@@ -118,6 +118,31 @@ scripts/clean.sh   # macOS/Linux
 scripts\clean.bat  # Windows
 ```
 
+### フォーマッタ
+
+Dart 標準の `dart format` に統一しています。コード修正後はフォーマットを実行してください。
+
+```bash
+# リポジトリ全体を整形（対象は lib/ と test/ の .dart のみ）
+fvm dart format .
+
+# 整形せずに差分の有無だけ確認（未整形なら終了コード 1）
+fvm dart format --output=none --set-exit-if-changed .
+```
+
+設定ファイルはありません。行長などは `dart format` の既定に従います。
+
+リポジトリ全体を整形したコミットは `.git-blame-ignore-revs` に登録してあります。
+`git blame` から除外するには一度だけ次を設定してください（GitHub 上では自動で適用されます）。
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
+`dart format` は 1 行に収まっていた `if` 文を折り返すことがあり、その結果
+`curly_braces_in_flow_control_structures` に該当する場合があります。整形後は
+リンターも実行してください。
+
 ### リンター
 
 `flutter_lints` パッケージによる静的解析を導入しています。コード修正後はリンターを実行して問題がないことを確認してください。

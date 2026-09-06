@@ -16,9 +16,12 @@ void main() {
 
       final children = span.children!.whereType<TextSpan>().toList();
       final highlighted = children
-          .where((s) =>
-              s.style?.backgroundColor != null &&
-              s.style!.backgroundColor!.toARGB32() == Colors.green.withValues(alpha: 0.3).toARGB32())
+          .where(
+            (s) =>
+                s.style?.backgroundColor != null &&
+                s.style!.backgroundColor!.toARGB32() ==
+                    Colors.green.withValues(alpha: 0.3).toARGB32(),
+          )
           .toList();
       expect(highlighted, isNotEmpty);
       expect(highlighted.first.text, 'はじめの文。');
@@ -26,17 +29,16 @@ void main() {
 
     test('no TTS highlight when ttsHighlightRange is null', () {
       final segments = [const PlainTextSegment('テスト文。')];
-      final span = buildRubyTextSpans(
-        segments,
-        const TextStyle(),
-        null,
-      );
+      final span = buildRubyTextSpans(segments, const TextStyle(), null);
 
       final children = span.children!.whereType<TextSpan>().toList();
       final highlighted = children
-          .where((s) =>
-              s.style?.backgroundColor != null &&
-              s.style!.backgroundColor!.toARGB32() == Colors.green.withValues(alpha: 0.3).toARGB32())
+          .where(
+            (s) =>
+                s.style?.backgroundColor != null &&
+                s.style!.backgroundColor!.toARGB32() ==
+                    Colors.green.withValues(alpha: 0.3).toARGB32(),
+          )
           .toList();
       expect(highlighted, isEmpty);
     });
@@ -52,9 +54,12 @@ void main() {
 
       final children = span.children!.whereType<TextSpan>().toList();
       final highlighted = children
-          .where((s) =>
-              s.style?.backgroundColor != null &&
-              s.style!.backgroundColor!.toARGB32() == Colors.green.withValues(alpha: 0.3).toARGB32())
+          .where(
+            (s) =>
+                s.style?.backgroundColor != null &&
+                s.style!.backgroundColor!.toARGB32() ==
+                    Colors.green.withValues(alpha: 0.3).toARGB32(),
+          )
           .toList();
       expect(highlighted, hasLength(1));
       expect(highlighted.first.text, 'えおかき');
@@ -74,9 +79,11 @@ void main() {
       final children = span.children!.whereType<TextSpan>().toList();
       // '太郎' should have yellow (search) highlight, not green
       final searchHighlighted = children
-          .where((s) =>
-              s.style?.backgroundColor != null &&
-              s.style!.backgroundColor == Colors.yellow)
+          .where(
+            (s) =>
+                s.style?.backgroundColor != null &&
+                s.style!.backgroundColor == Colors.yellow,
+          )
           .toList();
       expect(searchHighlighted, hasLength(1));
       expect(searchHighlighted.first.text, '太郎');
@@ -94,9 +101,11 @@ void main() {
 
       final children = span.children!.whereType<TextSpan>().toList();
       final searchHighlighted = children
-          .where((s) =>
-              s.style?.backgroundColor != null &&
-              s.style!.backgroundColor == Colors.amber.shade700)
+          .where(
+            (s) =>
+                s.style?.backgroundColor != null &&
+                s.style!.backgroundColor == Colors.amber.shade700,
+          )
           .toList();
       expect(searchHighlighted, hasLength(1));
       expect(searchHighlighted.first.text, '太郎');

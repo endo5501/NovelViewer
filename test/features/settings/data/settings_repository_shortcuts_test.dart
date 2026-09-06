@@ -37,21 +37,25 @@ void main() {
       await repo.setShortcutBindings(custom);
 
       expect(
-        repo.getShortcutBindings(defaults: defaults())[ShortcutAction.ttsToggle],
+        repo.getShortcutBindings(
+          defaults: defaults(),
+        )[ShortcutAction.ttsToggle],
         KeyBinding(keyId: LogicalKeyboardKey.keyP.keyId, control: true),
       );
     });
 
     test('fills missing actions from defaults', () async {
       final repo = buildRepo();
-      await repo.setShortcutBindings(
-        {ShortcutAction.search: defaults()[ShortcutAction.search]!},
-      );
+      await repo.setShortcutBindings({
+        ShortcutAction.search: defaults()[ShortcutAction.search]!,
+      });
 
       final restored = repo.getShortcutBindings(defaults: defaults());
       expect(restored.keys.toSet(), ShortcutAction.values.toSet());
-      expect(restored[ShortcutAction.bookmark],
-          defaults()[ShortcutAction.bookmark]);
+      expect(
+        restored[ShortcutAction.bookmark],
+        defaults()[ShortcutAction.bookmark],
+      );
     });
   });
 }

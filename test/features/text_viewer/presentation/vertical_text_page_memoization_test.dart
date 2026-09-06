@@ -61,10 +61,16 @@ void main() {
       await tester.pumpWidget(_wrap(selectionStart: 0, selectionEnd: 2));
       await tester.pump();
 
-      expect(computeMarkedRangesCallCount, 0,
-          reason: 'marks must be reused on a selection-only rebuild');
-      expect(verticalTtsHighlightComputeCount, 0,
-          reason: 'TTS highlights must be reused on a selection-only rebuild');
+      expect(
+        computeMarkedRangesCallCount,
+        0,
+        reason: 'marks must be reused on a selection-only rebuild',
+      );
+      expect(
+        verticalTtsHighlightComputeCount,
+        0,
+        reason: 'TTS highlights must be reused on a selection-only rebuild',
+      );
     });
 
     testWidgets('TTS tick does not reschedule the hit-region rebuild', (
@@ -89,11 +95,16 @@ void main() {
       await tester.pumpAndSettle();
       verticalHitRegionScheduleCount = 0;
 
-      await tester.pumpWidget(_wrap(baseStyle: const TextStyle(fontSize: 22.0)));
+      await tester.pumpWidget(
+        _wrap(baseStyle: const TextStyle(fontSize: 22.0)),
+      );
       await tester.pump();
 
-      expect(verticalHitRegionScheduleCount, greaterThan(0),
-          reason: 'a font-size change moves character rects');
+      expect(
+        verticalHitRegionScheduleCount,
+        greaterThan(0),
+        reason: 'a font-size change moves character rects',
+      );
     });
 
     testWidgets('column spacing change reschedules the hit-region rebuild', (
@@ -106,8 +117,11 @@ void main() {
       await tester.pumpWidget(_wrap(columnSpacing: 20.0));
       await tester.pump();
 
-      expect(verticalHitRegionScheduleCount, greaterThan(0),
-          reason: 'a column-spacing change moves character rects');
+      expect(
+        verticalHitRegionScheduleCount,
+        greaterThan(0),
+        reason: 'a column-spacing change moves character rects',
+      );
     });
   });
 
@@ -130,15 +144,20 @@ void main() {
 
       // A marked char carries one extra CustomPaint (the mark sidebar) versus
       // an unmarked char that only shares the common page-level CustomPaint.
-      expect(markPaintCount('ア'), markPaintCount('歩') + 1,
-          reason: 'marked char "ア" should have a mark sidebar, "歩" should not');
+      expect(
+        markPaintCount('ア'),
+        markPaintCount('歩') + 1,
+        reason: 'marked char "ア" should have a mark sidebar, "歩" should not',
+      );
 
-      await tester.pumpWidget(_wrap(
-        selectionStart: 7,
-        selectionEnd: 9,
-        ttsHighlightStart: 0,
-        ttsHighlightEnd: 1,
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          selectionStart: 7,
+          selectionEnd: 9,
+          ttsHighlightStart: 0,
+          ttsHighlightEnd: 1,
+        ),
+      );
       await tester.pump();
 
       // The memoized mark map must keep exactly the same chars marked.
@@ -150,12 +169,14 @@ void main() {
       await tester.pumpWidget(_wrap());
       await tester.pumpAndSettle();
 
-      await tester.pumpWidget(_wrap(
-        selectionStart: 0,
-        selectionEnd: 2,
-        ttsHighlightStart: 3,
-        ttsHighlightEnd: 4,
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          selectionStart: 0,
+          selectionEnd: 2,
+          ttsHighlightStart: 3,
+          ttsHighlightEnd: 4,
+        ),
+      );
       await tester.pump();
 
       // Selected chars get a blue background; the rest do not.

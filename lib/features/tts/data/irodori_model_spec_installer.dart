@@ -21,7 +21,7 @@ import 'package:path/path.dart' as p;
 /// beside the model works on both, so it is the only mechanism used.
 class IrodoriModelSpecInstaller {
   IrodoriModelSpecInstaller({Future<String> Function()? loadSpec})
-      : _loadSpec = loadSpec ?? _loadBundledSpec;
+    : _loadSpec = loadSpec ?? _loadBundledSpec;
 
   static const _assetPath = 'assets/model_specs/irodori_tts.json';
 

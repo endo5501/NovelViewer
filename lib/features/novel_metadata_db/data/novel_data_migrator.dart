@@ -34,17 +34,19 @@ class NovelDataMigrator {
   /// migration run discards all rows as orphans. Production MUST use
   /// [NovelDataMigrator.fromLibraryRoot].
   static NovelDataMigrator get empty => NovelDataMigrator(
-        resolveFolderPath: (_) => null,
-        openNovelDataDb: (_) async =>
-            throw StateError('empty migrator cannot open a folder db'),
-      );
+    resolveFolderPath: (_) => null,
+    openNovelDataDb: (_) async =>
+        throw StateError('empty migrator cannot open a folder db'),
+  );
 
   /// Production migrator: locates each registered novel folder by walking
   /// [libraryRoot] for a directory whose leaf name matches the `folderName`
   /// (so nested novels under organizational folders resolve correctly), and
   /// opens that folder's `novel_data.db` through the production schema.
-  factory NovelDataMigrator.fromLibraryRoot(String libraryRoot,
-      {Logger? logger}) {
+  factory NovelDataMigrator.fromLibraryRoot(
+    String libraryRoot, {
+    Logger? logger,
+  }) {
     return NovelDataMigrator(
       resolveFolderPath: (folderName) {
         final root = Directory(libraryRoot);
@@ -58,7 +60,10 @@ class NovelDataMigrator {
         // orphan: rows discarded + logged) rather than mis-target. Crashing the
         // upgrade is not an option here — it would brick startup.
         final matches = <String>[
-          for (final entity in root.listSync(recursive: true, followLinks: false))
+          for (final entity in root.listSync(
+            recursive: true,
+            followLinks: false,
+          ))
             if (entity is Directory && p.basename(entity.path) == folderName)
               entity.path,
         ];
@@ -131,43 +136,31 @@ Future<void> migrateV8ToV9(
       batch.delete('fact_cache');
       batch.delete('bookmarks');
       for (final r in wordRows.where((r) => r['folder_name'] == folder)) {
-        batch.insert(
-          'word_summaries',
-          {
-            'word': r['word'],
-            'covered_up_to_episode': r['covered_up_to_episode'],
-            'summary': r['summary'],
-            'source_file': r['source_file'],
-            'created_at': r['created_at'],
-            'updated_at': r['updated_at'],
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
+        batch.insert('word_summaries', {
+          'word': r['word'],
+          'covered_up_to_episode': r['covered_up_to_episode'],
+          'summary': r['summary'],
+          'source_file': r['source_file'],
+          'created_at': r['created_at'],
+          'updated_at': r['updated_at'],
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
       }
       for (final r in factRows.where((r) => r['folder_name'] == folder)) {
-        batch.insert(
-          'fact_cache',
-          {
-            'word': r['word'],
-            'file_name': r['file_name'],
-            'facts': r['facts'],
-            'content_hash': r['content_hash'],
-            'prompt_version': r['prompt_version'],
-            'updated_at': r['updated_at'],
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
+        batch.insert('fact_cache', {
+          'word': r['word'],
+          'file_name': r['file_name'],
+          'facts': r['facts'],
+          'content_hash': r['content_hash'],
+          'prompt_version': r['prompt_version'],
+          'updated_at': r['updated_at'],
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
       }
       for (final r in bookmarkRows.where((r) => r['novel_id'] == folder)) {
-        batch.insert(
-          'bookmarks',
-          {
-            'file_name': r['file_name'],
-            'line_number': r['line_number'],
-            'created_at': r['created_at'],
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
+        batch.insert('bookmarks', {
+          'file_name': r['file_name'],
+          'line_number': r['line_number'],
+          'created_at': r['created_at'],
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
       }
       await batch.commit(noResult: true);
     } finally {

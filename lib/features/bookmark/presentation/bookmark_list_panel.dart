@@ -17,17 +17,25 @@ class BookmarkListPanel extends ConsumerWidget {
     final folderPath = ref.watch(currentNovelFolderPathProvider).value;
 
     if (folderPath == null) {
-      return Center(child: Text(AppLocalizations.of(context)!.bookmark_selectNovelPrompt));
+      return Center(
+        child: Text(AppLocalizations.of(context)!.bookmark_selectNovelPrompt),
+      );
     }
 
     final bookmarksAsync = ref.watch(bookmarksForCurrentNovelProvider);
 
     return bookmarksAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text(AppLocalizations.of(context)!.common_errorPrefix(error.toString()))),
+      error: (error, _) => Center(
+        child: Text(
+          AppLocalizations.of(context)!.common_errorPrefix(error.toString()),
+        ),
+      ),
       data: (bookmarks) {
         if (bookmarks.isEmpty) {
-          return Center(child: Text(AppLocalizations.of(context)!.bookmark_noBookmarks));
+          return Center(
+            child: Text(AppLocalizations.of(context)!.bookmark_noBookmarks),
+          );
         }
 
         return ListView.builder(
@@ -52,9 +60,11 @@ class BookmarkListPanel extends ConsumerWidget {
       },
       child: ListTile(
         leading: const Icon(Icons.bookmark),
-        title: Text(bookmark.lineNumber != null
-            ? '${bookmark.fileName} : L${bookmark.lineNumber}'
-            : bookmark.fileName),
+        title: Text(
+          bookmark.lineNumber != null
+              ? '${bookmark.fileName} : L${bookmark.lineNumber}'
+              : bookmark.fileName,
+        ),
         onTap: () => _openBookmark(context, ref, bookmark),
       ),
     );
@@ -77,7 +87,10 @@ class BookmarkListPanel extends ConsumerWidget {
       items: [
         PopupMenuItem<String>(
           value: 'delete',
-          child: Text(AppLocalizations.of(context)!.bookmark_deleteMenuItem, style: const TextStyle(color: Colors.red)),
+          child: Text(
+            AppLocalizations.of(context)!.bookmark_deleteMenuItem,
+            style: const TextStyle(color: Colors.red),
+          ),
         ),
       ],
     );
@@ -90,8 +103,9 @@ class BookmarkListPanel extends ConsumerWidget {
   Future<void> _deleteBookmark(WidgetRef ref, Bookmark bookmark) async {
     final folderPath = await ref.read(currentNovelFolderPathProvider.future);
     if (folderPath == null) return;
-    final repository =
-        await ref.read(bookmarkRepositoryProvider(folderPath).future);
+    final repository = await ref.read(
+      bookmarkRepositoryProvider(folderPath).future,
+    );
     await repository.remove(
       fileName: bookmark.fileName,
       lineNumber: bookmark.lineNumber,
@@ -101,29 +115,28 @@ class BookmarkListPanel extends ConsumerWidget {
     ref.invalidate(isBookmarkedProvider);
   }
 
-  void _openBookmark(
-    BuildContext context,
-    WidgetRef ref,
-    Bookmark bookmark,
-  ) {
+  void _openBookmark(BuildContext context, WidgetRef ref, Bookmark bookmark) {
     // Reconstruct the target path from the novel's *current* folder + the
     // bookmark's file_name (no absolute path is persisted). The panel only
     // lists bookmarks for the current novel, so currentDirectory is that
     // novel's folder. existsSync stays as a fail-safe for the rare case the
     // file is gone (e.g. a renumber after refresh).
     final currentDir = ref.read(currentDirectoryProvider);
-    final resolvedPath =
-        currentDir == null ? null : p.join(currentDir, bookmark.fileName);
+    final resolvedPath = currentDir == null
+        ? null
+        : p.join(currentDir, bookmark.fileName);
     if (resolvedPath == null || !File(resolvedPath).existsSync()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.bookmark_fileNotFound)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.bookmark_fileNotFound),
+        ),
       );
       return;
     }
 
-    ref.read(selectedFileProvider.notifier).selectFile(
-          FileEntry(name: bookmark.fileName, path: resolvedPath),
-        );
+    ref
+        .read(selectedFileProvider.notifier)
+        .selectFile(FileEntry(name: bookmark.fileName, path: resolvedPath));
     if (bookmark.lineNumber != null) {
       ref.read(bookmarkJumpLineProvider.notifier).jump(bookmark.lineNumber!);
     }

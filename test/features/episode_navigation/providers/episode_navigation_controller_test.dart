@@ -33,54 +33,67 @@ ProviderContainer _makeContainer({
       directoryContentsProvider.overrideWith((ref) async {
         return DirectoryContents(files: files, subdirectories: const []);
       }),
-      selectedFileProvider
-          .overrideWith(() => _StubSelectedFileNotifier(selected)),
+      selectedFileProvider.overrideWith(
+        () => _StubSelectedFileNotifier(selected),
+      ),
     ],
   );
 }
 
 void main() {
   group('EpisodeNavigationController', () {
-    test('navigateToNext sets intent=fromStart and switches selectedFile',
-        () async {
-      final files = _files(3);
-      final container = _makeContainer(files: files, selected: files[0]);
-      addTearDown(container.dispose);
-      await container.read(directoryContentsProvider.future);
+    test(
+      'navigateToNext sets intent=fromStart and switches selectedFile',
+      () async {
+        final files = _files(3);
+        final container = _makeContainer(files: files, selected: files[0]);
+        addTearDown(container.dispose);
+        await container.read(directoryContentsProvider.future);
 
-      container.read(episodeNavigationControllerProvider).navigateToNext();
+        container.read(episodeNavigationControllerProvider).navigateToNext();
 
-      expect(container.read(pendingFileEntryIntentProvider),
-          FileEntryStartIntent.fromStart);
-      expect(container.read(selectedFileProvider), files[1]);
-    });
+        expect(
+          container.read(pendingFileEntryIntentProvider),
+          FileEntryStartIntent.fromStart,
+        );
+        expect(container.read(selectedFileProvider), files[1]);
+      },
+    );
 
-    test('navigateToPrevious sets intent=fromEnd and switches selectedFile',
-        () async {
-      final files = _files(3);
-      final container = _makeContainer(files: files, selected: files[2]);
-      addTearDown(container.dispose);
-      await container.read(directoryContentsProvider.future);
+    test(
+      'navigateToPrevious sets intent=fromEnd and switches selectedFile',
+      () async {
+        final files = _files(3);
+        final container = _makeContainer(files: files, selected: files[2]);
+        addTearDown(container.dispose);
+        await container.read(directoryContentsProvider.future);
 
-      container.read(episodeNavigationControllerProvider).navigateToPrevious();
+        container
+            .read(episodeNavigationControllerProvider)
+            .navigateToPrevious();
 
-      expect(container.read(pendingFileEntryIntentProvider),
-          FileEntryStartIntent.fromEnd);
-      expect(container.read(selectedFileProvider), files[1]);
-    });
+        expect(
+          container.read(pendingFileEntryIntentProvider),
+          FileEntryStartIntent.fromEnd,
+        );
+        expect(container.read(selectedFileProvider), files[1]);
+      },
+    );
 
-    test('navigateToNext at last file is a no-op (intent + selection unchanged)',
-        () async {
-      final files = _files(3);
-      final container = _makeContainer(files: files, selected: files.last);
-      addTearDown(container.dispose);
-      await container.read(directoryContentsProvider.future);
+    test(
+      'navigateToNext at last file is a no-op (intent + selection unchanged)',
+      () async {
+        final files = _files(3);
+        final container = _makeContainer(files: files, selected: files.last);
+        addTearDown(container.dispose);
+        await container.read(directoryContentsProvider.future);
 
-      container.read(episodeNavigationControllerProvider).navigateToNext();
+        container.read(episodeNavigationControllerProvider).navigateToNext();
 
-      expect(container.read(pendingFileEntryIntentProvider), isNull);
-      expect(container.read(selectedFileProvider), files.last);
-    });
+        expect(container.read(pendingFileEntryIntentProvider), isNull);
+        expect(container.read(selectedFileProvider), files.last);
+      },
+    );
 
     test('navigateToPrevious at first file is a no-op', () async {
       final files = _files(3);
@@ -118,14 +131,17 @@ void main() {
 
       FileEntryStartIntent? observedIntentWhenSelectionChanged;
       container.listen<FileEntry?>(selectedFileProvider, (prev, next) {
-        observedIntentWhenSelectionChanged =
-            container.read(pendingFileEntryIntentProvider);
+        observedIntentWhenSelectionChanged = container.read(
+          pendingFileEntryIntentProvider,
+        );
       });
 
       container.read(episodeNavigationControllerProvider).navigateToNext();
 
-      expect(observedIntentWhenSelectionChanged,
-          FileEntryStartIntent.fromStart);
+      expect(
+        observedIntentWhenSelectionChanged,
+        FileEntryStartIntent.fromStart,
+      );
     });
   });
 }

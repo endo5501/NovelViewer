@@ -23,11 +23,11 @@ void main() {
   });
 
   Episode ep(int i) => Episode(
-        index: i,
-        title: '第$i話',
-        url: Uri.parse('https://example.com/ep/$i'),
-        updatedAt: '2025/01/01 00:00',
-      );
+    index: i,
+    title: '第$i話',
+    url: Uri.parse('https://example.com/ep/$i'),
+    updatedAt: '2025/01/01 00:00',
+  );
 
   // ---- 1.2 sequencedClient helper sanity ----------------------------------
 
@@ -112,33 +112,39 @@ void main() {
       );
     });
 
-    test('2.2 later index page 503 then 200 is retried (not truncated)',
-        () async {
-      final log = <String>[];
-      final client = sequencedClient({
-        'p=2': [
-          const FakeRoute('p=2', statusCode: 503),
-          const FakeRoute('p=2', body: 'index2'),
-        ],
-        '/index': [const FakeRoute('/index', body: 'index1')],
-      }, fallback: const FakeRoute('', body: 'episode'), requestLog: log);
-      final service = DownloadService(
-        client: client,
-        requestDelay: Duration.zero,
-        retryBaseDelay: Duration.zero,
-        maxRetries: 2,
-      );
+    test(
+      '2.2 later index page 503 then 200 is retried (not truncated)',
+      () async {
+        final log = <String>[];
+        final client = sequencedClient(
+          {
+            'p=2': [
+              const FakeRoute('p=2', statusCode: 503),
+              const FakeRoute('p=2', body: 'index2'),
+            ],
+            '/index': [const FakeRoute('/index', body: 'index1')],
+          },
+          fallback: const FakeRoute('', body: 'episode'),
+          requestLog: log,
+        );
+        final service = DownloadService(
+          client: client,
+          requestDelay: Duration.zero,
+          retryBaseDelay: Duration.zero,
+          maxRetries: 2,
+        );
 
-      final result = await service.downloadNovel(
-        site: FakePagedSite(totalPages: 2, episodesPerPage: 2),
-        url: Uri.parse('https://example.com/index'),
-        outputPath: tempDir.path,
-      );
+        final result = await service.downloadNovel(
+          site: FakePagedSite(totalPages: 2, episodesPerPage: 2),
+          url: Uri.parse('https://example.com/index'),
+          outputPath: tempDir.path,
+        );
 
-      expect(result.indexTruncated, isFalse);
-      expect(result.episodeCount, 4);
-      expect(log.where((u) => u.contains('p=2')).length, 2);
-    });
+        expect(result.indexTruncated, isFalse);
+        expect(result.episodeCount, 4);
+        expect(log.where((u) => u.contains('p=2')).length, 2);
+      },
+    );
 
     test('2.3 episode 5xx exhausted -> failedCount + WARNING', () async {
       final logs = <LogRecord>[];
@@ -167,66 +173,73 @@ void main() {
       // maxRetries + 1 = 3 attempts
       expect(log.where((u) => u.contains('/ep/1')).length, 3);
       expect(
-        logs.any((r) =>
-            r.level == Level.WARNING &&
-            r.message.contains('Failed to download episode')),
+        logs.any(
+          (r) =>
+              r.level == Level.WARNING &&
+              r.message.contains('Failed to download episode'),
+        ),
         isTrue,
       );
     });
 
-    test('2.4 later index 5xx exhausted -> truncated, prior episodes kept',
-        () async {
-      final log = <String>[];
-      final client = sequencedClient({
-        'p=2': [const FakeRoute('p=2', statusCode: 503)],
-        '/index': [const FakeRoute('/index', body: 'index1')],
-      }, fallback: const FakeRoute('', body: 'episode'), requestLog: log);
-      final service = DownloadService(
-        client: client,
-        requestDelay: Duration.zero,
-        retryBaseDelay: Duration.zero,
-        maxRetries: 2,
-      );
+    test(
+      '2.4 later index 5xx exhausted -> truncated, prior episodes kept',
+      () async {
+        final log = <String>[];
+        final client = sequencedClient(
+          {
+            'p=2': [const FakeRoute('p=2', statusCode: 503)],
+            '/index': [const FakeRoute('/index', body: 'index1')],
+          },
+          fallback: const FakeRoute('', body: 'episode'),
+          requestLog: log,
+        );
+        final service = DownloadService(
+          client: client,
+          requestDelay: Duration.zero,
+          retryBaseDelay: Duration.zero,
+          maxRetries: 2,
+        );
 
-      final result = await service.downloadNovel(
-        site: FakePagedSite(totalPages: 2, episodesPerPage: 2),
-        url: Uri.parse('https://example.com/index'),
-        outputPath: tempDir.path,
-      );
-
-      expect(result.indexTruncated, isTrue);
-      expect(result.episodeCount, 2); // only page 1
-      expect(log.where((u) => u.contains('p=2')).length, 3);
-    });
-
-    test('2.5 first index 5xx exhausted -> propagates, no empty folder',
-        () async {
-      final log = <String>[];
-      final client = sequencedClient({
-        '/index': [const FakeRoute('/index', statusCode: 503)],
-      }, requestLog: log);
-      final service = DownloadService(
-        client: client,
-        requestDelay: Duration.zero,
-        retryBaseDelay: Duration.zero,
-        maxRetries: 2,
-      );
-
-      await expectLater(
-        service.downloadNovel(
-          site: FakeNovelSite(episodes: [ep(1)]),
+        final result = await service.downloadNovel(
+          site: FakePagedSite(totalPages: 2, episodesPerPage: 2),
           url: Uri.parse('https://example.com/index'),
           outputPath: tempDir.path,
-        ),
-        throwsA(isA<HttpException>()),
-      );
+        );
 
-      expect(log.where((u) => u.contains('/index')).length, 3);
-      expect(
-        Directory('${tempDir.path}/test_novel1').existsSync(),
-        isFalse,
-      );
-    });
+        expect(result.indexTruncated, isTrue);
+        expect(result.episodeCount, 2); // only page 1
+        expect(log.where((u) => u.contains('p=2')).length, 3);
+      },
+    );
+
+    test(
+      '2.5 first index 5xx exhausted -> propagates, no empty folder',
+      () async {
+        final log = <String>[];
+        final client = sequencedClient({
+          '/index': [const FakeRoute('/index', statusCode: 503)],
+        }, requestLog: log);
+        final service = DownloadService(
+          client: client,
+          requestDelay: Duration.zero,
+          retryBaseDelay: Duration.zero,
+          maxRetries: 2,
+        );
+
+        await expectLater(
+          service.downloadNovel(
+            site: FakeNovelSite(episodes: [ep(1)]),
+            url: Uri.parse('https://example.com/index'),
+            outputPath: tempDir.path,
+          ),
+          throwsA(isA<HttpException>()),
+        );
+
+        expect(log.where((u) => u.contains('/index')).length, 3);
+        expect(Directory('${tempDir.path}/test_novel1').existsSync(), isFalse);
+      },
+    );
 
     test('2.6 4xx is not retried (exactly one request)', () async {
       final log = <String>[];
@@ -277,47 +290,51 @@ void main() {
       expect(log.where((u) => u.contains('/ep/1')).length, 2);
     });
 
-    test('2.8 cancellation during retry surfaces as CancelledException',
-        () async {
-      final token = CancellationToken();
-      final client = MockClient((req) async {
-        final u = req.url.toString();
-        if (u.contains('/index')) return http.Response('index', 200);
-        // First (and only) episode fetch returns 503 and triggers cancel, so
-        // the retry backoff's cancellation check throws before re-fetching.
-        token.cancel();
-        return http.Response('', 503);
-      });
-      final service = DownloadService(
-        client: client,
-        requestDelay: Duration.zero,
-        retryBaseDelay: Duration.zero,
-        maxRetries: 2,
-      );
+    test(
+      '2.8 cancellation during retry surfaces as CancelledException',
+      () async {
+        final token = CancellationToken();
+        final client = MockClient((req) async {
+          final u = req.url.toString();
+          if (u.contains('/index')) return http.Response('index', 200);
+          // First (and only) episode fetch returns 503 and triggers cancel, so
+          // the retry backoff's cancellation check throws before re-fetching.
+          token.cancel();
+          return http.Response('', 503);
+        });
+        final service = DownloadService(
+          client: client,
+          requestDelay: Duration.zero,
+          retryBaseDelay: Duration.zero,
+          maxRetries: 2,
+        );
 
-      await expectLater(
-        service.downloadNovel(
-          site: FakeNovelSite(episodes: [ep(1)]),
-          url: Uri.parse('https://example.com/index'),
-          outputPath: tempDir.path,
-          cancelToken: token,
-        ),
-        throwsA(isA<CancelledException>()),
-      );
-    });
+        await expectLater(
+          service.downloadNovel(
+            site: FakeNovelSite(episodes: [ep(1)]),
+            url: Uri.parse('https://example.com/index'),
+            outputPath: tempDir.path,
+            cancelToken: token,
+          ),
+          throwsA(isA<CancelledException>()),
+        );
+      },
+    );
 
-    test('2.9 maxRetries / retryBaseDelay are injectable with sane defaults',
-        () {
-      final custom = DownloadService(
-        maxRetries: 5,
-        retryBaseDelay: const Duration(seconds: 1),
-      );
-      expect(custom.maxRetries, 5);
-      expect(custom.retryBaseDelay, const Duration(seconds: 1));
+    test(
+      '2.9 maxRetries / retryBaseDelay are injectable with sane defaults',
+      () {
+        final custom = DownloadService(
+          maxRetries: 5,
+          retryBaseDelay: const Duration(seconds: 1),
+        );
+        expect(custom.maxRetries, 5);
+        expect(custom.retryBaseDelay, const Duration(seconds: 1));
 
-      final defaults = DownloadService();
-      expect(defaults.maxRetries, 2);
-      expect(defaults.retryBaseDelay, const Duration(milliseconds: 500));
-    });
+        final defaults = DownloadService();
+        expect(defaults.maxRetries, 2);
+        expect(defaults.retryBaseDelay, const Duration(milliseconds: 500));
+      },
+    );
   });
 }

@@ -12,30 +12,28 @@ void main() {
 
   Widget host({required UpdateAvailable? available}) {
     return ProviderScope(
-      overrides: [
-        updateAvailableProvider.overrideWithValue(available),
-      ],
+      overrides: [updateAvailableProvider.overrideWithValue(available)],
       child: MaterialApp(
         locale: const Locale('ja'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          appBar: AppBar(actions: const [UpdateBadge()]),
-        ),
+        home: Scaffold(appBar: AppBar(actions: const [UpdateBadge()])),
       ),
     );
   }
 
-  testWidgets('shows the badge button when an update is available',
-      (tester) async {
+  testWidgets('shows the badge button when an update is available', (
+    tester,
+  ) async {
     await tester.pumpWidget(host(available: const UpdateAvailable(release)));
     await tester.pump();
 
     expect(find.byKey(const Key('update_badge_button')), findsOneWidget);
   });
 
-  testWidgets('hides the badge button when no update is available',
-      (tester) async {
+  testWidgets('hides the badge button when no update is available', (
+    tester,
+  ) async {
     await tester.pumpWidget(host(available: null));
     await tester.pump();
 

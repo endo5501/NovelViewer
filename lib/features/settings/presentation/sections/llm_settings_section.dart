@@ -9,8 +9,7 @@ class LlmSettingsSection extends ConsumerStatefulWidget {
   const LlmSettingsSection({super.key});
 
   @override
-  ConsumerState<LlmSettingsSection> createState() =>
-      _LlmSettingsSectionState();
+  ConsumerState<LlmSettingsSection> createState() => _LlmSettingsSectionState();
 }
 
 class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
@@ -60,11 +59,13 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
 
   Future<void> _saveLlmConfig() async {
     final repo = ref.read(settingsRepositoryProvider);
-    await repo.setLlmConfig(LlmConfig(
-      provider: _llmProvider,
-      baseUrl: _baseUrlController.text,
-      model: _modelController.text,
-    ));
+    await repo.setLlmConfig(
+      LlmConfig(
+        provider: _llmProvider,
+        baseUrl: _baseUrlController.text,
+        model: _modelController.text,
+      ),
+    );
     if (_apiKeyController.text != _persistedApiKey) {
       await repo.setApiKey(_apiKeyController.text);
       _persistedApiKey = _apiKeyController.text;
@@ -240,8 +241,7 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
               ),
               IconButton(
                 icon: const Icon(Icons.refresh),
-                onPressed: () =>
-                    ref.invalidate(ollamaModelListProvider(url)),
+                onPressed: () => ref.invalidate(ollamaModelListProvider(url)),
               ),
             ],
           ),
@@ -273,8 +273,7 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
             ),
             IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: () =>
-                  ref.invalidate(ollamaModelListProvider(url)),
+              onPressed: () => ref.invalidate(ollamaModelListProvider(url)),
             ),
           ],
         ),

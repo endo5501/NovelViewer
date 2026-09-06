@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Future<UpdatePreferences> build([Map<String, Object> initial = const {}]) async {
+  Future<UpdatePreferences> build([
+    Map<String, Object> initial = const {},
+  ]) async {
     SharedPreferences.setMockInitialValues(initial);
     final prefs = await SharedPreferences.getInstance();
     return UpdatePreferences(prefs);

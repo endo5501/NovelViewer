@@ -29,8 +29,9 @@ void main() {
       expect(find.byIcon(Icons.settings), findsOneWidget);
     });
 
-    testWidgets('settings dialog opens when icon is pressed',
-        (WidgetTester tester) async {
+    testWidgets('settings dialog opens when icon is pressed', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [

@@ -40,8 +40,8 @@ class IrodoriModelDownloadError extends IrodoriModelDownloadState {
 /// payloads to match the real manifest.
 final irodoriExpectedFileSizesProvider =
     Provider<Map<IrodoriModelVariant, int>>(
-  (ref) => IrodoriModelDownloadService.defaultExpectedFileSizes,
-);
+      (ref) => IrodoriModelDownloadService.defaultExpectedFileSizes,
+    );
 
 /// Presence and size of the pre-GGUF safetensors assets.
 ///
@@ -63,13 +63,12 @@ final irodoriLegacyAssetsProvider = Provider<IrodoriLegacyAssets>((ref) {
   );
 });
 
-final irodoriModelDownloadProvider = NotifierProvider<
-    IrodoriModelDownloadNotifier, IrodoriModelDownloadState>(
-  IrodoriModelDownloadNotifier.new,
-);
+final irodoriModelDownloadProvider =
+    NotifierProvider<IrodoriModelDownloadNotifier, IrodoriModelDownloadState>(
+      IrodoriModelDownloadNotifier.new,
+    );
 
-class IrodoriModelDownloadNotifier
-    extends Notifier<IrodoriModelDownloadState> {
+class IrodoriModelDownloadNotifier extends Notifier<IrodoriModelDownloadState> {
   late IrodoriModelDownloadService _service;
 
   /// Bumped on every [build]. A transfer captures the value current when it
@@ -126,10 +125,7 @@ class IrodoriModelDownloadNotifier
     final service = _service;
     _inFlight = service;
 
-    state = const IrodoriModelDownloadDownloading(
-      currentFile: '',
-      progress: 0,
-    );
+    state = const IrodoriModelDownloadDownloading(currentFile: '', progress: 0);
 
     try {
       await service.downloadModel(

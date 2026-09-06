@@ -9,5 +9,5 @@ class RightColumnVisibleNotifier extends Notifier<bool> {
 
 final rightColumnVisibleProvider =
     NotifierProvider<RightColumnVisibleNotifier, bool>(
-  RightColumnVisibleNotifier.new,
-);
+      RightColumnVisibleNotifier.new,
+    );

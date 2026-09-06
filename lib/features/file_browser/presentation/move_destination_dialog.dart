@@ -25,9 +25,7 @@ class MoveDestinationDialog extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.only(left: 16.0 * dest.depth),
                 child: ListTile(
-                  leading: Icon(
-                    dest.depth == 0 ? Icons.home : Icons.folder,
-                  ),
+                  leading: Icon(dest.depth == 0 ? Icons.home : Icons.folder),
                   title: Text(
                     dest.depth == 0
                         ? l10n.fileBrowser_moveLibraryRoot

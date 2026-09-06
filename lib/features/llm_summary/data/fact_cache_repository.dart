@@ -65,9 +65,7 @@ class FactCacheRepository {
   }
 
   /// Returns every cache row for `word`.
-  Future<List<FactCacheEntry>> findForWord({
-    required String word,
-  }) async {
+  Future<List<FactCacheEntry>> findForWord({required String word}) async {
     final results = await _db.query(
       'fact_cache',
       where: 'word = ?',
@@ -96,9 +94,7 @@ class FactCacheRepository {
         'content_hash': sentinelHash,
         'updated_at': DateTime.now().toIso8601String(),
       },
-      where: notNewerThan == null
-          ? 'word = ?'
-          : 'word = ? AND updated_at <= ?',
+      where: notNewerThan == null ? 'word = ?' : 'word = ? AND updated_at <= ?',
       whereArgs: [
         word,
         if (notNewerThan != null) notNewerThan.toIso8601String(),
@@ -108,13 +104,7 @@ class FactCacheRepository {
 
   /// Cascade helper: removes the cache rows for `word`. Call alongside
   /// `LlmSummaryRepository.deleteAllForWord`.
-  Future<void> deleteAllForWord({
-    required String word,
-  }) async {
-    await _db.delete(
-      'fact_cache',
-      where: 'word = ?',
-      whereArgs: [word],
-    );
+  Future<void> deleteAllForWord({required String word}) async {
+    await _db.delete('fact_cache', where: 'word = ?', whereArgs: [word]);
   }
 }

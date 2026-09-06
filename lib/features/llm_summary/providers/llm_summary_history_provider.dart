@@ -15,7 +15,9 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
     final directory = ref.watch(currentDirectoryProvider);
     if (directory == null) return const [];
 
-    final repo = await ref.watch(llmSummaryRepositoryProvider(directory).future);
+    final repo = await ref.watch(
+      llmSummaryRepositoryProvider(directory).future,
+    );
     final rows = await repo.findAll();
     return HistoryEntry.mergeRows(rows);
   }
@@ -25,8 +27,9 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
     if (directory == null) return;
 
     final repo = await ref.read(llmSummaryRepositoryProvider(directory).future);
-    final factCache =
-        await ref.read(factCacheRepositoryProvider(directory).future);
+    final factCache = await ref.read(
+      factCacheRepositoryProvider(directory).future,
+    );
 
     await repo.deleteAllForWord(word: word);
     // Cascade the per-file fact cache so deleting a word's summaries also
@@ -85,5 +88,5 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
 
 final llmSummaryHistoryProvider =
     AsyncNotifierProvider<LlmSummaryHistoryNotifier, List<HistoryEntry>>(
-  LlmSummaryHistoryNotifier.new,
-);
+      LlmSummaryHistoryNotifier.new,
+    );

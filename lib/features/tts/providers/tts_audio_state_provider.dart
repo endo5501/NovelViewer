@@ -32,14 +32,16 @@ class ActiveStreamingFileNotifier extends Notifier<String?> {
 
 final activeStreamingFileProvider =
     NotifierProvider<ActiveStreamingFileNotifier, String?>(
-  ActiveStreamingFileNotifier.new,
-);
+      ActiveStreamingFileNotifier.new,
+    );
 
 /// Per-file `TtsAudioState` derived from the cached `TtsAudioDatabase` for the
 /// file's parent folder. Re-queries on `ref.invalidate(...)` so callers that
 /// just wrote to the DB (e.g. streaming controller) can ask the UI to refresh.
-final ttsAudioStateProvider =
-    FutureProvider.family<TtsAudioState, String>((ref, filePath) async {
+final ttsAudioStateProvider = FutureProvider.family<TtsAudioState, String>((
+  ref,
+  filePath,
+) async {
   if (ref.watch(activeStreamingFileProvider) == filePath) {
     return TtsAudioState.generating;
   }

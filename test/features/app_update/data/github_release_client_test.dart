@@ -57,13 +57,16 @@ void main() {
       });
       final client = GithubReleaseClient(
         httpClient: mock,
-        userAgent: 'NovelViewer/1.2.0 (https://github.com/endo5501/NovelViewer)',
+        userAgent:
+            'NovelViewer/1.2.0 (https://github.com/endo5501/NovelViewer)',
       );
 
       await client.fetchLatest();
 
-      expect(sentUserAgent,
-          'NovelViewer/1.2.0 (https://github.com/endo5501/NovelViewer)');
+      expect(
+        sentUserAgent,
+        'NovelViewer/1.2.0 (https://github.com/endo5501/NovelViewer)',
+      );
     });
 
     test('treats null body as empty string', () async {
@@ -73,10 +76,7 @@ void main() {
           200,
         );
       });
-      final client = GithubReleaseClient(
-        httpClient: mock,
-        userAgent: 'ua',
-      );
+      final client = GithubReleaseClient(httpClient: mock, userAgent: 'ua');
 
       final info = await client.fetchLatest();
 

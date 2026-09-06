@@ -24,9 +24,9 @@ void main() {
         libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
       ],
       child: const MaterialApp(
-            locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('ja'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: SettingsDialog()),
       ),
     );
@@ -73,8 +73,9 @@ void main() {
       expect(find.text('ダークモード'), findsNothing);
     });
 
-    testWidgets('TTS tab shows model selector and voice reference controls',
-        (tester) async {
+    testWidgets('TTS tab shows model selector and voice reference controls', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestWidget());
 
       await tester.tap(find.text('読み上げ'));
@@ -90,8 +91,9 @@ void main() {
       expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
     });
 
-    testWidgets('TTS tab shows language dropdown with default Japanese',
-        (tester) async {
+    testWidgets('TTS tab shows language dropdown with default Japanese', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestWidget());
 
       await tester.tap(find.text('読み上げ'));
@@ -102,8 +104,7 @@ void main() {
       expect(find.text('日本語'), findsOneWidget);
     });
 
-    testWidgets('language dropdown changes provider value',
-        (tester) async {
+    testWidgets('language dropdown changes provider value', (tester) async {
       await tester.pumpWidget(buildTestWidget());
 
       await tester.tap(find.text('読み上げ'));
@@ -119,12 +120,14 @@ void main() {
 
       // Verify the provider was updated
       final container = ProviderScope.containerOf(
-          tester.element(find.byType(SettingsDialog)));
+        tester.element(find.byType(SettingsDialog)),
+      );
       expect(container.read(ttsLanguageProvider), TtsLanguage.en);
     });
 
-    testWidgets('language dropdown is above model size selector',
-        (tester) async {
+    testWidgets('language dropdown is above model size selector', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestWidget());
 
       await tester.tap(find.text('読み上げ'));

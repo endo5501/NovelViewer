@@ -39,13 +39,13 @@ class HamelnSite extends NovelSite {
 
   @override
   Map<String, String> requestHeaders(Uri url) => const {
-        'User-Agent': _userAgent,
-        // Some R-18 works serve an age-confirmation interstitial instead of
-        // the body unless this cookie is present. The site's own "はい" flow
-        // (?mode=r18_cs_end) sets `over18=off`; sending it up front is
-        // harmless for non-R-18 works and unlocks gated ones site-wide.
-        'Cookie': 'over18=off',
-      };
+    'User-Agent': _userAgent,
+    // Some R-18 works serve an age-confirmation interstitial instead of
+    // the body unless this cookie is present. The site's own "はい" flow
+    // (?mode=r18_cs_end) sets `over18=off`; sending it up front is
+    // harmless for non-R-18 works and unlocks gated ones site-wide.
+    'Cookie': 'over18=off',
+  };
 
   @override
   String extractNovelId(Uri url) {
@@ -95,12 +95,14 @@ class HamelnSite extends NovelSite {
       }
       if (link == null || href == null) continue;
 
-      episodes.add(Episode(
-        index: episodes.length + 1,
-        title: _extractEpisodeTitle(link),
-        url: baseUrl.resolve(href),
-        updatedAt: _extractUpdateDate(entry),
-      ));
+      episodes.add(
+        Episode(
+          index: episodes.length + 1,
+          title: _extractEpisodeTitle(link),
+          url: baseUrl.resolve(href),
+          updatedAt: _extractUpdateDate(entry),
+        ),
+      );
     }
 
     String? bodyContent;
@@ -194,8 +196,8 @@ class HamelnSite extends NovelSite {
     // to the work root (<a href="./">work title</a>), which is the cleanest
     // source for the work title.
     final main = document.querySelector('#maind') ?? document;
-    final selfLink = main.querySelector('a[href="./"]') ??
-        main.querySelector('a[href="."]');
+    final selfLink =
+        main.querySelector('a[href="./"]') ?? main.querySelector('a[href="."]');
     if (selfLink != null && selfLink.text.trim().isNotEmpty) {
       return selfLink.text.trim();
     }
@@ -205,8 +207,9 @@ class HamelnSite extends NovelSite {
     // "<work> - <work> - ハーメルン".
     final titleTag = document.querySelector('title')?.text.trim() ?? '';
     if (titleTag.isEmpty) return '';
-    final stripped =
-        titleTag.replaceFirst(RegExp(r'\s*-\s*ハーメルン\s*$'), '').trim();
+    final stripped = titleTag
+        .replaceFirst(RegExp(r'\s*-\s*ハーメルン\s*$'), '')
+        .trim();
     // Collapse an exact duplication ("X - X" -> "X") without truncating a
     // title that legitimately contains " - ".
     final parts = stripped.split(' - ');

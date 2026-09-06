@@ -27,16 +27,17 @@ class TtsEditController {
     TtsSession? session,
     SegmentPlayer? segmentPlayer,
     TextSegmenter? textSegmenter,
-  })  : _repository = repository,
-        _ttsIsolateFactory = ttsIsolateFactory ?? TtsIsolate.new,
-        _dictionaryRepository = dictionaryRepository,
-        _session = session ?? TtsSession(isolate: ttsIsolate),
-        _segmentPlayer = segmentPlayer ??
-            // Edit-screen previews always treat each segment as the last one
-            // (no follow-up play()), so default drain to zero — the WASAPI
-            // tail concern only applies to back-to-back segment playback.
-            SegmentPlayer(player: audioPlayer, bufferDrainDelay: Duration.zero),
-        _textSegmenter = textSegmenter ?? const TextSegmenter();
+  }) : _repository = repository,
+       _ttsIsolateFactory = ttsIsolateFactory ?? TtsIsolate.new,
+       _dictionaryRepository = dictionaryRepository,
+       _session = session ?? TtsSession(isolate: ttsIsolate),
+       _segmentPlayer =
+           segmentPlayer ??
+           // Edit-screen previews always treat each segment as the last one
+           // (no follow-up play()), so default drain to zero — the WASAPI
+           // tail concern only applies to back-to-back segment playback.
+           SegmentPlayer(player: audioPlayer, bufferDrainDelay: Duration.zero),
+       _textSegmenter = textSegmenter ?? const TextSegmenter();
 
   TtsSession _session;
   final SegmentPlayer _segmentPlayer;
@@ -103,7 +104,9 @@ class TtsEditController {
         for (final segment in _segments) {
           if (!segment.dbRecordExists) {
             segment.text = TtsDictionaryRepository.applyDictionaryWithEntries(
-                entries, segment.text);
+              entries,
+              segment.text,
+            );
           }
         }
       }
@@ -134,7 +137,9 @@ class TtsEditController {
   }
 
   Future<void> updateSegmentRefWavPath(
-      int segmentIndex, String? refWavPath) async {
+    int segmentIndex,
+    String? refWavPath,
+  ) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return;
 
     final segment = _segments[segmentIndex];
@@ -144,7 +149,10 @@ class TtsEditController {
 
     if (segment.dbRecordExists) {
       await _repository.updateSegmentRefWavPath(
-          _episodeId!, segmentIndex, refWavPath);
+        _episodeId!,
+        segmentIndex,
+        refWavPath,
+      );
     } else {
       await _repository.insertSegment(
         episodeId: _episodeId!,
@@ -231,9 +239,7 @@ class TtsEditController {
   }) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
     final dict = _dictionaryRepository;
-    final entries = dict != null
-        ? await dict.getEntriesSortedByLength()
-        : null;
+    final entries = dict != null ? await dict.getEntriesSortedByLength() : null;
     final refWavPath = TtsRefWavResolver.resolve(
       storedPath: _segments[segmentIndex].refWavPath,
       fallbackPath: config.synthesisFallbackRefWavPath,
@@ -260,7 +266,9 @@ class TtsEditController {
     // For segments already in DB, use their stored text as-is (already converted).
     final synthText = !segment.dbRecordExists && dictEntries != null
         ? TtsDictionaryRepository.applyDictionaryWithEntries(
-            dictEntries, segment.text)
+            dictEntries,
+            segment.text,
+          )
         : segment.text;
 
     // A symbol-only line ("――‐") is its own segment, so a no-reading
@@ -291,7 +299,11 @@ class TtsEditController {
 
     if (segment.dbRecordExists) {
       await _repository.updateSegmentAudio(
-          _episodeId!, segmentIndex, wavBytes, result.audio!.length);
+        _episodeId!,
+        segmentIndex,
+        wavBytes,
+        result.audio!.length,
+      );
     } else {
       await _repository.insertSegment(
         episodeId: _episodeId!,
@@ -319,7 +331,9 @@ class TtsEditController {
   /// loads it, so opening the edit screen stays a pure read and does not
   /// conjure an episode row (design D4).
   Future<void> _markBlankSegmentSkipped(
-      int segmentIndex, TtsEditSegment segment) async {
+    int segmentIndex,
+    TtsEditSegment segment,
+  ) async {
     segment.skip = true;
 
     await _ensureEpisodeExists();
@@ -410,8 +424,10 @@ class TtsEditController {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return;
     if (!_segments[segmentIndex].hasAudio || _episodeId == null) return;
 
-    final segmentData =
-        await _repository.getSegmentByIndex(_episodeId!, segmentIndex);
+    final segmentData = await _repository.getSegmentByIndex(
+      _episodeId!,
+      segmentIndex,
+    );
     final audioData = segmentData.audioData;
     if (audioData == null) return;
 
@@ -478,7 +494,9 @@ class TtsEditController {
     if (dict != null) {
       final entries = await dict.getEntriesSortedByLength();
       segment.text = TtsDictionaryRepository.applyDictionaryWithEntries(
-          entries, segment.originalText);
+        entries,
+        segment.originalText,
+      );
     } else {
       segment.text = segment.originalText;
     }
@@ -503,12 +521,16 @@ class TtsEditController {
 
     // Pre-load dictionary entries once for all resets.
     final dict = _dictionaryRepository;
-    final dictEntries = dict != null ? await dict.getEntriesSortedByLength() : null;
+    final dictEntries = dict != null
+        ? await dict.getEntriesSortedByLength()
+        : null;
 
     for (final segment in _segments) {
       segment.text = dictEntries != null
           ? TtsDictionaryRepository.applyDictionaryWithEntries(
-              dictEntries, segment.originalText)
+              dictEntries,
+              segment.originalText,
+            )
           : segment.originalText;
       segment.hasAudio = false;
       segment.refWavPath = null;

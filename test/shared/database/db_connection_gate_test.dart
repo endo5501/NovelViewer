@@ -13,58 +13,67 @@ class _FakeResource {
 
 void main() {
   group('DbConnectionGate', () {
-    test('concurrent access shares a single opener call (no double open)',
-        () async {
-      var openCount = 0;
-      final opener = Completer<_FakeResource>();
-      final gate = DbConnectionGate<_FakeResource>(
-        opener: () {
-          openCount++;
-          return opener.future;
-        },
-        closer: (r) async {},
-      );
+    test(
+      'concurrent access shares a single opener call (no double open)',
+      () async {
+        var openCount = 0;
+        final opener = Completer<_FakeResource>();
+        final gate = DbConnectionGate<_FakeResource>(
+          opener: () {
+            openCount++;
+            return opener.future;
+          },
+          closer: (r) async {},
+        );
 
-      // Two accesses while the open is still in flight.
-      final f1 = gate.resource;
-      final f2 = gate.resource;
-      final res = _FakeResource();
-      opener.complete(res);
+        // Two accesses while the open is still in flight.
+        final f1 = gate.resource;
+        final f2 = gate.resource;
+        final res = _FakeResource();
+        opener.complete(res);
 
-      expect(await f1, same(res));
-      expect(await f2, same(res));
-      expect(openCount, 1, reason: 'opener must run exactly once');
-    });
+        expect(await f1, same(res));
+        expect(await f2, same(res));
+        expect(openCount, 1, reason: 'opener must run exactly once');
+      },
+    );
 
-    test('close awaits the in-flight open then closes that same resource',
-        () async {
-      final opener = Completer<_FakeResource>();
-      final res = _FakeResource();
-      var openCount = 0;
-      final gate = DbConnectionGate<_FakeResource>(
-        opener: () {
-          openCount++;
-          // First open is gated by the completer (to create the in-flight
-          // race); any reopen yields a distinct fresh resource.
-          return openCount == 1 ? opener.future : Future.value(_FakeResource());
-        },
-        closer: (r) async => r.closed = true,
-      );
+    test(
+      'close awaits the in-flight open then closes that same resource',
+      () async {
+        final opener = Completer<_FakeResource>();
+        final res = _FakeResource();
+        var openCount = 0;
+        final gate = DbConnectionGate<_FakeResource>(
+          opener: () {
+            openCount++;
+            // First open is gated by the completer (to create the in-flight
+            // race); any reopen yields a distinct fresh resource.
+            return openCount == 1
+                ? opener.future
+                : Future.value(_FakeResource());
+          },
+          closer: (r) async => r.closed = true,
+        );
 
-      final accessing = gate.resource; // open in flight
-      final closing = gate.close(); // close starts while opening
-      opener.complete(res);
-      await accessing;
-      await closing;
+        final accessing = gate.resource; // open in flight
+        final closing = gate.close(); // close starts while opening
+        opener.complete(res);
+        await accessing;
+        await closing;
 
-      expect(res.closed, isTrue,
-          reason: 'close must wait for the open and close that handle');
+        expect(
+          res.closed,
+          isTrue,
+          reason: 'close must wait for the open and close that handle',
+        );
 
-      // Nothing retained: a subsequent access opens a fresh resource.
-      final reopened = await gate.resource;
-      expect(reopened, isNot(same(res)));
-      expect(openCount, 2);
-    });
+        // Nothing retained: a subsequent access opens a fresh resource.
+        final reopened = await gate.resource;
+        expect(reopened, isNot(same(res)));
+        expect(openCount, 2);
+      },
+    );
 
     test('access during close throws DatabaseClosingException', () async {
       final opener = Completer<_FakeResource>();

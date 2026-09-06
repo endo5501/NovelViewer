@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
+import 'package:novel_viewer/features/reading_progress/providers/reading_position_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/tts/providers/vacuum_lifecycle_provider.dart';
 import 'package:novel_viewer/home_screen.dart';
@@ -24,6 +25,8 @@ class NovelViewerApp extends ConsumerWidget {
     // effects fire without further wiring at each screen.
     ref.read(readingProgressAutoSaveListenerProvider);
     ref.read(readingProgressAutoOpenListenerProvider);
+    ref.read(readingPositionLifecycleProvider);
+    ref.read(readingProgressStartupProvider);
 
     return MaterialApp(
       title: 'NovelViewer',

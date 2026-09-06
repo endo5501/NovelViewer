@@ -19,10 +19,7 @@ List<PopupMenuEntry<VerticalContextAction>> buildVerticalContextMenuItems({
   required String analyzeSpoilerLabel,
 }) {
   return [
-    PopupMenuItem(
-      value: VerticalContextAction.copy,
-      child: Text(copyLabel),
-    ),
+    PopupMenuItem(value: VerticalContextAction.copy, child: Text(copyLabel)),
     PopupMenuItem(
       value: VerticalContextAction.addToDictionary,
       child: Text(addToDictionaryLabel),

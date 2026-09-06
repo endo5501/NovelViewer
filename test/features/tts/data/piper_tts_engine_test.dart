@@ -46,8 +46,8 @@ class MockPiperNativeBindings extends PiperNativeBindings {
 
   @override
   // ignore: overridden_fields
-  late final int Function(Pointer<Void>) isLoaded =
-      (Pointer<Void> ctx) => _isLoadedResult;
+  late final int Function(Pointer<Void>) isLoaded = (Pointer<Void> ctx) =>
+      _isLoadedResult;
 
   @override
   // ignore: overridden_fields
@@ -57,33 +57,33 @@ class MockPiperNativeBindings extends PiperNativeBindings {
   // ignore: overridden_fields
   late final int Function(Pointer<Void>, Pointer<Utf8>) synthesize =
       (Pointer<Void> ctx, Pointer<Utf8> text) {
-    synthesizeCalled = true;
-    return 0;
-  };
+        synthesizeCalled = true;
+        return 0;
+      };
 
   @override
   // ignore: overridden_fields
   late final int Function(Pointer<Void>, double) setLengthScale =
       (Pointer<Void> ctx, double value) {
-    lastLengthScale = value;
-    return 0;
-  };
+        lastLengthScale = value;
+        return 0;
+      };
 
   @override
   // ignore: overridden_fields
   late final int Function(Pointer<Void>, double) setNoiseScale =
       (Pointer<Void> ctx, double value) {
-    lastNoiseScale = value;
-    return 0;
-  };
+        lastNoiseScale = value;
+        return 0;
+      };
 
   @override
   // ignore: overridden_fields
   late final int Function(Pointer<Void>, double) setNoiseW =
       (Pointer<Void> ctx, double value) {
-    lastNoiseW = value;
-    return 0;
-  };
+        lastNoiseW = value;
+        return 0;
+      };
 
   @override
   // ignore: overridden_fields
@@ -92,13 +92,13 @@ class MockPiperNativeBindings extends PiperNativeBindings {
 
   @override
   // ignore: overridden_fields
-  late final int Function(Pointer<Void>) getAudioLength =
-      (Pointer<Void> ctx) => _fakeAudioLength;
+  late final int Function(Pointer<Void>) getAudioLength = (Pointer<Void> ctx) =>
+      _fakeAudioLength;
 
   @override
   // ignore: overridden_fields
-  late final int Function(Pointer<Void>) getSampleRate =
-      (Pointer<Void> ctx) => _fakeSampleRate;
+  late final int Function(Pointer<Void>) getSampleRate = (Pointer<Void> ctx) =>
+      _fakeSampleRate;
 
   @override
   // ignore: overridden_fields

@@ -5,8 +5,10 @@ import 'package:ffi/ffi.dart';
 
 // init takes the model dir, thread count, and an abort handle pointer (may be
 // nullptr). The abort handle is owned by the caller and outlives the context.
-typedef _QTtsInitC = Pointer<Void> Function(Pointer<Utf8>, Int32, Pointer<Void>);
-typedef _QTtsInitDart = Pointer<Void> Function(Pointer<Utf8>, int, Pointer<Void>);
+typedef _QTtsInitC =
+    Pointer<Void> Function(Pointer<Utf8>, Int32, Pointer<Void>);
+typedef _QTtsInitDart =
+    Pointer<Void> Function(Pointer<Utf8>, int, Pointer<Void>);
 
 // Abort handle lifecycle (lifetime independent of any synthesis context).
 typedef _QTtsCreateAbortHandleC = Pointer<Void> Function();
@@ -24,29 +26,13 @@ typedef _QTtsFreeDart = void Function(Pointer<Void>);
 typedef _QTtsSetLanguageC = Void Function(Pointer<Void>, Int32);
 typedef _QTtsSetLanguageDart = void Function(Pointer<Void>, int);
 
-typedef _QTtsSynthesizeC = Int32 Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Int32,
-);
-typedef _QTtsSynthesizeDart = int Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  int,
-);
+typedef _QTtsSynthesizeC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32);
+typedef _QTtsSynthesizeDart = int Function(Pointer<Void>, Pointer<Utf8>, int);
 
-typedef _QTtsSynthesizeWithVoiceC = Int32 Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  Int32,
-);
-typedef _QTtsSynthesizeWithVoiceDart = int Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  int,
-);
+typedef _QTtsSynthesizeWithVoiceC =
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Int32);
+typedef _QTtsSynthesizeWithVoiceDart =
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, int);
 
 typedef _QTtsGetAudioC = Pointer<Float> Function(Pointer<Void>);
 typedef _QTtsGetAudioDart = Pointer<Float> Function(Pointer<Void>);
@@ -61,55 +47,35 @@ typedef _QTtsGetErrorC = Pointer<Utf8> Function(Pointer<Void>);
 typedef _QTtsGetErrorDart = Pointer<Utf8> Function(Pointer<Void>);
 
 // Speaker embedding types
-typedef _QTtsSynthesizeWithEmbeddingC = Int32 Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Float>,
-  Int32,
-  Int32,
-);
-typedef _QTtsSynthesizeWithEmbeddingDart = int Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Float>,
-  int,
-  int,
-);
+typedef _QTtsSynthesizeWithEmbeddingC =
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Float>, Int32, Int32);
+typedef _QTtsSynthesizeWithEmbeddingDart =
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Float>, int, int);
 
-typedef _QTtsExtractSpeakerEmbeddingC = Int32 Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Pointer<Float>>,
-  Pointer<Int32>,
-);
-typedef _QTtsExtractSpeakerEmbeddingDart = int Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Pointer<Float>>,
-  Pointer<Int32>,
-);
+typedef _QTtsExtractSpeakerEmbeddingC =
+    Int32 Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<Pointer<Float>>,
+      Pointer<Int32>,
+    );
+typedef _QTtsExtractSpeakerEmbeddingDart =
+    int Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<Pointer<Float>>,
+      Pointer<Int32>,
+    );
 
-typedef _QTtsSaveSpeakerEmbeddingC = Int32 Function(
-  Pointer<Utf8>,
-  Pointer<Float>,
-  Int32,
-);
-typedef _QTtsSaveSpeakerEmbeddingDart = int Function(
-  Pointer<Utf8>,
-  Pointer<Float>,
-  int,
-);
+typedef _QTtsSaveSpeakerEmbeddingC =
+    Int32 Function(Pointer<Utf8>, Pointer<Float>, Int32);
+typedef _QTtsSaveSpeakerEmbeddingDart =
+    int Function(Pointer<Utf8>, Pointer<Float>, int);
 
-typedef _QTtsLoadSpeakerEmbeddingC = Int32 Function(
-  Pointer<Utf8>,
-  Pointer<Pointer<Float>>,
-  Pointer<Int32>,
-);
-typedef _QTtsLoadSpeakerEmbeddingDart = int Function(
-  Pointer<Utf8>,
-  Pointer<Pointer<Float>>,
-  Pointer<Int32>,
-);
+typedef _QTtsLoadSpeakerEmbeddingC =
+    Int32 Function(Pointer<Utf8>, Pointer<Pointer<Float>>, Pointer<Int32>);
+typedef _QTtsLoadSpeakerEmbeddingDart =
+    int Function(Pointer<Utf8>, Pointer<Pointer<Float>>, Pointer<Int32>);
 
 typedef _QTtsFreeSpeakerEmbeddingC = Void Function(Pointer<Float>);
 typedef _QTtsFreeSpeakerEmbeddingDart = void Function(Pointer<Float>);
@@ -140,91 +106,90 @@ class TtsNativeBindings {
     'qwen3_tts_init',
   );
 
-  late final createAbortHandle = _library.lookupFunction<
-    _QTtsCreateAbortHandleC,
-    _QTtsCreateAbortHandleDart
-  >('qwen3_tts_create_abort_handle');
+  late final createAbortHandle = _library
+      .lookupFunction<_QTtsCreateAbortHandleC, _QTtsCreateAbortHandleDart>(
+        'qwen3_tts_create_abort_handle',
+      );
 
-  late final freeAbortHandle = _library.lookupFunction<
-    _QTtsFreeAbortHandleC,
-    _QTtsFreeAbortHandleDart
-  >('qwen3_tts_free_abort_handle');
+  late final freeAbortHandle = _library
+      .lookupFunction<_QTtsFreeAbortHandleC, _QTtsFreeAbortHandleDart>(
+        'qwen3_tts_free_abort_handle',
+      );
 
-  late final isLoaded =
-      _library.lookupFunction<_QTtsIsLoadedC, _QTtsIsLoadedDart>(
-    'qwen3_tts_is_loaded',
-  );
+  late final isLoaded = _library
+      .lookupFunction<_QTtsIsLoadedC, _QTtsIsLoadedDart>('qwen3_tts_is_loaded');
 
   late final free = _library.lookupFunction<_QTtsFreeC, _QTtsFreeDart>(
     'qwen3_tts_free',
   );
 
-  late final setLanguage =
-      _library.lookupFunction<_QTtsSetLanguageC, _QTtsSetLanguageDart>(
-    'qwen3_tts_set_language',
-  );
+  late final setLanguage = _library
+      .lookupFunction<_QTtsSetLanguageC, _QTtsSetLanguageDart>(
+        'qwen3_tts_set_language',
+      );
 
-  late final synthesize =
-      _library.lookupFunction<_QTtsSynthesizeC, _QTtsSynthesizeDart>(
-    'qwen3_tts_synthesize',
-  );
+  late final synthesize = _library
+      .lookupFunction<_QTtsSynthesizeC, _QTtsSynthesizeDart>(
+        'qwen3_tts_synthesize',
+      );
 
-  late final synthesizeWithVoice = _library.lookupFunction<
-    _QTtsSynthesizeWithVoiceC,
-    _QTtsSynthesizeWithVoiceDart
-  >('qwen3_tts_synthesize_with_voice');
+  late final synthesizeWithVoice = _library
+      .lookupFunction<_QTtsSynthesizeWithVoiceC, _QTtsSynthesizeWithVoiceDart>(
+        'qwen3_tts_synthesize_with_voice',
+      );
 
-  late final getAudio =
-      _library.lookupFunction<_QTtsGetAudioC, _QTtsGetAudioDart>(
-    'qwen3_tts_get_audio',
-  );
+  late final getAudio = _library
+      .lookupFunction<_QTtsGetAudioC, _QTtsGetAudioDart>('qwen3_tts_get_audio');
 
-  late final getAudioLength =
-      _library.lookupFunction<_QTtsGetAudioLengthC, _QTtsGetAudioLengthDart>(
-    'qwen3_tts_get_audio_length',
-  );
+  late final getAudioLength = _library
+      .lookupFunction<_QTtsGetAudioLengthC, _QTtsGetAudioLengthDart>(
+        'qwen3_tts_get_audio_length',
+      );
 
-  late final getSampleRate =
-      _library.lookupFunction<_QTtsGetSampleRateC, _QTtsGetSampleRateDart>(
-    'qwen3_tts_get_sample_rate',
-  );
+  late final getSampleRate = _library
+      .lookupFunction<_QTtsGetSampleRateC, _QTtsGetSampleRateDart>(
+        'qwen3_tts_get_sample_rate',
+      );
 
-  late final getError =
-      _library.lookupFunction<_QTtsGetErrorC, _QTtsGetErrorDart>(
-    'qwen3_tts_get_error',
-  );
+  late final getError = _library
+      .lookupFunction<_QTtsGetErrorC, _QTtsGetErrorDart>('qwen3_tts_get_error');
 
-  late final synthesizeWithEmbedding = _library.lookupFunction<
-    _QTtsSynthesizeWithEmbeddingC,
-    _QTtsSynthesizeWithEmbeddingDart
-  >('qwen3_tts_synthesize_with_embedding');
+  late final synthesizeWithEmbedding = _library
+      .lookupFunction<
+        _QTtsSynthesizeWithEmbeddingC,
+        _QTtsSynthesizeWithEmbeddingDart
+      >('qwen3_tts_synthesize_with_embedding');
 
-  late final extractSpeakerEmbedding = _library.lookupFunction<
-    _QTtsExtractSpeakerEmbeddingC,
-    _QTtsExtractSpeakerEmbeddingDart
-  >('qwen3_tts_extract_speaker_embedding');
+  late final extractSpeakerEmbedding = _library
+      .lookupFunction<
+        _QTtsExtractSpeakerEmbeddingC,
+        _QTtsExtractSpeakerEmbeddingDart
+      >('qwen3_tts_extract_speaker_embedding');
 
-  late final saveSpeakerEmbedding = _library.lookupFunction<
-    _QTtsSaveSpeakerEmbeddingC,
-    _QTtsSaveSpeakerEmbeddingDart
-  >('qwen3_tts_save_speaker_embedding');
+  late final saveSpeakerEmbedding = _library
+      .lookupFunction<
+        _QTtsSaveSpeakerEmbeddingC,
+        _QTtsSaveSpeakerEmbeddingDart
+      >('qwen3_tts_save_speaker_embedding');
 
-  late final loadSpeakerEmbedding = _library.lookupFunction<
-    _QTtsLoadSpeakerEmbeddingC,
-    _QTtsLoadSpeakerEmbeddingDart
-  >('qwen3_tts_load_speaker_embedding');
+  late final loadSpeakerEmbedding = _library
+      .lookupFunction<
+        _QTtsLoadSpeakerEmbeddingC,
+        _QTtsLoadSpeakerEmbeddingDart
+      >('qwen3_tts_load_speaker_embedding');
 
-  late final freeSpeakerEmbedding = _library.lookupFunction<
-    _QTtsFreeSpeakerEmbeddingC,
-    _QTtsFreeSpeakerEmbeddingDart
-  >('qwen3_tts_free_speaker_embedding');
+  late final freeSpeakerEmbedding = _library
+      .lookupFunction<
+        _QTtsFreeSpeakerEmbeddingC,
+        _QTtsFreeSpeakerEmbeddingDart
+      >('qwen3_tts_free_speaker_embedding');
 
   late final abort = _library.lookupFunction<_QTtsAbortC, _QTtsAbortDart>(
     'qwen3_tts_abort',
   );
 
-  late final resetAbort =
-      _library.lookupFunction<_QTtsResetAbortC, _QTtsResetAbortDart>(
-    'qwen3_tts_reset_abort',
-  );
+  late final resetAbort = _library
+      .lookupFunction<_QTtsResetAbortC, _QTtsResetAbortDart>(
+        'qwen3_tts_reset_abort',
+      );
 }

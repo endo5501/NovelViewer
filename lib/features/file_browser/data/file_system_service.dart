@@ -57,10 +57,7 @@ class DirectoryOpException implements Exception {
 }
 
 class FileSystemService {
-  Future<DirectoryEntry> createDirectory(
-    String parentPath,
-    String name,
-  ) async {
+  Future<DirectoryEntry> createDirectory(String parentPath, String name) async {
     if (!isValidFolderName(name)) {
       throw DirectoryOpException(
         DirectoryOpError.invalidName,
@@ -87,10 +84,7 @@ class FileSystemService {
     return DirectoryEntry(name: name, path: targetPath);
   }
 
-  Future<DirectoryEntry> renameDirectory(
-    String path_,
-    String newName,
-  ) async {
+  Future<DirectoryEntry> renameDirectory(String path_, String newName) async {
     if (!isValidFolderName(newName)) {
       throw DirectoryOpException(
         DirectoryOpError.invalidName,
@@ -133,10 +127,7 @@ class FileSystemService {
 
   /// Moves [srcPath] into [destParentPath], preserving the source's leaf name
   /// (its `folder_name` for novel folders). Returns the new absolute path.
-  Future<String> moveDirectory(
-    String srcPath,
-    String destParentPath,
-  ) async {
+  Future<String> moveDirectory(String srcPath, String destParentPath) async {
     final source = Directory(srcPath);
     if (!source.existsSync()) {
       throw DirectoryOpException(

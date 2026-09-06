@@ -32,15 +32,17 @@ class _AboutAndUpdateSectionState extends ConsumerState<AboutAndUpdateSection> {
       _checking = true;
       _resultMessage = null;
     });
-    final status =
-        await ref.read(updateStatusProvider.notifier).check(manual: true);
+    final status = await ref
+        .read(updateStatusProvider.notifier)
+        .check(manual: true);
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
     setState(() {
       _checking = false;
       _resultMessage = switch (status) {
-        UpdateAvailable(:final release) => l10n
-            .settings_updateAvailableMessage(_normalizedTag(release.tagName)),
+        UpdateAvailable(:final release) => l10n.settings_updateAvailableMessage(
+          _normalizedTag(release.tagName),
+        ),
         UpdateNotAvailable() => l10n.settings_upToDateMessage,
         UpdateCheckError() => l10n.settings_checkFailedMessage,
         UpdateSkipped() => null,
@@ -112,8 +114,10 @@ class _AboutAndUpdateSectionState extends ConsumerState<AboutAndUpdateSection> {
         children: [
           SizedBox(
             width: 140,
-            child: Text(label,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
           ),
           Expanded(child: Text(value)),
         ],

@@ -39,15 +39,11 @@ void main() {
         libraryPathProvider.overrideWithValue(libraryPath),
       ],
       child: const MaterialApp(
-            locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('ja'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: SizedBox(
-            width: 800,
-            height: 600,
-            child: SettingsDialog(),
-          ),
+          body: SizedBox(width: 800, height: 600, child: SettingsDialog()),
         ),
       ),
     );
@@ -162,8 +158,9 @@ void main() {
       expect(prefs.getString('tts_ref_wav_path'), 'my_voice.wav');
     });
 
-    testWidgets('shows default when saved file no longer exists',
-        (tester) async {
+    testWidgets('shows default when saved file no longer exists', (
+      tester,
+    ) async {
       await prefs.setString('tts_ref_wav_path', 'deleted_file.wav');
       Directory(p.join(tempDir.path, 'voices')).createSync();
 
@@ -174,8 +171,9 @@ void main() {
   });
 
   group('Drop zone', () {
-    testWidgets('voice reference selector is wrapped in DropTarget',
-        (tester) async {
+    testWidgets('voice reference selector is wrapped in DropTarget', (
+      tester,
+    ) async {
       await navigateToTtsTab(tester);
 
       expect(find.byType(DropTarget), findsOneWidget);
@@ -183,8 +181,9 @@ void main() {
   });
 
   group('Rename button', () {
-    testWidgets('rename button is hidden when no file is selected',
-        (tester) async {
+    testWidgets('rename button is hidden when no file is selected', (
+      tester,
+    ) async {
       final voicesDir = Directory(p.join(tempDir.path, 'voices'));
       voicesDir.createSync();
 
@@ -193,8 +192,9 @@ void main() {
       expect(find.byTooltip('ファイル名を変更'), findsNothing);
     });
 
-    testWidgets('rename button is shown when a file is selected',
-        (tester) async {
+    testWidgets('rename button is shown when a file is selected', (
+      tester,
+    ) async {
       final voicesDir = Directory(p.join(tempDir.path, 'voices'));
       voicesDir.createSync();
       File(p.join(voicesDir.path, 'my_voice.wav')).writeAsStringSync('');
@@ -220,8 +220,9 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('rename dialog shows current file name without extension',
-        (tester) async {
+    testWidgets('rename dialog shows current file name without extension', (
+      tester,
+    ) async {
       await openRenameDialog(tester);
 
       expect(find.text('ファイル名の変更'), findsOneWidget);
@@ -232,8 +233,7 @@ void main() {
       expect(find.text('.wav'), findsOneWidget);
     });
 
-    testWidgets('rename dialog cancel does not rename file',
-        (tester) async {
+    testWidgets('rename dialog cancel does not rename file', (tester) async {
       await openRenameDialog(tester);
 
       await tester.tap(find.text('キャンセル'));
@@ -246,8 +246,7 @@ void main() {
       expect(File(p.join(voicesDir.path, 'my_voice.wav')).existsSync(), isTrue);
     });
 
-    testWidgets('rename dialog confirms and renames file',
-        (tester) async {
+    testWidgets('rename dialog confirms and renames file', (tester) async {
       await openRenameDialog(tester);
 
       // Clear and type new name
@@ -264,15 +263,21 @@ void main() {
 
       // File should be renamed
       final voicesDir = Directory(p.join(tempDir.path, 'voices'));
-      expect(File(p.join(voicesDir.path, 'my_voice.wav')).existsSync(), isFalse);
       expect(
-          File(p.join(voicesDir.path, 'renamed_voice.wav')).existsSync(), isTrue);
+        File(p.join(voicesDir.path, 'my_voice.wav')).existsSync(),
+        isFalse,
+      );
+      expect(
+        File(p.join(voicesDir.path, 'renamed_voice.wav')).existsSync(),
+        isTrue,
+      );
       // Setting should be updated
       expect(prefs.getString('tts_ref_wav_path'), 'renamed_voice.wav');
     });
 
-    testWidgets('rename dialog disables confirm when name already exists',
-        (tester) async {
+    testWidgets('rename dialog disables confirm when name already exists', (
+      tester,
+    ) async {
       final voicesDir = Directory(p.join(tempDir.path, 'voices'));
       voicesDir.createSync();
       File(p.join(voicesDir.path, 'existing.wav')).writeAsStringSync('');
@@ -288,8 +293,9 @@ void main() {
       expect(find.text('同名のファイルが既に存在します'), findsOneWidget);
     });
 
-    testWidgets('rename dialog disables confirm when name is empty',
-        (tester) async {
+    testWidgets('rename dialog disables confirm when name is empty', (
+      tester,
+    ) async {
       await openRenameDialog(tester);
 
       // Clear the text field
@@ -299,7 +305,8 @@ void main() {
 
       // Confirm button should be disabled (find it and check onPressed)
       final confirmButton = tester.widget<TextButton>(
-          find.widgetWithText(TextButton, '変更'));
+        find.widgetWithText(TextButton, '変更'),
+      );
       expect(confirmButton.onPressed, isNull);
     });
   });

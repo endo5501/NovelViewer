@@ -82,8 +82,9 @@ class LlmSummaryService {
       // invalidated to re-extract rather than serve the facts that produced it
       // ("re-analyze = redo from scratch").
       final existing = await repository.findSnapshotsForWord(word: word);
-      final isReanalysis =
-          existing.any((s) => s.coveredUpToEpisode == coveredUpToEpisode);
+      final isReanalysis = existing.any(
+        (s) => s.coveredUpToEpisode == coveredUpToEpisode,
+      );
       if (isReanalysis) {
         // Scope the invalidation to rows written no later than the word's most
         // recent successful run of ANY scope. Only a run that saved a snapshot
@@ -119,8 +120,10 @@ class LlmSummaryService {
 
       final files = _groupByFile(filteredResults);
 
-      final pipeline =
-          LlmSummaryPipeline(llmClient: llmClient, language: language);
+      final pipeline = LlmSummaryPipeline(
+        llmClient: llmClient,
+        language: language,
+      );
 
       // Resolve hit/miss for each file before extracting, so progress totals
       // reflect only the files actually extracted (the misses).
@@ -141,8 +144,7 @@ class LlmSummaryService {
         );
         cachedFactsByFile[file.fileName] = valid ? cached!.facts : null;
       }
-      final missCount =
-          cachedFactsByFile.values.where((f) => f == null).length;
+      final missCount = cachedFactsByFile.values.where((f) => f == null).length;
 
       final perFileFacts = <String>[];
       var missDone = 0;
@@ -295,8 +297,9 @@ class LlmSummaryService {
     // numeric prefix and therefore needs a lexical rank — avoids paying the
     // directory-listing cost in the common (well-numbered) case.
     List<String>? folderFiles;
-    final anyMissingPrefix =
-        results.any((r) => extractNumericPrefix(r.fileName) == null);
+    final anyMissingPrefix = results.any(
+      (r) => extractNumericPrefix(r.fileName) == null,
+    );
     if (anyMissingPrefix) {
       folderFiles = listSortedTextFileNames(directoryPath);
     }

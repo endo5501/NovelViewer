@@ -29,8 +29,7 @@ final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
         httpClient: httpClient,
       );
     case LlmProvider.openai:
-      final apiKey =
-          await ref.watch(settingsRepositoryProvider).getApiKey();
+      final apiKey = await ref.watch(settingsRepositoryProvider).getApiKey();
       if (apiKey.isEmpty) {
         return null;
       }
@@ -48,33 +47,38 @@ final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
 /// Folder-scoped `LlmSummaryRepository`, backed by the novel's per-folder
 /// `novel_data.db`. The family argument is the novel folder's absolute path.
 final llmSummaryRepositoryProvider =
-    FutureProvider.family<LlmSummaryRepository, String>((ref, folderPath) async {
-  // Normalize via folderDbKey so this resolves the SAME novel_data.db thin-view
-  // the registry/folder-switch flow evicts & invalidates (which key on
-  // folderDbKey). Reading the raw path would key a distinct provider entry that
-  // never gets invalidated and could serve a closed handle.
-  final db = await ref
-      .watch(novelDataDatabaseProvider(folderDbKey(folderPath)))
-      .database;
-  return LlmSummaryRepository(db);
-});
+    FutureProvider.family<LlmSummaryRepository, String>((
+      ref,
+      folderPath,
+    ) async {
+      // Normalize via folderDbKey so this resolves the SAME novel_data.db thin-view
+      // the registry/folder-switch flow evicts & invalidates (which key on
+      // folderDbKey). Reading the raw path would key a distinct provider entry that
+      // never gets invalidated and could serve a closed handle.
+      final db = await ref
+          .watch(novelDataDatabaseProvider(folderDbKey(folderPath)))
+          .database;
+      return LlmSummaryRepository(db);
+    });
 
 /// Folder-scoped `FactCacheRepository`, backed by the novel's per-folder
 /// `novel_data.db`. The family argument is the novel folder's absolute path.
 final factCacheRepositoryProvider =
     FutureProvider.family<FactCacheRepository, String>((ref, folderPath) async {
-  final db = await ref
-      .watch(novelDataDatabaseProvider(folderDbKey(folderPath)))
-      .database;
-  return FactCacheRepository(db);
-});
+      final db = await ref
+          .watch(novelDataDatabaseProvider(folderDbKey(folderPath)))
+          .database;
+      return FactCacheRepository(db);
+    });
 
 /// Folder-scoped `LlmSummaryService`. The family argument is the novel folder's
 /// absolute path; the service's repositories are bound to that folder's
 /// `novel_data.db`. Returns null while async dependencies load or no LLM is
 /// configured.
-final llmSummaryServiceProvider =
-    Provider.family<LlmSummaryService?, String>((ref, folderPath) {
+final llmSummaryServiceProvider = Provider.family<LlmSummaryService?, String>((
+  ref,
+  folderPath,
+) {
   final clientAsync = ref.watch(llmClientProvider);
   final client = clientAsync.value;
   if (client == null) return null;
@@ -95,4 +99,3 @@ final llmSummaryServiceProvider =
     searchService: searchService,
   );
 });
-

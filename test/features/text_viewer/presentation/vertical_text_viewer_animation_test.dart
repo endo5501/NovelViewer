@@ -14,21 +14,23 @@ Widget _buildTestWidget({
   double height = 400,
   ValueChanged<ViewerSelection?>? onSelectionChanged,
 }) {
-  return ProviderScope(child: MaterialApp(
-        locale: const Locale('ja'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-    home: Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints.tightFor(width: width, height: height),
-        child: VerticalTextViewer(
-          segments: segments,
-          baseStyle: const TextStyle(fontSize: 14.0),
-          onSelectionChanged: onSelectionChanged,
+  return ProviderScope(
+    child: MaterialApp(
+      locale: const Locale('ja'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints.tightFor(width: width, height: height),
+          child: VerticalTextViewer(
+            segments: segments,
+            baseStyle: const TextStyle(fontSize: 14.0),
+            onSelectionChanged: onSelectionChanged,
+          ),
         ),
       ),
     ),
-  ));
+  );
 }
 
 /// Find SlideTransition widgets that are descendants of VerticalTextViewer
@@ -55,11 +57,10 @@ List<TextSegment> _multiPageSegments() => [PlainTextSegment('あ' * 500)];
 
 void main() {
   group('Page transition animation - basic operation', () {
-    testWidgets('SlideTransition appears during page transition',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+    testWidgets('SlideTransition appears during page transition', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
 
       // No SlideTransition in viewer before navigation
       expect(_findViewerSlideTransitions(), findsNothing);
@@ -73,11 +74,10 @@ void main() {
       expect(_findViewerSlideTransitions(), findsWidgets);
     });
 
-    testWidgets('animation completes and SlideTransition is removed',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+    testWidgets('animation completes and SlideTransition is removed', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pumpAndSettle();
@@ -88,11 +88,10 @@ void main() {
       expect(_extractCurrentPage(tester), 2);
     });
 
-    testWidgets('two VerticalTextPage widgets visible during animation',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+    testWidgets('two VerticalTextPage widgets visible during animation', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pump();
@@ -102,11 +101,10 @@ void main() {
       expect(find.byType(VerticalTextPage), findsNWidgets(2));
     });
 
-    testWidgets('only one VerticalTextPage after animation completes',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+    testWidgets('only one VerticalTextPage after animation completes', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pumpAndSettle();
@@ -116,9 +114,7 @@ void main() {
     });
 
     testWidgets('animation completes in 250ms', (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pump(); // Start animation
@@ -136,11 +132,10 @@ void main() {
   });
 
   group('Page transition animation - slide direction', () {
-    testWidgets('next page: outgoing slides right (positive offset)',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+    testWidgets('next page: outgoing slides right (positive offset)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pump();
@@ -155,21 +150,26 @@ void main() {
       // Outgoing page should have positive X offset (sliding right)
       final outgoing = slideTransitions[0];
       final outgoingOffset = outgoing.position.value;
-      expect(outgoingOffset.dx, greaterThan(0),
-          reason: 'Outgoing page should slide to the right (positive dx)');
+      expect(
+        outgoingOffset.dx,
+        greaterThan(0),
+        reason: 'Outgoing page should slide to the right (positive dx)',
+      );
 
       // Incoming page should have negative X offset (sliding in from left)
       final incoming = slideTransitions[1];
       final incomingOffset = incoming.position.value;
-      expect(incomingOffset.dx, lessThan(0),
-          reason: 'Incoming page should slide in from the left (negative dx)');
+      expect(
+        incomingOffset.dx,
+        lessThan(0),
+        reason: 'Incoming page should slide in from the left (negative dx)',
+      );
     });
 
-    testWidgets('previous page: outgoing slides left (negative offset)',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+    testWidgets('previous page: outgoing slides left (negative offset)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
 
       // First go to page 2
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
@@ -189,21 +189,25 @@ void main() {
       // Outgoing page should have negative X offset (sliding left)
       final outgoing = slideTransitions[0];
       final outgoingOffset = outgoing.position.value;
-      expect(outgoingOffset.dx, lessThan(0),
-          reason: 'Outgoing page should slide to the left (negative dx)');
+      expect(
+        outgoingOffset.dx,
+        lessThan(0),
+        reason: 'Outgoing page should slide to the left (negative dx)',
+      );
 
       // Incoming page should have positive X offset (sliding in from right)
       final incoming = slideTransitions[1];
       final incomingOffset = incoming.position.value;
-      expect(incomingOffset.dx, greaterThan(0),
-          reason:
-              'Incoming page should slide in from the right (positive dx)');
+      expect(
+        incomingOffset.dx,
+        greaterThan(0),
+        reason: 'Incoming page should slide in from the right (positive dx)',
+      );
     });
   });
 
   group('Page transition animation - boundary conditions', () {
-    testWidgets('no animation when pressing next on last page',
-        (tester) async {
+    testWidgets('no animation when pressing next on last page', (tester) async {
       final segments = [PlainTextSegment('あ' * 60)];
 
       await tester.pumpWidget(
@@ -232,11 +236,10 @@ void main() {
       expect(_extractCurrentPage(tester), totalPages);
     });
 
-    testWidgets('no animation when pressing previous on first page',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+    testWidgets('no animation when pressing previous on first page', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
       expect(_extractCurrentPage(tester), 1);
 
       // Try to go to previous page (should have no effect)
@@ -251,12 +254,10 @@ void main() {
   });
 
   group('Page transition animation - rapid navigation', () {
-    testWidgets(
-        'rapid arrow keys: previous animation snaps, new one starts',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+    testWidgets('rapid arrow keys: previous animation snaps, new one starts', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
 
       // Start first page transition
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
@@ -315,11 +316,10 @@ void main() {
   });
 
   group('Page transition animation - existing functionality preserved', () {
-    testWidgets('arrow key navigation still works with animation',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+    testWidgets('arrow key navigation still works with animation', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
 
       expect(_extractCurrentPage(tester), 1);
 
@@ -334,11 +334,8 @@ void main() {
       expect(_extractCurrentPage(tester), 1);
     });
 
-    testWidgets('swipe navigation still works with animation',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildTestWidget(segments: _multiPageSegments()),
-      );
+    testWidgets('swipe navigation still works with animation', (tester) async {
+      await tester.pumpWidget(_buildTestWidget(segments: _multiPageSegments()));
 
       expect(_extractCurrentPage(tester), 1);
 

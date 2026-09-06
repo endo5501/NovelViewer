@@ -14,8 +14,9 @@ class InstallerVerifier {
     required String sha256Path,
   }) async {
     try {
-      final expected =
-          _parseExpectedHash(await File(sha256Path).readAsString());
+      final expected = _parseExpectedHash(
+        await File(sha256Path).readAsString(),
+      );
       if (expected == null) return false;
       final bytes = await File(exePath).readAsBytes();
       final actual = sha256.convert(bytes).toString().toLowerCase();

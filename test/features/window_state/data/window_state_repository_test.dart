@@ -68,15 +68,17 @@ void main() {
       expect(WindowStateRepository(prefs).load(), WindowState.empty);
     });
 
-    test('falls back to empty when the maximized flag holds a wrong type',
-        () async {
-      await initPrefs({
-        'window_width': 1600.0,
-        'window_height': 1000.0,
-        'window_maximized': 'yes',
-      });
-      expect(WindowStateRepository(prefs).load(), WindowState.empty);
-    });
+    test(
+      'falls back to empty when the maximized flag holds a wrong type',
+      () async {
+        await initPrefs({
+          'window_width': 1600.0,
+          'window_height': 1000.0,
+          'window_maximized': 'yes',
+        });
+        expect(WindowStateRepository(prefs).load(), WindowState.empty);
+      },
+    );
   });
 
   group('WindowStateRepository - save', () {
@@ -102,21 +104,24 @@ void main() {
       );
     });
 
-    test('saving only the maximized flag keeps the stored size intact',
-        () async {
-      await initPrefs({'window_width': 1400.0, 'window_height': 900.0});
-      final repo = WindowStateRepository(prefs);
-      await repo.saveMaximized(true);
-      expect(
-        repo.load(),
-        const WindowState(width: 1400, height: 900, maximized: true),
-      );
-    });
+    test(
+      'saving only the maximized flag keeps the stored size intact',
+      () async {
+        await initPrefs({'window_width': 1400.0, 'window_height': 900.0});
+        final repo = WindowStateRepository(prefs);
+        await repo.saveMaximized(true);
+        expect(
+          repo.load(),
+          const WindowState(width: 1400, height: 900, maximized: true),
+        );
+      },
+    );
 
     test('writes the documented preference keys', () async {
       await initPrefs();
-      await WindowStateRepository(prefs)
-          .save(const WindowState(width: 1600, height: 1000, maximized: true));
+      await WindowStateRepository(
+        prefs,
+      ).save(const WindowState(width: 1600, height: 1000, maximized: true));
       expect(prefs.getDouble('window_width'), 1600.0);
       expect(prefs.getDouble('window_height'), 1000.0);
       expect(prefs.getBool('window_maximized'), isTrue);

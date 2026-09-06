@@ -37,26 +37,26 @@ void main() {
   });
 
   group('computePopupAnchor — vertical mode default placement', () {
-    test('places bottom-left of popup up-right of pointer when room permits',
-        () {
-      // pointer comfortably away from any edge.
-      final anchor = computePopupAnchor(
-        mode: TextDisplayMode.vertical,
-        pointer: const Offset(800, 600),
-        screenSize: screen,
-      );
-      // bottom-left at (pointer.dx + g, pointer.dy - g)
-      // → top-left at (pointer.dx + g, pointer.dy - g - h)
-      expect(anchor.left, 800 + g);
-      expect(anchor.top, 600 - g - h);
-    });
+    test(
+      'places bottom-left of popup up-right of pointer when room permits',
+      () {
+        // pointer comfortably away from any edge.
+        final anchor = computePopupAnchor(
+          mode: TextDisplayMode.vertical,
+          pointer: const Offset(800, 600),
+          screenSize: screen,
+        );
+        // bottom-left at (pointer.dx + g, pointer.dy - g)
+        // → top-left at (pointer.dx + g, pointer.dy - g - h)
+        expect(anchor.left, 800 + g);
+        expect(anchor.top, 600 - g - h);
+      },
+    );
   });
 
   group('computePopupAnchor — vertical mode horizontal flip', () {
-    test(
-        'when default placement would overflow the right edge, the popup '
-        'flips to the left of the pointer',
-        () {
+    test('when default placement would overflow the right edge, the popup '
+        'flips to the left of the pointer', () {
       // pointer near right edge: default left would be screen.width - small,
       // and left + w would exceed screen.width.
       final pointer = Offset(screen.width - 50, 600);
@@ -74,10 +74,8 @@ void main() {
   });
 
   group('computePopupAnchor — vertical mode vertical flip', () {
-    test(
-        'when default placement would overflow the top edge, the popup '
-        'flips to below the pointer',
-        () {
+    test('when default placement would overflow the top edge, the popup '
+        'flips to below the pointer', () {
       // pointer near top edge: pointer.dy - g - h would be negative.
       const pointer = Offset(800, 20);
       final anchor = computePopupAnchor(
@@ -106,10 +104,8 @@ void main() {
   });
 
   group('computePopupAnchor — clamps to keep popup on-screen', () {
-    test(
-        'narrow window: horizontal-flip would push left negative, so left is '
-        'clamped to >= 0',
-        () {
+    test('narrow window: horizontal-flip would push left negative, so left is '
+        'clamped to >= 0', () {
       // screen narrower than popup-width + gap so even the flipped placement
       // would push left negative.
       const narrow = Size(300, 1080);
@@ -119,14 +115,15 @@ void main() {
         pointer: pointer,
         screenSize: narrow,
       );
-      expect(anchor.left, greaterThanOrEqualTo(0.0),
-          reason: 'popup must not hang off the left edge');
+      expect(
+        anchor.left,
+        greaterThanOrEqualTo(0.0),
+        reason: 'popup must not hang off the left edge',
+      );
     });
 
-    test(
-        'short window: vertical-flip would push popup off the bottom, so top '
-        'is clamped to keep the popup visible',
-        () {
+    test('short window: vertical-flip would push popup off the bottom, so top '
+        'is clamped to keep the popup visible', () {
       // Even the flipped placement (top = dy + g) would push the popup
       // bottom past the screen.
       const short = Size(1920, 180);
@@ -136,11 +133,16 @@ void main() {
         pointer: pointer,
         screenSize: short,
       );
-      expect(anchor.top + h, lessThanOrEqualTo(short.height),
-          reason: 'popup bottom must not extend past screen bottom');
-      expect(anchor.top, greaterThanOrEqualTo(0.0),
-          reason: 'popup top must not be negative');
+      expect(
+        anchor.top + h,
+        lessThanOrEqualTo(short.height),
+        reason: 'popup bottom must not extend past screen bottom',
+      );
+      expect(
+        anchor.top,
+        greaterThanOrEqualTo(0.0),
+        reason: 'popup top must not be negative',
+      );
     });
-
   });
 }

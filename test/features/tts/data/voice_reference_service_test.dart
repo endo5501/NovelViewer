@@ -67,13 +67,15 @@ void main() {
       expect(files, isEmpty);
     });
 
-    test('creates directory and returns empty list when directory does not exist',
-        () async {
-      final files = await service.listVoiceFiles();
+    test(
+      'creates directory and returns empty list when directory does not exist',
+      () async {
+        final files = await service.listVoiceFiles();
 
-      expect(files, isEmpty);
-      expect(Directory(service.voicesDirPath).existsSync(), isTrue);
-    });
+        expect(files, isEmpty);
+        expect(Directory(service.voicesDirPath).existsSync(), isTrue);
+      },
+    );
 
     test('ignores subdirectories', () async {
       final voicesDir = Directory(service.voicesDirPath);
@@ -171,7 +173,9 @@ void main() {
 
       expect(Directory(service.voicesDirPath).existsSync(), isTrue);
       expect(
-          File(p.join(service.voicesDirPath, 'voice.wav')).existsSync(), isTrue);
+        File(p.join(service.voicesDirPath, 'voice.wav')).existsSync(),
+        isTrue,
+      );
     });
   });
 
@@ -184,11 +188,14 @@ void main() {
       await service.renameVoiceFile('old_name.wav', 'new_name.wav');
 
       expect(
-          File(p.join(voicesDir.path, 'old_name.wav')).existsSync(), isFalse);
+        File(p.join(voicesDir.path, 'old_name.wav')).existsSync(),
+        isFalse,
+      );
+      expect(File(p.join(voicesDir.path, 'new_name.wav')).existsSync(), isTrue);
       expect(
-          File(p.join(voicesDir.path, 'new_name.wav')).existsSync(), isTrue);
-      expect(File(p.join(voicesDir.path, 'new_name.wav')).readAsStringSync(),
-          'content');
+        File(p.join(voicesDir.path, 'new_name.wav')).readAsStringSync(),
+        'content',
+      );
     });
 
     test('rejects rename to an existing name', () async {
@@ -301,7 +308,9 @@ void main() {
 
       expect(Directory(service.voicesDirPath).existsSync(), isTrue);
       expect(
-          File(p.join(service.voicesDirPath, 'voice.wav')).existsSync(), isTrue);
+        File(p.join(service.voicesDirPath, 'voice.wav')).existsSync(),
+        isTrue,
+      );
     });
   });
 }

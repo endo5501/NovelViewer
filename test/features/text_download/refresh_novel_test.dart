@@ -57,41 +57,42 @@ void main() {
   );
 
   group('DownloadNotifier.refreshNovel', () {
-    test('fetches metadata by folderName and calls startDownload with stored URL',
-        () async {
-      final fakeRepo = _FakeNovelRepository(testMetadata);
-      final trackingNotifier = _TrackingDownloadNotifier();
-
-      final container = ProviderContainer(
-        overrides: [
-          novelRepositoryProvider.overrideWithValue(fakeRepo),
-          libraryPathProvider.overrideWithValue('/tmp/test_novels'),
-          downloadProvider.overrideWith(() => trackingNotifier),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      // Initialize the notifier
-      container.read(downloadProvider);
-
-      await container
-          .read(downloadProvider.notifier)
-          .refreshNovel('narou_n1234ab', parentPath: '/tmp/test_novels');
-
-      expect(fakeRepo.lastFolderName, 'narou_n1234ab');
-      expect(
-        trackingNotifier.lastUrl,
-        Uri.parse('https://ncode.syosetu.com/n1234ab/'),
-      );
-      expect(trackingNotifier.lastOutputPath, '/tmp/test_novels');
-      expect(
-        container.read(downloadProvider).status,
-        DownloadStatus.completed,
-      );
-    });
-
     test(
-        'refresh of a novel inside a subfolder writes back to that subfolder '
+      'fetches metadata by folderName and calls startDownload with stored URL',
+      () async {
+        final fakeRepo = _FakeNovelRepository(testMetadata);
+        final trackingNotifier = _TrackingDownloadNotifier();
+
+        final container = ProviderContainer(
+          overrides: [
+            novelRepositoryProvider.overrideWithValue(fakeRepo),
+            libraryPathProvider.overrideWithValue('/tmp/test_novels'),
+            downloadProvider.overrideWith(() => trackingNotifier),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        // Initialize the notifier
+        container.read(downloadProvider);
+
+        await container
+            .read(downloadProvider.notifier)
+            .refreshNovel('narou_n1234ab', parentPath: '/tmp/test_novels');
+
+        expect(fakeRepo.lastFolderName, 'narou_n1234ab');
+        expect(
+          trackingNotifier.lastUrl,
+          Uri.parse('https://ncode.syosetu.com/n1234ab/'),
+        );
+        expect(trackingNotifier.lastOutputPath, '/tmp/test_novels');
+        expect(
+          container.read(downloadProvider).status,
+          DownloadStatus.completed,
+        );
+      },
+    );
+
+    test('refresh of a novel inside a subfolder writes back to that subfolder '
         '(no library-root duplication)', () async {
       final fakeRepo = _FakeNovelRepository(testMetadata);
       final trackingNotifier = _TrackingDownloadNotifier();
@@ -106,7 +107,9 @@ void main() {
       addTearDown(container.dispose);
       container.read(downloadProvider);
 
-      await container.read(downloadProvider.notifier).refreshNovel(
+      await container
+          .read(downloadProvider.notifier)
+          .refreshNovel(
             'narou_n1234ab',
             parentPath: '/tmp/test_novels/完結済み/異世界',
           );
@@ -165,14 +168,8 @@ void main() {
           .read(downloadProvider.notifier)
           .refreshNovel('unknown_folder', parentPath: '/tmp/test_novels');
 
-      expect(
-        container.read(downloadProvider).status,
-        DownloadStatus.error,
-      );
-      expect(
-        container.read(downloadProvider).errorMessage,
-        '小説のメタデータが見つかりません',
-      );
+      expect(container.read(downloadProvider).status, DownloadStatus.error);
+      expect(container.read(downloadProvider).errorMessage, '小説のメタデータが見つかりません');
     });
   });
 }

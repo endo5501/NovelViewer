@@ -138,10 +138,7 @@ void main() {
       );
 
       expect(results, hasLength(1));
-      expect(
-        results[0].matches[0].extendedContext,
-        '太郎が登場\n2行目\n3行目',
-      );
+      expect(results[0].matches[0].extendedContext, '太郎が登場\n2行目\n3行目');
     });
 
     test('handles context at end of file', () async {
@@ -154,25 +151,16 @@ void main() {
       );
 
       expect(results, hasLength(1));
-      expect(
-        results[0].matches[0].extendedContext,
-        '1行目\n2行目\n太郎が退場',
-      );
+      expect(results[0].matches[0].extendedContext, '1行目\n2行目\n太郎が退場');
     });
 
     test('uses contextLines of 2 by default', () async {
-      await createFile(
-        '001.txt',
-        'a\nb\nc\n太郎\ne\nf\ng',
-      );
+      await createFile('001.txt', 'a\nb\nc\n太郎\ne\nf\ng');
 
       final results = await service.searchWithContext(tempDir.path, '太郎');
 
       expect(results, hasLength(1));
-      expect(
-        results[0].matches[0].extendedContext,
-        'b\nc\n太郎\ne\nf',
-      );
+      expect(results[0].matches[0].extendedContext, 'b\nc\n太郎\ne\nf');
     });
 
     test('returns results from multiple files', () async {

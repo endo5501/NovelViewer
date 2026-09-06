@@ -15,12 +15,15 @@ void main() {
   Future<ProviderContainer> makeContainer() async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
-    final container = ProviderContainer(overrides: [
-      sharedPreferencesProvider.overrideWithValue(prefs),
-      // Pin defaults to non-macOS so assertions are platform-independent.
-      shortcutDefaultsProvider
-          .overrideWithValue(defaultShortcutBindings(isMacOS: false)),
-    ]);
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        // Pin defaults to non-macOS so assertions are platform-independent.
+        shortcutDefaultsProvider.overrideWithValue(
+          defaultShortcutBindings(isMacOS: false),
+        ),
+      ],
+    );
     addTearDown(container.dispose);
     return container;
   }
@@ -47,16 +50,19 @@ void main() {
     );
   });
 
-  test('rebind rejects a combination already used by another action',
-      () async {
+  test('rebind rejects a combination already used by another action', () async {
     final container = await makeContainer();
     final notifier = container.read(keyBindingsProvider.notifier);
     // search default is Control+F on non-macOS; assigning it to bookmark
     // must be rejected.
-    final searchBinding =
-        container.read(keyBindingsProvider)[ShortcutAction.search]!;
+    final searchBinding = container.read(
+      keyBindingsProvider,
+    )[ShortcutAction.search]!;
 
-    final applied = await notifier.rebind(ShortcutAction.bookmark, searchBinding);
+    final applied = await notifier.rebind(
+      ShortcutAction.bookmark,
+      searchBinding,
+    );
 
     expect(applied, isFalse);
     // bookmark keeps its original default binding.
@@ -66,17 +72,20 @@ void main() {
     );
   });
 
-  test('rebind allows reassigning an action to its own current binding',
-      () async {
-    final container = await makeContainer();
-    final notifier = container.read(keyBindingsProvider.notifier);
-    final current =
-        container.read(keyBindingsProvider)[ShortcutAction.search]!;
+  test(
+    'rebind allows reassigning an action to its own current binding',
+    () async {
+      final container = await makeContainer();
+      final notifier = container.read(keyBindingsProvider.notifier);
+      final current = container.read(
+        keyBindingsProvider,
+      )[ShortcutAction.search]!;
 
-    final applied = await notifier.rebind(ShortcutAction.search, current);
+      final applied = await notifier.rebind(ShortcutAction.search, current);
 
-    expect(applied, isTrue);
-  });
+      expect(applied, isTrue);
+    },
+  );
 
   test('resetToDefaults restores and persists defaults', () async {
     final container = await makeContainer();
@@ -88,7 +97,9 @@ void main() {
 
     await notifier.resetToDefaults();
 
-    expect(container.read(keyBindingsProvider),
-        defaultShortcutBindings(isMacOS: false));
+    expect(
+      container.read(keyBindingsProvider),
+      defaultShortcutBindings(isMacOS: false),
+    );
   });
 }

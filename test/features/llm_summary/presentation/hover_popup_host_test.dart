@@ -33,13 +33,13 @@ class _MockSelectedFile extends SelectedFileNotifier {
 }
 
 WordSummary _snapshot(int episode, String text) => WordSummary(
-      word: 'アリス',
-      coveredUpToEpisode: episode,
-      summary: text,
-      sourceFile: '${episode.toString().padLeft(3, '0')}.txt',
-      createdAt: DateTime.parse('2026-05-24T10:00:00Z'),
-      updatedAt: DateTime.parse('2026-05-24T10:00:00Z'),
-    );
+  word: 'アリス',
+  coveredUpToEpisode: episode,
+  summary: text,
+  sourceFile: '${episode.toString().padLeft(3, '0')}.txt',
+  createdAt: DateTime.parse('2026-05-24T10:00:00Z'),
+  updatedAt: DateTime.parse('2026-05-24T10:00:00Z'),
+);
 
 const _aliceKey = (folderPath: '/library/novel_a', word: 'アリス');
 
@@ -74,19 +74,23 @@ ProviderContainer _makeContainer({
   FileEntry? selectedFile,
   AnalysisRunner? runner,
 }) {
-  final container = ProviderContainer(overrides: [
-    displayModeProvider.overrideWith(() => _MockDisplayMode(mode)),
-    currentDirectoryProvider
-        .overrideWith(() => CurrentDirectoryNotifier(directory)),
-    selectedFileProvider.overrideWith(() => _MockSelectedFile(selectedFile)),
-    hoverPopupCacheProvider(_aliceKey).overrideWith(
-      (_) async => [_snapshot(1, 'なし本文')],
-    ),
-    llmSummaryRepositoryProvider.overrideWith(
-      (ref, folderPath) async => throw UnsupportedError('not used in this test'),
-    ),
-    if (runner != null) analysisRunnerProvider.overrideWithValue(runner),
-  ]);
+  final container = ProviderContainer(
+    overrides: [
+      displayModeProvider.overrideWith(() => _MockDisplayMode(mode)),
+      currentDirectoryProvider.overrideWith(
+        () => CurrentDirectoryNotifier(directory),
+      ),
+      selectedFileProvider.overrideWith(() => _MockSelectedFile(selectedFile)),
+      hoverPopupCacheProvider(
+        _aliceKey,
+      ).overrideWith((_) async => [_snapshot(1, 'なし本文')]),
+      llmSummaryRepositoryProvider.overrideWith(
+        (ref, folderPath) async =>
+            throw UnsupportedError('not used in this test'),
+      ),
+      if (runner != null) analysisRunnerProvider.overrideWithValue(runner),
+    ],
+  );
   return container;
 }
 
@@ -108,28 +112,29 @@ void main() {
       final container = _makeContainer();
       addTearDown(container.dispose);
 
-      await tester.pumpWidget(_wrap(
-        container,
-        const HoverPopupHost(child: SizedBox.expand()),
-      ));
+      await tester.pumpWidget(
+        _wrap(container, const HoverPopupHost(child: SizedBox.expand())),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byType(HoverPopupWidget), findsNothing);
     });
 
-    testWidgets('inserts popup into the overlay when the notifier shows it',
-        (tester) async {
+    testWidgets('inserts popup into the overlay when the notifier shows it', (
+      tester,
+    ) async {
       final container = _makeContainer(
         selectedFile: const FileEntry(name: '001.txt', path: '/lib/001.txt'),
       );
       addTearDown(container.dispose);
 
-      await tester.pumpWidget(_wrap(
-        container,
-        const HoverPopupHost(child: SizedBox.expand()),
-      ));
+      await tester.pumpWidget(
+        _wrap(container, const HoverPopupHost(child: SizedBox.expand())),
+      );
 
-      container.read(hoverPopupProvider.notifier).show(
+      container
+          .read(hoverPopupProvider.notifier)
+          .show(
             word: 'アリス',
             position: const Offset(100, 200),
             token: (start: 0, end: 3),
@@ -143,12 +148,13 @@ void main() {
       final container = _makeContainer();
       addTearDown(container.dispose);
 
-      await tester.pumpWidget(_wrap(
-        container,
-        const HoverPopupHost(child: SizedBox.expand()),
-      ));
+      await tester.pumpWidget(
+        _wrap(container, const HoverPopupHost(child: SizedBox.expand())),
+      );
 
-      container.read(hoverPopupProvider.notifier).show(
+      container
+          .read(hoverPopupProvider.notifier)
+          .show(
             word: 'アリス',
             position: const Offset(100, 200),
             token: (start: 0, end: 3),
@@ -162,43 +168,54 @@ void main() {
     });
 
     testWidgets(
-        'reanalyze menu item invokes the runner even though closing the menu '
-        'hides the popup (overlay teardown)', (tester) async {
-      final runner = _RecordingRunner();
-      final container = _makeContainer(
-        selectedFile: const FileEntry(name: '003.txt', path: '/lib/003.txt'),
-        runner: runner,
-      );
-      addTearDown(container.dispose);
+      'reanalyze menu item invokes the runner even though closing the menu '
+      'hides the popup (overlay teardown)',
+      (tester) async {
+        final runner = _RecordingRunner();
+        final container = _makeContainer(
+          selectedFile: const FileEntry(name: '003.txt', path: '/lib/003.txt'),
+          runner: runner,
+        );
+        addTearDown(container.dispose);
 
-      await tester.pumpWidget(_wrap(
-        container,
-        const HoverPopupHost(child: SizedBox.expand()),
-      ));
+        await tester.pumpWidget(
+          _wrap(container, const HoverPopupHost(child: SizedBox.expand())),
+        );
 
-      container.read(hoverPopupProvider.notifier).show(
-            word: 'アリス',
-            position: const Offset(100, 200),
-            token: (start: 0, end: 3),
-          );
-      await tester.pumpAndSettle();
-      expect(find.byType(HoverPopupWidget), findsOneWidget);
+        container
+            .read(hoverPopupProvider.notifier)
+            .show(
+              word: 'アリス',
+              position: const Offset(100, 200),
+              token: (start: 0, end: 3),
+            );
+        await tester.pumpAndSettle();
+        expect(find.byType(HoverPopupWidget), findsOneWidget);
 
-      // Open the re-analyze dropdown and tap "up to current page". Tapping the
-      // menu item closes the menu, which (the pointer being on the menu, not
-      // the popup body) hides the popup and tears down the overlay entry.
-      await tester.tap(find.byKey(const Key('hover_popup_reanalyze_button')));
-      await tester.pumpAndSettle();
-      await tester.tap(
-          find.byKey(const Key('hover_popup_reanalyze_up_to_current')));
-      await tester.pumpAndSettle();
+        // Open the re-analyze dropdown and tap "up to current page". Tapping the
+        // menu item closes the menu, which (the pointer being on the menu, not
+        // the popup body) hides the popup and tears down the overlay entry.
+        await tester.tap(find.byKey(const Key('hover_popup_reanalyze_button')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const Key('hover_popup_reanalyze_up_to_current')),
+        );
+        await tester.pumpAndSettle();
 
-      expect(runner.callCount, 1,
-          reason: 'the analysis runner must be invoked even though closing the '
-              'menu hides the popup and unmounts the menu button');
-      expect(runner.lastEpisode, 3,
-          reason: 'up to current page = current file (003.txt) prefix');
-      expect(runner.lastSourceFile, '003.txt');
-    });
+        expect(
+          runner.callCount,
+          1,
+          reason:
+              'the analysis runner must be invoked even though closing the '
+              'menu hides the popup and unmounts the menu button',
+        );
+        expect(
+          runner.lastEpisode,
+          3,
+          reason: 'up to current page = current file (003.txt) prefix',
+        );
+        expect(runner.lastSourceFile, '003.txt');
+      },
+    );
   });
 }

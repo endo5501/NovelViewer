@@ -34,10 +34,7 @@ void main() {
     });
 
     test('returns parent for nested Unix path', () {
-      expect(
-        getParentDirectory('/home/user'),
-        equals('/home'),
-      );
+      expect(getParentDirectory('/home/user'), equals('/home'));
     });
 
     test(
@@ -54,10 +51,7 @@ void main() {
     test(
       'returns parent for nested Windows path',
       () {
-        expect(
-          getParentDirectory(r'C:\Users'),
-          equals(r'C:\'),
-        );
+        expect(getParentDirectory(r'C:\Users'), equals(r'C:\'));
       },
       skip: !Platform.isWindows ? 'Windows-only path test' : null,
     );
@@ -67,10 +61,7 @@ void main() {
     });
 
     test('returns null when already at the library root', () {
-      expect(
-        getParentDirectory('/library', libraryPath: '/library'),
-        isNull,
-      );
+      expect(getParentDirectory('/library', libraryPath: '/library'), isNull);
     });
 
     test('returns parent when below the library root', () {
@@ -125,28 +116,38 @@ void main() {
   });
 
   group('FileBrowserPanel', () {
-    testWidgets('shows prompt text and no folder picker when no directory set',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: FileBrowserPanel())),
-        ),
-      );
-      await tester.pumpAndSettle();
+    testWidgets(
+      'shows prompt text and no folder picker when no directory set',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          const ProviderScope(
+            child: MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: FileBrowserPanel()),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('フォルダを選択してください'), findsOneWidget);
-      expect(find.byIcon(Icons.folder_open), findsNothing);
-    });
+        expect(find.text('フォルダを選択してください'), findsOneWidget);
+        expect(find.byIcon(Icons.folder_open), findsNothing);
+      },
+    );
 
-    testWidgets('shows file list when directory is selected',
-        (WidgetTester tester) async {
+    testWidgets('shows file list when directory is selected', (
+      WidgetTester tester,
+    ) async {
       final testFiles = [
-        const FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt'),
-        const FileEntry(name: '002_chapter2.txt', path: '/test/002_chapter2.txt'),
+        const FileEntry(
+          name: '001_chapter1.txt',
+          path: '/test/001_chapter1.txt',
+        ),
+        const FileEntry(
+          name: '002_chapter2.txt',
+          path: '/test/002_chapter2.txt',
+        ),
       ];
 
       await tester.pumpWidget(
@@ -161,10 +162,11 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -173,8 +175,9 @@ void main() {
       expect(find.text('002_chapter2.txt'), findsOneWidget);
     });
 
-    testWidgets('shows message when no text files found',
-        (WidgetTester tester) async {
+    testWidgets('shows message when no text files found', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -187,10 +190,11 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -198,8 +202,9 @@ void main() {
       expect(find.text('テキストファイルが見つかりません'), findsOneWidget);
     });
 
-    testWidgets('up button is disabled at the library root',
-        (WidgetTester tester) async {
+    testWidgets('up button is disabled at the library root', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -212,10 +217,11 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -226,8 +232,9 @@ void main() {
       expect(upButton.onPressed, isNull);
     });
 
-    testWidgets('up button is enabled below the library root',
-        (WidgetTester tester) async {
+    testWidgets('up button is enabled below the library root', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -240,10 +247,11 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -271,10 +279,11 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -284,62 +293,74 @@ void main() {
     });
 
     testWidgets(
-        'long subdirectory title uses ellipsis overflow (fits in fixed-height '
-        'tile without clipping)',
-        (WidgetTester tester) async {
-      // Subdirectory tiles share the ListView's fixed itemExtent with file
-      // tiles. To avoid clipped novel titles (especially long ja/zh names),
-      // they must apply maxLines:1 + ellipsis overflow.
-      const longTitle = '非常に長い小説タイトルが続きます。途中で省略されるべき';
-      final testDirs = [
-        const DirectoryEntry(
-          name: 'n1234',
-          path: '/library/n1234',
-          displayName: longTitle,
-        ),
-      ];
+      'long subdirectory title uses ellipsis overflow (fits in fixed-height '
+      'tile without clipping)',
+      (WidgetTester tester) async {
+        // Subdirectory tiles share the ListView's fixed itemExtent with file
+        // tiles. To avoid clipped novel titles (especially long ja/zh names),
+        // they must apply maxLines:1 + ellipsis overflow.
+        const longTitle = '非常に長い小説タイトルが続きます。途中で省略されるべき';
+        final testDirs = [
+          const DirectoryEntry(
+            name: 'n1234',
+            path: '/library/n1234',
+            displayName: longTitle,
+          ),
+        ];
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            directoryContentsProvider.overrideWith((ref) async {
-              return DirectoryContents(files: [], subdirectories: testDirs);
-            }),
-            currentDirectoryProvider.overrideWith(() {
-              return _TestCurrentDirectoryNotifier('/library');
-            }),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: const MaterialApp(
-            locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: SizedBox(width: 200, child: FileBrowserPanel()),
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              directoryContentsProvider.overrideWith((ref) async {
+                return DirectoryContents(files: [], subdirectories: testDirs);
+              }),
+              currentDirectoryProvider.overrideWith(() {
+                return _TestCurrentDirectoryNotifier('/library');
+              }),
+              libraryPathProvider.overrideWithValue('/library'),
+            ],
+            child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: SizedBox(width: 200, child: FileBrowserPanel()),
+              ),
             ),
           ),
-        ),
+        );
+        await tester.pumpAndSettle();
+
+        final titleText = tester.widget<Text>(find.text(longTitle));
+        expect(
+          titleText.maxLines,
+          1,
+          reason: 'Long subdirectory titles must render on a single line',
+        );
+        expect(
+          titleText.overflow,
+          TextOverflow.ellipsis,
+          reason: 'Overflowing subdirectory titles must use ellipsis',
+        );
+      },
+    );
+
+    testWidgets('highlights selected file with selected=true on ListTile', (
+      WidgetTester tester,
+    ) async {
+      const testFile = FileEntry(
+        name: '001_chapter1.txt',
+        path: '/test/001_chapter1.txt',
       );
-      await tester.pumpAndSettle();
-
-      final titleText = tester.widget<Text>(find.text(longTitle));
-      expect(titleText.maxLines, 1,
-          reason: 'Long subdirectory titles must render on a single line');
-      expect(titleText.overflow, TextOverflow.ellipsis,
-          reason: 'Overflowing subdirectory titles must use ellipsis');
-    });
-
-    testWidgets('highlights selected file with selected=true on ListTile',
-        (WidgetTester tester) async {
-      const testFile =
-          FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt');
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             directoryContentsProvider.overrideWith((ref) async {
               return const DirectoryContents(
-                  files: [testFile], subdirectories: []);
+                files: [testFile],
+                subdirectories: [],
+              );
             }),
             currentDirectoryProvider.overrideWith(() {
               return _TestCurrentDirectoryNotifier('/test');
@@ -350,10 +371,11 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -369,124 +391,140 @@ void main() {
     });
 
     testWidgets(
-        'selected file tile shows secondaryContainer background, primary '
-        'leading accent bar, and bold title (light theme)',
-        (WidgetTester tester) async {
-      const testFile =
-          FileEntry(name: '001-ep1.txt', path: '/test/001-ep1.txt');
+      'selected file tile shows secondaryContainer background, primary '
+      'leading accent bar, and bold title (light theme)',
+      (WidgetTester tester) async {
+        const testFile = FileEntry(
+          name: '001-ep1.txt',
+          path: '/test/001-ep1.txt',
+        );
 
-      final lightTheme = ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
-        useMaterial3: true,
-      );
+        final lightTheme = ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
+          useMaterial3: true,
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            directoryContentsProvider.overrideWith((ref) async {
-              return const DirectoryContents(
-                  files: [testFile], subdirectories: []);
-            }),
-            currentDirectoryProvider.overrideWith(() {
-              return _TestCurrentDirectoryNotifier('/test');
-            }),
-            selectedFileProvider.overrideWith(() {
-              return _TestSelectedFileNotifier(testFile);
-            }),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: MaterialApp(
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              directoryContentsProvider.overrideWith((ref) async {
+                return const DirectoryContents(
+                  files: [testFile],
+                  subdirectories: [],
+                );
+              }),
+              currentDirectoryProvider.overrideWith(() {
+                return _TestCurrentDirectoryNotifier('/test');
+              }),
+              selectedFileProvider.overrideWith(() {
+                return _TestSelectedFileNotifier(testFile);
+              }),
+              libraryPathProvider.overrideWithValue('/library'),
+            ],
+            child: MaterialApp(
               locale: const Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: lightTheme,
-              home: const Scaffold(body: FileBrowserPanel())),
-        ),
-      );
-      await tester.pumpAndSettle();
+              home: const Scaffold(body: FileBrowserPanel()),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // The selected tile is wrapped in a Container with our decoration.
-      final decoratedContainer = tester.widget<Container>(
-        find.byKey(const Key('selected_file_tile_decoration')),
-      );
-      final decoration = decoratedContainer.decoration as BoxDecoration;
-      expect(
-        decoration.color,
-        lightTheme.colorScheme.secondaryContainer,
-        reason: 'Selected tile background uses secondaryContainer',
-      );
-      final leftBorder = (decoration.border as Border).left;
-      expect(leftBorder.width, 4.0,
-          reason: 'Leading accent bar is 4 pixels wide');
-      expect(leftBorder.color, lightTheme.colorScheme.primary);
+        // The selected tile is wrapped in a Container with our decoration.
+        final decoratedContainer = tester.widget<Container>(
+          find.byKey(const Key('selected_file_tile_decoration')),
+        );
+        final decoration = decoratedContainer.decoration as BoxDecoration;
+        expect(
+          decoration.color,
+          lightTheme.colorScheme.secondaryContainer,
+          reason: 'Selected tile background uses secondaryContainer',
+        );
+        final leftBorder = (decoration.border as Border).left;
+        expect(
+          leftBorder.width,
+          4.0,
+          reason: 'Leading accent bar is 4 pixels wide',
+        );
+        expect(leftBorder.color, lightTheme.colorScheme.primary);
 
-      // Title text should be bold (w600).
-      final titleText = tester.widget<Text>(find.text('001-ep1.txt'));
-      expect(titleText.style?.fontWeight, FontWeight.w600);
-    });
+        // Title text should be bold (w600).
+        final titleText = tester.widget<Text>(find.text('001-ep1.txt'));
+        expect(titleText.style?.fontWeight, FontWeight.w600);
+      },
+    );
 
     testWidgets(
-        'selected file tile decoration resolves from dark theme colorScheme',
-        (WidgetTester tester) async {
-      const testFile =
-          FileEntry(name: '001-ep1.txt', path: '/test/001-ep1.txt');
+      'selected file tile decoration resolves from dark theme colorScheme',
+      (WidgetTester tester) async {
+        const testFile = FileEntry(
+          name: '001-ep1.txt',
+          path: '/test/001-ep1.txt',
+        );
 
-      final darkTheme = ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blueGrey,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      );
+        final darkTheme = ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.blueGrey,
+            brightness: Brightness.dark,
+          ),
+          useMaterial3: true,
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            directoryContentsProvider.overrideWith((ref) async {
-              return const DirectoryContents(
-                  files: [testFile], subdirectories: []);
-            }),
-            currentDirectoryProvider.overrideWith(() {
-              return _TestCurrentDirectoryNotifier('/test');
-            }),
-            selectedFileProvider.overrideWith(() {
-              return _TestSelectedFileNotifier(testFile);
-            }),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: MaterialApp(
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              directoryContentsProvider.overrideWith((ref) async {
+                return const DirectoryContents(
+                  files: [testFile],
+                  subdirectories: [],
+                );
+              }),
+              currentDirectoryProvider.overrideWith(() {
+                return _TestCurrentDirectoryNotifier('/test');
+              }),
+              selectedFileProvider.overrideWith(() {
+                return _TestSelectedFileNotifier(testFile);
+              }),
+              libraryPathProvider.overrideWithValue('/library'),
+            ],
+            child: MaterialApp(
               locale: const Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: darkTheme,
-              home: const Scaffold(body: FileBrowserPanel())),
-        ),
-      );
-      await tester.pumpAndSettle();
+              home: const Scaffold(body: FileBrowserPanel()),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      final decoratedContainer = tester.widget<Container>(
-        find.byKey(const Key('selected_file_tile_decoration')),
-      );
-      final decoration = decoratedContainer.decoration as BoxDecoration;
-      expect(decoration.color, darkTheme.colorScheme.secondaryContainer);
-      final borderSide = (decoration.border as Border).left;
-      expect(borderSide.color, darkTheme.colorScheme.primary);
-      expect(borderSide.width, 4.0);
-    });
+        final decoratedContainer = tester.widget<Container>(
+          find.byKey(const Key('selected_file_tile_decoration')),
+        );
+        final decoration = decoratedContainer.decoration as BoxDecoration;
+        expect(decoration.color, darkTheme.colorScheme.secondaryContainer);
+        final borderSide = (decoration.border as Border).left;
+        expect(borderSide.color, darkTheme.colorScheme.primary);
+        expect(borderSide.width, 4.0);
+      },
+    );
 
-    testWidgets('non-selected file tiles have no extra decoration',
-        (WidgetTester tester) async {
-      const fileA =
-          FileEntry(name: '001-ep1.txt', path: '/test/001-ep1.txt');
-      const fileB =
-          FileEntry(name: '002-ep2.txt', path: '/test/002-ep2.txt');
+    testWidgets('non-selected file tiles have no extra decoration', (
+      WidgetTester tester,
+    ) async {
+      const fileA = FileEntry(name: '001-ep1.txt', path: '/test/001-ep1.txt');
+      const fileB = FileEntry(name: '002-ep2.txt', path: '/test/002-ep2.txt');
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             directoryContentsProvider.overrideWith((ref) async {
               return const DirectoryContents(
-                  files: [fileA, fileB], subdirectories: []);
+                files: [fileA, fileB],
+                subdirectories: [],
+              );
             }),
             currentDirectoryProvider.overrideWith(() {
               return _TestCurrentDirectoryNotifier('/test');
@@ -497,26 +535,29 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
 
       // Only the selected tile carries the decoration key.
-      expect(find.byKey(const Key('selected_file_tile_decoration')),
-          findsOneWidget);
+      expect(
+        find.byKey(const Key('selected_file_tile_decoration')),
+        findsOneWidget,
+      );
 
       // Title for the non-selected tile must NOT be bold.
       final unselectedTitle = tester.widget<Text>(find.text('002-ep2.txt'));
       expect(unselectedTitle.style?.fontWeight, isNot(FontWeight.w600));
     });
 
-    testWidgets(
-        'selecting an off-screen file scrolls it into the viewport',
-        (WidgetTester tester) async {
+    testWidgets('selecting an off-screen file scrolls it into the viewport', (
+      WidgetTester tester,
+    ) async {
       // Generate 200 files; the viewport will only hold a handful.
       final files = List.generate(
         200,
@@ -531,8 +572,7 @@ void main() {
         ProviderScope(
           overrides: [
             directoryContentsProvider.overrideWith((ref) async {
-              return DirectoryContents(
-                  files: files, subdirectories: const []);
+              return DirectoryContents(files: files, subdirectories: const []);
             }),
             currentDirectoryProvider.overrideWith(() {
               return _TestCurrentDirectoryNotifier('/test');
@@ -540,12 +580,13 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(
-                  body: SizedBox(
-                      height: 400, child: FileBrowserPanel()))),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(height: 400, child: FileBrowserPanel()),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -556,22 +597,27 @@ void main() {
 
       // 150th file (index 149) starts far off-screen.
       final target = files[149];
-      expect(find.text(target.name), findsNothing,
-          reason:
-              'Sanity check: target file is off-screen before selection');
+      expect(
+        find.text(target.name),
+        findsNothing,
+        reason: 'Sanity check: target file is off-screen before selection',
+      );
 
       // Trigger selection programmatically (simulates external selection).
       container.read(selectedFileProvider.notifier).selectFile(target);
       await tester.pumpAndSettle();
 
       // After auto-scroll, the target file must be visible.
-      expect(find.text(target.name), findsOneWidget,
-          reason: 'Selected off-screen file should be scrolled into view');
+      expect(
+        find.text(target.name),
+        findsOneWidget,
+        reason: 'Selected off-screen file should be scrolled into view',
+      );
     });
 
-    testWidgets(
-        'reselecting the same file does not animate scroll',
-        (WidgetTester tester) async {
+    testWidgets('reselecting the same file does not animate scroll', (
+      WidgetTester tester,
+    ) async {
       final files = List.generate(
         50,
         (i) => FileEntry(
@@ -585,8 +631,7 @@ void main() {
         ProviderScope(
           overrides: [
             directoryContentsProvider.overrideWith((ref) async {
-              return DirectoryContents(
-                  files: files, subdirectories: const []);
+              return DirectoryContents(files: files, subdirectories: const []);
             }),
             currentDirectoryProvider.overrideWith(() {
               return _TestCurrentDirectoryNotifier('/test');
@@ -597,12 +642,13 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(
-                  body: SizedBox(
-                      height: 400, child: FileBrowserPanel()))),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(height: 400, child: FileBrowserPanel()),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -618,30 +664,41 @@ void main() {
       );
       await tester.drag(scrollable, const Offset(0, -200));
       await tester.pumpAndSettle();
-      final positionBefore =
-          tester.state<ScrollableState>(scrollable).position.pixels;
+      final positionBefore = tester
+          .state<ScrollableState>(scrollable)
+          .position
+          .pixels;
 
       // Reselect the same file.
       container.read(selectedFileProvider.notifier).selectFile(files[0]);
       await tester.pumpAndSettle();
-      final positionAfter =
-          tester.state<ScrollableState>(scrollable).position.pixels;
+      final positionAfter = tester
+          .state<ScrollableState>(scrollable)
+          .position
+          .pixels;
 
-      expect(positionAfter, equals(positionBefore),
-          reason:
-              'Re-selecting the currently-selected file must not move the scroll position');
+      expect(
+        positionAfter,
+        equals(positionBefore),
+        reason:
+            'Re-selecting the currently-selected file must not move the scroll position',
+      );
     });
 
     testWidgets('tapping file selects it', (WidgetTester tester) async {
-      const testFile =
-          FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt');
+      const testFile = FileEntry(
+        name: '001_chapter1.txt',
+        path: '/test/001_chapter1.txt',
+      );
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             directoryContentsProvider.overrideWith((ref) async {
               return const DirectoryContents(
-                  files: [testFile], subdirectories: []);
+                files: [testFile],
+                subdirectories: [],
+              );
             }),
             currentDirectoryProvider.overrideWith(() {
               return _TestCurrentDirectoryNotifier('/test');
@@ -649,10 +706,11 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -670,10 +728,13 @@ void main() {
       expect(listTile.selected, isTrue);
     });
 
-    testWidgets('shows green check icon for completed TTS status',
-        (WidgetTester tester) async {
-      const testFile =
-          FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt');
+    testWidgets('shows green check icon for completed TTS status', (
+      WidgetTester tester,
+    ) async {
+      const testFile = FileEntry(
+        name: '001_chapter1.txt',
+        path: '/test/001_chapter1.txt',
+      );
 
       await tester.pumpWidget(
         ProviderScope(
@@ -691,10 +752,11 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -704,10 +766,13 @@ void main() {
       expect(icon.color, Colors.green);
     });
 
-    testWidgets('shows orange pie chart icon for partial TTS status',
-        (WidgetTester tester) async {
-      const testFile =
-          FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt');
+    testWidgets('shows orange pie chart icon for partial TTS status', (
+      WidgetTester tester,
+    ) async {
+      const testFile = FileEntry(
+        name: '001_chapter1.txt',
+        path: '/test/001_chapter1.txt',
+      );
 
       await tester.pumpWidget(
         ProviderScope(
@@ -725,10 +790,11 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -738,10 +804,13 @@ void main() {
       expect(icon.color, Colors.orange);
     });
 
-    testWidgets('shows no trailing icon for none TTS status',
-        (WidgetTester tester) async {
-      const testFile =
-          FileEntry(name: '001_chapter1.txt', path: '/test/001_chapter1.txt');
+    testWidgets('shows no trailing icon for none TTS status', (
+      WidgetTester tester,
+    ) async {
+      const testFile = FileEntry(
+        name: '001_chapter1.txt',
+        path: '/test/001_chapter1.txt',
+      );
 
       await tester.pumpWidget(
         ProviderScope(
@@ -758,10 +827,11 @@ void main() {
             libraryPathProvider.overrideWithValue('/library'),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -770,59 +840,117 @@ void main() {
       expect(find.byIcon(Icons.pie_chart), findsNothing);
     });
 
-    testWidgets('context menu shows refresh, rename and delete options at library root',
-        (WidgetTester tester) async {
-      const testDir = DirectoryEntry(
-        name: 'narou_n1234ab',
-        path: '/library/narou_n1234ab',
-        displayName: 'テスト小説',
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            directoryContentsProvider.overrideWith((ref) async {
-              return const DirectoryContents(
-                  files: [], subdirectories: [testDir]);
-            }),
-            currentDirectoryProvider.overrideWith(() {
-              return _TestCurrentDirectoryNotifier('/library');
-            }),
-            libraryPathProvider.overrideWithValue('/library'),
-            allNovelsProvider.overrideWith(
-                (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')]),
-          ],
-          child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: FileBrowserPanel())),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Right-click on the directory tile
-      final folderTile = find.text('テスト小説');
-      expect(folderTile, findsOneWidget);
-
-      final center = tester.getCenter(folderTile);
-      final gesture = await tester.createGesture(
-        kind: PointerDeviceKind.mouse,
-        buttons: kSecondaryMouseButton,
-      );
-      await gesture.addPointer(location: center);
-      await gesture.down(center);
-      await gesture.up();
-      await tester.pumpAndSettle();
-
-      // Verify all three menu items are shown
-      expect(find.text('更新'), findsOneWidget);
-      expect(find.text('タイトル変更'), findsOneWidget);
-      expect(find.text('削除'), findsOneWidget);
-    });
     testWidgets(
-        'registered novel folder shows a reading-progress bar and read / total',
-        (WidgetTester tester) async {
+      'context menu shows refresh, rename and delete options at library root',
+      (WidgetTester tester) async {
+        const testDir = DirectoryEntry(
+          name: 'narou_n1234ab',
+          path: '/library/narou_n1234ab',
+          displayName: 'テスト小説',
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              directoryContentsProvider.overrideWith((ref) async {
+                return const DirectoryContents(
+                  files: [],
+                  subdirectories: [testDir],
+                );
+              }),
+              currentDirectoryProvider.overrideWith(() {
+                return _TestCurrentDirectoryNotifier('/library');
+              }),
+              libraryPathProvider.overrideWithValue('/library'),
+              allNovelsProvider.overrideWith(
+                (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')],
+              ),
+            ],
+            child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: FileBrowserPanel()),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Right-click on the directory tile
+        final folderTile = find.text('テスト小説');
+        expect(folderTile, findsOneWidget);
+
+        final center = tester.getCenter(folderTile);
+        final gesture = await tester.createGesture(
+          kind: PointerDeviceKind.mouse,
+          buttons: kSecondaryMouseButton,
+        );
+        await gesture.addPointer(location: center);
+        await gesture.down(center);
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        // Verify all three menu items are shown
+        expect(find.text('更新'), findsOneWidget);
+        expect(find.text('タイトル変更'), findsOneWidget);
+        expect(find.text('削除'), findsOneWidget);
+      },
+    );
+    testWidgets(
+      'registered novel folder shows a reading-progress bar and read / total',
+      (WidgetTester tester) async {
+        const testDir = DirectoryEntry(
+          name: 'narou_n1234ab',
+          path: '/library/narou_n1234ab',
+          displayName: 'テスト小説',
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              directoryContentsProvider.overrideWith((ref) async {
+                return const DirectoryContents(
+                  files: [],
+                  subdirectories: [testDir],
+                );
+              }),
+              currentDirectoryProvider.overrideWith(() {
+                return _TestCurrentDirectoryNotifier('/library');
+              }),
+              libraryPathProvider.overrideWithValue('/library'),
+              allNovelsProvider.overrideWith(
+                (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')],
+              ),
+              readingProgressBadgesProvider.overrideWith(
+                (ref) async => {
+                  'narou_n1234ab': const ReadingProgressBadge(
+                    read: 3,
+                    total: 120,
+                  ),
+                },
+              ),
+            ],
+            child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: FileBrowserPanel()),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('3 / 120'), findsOneWidget);
+        final bar = tester.widget<LinearProgressIndicator>(
+          find.byType(LinearProgressIndicator),
+        );
+        expect(bar.value, closeTo(3 / 120, 1e-9));
+      },
+    );
+
+    testWidgets('unread registered novel shows 0 / N with a 0% bar', (
+      WidgetTester tester,
+    ) async {
       const testDir = DirectoryEntry(
         name: 'narou_n1234ab',
         path: '/library/narou_n1234ab',
@@ -834,66 +962,29 @@ void main() {
           overrides: [
             directoryContentsProvider.overrideWith((ref) async {
               return const DirectoryContents(
-                  files: [], subdirectories: [testDir]);
+                files: [],
+                subdirectories: [testDir],
+              );
             }),
             currentDirectoryProvider.overrideWith(() {
               return _TestCurrentDirectoryNotifier('/library');
             }),
             libraryPathProvider.overrideWithValue('/library'),
             allNovelsProvider.overrideWith(
-                (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')]),
-            readingProgressBadgesProvider.overrideWith((ref) async => {
-                  'narou_n1234ab':
-                      const ReadingProgressBadge(read: 3, total: 120),
-                }),
+              (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')],
+            ),
+            readingProgressBadgesProvider.overrideWith(
+              (ref) async => {
+                'narou_n1234ab': const ReadingProgressBadge(read: 0, total: 80),
+              },
+            ),
           ],
           child: const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(body: FileBrowserPanel())),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('3 / 120'), findsOneWidget);
-      final bar = tester.widget<LinearProgressIndicator>(
-        find.byType(LinearProgressIndicator),
-      );
-      expect(bar.value, closeTo(3 / 120, 1e-9));
-    });
-
-    testWidgets('unread registered novel shows 0 / N with a 0% bar',
-        (WidgetTester tester) async {
-      const testDir = DirectoryEntry(
-        name: 'narou_n1234ab',
-        path: '/library/narou_n1234ab',
-        displayName: 'テスト小説',
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            directoryContentsProvider.overrideWith((ref) async {
-              return const DirectoryContents(
-                  files: [], subdirectories: [testDir]);
-            }),
-            currentDirectoryProvider.overrideWith(() {
-              return _TestCurrentDirectoryNotifier('/library');
-            }),
-            libraryPathProvider.overrideWithValue('/library'),
-            allNovelsProvider.overrideWith(
-                (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')]),
-            readingProgressBadgesProvider.overrideWith((ref) async => {
-                  'narou_n1234ab':
-                      const ReadingProgressBadge(read: 0, total: 80),
-                }),
-          ],
-          child: const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -905,33 +996,33 @@ void main() {
       expect(bar.value, 0.0);
     });
 
-    testWidgets('manual (unregistered) folder shows no progress bar',
-        (WidgetTester tester) async {
-      const manualDir = DirectoryEntry(
-        name: 'お気に入り',
-        path: '/library/お気に入り',
-      );
+    testWidgets('manual (unregistered) folder shows no progress bar', (
+      WidgetTester tester,
+    ) async {
+      const manualDir = DirectoryEntry(name: 'お気に入り', path: '/library/お気に入り');
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             directoryContentsProvider.overrideWith((ref) async {
               return const DirectoryContents(
-                  files: [], subdirectories: [manualDir]);
+                files: [],
+                subdirectories: [manualDir],
+              );
             }),
             currentDirectoryProvider.overrideWith(() {
               return _TestCurrentDirectoryNotifier('/library');
             }),
             libraryPathProvider.overrideWithValue('/library'),
             allNovelsProvider.overrideWith((ref) async => const []),
-            readingProgressBadgesProvider
-                .overrideWith((ref) async => const {}),
+            readingProgressBadgesProvider.overrideWith((ref) async => const {}),
           ],
           child: const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -940,8 +1031,9 @@ void main() {
       expect(find.byType(LinearProgressIndicator), findsNothing);
     });
 
-    testWidgets('selecting rename from context menu shows rename dialog',
-        (WidgetTester tester) async {
+    testWidgets('selecting rename from context menu shows rename dialog', (
+      WidgetTester tester,
+    ) async {
       const testDir = DirectoryEntry(
         name: 'narou_n1234ab',
         path: '/library/narou_n1234ab',
@@ -953,20 +1045,24 @@ void main() {
           overrides: [
             directoryContentsProvider.overrideWith((ref) async {
               return const DirectoryContents(
-                  files: [], subdirectories: [testDir]);
+                files: [],
+                subdirectories: [testDir],
+              );
             }),
             currentDirectoryProvider.overrideWith(() {
               return _TestCurrentDirectoryNotifier('/library');
             }),
             libraryPathProvider.overrideWithValue('/library'),
             allNovelsProvider.overrideWith(
-                (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')]),
+              (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')],
+            ),
           ],
           child: const MaterialApp(
-                locale: Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: FileBrowserPanel())),
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -996,130 +1092,155 @@ void main() {
     });
 
     testWidgets(
-        'folder tile wraps its title in a Tooltip showing the full displayName',
-        (WidgetTester tester) async {
-      const longTitle = '非常に長い小説タイトルが続きます。フルネームをツールチップで表示';
-      const testDir = DirectoryEntry(
-        name: 'n1234',
-        path: '/library/n1234',
-        displayName: longTitle,
-      );
+      'folder tile wraps its title in a Tooltip showing the full displayName',
+      (WidgetTester tester) async {
+        const longTitle = '非常に長い小説タイトルが続きます。フルネームをツールチップで表示';
+        const testDir = DirectoryEntry(
+          name: 'n1234',
+          path: '/library/n1234',
+          displayName: longTitle,
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            directoryContentsProvider.overrideWith((ref) async {
-              return const DirectoryContents(
-                  files: [], subdirectories: [testDir]);
-            }),
-            currentDirectoryProvider.overrideWith(() {
-              return _TestCurrentDirectoryNotifier('/library');
-            }),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: const MaterialApp(
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              directoryContentsProvider.overrideWith((ref) async {
+                return const DirectoryContents(
+                  files: [],
+                  subdirectories: [testDir],
+                );
+              }),
+              currentDirectoryProvider.overrideWith(() {
+                return _TestCurrentDirectoryNotifier('/library');
+              }),
+              libraryPathProvider.overrideWithValue('/library'),
+            ],
+            child: const MaterialApp(
               locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: SizedBox(width: 200, child: FileBrowserPanel()),
-              )),
-        ),
-      );
-      await tester.pumpAndSettle();
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      final tooltip = tester.widget<Tooltip>(
-        find.ancestor(
-          of: find.text(longTitle),
-          matching: find.byType(Tooltip),
-        ),
-      );
-      expect(tooltip.message, longTitle,
-          reason: 'Folder tile tooltip must show the full displayName');
-    });
+        final tooltip = tester.widget<Tooltip>(
+          find.ancestor(
+            of: find.text(longTitle),
+            matching: find.byType(Tooltip),
+          ),
+        );
+        expect(
+          tooltip.message,
+          longTitle,
+          reason: 'Folder tile tooltip must show the full displayName',
+        );
+      },
+    );
 
     testWidgets(
-        'file tile wraps its name in a Tooltip showing the full file name',
-        (WidgetTester tester) async {
-      const longName = '0001_とても長いエピソードタイトルのファイル名が続きます.txt';
-      const testFile = FileEntry(name: longName, path: '/test/$longName');
+      'file tile wraps its name in a Tooltip showing the full file name',
+      (WidgetTester tester) async {
+        const longName = '0001_とても長いエピソードタイトルのファイル名が続きます.txt';
+        const testFile = FileEntry(name: longName, path: '/test/$longName');
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            directoryContentsProvider.overrideWith((ref) async {
-              return const DirectoryContents(
-                  files: [testFile], subdirectories: []);
-            }),
-            currentDirectoryProvider.overrideWith(() {
-              return _TestCurrentDirectoryNotifier('/test');
-            }),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: const MaterialApp(
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              directoryContentsProvider.overrideWith((ref) async {
+                return const DirectoryContents(
+                  files: [testFile],
+                  subdirectories: [],
+                );
+              }),
+              currentDirectoryProvider.overrideWith(() {
+                return _TestCurrentDirectoryNotifier('/test');
+              }),
+              libraryPathProvider.overrideWithValue('/library'),
+            ],
+            child: const MaterialApp(
               locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: SizedBox(width: 200, child: FileBrowserPanel()),
-              )),
-        ),
-      );
-      await tester.pumpAndSettle();
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      final tooltip = tester.widget<Tooltip>(
-        find.ancestor(
-          of: find.text(longName),
-          matching: find.byType(Tooltip),
-        ),
-      );
-      expect(tooltip.message, longName,
-          reason: 'File tile tooltip must show the full file name');
-    });
+        final tooltip = tester.widget<Tooltip>(
+          find.ancestor(
+            of: find.text(longName),
+            matching: find.byType(Tooltip),
+          ),
+        );
+        expect(
+          tooltip.message,
+          longName,
+          reason: 'File tile tooltip must show the full file name',
+        );
+      },
+    );
 
     testWidgets(
-        'selected file tile keeps the name Tooltip and the selection decoration',
-        (WidgetTester tester) async {
-      const testFile =
-          FileEntry(name: '001-ep1.txt', path: '/test/001-ep1.txt');
+      'selected file tile keeps the name Tooltip and the selection decoration',
+      (WidgetTester tester) async {
+        const testFile = FileEntry(
+          name: '001-ep1.txt',
+          path: '/test/001-ep1.txt',
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            directoryContentsProvider.overrideWith((ref) async {
-              return const DirectoryContents(
-                  files: [testFile], subdirectories: []);
-            }),
-            currentDirectoryProvider.overrideWith(() {
-              return _TestCurrentDirectoryNotifier('/test');
-            }),
-            selectedFileProvider.overrideWith(() {
-              return _TestSelectedFileNotifier(testFile);
-            }),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: const MaterialApp(
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              directoryContentsProvider.overrideWith((ref) async {
+                return const DirectoryContents(
+                  files: [testFile],
+                  subdirectories: [],
+                );
+              }),
+              currentDirectoryProvider.overrideWith(() {
+                return _TestCurrentDirectoryNotifier('/test');
+              }),
+              selectedFileProvider.overrideWith(() {
+                return _TestSelectedFileNotifier(testFile);
+              }),
+              libraryPathProvider.overrideWithValue('/library'),
+            ],
+            child: const MaterialApp(
               locale: Locale('ja'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(body: FileBrowserPanel())),
-        ),
-      );
-      await tester.pumpAndSettle();
+              home: Scaffold(body: FileBrowserPanel()),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      final tooltip = tester.widget<Tooltip>(
-        find.ancestor(
-          of: find.text('001-ep1.txt'),
-          matching: find.byType(Tooltip),
-        ),
-      );
-      expect(tooltip.message, '001-ep1.txt',
-          reason: 'Selected file tile must still expose the name Tooltip');
+        final tooltip = tester.widget<Tooltip>(
+          find.ancestor(
+            of: find.text('001-ep1.txt'),
+            matching: find.byType(Tooltip),
+          ),
+        );
+        expect(
+          tooltip.message,
+          '001-ep1.txt',
+          reason: 'Selected file tile must still expose the name Tooltip',
+        );
 
-      // The selection decoration must remain intact.
-      expect(find.byKey(const Key('selected_file_tile_decoration')),
-          findsOneWidget);
-    });
+        // The selection decoration must remain intact.
+        expect(
+          find.byKey(const Key('selected_file_tile_decoration')),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }
 

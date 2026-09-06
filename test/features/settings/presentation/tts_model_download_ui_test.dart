@@ -39,15 +39,14 @@ void main() {
     return ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
-        libraryPathProvider
-            .overrideWithValue('${tempDir.path}/NovelViewer'),
+        libraryPathProvider.overrideWithValue('${tempDir.path}/NovelViewer'),
         if (httpClient != null)
           httpClientProvider.overrideWithValue(httpClient),
       ],
       child: const MaterialApp(
-            locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('ja'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: SettingsDialog()),
       ),
     );
@@ -86,26 +85,30 @@ void main() {
   }
 
   group('TTS model download section', () {
-    testWidgets('shows download button when models not downloaded',
-        (tester) async {
+    testWidgets('shows download button when models not downloaded', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestWidget());
       await navigateToTtsTab(tester);
 
       expect(find.text('モデルデータダウンロード'), findsOneWidget);
     });
 
-    testWidgets('shows completed status when models already exist',
-        (tester) async {
+    testWidgets('shows completed status when models already exist', (
+      tester,
+    ) async {
       // Models now go in size-specific subdirectory
-      final modelsDir =
-          Directory(p.join(tempDir.path, 'models', '0.6b'))
-            ..createSync(recursive: true);
-      File(p.join(modelsDir.path, 'qwen3-tts-0.6b-f16.gguf'))
-          .writeAsStringSync('model');
-      File(p.join(modelsDir.path, 'qwen3-tts-tokenizer-f16.gguf'))
-          .writeAsStringSync('tokenizer');
-      File(p.join(modelsDir.path, '.tts_models_complete'))
-          .writeAsStringSync('done');
+      final modelsDir = Directory(p.join(tempDir.path, 'models', '0.6b'))
+        ..createSync(recursive: true);
+      File(
+        p.join(modelsDir.path, 'qwen3-tts-0.6b-f16.gguf'),
+      ).writeAsStringSync('model');
+      File(
+        p.join(modelsDir.path, 'qwen3-tts-tokenizer-f16.gguf'),
+      ).writeAsStringSync('tokenizer');
+      File(
+        p.join(modelsDir.path, '.tts_models_complete'),
+      ).writeAsStringSync('done');
 
       await tester.pumpWidget(buildTestWidget());
       await navigateToTtsTab(tester);

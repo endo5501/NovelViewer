@@ -42,7 +42,9 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('Ctrl+T issues a TTS toggle request', (WidgetTester tester) async {
+  testWidgets('Ctrl+T issues a TTS toggle request', (
+    WidgetTester tester,
+  ) async {
     final container = await pumpApp(tester);
 
     expect(container.read(ttsToggleRequestProvider), 0);
@@ -52,25 +54,30 @@ void main() {
     expect(container.read(ttsToggleRequestProvider), 2);
   });
 
-  testWidgets('Escape stops TTS when playing and search field not focused',
-      (WidgetTester tester) async {
+  testWidgets('Escape stops TTS when playing and search field not focused', (
+    WidgetTester tester,
+  ) async {
     final container = await pumpApp(tester);
 
-    container.read(ttsPlaybackStateProvider.notifier).set(
-          TtsPlaybackState.playing,
-        );
+    container
+        .read(ttsPlaybackStateProvider.notifier)
+        .set(TtsPlaybackState.playing);
     await tester.pump();
 
     final before = container.read(ttsStopRequestProvider);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
 
-    expect(container.read(ttsStopRequestProvider), before + 1,
-        reason: 'Escape requests a TTS stop when playing');
+    expect(
+      container.read(ttsStopRequestProvider),
+      before + 1,
+      reason: 'Escape requests a TTS stop when playing',
+    );
   });
 
-  testWidgets('Escape stops TTS while focus is on the novel body text',
-      (WidgetTester tester) async {
+  testWidgets('Escape stops TTS while focus is on the novel body text', (
+    WidgetTester tester,
+  ) async {
     // Regression: SelectableText is a read-only EditableText. Focus landing on
     // the novel body (e.g. right after the window regains focus) must NOT block
     // Escape from stopping TTS.
@@ -94,21 +101,25 @@ void main() {
     await tester.pump();
     expect(find.byType(EditableText), findsWidgets);
 
-    container.read(ttsPlaybackStateProvider.notifier).set(
-          TtsPlaybackState.playing,
-        );
+    container
+        .read(ttsPlaybackStateProvider.notifier)
+        .set(TtsPlaybackState.playing);
     await tester.pump();
     final before = container.read(ttsStopRequestProvider);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
 
-    expect(container.read(ttsStopRequestProvider), before + 1,
-        reason: 'Escape stops TTS even when SelectableText holds focus');
+    expect(
+      container.read(ttsStopRequestProvider),
+      before + 1,
+      reason: 'Escape stops TTS even when SelectableText holds focus',
+    );
   });
 
-  testWidgets('Escape does nothing to TTS when stopped',
-      (WidgetTester tester) async {
+  testWidgets('Escape does nothing to TTS when stopped', (
+    WidgetTester tester,
+  ) async {
     final container = await pumpApp(tester);
 
     expect(container.read(ttsPlaybackStateProvider), TtsPlaybackState.stopped);
@@ -117,7 +128,10 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
 
-    expect(container.read(ttsStopRequestProvider), before,
-        reason: 'No stop request when nothing is playing');
+    expect(
+      container.read(ttsStopRequestProvider),
+      before,
+      reason: 'No stop request when nothing is playing',
+    );
   });
 }

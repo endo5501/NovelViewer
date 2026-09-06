@@ -36,7 +36,10 @@ class _RecordingFileSystemService extends FileSystemService {
   @override
   Future<DirectoryEntry> renameDirectory(String path_, String newName) async {
     renamed.add((path: path_, newName: newName));
-    return DirectoryEntry(name: newName, path: p.join(p.dirname(path_), newName));
+    return DirectoryEntry(
+      name: newName,
+      path: p.join(p.dirname(path_), newName),
+    );
   }
 
   DirectoryOpError? moveError;
@@ -55,8 +58,7 @@ class _RecordingFileSystemService extends FileSystemService {
   Future<List<String>> listOrganizationalFolderTree(
     String libraryPath,
     Set<String> novelFolderNames,
-  ) async =>
-      orgFolderTree;
+  ) async => orgFolderTree;
 
   final List<String> deletedEmpty = [];
   DirectoryOpError? deleteError;
@@ -80,13 +82,16 @@ Widget _panel({
 }) {
   return ProviderScope(
     overrides: [
-      currentDirectoryProvider
-          .overrideWith(() => _TestCurrentDirectoryNotifier(currentDir)),
+      currentDirectoryProvider.overrideWith(
+        () => _TestCurrentDirectoryNotifier(currentDir),
+      ),
       libraryPathProvider.overrideWithValue(libraryPath),
       allNovelsProvider.overrideWith((ref) async => novels),
       fileSystemServiceProvider.overrideWithValue(fs),
-      directoryContentsProvider.overrideWith((ref) async =>
-          DirectoryContents(files: const [], subdirectories: subdirectories)),
+      directoryContentsProvider.overrideWith(
+        (ref) async =>
+            DirectoryContents(files: const [], subdirectories: subdirectories),
+      ),
     ],
     child: const MaterialApp(
       locale: Locale('ja'),
@@ -100,11 +105,9 @@ Widget _panel({
 void main() {
   testWidgets('creates a new folder via the toolbar button', (tester) async {
     final fs = _RecordingFileSystemService();
-    await tester.pumpWidget(_panel(
-      currentDir: '/library',
-      libraryPath: '/library',
-      fs: fs,
-    ));
+    await tester.pumpWidget(
+      _panel(currentDir: '/library', libraryPath: '/library', fs: fs),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.create_new_folder));
@@ -122,31 +125,36 @@ void main() {
   });
 
   NovelMetadata novel(String folderName, String title) => NovelMetadata(
-        siteType: 'narou',
-        novelId: folderName.split('_').last,
-        title: title,
-        url: 'https://example.com/$folderName',
-        folderName: folderName,
-        episodeCount: 1,
-        downloadedAt: DateTime(2024, 1, 1),
-      );
+    siteType: 'narou',
+    novelId: folderName.split('_').last,
+    title: title,
+    url: 'https://example.com/$folderName',
+    folderName: folderName,
+    episodeCount: 1,
+    downloadedAt: DateTime(2024, 1, 1),
+  );
 
-  testWidgets('organizational folder context menu offers folder rename',
-      (tester) async {
+  testWidgets('organizational folder context menu offers folder rename', (
+    tester,
+  ) async {
     final fs = _RecordingFileSystemService();
-    await tester.pumpWidget(_panel(
-      currentDir: '/library',
-      libraryPath: '/library',
-      fs: fs,
-      novels: [novel('narou_n1', 'テスト小説')],
-      subdirectories: const [
-        DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
-      ],
-    ));
+    await tester.pumpWidget(
+      _panel(
+        currentDir: '/library',
+        libraryPath: '/library',
+        fs: fs,
+        novels: [novel('narou_n1', 'テスト小説')],
+        subdirectories: const [
+          DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
+        ],
+      ),
+    );
     await tester.pumpAndSettle();
 
-    await tester.tapAt(tester.getCenter(find.text('完結済み')),
-        buttons: kSecondaryButton);
+    await tester.tapAt(
+      tester.getCenter(find.text('完結済み')),
+      buttons: kSecondaryButton,
+    );
     await tester.pumpAndSettle();
 
     // Organizational folders rename the real directory, not a DB title.
@@ -166,23 +174,31 @@ void main() {
     expect(fs.renamed.single.newName, '完結');
   });
 
-  testWidgets('novel folder context menu offers title rename (not folder)',
-      (tester) async {
+  testWidgets('novel folder context menu offers title rename (not folder)', (
+    tester,
+  ) async {
     final fs = _RecordingFileSystemService();
-    await tester.pumpWidget(_panel(
-      currentDir: '/library',
-      libraryPath: '/library',
-      fs: fs,
-      novels: [novel('narou_n1', 'テスト小説')],
-      subdirectories: const [
-        DirectoryEntry(
-            name: 'narou_n1', path: '/library/narou_n1', displayName: 'テスト小説'),
-      ],
-    ));
+    await tester.pumpWidget(
+      _panel(
+        currentDir: '/library',
+        libraryPath: '/library',
+        fs: fs,
+        novels: [novel('narou_n1', 'テスト小説')],
+        subdirectories: const [
+          DirectoryEntry(
+            name: 'narou_n1',
+            path: '/library/narou_n1',
+            displayName: 'テスト小説',
+          ),
+        ],
+      ),
+    );
     await tester.pumpAndSettle();
 
-    await tester.tapAt(tester.getCenter(find.text('テスト小説')),
-        buttons: kSecondaryButton);
+    await tester.tapAt(
+      tester.getCenter(find.text('テスト小説')),
+      buttons: kSecondaryButton,
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('タイトル変更'), findsOneWidget);
@@ -191,126 +207,154 @@ void main() {
     expect(find.text('移動'), findsOneWidget);
   });
 
-  testWidgets('moving a novel folder calls moveDirectory with the chosen dest',
-      (tester) async {
-    final fs = _RecordingFileSystemService();
-    fs.orgFolderTree = ['/library/完結済み'];
-    await tester.pumpWidget(_panel(
-      currentDir: '/library',
-      libraryPath: '/library',
-      fs: fs,
-      novels: [novel('narou_n1', 'テスト小説')],
-      subdirectories: const [
-        DirectoryEntry(
-            name: 'narou_n1', path: '/library/narou_n1', displayName: 'テスト小説'),
-        DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
-      ],
-    ));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'moving a novel folder calls moveDirectory with the chosen dest',
+    (tester) async {
+      final fs = _RecordingFileSystemService();
+      fs.orgFolderTree = ['/library/完結済み'];
+      await tester.pumpWidget(
+        _panel(
+          currentDir: '/library',
+          libraryPath: '/library',
+          fs: fs,
+          novels: [novel('narou_n1', 'テスト小説')],
+          subdirectories: const [
+            DirectoryEntry(
+              name: 'narou_n1',
+              path: '/library/narou_n1',
+              displayName: 'テスト小説',
+            ),
+            DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tapAt(tester.getCenter(find.text('テスト小説')),
-        buttons: kSecondaryButton);
-    await tester.pumpAndSettle();
+      await tester.tapAt(
+        tester.getCenter(find.text('テスト小説')),
+        buttons: kSecondaryButton,
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('移動'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('移動'));
+      await tester.pumpAndSettle();
 
-    // Destination dialog lists the organizational folder; pick it (scoped to
-    // the dialog since the same name also appears in the file list).
-    await tester.tap(find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.text('完結済み'),
-    ));
-    await tester.pumpAndSettle();
+      // Destination dialog lists the organizational folder; pick it (scoped to
+      // the dialog since the same name also appears in the file list).
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('完結済み'),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(fs.moved, hasLength(1));
-    expect(fs.moved.single.src, '/library/narou_n1');
-    expect(fs.moved.single.dest, '/library/完結済み');
-  });
+      expect(fs.moved, hasLength(1));
+      expect(fs.moved.single.src, '/library/narou_n1');
+      expect(fs.moved.single.dest, '/library/完結済み');
+    },
+  );
 
   testWidgets('move name collision shows an error message', (tester) async {
     final fs = _RecordingFileSystemService();
     fs.orgFolderTree = ['/library/完結済み'];
     fs.moveError = DirectoryOpError.nameCollision;
-    await tester.pumpWidget(_panel(
-      currentDir: '/library',
-      libraryPath: '/library',
-      fs: fs,
-      novels: [novel('narou_n1', 'テスト小説')],
-      subdirectories: const [
-        DirectoryEntry(
-            name: 'narou_n1', path: '/library/narou_n1', displayName: 'テスト小説'),
-        DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
-      ],
-    ));
+    await tester.pumpWidget(
+      _panel(
+        currentDir: '/library',
+        libraryPath: '/library',
+        fs: fs,
+        novels: [novel('narou_n1', 'テスト小説')],
+        subdirectories: const [
+          DirectoryEntry(
+            name: 'narou_n1',
+            path: '/library/narou_n1',
+            displayName: 'テスト小説',
+          ),
+          DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
+        ],
+      ),
+    );
     await tester.pumpAndSettle();
 
-    await tester.tapAt(tester.getCenter(find.text('テスト小説')),
-        buttons: kSecondaryButton);
+    await tester.tapAt(
+      tester.getCenter(find.text('テスト小説')),
+      buttons: kSecondaryButton,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('移動'));
     await tester.pumpAndSettle();
-    await tester.tap(find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.text('完結済み'),
-    ));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('完結済み'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('同名のフォルダが既に存在します'), findsOneWidget);
   });
 
-  testWidgets('deleting an empty organizational folder calls deleteEmpty',
-      (tester) async {
+  testWidgets('deleting an empty organizational folder calls deleteEmpty', (
+    tester,
+  ) async {
     final fs = _RecordingFileSystemService();
-    await tester.pumpWidget(_panel(
-      currentDir: '/library',
-      libraryPath: '/library',
-      fs: fs,
-      subdirectories: const [
-        DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
-      ],
-    ));
+    await tester.pumpWidget(
+      _panel(
+        currentDir: '/library',
+        libraryPath: '/library',
+        fs: fs,
+        subdirectories: const [
+          DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
+        ],
+      ),
+    );
     await tester.pumpAndSettle();
 
-    await tester.tapAt(tester.getCenter(find.text('完結済み')),
-        buttons: kSecondaryButton);
+    await tester.tapAt(
+      tester.getCenter(find.text('完結済み')),
+      buttons: kSecondaryButton,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除'));
     await tester.pumpAndSettle();
 
     // Confirm in the dialog.
-    await tester.tap(find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.text('削除'),
-    ));
+    await tester.tap(
+      find.descendant(of: find.byType(AlertDialog), matching: find.text('削除')),
+    );
     await tester.pumpAndSettle();
 
     expect(fs.deletedEmpty, ['/library/完結済み']);
   });
 
-  testWidgets('deleting a non-empty folder shows the not-empty error',
-      (tester) async {
+  testWidgets('deleting a non-empty folder shows the not-empty error', (
+    tester,
+  ) async {
     final fs = _RecordingFileSystemService();
     fs.deleteError = DirectoryOpError.notEmpty;
-    await tester.pumpWidget(_panel(
-      currentDir: '/library',
-      libraryPath: '/library',
-      fs: fs,
-      subdirectories: const [
-        DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
-      ],
-    ));
+    await tester.pumpWidget(
+      _panel(
+        currentDir: '/library',
+        libraryPath: '/library',
+        fs: fs,
+        subdirectories: const [
+          DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
+        ],
+      ),
+    );
     await tester.pumpAndSettle();
 
-    await tester.tapAt(tester.getCenter(find.text('完結済み')),
-        buttons: kSecondaryButton);
+    await tester.tapAt(
+      tester.getCenter(find.text('完結済み')),
+      buttons: kSecondaryButton,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除'));
     await tester.pumpAndSettle();
-    await tester.tap(find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.text('削除'),
-    ));
+    await tester.tap(
+      find.descendant(of: find.byType(AlertDialog), matching: find.text('削除')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('フォルダが空ではないため削除できません'), findsOneWidget);

@@ -37,21 +37,27 @@ void main() {
   });
 
   // Long enough that horizontal mode is scrollable.
-  final longContent =
-      List.generate(200, (i) => 'これは ${i + 1} 行目の内容です。').join('\n');
+  final longContent = List.generate(
+    200,
+    (i) => 'これは ${i + 1} 行目の内容です。',
+  ).join('\n');
 
   ProviderContainer makeContainer({
-    AdjacentFiles adjacent =
-        const AdjacentFiles(prev: _prevFile, next: _nextFile),
+    AdjacentFiles adjacent = const AdjacentFiles(
+      prev: _prevFile,
+      next: _nextFile,
+    ),
   }) {
     return ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
-        displayModeProvider
-            .overrideWith(() => _StubDisplayMode(TextDisplayMode.horizontal)),
+        displayModeProvider.overrideWith(
+          () => _StubDisplayMode(TextDisplayMode.horizontal),
+        ),
         adjacentFilesProvider.overrideWithValue(adjacent),
-        episodeNavigationControllerProvider
-            .overrideWith((ref) => _SpyEpisodeNav(ref)),
+        episodeNavigationControllerProvider.overrideWith(
+          (ref) => _SpyEpisodeNav(ref),
+        ),
       ],
     );
   }
@@ -75,7 +81,12 @@ void main() {
         home: Scaffold(
           body: sibling == null
               ? viewer
-              : Column(children: [sibling, Expanded(child: viewer)]),
+              : Column(
+                  children: [
+                    sibling,
+                    Expanded(child: viewer),
+                  ],
+                ),
         ),
       ),
     );
@@ -100,8 +111,9 @@ void main() {
   }
 
   group('horizontal edge episode navigation — cursor keys', () {
-    testWidgets('arrow down at scroll-bottom navigates to next episode',
-        (tester) async {
+    testWidgets('arrow down at scroll-bottom navigates to next episode', (
+      tester,
+    ) async {
       final container = makeContainer();
       addTearDown(container.dispose);
       await tester.pumpWidget(wrap(container: container, content: longContent));
@@ -118,8 +130,9 @@ void main() {
       expect(spyOf(container).prev, 0);
     });
 
-    testWidgets('arrow up at scroll-top navigates to previous episode',
-        (tester) async {
+    testWidgets('arrow up at scroll-top navigates to previous episode', (
+      tester,
+    ) async {
       final container = makeContainer();
       addTearDown(container.dispose);
       await tester.pumpWidget(wrap(container: container, content: longContent));
@@ -133,8 +146,9 @@ void main() {
       expect(spyOf(container).next, 0);
     });
 
-    testWidgets('arrow down in the middle scrolls without navigating',
-        (tester) async {
+    testWidgets('arrow down in the middle scrolls without navigating', (
+      tester,
+    ) async {
       final container = makeContainer();
       addTearDown(container.dispose);
       await tester.pumpWidget(wrap(container: container, content: longContent));
@@ -148,16 +162,22 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
 
-      expect(spyOf(container).next, 0,
-          reason: 'Mid-scroll arrow down must page within the file, not '
-              'switch episodes');
+      expect(
+        spyOf(container).next,
+        0,
+        reason:
+            'Mid-scroll arrow down must page within the file, not '
+            'switch episodes',
+      );
       expect(state.position.pixels, greaterThan(before));
     });
 
-    testWidgets('arrow down at bottom with no next file is a no-op',
-        (tester) async {
+    testWidgets('arrow down at bottom with no next file is a no-op', (
+      tester,
+    ) async {
       final container = makeContainer(
-          adjacent: const AdjacentFiles(prev: _prevFile, next: null));
+        adjacent: const AdjacentFiles(prev: _prevFile, next: null),
+      );
       addTearDown(container.dispose);
       await tester.pumpWidget(wrap(container: container, content: longContent));
       await tester.pumpAndSettle();
@@ -172,10 +192,12 @@ void main() {
       expect(spyOf(container).next, 0);
     });
 
-    testWidgets('arrow up at top with no previous file is a no-op',
-        (tester) async {
+    testWidgets('arrow up at top with no previous file is a no-op', (
+      tester,
+    ) async {
       final container = makeContainer(
-          adjacent: const AdjacentFiles(prev: null, next: _nextFile));
+        adjacent: const AdjacentFiles(prev: null, next: _nextFile),
+      );
       addTearDown(container.dispose);
       await tester.pumpWidget(wrap(container: container, content: longContent));
       await tester.pumpAndSettle();
@@ -186,15 +208,18 @@ void main() {
       expect(spyOf(container).prev, 0);
     });
 
-    testWidgets('arrow key does not navigate when focus is elsewhere',
-        (tester) async {
+    testWidgets('arrow key does not navigate when focus is elsewhere', (
+      tester,
+    ) async {
       final container = makeContainer();
       addTearDown(container.dispose);
-      await tester.pumpWidget(wrap(
-        container: container,
-        content: longContent,
-        sibling: const TextField(),
-      ));
+      await tester.pumpWidget(
+        wrap(
+          container: container,
+          content: longContent,
+          sibling: const TextField(),
+        ),
+      );
       await tester.pumpAndSettle();
 
       final state = tester.state<ScrollableState>(outerScrollable());
@@ -208,15 +233,20 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
 
-      expect(spyOf(container).next, 0,
-          reason: 'With focus on the file browser / another widget, the '
-              'viewer must not consume the arrow key for episode navigation');
+      expect(
+        spyOf(container).next,
+        0,
+        reason:
+            'With focus on the file browser / another widget, the '
+            'viewer must not consume the arrow key for episode navigation',
+      );
     });
   });
 
   group('horizontal edge episode navigation — mouse wheel', () {
-    testWidgets('wheel down at scroll-bottom navigates to next episode',
-        (tester) async {
+    testWidgets('wheel down at scroll-bottom navigates to next episode', (
+      tester,
+    ) async {
       final container = makeContainer();
       addTearDown(container.dispose);
       await tester.pumpWidget(wrap(container: container, content: longContent));
@@ -231,8 +261,9 @@ void main() {
       expect(spyOf(container).next, 1);
     });
 
-    testWidgets('wheel up at scroll-top navigates to previous episode',
-        (tester) async {
+    testWidgets('wheel up at scroll-top navigates to previous episode', (
+      tester,
+    ) async {
       final container = makeContainer();
       addTearDown(container.dispose);
       await tester.pumpWidget(wrap(container: container, content: longContent));
@@ -275,12 +306,16 @@ void main() {
       await sendWheel(tester, 60);
       await sendWheel(tester, 60);
 
-      expect(spyOf(container).next, 1,
-          reason: 'A burst of wheel events must advance at most one episode');
+      expect(
+        spyOf(container).next,
+        1,
+        reason: 'A burst of wheel events must advance at most one episode',
+      );
     });
 
-    testWidgets('navigation works again after the cooldown elapses',
-        (tester) async {
+    testWidgets('navigation works again after the cooldown elapses', (
+      tester,
+    ) async {
       final container = makeContainer();
       addTearDown(container.dispose);
       await tester.pumpWidget(wrap(container: container, content: longContent));
@@ -301,27 +336,33 @@ void main() {
     });
 
     testWidgets(
-        'short (single-screen) episode: wheel burst does not run away',
-        (tester) async {
-      // maxScrollExtent == 0 → simultaneously at top and bottom. A continued
-      // wheel burst must still only advance one episode per cooldown window.
-      final container = makeContainer();
-      addTearDown(container.dispose);
-      await tester.pumpWidget(
-          wrap(container: container, content: '一行だけのテキスト。'));
-      await tester.pumpAndSettle();
+      'short (single-screen) episode: wheel burst does not run away',
+      (tester) async {
+        // maxScrollExtent == 0 → simultaneously at top and bottom. A continued
+        // wheel burst must still only advance one episode per cooldown window.
+        final container = makeContainer();
+        addTearDown(container.dispose);
+        await tester.pumpWidget(
+          wrap(container: container, content: '一行だけのテキスト。'),
+        );
+        await tester.pumpAndSettle();
 
-      final state = tester.state<ScrollableState>(outerScrollable());
-      expect(state.position.maxScrollExtent, 0);
+        final state = tester.state<ScrollableState>(outerScrollable());
+        expect(state.position.maxScrollExtent, 0);
 
-      await sendWheel(tester, 60);
-      await sendWheel(tester, 60);
-      await sendWheel(tester, 60);
+        await sendWheel(tester, 60);
+        await sendWheel(tester, 60);
+        await sendWheel(tester, 60);
 
-      expect(spyOf(container).next, 1,
-          reason: 'On a one-screen episode the cooldown must prevent a wheel '
-              'burst from skipping multiple episodes');
-    });
+        expect(
+          spyOf(container).next,
+          1,
+          reason:
+              'On a one-screen episode the cooldown must prevent a wheel '
+              'burst from skipping multiple episodes',
+        );
+      },
+    );
   });
 }
 

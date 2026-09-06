@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:novel_viewer/app.dart';
+import 'package:novel_viewer/features/reading_progress/providers/reading_position_providers.dart';
 import 'package:novel_viewer/app/startup_migrations.dart';
 import 'package:logging/logging.dart';
 import 'package:novel_viewer/shared/logging/app_logger.dart';
@@ -48,13 +49,16 @@ void main() async {
   // Wire a real folder lister so the v4→v5 LLM summary migration can resolve
   // lexical ranks for legacy rows whose source_file lacks a numeric prefix.
   final novelDatabase = NovelDatabase(
-    snapshotResolver:
-        NovelDatabaseSnapshotResolver.fromLibraryRoot(libraryDir.path),
+    snapshotResolver: NovelDatabaseSnapshotResolver.fromLibraryRoot(
+      libraryDir.path,
+    ),
     // v8→v9: move per-novel tables into each folder's novel_data.db. Locating
     // novel folders (incl. nested) needs the library root; the logger surfaces
     // ambiguous/missing-folder skips.
-    dataMigrator: NovelDataMigrator.fromLibraryRoot(libraryDir.path,
-        logger: Logger('novel_metadata_db')),
+    dataMigrator: NovelDataMigrator.fromLibraryRoot(
+      libraryDir.path,
+      logger: Logger('novel_metadata_db'),
+    ),
   );
   await novelDatabase.database;
 
@@ -62,8 +66,9 @@ void main() async {
 
   final container = ProviderContainer(
     overrides: [
-      currentDirectoryProvider
-          .overrideWith(() => CurrentDirectoryNotifier(libraryDir.path)),
+      currentDirectoryProvider.overrideWith(
+        () => CurrentDirectoryNotifier(libraryDir.path),
+      ),
       libraryPathProvider.overrideWithValue(libraryDir.path),
       sharedPreferencesProvider.overrideWithValue(prefs),
       novelDatabaseProvider.overrideWithValue(novelDatabase),
@@ -78,7 +83,10 @@ void main() async {
   // late as possible: the runner creates the window hidden and only shows it
   // once Flutter has a frame, so anything that reveals it earlier would put a
   // blank window on screen for the whole startup migration.
-  await initializeWindowState(prefs: prefs);
+  await initializeWindowState(
+    prefs: prefs,
+    beforeClose: () => container.read(readingPositionWriterProvider).flush(),
+  );
 
   runApp(
     UncontrolledProviderScope(

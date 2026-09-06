@@ -8,10 +8,7 @@ void main() {
     });
 
     test('returns different hashes for different content', () {
-      expect(
-        computeContentHash('テスト１'),
-        isNot(computeContentHash('テスト２')),
-      );
+      expect(computeContentHash('テスト１'), isNot(computeContentHash('テスト２')));
     });
 
     test('returns SHA-256 hex (64 chars)', () {

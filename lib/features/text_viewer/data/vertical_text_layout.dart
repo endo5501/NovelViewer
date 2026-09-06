@@ -8,26 +8,23 @@ class VerticalCharEntry {
   final bool isRuby;
 
   VerticalCharEntry.plain(this.text)
-      : rubyText = null,
-        isNewline = false,
-        isRuby = false;
+    : rubyText = null,
+      isNewline = false,
+      isRuby = false;
 
   VerticalCharEntry.newline()
-      : text = '\n',
-        rubyText = null,
-        isNewline = true,
-        isRuby = false;
+    : text = '\n',
+      rubyText = null,
+      isNewline = true,
+      isRuby = false;
 
   VerticalCharEntry.ruby(this.text, this.rubyText)
-      : isNewline = false,
-        isRuby = true;
+    : isNewline = false,
+      isRuby = true;
 }
 
 class VerticalHitRegion {
-  const VerticalHitRegion({
-    required this.charIndex,
-    required this.rect,
-  });
+  const VerticalHitRegion({required this.charIndex, required this.rect});
 
   final int charIndex;
   final Rect rect;
@@ -87,13 +84,13 @@ int? hitTestCharIndexFromRegions({
     final dx = localPosition.dx < region.rect.left
         ? region.rect.left - localPosition.dx
         : localPosition.dx > region.rect.right
-            ? localPosition.dx - region.rect.right
-            : 0.0;
+        ? localPosition.dx - region.rect.right
+        : 0.0;
     final dy = localPosition.dy < region.rect.top
         ? region.rect.top - localPosition.dy
         : localPosition.dy > region.rect.bottom
-            ? localPosition.dy - region.rect.bottom
-            : 0.0;
+        ? localPosition.dy - region.rect.bottom
+        : 0.0;
 
     final distanceSquared = (dx * dx) + (dy * dy);
     if (distanceSquared < nearestDistanceSquared) {
@@ -135,9 +132,9 @@ int? hitTestCharIndexFromRegions({
 /// them null and the other an empty set makes the extracted text and the
 /// offset describe different strings.
 Set<int> realLineBreakEntries(List<VerticalCharEntry> entries) => {
-      for (var i = 0; i < entries.length; i++)
-        if (entries[i].isNewline) i,
-    };
+  for (var i = 0; i < entries.length; i++)
+    if (entries[i].isNewline) i,
+};
 
 int plainTextOffsetFromEntryIndex(
   List<VerticalCharEntry> entries,

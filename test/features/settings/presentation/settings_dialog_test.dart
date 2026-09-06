@@ -23,9 +23,9 @@ void main() {
         libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
       ],
       child: const MaterialApp(
-            locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('ja'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: SettingsDialog()),
       ),
     );
@@ -98,8 +98,7 @@ void main() {
 
       final switchTiles = find.byType(SwitchListTile);
       // Find the dark mode switch (second SwitchListTile after vertical display)
-      final darkModeSwitch =
-          tester.widget<SwitchListTile>(switchTiles.at(1));
+      final darkModeSwitch = tester.widget<SwitchListTile>(switchTiles.at(1));
       expect(darkModeSwitch.value, isFalse);
     });
 
@@ -112,8 +111,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify it's now on
-      final updatedSwitch =
-          tester.widget<SwitchListTile>(find.byType(SwitchListTile).at(1));
+      final updatedSwitch = tester.widget<SwitchListTile>(
+        find.byType(SwitchListTile).at(1),
+      );
       expect(updatedSwitch.value, isTrue);
       expect(prefs.getString('theme_mode'), 'dark');
     });

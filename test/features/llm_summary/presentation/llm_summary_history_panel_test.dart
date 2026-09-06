@@ -68,38 +68,48 @@ Widget _wrap({required List<Object> overrides}) {
 void main() {
   group('LlmSummaryHistoryPanel', () {
     testWidgets('shows placeholder when no novel is active', (tester) async {
-      await tester.pumpWidget(_wrap(
-        overrides: [
-          libraryPathProvider.overrideWithValue('/library'),
-          currentDirectoryProvider
-              .overrideWith(() => _TestCurrentDirectoryNotifier('/library')),
-          llmSummaryHistoryProvider
-              .overrideWith(() => _StubHistoryNotifier(const [])),
-        ],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          overrides: [
+            libraryPathProvider.overrideWithValue('/library'),
+            currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/library'),
+            ),
+            llmSummaryHistoryProvider.overrideWith(
+              () => _StubHistoryNotifier(const []),
+            ),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('作品フォルダを選択してください'), findsOneWidget);
     });
 
-    testWidgets('shows empty message when no history entries exist',
-        (tester) async {
-      await tester.pumpWidget(_wrap(
-        overrides: [
-          libraryPathProvider.overrideWithValue('/library'),
-          currentDirectoryProvider.overrideWith(
-              () => _TestCurrentDirectoryNotifier('/library/my_novel')),
-          llmSummaryHistoryProvider
-              .overrideWith(() => _StubHistoryNotifier(const [])),
-        ],
-      ));
+    testWidgets('shows empty message when no history entries exist', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          overrides: [
+            libraryPathProvider.overrideWithValue('/library'),
+            currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/library/my_novel'),
+            ),
+            llmSummaryHistoryProvider.overrideWith(
+              () => _StubHistoryNotifier(const []),
+            ),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('解析履歴がありません'), findsOneWidget);
     });
 
-    testWidgets('renders a snapshot-count badge for each entry',
-        (tester) async {
+    testWidgets('renders a snapshot-count badge for each entry', (
+      tester,
+    ) async {
       final entries = [
         _entry(word: 'アリス', episode: 30, sourceFile: '030.txt'),
         _entry(
@@ -110,23 +120,33 @@ void main() {
         ),
       ];
 
-      await tester.pumpWidget(_wrap(
-        overrides: [
-          libraryPathProvider.overrideWithValue('/library'),
-          currentDirectoryProvider.overrideWith(
-              () => _TestCurrentDirectoryNotifier('/library/my_novel')),
-          llmSummaryHistoryProvider
-              .overrideWith(() => _StubHistoryNotifier(entries)),
-        ],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          overrides: [
+            libraryPathProvider.overrideWithValue('/library'),
+            currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/library/my_novel'),
+            ),
+            llmSummaryHistoryProvider.overrideWith(
+              () => _StubHistoryNotifier(entries),
+            ),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('アリス'), findsOneWidget);
       expect(find.text('ボブ'), findsOneWidget);
-      expect(find.text('1スナップショット'), findsOneWidget,
-          reason: 'アリス has a single snapshot');
-      expect(find.text('3スナップショット'), findsOneWidget,
-          reason: 'ボブ has 1 base + 2 extra snapshots');
+      expect(
+        find.text('1スナップショット'),
+        findsOneWidget,
+        reason: 'アリス has a single snapshot',
+      );
+      expect(
+        find.text('3スナップショット'),
+        findsOneWidget,
+        reason: 'ボブ has 1 base + 2 extra snapshots',
+      );
     });
   });
 }

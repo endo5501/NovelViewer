@@ -20,11 +20,11 @@ class TtsSession {
     Logger? logger,
     Duration modelLoadTimeout = const Duration(seconds: 120),
     IrodoriModelSpecInstaller? irodoriSpecInstaller,
-  })  : _isolate = isolate,
-        _log = logger ?? Logger('tts.session'),
-        _irodoriSpecInstaller =
-            irodoriSpecInstaller ?? IrodoriModelSpecInstaller(),
-        _modelLoadTimeout = modelLoadTimeout;
+  }) : _isolate = isolate,
+       _log = logger ?? Logger('tts.session'),
+       _irodoriSpecInstaller =
+           irodoriSpecInstaller ?? IrodoriModelSpecInstaller(),
+       _modelLoadTimeout = modelLoadTimeout;
 
   final TtsIsolate _isolate;
   final Logger _log;
@@ -252,5 +252,4 @@ class TtsSession {
     _modelLoaded = false;
     _loadedKey = null;
   }
-
 }

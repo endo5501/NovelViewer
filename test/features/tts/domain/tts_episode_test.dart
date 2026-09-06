@@ -88,13 +88,13 @@ void main() {
 
     test('maps each known status string', () {
       TtsEpisode build(String status) => TtsEpisode.fromRow({
-            'id': 1,
-            'file_name': 'a.txt',
-            'sample_rate': 24000,
-            'status': status,
-            'created_at': '2026-04-01T00:00:00.000Z',
-            'updated_at': '2026-04-01T00:00:00.000Z',
-          });
+        'id': 1,
+        'file_name': 'a.txt',
+        'sample_rate': 24000,
+        'status': status,
+        'created_at': '2026-04-01T00:00:00.000Z',
+        'updated_at': '2026-04-01T00:00:00.000Z',
+      });
 
       expect(build('generating').status, TtsEpisodeStatus.generating);
       expect(build('partial').status, TtsEpisodeStatus.partial);

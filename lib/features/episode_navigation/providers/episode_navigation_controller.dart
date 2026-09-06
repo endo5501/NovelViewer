@@ -17,14 +17,18 @@ class EpisodeNavigationController {
   /// Switches the viewer to the next adjacent file (if any). Sets
   /// [FileEntryStartIntent.fromStart] so the new file opens from the
   /// beginning. No-op if there is no next file.
-  void navigateToNext() => _navigate(_ref.read(adjacentFilesProvider).next,
-      FileEntryStartIntent.fromStart);
+  void navigateToNext() => _navigate(
+    _ref.read(adjacentFilesProvider).next,
+    FileEntryStartIntent.fromStart,
+  );
 
   /// Switches the viewer to the previous adjacent file (if any). Sets
   /// [FileEntryStartIntent.fromEnd] so the new file opens from its tail —
   /// this matches "reading backward" continuity. No-op if no previous file.
-  void navigateToPrevious() => _navigate(_ref.read(adjacentFilesProvider).prev,
-      FileEntryStartIntent.fromEnd);
+  void navigateToPrevious() => _navigate(
+    _ref.read(adjacentFilesProvider).prev,
+    FileEntryStartIntent.fromEnd,
+  );
 
   void _navigate(FileEntry? target, FileEntryStartIntent intent) {
     if (target == null) return;
@@ -36,6 +40,4 @@ class EpisodeNavigationController {
 }
 
 final episodeNavigationControllerProvider =
-    Provider<EpisodeNavigationController>(
-  EpisodeNavigationController.new,
-);
+    Provider<EpisodeNavigationController>(EpisodeNavigationController.new);

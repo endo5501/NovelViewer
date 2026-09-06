@@ -35,8 +35,10 @@ class SettingsRepository {
   static const _piperNoiseScaleKey = 'piper_noise_scale';
   static const _piperNoiseWKey = 'piper_noise_w';
   static const _irodoriModelVariantKey = 'irodori_model_variant';
-  static const _irodoriSpeakerGuidanceScaleKey = 'irodori_speaker_guidance_scale';
-  static const _irodoriCaptionGuidanceScaleKey = 'irodori_caption_guidance_scale';
+  static const _irodoriSpeakerGuidanceScaleKey =
+      'irodori_speaker_guidance_scale';
+  static const _irodoriCaptionGuidanceScaleKey =
+      'irodori_caption_guidance_scale';
   static const _irodoriNumInferenceStepsKey = 'irodori_num_inference_steps';
   static const _shortcutBindingsKey = 'keyboard_shortcuts';
 
@@ -51,10 +53,8 @@ class SettingsRepository {
   final SharedPreferences _prefs;
   final FlutterSecureStorage _secureStorage;
 
-  SettingsRepository(
-    this._prefs, {
-    FlutterSecureStorage? secureStorage,
-  }) : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+  SettingsRepository(this._prefs, {FlutterSecureStorage? secureStorage})
+    : _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   static const supportedLocales = ['ja', 'en', 'zh'];
   static const defaultLocale = 'ja';
@@ -68,7 +68,9 @@ class SettingsRepository {
   }
 
   Future<void> setLocale(String locale) async {
-    final normalized = supportedLocales.contains(locale) ? locale : defaultLocale;
+    final normalized = supportedLocales.contains(locale)
+        ? locale
+        : defaultLocale;
     await _prefs.setString(_localeKey, normalized);
   }
 
@@ -112,7 +114,9 @@ class SettingsRepository {
 
   Future<void> setColumnSpacing(double spacing) async {
     await _prefs.setDouble(
-        _columnSpacingKey, spacing.clamp(minColumnSpacing, maxColumnSpacing));
+      _columnSpacingKey,
+      spacing.clamp(minColumnSpacing, maxColumnSpacing),
+    );
   }
 
   ThemeMode getThemeMode() {
@@ -286,8 +290,10 @@ class SettingsRepository {
 
   // Irodori synthesis parameters (design D8 / spec irodori-caption-synthesis)
   double getIrodoriSpeakerGuidanceScale() {
-    return (_prefs.getDouble(_irodoriSpeakerGuidanceScaleKey) ?? 5.0)
-        .clamp(0.0, 10.0);
+    return (_prefs.getDouble(_irodoriSpeakerGuidanceScaleKey) ?? 5.0).clamp(
+      0.0,
+      10.0,
+    );
   }
 
   Future<void> setIrodoriSpeakerGuidanceScale(double value) async {
@@ -295,8 +301,10 @@ class SettingsRepository {
   }
 
   double getIrodoriCaptionGuidanceScale() {
-    return (_prefs.getDouble(_irodoriCaptionGuidanceScaleKey) ?? 3.0)
-        .clamp(0.0, 10.0);
+    return (_prefs.getDouble(_irodoriCaptionGuidanceScaleKey) ?? 3.0).clamp(
+      0.0,
+      10.0,
+    );
   }
 
   Future<void> setIrodoriCaptionGuidanceScale(double value) async {

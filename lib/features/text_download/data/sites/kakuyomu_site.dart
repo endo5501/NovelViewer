@@ -42,11 +42,11 @@ class KakuyomuSite extends NovelSite {
   @override
   NovelIndex parseIndex(String html, Uri baseUrl) {
     final document = html_parser.parse(html);
-    final scriptElement =
-        document.querySelector('script[id="__NEXT_DATA__"]');
+    final scriptElement = document.querySelector('script[id="__NEXT_DATA__"]');
     if (scriptElement == null) {
       throw ArgumentError(
-          'Kakuyomu __NEXT_DATA__ script tag not found in $baseUrl');
+        'Kakuyomu __NEXT_DATA__ script tag not found in $baseUrl',
+      );
     }
 
     final dynamic decoded;
@@ -54,7 +54,8 @@ class KakuyomuSite extends NovelSite {
       decoded = jsonDecode(scriptElement.text);
     } on FormatException catch (e) {
       throw ArgumentError(
-          'Failed to parse Kakuyomu __NEXT_DATA__ JSON for $baseUrl: ${e.message}');
+        'Failed to parse Kakuyomu __NEXT_DATA__ JSON for $baseUrl: ${e.message}',
+      );
     }
 
     final props = decoded is Map ? decoded['props'] : null;
@@ -62,27 +63,31 @@ class KakuyomuSite extends NovelSite {
     final apollo = pageProps is Map ? pageProps['__APOLLO_STATE__'] : null;
     if (apollo is! Map) {
       throw ArgumentError(
-          'Kakuyomu __APOLLO_STATE__ not found in __NEXT_DATA__ for $baseUrl');
+        'Kakuyomu __APOLLO_STATE__ not found in __NEXT_DATA__ for $baseUrl',
+      );
     }
 
     final workId = extractNovelId(baseUrl);
     final root = apollo['ROOT_QUERY'];
     if (root is! Map) {
       throw ArgumentError(
-          'Kakuyomu ROOT_QUERY not found in Apollo state for $baseUrl');
+        'Kakuyomu ROOT_QUERY not found in Apollo state for $baseUrl',
+      );
     }
     final workRefField = 'work({"id":"$workId"})';
     final work = _resolveRef(apollo, root[workRefField]);
     if (work == null) {
       throw ArgumentError(
-          'Kakuyomu Work entity unresolved via $workRefField for $baseUrl');
+        'Kakuyomu Work entity unresolved via $workRefField for $baseUrl',
+      );
     }
 
     final title = (work['title'] as String?) ?? '';
     final tocRaw = work['tableOfContentsV2'];
     if (tocRaw is! List) {
       throw ArgumentError(
-          'Kakuyomu Work.tableOfContentsV2 is not a List for $baseUrl');
+        'Kakuyomu Work.tableOfContentsV2 is not a List for $baseUrl',
+      );
     }
 
     final episodes = <Episode>[];
@@ -91,23 +96,23 @@ class KakuyomuSite extends NovelSite {
       final chapter = _resolveRef(apollo, chapterRef);
       if (chapter == null) {
         throw ArgumentError(
-            'Kakuyomu TableOfContentsChapter unresolved for $baseUrl');
+          'Kakuyomu TableOfContentsChapter unresolved for $baseUrl',
+        );
       }
       final episodeRefs = chapter['episodeUnions'];
       if (episodeRefs is! List) {
         throw ArgumentError(
-            'Kakuyomu episodeUnions is not a List for $baseUrl');
+          'Kakuyomu episodeUnions is not a List for $baseUrl',
+        );
       }
       for (final epRef in episodeRefs) {
         final ep = _resolveRef(apollo, epRef);
         if (ep == null) {
-          throw ArgumentError(
-              'Kakuyomu Episode unresolved for $baseUrl');
+          throw ArgumentError('Kakuyomu Episode unresolved for $baseUrl');
         }
         final epId = ep['id'] as String?;
         if (epId == null) {
-          throw ArgumentError(
-              'Kakuyomu Episode missing id for $baseUrl');
+          throw ArgumentError('Kakuyomu Episode missing id for $baseUrl');
         }
         final epTitle = (ep['title'] as String?) ?? '';
         final publishedAt = ep['publishedAt'] as String?;
@@ -116,12 +121,14 @@ class KakuyomuSite extends NovelSite {
           query: null,
           fragment: null,
         );
-        episodes.add(Episode(
-          index: index++,
-          title: epTitle,
-          url: url,
-          updatedAt: publishedAt,
-        ));
+        episodes.add(
+          Episode(
+            index: index++,
+            title: epTitle,
+            url: url,
+            updatedAt: publishedAt,
+          ),
+        );
       }
     }
 

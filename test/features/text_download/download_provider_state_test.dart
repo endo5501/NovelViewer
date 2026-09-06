@@ -95,23 +95,27 @@ void main() {
   final narouUrl = Uri.parse('https://ncode.syosetu.com/n1234ab/');
 
   DownloadResult resultWith({bool indexTruncated = false}) => DownloadResult(
-        siteType: 'narou',
-        novelId: 'n1234ab',
-        title: 'テスト小説',
-        folderName: 'narou_n1234ab',
-        episodeCount: 3,
-        failedCount: 0,
-        indexTruncated: indexTruncated,
-        url: narouUrl,
-      );
+    siteType: 'narou',
+    novelId: 'n1234ab',
+    title: 'テスト小説',
+    folderName: 'narou_n1234ab',
+    episodeCount: 3,
+    failedCount: 0,
+    indexTruncated: indexTruncated,
+    url: narouUrl,
+  );
 
-  ProviderContainer makeContainer(DownloadService service,
-      {NovelMetadata? metadata, _FakeNovelRepository? repo}) {
+  ProviderContainer makeContainer(
+    DownloadService service, {
+    NovelMetadata? metadata,
+    _FakeNovelRepository? repo,
+  }) {
     final container = ProviderContainer(
       overrides: [
         libraryPathProvider.overrideWithValue(tempDir.path),
         novelRepositoryProvider.overrideWithValue(
-            repo ?? _FakeNovelRepository(byFolderName: metadata)),
+          repo ?? _FakeNovelRepository(byFolderName: metadata),
+        ),
         downloadServiceFactoryProvider.overrideWithValue(() => service),
         episodeCacheDatabaseProvider.overrideWith((ref, key) {
           final db = EpisodeCacheDatabase(tempDir.path);
@@ -126,8 +130,9 @@ void main() {
 
   group('DownloadNotifier state mapping', () {
     test('indexTruncated from DownloadResult propagates to state', () async {
-      final service =
-          _ProgrammableService(resultBuilder: () => resultWith(indexTruncated: true));
+      final service = _ProgrammableService(
+        resultBuilder: () => resultWith(indexTruncated: true),
+      );
       final container = makeContainer(service);
 
       await container
@@ -176,20 +181,25 @@ void main() {
       expect(container.read(downloadProvider).status, DownloadStatus.error);
     });
 
-    test('CancelledException maps to the cancelled status (not error)',
-        () async {
-      final service = _ProgrammableService(
-        resultBuilder: () => resultWith(),
-        throwCancelled: true,
-      );
-      final container = makeContainer(service);
+    test(
+      'CancelledException maps to the cancelled status (not error)',
+      () async {
+        final service = _ProgrammableService(
+          resultBuilder: () => resultWith(),
+          throwCancelled: true,
+        );
+        final container = makeContainer(service);
 
-      await container
-          .read(downloadProvider.notifier)
-          .startDownload(url: narouUrl, outputPath: tempDir.path);
+        await container
+            .read(downloadProvider.notifier)
+            .startDownload(url: narouUrl, outputPath: tempDir.path);
 
-      expect(container.read(downloadProvider).status, DownloadStatus.cancelled);
-    });
+        expect(
+          container.read(downloadProvider).status,
+          DownloadStatus.cancelled,
+        );
+      },
+    );
 
     test('cancellation surfacing as a non-CancelledException (in-flight client '
         'close) still maps to cancelled, not error', () async {
@@ -219,23 +229,25 @@ void main() {
       expect(container.read(downloadProvider).status, DownloadStatus.error);
     });
 
-    test('EmptyIndexException (F118) maps to error with a dedicated message',
-        () async {
-      final service = _ProgrammableService(
-        resultBuilder: () => throw EmptyIndexException(narouUrl),
-      );
-      final container = makeContainer(service);
+    test(
+      'EmptyIndexException (F118) maps to error with a dedicated message',
+      () async {
+        final service = _ProgrammableService(
+          resultBuilder: () => throw EmptyIndexException(narouUrl),
+        );
+        final container = makeContainer(service);
 
-      await container
-          .read(downloadProvider.notifier)
-          .startDownload(url: narouUrl, outputPath: tempDir.path);
+        await container
+            .read(downloadProvider.notifier)
+            .startDownload(url: narouUrl, outputPath: tempDir.path);
 
-      final state = container.read(downloadProvider);
-      expect(state.status, DownloadStatus.error);
-      // Not the raw exception string, and not the unsupported-site message.
-      expect(state.errorMessage, isNotNull);
-      expect(state.errorMessage, contains('目次を取得できませんでした'));
-    });
+        final state = container.read(downloadProvider);
+        expect(state.status, DownloadStatus.error);
+        // Not the raw exception string, and not the unsupported-site message.
+        expect(state.errorMessage, isNotNull);
+        expect(state.errorMessage, contains('目次を取得できませんでした'));
+      },
+    );
 
     test('a second startDownload while one is in flight is ignored', () async {
       final gate = Completer<void>();
@@ -246,14 +258,18 @@ void main() {
       final container = makeContainer(service);
       final notifier = container.read(downloadProvider.notifier);
 
-      final first =
-          notifier.startDownload(url: narouUrl, outputPath: tempDir.path);
+      final first = notifier.startDownload(
+        url: narouUrl,
+        outputPath: tempDir.path,
+      );
       await Future<void>.delayed(Duration.zero); // reach gated downloadNovel
 
       // Second call must be ignored while the first is still in flight.
       await notifier.startDownload(url: narouUrl, outputPath: tempDir.path);
-      expect(container.read(downloadProvider).status,
-          DownloadStatus.downloading);
+      expect(
+        container.read(downloadProvider).status,
+        DownloadStatus.downloading,
+      );
       expect(service.downloadCalls, 1);
 
       gate.complete();
@@ -261,29 +277,34 @@ void main() {
       expect(container.read(downloadProvider).status, DownloadStatus.completed);
     });
 
-    test('cancel() cancels the in-flight token and yields cancelled status',
-        () async {
-      final gate = Completer<void>();
-      final service = _ProgrammableService(
-        resultBuilder: () => resultWith(),
-        gate: gate,
-      );
-      final container = makeContainer(service);
+    test(
+      'cancel() cancels the in-flight token and yields cancelled status',
+      () async {
+        final gate = Completer<void>();
+        final service = _ProgrammableService(
+          resultBuilder: () => resultWith(),
+          gate: gate,
+        );
+        final container = makeContainer(service);
 
-      final future = container
-          .read(downloadProvider.notifier)
-          .startDownload(url: narouUrl, outputPath: tempDir.path);
+        final future = container
+            .read(downloadProvider.notifier)
+            .startDownload(url: narouUrl, outputPath: tempDir.path);
 
-      // Let startDownload reach the gated downloadNovel call.
-      await Future<void>.delayed(Duration.zero);
-      container.read(downloadProvider.notifier).cancel();
-      gate.complete();
-      await future;
+        // Let startDownload reach the gated downloadNovel call.
+        await Future<void>.delayed(Duration.zero);
+        container.read(downloadProvider.notifier).cancel();
+        gate.complete();
+        await future;
 
-      expect(service.capturedToken, isNotNull);
-      expect(service.capturedToken!.isCancelled, isTrue);
-      expect(container.read(downloadProvider).status, DownloadStatus.cancelled);
-    });
+        expect(service.capturedToken, isNotNull);
+        expect(service.capturedToken!.isCancelled, isTrue);
+        expect(
+          container.read(downloadProvider).status,
+          DownloadStatus.cancelled,
+        );
+      },
+    );
   });
 
   group('collection downloads', () {
@@ -291,64 +312,74 @@ void main() {
     // generic-web extraction in startCollectionDownload runs for real.
     DownloadService articleService(String title) {
       final body = 'これはコレクション取り込み用の十分に長い本文テキストです。' * 10;
-      final html = '<html><head>'
+      final html =
+          '<html><head>'
           '<meta property="og:title" content="$title">'
           '</head><body><article><p>$body</p></article></body></html>';
       return DownloadService(
-        client: MockClient((_) async => http.Response.bytes(
-              utf8.encode(html),
-              200,
-              headers: {'content-type': 'text/html; charset=utf-8'},
-            )),
+        client: MockClient(
+          (_) async => http.Response.bytes(
+            utf8.encode(html),
+            200,
+            headers: {'content-type': 'text/html; charset=utf-8'},
+          ),
+        ),
         requestDelay: Duration.zero,
       );
     }
 
-    test('new collection with a blank name defaults to the article title',
-        () async {
-      final repo = _FakeNovelRepository();
-      final container = makeContainer(articleService('基礎から学ぶAI'), repo: repo);
+    test(
+      'new collection with a blank name defaults to the article title',
+      () async {
+        final repo = _FakeNovelRepository();
+        final container = makeContainer(articleService('基礎から学ぶAI'), repo: repo);
 
-      await container.read(downloadProvider.notifier).startCollectionDownload(
-            url: Uri.parse('https://blog.example.com/intro'),
-            libraryPath: tempDir.path,
-            // newCollectionName omitted (blank) -> should use the article title.
-          );
+        await container
+            .read(downloadProvider.notifier)
+            .startCollectionDownload(
+              url: Uri.parse('https://blog.example.com/intro'),
+              libraryPath: tempDir.path,
+              // newCollectionName omitted (blank) -> should use the article title.
+            );
 
-      expect(container.read(downloadProvider).status, DownloadStatus.completed);
-      expect(repo.upserts, hasLength(1));
-      final meta = repo.upserts.single;
-      expect(meta.siteType, 'web');
-      expect(meta.title, '基礎から学ぶAI');
-      expect(meta.folderName, 'web_基礎から学ぶAI');
-      expect(meta.episodeCount, 1);
-      expect(Directory('${tempDir.path}/web_基礎から学ぶAI').existsSync(), isTrue);
-    });
+        expect(
+          container.read(downloadProvider).status,
+          DownloadStatus.completed,
+        );
+        expect(repo.upserts, hasLength(1));
+        final meta = repo.upserts.single;
+        expect(meta.siteType, 'web');
+        expect(meta.title, '基礎から学ぶAI');
+        expect(meta.folderName, 'web_基礎から学ぶAI');
+        expect(meta.episodeCount, 1);
+        expect(Directory('${tempDir.path}/web_基礎から学ぶAI').existsSync(), isTrue);
+      },
+    );
 
-    test('createEmptyCollection registers a zero-episode web collection',
-        () async {
-      final repo = _FakeNovelRepository();
-      final container = makeContainer(articleService('unused'), repo: repo);
+    test(
+      'createEmptyCollection registers a zero-episode web collection',
+      () async {
+        final repo = _FakeNovelRepository();
+        final container = makeContainer(articleService('unused'), repo: repo);
 
-      await container.read(downloadProvider.notifier).createEmptyCollection(
-            name: '研究メモ',
-            libraryPath: tempDir.path,
-          );
+        await container
+            .read(downloadProvider.notifier)
+            .createEmptyCollection(name: '研究メモ', libraryPath: tempDir.path);
 
-      expect(repo.upserts, hasLength(1));
-      final meta = repo.upserts.single;
-      expect(meta.siteType, 'web');
-      expect(meta.title, '研究メモ');
-      expect(meta.folderName, 'web_研究メモ');
-      expect(meta.episodeCount, 0);
-      expect(meta.url, '');
-      expect(Directory('${tempDir.path}/web_研究メモ').existsSync(), isTrue);
-      // No episode files in a freshly-created empty collection.
-      final txt = Directory('${tempDir.path}/web_研究メモ')
-          .listSync()
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.txt'));
-      expect(txt, isEmpty);
-    });
+        expect(repo.upserts, hasLength(1));
+        final meta = repo.upserts.single;
+        expect(meta.siteType, 'web');
+        expect(meta.title, '研究メモ');
+        expect(meta.folderName, 'web_研究メモ');
+        expect(meta.episodeCount, 0);
+        expect(meta.url, '');
+        expect(Directory('${tempDir.path}/web_研究メモ').existsSync(), isTrue);
+        // No episode files in a freshly-created empty collection.
+        final txt = Directory(
+          '${tempDir.path}/web_研究メモ',
+        ).listSync().whereType<File>().where((f) => f.path.endsWith('.txt'));
+        expect(txt, isEmpty);
+      },
+    );
   });
 }

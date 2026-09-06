@@ -37,8 +37,9 @@ SwipeDirection? detectSwipeFromDrag({
   if (absDx <= absDy) return null;
 
   final hasVelocity = velocity.pixelsPerSecond.dx.abs() > kSwipeMinVelocity;
-  final requiredDistance =
-      hasVelocity ? kSwipeMinDistance : kSwipeMinDistanceWithoutFling;
+  final requiredDistance = hasVelocity
+      ? kSwipeMinDistance
+      : kSwipeMinDistanceWithoutFling;
 
   if (absDx <= requiredDistance) return null;
 

@@ -15,9 +15,7 @@ class LlmSummaryRepository {
   /// Returns every snapshot row for `word`, sorted by `coveredUpToEpisode`
   /// ascending so the hover popup's snapshot navigator and the history panel's
   /// copy submenu can walk them in order.
-  Future<List<WordSummary>> findSnapshotsForWord({
-    required String word,
-  }) async {
+  Future<List<WordSummary>> findSnapshotsForWord({required String word}) async {
     final results = await _db.query(
       'word_summaries',
       where: 'word = ?',
@@ -62,14 +60,7 @@ class LlmSummaryRepository {
         source_file = excluded.source_file,
         updated_at = excluded.updated_at
       ''',
-      [
-        word,
-        coveredUpToEpisode,
-        summary,
-        sourceFile,
-        now,
-        now,
-      ],
+      [word, coveredUpToEpisode, summary, sourceFile, now, now],
     );
   }
 
@@ -87,13 +78,7 @@ class LlmSummaryRepository {
   /// Removes every snapshot row for `word` — i.e. drops the word from the
   /// active novel entirely. Per-snapshot deletion is not exposed; the UI
   /// deletes per word.
-  Future<void> deleteAllForWord({
-    required String word,
-  }) async {
-    await _db.delete(
-      'word_summaries',
-      where: 'word = ?',
-      whereArgs: [word],
-    );
+  Future<void> deleteAllForWord({required String word}) async {
+    await _db.delete('word_summaries', where: 'word = ?', whereArgs: [word]);
   }
 }

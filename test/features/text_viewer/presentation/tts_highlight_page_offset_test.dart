@@ -9,9 +9,11 @@ final _ttsGreen = Colors.green.withValues(alpha: 0.3).toARGB32();
 List<Text> _findGreenTexts(WidgetTester tester) {
   return tester
       .widgetList<Text>(find.byType(Text))
-      .where((t) =>
-          t.style?.backgroundColor != null &&
-          t.style!.backgroundColor!.toARGB32() == _ttsGreen)
+      .where(
+        (t) =>
+            t.style?.backgroundColor != null &&
+            t.style!.backgroundColor!.toARGB32() == _ttsGreen,
+      )
       .toList();
 }
 
@@ -21,9 +23,9 @@ void main() {
       // Page 1 has 'あいうえお', global TTS range 0-3
       await tester.pumpWidget(
         const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 300,
@@ -50,9 +52,9 @@ void main() {
       // Global TTS range 5-8 → page-local 0-3
       await tester.pumpWidget(
         const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 300,
@@ -79,9 +81,9 @@ void main() {
       // Global TTS range 0-3 is on page 1, not page 2
       await tester.pumpWidget(
         const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 300,
@@ -103,8 +105,9 @@ void main() {
       expect(_findGreenTexts(tester), isEmpty);
     });
 
-    testWidgets('column-wrap newline: skips newlines in offset counting',
-        (tester) async {
+    testWidgets('column-wrap newline: skips newlines in offset counting', (
+      tester,
+    ) async {
       // Segments with synthetic column-wrap newline between columns:
       // 'あいう' + '\n' + 'えおか'
       // The \n is a column wrap (not an original line break) — should not count
@@ -117,9 +120,9 @@ void main() {
       ];
       await tester.pumpWidget(
         const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 300,
@@ -142,8 +145,9 @@ void main() {
       expect(_findGreenTexts(tester).length, 2);
     });
 
-    testWidgets('line-break newline: counts in offset for TTS alignment',
-        (tester) async {
+    testWidgets('line-break newline: counts in offset for TTS alignment', (
+      tester,
+    ) async {
       // Segments with line-break newline between columns:
       // 'あいう' + '\n' + 'えおか'
       // The \n is an original line break — should count in offset
@@ -160,9 +164,9 @@ void main() {
       ];
       await tester.pumpWidget(
         const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 300,
@@ -173,7 +177,9 @@ void main() {
                 ttsHighlightStart: 4,
                 ttsHighlightEnd: 7,
                 pageStartTextOffset: 0,
-                lineBreakEntryIndices: {3}, // newline at entry 3 is a line break
+                lineBreakEntryIndices: {
+                  3,
+                }, // newline at entry 3 is a line break
               ),
             ),
           ),
@@ -185,8 +191,9 @@ void main() {
       expect(_findGreenTexts(tester).length, 3);
     });
 
-    testWidgets('multiple line-break newlines: cumulative offset correction',
-        (tester) async {
+    testWidgets('multiple line-break newlines: cumulative offset correction', (
+      tester,
+    ) async {
       // Original text: "あ\nい\nう" (5 chars including 2 newlines)
       // Segments on page: 'あ' + '\n' + 'い' + '\n' + 'う'
       // TextSegmenter: "う" at offset 4 (after "あ\nい\n")
@@ -202,9 +209,9 @@ void main() {
       ];
       await tester.pumpWidget(
         const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 300,

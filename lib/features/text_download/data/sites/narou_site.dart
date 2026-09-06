@@ -37,10 +37,7 @@ class NarouSite extends NovelSite {
     '.index_box2 a',
   ];
 
-  static const _allowedHosts = {
-    'ncode.syosetu.com',
-    'novel18.syosetu.com',
-  };
+  static const _allowedHosts = {'ncode.syosetu.com', 'novel18.syosetu.com'};
 
   @override
   bool canHandle(Uri url) {
@@ -66,20 +63,24 @@ class NarouSite extends NovelSite {
     final containers = document.querySelectorAll('.p-eplist__sublist');
     if (containers.isNotEmpty) {
       for (final (i, container) in containers.indexed) {
-        final link = container.querySelector('.p-eplist__subtitle') ??
+        final link =
+            container.querySelector('.p-eplist__subtitle') ??
             container.querySelector('a');
         if (link == null) continue;
-        final href = link.attributes['href'] ??
+        final href =
+            link.attributes['href'] ??
             link.querySelector('a')?.attributes['href'];
         if (href == null) continue;
         final resolvedUrl = baseUrl.resolve(href);
         final updatedAt = _extractUpdateDate(container);
-        episodes.add(Episode(
-          index: i + 1,
-          title: link.text.trim(),
-          url: resolvedUrl,
-          updatedAt: updatedAt,
-        ));
+        episodes.add(
+          Episode(
+            index: i + 1,
+            title: link.text.trim(),
+            url: resolvedUrl,
+            updatedAt: updatedAt,
+          ),
+        );
       }
     } else {
       // Fallback to link-only selectors (no update date available)
@@ -87,15 +88,14 @@ class NarouSite extends NovelSite {
         final links = document.querySelectorAll(selector);
         if (links.isNotEmpty) {
           for (final (i, link) in links.indexed) {
-            final href = link.attributes['href'] ??
+            final href =
+                link.attributes['href'] ??
                 link.querySelector('a')?.attributes['href'];
             if (href == null) continue;
             final resolvedUrl = baseUrl.resolve(href);
-            episodes.add(Episode(
-              index: i + 1,
-              title: link.text.trim(),
-              url: resolvedUrl,
-            ));
+            episodes.add(
+              Episode(index: i + 1, title: link.text.trim(), url: resolvedUrl),
+            );
           }
           break;
         }

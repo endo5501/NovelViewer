@@ -77,44 +77,44 @@ void main() {
   }
 
   group('LlmSummaryService', () {
-    test('analyzes "all files" when coveredUpToEpisode equals the max prefix',
-        () async {
-      await createFile('001_chapter.txt', 'アリスが登場した。');
-      await createFile('050_chapter.txt', 'アリスが旅に出た。');
-      await createFile('100_chapter.txt', 'アリスが帰還した。');
+    test(
+      'analyzes "all files" when coveredUpToEpisode equals the max prefix',
+      () async {
+        await createFile('001_chapter.txt', 'アリスが登場した。');
+        await createFile('050_chapter.txt', 'アリスが旅に出た。');
+        await createFile('100_chapter.txt', 'アリスが帰還した。');
 
-      final mockClient = _MockLlmClient([
-        jsonEncode({'facts': '- 物語の序盤に登場'}),
-        jsonEncode({'facts': '- 旅に出た'}),
-        jsonEncode({'facts': '- 帰還した'}),
-        jsonEncode({'summary': 'アリスは冒険者。'}),
-      ]);
+        final mockClient = _MockLlmClient([
+          jsonEncode({'facts': '- 物語の序盤に登場'}),
+          jsonEncode({'facts': '- 旅に出た'}),
+          jsonEncode({'facts': '- 帰還した'}),
+          jsonEncode({'summary': 'アリスは冒険者。'}),
+        ]);
 
-      final service = LlmSummaryService(
-        llmClient: mockClient,
-        repository: repository,
-        factCacheRepository: factCache,
-        searchService: searchService,
-      );
+        final service = LlmSummaryService(
+          llmClient: mockClient,
+          repository: repository,
+          factCacheRepository: factCache,
+          searchService: searchService,
+        );
 
-      final result = await service.generateSummary(
-        directoryPath: tempDir.path,
-        word: 'アリス',
-        coveredUpToEpisode: 100,
-        sourceFileName: '100_chapter.txt',
-      );
+        final result = await service.generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 100,
+          sourceFileName: '100_chapter.txt',
+        );
 
-      expect(result, 'アリスは冒険者。');
-      // 3 files extracted (per-file Stage-1) + 1 final summary.
-      expect(mockClient.callCount, 4);
+        expect(result, 'アリスは冒険者。');
+        // 3 files extracted (per-file Stage-1) + 1 final summary.
+        expect(mockClient.callCount, 4);
 
-      final cached = await repository.findSnapshotsForWord(
-        word: 'アリス',
-      );
-      expect(cached, hasLength(1));
-      expect(cached.first.coveredUpToEpisode, 100);
-      expect(cached.first.sourceFile, '100_chapter.txt');
-    });
+        final cached = await repository.findSnapshotsForWord(word: 'アリス');
+        expect(cached, hasLength(1));
+        expect(cached.first.coveredUpToEpisode, 100);
+        expect(cached.first.sourceFile, '100_chapter.txt');
+      },
+    );
 
     test('passes the display language through to every prompt', () async {
       await createFile('001_chapter.txt', 'アリスが登場した。');
@@ -147,40 +147,42 @@ void main() {
       );
     });
 
-    test('filters out files whose numeric prefix is greater than the bound',
-        () async {
-      await createFile('001_chapter.txt', 'アリスが登場した。');
-      await createFile('040_chapter.txt', 'アリスが旅に出た。');
-      await createFile('100_chapter.txt', 'アリスが帰還した。');
+    test(
+      'filters out files whose numeric prefix is greater than the bound',
+      () async {
+        await createFile('001_chapter.txt', 'アリスが登場した。');
+        await createFile('040_chapter.txt', 'アリスが旅に出た。');
+        await createFile('100_chapter.txt', 'アリスが帰還した。');
 
-      final mockClient = _MockLlmClient([
-        jsonEncode({'facts': '- 物語の序盤に登場'}),
-        jsonEncode({'facts': '- 旅に出た'}),
-        jsonEncode({'summary': 'アリスは旅立った少女。'}),
-      ]);
+        final mockClient = _MockLlmClient([
+          jsonEncode({'facts': '- 物語の序盤に登場'}),
+          jsonEncode({'facts': '- 旅に出た'}),
+          jsonEncode({'summary': 'アリスは旅立った少女。'}),
+        ]);
 
-      final service = LlmSummaryService(
-        llmClient: mockClient,
-        repository: repository,
-        factCacheRepository: factCache,
-        searchService: searchService,
-      );
+        final service = LlmSummaryService(
+          llmClient: mockClient,
+          repository: repository,
+          factCacheRepository: factCache,
+          searchService: searchService,
+        );
 
-      final result = await service.generateSummary(
-        directoryPath: tempDir.path,
-        word: 'アリス',
-        coveredUpToEpisode: 40,
-        sourceFileName: '040_chapter.txt',
-      );
+        final result = await service.generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 40,
+          sourceFileName: '040_chapter.txt',
+        );
 
-      expect(result, 'アリスは旅立った少女。');
-      // Per-file Stage-1: 001 and 040 each get their own extraction prompt;
-      // 100 is filtered out and never extracted.
-      final extractionPrompts = mockClient.prompts.take(2).join('\n');
-      expect(extractionPrompts, contains('アリスが登場した'));
-      expect(extractionPrompts, contains('アリスが旅に出た'));
-      expect(extractionPrompts, isNot(contains('アリスが帰還した')));
-    });
+        expect(result, 'アリスは旅立った少女。');
+        // Per-file Stage-1: 001 and 040 each get their own extraction prompt;
+        // 100 is filtered out and never extracted.
+        final extractionPrompts = mockClient.prompts.take(2).join('\n');
+        expect(extractionPrompts, contains('アリスが登場した'));
+        expect(extractionPrompts, contains('アリスが旅に出た'));
+        expect(extractionPrompts, isNot(contains('アリスが帰還した')));
+      },
+    );
 
     test('saves snapshot at the provided coveredUpToEpisode', () async {
       await createFile('001_chapter.txt', 'アリスが登場した。');
@@ -206,17 +208,14 @@ void main() {
         sourceFileName: '060_chapter.txt',
       );
 
-      final snapshots = await repository.findSnapshotsForWord(
-        word: 'アリス',
-      );
+      final snapshots = await repository.findSnapshotsForWord(word: 'アリス');
 
       expect(snapshots, hasLength(1));
       expect(snapshots.first.coveredUpToEpisode, 60);
       expect(snapshots.first.sourceFile, '060_chapter.txt');
     });
 
-    test('empty search results fail instead of fabricating a summary',
-        () async {
+    test('empty search results fail instead of fabricating a summary', () async {
       // Nothing matched, so there is no evidence to summarize. Calling the LLM
       // with an empty facts block would have it invent an answer that then gets
       // saved as a snapshot.
@@ -247,8 +246,7 @@ void main() {
       expect(await repository.findSnapshotsForWord(word: 'アリス'), isEmpty);
     });
 
-    test('releases LLM client resources after successful generation',
-        () async {
+    test('releases LLM client resources after successful generation', () async {
       await createFile('001.txt', 'アリスが登場した。');
 
       final mockClient = _MockLlmClient([
@@ -275,36 +273,38 @@ void main() {
       expect(mockClient.events.last, 'release');
     });
 
-    test('releases resources when pipeline throws, rethrows original exception',
-        () async {
-      await createFile('001.txt', 'アリスが登場した。');
+    test(
+      'releases resources when pipeline throws, rethrows original exception',
+      () async {
+        await createFile('001.txt', 'アリスが登場した。');
 
-      final mockClient = _MockLlmClient(<String>[])
-        ..generateError = Exception('pipeline failure');
+        final mockClient = _MockLlmClient(<String>[])
+          ..generateError = Exception('pipeline failure');
 
-      final service = LlmSummaryService(
-        llmClient: mockClient,
-        repository: repository,
-        factCacheRepository: factCache,
-        searchService: searchService,
-      );
-
-      Object? thrown;
-      try {
-        await service.generateSummary(
-          directoryPath: tempDir.path,
-          word: 'アリス',
-          coveredUpToEpisode: 1,
-          sourceFileName: '001.txt',
+        final service = LlmSummaryService(
+          llmClient: mockClient,
+          repository: repository,
+          factCacheRepository: factCache,
+          searchService: searchService,
         );
-      } catch (e) {
-        thrown = e;
-      }
 
-      expect(thrown, isA<Exception>());
-      expect(thrown.toString(), contains('pipeline failure'));
-      expect(mockClient.releaseCallCount, 1);
-    });
+        Object? thrown;
+        try {
+          await service.generateSummary(
+            directoryPath: tempDir.path,
+            word: 'アリス',
+            coveredUpToEpisode: 1,
+            sourceFileName: '001.txt',
+          );
+        } catch (e) {
+          thrown = e;
+        }
+
+        expect(thrown, isA<Exception>());
+        expect(thrown.toString(), contains('pipeline failure'));
+        expect(mockClient.releaseCallCount, 1);
+      },
+    );
 
     test('release failure is swallowed when generation succeeded', () async {
       await createFile('001.txt', 'アリスが登場した。');
@@ -312,8 +312,7 @@ void main() {
       final mockClient = _MockLlmClient([
         jsonEncode({'facts': '- 登場した'}),
         jsonEncode({'summary': '要約OK'}),
-      ])
-        ..releaseError = Exception('release boom');
+      ])..releaseError = Exception('release boom');
 
       final service = LlmSummaryService(
         llmClient: mockClient,
@@ -333,8 +332,7 @@ void main() {
       expect(mockClient.releaseCallCount, 1);
     });
 
-    test('forwards pipeline progress events to onProgress callback',
-        () async {
+    test('forwards pipeline progress events to onProgress callback', () async {
       await createFile('001.txt', 'アリスが登場した。');
 
       final mockClient = _MockLlmClient([
@@ -365,38 +363,39 @@ void main() {
       expect(events.whereType<AnalysisGeneratingFinalSummary>().length, 1);
     });
 
-    test('original generation exception propagates when release also throws',
-        () async {
-      await createFile('001.txt', 'アリスが登場した。');
+    test(
+      'original generation exception propagates when release also throws',
+      () async {
+        await createFile('001.txt', 'アリスが登場した。');
 
-      final mockClient = _MockLlmClient(<String>[])
-        ..generateError = Exception('original generation failure')
-        ..releaseError = Exception('secondary release failure');
+        final mockClient = _MockLlmClient(<String>[])
+          ..generateError = Exception('original generation failure')
+          ..releaseError = Exception('secondary release failure');
 
-      final service = LlmSummaryService(
-        llmClient: mockClient,
-        repository: repository,
-        factCacheRepository: factCache,
-        searchService: searchService,
-      );
-
-      Object? thrown;
-      try {
-        await service.generateSummary(
-          directoryPath: tempDir.path,
-          word: 'アリス',
-          coveredUpToEpisode: 1,
-          sourceFileName: '001.txt',
+        final service = LlmSummaryService(
+          llmClient: mockClient,
+          repository: repository,
+          factCacheRepository: factCache,
+          searchService: searchService,
         );
-      } catch (e) {
-        thrown = e;
-      }
 
-      expect(thrown.toString(), contains('original generation failure'));
-      expect(
-          thrown.toString(), isNot(contains('secondary release failure')));
-      expect(mockClient.releaseCallCount, 1);
-    });
+        Object? thrown;
+        try {
+          await service.generateSummary(
+            directoryPath: tempDir.path,
+            word: 'アリス',
+            coveredUpToEpisode: 1,
+            sourceFileName: '001.txt',
+          );
+        } catch (e) {
+          thrown = e;
+        }
+
+        expect(thrown.toString(), contains('original generation failure'));
+        expect(thrown.toString(), isNot(contains('secondary release failure')));
+        expect(mockClient.releaseCallCount, 1);
+      },
+    );
 
     test('files without numeric prefix are filtered by lexical rank', () async {
       await createFile('intro.txt', 'アリスが登場した。');

@@ -34,26 +34,28 @@ class _FakeSite extends NovelSite {
   NovelIndex parseIndex(String html, Uri baseUrl) {
     return NovelIndex(
       title: 'テスト小説',
-      episodes: customEpisodes ?? [
-        Episode(
-          index: 1,
-          title: '第一話',
-          url: Uri.parse('https://example.com/1'),
-          updatedAt: '2025/01/01 00:00',
-        ),
-        Episode(
-          index: 2,
-          title: '第二話',
-          url: Uri.parse('https://example.com/2'),
-          updatedAt: '2025/01/01 00:00',
-        ),
-        Episode(
-          index: 3,
-          title: '第三話',
-          url: Uri.parse('https://example.com/3'),
-          updatedAt: '2025/01/01 00:00',
-        ),
-      ],
+      episodes:
+          customEpisodes ??
+          [
+            Episode(
+              index: 1,
+              title: '第一話',
+              url: Uri.parse('https://example.com/1'),
+              updatedAt: '2025/01/01 00:00',
+            ),
+            Episode(
+              index: 2,
+              title: '第二話',
+              url: Uri.parse('https://example.com/2'),
+              updatedAt: '2025/01/01 00:00',
+            ),
+            Episode(
+              index: 3,
+              title: '第三話',
+              url: Uri.parse('https://example.com/3'),
+              updatedAt: '2025/01/01 00:00',
+            ),
+          ],
     );
   }
 
@@ -126,19 +128,19 @@ class _MultiPageSite extends NovelSite {
     final episodes = <Episode>[];
     for (var i = 1; i <= episodesPerPage; i++) {
       final localIndex = i;
-      episodes.add(Episode(
-        index: localIndex,
-        title: 'ページ$currentPage第$i話',
-        url: Uri.parse('https://example.com/p$currentPage/$i'),
-        updatedAt: '2025/01/01 00:00',
-      ));
+      episodes.add(
+        Episode(
+          index: localIndex,
+          title: 'ページ$currentPage第$i話',
+          url: Uri.parse('https://example.com/p$currentPage/$i'),
+          updatedAt: '2025/01/01 00:00',
+        ),
+      );
     }
 
     Uri? nextPageUrl;
     if (currentPage < totalPages) {
-      nextPageUrl = Uri.parse(
-        'https://example.com/index?p=${currentPage + 1}',
-      );
+      nextPageUrl = Uri.parse('https://example.com/index?p=${currentPage + 1}');
     }
 
     return NovelIndex(
@@ -182,9 +184,7 @@ class _InfinitePageSite extends NovelSite {
           url: Uri.parse('https://example.com/p$currentPage/1'),
         ),
       ],
-      nextPageUrl: Uri.parse(
-        'https://example.com/index?p=${currentPage + 1}',
-      ),
+      nextPageUrl: Uri.parse('https://example.com/index?p=${currentPage + 1}'),
     );
   }
 
@@ -210,10 +210,7 @@ class _EmptyNovelSite extends NovelSite {
 
   @override
   NovelIndex parseIndex(String html, Uri baseUrl) {
-    return const NovelIndex(
-      title: '空の小説',
-      episodes: [],
-    );
+    return const NovelIndex(title: '空の小説', episodes: []);
   }
 
   @override
@@ -275,7 +272,9 @@ void main() {
       expect(result.skippedCount, 0);
 
       // All 3 episodes should have been fetched via GET
-      final episodeGets = getRequests.where((u) => u != 'https://example.com/index').toList();
+      final episodeGets = getRequests
+          .where((u) => u != 'https://example.com/index')
+          .toList();
       expect(episodeGets, hasLength(3));
     });
 
@@ -284,13 +283,15 @@ void main() {
       final titles = ['第一話', '第二話', '第三話'];
       for (var i = 1; i <= 3; i++) {
         final title = titles[i - 1];
-        await cacheRepo.upsert(EpisodeCache(
-          url: 'https://example.com/$i',
-          episodeIndex: i,
-          title: title,
-          lastModified: '2025/01/01 00:00',
-          downloadedAt: DateTime.utc(2025, 1, 1),
-        ));
+        await cacheRepo.upsert(
+          EpisodeCache(
+            url: 'https://example.com/$i',
+            episodeIndex: i,
+            title: title,
+            lastModified: '2025/01/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        );
         final fileName = formatEpisodeFileName(i, title, 3);
         File('${novelDir.path}/$fileName').writeAsStringSync('cached content');
       }
@@ -326,104 +327,121 @@ void main() {
       expect(getRequests, equals(['https://example.com/index']));
     });
 
-    test('downloads episode when updatedAt differs from cached value', () async {
-      // Pre-populate cache with old dates and create local files
-      await cacheRepo.upsert(EpisodeCache(
-        url: 'https://example.com/1',
-        episodeIndex: 1,
-        title: '第一話',
-        lastModified: '2024/12/01 00:00',
-        downloadedAt: DateTime.utc(2025, 1, 1),
-      ));
-      File('${novelDir.path}/${formatEpisodeFileName(1, '第一話', 3)}')
-          .writeAsStringSync('old content');
-      await cacheRepo.upsert(EpisodeCache(
-        url: 'https://example.com/2',
-        episodeIndex: 2,
-        title: '第二話',
-        lastModified: '2025/01/01 00:00',
-        downloadedAt: DateTime.utc(2025, 1, 1),
-      ));
-      File('${novelDir.path}/${formatEpisodeFileName(2, '第二話', 3)}')
-          .writeAsStringSync('old content');
+    test(
+      'downloads episode when updatedAt differs from cached value',
+      () async {
+        // Pre-populate cache with old dates and create local files
+        await cacheRepo.upsert(
+          EpisodeCache(
+            url: 'https://example.com/1',
+            episodeIndex: 1,
+            title: '第一話',
+            lastModified: '2024/12/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        );
+        File(
+          '${novelDir.path}/${formatEpisodeFileName(1, '第一話', 3)}',
+        ).writeAsStringSync('old content');
+        await cacheRepo.upsert(
+          EpisodeCache(
+            url: 'https://example.com/2',
+            episodeIndex: 2,
+            title: '第二話',
+            lastModified: '2025/01/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        );
+        File(
+          '${novelDir.path}/${formatEpisodeFileName(2, '第二話', 3)}',
+        ).writeAsStringSync('old content');
 
-      final mockClient = MockClient((request) async {
-        if (request.method == 'GET') {
-          if (request.url.toString() == 'https://example.com/index') {
-            return http.Response('index html', 200);
+        final mockClient = MockClient((request) async {
+          if (request.method == 'GET') {
+            if (request.url.toString() == 'https://example.com/index') {
+              return http.Response('index html', 200);
+            }
+            return http.Response('updated content', 200);
           }
-          return http.Response('updated content', 200);
-        }
-        return http.Response('', 200);
-      });
+          return http.Response('', 200);
+        });
 
-      final service = DownloadService(
-        client: mockClient,
-        requestDelay: Duration.zero,
-      );
+        final service = DownloadService(
+          client: mockClient,
+          requestDelay: Duration.zero,
+        );
 
-      // Episodes have updatedAt='2025/01/01 00:00'
-      // Episode 1 cache has '2024/12/01 00:00' → should re-download
-      // Episode 2 cache has '2025/01/01 00:00' → should skip
-      // Episode 3 not in cache → should download
-      final result = await service.downloadNovel(
-        site: _FakeSite(),
-        url: Uri.parse('https://example.com/index'),
-        outputPath: tempDir.path,
-        episodeCacheRepository: cacheRepo,
-      );
+        // Episodes have updatedAt='2025/01/01 00:00'
+        // Episode 1 cache has '2024/12/01 00:00' → should re-download
+        // Episode 2 cache has '2025/01/01 00:00' → should skip
+        // Episode 3 not in cache → should download
+        final result = await service.downloadNovel(
+          site: _FakeSite(),
+          url: Uri.parse('https://example.com/index'),
+          outputPath: tempDir.path,
+          episodeCacheRepository: cacheRepo,
+        );
 
-      expect(result.episodeCount, 3);
-      expect(result.skippedCount, 1);
-    });
+        expect(result.episodeCount, 3);
+        expect(result.skippedCount, 1);
+      },
+    );
 
-    test('downloads episode when updatedAt is null (always download)', () async {
-      // Pre-populate cache and create local file
-      await cacheRepo.upsert(EpisodeCache(
-        url: 'https://example.com/1',
-        episodeIndex: 1,
-        title: '第一話',
-        lastModified: '2025/01/01 00:00',
-        downloadedAt: DateTime.utc(2025, 1, 1),
-      ));
-      File('${novelDir.path}/${formatEpisodeFileName(1, '第一話', 1)}')
-          .writeAsStringSync('cached content');
+    test(
+      'downloads episode when updatedAt is null (always download)',
+      () async {
+        // Pre-populate cache and create local file
+        await cacheRepo.upsert(
+          EpisodeCache(
+            url: 'https://example.com/1',
+            episodeIndex: 1,
+            title: '第一話',
+            lastModified: '2025/01/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        );
+        File(
+          '${novelDir.path}/${formatEpisodeFileName(1, '第一話', 1)}',
+        ).writeAsStringSync('cached content');
 
-      final mockClient = MockClient((request) async {
-        if (request.method == 'GET') {
-          if (request.url.toString() == 'https://example.com/index') {
-            return http.Response('index html', 200);
+        final mockClient = MockClient((request) async {
+          if (request.method == 'GET') {
+            if (request.url.toString() == 'https://example.com/index') {
+              return http.Response('index html', 200);
+            }
+            return http.Response('new content', 200);
           }
-          return http.Response('new content', 200);
-        }
-        return http.Response('', 200);
-      });
+          return http.Response('', 200);
+        });
 
-      final service = DownloadService(
-        client: mockClient,
-        requestDelay: Duration.zero,
-      );
+        final service = DownloadService(
+          client: mockClient,
+          requestDelay: Duration.zero,
+        );
 
-      // Episode with updatedAt=null should always be downloaded
-      final site = _FakeSite(customEpisodes: [
-        Episode(
-          index: 1,
-          title: '第一話',
-          url: Uri.parse('https://example.com/1'),
-          updatedAt: null,
-        ),
-      ]);
+        // Episode with updatedAt=null should always be downloaded
+        final site = _FakeSite(
+          customEpisodes: [
+            Episode(
+              index: 1,
+              title: '第一話',
+              url: Uri.parse('https://example.com/1'),
+              updatedAt: null,
+            ),
+          ],
+        );
 
-      final result = await service.downloadNovel(
-        site: site,
-        url: Uri.parse('https://example.com/index'),
-        outputPath: tempDir.path,
-        episodeCacheRepository: cacheRepo,
-      );
+        final result = await service.downloadNovel(
+          site: site,
+          url: Uri.parse('https://example.com/index'),
+          outputPath: tempDir.path,
+          episodeCacheRepository: cacheRepo,
+        );
 
-      expect(result.episodeCount, 1);
-      expect(result.skippedCount, 0);
-    });
+        expect(result.episodeCount, 1);
+        expect(result.skippedCount, 0);
+      },
+    );
 
     test('saves updatedAt as lastModified in cache after download', () async {
       final mockClient = MockClient((request) async {
@@ -485,13 +503,15 @@ void main() {
       final titles = ['第一話', '第二話'];
       for (var i = 1; i <= 2; i++) {
         final title = titles[i - 1];
-        await cacheRepo.upsert(EpisodeCache(
-          url: 'https://example.com/$i',
-          episodeIndex: i,
-          title: title,
-          lastModified: '2025/01/01 00:00',
-          downloadedAt: DateTime.utc(2025, 1, 1),
-        ));
+        await cacheRepo.upsert(
+          EpisodeCache(
+            url: 'https://example.com/$i',
+            episodeIndex: i,
+            title: title,
+            lastModified: '2025/01/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        );
         final fileName = formatEpisodeFileName(i, title, 3);
         File('${novelDir.path}/$fileName').writeAsStringSync('cached content');
       }
@@ -537,13 +557,15 @@ void main() {
       final titles = ['第一話', '第二話', '第三話'];
       for (var i = 1; i <= 3; i++) {
         final title = titles[i - 1];
-        await cacheRepo.upsert(EpisodeCache(
-          url: 'https://example.com/$i',
-          episodeIndex: i,
-          title: title,
-          lastModified: '2025/01/01 00:00',
-          downloadedAt: DateTime.utc(2025, 1, 1),
-        ));
+        await cacheRepo.upsert(
+          EpisodeCache(
+            url: 'https://example.com/$i',
+            episodeIndex: i,
+            title: title,
+            lastModified: '2025/01/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        );
         final fileName = formatEpisodeFileName(i, title, 3);
         File('${novelDir.path}/$fileName').writeAsStringSync('cached content');
       }
@@ -580,13 +602,15 @@ void main() {
     test('applies delay only before actual downloads', () async {
       // Episode 1: new (download), Episode 2: cached (skip), Episode 3: new (download)
       // Delay should be applied once: before episode 3's GET (not before skip)
-      await cacheRepo.upsert(EpisodeCache(
-        url: 'https://example.com/2',
-        episodeIndex: 2,
-        title: '第二話',
-        lastModified: '2025/01/01 00:00',
-        downloadedAt: DateTime.utc(2025, 1, 1),
-      ));
+      await cacheRepo.upsert(
+        EpisodeCache(
+          url: 'https://example.com/2',
+          episodeIndex: 2,
+          title: '第二話',
+          lastModified: '2025/01/01 00:00',
+          downloadedAt: DateTime.utc(2025, 1, 1),
+        ),
+      );
       final fileName = formatEpisodeFileName(2, '第二話', 3);
       File('${novelDir.path}/$fileName').writeAsStringSync('cached content');
 
@@ -628,9 +652,11 @@ void main() {
     test('downloads short story with episodeCount=1', () async {
       final mockClient = MockClient((request) async {
         if (request.method == 'GET') {
-          return http.Response('index html', 200, headers: {
-            'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
-          });
+          return http.Response(
+            'index html',
+            200,
+            headers: {'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT'},
+          );
         }
         return http.Response('', 200);
       });
@@ -661,9 +687,11 @@ void main() {
     test('saves short story to episode cache with index page URL', () async {
       final mockClient = MockClient((request) async {
         if (request.method == 'GET') {
-          return http.Response('index html', 200, headers: {
-            'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
-          });
+          return http.Response(
+            'index html',
+            200,
+            headers: {'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT'},
+          );
         }
         return http.Response('', 200);
       });
@@ -691,21 +719,26 @@ void main() {
       // Pre-populate cache for the short story
       final novelDir = Directory('${tempDir.path}/test_short1');
       await novelDir.create(recursive: true);
-      await cacheRepo.upsert(EpisodeCache(
-        url: 'https://example.com/index',
-        episodeIndex: 1,
-        title: '短編テスト小説',
-        lastModified: 'Thu, 01 Jan 2025 00:00:00 GMT',
-        downloadedAt: DateTime.utc(2025, 1, 1),
-      ));
-      File('${novelDir.path}/1_短編テスト小説.txt')
-          .writeAsStringSync('cached content');
+      await cacheRepo.upsert(
+        EpisodeCache(
+          url: 'https://example.com/index',
+          episodeIndex: 1,
+          title: '短編テスト小説',
+          lastModified: 'Thu, 01 Jan 2025 00:00:00 GMT',
+          downloadedAt: DateTime.utc(2025, 1, 1),
+        ),
+      );
+      File(
+        '${novelDir.path}/1_短編テスト小説.txt',
+      ).writeAsStringSync('cached content');
 
       final mockClient = MockClient((request) async {
         if (request.method == 'GET') {
-          return http.Response('index html', 200, headers: {
-            'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
-          });
+          return http.Response(
+            'index html',
+            200,
+            headers: {'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT'},
+          );
         }
         return http.Response('', 200);
       });
@@ -726,39 +759,43 @@ void main() {
       expect(result.skippedCount, 1);
     });
 
-    test('throws EmptyIndexException for empty novel (no episodes, no body)',
-        () async {
-      // F118: an index that parses to no episodes AND no body content is a
-      // markup-drift failure, not a successful empty download. It must throw
-      // rather than silently "completing" with episodeCount=0.
-      final mockClient = MockClient((request) async {
-        if (request.method == 'GET') {
-          return http.Response('index html', 200);
-        }
-        return http.Response('', 200);
-      });
+    test(
+      'throws EmptyIndexException for empty novel (no episodes, no body)',
+      () async {
+        // F118: an index that parses to no episodes AND no body content is a
+        // markup-drift failure, not a successful empty download. It must throw
+        // rather than silently "completing" with episodeCount=0.
+        final mockClient = MockClient((request) async {
+          if (request.method == 'GET') {
+            return http.Response('index html', 200);
+          }
+          return http.Response('', 200);
+        });
 
-      final service = DownloadService(
-        client: mockClient,
-        requestDelay: Duration.zero,
-      );
+        final service = DownloadService(
+          client: mockClient,
+          requestDelay: Duration.zero,
+        );
 
-      await expectLater(
-        service.downloadNovel(
-          site: _EmptyNovelSite(),
-          url: Uri.parse('https://example.com/index'),
-          outputPath: tempDir.path,
-        ),
-        throwsA(isA<EmptyIndexException>()),
-      );
-    });
+        await expectLater(
+          service.downloadNovel(
+            site: _EmptyNovelSite(),
+            url: Uri.parse('https://example.com/index'),
+            outputPath: tempDir.path,
+          ),
+          throwsA(isA<EmptyIndexException>()),
+        );
+      },
+    );
 
     test('reports progress 1/1 for short story download', () async {
       final mockClient = MockClient((request) async {
         if (request.method == 'GET') {
-          return http.Response('index html', 200, headers: {
-            'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT',
-          });
+          return http.Response(
+            'index html',
+            200,
+            headers: {'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT'},
+          );
         }
         return http.Response('', 200);
       });
@@ -785,62 +822,68 @@ void main() {
   });
 
   group('Multi-page download', () {
-    test('fetches all pages and merges episodes with continuous numbering (2 pages)', () async {
-      final getRequests = <String>[];
+    test(
+      'fetches all pages and merges episodes with continuous numbering (2 pages)',
+      () async {
+        final getRequests = <String>[];
 
-      final mockClient = MockClient((request) async {
-        getRequests.add(request.url.toString());
-        return http.Response('episode content', 200);
-      });
+        final mockClient = MockClient((request) async {
+          getRequests.add(request.url.toString());
+          return http.Response('episode content', 200);
+        });
 
-      final service = DownloadService(
-        client: mockClient,
-        requestDelay: Duration.zero,
-      );
+        final service = DownloadService(
+          client: mockClient,
+          requestDelay: Duration.zero,
+        );
 
-      final result = await service.downloadNovel(
-        site: _MultiPageSite(totalPages: 2, episodesPerPage: 3),
-        url: Uri.parse('https://example.com/index'),
-        outputPath: tempDir.path,
-      );
+        final result = await service.downloadNovel(
+          site: _MultiPageSite(totalPages: 2, episodesPerPage: 3),
+          url: Uri.parse('https://example.com/index'),
+          outputPath: tempDir.path,
+        );
 
-      // 2 pages * 3 episodes = 6 total episodes
-      expect(result.episodeCount, 6);
+        // 2 pages * 3 episodes = 6 total episodes
+        expect(result.episodeCount, 6);
 
-      // Verify files have continuous numbering
-      final dir = Directory('${tempDir.path}/test_novel1');
-      final files = dir.listSync().whereType<File>().toList();
-      files.sort((a, b) => a.path.compareTo(b.path));
-      expect(files.length, 6);
+        // Verify files have continuous numbering
+        final dir = Directory('${tempDir.path}/test_novel1');
+        final files = dir.listSync().whereType<File>().toList();
+        files.sort((a, b) => a.path.compareTo(b.path));
+        expect(files.length, 6);
 
-      // Check that file names use continuous numbering (1-6)
-      expect(files[0].path, contains('1_'));
-      expect(files[5].path, contains('6_'));
-    });
+        // Check that file names use continuous numbering (1-6)
+        expect(files[0].path, contains('1_'));
+        expect(files[5].path, contains('6_'));
+      },
+    );
 
-    test('fetches all pages and merges episodes with continuous numbering (3 pages)', () async {
-      final mockClient = MockClient((request) async {
-        return http.Response('episode content', 200);
-      });
+    test(
+      'fetches all pages and merges episodes with continuous numbering (3 pages)',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('episode content', 200);
+        });
 
-      final service = DownloadService(
-        client: mockClient,
-        requestDelay: Duration.zero,
-      );
+        final service = DownloadService(
+          client: mockClient,
+          requestDelay: Duration.zero,
+        );
 
-      final result = await service.downloadNovel(
-        site: _MultiPageSite(totalPages: 3, episodesPerPage: 2),
-        url: Uri.parse('https://example.com/index'),
-        outputPath: tempDir.path,
-      );
+        final result = await service.downloadNovel(
+          site: _MultiPageSite(totalPages: 3, episodesPerPage: 2),
+          url: Uri.parse('https://example.com/index'),
+          outputPath: tempDir.path,
+        );
 
-      // 3 pages * 2 episodes = 6 total episodes
-      expect(result.episodeCount, 6);
+        // 3 pages * 2 episodes = 6 total episodes
+        expect(result.episodeCount, 6);
 
-      final dir = Directory('${tempDir.path}/test_novel1');
-      final files = dir.listSync().whereType<File>().toList();
-      expect(files.length, 6);
-    });
+        final dir = Directory('${tempDir.path}/test_novel1');
+        final files = dir.listSync().whereType<File>().toList();
+        expect(files.length, 6);
+      },
+    );
 
     test('enforces maximum page limit (100 pages)', () async {
       final mockClient = MockClient((request) async {

@@ -12,21 +12,22 @@ NovelMetadata _meta({
   required String siteType,
   required String title,
   required String folderName,
-}) =>
-    NovelMetadata(
-      siteType: siteType,
-      novelId: folderName,
-      title: title,
-      url: '',
-      folderName: folderName,
-      episodeCount: 1,
-      downloadedAt: DateTime(2026, 1, 1),
-    );
+}) => NovelMetadata(
+  siteType: siteType,
+  novelId: folderName,
+  title: title,
+  url: '',
+  folderName: folderName,
+  episodeCount: 1,
+  downloadedAt: DateTime(2026, 1, 1),
+);
 
 class FakeDownloadNotifier extends DownloadNotifier {
   @override
-  Future<void> startDownload(
-      {required Uri url, required String outputPath}) async {
+  Future<void> startDownload({
+    required Uri url,
+    required String outputPath,
+  }) async {
     state = DownloadState(
       status: DownloadStatus.completed,
       outputPath: outputPath,
@@ -40,13 +41,14 @@ void main() {
     return ProviderScope(
       overrides: [
         libraryPathProvider.overrideWithValue('/tmp/test_novels'),
-        currentDirectoryProvider
-            .overrideWith(() => CurrentDirectoryNotifier('/tmp/test_novels')),
+        currentDirectoryProvider.overrideWith(
+          () => CurrentDirectoryNotifier('/tmp/test_novels'),
+        ),
       ],
       child: MaterialApp(
-            locale: const Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('ja'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
             body: ElevatedButton(
@@ -63,8 +65,9 @@ void main() {
     return ProviderScope(
       overrides: [
         libraryPathProvider.overrideWithValue('/tmp/test_novels'),
-        currentDirectoryProvider
-            .overrideWith(() => CurrentDirectoryNotifier('/tmp/test_novels')),
+        currentDirectoryProvider.overrideWith(
+          () => CurrentDirectoryNotifier('/tmp/test_novels'),
+        ),
         allNovelsProvider.overrideWith((ref) async => novels),
       ],
       child: MaterialApp(
@@ -84,8 +87,9 @@ void main() {
   }
 
   group('DownloadDialog', () {
-    testWidgets('shows dialog with URL input and download button',
-        (tester) async {
+    testWidgets('shows dialog with URL input and download button', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestApp());
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
@@ -103,13 +107,16 @@ void main() {
 
       // The destination dropdown is always present; when the candidate list
       // cannot be loaded (no DB in this test) it falls back to the root option.
-      expect(find.byKey(const Key('download_destination_dropdown')),
-          findsOneWidget);
+      expect(
+        find.byKey(const Key('download_destination_dropdown')),
+        findsOneWidget,
+      );
       expect(find.text('ライブラリルート（既定）'), findsWidgets);
     });
 
-    testWidgets('download button is disabled when URL is empty',
-        (tester) async {
+    testWidgets('download button is disabled when URL is empty', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestApp());
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
@@ -120,8 +127,9 @@ void main() {
       expect(button.onPressed, isNull);
     });
 
-    testWidgets('does not show unsupported error for a generic web URL',
-        (tester) async {
+    testWidgets('does not show unsupported error for a generic web URL', (
+      tester,
+    ) async {
       // Behavior change: a generic http(s) page is now accepted via the web
       // fallback, so the "unsupported site" error must not appear for it.
       await tester.pumpWidget(createTestApp());
@@ -135,12 +143,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-          find.text('サポートされていないサイトです（なろう・なろう18・カクヨム・青空文庫・ハーメルンに対応）'),
-          findsNothing);
+        find.text('サポートされていないサイトです（なろう・なろう18・カクヨム・青空文庫・ハーメルンに対応）'),
+        findsNothing,
+      );
     });
 
-    testWidgets('shows collection target UI for a generic web URL',
-        (tester) async {
+    testWidgets('shows collection target UI for a generic web URL', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestApp());
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
@@ -155,16 +165,21 @@ void main() {
       expect(find.byKey(const Key('collection_mode_create')), findsOneWidget);
       expect(find.byKey(const Key('collection_mode_existing')), findsOneWidget);
       expect(find.byKey(const Key('collection_name_field')), findsOneWidget);
-      expect(find.byKey(const Key('download_destination_dropdown')),
-          findsNothing);
+      expect(
+        find.byKey(const Key('download_destination_dropdown')),
+        findsNothing,
+      );
     });
 
-    testWidgets('existing collection options are limited to web collections',
-        (tester) async {
-      await tester.pumpWidget(createCollectionTestApp([
-        _meta(siteType: 'web', title: 'リサーチA', folderName: 'web_リサーチA'),
-        _meta(siteType: 'narou', title: 'なろう小説', folderName: 'narou_n1'),
-      ]));
+    testWidgets('existing collection options are limited to web collections', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createCollectionTestApp([
+          _meta(siteType: 'web', title: 'リサーチA', folderName: 'web_リサーチA'),
+          _meta(siteType: 'narou', title: 'なろう小説', folderName: 'narou_n1'),
+        ]),
+      );
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
@@ -195,8 +210,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(
-          find.text('サポートされていないサイトです（なろう、カクヨムに対応）'), findsNothing);
+      expect(find.text('サポートされていないサイトです（なろう、カクヨムに対応）'), findsNothing);
     });
 
     testWidgets('accepts valid kakuyomu URL', (tester) async {
@@ -210,8 +224,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(
-          find.text('サポートされていないサイトです（なろう、カクヨムに対応）'), findsNothing);
+      expect(find.text('サポートされていないサイトです（なろう、カクヨムに対応）'), findsNothing);
     });
 
     testWidgets('cancel button closes dialog', (tester) async {
@@ -226,48 +239,51 @@ void main() {
     });
 
     testWidgets(
-        'uses library root path for download even when inside a novel folder',
-        (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            libraryPathProvider.overrideWithValue('/tmp/test_novels'),
-            currentDirectoryProvider.overrideWith(
-                () => CurrentDirectoryNotifier('/tmp/test_novels/narou_12345')),
-            downloadProvider.overrideWith(() => FakeDownloadNotifier()),
-          ],
-          child: MaterialApp(
-                locale: const Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-            home: Builder(
-              builder: (context) => Scaffold(
-                body: ElevatedButton(
-                  onPressed: () => DownloadDialog.show(context),
-                  child: const Text('Open'),
+      'uses library root path for download even when inside a novel folder',
+      (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              libraryPathProvider.overrideWithValue('/tmp/test_novels'),
+              currentDirectoryProvider.overrideWith(
+                () => CurrentDirectoryNotifier('/tmp/test_novels/narou_12345'),
+              ),
+              downloadProvider.overrideWith(() => FakeDownloadNotifier()),
+            ],
+            child: MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Builder(
+                builder: (context) => Scaffold(
+                  body: ElevatedButton(
+                    onPressed: () => DownloadDialog.show(context),
+                    child: const Text('Open'),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.byType(TextField),
-        'https://ncode.syosetu.com/n9669bk/',
-      );
-      await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byType(TextField),
+          'https://ncode.syosetu.com/n9669bk/',
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'ダウンロード開始'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(ElevatedButton, 'ダウンロード開始'));
+        await tester.pumpAndSettle();
 
-      final container = ProviderScope.containerOf(
-          tester.element(find.byType(AlertDialog)));
-      final state = container.read(downloadProvider);
-      expect(state.outputPath, '/tmp/test_novels');
-    });
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AlertDialog)),
+        );
+        final state = container.read(downloadProvider);
+        expect(state.outputPath, '/tmp/test_novels');
+      },
+    );
   });
 }

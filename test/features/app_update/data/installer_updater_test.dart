@@ -30,7 +30,11 @@ class _SpyProcessStarter implements ProcessStarter {
 /// Writes real temp files so the real InstallerVerifier can run; the sha256
 /// content is matched or corrupted per [matchHash].
 class _FakeDownloader implements InstallerDownloader {
-  _FakeDownloader(this.tempDir, {this.matchHash = true, this.throwError = false});
+  _FakeDownloader(
+    this.tempDir, {
+    this.matchHash = true,
+    this.throwError = false,
+  });
 
   final Directory tempDir;
   final bool matchHash;
@@ -48,28 +52,26 @@ class _FakeDownloader implements InstallerDownloader {
     final exePath = p.join(tempDir.path, 'setup.exe');
     final sha256Path = p.join(tempDir.path, 'setup.exe.sha256');
     await File(exePath).writeAsBytes(bytes);
-    final hash = matchHash
-        ? sha256.convert(bytes).toString()
-        : '0' * 64;
+    final hash = matchHash ? sha256.convert(bytes).toString() : '0' * 64;
     await File(sha256Path).writeAsString('$hash  setup.exe\n');
     return DownloadedInstaller(exePath: exePath, sha256Path: sha256Path);
   }
 }
 
 ReleaseInfo _releaseWithInstaller() => const ReleaseInfo(
-      tagName: 'v1.3.0',
-      body: 'notes',
-      assets: [
-        ReleaseAsset(
-          name: 'novel_viewer-setup-v1.3.0.exe',
-          downloadUrl: 'https://example.com/setup.exe',
-        ),
-        ReleaseAsset(
-          name: 'novel_viewer-setup-v1.3.0.exe.sha256',
-          downloadUrl: 'https://example.com/setup.exe.sha256',
-        ),
-      ],
-    );
+  tagName: 'v1.3.0',
+  body: 'notes',
+  assets: [
+    ReleaseAsset(
+      name: 'novel_viewer-setup-v1.3.0.exe',
+      downloadUrl: 'https://example.com/setup.exe',
+    ),
+    ReleaseAsset(
+      name: 'novel_viewer-setup-v1.3.0.exe.sha256',
+      downloadUrl: 'https://example.com/setup.exe.sha256',
+    ),
+  ],
+);
 
 void main() {
   late Directory tempDir;
@@ -82,45 +84,49 @@ void main() {
     if (tempDir.existsSync()) await tempDir.delete(recursive: true);
   });
 
-  test('happy path: downloads, verifies, launches with flags, then exits',
-      () async {
-    final spy = _SpyProcessStarter();
-    int? exitCode;
-    final updater = InstallerUpdater(
-      downloader: _FakeDownloader(tempDir, matchHash: true),
-      verifier: const InstallerVerifier(),
-      processStarter: spy,
-      onExit: (code) => exitCode = code,
-    );
+  test(
+    'happy path: downloads, verifies, launches with flags, then exits',
+    () async {
+      final spy = _SpyProcessStarter();
+      int? exitCode;
+      final updater = InstallerUpdater(
+        downloader: _FakeDownloader(tempDir, matchHash: true),
+        verifier: const InstallerVerifier(),
+        processStarter: spy,
+        onExit: (code) => exitCode = code,
+      );
 
-    final result = await updater.apply(_releaseWithInstaller());
+      final result = await updater.apply(_releaseWithInstaller());
 
-    expect(result.outcome, UpdateOutcome.launched);
-    expect(spy.startCount, 1);
-    expect(spy.arguments, ['/SILENT', '/SP-', '/UPDATELAUNCH']);
-    expect(spy.executable, endsWith('setup.exe'));
-    expect(exitCode, 0);
-  });
+      expect(result.outcome, UpdateOutcome.launched);
+      expect(spy.startCount, 1);
+      expect(spy.arguments, ['/SILENT', '/SP-', '/UPDATELAUNCH']);
+      expect(spy.executable, endsWith('setup.exe'));
+      expect(exitCode, 0);
+    },
+  );
 
-  test('missing installer asset returns missingAsset without downloading',
-      () async {
-    final fake = _FakeDownloader(tempDir);
-    final spy = _SpyProcessStarter();
-    final updater = InstallerUpdater(
-      downloader: fake,
-      verifier: const InstallerVerifier(),
-      processStarter: spy,
-      onExit: (_) {},
-    );
+  test(
+    'missing installer asset returns missingAsset without downloading',
+    () async {
+      final fake = _FakeDownloader(tempDir);
+      final spy = _SpyProcessStarter();
+      final updater = InstallerUpdater(
+        downloader: fake,
+        verifier: const InstallerVerifier(),
+        processStarter: spy,
+        onExit: (_) {},
+      );
 
-    final result = await updater.apply(
-      const ReleaseInfo(tagName: 'v1.3.0', body: '', assets: []),
-    );
+      final result = await updater.apply(
+        const ReleaseInfo(tagName: 'v1.3.0', body: '', assets: []),
+      );
 
-    expect(result.outcome, UpdateOutcome.missingAsset);
-    expect(fake.downloadCount, 0);
-    expect(spy.startCount, 0);
-  });
+      expect(result.outcome, UpdateOutcome.missingAsset);
+      expect(fake.downloadCount, 0);
+      expect(spy.startCount, 0);
+    },
+  );
 
   test('checksum mismatch deletes files and does not launch', () async {
     final spy = _SpyProcessStarter();
@@ -138,7 +144,10 @@ void main() {
     expect(spy.startCount, 0);
     expect(exitCode, isNull);
     expect(File(p.join(tempDir.path, 'setup.exe')).existsSync(), isFalse);
-    expect(File(p.join(tempDir.path, 'setup.exe.sha256')).existsSync(), isFalse);
+    expect(
+      File(p.join(tempDir.path, 'setup.exe.sha256')).existsSync(),
+      isFalse,
+    );
   });
 
   test('successful post-mismatch cleanup does not emit a WARNING', () async {
@@ -157,10 +166,7 @@ void main() {
 
     // Cleanup of deletable files succeeds, so the best-effort catch must stay
     // silent — guards against logging on every checksum mismatch.
-    expect(
-      records.any((r) => r.loggerName == 'app_update.installer'),
-      isFalse,
-    );
+    expect(records.any((r) => r.loggerName == 'app_update.installer'), isFalse);
   });
 
   test('download failure returns downloadFailed and does not launch', () async {

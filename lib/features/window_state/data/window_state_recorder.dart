@@ -19,6 +19,7 @@ class WindowStateRecorder with WindowListener {
 
   final WindowStateRepository _repository;
   final WindowController _window;
+  final Future<void> Function()? beforeClose;
 
   Timer? _timer;
   bool _disposed = false;
@@ -32,8 +33,9 @@ class WindowStateRecorder with WindowListener {
   WindowStateRecorder({
     required WindowStateRepository repository,
     required WindowController window,
-  })  : _repository = repository,
-        _window = window;
+    this.beforeClose,
+  }) : _repository = repository,
+       _window = window;
 
   @override
   void onWindowResize() => _schedule();
@@ -88,6 +90,10 @@ class WindowStateRecorder with WindowListener {
       _timer?.cancel();
       _timer = null;
       await _flushSafely();
+      final flushOtherState = beforeClose;
+      if (flushOtherState != null) {
+        await _ignoringErrors(flushOtherState, 'persist reading progress');
+      }
     } finally {
       // Release the interception, then let the close run its normal course.
       //
@@ -96,8 +102,10 @@ class WindowStateRecorder with WindowListener {
       // the window undestroyed — measured at ~5.9s to exit versus ~0.17s for
       // the normal path, which the user sees as the app hanging on Alt+F4.
       // destroy() stays as the fallback so the app is always closable.
-      await _ignoringErrors(() => _window.setPreventClose(false),
-          'release the close interception');
+      await _ignoringErrors(
+        () => _window.setPreventClose(false),
+        'release the close interception',
+      );
       try {
         await _window.close();
       } catch (e, stack) {

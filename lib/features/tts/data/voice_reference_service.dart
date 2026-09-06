@@ -23,7 +23,10 @@ class VoiceReferenceService {
     final entities = await Directory(voicesDirPath).list().toList();
     final files = entities
         .whereType<File>()
-        .where((f) => _supportedExtensions.contains(p.extension(f.path).toLowerCase()))
+        .where(
+          (f) =>
+              _supportedExtensions.contains(p.extension(f.path).toLowerCase()),
+        )
         .map((f) => p.basename(f.path))
         .toList();
     files.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
@@ -46,11 +49,15 @@ class VoiceReferenceService {
     _validateFileName(newName);
     final oldPath = p.join(voicesDirPath, oldName);
     if (!File(oldPath).existsSync()) {
-      throw StateError('File "$oldName" does not exist in the voices directory.');
+      throw StateError(
+        'File "$oldName" does not exist in the voices directory.',
+      );
     }
     final newPath = p.join(voicesDirPath, newName);
     if (File(newPath).existsSync()) {
-      throw StateError('A file named "$newName" already exists in the voices directory.');
+      throw StateError(
+        'A file named "$newName" already exists in the voices directory.',
+      );
     }
     await File(oldPath).rename(newPath);
   }
@@ -71,12 +78,16 @@ class VoiceReferenceService {
   Future<String> _prepareDestination(String fileName) async {
     final ext = p.extension(fileName).toLowerCase();
     if (!_supportedExtensions.contains(ext)) {
-      throw ArgumentError('Unsupported file type: $ext. Only .wav and .mp3 are supported.');
+      throw ArgumentError(
+        'Unsupported file type: $ext. Only .wav and .mp3 are supported.',
+      );
     }
     await ensureVoicesDir();
     final destPath = p.join(voicesDirPath, fileName);
     if (File(destPath).existsSync()) {
-      throw StateError('A file named "$fileName" already exists in the voices directory.');
+      throw StateError(
+        'A file named "$fileName" already exists in the voices directory.',
+      );
     }
     return destPath;
   }

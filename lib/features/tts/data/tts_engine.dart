@@ -8,10 +8,7 @@ import 'package:ffi/ffi.dart';
 import 'tts_native_bindings.dart';
 
 class TtsSynthesisResult {
-  const TtsSynthesisResult({
-    required this.audio,
-    required this.sampleRate,
-  });
+  const TtsSynthesisResult({required this.audio, required this.sampleRate});
 
   final Float32List audio;
   final int sampleRate;
@@ -101,8 +98,12 @@ class TtsEngine {
     final textPtr = text.toNativeUtf8();
     final wavPtr = refWavPath.toNativeUtf8();
     try {
-      final result =
-          _bindings.synthesizeWithVoice(_ctx, textPtr, wavPtr, maxTokens);
+      final result = _bindings.synthesizeWithVoice(
+        _ctx,
+        textPtr,
+        wavPtr,
+        maxTokens,
+      );
       if (result != 0) {
         final error = _bindings.getError(_ctx).toDartString();
         throw TtsEngineException('Synthesis with voice failed: $error');
@@ -135,8 +136,7 @@ class TtsEngine {
     try {
       if (cacheFile.existsSync()) {
         try {
-          if (_synthesizeFromCachedEmbedding(
-              textPtr, cachePath, maxTokens)) {
+          if (_synthesizeFromCachedEmbedding(textPtr, cachePath, maxTokens)) {
             return _extractAudio();
           }
         } on TtsEngineException {
@@ -166,15 +166,23 @@ class TtsEngine {
     final outData = calloc<Pointer<Float>>();
     final outSize = calloc<Int32>();
     try {
-      final loadResult =
-          _bindings.loadSpeakerEmbedding(pathPtr, outData, outSize);
+      final loadResult = _bindings.loadSpeakerEmbedding(
+        pathPtr,
+        outData,
+        outSize,
+      );
       if (loadResult != 0) return false;
 
       final embPtr = outData.value;
       final embSize = outSize.value;
       try {
         final result = _bindings.synthesizeWithEmbedding(
-            _ctx, textPtr, embPtr, embSize, maxTokens);
+          _ctx,
+          textPtr,
+          embPtr,
+          embSize,
+          maxTokens,
+        );
         if (result != 0) {
           final error = _bindings.getError(_ctx).toDartString();
           throw TtsEngineException(
@@ -202,13 +210,15 @@ class TtsEngine {
     final outData = calloc<Pointer<Float>>();
     final outSize = calloc<Int32>();
     try {
-      final extractResult =
-          _bindings.extractSpeakerEmbedding(_ctx, wavPtr, outData, outSize);
+      final extractResult = _bindings.extractSpeakerEmbedding(
+        _ctx,
+        wavPtr,
+        outData,
+        outSize,
+      );
       if (extractResult != 0) {
         final error = _bindings.getError(_ctx).toDartString();
-        throw TtsEngineException(
-          'Speaker embedding extraction failed: $error',
-        );
+        throw TtsEngineException('Speaker embedding extraction failed: $error');
       }
 
       final embPtr = outData.value;
@@ -216,8 +226,11 @@ class TtsEngine {
       try {
         final cachePathPtr = cachePath.toNativeUtf8();
         try {
-          final saveResult =
-              _bindings.saveSpeakerEmbedding(cachePathPtr, embPtr, embSize);
+          final saveResult = _bindings.saveSpeakerEmbedding(
+            cachePathPtr,
+            embPtr,
+            embSize,
+          );
           if (saveResult != 0) {
             try {
               File(cachePath).deleteSync();
@@ -231,12 +244,15 @@ class TtsEngine {
 
         // Synthesize
         final result = _bindings.synthesizeWithEmbedding(
-            _ctx, textPtr, embPtr, embSize, maxTokens);
+          _ctx,
+          textPtr,
+          embPtr,
+          embSize,
+          maxTokens,
+        );
         if (result != 0) {
           final error = _bindings.getError(_ctx).toDartString();
-          throw TtsEngineException(
-            'Synthesis with embedding failed: $error',
-          );
+          throw TtsEngineException('Synthesis with embedding failed: $error');
         }
       } finally {
         _bindings.freeSpeakerEmbedding(embPtr);

@@ -22,7 +22,8 @@ class LlmAnalysisPartialFailure implements LlmAnalysisFailure {
   final Object firstError;
 
   @override
-  String toString() => 'LlmAnalysisPartialFailure: $failedFileCount file(s) '
+  String toString() =>
+      'LlmAnalysisPartialFailure: $failedFileCount file(s) '
       'failed extraction: $firstError';
 }
 

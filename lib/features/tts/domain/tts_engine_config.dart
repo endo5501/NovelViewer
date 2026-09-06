@@ -26,10 +26,7 @@ const int _irodoriSampleRate = 48000;
 /// native engine consumes — adding a Piper-only knob to Qwen3 (or vice versa)
 /// is a compile-time error.
 sealed class TtsEngineConfig {
-  const TtsEngineConfig({
-    required this.modelDir,
-    required this.sampleRate,
-  });
+  const TtsEngineConfig({required this.modelDir, required this.sampleRate});
 
   /// Filesystem location of the engine's model. For Qwen3 this is a directory
   /// containing the model files; for Piper this is the absolute path to the
@@ -101,10 +98,10 @@ sealed class TtsEngineConfig {
   /// a fallback ref WAV (edit controller, streaming controller) uses the
   /// same rule instead of repeating the switch.
   String? get synthesisFallbackRefWavPath => switch (this) {
-        Qwen3EngineConfig(:final refWavPath) => refWavPath,
-        IrodoriEngineConfig(:final refWavPath) => refWavPath,
-        PiperEngineConfig() => null,
-      };
+    Qwen3EngineConfig(:final refWavPath) => refWavPath,
+    IrodoriEngineConfig(:final refWavPath) => refWavPath,
+    PiperEngineConfig() => null,
+  };
 
   /// Irodori-only synthesis-time parameters (speaker/caption guidance scales
   /// and diffusion step count), bundled as a single record so call sites can
@@ -116,20 +113,21 @@ sealed class TtsEngineConfig {
     double speakerGuidanceScale,
     double captionGuidanceScale,
     int numInferenceSteps,
-  })? get irodoriSynthesisParams => switch (this) {
-        IrodoriEngineConfig(
-          :final speakerGuidanceScale,
-          :final captionGuidanceScale,
-          :final numInferenceSteps,
-        ) =>
-          (
-            speakerGuidanceScale: speakerGuidanceScale,
-            captionGuidanceScale: captionGuidanceScale,
-            numInferenceSteps: numInferenceSteps,
-          ),
-        Qwen3EngineConfig() => null,
-        PiperEngineConfig() => null,
-      };
+  })?
+  get irodoriSynthesisParams => switch (this) {
+    IrodoriEngineConfig(
+      :final speakerGuidanceScale,
+      :final captionGuidanceScale,
+      :final numInferenceSteps,
+    ) =>
+      (
+        speakerGuidanceScale: speakerGuidanceScale,
+        captionGuidanceScale: captionGuidanceScale,
+        numInferenceSteps: numInferenceSteps,
+      ),
+    Qwen3EngineConfig() => null,
+    PiperEngineConfig() => null,
+  };
 }
 
 class Qwen3EngineConfig extends TtsEngineConfig {
@@ -182,14 +180,8 @@ class PiperEngineConfig extends TtsEngineConfig {
   final double noiseW;
 
   @override
-  Object get modelLoadKey => (
-        TtsEngineType.piper,
-        modelDir,
-        dicDir,
-        lengthScale,
-        noiseScale,
-        noiseW,
-      );
+  Object get modelLoadKey =>
+      (TtsEngineType.piper, modelDir, dicDir, lengthScale, noiseScale, noiseW);
 }
 
 class IrodoriEngineConfig extends TtsEngineConfig {

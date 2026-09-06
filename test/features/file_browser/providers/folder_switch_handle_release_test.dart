@@ -18,10 +18,13 @@ void main() {
   // key by the normalized form to reach a handle opened under it.
   const rawOld = '/library/narou_n1/../narou_n1';
 
-  ProviderContainer makeContainer() => ProviderContainer(overrides: [
-        currentDirectoryProvider
-            .overrideWith(() => _TestCurrentDirectoryNotifier(rawOld)),
-      ]);
+  ProviderContainer makeContainer() => ProviderContainer(
+    overrides: [
+      currentDirectoryProvider.overrideWith(
+        () => _TestCurrentDirectoryNotifier(rawOld),
+      ),
+    ],
+  );
 
   group('folder switch releases per-folder handles via the normalized key', () {
     test('tts_audio handle keyed by folderDbKey is invalidated on switch', () {
@@ -34,26 +37,38 @@ void main() {
       container.read(currentDirectoryProvider.notifier).setDirectory('/other');
 
       final after = container.read(ttsAudioDatabaseProvider(key));
-      expect(identical(before, after), isFalse,
-          reason: 'switching away SHALL invalidate the handle keyed by the '
-              'normalized old path, not the raw spelling');
+      expect(
+        identical(before, after),
+        isFalse,
+        reason:
+            'switching away SHALL invalidate the handle keyed by the '
+            'normalized old path, not the raw spelling',
+      );
     });
 
-    test('tts_dictionary handle keyed by folderDbKey is invalidated on switch',
-        () {
-      final container = makeContainer();
-      addTearDown(container.dispose);
+    test(
+      'tts_dictionary handle keyed by folderDbKey is invalidated on switch',
+      () {
+        final container = makeContainer();
+        addTearDown(container.dispose);
 
-      final key = folderDbKey(rawOld);
-      final before = container.read(ttsDictionaryDatabaseProvider(key));
+        final key = folderDbKey(rawOld);
+        final before = container.read(ttsDictionaryDatabaseProvider(key));
 
-      container.read(currentDirectoryProvider.notifier).setDirectory('/other');
+        container
+            .read(currentDirectoryProvider.notifier)
+            .setDirectory('/other');
 
-      final after = container.read(ttsDictionaryDatabaseProvider(key));
-      expect(identical(before, after), isFalse,
-          reason: 'switching away SHALL invalidate the handle keyed by the '
-              'normalized old path, not the raw spelling');
-    });
+        final after = container.read(ttsDictionaryDatabaseProvider(key));
+        expect(
+          identical(before, after),
+          isFalse,
+          reason:
+              'switching away SHALL invalidate the handle keyed by the '
+              'normalized old path, not the raw spelling',
+        );
+      },
+    );
 
     test('novel_data handle keyed by folderDbKey is invalidated on switch', () {
       final container = makeContainer();
@@ -65,9 +80,13 @@ void main() {
       container.read(currentDirectoryProvider.notifier).setDirectory('/other');
 
       final after = container.read(novelDataDatabaseProvider(key));
-      expect(identical(before, after), isFalse,
-          reason: 'switching away SHALL invalidate the novel_data handle keyed '
-              'by the normalized old path');
+      expect(
+        identical(before, after),
+        isFalse,
+        reason:
+            'switching away SHALL invalidate the novel_data handle keyed '
+            'by the normalized old path',
+      );
     });
   });
 }

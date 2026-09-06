@@ -10,8 +10,8 @@ import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/shared/utils/cancellation_token.dart';
 import 'package:novel_viewer/shared/utils/file_name_utils.dart' as file_names;
 
-typedef ProgressCallback = void Function(
-    int current, int total, int skipped, int failed);
+typedef ProgressCallback =
+    void Function(int current, int total, int skipped, int failed);
 
 final _log = Logger('text_download');
 
@@ -164,7 +164,11 @@ Future<void> migrateEpisodeFileNamePadding({
   }
 
   for (final episode in episodes) {
-    final newName = formatEpisodeFileName(episode.index, episode.title, totalEpisodes);
+    final newName = formatEpisodeFileName(
+      episode.index,
+      episode.title,
+      totalEpisodes,
+    );
     final cached = cache[episode.url.toString()];
     // A cache entry placing this episode at a *different* index means the files
     // sitting at the current index were written for another episode (indices
@@ -182,10 +186,8 @@ Future<void> migrateEpisodeFileNamePadding({
     // the same URL, i.e. `{cached.episodeIndex}_{safeName(cached.title)}`. Only
     // the cache can prove that, so a title-changed file with no matching cache
     // entry is left alone.
-    if (cached != null &&
-        safeName(cached.title) != safeName(episode.title)) {
-      final cachedMatches =
-          byKey['${episode.index}/${safeName(cached.title)}'];
+    if (cached != null && safeName(cached.title) != safeName(episode.title)) {
+      final cachedMatches = byKey['${episode.index}/${safeName(cached.title)}'];
       if (cachedMatches != null) matches.addAll(cachedMatches);
     }
     if (matches.isEmpty) continue;
@@ -357,8 +359,9 @@ class DownloadService {
       // is not retried into a fresh ClientException.
       cancelToken?.throwIfCancelled();
       try {
-        final response =
-            await _client.get(url, headers: headers).timeout(requestTimeout);
+        final response = await _client
+            .get(url, headers: headers)
+            .timeout(requestTimeout);
         if (response.statusCode == 200) return response;
         if (_isTransientStatus(response.statusCode) && attempt < maxRetries) {
           attempt++;
@@ -444,8 +447,9 @@ class DownloadService {
     // bodyContent, so they do not hit this guard.
     if (novelIndex.episodes.isEmpty && novelIndex.bodyContent == null) {
       _log.warning(
-          'Index page parsed to no episodes and no body content (likely site '
-          'markup drift): $normalizedUrl');
+        'Index page parsed to no episodes and no body content (likely site '
+        'markup drift): $normalizedUrl',
+      );
       throw EmptyIndexException(normalizedUrl);
     }
 
@@ -536,7 +540,11 @@ class DownloadService {
         // silently (F102): stop the chain, keep the episodes collected so far,
         // and flag the result as truncated so the UI can warn the user that
         // some episodes may be missing.
-        _log.warning('Failed to fetch index page $next; index truncated', e, st);
+        _log.warning(
+          'Failed to fetch index page $next; index truncated',
+          e,
+          st,
+        );
         truncated = true;
         break;
       }
@@ -696,7 +704,8 @@ class DownloadService {
             // it as a failure instead and leave the cache untouched for retry.
             failedCount++;
             _log.warning(
-                'Empty parse result for episode ${episode.index} from ${episode.url}; treated as failure (not saved or cached)');
+              'Empty parse result for episode ${episode.index} from ${episode.url}; treated as failure (not saved or cached)',
+            );
           } else {
             await _saveAndCacheEpisode(
               url: episode.url,
@@ -715,9 +724,10 @@ class DownloadService {
           cancelToken?.throwIfCancelled();
           failedCount++;
           _log.warning(
-              'Failed to download episode ${episode.index} from ${episode.url}',
-              e,
-              st);
+            'Failed to download episode ${episode.index} from ${episode.url}',
+            e,
+            st,
+          );
         }
         hadPriorRequest = true;
       }
@@ -772,13 +782,15 @@ class DownloadService {
       content: content,
       totalEpisodes: totalEpisodes,
     );
-    await episodeCacheRepository?.upsert(EpisodeCache(
-      url: url.toString(),
-      episodeIndex: index,
-      title: title,
-      lastModified: updatedAt,
-      downloadedAt: DateTime.now(),
-    ));
+    await episodeCacheRepository?.upsert(
+      EpisodeCache(
+        url: url.toString(),
+        episodeIndex: index,
+        title: title,
+        lastModified: updatedAt,
+        downloadedAt: DateTime.now(),
+      ),
+    );
   }
 
   /// Creates a new generic-web collection folder `web_<slug>` under
@@ -906,17 +918,22 @@ class DownloadService {
     // stale name left by a title change). Writing before deleting means a crash
     // can never destroy the old content without the replacement already on disk;
     // an identical name is overwritten in place.
-    final fileName = formatCollectionEpisodeFileName(episodeIndex, article.title);
+    final fileName = formatCollectionEpisodeFileName(
+      episodeIndex,
+      article.title,
+    );
     await File('${collectionDir.path}/$fileName').writeAsString(article.body);
     _removeCollectionEpisodeFiles(collectionDir, episodeIndex, keep: fileName);
 
-    await episodeCacheRepository.upsert(EpisodeCache(
-      url: url.toString(),
-      episodeIndex: episodeIndex,
-      title: article.title,
-      lastModified: article.lastModified,
-      downloadedAt: DateTime.now(),
-    ));
+    await episodeCacheRepository.upsert(
+      EpisodeCache(
+        url: url.toString(),
+        episodeIndex: episodeIndex,
+        title: article.title,
+        lastModified: article.lastModified,
+        downloadedAt: DateTime.now(),
+      ),
+    );
 
     return CollectionAppendResult(
       title: article.title,

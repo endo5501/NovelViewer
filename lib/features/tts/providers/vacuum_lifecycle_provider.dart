@@ -17,10 +17,8 @@ import 'tts_audio_database_provider.dart';
 /// generated episode. Batching to exit time fixes the spike without
 /// permanently leaking deleted-blob pages.
 class VacuumLifecycle with WidgetsBindingObserver {
-  VacuumLifecycle({
-    required this.vacuumFolder,
-    Logger? logger,
-  }) : _log = logger ?? Logger('tts.vacuum');
+  VacuumLifecycle({required this.vacuumFolder, Logger? logger})
+    : _log = logger ?? Logger('tts.vacuum');
 
   /// Performs `PRAGMA incremental_vacuum(0)` for the given folder.
   final Future<void> Function(String folderPath) vacuumFolder;
@@ -63,13 +61,15 @@ class VacuumLifecycle with WidgetsBindingObserver {
         // Run in parallel — each folder writes to its own SQLite file, and
         // at detached time the OS may kill the process at any moment, so
         // don't pay O(N × hundreds-of-ms) when O(slowest folder) suffices.
-        await Future.wait(pending.map((folder) async {
-          try {
-            await vacuumFolder(folder);
-          } catch (e, st) {
-            _log.warning('vacuum failed for $folder', e, st);
-          }
-        }));
+        await Future.wait(
+          pending.map((folder) async {
+            try {
+              await vacuumFolder(folder);
+            } catch (e, st) {
+              _log.warning('vacuum failed for $folder', e, st);
+            }
+          }),
+        );
       }
     } finally {
       _inFlight = null;

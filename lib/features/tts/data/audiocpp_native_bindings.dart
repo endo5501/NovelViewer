@@ -34,54 +34,58 @@ typedef _AcFreeDart = void Function(Pointer<Void>);
 // caption_guidance_scale, num_inference_steps) -> int (0 == success).
 // ref_wav_path / caption are nullable — the NULL combinations select between
 // plain TTS / clone-only / caption-only / clone+caption synthesis.
-typedef _AcSynthesizeC = Int32 Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  Float,
-  Float,
-  Int32,
-);
-typedef _AcSynthesizeDart = int Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  double,
-  double,
-  int,
-);
+typedef _AcSynthesizeC =
+    Int32 Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Float,
+      Float,
+      Int32,
+    );
+typedef _AcSynthesizeDart =
+    int Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      double,
+      double,
+      int,
+    );
 
 // audiocpp_synthesize_with_options(..., option_keys, option_values,
 // option_count) -> int (0 == success). Same as audiocpp_synthesize plus engine
 // request options as parallel key/value arrays, so a new engine option does not
 // need a new FFI signature. The engine validates the keys against the model
 // contract, so an unknown key fails loudly rather than being ignored.
-typedef _AcSynthesizeWithOptionsC = Int32 Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  Float,
-  Float,
-  Int32,
-  Pointer<Pointer<Utf8>>,
-  Pointer<Pointer<Utf8>>,
-  Int32,
-);
-typedef _AcSynthesizeWithOptionsDart = int Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  double,
-  double,
-  int,
-  Pointer<Pointer<Utf8>>,
-  Pointer<Pointer<Utf8>>,
-  int,
-);
+typedef _AcSynthesizeWithOptionsC =
+    Int32 Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Float,
+      Float,
+      Int32,
+      Pointer<Pointer<Utf8>>,
+      Pointer<Pointer<Utf8>>,
+      Int32,
+    );
+typedef _AcSynthesizeWithOptionsDart =
+    int Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      double,
+      double,
+      int,
+      Pointer<Pointer<Utf8>>,
+      Pointer<Pointer<Utf8>>,
+      int,
+    );
 
 typedef _AcGetAudioC = Pointer<Float> Function(Pointer<Void>);
 typedef _AcGetAudioDart = Pointer<Float> Function(Pointer<Void>);
@@ -120,31 +124,30 @@ class AudiocppNativeBindings {
     throw UnsupportedError('Unsupported platform: ${Platform.operatingSystem}');
   }
 
-  late final createAbortHandle = _library.lookupFunction<
-    _AcCreateAbortHandleC,
-    _AcCreateAbortHandleDart
-  >('audiocpp_create_abort_handle');
+  late final createAbortHandle = _library
+      .lookupFunction<_AcCreateAbortHandleC, _AcCreateAbortHandleDart>(
+        'audiocpp_create_abort_handle',
+      );
 
-  late final freeAbortHandle = _library.lookupFunction<
-    _AcFreeAbortHandleC,
-    _AcFreeAbortHandleDart
-  >('audiocpp_free_abort_handle');
+  late final freeAbortHandle = _library
+      .lookupFunction<_AcFreeAbortHandleC, _AcFreeAbortHandleDart>(
+        'audiocpp_free_abort_handle',
+      );
 
   late final abort = _library.lookupFunction<_AcAbortC, _AcAbortDart>(
     'audiocpp_abort',
   );
 
-  late final resetAbort =
-      _library.lookupFunction<_AcResetAbortC, _AcResetAbortDart>(
-    'audiocpp_reset_abort',
-  );
+  late final resetAbort = _library
+      .lookupFunction<_AcResetAbortC, _AcResetAbortDart>(
+        'audiocpp_reset_abort',
+      );
 
   late final init = _library.lookupFunction<_AcInitC, _AcInitDart>(
     'audiocpp_init',
   );
 
-  late final isLoaded =
-      _library.lookupFunction<_AcIsLoadedC, _AcIsLoadedDart>(
+  late final isLoaded = _library.lookupFunction<_AcIsLoadedC, _AcIsLoadedDart>(
     'audiocpp_is_loaded',
   );
 
@@ -152,38 +155,34 @@ class AudiocppNativeBindings {
     'audiocpp_free',
   );
 
-  late final synthesize =
-      _library.lookupFunction<_AcSynthesizeC, _AcSynthesizeDart>(
-    'audiocpp_synthesize',
-  );
+  late final synthesize = _library
+      .lookupFunction<_AcSynthesizeC, _AcSynthesizeDart>('audiocpp_synthesize');
 
-  late final synthesizeWithOptions = _library.lookupFunction<
-    _AcSynthesizeWithOptionsC,
-    _AcSynthesizeWithOptionsDart
-  >('audiocpp_synthesize_with_options');
+  late final synthesizeWithOptions = _library
+      .lookupFunction<_AcSynthesizeWithOptionsC, _AcSynthesizeWithOptionsDart>(
+        'audiocpp_synthesize_with_options',
+      );
 
-  late final getAudio =
-      _library.lookupFunction<_AcGetAudioC, _AcGetAudioDart>(
+  late final getAudio = _library.lookupFunction<_AcGetAudioC, _AcGetAudioDart>(
     'audiocpp_get_audio',
   );
 
-  late final getAudioLength =
-      _library.lookupFunction<_AcGetAudioLengthC, _AcGetAudioLengthDart>(
-    'audiocpp_get_audio_length',
-  );
+  late final getAudioLength = _library
+      .lookupFunction<_AcGetAudioLengthC, _AcGetAudioLengthDart>(
+        'audiocpp_get_audio_length',
+      );
 
-  late final getSampleRate =
-      _library.lookupFunction<_AcGetSampleRateC, _AcGetSampleRateDart>(
-    'audiocpp_get_sample_rate',
-  );
+  late final getSampleRate = _library
+      .lookupFunction<_AcGetSampleRateC, _AcGetSampleRateDart>(
+        'audiocpp_get_sample_rate',
+      );
 
-  late final getError =
-      _library.lookupFunction<_AcGetErrorC, _AcGetErrorDart>(
+  late final getError = _library.lookupFunction<_AcGetErrorC, _AcGetErrorDart>(
     'audiocpp_get_error',
   );
 
-  late final getInitError =
-      _library.lookupFunction<_AcGetInitErrorC, _AcGetInitErrorDart>(
-    'audiocpp_get_init_error',
-  );
+  late final getInitError = _library
+      .lookupFunction<_AcGetInitErrorC, _AcGetInitErrorDart>(
+        'audiocpp_get_init_error',
+      );
 }

@@ -32,13 +32,14 @@ List<String> listSortedTextFileNames(
   try {
     final dir = Directory(directoryPath);
     if (!dir.existsSync()) return const [];
-    final files = dir
-        .listSync(followLinks: false)
-        .whereType<File>()
-        .map((f) => p.basename(f.path))
-        .where((name) => name.toLowerCase().endsWith('.txt'))
-        .toList()
-      ..sort();
+    final files =
+        dir
+            .listSync(followLinks: false)
+            .whereType<File>()
+            .map((f) => p.basename(f.path))
+            .where((name) => name.toLowerCase().endsWith('.txt'))
+            .toList()
+          ..sort();
     return files;
   } catch (e, st) {
     onError?.call(e, st);

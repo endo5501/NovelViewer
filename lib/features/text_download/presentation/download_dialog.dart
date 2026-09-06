@@ -65,8 +65,8 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
 
   /// Existing `web` collections from the library, as (label, folderPath) pairs.
   List<({String label, String path})> _existingCollections(String libraryPath) {
-    final novels = ref.watch(allNovelsProvider).asData?.value ??
-        const <NovelMetadata>[];
+    final novels =
+        ref.watch(allNovelsProvider).asData?.value ?? const <NovelMetadata>[];
     return [
       for (final n in novels)
         if (n.siteType == GenericWebSite.siteTypeId)
@@ -120,7 +120,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     if (selected == null) return libraryPath;
     final destinations =
         ref.read(downloadDestinationFoldersProvider).asData?.value ??
-            const <DirectoryEntry>[];
+        const <DirectoryEntry>[];
     final isValid = destinations.any((d) => d.path == selected);
     return isValid ? selected : libraryPath;
   }
@@ -131,14 +131,18 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
 
     if (_isWebArticle) {
       if (_collectionMode == _CollectionMode.existing) {
-        ref.read(downloadProvider.notifier).startCollectionDownload(
+        ref
+            .read(downloadProvider.notifier)
+            .startCollectionDownload(
               url: uri,
               libraryPath: libraryPath,
               existingCollectionPath: _selectedCollectionPath,
             );
       } else {
         final name = _newCollectionNameController.text.trim();
-        ref.read(downloadProvider.notifier).startCollectionDownload(
+        ref
+            .read(downloadProvider.notifier)
+            .startCollectionDownload(
               url: uri,
               libraryPath: libraryPath,
               newCollectionName: name.isEmpty ? null : name,
@@ -148,10 +152,9 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     }
 
     final outputPath = _resolveOutputPath(libraryPath);
-    ref.read(downloadProvider.notifier).startDownload(
-          url: uri,
-          outputPath: outputPath,
-        );
+    ref
+        .read(downloadProvider.notifier)
+        .startDownload(url: uri, outputPath: outputPath);
   }
 
   @override
@@ -170,7 +173,8 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
               controller: _urlController,
               decoration: InputDecoration(
                 labelText: 'URL',
-                hintText: 'https://ncode.syosetu.com/... or https://www.aozora.gr.jp/...',
+                hintText:
+                    'https://ncode.syosetu.com/... or https://www.aozora.gr.jp/...',
                 errorText: _urlError,
                 enabled: downloadState.status != DownloadStatus.downloading,
               ),
@@ -201,7 +205,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
 
     final destinations =
         ref.watch(downloadDestinationFoldersProvider).asData?.value ??
-            const <DirectoryEntry>[];
+        const <DirectoryEntry>[];
 
     final items = <DropdownMenuItem<String>>[
       DropdownMenuItem(
@@ -217,9 +221,9 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     final validPaths = items.map((e) => e.value).toSet();
     final current =
         (_selectedDestinationPath != null &&
-                validPaths.contains(_selectedDestinationPath))
-            ? _selectedDestinationPath!
-            : libraryPath;
+            validPaths.contains(_selectedDestinationPath))
+        ? _selectedDestinationPath!
+        : libraryPath;
 
     final isDownloading = state.status == DownloadStatus.downloading;
 
@@ -253,8 +257,10 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.download_collectionTargetLabel,
-            style: Theme.of(context).textTheme.labelLarge),
+        Text(
+          l10n.download_collectionTargetLabel,
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
         RadioGroup<_CollectionMode>(
           groupValue: _collectionMode,
           onChanged: (v) {
@@ -308,14 +314,17 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
                     // Guard against a value no longer present in items (the
                     // collection was deleted/renamed while the dialog was open),
                     // which would trip DropdownButton's assertion.
-                    value: collections.any((c) => c.path == _selectedCollectionPath)
+                    value:
+                        collections.any(
+                          (c) => c.path == _selectedCollectionPath,
+                        )
                         ? _selectedCollectionPath
                         : null,
                     hint: Text(l10n.download_collectionSelectLabel),
                     onChanged: isDownloading
                         ? null
                         : (value) =>
-                            setState(() => _selectedCollectionPath = value),
+                              setState(() => _selectedCollectionPath = value),
                     items: [
                       for (final c in collections)
                         DropdownMenuItem(value: c.path, child: Text(c.label)),
@@ -326,8 +335,9 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     );
   }
 
-  String _skipSuffix(BuildContext context, int skipped) =>
-      skipped > 0 ? ' ${AppLocalizations.of(context)!.download_skippedSuffix(skipped)}' : '';
+  String _skipSuffix(BuildContext context, int skipped) => skipped > 0
+      ? ' ${AppLocalizations.of(context)!.download_skippedSuffix(skipped)}'
+      : '';
 
   String _failedSuffix(BuildContext context, int failed) => failed > 0
       ? ' ${AppLocalizations.of(context)!.download_failedSuffix(failed)}'
@@ -352,9 +362,10 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
             const SizedBox(height: 8),
             Text(
               AppLocalizations.of(context)!.download_progressFormat(
-                  state.currentEpisode,
-                  state.totalEpisodes,
-                  _summarySuffix(context, state)),
+                state.currentEpisode,
+                state.totalEpisodes,
+                _summarySuffix(context, state),
+              ),
             ),
           ],
         );
@@ -369,7 +380,9 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
                 Expanded(
                   child: Text(
                     AppLocalizations.of(context)!.download_completedFormat(
-                        state.totalEpisodes, _summarySuffix(context, state)),
+                      state.totalEpisodes,
+                      _summarySuffix(context, state),
+                    ),
                   ),
                 ),
               ],
@@ -382,8 +395,9 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      AppLocalizations.of(context)!
-                          .download_indexTruncatedWarning,
+                      AppLocalizations.of(
+                        context,
+                      )!.download_indexTruncatedWarning,
                       style: const TextStyle(color: Colors.orange),
                     ),
                   ),
@@ -411,7 +425,10 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                AppLocalizations.of(context)!.download_errorFormat(state.errorMessage ?? AppLocalizations.of(context)!.common_unknownError),
+                AppLocalizations.of(context)!.download_errorFormat(
+                  state.errorMessage ??
+                      AppLocalizations.of(context)!.common_unknownError,
+                ),
                 style: const TextStyle(color: Colors.red),
               ),
             ),

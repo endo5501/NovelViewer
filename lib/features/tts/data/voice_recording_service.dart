@@ -14,8 +14,7 @@ class VoiceRecordingService {
   Future<bool> hasPermission() => recorder.hasPermission();
 
   Future<void> startRecording(String tempDirPath) async {
-    final fileName =
-        'recording_${DateTime.now().millisecondsSinceEpoch}.wav';
+    final fileName = 'recording_${DateTime.now().millisecondsSinceEpoch}.wav';
     _tempFilePath = p.join(tempDirPath, fileName);
 
     const config = RecordConfig(

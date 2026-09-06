@@ -10,16 +10,16 @@ void main() {
   const viewportHeight = 300.0;
 
   List<TtsEditSegment> buildSegments(int count) => List.generate(count, (i) {
-        final text = 'セグメント$i。';
-        return TtsEditSegment(
-          segmentIndex: i,
-          originalText: text,
-          text: text,
-          textOffset: i * text.length,
-          textLength: text.length,
-          hasAudio: true,
-        );
-      });
+    final text = 'セグメント$i。';
+    return TtsEditSegment(
+      segmentIndex: i,
+      originalText: text,
+      text: text,
+      textOffset: i * text.length,
+      textLength: text.length,
+      hasAudio: true,
+    );
+  });
 
   /// Pumps the list in a viewport short enough that most rows are off-screen.
   Future<void> pumpList(
@@ -76,17 +76,20 @@ void main() {
   }
 
   Finder findRow(int index) => find.byWidgetPredicate(
-      (w) => w is TtsEditSegmentRow && w.segment.segmentIndex == index);
+    (w) => w is TtsEditSegmentRow && w.segment.segmentIndex == index,
+  );
 
   // Every TextField carries a Scrollable of its own, so the list's has to be
   // picked out: it is the outermost, and finders walk depth-first.
   double scrollOffset(WidgetTester tester) => tester
-      .state<ScrollableState>(find
-          .descendant(
-            of: find.byType(TtsEditSegmentList),
-            matching: find.byType(Scrollable),
-          )
-          .first)
+      .state<ScrollableState>(
+        find
+            .descendant(
+              of: find.byType(TtsEditSegmentList),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      )
       .position
       .pixels;
 
@@ -101,8 +104,9 @@ void main() {
   }
 
   group('TtsEditSegmentList playhead ownership', () {
-    testWidgets('a row press moves the playhead while nothing is playing',
-        (tester) async {
+    testWidgets('a row press moves the playhead while nothing is playing', (
+      tester,
+    ) async {
       final moves = <int>[];
       await pumpList(
         tester,
@@ -117,8 +121,9 @@ void main() {
       expect(moves, [2]);
     });
 
-    testWidgets('a row press is ignored while playback is running',
-        (tester) async {
+    testWidgets('a row press is ignored while playback is running', (
+      tester,
+    ) async {
       // Playback owns the playhead for its duration. Honouring the press too
       // would let the user's index and the next onSegmentStart fight over the
       // same value, and the highlight would jump between them.
@@ -137,8 +142,9 @@ void main() {
       expect(moves, isEmpty);
     });
 
-    testWidgets('row actions are disabled while playback is running',
-        (tester) async {
+    testWidgets('row actions are disabled while playback is running', (
+      tester,
+    ) async {
       // A row's play button would otherwise clear the playing flag when its
       // segment finished, releasing the playhead lock while the play-through
       // it interrupted is still running.
@@ -151,8 +157,9 @@ void main() {
       expect(buttons.every((b) => b.onPressed == null), true);
     });
 
-    testWidgets('row actions are available while nothing is playing',
-        (tester) async {
+    testWidgets('row actions are available while nothing is playing', (
+      tester,
+    ) async {
       await pumpList(tester, count: 30, cursorIndex: 0);
 
       final buttons = tester.widgetList<IconButton>(
@@ -162,35 +169,40 @@ void main() {
       expect(buttons.every((b) => b.onPressed != null), true);
     });
 
-    testWidgets('editing still works while playback is running',
-        (tester) async {
+    testWidgets('editing still works while playback is running', (
+      tester,
+    ) async {
       await pumpList(tester, count: 30, cursorIndex: 0, isPlaying: true);
 
       await tester.tap(findRow(1));
       await tester.pump();
 
-      final editable = tester.widgetList<EditableText>(find.descendant(
-        of: findRow(1),
-        matching: find.byType(EditableText),
-      ));
+      final editable = tester.widgetList<EditableText>(
+        find.descendant(of: findRow(1), matching: find.byType(EditableText)),
+      );
       expect(editable.any((e) => e.focusNode.hasFocus), true);
     });
   });
 
   group('TtsEditSegmentList auto-scroll', () {
-    testWidgets('follows the playhead when it moves below the viewport',
-        (tester) async {
+    testWidgets('follows the playhead when it moves below the viewport', (
+      tester,
+    ) async {
       await pumpList(tester, count: 30, cursorIndex: 0);
-      expect(rowIsVisible(tester, 8), false,
-          reason: 'row 8 must start off-screen for this to test anything');
+      expect(
+        rowIsVisible(tester, 8),
+        false,
+        reason: 'row 8 must start off-screen for this to test anything',
+      );
 
       await pumpList(tester, count: 30, cursorIndex: 8);
 
       expect(rowIsVisible(tester, 8), true);
     });
 
-    testWidgets('stays put when the playhead moves within the viewport',
-        (tester) async {
+    testWidgets('stays put when the playhead moves within the viewport', (
+      tester,
+    ) async {
       await pumpList(tester, count: 30, cursorIndex: 0);
       final before = scrollOffset(tester);
       expect(rowIsVisible(tester, 1), true);
@@ -202,8 +214,9 @@ void main() {
       expect(scrollOffset(tester), before);
     });
 
-    testWidgets('stays put for a visible row part-way down the list too',
-        (tester) async {
+    testWidgets('stays put for a visible row part-way down the list too', (
+      tester,
+    ) async {
       // At offset 0 the list cannot scroll backwards at all, so half of what
       // could go wrong is unreachable there. Part-way down it can move either
       // way, and this is the position the requirement is really about.
@@ -219,8 +232,9 @@ void main() {
       expect(scrollOffset(tester), before);
     });
 
-    testWidgets('scrolls back when the playhead moves above the viewport',
-        (tester) async {
+    testWidgets('scrolls back when the playhead moves above the viewport', (
+      tester,
+    ) async {
       await playThrough(tester, count: 30, upTo: 12);
       final scrolledDown = scrollOffset(tester);
       expect(scrolledDown, greaterThan(0));
@@ -231,8 +245,9 @@ void main() {
       expect(rowIsVisible(tester, 7), true);
     });
 
-    testWidgets('does not pull back a playhead the user has scrolled past',
-        (tester) async {
+    testWidgets('does not pull back a playhead the user has scrolled past', (
+      tester,
+    ) async {
       // The directional policy cuts both ways: following the playhead forwards
       // must not mean dragging the view back to a row the user deliberately
       // scrolled above. An `explicit` alignment would do exactly that.
@@ -242,16 +257,20 @@ void main() {
 
       final afterUserScroll = scrollOffset(tester);
       expect(afterUserScroll, greaterThan(0));
-      expect(rowIsVisible(tester, 6), false,
-          reason: 'the playhead must be off-screen for this to test anything');
+      expect(
+        rowIsVisible(tester, 6),
+        false,
+        reason: 'the playhead must be off-screen for this to test anything',
+      );
 
       await pumpList(tester, count: 30, cursorIndex: 6, isPlaying: true);
 
       expect(scrollOffset(tester), afterUserScroll);
     });
 
-    testWidgets('reaches a playhead too far away to have been built',
-        (tester) async {
+    testWidgets('reaches a playhead too far away to have been built', (
+      tester,
+    ) async {
       // Once the playhead row falls outside the build range there is no
       // element to reveal. Without a fallback the list stops following it for
       // the rest of the run — every later advance finds nothing built either.
@@ -263,17 +282,19 @@ void main() {
       expect(rowIsVisible(tester, 25), true);
     });
 
-    testWidgets('returns to the top when the playhead resets to the first row',
-        (tester) async {
-      // The reset happens when playback runs off the end, so the first row is
-      // by then far above the viewport and no longer built.
-      await playThrough(tester, count: 30, upTo: 12);
-      expect(scrollOffset(tester), greaterThan(0));
-      expect(findRow(0).evaluate(), isEmpty);
+    testWidgets(
+      'returns to the top when the playhead resets to the first row',
+      (tester) async {
+        // The reset happens when playback runs off the end, so the first row is
+        // by then far above the viewport and no longer built.
+        await playThrough(tester, count: 30, upTo: 12);
+        expect(scrollOffset(tester), greaterThan(0));
+        expect(findRow(0).evaluate(), isEmpty);
 
-      await pumpList(tester, count: 30, cursorIndex: 0);
+        await pumpList(tester, count: 30, cursorIndex: 0);
 
-      expect(scrollOffset(tester), 0);
-    });
+        expect(scrollOffset(tester), 0);
+      },
+    );
   });
 }

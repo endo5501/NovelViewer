@@ -12,10 +12,7 @@ class BookmarkRepository {
 
   BookmarkRepository(this._db);
 
-  Future<void> add({
-    required String fileName,
-    int? lineNumber,
-  }) async {
+  Future<void> add({required String fileName, int? lineNumber}) async {
     // SQLite treats NULLs as distinct in UNIQUE constraints,
     // so we check for duplicates manually when lineNumber is null.
     if (lineNumber == null) {
@@ -36,10 +33,7 @@ class BookmarkRepository {
     );
   }
 
-  Future<void> remove({
-    required String fileName,
-    int? lineNumber,
-  }) async {
+  Future<void> remove({required String fileName, int? lineNumber}) async {
     if (lineNumber != null) {
       await _db.delete(
         _tableName,
@@ -56,16 +50,11 @@ class BookmarkRepository {
   }
 
   Future<List<Bookmark>> findAll() async {
-    final maps = await _db.query(
-      _tableName,
-      orderBy: 'created_at DESC',
-    );
+    final maps = await _db.query(_tableName, orderBy: 'created_at DESC');
     return maps.map(Bookmark.fromMap).toList();
   }
 
-  Future<List<Bookmark>> findByFile({
-    required String fileName,
-  }) async {
+  Future<List<Bookmark>> findByFile({required String fileName}) async {
     final maps = await _db.query(
       _tableName,
       where: 'file_name = ?',
@@ -75,10 +64,7 @@ class BookmarkRepository {
     return maps.map(Bookmark.fromMap).toList();
   }
 
-  Future<bool> exists({
-    required String fileName,
-    int? lineNumber,
-  }) async {
+  Future<bool> exists({required String fileName, int? lineNumber}) async {
     final String where;
     final List<Object?> whereArgs;
     if (lineNumber != null) {

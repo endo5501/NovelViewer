@@ -48,18 +48,31 @@ void main() {
         onMarkExit: exitTokens.add,
       );
 
-      final marked =
-          _collectTextSpans(result).where(_hasMarkDecoration).toList();
-      expect(marked, isNotEmpty,
-          reason: 'A marked span should be produced for "アリス"');
+      final marked = _collectTextSpans(
+        result,
+      ).where(_hasMarkDecoration).toList();
+      expect(
+        marked,
+        isNotEmpty,
+        reason: 'A marked span should be produced for "アリス"',
+      );
 
       for (final span in marked) {
-        expect(span.onEnter, isNotNull,
-            reason: 'Marked span must have onEnter wired');
-        expect(span.onExit, isNotNull,
-            reason: 'Marked span must have onExit wired');
-        expect(span.mouseCursor, isNot(MouseCursor.defer),
-            reason: 'Marked span should advertise a hover-friendly cursor');
+        expect(
+          span.onEnter,
+          isNotNull,
+          reason: 'Marked span must have onEnter wired',
+        );
+        expect(
+          span.onExit,
+          isNotNull,
+          reason: 'Marked span must have onExit wired',
+        );
+        expect(
+          span.mouseCursor,
+          isNot(MouseCursor.defer),
+          reason: 'Marked span should advertise a hover-friendly cursor',
+        );
       }
 
       // Fire the handlers and verify they receive the right word.
@@ -70,8 +83,11 @@ void main() {
       }
       expect(enters.map((e) => e.$1), everyElement('アリス'));
       expect(enters.first.$2, pointerPosition);
-      expect(exitTokens, isNotEmpty,
-          reason: 'Marked span exit should fire and deliver its token');
+      expect(
+        exitTokens,
+        isNotEmpty,
+        reason: 'Marked span exit should fire and deliver its token',
+      );
     });
 
     test('does not attach hover handlers to unmarked spans', () {
@@ -86,49 +102,60 @@ void main() {
         onMarkExit: (_) {},
       );
 
-      final unmarked =
-          _collectTextSpans(result).where((s) => !_hasMarkDecoration(s)).toList();
+      final unmarked = _collectTextSpans(
+        result,
+      ).where((s) => !_hasMarkDecoration(s)).toList();
       // Filter the synthetic outer parent TextSpan (no text, no marks).
-      final unmarkedWithText =
-          unmarked.where((s) => s.text != null && s.text!.isNotEmpty).toList();
+      final unmarkedWithText = unmarked
+          .where((s) => s.text != null && s.text!.isNotEmpty)
+          .toList();
 
       expect(unmarkedWithText, isNotEmpty);
       for (final span in unmarkedWithText) {
-        expect(span.onEnter, isNull,
-            reason: 'Unmarked text span must NOT have onEnter wired');
-        expect(span.onExit, isNull,
-            reason: 'Unmarked text span must NOT have onExit wired');
+        expect(
+          span.onEnter,
+          isNull,
+          reason: 'Unmarked text span must NOT have onEnter wired',
+        );
+        expect(
+          span.onExit,
+          isNull,
+          reason: 'Unmarked text span must NOT have onExit wired',
+        );
       }
     });
 
-    test('attaches the correct word to each of multiple non-overlapping marks',
-        () {
-      final segments = [const PlainTextSegment('アリス と ボブ が会った')];
-      final enters = <String>[];
+    test(
+      'attaches the correct word to each of multiple non-overlapping marks',
+      () {
+        final segments = [const PlainTextSegment('アリス と ボブ が会った')];
+        final enters = <String>[];
 
-      final result = buildRubyTextSpans(
-        segments,
-        _baseStyle,
-        null,
-        markedWords: {
-          'アリス': MarkStyle.dotted,
-          'ボブ': MarkStyle.solid,
-        },
-        onMarkEnter: (word, _, _) => enters.add(word),
-        onMarkExit: (_) {},
-      );
+        final result = buildRubyTextSpans(
+          segments,
+          _baseStyle,
+          null,
+          markedWords: {'アリス': MarkStyle.dotted, 'ボブ': MarkStyle.solid},
+          onMarkEnter: (word, _, _) => enters.add(word),
+          onMarkExit: (_) {},
+        );
 
-      final marked =
-          _collectTextSpans(result).where(_hasMarkDecoration).toList();
-      // Fire each marked span's onEnter and remember which word was reported.
-      for (final span in marked) {
-        span.onEnter!(const PointerEnterEvent());
-      }
+        final marked = _collectTextSpans(
+          result,
+        ).where(_hasMarkDecoration).toList();
+        // Fire each marked span's onEnter and remember which word was reported.
+        for (final span in marked) {
+          span.onEnter!(const PointerEnterEvent());
+        }
 
-      expect(enters, containsAll(['アリス', 'ボブ']));
-      expect(enters, hasLength(marked.length),
-          reason: 'Every marked span should fire exactly once');
-    });
+        expect(enters, containsAll(['アリス', 'ボブ']));
+        expect(
+          enters,
+          hasLength(marked.length),
+          reason: 'Every marked span should fire exactly once',
+        );
+      },
+    );
 
     test('omits hover handlers entirely when callbacks are null', () {
       final segments = [const PlainTextSegment('アリス')];
@@ -141,14 +168,21 @@ void main() {
         // onMarkEnter / onMarkExit deliberately omitted
       );
 
-      final marked =
-          _collectTextSpans(result).where(_hasMarkDecoration).toList();
+      final marked = _collectTextSpans(
+        result,
+      ).where(_hasMarkDecoration).toList();
       expect(marked, isNotEmpty);
       for (final span in marked) {
-        expect(span.onEnter, isNull,
-            reason: 'No onEnter when callback is not supplied');
-        expect(span.onExit, isNull,
-            reason: 'No onExit when callback is not supplied');
+        expect(
+          span.onEnter,
+          isNull,
+          reason: 'No onEnter when callback is not supplied',
+        );
+        expect(
+          span.onExit,
+          isNull,
+          reason: 'No onExit when callback is not supplied',
+        );
       }
     });
   });

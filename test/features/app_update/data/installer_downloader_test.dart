@@ -9,19 +9,19 @@ import 'package:novel_viewer/features/app_update/data/release_info.dart';
 import 'package:path/path.dart' as p;
 
 ReleaseInfo _releaseWithInstaller() => const ReleaseInfo(
-      tagName: 'v1.3.0',
-      body: 'notes',
-      assets: [
-        ReleaseAsset(
-          name: 'novel_viewer-setup-v1.3.0.exe',
-          downloadUrl: 'https://example.com/setup.exe',
-        ),
-        ReleaseAsset(
-          name: 'novel_viewer-setup-v1.3.0.exe.sha256',
-          downloadUrl: 'https://example.com/setup.exe.sha256',
-        ),
-      ],
-    );
+  tagName: 'v1.3.0',
+  body: 'notes',
+  assets: [
+    ReleaseAsset(
+      name: 'novel_viewer-setup-v1.3.0.exe',
+      downloadUrl: 'https://example.com/setup.exe',
+    ),
+    ReleaseAsset(
+      name: 'novel_viewer-setup-v1.3.0.exe.sha256',
+      downloadUrl: 'https://example.com/setup.exe.sha256',
+    ),
+  ],
+);
 
 void main() {
   late Directory tempDir;
@@ -34,8 +34,7 @@ void main() {
     if (tempDir.existsSync()) await tempDir.delete(recursive: true);
   });
 
-  test(
-      'removes the partial download dir and rethrows on a failed download, '
+  test('removes the partial download dir and rethrows on a failed download, '
       'without logging when cleanup succeeds', () async {
     final records = <LogRecord>[];
     final sub = Logger.root.onRecord.listen(records.add);

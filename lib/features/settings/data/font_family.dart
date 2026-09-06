@@ -1,11 +1,7 @@
 import 'dart:io' show Platform;
 
 enum FontFamily {
-  system(
-    displayName: 'システムデフォルト',
-    fontFamilyName: null,
-    macOSOnly: false,
-  ),
+  system(displayName: 'システムデフォルト', fontFamilyName: null, macOSOnly: false),
   hiraginoMincho(
     displayName: 'ヒラギノ明朝',
     fontFamilyName: 'Hiragino Mincho ProN',
@@ -16,16 +12,8 @@ enum FontFamily {
     fontFamilyName: 'Hiragino Kaku Gothic ProN',
     macOSOnly: true,
   ),
-  yumincho(
-    displayName: '游明朝',
-    fontFamilyName: 'YuMincho',
-    macOSOnly: false,
-  ),
-  yuGothic(
-    displayName: '游ゴシック',
-    fontFamilyName: 'YuGothic',
-    macOSOnly: false,
-  );
+  yumincho(displayName: '游明朝', fontFamilyName: 'YuMincho', macOSOnly: false),
+  yuGothic(displayName: '游ゴシック', fontFamilyName: 'YuGothic', macOSOnly: false);
 
   const FontFamily({
     required this.displayName,

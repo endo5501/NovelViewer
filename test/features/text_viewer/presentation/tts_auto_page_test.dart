@@ -9,23 +9,25 @@ void main() {
   group('VerticalTextViewer - TTS auto page', () {
     testWidgets('passes TTS highlight to VerticalTextPage', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: SizedBox(
-              width: 300,
-              height: 400,
-              child: VerticalTextViewer(
-                segments: [PlainTextSegment('あいうえお')],
-                baseStyle: TextStyle(fontSize: 14),
-                ttsHighlightStart: 0,
-                ttsHighlightEnd: 3,
+        const ProviderScope(
+          child: MaterialApp(
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(
+                width: 300,
+                height: 400,
+                child: VerticalTextViewer(
+                  segments: [PlainTextSegment('あいうえお')],
+                  baseStyle: TextStyle(fontSize: 14),
+                  ttsHighlightStart: 0,
+                  ttsHighlightEnd: 3,
+                ),
               ),
             ),
           ),
-        )),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -33,27 +35,30 @@ void main() {
       expect(find.byType(VerticalTextViewer), findsOneWidget);
     });
 
-    testWidgets('auto-navigates to page containing TTS highlight',
-        (tester) async {
+    testWidgets('auto-navigates to page containing TTS highlight', (
+      tester,
+    ) async {
       // Create enough text to span multiple pages
       final longText = List.generate(200, (i) => 'あ').join();
 
       await tester.pumpWidget(
-        ProviderScope(child: MaterialApp(
-              locale: const Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: SizedBox(
-              width: 100, // narrow to force multiple pages
-              height: 400,
-              child: VerticalTextViewer(
-                segments: [PlainTextSegment(longText)],
-                baseStyle: const TextStyle(fontSize: 14),
+        ProviderScope(
+          child: MaterialApp(
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(
+                width: 100, // narrow to force multiple pages
+                height: 400,
+                child: VerticalTextViewer(
+                  segments: [PlainTextSegment(longText)],
+                  baseStyle: const TextStyle(fontSize: 14),
+                ),
               ),
             ),
           ),
-        )),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -62,23 +67,25 @@ void main() {
 
       // Update with TTS highlight pointing to later text
       await tester.pumpWidget(
-        ProviderScope(child: MaterialApp(
-              locale: const Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: SizedBox(
-              width: 100,
-              height: 400,
-              child: VerticalTextViewer(
-                segments: [PlainTextSegment(longText)],
-                baseStyle: const TextStyle(fontSize: 14),
-                ttsHighlightStart: 190,
-                ttsHighlightEnd: 200,
+        ProviderScope(
+          child: MaterialApp(
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(
+                width: 100,
+                height: 400,
+                child: VerticalTextViewer(
+                  segments: [PlainTextSegment(longText)],
+                  baseStyle: const TextStyle(fontSize: 14),
+                  ttsHighlightStart: 190,
+                  ttsHighlightEnd: 200,
+                ),
               ),
             ),
           ),
-        )),
+        ),
       );
       await tester.pumpAndSettle();
 

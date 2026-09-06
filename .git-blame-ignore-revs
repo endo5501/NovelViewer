@@ -1,0 +1,13 @@
+# Revisions to skip in `git blame`.
+#
+# Only purely mechanical, whole-repository reformats belong here — commits that
+# moved lines without changing behaviour. Never add a commit that also contains
+# a real edit, or blame will hide that edit's author.
+#
+# Enable locally with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub applies this file automatically.
+
+# style: apply dart format across the repository (394 files)
+01b4b317d6194ac63e509046da2ee8fb26fe3cec

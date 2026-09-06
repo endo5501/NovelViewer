@@ -16,8 +16,9 @@ class LlmResponseFormatException implements Exception {
   /// the cause is diagnosable without letting logs/exceptions grow unbounded.
   factory LlmResponseFormatException.withBody(String reason, String body) {
     const maxPrefix = 200;
-    final prefix =
-        body.length <= maxPrefix ? body : body.substring(0, maxPrefix);
+    final prefix = body.length <= maxPrefix
+        ? body
+        : body.substring(0, maxPrefix);
     return LlmResponseFormatException(
       '$reason (length=${body.length} prefix=$prefix)',
     );

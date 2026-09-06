@@ -19,15 +19,14 @@ void main() {
   });
 
   Episode ep(int i) => Episode(
-        index: i,
-        title: '第$i話',
-        url: Uri.parse('https://example.com/ep/$i'),
-        updatedAt: '2025/01/01 00:00',
-      );
+    index: i,
+    title: '第$i話',
+    url: Uri.parse('https://example.com/ep/$i'),
+    updatedAt: '2025/01/01 00:00',
+  );
 
   group('Request timeout (F103)', () {
-    test('episode fetch that exceeds the timeout is counted as failed',
-        () async {
+    test('episode fetch that exceeds the timeout is counted as failed', () async {
       // Index responds immediately; the episode request stalls past the timeout.
       final client = routingClient([
         const FakeRoute('/index', body: 'index'),
@@ -73,8 +72,9 @@ void main() {
     });
 
     test('timeout is configurable (default differs from injected)', () {
-      final service =
-          DownloadService(requestTimeout: const Duration(seconds: 5));
+      final service = DownloadService(
+        requestTimeout: const Duration(seconds: 5),
+      );
       expect(service.requestTimeout, const Duration(seconds: 5));
     });
   });

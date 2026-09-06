@@ -21,8 +21,9 @@ void main() {
     prefs = await SharedPreferences.getInstance();
   });
   group('HomeScreen 3-column layout', () {
-    testWidgets('right column is hidden by default on launch',
-        (WidgetTester tester) async {
+    testWidgets('right column is hidden by default on launch', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -39,30 +40,32 @@ void main() {
       expect(find.byType(VerticalDivider), findsNWidgets(1));
     });
 
-    testWidgets('displays three columns separated by vertical dividers when right column shown',
-        (WidgetTester tester) async {
-      late ProviderContainer container;
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: const NovelViewerApp(),
-        ),
-      );
+    testWidgets(
+      'displays three columns separated by vertical dividers when right column shown',
+      (WidgetTester tester) async {
+        late ProviderContainer container;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              libraryPathProvider.overrideWithValue('/library'),
+            ],
+            child: const NovelViewerApp(),
+          ),
+        );
 
-      container = ProviderScope.containerOf(
-        tester.element(find.byType(NovelViewerApp)),
-      );
-      container.read(rightColumnVisibleProvider.notifier).toggle();
-      await tester.pump();
+        container = ProviderScope.containerOf(
+          tester.element(find.byType(NovelViewerApp)),
+        );
+        container.read(rightColumnVisibleProvider.notifier).toggle();
+        await tester.pump();
 
-      expect(find.byKey(const Key('left_column')), findsOneWidget);
-      expect(find.byKey(const Key('center_column')), findsOneWidget);
-      expect(find.byKey(const Key('right_column')), findsOneWidget);
-      expect(find.byType(VerticalDivider), findsNWidgets(2));
-    });
+        expect(find.byKey(const Key('left_column')), findsOneWidget);
+        expect(find.byKey(const Key('center_column')), findsOneWidget);
+        expect(find.byKey(const Key('right_column')), findsOneWidget);
+        expect(find.byType(VerticalDivider), findsNWidgets(2));
+      },
+    );
 
     testWidgets('left column has fixed width', (WidgetTester tester) async {
       await tester.pumpWidget(
@@ -76,16 +79,19 @@ void main() {
       );
 
       final leftColumn = tester.widget<SizedBox>(
-        find.ancestor(
-          of: find.byKey(const Key('left_column')),
-          matching: find.byType(SizedBox),
-        ).first,
+        find
+            .ancestor(
+              of: find.byKey(const Key('left_column')),
+              matching: find.byType(SizedBox),
+            )
+            .first,
       );
       expect(leftColumn.width, isNotNull);
     });
 
-    testWidgets('right column has fixed width when shown',
-        (WidgetTester tester) async {
+    testWidgets('right column has fixed width when shown', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -103,51 +109,59 @@ void main() {
       await tester.pump();
 
       final rightColumn = tester.widget<SizedBox>(
-        find.ancestor(
-          of: find.byKey(const Key('right_column')),
-          matching: find.byType(SizedBox),
-        ).first,
+        find
+            .ancestor(
+              of: find.byKey(const Key('right_column')),
+              matching: find.byType(SizedBox),
+            )
+            .first,
       );
       expect(rightColumn.width, isNotNull);
     });
 
-    testWidgets('right column is a SearchResultsPanel (no wrapper) when shown',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: const NovelViewerApp(),
-        ),
-      );
+    testWidgets(
+      'right column is a SearchResultsPanel (no wrapper) when shown',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              libraryPathProvider.overrideWithValue('/library'),
+            ],
+            child: const NovelViewerApp(),
+          ),
+        );
 
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(NovelViewerApp)),
-      );
-      container.read(rightColumnVisibleProvider.notifier).toggle();
-      await tester.pump();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(NovelViewerApp)),
+        );
+        container.read(rightColumnVisibleProvider.notifier).toggle();
+        await tester.pump();
 
-      final rightColumnWidget =
-          tester.widget(find.byKey(const Key('right_column')));
-      expect(rightColumnWidget, isA<SearchResultsPanel>(),
+        final rightColumnWidget = tester.widget(
+          find.byKey(const Key('right_column')),
+        );
+        expect(
+          rightColumnWidget,
+          isA<SearchResultsPanel>(),
           reason:
               'After llm-summary-hover-popup the right column is search-only '
-              '— it should be a SearchResultsPanel directly, not a wrapper');
-    });
+              '— it should be a SearchResultsPanel directly, not a wrapper',
+        );
+      },
+    );
   });
 
   group('HomeScreen AppBar title', () {
-    testWidgets('shows NovelViewer when no novel is selected',
-        (WidgetTester tester) async {
+    testWidgets('shows NovelViewer when no novel is selected', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
-            selectedNovelTitleProvider
-                .overrideWith((ref) async => null),
+            selectedNovelTitleProvider.overrideWith((ref) async => null),
           ],
           child: const NovelViewerApp(),
         ),
@@ -159,15 +173,15 @@ void main() {
       expect(titleWidget.data, 'NovelViewer');
     });
 
-    testWidgets('shows novel title when a novel is selected',
-        (WidgetTester tester) async {
+    testWidgets('shows novel title when a novel is selected', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
-            selectedNovelTitleProvider
-                .overrideWith((ref) async => '異世界転生物語'),
+            selectedNovelTitleProvider.overrideWith((ref) async => '異世界転生物語'),
           ],
           child: const NovelViewerApp(),
         ),
@@ -179,8 +193,9 @@ void main() {
       expect(titleWidget.data, '異世界転生物語');
     });
 
-    testWidgets('shows "name (N/M)" suffix when a file is selected',
-        (WidgetTester tester) async {
+    testWidgets('shows "name (N/M)" suffix when a file is selected', (
+      WidgetTester tester,
+    ) async {
       const file = FileEntry(
         name: '049-戦闘.txt',
         path: '/library/n1234/049-戦闘.txt',
@@ -190,8 +205,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
-            selectedFileProgressTitleProvider
-                .overrideWithValue('異世界転生 — 049-戦闘.txt (49/200)'),
+            selectedFileProgressTitleProvider.overrideWithValue(
+              '異世界転生 — 049-戦闘.txt (49/200)',
+            ),
           ],
           child: const NovelViewerApp(),
         ),
@@ -205,8 +221,9 @@ void main() {
       expect(titleWidget.data, '異世界転生 — 049-戦闘.txt (49/200)');
     });
 
-    testWidgets('title uses ellipsis overflow with maxLines=1',
-        (WidgetTester tester) async {
+    testWidgets('title uses ellipsis overflow with maxLines=1', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -232,8 +249,9 @@ void main() {
   group('HomeScreen right column toggle', () {
     const toggleButtonKey = Key('toggle_right_column_button');
 
-    testWidgets('toggle button is displayed in AppBar',
-        (WidgetTester tester) async {
+    testWidgets('toggle button is displayed in AppBar', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -247,8 +265,9 @@ void main() {
       expect(find.byKey(toggleButtonKey), findsOneWidget);
     });
 
-    testWidgets('clicking toggle shows right column and divider',
-        (WidgetTester tester) async {
+    testWidgets('clicking toggle shows right column and divider', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -272,8 +291,9 @@ void main() {
       expect(find.byType(VerticalDivider), findsNWidgets(2));
     });
 
-    testWidgets('icon is view_sidebar by default (right column hidden)',
-        (WidgetTester tester) async {
+    testWidgets('icon is view_sidebar by default (right column hidden)', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -288,8 +308,9 @@ void main() {
       expect(find.byIcon(Icons.vertical_split), findsNothing);
     });
 
-    testWidgets('icon changes to vertical_split when right column is shown',
-        (WidgetTester tester) async {
+    testWidgets('icon changes to vertical_split when right column is shown', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -308,8 +329,9 @@ void main() {
       expect(find.byIcon(Icons.view_sidebar), findsNothing);
     });
 
-    testWidgets('clicking toggle twice returns to hidden state',
-        (WidgetTester tester) async {
+    testWidgets('clicking toggle twice returns to hidden state', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -336,8 +358,9 @@ void main() {
   });
 
   group('HomeScreen keyboard shortcuts', () {
-    testWidgets('Ctrl+F sets searchQueryProvider from selectedTextProvider',
-        (WidgetTester tester) async {
+    testWidgets('Ctrl+F sets searchQueryProvider from selectedTextProvider', (
+      WidgetTester tester,
+    ) async {
       late ProviderContainer container;
 
       await tester.pumpWidget(
@@ -345,8 +368,7 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
-            fileContentProvider
-                .overrideWith((ref) async => 'テスト小説の内容です。'),
+            fileContentProvider.overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
           child: Builder(
             builder: (context) {
@@ -366,9 +388,9 @@ void main() {
       final element = tester.element(find.byType(NovelViewerApp).last);
       container = ProviderScope.containerOf(element);
 
-      container.read(selectedTextProvider.notifier).setSelection(
-            const ViewerSelection(text: '太郎', plainTextOffset: 0),
-          );
+      container
+          .read(selectedTextProvider.notifier)
+          .setSelection(const ViewerSelection(text: '太郎', plainTextOffset: 0));
 
       await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
@@ -378,8 +400,9 @@ void main() {
       expect(container.read(searchQueryProvider), '太郎');
     });
 
-    testWidgets('Ctrl+F with selected text clears stale selectedSearchMatch',
-        (WidgetTester tester) async {
+    testWidgets('Ctrl+F with selected text clears stale selectedSearchMatch', (
+      WidgetTester tester,
+    ) async {
       late ProviderContainer container;
 
       await tester.pumpWidget(
@@ -398,14 +421,12 @@ void main() {
 
       // Simulate stale match from a previous search
       container.read(searchQueryProvider.notifier).setQuery('太郎');
-      container.read(selectedSearchMatchProvider.notifier).select(
-            filePath: '/path/to/001.txt',
-            lineNumber: 3,
-            query: '太郎',
-          );
-      container.read(selectedTextProvider.notifier).setSelection(
-            const ViewerSelection(text: '花子', plainTextOffset: 0),
-          );
+      container
+          .read(selectedSearchMatchProvider.notifier)
+          .select(filePath: '/path/to/001.txt', lineNumber: 3, query: '太郎');
+      container
+          .read(selectedTextProvider.notifier)
+          .setSelection(const ViewerSelection(text: '花子', plainTextOffset: 0));
 
       await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
@@ -413,13 +434,18 @@ void main() {
       await tester.pump();
 
       expect(container.read(searchQueryProvider), '花子');
-      expect(container.read(selectedSearchMatchProvider), isNull,
-          reason: 'Ctrl+F with new selected text should clear stale '
-              'selectedSearchMatch from a previous search');
+      expect(
+        container.read(selectedSearchMatchProvider),
+        isNull,
+        reason:
+            'Ctrl+F with new selected text should clear stale '
+            'selectedSearchMatch from a previous search',
+      );
     });
 
-    testWidgets('Ctrl+F shows search box when no text is selected',
-        (WidgetTester tester) async {
+    testWidgets('Ctrl+F shows search box when no text is selected', (
+      WidgetTester tester,
+    ) async {
       late ProviderContainer container;
 
       await tester.pumpWidget(
@@ -447,8 +473,9 @@ void main() {
       expect(container.read(searchQueryProvider), isNull);
     });
 
-    testWidgets('Ctrl+F auto-shows right column when initially hidden',
-        (WidgetTester tester) async {
+    testWidgets('Ctrl+F auto-shows right column when initially hidden', (
+      WidgetTester tester,
+    ) async {
       late ProviderContainer container;
 
       await tester.pumpWidget(
@@ -478,53 +505,98 @@ void main() {
     });
 
     testWidgets(
-        'Escape on the focused search field closes search and right column',
-        (WidgetTester tester) async {
-      late ProviderContainer container;
+      'Escape on the focused search field closes search and right column',
+      (WidgetTester tester) async {
+        late ProviderContainer container;
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: const NovelViewerApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              libraryPathProvider.overrideWithValue('/library'),
+            ],
+            child: const NovelViewerApp(),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      final element = tester.element(find.byType(NovelViewerApp));
-      container = ProviderScope.containerOf(element);
+        final element = tester.element(find.byType(NovelViewerApp));
+        container = ProviderScope.containerOf(element);
 
-      // Open search via Ctrl+F: shows the box, opens the right column, and
-      // autofocuses the field.
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
-      await tester.pumpAndSettle();
+        // Open search via Ctrl+F: shows the box, opens the right column, and
+        // autofocuses the field.
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+        await tester.pumpAndSettle();
 
-      container.read(searchQueryProvider.notifier).setQuery('太郎');
-      container.read(selectedSearchMatchProvider.notifier).select(
-            filePath: '/path/to/001.txt',
-            lineNumber: 3,
-            query: '太郎',
-          );
-      await tester.pump();
+        container.read(searchQueryProvider.notifier).setQuery('太郎');
+        container
+            .read(selectedSearchMatchProvider.notifier)
+            .select(filePath: '/path/to/001.txt', lineNumber: 3, query: '太郎');
+        await tester.pump();
 
-      // Escape while the field is focused closes the whole search session.
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pump();
+        // Escape while the field is focused closes the whole search session.
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
 
-      expect(container.read(searchBoxVisibleProvider), isFalse);
-      expect(container.read(searchQueryProvider), isNull);
-      expect(container.read(selectedSearchMatchProvider), isNull);
-      expect(container.read(rightColumnVisibleProvider), isFalse,
-          reason: 'Closing search also closes the search-only right column');
-    });
+        expect(container.read(searchBoxVisibleProvider), isFalse);
+        expect(container.read(searchQueryProvider), isNull);
+        expect(container.read(selectedSearchMatchProvider), isNull);
+        expect(
+          container.read(rightColumnVisibleProvider),
+          isFalse,
+          reason: 'Closing search also closes the search-only right column',
+        );
+      },
+    );
 
     testWidgets(
-        'Ctrl+F with a persistent selection closes on the second press',
-        (WidgetTester tester) async {
+      'Ctrl+F with a persistent selection closes on the second press',
+      (WidgetTester tester) async {
+        late ProviderContainer container;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              libraryPathProvider.overrideWithValue('/library'),
+            ],
+            child: const NovelViewerApp(),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final element = tester.element(find.byType(NovelViewerApp));
+        container = ProviderScope.containerOf(element);
+
+        // A text selection persists across both presses (range search).
+        container
+            .read(selectedTextProvider.notifier)
+            .setSelection(
+              const ViewerSelection(text: '太郎', plainTextOffset: 0),
+            );
+
+        // First Ctrl+F runs an immediate search on the selection.
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+        await tester.pump();
+        expect(container.read(searchQueryProvider), '太郎');
+        expect(container.read(rightColumnVisibleProvider), isTrue);
+
+        // Second Ctrl+F with the SAME selection still active must close, not
+        // re-search.
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+        await tester.pump();
+        expect(container.read(searchQueryProvider), isNull);
+        expect(container.read(rightColumnVisibleProvider), isFalse);
+      },
+    );
+
+    testWidgets('Escape closes a selection-search that shows no search box', (
+      WidgetTester tester,
+    ) async {
       late ProviderContainer container;
       await tester.pumpWidget(
         ProviderScope(
@@ -539,55 +611,19 @@ void main() {
       final element = tester.element(find.byType(NovelViewerApp));
       container = ProviderScope.containerOf(element);
 
-      // A text selection persists across both presses (range search).
-      container.read(selectedTextProvider.notifier).setSelection(
-            const ViewerSelection(text: '太郎', plainTextOffset: 0),
-          );
-
-      // First Ctrl+F runs an immediate search on the selection.
+      container
+          .read(selectedTextProvider.notifier)
+          .setSelection(const ViewerSelection(text: '太郎', plainTextOffset: 0));
       await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
       await tester.pump();
       expect(container.read(searchQueryProvider), '太郎');
-      expect(container.read(rightColumnVisibleProvider), isTrue);
-
-      // Second Ctrl+F with the SAME selection still active must close, not
-      // re-search.
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
-      await tester.pump();
-      expect(container.read(searchQueryProvider), isNull);
-      expect(container.read(rightColumnVisibleProvider), isFalse);
-    });
-
-    testWidgets('Escape closes a selection-search that shows no search box',
-        (WidgetTester tester) async {
-      late ProviderContainer container;
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: const NovelViewerApp(),
-        ),
+      expect(
+        container.read(searchBoxVisibleProvider),
+        isFalse,
+        reason: 'Selection search shows results without the search box',
       );
-      await tester.pumpAndSettle();
-      final element = tester.element(find.byType(NovelViewerApp));
-      container = ProviderScope.containerOf(element);
-
-      container.read(selectedTextProvider.notifier).setSelection(
-            const ViewerSelection(text: '太郎', plainTextOffset: 0),
-          );
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
-      await tester.pump();
-      expect(container.read(searchQueryProvider), '太郎');
-      expect(container.read(searchBoxVisibleProvider), isFalse,
-          reason: 'Selection search shows results without the search box');
       expect(container.read(rightColumnVisibleProvider), isTrue);
 
       // No search field is shown, so Escape must close via the global handler.
@@ -597,8 +633,9 @@ void main() {
       expect(container.read(rightColumnVisibleProvider), isFalse);
     });
 
-    testWidgets('second Ctrl+F closes search and right column (toggle)',
-        (WidgetTester tester) async {
+    testWidgets('second Ctrl+F closes search and right column (toggle)', (
+      WidgetTester tester,
+    ) async {
       late ProviderContainer container;
 
       await tester.pumpWidget(
@@ -631,8 +668,9 @@ void main() {
       expect(container.read(rightColumnVisibleProvider), isFalse);
     });
 
-    testWidgets('Escape does nothing when no search is active',
-        (WidgetTester tester) async {
+    testWidgets('Escape does nothing when no search is active', (
+      WidgetTester tester,
+    ) async {
       late ProviderContainer container;
 
       await tester.pumpWidget(

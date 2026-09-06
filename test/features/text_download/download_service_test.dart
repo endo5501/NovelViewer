@@ -50,10 +50,7 @@ void main() {
     });
 
     test('sanitizes title in file name', () {
-      expect(
-        formatEpisodeFileName(1, '第一話/始まり', 10),
-        '01_第一話_始まり.txt',
-      );
+      expect(formatEpisodeFileName(1, '第一話/始まり', 10), '01_第一話_始まり.txt');
     });
   });
 
@@ -68,16 +65,19 @@ void main() {
       tempDir.deleteSync(recursive: true);
     });
 
-    test('createNovelDirectory creates directory with given folder name', () async {
-      final service = DownloadService();
-      final dir = await service.createNovelDirectory(
-        tempDir.path,
-        'narou_n1234ab',
-      );
+    test(
+      'createNovelDirectory creates directory with given folder name',
+      () async {
+        final service = DownloadService();
+        final dir = await service.createNovelDirectory(
+          tempDir.path,
+          'narou_n1234ab',
+        );
 
-      expect(dir.existsSync(), isTrue);
-      expect(dir.path, contains('narou_n1234ab'));
-    });
+        expect(dir.existsSync(), isTrue);
+        expect(dir.path, contains('narou_n1234ab'));
+      },
+    );
 
     test('buildFolderName returns site_type + novel_id for narou', () {
       final service = DownloadService();
@@ -89,50 +89,53 @@ void main() {
     test('buildFolderName returns site_type + novel_id for kakuyomu', () {
       final service = DownloadService();
       final site = KakuyomuSite();
-      final url =
-          Uri.parse('https://kakuyomu.jp/works/1177354054881162325');
+      final url = Uri.parse('https://kakuyomu.jp/works/1177354054881162325');
       expect(
         service.buildFolderName(site, url),
         'kakuyomu_1177354054881162325',
       );
     });
 
-    test('downloadNovel sends site requestHeaders with HTTP requests', () async {
-      final capturedHeaders = <Map<String, String>>[];
-      final mockClient = http_testing.MockClient((request) async {
-        capturedHeaders.add(request.headers);
-        // Return a minimal HTML page with a title and short story body
-        return http.Response(
-          '<html><body><h1 class="p-novel__title">Test</h1>'
-          '<div class="js-novel-text p-novel__text"><p>Body</p></div>'
-          '</body></html>',
-          200,
+    test(
+      'downloadNovel sends site requestHeaders with HTTP requests',
+      () async {
+        final capturedHeaders = <Map<String, String>>[];
+        final mockClient = http_testing.MockClient((request) async {
+          capturedHeaders.add(request.headers);
+          // Return a minimal HTML page with a title and short story body
+          return http.Response(
+            '<html><body><h1 class="p-novel__title">Test</h1>'
+            '<div class="js-novel-text p-novel__text"><p>Body</p></div>'
+            '</body></html>',
+            200,
+          );
+        });
+
+        final service = DownloadService(
+          client: mockClient,
+          requestDelay: Duration.zero,
         );
-      });
+        final site = NarouSite();
+        final url = Uri.parse('https://novel18.syosetu.com/n1234ab/');
 
-      final service = DownloadService(
-        client: mockClient,
-        requestDelay: Duration.zero,
-      );
-      final site = NarouSite();
-      final url = Uri.parse('https://novel18.syosetu.com/n1234ab/');
+        await service.downloadNovel(
+          site: site,
+          url: url,
+          outputPath: tempDir.path,
+        );
 
-      await service.downloadNovel(
-        site: site,
-        url: url,
-        outputPath: tempDir.path,
-      );
-
-      expect(capturedHeaders, isNotEmpty);
-      expect(capturedHeaders.first['Cookie'], 'over18=yes');
-      expect(capturedHeaders.first['User-Agent'], isNotNull);
-    });
+        expect(capturedHeaders, isNotEmpty);
+        expect(capturedHeaders.first['Cookie'], 'over18=yes');
+        expect(capturedHeaders.first['User-Agent'], isNotNull);
+      },
+    );
 
     test('buildFolderName returns site_type + novel_id for aozora', () {
       final service = DownloadService();
       final site = AozoraSite();
       final url = Uri.parse(
-          'https://www.aozora.gr.jp/cards/001779/files/57105_59659.html');
+        'https://www.aozora.gr.jp/cards/001779/files/57105_59659.html',
+      );
       expect(service.buildFolderName(site, url), 'aozora_57105_59659');
     });
 
@@ -160,7 +163,8 @@ void main() {
       );
       final site = AozoraSite();
       final url = Uri.parse(
-          'https://www.aozora.gr.jp/cards/000081/files/456_15050.html');
+        'https://www.aozora.gr.jp/cards/000081/files/456_15050.html',
+      );
 
       final result = await service.downloadNovel(
         site: site,

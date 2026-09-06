@@ -11,8 +11,7 @@ import 'helpers/download_test_helpers.dart';
 class _HeaderSite extends FakeNovelSite {
   final Map<String, String> headers;
 
-  _HeaderSite(this.headers)
-      : super(episodes: const [], bodyContent: '短編本文');
+  _HeaderSite(this.headers) : super(episodes: const [], bodyContent: '短編本文');
 
   @override
   Map<String, String> requestHeaders(Uri url) => headers;
@@ -24,7 +23,10 @@ void main() {
       const siteUa = 'NovelViewer (Flutter desktop app)';
       final captured = <String, String>{};
       final client = capturingHeadersClient(captured);
-      final service = DownloadService(client: client, requestDelay: Duration.zero);
+      final service = DownloadService(
+        client: client,
+        requestDelay: Duration.zero,
+      );
 
       await service.downloadNovel(
         site: _HeaderSite(const {'User-Agent': siteUa}),
@@ -38,7 +40,10 @@ void main() {
     test('default User-Agent is used when the site provides none', () async {
       final captured = <String, String>{};
       final client = capturingHeadersClient(captured);
-      final service = DownloadService(client: client, requestDelay: Duration.zero);
+      final service = DownloadService(
+        client: client,
+        requestDelay: Duration.zero,
+      );
 
       await service.downloadNovel(
         site: _HeaderSite(const {}),

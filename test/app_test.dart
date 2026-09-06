@@ -13,8 +13,9 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           libraryPathProvider.overrideWithValue('/tmp/test'),
-          currentDirectoryProvider
-              .overrideWith(() => CurrentDirectoryNotifier('/tmp/test')),
+          currentDirectoryProvider.overrideWith(
+            () => CurrentDirectoryNotifier('/tmp/test'),
+          ),
         ],
         child: const NovelViewerApp(),
       );
@@ -26,8 +27,7 @@ void main() {
 
       await tester.pumpWidget(createApp(prefs));
 
-      final materialApp =
-          tester.widget<MaterialApp>(find.byType(MaterialApp));
+      final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(materialApp.themeMode, ThemeMode.light);
     });
 
@@ -37,8 +37,7 @@ void main() {
 
       await tester.pumpWidget(createApp(prefs));
 
-      final materialApp =
-          tester.widget<MaterialApp>(find.byType(MaterialApp));
+      final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(materialApp.themeMode, ThemeMode.dark);
     });
 
@@ -48,8 +47,7 @@ void main() {
 
       await tester.pumpWidget(createApp(prefs));
 
-      final materialApp =
-          tester.widget<MaterialApp>(find.byType(MaterialApp));
+      final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(materialApp.darkTheme, isNotNull);
       expect(materialApp.darkTheme!.brightness, Brightness.dark);
     });

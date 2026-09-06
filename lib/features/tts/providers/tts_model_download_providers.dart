@@ -24,10 +24,7 @@ class TtsModelDownloadIdle extends TtsModelDownloadState {
 class TtsModelDownloadDownloading extends TtsModelDownloadState {
   final String currentFile;
   final double? progress;
-  const TtsModelDownloadDownloading({
-    required this.currentFile,
-    this.progress,
-  });
+  const TtsModelDownloadDownloading({required this.currentFile, this.progress});
 }
 
 class TtsModelDownloadCompleted extends TtsModelDownloadState {
@@ -42,8 +39,8 @@ class TtsModelDownloadError extends TtsModelDownloadState {
 
 final ttsModelDownloadProvider =
     NotifierProvider<TtsModelDownloadNotifier, TtsModelDownloadState>(
-  TtsModelDownloadNotifier.new,
-);
+      TtsModelDownloadNotifier.new,
+    );
 
 class TtsModelDownloadNotifier extends Notifier<TtsModelDownloadState> {
   late TtsModelDownloadService _service;
@@ -78,10 +75,7 @@ class TtsModelDownloadNotifier extends Notifier<TtsModelDownloadState> {
 
     final modelSize = ref.read(ttsModelSizeProvider);
 
-    state = const TtsModelDownloadDownloading(
-      currentFile: '',
-      progress: 0,
-    );
+    state = const TtsModelDownloadDownloading(currentFile: '', progress: 0);
 
     try {
       await _service.downloadModels(

@@ -14,8 +14,7 @@ class ContextChunker {
     for (final context in contexts) {
       final entrySize = context.length;
 
-      if (currentChunk.isNotEmpty &&
-          currentSize + entrySize > maxChunkSize) {
+      if (currentChunk.isNotEmpty && currentSize + entrySize > maxChunkSize) {
         chunks.add(currentChunk);
         currentChunk = <String>[];
         currentSize = 0;

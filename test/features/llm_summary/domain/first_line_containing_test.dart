@@ -14,10 +14,7 @@ void main() {
     });
 
     test('returns null when the word is not present', () {
-      expect(
-        findFirstLineContaining1Indexed('全く関係ない本文', '存在しない'),
-        isNull,
-      );
+      expect(findFirstLineContaining1Indexed('全く関係ない本文', '存在しない'), isNull);
     });
 
     test('returns null for empty content', () {
@@ -29,26 +26,28 @@ void main() {
       expect(findFirstLineContaining1Indexed(content, 'アリス'), 2);
     });
 
-    test('matches the first occurrence even if word appears multiple times',
-        () {
-      const content = '一行目\nアリスは少女\n二行目\nアリスは王女';
-      expect(findFirstLineContaining1Indexed(content, 'アリス'), 2);
-    });
+    test(
+      'matches the first occurrence even if word appears multiple times',
+      () {
+        const content = '一行目\nアリスは少女\n二行目\nアリスは王女';
+        expect(findFirstLineContaining1Indexed(content, 'アリス'), 2);
+      },
+    );
 
-    test('strips ruby tags before searching so the displayed text is matched',
-        () {
-      // Displayed text on line 2 reads "聖印を持つ", but the raw source has
-      // `<ruby>聖印<rt>せいいん</rt></ruby>を持つ`. A cached word "聖印を持つ"
-      // would not appear as a literal substring of the raw line, so the
-      // search has to ruby-strip the line first.
-      const content =
-          '冒頭\n<ruby>聖印<rt>せいいん</rt></ruby>を持つ\n末尾';
-      expect(findFirstLineContaining1Indexed(content, '聖印を持つ'), 2);
-    });
+    test(
+      'strips ruby tags before searching so the displayed text is matched',
+      () {
+        // Displayed text on line 2 reads "聖印を持つ", but the raw source has
+        // `<ruby>聖印<rt>せいいん</rt></ruby>を持つ`. A cached word "聖印を持つ"
+        // would not appear as a literal substring of the raw line, so the
+        // search has to ruby-strip the line first.
+        const content = '冒頭\n<ruby>聖印<rt>せいいん</rt></ruby>を持つ\n末尾';
+        expect(findFirstLineContaining1Indexed(content, '聖印を持つ'), 2);
+      },
+    );
 
     test('matches a non-ruby word on the same line that has ruby tags', () {
-      const content =
-          '冒頭\nアリスと<ruby>聖印<rt>せいいん</rt></ruby>を持つ\n末尾';
+      const content = '冒頭\nアリスと<ruby>聖印<rt>せいいん</rt></ruby>を持つ\n末尾';
       expect(findFirstLineContaining1Indexed(content, 'アリス'), 2);
     });
   });

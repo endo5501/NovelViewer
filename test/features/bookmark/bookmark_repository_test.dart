@@ -157,16 +157,18 @@ void main() {
       await repository.add(fileName: '001_chapter1.txt', lineNumber: 42);
       await repository.add(fileName: '002_chapter2.txt', lineNumber: 5);
 
-      final bookmarks =
-          await repository.findByFile(fileName: '001_chapter1.txt');
+      final bookmarks = await repository.findByFile(
+        fileName: '001_chapter1.txt',
+      );
       expect(bookmarks.length, 2);
       expect(bookmarks[0].lineNumber, 10);
       expect(bookmarks[1].lineNumber, 42);
     });
 
     test('returns empty list for file with no bookmarks', () async {
-      final bookmarks =
-          await repository.findByFile(fileName: 'nonexistent.txt');
+      final bookmarks = await repository.findByFile(
+        fileName: 'nonexistent.txt',
+      );
       expect(bookmarks, isEmpty);
     });
   });

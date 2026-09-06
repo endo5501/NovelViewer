@@ -87,7 +87,8 @@ class GenericWebSite extends NovelSite {
   @override
   String decodeBody(http.Response response) {
     final bytes = response.bodyBytes;
-    final charset = _charsetFromContentType(response.headers['content-type']) ??
+    final charset =
+        _charsetFromContentType(response.headers['content-type']) ??
         _charsetFromMeta(bytes);
     return _decodeBytes(bytes, charset);
   }
@@ -166,7 +167,8 @@ class GenericWebSite extends NovelSite {
     Element? best;
     double bestScore = 0;
     for (final element in body.querySelectorAll('*')) {
-      final score = _directParagraphTextLength(element) -
+      final score =
+          _directParagraphTextLength(element) -
           linkPenaltyK * _directLinkTextLength(element);
       if (score > bestScore) {
         bestScore = score;
@@ -198,8 +200,10 @@ class GenericWebSite extends NovelSite {
 
   String? _charsetFromContentType(String? contentType) {
     if (contentType == null) return null;
-    final match =
-        RegExp(r'charset=([\w-]+)', caseSensitive: false).firstMatch(contentType);
+    final match = RegExp(
+      r'charset=([\w-]+)',
+      caseSensitive: false,
+    ).firstMatch(contentType);
     return match?.group(1);
   }
 
@@ -211,9 +215,10 @@ class GenericWebSite extends NovelSite {
       bytes.length > 4096 ? bytes.sublist(0, 4096) : bytes,
       allowInvalid: true,
     );
-    final metaCharset =
-        RegExp(r'<meta[^>]+charset=["\x27]?([\w-]+)', caseSensitive: false)
-            .firstMatch(head);
+    final metaCharset = RegExp(
+      r'<meta[^>]+charset=["\x27]?([\w-]+)',
+      caseSensitive: false,
+    ).firstMatch(head);
     return metaCharset?.group(1);
   }
 

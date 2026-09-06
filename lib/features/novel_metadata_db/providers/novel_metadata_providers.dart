@@ -4,7 +4,9 @@ import 'package:novel_viewer/features/novel_metadata_db/data/novel_repository.da
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 
 final novelDatabaseProvider = Provider<NovelDatabase>((ref) {
-  throw UnimplementedError('novelDatabaseProvider must be overridden at startup');
+  throw UnimplementedError(
+    'novelDatabaseProvider must be overridden at startup',
+  );
 });
 
 final novelRepositoryProvider = Provider<NovelRepository>((ref) {

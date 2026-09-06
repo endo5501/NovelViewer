@@ -16,10 +16,7 @@ class UpdateBadge extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     return IconButton(
       key: const Key('update_badge_button'),
-      icon: const Badge(
-        smallSize: 8,
-        child: Icon(Icons.system_update_alt),
-      ),
+      icon: const Badge(smallSize: 8, child: Icon(Icons.system_update_alt)),
       tooltip: l10n.update_badgeTooltip,
       onPressed: () => UpdateDialog.show(context, available.release),
     );

@@ -223,17 +223,15 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         final badges =
             ref.watch(readingProgressBadgesProvider).value ?? const {};
         final items = [
-          ...contents.subdirectories.map(
-            (dir) {
-              final isNovel = isNovelFolder(dir.name, novelFolderNames);
-              return _buildDirectoryTile(
-                context,
-                dir,
-                isNovel,
-                isNovel ? badges[dir.name] : null,
-              );
-            },
-          ),
+          ...contents.subdirectories.map((dir) {
+            final isNovel = isNovelFolder(dir.name, novelFolderNames);
+            return _buildDirectoryTile(
+              context,
+              dir,
+              isNovel,
+              isNovel ? badges[dir.name] : null,
+            );
+          }),
           ...contents.files.map(
             (file) => _buildFileTile(
               context,
@@ -269,8 +267,9 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         message: file.name,
         child: Text(
           file.name,
-          style:
-              isSelected ? const TextStyle(fontWeight: FontWeight.w600) : null,
+          style: isSelected
+              ? const TextStyle(fontWeight: FontWeight.w600)
+              : null,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),

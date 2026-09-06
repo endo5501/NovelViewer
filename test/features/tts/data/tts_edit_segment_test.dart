@@ -88,31 +88,33 @@ void main() {
       expect(result[1].dbRecordExists, false);
     });
 
-    test('handles DB segment with null audio_data (edited but not generated)',
-        () {
-      final originals = [
-        const TextSegment(text: '原文テキスト。', offset: 0, length: 7),
-      ];
+    test(
+      'handles DB segment with null audio_data (edited but not generated)',
+      () {
+        final originals = [
+          const TextSegment(text: '原文テキスト。', offset: 0, length: 7),
+        ];
 
-      final dbSegments = [
-        _seg(
-          segmentIndex: 0,
-          text: '編集済みテキスト。',
-          audioData: null,
-          refWavPath: null,
-          memo: null,
-        ),
-      ];
+        final dbSegments = [
+          _seg(
+            segmentIndex: 0,
+            text: '編集済みテキスト。',
+            audioData: null,
+            refWavPath: null,
+            memo: null,
+          ),
+        ];
 
-      final result = TtsEditSegment.mergeSegments(
-        originalSegments: originals,
-        dbSegments: dbSegments,
-      );
+        final result = TtsEditSegment.mergeSegments(
+          originalSegments: originals,
+          dbSegments: dbSegments,
+        );
 
-      expect(result[0].text, '編集済みテキスト。');
-      expect(result[0].hasAudio, false);
-      expect(result[0].dbRecordExists, true);
-    });
+        expect(result[0].text, '編集済みテキスト。');
+        expect(result[0].hasAudio, false);
+        expect(result[0].dbRecordExists, true);
+      },
+    );
 
     test('handles mixed state with some DB records and some without', () {
       final originals = [

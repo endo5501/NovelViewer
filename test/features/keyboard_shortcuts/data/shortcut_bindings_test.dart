@@ -32,22 +32,30 @@ void main() {
   group('defaultShortcutBindings', () {
     test('uses Control modifier on non-macOS', () {
       final b = defaultShortcutBindings(isMacOS: false);
-      expect(b[ShortcutAction.search],
-          KeyBinding(keyId: LogicalKeyboardKey.keyF.keyId, control: true));
-      expect(b[ShortcutAction.ttsToggle],
-          KeyBinding(keyId: LogicalKeyboardKey.keyT.keyId, control: true));
+      expect(
+        b[ShortcutAction.search],
+        KeyBinding(keyId: LogicalKeyboardKey.keyF.keyId, control: true),
+      );
+      expect(
+        b[ShortcutAction.ttsToggle],
+        KeyBinding(keyId: LogicalKeyboardKey.keyT.keyId, control: true),
+      );
     });
 
     test('uses Meta modifier on macOS', () {
       final b = defaultShortcutBindings(isMacOS: true);
-      expect(b[ShortcutAction.search],
-          KeyBinding(keyId: LogicalKeyboardKey.keyF.keyId, meta: true));
+      expect(
+        b[ShortcutAction.search],
+        KeyBinding(keyId: LogicalKeyboardKey.keyF.keyId, meta: true),
+      );
     });
 
     test('switchPane defaults to bare Tab', () {
       final b = defaultShortcutBindings(isMacOS: false);
-      expect(b[ShortcutAction.switchPane],
-          KeyBinding(keyId: LogicalKeyboardKey.tab.keyId));
+      expect(
+        b[ShortcutAction.switchPane],
+        KeyBinding(keyId: LogicalKeyboardKey.tab.keyId),
+      );
     });
 
     test('provides a binding for every customizable action', () {
@@ -82,7 +90,10 @@ void main() {
       expect(
         decoded[ShortcutAction.search],
         KeyBinding(
-            keyId: LogicalKeyboardKey.keyG.keyId, control: true, shift: true),
+          keyId: LogicalKeyboardKey.keyG.keyId,
+          control: true,
+          shift: true,
+        ),
       );
     });
   });
@@ -95,20 +106,24 @@ void main() {
 
     test('missing actions are filled from defaults', () {
       final defaults = defaultShortcutBindings(isMacOS: false);
-      final partial = ShortcutBindingCodec.encode(
-        {ShortcutAction.bookmark: defaults[ShortcutAction.bookmark]!},
-      );
+      final partial = ShortcutBindingCodec.encode({
+        ShortcutAction.bookmark: defaults[ShortcutAction.bookmark]!,
+      });
       final decoded = ShortcutBindingCodec.decode(partial, defaults: defaults);
       expect(decoded[ShortcutAction.search], defaults[ShortcutAction.search]);
       expect(
-          decoded[ShortcutAction.bookmark], defaults[ShortcutAction.bookmark]);
+        decoded[ShortcutAction.bookmark],
+        defaults[ShortcutAction.bookmark],
+      );
       expect(decoded.keys.toSet(), ShortcutAction.values.toSet());
     });
 
     test('malformed JSON yields the provided defaults', () {
       final defaults = defaultShortcutBindings(isMacOS: false);
-      expect(ShortcutBindingCodec.decode('not json {', defaults: defaults),
-          defaults);
+      expect(
+        ShortcutBindingCodec.decode('not json {', defaults: defaults),
+        defaults,
+      );
     });
   });
 }

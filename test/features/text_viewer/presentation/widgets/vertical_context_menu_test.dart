@@ -5,26 +5,28 @@ import 'package:novel_viewer/features/text_viewer/presentation/widgets/vertical_
 
 void main() {
   group('buildVerticalContextMenuItems', () {
-    test('produces 4 entries: copy, addToDictionary, analyze(なし), analyze(あり)',
-        () {
-      final items = buildVerticalContextMenuItems(
-        copyLabel: 'コピー',
-        addToDictionaryLabel: '辞書追加',
-        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
-        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
-      );
-      expect(items, hasLength(4));
-      final values = items
-          .whereType<PopupMenuItem<VerticalContextAction>>()
-          .map((i) => i.value)
-          .toList();
-      expect(values, [
-        VerticalContextAction.copy,
-        VerticalContextAction.addToDictionary,
-        VerticalContextAction.analyzeNoSpoiler,
-        VerticalContextAction.analyzeSpoiler,
-      ]);
-    });
+    test(
+      'produces 4 entries: copy, addToDictionary, analyze(なし), analyze(あり)',
+      () {
+        final items = buildVerticalContextMenuItems(
+          copyLabel: 'コピー',
+          addToDictionaryLabel: '辞書追加',
+          analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+          analyzeSpoilerLabel: '解析開始(ネタバレあり)',
+        );
+        expect(items, hasLength(4));
+        final values = items
+            .whereType<PopupMenuItem<VerticalContextAction>>()
+            .map((i) => i.value)
+            .toList();
+        expect(values, [
+          VerticalContextAction.copy,
+          VerticalContextAction.addToDictionary,
+          VerticalContextAction.analyzeNoSpoiler,
+          VerticalContextAction.analyzeSpoiler,
+        ]);
+      },
+    );
 
     testWidgets('items display their labels', (tester) async {
       final items = buildVerticalContextMenuItems(

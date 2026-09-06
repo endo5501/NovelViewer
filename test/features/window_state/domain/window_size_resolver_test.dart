@@ -146,16 +146,18 @@ void main() {
       );
     });
 
-    test('a stored size below the minimum is still capped by a tiny work area',
-        () {
-      expect(
-        resolveWindowSize(
-          const WindowState(width: 320, height: 240),
+    test(
+      'a stored size below the minimum is still capped by a tiny work area',
+      () {
+        expect(
+          resolveWindowSize(
+            const WindowState(width: 320, height: 240),
+            const Size(640, 480),
+          ),
           const Size(640, 480),
-        ),
-        const Size(640, 480),
-      );
-    });
+        );
+      },
+    );
   });
 
   group('resolveWindowSize - unusable work area', () {

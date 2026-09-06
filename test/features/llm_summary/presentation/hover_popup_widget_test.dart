@@ -53,11 +53,13 @@ ProviderScope _scopedWith({
 }) {
   return ProviderScope(
     overrides: [
-      hoverPopupCacheProvider(
-        (folderPath: 'novel_a', word: 'アリス'),
-      ).overrideWith((_) async => snapshots),
+      hoverPopupCacheProvider((
+        folderPath: 'novel_a',
+        word: 'アリス',
+      )).overrideWith((_) async => snapshots),
       llmSummaryRepositoryProvider.overrideWith(
-        (ref, folderPath) async => throw UnsupportedError('not needed in this test'),
+        (ref, folderPath) async =>
+            throw UnsupportedError('not needed in this test'),
       ),
     ],
     child: MaterialApp(
@@ -70,13 +72,13 @@ ProviderScope _scopedWith({
 }
 
 WordSummary _snap(int episode, String text) => WordSummary(
-      word: 'アリス',
-      coveredUpToEpisode: episode,
-      summary: text,
-      sourceFile: '${episode.toString().padLeft(3, '0')}.txt',
-      createdAt: DateTime.utc(2026, 5, 21),
-      updatedAt: DateTime.utc(2026, 5, 21),
-    );
+  word: 'アリス',
+  coveredUpToEpisode: episode,
+  summary: text,
+  sourceFile: '${episode.toString().padLeft(3, '0')}.txt',
+  createdAt: DateTime.utc(2026, 5, 21),
+  updatedAt: DateTime.utc(2026, 5, 21),
+);
 
 void main() {
   setUpAll(() {
@@ -86,82 +88,101 @@ void main() {
 
   group('HoverPopupWidget', () {
     testWidgets('hidden when there are no snapshots', (tester) async {
-      await tester.pumpWidget(_scopedWith(
-        snapshots: const [],
-        child: const HoverPopupWidget(
-          folderPath: 'novel_a',
-          word: 'アリス',
-          currentEpisode: 5,
-          currentFileName: '005.txt',
-          maxEpisodeInFolder: 10,
-          maxEpisodeFileName: '010.txt',
+      await tester.pumpWidget(
+        _scopedWith(
+          snapshots: const [],
+          child: const HoverPopupWidget(
+            folderPath: 'novel_a',
+            word: 'アリス',
+            currentEpisode: 5,
+            currentFileName: '005.txt',
+            maxEpisodeInFolder: 10,
+            maxEpisodeFileName: '010.txt',
+          ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('hover_popup_card')), findsNothing);
     });
 
-    testWidgets('renders the default snapshot label and summary text',
-        (tester) async {
-      await tester.pumpWidget(_scopedWith(
-        snapshots: [_snap(3, '序盤要約'), _snap(9, '中盤要約')],
-        child: const HoverPopupWidget(
-          folderPath: 'novel_a',
-          word: 'アリス',
-          currentEpisode: 6,
-          currentFileName: '006.txt',
-          maxEpisodeInFolder: 9,
-          maxEpisodeFileName: '009.txt',
+    testWidgets('renders the default snapshot label and summary text', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _scopedWith(
+          snapshots: [_snap(3, '序盤要約'), _snap(9, '中盤要約')],
+          child: const HoverPopupWidget(
+            folderPath: 'novel_a',
+            word: 'アリス',
+            currentEpisode: 6,
+            currentFileName: '006.txt',
+            maxEpisodeInFolder: 9,
+            maxEpisodeFileName: '009.txt',
+          ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('hover_popup_card')), findsOneWidget);
-      expect(find.text('序盤要約'), findsOneWidget,
-          reason: 'default = max{Sᵢ | Sᵢ ≤ 6} = 3');
+      expect(
+        find.text('序盤要約'),
+        findsOneWidget,
+        reason: 'default = max{Sᵢ | Sᵢ ≤ 6} = 3',
+      );
       expect(find.text('3ファイル時点の要約'), findsOneWidget);
     });
 
-    testWidgets('shows the future warning icon when only future snapshots exist',
-        (tester) async {
-      await tester.pumpWidget(_scopedWith(
-        snapshots: [_snap(9, '先の要約')],
-        child: const HoverPopupWidget(
-          folderPath: 'novel_a',
-          word: 'アリス',
-          currentEpisode: 6,
-          currentFileName: '006.txt',
-          maxEpisodeInFolder: 9,
-          maxEpisodeFileName: '009.txt',
-        ),
-      ));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'shows the future warning icon when only future snapshots exist',
+      (tester) async {
+        await tester.pumpWidget(
+          _scopedWith(
+            snapshots: [_snap(9, '先の要約')],
+            child: const HoverPopupWidget(
+              folderPath: 'novel_a',
+              word: 'アリス',
+              currentEpisode: 6,
+              currentFileName: '006.txt',
+              maxEpisodeInFolder: 9,
+              maxEpisodeFileName: '009.txt',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('hover_popup_future_warning')),
-          findsOneWidget);
-      expect(find.text('先の要約'), findsOneWidget);
-    });
+        expect(
+          find.byKey(const Key('hover_popup_future_warning')),
+          findsOneWidget,
+        );
+        expect(find.text('先の要約'), findsOneWidget);
+      },
+    );
 
-    testWidgets('arrow buttons are disabled when only one snapshot exists',
-        (tester) async {
-      await tester.pumpWidget(_scopedWith(
-        snapshots: [_snap(5, 'only')],
-        child: const HoverPopupWidget(
-          folderPath: 'novel_a',
-          word: 'アリス',
-          currentEpisode: 5,
-          currentFileName: '005.txt',
-          maxEpisodeInFolder: 5,
-          maxEpisodeFileName: '005.txt',
+    testWidgets('arrow buttons are disabled when only one snapshot exists', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _scopedWith(
+          snapshots: [_snap(5, 'only')],
+          child: const HoverPopupWidget(
+            folderPath: 'novel_a',
+            word: 'アリス',
+            currentEpisode: 5,
+            currentFileName: '005.txt',
+            maxEpisodeInFolder: 5,
+            maxEpisodeFileName: '005.txt',
+          ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       final prev = tester.widget<IconButton>(
-          find.byKey(const Key('hover_popup_snapshot_prev')));
+        find.byKey(const Key('hover_popup_snapshot_prev')),
+      );
       final next = tester.widget<IconButton>(
-          find.byKey(const Key('hover_popup_snapshot_next')));
+        find.byKey(const Key('hover_popup_snapshot_next')),
+      );
       expect(prev.onPressed, isNull);
       expect(next.onPressed, isNull);
     });
@@ -169,96 +190,117 @@ void main() {
 
   group('Re-analysis menu integration', () {
     testWidgets(
-        'tapping a menu item invokes the runner with the resolved episode + '
-        'source file and resets the popup notifier activeEpisode',
-        (tester) async {
-      final runner = _RecordingAnalysisRunner();
-      final container = ProviderContainer(overrides: [
-        hoverPopupCacheProvider(
-          (folderPath: 'novel_a', word: 'アリス'),
-        ).overrideWith((_) async => [_snap(3, '序盤要約'), _snap(9, '中盤要約')]),
-        llmSummaryRepositoryProvider.overrideWith(
-          (ref, folderPath) async => throw UnsupportedError('not needed in this test'),
-        ),
-        analysisRunnerProvider.overrideWithValue(runner),
-      ]);
-      addTearDown(container.dispose);
+      'tapping a menu item invokes the runner with the resolved episode + '
+      'source file and resets the popup notifier activeEpisode',
+      (tester) async {
+        final runner = _RecordingAnalysisRunner();
+        final container = ProviderContainer(
+          overrides: [
+            hoverPopupCacheProvider((
+              folderPath: 'novel_a',
+              word: 'アリス',
+            )).overrideWith((_) async => [_snap(3, '序盤要約'), _snap(9, '中盤要約')]),
+            llmSummaryRepositoryProvider.overrideWith(
+              (ref, folderPath) async =>
+                  throw UnsupportedError('not needed in this test'),
+            ),
+            analysisRunnerProvider.overrideWithValue(runner),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      // Pre-set the popup notifier as if the user had navigated to a
-      // specific snapshot — this lets the test verify the reset side-effect.
-      // We need the popup to be "visible" for setActiveEpisode to take.
-      container.read(hoverPopupProvider.notifier).show(
-            word: 'アリス',
-            position: const Offset(0, 0),
-            token: (start: 0, end: 3),
-          );
-      container.read(hoverPopupProvider.notifier).setActiveEpisode(9);
-      expect(container.read(hoverPopupProvider).activeEpisode, 9);
+        // Pre-set the popup notifier as if the user had navigated to a
+        // specific snapshot — this lets the test verify the reset side-effect.
+        // We need the popup to be "visible" for setActiveEpisode to take.
+        container
+            .read(hoverPopupProvider.notifier)
+            .show(
+              word: 'アリス',
+              position: const Offset(0, 0),
+              token: (start: 0, end: 3),
+            );
+        container.read(hoverPopupProvider.notifier).setActiveEpisode(9);
+        expect(container.read(hoverPopupProvider).activeEpisode, 9);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Material(
-              child: HoverPopupWidget(
-                folderPath: 'novel_a',
-                word: 'アリス',
-                currentEpisode: 6,
-                currentFileName: '006.txt',
-                maxEpisodeInFolder: 9,
-                maxEpisodeFileName: '009.txt',
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              locale: Locale('ja'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Material(
+                child: HoverPopupWidget(
+                  folderPath: 'novel_a',
+                  word: 'アリス',
+                  currentEpisode: 6,
+                  currentFileName: '006.txt',
+                  maxEpisodeInFolder: 9,
+                  maxEpisodeFileName: '009.txt',
+                ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Open the re-analyze menu, then tap "up to current page".
-      await tester.tap(find.byKey(const Key('hover_popup_reanalyze_button')));
-      await tester.pumpAndSettle();
-      await tester.tap(
-          find.byKey(const Key('hover_popup_reanalyze_up_to_current')));
-      await tester.pumpAndSettle();
+        // Open the re-analyze menu, then tap "up to current page".
+        await tester.tap(find.byKey(const Key('hover_popup_reanalyze_button')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const Key('hover_popup_reanalyze_up_to_current')),
+        );
+        await tester.pumpAndSettle();
 
-      expect(runner.callCount, 1);
-      expect(runner.lastWord, 'アリス');
-      expect(runner.lastCoveredUpToEpisode, 6,
-          reason: 'up to current page = currentEpisode (6)');
-      expect(runner.lastSourceFileName, '006.txt');
+        expect(runner.callCount, 1);
+        expect(runner.lastWord, 'アリス');
+        expect(
+          runner.lastCoveredUpToEpisode,
+          6,
+          reason: 'up to current page = currentEpisode (6)',
+        );
+        expect(runner.lastSourceFileName, '006.txt');
 
-      // The recording runner doesn't itself invalidate the cache /
-      // reset activeEpisode (that's done inside DefaultAnalysisRunner.run
-      // post-await). To exercise the reset, we directly invoke the same
-      // logic the production runner would: invalidate + reset.
-      container.invalidate(
-          hoverPopupCacheProvider((folderPath: 'novel_a', word: 'アリス')));
-      final hoverState = container.read(hoverPopupProvider);
-      if (hoverState.word == 'アリス') {
-        container.read(hoverPopupProvider.notifier).setActiveEpisode(null);
-      }
+        // The recording runner doesn't itself invalidate the cache /
+        // reset activeEpisode (that's done inside DefaultAnalysisRunner.run
+        // post-await). To exercise the reset, we directly invoke the same
+        // logic the production runner would: invalidate + reset.
+        container.invalidate(
+          hoverPopupCacheProvider((folderPath: 'novel_a', word: 'アリス')),
+        );
+        final hoverState = container.read(hoverPopupProvider);
+        if (hoverState.word == 'アリス') {
+          container.read(hoverPopupProvider.notifier).setActiveEpisode(null);
+        }
 
-      expect(container.read(hoverPopupProvider).activeEpisode, isNull,
-          reason: 'after re-analysis invalidation, activeEpisode is reset so '
+        expect(
+          container.read(hoverPopupProvider).activeEpisode,
+          isNull,
+          reason:
+              'after re-analysis invalidation, activeEpisode is reset so '
               'the popup falls back to the default-selection rule against '
-              'the freshly fetched snapshot list');
-    });
+              'the freshly fetched snapshot list',
+        );
+      },
+    );
 
-    testWidgets('"up to all" menu item resolves to maxEpisodeInFolder',
-        (tester) async {
+    testWidgets('"up to all" menu item resolves to maxEpisodeInFolder', (
+      tester,
+    ) async {
       final runner = _RecordingAnalysisRunner();
-      final container = ProviderContainer(overrides: [
-        hoverPopupCacheProvider(
-          (folderPath: 'novel_a', word: 'アリス'),
-        ).overrideWith((_) async => [_snap(3, '序盤要約')]),
-        llmSummaryRepositoryProvider.overrideWith(
-          (ref, folderPath) async => throw UnsupportedError('not needed in this test'),
-        ),
-        analysisRunnerProvider.overrideWithValue(runner),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          hoverPopupCacheProvider((
+            folderPath: 'novel_a',
+            word: 'アリス',
+          )).overrideWith((_) async => [_snap(3, '序盤要約')]),
+          llmSummaryRepositoryProvider.overrideWith(
+            (ref, folderPath) async =>
+                throw UnsupportedError('not needed in this test'),
+          ),
+          analysisRunnerProvider.overrideWithValue(runner),
+        ],
+      );
       addTearDown(container.dispose);
 
       await tester.pumpWidget(
@@ -285,8 +327,9 @@ void main() {
 
       await tester.tap(find.byKey(const Key('hover_popup_reanalyze_button')));
       await tester.pumpAndSettle();
-      await tester
-          .tap(find.byKey(const Key('hover_popup_reanalyze_up_to_all')));
+      await tester.tap(
+        find.byKey(const Key('hover_popup_reanalyze_up_to_all')),
+      );
       await tester.pumpAndSettle();
 
       expect(runner.callCount, 1);
@@ -298,10 +341,7 @@ void main() {
   group('shouldAppendOverwriteSuffix', () {
     test('returns true when an existing snapshot matches the candidate', () {
       expect(
-        shouldAppendOverwriteSuffix(
-          [_snap(3, ''), _snap(9, '')],
-          3,
-        ),
+        shouldAppendOverwriteSuffix([_snap(3, ''), _snap(9, '')], 3),
         isTrue,
       );
     });

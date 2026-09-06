@@ -60,8 +60,11 @@ void main() {
       expect(map['created_at'], now.toIso8601String());
       expect(map['updated_at'], now.toIso8601String());
       expect(map.containsKey('id'), isFalse);
-      expect(map.containsKey('summary_type'), isFalse,
-          reason: 'summary_type column is removed in v5');
+      expect(
+        map.containsKey('summary_type'),
+        isFalse,
+        reason: 'summary_type column is removed in v5',
+      );
     });
 
     test('fromMap creates from database map', () {

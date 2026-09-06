@@ -44,28 +44,30 @@ void main() {
     expect(container.read(markedWordsProvider), isEmpty);
   });
 
-  test('exposes a word -> MarkStyle.solid map derived from history entries',
-      () async {
-    final entries = [
-      _entry(folder: 'my_novel', word: 'アリス', episode: 40),
-      _entry(folder: 'my_novel', word: 'ボブ', episode: 41),
-      _entry(folder: 'my_novel', word: '聖印', episode: 42),
-    ];
+  test(
+    'exposes a word -> MarkStyle.solid map derived from history entries',
+    () async {
+      final entries = [
+        _entry(folder: 'my_novel', word: 'アリス', episode: 40),
+        _entry(folder: 'my_novel', word: 'ボブ', episode: 41),
+        _entry(folder: 'my_novel', word: '聖印', episode: 42),
+      ];
 
-    final container = ProviderContainer(
-      overrides: [
-        llmSummaryHistoryProvider.overrideWith(() => _StubHistory(entries)),
-      ],
-    );
-    addTearDown(container.dispose);
+      final container = ProviderContainer(
+        overrides: [
+          llmSummaryHistoryProvider.overrideWith(() => _StubHistory(entries)),
+        ],
+      );
+      addTearDown(container.dispose);
 
-    await container.read(llmSummaryHistoryProvider.future);
+      await container.read(llmSummaryHistoryProvider.future);
 
-    final marks = container.read(markedWordsProvider);
-    expect(marks['アリス'], MarkStyle.solid);
-    expect(marks['ボブ'], MarkStyle.solid);
-    expect(marks['聖印'], MarkStyle.solid);
-  });
+      final marks = container.read(markedWordsProvider);
+      expect(marks['アリス'], MarkStyle.solid);
+      expect(marks['ボブ'], MarkStyle.solid);
+      expect(marks['聖印'], MarkStyle.solid);
+    },
+  );
 
   test('excludes words shorter than 2 characters', () async {
     final entries = [

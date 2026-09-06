@@ -48,10 +48,12 @@ class FakeAudioRecorder implements AudioRecorder {
   Future<bool> hasPermission({bool request = true}) async => permissionGranted;
 
   @override
-  Future<Amplitude> getAmplitude() async => Amplitude(current: -20.0, max: -10.0);
+  Future<Amplitude> getAmplitude() async =>
+      Amplitude(current: -20.0, max: -10.0);
 
   @override
-  Stream<Amplitude> onAmplitudeChanged(Duration interval) => _amplitudeController.stream;
+  Stream<Amplitude> onAmplitudeChanged(Duration interval) =>
+      _amplitudeController.stream;
 
   @override
   Stream<RecordState> onStateChanged() => _stateController.stream;
@@ -78,7 +80,8 @@ class FakeAudioRecorder implements AudioRecorder {
   Future<bool> isEncoderSupported(AudioEncoder encoder) async => true;
   @override
   Future<void> setOnConfigChanged(
-          void Function(RecordConfig config)? callback) async {}
+    void Function(RecordConfig config)? callback,
+  ) async {}
   @override
   RecordIos? get ios => null;
 }

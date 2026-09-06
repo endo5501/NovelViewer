@@ -70,9 +70,9 @@ void main() {
     registry.ttsAudio('/lib/narou_n1');
     registry.ttsDictionary('/lib/narou_n1');
     registry.novelData('/lib/narou_n1');
-    container = ProviderContainer(overrides: [
-      perFolderDbRegistryProvider.overrideWithValue(registry),
-    ]);
+    container = ProviderContainer(
+      overrides: [perFolderDbRegistryProvider.overrideWithValue(registry)],
+    );
   });
 
   tearDown(() => container.dispose());
@@ -105,8 +105,12 @@ void main() {
         invalidate: recordingInvalidate,
       );
 
-      expect(log.where((e) => e.startsWith('close:')).toSet(),
-          {'close:episode', 'close:audio', 'close:dict', 'close:novel_data'});
+      expect(log.where((e) => e.startsWith('close:')).toSet(), {
+        'close:episode',
+        'close:audio',
+        'close:dict',
+        'close:novel_data',
+      });
     });
 
     test('invalidates all four per-folder database providers', () async {
@@ -128,8 +132,11 @@ void main() {
       );
 
       final key = folderDbKey(raw);
-      expect(invalidated.contains(ttsAudioDatabaseProvider(key)), isTrue,
-          reason: 'invalidate SHALL target the normalized key, not the raw path');
+      expect(
+        invalidated.contains(ttsAudioDatabaseProvider(key)),
+        isTrue,
+        reason: 'invalidate SHALL target the normalized key, not the raw path',
+      );
     });
   });
 }

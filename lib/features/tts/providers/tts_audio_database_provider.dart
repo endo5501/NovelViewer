@@ -11,17 +11,19 @@ import '../../../shared/database/per_folder_db_registry_provider.dart';
 /// normalized folder path) and releases it via `closeAll(folder)`. These
 /// providers no longer close handles in `onDispose`: ownership lives in one
 /// place so a new consumer cannot reintroduce the Windows file-lock bug.
-final ttsAudioDatabaseProvider =
-    Provider.family<TtsAudioDatabase, String>((ref, folderPath) {
+final ttsAudioDatabaseProvider = Provider.family<TtsAudioDatabase, String>((
+  ref,
+  folderPath,
+) {
   return ref.watch(perFolderDbRegistryProvider).ttsAudio(folderPath);
 });
 
 final ttsDictionaryDatabaseProvider =
     Provider.family<TtsDictionaryDatabase, String>((ref, folderPath) {
-  return ref.watch(perFolderDbRegistryProvider).ttsDictionary(folderPath);
-});
+      return ref.watch(perFolderDbRegistryProvider).ttsDictionary(folderPath);
+    });
 
 final episodeCacheDatabaseProvider =
     Provider.family<EpisodeCacheDatabase, String>((ref, folderPath) {
-  return ref.watch(perFolderDbRegistryProvider).episodeCache(folderPath);
-});
+      return ref.watch(perFolderDbRegistryProvider).episodeCache(folderPath);
+    });

@@ -40,25 +40,31 @@ void main() {
       expect(result, isNull);
     });
 
-    test('detects swipe with zero velocity when distance exceeds fallback threshold', () {
-      // Desktop scenario: user stops before releasing, velocity is zero
-      // Distance = 100px > kSwipeMinDistanceWithoutFling (80px)
-      final result = detectSwipeFromDrag(
-        startPosition: const Offset(200, 100),
-        endPosition: const Offset(100, 100),
-        velocity: Velocity.zero,
-      );
-      expect(result, SwipeDirection.left);
-    });
+    test(
+      'detects swipe with zero velocity when distance exceeds fallback threshold',
+      () {
+        // Desktop scenario: user stops before releasing, velocity is zero
+        // Distance = 100px > kSwipeMinDistanceWithoutFling (80px)
+        final result = detectSwipeFromDrag(
+          startPosition: const Offset(200, 100),
+          endPosition: const Offset(100, 100),
+          velocity: Velocity.zero,
+        );
+        expect(result, SwipeDirection.left);
+      },
+    );
 
-    test('returns null with zero velocity when distance is below fallback threshold', () {
-      // Distance = 60px, below kSwipeMinDistanceWithoutFling (80px)
-      final result = detectSwipeFromDrag(
-        startPosition: const Offset(100, 100),
-        endPosition: const Offset(160, 100),
-        velocity: Velocity.zero,
-      );
-      expect(result, isNull);
-    });
+    test(
+      'returns null with zero velocity when distance is below fallback threshold',
+      () {
+        // Distance = 60px, below kSwipeMinDistanceWithoutFling (80px)
+        final result = detectSwipeFromDrag(
+          startPosition: const Offset(100, 100),
+          endPosition: const Offset(160, 100),
+          velocity: Velocity.zero,
+        );
+        expect(result, isNull);
+      },
+    );
   });
 }

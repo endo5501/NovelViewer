@@ -25,8 +25,7 @@ class _InMemoryDictionaryRepository implements TtsDictionaryRepository {
       throw StateError('duplicate surface');
     }
     final id = _nextId++;
-    entries.add(
-        TtsDictionaryEntry(id: id, surface: surface, reading: reading));
+    entries.add(TtsDictionaryEntry(id: id, surface: surface, reading: reading));
     return id;
   }
 
@@ -43,8 +42,11 @@ class _InMemoryDictionaryRepository implements TtsDictionaryRepository {
     if (surface.isEmpty) throw ArgumentError('surface must not be empty');
     final index = entries.indexWhere((e) => e.id == id);
     if (index >= 0) {
-      entries[index] =
-          TtsDictionaryEntry(id: id, surface: surface, reading: reading);
+      entries[index] = TtsDictionaryEntry(
+        id: id,
+        surface: surface,
+        reading: reading,
+      );
     }
   }
 
@@ -56,7 +58,9 @@ class _InMemoryDictionaryRepository implements TtsDictionaryRepository {
   @override
   Future<String> applyDictionary(String text) async =>
       TtsDictionaryRepository.applyDictionaryWithEntries(
-          await getEntriesSortedByLength(), text);
+        await getEntriesSortedByLength(),
+        text,
+      );
 }
 
 void main() {
@@ -71,8 +75,9 @@ void main() {
   });
 
   setUp(() async {
-    tempDir =
-        Directory.systemTemp.createTempSync('tts_dictionary_dialog_test_');
+    tempDir = Directory.systemTemp.createTempSync(
+      'tts_dictionary_dialog_test_',
+    );
     database = TtsDictionaryDatabase(tempDir.path);
     repository = TtsDictionaryRepository(database);
     fakeRepository = _InMemoryDictionaryRepository();
@@ -122,36 +127,36 @@ void main() {
   }
 
   group('TtsDictionaryDialog initialSurface', () {
-    testWidgets('surface field is empty when initialSurface is not provided',
-        (tester) async {
+    testWidgets('surface field is empty when initialSurface is not provided', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestApp());
       await openDialogAndWait(tester);
 
       final surfaceField = find.byType(TextField).first;
-      final controller =
-          (tester.widget<TextField>(surfaceField)).controller!;
+      final controller = (tester.widget<TextField>(surfaceField)).controller!;
       expect(controller.text, isEmpty);
     });
 
-    testWidgets('surface field is pre-filled when initialSurface is provided',
-        (tester) async {
+    testWidgets('surface field is pre-filled when initialSurface is provided', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestApp(initialSurface: '山田太郎'));
       await openDialogAndWait(tester);
 
       final surfaceField = find.byType(TextField).first;
-      final controller =
-          (tester.widget<TextField>(surfaceField)).controller!;
+      final controller = (tester.widget<TextField>(surfaceField)).controller!;
       expect(controller.text, '山田太郎');
     });
 
-    testWidgets('reading field is empty even when initialSurface is provided',
-        (tester) async {
+    testWidgets('reading field is empty even when initialSurface is provided', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestApp(initialSurface: '山田太郎'));
       await openDialogAndWait(tester);
 
       final readingField = find.byType(TextField).at(1);
-      final controller =
-          (tester.widget<TextField>(readingField)).controller!;
+      final controller = (tester.widget<TextField>(readingField)).controller!;
       expect(controller.text, isEmpty);
     });
   });
@@ -160,8 +165,7 @@ void main() {
     Finder readingField() => find.byType(TextField).at(1);
 
     Future<void> openFake(WidgetTester tester) async {
-      await tester.pumpWidget(
-          buildTestApp(repositoryOverride: fakeRepository));
+      await tester.pumpWidget(buildTestApp(repositoryOverride: fakeRepository));
       await openDialogAndWait(tester);
     }
 
@@ -212,8 +216,9 @@ void main() {
       expect(find.text('（読み上げなし）'), findsOneWidget);
     });
 
-    testWidgets('a stale reading is discarded when the box is checked',
-        (tester) async {
+    testWidgets('a stale reading is discarded when the box is checked', (
+      tester,
+    ) async {
       await openFake(tester);
 
       await enterSurface(tester, '――‐');
@@ -237,16 +242,16 @@ void main() {
       expect(tester.widget<TextField>(readingField()).enabled, isTrue);
     });
 
-    testWidgets('still rejects an empty reading when unchecked',
-        (tester) async {
+    testWidgets('still rejects an empty reading when unchecked', (
+      tester,
+    ) async {
       await openFake(tester);
 
       await enterSurface(tester, '――‐');
       await tapAdd(tester);
 
       expect(fakeRepository.entries, isEmpty);
-      expect(find.text('表記と読みの両方を入力してください'),
-          findsOneWidget);
+      expect(find.text('表記と読みの両方を入力してください'), findsOneWidget);
     });
 
     testWidgets('rejects an empty surface even when checked', (tester) async {

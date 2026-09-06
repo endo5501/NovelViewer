@@ -59,8 +59,8 @@ final installerUpdaterProvider = Provider<InstallerUpdater>((ref) {
 /// Holds the latest update-check result that drives the AppBar badge and dialog.
 final updateStatusProvider =
     NotifierProvider<UpdateStatusNotifier, UpdateStatus>(
-  UpdateStatusNotifier.new,
-);
+      UpdateStatusNotifier.new,
+    );
 
 class UpdateStatusNotifier extends Notifier<UpdateStatus> {
   @override

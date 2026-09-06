@@ -16,13 +16,15 @@ void main() {
       tempDir.deleteSync(recursive: true);
     });
 
-    test('resolveLibraryPath returns path under given base directory',
-        () async {
-      final service = NovelLibraryService(basePath: tempDir.path);
-      final path = await service.resolveLibraryPath();
+    test(
+      'resolveLibraryPath returns path under given base directory',
+      () async {
+        final service = NovelLibraryService(basePath: tempDir.path);
+        final path = await service.resolveLibraryPath();
 
-      expect(path, p.join(tempDir.path, 'NovelViewer'));
-    });
+        expect(path, p.join(tempDir.path, 'NovelViewer'));
+      },
+    );
 
     test('ensureLibraryDirectory creates directory if not exists', () async {
       final service = NovelLibraryService(basePath: tempDir.path);
@@ -44,16 +46,18 @@ void main() {
       skip: !Platform.isWindows ? 'Windows-only test' : null,
     );
 
-    test('ensureLibraryDirectory succeeds if directory already exists',
-        () async {
-      final service = NovelLibraryService(basePath: tempDir.path);
+    test(
+      'ensureLibraryDirectory succeeds if directory already exists',
+      () async {
+        final service = NovelLibraryService(basePath: tempDir.path);
 
-      // Create it first
-      await service.ensureLibraryDirectory();
-      // Call again - should not throw
-      final dir = await service.ensureLibraryDirectory();
+        // Create it first
+        await service.ensureLibraryDirectory();
+        // Call again - should not throw
+        final dir = await service.ensureLibraryDirectory();
 
-      expect(dir.existsSync(), isTrue);
-    });
+        expect(dir.existsSync(), isTrue);
+      },
+    );
   });
 }

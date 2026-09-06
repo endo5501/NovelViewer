@@ -17,10 +17,7 @@ class OutlinedTextBadge extends StatelessWidget {
         border: Border.all(color: color),
         borderRadius: BorderRadius.circular(2),
       ),
-      child: Text(
-        label,
-        style: TextStyle(fontSize: 10, color: color),
-      ),
+      child: Text(label, style: TextStyle(fontSize: 10, color: color)),
     );
   }
 }

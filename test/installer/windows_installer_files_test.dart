@@ -16,8 +16,11 @@ void main() {
 
   setUpAll(() {
     final file = File('installer/novel_viewer.iss');
-    expect(file.existsSync(), isTrue,
-        reason: 'installer/novel_viewer.iss must exist');
+    expect(
+      file.existsSync(),
+      isTrue,
+      reason: 'installer/novel_viewer.iss must exist',
+    );
     iss = file.readAsStringSync();
   });
 
@@ -34,7 +37,8 @@ void main() {
       expect(
         line,
         isNotEmpty,
-        reason: 'The installer must package the model_specs directory; '
+        reason:
+            'The installer must package the model_specs directory; '
             'without it Irodori-TTS fails with "model package spec not found '
             "for family 'irodori_tts'\".",
       );

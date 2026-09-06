@@ -17,25 +17,26 @@ void main() {
   group('canHandle', () {
     test('returns true for www.aozora.gr.jp HTML file URL', () {
       expect(
-        site.canHandle(Uri.parse(
-            'https://www.aozora.gr.jp/cards/001779/files/57105_59659.html')),
+        site.canHandle(
+          Uri.parse(
+            'https://www.aozora.gr.jp/cards/001779/files/57105_59659.html',
+          ),
+        ),
         isTrue,
       );
     });
 
     test('returns false for card page URL', () {
       expect(
-        site.canHandle(Uri.parse(
-            'https://www.aozora.gr.jp/cards/001779/card57105.html')),
+        site.canHandle(
+          Uri.parse('https://www.aozora.gr.jp/cards/001779/card57105.html'),
+        ),
         isFalse,
       );
     });
 
     test('returns false for top page URL', () {
-      expect(
-        site.canHandle(Uri.parse('https://www.aozora.gr.jp/')),
-        isFalse,
-      );
+      expect(site.canHandle(Uri.parse('https://www.aozora.gr.jp/')), isFalse);
     });
 
     test('returns false for other sites', () {
@@ -49,7 +50,8 @@ void main() {
   group('extractNovelId', () {
     test('extracts filename without extension from URL', () {
       final url = Uri.parse(
-          'https://www.aozora.gr.jp/cards/001779/files/57105_59659.html');
+        'https://www.aozora.gr.jp/cards/001779/files/57105_59659.html',
+      );
       expect(site.extractNovelId(url), '57105_59659');
     });
 
@@ -62,17 +64,21 @@ void main() {
   group('normalizeUrl', () {
     test('preserves URL as-is', () {
       final url = Uri.parse(
-          'https://www.aozora.gr.jp/cards/001779/files/57105_59659.html');
+        'https://www.aozora.gr.jp/cards/001779/files/57105_59659.html',
+      );
       final normalized = site.normalizeUrl(url);
-      expect(normalized.toString(),
-          'https://www.aozora.gr.jp/cards/001779/files/57105_59659.html');
+      expect(
+        normalized.toString(),
+        'https://www.aozora.gr.jp/cards/001779/files/57105_59659.html',
+      );
     });
   });
 
   group('requestHeaders', () {
     test('returns empty map', () {
       final url = Uri.parse(
-          'https://www.aozora.gr.jp/cards/001779/files/57105_59659.html');
+        'https://www.aozora.gr.jp/cards/001779/files/57105_59659.html',
+      );
       expect(site.requestHeaders(url), isEmpty);
     });
   });
@@ -90,7 +96,8 @@ void main() {
 </html>
 ''';
       final baseUrl = Uri.parse(
-          'https://www.aozora.gr.jp/cards/000081/files/456_15050.html');
+        'https://www.aozora.gr.jp/cards/000081/files/456_15050.html',
+      );
       final index = site.parseIndex(html, baseUrl);
 
       expect(index.title, '銀河鉄道の夜 宮沢賢治');
@@ -108,7 +115,8 @@ void main() {
 </html>
 ''';
       final baseUrl = Uri.parse(
-          'https://www.aozora.gr.jp/cards/000081/files/456_15050.html');
+        'https://www.aozora.gr.jp/cards/000081/files/456_15050.html',
+      );
       final index = site.parseIndex(html, baseUrl);
 
       expect(index.episodes, isEmpty);
@@ -127,7 +135,8 @@ void main() {
 </html>
 ''';
       final baseUrl = Uri.parse(
-          'https://www.aozora.gr.jp/cards/000081/files/456_15050.html');
+        'https://www.aozora.gr.jp/cards/000081/files/456_15050.html',
+      );
       final index = site.parseIndex(html, baseUrl);
 
       expect(index.bodyContent, isNotNull);
@@ -145,7 +154,8 @@ void main() {
 </html>
 ''';
       final baseUrl = Uri.parse(
-          'https://www.aozora.gr.jp/cards/000081/files/456_15050.html');
+        'https://www.aozora.gr.jp/cards/000081/files/456_15050.html',
+      );
       final index = site.parseIndex(html, baseUrl);
 
       expect(index.bodyContent, isNull);

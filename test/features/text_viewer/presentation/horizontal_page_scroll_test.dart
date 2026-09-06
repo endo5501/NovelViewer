@@ -22,9 +22,7 @@ void main() {
     final content = List.generate(400, (i) => 'これは$i行目の本文です。').join('\n');
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
         child: MaterialApp(
           locale: const Locale('ja'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -42,8 +40,9 @@ void main() {
     return tester.state<ScrollableState>(find.byType(Scrollable).first);
   }
 
-  testWidgets('arrow down scrolls horizontal mode by about one viewport',
-      (WidgetTester tester) async {
+  testWidgets('arrow down scrolls horizontal mode by about one viewport', (
+    WidgetTester tester,
+  ) async {
     final scrollable = await pumpRenderer(tester);
     expect(scrollable.position.pixels, 0);
     final viewport = scrollable.position.viewportDimension;
@@ -51,12 +50,16 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
 
-    expect(scrollable.position.pixels, greaterThan(viewport * 0.5),
-        reason: 'Arrow down pages forward by roughly one viewport height');
+    expect(
+      scrollable.position.pixels,
+      greaterThan(viewport * 0.5),
+      reason: 'Arrow down pages forward by roughly one viewport height',
+    );
   });
 
-  testWidgets('arrow up scrolls horizontal mode back',
-      (WidgetTester tester) async {
+  testWidgets('arrow up scrolls horizontal mode back', (
+    WidgetTester tester,
+  ) async {
     final scrollable = await pumpRenderer(tester);
     final viewport = scrollable.position.viewportDimension;
 
@@ -68,7 +71,10 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
     await tester.pumpAndSettle();
 
-    expect(scrollable.position.pixels, lessThan(start),
-        reason: 'Arrow up pages backward');
+    expect(
+      scrollable.position.pixels,
+      lessThan(start),
+      reason: 'Arrow up pages backward',
+    );
   });
 }

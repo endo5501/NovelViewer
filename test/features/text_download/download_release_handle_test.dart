@@ -71,8 +71,9 @@ void main() {
       overrides: [
         novelSiteRegistryProvider.overrideWithValue(_FakeRegistry(_StubSite())),
         novelRepositoryProvider.overrideWithValue(_FakeNovelRepository()),
-        downloadServiceFactoryProvider
-            .overrideWithValue(() => _ConfigurableDownloadService(throws: throws)),
+        downloadServiceFactoryProvider.overrideWithValue(
+          () => _ConfigurableDownloadService(throws: throws),
+        ),
       ],
     );
   }
@@ -89,9 +90,13 @@ void main() {
       final after = container.read(episodeCacheDatabaseProvider(cacheKey));
 
       expect(container.read(downloadProvider).status, DownloadStatus.completed);
-      expect(identical(before, after), isFalse,
-          reason: 'handle SHALL be released (family entry invalidated) on '
-              'successful download');
+      expect(
+        identical(before, after),
+        isFalse,
+        reason:
+            'handle SHALL be released (family entry invalidated) on '
+            'successful download',
+      );
     });
 
     test('released after a failed download', () async {
@@ -105,9 +110,13 @@ void main() {
       final after = container.read(episodeCacheDatabaseProvider(cacheKey));
 
       expect(container.read(downloadProvider).status, DownloadStatus.error);
-      expect(identical(before, after), isFalse,
-          reason: 'handle SHALL be released (family entry invalidated) even '
-              'when the download throws');
+      expect(
+        identical(before, after),
+        isFalse,
+        reason:
+            'handle SHALL be released (family entry invalidated) even '
+            'when the download throws',
+      );
     });
   });
 
@@ -116,7 +125,9 @@ void main() {
   test('episode cache provider yields EpisodeCacheDatabase', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
-    expect(container.read(episodeCacheDatabaseProvider(cacheKey)),
-        isA<EpisodeCacheDatabase>());
+    expect(
+      container.read(episodeCacheDatabaseProvider(cacheKey)),
+      isA<EpisodeCacheDatabase>(),
+    );
   });
 }

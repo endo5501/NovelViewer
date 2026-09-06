@@ -35,9 +35,9 @@ class HttpInstallerDownloader implements InstallerDownloader {
     required String userAgent,
     Future<Directory> Function()? tempDirProvider,
     this.downloadTimeout = const Duration(minutes: 5),
-  })  : _httpClient = httpClient,
-        _userAgent = userAgent,
-        _tempDirProvider = tempDirProvider ?? getTemporaryDirectory;
+  }) : _httpClient = httpClient,
+       _userAgent = userAgent,
+       _tempDirProvider = tempDirProvider ?? getTemporaryDirectory;
 
   final http.Client _httpClient;
   final String _userAgent;
@@ -67,10 +67,16 @@ class HttpInstallerDownloader implements InstallerDownloader {
     final sha256Path = p.join(dir.path, shaAsset.name);
 
     try {
-      await _downloadTo(exeAsset.downloadUrl, exePath, onProgress)
-          .timeout(downloadTimeout);
-      await _downloadTo(shaAsset.downloadUrl, sha256Path, null)
-          .timeout(downloadTimeout);
+      await _downloadTo(
+        exeAsset.downloadUrl,
+        exePath,
+        onProgress,
+      ).timeout(downloadTimeout);
+      await _downloadTo(
+        shaAsset.downloadUrl,
+        sha256Path,
+        null,
+      ).timeout(downloadTimeout);
     } catch (_) {
       // Don't leave a partial (potentially large) installer behind on failure.
       if (dir.existsSync()) {
@@ -78,7 +84,10 @@ class HttpInstallerDownloader implements InstallerDownloader {
           await dir.delete(recursive: true);
         } catch (e, stack) {
           _log.warning(
-              'Failed to remove partial download directory: $e', e, stack);
+            'Failed to remove partial download directory: $e',
+            e,
+            stack,
+          );
         }
       }
       rethrow;
@@ -97,7 +106,8 @@ class HttpInstallerDownloader implements InstallerDownloader {
     final response = await _httpClient.send(request);
     if (response.statusCode != 200) {
       throw InstallerDownloadException(
-          'download failed for $url (status ${response.statusCode})');
+        'download failed for $url (status ${response.statusCode})',
+      );
     }
 
     final total = response.contentLength ?? 0;

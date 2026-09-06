@@ -20,9 +20,9 @@ class MockTtsNativeBindings extends TtsNativeBindings {
   // ignore: overridden_fields
   late final void Function(Pointer<Void>, int) setLanguage =
       (Pointer<Void> ctx, int languageId) {
-    lastSetLanguageCtx = ctx;
-    lastSetLanguageId = languageId;
-  };
+        lastSetLanguageCtx = ctx;
+        lastSetLanguageId = languageId;
+      };
 
   Pointer<Void> _fakeCtx = nullptr;
   int _isLoadedResult = 0;
@@ -38,14 +38,14 @@ class MockTtsNativeBindings extends TtsNativeBindings {
   // ignore: overridden_fields
   late final Pointer<Void> Function(Pointer<Utf8>, int, Pointer<Void>) init =
       (Pointer<Utf8> modelDir, int nThreads, Pointer<Void> abortHandle) {
-    lastInitAbortHandle = abortHandle;
-    return _fakeCtx;
-  };
+        lastInitAbortHandle = abortHandle;
+        return _fakeCtx;
+      };
 
   @override
   // ignore: overridden_fields
-  late final int Function(Pointer<Void>) isLoaded =
-      (Pointer<Void> ctx) => _isLoadedResult;
+  late final int Function(Pointer<Void>) isLoaded = (Pointer<Void> ctx) =>
+      _isLoadedResult;
 
   @override
   // ignore: overridden_fields
@@ -88,13 +88,13 @@ class MockTtsNativeBindings extends TtsNativeBindings {
 
   @override
   // ignore: overridden_fields
-  late final int Function(Pointer<Void>) getAudioLength =
-      (Pointer<Void> ctx) => audioLength;
+  late final int Function(Pointer<Void>) getAudioLength = (Pointer<Void> ctx) =>
+      audioLength;
 
   @override
   // ignore: overridden_fields
-  late final int Function(Pointer<Void>) getSampleRate =
-      (Pointer<Void> ctx) => sampleRateValue;
+  late final int Function(Pointer<Void>) getSampleRate = (Pointer<Void> ctx) =>
+      sampleRateValue;
 }
 
 void main() {
@@ -128,22 +128,12 @@ void main() {
       engine = TtsEngine(mockBindings);
     });
 
-    test(
-        'synthesize copies the native audio buffer into a Float32List that is '
+    test('synthesize copies the native audio buffer into a Float32List that is '
         'byte-equivalent to Float32List.fromList of the same samples', () {
       final fakeCtx = Pointer<Void>.fromAddress(0x1234);
       mockBindings.setFakeContext(fakeCtx);
 
-      const samples = <double>[
-        0.0,
-        0.1,
-        -0.1,
-        0.5,
-        -0.5,
-        1.0,
-        -1.0,
-        0.123456,
-      ];
+      const samples = <double>[0.0, 0.1, -0.1, 0.5, -0.5, 1.0, -1.0, 0.123456];
       final buf = calloc<Float>(samples.length);
       for (var i = 0; i < samples.length; i++) {
         buf[i] = samples[i];
@@ -165,8 +155,10 @@ void main() {
 
         // Byte-level equivalence guards against representation drift when the
         // implementation switches between per-element copy and asTypedList.
-        expect(result.audio.buffer.asUint8List(),
-            expected.buffer.asUint8List());
+        expect(
+          result.audio.buffer.asUint8List(),
+          expected.buffer.asUint8List(),
+        );
       } finally {
         calloc.free(buf);
       }
@@ -220,18 +212,20 @@ void main() {
       expect(mockBindings.lastInitAbortHandle, fakeHandle);
     });
 
-    test('abort calls native binding with the abort handle (not the context)',
-        () {
-      final fakeCtx = Pointer<Void>.fromAddress(0x1234);
-      final fakeHandle = Pointer<Void>.fromAddress(0xABCD);
-      mockBindings.setFakeContext(fakeCtx);
-      engine.loadModel('/fake/model/dir', abortHandle: fakeHandle);
+    test(
+      'abort calls native binding with the abort handle (not the context)',
+      () {
+        final fakeCtx = Pointer<Void>.fromAddress(0x1234);
+        final fakeHandle = Pointer<Void>.fromAddress(0xABCD);
+        mockBindings.setFakeContext(fakeCtx);
+        engine.loadModel('/fake/model/dir', abortHandle: fakeHandle);
 
-      engine.abort();
+        engine.abort();
 
-      expect(mockBindings.abortCallCount, 1);
-      expect(mockBindings.lastAbortHandle, fakeHandle);
-    });
+        expect(mockBindings.abortCallCount, 1);
+        expect(mockBindings.lastAbortHandle, fakeHandle);
+      },
+    );
 
     test('abort is no-op when no abort handle is wired', () {
       final fakeCtx = Pointer<Void>.fromAddress(0x1234);

@@ -67,20 +67,24 @@ void expectOffsetAddressesText(
   expect(
     pagePlainText.startsWith(selection.text, local),
     isTrue,
-    reason: 'offset $local should address "${selection.text}" in '
+    reason:
+        'offset $local should address "${selection.text}" in '
         '"$pagePlainText", but that position holds '
         '"${pagePlainText.substring(local)}"',
   );
 }
 
 void main() {
-  testWidgets('offset addresses the selected text in plain-text coordinates',
-      (tester) async {
+  testWidgets('offset addresses the selected text in plain-text coordinates', (
+    tester,
+  ) async {
     final notifications = <ViewerSelection?>[];
-    await tester.pumpWidget(_buildTestWidget(
-      segments: const [PlainTextSegment('あいうえお')],
-      onSelectionChanged: notifications.add,
-    ));
+    await tester.pumpWidget(
+      _buildTestWidget(
+        segments: const [PlainTextSegment('あいうえお')],
+        onSelectionChanged: notifications.add,
+      ),
+    );
 
     await _dragSelect(tester, 'い', 'え');
 
@@ -91,19 +95,25 @@ void main() {
     );
   });
 
-  testWidgets('adds pageStartTextOffset to make the offset document-global',
-      (tester) async {
+  testWidgets('adds pageStartTextOffset to make the offset document-global', (
+    tester,
+  ) async {
     final notifications = <ViewerSelection?>[];
-    await tester.pumpWidget(_buildTestWidget(
-      segments: const [PlainTextSegment('あいうえお')],
-      pageStartTextOffset: 800,
-      onSelectionChanged: notifications.add,
-    ));
+    await tester.pumpWidget(
+      _buildTestWidget(
+        segments: const [PlainTextSegment('あいうえお')],
+        pageStartTextOffset: 800,
+        onSelectionChanged: notifications.add,
+      ),
+    );
 
     await _dragSelect(tester, 'い', 'え');
 
-    expect(notifications.last!.plainTextOffset, greaterThanOrEqualTo(800),
-        reason: 'the page origin must be added, not dropped');
+    expect(
+      notifications.last!.plainTextOffset,
+      greaterThanOrEqualTo(800),
+      reason: 'the page origin must be added, not dropped',
+    );
     expectOffsetAddressesText(
       notifications.last,
       pagePlainText: 'あいうえお',
@@ -111,18 +121,21 @@ void main() {
     );
   });
 
-  testWidgets('ruby before the selection advances by its base length',
-      (tester) async {
+  testWidgets('ruby before the selection advances by its base length', (
+    tester,
+  ) async {
     final notifications = <ViewerSelection?>[];
-    await tester.pumpWidget(_buildTestWidget(
-      // Entries: あ(0) [ruby=漢字](1) い(2) う(3) え(4)
-      segments: const [
-        PlainTextSegment('あ'),
-        RubyTextSegment(base: '漢字', rubyText: 'かんじ'),
-        PlainTextSegment('いうえ'),
-      ],
-      onSelectionChanged: notifications.add,
-    ));
+    await tester.pumpWidget(
+      _buildTestWidget(
+        // Entries: あ(0) [ruby=漢字](1) い(2) う(3) え(4)
+        segments: const [
+          PlainTextSegment('あ'),
+          RubyTextSegment(base: '漢字', rubyText: 'かんじ'),
+          PlainTextSegment('いうえ'),
+        ],
+        onSelectionChanged: notifications.add,
+      ),
+    );
 
     await _dragSelect(tester, 'い', 'え');
 
@@ -135,19 +148,22 @@ void main() {
     );
   });
 
-  testWidgets('real line break before the selection counts as one character',
-      (tester) async {
+  testWidgets('real line break before the selection counts as one character', (
+    tester,
+  ) async {
     final notifications = <ViewerSelection?>[];
-    await tester.pumpWidget(_buildTestWidget(
-      // Entries: あ(0) い(1) \n(2) う(3) え(4) お(5)
-      segments: const [
-        PlainTextSegment('あい'),
-        PlainTextSegment('\n'),
-        PlainTextSegment('うえお'),
-      ],
-      lineBreakEntryIndices: const {2},
-      onSelectionChanged: notifications.add,
-    ));
+    await tester.pumpWidget(
+      _buildTestWidget(
+        // Entries: あ(0) い(1) \n(2) う(3) え(4) お(5)
+        segments: const [
+          PlainTextSegment('あい'),
+          PlainTextSegment('\n'),
+          PlainTextSegment('うえお'),
+        ],
+        lineBreakEntryIndices: const {2},
+        onSelectionChanged: notifications.add,
+      ),
+    );
 
     await _dragSelect(tester, 'う', 'お');
 
@@ -158,20 +174,23 @@ void main() {
     );
   });
 
-  testWidgets('visual column wrap before the selection counts as zero',
-      (tester) async {
+  testWidgets('visual column wrap before the selection counts as zero', (
+    tester,
+  ) async {
     final notifications = <ViewerSelection?>[];
-    await tester.pumpWidget(_buildTestWidget(
-      // Same entries, but the newline is a pagination wrap, not a paragraph
-      // break, so it contributes no character to the original text.
-      segments: const [
-        PlainTextSegment('あい'),
-        PlainTextSegment('\n'),
-        PlainTextSegment('うえお'),
-      ],
-      lineBreakEntryIndices: const {},
-      onSelectionChanged: notifications.add,
-    ));
+    await tester.pumpWidget(
+      _buildTestWidget(
+        // Same entries, but the newline is a pagination wrap, not a paragraph
+        // break, so it contributes no character to the original text.
+        segments: const [
+          PlainTextSegment('あい'),
+          PlainTextSegment('\n'),
+          PlainTextSegment('うえお'),
+        ],
+        lineBreakEntryIndices: const {},
+        onSelectionChanged: notifications.add,
+      ),
+    );
 
     await _dragSelect(tester, 'う', 'お');
 
@@ -182,21 +201,24 @@ void main() {
     );
   });
 
-  testWidgets('without pagination metadata the text and offset still agree',
-      (tester) async {
+  testWidgets('without pagination metadata the text and offset still agree', (
+    tester,
+  ) async {
     // No lineBreakEntryIndices: extractVerticalSelectedText's legacy reading
     // treats every newline as a real paragraph break, so the offset walk must
     // count them too. Falling back to an empty set would report text holding
     // a newline next to an offset that skipped it.
     final notifications = <ViewerSelection?>[];
-    await tester.pumpWidget(_buildTestWidget(
-      segments: const [
-        PlainTextSegment('あい'),
-        PlainTextSegment('\n'),
-        PlainTextSegment('うえお'),
-      ],
-      onSelectionChanged: notifications.add,
-    ));
+    await tester.pumpWidget(
+      _buildTestWidget(
+        segments: const [
+          PlainTextSegment('あい'),
+          PlainTextSegment('\n'),
+          PlainTextSegment('うえお'),
+        ],
+        onSelectionChanged: notifications.add,
+      ),
+    );
 
     await _dragSelect(tester, 'う', 'お');
 
@@ -209,10 +231,12 @@ void main() {
 
   testWidgets('carries the selected text alongside the offset', (tester) async {
     final notifications = <ViewerSelection?>[];
-    await tester.pumpWidget(_buildTestWidget(
-      segments: const [PlainTextSegment('あいうえお')],
-      onSelectionChanged: notifications.add,
-    ));
+    await tester.pumpWidget(
+      _buildTestWidget(
+        segments: const [PlainTextSegment('あいうえお')],
+        onSelectionChanged: notifications.add,
+      ),
+    );
 
     await _dragSelect(tester, 'い', 'え');
 
@@ -222,10 +246,12 @@ void main() {
 
   testWidgets('tap clears the selection with null', (tester) async {
     final notifications = <ViewerSelection?>[];
-    await tester.pumpWidget(_buildTestWidget(
-      segments: const [PlainTextSegment('あいうえお')],
-      onSelectionChanged: notifications.add,
-    ));
+    await tester.pumpWidget(
+      _buildTestWidget(
+        segments: const [PlainTextSegment('あいうえお')],
+        onSelectionChanged: notifications.add,
+      ),
+    );
 
     await tester.tap(find.text('い'));
     await tester.pumpAndSettle();

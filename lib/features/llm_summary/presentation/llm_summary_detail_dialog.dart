@@ -119,10 +119,7 @@ class _FactSection extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text(
-                entry.fileName,
-                style: theme.textTheme.titleSmall,
-              ),
+              child: Text(entry.fileName, style: theme.textTheme.titleSmall),
             ),
             if (isInvalid) ...[
               const SizedBox(width: 8),
@@ -162,9 +159,10 @@ class _ResultTabState extends ConsumerState<_ResultTab> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final snapshotsAsync = ref.watch(
-      hoverPopupCacheProvider(
-        (folderPath: widget.folderPath, word: widget.word),
-      ),
+      hoverPopupCacheProvider((
+        folderPath: widget.folderPath,
+        word: widget.word,
+      )),
     );
 
     return snapshotsAsync.when(

@@ -16,10 +16,7 @@ class SettingsDialog extends ConsumerStatefulWidget {
   const SettingsDialog({super.key});
 
   static Future<void> show(BuildContext context) {
-    return showDialog(
-      context: context,
-      builder: (_) => const SettingsDialog(),
-    );
+    return showDialog(context: context, builder: (_) => const SettingsDialog());
   }
 
   @override
@@ -28,8 +25,10 @@ class SettingsDialog extends ConsumerStatefulWidget {
 
 class _SettingsDialogState extends ConsumerState<SettingsDialog>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabController =
-      TabController(length: 3, vsync: this);
+  late final TabController _tabController = TabController(
+    length: 3,
+    vsync: this,
+  );
 
   @override
   void dispose() {
@@ -153,8 +152,10 @@ class _EngineSelector extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.settings_ttsEngine,
-              style: Theme.of(context).textTheme.titleSmall),
+          Text(
+            l10n.settings_ttsEngine,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,

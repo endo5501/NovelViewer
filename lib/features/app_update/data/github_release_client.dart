@@ -17,8 +17,8 @@ class GithubReleaseClient {
     required http.Client httpClient,
     required String userAgent,
     this.timeout = const Duration(seconds: 10),
-  })  : _httpClient = httpClient,
-        _userAgent = userAgent;
+  }) : _httpClient = httpClient,
+       _userAgent = userAgent;
 
   final http.Client _httpClient;
   final String _userAgent;
@@ -28,20 +28,21 @@ class GithubReleaseClient {
     final uri = Uri.parse(latestReleaseApiUrl());
     http.Response response;
     try {
-      response = await _httpClient.get(
-        uri,
-        headers: {
-          'User-Agent': _userAgent,
-          'Accept': 'application/vnd.github+json',
-        },
-      ).timeout(timeout);
+      response = await _httpClient
+          .get(
+            uri,
+            headers: {
+              'User-Agent': _userAgent,
+              'Accept': 'application/vnd.github+json',
+            },
+          )
+          .timeout(timeout);
     } catch (e) {
       throw GithubReleaseException('request failed: $e');
     }
 
     if (response.statusCode != 200) {
-      throw GithubReleaseException(
-          'unexpected status ${response.statusCode}');
+      throw GithubReleaseException('unexpected status ${response.statusCode}');
     }
 
     try {

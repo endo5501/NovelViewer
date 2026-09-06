@@ -5,16 +5,15 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 
 void main() {
   group('RenameTitleDialog', () {
-    testWidgets('shows current title prefilled in text field',
-        (WidgetTester tester) async {
+    testWidgets('shows current title prefilled in text field', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: RenameTitleDialog(currentTitle: 'テスト小説'),
-          ),
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: RenameTitleDialog(currentTitle: 'テスト小説')),
         ),
       );
       await tester.pumpAndSettle();
@@ -23,16 +22,15 @@ void main() {
       expect(textField.controller?.text, 'テスト小説');
     });
 
-    testWidgets('submit button is enabled when text is non-empty',
-        (WidgetTester tester) async {
+    testWidgets('submit button is enabled when text is non-empty', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: RenameTitleDialog(currentTitle: 'テスト小説'),
-          ),
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: RenameTitleDialog(currentTitle: 'テスト小説')),
         ),
       );
       await tester.pumpAndSettle();
@@ -43,16 +41,15 @@ void main() {
       expect(button.onPressed, isNotNull);
     });
 
-    testWidgets('submit button is disabled when text is empty',
-        (WidgetTester tester) async {
+    testWidgets('submit button is disabled when text is empty', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: RenameTitleDialog(currentTitle: 'テスト小説'),
-          ),
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: RenameTitleDialog(currentTitle: 'テスト小説')),
         ),
       );
       await tester.pumpAndSettle();
@@ -67,16 +64,15 @@ void main() {
       expect(button.onPressed, isNull);
     });
 
-    testWidgets('submit button is disabled when text is whitespace only',
-        (WidgetTester tester) async {
+    testWidgets('submit button is disabled when text is whitespace only', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-              locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: RenameTitleDialog(currentTitle: 'テスト小説'),
-          ),
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: RenameTitleDialog(currentTitle: 'テスト小説')),
         ),
       );
       await tester.pumpAndSettle();
@@ -90,15 +86,14 @@ void main() {
       expect(button.onPressed, isNull);
     });
 
-    testWidgets('submit returns trimmed title',
-        (WidgetTester tester) async {
+    testWidgets('submit returns trimmed title', (WidgetTester tester) async {
       String? result;
 
       await tester.pumpWidget(
         MaterialApp(
-              locale: const Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(
               body: ElevatedButton(
@@ -128,15 +123,16 @@ void main() {
       expect(result, '新しいタイトル');
     });
 
-    testWidgets('cancel button closes dialog and returns null',
-        (WidgetTester tester) async {
+    testWidgets('cancel button closes dialog and returns null', (
+      WidgetTester tester,
+    ) async {
       String? result = 'initial';
 
       await tester.pumpWidget(
         MaterialApp(
-              locale: const Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(
               body: ElevatedButton(
@@ -163,15 +159,14 @@ void main() {
       expect(result, isNull);
     });
 
-    testWidgets('submit returns new title',
-        (WidgetTester tester) async {
+    testWidgets('submit returns new title', (WidgetTester tester) async {
       String? result;
 
       await tester.pumpWidget(
         MaterialApp(
-              locale: const Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(
               body: ElevatedButton(

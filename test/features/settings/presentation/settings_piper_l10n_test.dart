@@ -10,39 +10,41 @@ void main() {
   }
 
   for (final locale in const [Locale('ja'), Locale('en'), Locale('zh')]) {
-    group('Piper labels resolve via AppLocalizations [${locale.languageCode}]',
-        () {
-      late AppLocalizations l10n;
+    group(
+      'Piper labels resolve via AppLocalizations [${locale.languageCode}]',
+      () {
+        late AppLocalizations l10n;
 
-      setUp(() async {
-        l10n = await loadFor(locale);
-      });
+        setUp(() async {
+          l10n = await loadFor(locale);
+        });
 
-      test('settings_ttsEngine is non-empty', () {
-        expect(l10n.settings_ttsEngine, isNotEmpty);
-      });
-      test('settings_modelLabel is non-empty', () {
-        expect(l10n.settings_modelLabel, isNotEmpty);
-      });
-      test('settings_modelDataDownload is non-empty', () {
-        expect(l10n.settings_modelDataDownload, isNotEmpty);
-      });
-      test('settings_piperDownloaded is non-empty', () {
-        expect(l10n.settings_piperDownloaded, isNotEmpty);
-      });
-      test('settings_retryButton is non-empty', () {
-        expect(l10n.settings_retryButton, isNotEmpty);
-      });
-      test('settings_piperLengthScale is non-empty', () {
-        expect(l10n.settings_piperLengthScale, isNotEmpty);
-      });
-      test('settings_piperNoiseScale is non-empty', () {
-        expect(l10n.settings_piperNoiseScale, isNotEmpty);
-      });
-      test('settings_piperNoiseW is non-empty', () {
-        expect(l10n.settings_piperNoiseW, isNotEmpty);
-      });
-    });
+        test('settings_ttsEngine is non-empty', () {
+          expect(l10n.settings_ttsEngine, isNotEmpty);
+        });
+        test('settings_modelLabel is non-empty', () {
+          expect(l10n.settings_modelLabel, isNotEmpty);
+        });
+        test('settings_modelDataDownload is non-empty', () {
+          expect(l10n.settings_modelDataDownload, isNotEmpty);
+        });
+        test('settings_piperDownloaded is non-empty', () {
+          expect(l10n.settings_piperDownloaded, isNotEmpty);
+        });
+        test('settings_retryButton is non-empty', () {
+          expect(l10n.settings_retryButton, isNotEmpty);
+        });
+        test('settings_piperLengthScale is non-empty', () {
+          expect(l10n.settings_piperLengthScale, isNotEmpty);
+        });
+        test('settings_piperNoiseScale is non-empty', () {
+          expect(l10n.settings_piperNoiseScale, isNotEmpty);
+        });
+        test('settings_piperNoiseW is non-empty', () {
+          expect(l10n.settings_piperNoiseW, isNotEmpty);
+        });
+      },
+    );
   }
 
   test('settings_ttsEngine is localized per language', () async {

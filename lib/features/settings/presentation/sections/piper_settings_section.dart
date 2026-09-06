@@ -39,9 +39,7 @@ class _PiperModelSelector extends ConsumerWidget {
       child: DropdownButtonFormField<String>(
         initialValue: modelName,
         isExpanded: true,
-        decoration: InputDecoration(
-          labelText: l10n.settings_modelLabel,
-        ),
+        decoration: InputDecoration(labelText: l10n.settings_modelLabel),
         items: const [
           DropdownMenuItem(
             value: PiperModelDownloadService.defaultModelName,
@@ -50,9 +48,7 @@ class _PiperModelSelector extends ConsumerWidget {
         ],
         onChanged: (value) {
           if (value != null) {
-            ref
-                .read(piperModelNameProvider.notifier)
-                .setPiperModelName(value);
+            ref.read(piperModelNameProvider.notifier).setPiperModelName(value);
           }
         },
       ),
@@ -72,12 +68,12 @@ class _PiperModelDownloadSection extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: switch (downloadState) {
         PiperModelDownloadIdle() => ElevatedButton.icon(
-            icon: const Icon(Icons.download),
-            label: Text(l10n.settings_modelDataDownload),
-            onPressed: () {
-              ref.read(piperModelDownloadProvider.notifier).startDownload();
-            },
-          ),
+          icon: const Icon(Icons.download),
+          label: Text(l10n.settings_modelDataDownload),
+          onPressed: () {
+            ref.read(piperModelDownloadProvider.notifier).startDownload();
+          },
+        ),
         PiperModelDownloadDownloading(:final currentFile, :final progress) =>
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,35 +86,35 @@ class _PiperModelDownloadSection extends ConsumerWidget {
             ],
           ),
         PiperModelDownloadCompleted(:final modelsDir) => Row(
-            children: [
-              Icon(Icons.check_circle,
-                  color: Theme.of(context).colorScheme.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '${l10n.settings_piperDownloaded}${modelsDir != null ? '\n$modelsDir' : ''}',
-                ),
+          children: [
+            Icon(
+              Icons.check_circle,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${l10n.settings_piperDownloaded}${modelsDir != null ? '\n$modelsDir' : ''}',
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
         PiperModelDownloadError(:final message) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                message,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () {
-                  ref
-                      .read(piperModelDownloadProvider.notifier)
-                      .startDownload();
-                },
-                child: Text(l10n.settings_retryButton),
-              ),
-            ],
-          ),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                ref.read(piperModelDownloadProvider.notifier).startDownload();
+              },
+              child: Text(l10n.settings_retryButton),
+            ),
+          ],
+        ),
       },
     );
   }
@@ -139,7 +135,9 @@ class _PiperSynthesisParams extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('${l10n.settings_piperLengthScale}: ${lengthScale.toStringAsFixed(1)}'),
+          Text(
+            '${l10n.settings_piperLengthScale}: ${lengthScale.toStringAsFixed(1)}',
+          ),
           Slider(
             value: lengthScale,
             min: 0.5,
@@ -151,7 +149,9 @@ class _PiperSynthesisParams extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 8),
-          Text('${l10n.settings_piperNoiseScale}: ${noiseScale.toStringAsFixed(3)}'),
+          Text(
+            '${l10n.settings_piperNoiseScale}: ${noiseScale.toStringAsFixed(3)}',
+          ),
           Slider(
             value: noiseScale,
             min: 0.0,

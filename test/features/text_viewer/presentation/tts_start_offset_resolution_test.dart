@@ -33,9 +33,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
         child: MaterialApp(
           locale: const Locale('ja'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -56,8 +54,9 @@ void main() {
   }
 
   void reportSelection(WidgetTester tester, int start, int end) {
-    tester.widget<SelectableText>(find.byType(SelectableText)).
-        onSelectionChanged!(
+    tester
+        .widget<SelectableText>(find.byType(SelectableText))
+        .onSelectionChanged!(
       TextSelection(baseOffset: start, extentOffset: end),
       SelectionChangedCause.drag,
     );
@@ -74,8 +73,9 @@ void main() {
   // Segments:       [0]魔法の朝だ。 [1]少年は走った。 [2]森は静かだ。
   //                 [3]最後の文です。
 
-  testWidgets('selection resolves to the segment the user selected',
-      (tester) async {
+  testWidgets('selection resolves to the segment the user selected', (
+    tester,
+  ) async {
     final container = await pumpRenderer(tester, rubyContent);
     final segments = const TextSegmenter().splitIntoSentences(rubyContent);
     expect(segments, hasLength(4));
@@ -90,25 +90,33 @@ void main() {
     expect(startSegmentIndexForOffset(segments, offset), 1);
   });
 
-  testWidgets('selection near the end does not collapse onto the last segment',
-      (tester) async {
-    final container = await pumpRenderer(tester, rubyContent);
-    final segments = const TextSegmenter().splitIntoSentences(rubyContent);
+  testWidgets(
+    'selection near the end does not collapse onto the last segment',
+    (tester) async {
+      final container = await pumpRenderer(tester, rubyContent);
+      final segments = const TextSegmenter().splitIntoSentences(rubyContent);
 
-    // Display offsets: [ruby 森](11) は(12) 静(13) か(14) だ(15) 。(16)
-    // Select "は静かだ。" — inside segment 2, the second-to-last sentence.
-    reportSelection(tester, 12, 17);
-    await tester.pump();
+      // Display offsets: [ruby 森](11) は(12) 静(13) か(14) だ(15) 。(16)
+      // Select "は静かだ。" — inside segment 2, the second-to-last sentence.
+      reportSelection(tester, 12, 17);
+      await tester.pump();
 
-    final offset = container.read(selectedTextProvider)!.plainTextOffset;
-    expect(startSegmentIndexForOffset(segments, offset), 2,
-        reason: 'ruby markup must not push the start onto the final segment');
-    expect(startSegmentIndexForOffset(segments, offset),
-        isNot(segments.length - 1));
-  });
+      final offset = container.read(selectedTextProvider)!.plainTextOffset;
+      expect(
+        startSegmentIndexForOffset(segments, offset),
+        2,
+        reason: 'ruby markup must not push the start onto the final segment',
+      );
+      expect(
+        startSegmentIndexForOffset(segments, offset),
+        isNot(segments.length - 1),
+      );
+    },
+  );
 
-  testWidgets('a raw-content offset would have resolved to the wrong segment',
-      (tester) async {
+  testWidgets('a raw-content offset would have resolved to the wrong segment', (
+    tester,
+  ) async {
     // Pins the regression: feeding the raw-content position of the same text
     // into the resolver lands on a later segment than the correct one.
     final container = await pumpRenderer(tester, rubyContent);
@@ -127,12 +135,16 @@ void main() {
     final viaRawContent = startSegmentIndexForOffset(segments, rawOffset);
 
     expect(correct, 1);
-    expect(viaRawContent, greaterThan(correct),
-        reason: 'the old indexOf-on-raw-content path overshot the selection');
+    expect(
+      viaRawContent,
+      greaterThan(correct),
+      reason: 'the old indexOf-on-raw-content path overshot the selection',
+    );
   });
 
-  testWidgets('a repeated word resolves to the occurrence that was selected',
-      (tester) async {
+  testWidgets('a repeated word resolves to the occurrence that was selected', (
+    tester,
+  ) async {
     // Independent of ruby: searching the selected text in the content finds
     // the FIRST occurrence, so selecting a later one used to start playback
     // from the earlier sentence. Nothing is searched any more, and this pins
@@ -154,8 +166,10 @@ void main() {
     expect(startSegmentIndexForOffset(segments, selection.plainTextOffset), 1);
     // The first occurrence would have resolved to segment 0.
     expect(content.indexOf(selection.text), 0);
-    expect(startSegmentIndexForOffset(segments, content.indexOf(selection.text)),
-        0);
+    expect(
+      startSegmentIndexForOffset(segments, content.indexOf(selection.text)),
+      0,
+    );
   });
 
   testWidgets('no selection starts from the first segment', (tester) async {
@@ -167,8 +181,9 @@ void main() {
     expect(startSegmentIndexForOffset(segments, offset), 0);
   });
 
-  testWidgets('selection containing ruby still resolves to its own segment',
-      (tester) async {
+  testWidgets('selection containing ruby still resolves to its own segment', (
+    tester,
+  ) async {
     // The old code searched the base-expanded selection in the raw content,
     // so any selection spanning ruby returned -1 and playback restarted from
     // the top.
@@ -181,8 +196,11 @@ void main() {
 
     final selection = container.read(selectedTextProvider)!;
     expect(selection.text, startsWith('森'));
-    expect(rubyContent.contains(selection.text), isFalse,
-        reason: 'the selection spans ruby, so it is absent from raw content');
+    expect(
+      rubyContent.contains(selection.text),
+      isFalse,
+      reason: 'the selection spans ruby, so it is absent from raw content',
+    );
     expect(startSegmentIndexForOffset(segments, selection.plainTextOffset), 2);
   });
 }

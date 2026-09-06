@@ -9,12 +9,15 @@ typedef HoverPopupCacheKey = ({String folderPath, String word});
 /// navigator and the future-warning rule. `folderPath` is the novel folder's
 /// absolute path, used to resolve its per-folder `novel_data.db`.
 final hoverPopupCacheProvider =
-    FutureProvider.family<List<WordSummary>, HoverPopupCacheKey>(
-        (ref, key) async {
-  final repo =
-      await ref.watch(llmSummaryRepositoryProvider(key.folderPath).future);
-  return repo.findSnapshotsForWord(word: key.word);
-});
+    FutureProvider.family<List<WordSummary>, HoverPopupCacheKey>((
+      ref,
+      key,
+    ) async {
+      final repo = await ref.watch(
+        llmSummaryRepositoryProvider(key.folderPath).future,
+      );
+      return repo.findSnapshotsForWord(word: key.word);
+    });
 
 /// Selects the default snapshot to display in the hover popup given a
 /// snapshot list and the current file's effective episode number.

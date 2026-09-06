@@ -158,10 +158,7 @@ void main() {
     });
 
     test('rejects top page URL', () {
-      expect(
-        site.canHandle(Uri.parse('https://syosetu.org/')),
-        isFalse,
-      );
+      expect(site.canHandle(Uri.parse('https://syosetu.org/')), isFalse);
     });
 
     test('rejects non-novel path', () {
@@ -204,7 +201,8 @@ void main() {
     test('extracts id from episode URL', () {
       expect(
         site.extractNovelId(
-            Uri.parse('https://syosetu.org/novel/402955/12.html')),
+          Uri.parse('https://syosetu.org/novel/402955/12.html'),
+        ),
         '402955',
       );
     });
@@ -219,39 +217,47 @@ void main() {
 
   group('normalizeUrl', () {
     test('normalizes episode URL to index URL', () {
-      final normalized =
-          site.normalizeUrl(Uri.parse('https://syosetu.org/novel/402955/3.html'));
+      final normalized = site.normalizeUrl(
+        Uri.parse('https://syosetu.org/novel/402955/3.html'),
+      );
       expect(normalized.toString(), 'https://syosetu.org/novel/402955/');
     });
 
     test('preserves index URL', () {
-      final normalized =
-          site.normalizeUrl(Uri.parse('https://syosetu.org/novel/402955/'));
+      final normalized = site.normalizeUrl(
+        Uri.parse('https://syosetu.org/novel/402955/'),
+      );
       expect(normalized.toString(), 'https://syosetu.org/novel/402955/');
     });
   });
 
   group('requestHeaders', () {
-    test('overrides UA with an honest, non-browser-impersonating User-Agent',
-        () {
-      // syosetu.org is behind Cloudflare, which 403s a spoofed Chrome UA that
-      // lacks real-browser traits (e.g. brotli). An honest app UA is allowed.
-      final headers =
-          site.requestHeaders(Uri.parse('https://syosetu.org/novel/402955/'));
-      expect(headers['User-Agent'], isNotNull);
-      expect(headers['User-Agent'], isNot(contains('Chrome')));
-      expect(headers['User-Agent'], isNot(contains('Mozilla')));
-      expect(headers['User-Agent'], contains('NovelViewer'));
-    });
+    test(
+      'overrides UA with an honest, non-browser-impersonating User-Agent',
+      () {
+        // syosetu.org is behind Cloudflare, which 403s a spoofed Chrome UA that
+        // lacks real-browser traits (e.g. brotli). An honest app UA is allowed.
+        final headers = site.requestHeaders(
+          Uri.parse('https://syosetu.org/novel/402955/'),
+        );
+        expect(headers['User-Agent'], isNotNull);
+        expect(headers['User-Agent'], isNot(contains('Chrome')));
+        expect(headers['User-Agent'], isNot(contains('Mozilla')));
+        expect(headers['User-Agent'], contains('NovelViewer'));
+      },
+    );
 
-    test('sends the R-18 age-confirmation cookie so gated works are reachable',
-        () {
-      // Some R-18 works (e.g. single-part stories) serve an age-confirmation
-      // interstitial instead of the body unless the over18 cookie is present.
-      final headers =
-          site.requestHeaders(Uri.parse('https://syosetu.org/novel/415332/'));
-      expect(headers['Cookie'], contains('over18'));
-    });
+    test(
+      'sends the R-18 age-confirmation cookie so gated works are reachable',
+      () {
+        // Some R-18 works (e.g. single-part stories) serve an age-confirmation
+        // interstitial instead of the body unless the over18 cookie is present.
+        final headers = site.requestHeaders(
+          Uri.parse('https://syosetu.org/novel/415332/'),
+        );
+        expect(headers['Cookie'], contains('over18'));
+      },
+    );
   });
 
   group('parseIndex - multi-part', () {
@@ -276,13 +282,17 @@ void main() {
 
     test('URL uses href file number, not the number written in the title', () {
       // Title reads "3　運ぶための力" but the link href is ./4.html
-      expect(index.episodes[2].url.toString(),
-          'https://syosetu.org/novel/402955/4.html');
+      expect(
+        index.episodes[2].url.toString(),
+        'https://syosetu.org/novel/402955/4.html',
+      );
     });
 
     test('first episode URL resolves from href', () {
-      expect(index.episodes[0].url.toString(),
-          'https://syosetu.org/novel/402955/1.html');
+      expect(
+        index.episodes[0].url.toString(),
+        'https://syosetu.org/novel/402955/1.html',
+      );
     });
 
     test('does not populate bodyContent for multi-part work', () {
@@ -295,7 +305,9 @@ void main() {
 
     setUp(() {
       index = site.parseIndex(
-          _multiPartIndexHtml, Uri.parse('https://syosetu.org/novel/402955/'));
+        _multiPartIndexHtml,
+        Uri.parse('https://syosetu.org/novel/402955/'),
+      );
     });
 
     test('keeps a leading number written by the author', () {
@@ -312,10 +324,12 @@ void main() {
       expect(index.episodes[3].title, '10 　京都参戦');
     });
 
-    test('keeps a leading number directly followed by an ideographic space',
-        () {
-      expect(index.episodes[1].title, '1　調伏の儀式');
-    });
+    test(
+      'keeps a leading number directly followed by an ideographic space',
+      () {
+        expect(index.episodes[1].title, '1　調伏の儀式');
+      },
+    );
   });
 
   group('parseIndex - updatedAt', () {
@@ -323,7 +337,9 @@ void main() {
 
     setUp(() {
       index = site.parseIndex(
-          _multiPartIndexHtml, Uri.parse('https://syosetu.org/novel/402955/'));
+        _multiPartIndexHtml,
+        Uri.parse('https://syosetu.org/novel/402955/'),
+      );
     });
 
     test('stores the time text alone when the episode was never revised', () {
@@ -333,27 +349,41 @@ void main() {
     test('appends the revision timestamp when the episode was revised', () {
       // <time> holds the publication timestamp and never changes on revision,
       // so the revision span's title attribute has to be part of the value.
-      expect(index.episodes[0].updatedAt,
-          '2026/02/21 16:20 (2026/03/01 06:05改稿)');
+      expect(
+        index.episodes[0].updatedAt,
+        '2026/02/21 16:20 (2026/03/01 06:05改稿)',
+      );
     });
 
     test('a second revision produces a different value', () {
-      final first = site.parseIndex(_indexWithRevision('2026/02/27 23:54改稿'),
-          Uri.parse('https://syosetu.org/novel/1/'));
-      final second = site.parseIndex(_indexWithRevision('2026/03/01 06:05改稿'),
-          Uri.parse('https://syosetu.org/novel/1/'));
-      expect(first.episodes.single.updatedAt,
-          isNot(second.episodes.single.updatedAt));
+      final first = site.parseIndex(
+        _indexWithRevision('2026/02/27 23:54改稿'),
+        Uri.parse('https://syosetu.org/novel/1/'),
+      );
+      final second = site.parseIndex(
+        _indexWithRevision('2026/03/01 06:05改稿'),
+        Uri.parse('https://syosetu.org/novel/1/'),
+      );
+      expect(
+        first.episodes.single.updatedAt,
+        isNot(second.episodes.single.updatedAt),
+      );
     });
 
     test('an unrevised episode differs from its later revised value', () {
       final unrevised = site.parseIndex(
-          _indexWithRevision(null), Uri.parse('https://syosetu.org/novel/1/'));
-      final revised = site.parseIndex(_indexWithRevision('2026/03/01 06:05改稿'),
-          Uri.parse('https://syosetu.org/novel/1/'));
+        _indexWithRevision(null),
+        Uri.parse('https://syosetu.org/novel/1/'),
+      );
+      final revised = site.parseIndex(
+        _indexWithRevision('2026/03/01 06:05改稿'),
+        Uri.parse('https://syosetu.org/novel/1/'),
+      );
       expect(unrevised.episodes.single.updatedAt, '2026/02/21 16:20');
-      expect(revised.episodes.single.updatedAt,
-          isNot(unrevised.episodes.single.updatedAt));
+      expect(
+        revised.episodes.single.updatedAt,
+        isNot(unrevised.episodes.single.updatedAt),
+      );
     });
   });
 
@@ -410,9 +440,10 @@ void main() {
   group('parseIndex - robustness', () {
     final baseUrl = Uri.parse('https://syosetu.org/novel/402955/');
 
-    test('picks the episode anchor even when a non-episode anchor precedes it',
-        () {
-      const html = '''
+    test(
+      'picks the episode anchor even when a non-episode anchor precedes it',
+      () {
+        const html = '''
 <html><head><title>堅牢テスト - ハーメルン</title></head>
 <body><div id="maind" itemscope itemtype="https://schema.org/CreativeWork">
 <div class="ss"><span itemprop="name">堅牢テスト</span></div>
@@ -433,16 +464,20 @@ void main() {
 </ul></section></div>
 </div></body></html>
 ''';
-      final index = site.parseIndex(html, baseUrl);
-      expect(index.episodes.length, 2);
-      expect(index.episodes[1].title, '挿絵回');
-      expect(index.episodes[1].url.toString(),
-          'https://syosetu.org/novel/402955/3.html');
-    });
+        final index = site.parseIndex(html, baseUrl);
+        expect(index.episodes.length, 2);
+        expect(index.episodes[1].title, '挿絵回');
+        expect(
+          index.episodes[1].url.toString(),
+          'https://syosetu.org/novel/402955/3.html',
+        );
+      },
+    );
 
-    test('excludes phantom entries linking to other novels (absolute href)',
-        () {
-      const html = '''
+    test(
+      'excludes phantom entries linking to other novels (absolute href)',
+      () {
+        const html = '''
 <html><head><title>堅牢テスト - ハーメルン</title></head>
 <body><div id="maind" itemscope itemtype="https://schema.org/CreativeWork">
 <div class="ss"><span itemprop="name">堅牢テスト</span></div>
@@ -462,11 +497,14 @@ void main() {
 </ul></section></div>
 </div></body></html>
 ''';
-      final index = site.parseIndex(html, baseUrl);
-      expect(index.episodes.length, 1);
-      expect(index.episodes[0].url.toString(),
-          'https://syosetu.org/novel/402955/1.html');
-    });
+        final index = site.parseIndex(html, baseUrl);
+        expect(index.episodes.length, 1);
+        expect(
+          index.episodes[0].url.toString(),
+          'https://syosetu.org/novel/402955/1.html',
+        );
+      },
+    );
 
     test('handles an episode entry without a date cell without crashing', () {
       const html = '''
@@ -509,8 +547,10 @@ void main() {
 ''';
       final index = site.parseIndex(html, baseUrl);
       expect(index.episodes.single.title, 'タイトルspanなし');
-      expect(index.episodes.single.updatedAt,
-          '2026/03/01 12:00 (2026/03/04 08:00改稿)');
+      expect(
+        index.episodes.single.updatedAt,
+        '2026/03/01 12:00 (2026/03/04 08:00改稿)',
+      );
     });
 
     test('the retired bgcolor table markup yields no episodes and no body', () {
@@ -548,8 +588,10 @@ void main() {
 <div id="honbun"><p id="1">本文。</p></div>
 </div></div></body></html>
 ''';
-      final index =
-          site.parseIndex(html, Uri.parse('https://syosetu.org/novel/415332/'));
+      final index = site.parseIndex(
+        html,
+        Uri.parse('https://syosetu.org/novel/415332/'),
+      );
       expect(index.title, 'ある日の日常');
     });
   });
@@ -563,8 +605,10 @@ void main() {
 <div id="honbun"><p id="1">本文。</p></div>
 </div></div></body></html>
 ''';
-      final index =
-          site.parseIndex(html, Uri.parse('https://syosetu.org/novel/100/'));
+      final index = site.parseIndex(
+        html,
+        Uri.parse('https://syosetu.org/novel/100/'),
+      );
       expect(index.title, '剣 - 盾');
     });
   });
@@ -583,8 +627,9 @@ void main() {
   group('NovelSiteRegistry integration', () {
     test('findSite returns HamelnSite for Hameln URL', () {
       final registry = NovelSiteRegistry();
-      final found =
-          registry.findSite(Uri.parse('https://syosetu.org/novel/402955/'));
+      final found = registry.findSite(
+        Uri.parse('https://syosetu.org/novel/402955/'),
+      );
       expect(found, isA<HamelnSite>());
     });
   });

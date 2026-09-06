@@ -121,8 +121,8 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
     final state = widget.segment.skip
         ? l10n.ttsEdit_skippedStatus
         : widget.segment.hasAudio
-            ? l10n.ttsEdit_generatedStatus
-            : l10n.ttsEdit_ungeneratedStatus;
+        ? l10n.ttsEdit_generatedStatus
+        : l10n.ttsEdit_ungeneratedStatus;
     // The toggle is not otherwise discoverable — the icon looks like a
     // status readout, not a control.
     return widget.enabled ? '$state\n${l10n.ttsEdit_skipToggleHint}' : state;
@@ -136,10 +136,10 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
     final effectiveRefValue = refWavPath == null
         ? null
         : refWavPath.isEmpty
-            ? ''
-            : widget.voiceFiles.contains(refWavPath)
-                ? refWavPath
-                : '';
+        ? ''
+        : widget.voiceFiles.contains(refWavPath)
+        ? refWavPath
+        : '';
 
     final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -167,8 +167,10 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
               controller: _textController,
               decoration: InputDecoration(
                 isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 10,
+                ),
                 border: const OutlineInputBorder(),
                 hintText: widget.segment.originalText,
               ),
@@ -212,25 +214,35 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
               isExpanded: true,
               decoration: const InputDecoration(
                 isDense: true,
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 8,
+                ),
                 border: OutlineInputBorder(),
               ),
               items: [
                 DropdownMenuItem<String?>(
                   value: null,
-                  child: Text(AppLocalizations.of(context)!.ttsEdit_referenceSettingValue, style: const TextStyle(fontSize: 12)),
+                  child: Text(
+                    AppLocalizations.of(context)!.ttsEdit_referenceSettingValue,
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ),
                 DropdownMenuItem<String?>(
                   value: '',
-                  child: Text(AppLocalizations.of(context)!.ttsEdit_referenceNone, style: const TextStyle(fontSize: 12)),
+                  child: Text(
+                    AppLocalizations.of(context)!.ttsEdit_referenceNone,
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ),
                 ...widget.voiceFiles.map(
                   (file) => DropdownMenuItem<String?>(
                     value: file,
-                    child: Text(file,
-                        style: const TextStyle(fontSize: 12),
-                        overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      file,
+                      style: const TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ],
@@ -249,8 +261,10 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
               controller: _memoController,
               decoration: InputDecoration(
                 isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 10,
+                ),
                 border: const OutlineInputBorder(),
                 hintText: AppLocalizations.of(context)!.ttsEdit_memoHint,
               ),
@@ -285,9 +299,11 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
             ),
             tooltip: AppLocalizations.of(context)!.ttsEdit_playTooltip,
             onPressed:
-                widget.segment.hasAudio && !widget.segment.skip && widget.enabled
-                    ? widget.onPlay
-                    : null,
+                widget.segment.hasAudio &&
+                    !widget.segment.skip &&
+                    widget.enabled
+                ? widget.onPlay
+                : null,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),

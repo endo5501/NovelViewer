@@ -66,25 +66,22 @@ void main() {
   }
 
   LlmSummaryService makeService(LlmClient client) => LlmSummaryService(
-        llmClient: client,
-        repository: repository,
-        factCacheRepository: factCache,
-        searchService: searchService,
-      );
+    llmClient: client,
+    repository: repository,
+    factCacheRepository: factCache,
+    searchService: searchService,
+  );
 
   group('fact-cache write gate', () {
     test('a raw-text fallback result is not cached', () async {
       await createFile('001_ch.txt', 'アリスはエピソード1で登場した。');
       await createFile('002_ch.txt', 'アリスはエピソード2で旅立った。');
 
-      final client = _ScriptedLlmClient(
-        {
-          // Not JSON: the parser falls back to raw text.
-          'エピソード1': '- 素のテキストで返ってきた事実',
-          'エピソード2': jsonEncode({'facts': '- 旅立った'}),
-        },
-        summary: jsonEncode({'summary': 'アリスは冒険者。'}),
-      );
+      final client = _ScriptedLlmClient({
+        // Not JSON: the parser falls back to raw text.
+        'エピソード1': '- 素のテキストで返ってきた事実',
+        'エピソード2': jsonEncode({'facts': '- 旅立った'}),
+      }, summary: jsonEncode({'summary': 'アリスは冒険者。'}));
 
       await makeService(client).generateSummary(
         directoryPath: tempDir.path,
@@ -92,10 +89,7 @@ void main() {
         coveredUpToEpisode: 2,
       );
 
-      expect(
-        await factCache.find(word: 'アリス', fileName: '001_ch.txt'),
-        isNull,
-      );
+      expect(await factCache.find(word: 'アリス', fileName: '001_ch.txt'), isNull);
       expect(
         (await factCache.find(word: 'アリス', fileName: '002_ch.txt'))?.facts,
         '- 旅立った',
@@ -106,13 +100,10 @@ void main() {
       await createFile('001_ch.txt', 'アリスはエピソード1で登場した。');
       await createFile('002_ch.txt', 'アリスはエピソード2で旅立った。');
 
-      final client = _ScriptedLlmClient(
-        {
-          'エピソード1': jsonEncode({'facts': '   '}),
-          'エピソード2': jsonEncode({'facts': '- 旅立った'}),
-        },
-        summary: jsonEncode({'summary': 'アリスは冒険者。'}),
-      );
+      final client = _ScriptedLlmClient({
+        'エピソード1': jsonEncode({'facts': '   '}),
+        'エピソード2': jsonEncode({'facts': '- 旅立った'}),
+      }, summary: jsonEncode({'summary': 'アリスは冒険者。'}));
 
       await makeService(client).generateSummary(
         directoryPath: tempDir.path,
@@ -120,19 +111,15 @@ void main() {
         coveredUpToEpisode: 2,
       );
 
-      expect(
-        await factCache.find(word: 'アリス', fileName: '001_ch.txt'),
-        isNull,
-      );
+      expect(await factCache.find(word: 'アリス', fileName: '001_ch.txt'), isNull);
     });
 
     test('a structured, non-empty result is cached', () async {
       await createFile('001_ch.txt', 'アリスはエピソード1で登場した。');
 
-      final client = _ScriptedLlmClient(
-        {'エピソード1': jsonEncode({'facts': '- 登場した'})},
-        summary: jsonEncode({'summary': 'アリスは冒険者。'}),
-      );
+      final client = _ScriptedLlmClient({
+        'エピソード1': jsonEncode({'facts': '- 登場した'}),
+      }, summary: jsonEncode({'summary': 'アリスは冒険者。'}));
 
       await makeService(client).generateSummary(
         directoryPath: tempDir.path,
@@ -149,26 +136,20 @@ void main() {
       await createFile('001_ch.txt', 'アリスはエピソード1で登場した。');
       await createFile('002_ch.txt', 'アリスはエピソード2で旅立った。');
 
-      final first = _ScriptedLlmClient(
-        {
-          'エピソード1': '- 素のテキストで返ってきた事実',
-          'エピソード2': jsonEncode({'facts': '- 旅立った'}),
-        },
-        summary: jsonEncode({'summary': 'アリスは冒険者。'}),
-      );
+      final first = _ScriptedLlmClient({
+        'エピソード1': '- 素のテキストで返ってきた事実',
+        'エピソード2': jsonEncode({'facts': '- 旅立った'}),
+      }, summary: jsonEncode({'summary': 'アリスは冒険者。'}));
       await makeService(first).generateSummary(
         directoryPath: tempDir.path,
         word: 'アリス',
         coveredUpToEpisode: 2,
       );
 
-      final second = _ScriptedLlmClient(
-        {
-          'エピソード1': jsonEncode({'facts': '- 登場した'}),
-          'エピソード2': jsonEncode({'facts': '- 旅立った'}),
-        },
-        summary: jsonEncode({'summary': 'アリスは冒険者。'}),
-      );
+      final second = _ScriptedLlmClient({
+        'エピソード1': jsonEncode({'facts': '- 登場した'}),
+        'エピソード2': jsonEncode({'facts': '- 旅立った'}),
+      }, summary: jsonEncode({'summary': 'アリスは冒険者。'}));
       await makeService(second).generateSummary(
         directoryPath: tempDir.path,
         word: 'アリス',
@@ -192,45 +173,50 @@ void main() {
       }
     }
 
-    test('extraction continues past a failed file and caches the successes',
-        () async {
-      await createEpisodes(5);
+    test(
+      'extraction continues past a failed file and caches the successes',
+      () async {
+        await createEpisodes(5);
 
-      // File 3 fails both its attempt and its retry.
-      final client = _ScriptedLlmClient(
-        {'エピソード3': const SocketException('connection reset')},
-        summary: jsonEncode({'summary': 'アリスは冒険者。'}),
-      );
+        // File 3 fails both its attempt and its retry.
+        final client = _ScriptedLlmClient({
+          'エピソード3': const SocketException('connection reset'),
+        }, summary: jsonEncode({'summary': 'アリスは冒険者。'}));
 
-      await expectLater(
-        () => makeService(client).generateSummary(
-          directoryPath: tempDir.path,
-          word: 'アリス',
-          coveredUpToEpisode: 5,
-        ),
-        throwsA(isA<LlmAnalysisPartialFailure>()),
-      );
-
-      for (final name in ['001_ch.txt', '002_ch.txt', '004_ch.txt', '005_ch.txt']) {
-        expect(
-          await factCache.find(word: 'アリス', fileName: name),
-          isNotNull,
-          reason: '$name should have been extracted and cached',
+        await expectLater(
+          () => makeService(client).generateSummary(
+            directoryPath: tempDir.path,
+            word: 'アリス',
+            coveredUpToEpisode: 5,
+          ),
+          throwsA(isA<LlmAnalysisPartialFailure>()),
         );
-      }
-      expect(
-        await factCache.find(word: 'アリス', fileName: '003_ch.txt'),
-        isNull,
-      );
-    });
+
+        for (final name in [
+          '001_ch.txt',
+          '002_ch.txt',
+          '004_ch.txt',
+          '005_ch.txt',
+        ]) {
+          expect(
+            await factCache.find(word: 'アリス', fileName: name),
+            isNotNull,
+            reason: '$name should have been extracted and cached',
+          );
+        }
+        expect(
+          await factCache.find(word: 'アリス', fileName: '003_ch.txt'),
+          isNull,
+        );
+      },
+    );
 
     test('a failed file prevents summary generation and persistence', () async {
       await createEpisodes(5);
 
-      final client = _ScriptedLlmClient(
-        {'エピソード3': const SocketException('connection reset')},
-        summary: jsonEncode({'summary': 'アリスは冒険者。'}),
-      );
+      final client = _ScriptedLlmClient({
+        'エピソード3': const SocketException('connection reset'),
+      }, summary: jsonEncode({'summary': 'アリスは冒険者。'}));
 
       await expectLater(
         () => makeService(client).generateSummary(
@@ -238,8 +224,13 @@ void main() {
           word: 'アリス',
           coveredUpToEpisode: 5,
         ),
-        throwsA(isA<LlmAnalysisPartialFailure>()
-            .having((e) => e.failedFileCount, 'failedFileCount', 1)),
+        throwsA(
+          isA<LlmAnalysisPartialFailure>().having(
+            (e) => e.failedFileCount,
+            'failedFileCount',
+            1,
+          ),
+        ),
       );
 
       expect(await repository.findSnapshotsForWord(word: 'アリス'), isEmpty);
@@ -247,47 +238,47 @@ void main() {
       expect(client.callCount, 6);
     });
 
-    test('a re-run after a partial failure only re-extracts the failed file',
-        () async {
-      await createEpisodes(5);
+    test(
+      'a re-run after a partial failure only re-extracts the failed file',
+      () async {
+        await createEpisodes(5);
 
-      final first = _ScriptedLlmClient(
-        {'エピソード3': const SocketException('connection reset')},
-        summary: jsonEncode({'summary': 'アリスは冒険者。'}),
-      );
-      await expectLater(
-        () => makeService(first).generateSummary(
+        final first = _ScriptedLlmClient({
+          'エピソード3': const SocketException('connection reset'),
+        }, summary: jsonEncode({'summary': 'アリスは冒険者。'}));
+        await expectLater(
+          () => makeService(first).generateSummary(
+            directoryPath: tempDir.path,
+            word: 'アリス',
+            coveredUpToEpisode: 5,
+          ),
+          throwsA(isA<LlmAnalysisPartialFailure>()),
+        );
+
+        final second = _ScriptedLlmClient(
+          const {},
+          summary: jsonEncode({'summary': 'アリスは冒険者。'}),
+        );
+        final summary = await makeService(second).generateSummary(
           directoryPath: tempDir.path,
           word: 'アリス',
           coveredUpToEpisode: 5,
-        ),
-        throwsA(isA<LlmAnalysisPartialFailure>()),
-      );
+        );
 
-      final second = _ScriptedLlmClient(
-        const {},
-        summary: jsonEncode({'summary': 'アリスは冒険者。'}),
-      );
-      final summary = await makeService(second).generateSummary(
-        directoryPath: tempDir.path,
-        word: 'アリス',
-        coveredUpToEpisode: 5,
-      );
-
-      expect(summary, 'アリスは冒険者。');
-      // Only file 3 is re-extracted, then the final summary.
-      expect(second.callCount, 2);
-    });
+        expect(summary, 'アリスは冒険者。');
+        // Only file 3 is re-extracted, then the final summary.
+        expect(second.callCount, 2);
+      },
+    );
 
     test('three consecutive failures abort the run instead of attempting the '
         'rest', () async {
       await createEpisodes(6);
 
       // Every file fails: the cause is systemic (endpoint down), not file-local.
-      final client = _ScriptedLlmClient(
-        {'アリス': const SocketException('connection reset')},
-        summary: jsonEncode({'summary': 'アリスは冒険者。'}),
-      );
+      final client = _ScriptedLlmClient({
+        'アリス': const SocketException('connection reset'),
+      }, summary: jsonEncode({'summary': 'アリスは冒険者。'}));
 
       await expectLater(
         () => makeService(client).generateSummary(
@@ -295,8 +286,13 @@ void main() {
           word: 'アリス',
           coveredUpToEpisode: 6,
         ),
-        throwsA(isA<LlmAnalysisPartialFailure>()
-            .having((e) => e.failedFileCount, 'failedFileCount', 3)),
+        throwsA(
+          isA<LlmAnalysisPartialFailure>().having(
+            (e) => e.failedFileCount,
+            'failedFileCount',
+            3,
+          ),
+        ),
       );
 
       // Three files attempted, each once plus its retry. Files 4-6 are never
@@ -309,15 +305,12 @@ void main() {
 
       // Files 1,2 fail, 3 succeeds (resetting the streak), 4,5 fail: four
       // failures but never three in a row, so every file is attempted.
-      final client = _ScriptedLlmClient(
-        {
-          'エピソード1': const SocketException('reset'),
-          'エピソード2': const SocketException('reset'),
-          'エピソード4': const SocketException('reset'),
-          'エピソード5': const SocketException('reset'),
-        },
-        summary: jsonEncode({'summary': 'アリスは冒険者。'}),
-      );
+      final client = _ScriptedLlmClient({
+        'エピソード1': const SocketException('reset'),
+        'エピソード2': const SocketException('reset'),
+        'エピソード4': const SocketException('reset'),
+        'エピソード5': const SocketException('reset'),
+      }, summary: jsonEncode({'summary': 'アリスは冒険者。'}));
 
       await expectLater(
         () => makeService(client).generateSummary(
@@ -325,8 +318,13 @@ void main() {
           word: 'アリス',
           coveredUpToEpisode: 5,
         ),
-        throwsA(isA<LlmAnalysisPartialFailure>()
-            .having((e) => e.failedFileCount, 'failedFileCount', 4)),
+        throwsA(
+          isA<LlmAnalysisPartialFailure>().having(
+            (e) => e.failedFileCount,
+            'failedFileCount',
+            4,
+          ),
+        ),
       );
 
       // 4 failures x 2 attempts + 1 success = 9 requests, no final summary.
@@ -363,137 +361,147 @@ void main() {
       }
     }
 
-    test('re-analysis still forces fresh extraction of pre-snapshot rows',
-        () async {
-      await createEpisodes(3);
+    test(
+      're-analysis still forces fresh extraction of pre-snapshot rows',
+      () async {
+        await createEpisodes(3);
 
-      final first = _ScriptedLlmClient(
-        const {},
-        summary: jsonEncode({'summary': '初回要約。'}),
-      );
-      await makeService(first).generateSummary(
-        directoryPath: tempDir.path,
-        word: 'アリス',
-        coveredUpToEpisode: 3,
-      );
+        final first = _ScriptedLlmClient(
+          const {},
+          summary: jsonEncode({'summary': '初回要約。'}),
+        );
+        await makeService(first).generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 3,
+        );
 
-      final second = _ScriptedLlmClient(
-        const {},
-        summary: jsonEncode({'summary': '再解析要約。'}),
-      );
-      final summary = await makeService(second).generateSummary(
-        directoryPath: tempDir.path,
-        word: 'アリス',
-        coveredUpToEpisode: 3,
-      );
+        final second = _ScriptedLlmClient(
+          const {},
+          summary: jsonEncode({'summary': '再解析要約。'}),
+        );
+        final summary = await makeService(second).generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 3,
+        );
 
-      expect(summary, '再解析要約。');
-      // Every file re-extracted (3) plus the final summary.
-      expect(second.callCount, 4);
-    });
+        expect(summary, '再解析要約。');
+        // Every file re-extracted (3) plus the final summary.
+        expect(second.callCount, 4);
+      },
+    );
 
-    test('a failed re-analysis attempt keeps its extractions for the next try',
-        () async {
-      await createEpisodes(5);
+    test(
+      'a failed re-analysis attempt keeps its extractions for the next try',
+      () async {
+        await createEpisodes(5);
 
-      // A successful first analysis creates the snapshot that makes later runs
-      // count as re-analyses.
-      await makeService(_ScriptedLlmClient(
-        const {},
-        summary: jsonEncode({'summary': '初回要約。'}),
-      )).generateSummary(
-        directoryPath: tempDir.path,
-        word: 'アリス',
-        coveredUpToEpisode: 5,
-      );
-
-      // Re-analysis: file 3 fails, so nothing is saved — but files 1,2,4,5 were
-      // re-extracted and must survive the next attempt's invalidation.
-      final failing = _ScriptedLlmClient(
-        {'エピソード3': const SocketException('connection reset')},
-        summary: jsonEncode({'summary': '再解析要約。'}),
-      );
-      await expectLater(
-        () => makeService(failing).generateSummary(
+        // A successful first analysis creates the snapshot that makes later runs
+        // count as re-analyses.
+        await makeService(
+          _ScriptedLlmClient(
+            const {},
+            summary: jsonEncode({'summary': '初回要約。'}),
+          ),
+        ).generateSummary(
           directoryPath: tempDir.path,
           word: 'アリス',
           coveredUpToEpisode: 5,
-        ),
-        throwsA(isA<LlmAnalysisPartialFailure>()),
-      );
+        );
 
-      final retry = _ScriptedLlmClient(
-        const {},
-        summary: jsonEncode({'summary': '再解析要約。'}),
-      );
-      final summary = await makeService(retry).generateSummary(
-        directoryPath: tempDir.path,
-        word: 'アリス',
-        coveredUpToEpisode: 5,
-      );
+        // Re-analysis: file 3 fails, so nothing is saved — but files 1,2,4,5 were
+        // re-extracted and must survive the next attempt's invalidation.
+        final failing = _ScriptedLlmClient({
+          'エピソード3': const SocketException('connection reset'),
+        }, summary: jsonEncode({'summary': '再解析要約。'}));
+        await expectLater(
+          () => makeService(failing).generateSummary(
+            directoryPath: tempDir.path,
+            word: 'アリス',
+            coveredUpToEpisode: 5,
+          ),
+          throwsA(isA<LlmAnalysisPartialFailure>()),
+        );
 
-      expect(summary, '再解析要約。');
-      // Only file 3 is extracted again, then the final summary. Without the
-      // scoped invalidation this would be 6 (all five files re-extracted).
-      expect(retry.callCount, 2);
-    });
+        final retry = _ScriptedLlmClient(
+          const {},
+          summary: jsonEncode({'summary': '再解析要約。'}),
+        );
+        final summary = await makeService(retry).generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 5,
+        );
 
-    test('a row refreshed by a later wider analysis is still re-extracted',
-        () async {
-      await createEpisodes(3);
+        expect(summary, '再解析要約。');
+        // Only file 3 is extracted again, then the final summary. Without the
+        // scoped invalidation this would be 6 (all five files re-extracted).
+        expect(retry.callCount, 2);
+      },
+    );
 
-      // Snapshot at ep3.
-      await makeService(_ScriptedLlmClient(
-        const {},
-        summary: jsonEncode({'summary': 'ep3要約。'}),
-      )).generateSummary(
-        directoryPath: tempDir.path,
-        word: 'アリス',
-        coveredUpToEpisode: 3,
-      );
+    test(
+      'a row refreshed by a later wider analysis is still re-extracted',
+      () async {
+        await createEpisodes(3);
 
-      // 002 changes, then a wider analysis at ep6 sees it as a hash miss and
-      // rewrites its cache row with a timestamp later than the ep3 snapshot.
-      await createFile('002_ch.txt', 'アリスはエピソード2で別の行動をした。');
-      for (var i = 4; i <= 6; i++) {
-        await createFile('00${i}_ch.txt', 'アリスはエピソード$iで行動した。');
-      }
-      await makeService(_ScriptedLlmClient(
-        const {},
-        summary: jsonEncode({'summary': 'ep6要約。'}),
-      )).generateSummary(
-        directoryPath: tempDir.path,
-        word: 'アリス',
-        coveredUpToEpisode: 6,
-      );
+        // Snapshot at ep3.
+        await makeService(
+          _ScriptedLlmClient(
+            const {},
+            summary: jsonEncode({'summary': 'ep3要約。'}),
+          ),
+        ).generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 3,
+        );
 
-      // Re-analyzing ep3 means "redo from scratch". 002's row is newer than the
-      // ep3 snapshot but was NOT produced by a failed attempt, so it must still
-      // be re-extracted — otherwise the file the user is trying to fix is the
-      // one served from cache.
-      final reanalysis = _ScriptedLlmClient(
-        const {},
-        summary: jsonEncode({'summary': 'ep3再解析。'}),
-      );
-      await makeService(reanalysis).generateSummary(
-        directoryPath: tempDir.path,
-        word: 'アリス',
-        coveredUpToEpisode: 3,
-      );
+        // 002 changes, then a wider analysis at ep6 sees it as a hash miss and
+        // rewrites its cache row with a timestamp later than the ep3 snapshot.
+        await createFile('002_ch.txt', 'アリスはエピソード2で別の行動をした。');
+        for (var i = 4; i <= 6; i++) {
+          await createFile('00${i}_ch.txt', 'アリスはエピソード$iで行動した。');
+        }
+        await makeService(
+          _ScriptedLlmClient(
+            const {},
+            summary: jsonEncode({'summary': 'ep6要約。'}),
+          ),
+        ).generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 6,
+        );
 
-      // Three files re-extracted plus the final summary.
-      expect(reanalysis.callCount, 4);
-    });
+        // Re-analyzing ep3 means "redo from scratch". 002's row is newer than the
+        // ep3 snapshot but was NOT produced by a failed attempt, so it must still
+        // be re-extracted — otherwise the file the user is trying to fix is the
+        // one served from cache.
+        final reanalysis = _ScriptedLlmClient(
+          const {},
+          summary: jsonEncode({'summary': 'ep3再解析。'}),
+        );
+        await makeService(reanalysis).generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 3,
+        );
+
+        // Three files re-extracted plus the final summary.
+        expect(reanalysis.callCount, 4);
+      },
+    );
   });
 
   group('empty aggregated facts', () {
     test('empty facts never reach the final summary call', () async {
       await createFile('001_ch.txt', 'アリスはエピソード1で登場した。');
 
-      final client = _ScriptedLlmClient(
-        {'エピソード1': jsonEncode({'facts': '   '})},
-        summary: jsonEncode({'summary': '幻覚された要約。'}),
-      );
+      final client = _ScriptedLlmClient({
+        'エピソード1': jsonEncode({'facts': '   '}),
+      }, summary: jsonEncode({'summary': '幻覚された要約。'}));
 
       await expectLater(
         () => makeService(client).generateSummary(

@@ -24,23 +24,25 @@ void main() {
       tempDir.listSync().whereType<Directory>().toList();
 
   group('Empty index guard (F118)', () {
-    test('throws EmptyIndexException when episodes empty and body null',
-        () async {
-      final site = FakeNovelSite(episodes: const [], bodyContent: null);
-      final service = DownloadService(
-        client: routingClient(const [FakeRoute('')]),
-        requestDelay: Duration.zero,
-      );
+    test(
+      'throws EmptyIndexException when episodes empty and body null',
+      () async {
+        final site = FakeNovelSite(episodes: const [], bodyContent: null);
+        final service = DownloadService(
+          client: routingClient(const [FakeRoute('')]),
+          requestDelay: Duration.zero,
+        );
 
-      await expectLater(
-        service.downloadNovel(
-          site: site,
-          url: Uri.parse('https://example.com/index'),
-          outputPath: tempDir.path,
-        ),
-        throwsA(isA<EmptyIndexException>()),
-      );
-    });
+        await expectLater(
+          service.downloadNovel(
+            site: site,
+            url: Uri.parse('https://example.com/index'),
+            outputPath: tempDir.path,
+          ),
+          throwsA(isA<EmptyIndexException>()),
+        );
+      },
+    );
 
     test('does not create a novel folder when the index is empty', () async {
       final site = FakeNovelSite(episodes: const [], bodyContent: null);
@@ -59,8 +61,11 @@ void main() {
         // expected
       }
 
-      expect(novelDirs(), isEmpty,
-          reason: 'an empty index must not leave a folder on disk');
+      expect(
+        novelDirs(),
+        isEmpty,
+        reason: 'an empty index must not leave a folder on disk',
+      );
     });
 
     test('EmptyIndexException carries the index URL', () async {
@@ -85,25 +90,29 @@ void main() {
   });
 
   group('Empty index guard does not affect short stories / Aozora (F118)', () {
-    test('short story (empty episodes, non-null body) is still downloaded',
-        () async {
-      final site = FakeNovelSite(episodes: const [], bodyContent: '短編の本文です。');
-      final service = DownloadService(
-        client: routingClient(const [
-          FakeRoute('',
-              headers: {'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT'}),
-        ]),
-        requestDelay: Duration.zero,
-      );
+    test(
+      'short story (empty episodes, non-null body) is still downloaded',
+      () async {
+        final site = FakeNovelSite(episodes: const [], bodyContent: '短編の本文です。');
+        final service = DownloadService(
+          client: routingClient(const [
+            FakeRoute(
+              '',
+              headers: {'last-modified': 'Thu, 01 Jan 2025 00:00:00 GMT'},
+            ),
+          ]),
+          requestDelay: Duration.zero,
+        );
 
-      final result = await service.downloadNovel(
-        site: site,
-        url: Uri.parse('https://example.com/index'),
-        outputPath: tempDir.path,
-      );
+        final result = await service.downloadNovel(
+          site: site,
+          url: Uri.parse('https://example.com/index'),
+          outputPath: tempDir.path,
+        );
 
-      expect(result.episodeCount, 1);
-      expect(novelDirs(), hasLength(1));
-    });
+        expect(result.episodeCount, 1);
+        expect(novelDirs(), hasLength(1));
+      },
+    );
   });
 }

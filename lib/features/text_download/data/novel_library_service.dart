@@ -43,8 +43,7 @@ class NovelLibraryService {
 
     if (!currentPath.contains(_newBundleId)) return;
 
-    final oldPath =
-        currentPath.replaceFirst(_newBundleId, _oldBundleId);
+    final oldPath = currentPath.replaceFirst(_newBundleId, _oldBundleId);
     final oldLibraryDir = Directory(p.join(oldPath, _libraryDirName));
 
     if (!oldLibraryDir.existsSync()) return;
@@ -57,9 +56,10 @@ class NovelLibraryService {
     } catch (e, st) {
       // Non-fatal: app continues without migration. User can manually copy.
       _log.warning(
-          'Library migration from ${oldLibraryDir.path} to ${newLibraryDir.path} failed',
-          e,
-          st);
+        'Library migration from ${oldLibraryDir.path} to ${newLibraryDir.path} failed',
+        e,
+        st,
+      );
     }
   }
 

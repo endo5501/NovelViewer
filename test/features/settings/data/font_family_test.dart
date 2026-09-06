@@ -20,14 +20,15 @@ void main() {
     });
 
     test('hiraginoMincho has correct properties', () {
-      expect(FontFamily.hiraginoMincho.fontFamilyName,
-          'Hiragino Mincho ProN');
+      expect(FontFamily.hiraginoMincho.fontFamilyName, 'Hiragino Mincho ProN');
       expect(FontFamily.hiraginoMincho.displayName, 'ヒラギノ明朝');
     });
 
     test('hiraginoKaku has correct properties', () {
-      expect(FontFamily.hiraginoKaku.fontFamilyName,
-          'Hiragino Kaku Gothic ProN');
+      expect(
+        FontFamily.hiraginoKaku.fontFamilyName,
+        'Hiragino Kaku Gothic ProN',
+      );
       expect(FontFamily.hiraginoKaku.displayName, 'ヒラギノ角ゴ');
     });
 
@@ -64,10 +65,14 @@ void main() {
       test('maps font names to Windows format on Windows', () {
         expect(FontFamily.yumincho.effectiveFontFamilyName, 'Yu Mincho');
         expect(FontFamily.yuGothic.effectiveFontFamilyName, 'Yu Gothic');
-        expect(FontFamily.hiraginoMincho.effectiveFontFamilyName,
-            'Hiragino Mincho ProN');
-        expect(FontFamily.hiraginoKaku.effectiveFontFamilyName,
-            'Hiragino Kaku Gothic ProN');
+        expect(
+          FontFamily.hiraginoMincho.effectiveFontFamilyName,
+          'Hiragino Mincho ProN',
+        );
+        expect(
+          FontFamily.hiraginoKaku.effectiveFontFamilyName,
+          'Hiragino Kaku Gothic ProN',
+        );
       });
     }
 
@@ -79,10 +84,14 @@ void main() {
       test('returns fontFamilyName as-is on macOS', () {
         expect(FontFamily.yumincho.effectiveFontFamilyName, 'YuMincho');
         expect(FontFamily.yuGothic.effectiveFontFamilyName, 'YuGothic');
-        expect(FontFamily.hiraginoMincho.effectiveFontFamilyName,
-            'Hiragino Mincho ProN');
-        expect(FontFamily.hiraginoKaku.effectiveFontFamilyName,
-            'Hiragino Kaku Gothic ProN');
+        expect(
+          FontFamily.hiraginoMincho.effectiveFontFamilyName,
+          'Hiragino Mincho ProN',
+        );
+        expect(
+          FontFamily.hiraginoKaku.effectiveFontFamilyName,
+          'Hiragino Kaku Gothic ProN',
+        );
       });
     }
   });

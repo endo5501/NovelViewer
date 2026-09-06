@@ -42,7 +42,10 @@ class NovelDatabaseSnapshotResolver {
       folderFileLister: (folderName) => episode.listSortedTextFileNames(
         p.join(libraryRoot, folderName),
         onError: (e, st) => Logger('novel_metadata_db').warning(
-            'Failed to list folder $folderName during v5 migration', e, st),
+          'Failed to list folder $folderName during v5 migration',
+          e,
+          st,
+        ),
       ),
     );
   }
@@ -50,7 +53,7 @@ class NovelDatabaseSnapshotResolver {
 
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
-  static const _databaseVersion = 9;
+  static const _databaseVersion = 10;
 
   /// The current `novel_metadata.db` schema version. Exposed so test fixtures
   /// open in-memory databases at the same version the production schema targets.
@@ -69,10 +72,10 @@ class NovelDatabase {
     String? dbDirPath,
     NovelDatabaseSnapshotResolver? snapshotResolver,
     NovelDataMigrator? dataMigrator,
-  })  : _dbDirPath = dbDirPath,
-        _snapshotResolver =
-            snapshotResolver ?? NovelDatabaseSnapshotResolver.empty,
-        _dataMigrator = dataMigrator ?? NovelDataMigrator.empty;
+  }) : _dbDirPath = dbDirPath,
+       _snapshotResolver =
+           snapshotResolver ?? NovelDatabaseSnapshotResolver.empty,
+       _dataMigrator = dataMigrator ?? NovelDataMigrator.empty;
 
   Future<Database> get database => _gate.resource;
 
@@ -129,6 +132,7 @@ class NovelDatabase {
     // only the global catalog (`novels`) and `reading_progress` (kept global
     // for the cross-novel "how far read" view).
     await _createReadingProgressTableV8(db);
+    await _addReadingPositionColumns(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -165,6 +169,16 @@ class NovelDatabase {
       // (idempotent via INSERT OR IGNORE).
       await migrateV8ToV9(db, _dataMigrator, logger: _log);
     }
+    if (oldVersion < 10) {
+      await _addReadingPositionColumns(db);
+    }
+  }
+
+  static Future<void> _addReadingPositionColumns(Database db) async {
+    await db.execute(
+      'ALTER TABLE reading_progress ADD COLUMN body_offset INTEGER NOT NULL DEFAULT 0',
+    );
+    await db.execute('ALTER TABLE reading_progress ADD COLUMN body_hash TEXT');
   }
 
   static Future<void> _createV5WordSummariesTable(Database db) async {
@@ -329,8 +343,8 @@ class NovelDatabase {
   }) async {
     // --- bookmarks ---
     final bookmarkCountBefore =
-        (await db.rawQuery('SELECT COUNT(*) AS c FROM bookmarks'))
-            .first['c'] as int;
+        (await db.rawQuery('SELECT COUNT(*) AS c FROM bookmarks')).first['c']
+            as int;
     await db.execute('ALTER TABLE bookmarks RENAME TO bookmarks_v7old');
     await _createBookmarksTableV8(db);
     // Keep, per (novel_id, file_name, line_number) group, only the earliest
@@ -364,7 +378,8 @@ class NovelDatabase {
 
     // --- reading_progress ---
     await db.execute(
-        'ALTER TABLE reading_progress RENAME TO reading_progress_v7old');
+      'ALTER TABLE reading_progress RENAME TO reading_progress_v7old',
+    );
     await _createReadingProgressTableV8(db);
     await db.execute('''
       INSERT INTO reading_progress (novel_id, file_name, updated_at)
@@ -432,10 +447,7 @@ class NovelDatabase {
     // 2. Read every v4 row. Sort by updated_at ascending so the "keep latest
     //    on collision" rule is naturally satisfied by overwriting earlier
     //    inserts with later ones in step 3.
-    final v4Rows = await db.query(
-      'word_summaries',
-      orderBy: 'updated_at ASC',
-    );
+    final v4Rows = await db.query('word_summaries', orderBy: 'updated_at ASC');
     final novelRows = await db.query('novels');
     final episodeCountByFolder = <String, int>{
       for (final row in novelRows)
@@ -445,7 +457,10 @@ class NovelDatabase {
     // Cache folder -> sorted file list so each folder is scanned at most once.
     final fileListCache = <String, List<String>>{};
     List<String> filesIn(String folder) {
-      return fileListCache.putIfAbsent(folder, () => resolver.folderFileLister(folder));
+      return fileListCache.putIfAbsent(
+        folder,
+        () => resolver.folderFileLister(folder),
+      );
     }
 
     // 3. Convert + deduplicate (keep latest by updated_at; with ASC ordering
@@ -506,8 +521,9 @@ class NovelDatabase {
     required String folder,
     Logger? logger,
   }) {
-    final prefix =
-        sourceFile != null ? episode.extractNumericPrefix(sourceFile) : null;
+    final prefix = sourceFile != null
+        ? episode.extractNumericPrefix(sourceFile)
+        : null;
 
     if (summaryType == 'no_spoiler') {
       if (prefix != null) return prefix;
@@ -515,13 +531,15 @@ class NovelDatabase {
         final rank = episode.lexicalRankOf(filesIn(folder), sourceFile);
         if (rank != null) return rank;
         logger?.warning(
-            'v5 migration: could not resolve lexical rank for '
-            '$folder/$sourceFile; falling back to 1');
+          'v5 migration: could not resolve lexical rank for '
+          '$folder/$sourceFile; falling back to 1',
+        );
         return 1;
       }
       logger?.warning(
-          'v5 migration: no_spoiler row in $folder has NULL source_file; '
-          'falling back to coveredUpToEpisode=1');
+        'v5 migration: no_spoiler row in $folder has NULL source_file; '
+        'falling back to coveredUpToEpisode=1',
+      );
       return 1;
     }
 
@@ -578,10 +596,7 @@ class NovelDatabase {
       ),
     );
     try {
-      await _migrateWordSummariesToSnapshots(
-        db,
-        resolver: snapshotResolver,
-      );
+      await _migrateWordSummariesToSnapshots(db, resolver: snapshotResolver);
       return List<Map<String, Object?>>.unmodifiable(
         await db.query('word_summaries'),
       );

@@ -24,30 +24,30 @@ void main() {
     await novelDatabase.close();
   });
 
-  test('readingProgressRepositoryProvider resolves with novelDatabaseProvider',
-      () {
-    final container = ProviderContainer(
-      overrides: [
-        novelDatabaseProvider.overrideWithValue(novelDatabase),
-      ],
-    );
-    addTearDown(container.dispose);
+  test(
+    'readingProgressRepositoryProvider resolves with novelDatabaseProvider',
+    () {
+      final container = ProviderContainer(
+        overrides: [novelDatabaseProvider.overrideWithValue(novelDatabase)],
+      );
+      addTearDown(container.dispose);
 
-    final repository = container.read(readingProgressRepositoryProvider);
-    expect(repository, isA<ReadingProgressRepository>());
-  });
+      final repository = container.read(readingProgressRepositoryProvider);
+      expect(repository, isA<ReadingProgressRepository>());
+    },
+  );
 
-  test('readingProgressRepositoryProvider returns the same instance on read',
-      () {
-    final container = ProviderContainer(
-      overrides: [
-        novelDatabaseProvider.overrideWithValue(novelDatabase),
-      ],
-    );
-    addTearDown(container.dispose);
+  test(
+    'readingProgressRepositoryProvider returns the same instance on read',
+    () {
+      final container = ProviderContainer(
+        overrides: [novelDatabaseProvider.overrideWithValue(novelDatabase)],
+      );
+      addTearDown(container.dispose);
 
-    final a = container.read(readingProgressRepositoryProvider);
-    final b = container.read(readingProgressRepositoryProvider);
-    expect(identical(a, b), isTrue);
-  });
+      final a = container.read(readingProgressRepositoryProvider);
+      final b = container.read(readingProgressRepositoryProvider);
+      expect(identical(a, b), isTrue);
+    },
+  );
 }

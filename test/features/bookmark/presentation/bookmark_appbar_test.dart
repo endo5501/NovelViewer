@@ -9,14 +9,14 @@ import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 NovelMetadata _novel(String folderName) => NovelMetadata(
-      siteType: 'narou',
-      novelId: folderName,
-      title: 'Title $folderName',
-      url: 'https://example.com/$folderName',
-      folderName: folderName,
-      episodeCount: 1,
-      downloadedAt: DateTime(2026, 1, 1),
-    );
+  siteType: 'narou',
+  novelId: folderName,
+  title: 'Title $folderName',
+  url: 'https://example.com/$folderName',
+  folderName: folderName,
+  episodeCount: 1,
+  downloadedAt: DateTime(2026, 1, 1),
+);
 
 class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
   final String? _initialValue;
@@ -52,30 +52,35 @@ class _TestSelectedFileNotifier extends SelectedFileNotifier {
 
 void main() {
   group('Bookmark AppBar button', () {
-    testWidgets('shows bookmark_border icon when file is not bookmarked',
-        (WidgetTester tester) async {
+    testWidgets('shows bookmark_border icon when file is not bookmarked', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
             allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
-                () => _TestCurrentDirectoryNotifier('/library/n1234')),
-            selectedFileProvider.overrideWith(() => _TestSelectedFileNotifier(
+              () => _TestCurrentDirectoryNotifier('/library/n1234'),
+            ),
+            selectedFileProvider.overrideWith(
+              () => _TestSelectedFileNotifier(
                 const FileEntry(
-                    name: '001.txt', path: '/library/n1234/001.txt'))),
+                  name: '001.txt',
+                  path: '/library/n1234/001.txt',
+                ),
+              ),
+            ),
             isBookmarkedProvider.overrideWithValue(false),
           ],
           child: MaterialApp(
-                locale: const Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               appBar: AppBar(
                 actions: [
-                  Consumer(
-                    builder: (_, ref, _) => buildBookmarkButton(ref),
-                  ),
+                  Consumer(builder: (_, ref, _) => buildBookmarkButton(ref)),
                 ],
               ),
             ),
@@ -93,30 +98,35 @@ void main() {
       expect(iconButton.onPressed, isNotNull);
     });
 
-    testWidgets('shows bookmark icon when file is bookmarked',
-        (WidgetTester tester) async {
+    testWidgets('shows bookmark icon when file is bookmarked', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
             allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
-                () => _TestCurrentDirectoryNotifier('/library/n1234')),
-            selectedFileProvider.overrideWith(() => _TestSelectedFileNotifier(
+              () => _TestCurrentDirectoryNotifier('/library/n1234'),
+            ),
+            selectedFileProvider.overrideWith(
+              () => _TestSelectedFileNotifier(
                 const FileEntry(
-                    name: '001.txt', path: '/library/n1234/001.txt'))),
+                  name: '001.txt',
+                  path: '/library/n1234/001.txt',
+                ),
+              ),
+            ),
             isBookmarkedProvider.overrideWithValue(true),
           ],
           child: MaterialApp(
-                locale: const Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               appBar: AppBar(
                 actions: [
-                  Consumer(
-                    builder: (_, ref, _) => buildBookmarkButton(ref),
-                  ),
+                  Consumer(builder: (_, ref, _) => buildBookmarkButton(ref)),
                 ],
               ),
             ),
@@ -131,27 +141,27 @@ void main() {
       expect(icon.icon, Icons.bookmark);
     });
 
-    testWidgets('bookmark button is disabled when no file is selected',
-        (WidgetTester tester) async {
+    testWidgets('bookmark button is disabled when no file is selected', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
             allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
-                () => _TestCurrentDirectoryNotifier('/library/n1234')),
+              () => _TestCurrentDirectoryNotifier('/library/n1234'),
+            ),
             isBookmarkedProvider.overrideWithValue(false),
           ],
           child: MaterialApp(
-                locale: const Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               appBar: AppBar(
                 actions: [
-                  Consumer(
-                    builder: (_, ref, _) => buildBookmarkButton(ref),
-                  ),
+                  Consumer(builder: (_, ref, _) => buildBookmarkButton(ref)),
                 ],
               ),
             ),
@@ -165,27 +175,27 @@ void main() {
       expect(iconButton.onPressed, isNull);
     });
 
-    testWidgets('bookmark button is disabled at library root',
-        (WidgetTester tester) async {
+    testWidgets('bookmark button is disabled at library root', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
             allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
-                () => _TestCurrentDirectoryNotifier('/library')),
+              () => _TestCurrentDirectoryNotifier('/library'),
+            ),
             isBookmarkedProvider.overrideWithValue(false),
           ],
           child: MaterialApp(
-                locale: const Locale('ja'),
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               appBar: AppBar(
                 actions: [
-                  Consumer(
-                    builder: (_, ref, _) => buildBookmarkButton(ref),
-                  ),
+                  Consumer(builder: (_, ref, _) => buildBookmarkButton(ref)),
                 ],
               ),
             ),

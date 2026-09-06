@@ -16,10 +16,9 @@ List<TextSegment> parseRubyText(String content) {
     if (match.start > lastEnd) {
       segments.add(PlainTextSegment(content.substring(lastEnd, match.start)));
     }
-    segments.add(RubyTextSegment(
-      base: match.group(1)!,
-      rubyText: match.group(2)!,
-    ));
+    segments.add(
+      RubyTextSegment(base: match.group(1)!, rubyText: match.group(2)!),
+    );
     lastEnd = match.end;
   }
 
@@ -35,11 +34,7 @@ List<TextSegment> parseRubyText(String content) {
 /// In SelectableText.rich, WidgetSpan counts as 1 character (U+FFFC),
 /// so selection offsets don't match plainText offsets. This function
 /// maps display offsets to actual text content.
-String extractSelectedText(
-  int start,
-  int end,
-  List<TextSegment> segments,
-) {
+String extractSelectedText(int start, int end, List<TextSegment> segments) {
   if (start >= end) return '';
 
   final buffer = StringBuffer();

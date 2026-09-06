@@ -25,9 +25,8 @@ void main() {
                 onPressed: () async {
                   result = await showDialog<String>(
                     context: context,
-                    builder: (_) => const MoveDestinationDialog(
-                      destinations: destinations,
-                    ),
+                    builder: (_) =>
+                        const MoveDestinationDialog(destinations: destinations),
                   );
                 },
                 child: const Text('open'),
@@ -42,8 +41,9 @@ void main() {
     return result;
   }
 
-  testWidgets('shows the library root and organizational folders',
-      (tester) async {
+  testWidgets('shows the library root and organizational folders', (
+    tester,
+  ) async {
     await showDialogAndGet(tester);
 
     expect(find.text('ライブラリ（最上位）'), findsOneWidget);
@@ -65,9 +65,8 @@ void main() {
                 onPressed: () async {
                   result = await showDialog<String>(
                     context: context,
-                    builder: (_) => const MoveDestinationDialog(
-                      destinations: destinations,
-                    ),
+                    builder: (_) =>
+                        const MoveDestinationDialog(destinations: destinations),
                   );
                 },
                 child: const Text('open'),

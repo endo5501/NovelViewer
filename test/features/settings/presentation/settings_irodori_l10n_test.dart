@@ -12,26 +12,27 @@ void main() {
 
   for (final locale in const [Locale('ja'), Locale('en'), Locale('zh')]) {
     group(
-        'Irodori labels resolve via AppLocalizations [${locale.languageCode}]',
-        () {
-      late AppLocalizations l10n;
+      'Irodori labels resolve via AppLocalizations [${locale.languageCode}]',
+      () {
+        late AppLocalizations l10n;
 
-      setUp(() async {
-        l10n = await loadFor(locale);
-      });
+        setUp(() async {
+          l10n = await loadFor(locale);
+        });
 
-      test('settings_irodoriDownloaded is non-empty', () {
-        expect(l10n.settings_irodoriDownloaded, isNotEmpty);
-      });
-      test('settings_irodoriSpeakerGuidanceScale is non-empty', () {
-        expect(l10n.settings_irodoriSpeakerGuidanceScale, isNotEmpty);
-      });
-      test('settings_irodoriCaptionGuidanceScale is non-empty', () {
-        expect(l10n.settings_irodoriCaptionGuidanceScale, isNotEmpty);
-      });
-      test('settings_irodoriNumInferenceSteps is non-empty', () {
-        expect(l10n.settings_irodoriNumInferenceSteps, isNotEmpty);
-      });
-    });
+        test('settings_irodoriDownloaded is non-empty', () {
+          expect(l10n.settings_irodoriDownloaded, isNotEmpty);
+        });
+        test('settings_irodoriSpeakerGuidanceScale is non-empty', () {
+          expect(l10n.settings_irodoriSpeakerGuidanceScale, isNotEmpty);
+        });
+        test('settings_irodoriCaptionGuidanceScale is non-empty', () {
+          expect(l10n.settings_irodoriCaptionGuidanceScale, isNotEmpty);
+        });
+        test('settings_irodoriNumInferenceSteps is non-empty', () {
+          expect(l10n.settings_irodoriNumInferenceSteps, isNotEmpty);
+        });
+      },
+    );
   }
 }

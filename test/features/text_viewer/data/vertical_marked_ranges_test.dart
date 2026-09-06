@@ -50,8 +50,9 @@ void main() {
 
   group('computeMarkedRanges', () {
     test('returns empty map when no words to mark', () {
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('アリスが歩く')]);
+      final entries = buildVerticalCharEntries([
+        const PlainTextSegment('アリスが歩く'),
+      ]);
       expect(
         computeMarkedRanges(entries: entries, markedWords: const {}),
         isEmpty,
@@ -59,8 +60,9 @@ void main() {
     });
 
     test('returns empty map when text has no matches', () {
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('ボブの旅')]);
+      final entries = buildVerticalCharEntries([
+        const PlainTextSegment('ボブの旅'),
+      ]);
       expect(
         computeMarkedRanges(
           entries: entries,
@@ -71,8 +73,9 @@ void main() {
     });
 
     test('shares the same MarkInfo instance across all chars of one mark', () {
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('アリスが歩く')]);
+      final entries = buildVerticalCharEntries([
+        const PlainTextSegment('アリスが歩く'),
+      ]);
       final result = computeMarkedRanges(
         entries: entries,
         markedWords: const {'アリス': MarkStyle.solid},
@@ -90,11 +93,10 @@ void main() {
       expect(result.containsKey(3), isFalse);
     });
 
-    test('two occurrences of the same word produce distinct MarkInfo values',
-        () {
-      final entries = buildVerticalCharEntries(
-        [const PlainTextSegment('アリスが歩く。アリスが走る')],
-      );
+    test('two occurrences of the same word produce distinct MarkInfo values', () {
+      final entries = buildVerticalCharEntries([
+        const PlainTextSegment('アリスが歩く。アリスが走る'),
+      ]);
       final result = computeMarkedRanges(
         entries: entries,
         markedWords: const {'アリス': MarkStyle.solid},
@@ -117,8 +119,9 @@ void main() {
 
     test('newline between candidate chars prevents mark from spanning it', () {
       // Buffer would be "アリ\nス…" so "アリス" cannot match across the newline.
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
+      final entries = buildVerticalCharEntries([
+        const PlainTextSegment('アリ\nスが歩く'),
+      ]);
       final result = computeMarkedRanges(
         entries: entries,
         markedWords: const {'アリス': MarkStyle.solid},
@@ -126,8 +129,7 @@ void main() {
       expect(result, isEmpty);
     });
 
-    test(
-        'ruby-base text in a single RubyTextSegment maps the mark to the one '
+    test('ruby-base text in a single RubyTextSegment maps the mark to the one '
         'ruby entry covering the base chars', () {
       // Entries: [RubyTextSegment("聖印","せいいん"), PlainTextSegment("を持つ")]
       // The ruby entry buffer-expands to 2 chars "聖印", both pointing to
@@ -138,10 +140,7 @@ void main() {
       ]);
       final result = computeMarkedRanges(
         entries: entries,
-        markedWords: const {
-          '聖印': MarkStyle.solid,
-          'せいいん': MarkStyle.solid,
-        },
+        markedWords: const {'聖印': MarkStyle.solid, 'せいいん': MarkStyle.solid},
       );
       expect(result[0], isNotNull);
       expect(result[0]!.word, '聖印');
@@ -154,14 +153,12 @@ void main() {
     });
 
     test('1-character cached words are skipped (minWordLength=2)', () {
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('のもアリス')]);
+      final entries = buildVerticalCharEntries([
+        const PlainTextSegment('のもアリス'),
+      ]);
       final result = computeMarkedRanges(
         entries: entries,
-        markedWords: const {
-          'の': MarkStyle.solid,
-          'アリス': MarkStyle.solid,
-        },
+        markedWords: const {'の': MarkStyle.solid, 'アリス': MarkStyle.solid},
       );
       // "の" excluded; "アリス" marks entries 2..5.
       expect(result.containsKey(0), isFalse);
@@ -175,8 +172,9 @@ void main() {
       // entries: ア(0) リ(1) \n(2) ス(3) が(4) 歩(5) く(6).
       // The newline at index 2 is a VISUAL column wrap, so "アリス" must match
       // across it and entries 0,1,3 share one MarkInfo instance.
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
+      final entries = buildVerticalCharEntries([
+        const PlainTextSegment('アリ\nスが歩く'),
+      ]);
       final result = computeMarkedRanges(
         entries: entries,
         markedWords: const {'アリス': MarkStyle.solid},
@@ -195,8 +193,9 @@ void main() {
     test('real line break (in lineBreakEntryIndices) splits a mark', () {
       // Same entries, but the newline at index 2 is a REAL paragraph break,
       // so "アリス" must NOT match across it.
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
+      final entries = buildVerticalCharEntries([
+        const PlainTextSegment('アリ\nスが歩く'),
+      ]);
       final result = computeMarkedRanges(
         entries: entries,
         markedWords: const {'アリス': MarkStyle.solid},
@@ -207,8 +206,9 @@ void main() {
 
     test('omitting lineBreakEntryIndices treats every newline as a boundary '
         '(legacy)', () {
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
+      final entries = buildVerticalCharEntries([
+        const PlainTextSegment('アリ\nスが歩く'),
+      ]);
       final result = computeMarkedRanges(
         entries: entries,
         markedWords: const {'アリス': MarkStyle.solid},
@@ -248,29 +248,37 @@ void main() {
     Map<int, MarkStyle> styleMap(Map<int, MarkInfo> ranges) =>
         ranges.map((k, v) => MapEntry(k, v.style));
 
-    test('marks every char-entry index inside a matched span with its style',
-        () {
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('アリスが歩く')]);
-      final styles = styleMap(computeMarkedRanges(
-        entries: entries,
-        markedWords: const {'アリス': MarkStyle.solid},
-      ));
-      expect(styles[0], MarkStyle.solid);
-      expect(styles[1], MarkStyle.solid);
-      expect(styles[2], MarkStyle.solid);
-      expect(styles.containsKey(3), isFalse);
-      expect(styles.containsKey(4), isFalse);
-      expect(styles.containsKey(5), isFalse);
-    });
+    test(
+      'marks every char-entry index inside a matched span with its style',
+      () {
+        final entries = buildVerticalCharEntries([
+          const PlainTextSegment('アリスが歩く'),
+        ]);
+        final styles = styleMap(
+          computeMarkedRanges(
+            entries: entries,
+            markedWords: const {'アリス': MarkStyle.solid},
+          ),
+        );
+        expect(styles[0], MarkStyle.solid);
+        expect(styles[1], MarkStyle.solid);
+        expect(styles[2], MarkStyle.solid);
+        expect(styles.containsKey(3), isFalse);
+        expect(styles.containsKey(4), isFalse);
+        expect(styles.containsKey(5), isFalse);
+      },
+    );
 
     test('uses dotted style for dotted-cached words', () {
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('ボブの旅')]);
-      final styles = styleMap(computeMarkedRanges(
-        entries: entries,
-        markedWords: const {'ボブ': MarkStyle.dotted},
-      ));
+      final entries = buildVerticalCharEntries([
+        const PlainTextSegment('ボブの旅'),
+      ]);
+      final styles = styleMap(
+        computeMarkedRanges(
+          entries: entries,
+          markedWords: const {'ボブ': MarkStyle.dotted},
+        ),
+      );
       expect(styles[0], MarkStyle.dotted);
       expect(styles[1], MarkStyle.dotted);
     });
@@ -280,27 +288,26 @@ void main() {
         const RubyTextSegment(base: '聖印', rubyText: 'せいいん'),
         const PlainTextSegment('を持つ'),
       ]);
-      final styles = styleMap(computeMarkedRanges(
-        entries: entries,
-        markedWords: const {
-          '聖印': MarkStyle.solid,
-          'せいいん': MarkStyle.solid,
-        },
-      ));
+      final styles = styleMap(
+        computeMarkedRanges(
+          entries: entries,
+          markedWords: const {'聖印': MarkStyle.solid, 'せいいん': MarkStyle.solid},
+        ),
+      );
       expect(styles[0], MarkStyle.solid);
       expect(styles.containsKey(1), isFalse);
     });
 
     test('skips 1-character cached words (minWordLength=2)', () {
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('のもアリス')]);
-      final styles = styleMap(computeMarkedRanges(
-        entries: entries,
-        markedWords: const {
-          'の': MarkStyle.solid,
-          'アリス': MarkStyle.solid,
-        },
-      ));
+      final entries = buildVerticalCharEntries([
+        const PlainTextSegment('のもアリス'),
+      ]);
+      final styles = styleMap(
+        computeMarkedRanges(
+          entries: entries,
+          markedWords: const {'の': MarkStyle.solid, 'アリス': MarkStyle.solid},
+        ),
+      );
       expect(styles.containsKey(0), isFalse);
       expect(styles[2], MarkStyle.solid);
       expect(styles[3], MarkStyle.solid);
@@ -308,13 +315,16 @@ void main() {
     });
 
     test('visual column break does not split mark styling', () {
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
-      final styles = styleMap(computeMarkedRanges(
-        entries: entries,
-        markedWords: const {'アリス': MarkStyle.solid},
-        lineBreakEntryIndices: const {},
-      ));
+      final entries = buildVerticalCharEntries([
+        const PlainTextSegment('アリ\nスが歩く'),
+      ]);
+      final styles = styleMap(
+        computeMarkedRanges(
+          entries: entries,
+          markedWords: const {'アリス': MarkStyle.solid},
+          lineBreakEntryIndices: const {},
+        ),
+      );
       expect(styles[0], MarkStyle.solid);
       expect(styles[1], MarkStyle.solid);
       expect(styles[3], MarkStyle.solid);
@@ -322,25 +332,33 @@ void main() {
     });
 
     test('real line break splits mark styling', () {
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
-      final styles = styleMap(computeMarkedRanges(
-        entries: entries,
-        markedWords: const {'アリス': MarkStyle.solid},
-        lineBreakEntryIndices: const {2},
-      ));
+      final entries = buildVerticalCharEntries([
+        const PlainTextSegment('アリ\nスが歩く'),
+      ]);
+      final styles = styleMap(
+        computeMarkedRanges(
+          entries: entries,
+          markedWords: const {'アリス': MarkStyle.solid},
+          lineBreakEntryIndices: const {2},
+        ),
+      );
       expect(styles, isEmpty);
     });
 
-    test('omitting lineBreakEntryIndices treats newline as boundary (legacy)',
-        () {
-      final entries =
-          buildVerticalCharEntries([const PlainTextSegment('アリ\nスが歩く')]);
-      final styles = styleMap(computeMarkedRanges(
-        entries: entries,
-        markedWords: const {'アリス': MarkStyle.solid},
-      ));
-      expect(styles, isEmpty);
-    });
+    test(
+      'omitting lineBreakEntryIndices treats newline as boundary (legacy)',
+      () {
+        final entries = buildVerticalCharEntries([
+          const PlainTextSegment('アリ\nスが歩く'),
+        ]);
+        final styles = styleMap(
+          computeMarkedRanges(
+            entries: entries,
+            markedWords: const {'アリス': MarkStyle.solid},
+          ),
+        );
+        expect(styles, isEmpty);
+      },
+    );
   });
 }

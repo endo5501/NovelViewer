@@ -8,15 +8,15 @@ extension on String {
 
 class FlatCharEntry {
   const FlatCharEntry.plain(this.firstChar)
-      : lastChar = firstChar,
-        charCount = 1,
-        rubySegment = null;
+    : lastChar = firstChar,
+      charCount = 1,
+      rubySegment = null;
 
   FlatCharEntry.ruby(RubyTextSegment segment)
-      : firstChar = String.fromCharCode(segment.base.runes.first),
-        lastChar = String.fromCharCode(segment.base.runes.last),
-        charCount = segment.base.runes.length,
-        rubySegment = segment;
+    : firstChar = String.fromCharCode(segment.base.runes.first),
+      lastChar = String.fromCharCode(segment.base.runes.last),
+      charCount = segment.base.runes.length,
+      rubySegment = segment;
 
   final String firstChar;
   final String lastChar;
@@ -104,7 +104,8 @@ List<List<FlatCharEntry>> splitWithKinsoku(
 
       // Apply line-head kinsoku: push last char to next column
       // so forbidden char becomes 2nd char, not 1st
-      if (i < entries.length && entries[i].firstChar.isLineHeadForbidden &&
+      if (i < entries.length &&
+          entries[i].firstChar.isLineHeadForbidden &&
           currentColumn.length > 1) {
         moveLastEntryToNext();
         continue;

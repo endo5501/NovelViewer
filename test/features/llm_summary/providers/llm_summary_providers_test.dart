@@ -77,8 +77,7 @@ void main() {
       expect(client, isNull);
     });
 
-    test(
-        'returns OpenAiCompatibleClient configured with the API key fetched '
+    test('returns OpenAiCompatibleClient configured with the API key fetched '
         'from secure storage when provider is openai', () async {
       SharedPreferences.setMockInitialValues({
         'llm_provider': 'openai',
@@ -101,98 +100,110 @@ void main() {
       expect(openai.model, 'gpt-4o-mini');
     });
 
-    test('returns null when openai provider has no API key in secure storage',
-        () async {
-      SharedPreferences.setMockInitialValues({
-        'llm_provider': 'openai',
-        'llm_base_url': 'https://api.openai.com/v1',
-        'llm_model': 'gpt-4o-mini',
-      });
-      // No entry in secureStorageMock.store -> getApiKey returns ''
-      final prefs = await SharedPreferences.getInstance();
+    test(
+      'returns null when openai provider has no API key in secure storage',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'llm_provider': 'openai',
+          'llm_base_url': 'https://api.openai.com/v1',
+          'llm_model': 'gpt-4o-mini',
+        });
+        // No entry in secureStorageMock.store -> getApiKey returns ''
+        final prefs = await SharedPreferences.getInstance();
 
-      final container = ProviderContainer(
-        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-      );
-      addTearDown(container.dispose);
-
-      final client = await container.read(llmClientProvider.future);
-      expect(client, isNull);
-    });
-
-    test('injects the shared httpClientProvider into the OpenAI client',
-        () async {
-      // F163: the provider must inject the shared, provider-managed client
-      // rather than letting the LLM client create its own unclosed one.
-      SharedPreferences.setMockInitialValues({
-        'llm_provider': 'openai',
-        'llm_base_url': 'https://api.openai.com/v1',
-        'llm_model': 'gpt-4o-mini',
-      });
-      secureStorageMock.store['llm_api_key'] = 'sk-test';
-      final prefs = await SharedPreferences.getInstance();
-
-      var sawRequest = false;
-      final mockClient = MockClient((request) async {
-        sawRequest = true;
-        return http.Response(
-          jsonEncode({
-            'choices': [
-              {
-                'message': {'content': 'ok'},
-              }
-            ],
-          }),
-          200,
+        final container = ProviderContainer(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
         );
-      });
+        addTearDown(container.dispose);
 
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          httpClientProvider.overrideWithValue(mockClient),
-        ],
-      );
-      addTearDown(container.dispose);
+        final client = await container.read(llmClientProvider.future);
+        expect(client, isNull);
+      },
+    );
 
-      final client = await container.read(llmClientProvider.future);
-      final result = await client!.generate('p');
+    test(
+      'injects the shared httpClientProvider into the OpenAI client',
+      () async {
+        // F163: the provider must inject the shared, provider-managed client
+        // rather than letting the LLM client create its own unclosed one.
+        SharedPreferences.setMockInitialValues({
+          'llm_provider': 'openai',
+          'llm_base_url': 'https://api.openai.com/v1',
+          'llm_model': 'gpt-4o-mini',
+        });
+        secureStorageMock.store['llm_api_key'] = 'sk-test';
+        final prefs = await SharedPreferences.getInstance();
 
-      expect(sawRequest, isTrue,
-          reason: 'generate() must route through the injected client');
-      expect(result, 'ok');
-    });
+        var sawRequest = false;
+        final mockClient = MockClient((request) async {
+          sawRequest = true;
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {'content': 'ok'},
+                },
+              ],
+            }),
+            200,
+          );
+        });
 
-    test('injects the shared httpClientProvider into the Ollama client',
-        () async {
-      SharedPreferences.setMockInitialValues({
-        'llm_provider': 'ollama',
-        'llm_base_url': 'http://localhost:11434',
-        'llm_model': 'llama3',
-      });
-      final prefs = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            httpClientProvider.overrideWithValue(mockClient),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      var sawRequest = false;
-      final mockClient = MockClient((request) async {
-        sawRequest = true;
-        return http.Response(jsonEncode({'response': 'ok'}), 200);
-      });
+        final client = await container.read(llmClientProvider.future);
+        final result = await client!.generate('p');
 
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          httpClientProvider.overrideWithValue(mockClient),
-        ],
-      );
-      addTearDown(container.dispose);
+        expect(
+          sawRequest,
+          isTrue,
+          reason: 'generate() must route through the injected client',
+        );
+        expect(result, 'ok');
+      },
+    );
 
-      final client = await container.read(llmClientProvider.future);
-      final result = await client!.generate('p');
+    test(
+      'injects the shared httpClientProvider into the Ollama client',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'llm_provider': 'ollama',
+          'llm_base_url': 'http://localhost:11434',
+          'llm_model': 'llama3',
+        });
+        final prefs = await SharedPreferences.getInstance();
 
-      expect(sawRequest, isTrue,
-          reason: 'generate() must route through the injected client');
-      expect(result, 'ok');
-    });
+        var sawRequest = false;
+        final mockClient = MockClient((request) async {
+          sawRequest = true;
+          return http.Response(jsonEncode({'response': 'ok'}), 200);
+        });
+
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            httpClientProvider.overrideWithValue(mockClient),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final client = await container.read(llmClientProvider.future);
+        final result = await client!.generate('p');
+
+        expect(
+          sawRequest,
+          isTrue,
+          reason: 'generate() must route through the injected client',
+        );
+        expect(result, 'ok');
+      },
+    );
 
     test('does not call secure storage for the Ollama provider', () async {
       SharedPreferences.setMockInitialValues({
@@ -208,12 +219,12 @@ void main() {
       var secureCalls = 0;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
-        (call) async {
-          secureCalls++;
-          return null;
-        },
-      );
+            const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+            (call) async {
+              secureCalls++;
+              return null;
+            },
+          );
 
       final container = ProviderContainer(
         overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],

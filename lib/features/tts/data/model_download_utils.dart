@@ -2,10 +2,8 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-typedef DownloadProgressCallback = void Function(
-  String fileName,
-  double? progress,
-);
+typedef DownloadProgressCallback =
+    void Function(String fileName, double? progress);
 
 /// Thrown by [downloadFile] when `shouldCancel` reports true, either before
 /// the GET request fires or partway through the response stream.
@@ -39,10 +37,7 @@ Future<void> downloadFile(
   final response = await client.send(request);
 
   if (response.statusCode != 200) {
-    throw HttpException(
-      'HTTP ${response.statusCode}',
-      uri: Uri.parse(url),
-    );
+    throw HttpException('HTTP ${response.statusCode}', uri: Uri.parse(url));
   }
 
   final contentLength = response.contentLength;
@@ -56,10 +51,9 @@ Future<void> downloadFile(
       }
       sink.add(chunk);
       bytesReceived += chunk.length;
-      final progress =
-          contentLength != null && contentLength > 0
-              ? bytesReceived / contentLength
-              : null;
+      final progress = contentLength != null && contentLength > 0
+          ? bytesReceived / contentLength
+          : null;
       onProgress?.call(fileName, progress);
     }
     await sink.flush();
