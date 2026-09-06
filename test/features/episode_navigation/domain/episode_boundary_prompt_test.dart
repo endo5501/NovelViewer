@@ -133,7 +133,7 @@ void main() {
       });
     });
 
-    test('an ignored input does not restart the cooldown', () {
+    test('an ignored input restarts the cooldown', () {
       fakeAsync((clock) {
         final prompt = EpisodeBoundaryPrompt();
         prompt.hitBoundary(EpisodeBoundaryDirection.next, hasAdjacent: true);
@@ -145,9 +145,41 @@ void main() {
           reason: 'still inside the 300ms cooldown',
         );
 
-        // 350ms after arming: past the original cooldown. If the ignored input
-        // had restarted it, this would still be suppressed.
+        // 350ms after arming but only 150ms after the ignored input, so the
+        // gesture has not gone quiet yet.
         clock.elapse(const Duration(milliseconds: 150));
+        expect(
+          prompt.hitBoundary(EpisodeBoundaryDirection.next, hasAdjacent: true),
+          isFalse,
+        );
+        prompt.dispose();
+      });
+    });
+
+    test('inertial scrolling cannot confirm on its own', () {
+      fakeAsync((clock) {
+        final prompt = EpisodeBoundaryPrompt();
+
+        // One macOS trackpad flick: ~1s of momentum events at ~60Hz, long past
+        // the 300ms window measured from the first of them.
+        var confirmed = false;
+        for (var t = 0; t <= 1000; t += 16) {
+          confirmed |= prompt.hitBoundary(
+            EpisodeBoundaryDirection.next,
+            hasAdjacent: true,
+          );
+          clock.elapse(const Duration(milliseconds: 16));
+        }
+
+        expect(
+          confirmed,
+          isFalse,
+          reason: 'A single flick must not cross a file boundary',
+        );
+        expect(prompt.pending, EpisodeBoundaryDirection.next);
+
+        // The momentum dies down; a deliberate second flick confirms.
+        clock.elapse(const Duration(milliseconds: 300));
         expect(
           prompt.hitBoundary(EpisodeBoundaryDirection.next, hasAdjacent: true),
           isTrue,

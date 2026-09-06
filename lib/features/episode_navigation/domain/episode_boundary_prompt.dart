@@ -25,9 +25,14 @@ class EpisodeBoundaryPrompt extends ChangeNotifier {
   /// How long an armed hint survives without further input.
   final Duration promptTimeout;
 
-  /// How long after arming a hint the same direction cannot confirm it. A
-  /// single wheel turn, key repeat or overscroll fling emits a burst of
-  /// events; without this one gesture would both arm and confirm.
+  /// How quiet the same direction must go before it can confirm. A single
+  /// wheel turn, key repeat or overscroll fling emits a burst of events;
+  /// without this one gesture would both arm and confirm.
+  ///
+  /// Measured from the last input rather than from arming: a macOS trackpad
+  /// flick keeps emitting momentum events for about a second after the fingers
+  /// leave, so a window anchored to the first event would let one flick cross
+  /// a file boundary — exactly what the two-step confirmation exists to stop.
   final Duration confirmCooldown;
 
   EpisodeBoundaryDirection? _pending;
@@ -54,10 +59,14 @@ class EpisodeBoundaryPrompt extends ChangeNotifier {
 
     if (_pending == direction) {
       // Still inside the cooldown, so this is the same gesture that armed the
-      // hint rather than a second, deliberate input. Ignore it without
-      // touching the timeout — the hint expires 4s after arming, not 4s after
-      // the last event of a fling.
-      if (_inCooldown) return false;
+      // hint rather than a second, deliberate input. Restart the cooldown so
+      // the confirm needs a real gap in the input, but leave the timeout alone
+      // — the hint expires 4s after arming, not 4s after the last event of a
+      // fling.
+      if (_inCooldown) {
+        _startCooldown();
+        return false;
+      }
       // Publish the disarm like every other transition, so a viewer that
       // paints the hint drops it on its own rather than relying on the
       // navigation that follows to rebuild it.
@@ -87,12 +96,18 @@ class EpisodeBoundaryPrompt extends ChangeNotifier {
     _timeoutTimer?.cancel();
     _cooldownTimer?.cancel();
     _pending = direction;
-    _cooldownTimer = Timer(confirmCooldown, () {});
+    _startCooldown();
     _timeoutTimer = Timer(promptTimeout, () {
       _disarm();
       notifyListeners();
     });
     notifyListeners();
+  }
+
+  /// (Re)starts the quiet period the next same-direction input must clear.
+  void _startCooldown() {
+    _cooldownTimer?.cancel();
+    _cooldownTimer = Timer(confirmCooldown, () {});
   }
 
   void _disarm() {
