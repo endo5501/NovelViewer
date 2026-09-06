@@ -52,3 +52,11 @@ The playback toggle shortcut SHALL NOT start synthesis when TTS is unavailable, 
 #### Scenario: The TTS shortcut is listed where TTS is available
 - **WHEN** the shortcut settings list is displayed while TTS is available
 - **THEN** a row for the TTS playback toggle is present
+
+#### Scenario: The hidden binding does not block another rebinding
+- **WHEN** the reader assigns to a visible action the key combination currently held by the TTS playback toggle, while TTS is unavailable
+- **THEN** the assignment succeeds, because refusing it would report a conflict with a row the reader cannot see or change
+
+#### Scenario: Conflicts between available actions are still refused
+- **WHEN** the reader assigns to one visible action the key combination held by another visible action
+- **THEN** the assignment is refused, whether or not TTS is available

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_action.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_bindings.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 
 /// Platform-aware default bindings. Overridable in tests to pin the modifier
 /// (Control vs Meta) regardless of the host platform.
@@ -30,9 +31,17 @@ class KeyBindingsNotifier extends Notifier<Map<ShortcutAction, KeyBinding>> {
   /// same combination is already bound to a *different* action, so the user
   /// never silently overwrites an existing assignment. Reassigning an action to
   /// its own current binding is allowed.
+  ///
+  /// An action the platform cannot run is not counted as a conflict. Its
+  /// binding stays in storage but its row is not offered, so treating it as
+  /// taken would tell the user a key is in use by something they cannot see
+  /// and cannot rebind.
   Future<bool> rebind(ShortcutAction action, KeyBinding binding) async {
     final conflict = state.entries.any(
-      (entry) => entry.key != action && entry.value == binding,
+      (entry) =>
+          entry.key != action &&
+          entry.value == binding &&
+          _isAvailable(entry.key),
     );
     if (conflict) return false;
 
@@ -44,13 +53,17 @@ class KeyBindingsNotifier extends Notifier<Map<ShortcutAction, KeyBinding>> {
   }
 
   /// Returns the action currently bound to [binding], or `null` if none. Useful
-  /// for surfacing which action a rejected duplicate conflicts with.
+  /// for surfacing which action a rejected duplicate conflicts with. Skips
+  /// actions the platform cannot run, for the same reason [rebind] does.
   ShortcutAction? actionFor(KeyBinding binding) {
     for (final entry in state.entries) {
-      if (entry.value == binding) return entry.key;
+      if (entry.value == binding && _isAvailable(entry.key)) return entry.key;
     }
     return null;
   }
+
+  bool _isAvailable(ShortcutAction action) =>
+      action != ShortcutAction.ttsToggle || ref.read(ttsSupportedProvider);
 
   Future<void> resetToDefaults() async {
     final defaults = ref.read(shortcutDefaultsProvider);
