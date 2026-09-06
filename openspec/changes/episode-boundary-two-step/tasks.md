@@ -30,32 +30,32 @@
 
 ## 5. 横書きビューアの 2 段階化（TDD: 赤 → 緑）
 
-- [ ] 5.1 `horizontal_edge_episode_nav_test.dart` の `cursor keys` / `mouse wheel` グループを 2 段階前提へ書き換える（1 回目ではヒント表示のみで遷移しない／確定クールダウン経過後の 2 回目で遷移する）
-- [ ] 5.2 同ファイルの `runaway cooldown` グループを削除し、代わりに「1 回だけの境界操作ではタイムアウト後も遷移しない」「遷移直後の同方向入力は再び 1 回目扱いになる」のケースを追加する
-- [ ] 5.3 中間位置・隣接ファイルなし・フォーカス外の既存 no-op ケースが、ヒント表示も発生しないことまで検証するよう更新する
-- [ ] 5.4 `fvm flutter test test/features/text_viewer/presentation/horizontal_edge_episode_nav_test.dart` を実行し、失敗（赤）することを確認する
-- [ ] 5.5 `text_content_renderer.dart` に `EpisodeBoundaryPrompt` を導入し（`initState` で生成、`dispose` で破棄）、`_navigateEpisodeAtEdge` を `hitBoundary` 呼び出しへ置き換える
-- [ ] 5.6 `_edgeNavCooldownActive` / `_edgeNavCooldownTimer` / `_kEdgeNavCooldown` を削除する
-- [ ] 5.7 `_pageScroll` でファイル内スクロールが成立したとき、および `_handleViewerPointerSignal` で境界に達していないときに `prompt.reset()` を呼ぶよう配線する
-- [ ] 5.8 5.1〜5.3 のテストが緑になることを確認する
+- [x] 5.1 `horizontal_edge_episode_nav_test.dart` の `cursor keys` / `mouse wheel` グループを 2 段階前提へ書き換える（1 回目ではヒント表示のみで遷移しない／確定クールダウン経過後の 2 回目で遷移する）
+- [x] 5.2 同ファイルの `runaway cooldown` グループを削除し、代わりに「1 回だけの境界操作ではタイムアウト後も遷移しない」「遷移直後の同方向入力は再び 1 回目扱いになる」のケースを追加する
+- [x] 5.3 中間位置・隣接ファイルなし・フォーカス外の既存 no-op ケースを、2 回入力しても遷移しないことまで検証するよう更新する（ヒント表示の非表示検証はバナーを作る 6.1 へ移動）
+- [x] 5.4 `fvm flutter test test/features/text_viewer/presentation/horizontal_edge_episode_nav_test.dart` を実行し、失敗（赤）することを確認する
+- [x] 5.5 `text_content_renderer.dart` に `EpisodeBoundaryPrompt` を導入し（`initState` で生成、`dispose` で破棄）、`_navigateEpisodeAtEdge` を `hitBoundary` 呼び出しへ置き換える
+- [x] 5.6 `_edgeNavCooldownActive` / `_edgeNavCooldownTimer` / `_kEdgeNavCooldown` を削除する
+- [x] 5.7 `_pageScroll` でファイル内スクロールが成立したとき、および `_handleViewerPointerSignal` で境界に達していないときに `prompt.reset()` を呼ぶよう配線する
+- [x] 5.8 5.1〜5.3 のテストが緑になることを確認する
 
 ## 6. 横書きのヒント表示領域
 
-- [ ] 6.1 ヒント表示の widget test を追加する（ヒント状態で隣接ファイル名を含む文言が表示される／待機状態では描画されない／タイムアウトで消える／表示前後で本文のスクロール位置と `maxScrollExtent` が変化しない）
-- [ ] 6.2 テストが失敗（赤）することを確認する
-- [ ] 6.3 `text_content_renderer.dart` のスクロールビューを `Stack` で包み、`Positioned(bottom: 8, left: 0, right: 0)` + `Center` にヒントを配置する（書体は `textTheme.bodySmall`、背景は `colorScheme.surfaceContainerHighest` 相当＋角丸＋左右パディング、`TextOverflow.ellipsis`）
-- [ ] 6.4 `TtsControlsBar` と重ならないよう水平パディングを設定し、6.1 のテストが緑になることを確認する
+- [x] 6.1 ヒント表示の widget test を追加する（ヒント状態で隣接ファイル名を含む文言が表示される／待機状態では描画されない／タイムアウトで消える／no-op ケースでは表示されない／表示前後で本文のスクロール位置と `maxScrollExtent` が変化しない）
+- [x] 6.2 テストが失敗（赤）することを確認する
+- [x] 6.3 `text_content_renderer.dart` のスクロールビューを `Stack` で包み、`Positioned(bottom: 8, left: 0, right: 0)` + `Center` にヒントを配置する（書体は `textTheme.bodySmall`、背景は `colorScheme.surfaceContainerHighest` 相当＋角丸＋左右パディング、`TextOverflow.ellipsis`）
+- [x] 6.4 `TtsControlsBar` と重ならないよう水平パディングを設定し、6.1 のテストが緑になることを確認する
 
 ## 7. 仕様の整合確認
 
-- [ ] 7.1 `openspec/changes/episode-boundary-two-step/specs/episode-boundary-prompt/spec.md` の全シナリオが 1・2 のユニットテストで網羅されていることを突き合わせる
-- [ ] 7.2 `openspec/changes/episode-boundary-two-step/specs/text-viewer/spec.md` の MODIFIED / ADDED の全シナリオが 5・6 のテストで網羅されていることを突き合わせる
-- [ ] 7.3 `openspec validate episode-boundary-two-step` を実行して通ることを確認する
+- [x] 7.1 `openspec/changes/episode-boundary-two-step/specs/episode-boundary-prompt/spec.md` の全シナリオが 1・2 のユニットテストで網羅されていることを突き合わせる
+- [x] 7.2 `openspec/changes/episode-boundary-two-step/specs/text-viewer/spec.md` の MODIFIED / ADDED の全シナリオが 5・6 のテストで網羅されていることを突き合わせる
+- [x] 7.3 `openspec validate episode-boundary-two-step` を実行して通ることを確認する
 
 ## 8. 最終確認
 
 - [ ] 8.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 8.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 8.3 `fvm dart format .`でフォーマットを実行
-- [ ] 8.4 `fvm flutter analyze`でリントを実行
-- [ ] 8.5 `fvm flutter test`でテストを実行
+- [x] 8.3 `fvm dart format .`でフォーマットを実行
+- [x] 8.4 `fvm flutter analyze`でリントを実行
+- [x] 8.5 `fvm flutter test`でテストを実行

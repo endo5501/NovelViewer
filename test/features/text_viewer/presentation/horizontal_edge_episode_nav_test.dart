@@ -110,8 +110,14 @@ void main() {
     await tester.pump();
   }
 
+  /// Advances past the confirm cooldown so the next boundary input is treated
+  /// as a deliberate second input rather than part of the same gesture.
+  Future<void> passCooldown(WidgetTester tester) async {
+    await tester.pump(const Duration(milliseconds: 350));
+  }
+
   group('horizontal edge episode navigation — cursor keys', () {
-    testWidgets('arrow down at scroll-bottom navigates to next episode', (
+    testWidgets('arrow down at scroll-bottom needs two presses', (
       tester,
     ) async {
       final container = makeContainer();
@@ -126,13 +132,21 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
 
+      expect(
+        spyOf(container).next,
+        0,
+        reason: 'The first boundary press only arms the hint',
+      );
+
+      await passCooldown(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+
       expect(spyOf(container).next, 1);
       expect(spyOf(container).prev, 0);
     });
 
-    testWidgets('arrow up at scroll-top navigates to previous episode', (
-      tester,
-    ) async {
+    testWidgets('arrow up at scroll-top needs two presses', (tester) async {
       final container = makeContainer();
       addTearDown(container.dispose);
       await tester.pumpWidget(wrap(container: container, content: longContent));
@@ -142,7 +156,78 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await tester.pumpAndSettle();
 
+      expect(spyOf(container).prev, 0);
+
+      await passCooldown(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+
       expect(spyOf(container).prev, 1);
+      expect(spyOf(container).next, 0);
+    });
+
+    testWidgets('a lone boundary press never navigates', (tester) async {
+      final container = makeContainer();
+      addTearDown(container.dispose);
+      await tester.pumpWidget(wrap(container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      final state = tester.state<ScrollableState>(outerScrollable());
+      state.position.jumpTo(state.position.maxScrollExtent);
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      // Let the 4s hint window expire without a confirming press.
+      await tester.pump(const Duration(seconds: 5));
+
+      expect(spyOf(container).next, 0);
+    });
+
+    testWidgets('a press after the hint expired re-arms instead of moving', (
+      tester,
+    ) async {
+      final container = makeContainer();
+      addTearDown(container.dispose);
+      await tester.pumpWidget(wrap(container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      final state = tester.state<ScrollableState>(outerScrollable());
+      state.position.jumpTo(state.position.maxScrollExtent);
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 5));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+
+      expect(
+        spyOf(container).next,
+        0,
+        reason: 'The expired hint means this press arms a fresh one',
+      );
+    });
+
+    testWidgets('held arrow key (rapid repeats) does not auto-confirm', (
+      tester,
+    ) async {
+      final container = makeContainer();
+      addTearDown(container.dispose);
+      await tester.pumpWidget(wrap(container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      final state = tester.state<ScrollableState>(outerScrollable());
+      state.position.jumpTo(state.position.maxScrollExtent);
+      await tester.pump();
+
+      // Repeats arriving inside the confirm cooldown are part of one gesture.
+      for (var i = 0; i < 4; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump(const Duration(milliseconds: 30));
+      }
+
       expect(spyOf(container).next, 0);
     });
 
@@ -172,6 +257,33 @@ void main() {
       expect(state.position.pixels, greaterThan(before));
     });
 
+    testWidgets('an in-file page move disarms a pending hint', (tester) async {
+      final container = makeContainer();
+      addTearDown(container.dispose);
+      await tester.pumpWidget(wrap(container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      final state = tester.state<ScrollableState>(outerScrollable());
+      state.position.jumpTo(state.position.maxScrollExtent);
+      await tester.pump();
+
+      // Arm the next-episode hint, then scroll back up inside the file.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+
+      // Back at the bottom, the first press must arm again rather than
+      // confirm the hint that the in-file move dropped.
+      state.position.jumpTo(state.position.maxScrollExtent);
+      await tester.pump();
+      await passCooldown(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+
+      expect(spyOf(container).next, 0);
+    });
+
     testWidgets('arrow down at bottom with no next file is a no-op', (
       tester,
     ) async {
@@ -188,6 +300,9 @@ void main() {
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
+      await passCooldown(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
 
       expect(spyOf(container).next, 0);
     });
@@ -202,6 +317,9 @@ void main() {
       await tester.pumpWidget(wrap(container: container, content: longContent));
       await tester.pumpAndSettle();
 
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      await passCooldown(tester);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await tester.pumpAndSettle();
 
@@ -232,6 +350,9 @@ void main() {
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
+      await passCooldown(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
 
       expect(
         spyOf(container).next,
@@ -244,9 +365,7 @@ void main() {
   });
 
   group('horizontal edge episode navigation — mouse wheel', () {
-    testWidgets('wheel down at scroll-bottom navigates to next episode', (
-      tester,
-    ) async {
+    testWidgets('wheel down at scroll-bottom needs two turns', (tester) async {
       final container = makeContainer();
       addTearDown(container.dispose);
       await tester.pumpWidget(wrap(container: container, content: longContent));
@@ -257,18 +376,24 @@ void main() {
       await tester.pump();
 
       await sendWheel(tester, 60);
+      expect(spyOf(container).next, 0);
+
+      await passCooldown(tester);
+      await sendWheel(tester, 60);
 
       expect(spyOf(container).next, 1);
     });
 
-    testWidgets('wheel up at scroll-top navigates to previous episode', (
-      tester,
-    ) async {
+    testWidgets('wheel up at scroll-top needs two turns', (tester) async {
       final container = makeContainer();
       addTearDown(container.dispose);
       await tester.pumpWidget(wrap(container: container, content: longContent));
       await tester.pumpAndSettle();
 
+      await sendWheel(tester, -60);
+      expect(spyOf(container).prev, 0);
+
+      await passCooldown(tester);
       await sendWheel(tester, -60);
 
       expect(spyOf(container).prev, 1);
@@ -285,13 +410,15 @@ void main() {
       await tester.pump();
 
       await sendWheel(tester, 60);
+      await passCooldown(tester);
+      await sendWheel(tester, 60);
 
       expect(spyOf(container).next, 0);
     });
-  });
 
-  group('horizontal edge episode navigation — runaway cooldown', () {
-    testWidgets('wheel burst at bottom navigates only once', (tester) async {
+    testWidgets('a key then a wheel tick still form one two-step', (
+      tester,
+    ) async {
       final container = makeContainer();
       addTearDown(container.dispose);
       await tester.pumpWidget(wrap(container: container, content: longContent));
@@ -301,19 +428,44 @@ void main() {
       state.position.jumpTo(state.position.maxScrollExtent);
       await tester.pump();
 
-      // Two wheel ticks back-to-back without advancing the simulated clock —
-      // both fall inside the cooldown window.
+      // The confirmation is about direction, not about which device produced
+      // the input.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      await passCooldown(tester);
+      await sendWheel(tester, 60);
+
+      expect(spyOf(container).next, 1);
+    });
+
+    testWidgets('a wheel burst inside the cooldown never confirms', (
+      tester,
+    ) async {
+      final container = makeContainer();
+      addTearDown(container.dispose);
+      await tester.pumpWidget(wrap(container: container, content: longContent));
+      await tester.pumpAndSettle();
+
+      final state = tester.state<ScrollableState>(outerScrollable());
+      state.position.jumpTo(state.position.maxScrollExtent);
+      await tester.pump();
+
+      // Wheel ticks back-to-back without advancing the clock past the
+      // cooldown — one gesture, so at most the hint gets armed.
+      await sendWheel(tester, 60);
       await sendWheel(tester, 60);
       await sendWheel(tester, 60);
 
       expect(
         spyOf(container).next,
-        1,
-        reason: 'A burst of wheel events must advance at most one episode',
+        0,
+        reason: 'A burst of wheel events is a single gesture',
       );
     });
+  });
 
-    testWidgets('navigation works again after the cooldown elapses', (
+  group('horizontal edge episode navigation — after a confirmed switch', () {
+    testWidgets('the next input re-arms instead of navigating again', (
       tester,
     ) async {
       final container = makeContainer();
@@ -326,20 +478,25 @@ void main() {
       await tester.pump();
 
       await sendWheel(tester, 60);
+      await passCooldown(tester);
+      await sendWheel(tester, 60);
       expect(spyOf(container).next, 1);
 
-      // Let the cooldown expire, then the boundary gesture works again.
-      await tester.pump(const Duration(seconds: 1));
+      await passCooldown(tester);
       await sendWheel(tester, 60);
 
-      expect(spyOf(container).next, 2);
+      expect(
+        spyOf(container).next,
+        1,
+        reason: 'Confirming disarmed the prompt, so this only re-arms it',
+      );
     });
 
     testWidgets(
-      'short (single-screen) episode: wheel burst does not run away',
+      'short (single-screen) episode: a wheel burst does not run away',
       (tester) async {
         // maxScrollExtent == 0 → simultaneously at top and bottom. A continued
-        // wheel burst must still only advance one episode per cooldown window.
+        // wheel burst must not skip episodes.
         final container = makeContainer();
         addTearDown(container.dispose);
         await tester.pumpWidget(
@@ -356,10 +513,10 @@ void main() {
 
         expect(
           spyOf(container).next,
-          1,
+          0,
           reason:
-              'On a one-screen episode the cooldown must prevent a wheel '
-              'burst from skipping multiple episodes',
+              'On a one-screen episode a wheel burst is one gesture, so it '
+              'can only arm the hint',
         );
       },
     );
