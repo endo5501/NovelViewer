@@ -1,9 +1,9 @@
 ## Purpose
 
-LLM analysis history panel in the left column: a third tab ("解析履歴") alongside "ファイル" and "ブックマーク" that lists cached `word_summaries` entries for the active novel, supports click-to-jump back to the source file, and lets the user delete history entries via a context menu.
+LLM analysis history panel in the left column: a tab ("解析履歴") shown alongside "ファイル" and "ブックマーク" wherever the LLM summary feature is available on the running platform, and absent rather than empty where summaries cannot be produced. It lists cached `word_summaries` entries for the active novel, supports click-to-jump back to the source file, and lets the user delete history entries via a context menu.
 ## Requirements
 ### Requirement: Left column history tab
-The left column SHALL include a third tab labeled "解析履歴" alongside "ファイル" and "ブックマーク". The user SHALL be able to switch to this tab by tapping on it. Tab switching SHALL preserve the state of the other tabs (current directory, bookmark list scroll position).
+The left column SHALL include a third tab labeled "解析履歴" alongside "ファイル" and "ブックマーク" when the LLM summary feature is available on the running platform, and SHALL NOT include it otherwise — where summaries cannot be produced the tab lists nothing and can never be filled, so it is absent rather than empty. The user SHALL be able to switch to this tab by tapping on it. Tab switching SHALL preserve the state of the other tabs (current directory, bookmark list scroll position).
 
 #### Scenario: User switches to history tab
 - **WHEN** the user taps the "解析履歴" tab
@@ -13,6 +13,11 @@ The left column SHALL include a third tab labeled "解析履歴" alongside "フ�
 #### Scenario: User switches back from history tab
 - **WHEN** the user switches away from the "解析履歴" tab to another tab
 - **THEN** the other tab's panel SHALL be displayed with its prior state preserved
+
+#### Scenario: The history tab is absent where summaries are unavailable
+- **WHEN** the left column is displayed on a platform where the LLM summary feature is unavailable
+- **THEN** no "解析履歴" tab SHALL be present
+- **AND** the "ファイル" and "ブックマーク" tabs SHALL remain and continue to switch as before
 
 ### Requirement: History entries scoped to active novel
 The analysis history panel SHALL display only `word_summaries` entries whose `folder_name` matches the currently opened novel (the folder identified by `currentDirectoryProvider`). When no novel is active (user is at library root), a message SHALL be displayed instead of an entry list.
