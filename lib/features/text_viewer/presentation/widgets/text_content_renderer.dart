@@ -265,8 +265,11 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     // element is gone; every `ref.read` below would throw then.
     if (!mounted) return;
     if (ref.read(displayModeProvider) != TextDisplayMode.horizontal) return;
-    if (!_positionLoaded || _positionAdjusting || !_scrollController.hasClients)
+    if (!_positionLoaded ||
+        _positionAdjusting ||
+        !_scrollController.hasClients) {
       return;
+    }
     final body = _bodyMap;
     if (body == null) return;
     final painter = _ensurePositionPainter();
@@ -782,8 +785,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
           ref.read(pendingFileEntryIntentProvider) != null || _jumpToEndPending;
       _positionLayout = null;
     }
-    if (activeMatch != null || bookmarkJumpLine != null)
+    if (activeMatch != null || bookmarkJumpLine != null) {
       _positionCancelled = true;
+    }
     if (selectedFile != null) {
       final position = ref.watch(
         readingPositionForFileProvider(selectedFile.path),
@@ -1062,8 +1066,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted ||
                     _positionFile != file ||
-                    widget.content != scheduledContent)
+                    widget.content != scheduledContent) {
                   return;
+                }
                 _captureBodyPosition();
               });
             }

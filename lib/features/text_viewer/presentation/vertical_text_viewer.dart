@@ -440,8 +440,9 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   @override
   void didUpdateWidget(VerticalTextViewer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.bodyPositionReady && !oldWidget.bodyPositionReady)
+    if (widget.bodyPositionReady && !oldWidget.bodyPositionReady) {
       _bodyReportedPage = null;
+    }
     if (oldWidget.segments != widget.segments) {
       _readingAnchor = null;
       _lastBodyRequest = null;
