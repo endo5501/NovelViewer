@@ -924,6 +924,9 @@ void main() {
 
       expect(find.text('更新'), findsOneWidget);
       expect(find.text('削除'), findsOneWidget);
+      // And the tooltip did not open alongside it: a second copy of the title
+      // painted in the overlay is what a shown tooltip looks like.
+      expect(find.text('テスト小説'), findsOneWidget);
     });
 
     testWidgets('a slow mouse click still enters the folder', (
