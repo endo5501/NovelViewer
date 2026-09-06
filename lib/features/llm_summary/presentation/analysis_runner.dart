@@ -45,12 +45,22 @@ class DefaultAnalysisRunner implements AnalysisRunner {
   DefaultAnalysisRunner(this._ref);
   final Ref _ref;
 
+  /// Whether this platform can reach an LLM server at all.
+  ///
+  /// Checked before any work in both entry points. The UI already withholds
+  /// every control that leads here where analysis is unavailable, so this is
+  /// the second layer: a surface added later without a capability check must
+  /// still not open a connection. It is silent by design — there is no
+  /// user-facing action to explain, because no control was offered.
+  bool get _supported => _ref.read(llmSummarySupportedProvider);
+
   @override
   Future<void> runWithScope({
     required BuildContext context,
     required String word,
     required AnalysisScope scope,
   }) async {
+    if (!_supported) return;
     final l10n = AppLocalizations.of(context)!;
     final directory = _ref.read(currentDirectoryProvider);
     if (directory == null) {
@@ -94,6 +104,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     required int coveredUpToEpisode,
     String? sourceFileName,
   }) async {
+    if (!_supported) return;
     final l10n = AppLocalizations.of(context)!;
     final directory = _ref.read(currentDirectoryProvider);
     if (directory == null) {

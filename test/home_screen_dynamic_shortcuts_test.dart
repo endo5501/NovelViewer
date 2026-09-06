@@ -18,7 +18,7 @@ void main() {
     (WidgetTester tester) async {
       // Persist a custom binding: search = Ctrl+G instead of the default Ctrl+F.
       final custom = Map<ShortcutAction, KeyBinding>.from(
-        defaultShortcutBindings(isMacOS: false),
+        defaultShortcutBindings(isApplePlatform: false),
       );
       custom[ShortcutAction.search] = KeyBinding(
         keyId: LogicalKeyboardKey.keyG.keyId,
@@ -35,7 +35,7 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
             shortcutDefaultsProvider.overrideWithValue(
-              defaultShortcutBindings(isMacOS: false),
+              defaultShortcutBindings(isApplePlatform: false),
             ),
           ],
           child: const NovelViewerApp(),

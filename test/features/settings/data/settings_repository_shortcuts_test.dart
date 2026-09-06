@@ -13,7 +13,7 @@ void main() {
   SettingsRepository buildRepo() => SettingsRepository(prefs);
 
   Map<ShortcutAction, KeyBinding> defaults() =>
-      defaultShortcutBindings(isMacOS: false);
+      defaultShortcutBindings(isApplePlatform: false);
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});

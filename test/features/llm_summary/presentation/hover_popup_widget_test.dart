@@ -5,8 +5,8 @@ import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_widget.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
-import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
+import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -50,9 +50,11 @@ class _RecordingAnalysisRunner implements AnalysisRunner {
 ProviderScope _scopedWith({
   required Widget child,
   required List<WordSummary> snapshots,
+  bool llmSupported = true,
 }) {
   return ProviderScope(
     overrides: [
+      llmSummarySupportedProvider.overrideWithValue(llmSupported),
       hoverPopupCacheProvider((
         folderPath: 'novel_a',
         word: 'アリス',
@@ -355,6 +357,81 @@ void main() {
 
     test('returns false on empty snapshot list', () {
       expect(shouldAppendOverwriteSuffix(const [], 1), isFalse);
+    });
+  });
+
+  group('where LLM summary is unavailable', () {
+    // Stored summaries stay readable — a library folder carried over from a
+    // desktop install keeps its analysis visible. What is withheld is the one
+    // control in this popup that would start a new analysis. iPadOS delivers
+    // hover events whenever a trackpad is attached, so this popup is reachable
+    // there despite being pointer-driven.
+    testWidgets('the stored summary is still shown', (tester) async {
+      await tester.pumpWidget(
+        _scopedWith(
+          snapshots: [_snap(3, '序盤要約')],
+          llmSupported: false,
+          child: const HoverPopupWidget(
+            folderPath: 'novel_a',
+            word: 'アリス',
+            currentEpisode: 6,
+            currentFileName: '006.txt',
+            maxEpisodeInFolder: 9,
+            maxEpisodeFileName: '009.txt',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('hover_popup_card')), findsOneWidget);
+      expect(find.text('序盤要約'), findsOneWidget);
+    });
+
+    testWidgets('the re-analyze control is absent', (tester) async {
+      await tester.pumpWidget(
+        _scopedWith(
+          snapshots: [_snap(3, '序盤要約')],
+          llmSupported: false,
+          child: const HoverPopupWidget(
+            folderPath: 'novel_a',
+            word: 'アリス',
+            currentEpisode: 6,
+            currentFileName: '006.txt',
+            maxEpisodeInFolder: 9,
+            maxEpisodeFileName: '009.txt',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('hover_popup_reanalyze_button')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('the re-analyze control is present where it can be used', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _scopedWith(
+          snapshots: [_snap(3, '序盤要約')],
+          child: const HoverPopupWidget(
+            folderPath: 'novel_a',
+            word: 'アリス',
+            currentEpisode: 6,
+            currentFileName: '006.txt',
+            maxEpisodeInFolder: 9,
+            maxEpisodeFileName: '009.txt',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('hover_popup_reanalyze_button')),
+        findsOneWidget,
+      );
     });
   });
 }

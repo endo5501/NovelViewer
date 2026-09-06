@@ -47,6 +47,7 @@ void main() {
     required UpdatePreferences preferences,
     String currentVersion = '1.0.0',
     bool isDebug = false,
+    bool isSupported = true,
     DateTime? now,
   }) {
     return UpdateCheckService(
@@ -54,9 +55,69 @@ void main() {
       preferences: preferences,
       currentVersion: currentVersion,
       isDebug: isDebug,
+      isSupported: isSupported,
       now: () => now ?? DateTime.utc(2026, 5, 28, 12, 0, 0),
     );
   }
+
+  /// A client that fails the test if it is reached at all.
+  GithubReleaseClient unreachableClient() {
+    final mock = MockClient((request) async {
+      fail('the release API was contacted: ${request.url}');
+    });
+    return GithubReleaseClient(httpClient: mock, userAgent: 'ua');
+  }
+
+  group('platforms without a way to update themselves', () {
+    test('the auto check contacts nothing and records no attempt', () async {
+      final preferences = await prefs();
+      final s = service(
+        client: unreachableClient(),
+        preferences: preferences,
+        isSupported: false,
+      );
+
+      final result = await s.check();
+
+      expect(result, isA<UpdateSkipped>());
+      expect(preferences.lastCheckAt, isNull);
+    });
+
+    test('a manual check is refused too', () async {
+      final preferences = await prefs();
+      final s = service(
+        client: unreachableClient(),
+        preferences: preferences,
+        isSupported: false,
+      );
+
+      final result = await s.check(manual: true);
+
+      expect(result, isA<UpdateSkipped>());
+      expect(preferences.lastCheckAt, isNull);
+    });
+
+    test('the refusal precedes every other condition', () async {
+      // Auto-check enabled, not debug, never checked before, a newer release
+      // waiting: the only reason to skip is the platform itself.
+      final s = service(
+        client: unreachableClient(),
+        preferences: await prefs({'app_update.auto_check_enabled': true}),
+        isSupported: false,
+      );
+
+      expect(await s.check(), isA<UpdateSkipped>());
+    });
+
+    test('a supported platform still reaches the release API', () async {
+      final s = service(
+        client: clientReturning('v2.0.0'),
+        preferences: await prefs(),
+      );
+
+      expect(await s.check(), isA<UpdateAvailable>());
+    });
+  });
 
   test('auto check is skipped in debug builds', () async {
     final s = service(

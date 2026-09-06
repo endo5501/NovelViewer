@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,7 +22,7 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
         // Pin defaults to non-macOS so assertions are platform-independent.
         shortcutDefaultsProvider.overrideWithValue(
-          defaultShortcutBindings(isMacOS: false),
+          defaultShortcutBindings(isApplePlatform: false),
         ),
         ttsSupportedProvider.overrideWithValue(ttsSupported),
       ],
@@ -30,10 +31,54 @@ void main() {
     return container;
   }
 
+  group('shortcutDefaultsProvider follows the target platform', () {
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    Future<Map<ShortcutAction, KeyBinding>> defaultsFor(
+      TargetPlatform platform,
+    ) async {
+      debugDefaultTargetPlatformOverride = platform;
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(
+            await SharedPreferences.getInstance(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container.read(shortcutDefaultsProvider);
+    }
+
+    test('iOS gets ⌘, the modifier an iPad keyboard offers', () async {
+      final defaults = await defaultsFor(TargetPlatform.iOS);
+      expect(
+        defaults[ShortcutAction.search],
+        KeyBinding(keyId: LogicalKeyboardKey.keyF.keyId, meta: true),
+      );
+    });
+
+    test('macOS gets ⌘ as before', () async {
+      final defaults = await defaultsFor(TargetPlatform.macOS);
+      expect(
+        defaults[ShortcutAction.search],
+        KeyBinding(keyId: LogicalKeyboardKey.keyF.keyId, meta: true),
+      );
+    });
+
+    test('Windows keeps Control', () async {
+      final defaults = await defaultsFor(TargetPlatform.windows);
+      expect(
+        defaults[ShortcutAction.search],
+        KeyBinding(keyId: LogicalKeyboardKey.keyF.keyId, control: true),
+      );
+    });
+  });
+
   test('keyBindingsProvider exposes defaults initially', () async {
     final container = await makeContainer();
     final bindings = container.read(keyBindingsProvider);
-    expect(bindings, defaultShortcutBindings(isMacOS: false));
+    expect(bindings, defaultShortcutBindings(isApplePlatform: false));
   });
 
   test('rebind updates and persists the binding', () async {
@@ -70,7 +115,7 @@ void main() {
     // bookmark keeps its original default binding.
     expect(
       container.read(keyBindingsProvider)[ShortcutAction.bookmark],
-      defaultShortcutBindings(isMacOS: false)[ShortcutAction.bookmark],
+      defaultShortcutBindings(isApplePlatform: false)[ShortcutAction.bookmark],
     );
   });
 
@@ -101,7 +146,7 @@ void main() {
 
     expect(
       container.read(keyBindingsProvider),
-      defaultShortcutBindings(isMacOS: false),
+      defaultShortcutBindings(isApplePlatform: false),
     );
   });
 

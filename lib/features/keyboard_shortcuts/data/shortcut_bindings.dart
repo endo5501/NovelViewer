@@ -80,13 +80,18 @@ class KeyBinding {
 
 /// Default key bindings for the customizable shortcut actions.
 ///
-/// The primary command modifier is platform dependent: Meta (⌘) on macOS,
-/// Control on every other desktop platform. `switchPane` uses a bare Tab.
+/// The primary command modifier is platform dependent: Meta (⌘) on the Apple
+/// platforms — macOS, and iPadOS with a hardware keyboard attached, where ⌘ is
+/// equally what a reader reaches for — Control everywhere else. `switchPane`
+/// uses a bare Tab.
 Map<ShortcutAction, KeyBinding> defaultShortcutBindings({
-  required bool isMacOS,
+  required bool isApplePlatform,
 }) {
-  KeyBinding cmd(LogicalKeyboardKey key) =>
-      KeyBinding(keyId: key.keyId, control: !isMacOS, meta: isMacOS);
+  KeyBinding cmd(LogicalKeyboardKey key) => KeyBinding(
+    keyId: key.keyId,
+    control: !isApplePlatform,
+    meta: isApplePlatform,
+  );
 
   return {
     ShortcutAction.search: cmd(LogicalKeyboardKey.keyF),

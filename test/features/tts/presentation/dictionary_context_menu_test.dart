@@ -44,6 +44,30 @@ void main() {
       },
     );
 
+    test('omits the dictionary item when no dictionary callback is given', () {
+      final base = [ContextMenuButtonItem(label: 'Copy', onPressed: () {})];
+      final result = buildAnalysisButtonItems(
+        baseItems: base,
+        selectedText: 'アリス',
+        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
+        onAnalyze: (_, _) {},
+      );
+      expect(
+        result.map((i) => i.label).toList(),
+        equals(['Copy', '解析開始(ネタバレなし)', '解析開始(ネタバレあり)']),
+      );
+    });
+
+    test('omits both optional groups when neither callback is given', () {
+      final base = [ContextMenuButtonItem(label: 'Copy', onPressed: () {})];
+      final result = buildAnalysisButtonItems(
+        baseItems: base,
+        selectedText: 'アリス',
+      );
+      expect(result.map((i) => i.label).toList(), equals(['Copy']));
+    });
+
     test('the two analyze items pass the correct word + AnalysisScope', () {
       String? capturedWord;
       AnalysisScope? capturedType;
@@ -223,7 +247,7 @@ void main() {
     Future<List<ContextMenuButtonItem>> buildToolbarButtonItemsFor(
       WidgetTester tester, {
       required String selectedText,
-      required void Function(String) onAddToDictionary,
+      required void Function(String)? onAddToDictionary,
       required void Function(String, AnalysisScope)? onAnalyze,
     }) async {
       // A TextField gives us a real EditableTextState whose
@@ -268,6 +292,35 @@ void main() {
 
       return widget.buttonItems?.toList() ?? const [];
     }
+
+    testWidgets(
+      'dropping a callback drops its localized item from the toolbar',
+      (tester) async {
+        final withBoth = await buildToolbarButtonItemsFor(
+          tester,
+          selectedText: 'アリス',
+          onAddToDictionary: (_) {},
+          onAnalyze: (_, _) {},
+        );
+        expect(
+          withBoth.map((i) => i.label),
+          containsAll(['辞書追加', '解析開始(ネタバレなし)', '解析開始(ネタバレあり)']),
+        );
+
+        final withNeither = await buildToolbarButtonItemsFor(
+          tester,
+          selectedText: 'アリス',
+          onAddToDictionary: null,
+          onAnalyze: null,
+        );
+        expect(
+          withNeither.map((i) => i.label),
+          isNot(anyElement(isIn(['辞書追加', '解析開始(ネタバレなし)', '解析開始(ネタバレあり)']))),
+        );
+        // The platform-independent items survive.
+        expect(withNeither, isNotEmpty);
+      },
+    );
 
     testWidgets(
       'analyze items invoke onAnalyze with the explicit selectedText, not U+FFFC',

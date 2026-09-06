@@ -35,11 +35,13 @@ class UpdateCheckService {
     required UpdatePreferences preferences,
     required String currentVersion,
     bool isDebug = false,
+    bool isSupported = true,
     DateTime Function()? now,
   }) : _releaseClient = releaseClient,
        _preferences = preferences,
        _currentVersion = currentVersion,
        _isDebug = isDebug,
+       _isSupported = isSupported,
        _now = now ?? DateTime.now;
 
   static const _minInterval = Duration(hours: 24);
@@ -49,14 +51,23 @@ class UpdateCheckService {
   final UpdatePreferences _preferences;
   final String _currentVersion;
   final bool _isDebug;
+  final bool _isSupported;
   final DateTime Function() _now;
 
   /// Checks GitHub for a newer release.
+  ///
+  /// On a platform the app cannot update itself on, no check happens at all —
+  /// neither automatic nor manual. Refusing here rather than in the widgets
+  /// means a surface added later without a platform guard still cannot reach
+  /// the network, and it leaves the update status unable to ever become
+  /// [UpdateAvailable], so the AppBar badge needs no guard of its own.
   ///
   /// Auto checks ([manual] = false) are skipped in debug builds, when the user
   /// disabled auto-check, or within 24h of the last check, and they honor the
   /// snoozed ("Later") version. Manual checks ignore all of those.
   Future<UpdateStatus> check({bool manual = false}) async {
+    if (!_isSupported) return const UpdateSkipped('unsupported platform');
+
     if (!manual) {
       if (_isDebug) return const UpdateSkipped('debug build');
       if (!_preferences.autoCheckEnabled) {

@@ -5,10 +5,10 @@ LLM provider configuration (OpenAI-compatible API or Ollama): in-app settings UI
 ## Requirements
 
 ### Requirement: LLM provider selection in settings
-The settings dialog SHALL include an LLM configuration section where the user can select between "OpenAI互換API" and "Ollama" as the LLM provider. The LLM configuration section SHALL be accessible via scrolling when the settings dialog content exceeds the visible area.
+The settings dialog SHALL include an LLM configuration section where the user can select between "OpenAI互換API" and "Ollama" as the LLM provider, on platforms where LLM summary is available. The LLM configuration section SHALL be accessible via scrolling when the settings dialog content exceeds the visible area. Where LLM summary is unavailable, the section SHALL be absent from the dialog rather than shown in a state that cannot reach a server: the platform's transport policy blocks the plaintext HTTP endpoint the section defaults to, so any configuration entered there could only fail.
 
 #### Scenario: Display LLM provider dropdown
-- **WHEN** the user opens the settings dialog
+- **WHEN** the user opens the settings dialog on a platform where LLM summary is available
 - **THEN** an LLM provider dropdown is displayed with options "OpenAI互換API" and "Ollama", plus a "未設定" (not configured) default option
 
 #### Scenario: Select OpenAI-compatible provider
@@ -22,6 +22,10 @@ The settings dialog SHALL include an LLM configuration section where the user ca
 #### Scenario: LLM dropdown accessible via scrolling
 - **WHEN** the settings dialog contains more content than the visible area
 - **THEN** the user SHALL be able to scroll to the LLM provider dropdown and interact with it
+
+#### Scenario: The section is absent where LLM summary is unavailable
+- **WHEN** the user opens the settings dialog on a platform where LLM summary is unavailable
+- **THEN** the general tab contains no LLM configuration section, and its remaining sections render in their usual order without a dangling separator
 
 ### Requirement: OpenAI-compatible API configuration
 The system SHALL allow the user to configure OpenAI-compatible API connection settings: endpoint URL, API key, and model name. The API key SHALL be stored in the OS-provided secure storage (`flutter_secure_storage`); other fields SHALL be stored in `SharedPreferences`.

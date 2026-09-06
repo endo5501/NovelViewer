@@ -12,44 +12,59 @@ enum VerticalContextAction {
   analyzeSpoiler,
 }
 
+/// Builds the vertical-mode selection menu.
+///
+/// Copy is always offered; every other entry appears only when its label is
+/// supplied. The caller withholds the dictionary label where speech synthesis
+/// is unavailable and the analysis labels where LLM summary is, which keeps
+/// this builder a pure function that knows nothing about platforms.
 List<PopupMenuEntry<VerticalContextAction>> buildVerticalContextMenuItems({
   required String copyLabel,
-  required String addToDictionaryLabel,
-  required String analyzeNoSpoilerLabel,
-  required String analyzeSpoilerLabel,
+  String? addToDictionaryLabel,
+  String? analyzeNoSpoilerLabel,
+  String? analyzeSpoilerLabel,
 }) {
   return [
     PopupMenuItem(value: VerticalContextAction.copy, child: Text(copyLabel)),
-    PopupMenuItem(
-      value: VerticalContextAction.addToDictionary,
-      child: Text(addToDictionaryLabel),
-    ),
-    PopupMenuItem(
-      value: VerticalContextAction.analyzeNoSpoiler,
-      child: Text(analyzeNoSpoilerLabel),
-    ),
-    PopupMenuItem(
-      value: VerticalContextAction.analyzeSpoiler,
-      child: Text(analyzeSpoilerLabel),
-    ),
+    if (addToDictionaryLabel != null)
+      PopupMenuItem(
+        value: VerticalContextAction.addToDictionary,
+        child: Text(addToDictionaryLabel),
+      ),
+    if (analyzeNoSpoilerLabel != null)
+      PopupMenuItem(
+        value: VerticalContextAction.analyzeNoSpoiler,
+        child: Text(analyzeNoSpoilerLabel),
+      ),
+    if (analyzeSpoilerLabel != null)
+      PopupMenuItem(
+        value: VerticalContextAction.analyzeSpoiler,
+        child: Text(analyzeSpoilerLabel),
+      ),
   ];
 }
 
+/// Routes a chosen menu entry to its handler.
+///
+/// Every handler but [onCopy] is optional, and a withheld one makes its action
+/// a no-op. The builder above already omits an entry whose label is absent, so
+/// this is the second layer: an entry that somehow survives without its handler
+/// must do nothing rather than reach the speech engine or an LLM server.
 void dispatchVerticalContextAction(
   VerticalContextAction action, {
   required String selectedText,
   required void Function(String selectedText) onCopy,
-  required void Function(String selectedText) onAddToDictionary,
-  required void Function(String selectedText, AnalysisScope scope) onAnalyze,
+  void Function(String selectedText)? onAddToDictionary,
+  void Function(String selectedText, AnalysisScope scope)? onAnalyze,
 }) {
   switch (action) {
     case VerticalContextAction.copy:
       onCopy(selectedText);
     case VerticalContextAction.addToDictionary:
-      onAddToDictionary(selectedText);
+      onAddToDictionary?.call(selectedText);
     case VerticalContextAction.analyzeNoSpoiler:
-      onAnalyze(selectedText, AnalysisScope.upToCurrent);
+      onAnalyze?.call(selectedText, AnalysisScope.upToCurrent);
     case VerticalContextAction.analyzeSpoiler:
-      onAnalyze(selectedText, AnalysisScope.upToAll);
+      onAnalyze?.call(selectedText, AnalysisScope.upToAll);
   }
 }

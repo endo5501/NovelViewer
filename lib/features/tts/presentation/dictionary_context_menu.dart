@@ -3,20 +3,31 @@ import 'package:flutter/services.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
+/// The horizontal-mode selection toolbar.
+///
+/// Each optional item is dropped by passing no callback for it: the dictionary
+/// item where speech synthesis is unavailable (the dictionary exists only to
+/// instruct the engine), the analysis items where LLM summary is unavailable.
 Widget buildDictionaryContextMenu(
   BuildContext context,
   EditableTextState editableTextState, {
   required String selectedText,
-  required void Function(String selectedText) onAddToDictionary,
+  void Function(String selectedText)? onAddToDictionary,
   void Function(String selectedText, AnalysisScope scope)? onAnalyze,
 }) {
   final l10n = AppLocalizations.of(context)!;
   final buttonItems = buildAnalysisButtonItems(
     baseItems: editableTextState.contextMenuButtonItems,
     selectedText: selectedText,
-    addToDictionaryLabel: l10n.contextMenu_addToDictionary,
-    analyzeNoSpoilerLabel: l10n.contextMenu_analyzeNoSpoiler,
-    analyzeSpoilerLabel: l10n.contextMenu_analyzeSpoiler,
+    addToDictionaryLabel: onAddToDictionary == null
+        ? null
+        : l10n.contextMenu_addToDictionary,
+    analyzeNoSpoilerLabel: onAnalyze == null
+        ? null
+        : l10n.contextMenu_analyzeNoSpoiler,
+    analyzeSpoilerLabel: onAnalyze == null
+        ? null
+        : l10n.contextMenu_analyzeSpoiler,
     onAddToDictionary: onAddToDictionary,
     onAnalyze: onAnalyze,
   );
@@ -26,15 +37,24 @@ Widget buildDictionaryContextMenu(
   );
 }
 
+/// Builds the item list for the horizontal-mode selection toolbar.
+///
+/// An optional group is included only when its label and its callback are both
+/// supplied; omitting either drops it. This keeps the builder a pure function
+/// with no knowledge of platforms or providers, so both outcomes are testable.
 List<ContextMenuButtonItem> buildAnalysisButtonItems({
   required List<ContextMenuButtonItem> baseItems,
   required String selectedText,
-  required String addToDictionaryLabel,
-  required String analyzeNoSpoilerLabel,
-  required String analyzeSpoilerLabel,
-  required void Function(String selectedText) onAddToDictionary,
+  String? addToDictionaryLabel,
+  String? analyzeNoSpoilerLabel,
+  String? analyzeSpoilerLabel,
+  void Function(String selectedText)? onAddToDictionary,
   void Function(String selectedText, AnalysisScope scope)? onAnalyze,
 }) {
+  assert(
+    (addToDictionaryLabel == null) == (onAddToDictionary == null),
+    'the dictionary item needs both a label and a callback, or neither',
+  );
   // For SelectableText.rich, the default Copy item's onPressed routes
   // through EditableText.copySelection -> value.text.textInside(...),
   // which substitutes U+FFFC for each ruby WidgetSpan. Replace it so the
@@ -54,16 +74,20 @@ List<ContextMenuButtonItem> buildAnalysisButtonItems({
         }).toList();
   if (selectedText.isEmpty) return items;
 
-  items.add(
-    ContextMenuButtonItem(
-      label: addToDictionaryLabel,
-      onPressed: () {
-        ContextMenuController.removeAny();
-        onAddToDictionary(selectedText);
-      },
-    ),
-  );
-  if (onAnalyze != null) {
+  if (addToDictionaryLabel != null && onAddToDictionary != null) {
+    items.add(
+      ContextMenuButtonItem(
+        label: addToDictionaryLabel,
+        onPressed: () {
+          ContextMenuController.removeAny();
+          onAddToDictionary(selectedText);
+        },
+      ),
+    );
+  }
+  if (onAnalyze != null &&
+      analyzeNoSpoilerLabel != null &&
+      analyzeSpoilerLabel != null) {
     items.add(
       ContextMenuButtonItem(
         label: analyzeNoSpoilerLabel,

@@ -19,6 +19,7 @@ import 'package:novel_viewer/features/text_search/presentation/search_results_pa
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/text_viewer_panel.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
+import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/shared/providers/layout_providers.dart';
 
@@ -237,15 +238,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final bindings = ref.watch(keyBindingsProvider);
+    // Where TTS is unavailable the controls bar that listens for the toggle
+    // request is never mounted, so registering the binding would consume the
+    // key press and do nothing — for a row the reader cannot see or rebind.
+    final ttsSupported = ref.watch(ttsSupportedProvider);
     // Dynamic Shortcuts map built from the customizable bindings. Only actions
     // with a wired Actions handler below are included; switchPane (Tab) and
     // ttsToggle (Ctrl+T) are added with their handlers in their own groups.
     final shortcuts = <ShortcutActivator, Intent>{
-      for (final action in const [
+      for (final action in [
         ShortcutAction.search,
         ShortcutAction.bookmark,
         ShortcutAction.switchPane,
-        ShortcutAction.ttsToggle,
+        if (ttsSupported) ShortcutAction.ttsToggle,
       ])
         if (bindings[action] != null)
           bindings[action]!.toActivator(): intentFor(action),

@@ -1,7 +1,8 @@
 # llm-summary-hover-popup Specification
 
 ## Purpose
-TBD - created by archiving change llm-summary-hover-popup. Update Purpose after archive.
+
+The hover popup that shows a stored LLM summary over a marked word in the text viewer, in both horizontal and vertical display mode: when it appears and how the pointer grace period keeps it alive, how it is positioned for the display mode and dismissed on a mode switch, the snapshot selector with its "X話時点" label and the warning icon on a snapshot analysed beyond the currently viewed file, and the re-analysis dropdown offering the current-page and full-scope bounds with an overwrite hint. Where LLM summary is unavailable on the running platform the re-analysis control is withheld, while reading a summary stored earlier remains available.
 ## Requirements
 ### Requirement: Hover popup on marked words in horizontal mode
 In horizontal display mode, the text viewer SHALL display a popup widget over the text when the mouse pointer enters the screen region of any marked word (a word with a solid mark from `llm-summary`'s uniform mark rendering). The popup SHALL be displayed while the pointer remains within either the marked word's character range OR the popup widget itself (including any of its child overlays such as the re-analysis dropdown); when the pointer leaves the marked word, a short grace period (~150 ms) SHALL allow the pointer to travel into the popup to interact with controls such as the snapshot navigator (◀/▶) or the re-analysis dropdown. The popup SHALL NOT trigger for unmarked text.
@@ -136,12 +137,14 @@ When the currently selected snapshot's `covered_up_to_episode` is strictly great
 - **THEN** no warning icon SHALL be displayed
 
 ### Requirement: Re-analysis dropdown on the popup
-The popup SHALL include a re-analysis control (e.g., a button labeled "再解析" with a dropdown indicator) in the top-right area of the popup. Activating the control SHALL open a dropdown menu containing two items:
+On a platform where LLM summary is available, the popup SHALL include a re-analysis control (e.g., a button labeled "再解析" with a dropdown indicator) in the top-right area of the popup. Activating the control SHALL open a dropdown menu containing two items:
 
 1. "現在ページまで (Nファイル時点)" — where N is the numeric prefix of the currently viewed file (or its lexical rank when no numeric prefix exists). Selecting this item SHALL invoke the LLM analysis pipeline with `covered_up_to_episode=N` (equivalent to the "解析開始(ネタバレなし)" trigger).
 2. "全話まで (Mファイル時点)" — where M is the highest numeric prefix in the folder. Selecting this item SHALL invoke the pipeline with `covered_up_to_episode=M` (equivalent to "解析開始(ネタバレあり)").
 
 Each item SHALL append the localized suffix " (上書き)" when an existing snapshot row already matches the would-be `covered_up_to_episode`. Selecting an item that would overwrite SHALL proceed without a confirmation dialog (mirroring the existing context-menu re-analysis behavior). The popup itself SHALL remain visible while the re-analysis dropdown is open; the existing pointer grace period and `MouseRegion` handling SHALL be extended to cover the dropdown menu so that opening it does not cause the popup to dismiss.
+
+Where LLM summary is unavailable, the control SHALL be absent while the rest of the popup keeps working: reading a summary stored earlier — by a desktop install whose novel folder was carried over — is not gated, only producing a new one. The popup is reachable on such a platform despite being pointer-driven, since iPadOS delivers hover events whenever a trackpad is attached.
 
 #### Scenario: Both items present with episode hints
 - **WHEN** the popup is open while viewing "040_chapter.txt" in a folder whose highest-prefix file is "120_chapter.txt", and no snapshot currently exists at episodes 40 or 120
@@ -167,6 +170,14 @@ Each item SHALL append the localized suffix " (上書き)" when an existing snap
 #### Scenario: Closing the dropdown without selection returns to popup
 - **WHEN** the user dismisses the dropdown without picking an item
 - **THEN** the popup SHALL remain visible in its prior state (same selected snapshot)
+
+#### Scenario: The control is absent where analysis is unavailable
+- **WHEN** the popup opens on a platform where LLM summary is unavailable
+- **THEN** no re-analysis control is present
+
+#### Scenario: A stored summary is still readable where analysis is unavailable
+- **WHEN** the popup opens on a platform where LLM summary is unavailable and a stored snapshot exists for the word
+- **THEN** the snapshot's summary text and its episode label are displayed as usual
 
 ### Requirement: Popup body text is non-selectable
 The popup body SHALL render the summary text as non-selectable plain text. (Users who want to copy summary text use the copy actions on the analysis history panel — see `llm-summary-history-ui`.)

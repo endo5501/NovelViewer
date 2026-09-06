@@ -19,6 +19,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
+import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/llm_summary/providers/marked_words_provider.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
@@ -36,6 +37,7 @@ import 'package:novel_viewer/features/tts/data/tts_dictionary_repository.dart';
 import 'package:novel_viewer/features/tts/presentation/dictionary_context_menu.dart';
 import 'package:novel_viewer/features/tts/presentation/tts_dictionary_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
+import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -616,6 +618,8 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     String selectedText,
   ) {
     final l10n = AppLocalizations.of(context)!;
+    final ttsSupported = ref.read(ttsSupportedProvider);
+    final llmSupported = ref.read(llmSummarySupportedProvider);
     final renderObject = Overlay.maybeOf(context)?.context.findRenderObject();
     if (renderObject is! RenderBox) return;
     final overlay = renderObject;
@@ -629,9 +633,17 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       ),
       items: buildVerticalContextMenuItems(
         copyLabel: l10n.contextMenu_copy,
-        addToDictionaryLabel: l10n.contextMenu_addToDictionary,
-        analyzeNoSpoilerLabel: l10n.contextMenu_analyzeNoSpoiler,
-        analyzeSpoilerLabel: l10n.contextMenu_analyzeSpoiler,
+        // The reading dictionary only instructs the speech engine, and
+        // analysis needs an LLM server the platform may not be able to reach.
+        addToDictionaryLabel: ttsSupported
+            ? l10n.contextMenu_addToDictionary
+            : null,
+        analyzeNoSpoilerLabel: llmSupported
+            ? l10n.contextMenu_analyzeNoSpoiler
+            : null,
+        analyzeSpoilerLabel: llmSupported
+            ? l10n.contextMenu_analyzeSpoiler
+            : null,
       ),
     ).then((value) {
       if (value == null || !mounted) return;
@@ -639,8 +651,8 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         value,
         selectedText: selectedText,
         onCopy: (t) => Clipboard.setData(ClipboardData(text: t)),
-        onAddToDictionary: _openDictionaryDialog,
-        onAnalyze: _runAnalysis,
+        onAddToDictionary: ttsSupported ? _openDictionaryDialog : null,
+        onAnalyze: llmSupported ? _runAnalysis : null,
       );
     });
   }
@@ -1216,8 +1228,12 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
                         context,
                         editableTextState,
                         selectedText: selectedText,
-                        onAddToDictionary: _openDictionaryDialog,
-                        onAnalyze: _runAnalysis,
+                        onAddToDictionary: ref.read(ttsSupportedProvider)
+                            ? _openDictionaryDialog
+                            : null,
+                        onAnalyze: ref.read(llmSummarySupportedProvider)
+                            ? _runAnalysis
+                            : null,
                       );
                     },
                   ),

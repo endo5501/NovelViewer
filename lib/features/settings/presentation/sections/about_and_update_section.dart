@@ -60,8 +60,10 @@ class _AboutAndUpdateSectionState extends ConsumerState<AboutAndUpdateSection> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final info = ref.watch(packageInfoProvider);
-    final distribution = ref.watch(distributionTypeProvider);
-    final lastCheck = ref.watch(updatePreferencesProvider).lastCheckAt;
+    // Where the app has no way to update itself, the version is still worth
+    // showing, but everything below it describes a check that never runs — and
+    // the installer/ZIP distinction only means something on Windows.
+    final updateSupported = ref.watch(appUpdateSupportedProvider);
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -70,40 +72,49 @@ class _AboutAndUpdateSectionState extends ConsumerState<AboutAndUpdateSection> {
         children: [
           _row(l10n.settings_currentVersionLabel, info.version),
           _row(l10n.settings_buildNumberLabel, info.buildNumber),
-          _row(
-            l10n.settings_distributionLabel,
-            distribution == DistributionType.installer
-                ? l10n.settings_distributionInstaller
-                : l10n.settings_distributionPortable,
-          ),
-          _row(
-            l10n.settings_lastCheckedLabel,
-            lastCheck?.toLocal().toString() ?? l10n.settings_lastCheckedNever,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              FilledButton(
-                onPressed: _checking ? null : _check,
-                child: Text(l10n.settings_checkForUpdatesButton),
-              ),
-              const SizedBox(width: 12),
-              if (_checking)
-                Text(l10n.settings_checkingMessage)
-              else if (_resultMessage != null)
-                Flexible(child: Text(_resultMessage!)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(l10n.settings_autoCheckLabel),
-            value: _autoCheck,
-            onChanged: _toggleAuto,
-          ),
+          if (updateSupported) ..._updateRows(l10n),
         ],
       ),
     );
+  }
+
+  List<Widget> _updateRows(AppLocalizations l10n) {
+    final distribution = ref.watch(distributionTypeProvider);
+    final lastCheck = ref.watch(updatePreferencesProvider).lastCheckAt;
+
+    return [
+      _row(
+        l10n.settings_distributionLabel,
+        distribution == DistributionType.installer
+            ? l10n.settings_distributionInstaller
+            : l10n.settings_distributionPortable,
+      ),
+      _row(
+        l10n.settings_lastCheckedLabel,
+        lastCheck?.toLocal().toString() ?? l10n.settings_lastCheckedNever,
+      ),
+      const SizedBox(height: 16),
+      Row(
+        children: [
+          FilledButton(
+            onPressed: _checking ? null : _check,
+            child: Text(l10n.settings_checkForUpdatesButton),
+          ),
+          const SizedBox(width: 12),
+          if (_checking)
+            Text(l10n.settings_checkingMessage)
+          else if (_resultMessage != null)
+            Flexible(child: Text(_resultMessage!)),
+        ],
+      ),
+      const SizedBox(height: 8),
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(l10n.settings_autoCheckLabel),
+        value: _autoCheck,
+        onChanged: _toggleAuto,
+      ),
+    ];
   }
 
   Widget _row(String label, String value) {

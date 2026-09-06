@@ -25,7 +25,7 @@ void main() {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         shortcutDefaultsProvider.overrideWithValue(
-          defaultShortcutBindings(isMacOS: false),
+          defaultShortcutBindings(isApplePlatform: false),
         ),
       ],
     );
@@ -180,7 +180,7 @@ void main() {
 
     expect(
       container.read(keyBindingsProvider),
-      defaultShortcutBindings(isMacOS: false),
+      defaultShortcutBindings(isApplePlatform: false),
     );
   });
 }

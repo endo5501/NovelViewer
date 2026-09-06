@@ -30,8 +30,8 @@ void main() {
   });
 
   group('defaultShortcutBindings', () {
-    test('uses Control modifier on non-macOS', () {
-      final b = defaultShortcutBindings(isMacOS: false);
+    test('uses Control modifier off the Apple platforms', () {
+      final b = defaultShortcutBindings(isApplePlatform: false);
       expect(
         b[ShortcutAction.search],
         KeyBinding(keyId: LogicalKeyboardKey.keyF.keyId, control: true),
@@ -42,8 +42,8 @@ void main() {
       );
     });
 
-    test('uses Meta modifier on macOS', () {
-      final b = defaultShortcutBindings(isMacOS: true);
+    test('uses Meta modifier on the Apple platforms', () {
+      final b = defaultShortcutBindings(isApplePlatform: true);
       expect(
         b[ShortcutAction.search],
         KeyBinding(keyId: LogicalKeyboardKey.keyF.keyId, meta: true),
@@ -51,7 +51,7 @@ void main() {
     });
 
     test('switchPane defaults to bare Tab', () {
-      final b = defaultShortcutBindings(isMacOS: false);
+      final b = defaultShortcutBindings(isApplePlatform: false);
       expect(
         b[ShortcutAction.switchPane],
         KeyBinding(keyId: LogicalKeyboardKey.tab.keyId),
@@ -59,24 +59,24 @@ void main() {
     });
 
     test('provides a binding for every customizable action', () {
-      final b = defaultShortcutBindings(isMacOS: false);
+      final b = defaultShortcutBindings(isApplePlatform: false);
       expect(b.keys.toSet(), ShortcutAction.values.toSet());
     });
   });
 
   group('ShortcutBindingCodec round-trip', () {
     test('encode then decode restores the same bindings', () {
-      final original = defaultShortcutBindings(isMacOS: false);
+      final original = defaultShortcutBindings(isApplePlatform: false);
       final decoded = ShortcutBindingCodec.decode(
         ShortcutBindingCodec.encode(original),
-        defaults: defaultShortcutBindings(isMacOS: false),
+        defaults: defaultShortcutBindings(isApplePlatform: false),
       );
       expect(decoded, original);
     });
 
     test('preserves a custom non-default binding', () {
       final custom = Map<ShortcutAction, KeyBinding>.from(
-        defaultShortcutBindings(isMacOS: false),
+        defaultShortcutBindings(isApplePlatform: false),
       );
       custom[ShortcutAction.search] = KeyBinding(
         keyId: LogicalKeyboardKey.keyG.keyId,
@@ -85,7 +85,7 @@ void main() {
       );
       final decoded = ShortcutBindingCodec.decode(
         ShortcutBindingCodec.encode(custom),
-        defaults: defaultShortcutBindings(isMacOS: false),
+        defaults: defaultShortcutBindings(isApplePlatform: false),
       );
       expect(
         decoded[ShortcutAction.search],
@@ -100,12 +100,12 @@ void main() {
 
   group('ShortcutBindingCodec.decode fallbacks', () {
     test('null raw yields the provided defaults', () {
-      final defaults = defaultShortcutBindings(isMacOS: false);
+      final defaults = defaultShortcutBindings(isApplePlatform: false);
       expect(ShortcutBindingCodec.decode(null, defaults: defaults), defaults);
     });
 
     test('missing actions are filled from defaults', () {
-      final defaults = defaultShortcutBindings(isMacOS: false);
+      final defaults = defaultShortcutBindings(isApplePlatform: false);
       final partial = ShortcutBindingCodec.encode({
         ShortcutAction.bookmark: defaults[ShortcutAction.bookmark]!,
       });
@@ -119,7 +119,7 @@ void main() {
     });
 
     test('malformed JSON yields the provided defaults', () {
-      final defaults = defaultShortcutBindings(isMacOS: false);
+      final defaults = defaultShortcutBindings(isApplePlatform: false);
       expect(
         ShortcutBindingCodec.decode('not json {', defaults: defaults),
         defaults,
