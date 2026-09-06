@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/episode_navigation/providers/episode_navig
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/text_content_renderer.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -221,6 +222,82 @@ void main() {
       find.textContaining('001.txt'),
       findsNothing,
       reason: 'A downward boundary input must not surface the previous hint',
+    );
+  });
+
+  testWidgets('switching to vertical mode drops the horizontal hint', (
+    tester,
+  ) async {
+    // TextContentRenderer serves both modes from one State, so its prompt
+    // outlives a mode switch unless something clears it. A stale hint would be
+    // confirmed by the first boundary input after switching back.
+    final container = makeContainer();
+    addTearDown(container.dispose);
+    await tester.pumpWidget(wrap(container: container, content: longContent));
+    await tester.pumpAndSettle();
+
+    await armNextHint(tester);
+    expect(find.textContaining('003.txt'), findsOneWidget);
+
+    container.read(displayModeProvider.notifier).state =
+        TextDisplayMode.vertical;
+    await tester.pumpAndSettle();
+    expect(
+      find.byType(VerticalTextViewer),
+      findsOneWidget,
+      reason: 'sanity: the mode switch actually took effect',
+    );
+    container.read(displayModeProvider.notifier).state =
+        TextDisplayMode.horizontal;
+    await tester.pumpAndSettle();
+    expect(find.byType(VerticalTextViewer), findsNothing);
+
+    final state = tester.state<ScrollableState>(outerScrollable());
+    state.position.jumpTo(state.position.maxScrollExtent);
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('003.txt'),
+      findsOneWidget,
+      reason: 'This press re-arms the hint; it does not confirm a stale one',
+    );
+  });
+
+  testWidgets('a single-screen file drops the hint across a mode switch', (
+    tester,
+  ) async {
+    // maxScrollExtent == 0, so re-attaching the scroll view emits no scroll
+    // notification: nothing incidental can clear the prompt for us here.
+    const shortContent = '一行だけのテキスト。';
+    final container = makeContainer();
+    addTearDown(container.dispose);
+    await tester.pumpWidget(wrap(container: container, content: shortContent));
+    await tester.pumpAndSettle();
+
+    final state = tester.state<ScrollableState>(outerScrollable());
+    expect(state.position.maxScrollExtent, 0);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('003.txt'), findsOneWidget);
+
+    container.read(displayModeProvider.notifier).state =
+        TextDisplayMode.vertical;
+    await tester.pumpAndSettle();
+    container.read(displayModeProvider.notifier).state =
+        TextDisplayMode.horizontal;
+    await tester.pumpAndSettle();
+
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('003.txt'),
+      findsOneWidget,
+      reason: 'This press re-arms the hint; it does not confirm a stale one',
     );
   });
 

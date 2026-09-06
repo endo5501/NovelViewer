@@ -358,6 +358,13 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     super.initState();
     _scrollController.addListener(_updateCurrentViewLine);
     _boundaryPrompt.addListener(_onBoundaryPromptChanged);
+    // One State serves both modes, so the prompt would otherwise survive a
+    // switch: the vertical viewer has its own, and with single-screen content
+    // re-attaching the horizontal scroll view emits no scroll notification to
+    // clear this one incidentally.
+    ref.listenManual(displayModeProvider, (prev, next) {
+      if (prev != next) _boundaryPrompt.reset();
+    });
     // Reset current view line when the user switches files.
     ref.listenManual(selectedFileProvider, (prev, next) {
       if (prev?.path != next?.path) {

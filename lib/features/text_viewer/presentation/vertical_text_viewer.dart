@@ -877,6 +877,10 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
       // jump is a no-op matches the prior code, which returned early.
       final targetJump = effects.targetJumpToPage;
       if (targetJump != null && targetJump != _currentPage) {
+        // The reader moved inside the file, so an armed boundary hint no
+        // longer applies. This path bypasses _changePage, which is where an
+        // ordinary page turn drops it.
+        _boundaryPrompt.reset();
         setState(() {
           _readingAnchor = null;
           _bodyReportGeneration++;
