@@ -313,6 +313,7 @@
   "homeScreen_hideRightColumnTooltip": "Hide right column",
   "homeScreen_showRightColumnTooltip": "Show right column",
   "homeScreen_downloadTooltip": "Download novel",
+  "homeScreen_searchTooltip": "Search",
   "leftColumn_filesTab": "Files",
   "leftColumn_bookmarksTab": "Bookmarks",
   "leftColumn_historyTab": "History",

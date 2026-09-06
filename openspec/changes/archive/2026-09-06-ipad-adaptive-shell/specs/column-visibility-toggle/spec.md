@@ -1,8 +1,4 @@
-## Purpose
-
-Allow the user to show or hide the right-hand SearchSummaryPanel. In the wide layout an AppBar toggle button does this and the center column expands to fill the freed space; that button exists only there, because in the narrow layout the right column is an `endDrawer` that the AppBar's search button already opens. A Riverpod NotifierProvider remains the single source of truth in both layouts: it drives the drawer open and closed, and a dismissal of the drawer ends the search session by returning the state to hidden.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Right column visibility toggle button
 The application SHALL display a toggle button in the AppBar that controls the visibility of the right column (SearchSummaryPanel). That button SHALL be displayed only in the wide layout. In the narrow layout the right column exists solely as the search results drawer, which the AppBar's search button opens; a second button opening the same drawer, labelled as showing or hiding a column, would describe a layout that is not on screen.

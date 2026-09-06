@@ -779,6 +779,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get homeScreen_downloadTooltip => '小説ダウンロード';
 
   @override
+  String get homeScreen_searchTooltip => '検索';
+
+  @override
   String get leftColumn_filesTab => 'ファイル';
 
   @override

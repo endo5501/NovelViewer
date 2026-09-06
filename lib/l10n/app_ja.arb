@@ -503,6 +503,7 @@
   "homeScreen_hideRightColumnTooltip": "右カラムを非表示",
   "homeScreen_showRightColumnTooltip": "右カラムを表示",
   "homeScreen_downloadTooltip": "小説ダウンロード",
+  "homeScreen_searchTooltip": "検索",
   "leftColumn_filesTab": "ファイル",
   "leftColumn_bookmarksTab": "ブックマーク",
   "leftColumn_historyTab": "解析履歴",

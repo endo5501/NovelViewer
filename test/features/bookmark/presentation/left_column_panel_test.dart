@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/bookmark/presentation/left_column_panel.da
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
+import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
@@ -150,6 +151,48 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('フォルダを選択してください'), findsOneWidget);
+    });
+  });
+
+  group('LeftColumnPanel where LLM summaries are unavailable', () {
+    Future<void> pumpPanel(WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            libraryPathProvider.overrideWithValue('/library'),
+            llmSummarySupportedProvider.overrideWithValue(false),
+          ],
+          child: const MaterialApp(
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: LeftColumnPanel()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('drops the history tab, which could never be filled', (
+      tester,
+    ) async {
+      await pumpPanel(tester);
+
+      expect(find.text('解析履歴'), findsNothing);
+      expect(find.text('ファイル'), findsOneWidget);
+      expect(find.text('ブックマーク'), findsOneWidget);
+      expect(find.byType(Tab), findsNWidgets(2));
+    });
+
+    testWidgets('the remaining tabs still switch', (tester) async {
+      await pumpPanel(tester);
+
+      expect(find.text('フォルダを選択してください'), findsOneWidget);
+
+      await tester.tap(find.text('ブックマーク'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('作品フォルダを選択してください'), findsOneWidget);
     });
   });
 }
