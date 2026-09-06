@@ -189,6 +189,30 @@ void main() {
       expect(container.read(rightColumnVisibleProvider), isFalse);
     });
 
+    testWidgets('the search field takes focus inside the drawer', (
+      tester,
+    ) async {
+      // The panel mounts while the drawer animates open, inside the drawer's
+      // own focus scope. If the field did not end up focused there, a reader
+      // with a keyboard would have to tap it before typing.
+      await pumpApp(tester, breakpoint: 900);
+
+      await pressSearchShortcut(tester);
+
+      expect(find.byKey(const Key('right_column')), findsOneWidget);
+      final field = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(const Key('right_column')),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(
+        field.focusNode.hasPrimaryFocus,
+        isTrue,
+        reason: 'the search field, not the drawer or the viewer, holds focus',
+      );
+    });
+
     testWidgets('a selection search opens the end drawer', (tester) async {
       await pumpApp(tester, breakpoint: 900);
       final container = containerOf(tester);
