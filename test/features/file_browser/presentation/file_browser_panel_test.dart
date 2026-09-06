@@ -896,6 +896,125 @@ void main() {
         expect(find.text('削除'), findsOneWidget);
       },
     );
+    testWidgets('long press on a novel folder shows the same context menu', (
+      WidgetTester tester,
+    ) async {
+      await _pumpBrowserAtLibraryRoot(tester);
+
+      // Away from the title: this covers the long press itself, before the
+      // tooltip that sits over the title enters the picture.
+      await tester.longPress(find.byIcon(Icons.menu_book));
+      await tester.pumpAndSettle();
+
+      expect(find.text('更新'), findsOneWidget);
+      expect(find.text('タイトル変更'), findsOneWidget);
+      expect(find.text('削除'), findsOneWidget);
+    });
+
+    testWidgets('long press on the title text shows the context menu, not the '
+        'tooltip', (WidgetTester tester) async {
+      await _pumpBrowserAtLibraryRoot(tester);
+
+      // The tooltip covers the title, which is most of the tile. Flutter's
+      // Tooltip registers its own long-press recognizer for touch and sits
+      // deeper in the tree, so without TooltipTriggerMode.manual it wins the
+      // arena and the menu never opens where the reader is most likely to press.
+      await tester.longPress(find.text('テスト小説'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('更新'), findsOneWidget);
+      expect(find.text('削除'), findsOneWidget);
+      // And the tooltip did not open alongside it: a second copy of the title
+      // painted in the overlay is what a shown tooltip looks like.
+      expect(find.text('テスト小説'), findsOneWidget);
+    });
+
+    testWidgets('a slow mouse click still enters the folder', (
+      WidgetTester tester,
+    ) async {
+      // A mouse has the secondary button and does not need the long press; it
+      // must not lose the ability to complete a click it held for a moment.
+      await _pumpBrowserAtLibraryRoot(tester);
+
+      final target = tester.getCenter(find.text('テスト小説'));
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryMouseButton,
+      );
+      await gesture.addPointer(location: target);
+      await tester.pump();
+      await gesture.down(target);
+      await tester.pump(const Duration(milliseconds: 700));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(find.text('更新'), findsNothing);
+      expect(
+        ProviderScope.containerOf(
+          tester.element(find.byType(FileBrowserPanel)),
+        ).read(currentDirectoryProvider),
+        '/library/narou_n1234ab',
+      );
+    });
+
+    testWidgets('hovering the title still shows the tooltip', (
+      WidgetTester tester,
+    ) async {
+      // The other half of TooltipTriggerMode.manual: the touch trigger is
+      // given up, hovering is not. Nothing else covers this — the existing
+      // tooltip tests only assert that the Tooltip widget is in the tree.
+      await _pumpBrowserAtLibraryRoot(tester);
+
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+      await tester.pump();
+      await gesture.moveTo(tester.getCenter(find.text('テスト小説')));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // The tile's own title, plus the one painted in the tooltip overlay.
+      expect(find.text('テスト小説'), findsNWidgets(2));
+    });
+
+    testWidgets('long press on an episode file shows no context menu', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return const DirectoryContents(
+                files: [
+                  FileEntry(
+                    name: '001_chapter1.txt',
+                    path: '/library/narou_n1234ab/001_chapter1.txt',
+                  ),
+                ],
+                subdirectories: [],
+              );
+            }),
+            currentDirectoryProvider.overrideWith(() {
+              return _TestCurrentDirectoryNotifier('/library/narou_n1234ab');
+            }),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: FileBrowserPanel()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.text('001_chapter1.txt'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('削除'), findsNothing);
+      expect(find.text('移動'), findsNothing);
+    });
     testWidgets(
       'registered novel folder shows a reading-progress bar and read / total',
       (WidgetTester tester) async {
@@ -1258,4 +1377,38 @@ class _TestSelectedFileNotifier extends SelectedFileNotifier {
 
   @override
   FileEntry? build() => _initialValue;
+}
+
+/// Pumps the browser at the library root showing one registered novel folder,
+/// for the tests that only care about how the context menu is reached.
+Future<void> _pumpBrowserAtLibraryRoot(WidgetTester tester) async {
+  const testDir = DirectoryEntry(
+    name: 'narou_n1234ab',
+    path: '/library/narou_n1234ab',
+    displayName: 'テスト小説',
+  );
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        directoryContentsProvider.overrideWith((ref) async {
+          return const DirectoryContents(files: [], subdirectories: [testDir]);
+        }),
+        currentDirectoryProvider.overrideWith(() {
+          return _TestCurrentDirectoryNotifier('/library');
+        }),
+        libraryPathProvider.overrideWithValue('/library'),
+        allNovelsProvider.overrideWith(
+          (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')],
+        ),
+      ],
+      child: const MaterialApp(
+        locale: Locale('ja'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: FileBrowserPanel()),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }

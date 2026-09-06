@@ -642,4 +642,266 @@ void main() {
       },
     );
   });
+
+  group('VerticalTextPage context menu (touch tap inside the selection)', () {
+    testWidgets('a touch tap inside the selection opens the menu', (
+      tester,
+    ) async {
+      String? receivedText;
+      Offset? receivedPosition;
+      final selectionNotifications = <ViewerSelection?>[];
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          segments: const [PlainTextSegment('あいうえお')],
+          selectionStart: 1,
+          selectionEnd: 4,
+          onSelectionChanged: selectionNotifications.add,
+          onContextMenu: (position, text) {
+            receivedPosition = position;
+            receivedText = text;
+          },
+        ),
+      );
+      await tester.pump();
+
+      await tester.tapAt(tester.getCenter(find.text('う')));
+      await tester.pump();
+
+      expect(receivedText, 'いうえ');
+      expect(receivedPosition, isNotNull);
+      // The selection survives the tap, so the reader can still act on it.
+      expect(selectionNotifications, isEmpty);
+    });
+
+    testWidgets(
+      'a touch tap outside the selection clears it and opens nothing',
+      (tester) async {
+        bool called = false;
+        final selectionNotifications = <ViewerSelection?>[];
+
+        await tester.pumpWidget(
+          _buildTestWidget(
+            segments: const [PlainTextSegment('あいうえお')],
+            selectionStart: 1,
+            selectionEnd: 4,
+            onSelectionChanged: selectionNotifications.add,
+            onContextMenu: (position, text) => called = true,
+          ),
+        );
+        await tester.pump();
+
+        await tester.tapAt(tester.getCenter(find.text('お')));
+        await tester.pump();
+
+        expect(called, isFalse);
+        expect(selectionNotifications, [null]);
+      },
+    );
+
+    testWidgets('a mouse click inside the selection still clears it', (
+      tester,
+    ) async {
+      bool called = false;
+      final selectionNotifications = <ViewerSelection?>[];
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          segments: const [PlainTextSegment('あいうえお')],
+          selectionStart: 1,
+          selectionEnd: 4,
+          onSelectionChanged: selectionNotifications.add,
+          onContextMenu: (position, text) => called = true,
+        ),
+      );
+      await tester.pump();
+
+      final target = tester.getCenter(find.text('う'));
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryMouseButton,
+      );
+      await gesture.addPointer(location: target);
+      await tester.pump();
+      await gesture.down(target);
+      await gesture.up();
+      await tester.pump();
+
+      expect(called, isFalse, reason: 'The pointer behaviour is unchanged');
+      expect(selectionNotifications, [null]);
+    });
+
+    testWidgets('a stylus tap inside the selection opens the menu', (
+      tester,
+    ) async {
+      // An Apple Pencil is a first-class pointer on the target platform and
+      // has no secondary button either, so excluding it would leave a Pencil
+      // user with a selection and no way to act on it.
+      String? receivedText;
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          segments: const [PlainTextSegment('あいうえお')],
+          selectionStart: 1,
+          selectionEnd: 4,
+          onContextMenu: (position, text) => receivedText = text,
+        ),
+      );
+      await tester.pump();
+
+      final target = tester.getCenter(find.text('う'));
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.stylus,
+      );
+      await gesture.down(target);
+      await gesture.up();
+      await tester.pump();
+
+      expect(receivedText, 'いうえ');
+    });
+
+    testWidgets('a touch tap in the gap between two columns opens the menu', (
+      tester,
+    ) async {
+      // The columns are separated by columnSpacing, and nothing is painted
+      // there. A finger centred in that gap must not destroy a selection that
+      // took a drag to make — the drag path already snaps for the same reason.
+      String? receivedText;
+      final selectionNotifications = <ViewerSelection?>[];
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          // Long enough to wrap into more than one column at height 300:
+          // about 19 characters fit per column at fontSize 14.
+          segments: const [
+            PlainTextSegment(
+              'あいうえおかきくけこさしすせそたちつてと'
+              'なにぬねのはひふへほまみむめもやゆよわを',
+            ),
+          ],
+          selectionStart: 0,
+          selectionEnd: 40,
+          onSelectionChanged: selectionNotifications.add,
+          onContextMenu: (position, text) => receivedText = text,
+        ),
+      );
+      await tester.pump();
+
+      // Vertical text runs right to left, so the second column sits to the
+      // left of the first. Aim at the midpoint of the gap between them.
+      final first = tester.getRect(find.text('あ'));
+      final second = tester.getRect(find.text('は'));
+      expect(
+        second.right,
+        lessThan(first.left),
+        reason: 'expected a second column to the left of the first',
+      );
+      final gapCentre = Offset(
+        (second.right + first.left) / 2,
+        first.center.dy,
+      );
+
+      await tester.tapAt(gapCentre);
+      await tester.pump();
+
+      expect(receivedText, isNotNull);
+      expect(selectionNotifications, isEmpty);
+    });
+
+    testWidgets('a touch tap in the margin still clears the selection', (
+      tester,
+    ) async {
+      // The bound on the snap is what keeps this working: without it the
+      // nearest character is returned however far away the tap was, and a tap
+      // in the margin would open the menu instead of clearing.
+      bool called = false;
+      final selectionNotifications = <ViewerSelection?>[];
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          segments: const [PlainTextSegment('あいうえお')],
+          selectionStart: 1,
+          selectionEnd: 4,
+          onSelectionChanged: selectionNotifications.add,
+          onContextMenu: (position, text) => called = true,
+        ),
+      );
+      await tester.pump();
+
+      // Far to the left of the single right-hand column, level with a
+      // character that IS selected — so an unbounded snap would resolve to it
+      // and wrongly open the menu.
+      final selectedChar = tester.getRect(find.text('う'));
+      await tester.tapAt(
+        Offset(selectedChar.left - 100, selectedChar.center.dy),
+      );
+      await tester.pump();
+
+      expect(called, isFalse);
+      expect(selectionNotifications, [null]);
+    });
+
+    testWidgets('the menu text matches the reported selection text', (
+      tester,
+    ) async {
+      // The menu and the reported selection extract their text through
+      // different call sites, and only one of them resolves the null
+      // lineBreakEntryIndices through realLineBreakEntries. That fallback is a
+      // materialisation of the same null semantics rather than a different
+      // set, so the two agree — this pins that down, because a fallback that
+      // ever stopped matching would make a copy differ from what was reported
+      // as selected without anything else noticing.
+      String? menuText;
+      final selectionNotifications = <ViewerSelection?>[];
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          // Long enough to wrap, and with no lineBreakEntryIndices supplied.
+          segments: const [
+            PlainTextSegment(
+              'あいうえおかきくけこさしすせそたちつてと'
+              'なにぬねのはひふへほまみむめもやゆよわを',
+            ),
+          ],
+          onSelectionChanged: selectionNotifications.add,
+          onContextMenu: (position, text) => menuText = text,
+        ),
+      );
+      await tester.pump();
+
+      // Drag across the column boundary to build a selection internally.
+      final from = tester.getCenter(find.text('あ'));
+      final to = tester.getCenter(find.text('は'));
+      await tester.timedDragFrom(
+        from,
+        Offset(to.dx - from.dx, to.dy - from.dy),
+        const Duration(milliseconds: 300),
+      );
+      await tester.pump();
+
+      final reported = selectionNotifications.whereType<ViewerSelection>().last;
+
+      await tester.tapAt(tester.getCenter(find.text('い')));
+      await tester.pump();
+
+      expect(menuText, reported.text);
+    });
+
+    testWidgets('a touch tap with no selection opens nothing', (tester) async {
+      bool called = false;
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          segments: const [PlainTextSegment('あいうえお')],
+          onContextMenu: (position, text) => called = true,
+        ),
+      );
+      await tester.pump();
+
+      await tester.tapAt(tester.getCenter(find.text('う')));
+      await tester.pump();
+
+      expect(called, isFalse);
+    });
+  });
 }

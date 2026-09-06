@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/shared/gestures/pointer_kinds.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/features/bookmark/domain/bookmark.dart';
@@ -58,14 +59,24 @@ class BookmarkListPanel extends ConsumerWidget {
       onSecondaryTapUp: (details) {
         _showContextMenu(context, ref, details.globalPosition, bookmark);
       },
-      child: ListTile(
-        leading: const Icon(Icons.bookmark),
-        title: Text(
-          bookmark.lineNumber != null
-              ? '${bookmark.fileName} : L${bookmark.lineNumber}'
-              : bookmark.fileName,
+      // The same menu, reached without a secondary mouse button. Restricted to
+      // the pointers that need it: a mouse held down past the long-press
+      // deadline would otherwise open the menu instead of completing the
+      // click, and it can already reach the menu with its secondary button.
+      child: GestureDetector(
+        supportedDevices: kNoSecondaryButtonPointerKinds,
+        onLongPressStart: (details) {
+          _showContextMenu(context, ref, details.globalPosition, bookmark);
+        },
+        child: ListTile(
+          leading: const Icon(Icons.bookmark),
+          title: Text(
+            bookmark.lineNumber != null
+                ? '${bookmark.fileName} : L${bookmark.lineNumber}'
+                : bookmark.fileName,
+          ),
+          onTap: () => _openBookmark(context, ref, bookmark),
         ),
-        onTap: () => _openBookmark(context, ref, bookmark),
       ),
     );
   }

@@ -62,10 +62,17 @@ List<List<int>> buildColumnStructure(List<VerticalCharEntry> entries) {
   return columns;
 }
 
+/// Maps a point to the character index whose rendered rectangle contains it.
+///
+/// With [snapToNearest] a point that lands in none of them resolves to the
+/// closest region instead. [maxSnapDistance] bounds that search: beyond it the
+/// result is null again, so a point in the margin stays "outside the text"
+/// while one in the gap between two columns still reaches a character.
 int? hitTestCharIndexFromRegions({
   required Offset localPosition,
   required List<VerticalHitRegion> hitRegions,
   bool snapToNearest = false,
+  double? maxSnapDistance,
 }) {
   if (localPosition.dx < 0 || localPosition.dy < 0) return null;
   if (hitRegions.isEmpty) return null;
@@ -97,6 +104,11 @@ int? hitTestCharIndexFromRegions({
       nearestDistanceSquared = distanceSquared;
       nearest = region;
     }
+  }
+
+  if (maxSnapDistance != null &&
+      nearestDistanceSquared > maxSnapDistance * maxSnapDistance) {
+    return null;
   }
 
   return nearest?.charIndex;

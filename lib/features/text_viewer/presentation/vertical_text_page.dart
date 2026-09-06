@@ -12,6 +12,7 @@ import 'package:novel_viewer/features/text_viewer/data/vertical_text_layout.dart
 import 'package:novel_viewer/features/text_viewer/data/viewer_selection.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_ruby_text_widget.dart';
+import 'package:novel_viewer/shared/gestures/pointer_kinds.dart';
 
 export 'package:novel_viewer/features/llm_summary/domain/hover_token.dart'
     show HoverToken;
@@ -247,7 +248,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         onPanStart: _onPanStart,
         onPanUpdate: _onPanUpdate,
         onPanEnd: _onPanEnd,
-        onTap: _onTap,
+        onTapUp: _onTapUp,
         onSecondaryTapUp: _onSecondaryTapUp,
         child: Directionality(
           textDirection: TextDirection.rtl,
@@ -425,12 +426,54 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     }
   }
 
-  void _onTap() {
+  /// A tap clears the selection, except for the one case that would otherwise
+  /// leave a touch-only device with no way to act on it: a finger tapping
+  /// inside the selection opens the context menu instead, and the selection
+  /// survives.
+  ///
+  /// The branch is on the pointer's device kind rather than on the platform,
+  /// so that a tablet with a trackpad keeps the pointer behaviour and a
+  /// touchscreen desktop gains the touch one. It is deliberately narrow: a tap
+  /// already means "clear the selection", and that meaning is preserved
+  /// everywhere else.
+  ///
+  /// A long press would have been the more conventional touch gesture, but a
+  /// long press accepted after its deadline forcibly removes the pan
+  /// recognizer from the gesture arena — abandoning a selection drag that
+  /// began with the finger held still. Reusing the tap leaves the recognizer
+  /// set of this detector, and therefore the drag/swipe arbitration, untouched.
+  void _onTapUp(TapUpDetails details) {
+    if (kNoSecondaryButtonPointerKinds.contains(details.kind)) {
+      // Nothing is painted in the gap between two columns, but a finger aimed
+      // at a character lands there often enough — the gap is columnSpacing
+      // wide, so its midpoint is only half that from either column. Snapping
+      // within the gap width keeps such a tap on the character it was aimed
+      // at, while a tap out in the margin still resolves to nothing and so
+      // still clears, which is what the reader means by tapping there. The
+      // drag path snaps for the same reason, though without a bound.
+      final index = _hitTest(
+        details.localPosition,
+        snapToNearest: true,
+        maxSnapDistance: widget.columnSpacing,
+      );
+      if (index != null && _isInSelection(index)) {
+        _openContextMenuAt(details.globalPosition);
+        return;
+      }
+    }
     _clearInternalSelection();
     widget.onSelectionChanged?.call(null);
   }
 
   void _onSecondaryTapUp(TapUpDetails details) {
+    _openContextMenuAt(details.globalPosition);
+  }
+
+  /// Opens the selection context menu, if there is a selection to act on.
+  ///
+  /// Shared by both entry points: the secondary tap, and — for a touch pointer
+  /// — a tap that lands inside the selection.
+  void _openContextMenuAt(Offset globalPosition) {
     final start = _effectiveStart;
     final end = _effectiveEnd;
     if (start == null || end == null || start >= end) return;
@@ -441,7 +484,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       lineBreakEntryIndices: widget.lineBreakEntryIndices,
     );
     if (text.isEmpty) return;
-    widget.onContextMenu?.call(details.globalPosition, text);
+    widget.onContextMenu?.call(globalPosition, text);
   }
 
   void _clearInternalSelection() {
@@ -491,7 +534,11 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     );
   }
 
-  int? _hitTest(Offset localPosition, {bool snapToNearest = false}) {
+  int? _hitTest(
+    Offset localPosition, {
+    bool snapToNearest = false,
+    double? maxSnapDistance,
+  }) {
     if (_hitRegions.isEmpty) {
       _rebuildHitRegions();
     }
@@ -499,6 +546,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       localPosition: localPosition,
       hitRegions: _hitRegions,
       snapToNearest: snapToNearest,
+      maxSnapDistance: maxSnapDistance,
     );
   }
 

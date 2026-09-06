@@ -131,6 +131,42 @@ void main() {
       );
       expect(result, 4);
     });
+
+    test('a bounded snap reaches a region within the limit', () {
+      // 74 is 2px from region 4's right edge (60..72).
+      final result = hitTestCharIndexFromRegions(
+        localPosition: const Offset(74, 1),
+        hitRegions: hitRegions,
+        snapToNearest: true,
+        maxSnapDistance: 4,
+      );
+      expect(result, 4);
+    });
+
+    test('a bounded snap gives up beyond the limit', () {
+      // 300 is far to the right of every region; an unbounded snap would
+      // still return one, which is what makes a tap in the margin destroy a
+      // selection instead of clearing it deliberately.
+      final result = hitTestCharIndexFromRegions(
+        localPosition: const Offset(300, 1),
+        hitRegions: hitRegions,
+        snapToNearest: true,
+        maxSnapDistance: 4,
+      );
+      expect(result, isNull);
+    });
+
+    test('the limit is measured from the region edge, not its centre', () {
+      // 76 is 4px from region 4's right edge and 4px from region 0's left
+      // edge: exactly on the limit from both, so the nearer one still wins.
+      final result = hitTestCharIndexFromRegions(
+        localPosition: const Offset(76, 1),
+        hitRegions: hitRegions,
+        snapToNearest: true,
+        maxSnapDistance: 4,
+      );
+      expect(result, anyOf(0, 4));
+    });
   });
 
   group('extractVerticalSelectedText', () {

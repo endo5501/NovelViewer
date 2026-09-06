@@ -344,5 +344,78 @@ void main() {
 
       expect(find.text('削除'), findsOneWidget);
     });
+
+    testWidgets('long press shows the same context menu', (
+      WidgetTester tester,
+    ) async {
+      await _pumpPanelWithOneBookmark(tester);
+
+      await tester.longPress(find.text('001_chapter1.txt'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('削除'), findsOneWidget);
+      // A long press is a menu gesture, not a tap: the tile's own onTap must
+      // lose the arena, or the bookmark would be opened underneath the menu.
+      // This bookmark's file does not exist, so opening it would report so.
+      expect(find.text('ファイルが見つかりません'), findsNothing);
+    });
+
+    testWidgets('a slow mouse click still opens the bookmark', (
+      WidgetTester tester,
+    ) async {
+      // A mouse has the secondary button, so it does not need the long press
+      // and must not lose the ability to complete a click it held for a
+      // moment. This bookmark's file does not exist, so opening it reports so.
+      await _pumpPanelWithOneBookmark(tester);
+
+      final target = tester.getCenter(find.text('001_chapter1.txt'));
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryMouseButton,
+      );
+      await gesture.addPointer(location: target);
+      await tester.pump();
+      await gesture.down(target);
+      await tester.pump(const Duration(milliseconds: 700));
+      await gesture.up();
+      await tester.pump();
+
+      expect(find.text('削除'), findsNothing);
+      expect(find.text('ファイルが見つかりません'), findsOneWidget);
+    });
   });
+}
+
+/// Pumps the panel showing a single bookmark, for the tests that only care
+/// about how the context menu is reached.
+Future<void> _pumpPanelWithOneBookmark(WidgetTester tester) async {
+  final bookmarks = [
+    Bookmark(
+      id: 1,
+      fileName: '001_chapter1.txt',
+      createdAt: DateTime(2026, 1, 1),
+    ),
+  ];
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        libraryPathProvider.overrideWithValue('/library'),
+        allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
+        currentDirectoryProvider.overrideWith(
+          () => _TestCurrentDirectoryNotifier('/library/n1234'),
+        ),
+        bookmarksForCurrentNovelProvider.overrideWithValue(
+          AsyncValue.data(bookmarks),
+        ),
+      ],
+      child: const MaterialApp(
+        locale: Locale('ja'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: BookmarkListPanel()),
+      ),
+    ),
+  );
+  await tester.pump();
 }

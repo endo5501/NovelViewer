@@ -2,6 +2,7 @@ import 'dart:io' show FileSystemException;
 
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/shared/gestures/pointer_kinds.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
@@ -317,6 +318,13 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       leading: Icon(isNovel ? Icons.menu_book : Icons.folder),
       title: Tooltip(
         message: dir.displayName,
+        // Hover only. Tooltip's default touch trigger is a long press, and it
+        // registers its own recognizer deeper in the tree than the gesture
+        // detector below, so it would win the arena and swallow the context
+        // menu over the title — which is most of the tile. Hovering is handled
+        // by a MouseRegion and does not go through triggerMode, so the desktop
+        // behaviour is unchanged.
+        triggerMode: TooltipTriggerMode.manual,
         child: Text(
           dir.displayName,
           maxLines: 1,
@@ -334,7 +342,17 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       onSecondaryTapUp: (details) {
         _showContextMenu(context, details.globalPosition, dir, isNovel);
       },
-      child: tile,
+      // The same menu, reached without a secondary mouse button. Restricted to
+      // the pointers that need it: a mouse held down past the long-press
+      // deadline would otherwise open the menu instead of entering the folder,
+      // and it can already reach the menu with its secondary button.
+      child: GestureDetector(
+        supportedDevices: kNoSecondaryButtonPointerKinds,
+        onLongPressStart: (details) {
+          _showContextMenu(context, details.globalPosition, dir, isNovel);
+        },
+        child: tile,
+      ),
     );
   }
 

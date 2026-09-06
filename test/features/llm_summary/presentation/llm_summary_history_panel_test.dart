@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -147,6 +148,100 @@ void main() {
         findsOneWidget,
         reason: 'ボブ has 1 base + 2 extra snapshots',
       );
+    });
+
+    testWidgets('right-click opens the context menu', (tester) async {
+      // The panel had no coverage of its own secondary tap, and this change
+      // nests a second GestureDetector inside the one that carries it.
+      await tester.pumpWidget(
+        _wrap(
+          overrides: [
+            libraryPathProvider.overrideWithValue('/library'),
+            currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/library/my_novel'),
+            ),
+            llmSummaryHistoryProvider.overrideWith(
+              () => _StubHistoryNotifier([
+                _entry(word: 'アリス', episode: 30, sourceFile: '030.txt'),
+              ]),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final target = tester.getCenter(find.text('アリス'));
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kSecondaryMouseButton,
+      );
+      await gesture.addPointer(location: target);
+      await tester.pump();
+      await gesture.down(target);
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(find.text('詳細を表示'), findsOneWidget);
+    });
+
+    testWidgets('long press opens the same context menu', (tester) async {
+      // This tab is hidden where LLM summary is unavailable, so it is not an
+      // iPad path — but a touchscreen Windows or Linux desktop shows it, and
+      // there a secondary tap is not available either.
+      await tester.pumpWidget(
+        _wrap(
+          overrides: [
+            libraryPathProvider.overrideWithValue('/library'),
+            currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/library/my_novel'),
+            ),
+            llmSummaryHistoryProvider.overrideWith(
+              () => _StubHistoryNotifier([
+                _entry(word: 'アリス', episode: 30, sourceFile: '030.txt'),
+              ]),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.text('アリス'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('詳細を表示'), findsOneWidget);
+    });
+
+    testWidgets('a slow mouse click still opens the entry', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          overrides: [
+            libraryPathProvider.overrideWithValue('/library'),
+            currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/library/my_novel'),
+            ),
+            llmSummaryHistoryProvider.overrideWith(
+              () => _StubHistoryNotifier([
+                _entry(word: 'アリス', episode: 30, sourceFile: '030.txt'),
+              ]),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final target = tester.getCenter(find.text('アリス'));
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryMouseButton,
+      );
+      await gesture.addPointer(location: target);
+      await tester.pump();
+      await gesture.down(target);
+      await tester.pump(const Duration(milliseconds: 700));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(find.text('詳細を表示'), findsNothing);
     });
   });
 }
