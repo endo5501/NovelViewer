@@ -101,7 +101,8 @@ scripts/build_irodori_windows.bat
 fvm flutter build windows
 
 # iPad向けビルド（ビューア機能のみ。TTS / LLM は非対応）
-fvm flutter run -d <iPadのデバイスID>
+fvm flutter build ios --release
+xcrun devicectl device install app --device <デバイスUDID> build/ios/iphoneos/Runner.app
 ```
 
 #### iPad ビルドの前提
@@ -129,11 +130,24 @@ Team ID は Xcode > Settings > Accounts、または `security find-identity -v -
 
 無料プロビジョニング（Apple ID のみ、有料の Developer Program に未加入）でインストールしたアプリは **7 日で失効**します。失効後は Xcode から再インストールしてください。
 
-**3. 依存の管理方式**
+**3. debug ビルドは実機のホーム画面から起動できない**
+
+iOS 14 以降、debug ビルドは JIT を必要とするため Flutter ツール経由でしか起動できません。ホーム画面のアイコンから起動すると次のメッセージだけが表示されます。
+
+```
+In iOS 14+, debug mode Flutter apps can only be launched from Flutter tooling,
+IDEs with Flutter plugins or from Xcode.
+```
+
+常用する場合は上記のとおり `--release` でビルドしてインストールしてください。開発中にホットリロードを使いたい場合は `fvm flutter run -d <デバイスUDID>` で、ツールに接続したまま起動します。
+
+デバイスの UDID は `xcrun devicectl list devices` の Identifier 列で確認できます。
+
+**4. 依存の管理方式**
 
 iOS は Swift Package Manager 単独構成です（CocoaPods は使用しません）。`ios/Podfile` は存在せず、依存のピンは 2 つの `xcshareddata/swiftpm/Package.resolved` が保持します。macOS は従来どおり CocoaPods です。
 
-**4. ライブラリの場所**
+**5. ライブラリの場所**
 
 小説は端末内の `Documents/NovelViewer/` に保存され、Files アプリの「このiPad内 > NovelViewer」から参照・追加・削除できます。
 
