@@ -1,51 +1,51 @@
 ## 1. 準備
 
-- [ ] 1.1 `fvm flutter test` を実行し、変更前のテスト本数をベースラインとして記録する
-- [ ] 1.2 既存の右クリック経路のテストの所在を確認する（`bookmark_list_panel` / `file_browser_panel` / `vertical_text_page` の各テスト）
+- [x] 1.1 `fvm flutter test` を実行し、変更前のテスト本数をベースラインとして記録する
+- [x] 1.2 既存の右クリック経路のテストの所在を確認する（`bookmark_list_panel` / `file_browser_panel` / `vertical_text_page` の各テスト）
 
 ## 2. ブックマーク一覧の長押し
 
 長押しの型をここで確立する。Tooltip の干渉が無い一番単純なケースなので最初に置く。
 
-- [ ] 2.1 RED: ブックマーク項目を `tester.longPress` すると「削除」を含むメニューが出るテストを書き、失敗を確認する
-- [ ] 2.2 GREEN: `bookmark_list_panel.dart` の `GestureDetector` に `onLongPressStart` を追加し、`details.globalPosition` で既存の `_showContextMenu` を呼ぶ
-- [ ] 2.3 RED→GREEN: 長押しメニューから「削除」を選ぶとブックマークが削除され一覧が更新されるテストを追加する
-- [ ] 2.4 既存の右クリックのテストが変更なしで通ることを確認する
-- [ ] 2.5 判別力の確認: `onLongPressStart` を一時的に外すと 2.1 と 2.3 が落ちることを確認する
+- [x] 2.1 RED: ブックマーク項目を `tester.longPress` すると「削除」を含むメニューが出るテストを書き、失敗を確認する
+- [x] 2.2 GREEN: `bookmark_list_panel.dart` の `GestureDetector` に `onLongPressStart` を追加し、`details.globalPosition` で既存の `_showContextMenu` を呼ぶ
+- [x] 2.3 長押しがタイル自身の `onTap`（しおりを開く）を発火させないことを 2.1 のテストに追記する。当初は「削除まで実行する」テストを想定していたが、それは長押しではなく既存の右クリック経路のハンドラを試すことになり、実 DB の用意も要る。長押し固有のリスクは調停でタップに負けることなので、そちらを検証する
+- [x] 2.4 既存の右クリックのテストが変更なしで通ることを確認する
+- [x] 2.5 判別力の確認: `onLongPressStart` を一時的に外すと 2.1 と 2.3 が落ちることを確認する
 
 ## 3. ファイルブラウザの長押しと Tooltip
 
-- [ ] 3.1 RED: 小説フォルダのタイルを `tester.longPress` すると「更新 / タイトル変更 / 移動 / 削除」を含むメニューが出るテストを書き、失敗を確認する
-- [ ] 3.2 GREEN: `file_browser_panel.dart` の `_buildDirectoryTile` の `GestureDetector` に `onLongPressStart` を追加し、既存の `_showContextMenu` を呼ぶ
-- [ ] 3.3 RED: **タイトル文字の上**を長押ししてメニューが出るテストを書き、`Tooltip` に取られて失敗することを確認する（design D3 の推論の実測）
-- [ ] 3.4 GREEN: フォルダタイルのタイトルの `Tooltip` に `triggerMode: TooltipTriggerMode.manual` を設定する
-- [ ] 3.5 判別力の確認: `triggerMode` を戻すと 3.3 が落ちることを確認する
-- [ ] 3.6 ホバーによるツールチップ表示の既存テストが変更なしで通ることを確認する
-- [ ] 3.7 RED→GREEN: 小説フォルダ内のエピソードファイルを長押ししてもメニューが出ないテストを追加する
-- [ ] 3.8 ファイルタイル側の `Tooltip` は据え置きでよいか確認する（長押しの対象ではないため既定のままにする判断を記録）
+- [x] 3.1 RED: 小説フォルダのタイルを `tester.longPress` すると「更新 / タイトル変更 / 移動 / 削除」を含むメニューが出るテストを書き、失敗を確認する
+- [x] 3.2 GREEN: `file_browser_panel.dart` の `_buildDirectoryTile` の `GestureDetector` に `onLongPressStart` を追加し、既存の `_showContextMenu` を呼ぶ
+- [x] 3.3 RED: **タイトル文字の上**を長押ししてメニューが出るテストを書き、`Tooltip` に取られて失敗することを確認する（design D3 の推論の実測）
+- [x] 3.4 GREEN: フォルダタイルのタイトルの `Tooltip` に `triggerMode: TooltipTriggerMode.manual` を設定する
+- [x] 3.5 判別力の確認: `triggerMode` を戻すと 3.3 が落ちることを確認する
+- [x] 3.6 ホバーによるツールチップ表示を確認する。既存テストは `Tooltip` ウィジェットの存在しか見ておらず実際のホバーを検証していなかったため、ホバーでフルネームが出るテストを追加した（`Tooltip` を外すと落ちることも確認）
+- [x] 3.7 RED→GREEN: 小説フォルダ内のエピソードファイルを長押ししてもメニューが出ないテストを追加する
+- [x] 3.8 ファイルタイル側の `Tooltip` は既定のまま据え置く。ファイルタイルはコンテキストメニューを持たないため長押しが競合せず、狭い Drawer では長押しでフルネームが読めるのはむしろ有用なため
 
 ## 4. 縦書きビューアの選択範囲内タップ
 
-- [ ] 4.1 リファクタ: `vertical_text_page.dart` の `_onSecondaryTapUp` の本体を `_openContextMenuAt(Offset globalPosition)` に切り出す。既存の右クリックテストが変更なしで通ることを確認する
-- [ ] 4.2 RED: 選択がある状態で選択範囲の内側を指でタップすると `onContextMenu` が呼ばれるテストを書き、失敗を確認する
-- [ ] 4.3 GREEN: `onTap` を `onTapUp` に差し替え、`kind == PointerDeviceKind.touch` かつ `_isInSelection(_hitTest(localPosition))` のとき `_openContextMenuAt` を呼ぶ
-- [ ] 4.4 RED→GREEN: 選択範囲の内側を指でタップしても選択が維持されるテストを追加する
-- [ ] 4.5 RED→GREEN: 選択範囲の外側を指でタップすると従来どおり選択が解除されるテストを追加する
-- [ ] 4.6 RED→GREEN: 選択範囲の内側を**マウス**でクリックすると選択が解除されメニューが出ないテストを追加する
-- [ ] 4.7 RED→GREEN: 選択が無い状態で指でタップしてもメニューが出ないテストを追加する
-- [ ] 4.8 既存のジェスチャーテスト（ドラッグ選択・スワイプページ送り・タップによる選択解除）が通ることを確認する。`_GestureMode` 判定と recognizer 構成には一切手を入れない
-- [ ] 4.9 判別力の確認: `kind` の判定を外すと 4.6 が落ち、`_isInSelection` の判定を外すと 4.5 が落ちることを確認する
+- [x] 4.1 リファクタ: `vertical_text_page.dart` の `_onSecondaryTapUp` の本体を `_openContextMenuAt(Offset globalPosition)` に切り出す。既存の右クリックテストが変更なしで通ることを確認する
+- [x] 4.2 RED: 選択がある状態で選択範囲の内側を指でタップすると `onContextMenu` が呼ばれるテストを書き、失敗を確認する
+- [x] 4.3 GREEN: `onTap` を `onTapUp` に差し替え、`kind == PointerDeviceKind.touch` かつ `_isInSelection(_hitTest(localPosition))` のとき `_openContextMenuAt` を呼ぶ
+- [x] 4.4 RED→GREEN: 選択範囲の内側を指でタップしても選択が維持されるテストを追加する
+- [x] 4.5 RED→GREEN: 選択範囲の外側を指でタップすると従来どおり選択が解除されるテストを追加する
+- [x] 4.6 RED→GREEN: 選択範囲の内側を**マウス**でクリックすると選択が解除されメニューが出ないテストを追加する
+- [x] 4.7 RED→GREEN: 選択が無い状態で指でタップしてもメニューが出ないテストを追加する
+- [x] 4.8 既存のジェスチャーテスト（ドラッグ選択・スワイプページ送り・タップによる選択解除）が通ることを確認する。`_GestureMode` 判定と recognizer 構成には一切手を入れない
+- [x] 4.9 判別力の確認: `kind` の判定を外すと 4.6 が落ち、`_isInSelection` の判定を外すと 4.5 が落ちることを確認する
 
 ## 5. 統合
 
-- [ ] 5.1 RED→GREEN: 狭いレイアウト（`shellBreakpointProvider` を上回らない幅）で左 `Drawer` を開き、その中のフォルダタイルを長押ししてメニューが出るテストを追加する
-- [ ] 5.2 フォルダタイルの長押しでは Drawer が閉じないことを確認する（`fileOpenRequestProvider` はファイル選択でのみ発火するため）
-- [ ] 5.3 `fvm flutter test` の全体が通り、テスト本数が 1.1 のベースラインから増えていることを確認する
+- [x] 5.1 RED→GREEN: 狭いレイアウト（`shellBreakpointProvider` を上回らない幅）で左 `Drawer` を開き、その中のフォルダタイルを長押ししてメニューが出るテストを追加する
+- [x] 5.2 フォルダタイルの長押しでは Drawer が閉じないことを確認する（`fileOpenRequestProvider` はファイル選択でのみ発火するため）
+- [x] 5.3 `fvm flutter test` の全体が通り、テスト本数が 1.1 のベースラインから増えていることを確認する
 
 ## 6. ドキュメント
 
-- [ ] 6.1 README の iPad セクションに、長押しでコンテキストメニューを開ける旨と、縦書きの選択メニューが選択範囲内のタップで開く旨を追記する
-- [ ] 6.2 README の「解析済みの語はトラックパッド接続時のみホバーで読める」という既存の記述が、本変更でも変わらないことを確認する
+- [x] 6.1 README の iPad セクションに、長押しでコンテキストメニューを開ける旨と、縦書きの選択メニューが選択範囲内のタップで開く旨を追記する
+- [x] 6.2 README の「解析済みの語はトラックパッド接続時のみホバーで読める」という既存の記述が、本変更でも変わらないことを確認する
 
 ## 7. 実機確認
 

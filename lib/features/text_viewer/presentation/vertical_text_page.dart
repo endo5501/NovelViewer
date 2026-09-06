@@ -247,7 +247,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         onPanStart: _onPanStart,
         onPanUpdate: _onPanUpdate,
         onPanEnd: _onPanEnd,
-        onTap: _onTap,
+        onTapUp: _onTapUp,
         onSecondaryTapUp: _onSecondaryTapUp,
         child: Directionality(
           textDirection: TextDirection.rtl,
@@ -425,12 +425,43 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     }
   }
 
-  void _onTap() {
+  /// A tap clears the selection, except for the one case that would otherwise
+  /// leave a touch-only device with no way to act on it: a finger tapping
+  /// inside the selection opens the context menu instead, and the selection
+  /// survives.
+  ///
+  /// The branch is on the pointer's device kind rather than on the platform,
+  /// so that a tablet with a trackpad keeps the pointer behaviour and a
+  /// touchscreen desktop gains the touch one. It is deliberately narrow: a tap
+  /// already means "clear the selection", and that meaning is preserved
+  /// everywhere else.
+  ///
+  /// A long press would have been the more conventional touch gesture, but a
+  /// long press accepted after its deadline forcibly removes the pan
+  /// recognizer from the gesture arena — abandoning a selection drag that
+  /// began with the finger held still. Reusing the tap leaves the recognizer
+  /// set of this detector, and therefore the drag/swipe arbitration, untouched.
+  void _onTapUp(TapUpDetails details) {
+    if (details.kind == PointerDeviceKind.touch) {
+      final index = _hitTest(details.localPosition);
+      if (index != null && _isInSelection(index)) {
+        _openContextMenuAt(details.globalPosition);
+        return;
+      }
+    }
     _clearInternalSelection();
     widget.onSelectionChanged?.call(null);
   }
 
   void _onSecondaryTapUp(TapUpDetails details) {
+    _openContextMenuAt(details.globalPosition);
+  }
+
+  /// Opens the selection context menu, if there is a selection to act on.
+  ///
+  /// Shared by both entry points: the secondary tap, and — for a touch pointer
+  /// — a tap that lands inside the selection.
+  void _openContextMenuAt(Offset globalPosition) {
     final start = _effectiveStart;
     final end = _effectiveEnd;
     if (start == null || end == null || start >= end) return;
@@ -441,7 +472,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       lineBreakEntryIndices: widget.lineBreakEntryIndices,
     );
     if (text.isEmpty) return;
-    widget.onContextMenu?.call(details.globalPosition, text);
+    widget.onContextMenu?.call(globalPosition, text);
   }
 
   void _clearInternalSelection() {

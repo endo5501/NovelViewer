@@ -642,4 +642,110 @@ void main() {
       },
     );
   });
+
+  group('VerticalTextPage context menu (touch tap inside the selection)', () {
+    testWidgets('a touch tap inside the selection opens the menu', (
+      tester,
+    ) async {
+      String? receivedText;
+      Offset? receivedPosition;
+      final selectionNotifications = <ViewerSelection?>[];
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          segments: const [PlainTextSegment('あいうえお')],
+          selectionStart: 1,
+          selectionEnd: 4,
+          onSelectionChanged: selectionNotifications.add,
+          onContextMenu: (position, text) {
+            receivedPosition = position;
+            receivedText = text;
+          },
+        ),
+      );
+      await tester.pump();
+
+      await tester.tapAt(tester.getCenter(find.text('う')));
+      await tester.pump();
+
+      expect(receivedText, 'いうえ');
+      expect(receivedPosition, isNotNull);
+      // The selection survives the tap, so the reader can still act on it.
+      expect(selectionNotifications, isEmpty);
+    });
+
+    testWidgets(
+      'a touch tap outside the selection clears it and opens nothing',
+      (tester) async {
+        bool called = false;
+        final selectionNotifications = <ViewerSelection?>[];
+
+        await tester.pumpWidget(
+          _buildTestWidget(
+            segments: const [PlainTextSegment('あいうえお')],
+            selectionStart: 1,
+            selectionEnd: 4,
+            onSelectionChanged: selectionNotifications.add,
+            onContextMenu: (position, text) => called = true,
+          ),
+        );
+        await tester.pump();
+
+        await tester.tapAt(tester.getCenter(find.text('お')));
+        await tester.pump();
+
+        expect(called, isFalse);
+        expect(selectionNotifications, [null]);
+      },
+    );
+
+    testWidgets('a mouse click inside the selection still clears it', (
+      tester,
+    ) async {
+      bool called = false;
+      final selectionNotifications = <ViewerSelection?>[];
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          segments: const [PlainTextSegment('あいうえお')],
+          selectionStart: 1,
+          selectionEnd: 4,
+          onSelectionChanged: selectionNotifications.add,
+          onContextMenu: (position, text) => called = true,
+        ),
+      );
+      await tester.pump();
+
+      final target = tester.getCenter(find.text('う'));
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryMouseButton,
+      );
+      await gesture.addPointer(location: target);
+      await tester.pump();
+      await gesture.down(target);
+      await gesture.up();
+      await tester.pump();
+
+      expect(called, isFalse, reason: 'The pointer behaviour is unchanged');
+      expect(selectionNotifications, [null]);
+    });
+
+    testWidgets('a touch tap with no selection opens nothing', (tester) async {
+      bool called = false;
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          segments: const [PlainTextSegment('あいうえお')],
+          onContextMenu: (position, text) => called = true,
+        ),
+      );
+      await tester.pump();
+
+      await tester.tapAt(tester.getCenter(find.text('う')));
+      await tester.pump();
+
+      expect(called, isFalse);
+    });
+  });
 }

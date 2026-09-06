@@ -317,6 +317,13 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       leading: Icon(isNovel ? Icons.menu_book : Icons.folder),
       title: Tooltip(
         message: dir.displayName,
+        // Hover only. Tooltip's default touch trigger is a long press, and it
+        // registers its own recognizer deeper in the tree than the gesture
+        // detector below, so it would win the arena and swallow the context
+        // menu over the title — which is most of the tile. Hovering is handled
+        // by a MouseRegion and does not go through triggerMode, so the desktop
+        // behaviour is unchanged.
+        triggerMode: TooltipTriggerMode.manual,
         child: Text(
           dir.displayName,
           maxLines: 1,
@@ -332,6 +339,12 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
 
     return GestureDetector(
       onSecondaryTapUp: (details) {
+        _showContextMenu(context, details.globalPosition, dir, isNovel);
+      },
+      // The same menu, reached without a secondary mouse button. Not limited
+      // to touch: a long press means nothing else anywhere in the app, so an
+      // unconditional trigger takes nothing away from a mouse user.
+      onLongPressStart: (details) {
         _showContextMenu(context, details.globalPosition, dir, isNovel);
       },
       child: tile,

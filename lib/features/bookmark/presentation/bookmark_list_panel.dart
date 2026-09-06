@@ -58,6 +58,12 @@ class BookmarkListPanel extends ConsumerWidget {
       onSecondaryTapUp: (details) {
         _showContextMenu(context, ref, details.globalPosition, bookmark);
       },
+      // The same menu, reached without a secondary mouse button. Not limited
+      // to touch: a long press means nothing else anywhere in the app, so an
+      // unconditional trigger takes nothing away from a mouse user.
+      onLongPressStart: (details) {
+        _showContextMenu(context, ref, details.globalPosition, bookmark);
+      },
       child: ListTile(
         leading: const Icon(Icons.bookmark),
         title: Text(
