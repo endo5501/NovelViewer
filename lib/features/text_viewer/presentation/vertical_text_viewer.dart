@@ -606,25 +606,25 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
                 final lineBreakIndices =
                     result.lineBreakIndicesPerPage[safePage];
 
-                final incomingPage = Align(
-                  alignment: Alignment.topRight,
-                  child: VerticalTextPage(
-                    segments: currentSegments,
-                    baseStyle: widget.baseStyle,
-                    query: widget.query,
-                    ttsHighlightStart: widget.ttsHighlightStart,
-                    ttsHighlightEnd: widget.ttsHighlightEnd,
-                    pageStartTextOffset: pageTextOffset,
-                    lineBreakEntryIndices: lineBreakIndices,
-                    onSelectionChanged: widget.onSelectionChanged,
-                    onContextMenu: widget.onContextMenu,
-                    onSwipe: _handleSwipe,
-                    columnSpacing: widget.columnSpacing,
-                    markedWords: widget.markedWords,
-                    onMarkEnter: widget.onMarkEnter,
-                    onMarkExit: widget.onMarkExit,
-                    onHoverHideRequest: widget.onHoverHideRequest,
-                  ),
+                // No Align here: the page aligns its own text to the top right
+                // and keeps its render box — and therefore its swipe hit area
+                // — as large as the space it is given.
+                final incomingPage = VerticalTextPage(
+                  segments: currentSegments,
+                  baseStyle: widget.baseStyle,
+                  query: widget.query,
+                  ttsHighlightStart: widget.ttsHighlightStart,
+                  ttsHighlightEnd: widget.ttsHighlightEnd,
+                  pageStartTextOffset: pageTextOffset,
+                  lineBreakEntryIndices: lineBreakIndices,
+                  onSelectionChanged: widget.onSelectionChanged,
+                  onContextMenu: widget.onContextMenu,
+                  onSwipe: _handleSwipe,
+                  columnSpacing: widget.columnSpacing,
+                  markedWords: widget.markedWords,
+                  onMarkEnter: widget.onMarkEnter,
+                  onMarkExit: widget.onMarkExit,
+                  onHoverHideRequest: widget.onHoverHideRequest,
                 );
 
                 final Widget pageContent;
@@ -641,22 +641,19 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
                     children: [
                       SlideTransition(
                         position: slideOut,
-                        child: Align(
-                          alignment: Alignment.topRight,
-                          child: VerticalTextPage(
-                            segments: _outgoingSegments!,
-                            baseStyle: widget.baseStyle,
-                            query: widget.query,
-                            columnSpacing: widget.columnSpacing,
-                            markedWords: widget.markedWords,
-                            // Symmetric wiring with the incoming page: if the
-                            // pointer briefly hovers the outgoing page during
-                            // the slide animation, callbacks still route to
-                            // the notifier so no orphan token leaks.
-                            onMarkEnter: widget.onMarkEnter,
-                            onMarkExit: widget.onMarkExit,
-                            onHoverHideRequest: widget.onHoverHideRequest,
-                          ),
+                        child: VerticalTextPage(
+                          segments: _outgoingSegments!,
+                          baseStyle: widget.baseStyle,
+                          query: widget.query,
+                          columnSpacing: widget.columnSpacing,
+                          markedWords: widget.markedWords,
+                          // Symmetric wiring with the incoming page: if the
+                          // pointer briefly hovers the outgoing page during
+                          // the slide animation, callbacks still route to
+                          // the notifier so no orphan token leaks.
+                          onMarkEnter: widget.onMarkEnter,
+                          onMarkExit: widget.onMarkExit,
+                          onHoverHideRequest: widget.onHoverHideRequest,
                         ),
                       ),
                       SlideTransition(position: slideIn, child: incomingPage),

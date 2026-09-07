@@ -250,13 +250,21 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         onPanEnd: _onPanEnd,
         onTapUp: _onTapUp,
         onSecondaryTapUp: _onSecondaryTapUp,
-        child: Directionality(
-          textDirection: TextDirection.rtl,
-          child: Wrap(
-            direction: Axis.vertical,
-            spacing: 0.0,
-            runSpacing: widget.columnSpacing,
-            children: children,
+        // The Align sits INSIDE the detector so the detector fills the area
+        // the page was given while the text keeps its top-right placement.
+        // With the Align outside, the detector was only as large as the Wrap,
+        // and a swipe over the empty part of a page — the left of a short
+        // last page, most of its width — reached no gesture at all.
+        child: Align(
+          alignment: Alignment.topRight,
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Wrap(
+              direction: Axis.vertical,
+              spacing: 0.0,
+              runSpacing: widget.columnSpacing,
+              children: children,
+            ),
           ),
         ),
       ),
