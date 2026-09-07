@@ -29,3 +29,18 @@
 - [x] 4.3 `fvm dart format .`でフォーマットを実行
 - [x] 4.4 `fvm flutter analyze`でリントを実行
 - [x] 4.5 `fvm flutter test`でテストを実行
+
+## 5. スワイプによる選択解除の通知漏れを直す
+
+- [x] 5.1 スワイプで選択が解除されたとき `onSelectionChanged(null)` が通知されることを検証するテストを `vertical_swipe_hit_area_test.dart` に追加し、**失敗すること**を確認する
+- [x] 5.2 `_handleSwipeEnd` で、内部の選択状態を消したときに `onSelectionChanged(null)` を通知するよう修正する
+- [x] 5.3 5.1 のテストが通ることを確認する
+- [x] 5.4 `fvm flutter test test/features/text_viewer/` で回帰がないことを確認する
+
+## 6. 最終確認（再実行）
+
+- [ ] 6.1 code-reviewスキルを使用してコードレビューを実施
+- [ ] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [ ] 6.3 `fvm dart format .`でフォーマットを実行
+- [ ] 6.4 `fvm flutter analyze`でリントを実行
+- [ ] 6.5 `fvm flutter test`でテストを実行

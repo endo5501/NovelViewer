@@ -19,6 +19,7 @@
 - 文字の当たり判定（選択・ホバー）の座標系は `_rebuildHitRegions` が `localToGlobal(ancestor: pageRenderObject)` で構築しているため、ページ矩形の拡大に自動追従する。座標補正コードは追加しない。
 - 余白タップで選択が解除される既存挙動は維持する。余白は最寄り文字への吸着距離（列間隔）を超えるため、従来どおり「文字なし」と解決される。
 - 表示上のレイアウト（テキストが右上寄せで描画されること）は一切変更しない。
+- スワイプで選択を解除したとき、`onSelectionChanged(null)` を必ず通知する。現在は `_handleSwipeEnd` が内部の選択状態だけを消し、通知はページ移動が成立したときに `VerticalTextViewer._changePage` が行っている。境界ページでは `_changePage` が `_handleBoundaryNavigation` へ早期 return するため通知に到達せず、**ハイライトは消えているのに `selectedTextProvider` は古い選択を保持したまま**になる。既存の不具合だが、当たり判定の拡張によって発生領域がページ全面へ広がるため本変更に含める。
 
 対象外（本変更では扱わない）:
 
@@ -33,11 +34,11 @@
 ### Modified Capabilities
 
 - `vertical-text-display`: スワイプのヒット領域が「描画されたテキスト矩形」ではなく「ページに与えられた領域全面」であることを要件化する。あわせて `Wrap` を包む構造（`GestureDetector` > `Align` > `Wrap`）を rendering 要件に反映する。
-- `vertical-text-selection`: ドラッグ／タップが文字のない領域から始まった場合の扱い（選択は開始しない、スワイプ判定の対象にはなる、タップは選択解除）を明文化する。
+- `vertical-text-selection`: ドラッグ／タップが文字のない領域から始まった場合の扱い（選択は開始しない、スワイプ判定の対象にはなる、タップは選択解除）を明文化する。あわせて、スワイプで選択を解除したときはページが実際に移動したかによらず解除を通知する要件を追加する。
 
 ## Impact
 
-- `lib/features/text_viewer/presentation/vertical_text_page.dart`: `build` の widget ツリーに `Align` を追加
+- `lib/features/text_viewer/presentation/vertical_text_page.dart`: `build` の widget ツリーに `Align` を追加、`_handleSwipeEnd` で選択解除を通知
 - `lib/features/text_viewer/presentation/vertical_text_viewer.dart`: incoming／outgoing 両ページを包んでいた `Align` を除去
 - テスト: `test/features/text_viewer/presentation/` 配下の縦書きスワイプ／選択関連テスト
 - 依存パッケージ・API・データ形式への影響なし

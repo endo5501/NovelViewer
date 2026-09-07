@@ -44,3 +44,20 @@ A tap without dragging SHALL clear the selection, except where a tap from a poin
 #### Scenario: A touch tap inside the selection does not clear it
 - **WHEN** the user taps with a finger inside the selected range
 - **THEN** the selection is retained
+
+### Requirement: Selection state cleared on page navigation
+The system SHALL clear the text selection when the user navigates to a different page in vertical display mode.
+
+A recognized swipe SHALL clear the selection and report the clearing through `onSelectionChanged`, whether or not the page index actually changes. The visual clearing and the reported state SHALL NOT diverge: `VerticalTextPage` SHALL report the clearing itself when it clears its own selection, rather than relying on `VerticalTextViewer` to report it after a successful page move, because a swipe at the first or last page is routed to the file-boundary handler and never reaches that report.
+
+#### Scenario: Page forward clears selection
+- **WHEN** the user presses the left arrow key to advance to the next page while text is selected
+- **THEN** the selection is cleared and `selectedTextProvider` is set to null
+
+#### Scenario: Page backward clears selection
+- **WHEN** the user presses the right arrow key to go to the previous page while text is selected
+- **THEN** the selection is cleared and `selectedTextProvider` is set to null
+
+#### Scenario: A swipe at a page boundary clears the reported selection
+- **WHEN** the user swipes on the last page while text is selected, so the page index stays where it is and the file-boundary handler takes over
+- **THEN** the selection highlight is removed AND `selectedTextProvider` is set to null, so no feature keeps acting on text that is no longer shown as selected

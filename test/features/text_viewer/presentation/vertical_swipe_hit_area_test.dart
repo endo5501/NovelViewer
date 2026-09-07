@@ -206,6 +206,31 @@ void main() {
 
       expect(cleared, isTrue);
     });
+
+    testWidgets('a swipe reports the selection it clears', (tester) async {
+      final reported = <ViewerSelection?>[];
+      await tester.pumpWidget(
+        _pageHarness(
+          segments: const [PlainTextSegment('あいうえお')],
+          onSelectionChanged: reported.add,
+          onSwipe: (_) {},
+        ),
+      );
+
+      // Select by dragging down the column, then swipe across it. The page
+      // clears its own highlight on a swipe, so it has to say so: on the first
+      // or last page the swipe is routed to the boundary handler and the
+      // viewer's own "selection cleared" report is never reached.
+      final firstChar = tester.getCenter(find.text('あ'));
+      await tester.dragFrom(firstChar, const Offset(0, 40));
+      await tester.pumpAndSettle();
+      expect(reported.last, isNotNull);
+
+      await tester.dragFrom(firstChar, const Offset(120, 0));
+      await tester.pumpAndSettle();
+
+      expect(reported.last, isNull);
+    });
   });
 
   group('VerticalTextViewer swipe over an area with no text', () {

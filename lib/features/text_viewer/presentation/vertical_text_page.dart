@@ -428,7 +428,15 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
           )
         : null;
 
+    // Report the clearing here rather than leaving it to the viewer's page
+    // move: a swipe on the first or last page is routed to the file-boundary
+    // handler, which returns before that report, and the highlight would then
+    // be gone while the reported selection still named the old text.
+    final hadSelection = _selectionStart != null || _selectionEnd != null;
     _clearInternalSelection();
+    if (hadSelection) {
+      widget.onSelectionChanged?.call(null);
+    }
     if (direction != null) {
       widget.onSwipe?.call(direction);
     }
