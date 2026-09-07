@@ -7,7 +7,9 @@ The rectangles SHALL be collected relative to `VerticalTextPage`'s own render bo
 
 The selection anchor SHALL be resolved from the position where the pointer went down, NOT from the position `onPanStart` reports. When `onPanStart` decides the gesture is a selection, the range SHALL also be extended to the position `onPanStart` reports: no update event follows the move that got the pan accepted, so a drag accepted and released without a further move would otherwise select only the pressed character and drop everything the pointer crossed. A pan is accepted only after the gesture's slop distance, which on a touchscreen is worth a character or two of vertical text, so anchoring at acceptance would drop the characters the reader started on and would let a drag that began outside the text anchor on a character it merely passed.
 
-A drag that begins over an area where no character is painted SHALL NOT start a selection, because no anchor character can be resolved there. Such a drag SHALL still be eligible for swipe detection as defined in the vertical-text-display capability.
+Resolving the anchor SHALL snap to the nearest character within the width of a column gap, exactly as the tap path does: nothing is painted between two columns, but a finger aimed at a character lands there often enough, and an anchor that resolves to nothing abandons the whole drag and clears any selection that was already there.
+
+A drag that begins over an area where no character is painted, farther than a column gap from any character, SHALL NOT start a selection, because no anchor character can be resolved there. Such a drag SHALL still be eligible for swipe detection as defined in the vertical-text-display capability.
 
 The rectangles SHALL be rebuilt whenever the page's own size changes, not only when its segments, text style or column spacing change: the text is aligned inside the page, so every rectangle moves when the page resizes even though none of those inputs has.
 
@@ -40,6 +42,10 @@ A tap without dragging SHALL clear the selection, except where a tap from a poin
 #### Scenario: A drag accepted and released in one move selects the whole span
 - **WHEN** the pointer goes down on a character, moves once far enough for the pan to be accepted, and is released with no further movement
 - **THEN** the selection runs from the pressed character to the one under the release, not just the pressed character
+
+#### Scenario: A press in the gap between two columns still selects
+- **WHEN** the reader presses in the unpainted gap between two columns and drags
+- **THEN** the anchor snaps to the nearest character and the drag selects normally
 
 #### Scenario: A drag beginning beside the text starts no selection
 - **WHEN** the reader presses just outside the text, within the gesture's slop distance of a column, and drags onto that column

@@ -359,6 +359,33 @@ void main() {
       expect(selection?.text, 'あいうえお');
     });
 
+    testWidgets('a press in the gap between columns still selects', (
+      tester,
+    ) async {
+      ViewerSelection? selection;
+      await tester.pumpWidget(
+        _pageHarness(
+          segments: const [PlainTextSegment('あいうえお\nかきくけこ')],
+          onSelectionChanged: (value) => selection = value,
+        ),
+      );
+
+      // Nothing is painted between two columns, but a finger aimed at a
+      // character lands there often enough — the same reason the tap path
+      // snaps within a column gap.
+      final rightColumn = tester.getRect(find.text('あ'));
+      final leftColumn = tester.getRect(find.text('か'));
+      final gapCentre = Offset(
+        (leftColumn.right + rightColumn.left) / 2,
+        rightColumn.center.dy,
+      );
+
+      await tester.dragFrom(gapCentre, const Offset(0, 60));
+      await tester.pumpAndSettle();
+
+      expect(selection, isNotNull);
+    });
+
     testWidgets('a drag that starts beside the text starts no selection', (
       tester,
     ) async {
@@ -381,6 +408,29 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(selection, isNull);
+    });
+  });
+
+  group('VerticalTextViewer swipe during the slide animation', () {
+    testWidgets('a swipe mid-animation still turns the page', (tester) async {
+      // The outgoing page fills the content area and sits under the incoming
+      // one, which starts fully off-screen. Every pointer-down during the
+      // slide therefore lands on the outgoing page, so it has to route swipes
+      // too — otherwise a reader flipping quickly loses the second swipe.
+      await tester.pumpWidget(
+        _viewerHarness(segments: [PlainTextSegment('あ' * 4000)]),
+      );
+      await tester.pumpAndSettle();
+      expect(_indicatorText(tester), startsWith('1 /'));
+
+      await tester.drag(find.byType(VerticalTextPage), const Offset(200, 0));
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(_indicatorText(tester), startsWith('2 /'));
+
+      await tester.dragFrom(const Offset(400, 300), const Offset(200, 0));
+      await tester.pumpAndSettle();
+
+      expect(_indicatorText(tester), startsWith('3 /'));
     });
   });
 

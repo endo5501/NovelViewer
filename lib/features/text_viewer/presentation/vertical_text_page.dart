@@ -333,7 +333,15 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   }
 
   void _onPanStart(DragStartDetails details) {
-    _anchorIndex = _hitTest(_panDownLocalPosition ?? details.localPosition);
+    // Snap within a column gap, for the same reason the tap path does: nothing
+    // is painted between two columns, but a finger aimed at a character lands
+    // there often enough, and an anchor that resolves to nothing abandons the
+    // whole drag.
+    _anchorIndex = _hitTest(
+      _panDownLocalPosition ?? details.localPosition,
+      snapToNearest: true,
+      maxSnapDistance: widget.columnSpacing,
+    );
     // A real drag (not a tap) just began. onHover stops firing while a
     // button is held, so any popup already visible would otherwise linger.
     // Also clear the local hover diff so the popup can re-appear on the

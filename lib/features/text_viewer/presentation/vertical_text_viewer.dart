@@ -647,6 +647,12 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
                           query: widget.query,
                           columnSpacing: widget.columnSpacing,
                           markedWords: widget.markedWords,
+                          // The incoming page starts fully off-screen, so for
+                          // the first part of the slide every pointer-down
+                          // over the content area lands here. Route swipes on
+                          // to the same handler, or a reader flipping quickly
+                          // loses the second swipe.
+                          onSwipe: _handleSwipe,
                           // Symmetric wiring with the incoming page: if the
                           // pointer briefly hovers the outgoing page during
                           // the slide animation, callbacks still route to
