@@ -307,6 +307,57 @@ void main() {
     });
   });
 
+  group('VerticalTextPage selection anchor', () {
+    testWidgets(
+      'a selection starts at the character the pointer went down on',
+      (tester) async {
+        ViewerSelection? selection;
+        await tester.pumpWidget(
+          _pageHarness(
+            segments: const [PlainTextSegment('あいうえお')],
+            onSelectionChanged: (value) => selection = value,
+          ),
+        );
+
+        // A touch pan is accepted only after the slop distance, which on a
+        // touchscreen is worth a character or two of vertical text. Anchoring
+        // there instead of at the press drops the characters the reader
+        // actually started on.
+        await tester.dragFrom(
+          tester.getCenter(find.text('あ')),
+          const Offset(0, 40),
+        );
+        await tester.pumpAndSettle();
+
+        expect(selection?.text, startsWith('あ'));
+      },
+    );
+
+    testWidgets('a drag that starts beside the text starts no selection', (
+      tester,
+    ) async {
+      ViewerSelection? selection;
+      await tester.pumpWidget(
+        _pageHarness(
+          segments: const [PlainTextSegment('あいうえお')],
+          onSelectionChanged: (value) => selection = value,
+        ),
+      );
+
+      // Down in the empty area a slop's width from the column, then onto it:
+      // the anchor is decided by where the pointer went down, so this starts
+      // no selection even though the pointer ends up over characters.
+      final firstChar = tester.getRect(find.text('あ'));
+      await tester.dragFrom(
+        Offset(firstChar.left - 20, firstChar.center.dy),
+        const Offset(24, 60),
+      );
+      await tester.pumpAndSettle();
+
+      expect(selection, isNull);
+    });
+  });
+
   group('VerticalTextViewer swipe over an area with no text', () {
     testWidgets('the page covers the padded content area on a short page', (
       tester,

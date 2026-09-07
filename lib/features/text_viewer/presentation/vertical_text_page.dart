@@ -104,6 +104,12 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   // Swipe tracking
   Offset? _panStartGlobalPosition;
   Offset? _panLastGlobalPosition;
+
+  /// Where the pointer went down, in this page's coordinates. The selection
+  /// anchor is resolved from here rather than from the position `onPanStart`
+  /// reports, which is where the pan was accepted — a touch slop away, worth a
+  /// character or two of vertical text.
+  Offset? _panDownLocalPosition;
   _GestureMode _gestureMode = _GestureMode.undecided;
 
   late List<VerticalCharEntry> _charEntries;
@@ -322,11 +328,12 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   void _onPanDown(DragDownDetails details) {
     _panStartGlobalPosition = details.globalPosition;
     _panLastGlobalPosition = details.globalPosition;
+    _panDownLocalPosition = details.localPosition;
     _gestureMode = _GestureMode.undecided;
   }
 
   void _onPanStart(DragStartDetails details) {
-    _anchorIndex = _hitTest(details.localPosition);
+    _anchorIndex = _hitTest(_panDownLocalPosition ?? details.localPosition);
     // A real drag (not a tap) just began. onHover stops firing while a
     // button is held, so any popup already visible would otherwise linger.
     // Also clear the local hover diff so the popup can re-appear on the
