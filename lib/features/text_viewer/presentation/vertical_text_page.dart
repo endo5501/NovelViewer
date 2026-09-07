@@ -104,6 +104,12 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   // Swipe tracking
   Offset? _panStartGlobalPosition;
   Offset? _panLastGlobalPosition;
+
+  /// Where the pointer went down, in this page's coordinates. The selection
+  /// anchor is resolved from here rather than from the position `onPanStart`
+  /// reports, which is where the pan was accepted — a touch slop away, worth a
+  /// character or two of vertical text.
+  Offset? _panDownLocalPosition;
   _GestureMode _gestureMode = _GestureMode.undecided;
 
   late List<VerticalCharEntry> _charEntries;
@@ -111,6 +117,9 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   Set<int> _emptyColumnNewlines = const {};
   final Map<int, GlobalKey> _entryKeys = {};
   List<VerticalHitRegion> _hitRegions = const [];
+
+  /// The page size the rectangles in [_hitRegions] were measured against.
+  Size? _hitRegionsSize;
   bool _hitRegionUpdateScheduled = false;
 
   // Hover differential state — kept in sync as the pointer moves so
@@ -176,6 +185,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       }
     }
     _hitRegions = const [];
+    _hitRegionsSize = null;
     _scheduleHitRegionRebuild();
   }
 
@@ -250,13 +260,21 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         onPanEnd: _onPanEnd,
         onTapUp: _onTapUp,
         onSecondaryTapUp: _onSecondaryTapUp,
-        child: Directionality(
-          textDirection: TextDirection.rtl,
-          child: Wrap(
-            direction: Axis.vertical,
-            spacing: 0.0,
-            runSpacing: widget.columnSpacing,
-            children: children,
+        // The Align sits INSIDE the detector so the detector fills the area
+        // the page was given while the text keeps its top-right placement.
+        // With the Align outside, the detector was only as large as the Wrap,
+        // and a swipe over the empty part of a page — the left of a short
+        // last page, most of its width — reached no gesture at all.
+        child: Align(
+          alignment: Alignment.topRight,
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Wrap(
+              direction: Axis.vertical,
+              spacing: 0.0,
+              runSpacing: widget.columnSpacing,
+              children: children,
+            ),
           ),
         ),
       ),
@@ -310,17 +328,32 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   void _onPanDown(DragDownDetails details) {
     _panStartGlobalPosition = details.globalPosition;
     _panLastGlobalPosition = details.globalPosition;
+    _panDownLocalPosition = details.localPosition;
     _gestureMode = _GestureMode.undecided;
   }
 
   void _onPanStart(DragStartDetails details) {
-    _anchorIndex = _hitTest(details.localPosition);
+    // Snap within a column gap, for the same reason the tap path does: nothing
+    // is painted between two columns, but a finger aimed at a character lands
+    // there often enough, and an anchor that resolves to nothing abandons the
+    // whole drag.
+    _anchorIndex = _hitTest(
+      _panDownLocalPosition ?? details.localPosition,
+      snapToNearest: true,
+      maxSnapDistance: widget.columnSpacing,
+    );
     // A real drag (not a tap) just began. onHover stops firing while a
     // button is held, so any popup already visible would otherwise linger.
     // Also clear the local hover diff so the popup can re-appear on the
     // same charIndex after the drag ends.
     _requestHoverHide();
-    _tryDecideGestureMode(details.globalPosition);
+    if (_tryDecideGestureMode(details.globalPosition) &&
+        _gestureMode == _GestureMode.selecting) {
+      // The move that got the pan accepted arrives here, not as an update, so
+      // extend the range to it now. Otherwise a drag that is accepted and
+      // released without a further move selects only the pressed character.
+      _updateSelectionTo(details.localPosition);
+    }
   }
 
   void _requestHoverHide() {
@@ -381,7 +414,12 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   }
 
   void _handleSelectingUpdate(DragUpdateDetails details) {
-    final index = _hitTest(details.localPosition, snapToNearest: true);
+    _updateSelectionTo(details.localPosition);
+  }
+
+  /// Extends the selection from the anchor to [localPosition].
+  void _updateSelectionTo(Offset localPosition) {
+    final index = _hitTest(localPosition, snapToNearest: true);
     final anchor = _anchorIndex;
     if (index == null || anchor == null) return;
 
@@ -420,7 +458,18 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
           )
         : null;
 
+    // Report the clearing here rather than leaving it to the viewer's page
+    // move: a swipe on the first or last page is routed to the file-boundary
+    // handler, which returns before that report, and the highlight would then
+    // be gone while the reported selection still named the old text.
+    // Read the EFFECTIVE selection: a swipe clears any active one, and an
+    // owner-supplied selection outlives _clearInternalSelection, so the report
+    // is the only way the owner learns to drop it — exactly as for a tap.
+    final hadSelection = _effectiveStart != null && _effectiveEnd != null;
     _clearInternalSelection();
+    if (hadSelection) {
+      widget.onSelectionChanged?.call(null);
+    }
     if (direction != null) {
       widget.onSwipe?.call(direction);
     }
@@ -539,7 +588,14 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     bool snapToNearest = false,
     double? maxSnapDistance,
   }) {
-    if (_hitRegions.isEmpty) {
+    // The page fills the space it is given and aligns the text to its top
+    // right, so every character rectangle moves when that space resizes —
+    // even though none of the inputs didUpdateWidget watches has changed.
+    final pageRenderObject = context.findRenderObject();
+    final size = pageRenderObject is RenderBox && pageRenderObject.hasSize
+        ? pageRenderObject.size
+        : null;
+    if (_hitRegions.isEmpty || size != _hitRegionsSize) {
       _rebuildHitRegions();
     }
     return hitTestCharIndexFromRegions(
@@ -591,6 +647,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     }
 
     _hitRegions = regions;
+    _hitRegionsSize = pageRenderObject.size;
   }
 
   Widget _buildCharWidget(

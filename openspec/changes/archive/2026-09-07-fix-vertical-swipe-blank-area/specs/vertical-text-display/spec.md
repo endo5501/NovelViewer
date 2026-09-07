@@ -1,0 +1,113 @@
+## MODIFIED Requirements
+
+### Requirement: Vertical text rendering
+The system SHALL render text content in vertical writing mode (top-to-bottom, right-to-left columns) using a Wrap widget with vertical axis direction and RTL text direction. Each character SHALL be rendered individually as a separate widget within the Wrap layout. Each character widget SHALL be wrapped in a fixed-width container (`SizedBox`) with width equal to the current font size, and the character SHALL be horizontally centered within that container using a `Center` widget. This ensures consistent column alignment regardless of platform-specific font metrics differences. Characters SHALL be rendered with compact vertical spacing by setting the TextStyle `height` property to approximately 1.1 and minimizing the Wrap `spacing` to avoid excessive gaps between characters. The Wrap widget's `runSpacing` SHALL use the column spacing value from the settings (default `8.0`) instead of a hardcoded constant. The `VerticalTextPage` SHALL accept a `columnSpacing` parameter to control the `runSpacing` value. The Wrap widget SHALL be wrapped in a GestureDetector to support text selection via drag gestures. The `VerticalTextPage` SHALL accept an `onSelectionChanged` callback. Each character widget SHALL be assigned a `GlobalKey` to enable post-layout collection of actual rendered rectangles for accurate hit testing.
+
+The Wrap SHALL be positioned at the top-right of the area given to `VerticalTextPage` by an `Align` placed INSIDE the `GestureDetector`, so that the `GestureDetector` occupies the full incoming constraints while the text itself keeps its top-right placement. `VerticalTextViewer` SHALL NOT wrap `VerticalTextPage` in an `Align` of its own, because that would shrink the page's render box back to the size of the rendered text.
+
+#### Scenario: Text is displayed vertically
+- **WHEN** the display mode is set to vertical
+- **THEN** characters are arranged from top to bottom within each column, and columns flow from right to left
+
+#### Scenario: Line breaks create new columns
+- **WHEN** the text content contains newline characters in vertical mode
+- **THEN** a new column starts at the position of each newline, with subsequent text continuing from the top of the new column
+
+#### Scenario: Empty line creates a visible empty column
+- **WHEN** the text content contains consecutive newline characters (blank line) in vertical mode
+- **THEN** an empty column SHALL be rendered with the same width as a text column (one character width), creating visible space between adjacent text columns
+
+#### Scenario: Column overflow wraps to next column
+- **WHEN** a column of text exceeds the available vertical height
+- **THEN** the remaining characters wrap to a new column to the left
+
+#### Scenario: GestureDetector wraps the vertical text layout
+- **WHEN** the vertical text page is rendered
+- **THEN** a GestureDetector is present as a parent of the Wrap widget to capture pan gestures for text selection
+
+#### Scenario: The page render box fills the area it is given
+- **WHEN** a page whose text occupies only part of the available width is rendered (for example the last page of a file)
+- **THEN** the `VerticalTextPage` render box SHALL still cover the full area given to it, while the rendered text SHALL remain aligned to the top-right of that area
+
+#### Scenario: Characters are horizontally centered in fixed-width containers
+- **WHEN** any character is rendered in vertical text mode
+- **THEN** the character SHALL be placed inside a SizedBox with width equal to the current font size, and the character SHALL be horizontally centered within that SizedBox
+
+#### Scenario: Column alignment is consistent across platforms
+- **WHEN** vertical text is rendered on different platforms (macOS, Windows)
+- **THEN** characters within each column SHALL be aligned vertically in a straight line regardless of individual character width differences in the platform's font
+
+#### Scenario: Ruby base and annotation characters use fixed-width containers
+- **WHEN** ruby text (base and annotation) is rendered in vertical mode
+- **THEN** each base character SHALL be wrapped in a SizedBox with width equal to the base font size, and each ruby annotation character SHALL be wrapped in a SizedBox with width equal to the ruby font size, both horizontally centered
+
+#### Scenario: Column spacing uses configurable value
+- **WHEN** the vertical text page is rendered with a `columnSpacing` parameter
+- **THEN** the Wrap widget's `runSpacing` SHALL be set to the provided `columnSpacing` value
+
+#### Scenario: Default column spacing
+- **WHEN** the vertical text page is rendered without an explicit `columnSpacing` parameter
+- **THEN** the Wrap widget's `runSpacing` SHALL use the default value of `8.0`
+
+### Requirement: Swipe gesture page navigation
+The system SHALL support horizontal swipe gestures to navigate between pages in vertical display mode. Swipe detection SHALL be implemented within `VerticalTextPage`'s `GestureDetector` (`onPan*` handlers), sharing the same gesture recognizer that handles text selection. The swipe hit area SHALL be the whole area given to `VerticalTextPage`, NOT the bounding box of the rendered text: a swipe SHALL be recognized regardless of whether a character is painted under the pointer. The system SHALL use a gesture mode (`undecided`/`selecting`/`swiping`) to early-classify the user's intent based on the initial drag direction. On `onPanDown`, the system SHALL capture the true pointer-down position — in both global and page-local coordinates — and reset the gesture mode to `undecided`. On `onPanStart`, the system SHALL record the anchor character index, resolved from that recorded pointer-down position rather than from the position `onPanStart` reports, but SHALL NOT start visual text selection (deferred selection). On `onPanUpdate`, once the displacement from the start position exceeds 10 pixels (`_kGestureDecisionThreshold`), the system SHALL classify the gesture: if `|dx| > |dy|` the mode becomes `swiping` (no selection visual updates); otherwise the mode becomes `selecting` (deferred selection begins). On `onPanEnd`, if the mode is `swiping` or `undecided`, the system SHALL use `detectSwipeFromDrag` to determine if the gesture constitutes a swipe based on displacement and velocity from `DragEndDetails`; if the mode is `selecting`, the system SHALL notify the text selection result without attempting swipe detection. When velocity is available (fling detected, > 200 px/s), a swipe SHALL be recognized if absolute horizontal displacement exceeds 50 pixels (`kSwipeMinDistance`). When velocity is unavailable (desktop scenario where user stops before releasing, velocity ≈ 0), a swipe SHALL be recognized if absolute horizontal displacement exceeds 80 pixels (`kSwipeMinDistanceWithoutFling`). In both cases, the absolute horizontal displacement SHALL exceed the absolute vertical displacement. When a swipe is detected, the system SHALL clear any active text selection and invoke the `onSwipe` callback. `VerticalTextViewer` SHALL pass an `onSwipe` callback to `VerticalTextPage` to handle page navigation, to the outgoing page of a transition as well as the incoming one: the incoming page starts fully off-screen, so for the first part of the slide every pointer-down over the content area lands on the outgoing page, and a swipe there would otherwise be dropped. The swipe direction-to-page mapping SHALL follow the "content dragging" metaphor consistent with horizontal mode scrolling: a right swipe (finger moves left-to-right, dx > 0) SHALL advance to the next page, and a left swipe (finger moves right-to-left, dx < 0) SHALL return to the previous page. This mirrors horizontal mode where swiping up reveals content below; in vertical text mode, swiping right reveals content to the left (the reading direction). Swipe detection thresholds SHALL be defined as named constants to facilitate future tuning. Page transitions triggered by swipe SHALL be accompanied by a slide animation as defined in the page-transition-animation capability.
+
+#### Scenario: Right swipe advances to next page
+- **WHEN** the user performs a right swipe (positive horizontal displacement, finger moves left-to-right) that meets all swipe criteria in vertical mode
+- **THEN** the display advances to the next page with a slide animation (content dragging metaphor: drag content rightward to reveal next content on the left)
+
+#### Scenario: Left swipe returns to previous page
+- **WHEN** the user performs a left swipe (negative horizontal displacement, finger moves right-to-left) that meets all swipe criteria in vertical mode
+- **THEN** the display returns to the previous page with a slide animation
+
+#### Scenario: Swipe during a page transition turns the page again
+- **WHEN** the reader swipes while a slide animation is still running, anywhere over the content area
+- **THEN** the swipe is recognized and the next page transition begins, as required by the page-transition-animation capability
+
+#### Scenario: Swipe over an area with no text turns the page
+- **WHEN** the user swipes over an area of the page where no character is painted, such as the empty left-hand region of a last page whose text does not fill the width
+- **THEN** the page turns exactly as it would for a swipe performed over the text
+
+#### Scenario: Right swipe on last page has no effect
+- **WHEN** the user performs a right swipe on the last page in vertical mode
+- **THEN** the display remains on the last page without any animation
+
+#### Scenario: Left swipe on first page has no effect
+- **WHEN** the user performs a left swipe on the first page in vertical mode
+- **THEN** the display remains on the first page without any animation
+
+#### Scenario: Slow horizontal drag is not recognized as swipe
+- **WHEN** the user performs a horizontal drag with velocity below 200 pixels per second and distance below 80 pixels
+- **THEN** the gesture is not recognized as a swipe and text selection operates normally
+
+#### Scenario: Short horizontal movement is not recognized as swipe
+- **WHEN** the user performs a horizontal movement with displacement below 50 pixels (with velocity) or below 80 pixels (without velocity)
+- **THEN** the gesture is not recognized as a swipe and text selection operates normally
+
+#### Scenario: Primarily vertical drag is not recognized as swipe
+- **WHEN** the user performs a drag where vertical displacement exceeds horizontal displacement
+- **THEN** the gesture mode becomes `selecting` and text selection operates normally without attempting swipe detection
+
+#### Scenario: Swipe clears active text selection
+- **WHEN** a swipe gesture is detected while text is selected
+- **THEN** the active text selection is cleared
+
+#### Scenario: Desktop drag with pause before release triggers swipe
+- **WHEN** the user drags horizontally more than 80 pixels and pauses before releasing the mouse button (velocity drops to zero)
+- **THEN** the gesture is recognized as a swipe using the distance-only fallback threshold
+
+#### Scenario: Horizontal drag does not show selection highlight
+- **WHEN** the user performs a primarily horizontal drag (|dx| > |dy| after 10px displacement)
+- **THEN** the gesture mode becomes `swiping` and no text selection highlight is displayed during the drag
+
+#### Scenario: Text selection drag does not trigger swipe
+- **WHEN** the user performs a primarily vertical or diagonal drag for text selection (|dy| >= |dx| after 10px displacement)
+- **THEN** the gesture mode becomes `selecting` and swipe detection is not attempted at pan end
+
+#### Scenario: Very short drag below decision threshold
+- **WHEN** the user performs a drag with total displacement below 10 pixels before releasing
+- **THEN** the gesture mode remains `undecided`, no text selection highlight is shown, and swipe detection is attempted but does not qualify due to insufficient distance
+
+#### Scenario: Arrow key navigation continues to work alongside swipe
+- **WHEN** the user presses left or right arrow keys in vertical mode with swipe support enabled
+- **THEN** the arrow key page navigation works identically with slide animation
