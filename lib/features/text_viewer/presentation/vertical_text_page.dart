@@ -436,13 +436,12 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     // move: a swipe on the first or last page is routed to the file-boundary
     // handler, which returns before that report, and the highlight would then
     // be gone while the reported selection still named the old text.
-    // Report on the EFFECTIVE selection, not on this state's own fields: an
-    // owner-supplied selection outlives _clearInternalSelection, and telling
-    // the owner to drop one that is still painted would lose it.
+    // Read the EFFECTIVE selection: a swipe clears any active one, and an
+    // owner-supplied selection outlives _clearInternalSelection, so the report
+    // is the only way the owner learns to drop it — exactly as for a tap.
     final hadSelection = _effectiveStart != null && _effectiveEnd != null;
     _clearInternalSelection();
-    final stillSelected = _effectiveStart != null && _effectiveEnd != null;
-    if (hadSelection && !stillSelected) {
+    if (hadSelection) {
       widget.onSelectionChanged?.call(null);
     }
     if (direction != null) {

@@ -191,21 +191,28 @@ void main() {
     });
 
     testWidgets('a tap on the empty area clears the selection', (tester) async {
-      var cleared = false;
+      final reported = <ViewerSelection?>[];
       await tester.pumpWidget(
         _pageHarness(
-          segments: const [PlainTextSegment('あい')],
-          selectionStart: 0,
-          selectionEnd: 2,
-          onSelectionChanged: (value) => cleared = value == null,
+          segments: const [PlainTextSegment('あいうえお')],
+          onSelectionChanged: reported.add,
         ),
       );
+
+      // Select by dragging, the way the viewer's reader does — the viewer
+      // never supplies selectionStart/selectionEnd itself.
+      await tester.dragFrom(
+        tester.getCenter(find.text('あ')),
+        const Offset(0, 40),
+      );
+      await tester.pumpAndSettle();
+      expect(reported.last, isNotNull);
 
       final area = tester.getRect(find.byKey(_areaKey));
       await tester.tapAt(Offset(area.left + 40, area.center.dy));
       await tester.pumpAndSettle();
 
-      expect(cleared, isTrue);
+      expect(reported.last, isNull);
     });
 
     testWidgets('a swipe reports the selection it clears', (tester) async {
@@ -233,12 +240,13 @@ void main() {
       expect(reported.last, isNull);
     });
 
-    testWidgets('a swipe reports nothing while the owner still holds a '
-        'selection', (tester) async {
+    testWidgets('a swipe clears a selection the owner supplied', (
+      tester,
+    ) async {
+      // The page cannot clear the owner's props itself, so the report IS the
+      // clearing: a swipe clears any active selection, the same contract a tap
+      // already follows.
       final reported = <ViewerSelection?>[];
-      // The owner supplies the selection, so clearing the page's own copy of
-      // it takes nothing away that the reader can see. Reporting null here
-      // would tell the owner to drop a selection that is still on screen.
       await tester.pumpWidget(
         _pageHarness(
           segments: const [PlainTextSegment('あいうえお')],
@@ -249,13 +257,13 @@ void main() {
         ),
       );
 
-      final firstChar = tester.getCenter(find.text('あ'));
-      await tester.dragFrom(firstChar, const Offset(0, 40));
-      await tester.pumpAndSettle();
-      await tester.dragFrom(firstChar, const Offset(120, 0));
+      await tester.dragFrom(
+        tester.getCenter(find.text('あ')),
+        const Offset(120, 0),
+      );
       await tester.pumpAndSettle();
 
-      expect(reported, isNot(contains(null)));
+      expect(reported.last, isNull);
     });
 
     testWidgets('hit testing follows the text after a width-only rebuild', (
@@ -264,6 +272,11 @@ void main() {
       // Same const segments, style and spacing: nothing didUpdateWidget looks
       // at changes, but the top-right alignment moves every character when the
       // area narrows, so the cached rectangles have to be rebuilt anyway.
+      //
+      // Nothing is selected before the resize on purpose. With a selection
+      // left over from an earlier drag, a drag onto stale rectangles resolves
+      // no anchor, updates nothing, and re-reports that earlier selection at
+      // pan end — which would read as success while proving nothing.
       const segments = [PlainTextSegment('あいうえお')];
       ViewerSelection? selection;
       await tester.pumpWidget(
@@ -274,13 +287,6 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.dragFrom(
-        tester.getCenter(find.text('あ')),
-        const Offset(0, 40),
-      );
-      await tester.pumpAndSettle();
-      final beforeResize = selection?.text;
-      expect(beforeResize, isNotNull);
 
       await tester.pumpWidget(
         _pageHarness(
@@ -290,13 +296,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+
       await tester.dragFrom(
         tester.getCenter(find.text('あ')),
         const Offset(0, 40),
       );
       await tester.pumpAndSettle();
 
-      expect(selection?.text, beforeResize);
+      expect(selection, isNotNull);
     });
   });
 
