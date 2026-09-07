@@ -86,9 +86,30 @@ GestureDetector(opaque)      ← 当たり判定 = 与えられた領域全面
 
 `MouseRegion` もページ矩形と同じく全面に広がる。従来は余白へマウスを移動すると `onExit` でポップアップが隠れていたが、変更後は `_onHover` が `charIndex == null` で発火し、`onMarkExit` 経由で同じくポップアップが隠れる。結果は等価であり、追加対応は不要。
 
-### 決定 4: スライドアニメーションの移動量が変わることを受け入れる
+### 決定 4: スライドアニメーションの移動量は変わらない
 
-`SlideTransition` のオフセットは子ウィジェットのサイズに対する比率である。変更後は子が常に領域全面になるため、**内容の短い最終ページでも移動量が画面幅ぶんに揃う**。従来は「そのページのテキスト幅ぶん」しか動かず、最終ページの遷移だけ移動量が小さかった。仕様（`page-transition-animation` の「slide offset SHALL be proportional to the widget's width」）の記述はそのまま成立するため spec delta は不要。挙動としてはむしろ一貫性が改善する。
+当初「短い最終ページでは移動量が小さかったものが画面幅ぶんに揃う」と見立てたが、これは誤りだった。除去した `Align` は loose 制約下で既に `constraints.biggest` まで広がっており、`SlideTransition` の子のサイズは変更前後で同じである。移動量に変化はなく、`page-transition-animation` の spec delta も不要。
+
+ただし副作用が 1 つある。outgoing ページも領域全面を占める opaque な `GestureDetector` を持つようになり、incoming ページはスライド開始時点で完全に画面外にあるため、**アニメーション中のポインタは全て outgoing ページに当たる**。outgoing には `onSwipe` が配線されていなかったため、連続してページをめくると 2 回目のスワイプが落ちていた（`page-transition-animation` の「Swipe during animation」に反する）。outgoing ページにも `onSwipe` を配線して解消する。ホバー配線の意図（orphan token を残さない）を壊さないため `IgnorePointer` は採らない。
+
+### 決定 5: ヒット領域はページのサイズ変化でも作り直す
+
+当たり判定を広げたことで、文字の描画位置がページ幅に依存するようになった（従来は `Wrap` の原点基準で幅に依存しなかった）。`didUpdateWidget` は segments / baseStyle / columnSpacing しか見ないため、制約だけが変わったリサイズを検知できない。`_rebuildHitRegions` が測定時のページサイズを保持し、`_hitTest` が現在のサイズと異なれば作り直す。
+
+### 決定 6: 選択の anchor はポインタが降りた位置から解決する
+
+`onPanStart` が報告するのは pan が受理された位置で、タッチの slop（36px）は縦書きの 1〜2 文字分に相当する。実測で「'あ' の中心から下へドラッグすると選択が 'いうえ' になる」ことを確認したため、`_onPanDown` でページローカル座標を保持し、そこから anchor を解決する。
+
+これに伴う 2 点も同時に扱う。
+
+- 受理された move には `onPanUpdate` が続かないため、`_onPanStart` で selecting に決まった時点で受理位置まで範囲を広げる。さもないと `down → 1 回の move → up` で押した 1 文字しか選択されない。
+- anchor 解決は列間隔ぶん最寄り文字へ吸着させる（`_onTapUp` と同じ規則）。列間の隙間は 8〜24px あり、そこに指が落ちると anchor が解決できずドラッグ全体が無効になり、既存の選択まで消えてしまう。
+
+### 決定 7: スワイプによる選択解除は「見えている選択」を基準に通知する
+
+`onSelectionChanged(null)` は「嘘の通知」ではなく、owner に選択を落としてもらう唯一の手段である（ページ側は owner の `selectionStart`/`selectionEnd` を書き換えられない）。既存仕様はタップもスワイプも *any active* な選択を解除すると定めており、`vertical_text_page_test.dart` の 3 件がその契約を固定している。したがって通知条件は `_effectiveStart`/`_effectiveEnd` 基準とする。
+
+レビューで 3 度「owner 提供の選択がある間は通知するな」と指摘されたが、いずれもこの既存契約と矛盾するため不採用とした。
 
 ## Risks / Trade-offs
 

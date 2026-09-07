@@ -71,6 +71,7 @@ Widget _viewerHarness({
   required List<TextSegment> segments,
   double width = 800,
   double height = 600,
+  ValueChanged<ViewerSelection?>? onSelectionChanged,
 }) {
   return ProviderScope(
     child: MaterialApp(
@@ -83,6 +84,7 @@ Widget _viewerHarness({
           child: VerticalTextViewer(
             segments: segments,
             baseStyle: const TextStyle(fontSize: 16.0),
+            onSelectionChanged: onSelectionChanged,
           ),
         ),
       ),
@@ -408,6 +410,45 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(selection, isNull);
+    });
+  });
+
+  group('VerticalTextViewer swipe at a file boundary', () {
+    testWidgets('a swipe on the last page clears the reported selection', (
+      tester,
+    ) async {
+      // The page index cannot move, so _changePage hands off to the boundary
+      // handler and returns before the viewer's own "selection cleared"
+      // report. The highlight goes either way, so the report has to come from
+      // the page — otherwise the search and LLM panels keep acting on text
+      // that is no longer shown as selected.
+      final reported = <ViewerSelection?>[];
+      await tester.pumpWidget(
+        _viewerHarness(
+          segments: _shortLastPageSegments(),
+          onSelectionChanged: reported.add,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(VerticalTextPage), const Offset(200, 0));
+      await tester.pumpAndSettle();
+      expect(_indicatorText(tester), '2 / 2');
+
+      await tester.dragFrom(
+        tester.getCenter(find.text('う').first),
+        const Offset(0, 60),
+      );
+      await tester.pumpAndSettle();
+      expect(reported.last, isNotNull);
+
+      await tester.dragFrom(
+        tester.getCenter(find.text('う').first),
+        const Offset(200, 0),
+      );
+      await tester.pumpAndSettle();
+
+      expect(reported.last, isNull);
     });
   });
 
