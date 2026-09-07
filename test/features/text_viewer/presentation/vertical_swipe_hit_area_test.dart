@@ -30,6 +30,7 @@ Widget _pageHarness({
   ValueChanged<ViewerSelection?>? onSelectionChanged,
   int? selectionStart,
   int? selectionEnd,
+  double width = _kAreaWidth,
 }) {
   return MaterialApp(
     locale: const Locale('ja'),
@@ -39,7 +40,7 @@ Widget _pageHarness({
       body: Center(
         child: SizedBox(
           key: _areaKey,
-          width: _kAreaWidth,
+          width: width,
           height: _kAreaHeight,
           child: Align(
             alignment: Alignment.topRight,
@@ -230,6 +231,72 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(reported.last, isNull);
+    });
+
+    testWidgets('a swipe reports nothing while the owner still holds a '
+        'selection', (tester) async {
+      final reported = <ViewerSelection?>[];
+      // The owner supplies the selection, so clearing the page's own copy of
+      // it takes nothing away that the reader can see. Reporting null here
+      // would tell the owner to drop a selection that is still on screen.
+      await tester.pumpWidget(
+        _pageHarness(
+          segments: const [PlainTextSegment('あいうえお')],
+          selectionStart: 0,
+          selectionEnd: 3,
+          onSelectionChanged: reported.add,
+          onSwipe: (_) {},
+        ),
+      );
+
+      final firstChar = tester.getCenter(find.text('あ'));
+      await tester.dragFrom(firstChar, const Offset(0, 40));
+      await tester.pumpAndSettle();
+      await tester.dragFrom(firstChar, const Offset(120, 0));
+      await tester.pumpAndSettle();
+
+      expect(reported, isNot(contains(null)));
+    });
+
+    testWidgets('hit testing follows the text after a width-only rebuild', (
+      tester,
+    ) async {
+      // Same const segments, style and spacing: nothing didUpdateWidget looks
+      // at changes, but the top-right alignment moves every character when the
+      // area narrows, so the cached rectangles have to be rebuilt anyway.
+      const segments = [PlainTextSegment('あいうえお')];
+      ViewerSelection? selection;
+      await tester.pumpWidget(
+        _pageHarness(
+          segments: segments,
+          width: 400,
+          onSelectionChanged: (value) => selection = value,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.dragFrom(
+        tester.getCenter(find.text('あ')),
+        const Offset(0, 40),
+      );
+      await tester.pumpAndSettle();
+      final beforeResize = selection?.text;
+      expect(beforeResize, isNotNull);
+
+      await tester.pumpWidget(
+        _pageHarness(
+          segments: segments,
+          width: 300,
+          onSelectionChanged: (value) => selection = value,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.dragFrom(
+        tester.getCenter(find.text('あ')),
+        const Offset(0, 40),
+      );
+      await tester.pumpAndSettle();
+
+      expect(selection?.text, beforeResize);
     });
   });
 

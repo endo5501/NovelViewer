@@ -111,6 +111,9 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   Set<int> _emptyColumnNewlines = const {};
   final Map<int, GlobalKey> _entryKeys = {};
   List<VerticalHitRegion> _hitRegions = const [];
+
+  /// The page size the rectangles in [_hitRegions] were measured against.
+  Size? _hitRegionsSize;
   bool _hitRegionUpdateScheduled = false;
 
   // Hover differential state — kept in sync as the pointer moves so
@@ -176,6 +179,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
       }
     }
     _hitRegions = const [];
+    _hitRegionsSize = null;
     _scheduleHitRegionRebuild();
   }
 
@@ -432,9 +436,13 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     // move: a swipe on the first or last page is routed to the file-boundary
     // handler, which returns before that report, and the highlight would then
     // be gone while the reported selection still named the old text.
-    final hadSelection = _selectionStart != null || _selectionEnd != null;
+    // Report on the EFFECTIVE selection, not on this state's own fields: an
+    // owner-supplied selection outlives _clearInternalSelection, and telling
+    // the owner to drop one that is still painted would lose it.
+    final hadSelection = _effectiveStart != null && _effectiveEnd != null;
     _clearInternalSelection();
-    if (hadSelection) {
+    final stillSelected = _effectiveStart != null && _effectiveEnd != null;
+    if (hadSelection && !stillSelected) {
       widget.onSelectionChanged?.call(null);
     }
     if (direction != null) {
@@ -555,7 +563,14 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     bool snapToNearest = false,
     double? maxSnapDistance,
   }) {
-    if (_hitRegions.isEmpty) {
+    // The page fills the space it is given and aligns the text to its top
+    // right, so every character rectangle moves when that space resizes —
+    // even though none of the inputs didUpdateWidget watches has changed.
+    final pageRenderObject = context.findRenderObject();
+    final size = pageRenderObject is RenderBox && pageRenderObject.hasSize
+        ? pageRenderObject.size
+        : null;
+    if (_hitRegions.isEmpty || size != _hitRegionsSize) {
       _rebuildHitRegions();
     }
     return hitTestCharIndexFromRegions(
@@ -607,6 +622,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     }
 
     _hitRegions = regions;
+    _hitRegionsSize = pageRenderObject.size;
   }
 
   Widget _buildCharWidget(

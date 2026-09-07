@@ -37,10 +37,17 @@
 - [x] 5.3 5.1 のテストが通ることを確認する
 - [x] 5.4 `fvm flutter test test/features/text_viewer/` で回帰がないことを確認する
 
+## 5b. 再レビュー指摘への対応
+
+- [x] 5b.1 スワイプ時の解除通知を、実際に見えている選択（`_effectiveStart`/`_effectiveEnd`）が消えた場合だけに限定する
+- [x] 5b.2 ページのサイズが変わったときに文字のヒット領域を作り直す（今回の変更で文字位置がページ幅依存になったため）
+- [x] 5b.3 5b.1 / 5b.2 の失敗するテストを先に追加し、RED→GREEN を確認する
+- [x] 5b.4 余白起点ドラッグの要件文を実装の挙動（anchor は pan 受理位置で解決）に合わせて修正する
+
 ## 6. 最終確認（再実行）
 
 - [ ] 6.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 6.3 `fvm dart format .`でフォーマットを実行
-- [ ] 6.4 `fvm flutter analyze`でリントを実行
-- [ ] 6.5 `fvm flutter test`でテストを実行
+- [x] 6.3 `fvm dart format .`でフォーマットを実行
+- [x] 6.4 `fvm flutter analyze`でリントを実行
+- [x] 6.5 `fvm flutter test`でテストを実行
