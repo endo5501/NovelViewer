@@ -24,8 +24,8 @@
 
 ## 4. 最終確認
 
-- [ ] 4.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 4.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 4.3 `fvm dart format .`でフォーマットを実行
-- [ ] 4.4 `fvm flutter analyze`でリントを実行
-- [ ] 4.5 `fvm flutter test`でテストを実行
+- [x] 4.1 code-reviewスキルを使用してコードレビューを実施
+- [x] 4.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 4.3 `fvm dart format .`でフォーマットを実行
+- [x] 4.4 `fvm flutter analyze`でリントを実行
+- [x] 4.5 `fvm flutter test`でテストを実行

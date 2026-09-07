@@ -15,10 +15,15 @@ final _areaKey = GlobalKey();
 const _kAreaWidth = 400.0;
 const _kAreaHeight = 300.0;
 
-/// The page is given loose constraints and a top-right alignment, which is how
-/// `VerticalTextViewer` hands it its area. With only two characters of content
-/// the text occupies one narrow column at the right, so most of the area has
-/// nothing painted on it.
+/// The `Align` is here only to hand the page the bounded, loose constraints it
+/// gets from `Padding` in the viewer, which the keyed `SizedBox` would
+/// otherwise make tight — the viewer itself no longer wraps the page in one,
+/// because the page aligns its own text. `topRight` rather than `topLeft` so
+/// that a page which went back to shrink-wrapping would leave the empty region
+/// on the left, where these tests aim, instead of silently moving under them.
+///
+/// With only two characters of content the text occupies one narrow column at
+/// the right, so most of the area has nothing painted on it.
 Widget _pageHarness({
   required List<TextSegment> segments,
   ValueChanged<SwipeDirection>? onSwipe,
@@ -235,9 +240,23 @@ void main() {
       await tester.pumpAndSettle();
       expect(_indicatorText(tester), '2 / 2');
 
-      // x = 200 is inside the empty left region of the short last page: with
-      // this content the text starts around x = 480.
-      await tester.dragFrom(const Offset(200, 300), const Offset(-200, 0));
+      // Aim halfway between the viewer's left edge and the leftmost painted
+      // column, derived rather than hardcoded: if pagination or the font ever
+      // let the text reach further left, this asserts instead of quietly
+      // starting the drag on a character and testing nothing.
+      final viewer = tester.getRect(find.byType(VerticalTextViewer));
+      final leftmostChar = tester.getRect(find.text('う').first);
+      final emptyX = (viewer.left + leftmostChar.left) / 2;
+      expect(
+        emptyX,
+        lessThan(leftmostChar.left),
+        reason: 'the drag must start where no character is painted',
+      );
+
+      await tester.dragFrom(
+        Offset(emptyX, viewer.center.dy),
+        const Offset(-200, 0),
+      );
       await tester.pumpAndSettle();
 
       expect(_indicatorText(tester), '1 / 2');
