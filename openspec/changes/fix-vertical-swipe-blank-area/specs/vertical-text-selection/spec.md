@@ -5,7 +5,7 @@ The system SHALL allow the user to select text in vertical display mode by click
 
 The rectangles SHALL be collected relative to `VerticalTextPage`'s own render box, so that they stay correct when that render box is larger than the rendered text and the text is aligned inside it. A pointer position SHALL be resolved against those rectangles without any additional coordinate correction.
 
-The selection anchor SHALL be resolved from the position where the pointer went down, NOT from the position `onPanStart` reports. A pan is accepted only after the gesture's slop distance, which on a touchscreen is worth a character or two of vertical text, so anchoring at acceptance would drop the characters the reader started on and would let a drag that began outside the text anchor on a character it merely passed.
+The selection anchor SHALL be resolved from the position where the pointer went down, NOT from the position `onPanStart` reports. When `onPanStart` decides the gesture is a selection, the range SHALL also be extended to the position `onPanStart` reports: no update event follows the move that got the pan accepted, so a drag accepted and released without a further move would otherwise select only the pressed character and drop everything the pointer crossed. A pan is accepted only after the gesture's slop distance, which on a touchscreen is worth a character or two of vertical text, so anchoring at acceptance would drop the characters the reader started on and would let a drag that began outside the text anchor on a character it merely passed.
 
 A drag that begins over an area where no character is painted SHALL NOT start a selection, because no anchor character can be resolved there. Such a drag SHALL still be eligible for swipe detection as defined in the vertical-text-display capability.
 
@@ -36,6 +36,10 @@ A tap without dragging SHALL clear the selection, except where a tap from a poin
 #### Scenario: A selection starts at the character the pointer went down on
 - **WHEN** the reader presses on a character and drags far enough for the pan to be accepted
 - **THEN** the selection includes the character that was pressed, not only the ones past the slop distance
+
+#### Scenario: A drag accepted and released in one move selects the whole span
+- **WHEN** the pointer goes down on a character, moves once far enough for the pan to be accepted, and is released with no further movement
+- **THEN** the selection runs from the pressed character to the one under the release, not just the pressed character
 
 #### Scenario: A drag beginning beside the text starts no selection
 - **WHEN** the reader presses just outside the text, within the gesture's slop distance of a column, and drags onto that column

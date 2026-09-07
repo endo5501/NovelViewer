@@ -330,8 +330,34 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(selection?.text, startsWith('あ'));
+        expect(selection?.plainTextOffset, 0);
       },
     );
+
+    testWidgets('a selection covers the move that got the pan accepted', (
+      tester,
+    ) async {
+      ViewerSelection? selection;
+      await tester.pumpWidget(
+        _pageHarness(
+          segments: const [PlainTextSegment('あいうえおかきく')],
+          onSelectionChanged: (value) => selection = value,
+        ),
+      );
+
+      // One move far enough to be accepted, then release. No onPanUpdate
+      // follows the accepting move, so the range has to be set from that
+      // move's position too — otherwise only the pressed character is
+      // selected and everything the pointer crossed is dropped.
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.text('あ')),
+      );
+      await gesture.moveTo(tester.getCenter(find.text('お')));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(selection?.text, 'あいうえお');
+    });
 
     testWidgets('a drag that starts beside the text starts no selection', (
       tester,

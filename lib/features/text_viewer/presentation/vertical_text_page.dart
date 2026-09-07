@@ -339,7 +339,13 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     // Also clear the local hover diff so the popup can re-appear on the
     // same charIndex after the drag ends.
     _requestHoverHide();
-    _tryDecideGestureMode(details.globalPosition);
+    if (_tryDecideGestureMode(details.globalPosition) &&
+        _gestureMode == _GestureMode.selecting) {
+      // The move that got the pan accepted arrives here, not as an update, so
+      // extend the range to it now. Otherwise a drag that is accepted and
+      // released without a further move selects only the pressed character.
+      _updateSelectionTo(details.localPosition);
+    }
   }
 
   void _requestHoverHide() {
@@ -400,7 +406,12 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   }
 
   void _handleSelectingUpdate(DragUpdateDetails details) {
-    final index = _hitTest(details.localPosition, snapToNearest: true);
+    _updateSelectionTo(details.localPosition);
+  }
+
+  /// Extends the selection from the anchor to [localPosition].
+  void _updateSelectionTo(Offset localPosition) {
+    final index = _hitTest(localPosition, snapToNearest: true);
     final anchor = _anchorIndex;
     if (index == null || anchor == null) return;
 
