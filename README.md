@@ -219,6 +219,8 @@ iOS の共有シートに直接 NovelViewer を出すには App Extension が要
 
 Safari で小説の目次ページを開き、共有 → 作成したショートカットを選ぶと、NovelViewer が前面に来てダイアログがその URL 入りで開きます。
 
+共有シートに NovelViewer を直接出すには App Extension が必要です。Apple Developer Program への加入を前提に保留しており、着手するときの設計は `docs/plans/2026-09-11-share-extension-phase2.md` にあります。
+
 ### テスト
 
 ```bash

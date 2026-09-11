@@ -37,7 +37,7 @@ open "novelviewer://download?url=https%3A%2F%2Fncode.syosetu.com%2Fn9669bk%2F"
 
 ### iPad
 
-ショートカットの作り方は README の「iPad で共有シートから登録する」を参照。
+ショートカットの作り方は README の「iPad で共有シートから登録する」を参照。共有シートに NovelViewer を直接出す対応（Share Extension）は保留中で、着手時はこの節に項目を追加する。設計は `docs/plans/2026-09-11-share-extension-phase2.md`。
 
 - [x] **共有シートから**: Safari で小説の目次ページを開き、共有 → 作成したショートカットを選ぶ。NovelViewer が前面に来て、ダイアログがそのページの URL 入りで開く。
 - [x] **対応サイト以外**: 小説サイト以外のページを同じ手順で送る。ダイアログが開き、「取り込み先」としてコレクションを選ぶ UI が出る（汎用 Web 記事として扱われる）。
