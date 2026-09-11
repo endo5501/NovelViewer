@@ -1,0 +1,30 @@
+name: foundation_models_llm
+description: "Reaches Apple's on-device foundation model from Flutter, for availability and schema-constrained generation."
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.12.2
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  plugin:
+    platforms:
+      # Both platforms compile the same sources under `darwin/`: the model is
+      # reached through one framework that exists on each, so a per-platform
+      # copy would be the same file twice.
+      ios:
+        pluginClass: FoundationModelsLlmPlugin
+        sharedDarwinSource: true
+      macos:
+        pluginClass: FoundationModelsLlmPlugin
+        sharedDarwinSource: true

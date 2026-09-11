@@ -1,13 +1,13 @@
 ## 1. プラグインの骨格と可用性の問い合わせ
 
-- [ ] 1.1 `packages/foundation_models_llm` を作成する。`lib/` と共有 `darwin/`、iOS と macOS の podspec が `darwin/` を指す構成にする
-- [ ] 1.2 ルートの `pubspec.yaml` にパス依存として追加し、`fvm flutter pub get` が通ることを確認する
-- [ ] 1.3 macOS のサンドボックスで Foundation Models に entitlement が要るかを確認する。要る場合は `DebugProfile.entitlements` と `Release.entitlements` の両方に追加する
-- [ ] 1.4 可用性の戻り値を表す Dart の値型（利用可、または三つの不可理由のいずれか）を書き、その単体テストを先に書く
-- [ ] 1.5 プラグインの Dart 側でチャンネルの応答を値型に写すコードを、モックしたチャンネルに対するテストを先に書いてから実装する
-- [ ] 1.6 未知の応答文字列や応答なしを「不可」として扱うことをテストで固定する
-- [ ] 1.7 Swift 側で `SystemLanguageModel.default.availability` を問い合わせ、`deviceNotEligible` / `appleIntelligenceNotEnabled` / `modelNotReady` を区別して返す。全体を `if #available(iOS 26.0, macOS 26.0, *)` で囲み、満たさない環境では不可を返す
-- [ ] 1.8 macOS で疎通を確認する。Apple Intelligence を切って `appleIntelligenceNotEnabled` が返ることも確かめる
+- [x] 1.1 `packages/foundation_models_llm` を作成する。`lib/` と共有 `darwin/`、iOS と macOS の podspec が `darwin/` を指す構成にする
+- [x] 1.2 ルートの `pubspec.yaml` にパス依存として追加し、`fvm flutter pub get` が通ることを確認する
+- [x] 1.3 macOS のサンドボックスで Foundation Models に entitlement が要るかを確認する。要る場合は `DebugProfile.entitlements` と `Release.entitlements` の両方に追加する
+- [x] 1.4 可用性の戻り値を表す Dart の値型（利用可、または三つの不可理由のいずれか）を書き、その単体テストを先に書く
+- [x] 1.5 プラグインの Dart 側でチャンネルの応答を値型に写すコードを、モックしたチャンネルに対するテストを先に書いてから実装する
+- [x] 1.6 未知の応答文字列や応答なしを「不可」として扱うことをテストで固定する
+- [x] 1.7 Swift 側で `SystemLanguageModel.default.availability` を問い合わせ、`deviceNotEligible` / `appleIntelligenceNotEnabled` / `modelNotReady` を区別して返す。全体を `if #available(iOS 26.0, macOS 26.0, *)` で囲み、満たさない環境では不可を返す
+- [x] 1.8 macOS で疎通を確認する（Apple Intelligence を切った状態の確認は、設定の切り替えが要るため 7.5 に寄せる）
 
 ## 2. 構造化生成
 

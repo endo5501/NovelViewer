@@ -317,6 +317,13 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  foundation_models_llm:
+    dependency: "direct main"
+    description:
+      path: "packages/foundation_models_llm"
+      relative: true
+    source: path
+    version: "0.0.1"
   glob:
     dependency: transitive
     description:
@@ -1155,5 +1162,5 @@ packages:
     source: hosted
     version: "3.1.4"
 sdks:
-  dart: ">=3.12.0 <4.0.0"
+  dart: ">=3.12.2 <4.0.0"
   flutter: ">=3.44.0"
