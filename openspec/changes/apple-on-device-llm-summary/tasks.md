@@ -11,12 +11,12 @@
 
 ## 2. 構造化生成
 
-- [ ] 2.1 `LlmResponseSchema` をチャンネル引数へ写す変換のテストを先に書く（フィールド名がそのまま渡ること、null のときは渡らないこと）
-- [ ] 2.2 Swift 側で `DynamicGenerationSchema` に文字列プロパティ一つを組み、`GenerationSchema(root:dependencies:)` 経由で `respond(to:schema:)` を呼び、`GeneratedContent.jsonString` を返す
-- [ ] 2.3 スキーマなしの呼び出しでは `respond(to:)` を使い、生成テキストをそのまま返す
-- [ ] 2.4 呼び出しごとに新しい `LanguageModelSession` を作る。`GenerationOptions.maximumResponseTokens` で出力側を抑える
-- [ ] 2.5 `GenerationError` を Dart 側の失敗に写す。`guardrailViolation` / `exceededContextWindowSize` / `rateLimited` / `unsupportedLanguageOrLocale` / `assetsUnavailable` を区別する
-- [ ] 2.6 エラー写像の単体テストを、モックしたチャンネルに対して書く
+- [x] 2.1 `LlmResponseSchema` をチャンネル引数へ写す変換のテストを先に書く（フィールド名がそのまま渡ること、null のときは渡らないこと）
+- [x] 2.2 Swift 側で `DynamicGenerationSchema` に文字列プロパティ一つを組み、`GenerationSchema(root:dependencies:)` 経由で `respond(to:schema:)` を呼び、`GeneratedContent.jsonString` を返す
+- [x] 2.3 スキーマなしの呼び出しでは `respond(to:)` を使い、生成テキストをそのまま返す
+- [x] 2.4 呼び出しごとに新しい `LanguageModelSession` を作る。`GenerationOptions.maximumResponseTokens` で出力側を抑える
+- [x] 2.5 `GenerationError` を Dart 側の失敗に写す。`guardrailViolation` / `exceededContextWindowSize` / `rateLimited` / `unsupportedLanguageOrLocale` / `assetsUnavailable` を区別する
+- [x] 2.6 エラー写像の単体テストを、モックしたチャンネルに対して書く
 
 ## 3. `LlmClient` 実装
 

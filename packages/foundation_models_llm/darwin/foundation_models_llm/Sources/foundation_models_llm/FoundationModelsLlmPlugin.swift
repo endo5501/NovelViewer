@@ -34,6 +34,8 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
     switch call.method {
     case "availability":
       result(Self.availabilityName())
+    case "generate":
+      handleGenerate(call.arguments, result: result)
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -61,6 +63,126 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
       return "modelNotReady"
     case .unavailable:
       return "unknown"
+    }
+  }
+
+  private func handleGenerate(_ arguments: Any?, result: @escaping FlutterResult) {
+    guard #available(iOS 26.0, macOS 26.0, *) else {
+      result(
+        FlutterError(
+          code: "modelUnavailable",
+          message: "This operating system has no on-device model.",
+          details: nil))
+      return
+    }
+    guard let arguments = arguments as? [String: Any],
+      let prompt = arguments["prompt"] as? String
+    else {
+      result(
+        FlutterError(
+          code: "badArguments",
+          message: "generate needs a prompt.",
+          details: nil))
+      return
+    }
+    guard SystemLanguageModel.default.availability == .available else {
+      // Asked before the caller checked, or the state changed under it. Said
+      // plainly, so it is not mistaken for the content having been refused.
+      result(
+        FlutterError(
+          code: "modelUnavailable",
+          message: "The on-device model is not available: "
+            + Self.availabilityName(),
+          details: nil))
+      return
+    }
+
+    let schemaFieldName = arguments["schemaFieldName"] as? String
+    let maxResponseTokens = arguments["maxResponseTokens"] as? Int
+
+    // `result` has to be called back on the platform thread, which is where
+    // this hop lands.
+    Task { @MainActor in
+      do {
+        let text = try await Self.generate(
+          prompt: prompt,
+          schemaFieldName: schemaFieldName,
+          maxResponseTokens: maxResponseTokens)
+        result(text)
+      } catch let error as LanguageModelSession.GenerationError {
+        result(
+          FlutterError(
+            code: Self.wireCode(for: error),
+            message: error.failureReason ?? String(describing: error),
+            details: nil))
+      } catch {
+        result(
+          FlutterError(
+            code: "unknown",
+            message: error.localizedDescription,
+            details: nil))
+      }
+    }
+  }
+
+  /// Generates, constraining the answer to a one-field object when the caller
+  /// named a field.
+  ///
+  /// The field name is only known at run time — the pipeline asks for `facts`
+  /// in one stage and `summary` in the next — so the schema is built with the
+  /// dynamic API rather than declared as a type. The result is handed back as
+  /// the JSON the caller already knows how to read, which is why nothing here
+  /// reshapes it.
+  @available(iOS 26.0, macOS 26.0, *)
+  private static func generate(
+    prompt: String,
+    schemaFieldName: String?,
+    maxResponseTokens: Int?
+  ) async throws -> String {
+    // A session per request. The prompts a run issues do not depend on one
+    // another, and the model's window is shared between prompt and response,
+    // so carrying a transcript forward would spend that window on text
+    // nothing later needs.
+    let session = LanguageModelSession()
+    let options = GenerationOptions(maximumResponseTokens: maxResponseTokens)
+
+    guard let schemaFieldName else {
+      return try await session.respond(to: prompt, options: options).content
+    }
+
+    let root = DynamicGenerationSchema(
+      name: "Answer",
+      properties: [
+        DynamicGenerationSchema.Property(
+          name: schemaFieldName,
+          schema: DynamicGenerationSchema(type: String.self))
+      ])
+    let schema = try GenerationSchema(root: root, dependencies: [])
+    let response = try await session.respond(
+      to: prompt, schema: schema, options: options)
+    return response.content.jsonString
+  }
+
+  /// The error code Dart reads back.
+  ///
+  /// A guardrail block and the model's own refusal are reported separately by
+  /// the framework and kept separate here, so a log says which happened; Dart
+  /// reads both as the text having been refused.
+  @available(iOS 26.0, macOS 26.0, *)
+  private static func wireCode(
+    for error: LanguageModelSession.GenerationError
+  ) -> String {
+    switch error {
+    case .exceededContextWindowSize: return "exceededContextWindowSize"
+    case .assetsUnavailable: return "assetsUnavailable"
+    case .guardrailViolation: return "guardrailViolation"
+    case .refusal: return "refusal"
+    case .unsupportedGuide: return "unsupportedGuide"
+    case .unsupportedLanguageOrLocale: return "unsupportedLanguageOrLocale"
+    case .decodingFailure: return "decodingFailure"
+    case .rateLimited: return "rateLimited"
+    case .concurrentRequests: return "concurrentRequests"
+    @unknown default: return "unknown"
     }
   }
 }

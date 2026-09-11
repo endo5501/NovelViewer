@@ -6,4 +6,5 @@
 library;
 
 export 'src/foundation_models_llm.dart';
+export 'src/on_device_generation_failure.dart';
 export 'src/on_device_model_availability.dart';
