@@ -31,11 +31,10 @@ void main() {
     prefs = await SharedPreferences.getInstance();
   });
 
-  Future<ProviderContainer> pumpRenderer(
-    WidgetTester tester, {
-    TextDisplayMode mode = TextDisplayMode.horizontal,
+  Future<void> pumpContent(
+    WidgetTester tester,
+    String text, {
     Map<String, MarkStyle> marks = const {'アリス': MarkStyle.solid},
-    String text = content,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -59,6 +58,15 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+  }
+
+  Future<ProviderContainer> pumpRenderer(
+    WidgetTester tester, {
+    TextDisplayMode mode = TextDisplayMode.horizontal,
+    Map<String, MarkStyle> marks = const {'アリス': MarkStyle.solid},
+    String text = content,
+  }) async {
+    await pumpContent(tester, text, marks: marks);
 
     final container = ProviderScope.containerOf(
       tester.element(find.byType(TextContentRenderer)),
@@ -85,7 +93,9 @@ void main() {
 
   Future<void> tapCharacter(WidgetTester tester, int index) async {
     await tester.tapAt(characterCentre(tester, index));
-    await tester.pump();
+    // Past the double-tap window, so consecutive taps in a test are read as
+    // separate taps rather than as a word-selecting double tap.
+    await tester.pump(kDoubleTapTimeout + const Duration(milliseconds: 50));
   }
 
   group('horizontal mode', () {
@@ -155,6 +165,28 @@ void main() {
       expect(container.read(hoverPopupProvider).word, 'アリス');
     });
 
+    testWidgets('a touch that lands on a popup-owned menu is not resolved', (
+      tester,
+    ) async {
+      // The re-analysis dropdown floats over the text. A touch on one of its
+      // items must not also be read as a tap on whatever is underneath it,
+      // which would dismiss the popup the menu belongs to, or open the
+      // summary for some unrelated word the item happened to cover.
+      final container = await pumpRenderer(tester);
+
+      await tapCharacter(tester, content.indexOf('リ'));
+      await tester.pump();
+      expect(container.read(hoverPopupProvider).isVisible, isTrue);
+
+      container.read(hoverPopupProvider.notifier).onChildMenuOpen();
+      await tester.pump();
+
+      await tapCharacter(tester, content.indexOf('昨'));
+      await tester.pump();
+
+      expect(container.read(hoverPopupProvider).isVisible, isTrue);
+    });
+
     testWidgets('a mouse click leaves the popup under hover control', (
       tester,
     ) async {
@@ -192,6 +224,30 @@ void main() {
         isFalse,
         reason: 'the hover exit still dismisses what hover opened',
       );
+    });
+  });
+
+  group('horizontal mode, after a content swap', () {
+    testWidgets('a tap cannot open a summary from the previous file', (
+      tester,
+    ) async {
+      // The marks a tap is resolved against belong to the text they were
+      // found in. Held across a file switch they would name positions in
+      // text that is no longer on screen, and a tap anywhere near one of
+      // them would open a summary for a word the reader cannot see.
+      final container = await pumpRenderer(tester);
+
+      await tapCharacter(tester, content.indexOf('リ'));
+      await tester.pump();
+      expect(container.read(hoverPopupProvider).isVisible, isTrue);
+
+      container.read(hoverPopupProvider.notifier).hide();
+      await pumpContent(tester, 'まったく別の本文です。');
+
+      await tapCharacter(tester, 2);
+      await tester.pump();
+
+      expect(container.read(hoverPopupProvider).isVisible, isFalse);
     });
   });
 

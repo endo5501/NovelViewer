@@ -740,6 +740,11 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     _pendingTouchTap = null;
     if (!mounted || position == null) return;
 
+    // The re-analysis dropdown floats over the text. A touch on one of its
+    // items must not be read as a tap on whatever it covers, which would
+    // dismiss the popup the menu belongs to.
+    if (ref.read(hoverPopupProvider.notifier).isChildMenuOpen) return;
+
     final displayOffset = _lastTapDisplayOffset;
     final mark = displayOffset == null
         ? null
