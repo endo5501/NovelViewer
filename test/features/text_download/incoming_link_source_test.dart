@@ -168,6 +168,26 @@ void main() {
       expect(await IncomingLinkSource.none().links.toList(), isEmpty);
     });
 
+    test('survives a launch link that fails before anything listens', () async {
+      // The launch link is asked for as the app starts, but nothing listens
+      // until the first screen builds. A failure that lands in between has
+      // nobody to catch it, and Dart reports that as an unhandled error — so
+      // the source has to take the failure on straight away, not at listen.
+      final failing = Completer<Uri?>();
+      final early = IncomingLinkSource(
+        initialLink: failing.future,
+        platformLinks: platform.stream,
+      );
+      failing.completeError(StateError('no plugin'));
+      await pumpEventQueue();
+
+      subscription = early.links.listen(delivered.add);
+      platform.add(first);
+      await pumpEventQueue();
+
+      expect(delivered, [first]);
+    });
+
     test('closes once the platform stream is done', () async {
       var closed = false;
       listen(onDone: () => closed = true);

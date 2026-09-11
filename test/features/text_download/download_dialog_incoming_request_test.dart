@@ -282,6 +282,33 @@ void main() {
       expect(started, isEmpty);
     });
 
+    testWidgets('withdraws the notice when it can take a URL again', (
+      tester,
+    ) async {
+      // Turning a share down points at the download in the way. Once that
+      // download has failed, the dialog is asking for a URL again and the
+      // message names an obstacle that is no longer there.
+      await tester.pumpWidget(
+        createApp(
+          initialUrl: opened,
+          state: const DownloadState(
+            status: DownloadStatus.downloading,
+            totalEpisodes: 3,
+          ),
+        ),
+      );
+      await openDialog(tester);
+
+      platform.add(sharedLink);
+      await tester.pumpAndSettle();
+      expect(find.byKey(ignoredNotice), findsOneWidget);
+
+      notifier(tester).fail();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(ignoredNotice), findsNothing);
+    });
+
     testWidgets('stops reporting once a later request is taken', (
       tester,
     ) async {
