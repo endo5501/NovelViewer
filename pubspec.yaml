@@ -63,6 +63,7 @@ dependencies:
   win32_registry: ^2.1.0
   window_manager: ^0.5.2
   screen_retriever: ^0.2.2
+  app_links: ^7.2.1
 
 dev_dependencies:
   flutter_test:
