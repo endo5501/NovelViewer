@@ -92,6 +92,18 @@ void main() {
       );
     });
 
+    test('no transport-policy exception is declared', () {
+      // The requests are sent through `dart:io`'s `HttpClient`, which opens its
+      // own sockets rather than going through the URL loading system App
+      // Transport Security is enforced in, so an exception here would buy
+      // nothing and would only invite someone to widen it later.
+      expect(
+        infoPlist.contains('NSAppTransportSecurity'),
+        isFalse,
+        reason: 'the HTTP client in use is not subject to that policy',
+      );
+    });
+
     test('the usage description says what the connection is for', () {
       final match = RegExp(
         '<key>NSLocalNetworkUsageDescription</key>\\s*<string>(.*?)</string>',
