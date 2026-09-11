@@ -83,6 +83,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settings_llmProviderOllama => 'Ollama';
 
   @override
+  String get settings_llmProviderAppleOnDevice => '设备端 (Apple)';
+
+  @override
+  String get settings_llmOnDeviceUnavailableDeviceNotEligible =>
+      '此设备无法运行设备端 AI 模型。';
+
+  @override
+  String get settings_llmOnDeviceUnavailableIntelligenceOff =>
+      'Apple Intelligence 已关闭。请在系统设置中开启后再选择。';
+
+  @override
+  String get settings_llmOnDeviceUnavailableModelNotReady =>
+      'AI 模型正在准备中，准备完成后即可选择。';
+
+  @override
+  String get settings_llmOnDeviceUnavailableUnknown => '设备端 AI 模型目前不可用。';
+
+  @override
   String get settings_endpointUrlLabel => '端点URL';
 
   @override

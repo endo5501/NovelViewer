@@ -3,11 +3,12 @@ import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 
 void main() {
   group('LlmProvider', () {
-    test('has three values: none, ollama, openai', () {
-      expect(LlmProvider.values.length, 3);
+    test('has four values: none, ollama, openai, appleOnDevice', () {
+      expect(LlmProvider.values.length, 4);
       expect(LlmProvider.values, contains(LlmProvider.none));
       expect(LlmProvider.values, contains(LlmProvider.ollama));
       expect(LlmProvider.values, contains(LlmProvider.openai));
+      expect(LlmProvider.values, contains(LlmProvider.appleOnDevice));
     });
   });
 
@@ -52,6 +53,33 @@ void main() {
       );
 
       expect(config.isConfigured, true);
+    });
+
+    test('only the server providers are addressed by an endpoint', () {
+      expect(
+        const LlmConfig(provider: LlmProvider.ollama).needsServerSettings,
+        isTrue,
+      );
+      expect(
+        const LlmConfig(provider: LlmProvider.openai).needsServerSettings,
+        isTrue,
+      );
+      expect(
+        const LlmConfig(
+          provider: LlmProvider.appleOnDevice,
+        ).needsServerSettings,
+        isFalse,
+      );
+      expect(const LlmConfig().needsServerSettings, isFalse);
+    });
+
+    test('the on-device provider counts as configured on its own', () {
+      // It needs no endpoint and no key, so selecting it is the whole of its
+      // configuration.
+      expect(
+        const LlmConfig(provider: LlmProvider.appleOnDevice).isConfigured,
+        isTrue,
+      );
     });
 
     test('isConfigured returns false when provider is none', () {

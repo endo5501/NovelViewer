@@ -84,6 +84,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings_llmProviderOllama => 'Ollama';
 
   @override
+  String get settings_llmProviderAppleOnDevice => 'On-device (Apple)';
+
+  @override
+  String get settings_llmOnDeviceUnavailableDeviceNotEligible =>
+      'This device cannot run the on-device AI model.';
+
+  @override
+  String get settings_llmOnDeviceUnavailableIntelligenceOff =>
+      'Apple Intelligence is off. Turn it on in system settings to select this.';
+
+  @override
+  String get settings_llmOnDeviceUnavailableModelNotReady =>
+      'The AI model is still being prepared. It becomes selectable once it is ready.';
+
+  @override
+  String get settings_llmOnDeviceUnavailableUnknown =>
+      'The on-device AI model is not available right now.';
+
+  @override
   String get settings_endpointUrlLabel => 'Endpoint URL';
 
   @override
