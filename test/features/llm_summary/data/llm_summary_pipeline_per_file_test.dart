@@ -103,20 +103,91 @@ void main() {
       },
     );
 
-    test('an oversized single entry is its own chunk (one call)', () async {
-      final mock = _MockLlmClient([
-        jsonEncode({'facts': '- huge'}),
-      ]);
-      final pipeline = LlmSummaryPipeline(llmClient: mock, maxChunkSize: 10);
+    test(
+      'an oversized single entry is broken up rather than sent whole',
+      () async {
+        // Fifty characters against a budget of ten: sending it in one piece
+        // would hand the model five times what it accepts.
+        final mock = _MockLlmClient(
+          List.generate(5, (i) => jsonEncode({'facts': '- part $i'})),
+        );
+        final pipeline = LlmSummaryPipeline(llmClient: mock, maxChunkSize: 10);
 
-      final facts = await pipeline.extractFileFacts(
-        word: 'アリス',
-        contexts: ['あ' * 500],
+        final facts = await pipeline.extractFileFacts(
+          word: 'アリス',
+          contexts: ['あ' * 50],
+        );
+
+        expect(mock.callCount, 5);
+        expect(facts, '- part 0\n- part 1\n- part 2\n- part 3\n- part 4');
+      },
+    );
+
+    test(
+      'a refusal is not retried, since the same text is sent again',
+      () async {
+        final mock = _ThrowingClient(const LlmOnDeviceRefusedFailure());
+        final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+        await expectLater(
+          pipeline.extractFileFacts(word: 'アリス', contexts: ['本文']),
+          throwsA(isA<LlmOnDeviceRefusedFailure>()),
+        );
+
+        expect(mock.callCount, 1);
+      },
+    );
+
+    test('a context overflow is not retried either', () async {
+      final mock = _ThrowingClient(
+        const LlmOnDeviceGenerationFailure(
+          OnDeviceGenerationFailure.contextWindowExceeded,
+        ),
+      );
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      await expectLater(
+        pipeline.extractFileFacts(word: 'アリス', contexts: ['本文']),
+        throwsA(isA<LlmOnDeviceGenerationFailure>()),
       );
 
       expect(mock.callCount, 1);
-      expect(facts, '- huge');
     });
+
+    test('a transient on-device failure is still retried', () async {
+      final mock = _ThrowingClient(
+        const LlmOnDeviceGenerationFailure(
+          OnDeviceGenerationFailure.rateLimited,
+        ),
+      );
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      await expectLater(
+        pipeline.extractFileFacts(word: 'アリス', contexts: ['本文']),
+        throwsA(isA<LlmOnDeviceGenerationFailure>()),
+      );
+
+      expect(mock.callCount, 2);
+    });
+
+    test(
+      'a truncated answer is still retried, since it may not recur',
+      () async {
+        final mock = _ThrowingClient(
+          const LlmOnDeviceGenerationFailure(
+            OnDeviceGenerationFailure.decodingFailure,
+          ),
+        );
+        final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+        await expectLater(
+          pipeline.extractFileFacts(word: 'アリス', contexts: ['本文']),
+          throwsA(isA<LlmOnDeviceGenerationFailure>()),
+        );
+
+        expect(mock.callCount, 2);
+      },
+    );
 
     test('empty contexts make no LLM call and return empty facts', () async {
       final mock = _MockLlmClient([
@@ -296,22 +367,24 @@ void main() {
     test(
       'refinement stops when a round makes no compression progress',
       () async {
-        // Combined facts (60ch) exceed maxChunkSize(50) → refinement at depth 1,
-        // but the round returns LARGER facts (no progress) so it must stop
+        // Two entries of 30 characters: each fits maxChunkSize(50) so neither
+        // is broken up, but combined they exceed it → refinement at depth 1.
+        // The round returns LARGER facts (no progress) so it must stop
         // immediately instead of recursing on the bigger output.
         final mock = _MockLlmClient([
-          jsonEncode({'facts': '- ${'あ' * 200}'}),
+          jsonEncode({'facts': 'あ' * 40}),
+          jsonEncode({'facts': 'い' * 40}),
           jsonEncode({'summary': '圧縮不可の要約。'}),
         ]);
         final pipeline = LlmSummaryPipeline(llmClient: mock, maxChunkSize: 50);
 
         final summary = await pipeline.summarizeFromFacts(
           word: 'テスト',
-          perFileFacts: ['あ' * 60],
+          perFileFacts: ['あ' * 30, 'い' * 30],
         );
 
         expect(summary, '圧縮不可の要約。');
-        expect(mock.callCount, 2); // 1 extraction (no progress) + 1 summary
+        expect(mock.callCount, 3); // 2 extractions (no progress) + 1 summary
       },
     );
 
@@ -549,4 +622,18 @@ void main() {
       expect(client.callCount, 1);
     });
   });
+}
+
+/// Throws the same failure every time, counting attempts.
+class _ThrowingClient extends LlmClient {
+  _ThrowingClient(this.failure);
+
+  final Object failure;
+  int callCount = 0;
+
+  @override
+  Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
+    callCount++;
+    throw failure;
+  }
 }

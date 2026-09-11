@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:foundation_models_llm/foundation_models_llm.dart';
@@ -123,6 +124,112 @@ void main() {
       await container.read(onDeviceModelAvailabilityProvider.future),
       OnDeviceModelAvailability.available,
     );
+  });
+
+  group('the availability is re-asked when the app comes back', () {
+    /// Changing the system intelligence feature means leaving the app, so
+    /// coming back is the moment the cached answer is most likely stale.
+    test('a resume re-asks the native side', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      var answer = OnDeviceModelAvailability.intelligenceNotEnabled;
+      final plugin = _AnswerHolder(() => answer);
+      final container = ProviderContainer(
+        overrides: [
+          platformCapabilitiesProvider.overrideWithValue(
+            const PlatformCapabilities(
+              textToSpeech: true,
+              appUpdate: true,
+              llmSummary: true,
+              onDeviceLlm: true,
+            ),
+          ),
+          foundationModelsLlmProvider.overrideWithValue(plugin),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final lifecycle = container.read(onDeviceAvailabilityLifecycleProvider);
+      expect(
+        await container.read(onDeviceModelAvailabilityProvider.future),
+        OnDeviceModelAvailability.intelligenceNotEnabled,
+      );
+
+      answer = OnDeviceModelAvailability.available;
+      lifecycle.didChangeAppLifecycleState(AppLifecycleState.resumed);
+
+      expect(
+        await container.read(onDeviceModelAvailabilityProvider.future),
+        OnDeviceModelAvailability.available,
+      );
+    });
+
+    test('any other lifecycle state leaves the cached answer alone', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      var asked = 0;
+      final container = ProviderContainer(
+        overrides: [
+          platformCapabilitiesProvider.overrideWithValue(
+            const PlatformCapabilities(
+              textToSpeech: true,
+              appUpdate: true,
+              llmSummary: true,
+              onDeviceLlm: true,
+            ),
+          ),
+          foundationModelsLlmProvider.overrideWith((ref) {
+            return _AnswerHolder(() {
+              asked++;
+              return OnDeviceModelAvailability.available;
+            });
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final lifecycle = container.read(onDeviceAvailabilityLifecycleProvider);
+      await container.read(onDeviceModelAvailabilityProvider.future);
+      expect(asked, 1);
+
+      lifecycle.didChangeAppLifecycleState(AppLifecycleState.paused);
+      lifecycle.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      await container.read(onDeviceModelAvailabilityProvider.future);
+
+      expect(asked, 1);
+    });
+
+    test('the observer is actually registered with the binding', () async {
+      // Driving the binding rather than the observer proves registration
+      // happened, which calling the observer directly would not.
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      var answer = OnDeviceModelAvailability.modelNotReady;
+      final container = ProviderContainer(
+        overrides: [
+          platformCapabilitiesProvider.overrideWithValue(
+            const PlatformCapabilities(
+              textToSpeech: true,
+              appUpdate: true,
+              llmSummary: true,
+              onDeviceLlm: true,
+            ),
+          ),
+          foundationModelsLlmProvider.overrideWithValue(
+            _AnswerHolder(() => answer),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(onDeviceAvailabilityLifecycleProvider);
+      await container.read(onDeviceModelAvailabilityProvider.future);
+
+      answer = OnDeviceModelAvailability.available;
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+      expect(
+        await container.read(onDeviceModelAvailabilityProvider.future),
+        OnDeviceModelAvailability.available,
+      );
+    });
   });
 
   test('the platform-layer provider reads the capability model', () {

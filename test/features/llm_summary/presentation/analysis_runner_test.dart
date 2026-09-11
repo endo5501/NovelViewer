@@ -16,6 +16,8 @@ import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.d
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
+import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 // Dummy stand-ins for the dependencies of LlmSummaryService.
@@ -156,6 +158,114 @@ Widget _harness({
 }
 
 void main() {
+  group('when no client could be built', () {
+    /// A container whose service is absent, with the on-device provider
+    /// selected and the model reporting [availability].
+    ProviderContainer noService(OnDeviceModelAvailability availability) {
+      final container = ProviderContainer(
+        overrides: [
+          llmSummarySupportedProvider.overrideWithValue(true),
+          currentDirectoryProvider.overrideWith(
+            () => CurrentDirectoryNotifier('/library/novel_a'),
+          ),
+          selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
+          localeProvider.overrideWith(() => _StubLocale('ja')),
+          llmSummaryServiceProvider.overrideWith((ref, folderPath) => null),
+          llmClientProvider.overrideWith((_) async => null),
+          llmConfigProvider.overrideWithValue(
+            const LlmConfig(provider: LlmProvider.appleOnDevice),
+          ),
+          onDeviceModelAvailabilityProvider.overrideWith(
+            (ref) async => availability,
+          ),
+          llmSummaryRepositoryProvider.overrideWith(
+            (ref, folderPath) async => _DummyRepo(),
+          ),
+          factCacheRepositoryProvider.overrideWith(
+            (ref, folderPath) async => _DummyFactCache(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    Future<void> runIt(WidgetTester tester, ProviderContainer container) async {
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            ref
+                .read(analysisRunnerProvider)
+                .run(context: context, word: 'アリス', coveredUpToEpisode: 1);
+          },
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a disabled intelligence feature is named, not blamed on '
+        'the settings', (tester) async {
+      final ja = await AppLocalizations.delegate.load(const Locale('ja'));
+      final container = noService(
+        OnDeviceModelAvailability.intelligenceNotEnabled,
+      );
+
+      await runIt(tester, container);
+
+      // The reader has configured an LLM. Telling them to go and configure
+      // one sends them somewhere that cannot help.
+      expect(find.text(ja.llmAnalysis_noLlmConfigured), findsNothing);
+      expect(
+        find.text(ja.settings_llmOnDeviceUnavailableIntelligenceOff),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a model still being prepared is named', (tester) async {
+      final ja = await AppLocalizations.delegate.load(const Locale('ja'));
+      final container = noService(OnDeviceModelAvailability.modelNotReady);
+
+      await runIt(tester, container);
+
+      expect(
+        find.text(ja.settings_llmOnDeviceUnavailableModelNotReady),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a server provider still gets the configure message', (
+      tester,
+    ) async {
+      final ja = await AppLocalizations.delegate.load(const Locale('ja'));
+      final container = ProviderContainer(
+        overrides: [
+          llmSummarySupportedProvider.overrideWithValue(true),
+          currentDirectoryProvider.overrideWith(
+            () => CurrentDirectoryNotifier('/library/novel_a'),
+          ),
+          selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
+          localeProvider.overrideWith(() => _StubLocale('ja')),
+          llmSummaryServiceProvider.overrideWith((ref, folderPath) => null),
+          llmClientProvider.overrideWith((_) async => null),
+          llmConfigProvider.overrideWithValue(const LlmConfig()),
+          llmSummaryRepositoryProvider.overrideWith(
+            (ref, folderPath) async => _DummyRepo(),
+          ),
+          factCacheRepositoryProvider.overrideWith(
+            (ref, folderPath) async => _DummyFactCache(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await runIt(tester, container);
+
+      expect(find.text(ja.llmAnalysis_noLlmConfigured), findsOneWidget);
+    });
+  });
+
   group('DefaultAnalysisRunner success path', () {
     testWidgets(
       'opens modal, calls service, closes modal, shows success SnackBar',

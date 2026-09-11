@@ -6,6 +6,8 @@ The system SHALL perform Stage-1 fact extraction at source-file granularity: the
 
 The context budget SHALL be a property of the LLM client rather than a constant of the pipeline, and the service that assembles the pipeline SHALL read it from the client it was given. How much text a model can be handed at once is a property of the model, and a client whose model runs on the device has a far smaller window than one that reaches a server. A client that does not declare a budget SHALL be treated as declaring 4000 characters, which is the value every client used before the budget was introduced.
 
+The budget SHALL be an upper bound on what any chunk carries, including where a single context entry exceeds it on its own. A context entry is otherwise kept whole, because it is the passage around a match and cutting it costs the model the run-up to what it is being asked about. An entry larger than the entire budget cannot be kept whole without handing the model more than it accepts, which on a small window fails the request outright; a novel written in long paragraphs produces such entries. Such an entry SHALL therefore be broken into pieces that each fit, preferring a line break where one falls within the budget, and no character SHALL be lost.
+
 #### Scenario: Each file is an independent extraction unit
 
 - **WHEN** the in-scope context entries come from three source files
@@ -21,10 +23,11 @@ The context budget SHALL be a property of the LLM client rather than a constant 
 - **WHEN** a single file's context entries total 12000 characters and the client's budget is 4000 characters
 - **THEN** the system splits that file's entries into approximately 4000-character chunks (about 3 chunks), keeps each context entry intact within a chunk, and combines the chunk results into that file's facts
 
-#### Scenario: Large individual context entry
+#### Scenario: An entry larger than the whole budget is broken up
 
-- **WHEN** a single context entry within a file exceeds the client's budget
-- **THEN** the context entry is placed in its own chunk without being split
+- **WHEN** a single context entry within a file exceeds the client's budget on its own
+- **THEN** the entry SHALL be broken into pieces that each fit the budget, preferring a line break where the cut allows one
+- **AND** no character of the entry SHALL be lost
 
 #### Scenario: A smaller budget produces more chunks
 

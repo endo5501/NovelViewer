@@ -23,18 +23,73 @@ void main() {
       expect(allContexts, contexts);
     });
 
-    test('places large single entry in its own chunk', () {
+    test('splits an entry that alone exceeds the limit', () {
+      // Left whole, such an entry would be handed to the model in one piece
+      // and blow a window the chunk size exists to respect. A novel with long
+      // paragraphs produces these.
       final largeEntry = 'あ' * 5000;
       final contexts = ['短いテキスト', largeEntry, '別の短いテキスト'];
 
       final chunks = ContextChunker.split(contexts);
 
-      // The large entry should be in its own chunk
-      final chunkWithLarge = chunks
-          .where((c) => c.contains(largeEntry))
-          .toList();
-      expect(chunkWithLarge.length, 1);
-      expect(chunkWithLarge[0], [largeEntry]);
+      for (final chunk in chunks) {
+        expect(
+          chunk.fold<int>(0, (sum, entry) => sum + entry.length),
+          lessThanOrEqualTo(4000),
+        );
+      }
+    });
+
+    test('keeps every character of an entry it had to split', () {
+      final largeEntry = List.generate(200, (i) => '第$i文。').join();
+      final chunks = ContextChunker.split([largeEntry], maxChunkSize: 100);
+
+      expect(chunks.expand((c) => c).join(), largeEntry);
+    });
+
+    test('prefers a line break when it has to cut', () {
+      final lines = List.generate(
+        40,
+        (i) =>
+            '${i.toString().padLeft(3, '0')}'
+            '${'あ' * 20}',
+      );
+      final entry = lines.join('\n');
+
+      final chunks = ContextChunker.split([entry], maxChunkSize: 100);
+
+      // No piece starts mid-line: every cut landed on a newline, so the
+      // leading fragment of each piece is a whole line.
+      for (final piece in chunks.expand((c) => c)) {
+        expect(piece.trimLeft().length, greaterThan(0));
+        expect(
+          lines.any((l) => piece.trimLeft().startsWith(l)),
+          isTrue,
+          reason: piece.substring(0, 10),
+        );
+      }
+    });
+
+    test('cuts at the limit when there is no line break to prefer', () {
+      final entry = 'あ' * 250;
+
+      final chunks = ContextChunker.split([entry], maxChunkSize: 100);
+
+      expect(chunks.expand((c) => c).map((e) => e.length).toList(), [
+        100,
+        100,
+        50,
+      ]);
+    });
+
+    test('an entry within the limit is never split', () {
+      const entry = '短いテキスト';
+
+      final chunks = ContextChunker.split([entry], maxChunkSize: 100);
+
+      expect(chunks, [
+        [entry],
+      ]);
     });
 
     test('returns empty list for empty input', () {

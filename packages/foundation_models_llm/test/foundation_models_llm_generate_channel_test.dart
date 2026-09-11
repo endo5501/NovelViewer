@@ -153,6 +153,15 @@ void main() {
       );
     });
 
+    test('reads a concurrent-request rejection as transient', () async {
+      // It passes on its own, like rate limiting, and reading it as unknown
+      // would make a momentary clash look like a permanent fault.
+      expect(
+        await reasonFor(PlatformException(code: 'concurrentRequests')),
+        OnDeviceGenerationFailure.rateLimited,
+      );
+    });
+
     test('names an error code it does not know as unknown', () async {
       expect(
         await reasonFor(PlatformException(code: 'somethingNewInAFutureOs')),

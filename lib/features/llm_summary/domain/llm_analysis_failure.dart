@@ -7,6 +7,20 @@ export 'package:foundation_models_llm/foundation_models_llm.dart'
 /// happened, as opposed to a bare transport or parse error.
 abstract class LlmAnalysisFailure implements Exception {}
 
+/// A failure that can say whether sending the identical request again could
+/// possibly produce a different answer.
+///
+/// The pipeline retries once by default, because most of what goes wrong at
+/// this layer is transient. Some causes are not: the same text refused by a
+/// safety guardrail is refused again, and the same prompt that overran a
+/// context window overruns it again. Retrying those buys nothing and costs a
+/// full generation, which on the slowest provider is the whole delay twice
+/// over.
+abstract interface class LlmRetryableFailure {
+  /// Whether an identical retry stands any chance of succeeding.
+  bool get isWorthRetrying;
+}
+
 /// Raised when one or more in-scope source files could not be extracted.
 ///
 /// The run deliberately continues past a failed file so the successes reach the
@@ -47,7 +61,8 @@ class LlmAnalysisNoFactsFailure implements LlmAnalysisFailure {
 /// Named separately from a transport error so the reason survives to the
 /// reader: what stops an on-device run is never an unreachable server, and
 /// telling them to check their endpoint would send them somewhere useless.
-class LlmOnDeviceGenerationFailure implements LlmAnalysisFailure {
+class LlmOnDeviceGenerationFailure
+    implements LlmAnalysisFailure, LlmRetryableFailure {
   const LlmOnDeviceGenerationFailure(this.cause, {this.detail});
 
   /// What the model framework said went wrong.
@@ -55,6 +70,23 @@ class LlmOnDeviceGenerationFailure implements LlmAnalysisFailure {
 
   /// The native side's own words, kept for the log.
   final String? detail;
+
+  /// Only the causes that depend on something other than the request itself.
+  /// A refusal, an overrun window, an unsupported language and a missing
+  /// model all answer the same way to the same prompt. Rate limiting passes,
+  /// and a truncated answer depends on how much the model chose to say, so
+  /// both are worth one more attempt.
+  @override
+  bool get isWorthRetrying => switch (cause) {
+    OnDeviceGenerationFailure.rateLimited ||
+    OnDeviceGenerationFailure.decodingFailure ||
+    OnDeviceGenerationFailure.unknown => true,
+    OnDeviceGenerationFailure.guardrailViolation ||
+    OnDeviceGenerationFailure.contextWindowExceeded ||
+    OnDeviceGenerationFailure.unsupportedLanguage ||
+    OnDeviceGenerationFailure.assetsUnavailable ||
+    OnDeviceGenerationFailure.modelUnavailable => false,
+  };
 
   @override
   String toString() => detail == null

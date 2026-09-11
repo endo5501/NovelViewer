@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:foundation_models_llm/foundation_models_llm.dart';
 import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dart';
@@ -38,4 +39,40 @@ final onDeviceModelAvailabilityProvider =
         return OnDeviceModelAvailability.unsupportedPlatform;
       }
       return ref.watch(foundationModelsLlmProvider).availability();
+    });
+
+/// Re-asks the native side when the app comes back to the foreground.
+///
+/// Two of the three unavailability reasons describe states the reader can
+/// leave, and leaving the one that matters most — the system intelligence
+/// feature — means leaving the app to visit its settings. Coming back is
+/// therefore the moment the cached answer is most likely to be stale, and
+/// without this the reader would have to restart the app to be believed.
+class OnDeviceAvailabilityLifecycle with WidgetsBindingObserver {
+  OnDeviceAvailabilityLifecycle(this._refresh);
+
+  final void Function() _refresh;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    _refresh();
+  }
+}
+
+/// Registers [OnDeviceAvailabilityLifecycle], where there is a model to ask
+/// about. Read once from the application root, as the other lifecycle
+/// observers are.
+final onDeviceAvailabilityLifecycleProvider =
+    Provider<OnDeviceAvailabilityLifecycle>((ref) {
+      final lifecycle = OnDeviceAvailabilityLifecycle(
+        () => ref.invalidate(onDeviceModelAvailabilityProvider),
+      );
+      // Nothing to refresh where the platform cannot host the model: the
+      // answer there is fixed, and an observer would wake on every resume to
+      // recompute a constant.
+      if (!ref.watch(onDeviceLlmSupportedProvider)) return lifecycle;
+      WidgetsBinding.instance.addObserver(lifecycle);
+      ref.onDispose(() => WidgetsBinding.instance.removeObserver(lifecycle));
+      return lifecycle;
     });

@@ -13,7 +13,8 @@ enum OnDeviceGenerationFailure {
   /// The prompt and the response together did not fit the model's window.
   contextWindowExceeded,
 
-  /// The system declined to run the request for now.
+  /// The system declined to run the request for now. Transient: a later
+  /// attempt can succeed without anything changing.
   rateLimited,
 
   /// The model does not work in the language it was asked for.
@@ -44,7 +45,10 @@ enum OnDeviceGenerationFailure {
     'refusal' => OnDeviceGenerationFailure.guardrailViolation,
     'exceededContextWindowSize' =>
       OnDeviceGenerationFailure.contextWindowExceeded,
-    'rateLimited' => OnDeviceGenerationFailure.rateLimited,
+    // A clash with another request in flight passes on its own, like rate
+    // limiting, so it arrives as the same transient reason.
+    'rateLimited' ||
+    'concurrentRequests' => OnDeviceGenerationFailure.rateLimited,
     'unsupportedLanguageOrLocale' =>
       OnDeviceGenerationFailure.unsupportedLanguage,
     'assetsUnavailable' => OnDeviceGenerationFailure.assetsUnavailable,

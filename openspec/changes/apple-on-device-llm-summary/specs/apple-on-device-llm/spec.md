@@ -57,14 +57,20 @@ The three unavailability reasons SHALL be preserved distinctly rather than colla
 - **WHEN** the reader enables the system intelligence feature after the application has already reported it disabled, and the availability is queried again
 - **THEN** the provider SHALL be reported available
 
-### Requirement: An unavailable on-device provider is shown with its reason rather than hidden
-Where the platform can host the model but it is not currently available, the provider SHALL remain visible in the provider selection and SHALL be made unselectable, with the reason shown to the reader.
+### Requirement: A temporarily unavailable provider is shown with its reason; a permanently unavailable one is hidden
+Where the model is unavailable for a reason the reader can leave, the provider SHALL remain visible in the provider selection, SHALL be made unselectable, and the reason SHALL be shown. Those reasons are the system intelligence feature being disabled and the model not yet being ready. An unrecognised answer SHALL be treated the same way, since it is not known to be permanent.
 
-The reason SHALL be presented outside the selection list, so it is readable without opening the list.
+The reason SHALL be presented outside the selection list, so it is readable without opening the list. It SHALL be shown only while there is a visible option it explains, so a reader who uses a server provider on a machine that will never run the model is told nothing about it.
 
-This differs from the rule that an unavailable feature presents no surface at all, and does so deliberately. That rule governs whether a feature's surface exists; here the LLM configuration surface exists and one option within it is unavailable. Two of the three reasons — the intelligence feature being disabled, and the model not yet being ready — describe states the reader can leave, and hiding the option would remove the only place the application could say so.
+Showing an unselectable option differs from the rule that an unavailable feature presents no surface at all, and does so deliberately. That rule governs whether a feature's surface exists; here the LLM configuration surface exists and one option within it is unavailable. The reasons above describe states the reader can leave, and hiding the option would remove the only place the application could say so.
 
-Where the platform cannot host the model at all, the option SHALL be absent from the selection entirely. That state is permanent and has nothing to tell the reader.
+Where the model is permanently unavailable, the option SHALL be absent from the selection entirely. That covers a platform that cannot host the model, an operating system older than the framework, and a device that is not eligible. None of them can change, so a dead entry and a paragraph explaining it are clutter the reader can do nothing about.
+
+Whether the operating system carries the framework is not answerable from a platform flag, so an option offered on the strength of the platform alone SHALL be withdrawn when the native side answers that the platform is unsupported.
+
+While the availability query is still out, the option SHALL NOT be offered. Listing it and then withdrawing it reads worse than listing it a moment late, and withdrawing it is what would happen on every operating system older than the framework.
+
+The provider the reader has selected SHALL always be listed, whatever the answer, and SHALL be unselectable where it is unavailable. The selection list requires an entry matching the stored value, and a selection carried over from another machine would otherwise take the settings dialog down.
 
 #### Scenario: A disabled intelligence feature is explained
 - **WHEN** the reader opens the LLM settings on a platform that can host the model, with the system intelligence feature turned off
@@ -75,9 +81,22 @@ Where the platform cannot host the model at all, the option SHALL be absent from
 - **WHEN** the reader opens the LLM settings while the model is still becoming ready
 - **THEN** the on-device option SHALL be present and unselectable, with a reason that says the model is not yet ready
 
-#### Scenario: An ineligible device is explained
+#### Scenario: An ineligible device is left out
 - **WHEN** the reader opens the LLM settings on a device that can never run the model
-- **THEN** the on-device option SHALL be present and unselectable, with a reason that says the device does not support it
+- **THEN** the on-device option SHALL be absent from the selection list
+
+#### Scenario: An operating system without the framework is left out
+- **WHEN** the reader opens the LLM settings on an Apple platform whose operating system predates the model framework
+- **THEN** the on-device option SHALL be absent from the selection list
+- **AND** no reason SHALL be shown
+
+#### Scenario: A server-provider reader is told nothing about a model they cannot use
+- **WHEN** the reader has a server provider selected on a machine where the on-device model is permanently unavailable
+- **THEN** no reason concerning the on-device model SHALL appear in the section
+
+#### Scenario: A stored on-device selection keeps its entry
+- **WHEN** the stored provider is the on-device model on a machine where it is permanently unavailable
+- **THEN** the on-device option SHALL be present and unselectable, with its reason shown
 
 #### Scenario: An unsupported platform shows no option
 - **WHEN** the reader opens the LLM settings on a platform that cannot host the model
@@ -86,6 +105,37 @@ Where the platform cannot host the model at all, the option SHALL be absent from
 #### Scenario: An available model is selectable
 - **WHEN** the reader opens the LLM settings with the model available
 - **THEN** the on-device option SHALL be selectable, and no reason SHALL be shown
+
+#### Scenario: The option is not offered before the answer arrives
+- **WHEN** the reader opens the LLM settings while the availability query is still out
+- **THEN** the on-device option SHALL be absent from the selection list
+- **AND** no reason SHALL be shown, since none is known yet
+
+### Requirement: Availability is re-asked when it can have changed
+The application SHALL re-ask the native side for the model's availability when the application returns to the foreground, and when the settings section that offers the provider is opened.
+
+Two of the three unavailability reasons describe states the reader can leave, and the one they act on — the system intelligence feature — is changed outside the application. A cached answer that is never refreshed would leave a reader who has just enabled it told that it is disabled until they restart. The reverse matters too: an answer cached as available outlives the reader turning the feature off.
+
+The section is re-asked on opening as well as on return, because a model can finish becoming ready while the application never loses the foreground, and no return then occurs.
+
+Where the platform cannot host the model, no such refresh SHALL be registered: the answer there is fixed and recomputing it would be work for a constant.
+
+#### Scenario: Returning to the app picks up a newly enabled feature
+- **WHEN** the model was reported unavailable, the reader enables the system intelligence feature outside the application, and the application returns to the foreground
+- **THEN** the availability SHALL be asked again and reported as available
+- **AND** analysis SHALL work without the reader changing any setting
+
+#### Scenario: Other lifecycle changes do not re-ask
+- **WHEN** the application becomes inactive or is paused
+- **THEN** the availability SHALL NOT be asked again
+
+#### Scenario: Opening the settings picks up a model that became ready
+- **WHEN** the model was reported not ready, becomes ready while the application stays in the foreground, and the reader opens the settings section
+- **THEN** the availability SHALL be asked again
+
+#### Scenario: Nothing is registered where the platform cannot host the model
+- **WHEN** the platform cannot host the model
+- **THEN** no refresh on returning to the foreground SHALL be registered
 
 ### Requirement: The on-device provider never falls back to a server by itself
 Where the on-device provider is selected and becomes unavailable, the system SHALL NOT perform analysis through any other provider. Analysis SHALL fail with a reason the reader can act on.
@@ -98,6 +148,15 @@ A reader chooses the on-device provider so that the text of what they are readin
 - **WHEN** the reader runs analysis with the on-device provider selected and the model unavailable
 - **THEN** the analysis SHALL fail with the reason the model is unavailable
 - **AND** no request SHALL be issued to any LLM server, including one configured earlier
+
+#### Scenario: The failure names the model, not the settings
+- **WHEN** analysis cannot run because the on-device model is unavailable
+- **THEN** the reader SHALL be told which of the unavailability reasons applies
+- **AND** SHALL NOT be told to go and configure an LLM, which they have already done
+
+#### Scenario: A server provider keeps the message it had
+- **WHEN** analysis cannot run with a server provider selected
+- **THEN** the reader SHALL be told to configure an LLM, exactly as before
 
 #### Scenario: The stored selection survives a loss of availability
 - **WHEN** availability is lost and later regained while the on-device provider is the stored selection
@@ -124,6 +183,29 @@ Where the caller supplies no schema, the provider SHALL return the generated tex
 - **WHEN** a caller requests generation with no schema
 - **THEN** the provider SHALL return the generated text as it stands
 
+### Requirement: A failure that cannot change is not retried
+Where a generation failure could not possibly answer differently to the identical request, that request SHALL NOT be retried. Text refused by the safety guardrails is refused again; a prompt that overran the context window overruns it again; an unsupported language and a model that is not there do not change between two attempts a moment apart.
+
+A failure that can answer differently SHALL keep the single retry: rate limiting passes, and a response that would not parse depends on how much the model chose to say.
+
+On-device generation is the slowest of the three providers, and a run gives up only after several consecutive file failures. Retrying what cannot succeed would double the delay before a reader learns that the analysis is not going to work.
+
+#### Scenario: A refusal is reported without a second attempt
+- **WHEN** extraction fails because the model's safety guardrails refused the text
+- **THEN** the request SHALL be issued exactly once
+
+#### Scenario: A context overflow is reported without a second attempt
+- **WHEN** extraction fails because the request exceeded the context window
+- **THEN** the request SHALL be issued exactly once
+
+#### Scenario: A transient failure keeps its retry
+- **WHEN** extraction fails because the request was rate limited
+- **THEN** the request SHALL be issued a second time
+
+#### Scenario: A response that would not parse keeps its retry
+- **WHEN** extraction fails because the response did not parse against its schema
+- **THEN** the request SHALL be issued a second time
+
 ### Requirement: Each generation request starts from a fresh session
 The on-device provider SHALL start each generation request from a session that carries no history of previous requests.
 
@@ -142,7 +224,9 @@ Releasing the provider's resources SHALL drop any session it holds.
 ### Requirement: Generation failures are reported with their cause
 The on-device provider SHALL translate the model framework's generation failures into failures that name their cause, rather than a single opaque error.
 
-The causes that SHALL be distinguished are: the content was refused by the model's safety guardrails, the request exceeded the context window, the request was rate limited, the language is not supported, and the model's assets are unavailable.
+The causes that SHALL be distinguished are: the content was refused by the model's safety guardrails, the request exceeded the context window, the response would not parse against the schema it was given, the request was rate limited, the language is not supported, and the model's assets are unavailable.
+
+The response that will not parse is named separately because it has been seen in practice, caused by the response cap cutting a structured answer off before it closes. Reading it as an unrecognised failure would hide a cause with a clear remedy.
 
 A guardrail refusal SHALL be reported as a failure of the file being extracted, so that the existing per-file failure isolation applies: the remaining files are still extracted, and the run reports a partial failure. A novel containing violent or sexual description can be refused, and one refused file SHALL NOT end the analysis of the rest.
 
@@ -157,3 +241,7 @@ A guardrail refusal SHALL be reported as a failure of the file being extracted, 
 #### Scenario: A context overflow is distinguishable
 - **WHEN** a generation request exceeds the model's context window
 - **THEN** the failure SHALL name the context window as its cause
+
+#### Scenario: A truncated structured answer is distinguishable
+- **WHEN** the model's response does not parse against the schema it was given
+- **THEN** the failure SHALL name that as its cause, distinctly from an unrecognised failure

@@ -97,6 +97,14 @@ class MethodChannelFoundationModelsLlm implements FoundationModelsLlm {
         OnDeviceGenerationFailure.fromWireCode(e.code),
         detail: e.message ?? e.code,
       );
+    } on TypeError {
+      // `invokeMethod<String>` casts, so an answer of the wrong type lands
+      // here. Letting it through would break this method's promise to throw
+      // one type, and the caller's catch would not see it.
+      throw const OnDeviceGenerationException(
+        OnDeviceGenerationFailure.unknown,
+        detail: 'the native side returned something that is not text',
+      );
     }
   }
 }

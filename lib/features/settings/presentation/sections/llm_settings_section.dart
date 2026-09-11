@@ -24,6 +24,10 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
   @override
   void initState() {
     super.initState();
+    // A model can finish becoming ready while the reader never leaves the
+    // app, and the resume that would otherwise refresh this never fires.
+    // Opening the section is the other natural moment to ask again.
+    ref.invalidate(onDeviceModelAvailabilityProvider);
     final repo = ref.read(settingsRepositoryProvider);
     final config = repo.getLlmConfig();
     _llmProvider = config.provider;
@@ -86,12 +90,49 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
   /// provider is addressed by an endpoint rather than listing providers here.
   LlmConfig get _config => LlmConfig(provider: _llmProvider);
 
-  /// Why the on-device model cannot be picked, or null when it can.
+  /// Whether the on-device model can be picked right now.
   ///
-  /// Reads as null while the availability query is still in flight: the option
-  /// is then briefly enabled, and selecting it in that window yields no client
-  /// until the answer lands, which is the same state as the model going away
-  /// a moment later.
+  /// False while the query is still out. Picking it in that window would store
+  /// a selection the answer may contradict a moment later, and the window is
+  /// short enough that waiting costs the reader nothing.
+  bool get _onDeviceSelectable =>
+      ref.watch(onDeviceModelAvailabilityProvider).value?.isAvailable ?? false;
+
+  /// Whether the on-device model belongs in the list at all.
+  ///
+  /// Three reasons keep it out. It is not the reader's selection and the
+  /// platform cannot host it; or the native side has not answered yet, since
+  /// listing an entry and then withdrawing it reads worse than listing it a
+  /// beat late; or the answer is one of the permanent ones, where a dead
+  /// entry and a paragraph explaining it are clutter the reader can do
+  /// nothing about.
+  ///
+  /// The capability model cannot make that last call on its own: it knows the
+  /// platform is Apple's, not whether this particular system carries the
+  /// framework. An operating system older than the model answers
+  /// [OnDeviceModelAvailability.unsupportedPlatform], and that answer is what
+  /// settles it.
+  ///
+  /// The current selection is always listed, whatever the answer. The
+  /// dropdown requires an item matching its value, and a selection carried
+  /// over from another machine would otherwise take the dialog down.
+  bool get _onDeviceOffered {
+    if (_llmProvider == LlmProvider.appleOnDevice) return true;
+    if (!ref.watch(onDeviceLlmSupportedProvider)) return false;
+    return switch (ref.watch(onDeviceModelAvailabilityProvider).value) {
+      null => false,
+      OnDeviceModelAvailability.unsupportedPlatform ||
+      OnDeviceModelAvailability.deviceNotEligible => false,
+      _ => true,
+    };
+  }
+
+  /// Why the on-device model cannot be picked, or null when there is nothing
+  /// to say.
+  ///
+  /// Null while the query is still out: the option is unselectable then, but
+  /// "we have not asked yet" is not a reason worth showing for the moment it
+  /// lasts.
   String? _onDeviceUnavailableReason(AppLocalizations l10n) {
     final availability = ref.watch(onDeviceModelAvailabilityProvider).value;
     return switch (availability) {
@@ -102,7 +143,10 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
         l10n.settings_llmOnDeviceUnavailableIntelligenceOff,
       OnDeviceModelAvailability.modelNotReady =>
         l10n.settings_llmOnDeviceUnavailableModelNotReady,
-      OnDeviceModelAvailability.unsupportedPlatform ||
+      // An operating system without the framework is as permanent for this
+      // device as ineligible hardware, and reads the same way to the reader.
+      OnDeviceModelAvailability.unsupportedPlatform =>
+        l10n.settings_llmOnDeviceUnavailableDeviceNotEligible,
       OnDeviceModelAvailability.unknown =>
         l10n.settings_llmOnDeviceUnavailableUnknown,
     };
@@ -111,8 +155,11 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final platformCanHost = ref.watch(onDeviceLlmSupportedProvider);
-    final onDeviceReason = platformCanHost
+    final offerOnDevice = _onDeviceOffered;
+    // The reason explains a visible entry that cannot be picked. With no
+    // entry there is nothing to explain, and with a usable one nothing to
+    // say.
+    final onDeviceReason = offerOnDevice && !_onDeviceSelectable
         ? _onDeviceUnavailableReason(l10n)
         : null;
 
@@ -167,10 +214,10 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
               // stays visible even when it cannot be used, because two of the
               // three reasons are states the reader can leave and this is the
               // only place the app could say so.
-              if (platformCanHost)
+              if (offerOnDevice)
                 DropdownMenuItem(
                   value: LlmProvider.appleOnDevice,
-                  enabled: onDeviceReason == null,
+                  enabled: _onDeviceSelectable,
                   child: Text(l10n.settings_llmProviderAppleOnDevice),
                 ),
             ],
