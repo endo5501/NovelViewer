@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_anchor.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_widget.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
@@ -106,6 +107,37 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('hover_popup_card')), findsNothing);
+    });
+
+    testWidgets('never lays out wider than the anchor math assumes', (
+      tester,
+    ) async {
+      // The anchor decides where to put the popup, and whether to flip it or
+      // pull it back on screen, from a constant. A card that can grow wider
+      // than that constant hangs off the edge of a narrow screen by the
+      // difference, which is exactly the case the flip exists for.
+      await tester.pumpWidget(
+        _scopedWith(
+          snapshots: [_snap(3, 'あ' * 400)],
+          child: const Align(
+            alignment: Alignment.topLeft,
+            child: HoverPopupWidget(
+              folderPath: 'novel_a',
+              word: 'アリス',
+              currentEpisode: 3,
+              currentFileName: '003.txt',
+              maxEpisodeInFolder: 3,
+              maxEpisodeFileName: '003.txt',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSize(find.byKey(const Key('hover_popup_card'))).width,
+        lessThanOrEqualTo(kHoverPopupApproxWidth),
+      );
     });
 
     testWidgets('renders the default snapshot label and summary text', (

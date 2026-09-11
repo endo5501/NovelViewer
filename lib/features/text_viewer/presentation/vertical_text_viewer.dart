@@ -675,7 +675,11 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
                           // the notifier so no orphan token leaks.
                           onMarkEnter: widget.onMarkEnter,
                           onMarkExit: widget.onMarkExit,
-                          onMarkTap: widget.onMarkTap,
+                          // No onMarkTap: this page is on its way off screen.
+                          // Hover survives it because an enter is matched by
+                          // an exit, but a tap has nothing to undo it, so a
+                          // finger landing here mid-slide would leave a
+                          // summary open for a word the reader has left.
                           onHoverHideRequest: widget.onHoverHideRequest,
                         ),
                       ),

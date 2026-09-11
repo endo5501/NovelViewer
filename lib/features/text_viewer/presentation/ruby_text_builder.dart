@@ -223,7 +223,15 @@ List<MarkSpan> _localizeMarks(
     final localStart = (m.start - segmentStart).clamp(0, segmentLength);
     final localEnd = (m.end - segmentStart).clamp(0, segmentLength);
     result.add(
-      MarkSpan(start: localStart, end: localEnd, style: m.style, word: m.word),
+      MarkSpan(
+        start: localStart,
+        end: localEnd,
+        style: m.style,
+        word: m.word,
+        // Carried through the translation so both halves of a word split at
+        // a segment boundary still name the same occurrence.
+        occurrence: m.occurrence,
+      ),
     );
   }
   return result;
@@ -286,7 +294,7 @@ List<InlineSpan> _applyLocalMarksToSpans(
                 decorationStyle: _decorationStyleFor(runMark.style),
               );
           final word = runMark.word;
-          final token = (start: runMark.start, end: runMark.end);
+          final token = runMark.occurrence;
           output.add(
             TextSpan(
               text: subText,

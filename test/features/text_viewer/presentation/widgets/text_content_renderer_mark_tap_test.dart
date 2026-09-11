@@ -268,11 +268,34 @@ void main() {
       await tester.pump();
       expect(container.read(hoverPopupProvider).isVisible, isTrue);
 
-      await tester.drag(
-        find.byType(SingleChildScrollView),
+      // From a glyph, so the drag starts on the same subtree a tap does.
+      await tester.dragFrom(
+        characterCentre(tester, content.indexOf('リ')),
         const Offset(0, -120),
       );
       await tester.pump();
+
+      expect(container.read(hoverPopupProvider).isVisible, isFalse);
+    });
+
+    testWidgets('lifting the finger after a scroll does not reopen it', (
+      tester,
+    ) async {
+      // The drag ends with a pointer-up over the text, exactly as a tap does.
+      // Read as a tap it would resolve the offset the earlier tap left behind
+      // and put the old word back on screen, anchored wherever the finger
+      // happened to stop.
+      final container = await pumpRenderer(tester, text: long);
+
+      await tapCharacter(tester, content.indexOf('リ'));
+      await tester.pump();
+      expect(container.read(hoverPopupProvider).isVisible, isTrue);
+
+      await tester.dragFrom(
+        characterCentre(tester, content.indexOf('リ')),
+        const Offset(0, -160),
+      );
+      await tester.pumpAndSettle();
 
       expect(container.read(hoverPopupProvider).isVisible, isFalse);
     });

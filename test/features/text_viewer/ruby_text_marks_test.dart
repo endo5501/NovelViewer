@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
@@ -33,6 +34,35 @@ String _underlinedText(
     buildRubyTextSpans(segments, _baseStyle, null, markedWords: markedWords),
   );
   return buf.toString();
+}
+
+/// The `(start, end)` tokens the built spans hand to their hover handlers,
+/// gathered by firing each marked span's `onEnter`.
+Set<({int start, int end})> _tokensInBuiltSpans(
+  List<TextSegment> segments,
+  Map<String, MarkStyle> markedWords,
+) {
+  final tokens = <({int start, int end})>{};
+  void walk(InlineSpan s) {
+    if (s is TextSpan) {
+      s.onEnter?.call(const PointerEnterEvent());
+      for (final child in s.children ?? const <InlineSpan>[]) {
+        walk(child);
+      }
+    }
+  }
+
+  walk(
+    buildRubyTextSpans(
+      segments,
+      _baseStyle,
+      null,
+      markedWords: markedWords,
+      onMarkEnter: (_, _, token) => tokens.add(token),
+      onMarkExit: (_) {},
+    ),
+  );
+  return tokens;
 }
 
 void main() {
@@ -76,6 +106,30 @@ void main() {
       expect(marks.single.word, 'アリス');
       expect((marks.single.start, marks.single.end), (3, 6));
       expect(_underlinedText(segments, words), 'アリス');
+    });
+
+    test('every span of one occurrence carries the same hover token', () {
+      // The token tells two occurrences of a word apart, and the hover
+      // handlers pair up by it: an enter on one span and an exit on another
+      // only cancel out when the two agree. A word split across segments is
+      // still one occurrence, and a tap resolves it from the base-text
+      // offsets, so both routes have to name it the same way.
+      const segments = [PlainTextSegment('AAAアリ'), PlainTextSegment('スBBB')];
+      const words = {'アリス': MarkStyle.solid};
+
+      final marks = findMarksInSegments(segments, words);
+      expect(marks, hasLength(1));
+
+      expect(_tokensInBuiltSpans(segments, words), {
+        (start: marks.single.start, end: marks.single.end),
+      });
+    });
+
+    test('two occurrences of a word carry different tokens', () {
+      const segments = [PlainTextSegment('AAAアリスBBBアリスCCC')];
+      const words = {'アリス': MarkStyle.solid};
+
+      expect(_tokensInBuiltSpans(segments, words), hasLength(2));
     });
 
     test('no marked words means no marks', () {

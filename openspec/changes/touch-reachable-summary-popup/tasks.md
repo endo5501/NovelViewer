@@ -67,6 +67,6 @@ design.md の決定3で挙げたタイミングの不確かさがあるため、
 
 - [ ] 8.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 8.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 8.3 `fvm dart format .`でフォーマットを実行
-- [ ] 8.4 `fvm flutter analyze`でリントを実行
-- [ ] 8.5 `fvm flutter test`でテストを実行
+- [x] 8.3 `fvm dart format .`でフォーマットを実行
+- [x] 8.4 `fvm flutter analyze`でリントを実行
+- [x] 8.5 `fvm flutter test`でテストを実行

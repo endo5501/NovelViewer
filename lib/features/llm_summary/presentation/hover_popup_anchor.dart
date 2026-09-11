@@ -1,10 +1,12 @@
 import 'package:flutter/painting.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 
-/// Approximate popup width used for edge-flip math. The popup widget caps
-/// itself at this value, so it is a tight upper bound for the real laid-out
-/// width.
-const double kHoverPopupApproxWidth = 320.0;
+/// The popup's widest possible layout, used for the edge-flip and clamp
+/// math. The popup widget caps itself at exactly this value, so it is a
+/// tight upper bound for the real laid-out width. The two are pinned
+/// together by a test: a card allowed to grow past this would hang off the
+/// screen edge by the difference, in the very case the flip exists for.
+const double kHoverPopupApproxWidth = 360.0;
 
 /// Approximate popup height for edge-flip math. The popup may be shorter
 /// than this, but never meaningfully taller: 2-3 lines of summary plus

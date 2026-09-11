@@ -332,6 +332,13 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   int? _lastTapDisplayOffset;
   Offset? _pendingTouchTap;
 
+  /// Where the touch now on the text first landed, or null when the pointer
+  /// is not one that needs this path. A drag ends with a pointer-up over the
+  /// text exactly as a tap does, so without the starting point there is
+  /// nothing to tell the two apart, and the end of a scroll would reopen the
+  /// word the reader last tapped.
+  Offset? _touchDownPosition;
+
   // Cached TextPainter-space offsets of each line start, derived from the
   // parsed segments (so that ruby `WidgetSpan`s count as 1 caret unit each
   // rather than the raw markup length). Indexed by 0-based line number.
@@ -712,14 +719,31 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         .show(word: word, position: position, token: token);
   }
 
+  void _onTextPointerDown(PointerDownEvent event) {
+    _touchDownPosition = kNoSecondaryButtonPointerKinds.contains(event.kind)
+        ? event.position
+        : null;
+  }
+
+  void _onTextPointerCancel(PointerCancelEvent event) {
+    _touchDownPosition = null;
+  }
+
   /// Records where a touch lifted off the horizontal text, and asks for the
   /// tap to be resolved once the text widget has had its say.
+  ///
+  /// Only a pointer that barely moved counts. Anything further was a scroll
+  /// or a selection drag, and reading its end as a tap would put a summary
+  /// on screen the reader never asked for.
   ///
   /// This is a `Listener`, so it never joins the gesture arena and cannot
   /// take the tap away from `SelectableText`: placing the caret, extending a
   /// selection and raising the toolbar all behave exactly as before.
   void _onTextPointerUp(PointerUpEvent event) {
-    if (!kNoSecondaryButtonPointerKinds.contains(event.kind)) return;
+    final down = _touchDownPosition;
+    _touchDownPosition = null;
+    if (down == null) return;
+    if ((event.position - down).distance > kTouchSlop) return;
     _pendingTouchTap = event.position;
     // The tap recognizer resolves inside the synchronous dispatch of this
     // same event, so a microtask runs after `onSelectionChanged` has been
@@ -753,11 +777,13 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       ref.read(hoverPopupProvider.notifier).hide();
       return;
     }
-    _onMarkTap(mark.word, position, (start: mark.start, end: mark.end));
+    _onMarkTap(mark.word, position, mark.occurrence);
   }
 
   MarkSpan? _markAtDisplayOffset(int displayOffset) {
-    if (_marks.isEmpty) return null;
+    // A tap reported against an invalid selection carries -1, which would
+    // otherwise clamp to 0 and open whatever word starts the file.
+    if (_marks.isEmpty || displayOffset < 0) return null;
     final offset = plainTextOffsetFromDisplayOffset(displayOffset, _segments);
     for (final candidate in [offset, offset - 1]) {
       for (final mark in _marks) {
@@ -1288,7 +1314,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
                   // touch without entering the arena, so SelectableText keeps
                   // every gesture it already handles.
                   child: Listener(
+                    onPointerDown: _onTextPointerDown,
                     onPointerUp: _onTextPointerUp,
+                    onPointerCancel: _onTextPointerCancel,
                     child: SelectableText.rich(
                       textSpan,
                       onSelectionChanged: (selection, cause) {
