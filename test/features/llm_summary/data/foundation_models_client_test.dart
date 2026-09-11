@@ -72,6 +72,23 @@ void main() {
       expect(plugin.calls.single.maxTokens, greaterThan(0));
     });
 
+    test('leaves the response enough room to close what it started', () async {
+      // A cap the answer runs into truncates the structured object, which
+      // comes back as a response that will not parse. Measured on macOS: a
+      // few hundred tokens was not enough for a chunk-sized extraction.
+      expect(
+        FoundationModelsClient.maxResponseTokens,
+        greaterThanOrEqualTo(1000),
+      );
+    });
+
+    test('keeps real margin under the measured context ceiling', () async {
+      // Requests start failing between 5000 and 6000 characters of varied
+      // Japanese prose. The chunk size stays well under that, because denser
+      // text tokenizes worse than the sample did.
+      expect(FoundationModelsClient.onDeviceChunkSize, lessThan(4000));
+    });
+
     test('returns the generated text unchanged', () async {
       final plugin = _FakePlugin(answer: '{"facts": "- アリスは騎士"}');
 
@@ -123,6 +140,7 @@ void main() {
     test('carries every other cause through as a named failure', () async {
       for (final cause in [
         OnDeviceGenerationFailure.contextWindowExceeded,
+        OnDeviceGenerationFailure.decodingFailure,
         OnDeviceGenerationFailure.rateLimited,
         OnDeviceGenerationFailure.unsupportedLanguage,
         OnDeviceGenerationFailure.assetsUnavailable,

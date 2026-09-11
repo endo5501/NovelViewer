@@ -13,17 +13,26 @@ class FoundationModelsClient extends LlmClient {
 
   /// Characters of prompt this client accepts at once.
   ///
-  /// The model's window holds the prompt and the response together and is far
-  /// smaller than a server model's. Japanese runs at roughly one token to the
-  /// character, so the 4000 the server clients use would not fit even before
-  /// the response was accounted for.
-  static const int onDeviceChunkSize = 2000;
+  /// The model's window holds the prompt and the response together, and is far
+  /// smaller than a server model's. Measured on macOS with varied Japanese
+  /// prose, the request starts failing between 5000 and 6000 characters, which
+  /// puts Japanese at roughly seven tenths of a token to the character.
+  ///
+  /// This sits well below that ceiling on purpose. Denser text tokenizes
+  /// worse than the sample did, and the margin is what keeps a chunk of
+  /// unusually kanji-heavy prose from failing where an average one passes.
+  /// Going lower buys no safety and costs a call per chunk, on a model that
+  /// is already the slow part of a run.
+  static const int onDeviceChunkSize = 3000;
 
   /// Tokens the response may take.
   ///
   /// Bounded so the share of the window left for the prompt is predictable
-  /// rather than whatever the model happens not to use.
-  static const int maxResponseTokens = 700;
+  /// rather than whatever the model happens not to use. Not bounded too
+  /// tightly: a cap the answer runs into cuts the structured object off before
+  /// it is closed, and that arrives as a response that will not parse rather
+  /// than as anything mentioning a limit.
+  static const int maxResponseTokens = 1000;
 
   final FoundationModelsLlm _plugin;
 

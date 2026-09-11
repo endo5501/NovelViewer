@@ -22,6 +22,11 @@ enum OnDeviceGenerationFailure {
   /// The model's own files are not on the device.
   assetsUnavailable,
 
+  /// What the model produced did not parse against the schema it was given.
+  /// Seen in practice when the response cap cuts a structured answer off
+  /// before it is closed, so a larger cap or a smaller prompt is the remedy.
+  decodingFailure,
+
   /// The model could not be reached at all. Distinct from a refusal: nothing
   /// was judged about the content.
   modelUnavailable,
@@ -43,6 +48,7 @@ enum OnDeviceGenerationFailure {
     'unsupportedLanguageOrLocale' =>
       OnDeviceGenerationFailure.unsupportedLanguage,
     'assetsUnavailable' => OnDeviceGenerationFailure.assetsUnavailable,
+    'decodingFailure' => OnDeviceGenerationFailure.decodingFailure,
     'modelUnavailable' => OnDeviceGenerationFailure.modelUnavailable,
     _ => OnDeviceGenerationFailure.unknown,
   };

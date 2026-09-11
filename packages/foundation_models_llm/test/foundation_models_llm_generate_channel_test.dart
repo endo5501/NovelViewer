@@ -143,6 +143,16 @@ void main() {
       );
     });
 
+    test('names a response that would not parse as its own reason', () async {
+      // Seen in practice when the response cap cuts a structured answer off
+      // mid-object. Reading it as "unknown" would hide a cause that has a
+      // clear remedy.
+      expect(
+        await reasonFor(PlatformException(code: 'decodingFailure')),
+        OnDeviceGenerationFailure.decodingFailure,
+      );
+    });
+
     test('names an error code it does not know as unknown', () async {
       expect(
         await reasonFor(PlatformException(code: 'somethingNewInAFutureOs')),
