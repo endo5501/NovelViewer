@@ -131,6 +131,33 @@ void main() {
       expect(find.byKey(ignoredNotice), findsNothing);
     });
 
+    testWidgets('downloads that URL when the reader starts it', (tester) async {
+      // The point of pre-filling the field: the URL has to be usable, not just
+      // visible. Nothing else covers the pre-filled URL reaching the download.
+      await tester.pumpWidget(createApp(initialUrl: opened));
+      await openDialog(tester);
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'ダウンロード開始'));
+      await tester.pumpAndSettle();
+
+      expect(started, [opened]);
+    });
+
+    testWidgets('offers the collection target for a plain web page', (
+      tester,
+    ) async {
+      // A share can carry any page. One that no dedicated adapter claims is
+      // filed into a collection, and that choice has to be on screen for a
+      // shared URL exactly as it is for a typed one.
+      await tester.pumpWidget(
+        createApp(initialUrl: Uri.parse('https://example.com/a')),
+      );
+      await openDialog(tester);
+
+      expect(find.text('取り込み先'), findsOneWidget);
+      expect(find.text('新規コレクション'), findsOneWidget);
+    });
+
     testWidgets('does not download on its own', (tester) async {
       // Anything can open the app's URL scheme, so arriving at the dialog must
       // never be enough to start a download.
