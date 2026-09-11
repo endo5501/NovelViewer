@@ -14,6 +14,7 @@ import 'package:novel_viewer/features/keyboard_shortcuts/providers/keyboard_shor
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_host.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
+import 'package:novel_viewer/features/text_download/providers/download_request_providers.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 import 'package:novel_viewer/features/text_search/presentation/search_results_panel.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
@@ -76,6 +77,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// The layout the last build produced, so a crossing of the breakpoint can
   /// be told apart from an ordinary rebuild.
   ShellLayout? _lastLayout;
+
+  /// Whether the download dialog is on screen. A request that arrives while it
+  /// is open is handled by the dialog itself, which knows whether it is in a
+  /// state to take another URL; opening a second one over it would only stack
+  /// two dialogs.
+  bool _downloadDialogOpen = false;
 
   @override
   void initState() {
@@ -165,6 +172,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final scaffold = _scaffoldKey.currentState;
     if (scaffold == null || !scaffold.isDrawerOpen) return;
     scaffold.closeDrawer();
+  }
+
+  /// Opens the download dialog, optionally with a URL already in it, and
+  /// remembers that it is up for as long as it stays there.
+  Future<void> _openDownloadDialog({Uri? initialUrl}) async {
+    _downloadDialogOpen = true;
+    try {
+      await DownloadDialog.show(context, initialUrl: initialUrl);
+    } finally {
+      _downloadDialogOpen = false;
+    }
   }
 
   /// Ends the search session when the reader dismisses the drawer themselves —
@@ -332,6 +350,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.listen(fileOpenRequestProvider, (_, _) {
       _closeDrawerIfOpen();
     });
+    // A download asked for from outside the app — a shared link, a shortcut —
+    // reaches the reader as a pre-filled dialog awaiting confirmation, never as
+    // a download that simply starts.
+    ref.listen(pendingDownloadRequestProvider, (_, next) {
+      if (next == null || _downloadDialogOpen) return;
+      _openDownloadDialog(initialUrl: next.url);
+    });
     // Crossing the breakpoint replaces the end drawer without any change to
     // the provider, so nothing above would open a drawer for a search that was
     // already showing — and the scaffold hands its remembered "was open" flag
@@ -476,7 +501,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.download),
-                        onPressed: () => DownloadDialog.show(context),
+                        onPressed: _openDownloadDialog,
                         tooltip: AppLocalizations.of(
                           context,
                         )!.homeScreen_downloadTooltip,

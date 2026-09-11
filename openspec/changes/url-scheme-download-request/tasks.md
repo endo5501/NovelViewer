@@ -43,14 +43,14 @@
 - [x] 7.1 `HomeScreen` のテストを書く（ダイアログ未表示のときに受信するとダイアログが URL 入りで開く、すでに開いているときは二重に開かない、受信だけではダウンロードが開始されない）
 - [x] 7.2 テストを実行して失敗することを確認する
 - [x] 7.3 テストが正しいことを確認できた段階でコミットする
-- [ ] 7.4 `HomeScreen` に保留リクエストの `ref.listen` を追加し、ダイアログ未表示のときだけ開く処理を実装する
-- [ ] 7.5 受信経路から `downloadProvider.startDownload` / `startCollectionDownload` を呼び出していないことをコード上で確認する
+- [x] 7.4 `HomeScreen` に保留リクエストの `ref.listen` を追加し、ダイアログ未表示のときだけ開く処理を実装する
+- [x] 7.5 受信経路から `downloadProvider.startDownload` / `startCollectionDownload` を呼び出していないことをコード上で確認する
 
 ## 8. ネイティブへのスキーム登録
 
-- [ ] 8.1 `ios/Runner/Info.plist` に `CFBundleURLTypes` で `novelviewer` スキームを登録する
-- [ ] 8.2 `macos/Runner/Info.plist` に `CFBundleURLTypes` で `novelviewer` スキームを登録する
-- [ ] 8.3 Windows のインストーラ定義（`installer/novel_viewer.iss`）とアプリ起動処理にスキーム登録を追加していないことを確認する
+- [x] 8.1 `ios/Runner/Info.plist` に `CFBundleURLTypes` で `novelviewer` スキームを登録する
+- [x] 8.2 `macos/Runner/Info.plist` に `CFBundleURLTypes` で `novelviewer` スキームを登録する
+- [x] 8.3 Windows のインストーラ定義（`installer/novel_viewer.iss`）とアプリ起動処理にスキーム登録を追加していないことを確認する
 
 ## 9. 手動確認
 
