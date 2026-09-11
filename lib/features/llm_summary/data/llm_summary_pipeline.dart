@@ -218,7 +218,12 @@ class LlmSummaryPipeline {
   static Future<T> _withSingleRetry<T>(Future<T> Function() operation) async {
     try {
       return await operation();
-    } catch (_) {
+    } catch (e) {
+      // A failure that knows an identical retry cannot help is not retried.
+      // The second attempt would send the same prompt to the same model and
+      // be refused, or overrun, for the same reason — at the cost of a full
+      // generation.
+      if (e is LlmRetryableFailure && !e.isWorthRetrying) rethrow;
       return await operation();
     }
   }

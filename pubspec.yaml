@@ -65,6 +65,12 @@ dependencies:
   screen_retriever: ^0.2.2
   app_links: ^7.2.1
 
+  # In-repo plugin: reaches Apple's on-device foundation model. Present on
+  # every platform's dependency list because pub resolves this file once; the
+  # plugin itself only registers an implementation on iOS and macOS.
+  foundation_models_llm:
+    path: packages/foundation_models_llm
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

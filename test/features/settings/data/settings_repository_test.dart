@@ -198,6 +198,32 @@ void main() {
       expect(loaded.model, 'llama3');
     });
 
+    test(
+      'round-trips the on-device provider, which needs no other field',
+      () async {
+        final repo = buildRepo();
+
+        await repo.setLlmConfig(
+          const LlmConfig(provider: LlmProvider.appleOnDevice),
+        );
+        final loaded = repo.getLlmConfig();
+
+        expect(loaded.provider, LlmProvider.appleOnDevice);
+        expect(loaded.baseUrl, '');
+        expect(loaded.model, '');
+      },
+    );
+
+    test('a stored on-device selection is still read as configured', () async {
+      // What availability says is not this layer's business: losing it must
+      // not rewrite what the reader chose.
+      await prefs.setString('llm_provider', LlmProvider.appleOnDevice.name);
+      final repo = buildRepo();
+
+      expect(repo.getLlmConfig().provider, LlmProvider.appleOnDevice);
+      expect(repo.getLlmConfig().isConfigured, isTrue);
+    });
+
     test('getLlmConfig returns none for invalid provider value', () async {
       await prefs.setString('llm_provider', 'invalid');
       final repo = buildRepo();

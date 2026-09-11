@@ -13,6 +13,8 @@ import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
+import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 /// The scope a context-menu / popup analysis trigger expresses. The runner
@@ -124,11 +126,13 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     await _ref.read(llmSummaryRepositoryProvider(directory).future);
     await _ref.read(factCacheRepositoryProvider(directory).future);
     final service = _ref.read(llmSummaryServiceProvider(directory));
-    if (!context.mounted) return;
     if (service == null) {
-      _snack(context, l10n.llmAnalysis_noLlmConfigured);
+      final message = await _noServiceMessage(l10n);
+      if (!context.mounted) return;
+      _snack(context, message);
       return;
     }
+    if (!context.mounted) return;
 
     final selectedFile = _ref.read(selectedFileProvider);
     final resolvedSourceFile = sourceFileName ?? selectedFile?.name;
@@ -197,6 +201,33 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     if (!messenger.mounted) return;
     final message = failureMessage ?? l10n.llmAnalysis_savedSummary(word);
     messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// What to say when no client could be built.
+  ///
+  /// The generic message tells the reader to go and configure an LLM. With
+  /// the on-device provider selected that is wrong: they have configured one,
+  /// and what stopped the run is the model being unusable right now. Naming
+  /// that sends them somewhere they can act.
+  Future<String> _noServiceMessage(AppLocalizations l10n) async {
+    if (_ref.read(llmConfigProvider).provider != LlmProvider.appleOnDevice) {
+      return l10n.llmAnalysis_noLlmConfigured;
+    }
+    // Awaited rather than read: nothing else on this path resolves it, and an
+    // unresolved answer would fall through to the generic message.
+    return switch (await _ref.read(onDeviceModelAvailabilityProvider.future)) {
+      OnDeviceModelAvailability.intelligenceNotEnabled =>
+        l10n.settings_llmOnDeviceUnavailableIntelligenceOff,
+      OnDeviceModelAvailability.modelNotReady =>
+        l10n.settings_llmOnDeviceUnavailableModelNotReady,
+      OnDeviceModelAvailability.deviceNotEligible ||
+      OnDeviceModelAvailability.unsupportedPlatform =>
+        l10n.settings_llmOnDeviceUnavailableDeviceNotEligible,
+      // The model is fine, so whatever stopped the run was something else
+      // and the generic message is the honest one.
+      OnDeviceModelAvailability.available ||
+      OnDeviceModelAvailability.unknown => l10n.llmAnalysis_noLlmConfigured,
+    };
   }
 
   void _snack(BuildContext context, String message) {

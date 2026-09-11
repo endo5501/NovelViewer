@@ -64,7 +64,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           platformCapabilitiesProvider.overrideWithValue(
-            const PlatformCapabilities.forPlatform(isIOS: true),
+            const PlatformCapabilities.forPlatform(isIOS: true, isMacOS: false),
           ),
           sharedPreferencesProvider.overrideWithValue(preferences),
           packageInfoProvider.overrideWithValue(

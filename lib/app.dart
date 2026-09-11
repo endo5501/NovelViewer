@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
 import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 import 'package:novel_viewer/features/reading_progress/providers/reading_position_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
@@ -19,6 +20,7 @@ class NovelViewerApp extends ConsumerWidget {
     // but registration here means the detached lifecycle event is observed
     // even if the user never opens a text viewer in this session.
     ref.read(vacuumLifecycleProvider);
+    ref.read(onDeviceAvailabilityLifecycleProvider);
     // Attach the reading-progress listeners at startup. Reading them here
     // keeps them alive for the app's lifetime so the auto-save (on file
     // selection) and one-shot auto-open (on novel-folder entry) side

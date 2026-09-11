@@ -22,6 +22,12 @@ class _MinimalLlmClient extends LlmClient {
 
 void main() {
   group('LlmClient default behavior', () {
+    test('declares 4000 characters when it names no budget of its own', () {
+      // The value every client used before the budget existed, so adding the
+      // notion changes nothing for a client that does not care about it.
+      expect(_MinimalLlmClient().maxChunkSize, 4000);
+    });
+
     test(
       'default releaseResources is a no-op that completes successfully',
       () async {

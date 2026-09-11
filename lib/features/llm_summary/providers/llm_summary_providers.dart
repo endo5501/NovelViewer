@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
+import 'package:novel_viewer/features/llm_summary/data/foundation_models_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
 import 'package:novel_viewer/features/llm_summary/data/ollama_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/openai_compatible_client.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
+import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
@@ -39,6 +41,19 @@ final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
         apiKey: apiKey,
         model: config.model,
         httpClient: httpClient,
+      );
+    case LlmProvider.appleOnDevice:
+      // No fallback. A reader picks this provider so the novel's text stays
+      // on the device; quietly reaching for a server they configured earlier
+      // would defeat that choice without ever telling them. Their stored
+      // selection is left alone, so turning the system intelligence feature
+      // back on is all it takes to resume.
+      final availability = await ref.watch(
+        onDeviceModelAvailabilityProvider.future,
+      );
+      if (!availability.isAvailable) return null;
+      return FoundationModelsClient(
+        plugin: ref.watch(foundationModelsLlmProvider),
       );
     case LlmProvider.none:
       return null;

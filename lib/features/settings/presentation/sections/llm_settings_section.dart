@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/llm_summary/providers/ollama_model_list_provider.dart';
+import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -23,6 +24,10 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
   @override
   void initState() {
     super.initState();
+    // A model can finish becoming ready while the reader never leaves the
+    // app, and the resume that would otherwise refresh this never fires.
+    // Opening the section is the other natural moment to ask again.
+    ref.invalidate(onDeviceModelAvailabilityProvider);
     final repo = ref.read(settingsRepositoryProvider);
     final config = repo.getLlmConfig();
     _llmProvider = config.provider;
@@ -81,9 +86,82 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
     _saveLlmConfig();
   }
 
+  /// The current selection as a config, so the section can ask it whether a
+  /// provider is addressed by an endpoint rather than listing providers here.
+  LlmConfig get _config => LlmConfig(provider: _llmProvider);
+
+  /// Whether the on-device model can be picked right now.
+  ///
+  /// False while the query is still out. Picking it in that window would store
+  /// a selection the answer may contradict a moment later, and the window is
+  /// short enough that waiting costs the reader nothing.
+  bool get _onDeviceSelectable =>
+      ref.watch(onDeviceModelAvailabilityProvider).value?.isAvailable ?? false;
+
+  /// Whether the on-device model belongs in the list at all.
+  ///
+  /// Three reasons keep it out. It is not the reader's selection and the
+  /// platform cannot host it; or the native side has not answered yet, since
+  /// listing an entry and then withdrawing it reads worse than listing it a
+  /// beat late; or the answer is one of the permanent ones, where a dead
+  /// entry and a paragraph explaining it are clutter the reader can do
+  /// nothing about.
+  ///
+  /// The capability model cannot make that last call on its own: it knows the
+  /// platform is Apple's, not whether this particular system carries the
+  /// framework. An operating system older than the model answers
+  /// [OnDeviceModelAvailability.unsupportedPlatform], and that answer is what
+  /// settles it.
+  ///
+  /// The current selection is always listed, whatever the answer. The
+  /// dropdown requires an item matching its value, and a selection carried
+  /// over from another machine would otherwise take the dialog down.
+  bool get _onDeviceOffered {
+    if (_llmProvider == LlmProvider.appleOnDevice) return true;
+    if (!ref.watch(onDeviceLlmSupportedProvider)) return false;
+    return switch (ref.watch(onDeviceModelAvailabilityProvider).value) {
+      null => false,
+      OnDeviceModelAvailability.unsupportedPlatform ||
+      OnDeviceModelAvailability.deviceNotEligible => false,
+      _ => true,
+    };
+  }
+
+  /// Why the on-device model cannot be picked, or null when there is nothing
+  /// to say.
+  ///
+  /// Null while the query is still out: the option is unselectable then, but
+  /// "we have not asked yet" is not a reason worth showing for the moment it
+  /// lasts.
+  String? _onDeviceUnavailableReason(AppLocalizations l10n) {
+    final availability = ref.watch(onDeviceModelAvailabilityProvider).value;
+    return switch (availability) {
+      null || OnDeviceModelAvailability.available => null,
+      OnDeviceModelAvailability.deviceNotEligible =>
+        l10n.settings_llmOnDeviceUnavailableDeviceNotEligible,
+      OnDeviceModelAvailability.intelligenceNotEnabled =>
+        l10n.settings_llmOnDeviceUnavailableIntelligenceOff,
+      OnDeviceModelAvailability.modelNotReady =>
+        l10n.settings_llmOnDeviceUnavailableModelNotReady,
+      // An operating system without the framework is as permanent for this
+      // device as ineligible hardware, and reads the same way to the reader.
+      OnDeviceModelAvailability.unsupportedPlatform =>
+        l10n.settings_llmOnDeviceUnavailableDeviceNotEligible,
+      OnDeviceModelAvailability.unknown =>
+        l10n.settings_llmOnDeviceUnavailableUnknown,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final offerOnDevice = _onDeviceOffered;
+    // The reason explains a visible entry that cannot be picked. With no
+    // entry there is nothing to explain, and with a usable one nothing to
+    // say.
+    final onDeviceReason = offerOnDevice && !_onDeviceSelectable
+        ? _onDeviceUnavailableReason(l10n)
+        : null;
 
     if (_llmProvider == LlmProvider.ollama) {
       ref.listen<AsyncValue<List<String>>>(
@@ -132,10 +210,29 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
                 value: LlmProvider.ollama,
                 child: Text(l10n.settings_llmProviderOllama),
               ),
+              // Offered only where the platform could host the model. There it
+              // stays visible even when it cannot be used, because two of the
+              // three reasons are states the reader can leave and this is the
+              // only place the app could say so.
+              if (offerOnDevice)
+                DropdownMenuItem(
+                  value: LlmProvider.appleOnDevice,
+                  enabled: _onDeviceSelectable,
+                  child: Text(l10n.settings_llmProviderAppleOnDevice),
+                ),
             ],
           ),
         ),
-        if (_llmProvider != LlmProvider.none) ...[
+        // Outside the list, so it is readable without opening it.
+        if (onDeviceReason != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              onDeviceReason,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        if (_config.needsServerSettings) ...[
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(

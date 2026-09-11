@@ -244,6 +244,36 @@ abstract class AppLocalizations {
   /// **'Ollama'**
   String get settings_llmProviderOllama;
 
+  /// No description provided for @settings_llmProviderAppleOnDevice.
+  ///
+  /// In ja, this message translates to:
+  /// **'オンデバイス (Apple)'**
+  String get settings_llmProviderAppleOnDevice;
+
+  /// No description provided for @settings_llmOnDeviceUnavailableDeviceNotEligible.
+  ///
+  /// In ja, this message translates to:
+  /// **'この端末はオンデバイスのAIモデルに対応していません。'**
+  String get settings_llmOnDeviceUnavailableDeviceNotEligible;
+
+  /// No description provided for @settings_llmOnDeviceUnavailableIntelligenceOff.
+  ///
+  /// In ja, this message translates to:
+  /// **'Apple Intelligence が無効です。システム設定で有効にすると選べるようになります。'**
+  String get settings_llmOnDeviceUnavailableIntelligenceOff;
+
+  /// No description provided for @settings_llmOnDeviceUnavailableModelNotReady.
+  ///
+  /// In ja, this message translates to:
+  /// **'AIモデルの準備中です。しばらく待つと選べるようになります。'**
+  String get settings_llmOnDeviceUnavailableModelNotReady;
+
+  /// No description provided for @settings_llmOnDeviceUnavailableUnknown.
+  ///
+  /// In ja, this message translates to:
+  /// **'オンデバイスのAIモデルは現在利用できません。'**
+  String get settings_llmOnDeviceUnavailableUnknown;
+
   /// No description provided for @settings_endpointUrlLabel.
   ///
   /// In ja, this message translates to:

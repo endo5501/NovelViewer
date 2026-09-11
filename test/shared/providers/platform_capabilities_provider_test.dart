@@ -20,7 +20,7 @@ void main() {
   group('per-feature providers derive from the capability model', () {
     test('all features report available when the model says so', () {
       final container = _containerWith(
-        const PlatformCapabilities.forPlatform(isIOS: false),
+        const PlatformCapabilities.forPlatform(isIOS: false, isMacOS: false),
       );
 
       expect(container.read(ttsSupportedProvider), isTrue);
@@ -30,7 +30,7 @@ void main() {
 
     test('only LLM summary reports available on the iOS capability set', () {
       final container = _containerWith(
-        const PlatformCapabilities.forPlatform(isIOS: true),
+        const PlatformCapabilities.forPlatform(isIOS: true, isMacOS: false),
       );
 
       expect(container.read(llmSummarySupportedProvider), isTrue);
@@ -44,6 +44,7 @@ void main() {
           textToSpeech: true,
           appUpdate: false,
           llmSummary: true,
+          onDeviceLlm: false,
         ),
       );
 
