@@ -91,6 +91,19 @@ void main() {
     return editable.localToGlobal(local);
   }
 
+  /// A point [fraction] of the way across the character at [index], so a
+  /// test can aim at the half of a glyph a reader would.
+  Offset withinCharacter(WidgetTester tester, int index, double fraction) {
+    final editable = tester
+        .state<EditableTextState>(find.byType(EditableText))
+        .renderEditable;
+    Offset caret(int offset) =>
+        editable.getLocalRectForCaret(TextPosition(offset: offset)).center;
+    final a = caret(index);
+    final b = caret(index + 1);
+    return editable.localToGlobal(a + (b - a) * fraction);
+  }
+
   Future<void> tapCharacter(WidgetTester tester, int index) async {
     await tester.tapAt(characterCentre(tester, index));
     // Past the double-tap window, so consecutive taps in a test are read as
@@ -145,10 +158,11 @@ void main() {
     testWidgets('tapping the same word again after a dismissal reopens it', (
       tester,
     ) async {
-      // On iOS a repeat tap at the same spot leaves the selection unchanged,
-      // so no selection change is reported. Resolving the tap from the last
-      // known selection rather than from the change notification is what
-      // keeps the second tap working.
+      // A tap that lands where the caret already is changes no selection, so
+      // none is reported. Resolving from the last caret rather than only
+      // from the notification is what keeps the second tap working; the
+      // check that it came from the same place is what stops an unrelated
+      // gesture elsewhere from claiming it.
       final container = await pumpRenderer(tester);
 
       await tapCharacter(tester, content.indexOf('リ'));
@@ -163,6 +177,25 @@ void main() {
 
       expect(container.read(hoverPopupProvider).isVisible, isTrue);
       expect(container.read(hoverPopupProvider).word, 'アリス');
+    });
+
+    testWidgets('a second tap in quick succession does not reuse the first', (
+      tester,
+    ) async {
+      // A tap that follows another closely enough is a double tap, which
+      // reports its selection under a different cause and so leaves the
+      // remembered caret untouched. Resolving that caret anyway would put
+      // the first tap's word on screen at the second tap's position.
+      final container = await pumpRenderer(tester);
+
+      await tester.tapAt(characterCentre(tester, content.indexOf('リ')));
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(container.read(hoverPopupProvider).isVisible, isTrue);
+
+      await tester.tapAt(characterCentre(tester, content.indexOf('来')));
+      await tester.pump(kDoubleTapTimeout);
+
+      expect(container.read(hoverPopupProvider).isVisible, isFalse);
     });
 
     testWidgets('a touch that lands on a popup-owned menu is not resolved', (
@@ -224,6 +257,60 @@ void main() {
         isFalse,
         reason: 'the hover exit still dismisses what hover opened',
       );
+    });
+  });
+
+  group('horizontal mode, resolving which character was touched', () {
+    // A caret position sits between two characters, so the offset a tap
+    // reports names a boundary rather than a glyph. Which side of it the
+    // finger landed on is what decides the answer, and getting it wrong
+    // opens the neighbouring word.
+    const adjacent = 'アリスボブが来た。';
+    const bothMarked = {'アリス': MarkStyle.solid, 'ボブ': MarkStyle.solid};
+
+    testWidgets('the far half of a word opens that word, not the next one', (
+      tester,
+    ) async {
+      final container = await pumpRenderer(
+        tester,
+        text: adjacent,
+        marks: bothMarked,
+      );
+
+      // The right-hand side of the last character of "アリス", which reports
+      // the boundary it shares with the start of "ボブ".
+      await tester.tapAt(withinCharacter(tester, 2, 0.8));
+      await tester.pump(kDoubleTapTimeout);
+
+      expect(container.read(hoverPopupProvider).word, 'アリス');
+    });
+
+    testWidgets('the near half of the next word opens the next word', (
+      tester,
+    ) async {
+      final container = await pumpRenderer(
+        tester,
+        text: adjacent,
+        marks: bothMarked,
+      );
+
+      await tester.tapAt(withinCharacter(tester, 3, 0.2));
+      await tester.pump(kDoubleTapTimeout);
+
+      expect(container.read(hoverPopupProvider).word, 'ボブ');
+    });
+
+    testWidgets('the character after a mark opens nothing', (tester) async {
+      final container = await pumpRenderer(
+        tester,
+        text: adjacent,
+        marks: const {'アリス': MarkStyle.solid},
+      );
+
+      await tester.tapAt(withinCharacter(tester, 3, 0.2));
+      await tester.pump(kDoubleTapTimeout);
+
+      expect(container.read(hoverPopupProvider).isVisible, isFalse);
     });
   });
 

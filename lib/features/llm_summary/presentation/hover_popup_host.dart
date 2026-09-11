@@ -56,9 +56,10 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
   void _onPointerDownOutside(PointerDownEvent event) {
     if (!kNoSecondaryButtonPointerKinds.contains(event.kind)) return;
     final notifier = ref.read(hoverPopupProvider.notifier);
-    // The re-analysis dropdown is a modal route with a barrier of its own, so
-    // a press on one of its items does not normally reach here. Guarding
-    // anyway keeps the popup from depending on the order of two overlays.
+    // The re-analysis dropdown is a MenuAnchor. Its items sit in an overlay
+    // above this one and do not stop a press from reaching it, so without
+    // this the touch that picks an item would take down the popup the menu
+    // belongs to.
     if (notifier.isChildMenuOpen) return;
     if (_popupBounds()?.contains(event.position) ?? true) return;
     notifier.hide();

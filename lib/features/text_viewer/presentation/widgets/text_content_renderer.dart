@@ -322,15 +322,26 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   List<MarkSpan> _marks = const [];
   List<TextSegment> _segments = const [];
 
-  // The display offset SelectableText last reported for a tap, and the screen
+  // The caret position SelectableText last reported for a tap, and the screen
   // position of the touch that is waiting to be resolved against it.
   //
-  // The offset is remembered rather than acted on directly: on iOS a repeat
+  // The caret is remembered rather than acted on directly: on iOS a repeat
   // tap at the same spot leaves the selection unchanged, so no change is
   // reported, and resolving from the notification alone would make the second
   // tap on a word do nothing.
-  int? _lastTapDisplayOffset;
+  TextPosition? _lastTapCaret;
   Offset? _pendingTouchTap;
+
+  /// Where the touch was that the remembered caret belongs to. A later touch
+  /// may reuse that caret only from the same place: a tap that reports no
+  /// caret of its own did so either because nothing moved — the reader
+  /// tapping the same word again — or because the platform read the gesture
+  /// as something else, a double tap or a press inside an existing
+  /// selection. Only the first deserves the old answer.
+  Offset? _lastTapCaretPosition;
+
+  /// Whether a caret has been reported for the touch now on the text.
+  bool _tapReportedCaret = false;
 
   /// Where the touch now on the text first landed, or null when the pointer
   /// is not one that needs this path. A drag ends with a pointer-up over the
@@ -416,6 +427,11 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   void didUpdateWidget(TextContentRenderer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.content, widget.content)) {
+      // The caret belongs to the document it was taken in, and naming a
+      // position in text that is no longer on screen.
+      _lastTapCaret = null;
+      _lastTapCaretPosition = null;
+      _pendingTouchTap = null;
       _contentHash = null;
       _lastTtsScrolledRange = null;
       _cachedTextSpan = null;
@@ -723,6 +739,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     _touchDownPosition = kNoSecondaryButtonPointerKinds.contains(event.kind)
         ? event.position
         : null;
+    _tapReportedCaret = false;
   }
 
   void _onTextPointerCancel(PointerCancelEvent event) {
@@ -764,15 +781,18 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     _pendingTouchTap = null;
     if (!mounted || position == null) return;
 
-    // The re-analysis dropdown floats over the text. A touch on one of its
-    // items must not be read as a tap on whatever it covers, which would
-    // dismiss the popup the menu belongs to.
+    // The re-analysis dropdown is a MenuAnchor floating over the text, and a
+    // press on one of its items reaches through to here. Read as a tap it
+    // would dismiss the popup the menu belongs to.
     if (ref.read(hoverPopupProvider.notifier).isChildMenuOpen) return;
 
-    final displayOffset = _lastTapDisplayOffset;
-    final mark = displayOffset == null
-        ? null
-        : _markAtDisplayOffset(displayOffset);
+    final caret = _stillApplicableCaret(position);
+    // Where the caret now in hand was taken, for a later touch that reports
+    // none of its own. Recorded here rather than where the caret arrives
+    // because the platform may report it on the press or on the release, and
+    // only this point sees the whole touch either way.
+    if (_tapReportedCaret) _lastTapCaretPosition = position;
+    final mark = caret == null ? null : _markAtCaret(caret);
     if (mark == null) {
       ref.read(hoverPopupProvider.notifier).hide();
       return;
@@ -780,15 +800,42 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     _onMarkTap(mark.word, position, mark.occurrence);
   }
 
-  MarkSpan? _markAtDisplayOffset(int displayOffset) {
+  /// The caret to resolve the touch that lifted at [position] against, or
+  /// null when there is none this touch may claim.
+  ///
+  /// A touch that reported its own caret uses that. One that reported none
+  /// may fall back on the last, but only from the same place: that is the
+  /// reader tapping a word again after dismissing its summary, which on iOS
+  /// changes no selection and so goes unreported. A touch elsewhere that
+  /// reported nothing was read as some other gesture, and has no caret of
+  /// its own to speak for it.
+  TextPosition? _stillApplicableCaret(Offset position) {
+    final caret = _lastTapCaret;
+    if (caret == null) return null;
+    if (_tapReportedCaret) return caret;
+    final previous = _lastTapCaretPosition;
+    if (previous == null) return null;
+    return (position - previous).distance <= kTouchSlop ? caret : null;
+  }
+
+  /// The mark covering the character [caret] was placed against.
+  ///
+  /// A caret sits between two characters, so its offset alone names a
+  /// boundary rather than a glyph: the offset where a word ends is the same
+  /// one where the next begins. The affinity says which side the touch was
+  /// on, and is the only thing that separates the last character of a marked
+  /// word from the first character after it. Without it a tap aimed at the
+  /// end of one word opens the word beside it.
+  MarkSpan? _markAtCaret(TextPosition caret) {
     // A tap reported against an invalid selection carries -1, which would
     // otherwise clamp to 0 and open whatever word starts the file.
-    if (_marks.isEmpty || displayOffset < 0) return null;
-    final offset = plainTextOffsetFromDisplayOffset(displayOffset, _segments);
-    for (final candidate in [offset, offset - 1]) {
-      for (final mark in _marks) {
-        if (candidate >= mark.start && candidate < mark.end) return mark;
-      }
+    if (_marks.isEmpty || caret.offset < 0) return null;
+    final boundary = plainTextOffsetFromDisplayOffset(caret.offset, _segments);
+    final character = caret.affinity == TextAffinity.upstream
+        ? boundary - 1
+        : boundary;
+    for (final mark in _marks) {
+      if (character >= mark.start && character < mark.end) return mark;
     }
     return null;
   }
@@ -1321,7 +1368,8 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
                       textSpan,
                       onSelectionChanged: (selection, cause) {
                         if (cause == SelectionChangedCause.tap) {
-                          _lastTapDisplayOffset = selection.baseOffset;
+                          _lastTapCaret = selection.base;
+                          _tapReportedCaret = true;
                         }
                         final selectedText = selectedTextFromSelection(
                           selection,
