@@ -419,6 +419,76 @@ void main() {
       expect(container.read(rightColumnVisibleProvider), isFalse);
       expect(find.byKey(const Key('right_column')), findsNothing);
     });
+
+    testWidgets('widening rebuilds the file list on the selected file', (
+      tester,
+    ) async {
+      // The narrow layout keeps the file browser in a closed drawer, so it is
+      // not mounted at all; widening builds it for the first time with a
+      // selection already in place. Nothing tells it the selection changed, so
+      // without the reveal the reader lands back at episode 1.
+      final files = List.generate(200, (i) {
+        final n = (i + 1).toString().padLeft(3, '0');
+        return FileEntry(name: '$n-ep${i + 1}.txt', path: '/library/$n.txt');
+      });
+      final target = files[149];
+
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 600);
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+            shellBreakpointProvider.overrideWithValue(900),
+            directoryContentsProvider.overrideWith((ref) async {
+              return DirectoryContents(files: files, subdirectories: const []);
+            }),
+            currentDirectoryProvider.overrideWith(
+              () => _FixedDirectoryNotifier('/library'),
+            ),
+            selectedFileProvider.overrideWith(
+              () => _FixedSelectionNotifier(target),
+            ),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+      // Not pumpAndSettle: the selected episode does not exist on disk, so the
+      // viewer is left with a progress indicator and the frame stream never
+      // quiesces. This is the same wait the drawer-closing tests above use.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        find.byKey(const Key('left_column')),
+        findsNothing,
+        reason: 'Precondition: the narrow layout leaves the browser unmounted',
+      );
+
+      tester.view.physicalSize = const Size(1000, 600);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+      final list = find.descendant(
+        of: find.byKey(const Key('left_column')),
+        matching: find.byType(ListView),
+      );
+      final viewport = tester.getRect(list);
+      final row = tester.getRect(find.text(target.name));
+      expect(
+        row.top >= viewport.top && row.bottom <= viewport.bottom,
+        isTrue,
+        reason: 'The rebuilt list must show the selected episode',
+      );
+      expect(
+        (row.center.dy - viewport.center.dy).abs(),
+        lessThan(64.0),
+        reason: 'and place it within one row of the middle',
+      );
+    });
   });
 
   group('the app bar', () {
@@ -573,4 +643,23 @@ void main() {
       expect(find.byType(Drawer), findsNothing);
     });
   });
+}
+
+/// Pins the browser to one folder, so a layout change is the only thing moving.
+class _FixedDirectoryNotifier extends CurrentDirectoryNotifier {
+  final String _value;
+  _FixedDirectoryNotifier(this._value);
+
+  @override
+  String? build() => _value;
+}
+
+/// Starts the app with an episode already open, the state a reader is in when
+/// they rotate the device.
+class _FixedSelectionNotifier extends SelectedFileNotifier {
+  final FileEntry _value;
+  _FixedSelectionNotifier(this._value);
+
+  @override
+  FileEntry? build() => _value;
 }

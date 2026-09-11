@@ -1,3 +1,4 @@
+import 'dart:async' show Completer;
 import 'dart:io' show Platform;
 
 import 'package:flutter/gestures.dart';
@@ -682,6 +683,301 @@ void main() {
         equals(positionBefore),
         reason:
             'Re-selecting the currently-selected file must not move the scroll position',
+      );
+    });
+
+    testWidgets('mounting with a selection reveals the selected file', (
+      WidgetTester tester,
+    ) async {
+      final files = _numberedFiles(200);
+      final target = files[149];
+
+      await _pumpPanel(tester, files: files, selected: target);
+      await tester.pumpAndSettle();
+
+      // Not just findsOneWidget: a ListView also builds the rows in its cache
+      // area either side of the viewport, so a row can be found while still
+      // off-screen. Compare the rectangles instead.
+      final viewport = tester.getRect(find.byType(ListView));
+      final row = tester.getRect(find.text(target.name));
+      expect(
+        row.top >= viewport.top && row.bottom <= viewport.bottom,
+        isTrue,
+        reason:
+            'File #150 must be inside the viewport, not merely built in the '
+            'cache area around it',
+      );
+      expect(
+        (row.center.dy - viewport.center.dy).abs(),
+        lessThan(64.0),
+        reason: 'and it sits near the middle, within one row of the centre',
+      );
+    });
+
+    testWidgets('the list is already placed on the first frame that shows it', (
+      WidgetTester tester,
+    ) async {
+      final files = _numberedFiles(200);
+      final target = files[149];
+
+      // Frame 1: the listing is still resolving, so there is no list yet.
+      await _pumpPanel(tester, files: files, selected: target);
+      expect(find.byType(Scrollable), findsNothing);
+
+      // Frame 2 is the first one that composites the list. Assert on the laid
+      // out geometry, not on the scroll offset: a post-frame jump updates the
+      // offset before this pump returns, but lays the frame out at the top and
+      // only reaches the selection on the frame after.
+      await tester.pump();
+      final viewport = tester.getRect(find.byType(ListView));
+      final row = tester.getRect(find.text(target.name));
+      expect(
+        row.top >= viewport.top && row.bottom <= viewport.bottom,
+        isTrue,
+        reason:
+            'The very first frame that shows the list must already be laid '
+            'out on the selection',
+      );
+
+      final position = _panelScrollPosition(tester);
+      final placed = position.pixels;
+      await tester.pumpAndSettle();
+      expect(
+        position.pixels,
+        equals(placed),
+        reason: 'and nothing animates afterwards',
+      );
+    });
+
+    testWidgets('a selection change still scrolls with an animation', (
+      WidgetTester tester,
+    ) async {
+      final files = _numberedFiles(200);
+
+      await _pumpPanel(tester, files: files);
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(FileBrowserPanel)),
+      );
+      container.read(selectedFileProvider.notifier).selectFile(files[149]);
+      // One frame for the post-frame callback to start the scroll, one for the
+      // ticker's first tick (elapsed 0), then let 100ms of it run.
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final position = _panelScrollPosition(tester);
+      final partway = position.pixels;
+      await tester.pumpAndSettle();
+
+      expect(partway, greaterThan(0.0), reason: 'the scroll has started');
+      expect(
+        partway,
+        lessThan(position.pixels),
+        reason:
+            'and it was still under way 100ms in, so the selection change '
+            'animates rather than jumping',
+      );
+    });
+
+    testWidgets('mounting without a selection leaves the list at the top', (
+      WidgetTester tester,
+    ) async {
+      await _pumpPanel(tester, files: _numberedFiles(200));
+      await tester.pumpAndSettle();
+
+      expect(_panelScrollPosition(tester).pixels, equals(0.0));
+    });
+
+    testWidgets(
+      'a selection from another directory leaves the list at the top',
+      (WidgetTester tester) async {
+        await _pumpPanel(
+          tester,
+          files: _numberedFiles(200),
+          selected: const FileEntry(
+            name: '001_elsewhere.txt',
+            path: '/other/001_elsewhere.txt',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(_panelScrollPosition(tester).pixels, equals(0.0));
+      },
+    );
+
+    testWidgets('navigating into another directory does not reveal again', (
+      WidgetTester tester,
+    ) async {
+      final files = _numberedFiles(200);
+      final target = files[149];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            // Both folders list the same episodes. A reveal firing a second
+            // time would therefore have somewhere to scroll to, which is what
+            // lets the final assertion tell the two cases apart.
+            directoryContentsProvider.overrideWith((ref) async {
+              ref.watch(currentDirectoryProvider);
+              return DirectoryContents(files: files, subdirectories: const []);
+            }),
+            currentDirectoryProvider.overrideWith(
+              () => _SwitchableDirectoryNotifier('/test'),
+            ),
+            selectedFileProvider.overrideWith(
+              () => _TestSelectedFileNotifier(target),
+            ),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(height: 400, child: FileBrowserPanel()),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        _panelScrollPosition(tester).pixels,
+        greaterThan(0.0),
+        reason: 'Precondition: the mount spent its reveal on the selection',
+      );
+
+      // The reader scrolls back to the first entry before moving on.
+      _panelScrollPosition(tester).jumpTo(0.0);
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(FileBrowserPanel)),
+      );
+      container.read(currentDirectoryProvider.notifier).setDirectory('/other');
+      await tester.pumpAndSettle();
+
+      expect(
+        _panelScrollPosition(tester).pixels,
+        equals(0.0),
+        reason:
+            'The reveal is spent for this mount, so a new listing must not '
+            'pull the list back to the selected file',
+      );
+    });
+
+    testWidgets('a listing that arrives after mount still gets its reveal', (
+      WidgetTester tester,
+    ) async {
+      final files = _numberedFiles(200);
+      final target = files[149];
+      final completer = Completer<DirectoryContents>();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) => completer.future),
+            currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/test'),
+            ),
+            selectedFileProvider.overrideWith(
+              () => _TestSelectedFileNotifier(target),
+            ),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: const MaterialApp(
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(height: 400, child: FileBrowserPanel()),
+            ),
+          ),
+        ),
+      );
+      // Not pumpAndSettle: the loading indicator spins forever.
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      completer.complete(
+        DirectoryContents(files: files, subdirectories: const []),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(target.name),
+        findsOneWidget,
+        reason: 'The loading build must not consume the once-per-mount reveal',
+      );
+    });
+
+    testWidgets('reopening the drawer reveals the selected file', (
+      WidgetTester tester,
+    ) async {
+      final files = _numberedFiles(200);
+      final target = files[149];
+      final scaffoldKey = GlobalKey<ScaffoldState>();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            directoryContentsProvider.overrideWith((ref) async {
+              return DirectoryContents(files: files, subdirectories: const []);
+            }),
+            currentDirectoryProvider.overrideWith(
+              () => _TestCurrentDirectoryNotifier('/test'),
+            ),
+            selectedFileProvider.overrideWith(
+              () => _TestSelectedFileNotifier(target),
+            ),
+            libraryPathProvider.overrideWithValue('/library'),
+          ],
+          child: MaterialApp(
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              key: scaffoldKey,
+              drawer: const Drawer(child: FileBrowserPanel()),
+              body: const SizedBox.expand(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      scaffoldKey.currentState!.openDrawer();
+      await tester.pumpAndSettle();
+      expect(find.byType(FileBrowserPanel), findsOneWidget);
+
+      scaffoldKey.currentState!.closeDrawer();
+      await tester.pumpAndSettle();
+      expect(
+        find.byType(FileBrowserPanel),
+        findsNothing,
+        reason:
+            'A closed drawer unmounts its child, which is why the scroll '
+            'position is lost in the first place',
+      );
+
+      scaffoldKey.currentState!.openDrawer();
+      await tester.pumpAndSettle();
+
+      final viewport = tester.getRect(find.byType(ListView));
+      final row = tester.getRect(find.text(target.name));
+      expect(
+        row.top >= viewport.top && row.bottom <= viewport.bottom,
+        isTrue,
+        reason:
+            'Reopening the drawer must show the selected file without the '
+            'reader scrolling, inside the viewport rather than merely built '
+            'in the cache area around it',
+      );
+      expect(
+        (row.center.dy - viewport.center.dy).abs(),
+        lessThan(64.0),
+        reason: 'and near the middle, within one row of the centre',
       );
     });
 
@@ -1411,4 +1707,75 @@ Future<void> _pumpBrowserAtLibraryRoot(WidgetTester tester) async {
     ),
   );
   await tester.pumpAndSettle();
+}
+
+/// Builds [count] numbered episode files, the shape a long novel folder has.
+List<FileEntry> _numberedFiles(
+  int count, {
+  String dir = '/test',
+  String suffix = 'ep',
+}) => List.generate(count, (i) {
+  final n = (i + 1).toString().padLeft(3, '0');
+  return FileEntry(
+    name: '$n-$suffix${i + 1}.txt',
+    path: '$dir/$n-$suffix${i + 1}.txt',
+  );
+});
+
+/// Mounts the browser over [files], optionally with [selected] already chosen,
+/// in a viewport short enough that most of the list is off-screen.
+Future<void> _pumpPanel(
+  WidgetTester tester, {
+  required List<FileEntry> files,
+  FileEntry? selected,
+  double height = 400,
+}) {
+  return tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        directoryContentsProvider.overrideWith((ref) async {
+          return DirectoryContents(files: files, subdirectories: const []);
+        }),
+        currentDirectoryProvider.overrideWith(
+          () => _TestCurrentDirectoryNotifier('/test'),
+        ),
+        if (selected != null)
+          selectedFileProvider.overrideWith(
+            () => _TestSelectedFileNotifier(selected),
+          ),
+        libraryPathProvider.overrideWithValue('/library'),
+      ],
+      child: MaterialApp(
+        locale: const Locale('ja'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: SizedBox(height: height, child: const FileBrowserPanel()),
+        ),
+      ),
+    ),
+  );
+}
+
+/// The scroll position of the browser's file list.
+ScrollPosition _panelScrollPosition(WidgetTester tester) => tester
+    .state<ScrollableState>(
+      find.descendant(
+        of: find.byType(FileBrowserPanel),
+        matching: find.byType(Scrollable),
+      ),
+    )
+    .position;
+
+/// A current-directory notifier that switches folders without touching the
+/// per-folder database registry, which a widget test does not provide.
+class _SwitchableDirectoryNotifier extends CurrentDirectoryNotifier {
+  final String? _initialValue;
+  _SwitchableDirectoryNotifier(this._initialValue);
+
+  @override
+  String? build() => _initialValue;
+
+  @override
+  void setDirectory(String path) => state = path;
 }
