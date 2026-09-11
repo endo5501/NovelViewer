@@ -1,4 +1,5 @@
 import 'dart:io' show FileSystemException;
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -58,23 +59,24 @@ class FileBrowserPanel extends ConsumerStatefulWidget {
 const double _kFileTileExtent = 64.0;
 
 class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
-  final ScrollController _scrollController = ScrollController();
-
-  /// Whether this mount has already placed the list on the selected file.
+  /// The file list's scroll controller, created by [_controllerForViewport] on
+  /// the first build that has both a listing and a measured viewport.
   ///
-  /// A closed [Drawer] unmounts its child, so in the narrow layout the whole
-  /// panel — and with it [_scrollController] — is rebuilt from scratch every
-  /// time the reader opens the file browser. Crossing the shell's layout
-  /// breakpoint (rotating a tablet, resizing a window) does the same. In both
-  /// cases a selection is already in place, so it never transitions and the
-  /// listener in [initState] never fires; the list would open at the top.
-  /// Revealing the selection once per mount covers every such path without the
-  /// panel having to know which one it is in.
+  /// Deferring its creation is what lets the list open already sitting on the
+  /// selected file. A closed [Drawer] unmounts its child, so in the narrow
+  /// layout the whole panel is rebuilt from scratch every time the reader
+  /// opens the file browser, and crossing the shell's layout breakpoint
+  /// (rotating a tablet, resizing a window) does the same. The selection is
+  /// already in place on such a remount, so it never transitions and the
+  /// listener in [initState] never fires — the list would open at the top.
+  /// Handing the controller its starting offset before the list is first laid
+  /// out covers every one of those paths, without the panel having to know
+  /// which one it is in and without a frame at the top first.
   ///
-  /// Once per *mount*, not once per listing: opening another folder while the
-  /// panel stays mounted must show that folder from its first entry rather
-  /// than chase a selection carried over from the folder before it.
-  bool _didInitialReveal = false;
+  /// Existing for the rest of the mount is also what keeps the placement to a
+  /// single occasion: opening another folder while the panel stays mounted
+  /// must not chase a selection carried over from the folder before it.
+  ScrollController? _scrollController;
 
   @override
   void initState() {
@@ -92,40 +94,88 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _scrollController?.dispose();
     super.dispose();
   }
 
-  /// Scrolls [file] to the middle of the viewport after the current frame.
+  /// The position of [file] in the flat item list, or null when the current
+  /// listing does not contain it.
   ///
-  /// [animate] is false for the once-per-mount reveal. A drawer slides open in
-  /// roughly the same 250ms this animation takes, so animating there would
-  /// have the list still moving while the panel itself is still arriving. A
-  /// jump lands before the first frame the reader sees.
-  void _scheduleScrollTo(FileEntry file, {bool animate = true}) {
+  /// Files render after subdirectories, so the folder count is the offset
+  /// between a file's index and its row.
+  int? _flatIndexOf(DirectoryContents contents, FileEntry file) {
+    final fileIndex = contents.files.indexWhere((f) => f.path == file.path);
+    if (fileIndex < 0) return null;
+    return contents.subdirectories.length + fileIndex;
+  }
+
+  /// The scroll offset that puts row [flatIndex] in the middle of a viewport
+  /// [viewportHeight] tall, kept within [maxScrollExtent].
+  ///
+  /// Rows either side of the target stay visible, which is what makes the
+  /// neighbouring episodes reachable from where the list lands.
+  double _centeredOffset({
+    required int flatIndex,
+    required double viewportHeight,
+    required double maxScrollExtent,
+  }) {
+    final centered =
+        flatIndex * _kFileTileExtent - (viewportHeight - _kFileTileExtent) / 2;
+    return centered.clamp(0.0, maxScrollExtent);
+  }
+
+  /// The controller for a list of [itemCount] rows in a viewport
+  /// [viewportHeight] tall, created on first use and kept for the rest of the
+  /// mount.
+  ///
+  /// The first call is the one that places the list: it starts the controller
+  /// on the selected file rather than at the top. A fixed [_kFileTileExtent]
+  /// makes both the target offset and the maximum scroll extent computable
+  /// from the row count alone, so the offset is known before the list has ever
+  /// been laid out and no frame is composited at the top on the way there.
+  ScrollController _controllerForViewport({
+    required double viewportHeight,
+    required int itemCount,
+    required DirectoryContents contents,
+    required FileEntry? selectedFile,
+  }) {
+    final existing = _scrollController;
+    if (existing != null) return existing;
+
+    var initialOffset = 0.0;
+    if (selectedFile != null) {
+      final flatIndex = _flatIndexOf(contents, selectedFile);
+      if (flatIndex != null) {
+        initialOffset = _centeredOffset(
+          flatIndex: flatIndex,
+          viewportHeight: viewportHeight,
+          maxScrollExtent: math.max(
+            0.0,
+            itemCount * _kFileTileExtent - viewportHeight,
+          ),
+        );
+      }
+    }
+    return _scrollController = ScrollController(
+      initialScrollOffset: initialOffset,
+    );
+  }
+
+  /// Animates [file] to the middle of the viewport after the current frame.
+  void _scheduleScrollTo(FileEntry file) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
+      final controller = _scrollController;
+      if (!mounted || controller == null || !controller.hasClients) return;
       final contents = ref.read(directoryContentsProvider).value;
       if (contents == null) return;
-      final fileIndex = contents.files.indexWhere((f) => f.path == file.path);
-      if (fileIndex < 0) return;
-      // Files render after subdirectories in the flat item list.
-      final flatIndex = contents.subdirectories.length + fileIndex;
-      final viewportHeight = _scrollController.position.viewportDimension;
-      // Centre the target row in the viewport when possible.
-      final targetOffset =
-          flatIndex * _kFileTileExtent -
-          (viewportHeight - _kFileTileExtent) / 2;
-      final clamped = targetOffset.clamp(
-        0.0,
-        _scrollController.position.maxScrollExtent,
-      );
-      if (!animate) {
-        _scrollController.jumpTo(clamped);
-        return;
-      }
-      _scrollController.animateTo(
-        clamped,
+      final flatIndex = _flatIndexOf(contents, file);
+      if (flatIndex == null) return;
+      controller.animateTo(
+        _centeredOffset(
+          flatIndex: flatIndex,
+          viewportHeight: controller.position.viewportDimension,
+          maxScrollExtent: controller.position.maxScrollExtent,
+        ),
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
       );
@@ -270,28 +320,27 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
           ),
         ];
 
-        // Reveal the selection from here rather than from initState: a panel
-        // mounted while the listing is still loading has no ListView, so a
-        // post-frame callback would find no scroll client and the one chance
-        // would be spent on nothing. Only a build that actually returns the
-        // list consumes it — at startup the provider first yields an empty
-        // listing (no directory chosen yet), which returns the "no files"
-        // message above and must leave the reveal for the real listing.
+        // The viewport height decides where a centred row sits, so the
+        // controller is created from inside a LayoutBuilder rather than in
+        // initState. Only a build that reaches here creates it, which is what
+        // leaves the placement to the first real listing: a panel mounted
+        // while the directory is still loading returns the indicator above,
+        // and an empty folder returns the message above.
         //
-        // The flag is spent even when nothing is selected, so that a file
-        // tapped afterwards still scrolls with the usual animation instead of
-        // being overtaken by a jump from this branch.
-        if (!_didInitialReveal) {
-          _didInitialReveal = true;
-          if (selectedFile != null) {
-            _scheduleScrollTo(selectedFile, animate: false);
-          }
-        }
-
-        return ListView(
-          controller: _scrollController,
-          itemExtent: _kFileTileExtent,
-          children: items,
+        // The controller is created even when nothing is selected, so that a
+        // file tapped afterwards scrolls with the usual animation instead of
+        // being overtaken by a placement meant for a remount.
+        return LayoutBuilder(
+          builder: (context, constraints) => ListView(
+            controller: _controllerForViewport(
+              viewportHeight: constraints.maxHeight,
+              itemCount: items.length,
+              contents: contents,
+              selectedFile: selectedFile,
+            ),
+            itemExtent: _kFileTileExtent,
+            children: items,
+          ),
         );
       },
     );

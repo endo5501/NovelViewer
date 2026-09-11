@@ -63,32 +63,44 @@ ref.listenManual<FileEntry?>(selectedFileProvider, (prev, next) {
 
 ## Decisions
 
-### 決定 1: 初回スクロールの発火点は ListView を組み立てるビルドに置く
+### 決定 1: `ScrollController` の生成を遅らせ、初期オフセットで位置を決める
 
-`initState` の `addPostFrameCallback` だけでは足りない。アプリ起動直後は `directoryContentsProvider` がまだ読み込み中で、その間 `contentsAsync.when` は `CircularProgressIndicator` を返す。`ListView` が存在しないので `_scrollController.hasClients` が false になり、`_scheduleScrollTo` は何もせずに終わる。そこで一度きりのフラグを持ち、`_buildFileList` の `data` ブランチで実際に `ListView` を返すときに判定する。
+`addPostFrameCallback` からの `jumpTo` では 1 フレーム足りない。ポストフレームコールバックはそのフレームの `compositeFrame` が済んだあとに走るので、リストは必ず一度だけ先頭位置で合成される。位置が変わるのは次のフレームになる。ドロワーの場合はその時点でドロワーが画面外なので見えないが、回転で固定カラムとして現れる場合は見え得るし、フレーム落ちが起きればその時間は伸びる。
+
+そこで `ScrollController` をフィールド初期化で作らず、リストを組み立てるときに `initialScrollOffset` を与えて生成する。
 
 ```dart
-bool _didInitialReveal = false;
+ScrollController? _scrollController;
+
+ScrollController _controllerForViewport({...}) {
+  final existing = _scrollController;
+  if (existing != null) return existing;
+  return _scrollController = ScrollController(initialScrollOffset: ...);
+}
 ```
 
-この置き方なら、キャッシュが効いて即座にデータが揃う再表示時も、読み込みを挟む起動時も、同じ 1 か所で扱える。
+中央寄せの位置にはビューポート高さが要るので、`ListView` を `LayoutBuilder` で包み `constraints.maxHeight` を使う。`LayoutBuilder` の builder はレイアウト中に走るため、こうして作ったコントローラは同じフレームのレイアウトに間に合う。最初に合成されるフレームが既に目的位置になる。
 
-### 決定 2: フラグは「ListView を組み立てた」ときにだけ立てる
+`maxScrollExtent` はレイアウト前には分からないが、`itemExtent` が `_kFileTileExtent` で固定なので `行数 * _kFileTileExtent - ビューポート高さ` として自前で計算できる。負になり得るので `math.max` で 0 に寄せてからクランプする。
 
-`contents.isEmpty` のときは「ファイルがありません」の文言を返すだけで `ListView` が無い。ここでフラグを立てると初回スクロールの機会を失う。
+コントローラが「まだ無い」ことが、そのまま「まだ位置を決めていない」ことを表す。別途フラグを持つ必要はない。
 
-起動時の実際の並びがこれに当たる。`currentDirectoryProvider` の初期値が null の間、`directoryContentsProvider` は `DirectoryContents.empty()` を返す（`file_browser_providers.dart:68`）。ライブラリのパスが決まってディレクトリが設定されてから、はじめて中身のあるリストになる。空のブランチでフラグを立てると、本来のリストが出たときには既に消費済みになってしまう。
+### 決定 2: コントローラを作るのはリストを返すビルドだけ
 
-### 決定 3: 初回だけ `jumpTo`、選択変化は `animateTo` のまま
+`loading` と `error` のブランチ、および `contents.isEmpty` のブランチはコントローラを作らない。読み込み中のパネルにはまだ `ListView` が無く、ここで機会を消費すると本来の一覧が出たときには手遅れになる。
 
-`_scheduleScrollTo` にアニメーション有無の引数を足し、オフセット計算（中央寄せ、`maxScrollExtent` でのクランプ、フォルダ件数を足した flat index の算出）は共有する。
+なお `currentDirectoryProvider` が null の間は `build` が「フォルダを選択してください」を返し、`_buildFileList` 自体が呼ばれない。空一覧のブランチに来るのは実際に空のフォルダを開いたときである。
+
+### 決定 3: 初回は初期オフセット、選択変化は `animateTo` のまま
 
 ```
-初回（マウント後 1 回）    jumpTo(clamped)
-選択の変化（既存）        animateTo(clamped, 250ms, easeInOut)
+初回（マウントごとに 1 回）  ScrollController(initialScrollOffset: 中央寄せ位置)
+選択の変化（既存）           animateTo(中央寄せ位置, 250ms, easeInOut)
 ```
 
-ドロワーのスライドインは約 246ms で、250ms のスクロールアニメーションとほぼ同じ長さになる。同時に走らせると、開きながら中身も動くことになり落ち着かない。`jumpTo` はドロワーがまだほとんど見えていない最初のフレームで完了するため、ユーザーには最初からその位置にあるように見える。
+中央寄せの計算（`_centeredOffset`）と flat index の算出（`_flatIndexOf`）は両者で共有する。
+
+初回をアニメーションにしない理由は二つある。ドロワーのスライドインは約 246ms で 250ms のスクロールアニメーションとほぼ同じ長さになり、同時に走らせると開きながら中身も動いて落ち着かない。そして初期オフセットなら、そもそも動きが発生しない。
 
 ### 決定 4: 中央寄せを維持する
 
@@ -109,7 +121,7 @@ bool _didInitialReveal = false;
 
 ### 決定 6: 再発火させない
 
-フラグはマウントごとに一度だけ消費する。パネルが生きたままユーザーがフォルダを移動すると `directoryContentsProvider` が再取得され、リストは丸ごと差し替わる。ここで再発火すると、フォルダを開いた直後に、前のフォルダから持ち越した選択ファイルへ向かってスクロールしてしまう。
+コントローラはマウントごとに一度だけ作られる。パネルが生きたままユーザーがフォルダを移動すると `directoryContentsProvider` が再取得され、リストは丸ごと差し替わる。ここで再発火すると、フォルダを開いた直後に、前のフォルダから持ち越した選択ファイルへ向かってスクロールしてしまう。
 
 既存の要件「Auto-scroll SHALL NOT fire ... on directory changes that already reset the list」もこれを求めている。
 
@@ -125,15 +137,17 @@ bool _didInitialReveal = false;
 
 ## Risks
 
-- **初回の `jumpTo` が既存テストを壊す可能性**: `file_browser_panel_test.dart` の「reselecting the same file does not animate scroll」は `selectedFileProvider` を `files[0]` にしてマウントする。初回スクロールは中央寄せの目標が負になりクランプで 0 になるため、その後の 200px ドラッグと再選択の検証は影響を受けない見込み。実装前にこのテストが通ることを確認する
-- **フレームの取りこぼし**: `addPostFrameCallback` の時点で `hasClients` が false なら何も起きず、フラグだけ消費される恐れがある。フラグは予約時ではなくビルド時に立てるので、`ListView` が返るビルドと同じフレームのコールバックになり、レイアウト後には必ずクライアントが付いている
+- **初期オフセットが既存テストを壊す可能性**: `file_browser_panel_test.dart` の「reselecting the same file does not animate scroll」は `selectedFileProvider` を `files[0]` にしてマウントする。中央寄せの目標が負になりクランプで 0 になるため、その後の 200px ドラッグと再選択の検証は影響を受けない
+- **レイアウト中にコントローラを生成すること**: `LayoutBuilder` の builder はレイアウトフェーズで走る。ここでの `ScrollController` 生成は単なるオブジェクト生成であり `setState` を呼ばないので、レイアウト中のツリー変更には当たらない
+- **クランプ範囲の自前計算**: `maxScrollExtent` を `itemExtent` から求めるため、`_kFileTileExtent` と `ListView.itemExtent` が一致し続けることに依存する。両者は同じ定数を参照している
 
 ## Test Plan
 
 TDD で進める。以下を先に書いて失敗を確認する。
 
 1. 選択済みの状態でパネルをマウントしたとき、遠くのファイル（200件中の150番目）が最初から可視になること
-2. その移動がアニメーションでないこと（`pumpAndSettle` を挟まず、post-frame 後の 1 フレームで目的位置に到達していること）
+2. リストを最初に合成するフレームが既に目的位置でレイアウトされていること（スクロールオフセットではなく描画された矩形で検証する。オフセットはポストフレームのジャンプでも同じ値になってしまう）
+2b. 選択変化のスクロールが今までどおりアニメーションであること
 3. 選択が無い状態でマウントしたとき、オフセットが 0 のままであること
 4. 選択ファイルが現在フォルダに含まれないとき、オフセットが 0 のままであること
 5. マウント後にフォルダを移動したとき、初回スクロールが再発火しないこと

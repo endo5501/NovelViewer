@@ -695,43 +695,89 @@ void main() {
       await _pumpPanel(tester, files: files, selected: target);
       await tester.pumpAndSettle();
 
+      // Not just findsOneWidget: a ListView also builds the rows in its cache
+      // area either side of the viewport, so a row can be found while still
+      // off-screen. Compare the rectangles instead.
+      final viewport = tester.getRect(find.byType(ListView));
+      final row = tester.getRect(find.text(target.name));
       expect(
-        find.text(target.name),
-        findsOneWidget,
+        row.top >= viewport.top && row.bottom <= viewport.bottom,
+        isTrue,
         reason:
-            'A browser mounted with file #150 already selected must show it '
-            'without the reader scrolling',
+            'File #150 must be inside the viewport, not merely built in the '
+            'cache area around it',
+      );
+      expect(
+        (row.center.dy - viewport.center.dy).abs(),
+        lessThan(64.0),
+        reason: 'and it sits near the middle, within one row of the centre',
       );
     });
 
-    testWidgets('the reveal on mount is not animated', (
+    testWidgets('the list is already placed on the first frame that shows it', (
       WidgetTester tester,
     ) async {
       final files = _numberedFiles(200);
       final target = files[149];
 
+      // Frame 1: the listing is still resolving, so there is no list yet.
       await _pumpPanel(tester, files: files, selected: target);
-      // Frame 1 resolves the directory listing and builds the list; the
-      // reveal runs in that frame's post-frame callback. Frame 2 paints it.
-      await tester.pump();
-      await tester.pump();
+      expect(find.byType(Scrollable), findsNothing);
 
-      final position = _panelScrollPosition(tester);
-      final immediate = position.pixels;
+      // Frame 2 is the first one that composites the list. Assert on the laid
+      // out geometry, not on the scroll offset: a post-frame jump updates the
+      // offset before this pump returns, but lays the frame out at the top and
+      // only reaches the selection on the frame after.
+      await tester.pump();
+      final viewport = tester.getRect(find.byType(ListView));
+      final row = tester.getRect(find.text(target.name));
       expect(
-        immediate,
-        greaterThan(0.0),
-        reason: 'The reveal must have moved the list by the frame after layout',
+        row.top >= viewport.top && row.bottom <= viewport.bottom,
+        isTrue,
+        reason:
+            'The very first frame that shows the list must already be laid '
+            'out on the selection',
       );
 
+      final position = _panelScrollPosition(tester);
+      final placed = position.pixels;
       await tester.pumpAndSettle();
-
       expect(
         position.pixels,
-        equals(immediate),
+        equals(placed),
+        reason: 'and nothing animates afterwards',
+      );
+    });
+
+    testWidgets('a selection change still scrolls with an animation', (
+      WidgetTester tester,
+    ) async {
+      final files = _numberedFiles(200);
+
+      await _pumpPanel(tester, files: files);
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(FileBrowserPanel)),
+      );
+      container.read(selectedFileProvider.notifier).selectFile(files[149]);
+      // One frame for the post-frame callback to start the scroll, one for the
+      // ticker's first tick (elapsed 0), then let 100ms of it run.
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final position = _panelScrollPosition(tester);
+      final partway = position.pixels;
+      await tester.pumpAndSettle();
+
+      expect(partway, greaterThan(0.0), reason: 'the scroll has started');
+      expect(
+        partway,
+        lessThan(position.pixels),
         reason:
-            'A jump reaches its final offset in one frame; an animation would '
-            'keep moving after that frame',
+            'and it was still under way 100ms in, so the selection change '
+            'animates rather than jumping',
       );
     });
 

@@ -38,13 +38,19 @@ The reveal SHALL NOT fire again for the lifetime of that mount. In particular, n
 
 The reveal SHALL be evaluated against the listing the user actually sees, not against an empty or still-loading one: a build that shows a loading indicator or an empty-directory message SHALL NOT consume the once-per-mount reveal.
 
+The reveal SHALL take effect in the first layout of the list rather than after it. A correction applied once the list has already been laid out composites one frame at the top before it lands, which is visible wherever the browser appears without an opening animation in front of it, and lasts as long as the next frame takes to arrive.
+
 #### Scenario: Reopening the drawer shows the selected file
 - **WHEN** the reader is on file #150 of a 200 file novel in the narrow layout, closes the file browser drawer, and opens it again
 - **THEN** file #150's `ListTile` is visible near the center of the file list without the reader scrolling
 
-#### Scenario: The reveal is not animated
+#### Scenario: The first frame showing the list is already placed
 - **WHEN** the file browser is mounted with an off-screen file already selected
-- **THEN** the list is at its final position on the first frame after layout, with no scrolling animation in between
+- **THEN** the first frame that lays the list out already has the selected row inside the viewport, and nothing moves afterwards
+
+#### Scenario: A selection change still animates
+- **WHEN** the reader selects an off-screen file in a browser that is already showing a list
+- **THEN** the list scrolls to it over time, as required by the "Auto-scroll to keep the selected file visible" requirement, rather than jumping
 
 #### Scenario: Rotating the device shows the selected file
 - **WHEN** the reader is on an off-screen file and rotates the device so that the shell crosses the layout breakpoint and the file browser is rebuilt
