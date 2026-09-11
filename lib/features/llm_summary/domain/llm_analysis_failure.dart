@@ -1,3 +1,8 @@
+import 'package:foundation_models_llm/foundation_models_llm.dart';
+
+export 'package:foundation_models_llm/foundation_models_llm.dart'
+    show OnDeviceGenerationFailure;
+
 /// Analysis failures that carry enough context for the UI to explain what
 /// happened, as opposed to a bare transport or parse error.
 abstract class LlmAnalysisFailure implements Exception {}
@@ -35,4 +40,57 @@ class LlmAnalysisNoFactsFailure implements LlmAnalysisFailure {
   @override
   String toString() =>
       'LlmAnalysisNoFactsFailure: no facts were extracted for this word';
+}
+
+/// Raised when the on-device model produced no text.
+///
+/// Named separately from a transport error so the reason survives to the
+/// reader: what stops an on-device run is never an unreachable server, and
+/// telling them to check their endpoint would send them somewhere useless.
+class LlmOnDeviceGenerationFailure implements LlmAnalysisFailure {
+  const LlmOnDeviceGenerationFailure(this.cause, {this.detail});
+
+  /// What the model framework said went wrong.
+  final OnDeviceGenerationFailure cause;
+
+  /// The native side's own words, kept for the log.
+  final String? detail;
+
+  @override
+  String toString() => detail == null
+      ? 'LlmOnDeviceGenerationFailure: ${cause.name}'
+      : 'LlmOnDeviceGenerationFailure: ${cause.name}: $detail';
+}
+
+/// Raised when the model's safety guardrails refused the text it was given.
+///
+/// Its own type because it is the one failure that says something about the
+/// text rather than about the model: a novel carrying violent or sexual
+/// description can be refused, and that is not a defect to be retried away.
+/// It reaches the service as a per-file extraction failure, so the remaining
+/// files are still extracted and the run reports a partial failure.
+class LlmOnDeviceRefusedFailure extends LlmOnDeviceGenerationFailure {
+  const LlmOnDeviceRefusedFailure({super.detail})
+    : super(OnDeviceGenerationFailure.guardrailViolation);
+
+  @override
+  String toString() => detail == null
+      ? 'LlmOnDeviceRefusedFailure: the model refused this text'
+      : 'LlmOnDeviceRefusedFailure: the model refused this text: $detail';
+}
+
+/// Raised when the on-device model could not be reached at all.
+///
+/// Distinct from a refusal: nothing was judged about the text. This is what a
+/// reader sees when they turn the system intelligence feature off between
+/// selecting the provider and running an analysis.
+class LlmOnDeviceUnavailableFailure extends LlmOnDeviceGenerationFailure {
+  const LlmOnDeviceUnavailableFailure({super.detail})
+    : super(OnDeviceGenerationFailure.modelUnavailable);
+
+  @override
+  String toString() => detail == null
+      ? 'LlmOnDeviceUnavailableFailure: the on-device model is not available'
+      : 'LlmOnDeviceUnavailableFailure: '
+            'the on-device model is not available: $detail';
 }

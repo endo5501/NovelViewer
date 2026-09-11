@@ -21,6 +21,8 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 // Dummy stand-ins for the dependencies of LlmSummaryService.
 class _DummyClient implements LlmClient {
   @override
+  int get maxChunkSize => 4000;
+  @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) =>
       throw UnimplementedError();
   @override

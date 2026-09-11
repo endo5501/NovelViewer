@@ -120,8 +120,13 @@ class LlmSummaryService {
 
       final files = _groupByFile(filteredResults);
 
+      // How much text may go out at once belongs to the model behind the
+      // client, not to this service: an on-device model's window is a
+      // fraction of a server model's, and chunking that suits the second
+      // overflows the first on its first request.
       final pipeline = LlmSummaryPipeline(
         llmClient: llmClient,
+        maxChunkSize: llmClient.maxChunkSize,
         language: language,
       );
 

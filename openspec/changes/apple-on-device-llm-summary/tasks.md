@@ -20,19 +20,19 @@
 
 ## 3. `LlmClient` 実装
 
-- [ ] 3.1 `FoundationModelsClient` のテストを先に書く。スキーマ付きの応答が `{"facts": "..."}` の形で返ること、スキーマなしで生テキストが返ること、各エラーが対応する失敗になること
-- [ ] 3.2 `FoundationModelsClient implements LlmClient` を実装する
-- [ ] 3.3 `releaseResources()` が保持しているセッション参照を捨てることをテストで固定する
-- [ ] 3.4 `guardrailViolation` がファイル単位の抽出失敗として既存の部分失敗経路を流れることを、`LlmSummaryService` のテストで確認する
+- [x] 3.1 `FoundationModelsClient` のテストを先に書く。スキーマ付きの応答が `{"facts": "..."}` の形で返ること、スキーマなしで生テキストが返ること、各エラーが対応する失敗になること
+- [x] 3.2 `FoundationModelsClient implements LlmClient` を実装する
+- [x] 3.3 `releaseResources()` が保持しているセッション参照を捨てることをテストで固定する
+- [x] 3.4 `guardrailViolation` がファイル単位の抽出失敗として既存の部分失敗経路を流れることを、`LlmSummaryService` のテストで確認する
 
 ## 4. 文脈予算
 
-- [ ] 4.1 `LlmClient` に文脈予算を表す値を足し、既定を 4000 とする。既定値が返ることのテストを先に書く
-- [ ] 4.2 `LlmSummaryService` が予算を読んで `LlmSummaryPipeline` に渡すことのテストを先に書く
-- [ ] 4.3 サービスの実装を変更する。既存二クライアントの挙動が変わらないことを既存テストで確認する
-- [ ] 4.4 予算 2000 のクライアントでチャンク数がおよそ倍になることのテストを書く
-- [ ] 4.5 予算 2000 のとき、3000 文字の事実が再帰的な畳み込みに入ることのテストを書く
-- [ ] 4.6 `FoundationModelsClient` の予算を 2000 とする
+- [x] 4.1 `LlmClient` に文脈予算を表す値を足し、既定を 4000 とする。既定値が返ることのテストを先に書く
+- [x] 4.2 `LlmSummaryService` が予算を読んで `LlmSummaryPipeline` に渡すことのテストを先に書く
+- [x] 4.3 サービスの実装を変更する。既存二クライアントの挙動が変わらないことを既存テストで確認する
+- [x] 4.4 予算 2000 のクライアントでチャンク数がおよそ倍になることのテストを書く
+- [x] 4.5 予算 2000 のとき、3000 文字の事実が再帰的な畳み込みに入ることのテストを書く
+- [x] 4.6 `FoundationModelsClient` の予算を 2000 とする
 
 ## 5. 能力モデル
 

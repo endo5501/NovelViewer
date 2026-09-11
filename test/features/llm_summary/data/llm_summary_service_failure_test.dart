@@ -72,6 +72,64 @@ void main() {
     searchService: searchService,
   );
 
+  group('an on-device refusal', () {
+    test('fails only the file it refused, and the rest still cache', () async {
+      await createFile('001_ch.txt', 'アリスはエピソード1で登場した。');
+      await createFile('002_ch.txt', 'アリスはエピソード2で旅立った。');
+
+      final client = _ScriptedLlmClient({
+        'エピソード1': const LlmOnDeviceRefusedFailure(detail: 'refused'),
+        'エピソード2': jsonEncode({'facts': '- 旅立った'}),
+      }, summary: jsonEncode({'summary': 'アリスは冒険者。'}));
+
+      await expectLater(
+        makeService(client).generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 2,
+        ),
+        throwsA(
+          isA<LlmAnalysisPartialFailure>()
+              .having((e) => e.failedFileCount, 'failedFileCount', 1)
+              .having(
+                (e) => e.firstError,
+                'firstError',
+                isA<LlmOnDeviceRefusedFailure>(),
+              ),
+        ),
+      );
+
+      // The file that was not refused still reached the cache, so re-running
+      // pays only for the refused one.
+      expect(await factCache.find(word: 'アリス', fileName: '001_ch.txt'), isNull);
+      expect(
+        (await factCache.find(word: 'アリス', fileName: '002_ch.txt'))?.facts,
+        '- 旅立った',
+      );
+    });
+
+    test('does not save a summary built without the refused file', () async {
+      await createFile('001_ch.txt', 'アリスはエピソード1で登場した。');
+      await createFile('002_ch.txt', 'アリスはエピソード2で旅立った。');
+
+      final client = _ScriptedLlmClient({
+        'エピソード1': const LlmOnDeviceRefusedFailure(),
+        'エピソード2': jsonEncode({'facts': '- 旅立った'}),
+      }, summary: jsonEncode({'summary': 'アリスは冒険者。'}));
+
+      await expectLater(
+        makeService(client).generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 2,
+        ),
+        throwsA(isA<LlmAnalysisPartialFailure>()),
+      );
+
+      expect(await repository.findSnapshotsForWord(word: 'アリス'), isEmpty);
+    });
+  });
+
   group('fact-cache write gate', () {
     test('a raw-text fallback result is not cached', () async {
       await createFile('001_ch.txt', 'アリスはエピソード1で登場した。');
