@@ -1,7 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -11,6 +10,7 @@ import 'package:novel_viewer/features/llm_summary/providers/marked_words_provide
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/text_content_renderer.dart';
+import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -22,6 +22,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   const content = '昨日アリスが来た。';
+  // Long enough to have somewhere to scroll to, with a landmark near the end.
+  final long = '$content\n${'あ\n' * 200}目印';
   late SharedPreferences prefs;
 
   setUp(() async {
@@ -33,6 +35,7 @@ void main() {
     WidgetTester tester, {
     TextDisplayMode mode = TextDisplayMode.horizontal,
     Map<String, MarkStyle> marks = const {'アリス': MarkStyle.solid},
+    String text = content,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -41,15 +44,15 @@ void main() {
           libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
           markedWordsProvider.overrideWithValue(marks),
         ],
-        child: const MaterialApp(
-          locale: Locale('ja'),
+        child: MaterialApp(
+          locale: const Locale('ja'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               width: 400,
               height: 400,
-              child: TextContentRenderer(content: content),
+              child: TextContentRenderer(content: text),
             ),
           ),
         ),
@@ -189,6 +192,59 @@ void main() {
         isFalse,
         reason: 'the hover exit still dismisses what hover opened',
       );
+    });
+  });
+
+  group('horizontal scrolling', () {
+    // The popup is anchored where it opened, so text scrolling out from under
+    // it leaves it pointing at nothing. Vertical mode already drops the popup
+    // on a page turn for the same reason.
+    testWidgets('a scroll the reader drives dismisses the popup', (
+      tester,
+    ) async {
+      final container = await pumpRenderer(
+        tester,
+        // Long enough to have somewhere to scroll to.
+        text: long,
+      );
+
+      await tapCharacter(tester, content.indexOf('リ'));
+      await tester.pump();
+      expect(container.read(hoverPopupProvider).isVisible, isTrue);
+
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -120),
+      );
+      await tester.pump();
+
+      expect(container.read(hoverPopupProvider).isVisible, isFalse);
+    });
+
+    testWidgets('the speech-following scroll leaves the popup alone', (
+      tester,
+    ) async {
+      // The reader did not move the text, so the summary they opened stays.
+      final container = await pumpRenderer(tester, text: long);
+
+      await tapCharacter(tester, content.indexOf('リ'));
+      await tester.pump();
+      expect(container.read(hoverPopupProvider).isVisible, isTrue);
+
+      final scrollView = tester.widget<SingleChildScrollView>(
+        find.byType(SingleChildScrollView),
+      );
+      expect(scrollView.controller!.offset, 0.0);
+
+      // The real path: a new highlight makes the viewer scroll to it.
+      final target = long.indexOf('目印');
+      container
+          .read(ttsHighlightRangeProvider.notifier)
+          .set(TextRange(start: target, end: target + 2));
+      await tester.pumpAndSettle();
+
+      expect(scrollView.controller!.offset, greaterThan(0.0));
+      expect(container.read(hoverPopupProvider).isVisible, isTrue);
     });
   });
 

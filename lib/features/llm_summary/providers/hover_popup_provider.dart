@@ -121,6 +121,11 @@ class HoverPopupNotifier extends Notifier<HoverPopupState> {
     state = const HoverPopupState.hidden();
   }
 
+  /// Whether a popup-owned child overlay is currently open. Read by the
+  /// touch-dismissal barrier, which must not take the popup down while the
+  /// reader is reaching for an item in the re-analysis dropdown.
+  bool get isChildMenuOpen => _childMenuOpen;
+
   /// Mark a popup-owned child overlay (e.g. the reanalyze dropdown) as open.
   /// Cancels any pending grace-period hide so the popup survives the pointer
   /// leaving its own MouseRegion to enter the menu.

@@ -1083,6 +1083,15 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
             notification.dragDetails != null) {
           _cancelPositionRestore();
         }
+        // A popup is anchored where it opened, so text moving out from under
+        // it leaves it pointing at nothing. Every reader-driven scroll — drag,
+        // fling, wheel, scrollbar — starts with one of these; the automatic
+        // scroll that follows the speech highlight is the one the reader did
+        // not ask for, and is excluded. Vertical mode drops the popup on a
+        // page turn for the same reason.
+        if (notification is ScrollStartNotification && !_isTtsScrolling) {
+          ref.read(hoverPopupProvider.notifier).hide();
+        }
         if (!_isTtsScrolling &&
             notification is ScrollStartNotification &&
             notification.dragDetails != null &&
