@@ -49,3 +49,32 @@ Uri? downloadTargetFromLink(Uri link) {
 
   return target;
 }
+
+/// A download the app has been asked to perform from outside it, waiting for
+/// the reader to confirm or dismiss it.
+///
+/// [sequence] distinguishes one request from the next, so that sharing the same
+/// page twice produces two unequal values and reaches the dialog both times.
+/// Without it the second share would assign an identical value and notify
+/// nobody — the same reason `FileOpenRequestNotifier` counts its requests.
+class PendingDownloadRequest {
+  const PendingDownloadRequest({required this.url, required this.sequence});
+
+  /// The page to download. Always an http(s) URL with a host.
+  final Uri url;
+
+  /// How many requests have arrived in this session, this one included.
+  final int sequence;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PendingDownloadRequest &&
+      other.url == url &&
+      other.sequence == sequence;
+
+  @override
+  int get hashCode => Object.hash(url, sequence);
+
+  @override
+  String toString() => 'PendingDownloadRequest(url: $url, sequence: $sequence)';
+}
