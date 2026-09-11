@@ -92,19 +92,28 @@ final topLeft = renderObject.localToGlobal(
 
 とはいえこの不変条件は暗黙で壊れやすいため、「文字をタップして解決される文字インデックスが移動前と一致する」ことを回帰テストで固定する。
 
-### 決定 3: ページ分割の定数はそのまま
+### 決定 3: ページ分割の定数は値を変えず、余白定数から導出する
+
+`LayoutBuilder` は `Padding` より外側にあり、`constraints` は常にビューア全域である。組版は `Padding` ウィジェットの位置ではなくこの定数に依存しているので、移動しても分割結果は 1 文字も変わらない。
 
 ```dart
-const _kHorizontalPadding = 32.0;   // 16 * 2
-const _kVerticalPadding   = 62.0;   // 16 * 2 + ページ番号行
-
 final availableWidth  = constraints.maxWidth  - _kHorizontalPadding;
 final availableHeight = constraints.maxHeight - _kVerticalPadding;
 ```
 
-`LayoutBuilder` は `Padding` より外側にあり、`constraints` は常にビューア全域である。組版は `Padding` ウィジェットの位置ではなくこの定数に依存しているので、移動しても分割結果は 1 文字も変わらない。
+ただし余白の値がビューアとページの 2 ファイルに分かれることになる。コメントだけで対応関係を示すと片方だけが動かされる余地が残るので、定数をリテラルからページ側の定数を使った式に置き換える。
 
-ただし定数とウィジェットが別ファイルに分かれることになるので、両者が対応していることをコメントで明示する。
+```dart
+// 変更前
+const _kHorizontalPadding = 32.0;
+const _kVerticalPadding   = 62.0;
+
+// 変更後
+const _kHorizontalPadding = 2 * kVerticalTextMargin;
+const _kVerticalPadding   = 2 * kVerticalTextMargin + 30.0;   // + ページ番号行
+```
+
+`kVerticalTextMargin` は 16.0 なので値は 32.0 と 62.0 のまま完全に一致する。いずれも 2 の冪を含む小さい整数値なので丸め差も生じない。
 
 ### 決定 4: しおりアイコンを `IgnorePointer` で包む
 

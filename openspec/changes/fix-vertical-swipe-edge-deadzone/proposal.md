@@ -9,7 +9,7 @@ iPad で縦書き表示を使うと、画面の左右端でスワイプによる
 - `VerticalTextViewer` が持つ `Padding(EdgeInsets.all(16.0))` を、`VerticalTextPage` 内部の `GestureDetector` 直下へ移す。`GestureDetector` がビューアのコンテンツ領域全体を占めるようになり、外周 16pt の死角が消える。テキストの見た目の余白は変わらない。
 - `VerticalTextViewer` の `ClipRect` は `Padding` を介さず `pageContent` を直接包む。
 - しおりアイコン（`Positioned(left: 4, top: 4)`）を `IgnorePointer` で包む。`Stack` は前面の子から順にヒットテストして最初に当たった時点で止まるため、現状は左上の約 20pt 四方がページに届いていない。
-- ページ分割の定数 `_kHorizontalPadding = 32.0` / `_kVerticalPadding = 62.0` は変更しない。`LayoutBuilder` はパディングより外側にあり `constraints` は常にビューア全域なので、`Padding` ウィジェットの位置に依存しない。
+- ページ分割の定数 `_kHorizontalPadding` / `_kVerticalPadding` は値を変えない。`LayoutBuilder` はパディングより外側にあり `constraints` は常にビューア全域なので、`Padding` ウィジェットの位置に依存しない。ただし余白の値が 2 ファイルに分かれるため、リテラルの `32.0` / `62.0` をページ側の余白定数を使った式に置き換えて片方だけが動かされないようにする。
 
 破壊的変更はない。
 
