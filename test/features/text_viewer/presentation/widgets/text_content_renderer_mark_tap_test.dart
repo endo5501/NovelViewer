@@ -179,6 +179,46 @@ void main() {
       expect(container.read(hoverPopupProvider).word, 'アリス');
     });
 
+    testWidgets('tapping another marked word switches the popup to it', (
+      tester,
+    ) async {
+      // The touch that takes the first popup down is the same one that opens
+      // the second: the barrier only watches, so the press still reaches the
+      // word underneath it.
+      final container = await pumpRenderer(
+        tester,
+        text: 'アリスはボブと歩く。',
+        marks: const {'アリス': MarkStyle.solid, 'ボブ': MarkStyle.solid},
+      );
+
+      await tapCharacter(tester, 1);
+      await tester.pump();
+      expect(container.read(hoverPopupProvider).word, 'アリス');
+
+      await tapCharacter(tester, 5);
+      await tester.pump();
+
+      expect(container.read(hoverPopupProvider).word, 'ボブ');
+    });
+
+    testWidgets('a stylus tap on a marked word shows the popup', (
+      tester,
+    ) async {
+      final container = await pumpRenderer(tester);
+
+      final stylus = await tester.createGesture(kind: PointerDeviceKind.stylus);
+      await stylus.down(characterCentre(tester, content.indexOf('リ')));
+      await stylus.up();
+      await tester.pump(kDoubleTapTimeout);
+
+      expect(container.read(hoverPopupProvider).word, 'アリス');
+
+      // A stylus hovers as well as touches, so it is still over the word.
+      // Taking it away here keeps the exit that follows inside the test.
+      await stylus.removePointer();
+      await tester.pump();
+    });
+
     testWidgets('a second tap in quick succession does not reuse the first', (
       tester,
     ) async {

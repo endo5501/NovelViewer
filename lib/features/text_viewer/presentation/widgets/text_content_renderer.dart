@@ -329,6 +329,8 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   // tap at the same spot leaves the selection unchanged, so no change is
   // reported, and resolving from the notification alone would make the second
   // tap on a word do nothing.
+  late final HoverPopupNotifier _hoverPopup;
+
   TextPosition? _lastTapCaret;
   Offset? _pendingTouchTap;
 
@@ -393,6 +395,11 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   @override
   void initState() {
     super.initState();
+    // Held rather than read on each use: a pointer leaving a marked word can
+    // arrive while this widget is being taken out of the tree, and `ref` is
+    // not usable then. The notifier outlives the widget, so the popup is
+    // still put away properly.
+    _hoverPopup = ref.read(hoverPopupProvider.notifier);
     _scrollController.addListener(_updateCurrentViewLine);
     _boundaryPrompt.addListener(_onBoundaryPromptChanged);
     // One State serves both modes, so the prompt would otherwise survive a
@@ -717,22 +724,18 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   }
 
   void _onMarkEnter(String word, Offset position, HoverToken token) {
-    ref
-        .read(hoverPopupProvider.notifier)
-        .show(word: word, position: position, token: token);
+    _hoverPopup.show(word: word, position: position, token: token);
   }
 
   void _onMarkExit(HoverToken token) {
-    ref.read(hoverPopupProvider.notifier).hideIfShowing(token);
+    _hoverPopup.hideIfShowing(token);
   }
 
   /// A finger landed on a marked word. There is no exit to pair with this,
   /// so the popup it opens is dismissed by a touch elsewhere instead — see
   /// `HoverPopupHost`.
   void _onMarkTap(String word, Offset position, HoverToken token) {
-    ref
-        .read(hoverPopupProvider.notifier)
-        .show(word: word, position: position, token: token);
+    _hoverPopup.show(word: word, position: position, token: token);
   }
 
   void _onTextPointerDown(PointerDownEvent event) {
@@ -784,7 +787,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     // The re-analysis dropdown is a MenuAnchor floating over the text, and a
     // press on one of its items reaches through to here. Read as a tap it
     // would dismiss the popup the menu belongs to.
-    if (ref.read(hoverPopupProvider.notifier).isChildMenuOpen) return;
+    if (_hoverPopup.isChildMenuOpen) return;
 
     final caret = _stillApplicableCaret(position);
     // Where the caret now in hand was taken, for a later touch that reports
@@ -794,7 +797,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     if (_tapReportedCaret) _lastTapCaretPosition = position;
     final mark = caret == null ? null : _markAtCaret(caret);
     if (mark == null) {
-      ref.read(hoverPopupProvider.notifier).hide();
+      _hoverPopup.hide();
       return;
     }
     _onMarkTap(mark.word, position, mark.occurrence);
@@ -841,7 +844,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   }
 
   void _onHoverHideRequest() {
-    ref.read(hoverPopupProvider.notifier).hide();
+    _hoverPopup.hide();
   }
 
   void _scrollToTtsHighlight(
@@ -1168,7 +1171,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         // not ask for, and is excluded. Vertical mode drops the popup on a
         // page turn for the same reason.
         if (notification is ScrollStartNotification && !_isTtsScrolling) {
-          ref.read(hoverPopupProvider.notifier).hide();
+          _hoverPopup.hide();
         }
         if (!_isTtsScrolling &&
             notification is ScrollStartNotification &&

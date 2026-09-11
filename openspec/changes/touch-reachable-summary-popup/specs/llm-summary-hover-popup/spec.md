@@ -9,7 +9,7 @@ A mouse tap SHALL NOT open the popup. A mouse already reaches it by hovering, an
 
 In vertical mode this trigger SHALL be ordered against the meanings a tap already carries. A tap inside the current selection SHALL open the selection context menu, as it does today. A tap that is not inside the selection but falls within a mark range SHALL open the popup. A tap that is neither SHALL clear the selection, as it does today.
 
-In horizontal mode the tapped position SHALL be resolved through the selection the text widget itself reports for the tap, rather than through a separate layout measurement, so the resolved character is the one the platform's own hit test chose. Where the reported position has been snapped to a word edge, a mark that begins or ends at that edge SHALL still be resolved.
+In horizontal mode the tapped position SHALL be resolved through the selection the text widget itself reports for the tap, rather than through a separate layout measurement, so the resolved character is the one the platform's own hit test chose. That position names a boundary between two characters rather than a character, and the two are told apart by which side of the boundary the touch fell on, so that the last character of a marked word and the first character after it resolve differently. Where the reported position has been snapped to a word edge, a mark that ends at that edge SHALL still be resolved.
 
 #### Scenario: Tapping a marked word in horizontal mode opens the popup
 - **WHEN** the reader taps with a finger on an occurrence of the word "アリス" which has at least one cached snapshot for the active folder, in horizontal display mode
@@ -41,6 +41,14 @@ In horizontal mode the tapped position SHALL be resolved through the selection t
 - **WHEN** the reader taps with a finger on a marked word in horizontal mode and the platform reports the tap position snapped to the edge of that word rather than a position inside it
 - **THEN** the popup SHALL open for that word
 
+#### Scenario: Tapping the character after a marked word opens nothing
+- **WHEN** the reader taps with a finger on the character immediately after a marked word, which shares its position with the end of that word
+- **THEN** no popup SHALL appear
+
+#### Scenario: Tapping the last character of one of two adjacent marked words opens that word
+- **WHEN** two marked words sit side by side and the reader taps with a finger on the last character of the first
+- **THEN** the popup SHALL open for the first word, not the second
+
 #### Scenario: Re-tapping the same word after dismissal opens it again
 - **WHEN** the reader taps a marked word in horizontal mode, dismisses the popup, and taps the same word again without moving the finger to a different word first
 - **THEN** the popup SHALL open again
@@ -56,7 +64,7 @@ The mechanism SHALL NOT absorb the pointer event: whatever the reader touched SH
 
 A pointer-down from a mouse SHALL be ignored, so that no dismissal behaviour on a hovering pointer changes.
 
-A pointer-down SHALL NOT dismiss the popup while a popup-owned child overlay is open, so that reaching the re-analysis dropdown's items does not tear down the popup underneath them.
+A pointer-down SHALL NOT dismiss the popup while a popup-owned child overlay is open. The re-analysis dropdown's items float over the text without stopping a press from reaching it, so without this the touch that picks an item would take down the popup the menu belongs to before its handler ran. This is separate from the popup closing once the menu has closed, which it already does.
 
 #### Scenario: Touching outside the popup dismisses it
 - **WHEN** the popup is visible and the reader touches anywhere outside the popup's bounds
@@ -80,10 +88,10 @@ A pointer-down SHALL NOT dismiss the popup while a popup-owned child overlay is 
 - **WHEN** the popup is visible because a mouse pointer is inside it, and the mouse presses its primary button outside the popup
 - **THEN** the dismissal SHALL be governed by the existing pointer-exit handling alone
 
-#### Scenario: Touching a re-analysis dropdown item does not dismiss the popup
+#### Scenario: Touching a re-analysis dropdown item runs that analysis
 - **WHEN** the popup's re-analysis dropdown is open and the reader touches one of its items
-- **THEN** the popup SHALL NOT be dismissed by that touch
-- **AND** the selected re-analysis SHALL run
+- **THEN** the selected re-analysis SHALL run
+- **AND** the touch SHALL NOT be taken for a press on what the item covers, either as a dismissal or as a tap on a word beneath it
 
 ### Requirement: Scrolling in horizontal mode dismisses the popup
 In horizontal display mode, a scroll the reader initiated SHALL dismiss the popup. The popup is anchored at a screen position computed when it opened, so text that scrolls out from under it leaves the popup pointing at nothing. Vertical mode already dismisses the popup on a page change and on the start of a drag selection; horizontal mode SHALL dismiss it on the reader's scroll for the same reason.
