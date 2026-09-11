@@ -223,6 +223,13 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     ref.listen(pendingDownloadRequestProvider, (_, next) {
       if (next != null) _receiveRequest(next);
     });
+    // Turning a share down points at the download in the way. Once the dialog
+    // is asking for a URL again, that obstacle is gone and so must the message
+    // be — a failed download leaves exactly that state behind.
+    ref.listen(downloadProvider, (_, next) {
+      if (!_ignoredIncomingRequest || !_acceptsInput(next.status)) return;
+      setState(() => _ignoredIncomingRequest = false);
+    });
 
     return AlertDialog(
       title: Text(AppLocalizations.of(context)!.download_title),

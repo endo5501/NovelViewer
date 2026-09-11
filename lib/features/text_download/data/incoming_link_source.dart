@@ -20,7 +20,13 @@ class IncomingLinkSource {
   IncomingLinkSource({
     required Future<Uri?> initialLink,
     required Stream<Uri> platformLinks,
-  }) : _initialLink = initialLink,
+    // The launch link is asked for as the app starts, and nothing listens here
+    // until the first screen builds. A failure landing in between would have no
+    // handler attached yet, which Dart reports as an unhandled error — so it is
+    // taken on now rather than at listen. A launch link that cannot be read
+    // settles as "the app was not opened with one"; it says nothing about the
+    // links that follow.
+  }) : _initialLink = initialLink.catchError((Object _) => null),
        _platformLinks = platformLinks;
 
   /// A source that delivers nothing, and touches no platform channel.
@@ -100,9 +106,7 @@ class IncomingLinkSource {
           closeWhenSettled();
         },
       );
-      // A failure to read the launch link says nothing about the links that
-      // follow, so it settles as "the app was not opened with one".
-      _initialLink.then(settleInitial, onError: (_, _) => settleInitial(null));
+      _initialLink.then(settleInitial);
     };
     controller.onCancel = () async {
       await subscription?.cancel();
