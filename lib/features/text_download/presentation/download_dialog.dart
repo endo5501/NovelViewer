@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.da
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/text_download/data/sites/generic_web_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
+import 'package:novel_viewer/features/text_download/providers/download_request_providers.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -15,13 +16,19 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 enum _CollectionMode { create, existing }
 
 class DownloadDialog extends ConsumerStatefulWidget {
-  const DownloadDialog({super.key});
+  const DownloadDialog({super.key, this.initialUrl});
 
-  static Future<void> show(BuildContext context) {
+  /// The URL to start with, when the dialog was opened by a request that came
+  /// from outside the app rather than by the download button.
+  ///
+  /// Only ever pre-filled, never acted on: the reader still has to press start.
+  final Uri? initialUrl;
+
+  static Future<void> show(BuildContext context, {Uri? initialUrl}) {
     return showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const DownloadDialog(),
+      builder: (_) => DownloadDialog(initialUrl: initialUrl),
     );
   }
 
@@ -43,6 +50,20 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
   /// `web` adapter.
   _CollectionMode _collectionMode = _CollectionMode.create;
   String? _selectedCollectionPath;
+
+  /// True once a request from outside the app arrived while this dialog was
+  /// busy, so the reader is told their URL went nowhere. Cleared as soon as a
+  /// later request is taken.
+  bool _ignoredIncomingRequest = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Only ever a URL that already passed the same validation the field
+    // applies, so there is no error to compute here.
+    final initialUrl = widget.initialUrl;
+    if (initialUrl != null) _urlController.text = initialUrl.toString();
+  }
 
   @override
   void dispose() {
@@ -157,9 +178,37 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
         .startDownload(url: uri, outputPath: outputPath);
   }
 
+  /// Whether the dialog is asking for a URL right now: the field is editable
+  /// and the start button is on screen. A download in progress cannot be
+  /// redirected, and a finished or cancelled one holds the dialog on its result
+  /// until it is closed.
+  static bool _acceptsInput(DownloadStatus status) =>
+      status == DownloadStatus.idle || status == DownloadStatus.error;
+
+  /// Takes in a request that arrived from outside the app while this dialog was
+  /// already open. The URL is only ever put in the field; starting the download
+  /// stays with the reader.
+  void _receiveRequest(Uri url) {
+    if (!_acceptsInput(ref.read(downloadProvider).status)) {
+      setState(() => _ignoredIncomingRequest = true);
+      return;
+    }
+    setState(() {
+      _urlController.text = url.toString();
+      _urlError = null;
+      _ignoredIncomingRequest = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final downloadState = ref.watch(downloadProvider);
+
+    // The request that opened this dialog arrived before it was built and came
+    // in through `initialUrl`; this only ever sees the ones after it.
+    ref.listen(pendingDownloadRequestProvider, (_, next) {
+      if (next != null) _receiveRequest(next.url);
+    });
 
     return AlertDialog(
       title: Text(AppLocalizations.of(context)!.download_title),
@@ -186,11 +235,36 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
             else
               _buildDestinationSelector(downloadState),
             const SizedBox(height: 16),
+            if (_ignoredIncomingRequest) ...[
+              _buildIgnoredRequestNotice(),
+              const SizedBox(height: 16),
+            ],
             _buildStatusArea(downloadState),
           ],
         ),
       ),
       actions: _buildActions(downloadState),
+    );
+  }
+
+  /// Tells the reader that a URL they shared went nowhere.
+  ///
+  /// It belongs inside the dialog rather than in a snackbar: while a download
+  /// runs this dialog is a modal that cannot be dismissed, and anything shown
+  /// behind it would never be seen.
+  Widget _buildIgnoredRequestNotice() {
+    return Row(
+      key: const Key('download_incoming_request_ignored'),
+      children: [
+        const Icon(Icons.info_outline, color: Colors.orange),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            AppLocalizations.of(context)!.download_incomingRequestIgnored,
+            style: const TextStyle(color: Colors.orange),
+          ),
+        ),
+      ],
     );
   }
 
@@ -447,8 +521,8 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
       ];
     }
 
-    if (state.status == DownloadStatus.completed ||
-        state.status == DownloadStatus.cancelled) {
+    // Anything left that is not asking for a URL is showing a result.
+    if (!_acceptsInput(state.status)) {
       return [
         TextButton(
           onPressed: () {
