@@ -36,6 +36,15 @@ class PendingDownloadRequestNotifier extends Notifier<PendingDownloadRequest?> {
     return null;
   }
 
+  /// Drops [request] now that it has been put in front of the reader, so a
+  /// dialog opened later does not act on it a second time.
+  ///
+  /// Only the request named is dropped. A newer one that arrived in between
+  /// belongs to whoever has not shown it yet.
+  void markHandled(PendingDownloadRequest request) {
+    if (state?.sequence == request.sequence) state = null;
+  }
+
   void _onLink(Uri link) {
     final target = downloadTargetFromLink(link);
     if (target == null) {

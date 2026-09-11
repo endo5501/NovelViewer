@@ -355,6 +355,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // a download that simply starts.
     ref.listen(pendingDownloadRequestProvider, (_, next) {
       if (next == null || _downloadDialogOpen) return;
+      ref.read(pendingDownloadRequestProvider.notifier).markHandled(next);
       _openDownloadDialog(initialUrl: next.url);
     });
     // Crossing the breakpoint replaces the end drawer without any change to

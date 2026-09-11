@@ -53,6 +53,7 @@ class IncomingLinkSource {
     final controller = StreamController<Uri>();
     final buffered = <Uri>[];
     var initialSettled = false;
+    var platformDone = false;
     Uri? initial;
     var firstPlatformLinkSeen = false;
     StreamSubscription<Uri>? subscription;
@@ -61,7 +62,6 @@ class IncomingLinkSource {
     // event. Drop that one event when it matches; every later repeat is a real
     // one the reader asked for.
     void forward(Uri link) {
-      if (controller.isClosed) return;
       if (!firstPlatformLinkSeen) {
         firstPlatformLinkSeen = true;
         if (link == initial) return;
@@ -69,14 +69,20 @@ class IncomingLinkSource {
       controller.add(link);
     }
 
+    // The platform stream ending does not end this one until the launch link
+    // has settled: a link the reader asked for is not dropped because the two
+    // channels finished in an order the app does not control.
+    void closeWhenSettled() {
+      if (initialSettled && platformDone) controller.close();
+    }
+
     void settleInitial(Uri? link) {
       initial = link;
       initialSettled = true;
-      // The platform stream may already be gone; its closing closed this one.
-      if (controller.isClosed) return;
       if (link != null) controller.add(link);
       buffered.forEach(forward);
       buffered.clear();
+      closeWhenSettled();
     }
 
     controller.onListen = () {
@@ -89,7 +95,10 @@ class IncomingLinkSource {
           'Ignoring an error from the platform link channel',
           error,
         ),
-        onDone: controller.close,
+        onDone: () {
+          platformDone = true;
+          closeWhenSettled();
+        },
       );
       // A failure to read the launch link says nothing about the links that
       // follow, so it settles as "the app was not opened with one".

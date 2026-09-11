@@ -37,7 +37,16 @@ Uri? downloadTargetFromLink(Uri link) {
   if (link.scheme != downloadRequestScheme) return null;
   if (link.host != downloadRequestHost) return null;
 
-  final raw = link.queryParameters[downloadRequestUrlParameter];
+  // Reading the query decodes percent escapes as UTF-8, and bad bytes throw
+  // rather than parse. Anything can open this scheme, so a malformed link is
+  // turned away here instead of escaping into the subscription that delivered
+  // it and taking every later link down with it.
+  final String? raw;
+  try {
+    raw = link.queryParameters[downloadRequestUrlParameter];
+  } on FormatException {
+    return null;
+  }
   if (raw == null || raw.isEmpty) return null;
 
   final target = Uri.tryParse(raw);

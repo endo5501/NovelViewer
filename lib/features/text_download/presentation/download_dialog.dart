@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.da
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/text_download/data/sites/generic_web_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
+import 'package:novel_viewer/features/text_download/domain/download_request.dart';
 import 'package:novel_viewer/features/text_download/providers/download_request_providers.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -63,6 +64,14 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     // applies, so there is no error to compute here.
     final initialUrl = widget.initialUrl;
     if (initialUrl != null) _urlController.text = initialUrl.toString();
+    // A share can land between this dialog being pushed and its first build.
+    // The home screen sees a dialog already on its way and leaves it alone, so
+    // whatever is still pending is this dialog's to take.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final pending = ref.read(pendingDownloadRequestProvider);
+      if (pending != null) _receiveRequest(pending);
+    });
   }
 
   @override
@@ -185,16 +194,20 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
   static bool _acceptsInput(DownloadStatus status) =>
       status == DownloadStatus.idle || status == DownloadStatus.error;
 
-  /// Takes in a request that arrived from outside the app while this dialog was
-  /// already open. The URL is only ever put in the field; starting the download
-  /// stays with the reader.
-  void _receiveRequest(Uri url) {
+  /// Takes in a request that arrived from outside the app. The URL is only ever
+  /// put in the field; starting the download stays with the reader.
+  ///
+  /// The request is marked handled either way. Having been turned down is still
+  /// having been answered, and leaving it pending would hand it to the next
+  /// dialog the reader opens for their own reasons.
+  void _receiveRequest(PendingDownloadRequest request) {
+    ref.read(pendingDownloadRequestProvider.notifier).markHandled(request);
     if (!_acceptsInput(ref.read(downloadProvider).status)) {
       setState(() => _ignoredIncomingRequest = true);
       return;
     }
     setState(() {
-      _urlController.text = url.toString();
+      _urlController.text = request.url.toString();
       _urlError = null;
       _ignoredIncomingRequest = false;
     });
@@ -204,10 +217,11 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
   Widget build(BuildContext context) {
     final downloadState = ref.watch(downloadProvider);
 
-    // The request that opened this dialog arrived before it was built and came
-    // in through `initialUrl`; this only ever sees the ones after it.
+    // The request that opened this dialog came in through `initialUrl`, and one
+    // that landed while it was being built is taken in `initState`; this sees
+    // the ones after that.
     ref.listen(pendingDownloadRequestProvider, (_, next) {
-      if (next != null) _receiveRequest(next.url);
+      if (next != null) _receiveRequest(next);
     });
 
     return AlertDialog(
