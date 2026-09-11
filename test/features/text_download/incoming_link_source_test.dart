@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_download/data/incoming_link_source.dart';
 
 void main() {
-  final first = Uri.parse('novelviewer://download?url=https%3A%2F%2Fa.test%2F1');
+  final first = Uri.parse(
+    'novelviewer://download?url=https%3A%2F%2Fa.test%2F1',
+  );
   final second = Uri.parse(
     'novelviewer://download?url=https%3A%2F%2Fa.test%2F2',
   );
@@ -29,11 +31,15 @@ void main() {
       platformLinks: platform.stream,
     );
     delivered = [];
+    subscription = null;
   });
 
   tearDown(() async {
     await subscription?.cancel();
-    if (!platform.isClosed) await platform.close();
+    // Not awaited: closing a single-subscription controller that was never
+    // listened to does not complete until something drains it, and the tests
+    // that skip the fixture leave it exactly so.
+    if (!platform.isClosed) unawaited(platform.close());
   });
 
   group('IncomingLinkSource', () {
@@ -69,15 +75,18 @@ void main() {
       expect(delivered, [first]);
     });
 
-    test('absorbs a replay arriving before the initial link resolves', () async {
-      listen();
-      platform.add(first);
-      await pumpEventQueue();
-      initial.complete(first);
-      await pumpEventQueue();
+    test(
+      'absorbs a replay arriving before the initial link resolves',
+      () async {
+        listen();
+        platform.add(first);
+        await pumpEventQueue();
+        initial.complete(first);
+        await pumpEventQueue();
 
-      expect(delivered, [first]);
-    });
+        expect(delivered, [first]);
+      },
+    );
 
     test('delivers a link received while running after the initial', () async {
       listen();
@@ -118,6 +127,38 @@ void main() {
       await pumpEventQueue();
 
       expect(delivered, [first]);
+    });
+
+    test('keeps going when the platform stream reports an error', () async {
+      // A failing platform channel — no plugin registered on this platform, a
+      // channel error — means no links will arrive, which is nothing a consumer
+      // can act on. Forwarding it would only turn "no links" into a crash.
+      listen();
+      initial.complete(null);
+      await pumpEventQueue();
+      platform.addError(StateError('no plugin'));
+      await pumpEventQueue();
+      platform.add(first);
+      await pumpEventQueue();
+
+      expect(delivered, [first]);
+    });
+
+    test('survives a platform stream that closes first', () async {
+      // Ordering between the two channels is not the app's to control, and a
+      // launch link settling after the stream is gone must not blow up.
+      listen();
+      await platform.close();
+      await pumpEventQueue();
+      initial.complete(first);
+      await pumpEventQueue();
+
+      expect(delivered, isEmpty);
+    });
+
+    test('delivers nothing through the inert source', () async {
+      // The default outside a running app: no platform channel is touched.
+      expect(await IncomingLinkSource.none().links.toList(), isEmpty);
     });
 
     test('closes once the platform stream is done', () async {

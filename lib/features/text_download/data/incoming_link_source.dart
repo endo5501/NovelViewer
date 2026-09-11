@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:logging/logging.dart';
+
+final _log = Logger('text_download.links');
 
 /// Every link the app is opened with or receives while running, delivered
 /// exactly once.
@@ -19,6 +22,16 @@ class IncomingLinkSource {
     required Stream<Uri> platformLinks,
   }) : _initialLink = initialLink,
        _platformLinks = platformLinks;
+
+  /// A source that delivers nothing, and touches no platform channel.
+  ///
+  /// The default everywhere except a running app: [appLinks] reaches an event
+  /// channel that only exists behind a real engine, and merely subscribing to
+  /// it outside one is reported as an unhandled plugin error.
+  factory IncomingLinkSource.none() => IncomingLinkSource(
+    initialLink: Future.value(null),
+    platformLinks: const Stream.empty(),
+  );
 
   /// The running app's source, reading both channels from `app_links`.
   factory IncomingLinkSource.appLinks() {
@@ -48,6 +61,7 @@ class IncomingLinkSource {
     // event. Drop that one event when it matches; every later repeat is a real
     // one the reader asked for.
     void forward(Uri link) {
+      if (controller.isClosed) return;
       if (!firstPlatformLinkSeen) {
         firstPlatformLinkSeen = true;
         if (link == initial) return;
@@ -58,6 +72,8 @@ class IncomingLinkSource {
     void settleInitial(Uri? link) {
       initial = link;
       initialSettled = true;
+      // The platform stream may already be gone; its closing closed this one.
+      if (controller.isClosed) return;
       if (link != null) controller.add(link);
       buffered.forEach(forward);
       buffered.clear();
@@ -66,7 +82,13 @@ class IncomingLinkSource {
     controller.onListen = () {
       subscription = _platformLinks.listen(
         (link) => initialSettled ? forward(link) : buffered.add(link),
-        onError: controller.addError,
+        // A failing channel — no plugin registered on this platform, a decoding
+        // error — means links will not arrive, which is nothing a consumer can
+        // act on. Forwarding it would only turn "no links" into a crash.
+        onError: (Object error, StackTrace stackTrace) => _log.fine(
+          'Ignoring an error from the platform link channel',
+          error,
+        ),
         onDone: controller.close,
       );
       // A failure to read the launch link says nothing about the links that

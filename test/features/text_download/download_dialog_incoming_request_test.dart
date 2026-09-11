@@ -262,7 +262,9 @@ void main() {
 
       notifier(tester).fail();
       await tester.pumpAndSettle();
-      platform.add(Uri.parse('novelviewer://download?url=https%3A%2F%2Fa.test'));
+      platform.add(
+        Uri.parse('novelviewer://download?url=https%3A%2F%2Fa.test'),
+      );
       await tester.pumpAndSettle();
 
       expect(urlFieldText(tester), 'https://a.test');

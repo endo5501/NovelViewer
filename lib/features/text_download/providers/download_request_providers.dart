@@ -5,9 +5,15 @@ import 'package:novel_viewer/features/text_download/domain/download_request.dart
 
 final _log = Logger('text_download.request');
 
-/// Where incoming links come from. Overridden in tests.
+/// Where incoming links come from.
+///
+/// Defaults to the source that delivers nothing, and `main` overrides it with
+/// the one backed by `app_links`. The platform channel behind that one only
+/// exists inside a running app, and merely subscribing to it elsewhere is
+/// reported as an unhandled plugin error — so a widget test gets the inert
+/// default without having to know this provider exists.
 final incomingLinkSourceProvider = Provider<IncomingLinkSource>(
-  (ref) => IncomingLinkSource.appLinks(),
+  (ref) => IncomingLinkSource.none(),
 );
 
 /// The download the app has most recently been asked to perform from outside
@@ -22,9 +28,10 @@ class PendingDownloadRequestNotifier extends Notifier<PendingDownloadRequest?> {
 
   @override
   PendingDownloadRequest? build() {
-    final subscription = ref.watch(incomingLinkSourceProvider).links.listen(
-      _onLink,
-    );
+    final subscription = ref
+        .watch(incomingLinkSourceProvider)
+        .links
+        .listen(_onLink);
     ref.onDispose(subscription.cancel);
     return null;
   }
