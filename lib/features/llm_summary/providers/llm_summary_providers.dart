@@ -104,9 +104,19 @@ final llmSummaryServiceProvider = Provider.family<LlmSummaryService?, String>((
 /// Whether word summaries can be produced on this platform.
 ///
 /// Analysis reaches an LLM server the reader runs themselves, addressed by
-/// default at a plaintext `http://` endpoint. iOS blocks that transport, so
-/// no configuration entered on an iPad could succeed; the settings section
-/// and the context-menu triggers are withheld instead of failing on use.
+/// default at a plaintext `http://` endpoint. That is not something a platform
+/// takes away: the requests go through `dart:io`'s `HttpClient`, which opens
+/// its own sockets and never reaches the layer a transport policy is enforced
+/// in. Every platform therefore reports the feature as supported today.
+///
+/// Two things about an iPad are worth knowing here even so, because neither is
+/// a capability. The default endpoint names the machine the app runs on, which
+/// on a tablet is not where the server lives, so a reader has to point the
+/// settings section at their own host. And reaching that host over the local
+/// network needs a usage description in the iOS project and the reader's
+/// permission, granted once, with the first attempt failing while the prompt
+/// is up. A loopback address, which is what the simulator reaches on the
+/// developer's own machine, is subject to neither.
 ///
 /// Reading already-stored summaries is not gated: a library folder carried
 /// over from a desktop install keeps its analysis history browsable.

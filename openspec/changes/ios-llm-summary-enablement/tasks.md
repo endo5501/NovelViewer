@@ -9,16 +9,16 @@
 
 ## 2. 能力モデルの変更
 
-- [ ] 2.1 `lib/shared/platform/platform_capabilities.dart` の `forPlatform` で `llmSummary` を `true` にする。`textToSpeech` と `appUpdate` は `!isIOS` のまま据え置く
-- [ ] 2.2 `fvm flutter test` を実行し、1章のテストがすべて通過することを確認する
-- [ ] 2.3 ゲートを持つ4ファイル（`settings_dialog.dart`、`text_content_renderer.dart`、`left_column_panel.dart`、`hover_popup_widget.dart`）に差分が出ていないことを確認する
+- [x] 2.1 `lib/shared/platform/platform_capabilities.dart` の `forPlatform` で `llmSummary` を `true` にする。`textToSpeech` と `appUpdate` は `!isIOS` のまま据え置く
+- [x] 2.2 `fvm flutter test` を実行し、1章のテストがすべて通過することを確認する
+- [x] 2.3 ゲートを持つ4ファイル（`settings_dialog.dart`、`text_content_renderer.dart`、`left_column_panel.dart`、`hover_popup_widget.dart`）に差分が出ていないことを確認する
 
 ## 3. 根拠の記述を訂正する
 
-- [ ] 3.1 `lib/shared/platform/platform_capabilities.dart` のクラスコメントとコンストラクタコメントから、トランスポートポリシーが平文HTTPを塞ぐという記述を削除する。代わりに、Dartの `HttpClient` が独自にソケットを開くためその制約を受けないこと、iOSで実際に効くのはLAN上のホストへ到達する際のローカルネットワーク権限であることを記録する
-- [ ] 3.2 同コメントに、`llmSummary` を能力モデルに残したまま常に真としている理由（平文HTTPの可否を実機で確かめるまでの一時措置であり、将来オンデバイス推論で機種依存の区別が復活しうること）を記録する
-- [ ] 3.3 `lib/features/llm_summary/providers/llm_summary_providers.dart` の `llmSummarySupportedProvider` のコメントを同様に訂正する。既定のループバックURLが実機のiPadでは到達先を持たないことも併記する
-- [ ] 3.4 変更をコミットする
+- [x] 3.1 `lib/shared/platform/platform_capabilities.dart` のクラスコメントとコンストラクタコメントから、トランスポートポリシーが平文HTTPを塞ぐという記述を削除する。代わりに、Dartの `HttpClient` が独自にソケットを開くためその制約を受けないこと、iOSで実際に効くのはLAN上のホストへ到達する際のローカルネットワーク権限であることを記録する
+- [x] 3.2 同コメントに、`llmSummary` を能力モデルに残したまま常に真としている理由（平文HTTPの可否を実機で確かめるまでの一時措置であり、将来オンデバイス推論で機種依存の区別が復活しうること）を記録する
+- [x] 3.3 `lib/features/llm_summary/providers/llm_summary_providers.dart` の `llmSummarySupportedProvider` のコメントを同様に訂正する。既定のループバックURLが実機のiPadでは到達先を持たないことも併記する
+- [x] 3.4 変更をコミットする
 
 ## 4. シミュレータ検証
 
