@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_anchor.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/summary_snapshot_view.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
@@ -129,7 +130,7 @@ class _Card extends ConsumerWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
+        constraints: const BoxConstraints(maxWidth: kHoverPopupApproxWidth),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
           child: SummarySnapshotView(

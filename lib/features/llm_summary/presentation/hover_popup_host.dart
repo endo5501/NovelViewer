@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_widge
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/shared/gestures/pointer_kinds.dart';
 
 /// Host widget that places its [child] into the tree while listening to
 /// [hoverPopupProvider]. When the state becomes visible (and a novel
@@ -25,6 +26,12 @@ class HoverPopupHost extends ConsumerStatefulWidget {
 class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
   OverlayEntry? _entry;
 
+  /// Sits under [_entry] and watches for the touch that means "done reading".
+  OverlayEntry? _dismissEntry;
+
+  /// Identifies the popup so its bounds can be excluded from that touch.
+  final GlobalKey _popupKey = GlobalKey();
+
   @override
   void dispose() {
     _removeEntry();
@@ -34,6 +41,37 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
   void _removeEntry() {
     _entry?.remove();
     _entry = null;
+    _dismissEntry?.remove();
+    _dismissEntry = null;
+  }
+
+  /// Dismisses the popup when a pointer that cannot hover presses outside it.
+  ///
+  /// Only such a pointer: a mouse leaves the popup's `MouseRegion` and is
+  /// dismissed by that, and a click that dismissed as well would take the
+  /// popup down while the pointer was still inside it.
+  ///
+  /// The press is observed, never consumed, so whatever it landed on still
+  /// receives it — including a marked word, which then opens its own summary.
+  void _onPointerDownOutside(PointerDownEvent event) {
+    if (!kNoSecondaryButtonPointerKinds.contains(event.kind)) return;
+    final notifier = ref.read(hoverPopupProvider.notifier);
+    // The re-analysis dropdown is a MenuAnchor. Its items sit in an overlay
+    // above this one and do not stop a press from reaching it, so without
+    // this the touch that picks an item would take down the popup the menu
+    // belongs to.
+    if (notifier.isChildMenuOpen) return;
+    if (_popupBounds()?.contains(event.position) ?? true) return;
+    notifier.hide();
+  }
+
+  /// The popup's global bounds, or null before it has been laid out. A null
+  /// is read as "inside", so the press that opened the popup cannot also
+  /// close it in the same frame.
+  Rect? _popupBounds() {
+    final box = _popupKey.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
   }
 
   void _insertEntry({
@@ -47,6 +85,14 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
     required TextDisplayMode mode,
   }) {
     _removeEntry();
+    _dismissEntry = OverlayEntry(
+      builder: (_) => Positioned.fill(
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: _onPointerDownOutside,
+        ),
+      ),
+    );
     _entry = OverlayEntry(
       builder: (overlayContext) {
         final screen = MediaQuery.sizeOf(overlayContext);
@@ -59,6 +105,7 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
           left: anchor.left,
           top: anchor.top,
           child: HoverPopupWidget(
+            key: _popupKey,
             folderPath: folderPath,
             word: word,
             currentEpisode: currentEpisode,
@@ -69,7 +116,11 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
         );
       },
     );
-    Overlay.of(context, rootOverlay: true).insert(_entry!);
+    // The barrier goes in first so it sits under the popup: a press on the
+    // popup itself is then excluded by bounds rather than by luck.
+    Overlay.of(context, rootOverlay: true)
+      ..insert(_dismissEntry!)
+      ..insert(_entry!);
   }
 
   @override

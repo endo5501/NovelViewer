@@ -101,12 +101,7 @@ TextSpan buildRubyTextSpans(
   final hasTts = ttsHighlightRange != null;
   // Marks are computed over the FULL base text (plain segments + ruby base
   // text) so a cached word that straddles a segment boundary still matches.
-  final globalMarks = markedWords.isEmpty
-      ? const <MarkSpan>[]
-      : findMarks(
-          text: _concatenatedBaseText(segments),
-          wordsByStyle: markedWords,
-        );
+  final globalMarks = findMarksInSegments(segments, markedWords);
   final spans = <InlineSpan>[];
   var plainTextOffset = 0;
 
@@ -178,6 +173,28 @@ TextSpan buildRubyTextSpans(
   return TextSpan(style: baseStyle, children: spans);
 }
 
+/// The marks of [markedWords] over [segments], in the base-text space.
+///
+/// Marks are computed over the FULL base text (plain segments + ruby base
+/// text) so a cached word that straddles a segment boundary still matches.
+/// That space is also the one `plainTextOffsetFromDisplayOffset` converts a
+/// selection into, so a caller holding a selection offset can look up the
+/// mark under it without a second notion of position.
+///
+/// `buildRubyTextSpans` uses this to decide which runs to underline, and the
+/// viewer uses it to resolve a tap. Both must see the same marks, or a tap
+/// would open a summary for a word that carries no underline.
+List<MarkSpan> findMarksInSegments(
+  List<TextSegment> segments,
+  Map<String, MarkStyle> markedWords,
+) {
+  if (markedWords.isEmpty) return const <MarkSpan>[];
+  return findMarks(
+    text: _concatenatedBaseText(segments),
+    wordsByStyle: markedWords,
+  );
+}
+
 String _concatenatedBaseText(List<TextSegment> segments) {
   final buf = StringBuffer();
   for (final s in segments) {
@@ -206,7 +223,15 @@ List<MarkSpan> _localizeMarks(
     final localStart = (m.start - segmentStart).clamp(0, segmentLength);
     final localEnd = (m.end - segmentStart).clamp(0, segmentLength);
     result.add(
-      MarkSpan(start: localStart, end: localEnd, style: m.style, word: m.word),
+      MarkSpan(
+        start: localStart,
+        end: localEnd,
+        style: m.style,
+        word: m.word,
+        // Carried through the translation so both halves of a word split at
+        // a segment boundary still name the same occurrence.
+        occurrence: m.occurrence,
+      ),
     );
   }
   return result;
@@ -269,7 +294,7 @@ List<InlineSpan> _applyLocalMarksToSpans(
                 decorationStyle: _decorationStyleFor(runMark.style),
               );
           final word = runMark.word;
-          final token = (start: runMark.start, end: runMark.end);
+          final token = runMark.occurrence;
           output.add(
             TextSpan(
               text: subText,

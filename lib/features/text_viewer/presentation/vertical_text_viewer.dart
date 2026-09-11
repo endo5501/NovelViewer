@@ -296,6 +296,7 @@ class VerticalTextViewer extends ConsumerStatefulWidget {
     this.markedWords = const {},
     this.onMarkEnter,
     this.onMarkExit,
+    this.onMarkTap,
     this.onHoverHideRequest,
   }) : assert(columnSpacing >= 0);
 
@@ -321,6 +322,11 @@ class VerticalTextViewer extends ConsumerStatefulWidget {
   final void Function(String word, Offset globalPosition, HoverToken token)?
   onMarkEnter;
   final void Function(HoverToken token)? onMarkExit;
+
+  /// Reports a tap that landed on a marked character, for a pointer with no
+  /// secondary button. See `VerticalTextPage.onMarkTap`.
+  final void Function(String word, Offset globalPosition, HoverToken token)?
+  onMarkTap;
 
   /// Fired when the viewer-level hover state should be dropped wholesale —
   /// page turn, selection drag started, etc.
@@ -633,6 +639,7 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
                   markedWords: widget.markedWords,
                   onMarkEnter: widget.onMarkEnter,
                   onMarkExit: widget.onMarkExit,
+                  onMarkTap: widget.onMarkTap,
                   onHoverHideRequest: widget.onHoverHideRequest,
                 );
 
@@ -668,6 +675,11 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
                           // the notifier so no orphan token leaks.
                           onMarkEnter: widget.onMarkEnter,
                           onMarkExit: widget.onMarkExit,
+                          // No onMarkTap: this page is on its way off screen.
+                          // Hover survives it because an enter is matched by
+                          // an exit, but a tap has nothing to undo it, so a
+                          // finger landing here mid-slide would leave a
+                          // summary open for a word the reader has left.
                           onHoverHideRequest: widget.onHoverHideRequest,
                         ),
                       ),

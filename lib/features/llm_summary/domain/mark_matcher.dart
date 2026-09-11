@@ -10,12 +10,24 @@ class MarkSpan {
   final MarkStyle style;
   final String word;
 
-  const MarkSpan({
+  /// Identifies the occurrence this mark belongs to, as the range it was
+  /// found at in the whole text.
+  ///
+  /// [start] and [end] may be narrower: a renderer that lays text out in
+  /// pieces translates a mark into each piece's own coordinates and clips it
+  /// at the edges, so a word split across two pieces becomes two marks. This
+  /// stays the same for both, and is what the hover popup uses to tell one
+  /// occurrence from another. It defaults to the range given, which is the
+  /// answer whenever no translation has happened.
+  final ({int start, int end}) occurrence;
+
+  MarkSpan({
     required this.start,
     required this.end,
     required this.style,
     required this.word,
-  });
+    ({int start, int end})? occurrence,
+  }) : occurrence = occurrence ?? (start: start, end: end);
 }
 
 /// Finds occurrences of [wordsByStyle] keys inside [text] and returns one
