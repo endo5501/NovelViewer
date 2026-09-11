@@ -77,6 +77,36 @@ void main() {
     });
   });
 
+  group('local network access', () {
+    // Reaching an LLM server the reader runs on their own machine means
+    // reaching a host on the local network, which iOS gates behind the
+    // reader's permission. Without a purpose string the system has nothing to
+    // show in the prompt and the connection is refused, which surfaces as a
+    // connection error the reader cannot act on: the settings section is
+    // visible, the address is right, and the analysis fails every time.
+    test('Info.plist declares a local network usage description', () {
+      expect(
+        plistValueTag(infoPlist, 'NSLocalNetworkUsageDescription'),
+        'string',
+        reason: 'NSLocalNetworkUsageDescription must be present as a string',
+      );
+    });
+
+    test('the usage description says what the connection is for', () {
+      final match = RegExp(
+        '<key>NSLocalNetworkUsageDescription</key>\\s*<string>(.*?)</string>',
+        dotAll: true,
+      ).firstMatch(infoPlist);
+
+      expect(match, isNotNull);
+      expect(
+        match!.group(1)!.trim(),
+        isNotEmpty,
+        reason: 'an empty purpose string tells the reader nothing',
+      );
+    });
+  });
+
   group('device family', () {
     test('every build configuration targets iPad only', () {
       final assignments = RegExp(

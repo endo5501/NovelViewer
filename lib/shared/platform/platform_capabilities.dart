@@ -33,11 +33,11 @@ class PlatformCapabilities {
   /// server the reader runs themselves, reached over plain HTTP, and nothing in
   /// that path is platform-specific: requests go through `dart:io`'s
   /// `HttpClient`, which opens its own sockets rather than using the system's
-  /// URL loading layer, so the transport policy that restricts plaintext HTTP
-  /// never sees them. What iOS does restrict is reaching a host on the local
-  /// network, which needs a usage description and the reader's permission. That
-  /// bears on where the server may be, not on whether the feature exists, so it
-  /// is not modelled here.
+  /// URL loading system, which is the layer the transport policy that restricts
+  /// plaintext HTTP is enforced in, so it never sees them. What iOS does
+  /// restrict is reaching a host on the local network, which needs a usage
+  /// description and the reader's permission. That bears on where the server
+  /// may be, not on whether the feature exists, so it is not modelled here.
   ///
   /// The plaintext claim has been confirmed on an iPad simulator, which fetched
   /// a model list over `http://` from a server on the host. What that does not

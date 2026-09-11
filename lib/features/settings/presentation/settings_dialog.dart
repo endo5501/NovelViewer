@@ -90,8 +90,8 @@ class _GeneralTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Withheld where the LLM cannot be reached: the endpoint this section
-    // configures is plaintext HTTP, which the platform blocks.
+    // Withheld where the capability model says summaries cannot be produced,
+    // so the reader is not given a form whose every setting would go nowhere.
     final llmSupported = ref.watch(llmSummarySupportedProvider);
 
     return SingleChildScrollView(

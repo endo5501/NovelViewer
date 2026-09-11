@@ -15,15 +15,6 @@ import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dar
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// The LLM section configures a server the reader runs themselves. It is shown
-/// wherever the capability model reports the feature as supported, and withheld
-/// where it does not, rather than being shown as a form whose every setting
-/// could only fail.
-///
-/// Most cases here override the per-feature provider directly, which is what
-/// lets both outcomes be exercised. One case overrides the capability model
-/// instead, so that the derivation from a platform flag through to the rendered
-/// section is covered end to end.
 final _packageInfo = PackageInfo(
   appName: 'NovelViewer',
   packageName: 'com.endo5501.novelViewer',
@@ -45,6 +36,15 @@ class _Dialog extends StatelessWidget {
   }
 }
 
+// The LLM section configures a server the reader runs themselves. It is shown
+// wherever the capability model reports the feature as supported, and withheld
+// where it does not, rather than being shown as a form whose every setting
+// could only fail.
+//
+// Most cases here override the per-feature provider directly, which is what
+// lets both outcomes be exercised. One case overrides the capability model
+// instead, so that the derivation from a platform flag through to the rendered
+// section is covered end to end.
 void main() {
   late SharedPreferences prefs;
 

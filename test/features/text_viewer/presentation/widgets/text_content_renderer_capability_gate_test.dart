@@ -16,8 +16,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// The builders are pure and covered directly, but they only omit an item when
 /// the renderer withholds its label and callback. Removing those `ref.read`
 /// checks would leave the builder tests green while putting the dictionary and
-/// analysis actions back on an iPad, so the wiring needs a test that mounts the
-/// real widget.
+/// analysis actions back where the platform withholds them, so the wiring
+/// needs a test that mounts the real widget.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -141,7 +141,7 @@ void main() {
     expect(labels, isNot(contains('解析開始(ネタバレあり)')));
   });
 
-  testWidgets('an iPad is offered neither, but keeps the standard items', (
+  testWidgets('neither group is offered when both are unsupported', (
     tester,
   ) async {
     final labels = await toolbarLabels(
@@ -207,7 +207,9 @@ void main() {
     expect(labels, contains('解析開始(ネタバレあり)'));
   });
 
-  testWidgets('vertical mode withholds both groups on an iPad', (tester) async {
+  testWidgets('vertical mode withholds both groups when both are unsupported', (
+    tester,
+  ) async {
     final labels = await verticalMenuLabels(
       tester,
       ttsSupported: false,

@@ -114,9 +114,10 @@ final llmSummaryServiceProvider = Provider.family<LlmSummaryService?, String>((
 /// on a tablet is not where the server lives, so a reader has to point the
 /// settings section at their own host. And reaching that host over the local
 /// network needs a usage description in the iOS project and the reader's
-/// permission, granted once, with the first attempt failing while the prompt
-/// is up. A loopback address, which is what the simulator reaches on the
-/// developer's own machine, is subject to neither.
+/// permission, which they can refuse and later revoke; the attempt that raises
+/// the prompt fails while it is up, so a retry is what makes a granted
+/// permission visible. A loopback address, which is what the simulator reaches
+/// on the developer's own machine, is subject to neither.
 ///
 /// Reading already-stored summaries is not gated: a library folder carried
 /// over from a desktop install keeps its analysis history browsable.
