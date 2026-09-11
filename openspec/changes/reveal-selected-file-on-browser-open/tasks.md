@@ -13,13 +13,13 @@
 
 ## 2. 初回スクロールの実装
 
-- [ ] 2.1 `file_browser_panel.dart` の `_FileBrowserPanelState` に、マウントごとに一度だけ消費するフラグ（`_didInitialReveal`）を追加する
-- [ ] 2.2 `_scheduleScrollTo` にアニメーション有無の引数を追加し、`animateTo` と `jumpTo` を切り替えられるようにする。オフセット計算（フォルダ件数を足した flat index、中央寄せ、`maxScrollExtent` でのクランプ）は共有したまま変えない
-- [ ] 2.3 `_buildFileList` の `data` ブランチで `ListView` を返す直前に、フラグが未消費かつ選択ファイルがある場合に限り、アニメーション無しの初回スクロールを予約してフラグを立てる
-- [ ] 2.4 `contents.isEmpty` のブランチと `loading` / `error` のブランチではフラグを立てないことを確認する（決定 2）
-- [ ] 2.5 `initState` の `ref.listenManual` は選択変化用としてそのまま残し、アニメーション有りで呼ぶ
-- [ ] 2.6 フラグの意図（なぜ一度きりか、なぜ `ListView` を返すビルドで立てるのか）をコードコメントに残す。周囲の既存コメントと同じ粒度に合わせる
-- [ ] 2.7 `fvm flutter test` を実行し、1 で追加した全テストと既存テストが通ることを確認する
+- [x] 2.1 `file_browser_panel.dart` の `_FileBrowserPanelState` に、マウントごとに一度だけ消費するフラグ（`_didInitialReveal`）を追加する
+- [x] 2.2 `_scheduleScrollTo` にアニメーション有無の引数を追加し、`animateTo` と `jumpTo` を切り替えられるようにする。オフセット計算（フォルダ件数を足した flat index、中央寄せ、`maxScrollExtent` でのクランプ）は共有したまま変えない
+- [x] 2.3 `_buildFileList` の `data` ブランチで `ListView` を返す直前に、フラグが未消費かつ選択ファイルがある場合に限り、アニメーション無しの初回スクロールを予約してフラグを立てる
+- [x] 2.4 `contents.isEmpty` のブランチと `loading` / `error` のブランチではフラグを立てないことを確認する（決定 2）
+- [x] 2.5 `initState` の `ref.listenManual` は選択変化用としてそのまま残し、アニメーション有りで呼ぶ
+- [x] 2.6 フラグの意図（なぜ一度きりか、なぜ `ListView` を返すビルドで立てるのか）をコードコメントに残す。周囲の既存コメントと同じ粒度に合わせる
+- [x] 2.7 `fvm flutter test` を実行し、1 で追加した全テストと既存テストが通ることを確認する（3096 件通過）。あわせて 1.5 のテストが実際に再発火を検出できることを、フラグの判定を一時的に外して失敗すること（0.0 のはずが 9400.5）で確認した
 
 ## 3. 実機確認
 

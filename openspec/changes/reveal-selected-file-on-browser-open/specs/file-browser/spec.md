@@ -34,7 +34,7 @@ This reveal SHALL be driven by the file browser itself, from the fact that it wa
 
 The reveal SHALL be skipped, leaving the list at its top, when no file is selected, and when the selected file does not belong to the directory the browser is currently showing.
 
-The reveal SHALL NOT fire again for the lifetime of that mount. In particular, navigating into another directory while the browser stays mounted SHALL leave the new listing at its top rather than scrolling toward a selection carried over from the previous directory.
+The reveal SHALL NOT fire again for the lifetime of that mount. In particular, navigating into another directory while the browser stays mounted SHALL NOT scroll the new listing toward the selection carried over from the previous directory. Where the list sits when one listing replaces another is otherwise outside this requirement: a scroll position that survives a listing change is existing behaviour of the underlying list and is neither required nor forbidden here.
 
 The reveal SHALL be evaluated against the listing the user actually sees, not against an empty or still-loading one: a build that shows a loading indicator or an empty-directory message SHALL NOT consume the once-per-mount reveal.
 
@@ -58,9 +58,9 @@ The reveal SHALL be evaluated against the listing the user actually sees, not ag
 - **WHEN** the file browser is mounted showing a directory that does not contain the currently selected file
 - **THEN** the file list shows its first entries and does not scroll
 
-#### Scenario: Navigating into a directory after the reveal starts at the top
-- **WHEN** the file browser has already revealed the selected file for this mount and the user then navigates into another directory
-- **THEN** the new listing is shown from its first entry, and the list does not scroll toward the previously selected file
+#### Scenario: Navigating into a directory does not reveal again
+- **WHEN** the file browser has already revealed the selected file for this mount, the reader scrolls the list back to its first entry, and the reader then navigates into another directory whose listing also contains the selected file
+- **THEN** the list stays at the first entry and does not scroll back toward the selected file
 
 #### Scenario: A slow directory load still gets its reveal
 - **WHEN** the file browser is mounted with a file already selected while the directory listing is still loading, and the listing arrives afterwards

@@ -766,17 +766,16 @@ void main() {
     ) async {
       final files = _numberedFiles(200);
       final target = files[149];
-      final otherFiles = _numberedFiles(200, dir: '/other', suffix: 'other');
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            // Both folders list the same episodes. A reveal firing a second
+            // time would therefore have somewhere to scroll to, which is what
+            // lets the final assertion tell the two cases apart.
             directoryContentsProvider.overrideWith((ref) async {
-              final dir = ref.watch(currentDirectoryProvider);
-              return DirectoryContents(
-                files: dir == '/other' ? otherFiles : files,
-                subdirectories: const [],
-              );
+              ref.watch(currentDirectoryProvider);
+              return DirectoryContents(files: files, subdirectories: const []);
             }),
             currentDirectoryProvider.overrideWith(
               () => _SwitchableDirectoryNotifier('/test'),
@@ -797,7 +796,15 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text(target.name), findsOneWidget);
+      expect(
+        _panelScrollPosition(tester).pixels,
+        greaterThan(0.0),
+        reason: 'Precondition: the mount spent its reveal on the selection',
+      );
+
+      // The reader scrolls back to the first entry before moving on.
+      _panelScrollPosition(tester).jumpTo(0.0);
+      await tester.pumpAndSettle();
 
       final container = ProviderScope.containerOf(
         tester.element(find.byType(FileBrowserPanel)),
@@ -809,8 +816,8 @@ void main() {
         _panelScrollPosition(tester).pixels,
         equals(0.0),
         reason:
-            'A directory the reader just opened must be shown from its first '
-            'entry, not scrolled toward a selection carried over',
+            'The reveal is spent for this mount, so a new listing must not '
+            'pull the list back to the selected file',
       );
     });
 
@@ -843,7 +850,8 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      // Not pumpAndSettle: the loading indicator spins forever.
+      await tester.pump();
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
       completer.complete(

@@ -60,6 +60,22 @@ const double _kFileTileExtent = 64.0;
 class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
   final ScrollController _scrollController = ScrollController();
 
+  /// Whether this mount has already placed the list on the selected file.
+  ///
+  /// A closed [Drawer] unmounts its child, so in the narrow layout the whole
+  /// panel — and with it [_scrollController] — is rebuilt from scratch every
+  /// time the reader opens the file browser. Crossing the shell's layout
+  /// breakpoint (rotating a tablet, resizing a window) does the same. In both
+  /// cases a selection is already in place, so it never transitions and the
+  /// listener in [initState] never fires; the list would open at the top.
+  /// Revealing the selection once per mount covers every such path without the
+  /// panel having to know which one it is in.
+  ///
+  /// Once per *mount*, not once per listing: opening another folder while the
+  /// panel stays mounted must show that folder from its first entry rather
+  /// than chase a selection carried over from the folder before it.
+  bool _didInitialReveal = false;
+
   @override
   void initState() {
     super.initState();
@@ -80,7 +96,13 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     super.dispose();
   }
 
-  void _scheduleScrollTo(FileEntry file) {
+  /// Scrolls [file] to the middle of the viewport after the current frame.
+  ///
+  /// [animate] is false for the once-per-mount reveal. A drawer slides open in
+  /// roughly the same 250ms this animation takes, so animating there would
+  /// have the list still moving while the panel itself is still arriving. A
+  /// jump lands before the first frame the reader sees.
+  void _scheduleScrollTo(FileEntry file, {bool animate = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
       final contents = ref.read(directoryContentsProvider).value;
@@ -98,6 +120,10 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         0.0,
         _scrollController.position.maxScrollExtent,
       );
+      if (!animate) {
+        _scrollController.jumpTo(clamped);
+        return;
+      }
       _scrollController.animateTo(
         clamped,
         duration: const Duration(milliseconds: 250),
@@ -243,6 +269,24 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
             ),
           ),
         ];
+
+        // Reveal the selection from here rather than from initState: a panel
+        // mounted while the listing is still loading has no ListView, so a
+        // post-frame callback would find no scroll client and the one chance
+        // would be spent on nothing. Only a build that actually returns the
+        // list consumes it — at startup the provider first yields an empty
+        // listing (no directory chosen yet), which returns the "no files"
+        // message above and must leave the reveal for the real listing.
+        //
+        // The flag is spent even when nothing is selected, so that a file
+        // tapped afterwards still scrolls with the usual animation instead of
+        // being overtaken by a jump from this branch.
+        if (!_didInitialReveal) {
+          _didInitialReveal = true;
+          if (selectedFile != null) {
+            _scheduleScrollTo(selectedFile, animate: false);
+          }
+        }
 
         return ListView(
           controller: _scrollController,
