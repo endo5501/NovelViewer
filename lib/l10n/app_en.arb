@@ -165,6 +165,7 @@
   "download_startButton": "Start download",
   "download_indexTruncatedWarning": "Failed to fetch the full table of contents; some episodes may be missing",
   "download_cancelledMessage": "Download cancelled",
+  "download_incomingRequestIgnored": "A shared URL was received, but not taken: finish the current download first",
   "download_destinationLabel": "Destination folder",
   "download_destinationRoot": "Library root (default)",
   "download_collectionTargetLabel": "Import target",

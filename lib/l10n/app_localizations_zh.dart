@@ -557,6 +557,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get download_cancelledMessage => '下载已取消';
 
   @override
+  String get download_incomingRequestIgnored => '已收到共享的 URL，但未接收：请先完成当前下载';
+
+  @override
   String get download_destinationLabel => '保存文件夹';
 
   @override
