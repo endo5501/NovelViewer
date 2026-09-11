@@ -211,15 +211,15 @@ The on-device provider SHALL start each generation request from a session that c
 
 The prompts the pipeline issues are independent of one another, and the model's context window is shared between the prompt and the response. Carrying a transcript forward would spend that window on text no later prompt depends on.
 
-Releasing the provider's resources SHALL drop any session it holds.
+No session SHALL outlive the request that created it. Releasing the provider's resources therefore has nothing to drop, and the contract every client shares is satisfied by doing nothing.
 
 #### Scenario: A later request is not shaped by an earlier one
 - **WHEN** two unrelated generation requests are made in succession
 - **THEN** the second SHALL be answered without the first's prompt or response in its context
 
-#### Scenario: Releasing resources drops the session
+#### Scenario: Releasing resources has nothing to drop
 - **WHEN** the provider's resources are released after an analysis run
-- **THEN** it SHALL hold no session
+- **THEN** the call SHALL complete, and the provider SHALL remain usable for a later request
 
 ### Requirement: Generation failures are reported with their cause
 The on-device provider SHALL translate the model framework's generation failures into failures that name their cause, rather than a single opaque error.

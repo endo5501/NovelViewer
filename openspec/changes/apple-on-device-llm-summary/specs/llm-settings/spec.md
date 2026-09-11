@@ -5,7 +5,7 @@ The settings dialog SHALL include an LLM configuration section where the user ca
 
 The reason a platform may report the feature as unavailable belongs to the capability model, not to this section. In particular the transport policy is not such a reason: the HTTP client the requests are sent through opens its own sockets and is not subject to it. Where the feature is available, the section SHALL be shown whether or not the reader has a server within reach — the default endpoint addresses the machine the app runs on, which on a tablet is not where the server lives, and the section is how the reader points it somewhere else.
 
-The on-device option SHALL be offered only where the platform can host the model at all, and its selectability and accompanying reason are governed by `apple-on-device-llm`. Selecting it SHALL reveal no configuration fields: it addresses no endpoint, carries no credential and names no model. The section SHALL therefore show, for that provider, only the selection itself and whatever reason applies.
+Whether the on-device option appears at all, whether it can be selected, and what reason accompanies it are governed by `apple-on-device-llm`: the platform being able to host the model is necessary but not sufficient, since an operating system without the framework and a device that cannot run it are both answered by the native side rather than by a platform flag. Selecting it SHALL reveal no configuration fields: it addresses no endpoint, carries no credential and names no model. The section SHALL therefore show, for that provider, only the selection itself and whatever reason applies.
 
 #### Scenario: Display LLM provider dropdown
 - **WHEN** the user opens the settings dialog on a platform where LLM summary is available
@@ -19,8 +19,8 @@ The on-device option SHALL be offered only where the platform can host the model
 - **WHEN** the user selects "Ollama" from the provider dropdown
 - **THEN** the Ollama-specific configuration fields (endpoint URL, model name) are displayed
 
-#### Scenario: The on-device option appears where the platform can host the model
-- **WHEN** the user opens the settings dialog on a platform that can host the on-device model
+#### Scenario: The on-device option appears where the model is usable
+- **WHEN** the user opens the settings dialog on a platform that can host the on-device model, with the model reported available
 - **THEN** the provider dropdown SHALL offer the on-device option alongside the two server-backed options
 
 #### Scenario: Selecting the on-device provider reveals no configuration fields
