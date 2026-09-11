@@ -355,6 +355,7 @@
   "download_startButton": "ダウンロード開始",
   "download_indexTruncatedWarning": "目次の取得が途中で失敗しました（一部のエピソードが取得できていない可能性があります）",
   "download_cancelledMessage": "ダウンロードを中断しました",
+  "download_incomingRequestIgnored": "URL を受け取りましたが、取り込みませんでした。先に今のダウンロードを終えてください",
   "download_destinationLabel": "保存先フォルダ",
   "download_destinationRoot": "ライブラリルート（既定）",
   "download_collectionTargetLabel": "取り込み先",

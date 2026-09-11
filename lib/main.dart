@@ -15,7 +15,9 @@ import 'package:logging/logging.dart';
 import 'package:novel_viewer/shared/logging/app_logger.dart';
 import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
+import 'package:novel_viewer/features/text_download/data/incoming_link_source.dart';
 import 'package:novel_viewer/features/text_download/data/novel_library_service.dart';
+import 'package:novel_viewer/features/text_download/providers/download_request_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_data_migrator.dart';
@@ -73,6 +75,10 @@ void main() async {
       sharedPreferencesProvider.overrideWithValue(prefs),
       novelDatabaseProvider.overrideWithValue(novelDatabase),
       packageInfoProvider.overrideWithValue(packageInfo),
+      // Only a running app has the platform channel this reads from.
+      incomingLinkSourceProvider.overrideWithValue(
+        IncomingLinkSource.appLinks(),
+      ),
     ],
   );
 

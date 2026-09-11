@@ -575,6 +575,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get download_cancelledMessage => 'Download cancelled';
 
   @override
+  String get download_incomingRequestIgnored =>
+      'A shared URL was received, but not taken: finish the current download first';
+
+  @override
   String get download_destinationLabel => 'Destination folder';
 
   @override

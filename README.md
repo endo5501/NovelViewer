@@ -18,6 +18,7 @@ Web小説サイトから小説をダウンロードし、ローカルで閲覧�
 - **LLM要約**: 指定した単語をネタばれあり/なしを指定して確認可能  
 (Ollama / OpenAI互換APIに対応)
 - **音声読み上げ**: 指定したリファレンス音声を使った読み上げ/読み上げテキストの編集
+- **URL スキームからの登録**: `novelviewer://download?url=...` を開くと、その URL 入りでダウンロードダイアログが開く(macOS / iPad)
 
 ![閲覧画面](images/view3.png)
 
@@ -192,6 +193,33 @@ iOS は Swift Package Manager 単独構成です（CocoaPods は使用しませ�
 蔵書全体のメタデータ（`novel_metadata.db`）は Files アプリに露出しない `Library/Application Support/` に置かれます。一方、各小説フォルダの中にある `novel_data.db` / `episode_cache.db` / `tts_audio.db` は、小説フォルダごと持ち運ぶ設計のため Files アプリからも見えます。
 
 > **注意:** `novel_data.db` にはブックマークと LLM 要約が入っており、破損時に自動復旧しません（意図的な設計です）。Files アプリで小説フォルダを整理する際は、`.txt` 以外のファイルを消したり、`-wal` / `-shm` を欠いた状態でコピーし直したりしないでください。フォルダごと丸ごと移動・コピーするのは安全です。
+
+### URL スキームでダウンロードを依頼する
+
+`novelviewer://download?url=<URL をパーセントエンコードしたもの>` を開くと、その URL が入力された状態でダウンロードダイアログが開きます。開始ボタンを押すまでダウンロードは始まりません。任意のページがこのスキームを叩けるため、確認を経ずにダウンロードすることはありません。
+
+```bash
+# macOS での例
+open "novelviewer://download?url=https%3A%2F%2Fncode.syosetu.com%2Fn9669bk%2F"
+```
+
+対応は **macOS と iPad のみ**です。Windows と Linux にはスキームを登録していません。Windows はスキーム起動が既存プロセスとは別のプロセスを立ち上げるため、同じ SQLite ファイルを 2 つのプロセスが掴みます。単一インスタンス化を先に片付ける必要があり、別の変更として扱います。
+
+登録が効いているかの手動確認手順は `docs/verify-url-scheme.md` にあります。
+
+#### iPad で共有シートから登録する
+
+iOS の共有シートに直接 NovelViewer を出すには App Extension が要るため、現時点ではショートカットアプリを経由します。一度作れば、Safari の共有シートに項目として並びます。
+
+1. ショートカットアプリで新規ショートカットを作る
+2. 詳細（ⓘ）を開き、「共有シートに表示」をオンにする。受け取る種類は「URL」だけにする
+3. アクションとして「URL を展開」→「テキスト」に `novelviewer://download?url=` と入力し、続けて受け取った URL をエンコードして連結する（「テキストをエンコード」アクションを使う）
+4. 最後に「URL を開く」アクションを置く
+5. 分かりやすい名前（例: NovelViewer に送る）を付けて保存する
+
+Safari で小説の目次ページを開き、共有 → 作成したショートカットを選ぶと、NovelViewer が前面に来てダイアログがその URL 入りで開きます。
+
+共有シートに NovelViewer を直接出すには App Extension が必要です。Apple Developer Program への加入を前提に保留しており、着手するときの設計は `docs/plans/2026-09-11-share-extension-phase2.md` にあります。
 
 ### テスト
 

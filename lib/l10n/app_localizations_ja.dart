@@ -561,6 +561,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get download_cancelledMessage => 'ダウンロードを中断しました';
 
   @override
+  String get download_incomingRequestIgnored =>
+      'URL を受け取りましたが、取り込みませんでした。先に今のダウンロードを終えてください';
+
+  @override
   String get download_destinationLabel => '保存先フォルダ';
 
   @override

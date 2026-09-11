@@ -1090,6 +1090,12 @@ abstract class AppLocalizations {
   /// **'ダウンロードを中断しました'**
   String get download_cancelledMessage;
 
+  /// No description provided for @download_incomingRequestIgnored.
+  ///
+  /// In ja, this message translates to:
+  /// **'URL を受け取りましたが、取り込みませんでした。先に今のダウンロードを終えてください'**
+  String get download_incomingRequestIgnored;
+
   /// No description provided for @download_destinationLabel.
   ///
   /// In ja, this message translates to:
