@@ -18,39 +18,42 @@ const double kHoverPopupGap = 16.0;
 /// given display [mode] and pointer location. The returned offset is what
 /// callers pass to a `Positioned(left:..., top:...)` over the root overlay.
 ///
-/// Horizontal mode: popup goes down-right of the pointer (no edge flips —
-/// matches the archived horizontal-only behavior).
+/// Horizontal mode: popup goes down-right of the pointer, the placement it
+/// has always had.
 ///
 /// Vertical mode: popup goes up-right of the pointer by default so it
 /// floats over already-read columns (which are to the right under RTL
 /// column flow) and away from the next character in the reading direction.
-/// If the up-right placement would overflow the screen's right or top
-/// edge, the affected axis flips: right-overflow → popup left of pointer,
-/// top-overflow → popup below pointer.
+///
+/// Either default may then be flipped on either axis so the popup stays on
+/// screen, and the origin is clamped for a viewport too small for any flip
+/// to help. On a desktop window the pointer is rarely close enough to an
+/// edge for that to happen; on a tablet held upright it happens as soon as
+/// the reader taps a word in the outer third of the page.
 ({double left, double top}) computePopupAnchor({
   required TextDisplayMode mode,
   required Offset pointer,
   required Size screenSize,
 }) {
-  if (mode == TextDisplayMode.horizontal) {
-    // Horizontal mode keeps the simple "down-right of pointer" anchor with
-    // no flipping and no clamping — this matches the archived behavior.
-    return (
-      left: pointer.dx + kHoverPopupGap,
-      top: pointer.dy + kHoverPopupGap,
-    );
-  }
+  final isHorizontal = mode == TextDisplayMode.horizontal;
 
-  // Vertical mode defaults.
   var left = pointer.dx + kHoverPopupGap;
-  var top = pointer.dy - kHoverPopupGap - kHoverPopupApproxHeight;
+  var top = isHorizontal
+      ? pointer.dy + kHoverPopupGap
+      : pointer.dy - kHoverPopupGap - kHoverPopupApproxHeight;
 
   // Right-edge overflow → flip horizontally so the popup sits to the left.
+  // Both modes start out to the right of the pointer, so this is shared.
   if (left + kHoverPopupApproxWidth > screenSize.width) {
     left = pointer.dx - kHoverPopupGap - kHoverPopupApproxWidth;
   }
-  // Top-edge overflow → flip vertically so the popup sits below.
-  if (top < 0) {
+  // The vertical flip mirrors whichever side the mode started on: horizontal
+  // opens downward and flips up, vertical opens upward and flips down.
+  if (isHorizontal) {
+    if (top + kHoverPopupApproxHeight > screenSize.height) {
+      top = pointer.dy - kHoverPopupGap - kHoverPopupApproxHeight;
+    }
+  } else if (top < 0) {
     top = pointer.dy + kHoverPopupGap;
   }
 

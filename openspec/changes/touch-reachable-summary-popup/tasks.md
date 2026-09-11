@@ -2,19 +2,19 @@
 
 純関数で独立しており、他のどの作業にも依存しない。ここから始めて土台を固める。
 
-- [ ] 1.1 `test/features/llm_summary/presentation/hover_popup_anchor_test.dart` に横書きの端処理のテストを追加する。右端でのめくり返し、下端でのめくり返し、どちらも収まらない場合の原点クランプ、そして余裕がある通常の場合に従来どおり右下 16px であること、の四つ
-- [ ] 1.2 テストを実行し、追加した分だけが失敗することを確認する
-- [ ] 1.3 `lib/features/llm_summary/presentation/hover_popup_anchor.dart` の横書き分岐に、縦書きと同じめくり返しとクランプを適用する
-- [ ] 1.4 テストが通ることを確認し、縦書き側の既存テストが変わらず通ることも確認する
+- [x] 1.1 `test/features/llm_summary/presentation/hover_popup_anchor_test.dart` に横書きの端処理のテストを追加する。右端でのめくり返し、下端でのめくり返し、どちらも収まらない場合の原点クランプ、そして余裕がある通常の場合に従来どおり右下 16px であること、の四つ
+- [x] 1.2 テストを実行し、追加した分だけが失敗することを確認する
+- [x] 1.3 `lib/features/llm_summary/presentation/hover_popup_anchor.dart` の横書き分岐に、縦書きと同じめくり返しとクランプを適用する
+- [x] 1.4 テストが通ることを確認し、縦書き側の既存テストが変わらず通ることも確認する
 
 ## 2. マーク一覧の共有化
 
 横書きでタップ位置から語句を引くために、`buildRubyTextSpans` の内部にあるマーク算出を呼び出し側からも使えるようにする。
 
-- [ ] 2.1 平文テキストの連結と `findMarks` の呼び出しを行う関数のテストを書く。`buildRubyTextSpans` が組み立てる `TextSpan` のマーク範囲と、この関数が返す範囲が一致することを、ルビをまたぐ語句を含む入力で確認する
-- [ ] 2.2 テストを実行し、失敗することを確認する
-- [ ] 2.3 `lib/features/text_viewer/presentation/ruby_text_builder.dart` から該当処理を公開関数として切り出し、`buildRubyTextSpans` 自身もその関数を使うように書き換える
-- [ ] 2.4 テストが通ることと、既存のルビ・マーク関連テストが変わらず通ることを確認する
+- [x] 2.1 平文テキストの連結と `findMarks` の呼び出しを行う関数のテストを書く。`buildRubyTextSpans` が組み立てる `TextSpan` のマーク範囲と、この関数が返す範囲が一致することを、ルビをまたぐ語句を含む入力で確認する
+- [x] 2.2 テストを実行し、失敗することを確認する
+- [x] 2.3 `lib/features/text_viewer/presentation/ruby_text_builder.dart` から該当処理を公開関数として切り出し、`buildRubyTextSpans` 自身もその関数を使うように書き換える
+- [x] 2.4 テストが通ることと、既存のルビ・マーク関連テストが変わらず通ることを確認する
 
 ## 3. 縦書きのタップ分岐
 

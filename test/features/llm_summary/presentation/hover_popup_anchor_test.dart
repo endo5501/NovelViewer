@@ -23,16 +23,42 @@ void main() {
       expect(anchor.top, 100 + g);
     });
 
-    test('horizontal mode does not flip even near a screen edge', () {
-      // Horizontal popup placement is intentionally simple — the existing
-      // archived hover behavior never flipped.
+    test('flips to the left of the pointer near the right edge', () {
+      // A tablet held upright is narrow enough for the default placement to
+      // run off the side, which leaves the popup unreadable rather than
+      // merely misplaced.
+      final pointer = Offset(screen.width - 20, 600);
       final anchor = computePopupAnchor(
         mode: TextDisplayMode.horizontal,
-        pointer: const Offset(1900, 1070),
+        pointer: pointer,
         screenSize: screen,
       );
-      expect(anchor.left, 1900 + g);
-      expect(anchor.top, 1070 + g);
+      expect(anchor.left, pointer.dx - g - w);
+      expect(anchor.top, pointer.dy + g, reason: 'the vertical axis is fine');
+    });
+
+    test('flips above the pointer near the bottom edge', () {
+      final pointer = Offset(800, screen.height - 20);
+      final anchor = computePopupAnchor(
+        mode: TextDisplayMode.horizontal,
+        pointer: pointer,
+        screenSize: screen,
+      );
+      expect(anchor.top, pointer.dy - g - h);
+      expect(anchor.left, pointer.dx + g, reason: 'the horizontal axis is fine');
+    });
+
+    test('keeps the origin on screen when neither placement fits', () {
+      // Smaller than the popup on both axes, so no flip can help.
+      const tiny = Size(200, 100);
+      const pointer = Offset(100, 50);
+      final anchor = computePopupAnchor(
+        mode: TextDisplayMode.horizontal,
+        pointer: pointer,
+        screenSize: tiny,
+      );
+      expect(anchor.left, 0.0, reason: 'no room to the left either');
+      expect(anchor.top, 0.0, reason: 'no room above either');
     });
   });
 
