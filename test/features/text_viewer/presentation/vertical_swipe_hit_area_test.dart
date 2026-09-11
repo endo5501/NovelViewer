@@ -1,6 +1,8 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/data/viewer_selection.dart';
@@ -16,14 +18,16 @@ const _kAreaWidth = 400.0;
 const _kAreaHeight = 300.0;
 
 /// The `Align` is here only to hand the page the bounded, loose constraints it
-/// gets from `Padding` in the viewer, which the keyed `SizedBox` would
-/// otherwise make tight — the viewer itself no longer wraps the page in one,
-/// because the page aligns its own text. `topRight` rather than `topLeft` so
-/// that a page which went back to shrink-wrapping would leave the empty region
-/// on the left, where these tests aim, instead of silently moving under them.
+/// gets from the `Stack` in the viewer, which the keyed `SizedBox` would
+/// otherwise make tight — the viewer itself wraps the page in neither an
+/// `Align` nor a `Padding`, because the page aligns its own text and applies
+/// its own margin. `topRight` rather than `topLeft` so that a page which went
+/// back to shrink-wrapping would leave the empty region on the left, where
+/// these tests aim, instead of silently moving under them.
 ///
 /// With only two characters of content the text occupies one narrow column at
-/// the right, so most of the area has nothing painted on it.
+/// the right, so most of the area has nothing painted on it. The page covers
+/// the whole keyed area regardless; its margin insets only the text.
 Widget _pageHarness({
   required List<TextSegment> segments,
   ValueChanged<SwipeDirection>? onSwipe,
@@ -31,6 +35,8 @@ Widget _pageHarness({
   int? selectionStart,
   int? selectionEnd,
   double width = _kAreaWidth,
+  Map<String, MarkStyle> markedWords = const {},
+  void Function(String word, Offset position, HoverToken token)? onMarkEnter,
 }) {
   return MaterialApp(
     locale: const Locale('ja'),
@@ -52,6 +58,8 @@ Widget _pageHarness({
               selectionEnd: selectionEnd,
               onSwipe: onSwipe,
               onSelectionChanged: onSelectionChanged,
+              markedWords: markedWords,
+              onMarkEnter: onMarkEnter,
             ),
           ),
         ),
@@ -72,6 +80,7 @@ Widget _viewerHarness({
   double width = 800,
   double height = 600,
   ValueChanged<ViewerSelection?>? onSelectionChanged,
+  List<int> bookmarkLineNumbers = const [],
 }) {
   return ProviderScope(
     child: MaterialApp(
@@ -85,6 +94,7 @@ Widget _viewerHarness({
             segments: segments,
             baseStyle: const TextStyle(fontSize: 16.0),
             onSelectionChanged: onSelectionChanged,
+            bookmarkLineNumbers: bookmarkLineNumbers,
           ),
         ),
       ),
@@ -111,7 +121,7 @@ void main() {
       );
     });
 
-    testWidgets('the text stays aligned to the top-right of that area', (
+    testWidgets('the text sits a margin in from the top-right of that area', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -121,8 +131,14 @@ void main() {
       final area = tester.getRect(find.byKey(_areaKey));
       final firstChar = tester.getRect(find.text('あ'));
 
-      expect(firstChar.right, moreOrLessEquals(area.right, epsilon: 0.01));
-      expect(firstChar.top, moreOrLessEquals(area.top, epsilon: 0.01));
+      expect(
+        firstChar.right,
+        moreOrLessEquals(area.right - kVerticalTextMargin, epsilon: 0.01),
+      );
+      expect(
+        firstChar.top,
+        moreOrLessEquals(area.top + kVerticalTextMargin, epsilon: 0.01),
+      );
     });
 
     testWidgets('a right drag over the empty area is a right swipe', (
@@ -476,9 +492,8 @@ void main() {
   });
 
   group('VerticalTextViewer swipe over an area with no text', () {
-    testWidgets('the page covers the padded content area on a short page', (
-      tester,
-    ) async {
+    testWidgets('the page covers the content area edge to edge on a short '
+        'page', (tester) async {
       await tester.pumpWidget(
         _viewerHarness(segments: _shortLastPageSegments()),
       );
@@ -491,9 +506,18 @@ void main() {
       final viewer = tester.getRect(find.byType(VerticalTextViewer));
       final page = tester.getRect(find.byType(VerticalTextPage));
 
-      // 16px of padding on each side is the only horizontal inset.
-      expect(page.left, moreOrLessEquals(viewer.left + 16, epsilon: 0.01));
-      expect(page.right, moreOrLessEquals(viewer.right - 16, epsilon: 0.01));
+      // The page reaches the edges of the viewer: the text margin is applied
+      // inside it, so nothing insets its render box, and therefore nothing
+      // insets the gesture detector that fills it.
+      expect(page.left, moreOrLessEquals(viewer.left, epsilon: 0.01));
+      expect(page.right, moreOrLessEquals(viewer.right, epsilon: 0.01));
+
+      // The text itself still keeps its margin.
+      final rightmostChar = tester.getRect(find.text('う').first);
+      expect(
+        rightmostChar.right,
+        lessThanOrEqualTo(viewer.right - kVerticalTextMargin),
+      );
     });
 
     testWidgets('a left swipe on the empty left region returns to the previous '
@@ -527,6 +551,171 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(_indicatorText(tester), '1 / 2');
+    });
+  });
+
+  group('VerticalTextViewer swipe at the edge of the content area', () {
+    testWidgets('a swipe that starts inside the text margin turns the page', (
+      tester,
+    ) async {
+      // The margin that insets the text is the reader's most natural place to
+      // start a page turn on a tablet, because it is where the thumb already
+      // rests. It has to carry the gesture recognizer with it.
+      await tester.pumpWidget(
+        _viewerHarness(segments: [PlainTextSegment('あ' * 4000)]),
+      );
+      await tester.pumpAndSettle();
+      expect(_indicatorText(tester), startsWith('1 /'));
+
+      final viewer = tester.getRect(find.byType(VerticalTextViewer));
+      await tester.dragFrom(
+        Offset(viewer.left + 8, viewer.center.dy),
+        const Offset(200, 0),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_indicatorText(tester), startsWith('2 /'));
+    });
+
+    testWidgets('a swipe that starts on the left edge turns the page', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _viewerHarness(segments: [PlainTextSegment('あ' * 4000)]),
+      );
+      await tester.pumpAndSettle();
+
+      final viewer = tester.getRect(find.byType(VerticalTextViewer));
+      await tester.dragFrom(
+        Offset(viewer.left + 0.5, viewer.center.dy),
+        const Offset(200, 0),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_indicatorText(tester), startsWith('2 /'));
+    });
+
+    testWidgets('a swipe that starts on the right edge turns the page', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _viewerHarness(segments: [PlainTextSegment('あ' * 4000)]),
+      );
+      await tester.pumpAndSettle();
+
+      // Move off the first page first: a left swipe there is routed to the
+      // file-boundary handler and would leave the indicator unchanged whether
+      // the gesture reached the page or not.
+      await tester.drag(find.byType(VerticalTextPage), const Offset(200, 0));
+      await tester.pumpAndSettle();
+      expect(_indicatorText(tester), startsWith('2 /'));
+
+      final viewer = tester.getRect(find.byType(VerticalTextViewer));
+      await tester.dragFrom(
+        Offset(viewer.right - 0.5, viewer.center.dy),
+        const Offset(-200, 0),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_indicatorText(tester), startsWith('1 /'));
+    });
+
+    testWidgets('a swipe over the bookmark indicator turns the page', (
+      tester,
+    ) async {
+      // The stack hit test stops at the frontmost child that reports a hit, so
+      // a decoration painted over the page would carve a dead spot out of it.
+      await tester.pumpWidget(
+        _viewerHarness(
+          segments: [PlainTextSegment('あ' * 4000)],
+          bookmarkLineNumbers: const [1],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.bookmark), findsOneWidget);
+
+      final bookmark = tester.getRect(find.byIcon(Icons.bookmark));
+      await tester.dragFrom(bookmark.center, const Offset(200, 0));
+      await tester.pumpAndSettle();
+
+      expect(_indicatorText(tester), startsWith('2 /'));
+    });
+  });
+
+  group('VerticalTextViewer coordinates with the text margin', () {
+    testWidgets('a drag selects the character it went down on', (tester) async {
+      // Character hit rectangles and pointer positions are measured against
+      // different render boxes. They only agree because those boxes coincide;
+      // an inset applied to one and not the other shifts every character by
+      // the width of the margin.
+      ViewerSelection? selection;
+      await tester.pumpWidget(
+        _viewerHarness(
+          segments: const [PlainTextSegment('あいうえおかきくけこ')],
+          onSelectionChanged: (value) => selection = value,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.dragFrom(
+        tester.getCenter(find.text('う')),
+        const Offset(0, 40),
+      );
+      await tester.pumpAndSettle();
+
+      expect(selection?.text, startsWith('う'));
+      expect(selection?.plainTextOffset, 2);
+    });
+
+    testWidgets('pagination is unchanged by where the margin is applied', (
+      tester,
+    ) async {
+      // Pagination measures against the viewer's full constraints and
+      // subtracts named padding constants, so it must not follow the padding
+      // widget around. These counts pin that.
+      await tester.pumpWidget(
+        _viewerHarness(segments: [PlainTextSegment('あ' * 4000)]),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_indicatorText(tester), '1 / 6');
+
+      await tester.drag(find.byType(VerticalTextPage), const Offset(200, 0));
+      await tester.pumpAndSettle();
+
+      expect(_indicatorText(tester), '2 / 6');
+      expect(find.text('あ'), findsNWidgets(696));
+    });
+  });
+
+  group('VerticalTextPage hover over the text margin', () {
+    testWidgets('a hover in the margin resolves to no character', (
+      tester,
+    ) async {
+      // The mouse region covers the margin as well as the text once the margin
+      // moves inside the page, so every hover there runs the hit test against
+      // rectangles none of which contain it.
+      final entered = <String>[];
+      await tester.pumpWidget(
+        _pageHarness(
+          segments: const [PlainTextSegment('アリスが歩く')],
+          markedWords: const {'アリス': MarkStyle.solid},
+          onMarkEnter: (word, _, _) => entered.add(word),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final area = tester.getRect(find.byKey(_areaKey));
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+
+      await mouse.moveTo(Offset(area.right - 4, area.top + 4));
+      await tester.pumpAndSettle();
+      await mouse.moveTo(Offset(area.left + 4, area.bottom - 4));
+      await tester.pumpAndSettle();
+
+      expect(entered, isEmpty);
     });
   });
 }

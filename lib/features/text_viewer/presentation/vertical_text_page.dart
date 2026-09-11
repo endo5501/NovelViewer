@@ -90,6 +90,21 @@ class VerticalTextPage extends StatefulWidget {
 const _kTextHeight = 1.1;
 const _kDefaultFontSize = 14.0;
 
+/// Inset between the edges of the area the page is given and the text it lays
+/// out in it.
+///
+/// The page owns this rather than the viewer so that the margin sits INSIDE
+/// the gesture detector. Applied outside the page, it left a band along every
+/// edge of the viewer in which a pointer reached no gesture recognizer at all
+/// — a dead zone for page turning, and one that lands on the physical screen
+/// edge whenever the viewer owns the full width, as it does on a tablet in the
+/// narrow layout.
+///
+/// `VerticalTextViewer` reserves room for it when paginating, via its own
+/// `_kHorizontalPadding` / `_kVerticalPadding`. Those constants are measured
+/// against the viewer's full constraints and must stay in step with this one.
+const kVerticalTextMargin = 16.0;
+
 /// Gesture mode for distinguishing between text selection and page swiping.
 enum _GestureMode { undecided, selecting, swiping }
 
@@ -260,20 +275,25 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         onPanEnd: _onPanEnd,
         onTapUp: _onTapUp,
         onSecondaryTapUp: _onSecondaryTapUp,
-        // The Align sits INSIDE the detector so the detector fills the area
-        // the page was given while the text keeps its top-right placement.
-        // With the Align outside, the detector was only as large as the Wrap,
-        // and a swipe over the empty part of a page — the left of a short
-        // last page, most of its width — reached no gesture at all.
-        child: Align(
-          alignment: Alignment.topRight,
-          child: Directionality(
-            textDirection: TextDirection.rtl,
-            child: Wrap(
-              direction: Axis.vertical,
-              spacing: 0.0,
-              runSpacing: widget.columnSpacing,
-              children: children,
+        // The Padding and the Align both sit INSIDE the detector so that it
+        // fills the area the page was given, while the text keeps its margin
+        // and its top-right placement. With either of them outside, the
+        // detector covers less than that area and a swipe over the difference
+        // reaches no gesture at all: with the Align outside, the empty part of
+        // a short last page; with the Padding outside, a band along every
+        // edge.
+        child: Padding(
+          padding: const EdgeInsets.all(kVerticalTextMargin),
+          child: Align(
+            alignment: Alignment.topRight,
+            child: Directionality(
+              textDirection: TextDirection.rtl,
+              child: Wrap(
+                direction: Axis.vertical,
+                spacing: 0.0,
+                runSpacing: widget.columnSpacing,
+                children: children,
+              ),
             ),
           ),
         ),

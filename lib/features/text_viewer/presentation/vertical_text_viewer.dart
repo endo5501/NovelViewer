@@ -331,8 +331,16 @@ class VerticalTextViewer extends ConsumerStatefulWidget {
 }
 
 // Layout constants
-const _kHorizontalPadding = 32.0;
-const _kVerticalPadding = 62.0;
+//
+// Room reserved when paginating, subtracted from the constraints `LayoutBuilder`
+// hands this viewer. `LayoutBuilder` sits outside the text margin, so these are
+// measured against the full area and do NOT follow the padding widget around:
+// the margin itself is applied inside `VerticalTextPage`, as
+// `kVerticalTextMargin`, so that it falls inside the gesture detector. Keep
+// them in step with that constant — 16 on each side horizontally, the same
+// again plus the page-number row vertically.
+const _kHorizontalPadding = 2 * kVerticalTextMargin;
+const _kVerticalPadding = 2 * kVerticalTextMargin + 30.0;
 const _kTextHeight = 1.1;
 const _kDefaultFontSize = 14.0;
 
@@ -606,9 +614,10 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
                 final lineBreakIndices =
                     result.lineBreakIndicesPerPage[safePage];
 
-                // No Align here: the page aligns its own text to the top right
-                // and keeps its render box — and therefore its swipe hit area
-                // — as large as the space it is given.
+                // No Align and no Padding here: the page aligns its own text to
+                // the top right and applies its own margin, both inside its
+                // gesture detector, so its render box — and therefore its
+                // swipe hit area — stays as large as the space it is given.
                 final incomingPage = VerticalTextPage(
                   segments: currentSegments,
                   baseStyle: widget.baseStyle,
@@ -678,20 +687,27 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
                     Expanded(
                       child: Stack(
                         children: [
-                          ClipRect(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: pageContent,
-                            ),
-                          ),
+                          // No Padding here: the page applies the text margin
+                          // itself, inside its gesture detector, so that the
+                          // detector covers this area edge to edge. Inset from
+                          // out here it left a band along every edge in which
+                          // a pointer reached no gesture recognizer.
+                          ClipRect(child: pageContent),
+                          // A stack hit test stops at the frontmost child that
+                          // reports a hit, and a painted glyph reports one, so
+                          // this indicator has to be transparent to pointers
+                          // or it carves a dead spot out of the top-left
+                          // corner of the page beneath it.
                           if (hasBookmarkOnPage)
                             const Positioned(
                               left: 4,
                               top: 4,
-                              child: Icon(
-                                Icons.bookmark,
-                                color: Colors.orange,
-                                size: 20,
+                              child: IgnorePointer(
+                                child: Icon(
+                                  Icons.bookmark,
+                                  color: Colors.orange,
+                                  size: 20,
+                                ),
                               ),
                             ),
                         ],
