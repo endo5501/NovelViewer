@@ -39,11 +39,14 @@ class PlatformCapabilities {
   /// bears on where the server may be, not on whether the feature exists, so it
   /// is not modelled here.
   ///
+  /// The plaintext claim has been confirmed on an iPad simulator, which fetched
+  /// a model list over `http://` from a server on the host. What that does not
+  /// cover is a server on the local network, since a loopback address is exempt
+  /// from the restriction that needs the reader's permission.
+  ///
   /// This leaves a capability that is true everywhere. It is kept rather than
-  /// removed for two reasons: the plaintext claim above is to be confirmed
-  /// against a device before the surfaces it guards are dismantled, and an
-  /// on-device model would reintroduce a real distinction, since running one
-  /// depends on the hardware rather than on the platform.
+  /// removed because an on-device model would reintroduce a real distinction,
+  /// since running one depends on the hardware rather than on the platform.
   const PlatformCapabilities.forPlatform({required bool isIOS})
     : textToSpeech = !isIOS,
       appUpdate = !isIOS,
