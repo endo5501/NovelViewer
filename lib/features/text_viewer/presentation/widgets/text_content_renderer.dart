@@ -38,6 +38,7 @@ import 'package:novel_viewer/features/tts/presentation/dictionary_context_menu.d
 import 'package:novel_viewer/features/tts/presentation/tts_dictionary_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
+import 'package:novel_viewer/shared/gestures/pointer_kinds.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -315,6 +316,21 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
   TextRange? _cachedTextSpanTtsRange;
   Map<String, MarkStyle>? _cachedTextSpanMarkedWords;
   Brightness? _cachedTextSpanBrightness;
+
+  // What a tap in horizontal mode needs to resolve a word, kept alongside the
+  // span cache because it is derived from the same two inputs.
+  List<MarkSpan> _marks = const [];
+  List<TextSegment> _segments = const [];
+
+  // The display offset SelectableText last reported for a tap, and the screen
+  // position of the touch that is waiting to be resolved against it.
+  //
+  // The offset is remembered rather than acted on directly: on iOS a repeat
+  // tap at the same spot leaves the selection unchanged, so no change is
+  // reported, and resolving from the notification alone would make the second
+  // tap on a word do nothing.
+  int? _lastTapDisplayOffset;
+  Offset? _pendingTouchTap;
 
   // Cached TextPainter-space offsets of each line start, derived from the
   // parsed segments (so that ruby `WidgetSpan`s count as 1 caret unit each
@@ -687,6 +703,65 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     ref.read(hoverPopupProvider.notifier).hideIfShowing(token);
   }
 
+  /// A finger landed on a marked word. There is no exit to pair with this,
+  /// so the popup it opens is dismissed by a touch elsewhere instead — see
+  /// `HoverPopupHost`.
+  void _onMarkTap(String word, Offset position, HoverToken token) {
+    ref
+        .read(hoverPopupProvider.notifier)
+        .show(word: word, position: position, token: token);
+  }
+
+  /// Records where a touch lifted off the horizontal text, and asks for the
+  /// tap to be resolved once the text widget has had its say.
+  ///
+  /// This is a `Listener`, so it never joins the gesture arena and cannot
+  /// take the tap away from `SelectableText`: placing the caret, extending a
+  /// selection and raising the toolbar all behave exactly as before.
+  void _onTextPointerUp(PointerUpEvent event) {
+    if (!kNoSecondaryButtonPointerKinds.contains(event.kind)) return;
+    _pendingTouchTap = event.position;
+    // The tap recognizer resolves inside the synchronous dispatch of this
+    // same event, so a microtask runs after `onSelectionChanged` has been
+    // called for it — if it is going to be called at all.
+    scheduleMicrotask(_resolveTouchTap);
+  }
+
+  /// Opens the popup for the word under the touch that just lifted, or
+  /// dismisses it when the touch landed on unmarked text.
+  ///
+  /// The offset comes from the text widget's own hit test, by way of the
+  /// selection it reported, so the character resolved here is the one the
+  /// platform chose. On iOS that offset is snapped to a word edge, which can
+  /// put it one position past the end of the mark it came from, so the
+  /// position before it is tried as well.
+  void _resolveTouchTap() {
+    final position = _pendingTouchTap;
+    _pendingTouchTap = null;
+    if (!mounted || position == null) return;
+
+    final displayOffset = _lastTapDisplayOffset;
+    final mark = displayOffset == null
+        ? null
+        : _markAtDisplayOffset(displayOffset);
+    if (mark == null) {
+      ref.read(hoverPopupProvider.notifier).hide();
+      return;
+    }
+    _onMarkTap(mark.word, position, (start: mark.start, end: mark.end));
+  }
+
+  MarkSpan? _markAtDisplayOffset(int displayOffset) {
+    if (_marks.isEmpty) return null;
+    final offset = plainTextOffsetFromDisplayOffset(displayOffset, _segments);
+    for (final candidate in [offset, offset - 1]) {
+      for (final mark in _marks) {
+        if (candidate >= mark.start && candidate < mark.end) return mark;
+      }
+    }
+    return null;
+  }
+
   void _onHoverHideRequest() {
     ref.read(hoverPopupProvider.notifier).hide();
   }
@@ -946,6 +1021,7 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         markedWords: markedWords,
         onMarkEnter: _onMarkEnter,
         onMarkExit: _onMarkExit,
+        onMarkTap: _onMarkTap,
         onHoverHideRequest: _onHoverHideRequest,
         onPageLineChanged: (lineNumber) {
           ref.read(currentViewLineProvider.notifier).set(lineNumber);
@@ -990,7 +1066,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
       _cachedTextSpanTtsRange = ttsHighlightRange;
       _cachedTextSpanMarkedWords = markedWords;
       _cachedTextSpanBrightness = brightness;
+      _marks = findMarksInSegments(segments, markedWords);
     }
+    _segments = segments;
 
     if (ttsHighlightRange != null &&
         ttsHighlightRange != _lastTtsScrolledRange) {
@@ -1192,50 +1270,59 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
               children: [
                 Padding(
                   padding: EdgeInsets.only(left: bookmarkGutter),
-                  child: SelectableText.rich(
-                    textSpan,
-                    onSelectionChanged: (selection, cause) {
-                      final selectedText = selectedTextFromSelection(
-                        selection,
-                        segments,
-                      );
-                      // `selection.start` is a display offset (each ruby
-                      // WidgetSpan counts as one U+FFFC). Convert it to the
-                      // plain-text space that TTS segment offsets live in, so
-                      // playback can start here without guessing the position
-                      // back out of the raw content.
-                      ref
-                          .read(selectedTextProvider.notifier)
-                          .setSelection(
-                            selectedText.isEmpty
-                                ? null
-                                : ViewerSelection(
-                                    text: selectedText,
-                                    plainTextOffset:
-                                        plainTextOffsetFromDisplayOffset(
-                                          selection.start,
-                                          segments,
-                                        ),
-                                  ),
-                          );
-                    },
-                    contextMenuBuilder: (menuContext, editableTextState) {
-                      final selectedText = selectedTextFromSelection(
-                        editableTextState.textEditingValue.selection,
-                        segments,
-                      );
-                      return buildDictionaryContextMenu(
-                        context,
-                        editableTextState,
-                        selectedText: selectedText,
-                        onAddToDictionary: ref.read(ttsSupportedProvider)
-                            ? _openDictionaryDialog
-                            : null,
-                        onAnalyze: ref.read(llmSummarySupportedProvider)
-                            ? _runAnalysis
-                            : null,
-                      );
-                    },
+                  // A Listener rather than a GestureDetector: it observes the
+                  // touch without entering the arena, so SelectableText keeps
+                  // every gesture it already handles.
+                  child: Listener(
+                    onPointerUp: _onTextPointerUp,
+                    child: SelectableText.rich(
+                      textSpan,
+                      onSelectionChanged: (selection, cause) {
+                        if (cause == SelectionChangedCause.tap) {
+                          _lastTapDisplayOffset = selection.baseOffset;
+                        }
+                        final selectedText = selectedTextFromSelection(
+                          selection,
+                          segments,
+                        );
+                        // `selection.start` is a display offset (each ruby
+                        // WidgetSpan counts as one U+FFFC). Convert it to the
+                        // plain-text space that TTS segment offsets live in, so
+                        // playback can start here without guessing the position
+                        // back out of the raw content.
+                        ref
+                            .read(selectedTextProvider.notifier)
+                            .setSelection(
+                              selectedText.isEmpty
+                                  ? null
+                                  : ViewerSelection(
+                                      text: selectedText,
+                                      plainTextOffset:
+                                          plainTextOffsetFromDisplayOffset(
+                                            selection.start,
+                                            segments,
+                                          ),
+                                    ),
+                            );
+                      },
+                      contextMenuBuilder: (menuContext, editableTextState) {
+                        final selectedText = selectedTextFromSelection(
+                          editableTextState.textEditingValue.selection,
+                          segments,
+                        );
+                        return buildDictionaryContextMenu(
+                          context,
+                          editableTextState,
+                          selectedText: selectedText,
+                          onAddToDictionary: ref.read(ttsSupportedProvider)
+                              ? _openDictionaryDialog
+                              : null,
+                          onAnalyze: ref.read(llmSummarySupportedProvider)
+                              ? _runAnalysis
+                              : null,
+                        );
+                      },
+                    ),
                   ),
                 ),
                 ..._bookmarkLineYsFor(

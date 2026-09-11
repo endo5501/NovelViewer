@@ -48,6 +48,7 @@ class VerticalTextPage extends StatefulWidget {
     this.markedWords = const {},
     this.onMarkEnter,
     this.onMarkExit,
+    this.onMarkTap,
     this.onHoverHideRequest,
   }) : assert(columnSpacing >= 0);
 
@@ -76,6 +77,16 @@ class VerticalTextPage extends StatefulWidget {
   final void Function(String word, Offset globalPosition, HoverToken token)?
   onMarkEnter;
   final void Function(HoverToken token)? onMarkExit;
+
+  /// Reports a tap that landed on a marked character, for a pointer that has
+  /// no secondary button. This is how the summary popup is reached without a
+  /// hover; [onMarkEnter] is the pointer's way in and is unaffected.
+  ///
+  /// Unlike [onMarkEnter] this has no matching exit: nothing takes a finger
+  /// off a word the way a pointer leaves it, so the popup it opens is
+  /// dismissed by a touch elsewhere instead.
+  final void Function(String word, Offset globalPosition, HoverToken token)?
+  onMarkTap;
 
   /// Coarse "drop any active popup" signal — fired when the page's overall
   /// hover state can no longer be trusted (selection drag starts here, page
@@ -495,10 +506,16 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     }
   }
 
-  /// A tap clears the selection, except for the one case that would otherwise
-  /// leave a touch-only device with no way to act on it: a finger tapping
-  /// inside the selection opens the context menu instead, and the selection
-  /// survives.
+  /// A tap clears the selection, except for the two cases that would
+  /// otherwise leave a touch-only device with no way to reach something a
+  /// pointer reaches easily. A finger tapping inside the selection opens the
+  /// context menu, and a finger tapping a marked character opens that word's
+  /// summary. In both the selection survives.
+  ///
+  /// The order is selection, then mark, then clear. The selection comes first
+  /// because it is what the reader has just built by hand: a tap inside it
+  /// means to act on that selection, even where the selected text happens to
+  /// be an analysed word.
   ///
   /// The branch is on the pointer's device kind rather than on the platform,
   /// so that a tablet with a trackpad keeps the pointer behaviour and a
@@ -529,9 +546,30 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         _openContextMenuAt(details.globalPosition);
         return;
       }
+      if (index != null && _reportMarkTapAt(index, details.globalPosition)) {
+        return;
+      }
     }
     _clearInternalSelection();
     widget.onSelectionChanged?.call(null);
+  }
+
+  /// Reports the mark covering the character at [index], if there is one.
+  /// Returns whether anything was reported, so the caller knows whether the
+  /// tap has been spoken for.
+  ///
+  /// The mark ranges are the same ones the sidebar line is drawn from, so a
+  /// tap can only open a summary for a word the reader can see is marked.
+  bool _reportMarkTapAt(int index, Offset globalPosition) {
+    final onMarkTap = widget.onMarkTap;
+    if (onMarkTap == null) return false;
+    final mark = _markedRanges[index];
+    if (mark == null) return false;
+    onMarkTap(mark.word, globalPosition, (
+      start: mark.startEntry,
+      end: mark.endEntry,
+    ));
+    return true;
   }
 
   void _onSecondaryTapUp(TapUpDetails details) {

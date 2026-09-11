@@ -45,7 +45,11 @@ void main() {
         screenSize: screen,
       );
       expect(anchor.top, pointer.dy - g - h);
-      expect(anchor.left, pointer.dx + g, reason: 'the horizontal axis is fine');
+      expect(
+        anchor.left,
+        pointer.dx + g,
+        reason: 'the horizontal axis is fine',
+      );
     });
 
     test('keeps the origin on screen when neither placement fits', () {
