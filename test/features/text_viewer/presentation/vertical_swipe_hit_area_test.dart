@@ -2,7 +2,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_viewer/features/llm_summary/domain/hover_token.dart';
 import 'package:novel_viewer/features/llm_summary/domain/mark_matcher.dart';
 import 'package:novel_viewer/features/text_viewer/data/swipe_detection.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
@@ -19,14 +18,16 @@ const _kAreaWidth = 400.0;
 const _kAreaHeight = 300.0;
 
 /// The `Align` is here only to hand the page the bounded, loose constraints it
-/// gets from `Padding` in the viewer, which the keyed `SizedBox` would
-/// otherwise make tight — the viewer itself no longer wraps the page in one,
-/// because the page aligns its own text. `topRight` rather than `topLeft` so
-/// that a page which went back to shrink-wrapping would leave the empty region
-/// on the left, where these tests aim, instead of silently moving under them.
+/// gets from the `Stack` in the viewer, which the keyed `SizedBox` would
+/// otherwise make tight — the viewer itself wraps the page in neither an
+/// `Align` nor a `Padding`, because the page aligns its own text and applies
+/// its own margin. `topRight` rather than `topLeft` so that a page which went
+/// back to shrink-wrapping would leave the empty region on the left, where
+/// these tests aim, instead of silently moving under them.
 ///
 /// With only two characters of content the text occupies one narrow column at
-/// the right, so most of the area has nothing painted on it.
+/// the right, so most of the area has nothing painted on it. The page covers
+/// the whole keyed area regardless; its margin insets only the text.
 Widget _pageHarness({
   required List<TextSegment> segments,
   ValueChanged<SwipeDirection>? onSwipe,
@@ -120,7 +121,7 @@ void main() {
       );
     });
 
-    testWidgets('the text stays aligned to the top-right of that area', (
+    testWidgets('the text sits a margin in from the top-right of that area', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -130,8 +131,14 @@ void main() {
       final area = tester.getRect(find.byKey(_areaKey));
       final firstChar = tester.getRect(find.text('あ'));
 
-      expect(firstChar.right, moreOrLessEquals(area.right, epsilon: 0.01));
-      expect(firstChar.top, moreOrLessEquals(area.top, epsilon: 0.01));
+      expect(
+        firstChar.right,
+        moreOrLessEquals(area.right - kVerticalTextMargin, epsilon: 0.01),
+      );
+      expect(
+        firstChar.top,
+        moreOrLessEquals(area.top + kVerticalTextMargin, epsilon: 0.01),
+      );
     });
 
     testWidgets('a right drag over the empty area is a right swipe', (
@@ -485,9 +492,8 @@ void main() {
   });
 
   group('VerticalTextViewer swipe over an area with no text', () {
-    testWidgets('the page covers the padded content area on a short page', (
-      tester,
-    ) async {
+    testWidgets('the page covers the content area edge to edge on a short '
+        'page', (tester) async {
       await tester.pumpWidget(
         _viewerHarness(segments: _shortLastPageSegments()),
       );
@@ -500,9 +506,18 @@ void main() {
       final viewer = tester.getRect(find.byType(VerticalTextViewer));
       final page = tester.getRect(find.byType(VerticalTextPage));
 
-      // 16px of padding on each side is the only horizontal inset.
-      expect(page.left, moreOrLessEquals(viewer.left + 16, epsilon: 0.01));
-      expect(page.right, moreOrLessEquals(viewer.right - 16, epsilon: 0.01));
+      // The page reaches the edges of the viewer: the text margin is applied
+      // inside it, so nothing insets its render box, and therefore nothing
+      // insets the gesture detector that fills it.
+      expect(page.left, moreOrLessEquals(viewer.left, epsilon: 0.01));
+      expect(page.right, moreOrLessEquals(viewer.right, epsilon: 0.01));
+
+      // The text itself still keeps its margin.
+      final rightmostChar = tester.getRect(find.text('う').first);
+      expect(
+        rightmostChar.right,
+        lessThanOrEqualTo(viewer.right - kVerticalTextMargin),
+      );
     });
 
     testWidgets('a left swipe on the empty left region returns to the previous '

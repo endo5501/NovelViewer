@@ -7,25 +7,25 @@
 - [x] 1.5 余白領域上のホバーが文字を解決せず `onMarkEnter` を発火せず例外も出さないことを検証するテストを追加する
 - [x] 1.6 ページ分割結果（総ページ数と各ページの先頭文字）が変わらないことを固定するテストを追加する
 - [x] 1.7 `fvm flutter test` を実行し、失敗を確認する。実際に失敗したのは 1.1、1.2、1.4、1.5 の 5 テスト。1.5 は予想に反して失敗した（現状は余白が存在しないため、ページ右上隅に文字が描かれておりホバーがマークを解決してしまう）。1.3 と 1.6 は予想どおり通過
-- [ ] 1.8 テストのみをコミットする
+- [x] 1.8 テストのみをコミットする
 
 ## 2. 余白を GestureDetector の内側へ移す
 
-- [ ] 2.1 `vertical_text_page.dart` にテキスト余白の名前付き定数を追加する（値は 16.0）
-- [ ] 2.2 `vertical_text_page.dart` の `build` で、`GestureDetector` と `Align` の間に `Padding` を挿入する
-- [ ] 2.3 `vertical_text_viewer.dart` から `Padding(EdgeInsets.all(16.0))` を削除し、`ClipRect` が `pageContent` を直接包むようにする
-- [ ] 2.4 `vertical_text_viewer.dart` の `_kHorizontalPadding` / `_kVerticalPadding` のコメントを更新し、`vertical_text_page.dart` の余白定数との対応関係を明示する
-- [ ] 2.5 `vertical_text_viewer.dart` の「No Align here」コメントを、余白がページ内部に移った現状に合わせて書き直す
+- [x] 2.1 `vertical_text_page.dart` にテキスト余白の名前付き定数を追加する（値は 16.0）
+- [x] 2.2 `vertical_text_page.dart` の `build` で、`GestureDetector` と `Align` の間に `Padding` を挿入する
+- [x] 2.3 `vertical_text_viewer.dart` から `Padding(EdgeInsets.all(16.0))` を削除し、`ClipRect` が `pageContent` を直接包むようにする
+- [x] 2.4 `vertical_text_viewer.dart` の `_kHorizontalPadding` / `_kVerticalPadding` のコメントを更新し、`vertical_text_page.dart` の余白定数との対応関係を明示する
+- [x] 2.5 `vertical_text_viewer.dart` の「No Align here」コメントを、余白がページ内部に移った現状に合わせて書き直す
 
 ## 3. しおりアイコンのヒット消費を止める
 
-- [ ] 3.1 `vertical_text_viewer.dart` の `Stack` 内のしおりアイコンを `IgnorePointer` で包む
+- [x] 3.1 `vertical_text_viewer.dart` の `Stack` 内のしおりアイコンを `IgnorePointer` で包む
 
 ## 4. テストハーネスの更新
 
-- [ ] 4.1 `vertical_swipe_hit_area_test.dart` の `_pageHarness` にある `Align` の前提コメントを、ページが自前の余白を持つ現状に合わせて更新する
-- [ ] 4.2 文字位置を絶対座標で検証している既存テストがあれば、余白ぶんのずれを吸収する相対検証に直す
-- [ ] 4.3 `fvm flutter test` を実行し、1 で追加した全テストと既存テストが通ることを確認する
+- [x] 4.1 `vertical_swipe_hit_area_test.dart` の `_pageHarness` にある `Align` の前提コメントを、ページが自前の余白を持つ現状に合わせて更新する
+- [x] 4.2 文字位置を絶対座標で検証している既存テストがあれば、余白ぶんのずれを吸収する相対検証に直す
+- [x] 4.3 `fvm flutter test` を実行し、1 で追加した全テストと既存テストが通ることを確認する
 
 ## 5. 実機確認
 
