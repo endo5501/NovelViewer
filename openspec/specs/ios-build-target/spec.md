@@ -1,6 +1,6 @@
 ## Purpose
 
-Defines the committed state of the `ios/` project so NovelViewer builds and runs as an iPad-only app: an iPad-exclusive device family with unrestricted orientations, a `Documents` library the reader can reach from the Files app, Swift Package Manager as the sole dependency integration (no CocoaPods on iOS, with macOS untouched), a signing identity kept out of the repository behind an untracked `Local.xcconfig`, Flutter's required project migrations tracked so a build never rewrites tracked files, and documented build prerequisites and constraints.
+Defines the committed state of the `ios/` project so NovelViewer builds and runs as an iPad-only app: an iPad-exclusive device family with unrestricted orientations, a `Documents` library the reader can reach from the Files app, a declared local-network usage description so the reader can be asked for permission to reach a self-hosted LLM server, Swift Package Manager as the sole dependency integration (no CocoaPods on iOS, with macOS untouched), a signing identity kept out of the repository behind an untracked `Local.xcconfig`, Flutter's required project migrations tracked so a build never rewrites tracked files, and documented build prerequisites and constraints.
 
 ## Requirements
 
@@ -25,6 +25,19 @@ The iOS build SHALL expose its `Documents` directory to the Files app so the rea
 #### Scenario: The library folder is what the reader sees
 - **WHEN** the app has started at least once on iOS and the Files app is opened
 - **THEN** a `NovelViewer` folder appears under the app's directory, holding the novel folders
+
+### Requirement: Local network access is declared
+The LLM server a reader's summaries are produced by is one they run themselves, which on a tablet means a host on the local network. iOS gates reaching such a host behind the reader's permission, and the system has nothing to put in that prompt without a purpose string. `ios/Runner/Info.plist` SHALL declare `NSLocalNetworkUsageDescription` with a non-empty string saying what the connection is for.
+
+Without it the failure is silent and misleading: the settings section is present, the address the reader entered is correct, and every analysis fails with a connection error that names no cause. The transport policy that restricts plaintext HTTP is a separate matter and needs no key here, because the requests are sent through `dart:io`'s `HttpClient`, which opens its own sockets rather than going through the URL loading system that policy is enforced in.
+
+#### Scenario: The usage description is declared
+- **WHEN** `ios/Runner/Info.plist` is inspected
+- **THEN** `NSLocalNetworkUsageDescription` is present and its value is a non-empty string
+
+#### Scenario: No transport-policy exception is added for it
+- **WHEN** `ios/Runner/Info.plist` is inspected
+- **THEN** it declares no App Transport Security exception, since the HTTP client in use is not subject to that policy
 
 ### Requirement: Swift Package Manager is the only dependency integration on iOS
 Every plugin the project depends on resolves as a Swift Package for iOS, so the iOS target SHALL NOT carry a CocoaPods integration. `ios/Podfile` SHALL NOT exist, and neither `ios/Flutter/Debug.xcconfig` nor `ios/Flutter/Release.xcconfig` SHALL include a `Pods-Runner` xcconfig. The macOS target's CocoaPods integration is out of scope and SHALL remain unchanged.

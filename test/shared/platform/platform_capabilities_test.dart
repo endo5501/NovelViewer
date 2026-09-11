@@ -11,12 +11,25 @@ void main() {
       expect(capabilities.llmSummary, isTrue);
     });
 
-    test('iOS supports none of the optional features', () {
+    test('iOS supports LLM summary but neither speech nor self-update', () {
       const capabilities = PlatformCapabilities.forPlatform(isIOS: true);
 
+      expect(capabilities.llmSummary, isTrue);
       expect(capabilities.textToSpeech, isFalse);
       expect(capabilities.appUpdate, isFalse);
-      expect(capabilities.llmSummary, isFalse);
+    });
+
+    test('LLM summary does not depend on the platform flag', () {
+      // The work is done by a server the reader runs themselves, reached over
+      // plain HTTP through a client that opens its own sockets. Nothing in
+      // that path differs by platform, so the flag must not reach this
+      // feature: deriving it from a shared `!isIOS` would tie it to the two
+      // features that do differ.
+      const asIOS = PlatformCapabilities.forPlatform(isIOS: true);
+      const asDesktop = PlatformCapabilities.forPlatform(isIOS: false);
+
+      expect(asIOS.llmSummary, isTrue);
+      expect(asDesktop.llmSummary, isTrue);
     });
 
     test('is evaluated from the flag alone, not from the host platform', () {
