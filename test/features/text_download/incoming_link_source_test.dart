@@ -144,16 +144,23 @@ void main() {
       expect(delivered, [first]);
     });
 
-    test('survives a platform stream that closes first', () async {
-      // Ordering between the two channels is not the app's to control, and a
-      // launch link settling after the stream is gone must not blow up.
-      listen();
+    test('delivers what it has when the platform stream closes first', () async {
+      // Ordering between the two channels is not the app's to control. A launch
+      // link that settles after the stream is gone is still a link the reader
+      // asked for, so closing waits for it rather than dropping it.
+      var closed = false;
+      listen(onDone: () => closed = true);
+      platform.add(second);
+      await pumpEventQueue();
       await platform.close();
       await pumpEventQueue();
+      expect(closed, isFalse, reason: 'still waiting for the launch link');
+
       initial.complete(first);
       await pumpEventQueue();
 
-      expect(delivered, isEmpty);
+      expect(delivered, [first, second]);
+      expect(closed, isTrue);
     });
 
     test('delivers nothing through the inert source', () async {

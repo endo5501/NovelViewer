@@ -80,6 +80,52 @@ void main() {
       );
     });
 
+    test('keeps working after a malformed link', () async {
+      platform.add(Uri.parse('novelviewer://download?url=%FF'));
+      await pumpEventQueue();
+      platform.add(novelLink);
+      await pumpEventQueue();
+
+      expect(
+        container.read(pendingDownloadRequestProvider)?.url,
+        Uri.parse(novelUrl),
+      );
+    });
+
+    test(
+      'clears a request once it has been put in front of the reader',
+      () async {
+        platform.add(novelLink);
+        await pumpEventQueue();
+        final request = container.read(pendingDownloadRequestProvider)!;
+
+        container
+            .read(pendingDownloadRequestProvider.notifier)
+            .markHandled(request);
+
+        expect(container.read(pendingDownloadRequestProvider), isNull);
+      },
+    );
+
+    test('keeps a newer request when an older one is marked handled', () async {
+      // Two shares in a row: whoever handles the first must not throw away the
+      // second, which nobody has seen yet.
+      platform.add(novelLink);
+      await pumpEventQueue();
+      final first = container.read(pendingDownloadRequestProvider)!;
+      platform.add(otherLink);
+      await pumpEventQueue();
+
+      container
+          .read(pendingDownloadRequestProvider.notifier)
+          .markHandled(first);
+
+      expect(
+        container.read(pendingDownloadRequestProvider)?.url,
+        Uri.parse(otherUrl),
+      );
+    });
+
     test('notifies again when the same URL arrives twice', () async {
       // Sharing the same page a second time has to reach the dialog again, so
       // two requests for one URL must not compare equal.

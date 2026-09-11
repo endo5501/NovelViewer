@@ -89,6 +89,16 @@ void main() {
       expect(target, isNull);
     });
 
+    test('rejects a link whose query is not valid UTF-8', () {
+      // Reading the query decodes percent escapes as UTF-8 and throws on bad
+      // bytes. Anything can open this scheme, so a malformed one has to be
+      // turned away rather than allowed to escape as an error.
+      final target = downloadTargetFromLink(
+        Uri.parse('novelviewer://download?url=%FF'),
+      );
+      expect(target, isNull);
+    });
+
     test('rejects a web target with an empty host', () {
       final target = downloadTargetFromLink(
         Uri.parse('novelviewer://download?url=https%3A%2F%2F'),

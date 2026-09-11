@@ -131,6 +131,24 @@ void main() {
       expect(urlFieldText(tester), 'https://a.test');
     });
 
+    testWidgets('shows the later of two requests arriving together', (
+      tester,
+    ) async {
+      // The second one lands after the dialog is pushed but before it builds,
+      // which is the window where a request is easiest to lose.
+      await pumpHome(tester);
+
+      platform.add(sharedLink);
+      platform.add(
+        Uri.parse('novelviewer://download?url=https%3A%2F%2Fa.test'),
+      );
+      await settle(tester);
+
+      expect(find.byType(DownloadDialog), findsOneWidget);
+      expect(urlFieldText(tester), 'https://a.test');
+      expect(started, isEmpty);
+    });
+
     testWidgets('opens the dialog again after it was closed', (tester) async {
       await pumpHome(tester);
 

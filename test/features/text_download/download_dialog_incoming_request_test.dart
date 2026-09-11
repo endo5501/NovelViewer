@@ -141,6 +141,46 @@ void main() {
     });
   });
 
+  group('DownloadDialog opened with a request already pending', () {
+    testWidgets('takes the request that arrived before it was built', (
+      tester,
+    ) async {
+      // A second share can land between the dialog being pushed and its first
+      // build. The home screen sees a dialog already opening and leaves it
+      // alone, so the dialog has to pick the request up itself.
+      await tester.pumpWidget(createApp(initialUrl: opened));
+      ProviderScope.containerOf(
+        tester.element(find.byType(MaterialApp)),
+      ).read(pendingDownloadRequestProvider);
+      platform.add(sharedLink);
+      await tester.pump();
+
+      await openDialog(tester);
+
+      expect(urlFieldText(tester), shared.toString());
+      expect(started, isEmpty);
+    });
+
+    testWidgets('leaves a handled request alone when opened again', (
+      tester,
+    ) async {
+      await tester.pumpWidget(createApp(initialUrl: opened));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MaterialApp)),
+      );
+      container.read(pendingDownloadRequestProvider);
+      platform.add(sharedLink);
+      await tester.pump();
+
+      await openDialog(tester);
+      await tester.tap(find.text('キャンセル'));
+      await tester.pumpAndSettle();
+      await openDialog(tester);
+
+      expect(urlFieldText(tester), opened.toString());
+    });
+  });
+
   group('DownloadDialog receiving a request while open', () {
     testWidgets('replaces the URL while waiting for input', (tester) async {
       await tester.pumpWidget(createApp(initialUrl: opened));
