@@ -28,14 +28,14 @@ void main() {
       expect(container.read(llmSummarySupportedProvider), isTrue);
     });
 
-    test('all features report unavailable on the iOS capability set', () {
+    test('only LLM summary reports available on the iOS capability set', () {
       final container = _containerWith(
         const PlatformCapabilities.forPlatform(isIOS: true),
       );
 
+      expect(container.read(llmSummarySupportedProvider), isTrue);
       expect(container.read(ttsSupportedProvider), isFalse);
       expect(container.read(appUpdateSupportedProvider), isFalse);
-      expect(container.read(llmSummarySupportedProvider), isFalse);
     });
 
     test('withdrawing one feature leaves the others untouched', () {

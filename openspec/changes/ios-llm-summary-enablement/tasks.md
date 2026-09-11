@@ -1,11 +1,11 @@
 ## 1. テスト先行（失敗を確認してコミット）
 
-- [ ] 1.1 `test/shared/platform/platform_capabilities_test.dart` のiOS向けケースを更新し、`llmSummary` が `true`、`textToSpeech` と `appUpdate` が `false` になることを期待する
-- [ ] 1.2 同ファイルに、`llmSummary` がプラットフォームフラグに依存せず両方の値で `true` になることを検証するケースを追加する
-- [ ] 1.3 `test/shared/providers/platform_capabilities_provider_test.dart` の「all features report unavailable on the iOS capability set」を、LLM要約のみ支援されるという期待に書き換える（テスト名も内容に合わせる）
-- [ ] 1.4 設定ダイアログがiOSの能力セットでLLMセクションを表示することを検証するウィジェットテストを追加する。`platformCapabilitiesProvider` を `PlatformCapabilities.forPlatform(isIOS: true)` でオーバーライドし、プロバイダ値を直接渡す既存のゲートテストとは別に、能力の導出からUIまでが繋がることを確かめる
-- [ ] 1.5 `fvm flutter test` を実行し、1.1から1.4がすべて失敗することを確認する
-- [ ] 1.6 テストのみをコミットする
+- [x] 1.1 `test/shared/platform/platform_capabilities_test.dart` のiOS向けケースを更新し、`llmSummary` が `true`、`textToSpeech` と `appUpdate` が `false` になることを期待する
+- [x] 1.2 同ファイルに、`llmSummary` がプラットフォームフラグに依存せず両方の値で `true` になることを検証するケースを追加する
+- [x] 1.3 `test/shared/providers/platform_capabilities_provider_test.dart` の「all features report unavailable on the iOS capability set」を、LLM要約のみ支援されるという期待に書き換える（テスト名も内容に合わせる）
+- [x] 1.4 設定ダイアログがiOSの能力セットでLLMセクションを表示することを検証するウィジェットテストを追加する。`platformCapabilitiesProvider` を `PlatformCapabilities.forPlatform(isIOS: true)` でオーバーライドし、プロバイダ値を直接渡す既存のゲートテストとは別に、能力の導出からUIまでが繋がることを確かめる
+- [x] 1.5 `fvm flutter test` を実行し、1.1から1.4がすべて失敗することを確認する
+- [x] 1.6 テストのみをコミットする
 
 ## 2. 能力モデルの変更
 
