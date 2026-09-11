@@ -46,3 +46,10 @@
 - [x] 4.3 `fvm dart format .`でフォーマットを実行
 - [x] 4.4 `fvm flutter analyze`でリントを実行
 - [x] 4.5 `fvm flutter test`でテストを実行
+
+## 5. 検証で挙がった指摘の反映
+
+- [x] 5.1 `home_screen_adaptive_shell_test.dart` の `crossing the breakpoint` グループに、narrow（ドロワーが閉じていてパネルが未マウント）から wide へ広げたとき、作り直された一覧で選択ファイルが可視かつ中央付近にあることを検証するテストを追加する
+- [x] 5.2 `reopening the drawer reveals the selected file` の可視性判定を `findsOneWidget` から描画矩形の比較へ強化し、仕様の「near the center」に合わせる
+- [x] 5.3 5.1 と 5.2 のテストが、main 時点の実装（初回スクロールなし）で失敗することを確認した
+- [x] 5.4 `fvm dart format .` / `fvm flutter analyze` / `fvm flutter test` を実行する

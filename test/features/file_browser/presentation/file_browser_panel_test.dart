@@ -964,12 +964,20 @@ void main() {
       scaffoldKey.currentState!.openDrawer();
       await tester.pumpAndSettle();
 
+      final viewport = tester.getRect(find.byType(ListView));
+      final row = tester.getRect(find.text(target.name));
       expect(
-        find.text(target.name),
-        findsOneWidget,
+        row.top >= viewport.top && row.bottom <= viewport.bottom,
+        isTrue,
         reason:
             'Reopening the drawer must show the selected file without the '
-            'reader scrolling',
+            'reader scrolling, inside the viewport rather than merely built '
+            'in the cache area around it',
+      );
+      expect(
+        (row.center.dy - viewport.center.dy).abs(),
+        lessThan(64.0),
+        reason: 'and near the middle, within one row of the centre',
       );
     });
 
