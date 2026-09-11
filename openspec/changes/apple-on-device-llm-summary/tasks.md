@@ -57,9 +57,9 @@
 
 - [x] 7.1 macOS で解析を一本通す。要約が生成され保存されることを確認する
 - [x] 7.2 `supportedLanguages` に日本語が含まれることを確認する。表示言語を英語・中国語に切り替えたときの挙動も見る
-- [ ] 7.3 iPad mini (A17 Pro) で解析を一本通し、所要時間を記録する
+- [x] 7.3 iPad mini (A17 Pro) で解析を一本通し、所要時間を記録する
 - [x] 7.4 `exceededContextWindowSize` が出ない文脈予算の上限を実測し、必要なら 4.6 の値を調整する
-- [ ] 7.5 Apple Intelligence を切った状態で、設定の表示と解析の失敗文面を確認する
+- [x] 7.5 Apple Intelligence を切った状態で、設定の表示と解析の失敗文面を確認する
 - [x] 7.6 `guardrailViolation` が起きる作品で、他のファイルの解析が続行され部分失敗として報告されることを確認する
 - [x] 7.7 確認に使ったテストデータを削除する
 
@@ -67,6 +67,6 @@
 
 - [x] 8.1 code-reviewスキルを使用してコードレビューを実施
 - [x] 8.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 8.3 `fvm dart format .`でフォーマットを実行
-- [ ] 8.4 `fvm flutter analyze`でリントを実行
-- [ ] 8.5 `fvm flutter test`でテストを実行
+- [x] 8.3 `fvm dart format .`でフォーマットを実行
+- [x] 8.4 `fvm flutter analyze`でリントを実行
+- [x] 8.5 `fvm flutter test`でテストを実行
