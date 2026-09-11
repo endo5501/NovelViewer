@@ -11,5 +11,8 @@ import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 /// widget test can override a single feature without knowing the model:
 /// `Platform` cannot be overridden from a test, but a provider can.
 final platformCapabilitiesProvider = Provider<PlatformCapabilities>(
-  (ref) => PlatformCapabilities.forPlatform(isIOS: Platform.isIOS),
+  (ref) => PlatformCapabilities.forPlatform(
+    isIOS: Platform.isIOS,
+    isMacOS: Platform.isMacOS,
+  ),
 );

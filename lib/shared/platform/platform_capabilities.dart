@@ -20,6 +20,7 @@ class PlatformCapabilities {
     required this.textToSpeech,
     required this.appUpdate,
     required this.llmSummary,
+    required this.onDeviceLlm,
   });
 
   /// The one mapping from a platform to the features it supports.
@@ -45,12 +46,27 @@ class PlatformCapabilities {
   /// from the restriction that needs the reader's permission.
   ///
   /// This leaves a capability that is true everywhere. It is kept rather than
-  /// removed because an on-device model would reintroduce a real distinction,
+  /// removed because an on-device model reintroduces a real distinction,
   /// since running one depends on the hardware rather than on the platform.
-  const PlatformCapabilities.forPlatform({required bool isIOS})
-    : textToSpeech = !isIOS,
-      appUpdate = !isIOS,
-      llmSummary = true;
+  ///
+  /// [onDeviceLlm] is that distinction, and it is the reason this takes a
+  /// second flag: the framework that runs the model exists on Apple's
+  /// platforms and nowhere else, so macOS and Windows part company here
+  /// although they agree on everything above.
+  ///
+  /// What it answers is only whether the platform could host the model.
+  /// Whether this particular device is eligible, whether the reader has the
+  /// system intelligence feature switched on, and whether the model has
+  /// finished becoming ready are not here: they are answered by asking the
+  /// native side, two of them change while the app is running, and folding
+  /// them in would make this neither pure nor stable.
+  const PlatformCapabilities.forPlatform({
+    required bool isIOS,
+    required bool isMacOS,
+  }) : textToSpeech = !isIOS,
+       appUpdate = !isIOS,
+       llmSummary = true,
+       onDeviceLlm = isIOS || isMacOS;
 
   /// Speech synthesis, its settings, and the reading dictionary that feeds it.
   final bool textToSpeech;
@@ -60,4 +76,8 @@ class PlatformCapabilities {
 
   /// Summarizing a selected word through an external LLM server.
   final bool llmSummary;
+
+  /// Whether the platform could host an on-device model at all. Says nothing
+  /// about whether this device can run it today.
+  final bool onDeviceLlm;
 }

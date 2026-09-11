@@ -74,7 +74,7 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
         libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
         platformCapabilitiesProvider.overrideWithValue(
-          PlatformCapabilities.forPlatform(isIOS: isIOS),
+          PlatformCapabilities.forPlatform(isIOS: isIOS, isMacOS: false),
         ),
         packageInfoProvider.overrideWithValue(_packageInfo),
       ],

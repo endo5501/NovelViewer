@@ -36,11 +36,11 @@
 
 ## 5. 能力モデル
 
-- [ ] 5.1 `PlatformCapabilities.forPlatform` が `isMacOS` を取り、オンデバイス LLM を導出することのテストを先に書く
-- [ ] 5.2 iOS と macOS で可、それ以外で不可になることをテストで固定する
-- [ ] 5.3 オンデバイス LLM を足しても他の三機能の答えが変わらないことをテストで固定する
-- [ ] 5.4 `PlatformCapabilities` と `platformCapabilitiesProvider` を変更する
-- [ ] 5.5 層1 が偽のときネイティブへの問い合わせを行わないことを、プロバイダのテストで固定する
+- [x] 5.1 `PlatformCapabilities.forPlatform` が `isMacOS` を取り、オンデバイス LLM を導出することのテストを先に書く
+- [x] 5.2 iOS と macOS で可、それ以外で不可になることをテストで固定する
+- [x] 5.3 オンデバイス LLM を足しても他の三機能の答えが変わらないことをテストで固定する
+- [x] 5.4 `PlatformCapabilities` と `platformCapabilitiesProvider` を変更する
+- [x] 5.5 層1 が偽のときネイティブへの問い合わせを行わないことを、プロバイダのテストで固定する
 
 ## 6. 設定とクライアント生成
 
