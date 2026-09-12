@@ -77,7 +77,9 @@ void main() {
       ),
     );
     await tester.tap(find.text('go'));
-    await tester.pump();
+    // Settle the entrance animation: until it finishes the bar sits below the
+    // viewport and taps on it miss.
+    await tester.pumpAndSettle();
   }
 
   group('showFailureSnackBar body', () {
@@ -182,7 +184,7 @@ void main() {
       );
 
       await tester.tap(find.text('first'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.tap(find.text('second'));
       await tester.pumpAndSettle();
 
@@ -212,9 +214,9 @@ void main() {
       );
 
       await tester.tap(find.text('go'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.tap(find.text('hide'));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('go'), findsNothing);
       expect(find.byType(SnackBar), findsOneWidget);

@@ -11,10 +11,10 @@
 - [x] 2.1 `test/features/tts/presentation/tts_failure_snackbar_test.dart` を `test/shared/failure/failure_snackbar_test.dart` へ移し、見出しと原因の連結規則が維持されることを検証する
 - [x] 2.2 同テストに追加する。既定の表示時間を過ぎても表示が残ること、閉じるアイコンで閉じられること、詳細アクションが1つだけ存在すること、連続した失敗で先行のスナックバーが取り除かれること
 - [x] 2.3 テストを実行して失敗を確認し、コミットする
-- [ ] 2.4 `lib/shared/failure/failure_snackbar.dart` を実装する。`removeCurrentSnackBar()` の後に `duration: Duration(days: 365)`、`showCloseIcon: true`、詳細アクションを持つスナックバーを表示する
-- [ ] 2.5 `formatTtsFailureMessage` 相当の連結規則を本体へ取り込み、スナックバー本文を組み立てる
-- [ ] 2.6 表示時に `Navigator.of(context, rootNavigator: true)` を解決して保持し、詳細アクションでは `mounted` を確認してから詳細ダイアログを開く
-- [ ] 2.7 テストが通ることを確認する
+- [x] 2.4 `lib/shared/failure/failure_snackbar.dart` を実装する。`removeCurrentSnackBar()` の後に `duration: Duration(days: 365)`、`showCloseIcon: true`、詳細アクションを持つスナックバーを表示する
+- [x] 2.5 `formatTtsFailureMessage` 相当の連結規則を本体へ取り込み、スナックバー本文を組み立てる
+- [x] 2.6 表示時に `Navigator.of(context, rootNavigator: true)` を解決して保持し、詳細アクションでは `mounted` を確認してから詳細ダイアログを開く
+- [x] 2.7 テストが通ることを確認する
 
 ## 3. 詳細ダイアログ
 
