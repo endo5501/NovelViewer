@@ -247,6 +247,90 @@ void main() {
     });
   });
 
+  group('a final summary that would not parse is asked for once more', () {
+    test('an answer that parses is taken without a second request', () async {
+      var calls = 0;
+      final pipeline = LlmSummaryPipeline(
+        llmClient: _AlternatingLlmClient(() {
+          calls++;
+          return jsonEncode({'summary': 'エドナは礼儀作法の先生。'});
+        }),
+      );
+
+      final summary = await pipeline.summarizeFromFacts(
+        word: 'エドナ',
+        perFileFacts: const ['- 礼儀作法の先生'],
+      );
+
+      expect(summary, 'エドナは礼儀作法の先生。');
+      expect(calls, 1);
+    });
+
+    test('an unreadable answer is replaced by a readable second', () async {
+      // What the reader sees is the last thing this stage produces, and it is
+      // saved without anything downstream judging it. An answer the response
+      // cap cut off mid-object would otherwise be shown as the summary.
+      var calls = 0;
+      final pipeline = LlmSummaryPipeline(
+        llmClient: _AlternatingLlmClient(() {
+          calls++;
+          return calls == 1
+              ? '```json\n{"summary": "エドナは礼儀作法の'
+              : jsonEncode({'summary': 'エドナは礼儀作法の先生。'});
+        }),
+      );
+
+      final summary = await pipeline.summarizeFromFacts(
+        word: 'エドナ',
+        perFileFacts: const ['- 礼儀作法の先生'],
+      );
+
+      expect(summary, 'エドナは礼儀作法の先生。');
+      expect(calls, 2);
+    });
+
+    test('a second unreadable answer keeps the first', () async {
+      // Two unreadable answers are equally bad, and one of them has to be
+      // shown. Keeping the first costs nothing and stops here rather than
+      // spending a third generation on the slowest provider.
+      var calls = 0;
+      final pipeline = LlmSummaryPipeline(
+        llmClient: _AlternatingLlmClient(() {
+          calls++;
+          return calls == 1 ? '一度目の素のテキスト' : '二度目の素のテキスト';
+        }),
+      );
+
+      final summary = await pipeline.summarizeFromFacts(
+        word: 'エドナ',
+        perFileFacts: const ['- 礼儀作法の先生'],
+      );
+
+      expect(summary, '一度目の素のテキスト');
+      expect(calls, 2);
+    });
+
+    test('a second request that throws keeps the first answer', () async {
+      // An answer in hand beats losing the run over the attempt to improve
+      // on it.
+      var calls = 0;
+      final pipeline = LlmSummaryPipeline(
+        llmClient: _AlternatingLlmClient(() {
+          calls++;
+          if (calls == 1) return '素のテキスト';
+          throw StateError('二度目は届かなかった');
+        }),
+      );
+
+      final summary = await pipeline.summarizeFromFacts(
+        word: 'エドナ',
+        perFileFacts: const ['- 礼儀作法の先生'],
+      );
+
+      expect(summary, '素のテキスト');
+    });
+  });
+
   group('array values that are not normalizable are rejected', () {
     test(
       'an empty array throws LlmResponseFormatException and logs WARNING',

@@ -144,7 +144,7 @@ class LlmSummaryPipeline {
         await llmClient.generate(prompt, schema: summarySchema),
       ),
     );
-    return parsed.value;
+    return (await _readableOr(parsed, prompt)).value;
   }
 
   static void Function(AnalysisProgress) _isolatedNotifier(
@@ -225,6 +225,40 @@ class LlmSummaryPipeline {
       // generation.
       if (e is LlmRetryableFailure && !e.isWorthRetrying) rethrow;
       return await operation();
+    }
+  }
+
+  /// [first], or one more answer to [prompt] when [first] could not be read.
+  ///
+  /// This stage is the one whose value the reader sees: it is saved as the
+  /// word's summary with nothing downstream judging it, so an answer that fell
+  /// back to raw text is shown as though it were a summary. That fallback used
+  /// to mean the model had replied in prose, which reads acceptably. It now
+  /// also covers an answer the response cap cut off mid-object, which does
+  /// not, and which reaches here whenever a provider gives up a schema
+  /// constraint to get an answer at all.
+  ///
+  /// One further request, and the first answer kept whatever it returns. Two
+  /// unreadable answers are equally bad and one of them has to be shown, so
+  /// there is nothing to gain by spending a third generation choosing between
+  /// them — and this runs on the slowest provider there is.
+  ///
+  /// A second request that fails outright leaves the first answer standing. An
+  /// answer in hand beats losing the run over an attempt to improve on it.
+  ///
+  /// Only the final summary is treated this way. An unreadable extraction is
+  /// already marked unstructured, which keeps it out of the fact cache and
+  /// costs the reader nothing beyond a re-extraction.
+  Future<_ParsedValue> _readableOr(_ParsedValue first, String prompt) async {
+    if (first.isStructured) return first;
+    try {
+      final second = _parseSummaryResponse(
+        await llmClient.generate(prompt, schema: summarySchema),
+      );
+      return second.isStructured ? second : first;
+    } catch (e, st) {
+      _log.warning('second summary attempt failed; keeping the first', e, st);
+      return first;
     }
   }
 
