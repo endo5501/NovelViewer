@@ -64,8 +64,11 @@ class LlmSummaryDetailDialog extends StatelessWidget {
   }
 }
 
-/// "事実" tab: per-file list of cached Stage-1 facts. Invalidated rows
-/// (sentinel `content_hash`) are kept and greyed out with an "無効" badge.
+/// "事実" tab: per-file list of cached Stage-1 facts, one section per
+/// `(file, model)` row. Each section names the model that wrote it, because
+/// the cache is keyed by model and the same file therefore appears once per
+/// model. Invalidated rows (sentinel `content_hash`) are kept and greyed out
+/// with an "無効" badge.
 class _FactsTab extends ConsumerWidget {
   const _FactsTab({required this.folderPath, required this.word});
 
@@ -121,8 +124,15 @@ class _FactSection extends StatelessWidget {
             Expanded(
               child: Text(entry.fileName, style: theme.textTheme.titleSmall),
             ),
+            // Which model wrote these facts. The cache is keyed by model, so
+            // the same file appears once per model and the headings would
+            // otherwise be indistinguishable. Shown verbatim: the identity is
+            // opaque, and abbreviating it would hide exactly the difference
+            // the reader opened this view to see.
+            const SizedBox(width: 8),
+            OutlinedTextBadge(label: entry.modelId),
             if (isInvalid) ...[
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
               OutlinedTextBadge(label: l10n.historyDetail_invalidBadge),
             ],
           ],

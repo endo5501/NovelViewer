@@ -49,9 +49,9 @@ TDD で進める。各節は「失敗するテストを書く → 失敗を確�
 
 ## 6. 履歴の詳細ダイアログ
 
-- [ ] 6.1 `test/features/llm_summary/presentation/llm_summary_detail_dialog_test.dart` に、同一ファイル名で名乗りの違う2行が別々の見出しとして並び、それぞれに名乗りのバッジが付くことを確かめるテストを追加する
-- [ ] 6.2 テストが失敗することを確認する
-- [ ] 6.3 `_FactSection` の見出し行に、既存の `OutlinedTextBadge` で `model_id` をそのまま表示する
+- [x] 6.1 `test/features/llm_summary/presentation/llm_summary_detail_dialog_test.dart` に、同一ファイル名で名乗りの違う2行が別々の見出しとして並び、それぞれに名乗りのバッジが付くことを確かめるテストを追加する
+- [x] 6.2 テストが失敗することを確認する
+- [x] 6.3 `_FactSection` の見出し行に、既存の `OutlinedTextBadge` で `model_id` をそのまま表示する
 
 ## 7. 最終確認
 

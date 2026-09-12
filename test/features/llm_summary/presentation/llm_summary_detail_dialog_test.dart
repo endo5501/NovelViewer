@@ -106,6 +106,42 @@ void main() {
       expect(y001, lessThan(y002));
     });
 
+    testWidgets('names the model each row came from', (tester) async {
+      await tester.pumpWidget(
+        _harness(
+          facts: [_fact('001.txt', '・髪は金色', modelId: 'apple:on-device')],
+          snapshots: [_snap(10, '要約#10')],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('apple:on-device'), findsOneWidget);
+    });
+
+    testWidgets('tells apart two models rows for the same file', (
+      tester,
+    ) async {
+      // Once the cache is keyed by model, the same file appears once per
+      // model. Without the name on the heading the reader sees two identical
+      // headings and cannot tell which facts belong to which run.
+      await tester.pumpWidget(
+        _harness(
+          facts: [
+            _fact('001.txt', '・端末が書いた事実', modelId: 'apple:on-device'),
+            _fact('001.txt', '・サーバが書いた事実', modelId: 'ollama:qwen3:30b'),
+          ],
+          snapshots: [_snap(10, '要約#10')],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('001.txt'), findsNWidgets(2));
+      expect(find.text('apple:on-device'), findsOneWidget);
+      expect(find.text('ollama:qwen3:30b'), findsOneWidget);
+      expect(find.text('・端末が書いた事実'), findsOneWidget);
+      expect(find.text('・サーバが書いた事実'), findsOneWidget);
+    });
+
     testWidgets('shows empty message when no facts exist', (tester) async {
       await tester.pumpWidget(
         _harness(facts: const [], snapshots: [_snap(10, '要約#10')]),
