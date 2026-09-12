@@ -68,10 +68,7 @@ LlmAnalysisPartialFailure: 3 file(s) failed extraction
     test('omits the cause and stack-trace sections when absent', () {
       const report = FailureReport(
         headline: 'failed',
-        diagnostics: {
-          'time': '2026-09-12T10:23:45.123Z',
-          'engine': 'piper',
-        },
+        diagnostics: {'time': '2026-09-12T10:23:45.123Z', 'engine': 'piper'},
       );
 
       expect(renderFailureReport(report), '''

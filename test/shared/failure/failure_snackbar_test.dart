@@ -42,6 +42,51 @@ class _HostState extends State<_Host> {
 }
 
 void main() {
+  group('formatFailureSnackBarBody', () {
+    test('appends the raw cause to the localized headline', () {
+      expect(
+        formatFailureSnackBarBody(
+          const FailureReport(
+            headline: '合成に失敗しました',
+            cause: 'unsupported WAV encoding (need PCM16, PCM24, or float32)',
+          ),
+        ),
+        '合成に失敗しました: unsupported WAV encoding '
+        '(need PCM16, PCM24, or float32)',
+      );
+    });
+
+    test('returns the headline alone when there is no cause', () {
+      expect(
+        formatFailureSnackBarBody(
+          const FailureReport(headline: 'Synthesis failed'),
+        ),
+        'Synthesis failed',
+      );
+    });
+
+    test('treats a blank cause as no cause', () {
+      expect(
+        formatFailureSnackBarBody(
+          const FailureReport(headline: 'Synthesis failed', cause: '   '),
+        ),
+        'Synthesis failed',
+      );
+    });
+
+    test('trims surrounding whitespace from the cause', () {
+      expect(
+        formatFailureSnackBarBody(
+          const FailureReport(
+            headline: '合成失败',
+            cause: '  could not open audio input  ',
+          ),
+        ),
+        '合成失败: could not open audio input',
+      );
+    });
+  });
+
   Future<String> jaLabel(String Function(AppLocalizations) pick) async {
     return pick(await AppLocalizations.delegate.load(const Locale('ja')));
   }

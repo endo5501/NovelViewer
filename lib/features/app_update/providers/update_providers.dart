@@ -19,6 +19,12 @@ final packageInfoProvider = Provider<PackageInfo>((ref) {
   throw UnimplementedError('Must be overridden in ProviderScope');
 });
 
+/// The version string reports and diagnostics quote, e.g. `1.8.2+41`.
+final appVersionLabelProvider = Provider<String>((ref) {
+  final info = ref.watch(packageInfoProvider);
+  return '${info.version}+${info.buildNumber}';
+});
+
 final updatePreferencesProvider = Provider<UpdatePreferences>((ref) {
   return UpdatePreferences(ref.watch(sharedPreferencesProvider));
 });

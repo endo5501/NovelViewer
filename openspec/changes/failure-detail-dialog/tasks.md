@@ -40,21 +40,21 @@
 
 ## 5. TTS失敗を共通経路へ載せる
 
-- [ ] 5.1 `tts_controls_bar` の失敗表示テストに、永続表示と詳細アクション、診断情報（時刻 / バージョン / エンジン / モデル / ファイル名）を検証するケースを追加する
-- [ ] 5.2 `tts_edit_dialog` の失敗表示テストに、同様のケースとセグメント索引の検証を追加する
-- [ ] 5.3 合成失敗の詳細出力にスタックトレースの節が現れないことを検証するテストを追加する
-- [ ] 5.4 テストを実行して失敗を確認し、コミットする
-- [ ] 5.5 `tts_controls_bar.dart` の失敗表示を `FailureReport` の構築と共通ヘルパー呼び出しへ置き換える
-- [ ] 5.6 `tts_edit_dialog.dart` の失敗表示を同様に置き換える
-- [ ] 5.7 `lib/features/tts/presentation/tts_failure_snackbar.dart` を削除し、参照を共通ヘルパーへ差し替える
-- [ ] 5.8 `tts_modelNeedsRedownload` など、合成失敗ではない既存のスナックバーは変更していないことを確認する
-- [ ] 5.9 テストが通ることを確認する
+- [x] 5.1 `buildTtsFailureReport` のテストを作成し、診断情報（時刻 / バージョン / エンジン / モデル名 / ファイル名）を検証する。`_startStreaming` が実物の isolate と音声プレイヤをその場で組み立てるため、失敗経路をウィジェットテストから駆動できない。旧 `showTtsFailureSnackBar` と同じ層で検証する
+- [x] 5.2 同テストにセグメント索引の検証を追加する（渡されたときだけ出ること）
+- [x] 5.3 合成失敗の詳細出力にスタックトレースの節が現れないことを検証するテストを追加する
+- [x] 5.4 テストを実行して失敗を確認し、コミットする
+- [x] 5.5 `tts_controls_bar.dart` の失敗表示を `FailureReport` の構築と共通ヘルパー呼び出しへ置き換える
+- [x] 5.6 `tts_edit_dialog.dart` の失敗表示を同様に置き換える
+- [x] 5.7 `lib/features/tts/presentation/tts_failure_snackbar.dart` を削除し、参照を共通ヘルパーへ差し替える
+- [x] 5.8 `tts_modelNeedsRedownload` など、合成失敗ではない既存のスナックバーは変更していないことを確認する
+- [x] 5.9 テストが通ることを確認する
 
 ## 6. 最終確認
 
 - [ ] 6.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 6.3 `fvm dart format .`でフォーマットを実行
-- [ ] 6.4 `fvm flutter analyze`でリントを実行
-- [ ] 6.5 `fvm flutter test`でテストを実行
+- [x] 6.3 `fvm dart format .`でフォーマットを実行
+- [x] 6.4 `fvm flutter analyze`でリントを実行
+- [x] 6.5 `fvm flutter test`でテストを実行
 - [ ] 6.6 iOS実機またはシミュレータで、LLM解析を意図的に失敗させ、スナックバーが残り詳細ダイアログからコピーできることを確認

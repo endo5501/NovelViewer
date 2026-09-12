@@ -11,7 +11,9 @@ import '../data/tts_engine_type.dart';
 import '../data/tts_isolate.dart';
 import '../domain/tts_engine_config.dart';
 import 'tts_edit_segment_list.dart';
-import 'tts_failure_snackbar.dart';
+import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
+import 'package:novel_viewer/shared/failure/failure_snackbar.dart';
+import 'tts_failure_report.dart';
 import '../providers/text_segmenter_provider.dart';
 import '../providers/vacuum_lifecycle_provider.dart';
 import '../providers/tts_audio_database_provider.dart';
@@ -105,10 +107,20 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
 
     controller.onSynthesisFailed = (reason) {
       if (!mounted) return;
-      showTtsFailureSnackBar(
+      final failedEngine = ref.read(ttsEngineTypeProvider);
+      showFailureSnackBar(
         context,
-        headline: AppLocalizations.of(context)!.ttsEdit_synthesisFailed,
-        reason: reason,
+        buildTtsFailureReport(
+          headline: AppLocalizations.of(context)!.ttsEdit_synthesisFailed,
+          reason: reason,
+          engine: failedEngine,
+          modelDir: TtsEngineConfig.resolveFromRef(ref, failedEngine).modelDir,
+          appVersion: ref.read(appVersionLabelProvider),
+          fileName: widget.fileName,
+          // Still set: the callback fires inside the await that
+          // `_generateSegment` brackets with set(index) / set(null).
+          segmentIndex: ref.read(ttsEditGeneratingIndexProvider),
+        ),
       );
     };
 

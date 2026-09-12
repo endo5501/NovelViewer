@@ -234,10 +234,9 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     required String? sourceFileName,
   }) {
     final config = _ref.read(llmConfigProvider);
-    final packageInfo = _ref.read(packageInfoProvider);
     return {
       'time': DateTime.now().toUtc().toIso8601String(),
-      'app version': '${packageInfo.version}+${packageInfo.buildNumber}',
+      'app version': _ref.read(appVersionLabelProvider),
       'provider': config.provider.name,
       'model': config.model,
       'word': word,
