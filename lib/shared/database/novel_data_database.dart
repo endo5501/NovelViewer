@@ -41,22 +41,28 @@ class NovelDataDatabase {
 
   Future<Database> get database => _gate.resource;
 
-  Future<Database> _open() {
-    final path = p.join(_folderPath, databaseName);
-    // Holds non-reproducible bookmarks → never auto-delete on open failure.
+  Future<Database> _open() => openFile(p.join(_folderPath, databaseName));
+
+  /// Opens the `novel_data.db` at [path] with this file's version and its
+  /// three schema callbacks.
+  ///
+  /// The single place any code opens one of these. The v8→v9 migration creates
+  /// these files itself and used to spell the same wiring out a second time,
+  /// which is how it came to create the current tables stamped at an older
+  /// version. One entry point is what stops that from happening again at the
+  /// next schema change.
+  ///
+  /// Holds non-reproducible bookmarks → never auto-delete on open failure.
+  static Future<Database> openFile(String path, {Logger? logger}) {
     return openOrResetDatabase(
       path: path,
       version: currentVersion,
-      onCreate: _onCreate,
+      onCreate: (db, _) => createCurrentSchema(db),
       onUpgrade: upgradeToCurrent,
       onDowngrade: refuseDowngrade,
       deleteOnFailure: false,
-      logger: _log,
+      logger: logger ?? _log,
     );
-  }
-
-  Future<void> _onCreate(Database db, int version) async {
-    await createCurrentSchema(db);
   }
 
   /// v1 → v2: `fact_cache` gains `model_id`, and its unique key becomes
@@ -81,9 +87,23 @@ class NovelDataDatabase {
     int newVersion,
   ) async {
     if (oldVersion < 2) {
+      // The count is the only trace of why a word re-extracts after an update,
+      // so record it before the rows are gone.
+      final discarded =
+          Sqflite.firstIntValue(
+            await db.rawQuery('SELECT COUNT(*) FROM fact_cache'),
+          ) ??
+          0;
       await db.execute('DROP INDEX IF EXISTS idx_fact_cache_unique');
       await db.execute('DROP TABLE IF EXISTS fact_cache');
       await _createFactCache(db);
+      if (discarded > 0) {
+        _log.info(
+          'novel_data.db v1→v2: discarded $discarded cached fact row(s) of '
+          'unknown model provenance; the affected words re-extract on their '
+          'next analysis',
+        );
+      }
     }
   }
 

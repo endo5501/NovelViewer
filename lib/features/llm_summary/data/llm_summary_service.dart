@@ -112,6 +112,12 @@ class LlmSummaryService {
         // was written. Bounding by the replaced snapshot alone would leave such
         // a row valid and serve it from cache — precisely the file the user is
         // re-analyzing to fix.
+        //
+        // Snapshots carry no model, so a run by another model advances the
+        // bound used against this one's shelf. That only widens what gets
+        // invalidated, never narrows it, and re-analysis is the one action
+        // that wants everything gone — so the coupling costs a re-extraction
+        // at worst and never serves a stale fact.
         final lastSuccessfulRun = existing
             .map((s) => s.updatedAt)
             .reduce((a, b) => a.isAfter(b) ? a : b);

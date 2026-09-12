@@ -55,8 +55,8 @@ TDD で進める。各節は「失敗するテストを書く → 失敗を確�
 
 ## 7. 最終確認
 
-- [ ] 7.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 7.3 `fvm dart format .`でフォーマットを実行
-- [ ] 7.4 `fvm flutter analyze`でリントを実行
-- [ ] 7.5 `fvm flutter test`でテストを実行
+- [x] 7.1 code-reviewスキルを使用してコードレビューを実施
+- [x] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 7.3 `fvm dart format .`でフォーマットを実行
+- [x] 7.4 `fvm flutter analyze`でリントを実行
+- [x] 7.5 `fvm flutter test`でテストを実行

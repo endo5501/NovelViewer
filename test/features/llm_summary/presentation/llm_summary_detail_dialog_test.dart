@@ -142,6 +142,52 @@ void main() {
       expect(find.text('・サーバが書いた事実'), findsOneWidget);
     });
 
+    testWidgets('orders two models rows for one file deterministically', (
+      tester,
+    ) async {
+      // File name alone no longer separates these rows, and Dart's sort is not
+      // stable, so without a tiebreaker the two sections could swap on any
+      // rebuild.
+      await tester.pumpWidget(
+        _harness(
+          facts: [
+            _fact('001.txt', '・ｚが書いた', modelId: 'zzz:last'),
+            _fact('001.txt', '・ａが書いた', modelId: 'aaa:first'),
+          ],
+          snapshots: [_snap(10, '要約#10')],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final first = tester.getTopLeft(find.text('aaa:first')).dy;
+      final last = tester.getTopLeft(find.text('zzz:last')).dy;
+      expect(first, lessThan(last));
+    });
+
+    testWidgets('a long model name does not overflow the heading', (
+      tester,
+    ) async {
+      // An OpenAI-compatible endpoint can name a model far longer than the
+      // two-character "無効" badge this row was built around.
+      await tester.pumpWidget(
+        _harness(
+          facts: [
+            _fact(
+              '001.txt',
+              '・髪は金色',
+              modelId:
+                  'openai:accounts/fireworks/models/llama-v3p1-70b-instruct',
+            ),
+          ],
+          snapshots: [_snap(10, '要約#10')],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('001.txt'), findsOneWidget);
+    });
+
     testWidgets('shows empty message when no facts exist', (tester) async {
       await tester.pumpWidget(
         _harness(facts: const [], snapshots: [_snap(10, '要約#10')]),

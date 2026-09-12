@@ -77,21 +77,13 @@ class NovelDataMigrator {
         }
         return null;
       },
-      openNovelDataDb: (folderPath) async {
-        final path = p.join(folderPath, NovelDataDatabase.databaseName);
-        // The same version and the same callbacks the app itself opens these
-        // files with. Creating the current tables under an older stamp would
-        // leave the target's schema and its `user_version` disagreeing, and a
-        // target left at an older version by an interrupted run of an earlier
-        // build would never be brought forward here.
-        return openDatabase(
-          path,
-          version: NovelDataDatabase.currentVersion,
-          onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
-          onUpgrade: NovelDataDatabase.upgradeToCurrent,
-          onDowngrade: NovelDataDatabase.refuseDowngrade,
-        );
-      },
+      // Through the app's own entry point, not a second copy of the same
+      // wiring. Spelling it out here is how the migration came to create the
+      // current tables stamped at an older version.
+      openNovelDataDb: (folderPath) => NovelDataDatabase.openFile(
+        p.join(folderPath, NovelDataDatabase.databaseName),
+        logger: logger,
+      ),
     );
   }
 }
