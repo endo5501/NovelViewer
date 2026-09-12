@@ -1378,6 +1378,24 @@ abstract class AppLocalizations {
   /// **'設定画面でLLMを設定してください'**
   String get llmAnalysis_noLlmConfigured;
 
+  /// No description provided for @llmAnalysis_missingEndpoint.
+  ///
+  /// In ja, this message translates to:
+  /// **'設定画面でエンドポイントURLを入力してください'**
+  String get llmAnalysis_missingEndpoint;
+
+  /// No description provided for @llmAnalysis_missingModel.
+  ///
+  /// In ja, this message translates to:
+  /// **'設定画面でモデル名を入力してください'**
+  String get llmAnalysis_missingModel;
+
+  /// No description provided for @llmAnalysis_missingApiKey.
+  ///
+  /// In ja, this message translates to:
+  /// **'設定画面でAPIキーを入力してください'**
+  String get llmAnalysis_missingApiKey;
+
   /// No description provided for @llmAnalysis_failed.
   ///
   /// In ja, this message translates to:

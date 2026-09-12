@@ -710,6 +710,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get llmAnalysis_noLlmConfigured => '请在设置中配置LLM';
 
   @override
+  String get llmAnalysis_missingEndpoint => '请在设置中输入端点URL';
+
+  @override
+  String get llmAnalysis_missingModel => '请在设置中输入模型名称';
+
+  @override
+  String get llmAnalysis_missingApiKey => '请在设置中输入API密钥';
+
+  @override
   String get llmAnalysis_failed => '分析失败';
 
   @override

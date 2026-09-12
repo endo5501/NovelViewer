@@ -17,6 +17,7 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_provider
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_config_problem.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
 import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -283,6 +284,153 @@ void main() {
       await runIt(tester, container);
 
       expect(find.text(ja.llmAnalysis_noLlmConfigured), findsOneWidget);
+    });
+  });
+
+  group('when the configuration is incomplete', () {
+    /// A container whose service is absent because [problem] stopped the
+    /// client from being built.
+    ProviderContainer withProblem(LlmConfigProblem problem, LlmConfig config) {
+      final container = ProviderContainer(
+        overrides: [
+          llmSummarySupportedProvider.overrideWithValue(true),
+          currentDirectoryProvider.overrideWith(
+            () => CurrentDirectoryNotifier('/library/novel_a'),
+          ),
+          selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
+          localeProvider.overrideWith(() => _StubLocale('ja')),
+          llmSummaryServiceProvider.overrideWith((ref, folderPath) => null),
+          llmClientProvider.overrideWith((_) async => null),
+          llmConfigProvider.overrideWithValue(config),
+          llmConfigProblemProvider.overrideWith((_) async => problem),
+          llmSummaryRepositoryProvider.overrideWith(
+            (ref, folderPath) async => _DummyRepo(),
+          ),
+          factCacheRepositoryProvider.overrideWith(
+            (ref, folderPath) async => _DummyFactCache(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    Future<void> runIt(WidgetTester tester, ProviderContainer container) async {
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            ref
+                .read(analysisRunnerProvider)
+                .run(context: context, word: 'アリス', coveredUpToEpisode: 1);
+          },
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a missing API key is named, not blamed on the whole '
+        'configuration', (tester) async {
+      final ja = await AppLocalizations.delegate.load(const Locale('ja'));
+      final container = withProblem(
+        LlmConfigProblem.missingApiKey,
+        const LlmConfig(
+          provider: LlmProvider.openai,
+          baseUrl: 'https://api.example.com/v1',
+          model: 'gpt-4o-mini',
+        ),
+      );
+
+      await runIt(tester, container);
+
+      expect(find.text(ja.llmAnalysis_missingApiKey), findsOneWidget);
+      // The reader has already chosen a provider and filled in the rest.
+      expect(find.text(ja.llmAnalysis_noLlmConfigured), findsNothing);
+    });
+
+    testWidgets('a missing endpoint URL is named', (tester) async {
+      final ja = await AppLocalizations.delegate.load(const Locale('ja'));
+      final container = withProblem(
+        LlmConfigProblem.missingEndpoint,
+        const LlmConfig(provider: LlmProvider.ollama, model: 'llama3'),
+      );
+
+      await runIt(tester, container);
+
+      expect(find.text(ja.llmAnalysis_missingEndpoint), findsOneWidget);
+      expect(find.text(ja.llmAnalysis_noLlmConfigured), findsNothing);
+    });
+
+    testWidgets('a missing model name is named', (tester) async {
+      final ja = await AppLocalizations.delegate.load(const Locale('ja'));
+      final container = withProblem(
+        LlmConfigProblem.missingModel,
+        const LlmConfig(
+          provider: LlmProvider.ollama,
+          baseUrl: 'http://localhost:11434',
+        ),
+      );
+
+      await runIt(tester, container);
+
+      expect(find.text(ja.llmAnalysis_missingModel), findsOneWidget);
+      expect(find.text(ja.llmAnalysis_noLlmConfigured), findsNothing);
+    });
+
+    testWidgets('no provider selected keeps the configure message', (
+      tester,
+    ) async {
+      final ja = await AppLocalizations.delegate.load(const Locale('ja'));
+      final container = withProblem(
+        LlmConfigProblem.noProvider,
+        const LlmConfig(),
+      );
+
+      await runIt(tester, container);
+
+      expect(find.text(ja.llmAnalysis_noLlmConfigured), findsOneWidget);
+    });
+
+    testWidgets('an endpoint URL of only whitespace never reaches Uri.parse', (
+      tester,
+    ) async {
+      final ja = await AppLocalizations.delegate.load(const Locale('ja'));
+      // What the reader used to get from a stray space was a FormatException
+      // naming a character position. Nothing of the sort may appear now.
+      final container = withProblem(
+        LlmConfigProblem.missingEndpoint,
+        const LlmConfig(
+          provider: LlmProvider.openai,
+          baseUrl: '   ',
+          model: 'gpt-4o-mini',
+        ),
+      );
+
+      await runIt(tester, container);
+
+      expect(find.text(ja.llmAnalysis_missingEndpoint), findsOneWidget);
+      expect(find.textContaining('FormatException'), findsNothing);
+    });
+
+    testWidgets('the message carries no details action', (tester) async {
+      // A configuration message has no exception and no stack trace behind it,
+      // so the persistent failure snackbar would open a dialog on nothing.
+      final container = withProblem(
+        LlmConfigProblem.missingApiKey,
+        const LlmConfig(
+          provider: LlmProvider.openai,
+          baseUrl: 'https://api.example.com/v1',
+          model: 'gpt-4o-mini',
+        ),
+      );
+
+      await runIt(tester, container);
+
+      final bar = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(bar.action, isNull);
+      expect(bar.showCloseIcon, isNot(isTrue));
+      expect(find.byType(FailureDetailDialog), findsNothing);
     });
   });
 

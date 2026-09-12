@@ -733,6 +733,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get llmAnalysis_noLlmConfigured => 'Please configure LLM in Settings';
 
   @override
+  String get llmAnalysis_missingEndpoint =>
+      'Please enter the endpoint URL in Settings';
+
+  @override
+  String get llmAnalysis_missingModel =>
+      'Please enter the model name in Settings';
+
+  @override
+  String get llmAnalysis_missingApiKey =>
+      'Please enter the API key in Settings';
+
+  @override
   String get llmAnalysis_failed => 'Analysis failed';
 
   @override

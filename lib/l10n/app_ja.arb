@@ -442,6 +442,9 @@
   "llmAnalysis_generatingFinal": "最終要約を生成中…",
   "llmAnalysis_noFolderOpen": "小説フォルダを開いてください",
   "llmAnalysis_noLlmConfigured": "設定画面でLLMを設定してください",
+  "llmAnalysis_missingEndpoint": "設定画面でエンドポイントURLを入力してください",
+  "llmAnalysis_missingModel": "設定画面でモデル名を入力してください",
+  "llmAnalysis_missingApiKey": "設定画面でAPIキーを入力してください",
   "llmAnalysis_failed": "解析失敗",
   "llmAnalysis_savedSummary": "「{word}」の要約を保存しました",
   "@llmAnalysis_savedSummary": {

@@ -252,6 +252,9 @@
   "llmAnalysis_generatingFinal": "正在生成最终摘要…",
   "llmAnalysis_noFolderOpen": "请先打开小说文件夹",
   "llmAnalysis_noLlmConfigured": "请在设置中配置LLM",
+  "llmAnalysis_missingEndpoint": "请在设置中输入端点URL",
+  "llmAnalysis_missingModel": "请在设置中输入模型名称",
+  "llmAnalysis_missingApiKey": "请在设置中输入API密钥",
   "llmAnalysis_failed": "分析失败",
   "llmAnalysis_savedSummary": "已保存「{word}」的摘要",
   "@llmAnalysis_savedSummary": {

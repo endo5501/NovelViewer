@@ -54,15 +54,15 @@ TDDのため、まずテストのみを用意して失敗を確認し、赤の�
 
 ## 7. 不足を名指しするメッセージ — テスト
 
-- [ ] 7.1 `app_ja.arb` / `app_en.arb` / `app_zh.arb` に3つの文言（エンドポイントURL・モデル名・APIキー）を追加する
-- [ ] 7.2 `fvm flutter gen-l10n` 相当の生成を行い、キーが利用可能になることを確認する
-- [ ] 7.3 `analysis_runner_test.dart` に、APIキーのみ欠落時に汎用文言ではなくAPIキーを名指しする文言が出るテストを追加する
-- [ ] 7.4 `analysis_runner_test.dart` に、エンドポイントURL欠落時・モデル名欠落時のテストを追加する
-- [ ] 7.5 `analysis_runner_test.dart` に、プロバイダ未設定時は既存の汎用文言が出るテストを追加する
-- [ ] 7.6 `analysis_runner_test.dart` に、これらのスナックバーが詳細アクションを持たないテストを追加する
-- [ ] 7.7 `analysis_runner_test.dart` に、空白のみのエンドポイントURLで `FormatException` が読者に届かないテストを追加する
-- [ ] 7.8 テストを実行し、意図した理由で失敗することを確認する
-- [ ] 7.9 赤の状態でコミットする
+- [x] 7.1 `app_ja.arb` / `app_en.arb` / `app_zh.arb` に3つの文言（エンドポイントURL・モデル名・APIキー）を追加する
+- [x] 7.2 `fvm flutter gen-l10n` 相当の生成を行い、キーが利用可能になることを確認する
+- [x] 7.3 `analysis_runner_test.dart` に、APIキーのみ欠落時に汎用文言ではなくAPIキーを名指しする文言が出るテストを追加する
+- [x] 7.4 `analysis_runner_test.dart` に、エンドポイントURL欠落時・モデル名欠落時のテストを追加する
+- [x] 7.5 `analysis_runner_test.dart` に、プロバイダ未設定時は既存の汎用文言が出るテストを追加する
+- [x] 7.6 `analysis_runner_test.dart` に、これらのスナックバーが詳細アクションを持たないテストを追加する
+- [x] 7.7 `analysis_runner_test.dart` に、空白のみのエンドポイントURLで `FormatException` が読者に届かないテストを追加する
+- [x] 7.8 テストを実行し、意図した理由で失敗することを確認する
+- [x] 7.9 赤の状態でコミットする
 
 ## 8. 不足を名指しするメッセージ — 実装
 
