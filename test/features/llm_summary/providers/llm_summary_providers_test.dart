@@ -205,6 +205,101 @@ void main() {
       },
     );
 
+    test('returns null when the Ollama endpoint URL is empty', () async {
+      SharedPreferences.setMockInitialValues({
+        'llm_provider': 'ollama',
+        'llm_base_url': '',
+        'llm_model': 'llama3',
+      });
+      final prefs = await SharedPreferences.getInstance();
+
+      var sawRequest = false;
+      final mockClient = MockClient((request) async {
+        sawRequest = true;
+        return http.Response('{}', 200);
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          httpClientProvider.overrideWithValue(mockClient),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(await container.read(llmClientProvider.future), isNull);
+      expect(sawRequest, isFalse);
+    });
+
+    test(
+      'returns null when the Ollama endpoint URL is only whitespace',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'llm_provider': 'ollama',
+          'llm_base_url': '   ',
+          'llm_model': 'llama3',
+        });
+        final prefs = await SharedPreferences.getInstance();
+
+        final container = ProviderContainer(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        );
+        addTearDown(container.dispose);
+
+        expect(await container.read(llmClientProvider.future), isNull);
+      },
+    );
+
+    test('returns null when the Ollama model name is empty', () async {
+      SharedPreferences.setMockInitialValues({
+        'llm_provider': 'ollama',
+        'llm_base_url': 'http://localhost:11434',
+        'llm_model': '',
+      });
+      final prefs = await SharedPreferences.getInstance();
+
+      final container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(container.dispose);
+
+      expect(await container.read(llmClientProvider.future), isNull);
+    });
+
+    test('returns null when the OpenAI endpoint URL is empty', () async {
+      SharedPreferences.setMockInitialValues({
+        'llm_provider': 'openai',
+        'llm_base_url': '',
+        'llm_model': 'gpt-4o-mini',
+      });
+      secureStorageMock.store['llm_api_key'] = 'sk-from-secure';
+      final prefs = await SharedPreferences.getInstance();
+
+      final container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(container.dispose);
+
+      expect(await container.read(llmClientProvider.future), isNull);
+    });
+
+    test('returns null when the OpenAI model name is empty', () async {
+      SharedPreferences.setMockInitialValues({
+        'llm_provider': 'openai',
+        'llm_base_url': 'https://api.openai.com/v1',
+        'llm_model': '',
+      });
+      secureStorageMock.store['llm_api_key'] = 'sk-from-secure';
+      final prefs = await SharedPreferences.getInstance();
+
+      final container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(container.dispose);
+
+      expect(await container.read(llmClientProvider.future), isNull);
+    });
+
     test('does not call secure storage for the Ollama provider', () async {
       SharedPreferences.setMockInitialValues({
         'llm_provider': 'ollama',
