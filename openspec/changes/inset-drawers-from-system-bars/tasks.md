@@ -21,6 +21,6 @@
 
 - [ ] 3.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 3.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 3.3 `fvm dart format .`でフォーマットを実行
-- [ ] 3.4 `fvm flutter analyze`でリントを実行
-- [ ] 3.5 `fvm flutter test`でテストを実行
+- [x] 3.3 `fvm dart format .`でフォーマットを実行
+- [x] 3.4 `fvm flutter analyze`でリントを実行
+- [x] 3.5 `fvm flutter test`でテストを実行
