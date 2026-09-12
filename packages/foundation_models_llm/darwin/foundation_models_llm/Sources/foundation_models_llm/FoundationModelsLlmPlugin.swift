@@ -59,16 +59,20 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
   /// the availability check the plugin already had and raises no deployment
   /// target.
   ///
-  /// One accessor rather than two so the availability the plugin reports and
-  /// the model it generates against cannot drift apart. The guardrails do not
-  /// bear on availability — that is a fact about the device and the system,
-  /// and all three ways of asking agree on a machine where the model is
-  /// available — but a second construction site would let a later change make
-  /// them disagree silently.
+  /// One instance rather than one per access. The availability the plugin
+  /// reports and the model it generates against are then the same object, so
+  /// they cannot drift apart; the guardrails do not bear on availability — it
+  /// is a fact about the device and the system, and every way of asking agrees
+  /// on a machine where the model is available — but a second construction
+  /// site would let a later change make them disagree silently.
+  ///
+  /// Stored rather than computed because an analysis run reaches this several
+  /// times per chunk, and what stood here before was the framework's own
+  /// shared instance. Building an observable object on each access, twice per
+  /// request, would be work the previous code did not do.
   @available(iOS 26.0, macOS 26.0, *)
-  private static var model: SystemLanguageModel {
-    SystemLanguageModel(useCase: .general, guardrails: .permissiveContentTransformations)
-  }
+  private static let model = SystemLanguageModel(
+    useCase: .general, guardrails: .permissiveContentTransformations)
 
   /// The availability, as the name Dart reads back.
   ///
