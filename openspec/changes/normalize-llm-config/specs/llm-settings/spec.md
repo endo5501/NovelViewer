@@ -1,5 +1,27 @@
 ## MODIFIED Requirements
 
+### Requirement: Ollama configuration
+The system SHALL allow the user to configure Ollama connection settings: endpoint URL and model name. The endpoint URL SHALL default to "http://localhost:11434". The model name SHALL be selected from a dropdown populated by fetching the installed model list from the Ollama server, instead of manual text input.
+
+The model list SHALL be fetched from the normalized endpoint URL, so that whitespace still sitting in the settings field does not leave the dropdown empty and the reader with no model to select.
+
+#### Scenario: Configure Ollama with default URL
+- **WHEN** the user selects Ollama and does not modify the endpoint URL
+- **THEN** the default URL "http://localhost:11434" is used for LLM requests
+
+#### Scenario: Configure Ollama custom URL
+- **WHEN** the user enters "http://192.168.1.100:11434" as the Ollama endpoint URL
+- **THEN** the value is persisted and used for subsequent LLM requests
+
+#### Scenario: Configure Ollama model via dropdown
+- **WHEN** the user selects a model name from the Ollama model dropdown
+- **THEN** the value is persisted and used as the model parameter in LLM requests
+
+#### Scenario: A pasted endpoint URL still populates the model dropdown
+- **WHEN** the user pastes `" http://localhost:11434/ "` into the endpoint URL field
+- **THEN** the model list SHALL be fetched from `http://localhost:11434`
+- **AND** the dropdown SHALL list the models the server reports, rather than a fetch error
+
 ### Requirement: LLM settings persistence
 Non-secret LLM configuration settings (provider selection, endpoint URLs, model names) SHALL be persisted using `SharedPreferences`. The OpenAI-compatible API key SHALL be persisted using `flutter_secure_storage`. Both stores SHALL be restored when the application starts.
 

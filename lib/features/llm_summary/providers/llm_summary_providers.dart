@@ -29,7 +29,12 @@ final llmConfigProvider = Provider<LlmConfig>((ref) {
 ///
 /// Only the provider that needs a credential reads this: the Ollama path must
 /// not touch secure storage at all.
-final llmApiKeyProvider = FutureProvider<String>(
+///
+/// `autoDispose` so the credential is not held for the life of the container.
+/// Selecting a different provider drops the only watchers, and the key leaves
+/// memory with them — as it did before it was cached here, when it lived only
+/// inside the client that was rebuilt.
+final llmApiKeyProvider = FutureProvider.autoDispose<String>(
   (ref) => ref.watch(settingsRepositoryProvider).getApiKey(),
 );
 
