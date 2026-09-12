@@ -14,6 +14,27 @@ import 'package:novel_viewer/shared/providers/layout_providers.dart';
 ProviderContainer containerOf(WidgetTester tester) =>
     ProviderScope.containerOf(tester.element(find.byType(NovelViewerApp)));
 
+/// The insets an iPad in portrait reports: a status bar above and a home
+/// indicator below. Held as logical pixels, which [useInsetDisplay] makes the
+/// same as physical ones by pinning the device pixel ratio to 1.
+const double kTopInset = 44;
+const double kBottomInset = 34;
+
+/// Reproduces a display whose system bars sit over the surface.
+///
+/// The test surface reports no padding at all, so without this the drawers
+/// would have nothing to be inset by and the assertions would hold whatever
+/// the layout did.
+void useInsetDisplay(WidgetTester tester) {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(800, 600);
+  tester.view.padding = const FakeViewPadding(
+    top: kTopInset,
+    bottom: kBottomInset,
+  );
+  addTearDown(tester.view.reset);
+}
+
 /// Walks up the focus tree looking for a node whose debugLabel marks a pane.
 bool paneHasFocus(WidgetTester tester, String label) {
   FocusNode? node = tester.binding.focusManager.primaryFocus;
@@ -78,6 +99,89 @@ void main() {
 
       expect(find.byKey(const Key('left_column')), findsOneWidget);
       expect(tester.getSize(find.byKey(const Key('left_column'))).width, 250);
+    });
+  });
+
+  group('drawers under the system bars', () {
+    testWidgets('the left drawer keeps its tabs below the status bar', (
+      tester,
+    ) async {
+      useInsetDisplay(tester);
+      await pumpApp(tester, breakpoint: 900);
+
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+
+      final tabs = find.descendant(
+        of: find.byKey(const Key('left_column')),
+        matching: find.byType(TabBar),
+      );
+      expect(tester.getTopLeft(tabs).dy, greaterThanOrEqualTo(kTopInset));
+    });
+
+    testWidgets('the left drawer ends above the home indicator', (
+      tester,
+    ) async {
+      useInsetDisplay(tester);
+      await pumpApp(tester, breakpoint: 900);
+
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+
+      final panel = find.byKey(const Key('left_column'));
+      expect(
+        tester.getBottomLeft(panel).dy,
+        lessThanOrEqualTo(600 - kBottomInset),
+      );
+    });
+
+    testWidgets('the search drawer is inset the same way', (tester) async {
+      useInsetDisplay(tester);
+      await pumpApp(tester, breakpoint: 900);
+
+      containerOf(tester).read(rightColumnVisibleProvider.notifier).toggle();
+      await tester.pumpAndSettle();
+
+      final panel = find.byKey(const Key('right_column'));
+      expect(tester.getTopLeft(panel).dy, greaterThanOrEqualTo(kTopInset));
+      expect(
+        tester.getBottomLeft(panel).dy,
+        lessThanOrEqualTo(600 - kBottomInset),
+      );
+    });
+
+    testWidgets('the drawer surface still covers the inset area', (
+      tester,
+    ) async {
+      // The inset moves the contents, not the drawer itself: the panel has to
+      // sit on the drawer's own background rather than on whatever the body
+      // is showing beside the status bar.
+      useInsetDisplay(tester);
+      await pumpApp(tester, breakpoint: 900);
+
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+
+      final drawer = find.ancestor(
+        of: find.byKey(const Key('left_column')),
+        matching: find.byType(Drawer),
+      );
+      expect(tester.getRect(drawer).top, 0);
+      expect(tester.getRect(drawer).bottom, 600);
+    });
+
+    testWidgets('the wide layout carries no inset of its own', (tester) async {
+      // The same panels are used in both layouts, so an inset placed on a
+      // panel rather than on the drawer would leave a gap under the left
+      // column that the text viewer beside it does not have.
+      useInsetDisplay(tester);
+      await pumpApp(tester);
+
+      containerOf(tester).read(rightColumnVisibleProvider.notifier).toggle();
+      await tester.pumpAndSettle();
+
+      expect(tester.getRect(find.byKey(const Key('left_column'))).bottom, 600);
+      expect(tester.getRect(find.byKey(const Key('right_column'))).bottom, 600);
     });
   });
 
