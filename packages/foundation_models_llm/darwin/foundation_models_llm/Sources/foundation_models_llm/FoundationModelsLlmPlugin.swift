@@ -41,6 +41,35 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
     }
   }
 
+  /// The model every request in this plugin is made against.
+  ///
+  /// Built with the framework's permissive content-transformation guardrails
+  /// rather than its default ones. Summarising a passage of a novel is a
+  /// content transformation, which is the case the permissive setting exists
+  /// for; the default setting judges the model's own output and refuses a
+  /// summary that characterises a character unfavourably, which is a routine
+  /// thing for a novel to contain and for a summary to say.
+  ///
+  /// Measured against the same passages, the permissive setting refused no
+  /// more often than the default one and returned the fuller answer where both
+  /// succeeded, so it is used for every request rather than only for one being
+  /// retried.
+  ///
+  /// The setting arrived with the rest of the framework, so this sits inside
+  /// the availability check the plugin already had and raises no deployment
+  /// target.
+  ///
+  /// One accessor rather than two so the availability the plugin reports and
+  /// the model it generates against cannot drift apart. The guardrails do not
+  /// bear on availability — that is a fact about the device and the system,
+  /// and all three ways of asking agree on a machine where the model is
+  /// available — but a second construction site would let a later change make
+  /// them disagree silently.
+  @available(iOS 26.0, macOS 26.0, *)
+  private static var model: SystemLanguageModel {
+    SystemLanguageModel(useCase: .general, guardrails: .permissiveContentTransformations)
+  }
+
   /// The availability, as the name Dart reads back.
   ///
   /// The three unavailable reasons are reported separately because they ask
@@ -52,7 +81,7 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
     guard #available(iOS 26.0, macOS 26.0, *) else {
       return "unsupportedPlatform"
     }
-    switch SystemLanguageModel.default.availability {
+    switch model.availability {
     case .available:
       return "available"
     case .unavailable(.deviceNotEligible):
@@ -85,7 +114,7 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
           details: nil))
       return
     }
-    guard SystemLanguageModel.default.availability == .available else {
+    guard Self.model.availability == .available else {
       // Asked before the caller checked, or the state changed under it. Said
       // plainly, so it is not mistaken for the content having been refused.
       result(
@@ -99,6 +128,7 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
 
     let schemaFieldName = arguments["schemaFieldName"] as? String
     let maxResponseTokens = arguments["maxResponseTokens"] as? Int
+    let sampling = arguments["sampling"] as? String
 
     // `result` has to be called back on the platform thread, which is where
     // this hop lands.
@@ -107,7 +137,8 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
         let text = try await Self.generate(
           prompt: prompt,
           schemaFieldName: schemaFieldName,
-          maxResponseTokens: maxResponseTokens)
+          maxResponseTokens: maxResponseTokens,
+          sampling: sampling)
         result(text)
       } catch let error as LanguageModelSession.GenerationError {
         result(
@@ -137,14 +168,17 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
   private static func generate(
     prompt: String,
     schemaFieldName: String?,
-    maxResponseTokens: Int?
+    maxResponseTokens: Int?,
+    sampling: String?
   ) async throws -> String {
     // A session per request. The prompts a run issues do not depend on one
     // another, and the model's window is shared between prompt and response,
     // so carrying a transcript forward would spend that window on text
     // nothing later needs.
-    let session = LanguageModelSession()
-    let options = GenerationOptions(maximumResponseTokens: maxResponseTokens)
+    let session = LanguageModelSession(model: model)
+    let options = GenerationOptions(
+      sampling: samplingMode(named: sampling),
+      maximumResponseTokens: maxResponseTokens)
 
     guard let schemaFieldName else {
       return try await session.respond(to: prompt, options: options).content
@@ -161,6 +195,20 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
     let response = try await session.respond(
       to: prompt, schema: schema, options: options)
     return response.content.jsonString
+  }
+
+  /// The sampling mode Dart named, or nil to leave the framework its default.
+  ///
+  /// A name this version does not know is read as no name at all, for the same
+  /// reason Dart reads an availability answer it does not know as "unknown"
+  /// rather than throwing: a sampling mode is a preference, and failing a
+  /// generation over one would turn a preference into a requirement.
+  @available(iOS 26.0, macOS 26.0, *)
+  private static func samplingMode(named name: String?) -> GenerationOptions.SamplingMode? {
+    switch name {
+    case "greedy": return .greedy
+    default: return nil
+    }
   }
 
   /// The error code Dart reads back.

@@ -8,10 +8,10 @@
 
 ## 2. ネイティブ実装
 
-- [ ] 2.1 `FoundationModelsLlmPlugin.swift` の `generate` で `SystemLanguageModel(useCase: .general, guardrails: .permissiveContentTransformations)` を作り、そのモデルで `LanguageModelSession` を開くようにする。既存の `#available(iOS 26.0, macOS 26.0, *)` の内側に収まることをコメントで明示する
-- [ ] 2.2 `availability` の判定も同じモデル構成で行うか、`SystemLanguageModel.default` のままとするかを決めて、選んだ理由をコメントに残す
-- [ ] 2.3 `sampling` 引数を読み、`'greedy'` のとき `GenerationOptions(sampling: .greedy, maximumResponseTokens:)` を渡す。解釈できない値は未指定として扱う
-- [ ] 2.4 `scripts/` を使わず `fvm flutter build macos` でビルドが通ることを確認する
+- [x] 2.1 `FoundationModelsLlmPlugin.swift` の `generate` で `SystemLanguageModel(useCase: .general, guardrails: .permissiveContentTransformations)` を作り、そのモデルで `LanguageModelSession` を開くようにする。既存の `#available(iOS 26.0, macOS 26.0, *)` の内側に収まることをコメントで明示する
+- [x] 2.2 `availability` の判定も同じモデル構成で行うか、`SystemLanguageModel.default` のままとするかを決めて、選んだ理由をコメントに残す
+- [x] 2.3 `sampling` 引数を読み、`'greedy'` のとき `GenerationOptions(sampling: .greedy, maximumResponseTokens:)` を渡す。解釈できない値は未指定として扱う
+- [x] 2.4 `scripts/` を使わず `fvm flutter build macos` でビルドが通ることを確認する
 
 ## 3. クライアントの再試行方針
 
