@@ -61,10 +61,21 @@ class FoundationModelsClient extends LlmClient {
   /// refusal of the constrained path specifically, and the one request worth
   /// making is the same prompt without it.
   ///
+  /// Both of the framework's refusal cases qualify. It reports a guardrail
+  /// block and the model declining separately, and this package reads both as
+  /// the text having been refused; either way it is the constrained path that
+  /// was turned down, so either way the same prompt without it is the request
+  /// worth making.
+  ///
   /// Only a refusal is worth a second attempt. A prompt that overran the
   /// window overruns it again without its schema, since dropping the schema
   /// does not shorten the prompt, and the rest do not change between two
   /// attempts a moment apart.
+  ///
+  /// The retry has its own fate, and it is that fate that is reported. A
+  /// retry that is rate limited is reported as rate limiting, not as the
+  /// refusal that provoked it, so a reader is not sent after the text when
+  /// the text was not the problem.
   ///
   /// A request that named no schema has no constraint left to give up, so it
   /// is reported as it stands rather than repeated identically.

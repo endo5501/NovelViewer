@@ -10,10 +10,14 @@ class _FakePlugin implements FoundationModelsLlm {
     this.answer = '',
     this.failure,
     this.failWhenSchemaNamed = false,
+    this.unconstrainedFailure,
   });
 
   final String answer;
-  final OnDeviceGenerationException? failure;
+
+  /// Mutable so a test can let a later request succeed where an earlier one
+  /// was refused.
+  OnDeviceGenerationException? failure;
 
   /// Fail only the calls that named a schema field.
   ///
@@ -21,6 +25,12 @@ class _FakePlugin implements FoundationModelsLlm {
   /// long as generation is constrained, and answered once the constraint is
   /// gone.
   final bool failWhenSchemaNamed;
+
+  /// Fail the call that named no schema field, with this instead.
+  ///
+  /// Lets a test give the retry a different fate from the attempt that
+  /// provoked it.
+  final OnDeviceGenerationException? unconstrainedFailure;
 
   final List<
     ({String prompt, String? field, int? maxTokens, OnDeviceSampling? sampling})
@@ -45,6 +55,9 @@ class _FakePlugin implements FoundationModelsLlm {
       maxTokens: maxResponseTokens,
       sampling: sampling,
     ));
+    if (schemaFieldName == null && unconstrainedFailure != null) {
+      throw unconstrainedFailure!;
+    }
     if (failure != null && (!failWhenSchemaNamed || schemaFieldName != null)) {
       throw failure!;
     }
@@ -171,6 +184,117 @@ void main() {
 
       expect(plugin.calls.first.sampling, isNull);
       expect(plugin.calls.last.sampling, OnDeviceSampling.greedy);
+    });
+
+    test(
+      'retries when the model itself refused, not only the guardrails',
+      () async {
+        // The framework reports a guardrail block and the model declining as
+        // separate cases, and this package reads both as the text having been
+        // refused. Both qualify for the unconstrained retry: either way it is
+        // the constrained path that was turned down, and the one request worth
+        // making is the same prompt without it.
+        //
+        // The reason is built from the native code rather than named directly,
+        // so this fails if that collapse is ever undone without the retry being
+        // reconsidered.
+        final plugin = _FakePlugin(
+          answer: '{"facts": "- one"}',
+          failure: OnDeviceGenerationException(
+            OnDeviceGenerationFailure.fromWireCode('refusal'),
+          ),
+          failWhenSchemaNamed: true,
+        );
+
+        await FoundationModelsClient(plugin: plugin).generate(
+          'p',
+          schema: const LlmResponseSchema.singleStringField('facts'),
+        );
+
+        expect(plugin.calls, hasLength(2));
+        expect(plugin.calls.last.field, isNull);
+      },
+    );
+
+    test('reports what the retry failed with, not the refusal', () async {
+      // The retry has its own fate. Reporting the refusal that provoked it
+      // would send a reader after the text when the model was rate limited.
+      final plugin = _FakePlugin(
+        failure: const OnDeviceGenerationException(
+          OnDeviceGenerationFailure.guardrailViolation,
+        ),
+        failWhenSchemaNamed: true,
+        unconstrainedFailure: const OnDeviceGenerationException(
+          OnDeviceGenerationFailure.rateLimited,
+          detail: 'too many at once',
+        ),
+      );
+
+      await expectLater(
+        FoundationModelsClient(plugin: plugin).generate(
+          'p',
+          schema: const LlmResponseSchema.singleStringField('facts'),
+        ),
+        throwsA(
+          isA<LlmOnDeviceGenerationFailure>()
+              .having(
+                (e) => e.cause,
+                'cause',
+                OnDeviceGenerationFailure.rateLimited,
+              )
+              .having((e) => e.detail, 'detail', 'too many at once'),
+        ),
+      );
+      expect(plugin.calls, hasLength(2));
+    });
+
+    test('keeps the response cap on the retry', () async {
+      // The retry runs against the same window as the attempt it replaces.
+      final plugin = _FakePlugin(
+        answer: '{"facts": "- one"}',
+        failure: const OnDeviceGenerationException(
+          OnDeviceGenerationFailure.guardrailViolation,
+        ),
+        failWhenSchemaNamed: true,
+      );
+
+      await FoundationModelsClient(plugin: plugin).generate(
+        'p',
+        schema: const LlmResponseSchema.singleStringField('facts'),
+      );
+
+      expect(
+        plugin.calls.last.maxTokens,
+        FoundationModelsClient.maxResponseTokens,
+      );
+    });
+
+    test('a later request starts constrained again', () async {
+      // The client holds no memory of having given up a schema, so one
+      // refused prompt does not push the next one down the degraded path.
+      final plugin = _FakePlugin(
+        answer: '{"facts": "- one"}',
+        failure: const OnDeviceGenerationException(
+          OnDeviceGenerationFailure.guardrailViolation,
+        ),
+        failWhenSchemaNamed: true,
+      );
+      final client = FoundationModelsClient(plugin: plugin);
+
+      await client.generate(
+        'refused',
+        schema: const LlmResponseSchema.singleStringField('facts'),
+      );
+      plugin.calls.clear();
+      plugin.failure = null;
+      await client.generate(
+        '次の語',
+        schema: const LlmResponseSchema.singleStringField('facts'),
+      );
+
+      expect(plugin.calls, hasLength(1));
+      expect(plugin.calls.single.field, 'facts');
+      expect(plugin.calls.single.sampling, isNull);
     });
 
     test('does not retry a refusal that named no schema', () async {

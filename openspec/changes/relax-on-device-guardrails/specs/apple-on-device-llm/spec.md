@@ -28,7 +28,13 @@ The permissive guardrails do not take effect on the schema-constrained path: the
 
 Unconstrained generation SHALL request greedy sampling. Without the schema the model falls into repeating a sentence until the response cap cuts the answer off mid-object, which reaches the caller as a response that will not parse. Greedy sampling removes that: measured over the same passages, every unconstrained answer parsed, where under the framework's default sampling half of them did not.
 
-The retry SHALL be issued at most once. Where it is also refused, the refusal SHALL be reported as it is today, so that the existing per-file failure isolation applies.
+Both of the framework's refusal cases SHALL qualify. It reports a guardrail block and the model declining as separate cases, and the provider already reads both as the text having been refused; either way it is the constrained path that was turned down, so either way the same prompt without it is the request worth making.
+
+The retry SHALL be issued at most once per generation request. Where it is also refused, the refusal SHALL be reported as it is today, so that the existing per-file failure isolation applies.
+
+The retry SHALL be reported by its own failure rather than by the refusal that provoked it. A retry that is rate limited is rate limiting, and reporting it as a refusal would send a reader after the text when the text was not what stopped it.
+
+The retry SHALL carry the same response cap as the attempt it replaces, and SHALL leave no state behind: a later request SHALL begin constrained, with no sampling mode named.
 
 The decision to retry SHALL live in the client rather than in the native plugin. The plugin SHALL accept the schema and the sampling mode as arguments of a single generation call and SHALL NOT decide on its own to make a second one, so that what the provider does on a refusal is readable in one place alongside the rest of the client's policy.
 
@@ -48,6 +54,22 @@ The decision to retry SHALL live in the client rather than in the native plugin.
 #### Scenario: Only one retry is made
 - **WHEN** a refusal is answered by an unconstrained retry
 - **THEN** at most two generation requests SHALL be issued for that prompt
+
+#### Scenario: The model declining counts as a refusal
+- **WHEN** generation carrying a response schema fails because the model itself declined rather than because the guardrails blocked the output
+- **THEN** the provider SHALL issue the unconstrained retry, as it does for a guardrail block
+
+#### Scenario: The retry is reported by its own failure
+- **WHEN** the unconstrained retry fails for a reason of its own, such as rate limiting
+- **THEN** that reason SHALL be reported, not the refusal that provoked the retry
+
+#### Scenario: The retry keeps the response cap
+- **WHEN** the unconstrained retry is issued
+- **THEN** it SHALL carry the same response cap as the attempt it replaces
+
+#### Scenario: A later request begins constrained
+- **WHEN** a request has been answered through the unconstrained retry and a further request is made with a schema
+- **THEN** that request SHALL be constrained by its schema, with no sampling mode named
 
 #### Scenario: The plugin makes exactly the call it was asked for
 - **WHEN** the client asks the plugin to generate
