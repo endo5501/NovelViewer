@@ -33,10 +33,10 @@
 - [x] 4.3 スタックトレースが詳細ダイアログに現れることを検証するテストを追加する
 - [x] 4.4 成功スナックバーは従来どおり自動で消えることを検証するテストを追加する
 - [x] 4.5 テストを実行して失敗を確認し、コミットする
-- [ ] 4.6 `analysis_runner.dart` の `catch (e)` を `catch (e, st)` に変える
-- [ ] 4.7 既存の型別メッセージ分岐の結果を headline とし、`e.toString()` を cause として `FailureReport` を構築する。`packageInfoProvider` からバージョンを読む
-- [ ] 4.8 失敗時の `showSnackBar` を共通ヘルパー呼び出しへ置き換える。成功時の経路は変更しない
-- [ ] 4.9 テストが通ることを確認する
+- [x] 4.6 `analysis_runner.dart` の `catch (e)` を `catch (e, st)` に変える
+- [x] 4.7 既存の型別メッセージ分岐の結果を headline とし、`e.toString()` を cause として `FailureReport` を構築する。`packageInfoProvider` からバージョンを読む
+- [x] 4.8 失敗時の `showSnackBar` を共通ヘルパー呼び出しへ置き換える。成功時の経路は変更しない
+- [x] 4.9 テストが通ることを確認する
 
 ## 5. TTS失敗を共通経路へ載せる
 

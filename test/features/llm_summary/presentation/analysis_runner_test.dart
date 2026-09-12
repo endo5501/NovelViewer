@@ -660,14 +660,9 @@ void main() {
         ),
       );
 
-      final body = tester
-          .widget<Text>(
-            find.descendant(
-              of: find.byType(SnackBar),
-              matching: find.byType(Text),
-            ),
-          )
-          .data!;
+      // The action label is a Text too, so read the body off the SnackBar.
+      final bar = tester.widget<SnackBar>(find.byType(SnackBar));
+      final body = (bar.content as Text).data!;
 
       expect('connection refused'.allMatches(body).length, 1);
       expect(body, contains('2件'));
