@@ -50,6 +50,15 @@
 - [x] 5.8 `tts_modelNeedsRedownload` など、合成失敗ではない既存のスナックバーは変更していないことを確認する
 - [x] 5.9 テストが通ることを確認する
 
+## 7. 生テキストの伏せ字 (codexレビュー指摘)
+
+- [x] 7.1 `test/shared/failure/sensitive_redaction_test.dart` を作成する。URL全体の置換、userinfo内の認証情報、POSIX絶対パス、Windows絶対パス、置換しない普通の文字列、の各ケース
+- [x] 7.2 `renderFailureReport` と `formatFailureSnackBarBody` の出力が伏せ字を通ることを検証するテストを追加する
+- [x] 7.3 テストを実行して失敗を確認し、コミットする
+- [x] 7.4 `lib/shared/failure/sensitive_redaction.dart` に `redactSensitive` を実装する
+- [x] 7.5 `renderFailureReport` と `formatFailureSnackBarBody` から適用する
+- [x] 7.6 テストが通ることを確認する
+
 ## 6. 最終確認
 
 - [ ] 6.1 code-reviewスキルを使用してコードレビューを実施

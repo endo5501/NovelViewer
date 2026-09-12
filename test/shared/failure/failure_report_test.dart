@@ -96,6 +96,33 @@ time: 2026-09-12T10:23:45.123Z
 provider: appleOnDevice''');
     });
 
+    test('redacts the endpoint out of the cause', () {
+      const report = FailureReport(
+        headline: 'failed',
+        cause:
+            'ClientException: Connection refused, '
+            'uri=http://192.168.1.20:11434/api/generate',
+        diagnostics: {'provider': 'ollama'},
+      );
+
+      final text = renderFailureReport(report);
+
+      expect(text, isNot(contains('192.168.1.20')));
+      expect(text, contains('<endpoint>'));
+    });
+
+    test('redacts absolute paths out of the stack trace', () {
+      final report = FailureReport(
+        headline: 'failed',
+        stackTrace: StackTrace.fromString(
+          '#0      main (file:///Users/someone/app/lib/main.dart:12:3)',
+        ),
+        diagnostics: const {'provider': 'ollama'},
+      );
+
+      expect(renderFailureReport(report), isNot(contains('/Users/someone')));
+    });
+
     test('does not wrap the output in a code fence', () {
       final report = FailureReport(
         headline: 'failed',

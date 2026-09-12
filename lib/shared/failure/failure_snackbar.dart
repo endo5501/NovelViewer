@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import 'failure_detail_dialog.dart';
 import 'failure_report.dart';
+import 'sensitive_redaction.dart';
 
 /// Shows the shared failure notification for [report].
 ///
@@ -54,5 +55,5 @@ String formatFailureSnackBarBody(FailureReport report) {
   if (cause == null || cause.isEmpty) {
     return report.headline;
   }
-  return '${report.headline}: $cause';
+  return '${report.headline}: ${redactSensitive(cause)}';
 }

@@ -1,3 +1,5 @@
+import 'sensitive_redaction.dart';
+
 /// Everything a user-facing failure notification needs to say.
 ///
 /// One type for every failure surface, so the snackbar and the detail dialog
@@ -43,6 +45,10 @@ class FailureReport {
 ///
 /// Deliberately not wrapped in a code fence — the destination is not
 /// necessarily a Markdown-rendering surface.
+///
+/// Redacted on the way out: the cause and the stack trace come from places
+/// that embed request URIs and absolute paths, and this is the text a reader
+/// is invited to paste into a bug report.
 String renderFailureReport(FailureReport report) {
   final sections = <String>[];
 
@@ -68,5 +74,5 @@ String renderFailureReport(FailureReport report) {
     }
   }
 
-  return sections.join('\n\n');
+  return redactSensitive(sections.join('\n\n'));
 }

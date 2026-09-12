@@ -106,6 +106,46 @@ The copied text SHALL NOT be wrapped in a code fence, because the destination is
 - **WHEN** the user taps the copy action in the detail dialog
 - **THEN** the rendered text is written to the clipboard and a confirmation is shown
 
+### Requirement: Rendered failure text withholds endpoints and filesystem locations
+
+Every text the system renders from a report — the snackbar body and the copied detail text alike — SHALL be redacted of endpoints and filesystem locations before it is shown.
+
+Withholding the endpoint from the diagnostics is not enough on its own: the raw `cause` and `stackTrace` are produced elsewhere and can carry the same values. An HTTP client's exception string embeds the request URI, an OpenAI-compatible error embeds the response body, and a native TTS failure embeds the reference audio's absolute path. Redaction SHALL happen at the rendering step rather than at each producer, so a failure surface added later cannot forget it.
+
+Redaction SHALL NOT alter text that carries neither a URL nor an absolute path.
+
+Redaction SHALL replace any URL, from its scheme through to the next whitespace, with a fixed placeholder, removing host, port, path and any credentials carried in the userinfo. It SHALL replace the directory portion of any absolute filesystem path, POSIX or Windows, with a fixed placeholder while keeping the final path segment, so the file remains identifiable but its location does not.
+
+#### Scenario: A connection error's URI is withheld
+
+- **WHEN** a report whose cause is `ClientException: Connection refused, uri=http://192.168.1.20:11434/api/generate` is rendered
+- **THEN** neither the host, the port, nor the path appears in the rendered text, and a placeholder stands in their place
+
+#### Scenario: Credentials inside a URL are withheld
+
+- **WHEN** a report whose cause contains `https://user:secret@example.com/v1/chat` is rendered
+- **THEN** neither `user` nor `secret` appears in the rendered text
+
+#### Scenario: A reference audio path keeps only its file name
+
+- **WHEN** a report whose cause is `could not open audio input: /Users/someone/voices/sample.wav` is rendered
+- **THEN** the rendered text contains `sample.wav` but not `/Users/someone/voices`
+
+#### Scenario: A Windows path is redacted too
+
+- **WHEN** a report whose cause contains `C:\Users\someone\voices\sample.wav` is rendered
+- **THEN** the rendered text contains `sample.wav` but not `C:\Users\someone`
+
+#### Scenario: The snackbar body is redacted as well
+
+- **WHEN** a failure snackbar is shown for a report whose cause carries a URI
+- **THEN** the snackbar body carries the placeholder, not the URI
+
+#### Scenario: A stack trace is redacted
+
+- **WHEN** a report whose stack trace carries a `file:///Users/someone/...` frame is rendered
+- **THEN** that frame's location does not appear verbatim in the rendered text
+
 ### Requirement: Diagnostics exclude endpoints and secrets
 
 The diagnostics of an LLM failure report SHALL NOT include the configured endpoint URL (`LlmConfig.baseUrl`), because a self-hosted endpoint carries the user's private network address and the report is intended to be pasted into a bug report.

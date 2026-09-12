@@ -74,6 +74,20 @@ void main() {
       );
     });
 
+    test('redacts an endpoint out of the body', () {
+      final body = formatFailureSnackBarBody(
+        const FailureReport(
+          headline: '解析失敗',
+          cause:
+              'ClientException: Connection refused, '
+              'uri=http://192.168.1.20:11434/api/generate',
+        ),
+      );
+
+      expect(body, isNot(contains('192.168.1.20')));
+      expect(body, contains('<endpoint>'));
+    });
+
     test('trims surrounding whitespace from the cause', () {
       expect(
         formatFailureSnackBarBody(
