@@ -1,8 +1,8 @@
 ## 1. 共通の型とコピー書式
 
-- [ ] 1.1 `test/shared/failure/failure_report_test.dart` を作成する。診断項目の挿入順が保たれること、cause と stackTrace が省略可能であることを検証する
-- [ ] 1.2 同テストにコピー文字列の書式を追加する。全項目あり / cause と stack なし / 値が空の項目は行ごと落ちる / コードフェンスで囲まれない、の4ケース
-- [ ] 1.3 テストを実行して失敗を確認し、コミットする
+- [x] 1.1 `test/shared/failure/failure_report_test.dart` を作成する。診断項目の挿入順が保たれること、cause と stackTrace が省略可能であることを検証する
+- [x] 1.2 同テストにコピー文字列の書式を追加する。全項目あり / cause と stack なし / 値が空の項目は行ごと落ちる / コードフェンスで囲まれない、の4ケース
+- [x] 1.3 テストを実行して失敗を確認し、コミットする
 - [ ] 1.4 `lib/shared/failure/failure_report.dart` に `FailureReport`（headline / cause / stackTrace / diagnostics）と、コピー用プレーンテキストへの整形関数を実装する
 - [ ] 1.5 テストが通ることを確認する
 
