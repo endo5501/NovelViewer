@@ -22,6 +22,10 @@ const double kBottomInset = 34;
 
 /// Reproduces a display whose system bars sit over the surface.
 ///
+/// The assertions that use it are exact rather than "at least": an inset
+/// larger than the display asks for is as much a mistake as none at all, and
+/// only an equality catches it.
+///
 /// The test surface reports no padding at all, so without this the drawers
 /// would have nothing to be inset by and the assertions would hold whatever
 /// the layout did.
@@ -116,7 +120,7 @@ void main() {
         of: find.byKey(const Key('left_column')),
         matching: find.byType(TabBar),
       );
-      expect(tester.getTopLeft(tabs).dy, greaterThanOrEqualTo(kTopInset));
+      expect(tester.getTopLeft(tabs).dy, kTopInset);
     });
 
     testWidgets('the left drawer ends above the home indicator', (
@@ -129,10 +133,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final panel = find.byKey(const Key('left_column'));
-      expect(
-        tester.getBottomLeft(panel).dy,
-        lessThanOrEqualTo(600 - kBottomInset),
-      );
+      expect(tester.getBottomLeft(panel).dy, 600 - kBottomInset);
     });
 
     testWidgets('the search drawer is inset the same way', (tester) async {
@@ -143,11 +144,8 @@ void main() {
       await tester.pumpAndSettle();
 
       final panel = find.byKey(const Key('right_column'));
-      expect(tester.getTopLeft(panel).dy, greaterThanOrEqualTo(kTopInset));
-      expect(
-        tester.getBottomLeft(panel).dy,
-        lessThanOrEqualTo(600 - kBottomInset),
-      );
+      expect(tester.getTopLeft(panel).dy, kTopInset);
+      expect(tester.getBottomLeft(panel).dy, 600 - kBottomInset);
     });
 
     testWidgets('the drawer surface still covers the inset area', (
