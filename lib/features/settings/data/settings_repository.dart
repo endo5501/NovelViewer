@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_action.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_bindings.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_config_normalization.dart';
 import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import '../../tts/data/irodori_model_variant.dart';
@@ -134,30 +135,38 @@ class SettingsRepository {
       (p) => p.name == providerName,
       orElse: () => LlmProvider.none,
     );
+    // Normalized on the way out as well as on the way in, so a value stored
+    // before this rule existed is corrected without a migration step.
     return LlmConfig(
       provider: provider,
-      baseUrl: _prefs.getString(_llmBaseUrlKey) ?? '',
-      model: _prefs.getString(_llmModelKey) ?? '',
+      baseUrl: normalizeEndpointUrl(_prefs.getString(_llmBaseUrlKey) ?? ''),
+      model: normalizeModelName(_prefs.getString(_llmModelKey) ?? ''),
     );
   }
 
   Future<void> setLlmConfig(LlmConfig config) async {
     await _prefs.setString(_llmProviderKey, config.provider.name);
-    await _prefs.setString(_llmBaseUrlKey, config.baseUrl);
-    await _prefs.setString(_llmModelKey, config.model);
+    await _prefs.setString(
+      _llmBaseUrlKey,
+      normalizeEndpointUrl(config.baseUrl),
+    );
+    await _prefs.setString(_llmModelKey, normalizeModelName(config.model));
   }
 
   Future<String> getApiKey() async {
     final value = await _secureStorage.read(key: _llmApiKeyKey);
-    return value ?? '';
+    return normalizeApiKey(value ?? '');
   }
 
   Future<void> setApiKey(String apiKey) async {
-    if (apiKey.isEmpty) {
+    // A key of only whitespace is no key: normalizing first means it deletes
+    // the entry rather than storing a credential the server will refuse.
+    final normalized = normalizeApiKey(apiKey);
+    if (normalized.isEmpty) {
       await _secureStorage.delete(key: _llmApiKeyKey);
       return;
     }
-    await _secureStorage.write(key: _llmApiKeyKey, value: apiKey);
+    await _secureStorage.write(key: _llmApiKeyKey, value: normalized);
   }
 
   /// Migrate any pre-existing `llm_api_key` entry from `SharedPreferences` to
