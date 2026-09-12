@@ -155,6 +155,7 @@ void main() {
       // The first run filled the cache; clear it so the second run extracts.
       await factCache.invalidateWord(
         word: 'アリス',
+        modelId: 'test:fake',
         notNewerThan: DateTime.now().toUtc(),
       );
       final atTwoThousand = await extractionCallsWith(2000);
