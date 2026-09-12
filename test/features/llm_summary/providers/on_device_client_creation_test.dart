@@ -80,6 +80,25 @@ void main() {
     );
   });
 
+  test('is never judged by the server settings it does not use', () async {
+    // No endpoint, no model name, no credential: the on-device provider is
+    // addressed by none of them, so the completeness check that gates the
+    // server providers must not reach it.
+    final container = await containerWith(
+      stored: {
+        'llm_provider': 'appleOnDevice',
+        'llm_base_url': '',
+        'llm_model': '',
+      },
+      availability: OnDeviceModelAvailability.available,
+    );
+
+    expect(
+      await container.read(llmClientProvider.future),
+      isA<FoundationModelsClient>(),
+    );
+  });
+
   test('builds no client at all when the model is unavailable', () async {
     final container = await containerWith(
       stored: {'llm_provider': 'appleOnDevice'},

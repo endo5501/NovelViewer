@@ -279,6 +279,126 @@ void main() {
     );
   });
 
+  group('SettingsRepository - LLM value normalization', () {
+    test('setLlmConfig strips whitespace around the endpoint URL', () async {
+      final repo = buildRepo();
+      await repo.setLlmConfig(
+        const LlmConfig(
+          provider: LlmProvider.ollama,
+          baseUrl: ' http://localhost:11434 ',
+          model: 'llama3',
+        ),
+      );
+      expect(prefs.getString('llm_base_url'), 'http://localhost:11434');
+    });
+
+    test(
+      'setLlmConfig strips trailing slashes from the endpoint URL',
+      () async {
+        final repo = buildRepo();
+        await repo.setLlmConfig(
+          const LlmConfig(
+            provider: LlmProvider.openai,
+            baseUrl: 'https://api.example.com/v1//',
+            model: 'gpt-4o-mini',
+          ),
+        );
+        expect(prefs.getString('llm_base_url'), 'https://api.example.com/v1');
+      },
+    );
+
+    test('setLlmConfig strips whitespace around the model name', () async {
+      final repo = buildRepo();
+      await repo.setLlmConfig(
+        const LlmConfig(
+          provider: LlmProvider.ollama,
+          baseUrl: 'http://localhost:11434',
+          model: '  llama3\n',
+        ),
+      );
+      expect(prefs.getString('llm_model'), 'llama3');
+    });
+
+    test('setApiKey strips the newline a paste leaves behind', () async {
+      final repo = buildRepo();
+      await repo.setApiKey('sk-example\n');
+      expect(secureStorageMock.store['llm_api_key'], 'sk-example');
+    });
+
+    test('setApiKey treats an all-whitespace key as empty', () async {
+      secureStorageMock.store['llm_api_key'] = 'sk-existing';
+      final repo = buildRepo();
+      await repo.setApiKey('   ');
+      expect(secureStorageMock.store.containsKey('llm_api_key'), isFalse);
+    });
+
+    test('a trailing slash inside a query survives a save and read', () async {
+      final repo = buildRepo();
+      await repo.setLlmConfig(
+        const LlmConfig(
+          provider: LlmProvider.openai,
+          baseUrl: 'https://host/proxy?route=/v1/',
+          model: 'gpt-4o-mini',
+        ),
+      );
+
+      expect(repo.getLlmConfig().baseUrl, 'https://host/proxy?route=/v1/');
+    });
+
+    test(
+      'a trailing slash inside a fragment survives a save and read',
+      () async {
+        final repo = buildRepo();
+        await repo.setLlmConfig(
+          const LlmConfig(
+            provider: LlmProvider.openai,
+            baseUrl: 'https://host/base#section/',
+            model: 'gpt-4o-mini',
+          ),
+        );
+
+        expect(repo.getLlmConfig().baseUrl, 'https://host/base#section/');
+      },
+    );
+
+    test(
+      'getLlmConfig corrects an endpoint URL stored before this rule',
+      () async {
+        await prefs.setString('llm_provider', LlmProvider.ollama.name);
+        await prefs.setString('llm_base_url', ' http://localhost:11434/ ');
+        await prefs.setString('llm_model', 'llama3');
+        final repo = buildRepo();
+        expect(repo.getLlmConfig().baseUrl, 'http://localhost:11434');
+      },
+    );
+
+    test(
+      'getLlmConfig corrects a model name stored before this rule',
+      () async {
+        await prefs.setString('llm_provider', LlmProvider.ollama.name);
+        await prefs.setString('llm_model', ' llama3 ');
+        final repo = buildRepo();
+        expect(repo.getLlmConfig().model, 'llama3');
+      },
+    );
+
+    test(
+      'getLlmConfig reads an all-whitespace endpoint URL as empty',
+      () async {
+        await prefs.setString('llm_provider', LlmProvider.ollama.name);
+        await prefs.setString('llm_base_url', '   ');
+        final repo = buildRepo();
+        expect(repo.getLlmConfig().baseUrl, '');
+      },
+    );
+
+    test('getApiKey corrects a key stored before this rule', () async {
+      secureStorageMock.store['llm_api_key'] = 'sk-example\n';
+      final repo = buildRepo();
+      expect(await repo.getApiKey(), 'sk-example');
+    });
+  });
+
   group('SettingsRepository - migrateApiKeyToSecureStorage', () {
     test('transfers an existing SharedPreferences key into secure storage and '
         'removes the SharedPreferences entry', () async {

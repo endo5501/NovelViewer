@@ -252,6 +252,9 @@
   "llmAnalysis_generatingFinal": "Generating final summary...",
   "llmAnalysis_noFolderOpen": "Please open a novel folder first",
   "llmAnalysis_noLlmConfigured": "Please configure LLM in Settings",
+  "llmAnalysis_missingEndpoint": "Please enter the endpoint URL in Settings",
+  "llmAnalysis_missingModel": "Please enter the model name in Settings",
+  "llmAnalysis_missingApiKey": "Please enter the API key in Settings",
   "llmAnalysis_failed": "Analysis failed",
   "llmAnalysis_savedSummary": "Saved summary for \"{word}\"",
   "@llmAnalysis_savedSummary": {

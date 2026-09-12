@@ -14,6 +14,7 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_config_problem.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
 import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -256,11 +257,31 @@ class DefaultAnalysisRunner implements AnalysisRunner {
 
   /// What to say when no client could be built.
   ///
-  /// The generic message tells the reader to go and configure an LLM. With
-  /// the on-device provider selected that is wrong: they have configured one,
-  /// and what stopped the run is the model being unusable right now. Naming
-  /// that sends them somewhere they can act.
+  /// The generic message tells the reader to go and configure an LLM. That is
+  /// only right when they have chosen no provider. With one chosen it sends
+  /// them somewhere they have already been: what stopped the run is a single
+  /// field left blank, or the on-device model being unusable right now.
+  /// Naming either points them at something they can act on.
+  ///
+  /// The reason comes from `llmConfigProblemProvider`, the same decision that
+  /// stopped the client from being built, so the sentence cannot describe a
+  /// different failure than the one that happened.
   Future<String> _noServiceMessage(AppLocalizations l10n) async {
+    // A null problem means the configuration itself is complete, so whatever
+    // stopped the run was something else and the checks below take over.
+    final problem = await _ref.read(llmConfigProblemProvider.future);
+    switch (problem) {
+      case LlmConfigProblem.noProvider:
+        return l10n.llmAnalysis_noLlmConfigured;
+      case LlmConfigProblem.missingEndpoint:
+        return l10n.llmAnalysis_missingEndpoint;
+      case LlmConfigProblem.missingModel:
+        return l10n.llmAnalysis_missingModel;
+      case LlmConfigProblem.missingApiKey:
+        return l10n.llmAnalysis_missingApiKey;
+      case null:
+        break;
+    }
     if (_ref.read(llmConfigProvider).provider != LlmProvider.appleOnDevice) {
       return l10n.llmAnalysis_noLlmConfigured;
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_config_normalization.dart';
 import 'package:novel_viewer/features/llm_summary/providers/ollama_model_list_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
@@ -165,7 +166,7 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
 
     if (_llmProvider == LlmProvider.ollama) {
       ref.listen<AsyncValue<List<String>>>(
-        ollamaModelListProvider(_baseUrlController.text),
+        ollamaModelListProvider(normalizeEndpointUrl(_baseUrlController.text)),
         (_, next) {
           if (next case AsyncData(value: final models)) {
             if (_selectedOllamaModel != null &&
@@ -279,7 +280,11 @@ class _LlmSettingsSectionState extends ConsumerState<LlmSettingsSection> {
 
   Widget _buildOllamaModelSelector() {
     final l10n = AppLocalizations.of(context)!;
-    final url = _baseUrlController.text;
+    // Normalized like the stored value: the field still holds whatever was
+    // pasted, and handing that to the fetch put the whitespace back in front
+    // of Uri.parse — leaving the reader with an empty dropdown, no model to
+    // pick, and then a message asking for the model name.
+    final url = normalizeEndpointUrl(_baseUrlController.text);
     final modelList = ref.watch(ollamaModelListProvider(url));
 
     if (modelList.hasError) {

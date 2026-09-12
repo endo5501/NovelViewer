@@ -716,6 +716,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get llmAnalysis_noLlmConfigured => '設定画面でLLMを設定してください';
 
   @override
+  String get llmAnalysis_missingEndpoint => '設定画面でエンドポイントURLを入力してください';
+
+  @override
+  String get llmAnalysis_missingModel => '設定画面でモデル名を入力してください';
+
+  @override
+  String get llmAnalysis_missingApiKey => '設定画面でAPIキーを入力してください';
+
+  @override
   String get llmAnalysis_failed => '解析失敗';
 
   @override

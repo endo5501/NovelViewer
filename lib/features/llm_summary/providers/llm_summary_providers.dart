@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart'
 import 'package:novel_viewer/features/llm_summary/data/ollama_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/openai_compatible_client.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_config_problem.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
@@ -19,8 +20,49 @@ final llmConfigProvider = Provider<LlmConfig>((ref) {
   return repo.getLlmConfig();
 });
 
+/// The stored OpenAI-compatible API key.
+///
+/// Held as a provider so the completeness check and the client construction
+/// read it once between them. Two reads could disagree — a key emptied in
+/// between would pass the check and reach the client blank — and each one
+/// crosses a platform channel to the device keychain.
+///
+/// Only the provider that needs a credential reads this: the Ollama path must
+/// not touch secure storage at all.
+///
+/// `autoDispose` so the credential is not held for the life of the container.
+/// Selecting a different provider drops the only watchers, and the key leaves
+/// memory with them — as it did before it was cached here, when it lived only
+/// inside the client that was rebuilt.
+final llmApiKeyProvider = FutureProvider.autoDispose<String>(
+  (ref) => ref.watch(settingsRepositoryProvider).getApiKey(),
+);
+
+/// What stops the current configuration from being used, or null when nothing
+/// does.
+///
+/// The one place that decides. `llmClientProvider` consults it to know whether
+/// to build a client at all, and the analysis runner consults it to know what
+/// to tell the reader, so a client that was not built and the sentence
+/// explaining why cannot describe different things.
+///
+/// The credential is fetched only for the provider that needs one: the Ollama
+/// path must not touch secure storage.
+final llmConfigProblemProvider = FutureProvider<LlmConfigProblem?>((ref) async {
+  final config = ref.watch(llmConfigProvider);
+  final apiKey = config.provider == LlmProvider.openai
+      ? await ref.watch(llmApiKeyProvider.future)
+      : '';
+  return findLlmConfigProblem(config, apiKey: apiKey);
+});
+
 final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
   final config = ref.watch(llmConfigProvider);
+  // Refuse before reaching the network rather than after. An endpoint URL or
+  // model name that is missing used to produce a client whose first request
+  // failed with a FormatException naming a character position — an error that
+  // told the reader nothing about the field they had left blank.
+  if (await ref.watch(llmConfigProblemProvider.future) != null) return null;
   // Inject the shared, provider-managed http.Client (closed via its onDispose)
   // instead of letting each client create its own unclosed one (F163).
   final httpClient = ref.watch(httpClientProvider);
@@ -32,10 +74,8 @@ final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
         httpClient: httpClient,
       );
     case LlmProvider.openai:
-      final apiKey = await ref.watch(settingsRepositoryProvider).getApiKey();
-      if (apiKey.isEmpty) {
-        return null;
-      }
+      // The same value the completeness check above passed judgement on.
+      final apiKey = await ref.watch(llmApiKeyProvider.future);
       return OpenAiCompatibleClient(
         baseUrl: config.baseUrl,
         apiKey: apiKey,
@@ -55,6 +95,8 @@ final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
       return FoundationModelsClient(
         plugin: ref.watch(foundationModelsLlmProvider),
       );
+    // Unreachable: `noProvider` is a problem, so the guard above already
+    // returned. Kept for exhaustiveness.
     case LlmProvider.none:
       return null;
   }
