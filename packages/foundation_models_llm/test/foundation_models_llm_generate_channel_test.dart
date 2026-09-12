@@ -59,6 +59,28 @@ void main() {
       expect(answer, 'free text');
     });
 
+    test('sends the sampling mode the caller asked for', () async {
+      final calls = stub('{"facts": "- one"}');
+
+      await MethodChannelFoundationModelsLlm().generate(
+        prompt: 'anything',
+        sampling: OnDeviceSampling.greedy,
+      );
+
+      expect((calls.single.arguments as Map)['sampling'], 'greedy');
+    });
+
+    test('sends no sampling mode when the caller named none', () async {
+      // Absent rather than a name meaning "the default": the framework's own
+      // option is nullable, and passing a name for it would make this package
+      // responsible for tracking what that default is.
+      final calls = stub('free text');
+
+      await MethodChannelFoundationModelsLlm().generate(prompt: 'anything');
+
+      expect((calls.single.arguments as Map)['sampling'], isNull);
+    });
+
     test('returns what the native side generated, unchanged', () async {
       stub('{"facts": "- アリスは騎士である"}');
 
