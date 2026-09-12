@@ -716,9 +716,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get llmAnalysis_noLlmConfigured => '設定画面でLLMを設定してください';
 
   @override
-  String llmAnalysis_failed(String error) {
-    return '解析失敗: $error';
-  }
+  String get llmAnalysis_failed => '解析失敗';
 
   @override
   String llmAnalysis_savedSummary(String word) {
@@ -726,8 +724,8 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String llmAnalysis_partialFailure(int count, String error) {
-    return '解析を中止しました: $count件のファイルを解析できなかったため、要約は保存されていません。再実行すると失敗した分だけ再試行します。($error)';
+  String llmAnalysis_partialFailure(int count) {
+    return '解析を中止しました: $count件のファイルを解析できなかったため、要約は保存されていません。再実行すると失敗した分だけ再試行します。';
   }
 
   @override

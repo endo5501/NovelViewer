@@ -6,6 +6,8 @@ When an analysis triggered from the context menu fails because one or more in-sc
 
 Any other failure — one not carrying a per-file extraction outcome, such as a storage error raised before or around the extraction loop — SHALL continue to use the existing generic failure message.
 
+The localized messages SHALL NOT embed the underlying error themselves. The error reaches the snackbar as the report's cause, which the shared notification path appends to the headline, so it appears exactly once. `llmAnalysis_failed` SHALL take no placeholder and `llmAnalysis_partialFailure` SHALL take only the failed-file count.
+
 The failed-file count SHALL NOT be persisted; it is conveyed to the user only through this notification.
 
 The failure notification SHALL be shown through the shared failure notification path, so it persists until dismissed and carries a details action. The runner SHALL catch the failure with its stack trace (`catch (e, st)`) and build a `FailureReport` whose headline is the message selected by the rules above, whose cause is the failure's string form, and whose stack trace is the captured one.
@@ -48,6 +50,11 @@ The success notification SHALL be unchanged and SHALL continue to dismiss itself
 
 - **WHEN** an analysis of "アリス" with scope `upToAll` over the file `040_chapter.txt` fails while the configured provider is `ollama`
 - **THEN** the detail dialog's copied text SHALL contain the time, the application version, `ollama`, the configured model name, `アリス`, the resolved scope, and `040_chapter.txt`
+
+#### Scenario: The underlying error appears exactly once
+
+- **WHEN** an analysis fails with a partial extraction failure whose first error is a connection error, and the resulting snackbar body is read
+- **THEN** the connection error text SHALL appear once, not once from the localized message and again from the appended cause
 
 #### Scenario: The stack trace reaches the report
 

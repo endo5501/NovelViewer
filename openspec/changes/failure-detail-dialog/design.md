@@ -129,6 +129,16 @@ LlmAnalysisPartialFailure: 3 file(s) failed extraction: ClientException: ...
 
 `analysis_runner.dart` の `catch (e)` はスタックトレースを捨てている。`catch (e, st)` に変える。既存の型別メッセージ分岐（`LlmAnalysisPartialFailure` / `LlmAnalysisNoFactsFailure` / その他）は見出しの決定にそのまま使い、`cause` には `e.toString()` を入れる。
 
+### 8. 失敗文言から埋め込みのエラー本文を外す
+
+既存の `llmAnalysis_failed`（`解析失敗: {error}`）と `llmAnalysis_partialFailure`（末尾の `({error})`）は、エラー本文を文言の中に埋め込んでいる。共通ヘルパーが headline と cause を連結するため、そこへ `cause` を渡すと同じ内容がスナックバーに二重に出る。
+
+そこで両文言から `{error}` プレースホルダを外し、headline は短い定型文、cause は生のエラー本文、という役割分担にそろえる。連結後の表示は従来とほぼ同じで、詳細ダイアログには例外の全文が別の節として入る。
+
+`llmAnalysis_noFacts` にはもともとエラー本文が入っていないが、cause の扱いは全分岐で同一にする。分岐ごとに規則が変わるほうが後から壊れやすい。
+
+*代替案*: 文言を触らず `cause` を渡さない。却下。詳細ダイアログのコピー文字列から例外の全文が消え、スタックトレースだけが残ることになる。
+
 ## Risks / Trade-offs
 
 **閉じない通知が操作の邪魔になる** → 画面下部を占有し続ける。`showCloseIcon` で1タップで閉じられ、新しい失敗が出るときは古いものを取り除くことで、積み上がりを防ぐ。

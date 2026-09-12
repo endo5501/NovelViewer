@@ -710,9 +710,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get llmAnalysis_noLlmConfigured => '请在设置中配置LLM';
 
   @override
-  String llmAnalysis_failed(String error) {
-    return '分析失败：$error';
-  }
+  String get llmAnalysis_failed => '分析失败';
 
   @override
   String llmAnalysis_savedSummary(String word) {
@@ -720,8 +718,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String llmAnalysis_partialFailure(int count, String error) {
-    return '分析已中止：有 $count 个文件无法分析，因此未保存摘要。重新运行将只重试失败的文件。（$error）';
+  String llmAnalysis_partialFailure(int count) {
+    return '分析已中止：有 $count 个文件无法分析，因此未保存摘要。重新运行将只重试失败的文件。';
   }
 
   @override
