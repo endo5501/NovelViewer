@@ -14,6 +14,9 @@ class _MinimalLlmClient extends LlmClient {
   LlmResponseSchema? receivedSchema;
 
   @override
+  String get modelId => 'test:fake';
+
+  @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     receivedSchema = schema;
     return '';

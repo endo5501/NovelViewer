@@ -8,15 +8,20 @@ import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_pr
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_detail_provider.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
-FactCacheEntry _fact(String file, String facts, {String hash = 'h'}) =>
-    FactCacheEntry(
-      word: 'アリス',
-      fileName: file,
-      facts: facts,
-      contentHash: hash,
-      promptVersion: 1,
-      updatedAt: DateTime.utc(2026, 5, 21),
-    );
+FactCacheEntry _fact(
+  String file,
+  String facts, {
+  String hash = 'h',
+  String modelId = 'ollama:qwen3:30b',
+}) => FactCacheEntry(
+  word: 'アリス',
+  fileName: file,
+  facts: facts,
+  contentHash: hash,
+  promptVersion: 1,
+  modelId: modelId,
+  updatedAt: DateTime.utc(2026, 5, 21),
+);
 
 WordSummary _snap(int episode, String text) => WordSummary(
   word: 'アリス',
@@ -99,6 +104,88 @@ void main() {
       final y001 = tester.getTopLeft(find.text('001.txt')).dy;
       final y002 = tester.getTopLeft(find.text('002.txt')).dy;
       expect(y001, lessThan(y002));
+    });
+
+    testWidgets('names the model each row came from', (tester) async {
+      await tester.pumpWidget(
+        _harness(
+          facts: [_fact('001.txt', '・髪は金色', modelId: 'apple:on-device')],
+          snapshots: [_snap(10, '要約#10')],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('apple:on-device'), findsOneWidget);
+    });
+
+    testWidgets('tells apart two models rows for the same file', (
+      tester,
+    ) async {
+      // Once the cache is keyed by model, the same file appears once per
+      // model. Without the name on the heading the reader sees two identical
+      // headings and cannot tell which facts belong to which run.
+      await tester.pumpWidget(
+        _harness(
+          facts: [
+            _fact('001.txt', '・端末が書いた事実', modelId: 'apple:on-device'),
+            _fact('001.txt', '・サーバが書いた事実', modelId: 'ollama:qwen3:30b'),
+          ],
+          snapshots: [_snap(10, '要約#10')],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('001.txt'), findsNWidgets(2));
+      expect(find.text('apple:on-device'), findsOneWidget);
+      expect(find.text('ollama:qwen3:30b'), findsOneWidget);
+      expect(find.text('・端末が書いた事実'), findsOneWidget);
+      expect(find.text('・サーバが書いた事実'), findsOneWidget);
+    });
+
+    testWidgets('orders two models rows for one file deterministically', (
+      tester,
+    ) async {
+      // File name alone no longer separates these rows, and Dart's sort is not
+      // stable, so without a tiebreaker the two sections could swap on any
+      // rebuild.
+      await tester.pumpWidget(
+        _harness(
+          facts: [
+            _fact('001.txt', '・ｚが書いた', modelId: 'zzz:last'),
+            _fact('001.txt', '・ａが書いた', modelId: 'aaa:first'),
+          ],
+          snapshots: [_snap(10, '要約#10')],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final first = tester.getTopLeft(find.text('aaa:first')).dy;
+      final last = tester.getTopLeft(find.text('zzz:last')).dy;
+      expect(first, lessThan(last));
+    });
+
+    testWidgets('a long model name does not overflow the heading', (
+      tester,
+    ) async {
+      // An OpenAI-compatible endpoint can name a model far longer than the
+      // two-character "無効" badge this row was built around.
+      await tester.pumpWidget(
+        _harness(
+          facts: [
+            _fact(
+              '001.txt',
+              '・髪は金色',
+              modelId:
+                  'openai:accounts/fireworks/models/llama-v3p1-70b-instruct',
+            ),
+          ],
+          snapshots: [_snap(10, '要約#10')],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('001.txt'), findsOneWidget);
     });
 
     testWidgets('shows empty message when no facts exist', (tester) async {

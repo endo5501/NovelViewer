@@ -210,6 +210,7 @@ void main() {
         facts: '- 事実',
         contentHash: 'h1',
         promptVersion: FactCacheRepository.currentPromptVersion,
+        modelId: 'test:fake',
       );
       await factCacheRepository.upsert(
         word: 'ボブ',
@@ -217,6 +218,7 @@ void main() {
         facts: '- 別事実',
         contentHash: 'h2',
         promptVersion: FactCacheRepository.currentPromptVersion,
+        modelId: 'test:fake',
       );
 
       final container = _containerFor(

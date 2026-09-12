@@ -52,10 +52,18 @@ class LlmSummaryService {
   /// prefix (or, for prefix-less files, lexical rank within the folder) is
   /// less than or equal to `coveredUpToEpisode`.
   ///
-  /// Stage-1 fact extraction is assembled from the per-file fact cache: each
-  /// in-scope file's cached facts are reused when still valid, and only cache
-  /// misses are extracted (and written back) — and only when the extraction
-  /// decoded structurally and produced content. When a snapshot already exists
+  /// Stage-1 fact extraction is assembled from the per-file fact cache of the
+  /// model behind [llmClient]: each in-scope file's cached facts are reused
+  /// when still valid, and only cache misses are extracted (and written back)
+  /// — and only when the extraction decoded structurally and produced content.
+  ///
+  /// A row another model wrote for the same file is not consulted, so the
+  /// evidence one run assembles always comes from a single model. A reader who
+  /// moves between an on-device model and a server one therefore never gets a
+  /// summary silently built from a mixture of the two, and finds the earlier
+  /// model's extractions still there when they move back.
+  ///
+  /// When a snapshot already exists
   /// at `coveredUpToEpisode`, this run is a re-analysis ("fix a bad result"),
   /// so the word's cache is invalidated up-front to force fresh extraction,
   /// bounded to rows written no later than the word's newest snapshot (rows
@@ -86,7 +94,13 @@ class LlmSummaryService {
         (s) => s.coveredUpToEpisode == coveredUpToEpisode,
       );
       if (isReanalysis) {
-        // Scope the invalidation to rows written no later than the word's most
+        // Scope the invalidation to this model's shelf. The result being
+        // discarded came from the model now configured; the other shelves hold
+        // unrelated work the reader may still come back to, and sweeping them
+        // up would charge the full cost of a model switch to an action that
+        // never asked for one.
+        //
+        // Scope it also to rows written no later than the word's most
         // recent successful run of ANY scope. Only a run that saved a snapshot
         // advances that mark, so rows newer than it can only have come from an
         // attempt that failed before saving: those are already fresh, and
@@ -98,11 +112,18 @@ class LlmSummaryService {
         // was written. Bounding by the replaced snapshot alone would leave such
         // a row valid and serve it from cache — precisely the file the user is
         // re-analyzing to fix.
+        //
+        // Snapshots carry no model, so a run by another model advances the
+        // bound used against this one's shelf. That only widens what gets
+        // invalidated, never narrows it, and re-analysis is the one action
+        // that wants everything gone — so the coupling costs a re-extraction
+        // at worst and never serves a stale fact.
         final lastSuccessfulRun = existing
             .map((s) => s.updatedAt)
             .reduce((a, b) => a.isAfter(b) ? a : b);
         await factCacheRepository.invalidateWord(
           word: word,
+          modelId: llmClient.modelId,
           notNewerThan: lastSuccessfulRun,
         );
       }
@@ -141,6 +162,7 @@ class LlmSummaryService {
         final cached = await factCacheRepository.find(
           word: word,
           fileName: file.fileName,
+          modelId: llmClient.modelId,
         );
         final valid = isFactCacheValid(
           cached,
@@ -202,6 +224,7 @@ class LlmSummaryService {
             facts: extracted.facts,
             contentHash: currentHashByFile[file.fileName]!,
             promptVersion: currentPromptVersion,
+            modelId: llmClient.modelId,
           );
         }
         perFileFacts.add(extracted.facts);

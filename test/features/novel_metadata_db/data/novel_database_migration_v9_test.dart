@@ -95,8 +95,9 @@ void main() {
         p.join(libRoot.path, folder, NovelDataDatabase.databaseName),
         options: OpenDatabaseOptions(
           singleInstance: false,
-          version: 1,
+          version: NovelDataDatabase.currentVersion,
           onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
+          onUpgrade: NovelDataDatabase.upgradeToCurrent,
         ),
       );
 
@@ -114,15 +115,16 @@ void main() {
         p.join(folderPath, NovelDataDatabase.databaseName),
         options: OpenDatabaseOptions(
           singleInstance: false,
-          version: 1,
+          version: NovelDataDatabase.currentVersion,
           onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
+          onUpgrade: NovelDataDatabase.upgradeToCurrent,
         ),
       ),
     );
   }
 
   test(
-    'copies each folder\'s rows into its novel_data.db then drops globals',
+    'copies summaries and bookmarks into novel_data.db then drops globals',
     () async {
       await global.insert('word_summaries', {
         'folder_name': 'novelA',
@@ -159,9 +161,11 @@ void main() {
       expect(ws.first['word'], 'アリス');
       expect(ws.first.containsKey('folder_name'), isFalse);
 
-      final fc = await folderDb.query('fact_cache');
-      expect(fc, hasLength(1));
-      expect(fc.first['file_name'], '030.txt');
+      // The global fact rows are NOT carried over: nothing records which
+      // model extracted them, and a fact-cache row without a model identity
+      // can never be found or replaced, so copying one would only plant
+      // residue. The word is simply re-extracted on its next analysis.
+      expect(await folderDb.query('fact_cache'), isEmpty);
 
       final bm = await folderDb.query('bookmarks');
       expect(bm, hasLength(1));
@@ -304,4 +308,22 @@ void main() {
       },
     );
   });
+
+  test(
+    'the production opener stamps the target at the current version',
+    () async {
+      // The migration creates these files itself. Stamping one at an older
+      // version would leave the current tables under a stale user_version —
+      // the very mismatch the schema work exists to avoid — and would leave a
+      // target from an earlier interrupted run unupgraded.
+      final folder = Directory(p.join(libRoot.path, 'novelA'))
+        ..createSync(recursive: true);
+      final migrator = NovelDataMigrator.fromLibraryRoot(libRoot.path);
+
+      final db = await migrator.openNovelDataDb(folder.path);
+      addTearDown(db.close);
+
+      expect(await db.getVersion(), NovelDataDatabase.currentVersion);
+    },
+  );
 }

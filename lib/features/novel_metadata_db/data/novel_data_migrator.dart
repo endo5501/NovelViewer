@@ -15,9 +15,9 @@ typedef NovelFolderPathResolver = String? Function(String folderName);
 /// [folderPath] and returns its [Database]. The caller owns closing it.
 typedef NovelDataDbOpener = Future<Database> Function(String folderPath);
 
-/// Injected I/O dependency for the v8→v9 migration that moves `word_summaries`,
-/// `fact_cache`, and `bookmarks` from the global `novel_metadata.db` into each
-/// novel's per-folder `novel_data.db`. Kept behind an interface so tests can
+/// Injected I/O dependency for the v8→v9 migration that moves `word_summaries`
+/// and `bookmarks` from the global `novel_metadata.db` into each novel's
+/// per-folder `novel_data.db`. Kept behind an interface so tests can
 /// supply in-memory folder databases and a fake folder resolver instead of
 /// touching the filesystem.
 class NovelDataMigrator {
@@ -77,14 +77,13 @@ class NovelDataMigrator {
         }
         return null;
       },
-      openNovelDataDb: (folderPath) async {
-        final path = p.join(folderPath, NovelDataDatabase.databaseName);
-        return openDatabase(
-          path,
-          version: 1,
-          onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
-        );
-      },
+      // Through the app's own entry point, not a second copy of the same
+      // wiring. Spelling it out here is how the migration came to create the
+      // current tables stamped at an older version.
+      openNovelDataDb: (folderPath) => NovelDataDatabase.openFile(
+        p.join(folderPath, NovelDataDatabase.databaseName),
+        logger: logger,
+      ),
     );
   }
 }
@@ -95,11 +94,18 @@ class NovelDataMigrator {
 ///
 /// Contract:
 /// - Rows are grouped by their owning folder (`word_summaries.folder_name`,
-///   `fact_cache.folder_name`, `bookmarks.novel_id`) and copied (dropping that
-///   identity column) into the folder's `novel_data.db` via INSERT-OR-IGNORE so
-///   a re-run after an interrupted migration cannot duplicate rows.
+///   `bookmarks.novel_id`) and copied (dropping that identity column) into the
+///   folder's `novel_data.db` via INSERT-OR-IGNORE so a re-run after an
+///   interrupted migration cannot duplicate rows.
+/// - Global `fact_cache` rows are NOT carried over. Nothing records which model
+///   extracted them, and a fact-cache row without a model identity can never be
+///   found by a client or replaced by an upsert, so copying one would plant
+///   residue rather than a cache entry. The affected words are simply
+///   re-extracted on their next analysis; their saved summaries come across.
 /// - Rows whose folder cannot be located on disk are discarded (orphans); the
-///   discarded count is logged at WARNING level.
+///   discarded count is logged at WARNING level. It counts folders named by
+///   summary or bookmark rows, the two tables that are migrated — a folder
+///   known only to `fact_cache` is never resolved and so never counted.
 /// - After all extant folders are copied, the three global tables are dropped.
 /// - `reading_progress` is never touched.
 Future<void> migrateV8ToV9(
@@ -108,13 +114,11 @@ Future<void> migrateV8ToV9(
   Logger? logger,
 }) async {
   final wordRows = await db.query('word_summaries');
-  final factRows = await db.query('fact_cache');
   final bookmarkRows = await db.query('bookmarks');
 
   // folderName -> {table -> rows}
   final folders = <String>{
     ...wordRows.map((r) => r['folder_name'] as String),
-    ...factRows.map((r) => r['folder_name'] as String),
     ...bookmarkRows.map((r) => r['novel_id'] as String),
   };
 
@@ -131,9 +135,11 @@ Future<void> migrateV8ToV9(
       // wrote to it before v9). Clear any rows from an interrupted prior run, then
       // copy the authoritative global rows — idempotent by construction, incl.
       // whole-file bookmarks (line_number IS NULL) that UNIQUE cannot dedup.
+      // `fact_cache` needs no clearing: nothing is copied into it, and rows an
+      // older build's interrupted run may have left are dropped by the folder
+      // database's own upgrade to the model-identity schema.
       final batch = folderDb.batch();
       batch.delete('word_summaries');
-      batch.delete('fact_cache');
       batch.delete('bookmarks');
       for (final r in wordRows.where((r) => r['folder_name'] == folder)) {
         batch.insert('word_summaries', {
@@ -142,16 +148,6 @@ Future<void> migrateV8ToV9(
           'summary': r['summary'],
           'source_file': r['source_file'],
           'created_at': r['created_at'],
-          'updated_at': r['updated_at'],
-        }, conflictAlgorithm: ConflictAlgorithm.ignore);
-      }
-      for (final r in factRows.where((r) => r['folder_name'] == folder)) {
-        batch.insert('fact_cache', {
-          'word': r['word'],
-          'file_name': r['file_name'],
-          'facts': r['facts'],
-          'content_hash': r['content_hash'],
-          'prompt_version': r['prompt_version'],
           'updated_at': r['updated_at'],
         }, conflictAlgorithm: ConflictAlgorithm.ignore);
       }
@@ -169,9 +165,12 @@ Future<void> migrateV8ToV9(
   }
 
   if (orphanedFolders > 0) {
+    // Counts folders named by summary or bookmark rows only. A folder known
+    // solely to `fact_cache` is never resolved, because nothing is migrated
+    // from that table, so it is neither visited nor counted here.
     logger?.warning(
-      'v9 migration: discarded per-novel rows for $orphanedFolders folder(s) '
-      'no longer present on disk',
+      'v9 migration: discarded summary/bookmark rows for $orphanedFolders '
+      'folder(s) no longer present on disk',
     );
   }
 

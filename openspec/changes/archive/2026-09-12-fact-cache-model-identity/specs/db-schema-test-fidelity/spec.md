@@ -1,22 +1,4 @@
-# db-schema-test-fidelity Specification
-
-## Purpose
-TBD - created by archiving change harden-db-test-schema-fidelity. Update Purpose after archive.
-## Requirements
-
-### Requirement: テストは本番スキーマ定義経由でDBを構築する
-
-`novel_metadata.db` を対象とするテストは、テーブルスキーマを手書きの `CREATE TABLE` DDL で定義してはならない（MUST NOT）。代わりに、本番の `NovelDatabase._onCreate`（またはそれを単一の正として露出する共有スキーマヘルパー）を経由してテスト用DBを構築しなければならない（SHALL）。これにより、本番スキーマの変更がテスト側に追従しないことに起因するスキーマドリフトを排除する。
-
-#### Scenario: 本番スキーマ変更がテストへ伝播する
-
-- **WHEN** `NovelDatabase._onCreate` のテーブル定義（列追加・制約変更など）が変更される
-- **THEN** 共有スキーマ経由で構築される全テストフィクスチャが同じスキーマを参照し、本番とテストのスキーマが食い違ったまま緑になることがない
-
-#### Scenario: 手書きDDLフィクスチャの不在
-
-- **WHEN** リポジトリ内のテストコードを走査する
-- **THEN** `novel_metadata.db` の各テーブル（novels / word_summaries / bookmarks / reading_progress / fact_cache）について、本番スキーマ定義から独立した手書き `CREATE TABLE` フィクスチャが存在しない
+## MODIFIED Requirements
 
 ### Requirement: バージョン移行のデータ保存をテストで固定する
 

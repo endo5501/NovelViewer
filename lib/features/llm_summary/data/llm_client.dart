@@ -9,6 +9,25 @@ abstract class LlmClient {
   /// validates the response shape after the fact.
   Future<String> generate(String prompt, {LlmResponseSchema? schema});
 
+  /// Names the model that answers this client's requests.
+  ///
+  /// A property of the client for the same reason [maxChunkSize] is: what
+  /// model answers is a fact about the client, and only the client holds the
+  /// provider and the model name together.
+  ///
+  /// Formed from the provider and the model name, never the endpoint address:
+  /// the address says where a model is reached, not what it is, and a reader's
+  /// self-hosted server changing address must not orphan its cache.
+  ///
+  /// Opaque. Stored as written, compared only for equality, never parsed — so
+  /// a model name carrying the separator needs no special handling.
+  ///
+  /// There is deliberately no default. A default would let two different
+  /// models share one identity and therefore one fact-cache shelf, which is
+  /// the exact confusion the identity exists to prevent, and it would happen
+  /// silently. A client that does not name itself fails to compile instead.
+  String get modelId;
+
   /// How much text, in characters, may be handed to this client at once.
   ///
   /// A property of the model behind the client rather than of the pipeline

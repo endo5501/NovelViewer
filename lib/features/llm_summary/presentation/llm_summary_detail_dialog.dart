@@ -64,8 +64,11 @@ class LlmSummaryDetailDialog extends StatelessWidget {
   }
 }
 
-/// "事実" tab: per-file list of cached Stage-1 facts. Invalidated rows
-/// (sentinel `content_hash`) are kept and greyed out with an "無効" badge.
+/// "事実" tab: per-file list of cached Stage-1 facts, one section per
+/// `(file, model)` row. Each section names the model that wrote it, because
+/// the cache is keyed by model and the same file therefore appears once per
+/// model. Invalidated rows (sentinel `content_hash`) are kept and greyed out
+/// with an "無効" badge.
 class _FactsTab extends ConsumerWidget {
   const _FactsTab({required this.folderPath, required this.word});
 
@@ -86,11 +89,18 @@ class _FactsTab extends ConsumerWidget {
         if (facts.isEmpty) {
           return Center(child: Text(l10n.historyDetail_noFacts));
         }
-        // Display per file in ascending file-name order. Sorting here (not
-        // only in the provider) keeps the display guarantee at the
-        // presentation layer regardless of how the list was sourced.
+        // Display per file in ascending file-name order, then by model. Since
+        // the cache is keyed by model the same file appears more than once,
+        // and Dart's sort is not stable, so without the second key those
+        // sections could swap places on any rebuild. Sorting here (not only in
+        // the provider) keeps the display guarantee at the presentation layer
+        // regardless of how the list was sourced.
         final sorted = [...facts]
-          ..sort((a, b) => a.fileName.compareTo(b.fileName));
+          ..sort((a, b) {
+            final byFile = a.fileName.compareTo(b.fileName);
+            if (byFile != 0) return byFile;
+            return a.modelId.compareTo(b.modelId);
+          });
         return ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 8),
           itemCount: sorted.length,
@@ -121,8 +131,24 @@ class _FactSection extends StatelessWidget {
             Expanded(
               child: Text(entry.fileName, style: theme.textTheme.titleSmall),
             ),
+            // Which model wrote these facts. The cache is keyed by model, so
+            // the same file appears once per model and the headings would
+            // otherwise be indistinguishable.
+            //
+            // Flexible because an identity can be long — an OpenAI-compatible
+            // endpoint may name a model in a path several segments deep —
+            // and a Row lays a non-flex child out at its full intrinsic width,
+            // squeezing the file name to nothing and then overflowing. The
+            // full value stays reachable through the tooltip.
+            const SizedBox(width: 8),
+            Flexible(
+              child: Tooltip(
+                message: entry.modelId,
+                child: OutlinedTextBadge(label: entry.modelId),
+              ),
+            ),
             if (isInvalid) ...[
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
               OutlinedTextBadge(label: l10n.historyDetail_invalidBadge),
             ],
           ],

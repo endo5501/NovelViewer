@@ -10,6 +10,28 @@ Future<Set<String>> _columns(Database db, String table) async {
   return rows.map((r) => r['name'] as String).toSet();
 }
 
+/// Returns the columns of [index], in index order.
+Future<List<String>> _indexColumns(Database db, String index) async {
+  final rows = await db.rawQuery('PRAGMA index_info($index)');
+  final sorted = [...rows]
+    ..sort((a, b) => (a['seqno'] as int).compareTo(b['seqno'] as int));
+  return sorted.map((r) => r['name'] as String).toList();
+}
+
+/// Returns the stored SQL of the `fact_cache` table and its index, keyed by
+/// name, so two databases' definitions of it can be compared exactly.
+///
+/// Scoped to `fact_cache` because that is what the upgrade rebuilds. The other
+/// tables carry whatever formatting the database was originally created with,
+/// and comparing those would only measure the test fixture's own indentation.
+Future<Map<String, String?>> _factCacheSql(Database db) async {
+  final rows = await db.rawQuery(
+    'SELECT name, sql FROM sqlite_master '
+    "WHERE name LIKE '%fact_cache%' ORDER BY name",
+  );
+  return {for (final r in rows) r['name'] as String: r['sql'] as String?};
+}
+
 void main() {
   setUpAll(() {
     sqfliteFfiInit();
@@ -77,7 +99,7 @@ void main() {
     });
 
     test('fact_cache has no folder_name column and is keyed by '
-        '(word, file_name)', () async {
+        '(word, file_name, model_id)', () async {
       final wrapper = NovelDataDatabase(tempDir.path);
       addTearDown(wrapper.close);
       final db = await wrapper.database;
@@ -88,24 +110,60 @@ void main() {
       expect(cols, contains('facts'));
       expect(cols, contains('content_hash'));
       expect(cols, contains('prompt_version'));
+      expect(cols, contains('model_id'));
       expect(cols, isNot(contains('folder_name')));
 
-      Future<void> upsert(String facts) => db.rawInsert(
+      expect(await _indexColumns(db, 'idx_fact_cache_unique'), [
+        'word',
+        'file_name',
+        'model_id',
+      ]);
+
+      Future<void> upsert(String facts, String modelId) => db.rawInsert(
         '''
             INSERT INTO fact_cache
-              (word, file_name, facts, content_hash, prompt_version, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(word, file_name) DO UPDATE SET
+              (word, file_name, facts, content_hash, prompt_version,
+               model_id, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(word, file_name, model_id) DO UPDATE SET
               facts = excluded.facts
             ''',
-        ['アリス', '005.txt', facts, 'h', 1, 't0'],
+        ['アリス', '005.txt', facts, 'h', 1, modelId, 't0'],
       );
-      await upsert('a');
-      await upsert('b');
+      await upsert('a', 'ollama:m');
+      await upsert('b', 'ollama:m');
 
-      final rows = await db.query('fact_cache');
-      expect(rows, hasLength(1));
-      expect(rows.first['facts'], 'b');
+      final sameModel = await db.query('fact_cache');
+      expect(sameModel, hasLength(1));
+      expect(sameModel.first['facts'], 'b');
+
+      // A different model is a different shelf, not a replacement.
+      await upsert('c', 'apple:on-device');
+      expect(await db.query('fact_cache'), hasLength(2));
+    });
+
+    test('a fact row cannot carry an empty model identity', () async {
+      // The spec says a row without a model identity does not exist. Nothing
+      // but convention enforced that: no client declares an empty identity,
+      // but the schema accepted one, and such a row could never be found or
+      // replaced. Make the storage refuse it.
+      final wrapper = NovelDataDatabase(tempDir.path);
+      addTearDown(wrapper.close);
+      final db = await wrapper.database;
+
+      await expectLater(
+        db.insert('fact_cache', {
+          'word': 'アリス',
+          'file_name': '005.txt',
+          'facts': '- 事実',
+          'content_hash': 'h',
+          'prompt_version': 1,
+          'model_id': '',
+          'updated_at': 't0',
+        }),
+        throwsA(anything),
+      );
+      expect(await db.query('fact_cache'), isEmpty);
     });
 
     test('bookmarks has no novel_id column and is keyed by '
@@ -177,6 +235,185 @@ void main() {
       await wrapper.close();
       final db2 = await wrapper.database;
       expect(identical(db1, db2), isFalse);
+    });
+  });
+
+  group('NovelDataDatabase upgrade from the pre-model-identity schema', () {
+    /// The historical v1 `fact_cache`: no `model_id`, keyed by two columns.
+    /// Hand-written on purpose — the definition no longer exists in production
+    /// code, so seeding an old database is the one thing that cannot go
+    /// through the current schema helper.
+    Future<void> seedV1(String folderPath) async {
+      final db = await databaseFactory.openDatabase(
+        '$folderPath${Platform.pathSeparator}novel_data.db',
+        options: OpenDatabaseOptions(
+          version: 1,
+          singleInstance: false,
+          onCreate: (db, _) async {
+            await db.execute('''
+              CREATE TABLE word_summaries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                word TEXT NOT NULL,
+                covered_up_to_episode INTEGER NOT NULL,
+                summary TEXT NOT NULL,
+                source_file TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+              )
+            ''');
+            await db.execute('''
+              CREATE UNIQUE INDEX idx_word_summaries_unique
+              ON word_summaries(word, covered_up_to_episode)
+            ''');
+            await db.execute('''
+              CREATE TABLE fact_cache (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                word TEXT NOT NULL,
+                file_name TEXT NOT NULL,
+                facts TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
+                prompt_version INTEGER NOT NULL,
+                updated_at TEXT NOT NULL
+              )
+            ''');
+            await db.execute('''
+              CREATE UNIQUE INDEX idx_fact_cache_unique
+              ON fact_cache(word, file_name)
+            ''');
+            await db.execute('''
+              CREATE TABLE bookmarks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_name TEXT NOT NULL,
+                line_number INTEGER,
+                created_at TEXT NOT NULL,
+                UNIQUE(file_name, line_number)
+              )
+            ''');
+          },
+        ),
+      );
+      await db.insert('word_summaries', {
+        'word': 'アリス',
+        'covered_up_to_episode': 30,
+        'summary': '騎士団の副長。',
+        'source_file': '030.txt',
+        'created_at': 't0',
+        'updated_at': 't0',
+      });
+      await db.insert('fact_cache', {
+        'word': 'アリス',
+        'file_name': '005.txt',
+        'facts': '- 誰が書いたか分からない事実',
+        'content_hash': 'h',
+        'prompt_version': 1,
+        'updated_at': 't0',
+      });
+      await db.insert('bookmarks', {
+        'file_name': '010.txt',
+        'line_number': 42,
+        'created_at': 't0',
+      });
+      await db.close();
+    }
+
+    test('the production upgrade path rebuilds fact_cache', () async {
+      await seedV1(tempDir.path);
+
+      final wrapper = NovelDataDatabase(tempDir.path);
+      addTearDown(wrapper.close);
+      final db = await wrapper.database;
+
+      expect(await _columns(db, 'fact_cache'), contains('model_id'));
+      expect(await _indexColumns(db, 'idx_fact_cache_unique'), [
+        'word',
+        'file_name',
+        'model_id',
+      ]);
+    });
+
+    test('rows of unknown provenance do not survive the upgrade', () async {
+      // A row with no model identity could never be found by any client and
+      // could never be replaced by an upsert, so keeping it would leave
+      // residue that surfaces in the inspector forever.
+      await seedV1(tempDir.path);
+
+      final wrapper = NovelDataDatabase(tempDir.path);
+      addTearDown(wrapper.close);
+      final db = await wrapper.database;
+
+      expect(await db.query('fact_cache'), isEmpty);
+    });
+
+    test('the upgrade leaves summaries and bookmarks alone', () async {
+      await seedV1(tempDir.path);
+
+      final wrapper = NovelDataDatabase(tempDir.path);
+      addTearDown(wrapper.close);
+      final db = await wrapper.database;
+
+      final summaries = await db.query('word_summaries');
+      expect(summaries, hasLength(1));
+      expect(summaries.first['summary'], '騎士団の副長。');
+      expect(await db.query('bookmarks'), hasLength(1));
+    });
+
+    test(
+      'the rebuilt fact_cache is identical to a freshly created one',
+      () async {
+        // SQLite requires a DEFAULT clause to add a NOT NULL column, which would
+        // leave the upgraded table's SQL differing from a fresh one. Rebuilding
+        // the table is what keeps the two paths from drifting.
+        await seedV1(tempDir.path);
+        final upgraded = NovelDataDatabase(tempDir.path);
+        addTearDown(upgraded.close);
+        final upgradedSql = await _factCacheSql(await upgraded.database);
+
+        final freshDir = Directory.systemTemp.createTempSync(
+          'novel_data_fresh_',
+        );
+        addTearDown(() {
+          if (freshDir.existsSync()) freshDir.deleteSync(recursive: true);
+        });
+        final fresh = NovelDataDatabase(freshDir.path);
+        addTearDown(fresh.close);
+        final freshSql = await _factCacheSql(await fresh.database);
+
+        expect(upgradedSql, freshSql);
+      },
+    );
+  });
+
+  group('NovelDataDatabase downgrade', () {
+    test('opening at an older version is refused, not stamped down', () async {
+      // sqflite skips an unsupplied onDowngrade and then writes the requested
+      // version anyway, leaving a database whose schema and user_version
+      // disagree. A build that believed it held the older schema would emit
+      // an upsert naming a unique key the table no longer has, and fail on
+      // every write. Refusing the open is the honest outcome.
+      final wrapper = NovelDataDatabase(tempDir.path);
+      final db = await wrapper.database;
+      final atCurrent = await db.getVersion();
+      await wrapper.close();
+
+      final path = '${tempDir.path}${Platform.pathSeparator}novel_data.db';
+      await expectLater(
+        databaseFactory.openDatabase(
+          path,
+          options: OpenDatabaseOptions(
+            version: atCurrent - 1,
+            singleInstance: false,
+            onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
+            onUpgrade: NovelDataDatabase.upgradeToCurrent,
+            onDowngrade: NovelDataDatabase.refuseDowngrade,
+          ),
+        ),
+        throwsA(anything),
+      );
+
+      // The refusal must not have moved the stamp.
+      final reopened = NovelDataDatabase(tempDir.path);
+      addTearDown(reopened.close);
+      expect(await (await reopened.database).getVersion(), atCurrent);
     });
   });
 }

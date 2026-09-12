@@ -22,6 +22,9 @@ class _MockLlmClient extends LlmClient {
   _MockLlmClient(this.responses);
 
   @override
+  String get modelId => 'test:fake';
+
+  @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     prompts.add(prompt);
     final response = responses[_callIndex % responses.length];
@@ -67,6 +70,7 @@ void main() {
       facts: facts,
       contentHash: computeContentHash(content),
       promptVersion: FactCacheRepository.currentPromptVersion,
+      modelId: 'test:fake',
     );
   }
 
@@ -156,6 +160,7 @@ void main() {
           facts: '- stale旅',
           contentHash: 'STALE',
           promptVersion: FactCacheRepository.currentPromptVersion,
+          modelId: 'test:fake',
         );
 
         final mock = _MockLlmClient([
@@ -187,6 +192,7 @@ void main() {
         facts: '- 旧プロンプト事実',
         contentHash: computeContentHash(content),
         promptVersion: FactCacheRepository.currentPromptVersion + 1,
+        modelId: 'test:fake',
       );
 
       final mock = _MockLlmClient([
@@ -347,7 +353,11 @@ void main() {
         );
 
         final content = await File('${tempDir.path}/001_ch.txt').readAsString();
-        final entry = await factCache.find(word: 'アリス', fileName: '001_ch.txt');
+        final entry = await factCache.find(
+          word: 'アリス',
+          fileName: '001_ch.txt',
+          modelId: 'test:fake',
+        );
         expect(entry, isNotNull);
         expect(entry!.facts, '- 新規事実');
         expect(entry.contentHash, computeContentHash(content));

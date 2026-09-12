@@ -17,7 +17,14 @@ class OutlinedTextBadge extends StatelessWidget {
         border: Border.all(color: color),
         borderRadius: BorderRadius.circular(2),
       ),
-      child: Text(label, style: TextStyle(fontSize: 10, color: color)),
+      child: Text(
+        label,
+        // A badge is a compact label beside other content, so it gives way
+        // rather than pushing its neighbours out of the row. Callers that
+        // want the whole value readable pair this with a tooltip.
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontSize: 10, color: color),
+      ),
     );
   }
 }

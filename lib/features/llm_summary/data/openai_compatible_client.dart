@@ -18,6 +18,9 @@ class OpenAiCompatibleClient extends LlmClient {
     http.Client? httpClient,
   }) : _httpClient = httpClient ?? http.Client();
 
+  @override
+  String get modelId => 'openai:$model';
+
   /// [schema] is accepted for interface conformance and ignored: mapping it to
   /// `response_format` is provider-dependent and out of scope here, so the
   /// request body is unchanged. Response-shape validation still happens in the

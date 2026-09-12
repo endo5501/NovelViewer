@@ -23,6 +23,9 @@ class _ScriptedLlmClient extends LlmClient {
   int callCount = 0;
 
   @override
+  String get modelId => 'test:fake';
+
+  @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     callCount++;
     if (schema?.fieldName == 'summary') return _answer(summary);
@@ -101,9 +104,20 @@ void main() {
 
       // The file that was not refused still reached the cache, so re-running
       // pays only for the refused one.
-      expect(await factCache.find(word: 'アリス', fileName: '001_ch.txt'), isNull);
       expect(
-        (await factCache.find(word: 'アリス', fileName: '002_ch.txt'))?.facts,
+        await factCache.find(
+          word: 'アリス',
+          fileName: '001_ch.txt',
+          modelId: 'test:fake',
+        ),
+        isNull,
+      );
+      expect(
+        (await factCache.find(
+          word: 'アリス',
+          fileName: '002_ch.txt',
+          modelId: 'test:fake',
+        ))?.facts,
         '- 旅立った',
       );
     });
@@ -147,9 +161,20 @@ void main() {
         coveredUpToEpisode: 2,
       );
 
-      expect(await factCache.find(word: 'アリス', fileName: '001_ch.txt'), isNull);
       expect(
-        (await factCache.find(word: 'アリス', fileName: '002_ch.txt'))?.facts,
+        await factCache.find(
+          word: 'アリス',
+          fileName: '001_ch.txt',
+          modelId: 'test:fake',
+        ),
+        isNull,
+      );
+      expect(
+        (await factCache.find(
+          word: 'アリス',
+          fileName: '002_ch.txt',
+          modelId: 'test:fake',
+        ))?.facts,
         '- 旅立った',
       );
     });
@@ -169,7 +194,14 @@ void main() {
         coveredUpToEpisode: 2,
       );
 
-      expect(await factCache.find(word: 'アリス', fileName: '001_ch.txt'), isNull);
+      expect(
+        await factCache.find(
+          word: 'アリス',
+          fileName: '001_ch.txt',
+          modelId: 'test:fake',
+        ),
+        isNull,
+      );
     });
 
     test('a structured, non-empty result is cached', () async {
@@ -185,7 +217,11 @@ void main() {
         coveredUpToEpisode: 1,
       );
 
-      final row = await factCache.find(word: 'アリス', fileName: '001_ch.txt');
+      final row = await factCache.find(
+        word: 'アリス',
+        fileName: '001_ch.txt',
+        modelId: 'test:fake',
+      );
       expect(row?.facts, '- 登場した');
       expect(row?.promptVersion, FactCacheRepository.currentPromptVersion);
     });
@@ -218,7 +254,11 @@ void main() {
       // final summary.
       expect(second.callCount, 2);
       expect(
-        (await factCache.find(word: 'アリス', fileName: '001_ch.txt'))?.facts,
+        (await factCache.find(
+          word: 'アリス',
+          fileName: '001_ch.txt',
+          modelId: 'test:fake',
+        ))?.facts,
         '- 登場した',
       );
     });
@@ -257,13 +297,21 @@ void main() {
           '005_ch.txt',
         ]) {
           expect(
-            await factCache.find(word: 'アリス', fileName: name),
+            await factCache.find(
+              word: 'アリス',
+              fileName: name,
+              modelId: 'test:fake',
+            ),
             isNotNull,
             reason: '$name should have been extracted and cached',
           );
         }
         expect(
-          await factCache.find(word: 'アリス', fileName: '003_ch.txt'),
+          await factCache.find(
+            word: 'アリス',
+            fileName: '003_ch.txt',
+            modelId: 'test:fake',
+          ),
           isNull,
         );
       },
@@ -388,7 +436,11 @@ void main() {
       // 4 failures x 2 attempts + 1 success = 9 requests, no final summary.
       expect(client.callCount, 9);
       expect(
-        await factCache.find(word: 'アリス', fileName: '003_ch.txt'),
+        await factCache.find(
+          word: 'アリス',
+          fileName: '003_ch.txt',
+          modelId: 'test:fake',
+        ),
         isNotNull,
       );
     });
