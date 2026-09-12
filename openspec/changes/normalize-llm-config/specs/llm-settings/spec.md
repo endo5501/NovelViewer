@@ -5,7 +5,7 @@ Non-secret LLM configuration settings (provider selection, endpoint URLs, model 
 
 Text-valued LLM settings SHALL be normalized both when written to and when read from their store, so that a value saved before this rule existed is corrected without a migration step:
 
-- The endpoint URL SHALL have leading and trailing whitespace removed, and SHALL have every trailing `/` removed.
+- The endpoint URL SHALL have leading and trailing whitespace removed, and SHALL have every trailing `/` removed. Where the value carries a query or a fragment, the trailing `/` SHALL be left in place, because there the last character belongs to data the application does not interpret.
 - The model name SHALL have leading and trailing whitespace removed.
 - The API key SHALL have leading and trailing whitespace removed.
 
@@ -30,6 +30,14 @@ Normalization SHALL NOT alter characters inside a value, and SHALL NOT be writte
 #### Scenario: Trailing slashes are stripped from the endpoint URL
 - **WHEN** the user saves an LLM configuration whose endpoint URL is `"https://api.example.com/v1//"`
 - **THEN** `SharedPreferences` holds `https://api.example.com/v1`
+
+#### Scenario: A trailing slash inside a query string is preserved
+- **WHEN** the user saves an LLM configuration whose endpoint URL is `"https://host/proxy?route=/v1/"`
+- **THEN** reading the LLM configuration yields that value unchanged
+
+#### Scenario: A trailing slash inside a fragment is preserved
+- **WHEN** the user saves an LLM configuration whose endpoint URL is `"https://host/base#section/"`
+- **THEN** reading the LLM configuration yields that value unchanged
 
 #### Scenario: An endpoint URL saved before normalization existed is corrected on read
 - **WHEN** `SharedPreferences` already holds `" http://localhost:11434/ "` from an earlier version

@@ -13,12 +13,19 @@ library;
 /// Clients build request URLs by appending a `/`-prefixed path, so a stored
 /// `http://host/v1/` would produce a doubled separator. Slashes inside the
 /// value are part of the path and are left alone.
+///
+/// A value carrying a query or a fragment keeps its trailing `/`. There the
+/// last character belongs to data we do not interpret — a route a proxy reads,
+/// or something a signature covers — and dropping it would hand the server a
+/// different request rather than the same one spelled canonically.
 String normalizeEndpointUrl(String value) {
-  var result = value.trim();
-  while (result.endsWith('/')) {
-    result = result.substring(0, result.length - 1);
+  final result = value.trim();
+  if (result.contains('?') || result.contains('#')) return result;
+  var trimmed = result;
+  while (trimmed.endsWith('/')) {
+    trimmed = trimmed.substring(0, trimmed.length - 1);
   }
-  return result;
+  return trimmed;
 }
 
 /// The model name with surrounding whitespace removed.

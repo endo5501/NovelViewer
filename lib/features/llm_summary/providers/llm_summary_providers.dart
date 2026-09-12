@@ -20,6 +20,19 @@ final llmConfigProvider = Provider<LlmConfig>((ref) {
   return repo.getLlmConfig();
 });
 
+/// The stored OpenAI-compatible API key.
+///
+/// Held as a provider so the completeness check and the client construction
+/// read it once between them. Two reads could disagree — a key emptied in
+/// between would pass the check and reach the client blank — and each one
+/// crosses a platform channel to the device keychain.
+///
+/// Only the provider that needs a credential reads this: the Ollama path must
+/// not touch secure storage at all.
+final llmApiKeyProvider = FutureProvider<String>(
+  (ref) => ref.watch(settingsRepositoryProvider).getApiKey(),
+);
+
 /// What stops the current configuration from being used, or null when nothing
 /// does.
 ///
@@ -33,7 +46,7 @@ final llmConfigProvider = Provider<LlmConfig>((ref) {
 final llmConfigProblemProvider = FutureProvider<LlmConfigProblem?>((ref) async {
   final config = ref.watch(llmConfigProvider);
   final apiKey = config.provider == LlmProvider.openai
-      ? await ref.watch(settingsRepositoryProvider).getApiKey()
+      ? await ref.watch(llmApiKeyProvider.future)
       : '';
   return findLlmConfigProblem(config, apiKey: apiKey);
 });
@@ -56,7 +69,8 @@ final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
         httpClient: httpClient,
       );
     case LlmProvider.openai:
-      final apiKey = await ref.watch(settingsRepositoryProvider).getApiKey();
+      // The same value the completeness check above passed judgement on.
+      final apiKey = await ref.watch(llmApiKeyProvider.future);
       return OpenAiCompatibleClient(
         baseUrl: config.baseUrl,
         apiKey: apiKey,
