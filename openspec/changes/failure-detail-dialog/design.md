@@ -86,13 +86,18 @@ Flutter の `SnackBar` は `action` を1つしか持てない。`[詳細]` と `
 | キー | 値 | 出所 |
 |---|---|---|
 | `time` | 発生時刻（ISO 8601） | 生成時の `DateTime.now()` |
-| `app version` | バージョン + ビルド番号 | `packageInfoProvider`（同期で読める） |
-| `provider` | `ollama` / `openai` / `appleOnDevice` | `LlmConfig.provider` |
-| `model` | モデル名 | `LlmConfig.model` / TTSエンジンのモデル |
+| `app version` | バージョン + ビルド番号 | `appVersionLabelProvider`（同期で読める） |
+| `provider` | `ollama` / `openai` / `appleOnDevice` | LLM解析のみ。`LlmConfig.provider` |
+| `model` | モデル名 | `LlmConfig.model` / TTSはモデルパスのファイル名 |
 | `word` | 解析対象の語句 | LLM解析のみ |
-| `scope` | `upToCurrent` / `upToAll` | LLM解析のみ |
+| `covered up to` | 解決済みの話数上限 | LLM解析のみ |
 | `file` | 対象ファイル名 | 両方 |
 | `engine` | TTSエンジン種別 | TTSのみ |
+| `segment` | 失敗したセグメントの索引 | TTS編集画面のみ |
+
+`AnalysisScope` そのものではなく解決済みの整数を記録する。`run()` が受け取るのは整数だけで、スコープは `runWithScope()` の中で消える。呼び出し元を広げるより、実際に渡っている値を残すほうが素直になる。
+
+TTSのモデルは `modelDir` のファイル名だけを記録する。`modelDir` は利用者のホームディレクトリ配下の絶対パスであり、報告に貼る文字列に含めない。
 
 エンドポイントURLは含めない。Ollama および OpenAI 互換の `baseUrl` は設定値がそのまま入り、宅内のプライベートIPを含みうる。プロバイダ種別とモデル名が残るため、どの構成で起きたかは追える。
 
@@ -110,7 +115,7 @@ app version: 1.8.2+41
 provider: ollama
 model: qwen3:8b
 word: アリス
-scope: upToAll
+covered up to: 40
 file: 040_chapter.txt
 
 LlmAnalysisPartialFailure: 3 file(s) failed extraction: ClientException: ...

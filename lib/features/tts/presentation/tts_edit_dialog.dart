@@ -82,6 +82,34 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     _initialize();
   }
 
+  /// Reports a synthesis failure from inside this modal dialog.
+  ///
+  /// Named rather than inlined into the controller callback so a test can
+  /// reach it: the controller it hangs off is built from a real isolate and
+  /// audio player, which a widget test cannot drive to an actual failure.
+  @visibleForTesting
+  void showSynthesisFailure(String? reason) {
+    if (!mounted) return;
+    final failedEngine = ref.read(ttsEngineTypeProvider);
+    showFailureSnackBar(
+      context,
+      // This dialog is modal: its own messenger keeps the bar above the
+      // barrier, where the details action can actually be tapped.
+      messenger: _messengerKey.currentState,
+      buildTtsFailureReport(
+        headline: AppLocalizations.of(context)!.ttsEdit_synthesisFailed,
+        reason: reason,
+        engine: failedEngine,
+        modelDir: TtsEngineConfig.resolveFromRef(ref, failedEngine).modelDir,
+        appVersion: ref.read(appVersionLabelProvider),
+        fileName: widget.fileName,
+        // Still set: the callback fires inside the await that
+        // `_generateSegment` brackets with set(index) / set(null).
+        segmentIndex: ref.read(ttsEditGeneratingIndexProvider),
+      ),
+    );
+  }
+
   Future<void> _initialize() async {
     final folderKey = folderDbKey(widget.folderPath);
     final db = ref.read(ttsAudioDatabaseProvider(folderKey));
@@ -110,27 +138,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
       ref.read(ttsEditGeneratingIndexProvider.notifier).set(null);
     };
 
-    controller.onSynthesisFailed = (reason) {
-      if (!mounted) return;
-      final failedEngine = ref.read(ttsEngineTypeProvider);
-      showFailureSnackBar(
-        context,
-        // This dialog is modal: its own messenger keeps the bar above the
-        // barrier, where the details action can actually be tapped.
-        messenger: _messengerKey.currentState,
-        buildTtsFailureReport(
-          headline: AppLocalizations.of(context)!.ttsEdit_synthesisFailed,
-          reason: reason,
-          engine: failedEngine,
-          modelDir: TtsEngineConfig.resolveFromRef(ref, failedEngine).modelDir,
-          appVersion: ref.read(appVersionLabelProvider),
-          fileName: widget.fileName,
-          // Still set: the callback fires inside the await that
-          // `_generateSegment` brackets with set(index) / set(null).
-          segmentIndex: ref.read(ttsEditGeneratingIndexProvider),
-        ),
-      );
-    };
+    controller.onSynthesisFailed = showSynthesisFailure;
 
     // Resolve the active engine's real sample rate (Qwen3=24000, Piper=22050)
     // instead of hard-coding it, so the episode's sample_rate metadata matches
