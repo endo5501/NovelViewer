@@ -178,6 +178,49 @@ void main() {
       expect(find.byType(SnackBar), findsOneWidget);
     });
 
+    testWidgets('eventually lets a queued ordinary snackbar through', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        Scaffold(
+          body: Builder(
+            builder: (context) => Column(
+              children: [
+                TextButton(
+                  onPressed: () => showFailureSnackBar(
+                    context,
+                    const FailureReport(headline: 'failure'),
+                  ),
+                  child: const Text('fail'),
+                ),
+                TextButton(
+                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('saved')),
+                  ),
+                  child: const Text('succeed'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('fail'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('succeed'));
+      await tester.pumpAndSettle();
+
+      // ScaffoldMessenger shows one bar at a time, so an unbounded failure
+      // would swallow every later notification in the app.
+      expect(find.text('saved'), findsNothing);
+
+      await tester.pump(const Duration(minutes: 10));
+      await tester.pumpAndSettle();
+
+      expect(find.text('saved'), findsOneWidget);
+    });
+
     testWidgets('offers a close affordance that dismisses it', (tester) async {
       await pumpAndShow(tester, headline: '解析に失敗しました');
 
@@ -249,6 +292,45 @@ void main() {
 
       expect(find.text('second failure'), findsOneWidget);
       expect(find.text('first failure'), findsNothing);
+    });
+  });
+
+  group('showFailureSnackBar messenger override', () {
+    testWidgets('shows through the messenger it is handed', (tester) async {
+      final key = GlobalKey<ScaffoldMessengerState>();
+      await pumpApp(
+        tester,
+        Scaffold(
+          body: ScaffoldMessenger(
+            key: key,
+            child: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showFailureSnackBar(
+                    context,
+                    const FailureReport(headline: 'inner failure'),
+                    messenger: key.currentState,
+                  ),
+                  child: const Text('go'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+
+      // A modal surface needs its own messenger, or the bar lands under the
+      // barrier where neither action can be reached.
+      expect(
+        find.descendant(
+          of: find.byWidget(key.currentWidget!),
+          matching: find.text('inner failure'),
+        ),
+        findsOneWidget,
+      );
     });
   });
 

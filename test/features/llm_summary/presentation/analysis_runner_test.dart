@@ -668,6 +668,46 @@ void main() {
       expect(body, contains('2件'));
     });
 
+    testWidgets('a no-facts failure keeps its class name off the body', (
+      tester,
+    ) async {
+      await runFailing(tester, error: const LlmAnalysisNoFactsFailure());
+
+      final bar = tester.widget<SnackBar>(find.byType(SnackBar));
+      final body = (bar.content as Text).data!;
+
+      expect(body, isNot(contains('LlmAnalysisNoFactsFailure')));
+      expect(body, contains('「アリス」'));
+    });
+
+    testWidgets('a partial failure shows the cause, not the wrapper', (
+      tester,
+    ) async {
+      await runFailing(
+        tester,
+        error: const LlmAnalysisPartialFailure(
+          failedFileCount: 2,
+          firstError: 'connection refused',
+        ),
+      );
+
+      final bar = tester.widget<SnackBar>(find.byType(SnackBar));
+      final body = (bar.content as Text).data!;
+
+      expect(body, contains('connection refused'));
+      expect(body, isNot(contains('LlmAnalysisPartialFailure')));
+    });
+
+    testWidgets('an unclassified failure still shows its own text', (
+      tester,
+    ) async {
+      await runFailing(tester, error: StateError('boom'));
+
+      final bar = tester.widget<SnackBar>(find.byType(SnackBar));
+
+      expect((bar.content as Text).data!, contains('boom'));
+    });
+
     testWidgets('a successful run keeps a self-dismissing snackbar', (
       tester,
     ) async {
