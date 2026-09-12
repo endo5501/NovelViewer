@@ -143,6 +143,71 @@ void main() {
       expect(result.isStructured, isTrue);
     });
 
+    test('a fenced object carrying a string is read', () async {
+      // The shape the on-device model returns once a guardrail refusal has
+      // forced generation to go on without its schema. Unconstrained, it
+      // writes the fence itself.
+      final pipeline = LlmSummaryPipeline(
+        llmClient: _FixedLlmClient(
+          '```json\n{"facts": "- エドナは礼儀作法の先生である。"}\n```',
+        ),
+      );
+
+      final result = await pipeline.extractFileFactsDetailed(
+        word: 'エドナ',
+        contexts: ['エドナは礼儀作法を教えている。'],
+      );
+
+      expect(result.facts, '- エドナは礼儀作法の先生である。');
+      expect(result.isStructured, isTrue);
+    });
+
+    test('a fenced object carrying a string array is read', () async {
+      // The other shape the unconstrained answer takes, and the commoner of
+      // the two: the fence and the array arrive together.
+      final pipeline = LlmSummaryPipeline(
+        llmClient: _FixedLlmClient(
+          '```json\n'
+          '{\n  "facts": [\n'
+          '    "- エドナは中年女性である。",\n'
+          '    "- エドナは乳母という話がある。"\n'
+          '  ]\n}\n'
+          '```',
+        ),
+      );
+
+      final result = await pipeline.extractFileFactsDetailed(
+        word: 'エドナ',
+        contexts: ['エドナは礼儀作法を教えている。'],
+      );
+
+      expect(result.facts, '- エドナは中年女性である。\n- エドナは乳母という話がある。');
+      expect(result.isStructured, isTrue);
+    });
+
+    test(
+      'an answer truncated before it closes falls back to raw text',
+      () async {
+        // Unconstrained generation can repeat itself until the response cap
+        // cuts the object off mid-array, leaving no closing bracket. Greedy
+        // sampling is what keeps this rare; it must not stop the run when it
+        // does happen.
+        final pipeline = LlmSummaryPipeline(
+          llmClient: _FixedLlmClient(
+            '```json\n{"facts": ["- エドナは先生である。", "- エドナは先生で',
+          ),
+        );
+
+        final result = await pipeline.extractFileFactsDetailed(
+          word: 'エドナ',
+          contexts: ['エドナは礼儀作法を教えている。'],
+        );
+
+        expect(result.isStructured, isFalse);
+        expect(result.facts, isNotEmpty);
+      },
+    );
+
     test('array elements already carrying a bullet prefix are not '
         'double-prefixed', () async {
       final pipeline = LlmSummaryPipeline(
