@@ -185,15 +185,24 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       // wording. Anything else — a configuration or storage error raised before
       // extraction — keeps the generic message. None of them embed the error
       // itself: that arrives as the report's cause and is appended once.
-      final headline = switch (e) {
-        LlmAnalysisPartialFailure(:final failedFileCount) =>
-          l10n.llmAnalysis_partialFailure(failedFileCount),
-        LlmAnalysisNoFactsFailure() => l10n.llmAnalysis_noFacts(word),
-        _ => l10n.llmAnalysis_failed,
+      // The cause is appended to the headline on screen, so a typed failure
+      // contributes only what the localized sentence does not already say:
+      // the underlying error for a partial run, nothing at all for a run that
+      // found no facts. Spelling out the Dart class name there would tell the
+      // reader nothing and read as a defect. The detail dialog still carries
+      // the full picture through the diagnostics and the stack trace.
+      final (headline, cause) = switch (e) {
+        LlmAnalysisPartialFailure(:final failedFileCount, :final firstError) =>
+          (
+            l10n.llmAnalysis_partialFailure(failedFileCount),
+            firstError.toString(),
+          ),
+        LlmAnalysisNoFactsFailure() => (l10n.llmAnalysis_noFacts(word), null),
+        _ => (l10n.llmAnalysis_failed, e.toString()),
       };
       failure = FailureReport(
         headline: headline,
-        cause: e.toString(),
+        cause: cause,
         stackTrace: st,
         diagnostics: _diagnostics(
           word: word,

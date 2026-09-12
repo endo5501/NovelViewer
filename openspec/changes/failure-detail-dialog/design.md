@@ -57,7 +57,11 @@ FailureReport
 
 Flutter の `SnackBar` は `action` を1つしか持てない。`[詳細]` と `[閉じる]` を2つのアクションとして並べることはできない。
 
-したがって `action` に `[詳細]` を割り当て、閉じる手段には `showCloseIcon: true` を使う。表示時間は `Duration(days: 365)` とし、実質的に手動で閉じるまで残す。
+したがって `action` に `[詳細]` を割り当て、閉じる手段には `showCloseIcon: true` を使う。表示時間は5分とし、`persist: false` を明示する。
+
+`SnackBar` は `persist` を `action != null` で既定するため、アクションを持つバーは `duration` を無視して自動では消えなくなる。`ScaffoldMessenger` は同時に1つしか表示せず残りをキューに積むので、消えないバーはアプリ内の他の通知をすべて堰き止める。失敗の次に成功した解析の「保存しました」が出ない、という形で表面化する。読んでコピーするには5分あれば足り、堰き止めもその長さで打ち切られる。
+
+呼び出し側が `ScaffoldMessenger` を指定できるようにする。モーダルダイアログは自前の `Scaffold` を持たないため、ページ側のメッセンジャー経由で出したバーはモーダルバリアの下に描画され、`[詳細]` も閉じるアイコンも押せない。TTS編集画面は自前のメッセンジャーを持ち、それを渡す。
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -127,7 +131,9 @@ LlmAnalysisPartialFailure: 3 file(s) failed extraction: ClientException: ...
 
 ### 7. LLM側の `catch (e, st)` 化
 
-`analysis_runner.dart` の `catch (e)` はスタックトレースを捨てている。`catch (e, st)` に変える。既存の型別メッセージ分岐（`LlmAnalysisPartialFailure` / `LlmAnalysisNoFactsFailure` / その他）は見出しの決定にそのまま使い、`cause` には `e.toString()` を入れる。
+`analysis_runner.dart` の `catch (e)` はスタックトレースを捨てている。`catch (e, st)` に変える。既存の型別メッセージ分岐（`LlmAnalysisPartialFailure` / `LlmAnalysisNoFactsFailure` / その他）は見出しの決定にそのまま使う。
+
+`cause` は分岐ごとに変える。画面では見出しに連結されるため、ローカライズ済みの文が既に言っていることを繰り返させない。部分失敗は最初のファイルのエラー、事実ゼロは cause なし、それ以外は `e.toString()` とする。`LlmAnalysisNoFactsFailure: no facts were extracted for this word` のようなDartのクラス名が本文に出ると、読み手には不具合にしか見えない。詳細ダイアログには診断項目とスタックトレースが残るため、追跡できる情報は失われない。
 
 ### 8. 失敗文言から埋め込みのエラー本文を外す
 
@@ -138,6 +144,8 @@ LlmAnalysisPartialFailure: 3 file(s) failed extraction: ClientException: ...
 `llmAnalysis_noFacts` にはもともとエラー本文が入っていないが、cause の扱いは全分岐で同一にする。分岐ごとに規則が変わるほうが後から壊れやすい。
 
 *代替案*: 文言を触らず `cause` を渡さない。却下。詳細ダイアログのコピー文字列から例外の全文が消え、スタックトレースだけが残ることになる。
+
+*なお* 当初は全分岐で `cause` を `e.toString()` に統一したが、決定7のとおり分岐ごとに変えた。規則の単純さより本文の読みやすさを採った。
 
 ### 9. 描画時に生テキストを伏せ字にする
 

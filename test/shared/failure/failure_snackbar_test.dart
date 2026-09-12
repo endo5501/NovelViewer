@@ -195,9 +195,9 @@ void main() {
                   child: const Text('fail'),
                 ),
                 TextButton(
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('saved')),
-                  ),
+                  onPressed: () => ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('saved'))),
                   child: const Text('succeed'),
                 ),
               ],
@@ -215,8 +215,10 @@ void main() {
       // would swallow every later notification in the app.
       expect(find.text('saved'), findsNothing);
 
+      // The timer fires during the long pump; the queued bar needs the next
+      // frames to take its place.
       await tester.pump(const Duration(minutes: 10));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 400));
 
       expect(find.text('saved'), findsOneWidget);
     });

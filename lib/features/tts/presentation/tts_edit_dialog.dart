@@ -13,6 +13,7 @@ import '../domain/tts_engine_config.dart';
 import 'tts_edit_segment_list.dart';
 import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
 import 'package:novel_viewer/shared/failure/failure_snackbar.dart';
+import '../data/tts_edit_segment.dart';
 import 'tts_failure_report.dart';
 import '../providers/text_segmenter_provider.dart';
 import '../providers/vacuum_lifecycle_provider.dart';
@@ -66,6 +67,10 @@ class TtsEditDialog extends ConsumerStatefulWidget {
 }
 
 class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
+  /// This dialog is modal, so a bar shown through the page's messenger lands
+  /// under the barrier. Its own messenger keeps failure notifications
+  /// reachable.
+  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
   TtsEditController? _controller;
   TtsDictionaryRepository? _dictRepository;
   bool _loading = true;
@@ -110,6 +115,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
       final failedEngine = ref.read(ttsEngineTypeProvider);
       showFailureSnackBar(
         context,
+        // This dialog is modal: its own messenger keeps the bar above the
+        // barrier, where the details action can actually be tapped.
+        messenger: _messengerKey.currentState,
         buildTtsFailureReport(
           headline: AppLocalizations.of(context)!.ttsEdit_synthesisFailed,
           reason: reason,
@@ -404,6 +412,30 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final isPlaying = ref.watch(ttsEditPlayingProvider);
     final isGenerating = generationState == TtsEditGenerationState.generating;
 
+    return ScaffoldMessenger(
+      key: _messengerKey,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: _buildDialog(
+          context,
+          segments,
+          generatingIndex,
+          cursorIndex,
+          isPlaying,
+          isGenerating,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDialog(
+    BuildContext context,
+    List<TtsEditSegment> segments,
+    int? generatingIndex,
+    int cursorIndex,
+    bool isPlaying,
+    bool isGenerating,
+  ) {
     return AlertDialog(
       title: Text(AppLocalizations.of(context)!.ttsEdit_title),
       content: SizedBox(

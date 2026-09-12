@@ -20,9 +20,13 @@ Producers SHALL supply the application version as a diagnostic. The shared notif
 
 ### Requirement: The failure snackbar persists until dismissed
 
-The system SHALL present a failure notification as a snackbar that does not disappear on its own. The snackbar SHALL remain visible until the user dismisses it or a newer failure replaces it.
+The system SHALL present a failure notification as a snackbar that stays up long enough to be read and acted on, rather than clearing after the default few seconds. It SHALL remain visible until the user dismisses it, a newer failure replaces it, or a bounded display time elapses.
+
+The display time SHALL be bounded. `ScaffoldMessenger` shows one snackbar at a time and queues the rest, so a notification that never clears itself would swallow every later notification in the application until the reader happened to dismiss it. `SnackBar` defaults `persist` to `action != null` and then ignores `duration` entirely, so the system SHALL set `persist` to false explicitly.
 
 The snackbar SHALL offer a close affordance (`showCloseIcon`) and exactly one action labelled for opening the details. `SnackBar` accepts a single action, so the close affordance SHALL NOT be implemented as a second action.
+
+The system SHALL allow a caller to supply the `ScaffoldMessenger` the snackbar is shown through. A modal surface owns no `Scaffold` of its own, so a bar shown through the page's messenger renders beneath the modal barrier, where neither the action nor the close icon can be reached.
 
 The snackbar body SHALL be the headline alone when the report carries no cause, and the headline joined with the cause when it carries one.
 
@@ -34,6 +38,16 @@ Success notifications SHALL be unaffected and SHALL continue to dismiss themselv
 
 - **WHEN** a failure snackbar is shown and no user interaction occurs
 - **THEN** the snackbar is still visible after the default snackbar duration has elapsed
+
+#### Scenario: A queued ordinary notification is not swallowed
+
+- **WHEN** an ordinary snackbar is raised while a failure snackbar is up, and no user interaction occurs
+- **THEN** the failure snackbar eventually clears on its own and the queued notification is shown
+
+#### Scenario: A modal surface shows through its own messenger
+
+- **WHEN** a failure is reported from a modal dialog that hands in its own `ScaffoldMessenger`
+- **THEN** the snackbar is shown through that messenger, above the modal barrier, and its details action can be tapped
 
 #### Scenario: The close affordance dismisses it
 

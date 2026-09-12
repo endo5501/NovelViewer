@@ -13,9 +13,17 @@ import 'sensitive_redaction.dart';
 /// before a cause could be read, and on iOS there is no log file to fall back
 /// on — `Library/Application Support` sits outside what `UIFileSharingEnabled`
 /// exposes.
-void showFailureSnackBar(BuildContext context, FailureReport report) {
+/// [messenger] overrides where the bar is shown. A modal surface — the TTS
+/// edit dialog, say — must hand in its own `ScaffoldMessenger`, or the bar
+/// lands in the page `Scaffold` underneath the modal barrier, where neither
+/// the details action nor the close icon can be reached.
+void showFailureSnackBar(
+  BuildContext context,
+  FailureReport report, {
+  ScaffoldMessengerState? messenger,
+}) {
   final l10n = AppLocalizations.of(context)!;
-  final messenger = ScaffoldMessenger.of(context);
+  final target = messenger ?? ScaffoldMessenger.of(context);
 
   // The details action gets no context of its own, and the widget that
   // reported the failure may well be disposed while the snackbar is still up
@@ -24,14 +32,20 @@ void showFailureSnackBar(BuildContext context, FailureReport report) {
 
   // Without this a burst of failures stacks up, and dismissing one only
   // uncovers the last.
-  messenger.removeCurrentSnackBar();
-  messenger.showSnackBar(
+  target.removeCurrentSnackBar();
+  target.showSnackBar(
     SnackBar(
       content: Text(formatFailureSnackBarBody(report)),
       // SnackBar takes a single action, so dismissal is the built-in close
       // icon rather than a second button.
       showCloseIcon: true,
-      duration: const Duration(days: 365),
+      // SnackBar defaults `persist` to `action != null`, which ignores the
+      // duration outright and keeps the bar up forever. ScaffoldMessenger
+      // shows one bar at a time and queues the rest, so that would swallow
+      // every later notification in the app until the reader dismissed this
+      // one by hand.
+      persist: false,
+      duration: _failureDuration,
       action: SnackBarAction(
         label: l10n.failure_detailsAction,
         onPressed: () {
@@ -42,6 +56,12 @@ void showFailureSnackBar(BuildContext context, FailureReport report) {
     ),
   );
 }
+
+/// Long enough to read a cause and open the diagnostics without hurrying,
+/// but bounded: `ScaffoldMessenger` shows one bar at a time and queues the
+/// rest, so an unbounded failure would swallow every later notification in the
+/// app until the reader happened to dismiss it.
+const _failureDuration = Duration(minutes: 5);
 
 /// Builds the snackbar body: the localized headline, followed by the raw cause
 /// when there is one.

@@ -59,6 +59,17 @@
 - [x] 7.5 `renderFailureReport` と `formatFailureSnackBarBody` から適用する
 - [x] 7.6 テストが通ることを確認する
 
+## 8. code-reviewスキル指摘の反映
+
+- [x] 8.1 失敗スナックバーが有限時間で消えることと、キューに積まれた通常の通知が後から出ることを検証するテストを追加する
+- [x] 8.2 `showFailureSnackBar` が渡された `ScaffoldMessenger` 経由で表示することを検証するテストを追加する
+- [x] 8.3 型付き失敗のクラス名がスナックバー本文に出ないことを検証するテストを追加する
+- [x] 8.4 テストを実行して失敗を確認し、コミットする
+- [x] 8.5 `persist: false` と5分の表示時間を設定する（`SnackBar` は `action != null` のとき `persist` が既定で true になり duration を無視する）
+- [x] 8.6 `showFailureSnackBar` に `messenger` 引数を足し、`TtsEditDialog` を自前の `ScaffoldMessenger` で包んで渡す
+- [x] 8.7 `analysis_runner.dart` の cause を分岐ごとに変える
+- [x] 8.8 テストが通ることを確認する
+
 ## 6. 最終確認
 
 - [ ] 6.1 code-reviewスキルを使用してコードレビューを実施
