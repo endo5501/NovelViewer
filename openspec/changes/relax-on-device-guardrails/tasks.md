@@ -15,14 +15,14 @@
 
 ## 3. クライアントの再試行方針
 
-- [ ] 3.1 `test/features/llm_summary/data/foundation_models_client_test.dart` に、スキーマ付き生成が `guardrailViolation` で失敗したとき、スキーマなし・`greedy` で二回目が呼ばれることを確認するテストを追加する
-- [ ] 3.2 同テストに、スキーマなしの生成が拒否されたときは二回目が呼ばれないことのテストを追加する
-- [ ] 3.3 同テストに、二回目も拒否されたとき `LlmOnDeviceRefusedFailure` が投げられることのテストを追加する
-- [ ] 3.4 同テストに、生成要求が一つのプロンプトにつき最大2回であることのテストを追加する
-- [ ] 3.5 同テストに、`guardrailViolation` 以外の失敗では二回目が呼ばれないことのテストを追加する
-- [ ] 3.6 テストが失敗することを確認してコミットする
-- [ ] 3.7 `FoundationModelsClient.generate` に二段構えを実装する。なぜ制約を外すのか、なぜ `greedy` なのかをdocコメントに残す
-- [ ] 3.8 テストが通ることを確認してコミットする
+- [x] 3.1 `test/features/llm_summary/data/foundation_models_client_test.dart` に、スキーマ付き生成が `guardrailViolation` で失敗したとき、スキーマなし・`greedy` で二回目が呼ばれることを確認するテストを追加する
+- [x] 3.2 同テストに、スキーマなしの生成が拒否されたときは二回目が呼ばれないことのテストを追加する
+- [x] 3.3 同テストに、二回目も拒否されたとき `LlmOnDeviceRefusedFailure` が投げられることのテストを追加する
+- [x] 3.4 同テストに、生成要求が一つのプロンプトにつき最大2回であることのテストを追加する
+- [x] 3.5 同テストに、`guardrailViolation` 以外の失敗では二回目が呼ばれないことのテストを追加する
+- [x] 3.6 テストが失敗することを確認してコミットする
+- [x] 3.7 `FoundationModelsClient.generate` に二段構えを実装する。なぜ制約を外すのか、なぜ `greedy` なのかをdocコメントに残す
+- [x] 3.8 テストが通ることを確認してコミットする
 
 ## 4. 返答形の受け入れ確認
 
