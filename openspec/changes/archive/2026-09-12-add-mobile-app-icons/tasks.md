@@ -32,7 +32,7 @@
 ## 5. ドキュメント
 
 - [x] 5.1 README にアイコン生成手順の記載があるか確認した。手順の記載自体が無いため更新不要
-- [ ] 5.2 アーカイブ時に `openspec/specs/app-icon/spec.md` の Purpose がまだ「macOS・Windows」のままになっていないか確認し、4プラットフォームに更新する
+- [x] 5.2 同期時に `openspec/specs/app-icon/spec.md` の Purpose を4プラットフォームに更新した
 
 ## 6. 最終確認
 
