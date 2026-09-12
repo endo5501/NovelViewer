@@ -21,13 +21,13 @@ TDDのため、まずテストのみを用意して失敗を確認し、赤の�
 
 ## 3. 不足判定 — テスト
 
-- [ ] 3.1 `findLlmConfigProblem` のテストを作成する（プロバイダ未設定 → `noProvider`）
-- [ ] 3.2 `findLlmConfigProblem` のテストを作成する（Ollama: エンドポイントURL欠落 / モデル名欠落 / 両方揃っていれば null）
-- [ ] 3.3 `findLlmConfigProblem` のテストを作成する（OpenAI互換API: エンドポイントURL欠落 / モデル名欠落 / APIキー欠落 / すべて揃っていれば null）
-- [ ] 3.4 `findLlmConfigProblem` のテストを作成する（オンデバイス: サーバ設定が空でも null）
-- [ ] 3.5 `findLlmConfigProblem` のテストを作成する（複数欠落時の優先順位: エンドポイントURL → モデル名 → APIキー）
-- [ ] 3.6 テストを実行し、意図した理由で失敗することを確認する
-- [ ] 3.7 赤の状態でコミットする
+- [x] 3.1 `findLlmConfigProblem` のテストを作成する（プロバイダ未設定 → `noProvider`）
+- [x] 3.2 `findLlmConfigProblem` のテストを作成する（Ollama: エンドポイントURL欠落 / モデル名欠落 / 両方揃っていれば null）
+- [x] 3.3 `findLlmConfigProblem` のテストを作成する（OpenAI互換API: エンドポイントURL欠落 / モデル名欠落 / APIキー欠落 / すべて揃っていれば null）
+- [x] 3.4 `findLlmConfigProblem` のテストを作成する（オンデバイス: サーバ設定が空でも null）
+- [x] 3.5 `findLlmConfigProblem` のテストを作成する（複数欠落時の優先順位: エンドポイントURL → モデル名 → APIキー）
+- [x] 3.6 テストを実行し、意図した理由で失敗することを確認する
+- [x] 3.7 赤の状態でコミットする
 
 ## 4. 不足判定 — 実装
 
