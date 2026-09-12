@@ -6,6 +6,7 @@
 - [x] 1.4 同ファイルに、`android/app/src/main/res/mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/ic_launcher.png` が5つとも存在することを検証するテストを追加する
 - [x] 1.4a 同ファイルに、iOS の1024アイコンと Android の5密度分のアイコンが Flutter テンプレートのデフォルトアイコン（初期化コミット `316420f5` 由来）の SHA-256 と一致しないことを検証するテストを追加する
 - [x] 1.4b 同ファイルに、`ios/Runner.xcodeproj/project.pbxproj` の `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` が `YES` または `NO` のままであることを検証するテストを追加する
+- [x] 1.4c 同ファイルに、`AndroidManifest.xml` が `@mipmap/ic_launcher` を参照したままであることを検証するテストを追加する
 - [x] 1.5 `fvm flutter test test/platform/app_icon_assets_test.dart` を実行し、テストが期待通り失敗することを確認する
 - [x] 1.6 テストのみをコミットする
 
@@ -26,7 +27,7 @@
 ## 4. 表示確認
 
 - [x] 4.1 `fvm flutter build ios` またはシミュレータ実行でビルドが通ることを確認する（実機・シミュレータが利用できる環境でのみ実施）
-- [x] 4.2 実機・シミュレータは使わず、`fvm flutter build ios --debug` が生成した `build/ios/iphoneos/Runner.app/AppIcon76x76@2x~ipad.png` を目視し、Flutter のデフォルトではなく本と音波のアイコンであることを確認した
+- [x] 4.2 Release ビルドを iPad 実機に転送し、ホーム画面のアイコンが更新されていることをユーザが目視確認した。あわせて `fvm flutter build ios --debug` が生成した `build/ios/iphoneos/Runner.app/AppIcon76x76@2x~ipad.png` も確認済み
 
 ## 5. ドキュメント
 

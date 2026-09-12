@@ -208,6 +208,17 @@ void main() {
         requireFile('$androidResDir/mipmap-$density/ic_launcher.png');
       }
     });
+
+    /// Giving `android` a name instead of `true` makes flutter_launcher_icons
+    /// write icons under that name and repoint the manifest at them. The
+    /// manifest staying on `ic_launcher` is what keeps the generated files to
+    /// the five that are already tracked.
+    test('the manifest still points at ic_launcher', () {
+      final manifest = requireFile(
+        'android/app/src/main/AndroidManifest.xml',
+      ).readAsStringSync();
+      expect(manifest, contains('android:icon="@mipmap/ic_launcher"'));
+    });
   });
 
   group('Xcode project survives icon generation', () {
