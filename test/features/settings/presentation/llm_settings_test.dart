@@ -192,6 +192,40 @@ void main() {
       expect(find.text('gemma3'), findsOneWidget);
     });
 
+    testWidgets('fetches the model list from a pasted URL with stray spaces', (
+      tester,
+    ) async {
+      // Pasting leaves whitespace around the URL. The stored value is
+      // normalized, but the model list is keyed on what the field holds, and
+      // an unnormalized key reached Uri.parse and threw the very
+      // FormatException this change exists to remove.
+      final mockClient = createMockOllamaClient();
+      await pumpSettingsDialogWithOllama(
+        tester,
+        prefsValues: {
+          'llm_provider': 'ollama',
+          'llm_base_url': 'http://localhost:11434',
+          'llm_model': '',
+        },
+        httpClient: mockClient,
+      );
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'エンドポイントURL'),
+        ' http://localhost:11434/ ',
+      );
+      await tester.runAsync(() async {
+        await Future.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('FormatException'), findsNothing);
+      await tester.ensureVisible(find.byType(DropdownButton<String>));
+      await tester.tap(find.byType(DropdownButton<String>));
+      await tester.pumpAndSettle();
+      expect(find.text('gemma3'), findsOneWidget);
+    });
+
     testWidgets('shows error when model fetch fails', (tester) async {
       final mockClient = MockClient((request) async {
         return http.Response('Server Error', 500);
