@@ -8,6 +8,18 @@
   "common_fileDuplicateError": "A file with the same name already exists",
   "common_fileNameLabel": "File name",
   "common_unknownError": "Unknown error",
+  "failure_detailsAction": "Details",
+  "@failure_detailsAction": {
+    "description": "Snackbar action that opens the failure detail dialog"
+  },
+  "failure_detailTitle": "Error details",
+  "@failure_detailTitle": {
+    "description": "Title of the failure detail dialog"
+  },
+  "failure_copyButton": "Copy",
+  "@failure_copyButton": {
+    "description": "Button that copies the whole failure report to the clipboard"
+  },
   "settings_title": "Settings",
   "settings_generalTabLabel": "General",
   "settings_ttsTabLabel": "Text-to-Speech",

@@ -35,6 +35,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get common_unknownError => '不明なエラー';
 
   @override
+  String get failure_detailsAction => '詳細';
+
+  @override
+  String get failure_detailTitle => 'エラーの詳細';
+
+  @override
+  String get failure_copyButton => 'コピー';
+
+  @override
   String get settings_title => '設定';
 
   @override

@@ -8,6 +8,18 @@
   "common_fileDuplicateError": "已存在同名文件",
   "common_fileNameLabel": "文件名",
   "common_unknownError": "未知错误",
+  "failure_detailsAction": "详情",
+  "@failure_detailsAction": {
+    "description": "Snackbar action that opens the failure detail dialog"
+  },
+  "failure_detailTitle": "错误详情",
+  "@failure_detailTitle": {
+    "description": "Title of the failure detail dialog"
+  },
+  "failure_copyButton": "复制",
+  "@failure_copyButton": {
+    "description": "Button that copies the whole failure report to the clipboard"
+  },
   "settings_title": "设置",
   "settings_generalTabLabel": "通用",
   "settings_ttsTabLabel": "语音朗读",

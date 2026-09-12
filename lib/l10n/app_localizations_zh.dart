@@ -35,6 +35,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get common_unknownError => '未知错误';
 
   @override
+  String get failure_detailsAction => '详情';
+
+  @override
+  String get failure_detailTitle => '错误详情';
+
+  @override
+  String get failure_copyButton => '复制';
+
+  @override
   String get settings_title => '设置';
 
   @override

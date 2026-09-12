@@ -148,6 +148,24 @@ abstract class AppLocalizations {
   /// **'不明なエラー'**
   String get common_unknownError;
 
+  /// Snackbar action that opens the failure detail dialog
+  ///
+  /// In ja, this message translates to:
+  /// **'詳細'**
+  String get failure_detailsAction;
+
+  /// Title of the failure detail dialog
+  ///
+  /// In ja, this message translates to:
+  /// **'エラーの詳細'**
+  String get failure_detailTitle;
+
+  /// Button that copies the whole failure report to the clipboard
+  ///
+  /// In ja, this message translates to:
+  /// **'コピー'**
+  String get failure_copyButton;
+
   /// No description provided for @settings_title.
   ///
   /// In ja, this message translates to:

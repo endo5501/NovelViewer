@@ -36,6 +36,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get common_unknownError => 'Unknown error';
 
   @override
+  String get failure_detailsAction => 'Details';
+
+  @override
+  String get failure_detailTitle => 'Error details';
+
+  @override
+  String get failure_copyButton => 'Copy';
+
+  @override
   String get settings_title => 'Settings';
 
   @override

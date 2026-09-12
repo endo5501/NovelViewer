@@ -15,6 +15,18 @@
   "common_fileDuplicateError": "同名のファイルが既に存在します",
   "common_fileNameLabel": "ファイル名",
   "common_unknownError": "不明なエラー",
+  "failure_detailsAction": "詳細",
+  "@failure_detailsAction": {
+    "description": "Snackbar action that opens the failure detail dialog"
+  },
+  "failure_detailTitle": "エラーの詳細",
+  "@failure_detailTitle": {
+    "description": "Title of the failure detail dialog"
+  },
+  "failure_copyButton": "コピー",
+  "@failure_copyButton": {
+    "description": "Button that copies the whole failure report to the clipboard"
+  },
   "settings_title": "設定",
   "settings_generalTabLabel": "一般",
   "settings_ttsTabLabel": "読み上げ",
