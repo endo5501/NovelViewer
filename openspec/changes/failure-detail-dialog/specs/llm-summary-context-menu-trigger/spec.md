@@ -12,7 +12,7 @@ The failed-file count SHALL NOT be persisted; it is conveyed to the user only th
 
 The failure notification SHALL be shown through the shared failure notification path, so it persists until dismissed and carries a details action. The runner SHALL catch the failure with its stack trace (`catch (e, st)`) and build a `FailureReport` whose headline is the message selected by the rules above, whose cause is the failure's string form, and whose stack trace is the captured one.
 
-The report's diagnostics SHALL carry the time of the failure, the application version, the configured LLM provider kind, the configured model name, the analyzed word, the resolved analysis scope, and the source file name. They SHALL NOT carry the configured endpoint URL.
+The report's diagnostics SHALL carry the time of the failure, the application version, the configured LLM provider kind, the configured model name, the analyzed word, the resolved inclusive episode bound (`covered up to`), and the source file name. The bound is recorded rather than the `AnalysisScope` value because `run()` receives only the resolved integer. They SHALL NOT carry the configured endpoint URL.
 
 The success notification SHALL be unchanged and SHALL continue to dismiss itself automatically.
 
@@ -48,8 +48,8 @@ The success notification SHALL be unchanged and SHALL continue to dismiss itself
 
 #### Scenario: The report carries the analysis diagnostics
 
-- **WHEN** an analysis of "アリス" with scope `upToAll` over the file `040_chapter.txt` fails while the configured provider is `ollama`
-- **THEN** the detail dialog's copied text SHALL contain the time, the application version, `ollama`, the configured model name, `アリス`, the resolved scope, and `040_chapter.txt`
+- **WHEN** an analysis of "アリス" resolved to the episode bound 40 over the file `040_chapter.txt` fails while the configured provider is `ollama`
+- **THEN** the detail dialog's copied text SHALL contain the time, the application version, `ollama`, the configured model name, `アリス`, the bound 40, and `040_chapter.txt`
 
 #### Scenario: The underlying error appears exactly once
 
