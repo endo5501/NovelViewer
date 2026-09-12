@@ -300,6 +300,37 @@ void main() {
       expect(await container.read(llmClientProvider.future), isNull);
     });
 
+    test('reads the API key from secure storage exactly once', () async {
+      // The completeness check and the client construction both need the key.
+      // Reading it twice would let them disagree: a key that is emptied
+      // between the two reads would pass the check and reach the client blank.
+      SharedPreferences.setMockInitialValues({
+        'llm_provider': 'openai',
+        'llm_base_url': 'https://api.openai.com/v1',
+        'llm_model': 'gpt-4o-mini',
+      });
+      final prefs = await SharedPreferences.getInstance();
+
+      var reads = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+            (call) async {
+              if (call.method == 'read') reads++;
+              return 'sk-from-secure';
+            },
+          );
+
+      final container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(container.dispose);
+
+      final client = await container.read(llmClientProvider.future);
+      expect(client, isA<OpenAiCompatibleClient>());
+      expect(reads, 1);
+    });
+
     test('does not call secure storage for the Ollama provider', () async {
       SharedPreferences.setMockInitialValues({
         'llm_provider': 'ollama',

@@ -49,6 +49,29 @@ void main() {
       );
     });
 
+    test('leaves a trailing slash inside a query string alone', () {
+      // The trailing character belongs to the query, not to the path, and a
+      // server that routes on it would be handed a different request.
+      expect(
+        normalizeEndpointUrl('https://host/proxy?route=/v1/'),
+        'https://host/proxy?route=/v1/',
+      );
+    });
+
+    test('leaves a trailing slash inside a fragment alone', () {
+      expect(
+        normalizeEndpointUrl('https://host/base#section/'),
+        'https://host/base#section/',
+      );
+    });
+
+    test('still strips whitespace around a value carrying a query', () {
+      expect(
+        normalizeEndpointUrl('  https://host/proxy?route=/v1/  '),
+        'https://host/proxy?route=/v1/',
+      );
+    });
+
     test('does not strip a lone slash into nothing surprising', () {
       // A value of only slashes is not a usable endpoint either way; the point
       // is that the pass terminates rather than looping.
