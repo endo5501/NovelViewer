@@ -13,6 +13,9 @@ class _FixedLlmClient extends LlmClient {
   final String response;
 
   @override
+  String get modelId => 'test:fake';
+
+  @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async =>
       response;
 }
@@ -225,6 +228,9 @@ class _AlternatingLlmClient extends LlmClient {
   _AlternatingLlmClient(this.next);
 
   final String Function() next;
+
+  @override
+  String get modelId => 'test:fake';
 
   @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async =>

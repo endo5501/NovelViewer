@@ -18,6 +18,9 @@ class _MockLlmClient extends LlmClient {
   _MockLlmClient(this.responses);
 
   @override
+  String get modelId => 'test:fake';
+
+  @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     prompts.add(prompt);
     schemas.add(schema);
@@ -36,6 +39,9 @@ class _SchemaAwareLlmClient extends LlmClient {
   final List<LlmResponseSchema?> schemas = [];
 
   @override
+  String get modelId => 'test:fake';
+
+  @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     schemas.add(schema);
     final field = schema?.fieldName ?? 'facts';
@@ -51,6 +57,9 @@ class _ScriptedLlmClient extends LlmClient {
 
   final List<Object> outcomes;
   int callCount = 0;
+
+  @override
+  String get modelId => 'test:fake';
 
   @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
@@ -630,6 +639,9 @@ class _ThrowingClient extends LlmClient {
 
   final Object failure;
   int callCount = 0;
+
+  @override
+  String get modelId => 'test:fake';
 
   @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {

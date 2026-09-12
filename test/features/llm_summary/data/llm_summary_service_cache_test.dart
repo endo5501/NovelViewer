@@ -22,6 +22,9 @@ class _MockLlmClient extends LlmClient {
   _MockLlmClient(this.responses);
 
   @override
+  String get modelId => 'test:fake';
+
+  @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     prompts.add(prompt);
     final response = responses[_callIndex % responses.length];

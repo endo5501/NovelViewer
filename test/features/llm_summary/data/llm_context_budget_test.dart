@@ -26,6 +26,9 @@ class _BudgetedClient extends LlmClient {
   int get maxChunkSize => budget;
 
   @override
+  String get modelId => 'test:fake';
+
+  @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     if (schema?.fieldName == 'summary') {
       summaryCalls++;

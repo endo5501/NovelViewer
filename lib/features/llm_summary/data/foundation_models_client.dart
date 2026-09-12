@@ -11,6 +11,16 @@ class FoundationModelsClient extends LlmClient {
   FoundationModelsClient({FoundationModelsLlm? plugin})
     : _plugin = plugin ?? MethodChannelFoundationModelsLlm();
 
+  /// Names the model, as far as it can be named.
+  ///
+  /// The framework exposes no version for the system model, so this identity
+  /// stays the same across an OS update that replaces the model underneath it.
+  /// Folding the OS version in would detect that, at the cost of discarding
+  /// every cached fact on every OS update — a worse trade for a model that is
+  /// only ever one thing at a time on a given device.
+  @override
+  String get modelId => 'apple:on-device';
+
   /// Characters of prompt this client accepts at once.
   ///
   /// The model's window holds the prompt and the response together, and is far

@@ -4,11 +4,11 @@ TDD で進める。各節は「失敗するテストを書く → 失敗を確�
 
 ## 1. クライアントが自分を名乗る
 
-- [ ] 1.1 `test/features/llm_summary/data/llm_client_model_id_test.dart` を新規作成し、3クライアントの名乗りを固定するテストを書く（サーバ系はプロバイダ名とモデル名を含む・エンドポイントが違っても等しい・モデル名が違えば異なる、オンデバイスは非空で固定）
-- [ ] 1.2 テストが失敗することを確認する
-- [ ] 1.3 `LlmClient` に抽象の `String get modelId` を追加する（既定値を置かない）
-- [ ] 1.4 `OllamaClient` / `OpenAiCompatibleClient` / `FoundationModelsClient` に名乗りを実装する
-- [ ] 1.5 `LlmClient` を `implements` / `extends` しているテスト内の偽クライアントに `modelId` を足し、コンパイルを回復させる
+- [x] 1.1 `test/features/llm_summary/data/llm_client_model_id_test.dart` を新規作成し、3クライアントの名乗りを固定するテストを書く（サーバ系はプロバイダ名とモデル名を含む・エンドポイントが違っても等しい・モデル名が違えば異なる、オンデバイスは非空で固定）
+- [x] 1.2 テストが失敗することを確認する
+- [x] 1.3 `LlmClient` に抽象の `String get modelId` を追加する（既定値を置かない）
+- [x] 1.4 `OllamaClient` / `OpenAiCompatibleClient` / `FoundationModelsClient` に名乗りを実装する
+- [x] 1.5 `LlmClient` を `implements` / `extends` しているテスト内の偽クライアントに `modelId` を足し、コンパイルを回復させる
 
 ## 2. ドメインモデル
 

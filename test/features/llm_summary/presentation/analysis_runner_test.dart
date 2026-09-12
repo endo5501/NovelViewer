@@ -25,6 +25,9 @@ class _DummyClient implements LlmClient {
   @override
   int get maxChunkSize => 4000;
   @override
+  String get modelId => 'test:fake';
+
+  @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) =>
       throw UnimplementedError();
   @override

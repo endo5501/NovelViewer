@@ -24,6 +24,9 @@ class OllamaClient extends LlmClient {
     http.Client? httpClient,
   }) : _httpClient = httpClient ?? http.Client();
 
+  @override
+  String get modelId => 'ollama:$model';
+
   static Future<List<String>> fetchModels({
     required String baseUrl,
     required http.Client httpClient,

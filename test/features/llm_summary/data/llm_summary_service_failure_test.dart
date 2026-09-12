@@ -23,6 +23,9 @@ class _ScriptedLlmClient extends LlmClient {
   int callCount = 0;
 
   @override
+  String get modelId => 'test:fake';
+
+  @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     callCount++;
     if (schema?.fieldName == 'summary') return _answer(summary);
