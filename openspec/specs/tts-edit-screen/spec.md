@@ -378,6 +378,10 @@ The system SHALL set the `tts_episodes.sample_rate` column to the sample rate of
 
 原因文言はネイティブ層が生成する英語の技術的メッセージであり、翻訳の対象と SHALL NOT。見出しと連結して表示する。
 
+通知は共通の失敗通知経路を通して表示 SHALL する。すなわち、ユーザーが閉じるまで残り、詳細アクションを備える。呼び出し元は見出しを headline、原因文言を cause とする `FailureReport` を構築 SHALL する。合成失敗は例外として送出されないため、スタックトレースは省略 SHALL する。
+
+診断情報には、失敗時刻、アプリケーションバージョン、TTSエンジン種別、モデル名、対象ファイル名、失敗したセグメントの索引を含める SHALL。
+
 #### Scenario: Failure with a native cause shows the cause
 - **WHEN** セグメントの合成が失敗し、セッションが保持する失敗理由が "unsupported WAV encoding (need PCM16, PCM24, or float32)" である
 - **THEN** スナックバーにローカライズされた見出しと "unsupported WAV encoding (need PCM16, PCM24, or float32)" の両方を含むメッセージが表示される
@@ -397,6 +401,14 @@ The system SHALL set the `tts_episodes.sample_rate` column to the sample rate of
 #### Scenario: Localization parity for the headline
 - **WHEN** 合成失敗の見出しキーを解決する
 - **THEN** `app_ja.arb`, `app_en.arb`, `app_zh.arb` のすべてに空でない翻訳が存在する
+
+#### Scenario: The failure notification persists and offers details
+- **WHEN** セグメントの合成が失敗して失敗スナックバーが表示される
+- **THEN** スナックバーは既定の表示時間が経過しても表示されたままであり、詳細アクションを備える
+
+#### Scenario: The report carries the segment diagnostics
+- **WHEN** 索引 7 のセグメントの合成が失敗し、詳細ダイアログを開いてコピーする
+- **THEN** コピーされたテキストに失敗時刻、アプリケーションバージョン、TTSエンジン種別、モデル名、対象ファイル名、およびセグメント索引 7 が含まれる
 
 ### Requirement: 読み上げ編集ダイアログのサイズ決定
 

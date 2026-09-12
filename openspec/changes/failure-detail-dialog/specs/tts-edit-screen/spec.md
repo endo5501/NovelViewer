@@ -24,6 +24,14 @@
 - **WHEN** セグメント生成中にユーザーがキャンセルを実行し、進行中の合成が中断される
 - **THEN** 失敗の通知は表示されない（意図的な中断は失敗ではない）
 
+#### Scenario: Reference audio failure is diagnosable
+- **WHEN** 読み込めない参照音声を指定したセグメントの生成を実行する
+- **THEN** 表示されるメッセージから、失敗が参照音声の読み込みに起因することが判別できる
+
+#### Scenario: Localization parity for the headline
+- **WHEN** 合成失敗の見出しキーを解決する
+- **THEN** `app_ja.arb`, `app_en.arb`, `app_zh.arb` のすべてに空でない翻訳が存在する
+
 #### Scenario: The failure notification persists and offers details
 - **WHEN** セグメントの合成が失敗して失敗スナックバーが表示される
 - **THEN** スナックバーは既定の表示時間が経過しても表示されたままであり、詳細アクションを備える
