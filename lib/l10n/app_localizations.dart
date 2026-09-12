@@ -148,6 +148,24 @@ abstract class AppLocalizations {
   /// **'不明なエラー'**
   String get common_unknownError;
 
+  /// Snackbar action that opens the failure detail dialog
+  ///
+  /// In ja, this message translates to:
+  /// **'詳細'**
+  String get failure_detailsAction;
+
+  /// Title of the failure detail dialog
+  ///
+  /// In ja, this message translates to:
+  /// **'エラーの詳細'**
+  String get failure_detailTitle;
+
+  /// Button that copies the whole failure report to the clipboard
+  ///
+  /// In ja, this message translates to:
+  /// **'コピー'**
+  String get failure_copyButton;
+
   /// No description provided for @settings_title.
   ///
   /// In ja, this message translates to:
@@ -1363,8 +1381,8 @@ abstract class AppLocalizations {
   /// No description provided for @llmAnalysis_failed.
   ///
   /// In ja, this message translates to:
-  /// **'解析失敗: {error}'**
-  String llmAnalysis_failed(String error);
+  /// **'解析失敗'**
+  String get llmAnalysis_failed;
 
   /// No description provided for @llmAnalysis_savedSummary.
   ///
@@ -1375,8 +1393,8 @@ abstract class AppLocalizations {
   /// No description provided for @llmAnalysis_partialFailure.
   ///
   /// In ja, this message translates to:
-  /// **'解析を中止しました: {count}件のファイルを解析できなかったため、要約は保存されていません。再実行すると失敗した分だけ再試行します。({error})'**
-  String llmAnalysis_partialFailure(int count, String error);
+  /// **'解析を中止しました: {count}件のファイルを解析できなかったため、要約は保存されていません。再実行すると失敗した分だけ再試行します。'**
+  String llmAnalysis_partialFailure(int count);
 
   /// No description provided for @llmAnalysis_noFacts.
   ///

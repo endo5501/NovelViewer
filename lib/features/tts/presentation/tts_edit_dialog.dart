@@ -11,7 +11,10 @@ import '../data/tts_engine_type.dart';
 import '../data/tts_isolate.dart';
 import '../domain/tts_engine_config.dart';
 import 'tts_edit_segment_list.dart';
-import 'tts_failure_snackbar.dart';
+import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
+import 'package:novel_viewer/shared/failure/failure_snackbar.dart';
+import '../data/tts_edit_segment.dart';
+import 'tts_failure_report.dart';
 import '../providers/text_segmenter_provider.dart';
 import '../providers/vacuum_lifecycle_provider.dart';
 import '../providers/tts_audio_database_provider.dart';
@@ -64,6 +67,10 @@ class TtsEditDialog extends ConsumerStatefulWidget {
 }
 
 class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
+  /// This dialog is modal, so a bar shown through the page's messenger lands
+  /// under the barrier. Its own messenger keeps failure notifications
+  /// reachable.
+  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
   TtsEditController? _controller;
   TtsDictionaryRepository? _dictRepository;
   bool _loading = true;
@@ -73,6 +80,34 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   void initState() {
     super.initState();
     _initialize();
+  }
+
+  /// Reports a synthesis failure from inside this modal dialog.
+  ///
+  /// Named rather than inlined into the controller callback so a test can
+  /// reach it: the controller it hangs off is built from a real isolate and
+  /// audio player, which a widget test cannot drive to an actual failure.
+  @visibleForTesting
+  void showSynthesisFailure(String? reason) {
+    if (!mounted) return;
+    final failedEngine = ref.read(ttsEngineTypeProvider);
+    showFailureSnackBar(
+      context,
+      // This dialog is modal: its own messenger keeps the bar above the
+      // barrier, where the details action can actually be tapped.
+      messenger: _messengerKey.currentState,
+      buildTtsFailureReport(
+        headline: AppLocalizations.of(context)!.ttsEdit_synthesisFailed,
+        reason: reason,
+        engine: failedEngine,
+        modelDir: TtsEngineConfig.resolveFromRef(ref, failedEngine).modelDir,
+        appVersion: ref.read(appVersionLabelProvider),
+        fileName: widget.fileName,
+        // Still set: the callback fires inside the await that
+        // `_generateSegment` brackets with set(index) / set(null).
+        segmentIndex: ref.read(ttsEditGeneratingIndexProvider),
+      ),
+    );
   }
 
   Future<void> _initialize() async {
@@ -103,14 +138,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
       ref.read(ttsEditGeneratingIndexProvider.notifier).set(null);
     };
 
-    controller.onSynthesisFailed = (reason) {
-      if (!mounted) return;
-      showTtsFailureSnackBar(
-        context,
-        headline: AppLocalizations.of(context)!.ttsEdit_synthesisFailed,
-        reason: reason,
-      );
-    };
+    controller.onSynthesisFailed = showSynthesisFailure;
 
     // Resolve the active engine's real sample rate (Qwen3=24000, Piper=22050)
     // instead of hard-coding it, so the episode's sample_rate metadata matches
@@ -392,6 +420,30 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     final isPlaying = ref.watch(ttsEditPlayingProvider);
     final isGenerating = generationState == TtsEditGenerationState.generating;
 
+    return ScaffoldMessenger(
+      key: _messengerKey,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: _buildDialog(
+          context,
+          segments,
+          generatingIndex,
+          cursorIndex,
+          isPlaying,
+          isGenerating,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDialog(
+    BuildContext context,
+    List<TtsEditSegment> segments,
+    int? generatingIndex,
+    int cursorIndex,
+    bool isPlaying,
+    bool isGenerating,
+  ) {
     return AlertDialog(
       title: Text(AppLocalizations.of(context)!.ttsEdit_title),
       content: SizedBox(

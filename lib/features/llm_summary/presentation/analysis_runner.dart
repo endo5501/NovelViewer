@@ -15,7 +15,10 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_provider
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
+import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/shared/failure/failure_report.dart';
+import 'package:novel_viewer/shared/failure/failure_snackbar.dart';
 
 /// The scope a context-menu / popup analysis trigger expresses. The runner
 /// resolves a `scope` into a concrete `coveredUpToEpisode` using the current
@@ -151,7 +154,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
 
     final language = _ref.read(localeProvider).languageCode;
 
-    String? failureMessage;
+    FailureReport? failure;
     try {
       await service.generateSummary(
         directoryPath: directory,
@@ -176,20 +179,37 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       if (hoverState.word == word) {
         _ref.read(hoverPopupProvider.notifier).setActiveEpisode(null);
       }
-    } catch (e) {
+    } catch (e, st) {
       // The typed analysis failures say something actionable ("2 files could
       // not be analyzed; re-run to retry just those"), so they get their own
       // wording. Anything else — a configuration or storage error raised before
-      // extraction — keeps the generic message.
-      failureMessage = switch (e) {
+      // extraction — keeps the generic message. None of them embed the error
+      // itself: that arrives as the report's cause and is appended once.
+      // The cause is appended to the headline on screen, so a typed failure
+      // contributes only what the localized sentence does not already say:
+      // the underlying error for a partial run, nothing at all for a run that
+      // found no facts. Spelling out the Dart class name there would tell the
+      // reader nothing and read as a defect. The detail dialog still carries
+      // the full picture through the diagnostics and the stack trace.
+      final (headline, cause) = switch (e) {
         LlmAnalysisPartialFailure(:final failedFileCount, :final firstError) =>
-          l10n.llmAnalysis_partialFailure(
-            failedFileCount,
+          (
+            l10n.llmAnalysis_partialFailure(failedFileCount),
             firstError.toString(),
           ),
-        LlmAnalysisNoFactsFailure() => l10n.llmAnalysis_noFacts(word),
-        _ => l10n.llmAnalysis_failed(e.toString()),
+        LlmAnalysisNoFactsFailure() => (l10n.llmAnalysis_noFacts(word), null),
+        _ => (l10n.llmAnalysis_failed, e.toString()),
       };
+      failure = FailureReport(
+        headline: headline,
+        cause: cause,
+        stackTrace: st,
+        diagnostics: _diagnostics(
+          word: word,
+          coveredUpToEpisode: coveredUpToEpisode,
+          sourceFileName: resolvedSourceFile,
+        ),
+      );
     } finally {
       if (modalRoute.isActive) {
         navigator.removeRoute(modalRoute);
@@ -198,9 +218,40 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       WidgetsBinding.instance.addPostFrameCallback((_) => progress.dispose());
     }
 
+    if (failure != null) {
+      // Routed through the root navigator rather than the captured context:
+      // the notification outlives whatever surface triggered the analysis.
+      if (!navigator.mounted) return;
+      showFailureSnackBar(navigator.context, failure);
+      return;
+    }
+
     if (!messenger.mounted) return;
-    final message = failureMessage ?? l10n.llmAnalysis_savedSummary(word);
-    messenger.showSnackBar(SnackBar(content: Text(message)));
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.llmAnalysis_savedSummary(word))),
+    );
+  }
+
+  /// What a failure report says about the run that produced it.
+  ///
+  /// Deliberately no endpoint: a self-hosted `baseUrl` carries the reader's
+  /// private network address, and this text is meant to be pasted into a bug
+  /// report. The provider kind and model still identify the configuration.
+  Map<String, String?> _diagnostics({
+    required String word,
+    required int coveredUpToEpisode,
+    required String? sourceFileName,
+  }) {
+    final config = _ref.read(llmConfigProvider);
+    return {
+      'time': DateTime.now().toUtc().toIso8601String(),
+      'app version': _ref.read(appVersionLabelProvider),
+      'provider': config.provider.name,
+      'model': config.model,
+      'word': word,
+      'covered up to': '$coveredUpToEpisode',
+      'file': sourceFileName,
+    };
   }
 
   /// What to say when no client could be built.

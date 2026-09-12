@@ -35,6 +35,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get common_unknownError => '未知错误';
 
   @override
+  String get failure_detailsAction => '详情';
+
+  @override
+  String get failure_detailTitle => '错误详情';
+
+  @override
+  String get failure_copyButton => '复制';
+
+  @override
   String get settings_title => '设置';
 
   @override
@@ -701,9 +710,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get llmAnalysis_noLlmConfigured => '请在设置中配置LLM';
 
   @override
-  String llmAnalysis_failed(String error) {
-    return '分析失败：$error';
-  }
+  String get llmAnalysis_failed => '分析失败';
 
   @override
   String llmAnalysis_savedSummary(String word) {
@@ -711,8 +718,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String llmAnalysis_partialFailure(int count, String error) {
-    return '分析已中止：有 $count 个文件无法分析，因此未保存摘要。重新运行将只重试失败的文件。（$error）';
+  String llmAnalysis_partialFailure(int count) {
+    return '分析已中止：有 $count 个文件无法分析，因此未保存摘要。重新运行将只重试失败的文件。';
   }
 
   @override

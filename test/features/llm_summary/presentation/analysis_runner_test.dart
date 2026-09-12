@@ -18,7 +18,10 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
+import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/shared/failure/failure_detail_dialog.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 // Dummy stand-ins for the dependencies of LlmSummaryService.
 class _DummyClient implements LlmClient {
@@ -106,16 +109,30 @@ class _StubLocale extends LocaleNotifier {
   Locale build() => Locale(_language);
 }
 
+final _testPackageInfo = PackageInfo(
+  appName: 'NovelViewer',
+  packageName: 'com.example.novelViewer',
+  version: '1.8.2',
+  buildNumber: '41',
+);
+
 ProviderContainer _container(
   _StubService stub, {
   String directory = '/library/novel_a',
   FileEntry? file,
   String language = 'ja',
   bool llmSupported = true,
+  LlmConfig config = const LlmConfig(
+    provider: LlmProvider.ollama,
+    baseUrl: 'http://192.168.1.20:11434',
+    model: 'qwen3:8b',
+  ),
 }) {
   final container = ProviderContainer(
     overrides: [
       llmSummarySupportedProvider.overrideWithValue(llmSupported),
+      llmConfigProvider.overrideWithValue(config),
+      packageInfoProvider.overrideWithValue(_testPackageInfo),
       currentDirectoryProvider.overrideWith(
         () => CurrentDirectoryNotifier(directory),
       ),
@@ -527,6 +544,201 @@ void main() {
         expect(find.textContaining('database is locked'), findsOneWidget);
       },
     );
+  });
+
+  group('DefaultAnalysisRunner failure diagnostics', () {
+    Future<AppLocalizations> ja() =>
+        AppLocalizations.delegate.load(const Locale('ja'));
+
+    Future<ProviderContainer> runFailing(
+      WidgetTester tester, {
+      required Object error,
+      String word = 'アリス',
+      int coveredUpToEpisode = 40,
+      String? sourceFileName = '040_chapter.txt',
+      LlmConfig config = const LlmConfig(
+        provider: LlmProvider.ollama,
+        baseUrl: 'http://192.168.1.20:11434',
+        model: 'qwen3:8b',
+      ),
+    }) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            throw error,
+      );
+      final container = _container(stub, config: config);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            ref
+                .read(analysisRunnerProvider)
+                .run(
+                  context: context,
+                  word: word,
+                  coveredUpToEpisode: coveredUpToEpisode,
+                  sourceFileName: sourceFileName,
+                );
+          },
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+      return container;
+    }
+
+    /// The text the detail dialog presents, i.e. what the copy button takes.
+    Future<String> openDetails(WidgetTester tester) async {
+      final l10n = await ja();
+      await tester.tap(find.text(l10n.failure_detailsAction));
+      await tester.pumpAndSettle();
+      return tester
+          .widget<SelectableText>(
+            find.descendant(
+              of: find.byType(FailureDetailDialog),
+              matching: find.byType(SelectableText),
+            ),
+          )
+          .data!;
+    }
+
+    testWidgets('the failure snackbar outlives the default duration', (
+      tester,
+    ) async {
+      await runFailing(tester, error: StateError('boom'));
+
+      await tester.pump(const Duration(seconds: 30));
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.byType(SnackBarAction), findsOneWidget);
+    });
+
+    testWidgets('the report names the run and the configuration', (
+      tester,
+    ) async {
+      await runFailing(tester, error: StateError('boom'));
+
+      final text = await openDetails(tester);
+
+      expect(text, contains('time: '));
+      expect(text, contains('app version: 1.8.2+41'));
+      expect(text, contains('provider: ollama'));
+      expect(text, contains('model: qwen3:8b'));
+      expect(text, contains('word: アリス'));
+      expect(text, contains('covered up to: 40'));
+      expect(text, contains('file: 040_chapter.txt'));
+    });
+
+    testWidgets('the report withholds the endpoint', (tester) async {
+      await runFailing(tester, error: StateError('boom'));
+
+      final text = await openDetails(tester);
+
+      expect(text, isNot(contains('192.168.1.20')));
+      expect(text, isNot(contains('11434')));
+    });
+
+    testWidgets('the report carries the stack trace from the catch site', (
+      tester,
+    ) async {
+      await runFailing(tester, error: StateError('boom'));
+
+      final text = await openDetails(tester);
+
+      expect(text, contains('Bad state: boom'));
+      expect(text, contains('#0'));
+    });
+
+    testWidgets('the underlying error is not printed twice', (tester) async {
+      await runFailing(
+        tester,
+        error: const LlmAnalysisPartialFailure(
+          failedFileCount: 2,
+          firstError: 'connection refused',
+        ),
+      );
+
+      // The action label is a Text too, so read the body off the SnackBar.
+      final bar = tester.widget<SnackBar>(find.byType(SnackBar));
+      final body = (bar.content as Text).data!;
+
+      expect('connection refused'.allMatches(body).length, 1);
+      expect(body, contains('2件'));
+    });
+
+    testWidgets('a no-facts failure keeps its class name off the body', (
+      tester,
+    ) async {
+      await runFailing(tester, error: const LlmAnalysisNoFactsFailure());
+
+      final bar = tester.widget<SnackBar>(find.byType(SnackBar));
+      final body = (bar.content as Text).data!;
+
+      expect(body, isNot(contains('LlmAnalysisNoFactsFailure')));
+      expect(body, contains('「アリス」'));
+    });
+
+    testWidgets('a partial failure shows the cause, not the wrapper', (
+      tester,
+    ) async {
+      await runFailing(
+        tester,
+        error: const LlmAnalysisPartialFailure(
+          failedFileCount: 2,
+          firstError: 'connection refused',
+        ),
+      );
+
+      final bar = tester.widget<SnackBar>(find.byType(SnackBar));
+      final body = (bar.content as Text).data!;
+
+      expect(body, contains('connection refused'));
+      expect(body, isNot(contains('LlmAnalysisPartialFailure')));
+    });
+
+    testWidgets('an unclassified failure still shows its own text', (
+      tester,
+    ) async {
+      await runFailing(tester, error: StateError('boom'));
+
+      final bar = tester.widget<SnackBar>(find.byType(SnackBar));
+
+      expect((bar.content as Text).data!, contains('boom'));
+    });
+
+    testWidgets('a successful run keeps a self-dismissing snackbar', (
+      tester,
+    ) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            'summary',
+      );
+      final container = _container(stub);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            ref
+                .read(analysisRunnerProvider)
+                .run(context: context, word: 'アリス', coveredUpToEpisode: 40);
+          },
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.byType(SnackBarAction), findsNothing);
+
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsNothing);
+    });
   });
 
   group('DefaultAnalysisRunner modal behavior', () {

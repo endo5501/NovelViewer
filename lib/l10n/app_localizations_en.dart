@@ -36,6 +36,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get common_unknownError => 'Unknown error';
 
   @override
+  String get failure_detailsAction => 'Details';
+
+  @override
+  String get failure_detailTitle => 'Error details';
+
+  @override
+  String get failure_copyButton => 'Copy';
+
+  @override
   String get settings_title => 'Settings';
 
   @override
@@ -724,9 +733,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get llmAnalysis_noLlmConfigured => 'Please configure LLM in Settings';
 
   @override
-  String llmAnalysis_failed(String error) {
-    return 'Analysis failed: $error';
-  }
+  String get llmAnalysis_failed => 'Analysis failed';
 
   @override
   String llmAnalysis_savedSummary(String word) {
@@ -734,8 +741,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String llmAnalysis_partialFailure(int count, String error) {
-    return 'Analysis stopped: $count file(s) could not be analyzed, so no summary was saved. Run it again to retry just those files. ($error)';
+  String llmAnalysis_partialFailure(int count) {
+    return 'Analysis stopped: $count file(s) could not be analyzed, so no summary was saved. Run it again to retry just those files.';
   }
 
   @override

@@ -8,6 +8,18 @@
   "common_fileDuplicateError": "已存在同名文件",
   "common_fileNameLabel": "文件名",
   "common_unknownError": "未知错误",
+  "failure_detailsAction": "详情",
+  "@failure_detailsAction": {
+    "description": "Snackbar action that opens the failure detail dialog"
+  },
+  "failure_detailTitle": "错误详情",
+  "@failure_detailTitle": {
+    "description": "Title of the failure detail dialog"
+  },
+  "failure_copyButton": "复制",
+  "@failure_copyButton": {
+    "description": "Button that copies the whole failure report to the clipboard"
+  },
   "settings_title": "设置",
   "settings_generalTabLabel": "通用",
   "settings_ttsTabLabel": "语音朗读",
@@ -240,14 +252,7 @@
   "llmAnalysis_generatingFinal": "正在生成最终摘要…",
   "llmAnalysis_noFolderOpen": "请先打开小说文件夹",
   "llmAnalysis_noLlmConfigured": "请在设置中配置LLM",
-  "llmAnalysis_failed": "分析失败：{error}",
-  "@llmAnalysis_failed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "llmAnalysis_failed": "分析失败",
   "llmAnalysis_savedSummary": "已保存「{word}」的摘要",
   "@llmAnalysis_savedSummary": {
     "placeholders": {
@@ -256,14 +261,11 @@
       }
     }
   },
-  "llmAnalysis_partialFailure": "分析已中止：有 {count} 个文件无法分析，因此未保存摘要。重新运行将只重试失败的文件。（{error}）",
+  "llmAnalysis_partialFailure": "分析已中止：有 {count} 个文件无法分析，因此未保存摘要。重新运行将只重试失败的文件。",
   "@llmAnalysis_partialFailure": {
     "placeholders": {
       "count": {
         "type": "int"
-      },
-      "error": {
-        "type": "String"
       }
     }
   },
