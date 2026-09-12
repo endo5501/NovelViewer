@@ -8,9 +8,9 @@
 
 ## 2. 失敗スナックバー
 
-- [ ] 2.1 `test/features/tts/presentation/tts_failure_snackbar_test.dart` を `test/shared/failure/failure_snackbar_test.dart` へ移し、見出しと原因の連結規則が維持されることを検証する
-- [ ] 2.2 同テストに追加する。既定の表示時間を過ぎても表示が残ること、閉じるアイコンで閉じられること、詳細アクションが1つだけ存在すること、連続した失敗で先行のスナックバーが取り除かれること
-- [ ] 2.3 テストを実行して失敗を確認し、コミットする
+- [x] 2.1 `test/features/tts/presentation/tts_failure_snackbar_test.dart` を `test/shared/failure/failure_snackbar_test.dart` へ移し、見出しと原因の連結規則が維持されることを検証する
+- [x] 2.2 同テストに追加する。既定の表示時間を過ぎても表示が残ること、閉じるアイコンで閉じられること、詳細アクションが1つだけ存在すること、連続した失敗で先行のスナックバーが取り除かれること
+- [x] 2.3 テストを実行して失敗を確認し、コミットする
 - [ ] 2.4 `lib/shared/failure/failure_snackbar.dart` を実装する。`removeCurrentSnackBar()` の後に `duration: Duration(days: 365)`、`showCloseIcon: true`、詳細アクションを持つスナックバーを表示する
 - [ ] 2.5 `formatTtsFailureMessage` 相当の連結規則を本体へ取り込み、スナックバー本文を組み立てる
 - [ ] 2.6 表示時に `Navigator.of(context, rootNavigator: true)` を解決して保持し、詳細アクションでは `mounted` を確認してから詳細ダイアログを開く
@@ -19,7 +19,7 @@
 ## 3. 詳細ダイアログ
 
 - [x] 3.1 `test/shared/failure/failure_detail_dialog_test.dart` を作成する。診断項目 / cause / stackTrace が表示されること、内容がスクロール可能かつ選択可能であること、コピーでクリップボードに全文が入り確認が出ることを検証する
-- [ ] 3.2 スナックバーを出した元のウィジェットを破棄した後でも詳細ダイアログが開けることを検証するテストを追加する
+- [x] 3.2 スナックバーを出した元のウィジェットを破棄した後でも詳細ダイアログが開けることを検証するテストを追加する
 - [x] 3.3 テストを実行して失敗を確認し、コミットする
 - [x] 3.4 `lib/shared/failure/failure_detail_dialog.dart` を実装する
 - [x] 3.5 `app_ja.arb` / `app_en.arb` / `app_zh.arb` に、ダイアログ見出し・詳細・閉じる・コピーのキーを追加する
