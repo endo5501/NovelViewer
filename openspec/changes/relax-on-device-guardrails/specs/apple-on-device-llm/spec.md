@@ -107,33 +107,6 @@ The constraint is the first choice and not the only one. Where it is what the sa
 - **WHEN** the unconstrained retry returns the named field holding a non-empty list of strings
 - **THEN** the caller SHALL join them into the single string the field was asked for
 
-### Requirement: A final summary that cannot be read is asked for once more
-Where the request that produces the word's final summary returns an answer that does not parse, the pipeline SHALL issue that request once more and SHALL use the second answer where it parses.
-
-This stage alone is treated this way, because its value is what the reader sees: it is saved as the word's summary with nothing downstream judging it. Falling back to the answer's raw text used to mean the model had replied in prose, which reads acceptably as a summary. It now also covers an answer the response cap cut off before it closed, which does not, and which becomes reachable as soon as a provider gives up a schema constraint in order to get an answer at all.
-
-Exactly one further request SHALL be made. Where the second answer also does not parse, the first SHALL be kept: both are equally unreadable, one of them has to be shown, and a third generation on the slowest provider buys nothing.
-
-Where the second request fails outright, the first answer SHALL be kept rather than the failure propagated. An answer in hand is worth more than the run that would be lost trying to improve on it.
-
-An extraction that cannot be read SHALL NOT be re-requested this way. It is already marked unstructured, which keeps it out of the fact cache, and it costs the reader nothing beyond a re-extraction.
-
-#### Scenario: A readable answer is taken as it stands
-- **WHEN** the final summary request returns an answer that parses
-- **THEN** exactly one request SHALL be made, and that answer SHALL be used
-
-#### Scenario: An unreadable answer is replaced
-- **WHEN** the final summary request returns an answer that does not parse, and a second request returns one that does
-- **THEN** the second answer SHALL be used
-
-#### Scenario: Two unreadable answers keep the first
-- **WHEN** neither the first nor the second final summary answer parses
-- **THEN** the first SHALL be used, and no third request SHALL be made
-
-#### Scenario: A failed second request keeps the first answer
-- **WHEN** the first final summary answer does not parse and the second request fails
-- **THEN** the first answer SHALL be used, and the failure SHALL NOT end the run
-
 ### Requirement: A failure that cannot change is not retried
 Where a generation failure could not possibly answer differently to the identical request, the pipeline SHALL NOT issue that request again. A prompt that overran the context window overruns it again; an unsupported language and a model that is not there do not change between two attempts a moment apart. Text refused by the safety guardrails is refused again on the identical request, and by the time such a refusal reaches the pipeline the provider has already tried the one request that differs — the same prompt with the schema constraint removed — so a further attempt by the pipeline would be the identical request once more.
 

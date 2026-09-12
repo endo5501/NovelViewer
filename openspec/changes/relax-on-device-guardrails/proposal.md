@@ -25,12 +25,13 @@ Apple のオンデバイスモデルで小説を解析すると、無害な場�
 ### Modified Capabilities
 
 - `apple-on-device-llm`: 3点が変わる。(1) モデル生成時のガードレール設定を明示し、緩和側を選ぶ。(2) スキーマ制約は第一候補にとどめ、ガードレール拒否時は制約を外した再生成に切り替える。(3) ガードレール拒否は「再試行しない失敗」ではなくなる。ただし投げ直すのは同一の要求ではなく条件を変えた要求であり、「同じ要求を投げ直しても無駄」という原則自体は維持される。
+- `llm-summary-pipeline`: 最終要約の段で、読めない答えが返ったら一度だけ問い直す。生テキストへの退避は残り、二度目も読めなければそれが使われる。変わるのは、読めない答えを一度も問い直さずに保存していた点。この段が発行し得る生成回数が最大3回になることも合わせて記す。
 
 ## Impact
 
 - `packages/foundation_models_llm/darwin/.../FoundationModelsLlmPlugin.swift`: モデル生成にガードレール指定を追加。`generate` がサンプリング方式を受ける。
 - `packages/foundation_models_llm/lib/src/foundation_models_llm.dart`: `generate` の引数追加。`MethodChannelFoundationModelsLlm` のメソッドチャネル引数を拡張。
 - `lib/features/llm_summary/data/foundation_models_client.dart`: 二段構えの生成方針を実装。
-- `lib/features/llm_summary/data/llm_summary_pipeline.dart`: 変更しない見込み。既存の `_stripCodeFence` と配列正規化が、制約なし生成の返答形をそのまま吸収することを実測で確認済み。
+- `lib/features/llm_summary/data/llm_summary_pipeline.dart`: 最終要約が読めなかったときの問い直しを足す。制約なし生成の返答形そのものは、既存の `_stripCodeFence` と配列正規化がそのまま吸収することを実測で確認済みで、そこは変えない。
 - 配列形の返答とコードフェンス付き返答が従来より増えるため、その経路のテストを増やす。
 - アプリのデプロイメントターゲットは変わらない。`permissiveContentTransformations` は iOS 26.0 / macOS 26.0 から利用でき、既存の `#available` ガードがそのまま覆う。
