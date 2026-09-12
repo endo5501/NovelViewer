@@ -56,6 +56,39 @@ void main() {
       expect(text, 'tried <endpoint> then <endpoint>');
     });
 
+    test('withholds the address a SocketException reports separately', () {
+      final text = redactSensitive(
+        'ClientException with SocketException: Operation timed out '
+        '(OS Error: Operation timed out, errno = 60), '
+        'address = 192.168.99.99, port = 56676, '
+        'uri=http://192.168.99.99:11434/v1/chat/completions',
+      );
+
+      expect(text, isNot(contains('192.168.99.99')));
+      expect(text, contains('<endpoint>'));
+      expect(text, contains('errno = 60'));
+    });
+
+    test('withholds a host name reported as an address', () {
+      expect(
+        redactSensitive('address = ollama.local, port = 11434'),
+        'address = <address>, port = 11434',
+      );
+    });
+
+    test('withholds a bare IPv4 literal anywhere', () {
+      expect(
+        redactSensitive('could not reach 10.0.0.5 after 3 tries'),
+        'could not reach <address> after 3 tries',
+      );
+    });
+
+    test('leaves a version number alone', () {
+      const text = 'app version: 1.8.4+19';
+
+      expect(redactSensitive(text), text);
+    });
+
     test('leaves ordinary text untouched', () {
       const text =
           'unsupported WAV encoding (need PCM16, PCM24, or float32) 2/3';
