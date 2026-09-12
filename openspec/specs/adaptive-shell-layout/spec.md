@@ -1,6 +1,6 @@
 ## Purpose
 
-Decides which of two shell layouts the application presents — narrow or wide — from the display width alone, through a single pure function that never reads `dart:io`'s `Platform`, so the shape of the shell follows how much room the body text has rather than which device is running. The width is read in exactly one place, the home screen, and the resolved layout is handed down to the surfaces that change with it; the breakpoint is a Riverpod provider, so a widget test selects either layout by overriding it instead of resizing the viewport. The wide layout keeps the three-column arrangement unchanged, while the narrow layout moves the left column into a `Drawer` and the right column into an `endDrawer` and gives the whole body to the text viewer. Those drawers open only from the app bar — edge drags stay with the vertical viewer's page turning — and close again when they stop being useful, on a file selection or when the display grows back past the breakpoint.
+Decides which of two shell layouts the application presents — narrow or wide — from the display width alone, through a single pure function that never reads `dart:io`'s `Platform`, so the shape of the shell follows how much room the body text has rather than which device is running. The width is read in exactly one place, the home screen, and the resolved layout is handed down to the surfaces that change with it; the breakpoint is a Riverpod provider, so a widget test selects either layout by overriding it instead of resizing the viewport. The wide layout keeps the three-column arrangement unchanged, while the narrow layout moves the left column into a `Drawer` and the right column into an `endDrawer` and gives the whole body to the text viewer. Those drawers open only from the app bar — edge drags stay with the vertical viewer's page turning — and close again when they stop being useful, on a file selection or when the display grows back past the breakpoint. Because a drawer is laid out at the origin at the full height of the shell, where the app bar's own inset handling does not reach, the contents of both drawers are inset by the display's padding so they stay clear of a status bar above and a home indicator below; the inset sits in the drawers rather than in the panels, which are shared with the wide layout.
 
 ## Requirements
 
@@ -78,3 +78,30 @@ An open drawer SHALL be closed when the reader selects a file, so that the newly
 #### Scenario: Widening the window closes the drawer
 - **WHEN** a drawer is open and the display width grows past the breakpoint
 - **THEN** the drawer is closed and the wide layout is displayed
+
+### Requirement: The narrow layout's drawers keep their contents clear of the system bars
+A drawer is laid out at the origin of the display at the full height of the shell, so it reaches behind whatever the operating system draws over the top and bottom of the screen. In the narrow layout the application SHALL inset the contents of both the drawer and the end drawer by the display's own padding, so that the first interactive row of each panel — the left column's tab bar and the search panel's input field — and the last row of each panel's list are reachable rather than sitting under a status bar or a home indicator.
+
+The inset SHALL be applied to the contents of the drawers only. The drawer's own surface SHALL continue to fill the height of the display, so the inset shows the drawer's own background rather than whatever lies beneath it.
+
+The panels themselves SHALL NOT carry the inset, so the wide layout, where the same panels sit in the body below the app bar, is unchanged.
+
+#### Scenario: The left drawer's tabs sit below the status bar
+- **WHEN** the drawer is opened in the narrow layout on a display that reports a top padding
+- **THEN** the top of the left column's tab bar is at or below that padding
+
+#### Scenario: The left drawer's contents end above the home indicator
+- **WHEN** the drawer is opened in the narrow layout on a display that reports a bottom padding
+- **THEN** the bottom of the left column's contents is at or above the start of that padding
+
+#### Scenario: The search drawer is inset the same way
+- **WHEN** the end drawer is opened in the narrow layout on a display that reports top and bottom padding
+- **THEN** the search panel's contents are inset by that padding exactly as the left drawer's are
+
+#### Scenario: The drawer's surface still covers the inset area
+- **WHEN** a drawer is opened on a display that reports a top padding
+- **THEN** the drawer's own surface extends to the top of the display, so no part of the body shows through beside the status bar
+
+#### Scenario: The wide layout carries no inset
+- **WHEN** the home screen is rendered in the wide layout on a display that reports padding
+- **THEN** the left column and the right column are laid out as before, with no inset of their own
