@@ -1,0 +1,78 @@
+## Context
+
+アプリアイコンの元画像は `assets/app_icon.png`（1024x1024、RGB、アルファチャンネル無し）1枚で、そこから `flutter_launcher_icons` が各プラットフォーム向けの成果物を生成し、生成物をリポジトリにコミットする運用になっている。ただし現在の `pubspec.yaml` の設定は macOS と Windows だけを対象にしている。
+
+その結果、`ios/Runner/Assets.xcassets/AppIcon.appiconset/` と `android/app/src/main/res/mipmap-*/ic_launcher.png` はプロジェクト初期化コミット `316420f5` 以降まったく更新されておらず、Flutter テンプレートのデフォルトアイコンが残っている。iPad で確認できるデフォルトアイコンの正体はこれである。
+
+制約として、iOS のアプリアイコンはアルファチャンネルを持てない。元画像は既に RGB なので現時点では問題にならないが、将来アルファ付きの画像に差し替えられる可能性がある。
+
+## Goals / Non-Goals
+
+**Goals:**
+
+- iPad で独自アプリアイコンが表示される状態にする
+- Android のランチャーアイコンも同じ元画像から生成しておく
+- アイコンの生成元を `assets/app_icon.png` 1枚に保ち、プラットフォームごとの手作業を発生させない
+- 生成物が再びテンプレートのまま取り残されないよう、リグレッションを検出できるようにする
+
+**Non-Goals:**
+
+- iOS 18 のダークアイコン・着色アイコンのバリアント対応
+- Android のアダプティブアイコン（`adaptive_icon_background` / `adaptive_icon_foreground`）対応
+- アイコンのデザイン変更。元画像 `assets/app_icon.png` はそのまま使う
+- Android をビルド対象プラットフォームとして追加すること。アイコンを揃えるだけで、ビルド・CI・配布の対象にはしない
+
+## Decisions
+
+### 決定1: 既存の `flutter_launcher_icons` に iOS・Android を追加する
+
+`pubspec.yaml` の `flutter_launcher_icons` セクションに設定を足し、`dart run flutter_launcher_icons` で生成する。
+
+代替案として、Xcode の Asset Catalog に手作業でアイコンを流し込む方法や、別のアイコン生成ツールを導入する方法があった。しかし macOS・Windows が既に `flutter_launcher_icons` で運用されており、同じコマンド1回で4プラットフォーム全部が揃う点、元画像を1枚に保てる点で優る。新しい依存も不要である。
+
+### 決定2: iOS は `ios: true` と `remove_alpha_ios: true` を指定する
+
+`remove_alpha_ios: true` は、アルファを持つ画像が来たときに背景色で合成して RGB に落とす。現在の元画像はアルファ無しなので動作上の変化は無いが、将来アルファ付きの画像に差し替えられたときに App Store の審査で弾かれる成果物が生まれるのを防ぐ保険として入れる。
+
+ダーク画像・着色画像を指定しない場合、`flutter_launcher_icons` は従来型（legacy）のアイコンセットを生成する。これは現在コミットされている15枚に加えて 50x50、57x57、72x72 の各スケールを含む21枚で、`Contents.json` も合わせて再生成される。ファイルが増えること自体に害は無い。
+
+### 決定3: Android は `android: true` とし、アダプティブアイコンは設定しない
+
+`android` に文字列（例: `"launcher_icon"`）を指定すると新しいアイコン名でファイルを作り、`AndroidManifest.xml` の `android:icon` を書き換える。ここでは既存の `ic_launcher` を上書きする `true` を選ぶ。マニフェストに触れずに済み、差分が `mipmap-*/ic_launcher.png` の5枚だけに収まるためである。
+
+アダプティブアイコンは前景・背景の2枚の素材を別途用意する必要があり、元画像1枚の運用から外れる。Android をビルド対象にする予定が無い以上、そこに手間をかける理由が無い。
+
+### 決定4: 生成物をリポジトリにコミットする
+
+macOS・Windows と同じ運用を踏襲する。ビルド時に生成する方式にすると、iOS ビルドは Xcode 経由でも走るため生成ステップを差し込む場所が増え、CI とローカルで挙動を揃えるのが難しくなる。
+
+### 決定5: ドリフトガードテストで生成物の状態を守る
+
+アイコンはアプリのコードから参照されないため、テンプレートのまま放置されても既存のテストは何も言わない。実際に今回それが起きた。`test/platform/ios_project_config_test.dart` と同じ方式で、設定と成果物の存在・形式を検証するテストを追加する。
+
+検証するのは次の6点である。
+
+- `pubspec.yaml` の `flutter_launcher_icons` に macOS・Windows・iOS・Android の4プラットフォームと `remove_alpha_ios: true` が設定されている
+- `ios/Runner/Assets.xcassets/AppIcon.appiconset/` に `Contents.json` が存在し、そこから参照されるファイルがすべて実在する
+- iOS の各アイコン PNG がアルファチャンネルを持たない
+- `android/app/src/main/res/mipmap-*/ic_launcher.png` が5つの密度すべてに存在する
+- iOS と Android のアイコンが Flutter テンプレートのデフォルトアイコンと一致しない
+- `ios/Runner.xcodeproj/project.pbxproj` の `ASSETCATALOG_COMPILER_*` 設定が生成ツールに壊されていない
+
+最後の項目だけ補足する。存在と形式の検証だけでは、今回の不具合そのもの（テンプレートのデフォルトアイコンが置かれたまま）を検出できない。デフォルトアイコンも所定のパスに所定のサイズで存在し、アルファも持たないためである。そこで初期化コミット `316420f5` が持ち込んだデフォルトアイコンの SHA-256 をテストに固定値として埋め込み、生成物がそれと一致しないことを検証する。
+
+この「デフォルトと一致しないこと」という否定形を選んだのは、生成物そのもののハッシュを固定すると元画像のデザイン更新や PNG エンコーダのバージョン差でテストが壊れるからである。デフォルトアイコンのバイト列は初期化コミット時点で確定した履歴上の値であり、今後変わらない。アイコンの見た目が元画像と一致しているかまでは検証しない。
+
+## Risks / Trade-offs
+
+**Android 8 以降でアイコンがシステムに自動マスクされる** → アダプティブアイコンを用意しないため、レガシーアイコンが白背景の枠に押し込められて表示される。Android をビルド対象にしていないため現時点では影響しない。将来 Android を正式対応する際にアダプティブアイコンを別変更として扱う。
+
+**iOS 18 でダークモード時に専用アイコンが出ない** → ライトアイコンがそのまま使われる。表示自体は問題なく、デフォルトアイコンよりは確実に良い状態になる。専用バリアントが必要になったら `image_path_ios_dark_transparent` と `image_path_ios_tinted_grayscale` を追加する別変更で対応する。
+
+**PNG のアルファ判定をテストで行う方法** → Dart の標準ライブラリだけで判定するには PNG の IHDR チャンクからカラータイプを読む必要がある。ヘッダの固定オフセットを読むだけで済むため、画像デコードライブラリへの依存は増やさない。
+
+**`flutter_launcher_icons` が Xcode プロジェクトを壊す** → 0.14.4 の `changeIosLauncherIcon` は `ASSETCATALOG` を含む行をすべて `= AppIcon;` に書き換える。その結果 `ASSETCATALOG_COMPILER_APPICON_NAME` だけでなく `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` まで `AppIcon` にされ、本来 `YES` / `NO` を取る設定が不正な値になる。`ASSETCATALOG_COMPILER_APPICON_NAME` は既に `AppIcon` で正しいため、生成後は `ios/Runner.xcodeproj/project.pbxproj` を丸ごと元に戻せばよい。再生成のたびに起きるので、手順として残すだけでなくドリフトガードテストでも検出する。
+
+**生成コマンドの実行漏れ** → 設定だけ足して生成を忘れると状態が変わらない。追加するテストが成果物側も検証するため、実行漏れはテスト失敗として現れる。
+
+**iOS の実機確認ができない環境がある** → iPad 実機またはシミュレータでの目視確認はコミットの前提にしない。テストが守るのは成果物の状態であり、実機表示の確認は可能な環境で行う任意の手順とする。
