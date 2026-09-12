@@ -11,6 +11,15 @@ final _windowsPath = RegExp(r'[A-Za-z]:\\(?:[^\\\s]+\\)+[^\\\s]*');
 /// relative fragments like `a/b/c` and off anything already rewritten.
 final _posixPath = RegExp(r'(?<![\w./~-])(?:/[^/\s]+){2,}');
 
+/// The host a `SocketException` names, which it reports separately from the
+/// URI as `address = <host>`. Matching the label keeps host names in scope,
+/// not only literal addresses.
+final _reportedAddress = RegExp(r'(address\s*=\s*)[^\s,)]+');
+
+/// A bare IPv4 literal. Four parts, so a three-part version string such as
+/// `1.8.4` is left alone.
+final _ipv4 = RegExp(r'(?<![\w.])\d{1,3}(?:\.\d{1,3}){3}(?![\w.])');
+
 /// Strips endpoints and filesystem locations out of free text.
 ///
 /// Applied to everything rendered from a failure report, because the raw cause
@@ -31,10 +40,12 @@ String redactSensitive(String text) {
     _windowsPath,
     (m) => _keepLastSegment(m[0]!, r'\'),
   );
-  return result.replaceAllMapped(
+  result = result.replaceAllMapped(
     _posixPath,
     (m) => _keepLastSegment(m[0]!, '/'),
   );
+  result = result.replaceAllMapped(_reportedAddress, (m) => '${m[1]}<address>');
+  return result.replaceAll(_ipv4, '<address>');
 }
 
 String _keepLastSegment(String path, String separator) {

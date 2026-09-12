@@ -130,6 +130,8 @@ Redaction SHALL NOT alter text that carries neither a URL nor an absolute path.
 
 Redaction SHALL replace any URL, from its scheme through to the next whitespace, with a fixed placeholder, removing host, port, path and any credentials carried in the userinfo. It SHALL replace the directory portion of any absolute filesystem path, POSIX or Windows, with a fixed placeholder while keeping the final path segment, so the file remains identifiable but its location does not.
 
+Redaction SHALL also withhold a host reported outside a URL. A `SocketException` names the host separately, as `address = <host>`, which no URL rule would see, so the value following that label SHALL be replaced, as SHALL any bare IPv4 literal. A three-part version string SHALL NOT be mistaken for one.
+
 #### Scenario: A connection error's URI is withheld
 
 - **WHEN** a report whose cause is `ClientException: Connection refused, uri=http://192.168.1.20:11434/api/generate` is rendered
@@ -149,6 +151,16 @@ Redaction SHALL replace any URL, from its scheme through to the next whitespace,
 
 - **WHEN** a report whose cause contains `C:\Users\someone\voices\sample.wav` is rendered
 - **THEN** the rendered text contains `sample.wav` but not `C:\Users\someone`
+
+#### Scenario: An address reported outside a URL is withheld
+
+- **WHEN** a report whose cause is `ClientException with SocketException: Operation timed out …, address = 192.168.99.99, port = 56676, uri=http://192.168.99.99:11434/v1/chat` is rendered
+- **THEN** the address does not appear anywhere in the rendered text, while the error number and the port remain
+
+#### Scenario: A version string is not mistaken for an address
+
+- **WHEN** a report carrying the diagnostic `app version: 1.8.4+19` is rendered
+- **THEN** that line is unchanged
 
 #### Scenario: The snackbar body is redacted as well
 
