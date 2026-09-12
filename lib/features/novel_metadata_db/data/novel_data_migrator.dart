@@ -79,10 +79,17 @@ class NovelDataMigrator {
       },
       openNovelDataDb: (folderPath) async {
         final path = p.join(folderPath, NovelDataDatabase.databaseName);
+        // The same version and the same callbacks the app itself opens these
+        // files with. Creating the current tables under an older stamp would
+        // leave the target's schema and its `user_version` disagreeing, and a
+        // target left at an older version by an interrupted run of an earlier
+        // build would never be brought forward here.
         return openDatabase(
           path,
-          version: 1,
+          version: NovelDataDatabase.currentVersion,
           onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
+          onUpgrade: NovelDataDatabase.upgradeToCurrent,
+          onDowngrade: NovelDataDatabase.refuseDowngrade,
         );
       },
     );
@@ -104,7 +111,9 @@ class NovelDataMigrator {
 ///   residue rather than a cache entry. The affected words are simply
 ///   re-extracted on their next analysis; their saved summaries come across.
 /// - Rows whose folder cannot be located on disk are discarded (orphans); the
-///   discarded count is logged at WARNING level.
+///   discarded count is logged at WARNING level. It counts folders named by
+///   summary or bookmark rows, the two tables that are migrated — a folder
+///   known only to `fact_cache` is never resolved and so never counted.
 /// - After all extant folders are copied, the three global tables are dropped.
 /// - `reading_progress` is never touched.
 Future<void> migrateV8ToV9(
@@ -164,9 +173,12 @@ Future<void> migrateV8ToV9(
   }
 
   if (orphanedFolders > 0) {
+    // Counts folders named by summary or bookmark rows only. A folder known
+    // solely to `fact_cache` is never resolved, because nothing is migrated
+    // from that table, so it is neither visited nor counted here.
     logger?.warning(
-      'v9 migration: discarded per-novel rows for $orphanedFolders folder(s) '
-      'no longer present on disk',
+      'v9 migration: discarded summary/bookmark rows for $orphanedFolders '
+      'folder(s) no longer present on disk',
     );
   }
 

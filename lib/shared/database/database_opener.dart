@@ -33,6 +33,8 @@ Future<Database> openOrResetDatabase({
   required int version,
   required Future<void> Function(Database db, int version) onCreate,
   Future<void> Function(Database db, int oldVersion, int newVersion)? onUpgrade,
+  Future<void> Function(Database db, int oldVersion, int newVersion)?
+  onDowngrade,
   Future<void> Function(Database db)? onConfigure,
   bool deleteOnFailure = false,
   Logger? logger,
@@ -43,6 +45,7 @@ Future<Database> openOrResetDatabase({
       version: version,
       onCreate: onCreate,
       onUpgrade: onUpgrade,
+      onDowngrade: onDowngrade,
       onConfigure: onConfigure,
     );
   } catch (e, st) {
@@ -57,6 +60,7 @@ Future<Database> openOrResetDatabase({
       version: version,
       onCreate: onCreate,
       onUpgrade: onUpgrade,
+      onDowngrade: onDowngrade,
       onConfigure: onConfigure,
     );
   }

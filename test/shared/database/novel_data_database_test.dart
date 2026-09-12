@@ -358,4 +358,38 @@ void main() {
       },
     );
   });
+
+  group('NovelDataDatabase downgrade', () {
+    test('opening at an older version is refused, not stamped down', () async {
+      // sqflite skips an unsupplied onDowngrade and then writes the requested
+      // version anyway, leaving a database whose schema and user_version
+      // disagree. A build that believed it held the older schema would emit
+      // an upsert naming a unique key the table no longer has, and fail on
+      // every write. Refusing the open is the honest outcome.
+      final wrapper = NovelDataDatabase(tempDir.path);
+      final db = await wrapper.database;
+      final atCurrent = await db.getVersion();
+      await wrapper.close();
+
+      final path = '${tempDir.path}${Platform.pathSeparator}novel_data.db';
+      await expectLater(
+        databaseFactory.openDatabase(
+          path,
+          options: OpenDatabaseOptions(
+            version: atCurrent - 1,
+            singleInstance: false,
+            onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
+            onUpgrade: NovelDataDatabase.upgradeToCurrent,
+            onDowngrade: NovelDataDatabase.refuseDowngrade,
+          ),
+        ),
+        throwsA(anything),
+      );
+
+      // The refusal must not have moved the stamp.
+      final reopened = NovelDataDatabase(tempDir.path);
+      addTearDown(reopened.close);
+      expect(await (await reopened.database).getVersion(), atCurrent);
+    });
+  });
 }

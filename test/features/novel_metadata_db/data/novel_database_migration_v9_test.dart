@@ -95,8 +95,9 @@ void main() {
         p.join(libRoot.path, folder, NovelDataDatabase.databaseName),
         options: OpenDatabaseOptions(
           singleInstance: false,
-          version: 1,
+          version: NovelDataDatabase.currentVersion,
           onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
+          onUpgrade: NovelDataDatabase.upgradeToCurrent,
         ),
       );
 
@@ -114,8 +115,9 @@ void main() {
         p.join(folderPath, NovelDataDatabase.databaseName),
         options: OpenDatabaseOptions(
           singleInstance: false,
-          version: 1,
+          version: NovelDataDatabase.currentVersion,
           onCreate: (db, _) => NovelDataDatabase.createCurrentSchema(db),
+          onUpgrade: NovelDataDatabase.upgradeToCurrent,
         ),
       ),
     );
@@ -306,4 +308,22 @@ void main() {
       },
     );
   });
+
+  test(
+    'the production opener stamps the target at the current version',
+    () async {
+      // The migration creates these files itself. Stamping one at an older
+      // version would leave the current tables under a stale user_version —
+      // the very mismatch the schema work exists to avoid — and would leave a
+      // target from an earlier interrupted run unupgraded.
+      final folder = Directory(p.join(libRoot.path, 'novelA'))
+        ..createSync(recursive: true);
+      final migrator = NovelDataMigrator.fromLibraryRoot(libRoot.path);
+
+      final db = await migrator.openNovelDataDb(folder.path);
+      addTearDown(db.close);
+
+      expect(await db.getVersion(), NovelDataDatabase.currentVersion);
+    },
+  );
 }

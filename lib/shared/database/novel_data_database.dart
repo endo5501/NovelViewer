@@ -22,7 +22,13 @@ import 'db_connection_gate.dart';
 /// of the three tables carries a `folder_name` / `novel_id` column.
 class NovelDataDatabase {
   static const databaseName = 'novel_data.db';
-  static const _databaseVersion = 2;
+
+  /// Current schema version. Public so the v8→v9 migration, which creates
+  /// these files itself, stamps the same number the schema it writes actually
+  /// is — a target created at an older number would carry the current tables
+  /// under a stale `user_version`, which is the drift this file works to
+  /// avoid.
+  static const int currentVersion = 2;
   static final _log = Logger('novel_data_db');
 
   final String _folderPath;
@@ -40,9 +46,10 @@ class NovelDataDatabase {
     // Holds non-reproducible bookmarks → never auto-delete on open failure.
     return openOrResetDatabase(
       path: path,
-      version: _databaseVersion,
+      version: currentVersion,
       onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
+      onUpgrade: upgradeToCurrent,
+      onDowngrade: refuseDowngrade,
       deleteOnFailure: false,
       logger: _log,
     );
@@ -68,7 +75,11 @@ class NovelDataDatabase {
   /// What the reader pays is one round of re-extraction per word, the same
   /// price a `prompt_version` bump already charges. Their saved summaries are
   /// untouched, as are their bookmarks.
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  static Future<void> upgradeToCurrent(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
     if (oldVersion < 2) {
       await db.execute('DROP INDEX IF EXISTS idx_fact_cache_unique');
       await db.execute('DROP TABLE IF EXISTS fact_cache');
@@ -106,6 +117,30 @@ class NovelDataDatabase {
         UNIQUE(file_name, line_number)
       )
     ''');
+  }
+
+  /// Refuses to open a database written by a newer schema than this build
+  /// knows.
+  ///
+  /// Not a formality. With no downgrade callback, sqflite runs nothing and
+  /// then writes the requested version anyway, leaving a file whose tables are
+  /// the newer shape under an older `user_version`. A build that trusted that
+  /// stamp would emit an upsert naming a unique key the table no longer
+  /// carries, and fail on every fact-cache write with nothing to explain it.
+  /// Failing the open says what actually happened.
+  ///
+  /// This cannot protect a build already in a reader's hands, which has no
+  /// such callback; it keeps the next one from inheriting the same trap.
+  static Future<void> refuseDowngrade(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    throw StateError(
+      'novel_data.db is at schema version $oldVersion, newer than the '
+      'version $newVersion this build understands. Refusing to open it '
+      'rather than stamp it down and write rows the schema cannot hold.',
+    );
   }
 
   /// `fact_cache` alone, so the v1 → v2 upgrade can rebuild exactly the table

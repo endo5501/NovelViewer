@@ -23,9 +23,15 @@ class _NamedClient extends LlmClient {
 
   final List<String> extractionPrompts = [];
 
+  /// The prompts the final summary stage was given. What the run actually
+  /// hands the model is the thing worth pinning: an extraction count is only
+  /// a proxy for it.
+  final List<String> summaryPrompts = [];
+
   @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     if (schema?.fieldName == 'summary') {
+      summaryPrompts.add(prompt);
       return jsonEncode({'summary': '$modelId のまとめ'});
     }
     extractionPrompts.add(prompt);
@@ -173,6 +179,25 @@ void main() {
         rows.singleWhere((r) => r.modelId == device).facts,
         '- 端末が前に書いた事実',
       );
+    });
+  });
+
+  group('the final summary sees one model facts', () {
+    test('another model facts never reach the summary prompt', () async {
+      for (final name in ['001_ch.txt', '002_ch.txt']) {
+        await writeEpisode(name);
+      }
+      await seedCache('001_ch.txt', device, '- 端末だけが書いた目印');
+
+      final client = await analyzeWith(server, upTo: 2);
+
+      final prompt = client.summaryPrompts.single;
+      expect(
+        prompt,
+        isNot(contains('端末だけが書いた目印')),
+        reason: 'the device shelf must not feed a server run',
+      );
+      expect(prompt, contains(server));
     });
   });
 

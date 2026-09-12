@@ -14,7 +14,7 @@ Future<Database> openInMemoryNovelDataDb() {
   return databaseFactoryFfi.openDatabase(
     inMemoryDatabasePath,
     options: OpenDatabaseOptions(
-      version: 1,
+      version: NovelDataDatabase.currentVersion,
       // singleInstance:false so this in-memory DB is a DISTINCT connection from
       // any other `:memory:` database opened in the same test (e.g. the
       // novel_metadata fixture). With the default (true), sqflite dedups by the
