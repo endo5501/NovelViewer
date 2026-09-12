@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -100,6 +102,38 @@ void main() {
 
       expect(copied, [renderFailureReport(report)]);
       expect(find.text(l10n.contextMenu_copiedToClipboard), findsOneWidget);
+    });
+
+    testWidgets('survives the messenger going away mid-copy', (tester) async {
+      final release = Completer<void>();
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            await release.future;
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+
+      await pumpDialog(tester);
+      final l10n = await AppLocalizations.delegate.load(const Locale('ja'));
+      await tester.tap(find.text(l10n.failure_copyButton));
+      await tester.pump();
+
+      // The surface that owned the messenger is torn down while the clipboard
+      // write is still in flight.
+      await tester.pumpWidget(const SizedBox.shrink());
+      release.complete();
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('closes on the close button', (tester) async {

@@ -49,6 +49,9 @@ class FailureDetailDialog extends StatelessWidget {
             final messenger = ScaffoldMessenger.of(context);
             final confirmation = l10n.contextMenu_copiedToClipboard;
             await Clipboard.setData(ClipboardData(text: text));
+            // The clipboard write crosses a platform channel, and the surface
+            // that owned the messenger can be torn down while it is in flight.
+            if (!messenger.mounted) return;
             messenger.showSnackBar(SnackBar(content: Text(confirmation)));
           },
           child: Text(l10n.failure_copyButton),
