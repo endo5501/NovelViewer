@@ -332,6 +332,35 @@ void main() {
       expect(secureStorageMock.store.containsKey('llm_api_key'), isFalse);
     });
 
+    test('a trailing slash inside a query survives a save and read', () async {
+      final repo = buildRepo();
+      await repo.setLlmConfig(
+        const LlmConfig(
+          provider: LlmProvider.openai,
+          baseUrl: 'https://host/proxy?route=/v1/',
+          model: 'gpt-4o-mini',
+        ),
+      );
+
+      expect(repo.getLlmConfig().baseUrl, 'https://host/proxy?route=/v1/');
+    });
+
+    test(
+      'a trailing slash inside a fragment survives a save and read',
+      () async {
+        final repo = buildRepo();
+        await repo.setLlmConfig(
+          const LlmConfig(
+            provider: LlmProvider.openai,
+            baseUrl: 'https://host/base#section/',
+            model: 'gpt-4o-mini',
+          ),
+        );
+
+        expect(repo.getLlmConfig().baseUrl, 'https://host/base#section/');
+      },
+    );
+
     test(
       'getLlmConfig corrects an endpoint URL stored before this rule',
       () async {
