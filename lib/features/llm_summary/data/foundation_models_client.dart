@@ -49,18 +49,81 @@ class FoundationModelsClient extends LlmClient {
   @override
   int get maxChunkSize => onDeviceChunkSize;
 
+  /// Generates, giving up the schema constraint if that is what was refused.
+  ///
+  /// The constraint is the first choice, because an answer the model was made
+  /// to shape parses without a fallback. It is not the only one. The safety
+  /// guardrails judge the model's own output, and on the constrained path they
+  /// judge it by the framework's default rules whatever guardrails the model
+  /// was built with — measured on a chapter introducing an etiquette teacher,
+  /// the passage was refused under both settings for as long as a schema was
+  /// supplied, and answered as soon as it was not. So a refusal here is a
+  /// refusal of the constrained path specifically, and the one request worth
+  /// making is the same prompt without it.
+  ///
+  /// Both of the framework's refusal cases qualify. It reports a guardrail
+  /// block and the model declining separately, and this package reads both as
+  /// the text having been refused; either way it is the constrained path that
+  /// was turned down, so either way the same prompt without it is the request
+  /// worth making.
+  ///
+  /// Only a refusal is worth a second attempt. A prompt that overran the
+  /// window overruns it again without its schema, since dropping the schema
+  /// does not shorten the prompt, and the rest do not change between two
+  /// attempts a moment apart.
+  ///
+  /// The retry has its own fate, and it is that fate that is reported. A
+  /// retry that is rate limited is reported as rate limiting, not as the
+  /// refusal that provoked it, so a reader is not sent after the text when
+  /// the text was not the problem.
+  ///
+  /// A request that named no schema has no constraint left to give up, so it
+  /// is reported as it stands rather than repeated identically.
+  ///
+  /// The retried answer is shaped by the model rather than by a schema: it
+  /// arrives fenced, or with the named field holding a list where a string was
+  /// asked for. It is returned as it came, because the pipeline already reads
+  /// both forms from server-backed runtimes that ignore a requested format,
+  /// and reshaping it here would give that text two places to be understood.
   @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
     try {
-      return await _plugin.generate(
-        prompt: prompt,
-        schemaFieldName: schema?.fieldName,
-        maxResponseTokens: maxResponseTokens,
-      );
+      return await _generate(prompt, fieldName: schema?.fieldName);
+    } on OnDeviceGenerationException catch (e) {
+      if (schema == null ||
+          e.reason != OnDeviceGenerationFailure.guardrailViolation) {
+        throw _asAnalysisFailure(e);
+      }
+    }
+    try {
+      return await _generate(prompt, fieldName: null, sampling: _retrySampling);
     } on OnDeviceGenerationException catch (e) {
       throw _asAnalysisFailure(e);
     }
   }
+
+  /// How the retry picks its tokens.
+  ///
+  /// Unconstrained, the model repeats a sentence until the response cap cuts
+  /// the answer off mid-object, which reaches the caller as text that will not
+  /// parse rather than as anything mentioning a limit. Measured on macOS over
+  /// the same passages, half the unconstrained answers were unusable under the
+  /// framework's default sampling and none were under greedy.
+  ///
+  /// Only the retry is sampled this way. The constrained path is already
+  /// reliable, and there is nothing there for this to fix.
+  static const OnDeviceSampling _retrySampling = OnDeviceSampling.greedy;
+
+  Future<String> _generate(
+    String prompt, {
+    required String? fieldName,
+    OnDeviceSampling? sampling,
+  }) => _plugin.generate(
+    prompt: prompt,
+    schemaFieldName: fieldName,
+    maxResponseTokens: maxResponseTokens,
+    sampling: sampling,
+  );
 
   /// Names the cause in the application's own terms.
   ///
