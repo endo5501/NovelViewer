@@ -21,10 +21,10 @@
 - [x] 3.1 `test/shared/failure/failure_detail_dialog_test.dart` を作成する。診断項目 / cause / stackTrace が表示されること、内容がスクロール可能かつ選択可能であること、コピーでクリップボードに全文が入り確認が出ることを検証する
 - [ ] 3.2 スナックバーを出した元のウィジェットを破棄した後でも詳細ダイアログが開けることを検証するテストを追加する
 - [x] 3.3 テストを実行して失敗を確認し、コミットする
-- [ ] 3.4 `lib/shared/failure/failure_detail_dialog.dart` を実装する
+- [x] 3.4 `lib/shared/failure/failure_detail_dialog.dart` を実装する
 - [x] 3.5 `app_ja.arb` / `app_en.arb` / `app_zh.arb` に、ダイアログ見出し・詳細・閉じる・コピーのキーを追加する
 - [x] 3.6 全ロケールで空でない翻訳が存在することを検証するテストを追加する
-- [ ] 3.7 テストが通ることを確認する
+- [x] 3.7 テストが通ることを確認する
 
 ## 4. LLM解析の失敗を共通経路へ載せる
 
