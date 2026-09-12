@@ -46,10 +46,12 @@ Stage-1 の事実キャッシュ (`fact_cache`) は、どのモデルがその�
 - `lib/features/llm_summary/data/ollama_client.dart` / `openai_compatible_client.dart` / `foundation_models_client.dart` — 名乗りの実装
 - `lib/features/llm_summary/data/fact_cache_repository.dart` — 各メソッドの `modelId` 対応
 - `lib/features/llm_summary/data/llm_summary_service.dart` — キャッシュ参照・書き戻し・無効化への受け渡し
-- `lib/features/llm_summary/domain/fact_cache_entry.dart` — `modelId` フィールドと有効性判定
-- `lib/shared/database/novel_data_database.dart` — スキーマ v2 と `onUpgrade`
-- `lib/features/novel_metadata_db/data/novel_data_migrator.dart` — v8→v9 移行が書き込む列の追随
-- `lib/features/llm_summary/presentation/llm_summary_detail_dialog.dart` — バッジ表示 (名乗りの文字列をそのまま出すため、新しい l10n キーは不要)
+- `lib/features/llm_summary/domain/fact_cache_entry.dart` — `modelId` フィールドの追加 (有効性判定は変更しない。参照が名乗りで絞られる以上、そこで重ねて見る必要がない)
+- `lib/shared/database/novel_data_database.dart` — スキーマ v2、`onUpgrade`、降格の拒否、そしてこのDBを開く唯一の入口
+- `lib/shared/database/database_opener.dart` — `onDowngrade` の受け渡し (他のDBは未指定のままなので挙動は変わらない)
+- `lib/features/novel_metadata_db/data/novel_data_migrator.dart` — `fact_cache` のコピーを除去し、移送先をアプリ本体と同じ入口で開く
+- `lib/features/llm_summary/presentation/llm_summary_detail_dialog.dart` — バッジ表示と、同一ファイル名の並べ替え鍵 (名乗りをそのまま出すので新しい l10n キーは不要)
+- `lib/features/llm_summary/presentation/outlined_text_badge.dart` — 長い名乗りで隣を押し出さないよう省略表示にする
 
 テスト: `LlmClient` を `implements` している偽クライアントは `modelId` 未実装でコンパイルが通らなくなる。黙って既定値に落ちるより良い壊れ方として受け入れる。
 

@@ -177,7 +177,11 @@ class NovelDataDatabase {
         facts TEXT NOT NULL,
         content_hash TEXT NOT NULL,
         prompt_version INTEGER NOT NULL,
-        model_id TEXT NOT NULL,
+        -- Non-empty, not merely non-null. A row carrying an empty identity
+        -- could be found by no client and replaced by no upsert, so it would
+        -- be residue rather than a cache entry. The client contract already
+        -- forbids it; this makes the storage refuse it too.
+        model_id TEXT NOT NULL CHECK (model_id <> ''),
         updated_at TEXT NOT NULL
       )
     ''');

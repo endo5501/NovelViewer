@@ -36,12 +36,19 @@ Every `fact_cache` row SHALL carry a non-empty `model_id`. A row whose provenanc
 
 This follows from the identity being part of the key. A row carrying an empty identity could never be found by any client, because no client declares an empty identity, and could never be replaced by an upsert, because the upsert would collide on a different key and insert alongside it. Such a row is not a cache entry but residue that accumulates forever and surfaces in the read-only inspector as an indistinguishable duplicate of a file name.
 
+The storage SHALL enforce this rather than relying on the client contract alone: the `model_id` column SHALL reject an empty value as well as a null one. That the clients never produce an empty identity is a property of the clients; that no such row exists is a property of the table, and belongs where the rows live.
+
 Rows that predate the model identity SHALL therefore be discarded when the identity is introduced, rather than retained under a placeholder. What the reader loses is one round of re-extraction for each word they analyze next, which is exactly what a `prompt_version` bump already costs and which the design treats as a normal event. Saved summaries SHALL NOT be affected.
 
 #### Scenario: No row carries an empty identity
 
 - **WHEN** the `fact_cache` table of any novel is inspected after the identity has been introduced
 - **THEN** no row SHALL have an empty `model_id`
+
+#### Scenario: The storage refuses an empty identity
+
+- **WHEN** a `fact_cache` row is written with an empty `model_id`
+- **THEN** the write SHALL fail and no row SHALL be stored
 
 #### Scenario: Discarded rows do not affect saved summaries
 

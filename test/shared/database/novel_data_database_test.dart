@@ -142,6 +142,30 @@ void main() {
       expect(await db.query('fact_cache'), hasLength(2));
     });
 
+    test('a fact row cannot carry an empty model identity', () async {
+      // The spec says a row without a model identity does not exist. Nothing
+      // but convention enforced that: no client declares an empty identity,
+      // but the schema accepted one, and such a row could never be found or
+      // replaced. Make the storage refuse it.
+      final wrapper = NovelDataDatabase(tempDir.path);
+      addTearDown(wrapper.close);
+      final db = await wrapper.database;
+
+      await expectLater(
+        db.insert('fact_cache', {
+          'word': 'アリス',
+          'file_name': '005.txt',
+          'facts': '- 事実',
+          'content_hash': 'h',
+          'prompt_version': 1,
+          'model_id': '',
+          'updated_at': 't0',
+        }),
+        throwsA(anything),
+      );
+      expect(await db.query('fact_cache'), isEmpty);
+    });
+
     test('bookmarks has no novel_id column and is keyed by '
         '(file_name, line_number)', () async {
       final wrapper = NovelDataDatabase(tempDir.path);
