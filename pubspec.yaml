@@ -91,6 +91,13 @@ flutter_launcher_icons:
   windows:
     generate: true
     icon_size: 256
+  ios: true
+  # iOS のアプリアイコンはアルファチャンネルを持てない。元画像は現状 RGB だが、
+  # 将来アルファ付きに差し替えられても審査で弾かれる成果物が生まれないようにする。
+  remove_alpha_ios: true
+  # true は既存の ic_launcher を上書きする。文字列を指定すると別名のアイコンを作り
+  # AndroidManifest.xml を書き換えてしまうため使わない。
+  android: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

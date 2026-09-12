@@ -50,13 +50,14 @@ macOS・Windows と同じ運用を踏襲する。ビルド時に生成する方�
 
 アイコンはアプリのコードから参照されないため、テンプレートのまま放置されても既存のテストは何も言わない。実際に今回それが起きた。`test/platform/ios_project_config_test.dart` と同じ方式で、設定と成果物の存在・形式を検証するテストを追加する。
 
-検証するのは次の5点である。
+検証するのは次の6点である。
 
 - `pubspec.yaml` の `flutter_launcher_icons` に macOS・Windows・iOS・Android の4プラットフォームと `remove_alpha_ios: true` が設定されている
 - `ios/Runner/Assets.xcassets/AppIcon.appiconset/` に `Contents.json` が存在し、そこから参照されるファイルがすべて実在する
 - iOS の各アイコン PNG がアルファチャンネルを持たない
 - `android/app/src/main/res/mipmap-*/ic_launcher.png` が5つの密度すべてに存在する
 - iOS と Android のアイコンが Flutter テンプレートのデフォルトアイコンと一致しない
+- `ios/Runner.xcodeproj/project.pbxproj` の `ASSETCATALOG_COMPILER_*` 設定が生成ツールに壊されていない
 
 最後の項目だけ補足する。存在と形式の検証だけでは、今回の不具合そのもの（テンプレートのデフォルトアイコンが置かれたまま）を検出できない。デフォルトアイコンも所定のパスに所定のサイズで存在し、アルファも持たないためである。そこで初期化コミット `316420f5` が持ち込んだデフォルトアイコンの SHA-256 をテストに固定値として埋め込み、生成物がそれと一致しないことを検証する。
 
@@ -69,6 +70,8 @@ macOS・Windows と同じ運用を踏襲する。ビルド時に生成する方�
 **iOS 18 でダークモード時に専用アイコンが出ない** → ライトアイコンがそのまま使われる。表示自体は問題なく、デフォルトアイコンよりは確実に良い状態になる。専用バリアントが必要になったら `image_path_ios_dark_transparent` と `image_path_ios_tinted_grayscale` を追加する別変更で対応する。
 
 **PNG のアルファ判定をテストで行う方法** → Dart の標準ライブラリだけで判定するには PNG の IHDR チャンクからカラータイプを読む必要がある。ヘッダの固定オフセットを読むだけで済むため、画像デコードライブラリへの依存は増やさない。
+
+**`flutter_launcher_icons` が Xcode プロジェクトを壊す** → 0.14.4 の `changeIosLauncherIcon` は `ASSETCATALOG` を含む行をすべて `= AppIcon;` に書き換える。その結果 `ASSETCATALOG_COMPILER_APPICON_NAME` だけでなく `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` まで `AppIcon` にされ、本来 `YES` / `NO` を取る設定が不正な値になる。`ASSETCATALOG_COMPILER_APPICON_NAME` は既に `AppIcon` で正しいため、生成後は `ios/Runner.xcodeproj/project.pbxproj` を丸ごと元に戻せばよい。再生成のたびに起きるので、手順として残すだけでなくドリフトガードテストでも検出する。
 
 **生成コマンドの実行漏れ** → 設定だけ足して生成を忘れると状態が変わらない。追加するテストが成果物側も検証するため、実行漏れはテスト失敗として現れる。
 

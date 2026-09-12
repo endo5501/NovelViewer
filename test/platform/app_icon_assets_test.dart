@@ -210,6 +210,33 @@ void main() {
     });
   });
 
+  group('Xcode project survives icon generation', () {
+    /// `flutter_launcher_icons` 0.14.4 rewrites every line of the pbxproj that
+    /// contains `ASSETCATALOG` to `= AppIcon;`, which turns this boolean
+    /// setting into an invalid value. `ASSETCATALOG_COMPILER_APPICON_NAME` is
+    /// already `AppIcon`, so the project needs no change at all and the file
+    /// must be reverted after each generation run.
+    test('the asset symbol setting is still a boolean', () {
+      final pbxproj = requireFile(
+        'ios/Runner.xcodeproj/project.pbxproj',
+      ).readAsStringSync();
+      final matches = RegExp(
+        r'ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = (\w+);',
+      ).allMatches(pbxproj);
+
+      expect(matches, isNotEmpty);
+      for (final match in matches) {
+        expect(
+          match.group(1),
+          anyOf('YES', 'NO'),
+          reason:
+              'flutter_launcher_icons corrupted the Xcode project. '
+              'Revert ios/Runner.xcodeproj/project.pbxproj after generating.',
+        );
+      }
+    });
+  });
+
   group('generated icons replace the Flutter defaults', () {
     test('no platform still ships the template artwork', () {
       flutterDefaultIconHashes.forEach((path, defaultHash) {

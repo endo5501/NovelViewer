@@ -44,6 +44,10 @@ iOS 用に生成されたアプリアイコンの PNG はアルファチャン�
 - **WHEN** iOS または Android のアイコンが Flutter テンプレートのデフォルトアイコンのままである時
 - **THEN** テストが失敗する
 
+#### Scenario: Xcode プロジェクトの破壊が検出される
+- **WHEN** `ios/Runner.xcodeproj/project.pbxproj` の `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` が `YES` または `NO` 以外の値になっている時
+- **THEN** テストが失敗する
+
 ## MODIFIED Requirements
 
 ### Requirement: flutter_launcher_icons の設定
