@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:foundation_models_llm/src/on_device_generation_failure.dart';
 import 'package:foundation_models_llm/src/on_device_model_availability.dart';
+import 'package:foundation_models_llm/src/on_device_sampling.dart';
 
 /// The on-device foundation model, as this package exposes it.
 ///
@@ -29,12 +30,18 @@ abstract class FoundationModelsLlm {
   /// [maxResponseTokens] bounds the response so the share of the model's
   /// window left for the prompt is predictable.
   ///
+  /// [sampling] pins how the model picks its next token. Named by a caller
+  /// that generates without a schema, where the framework's default lets the
+  /// model repeat itself until the response cap cuts the answer off. Left null
+  /// the framework's own default stands.
+  ///
   /// Throws [OnDeviceGenerationException] for every failure, so a caller reads
   /// one exception type rather than a platform's.
   Future<String> generate({
     required String prompt,
     String? schemaFieldName,
     int? maxResponseTokens,
+    OnDeviceSampling? sampling,
   });
 }
 
@@ -71,12 +78,14 @@ class MethodChannelFoundationModelsLlm implements FoundationModelsLlm {
     required String prompt,
     String? schemaFieldName,
     int? maxResponseTokens,
+    OnDeviceSampling? sampling,
   }) async {
     try {
       final answer = await _channel.invokeMethod<String>('generate', {
         'prompt': prompt,
         'schemaFieldName': schemaFieldName,
         'maxResponseTokens': maxResponseTokens,
+        'sampling': sampling?.wireName,
       });
       if (answer == null) {
         // A generate that answers nothing is a broken contract, not an empty

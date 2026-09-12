@@ -1,10 +1,10 @@
 ## 1. プラグインのDart境界
 
-- [ ] 1.1 `packages/foundation_models_llm/test/foundation_models_llm_generate_channel_test.dart` に、`generate` が `sampling` をメソッドチャネル引数に載せることを確認するテストを追加する(未指定時は null、`greedy` 指定時は `'greedy'`)
-- [ ] 1.2 同テストに、`schemaFieldName` を null にしたときスキーマ引数が送られないことの確認を追加する
-- [ ] 1.3 テストが失敗することを確認してコミットする
-- [ ] 1.4 `FoundationModelsLlm.generate` に `sampling` 引数を追加し、`MethodChannelFoundationModelsLlm` が送るようにする。抽象側のdocコメントで、値は不透明な名前でありネイティブ側が解釈できない値は未指定と同じ扱いになることを書く
-- [ ] 1.5 テストが通ることを確認してコミットする
+- [x] 1.1 `packages/foundation_models_llm/test/foundation_models_llm_generate_channel_test.dart` に、`generate` が `sampling` をメソッドチャネル引数に載せることを確認するテストを追加する(未指定時は null、`greedy` 指定時は `'greedy'`)
+- [x] 1.2 同テストに、`schemaFieldName` を null にしたときスキーマ引数が送られないことの確認を追加する
+- [x] 1.3 テストが失敗することを確認してコミットする
+- [x] 1.4 `FoundationModelsLlm.generate` に `sampling` 引数を追加し、`MethodChannelFoundationModelsLlm` が送るようにする。抽象側のdocコメントで、値は不透明な名前でありネイティブ側が解釈できない値は未指定と同じ扱いになることを書く
+- [x] 1.5 テストが通ることを確認してコミットする
 
 ## 2. ネイティブ実装
 

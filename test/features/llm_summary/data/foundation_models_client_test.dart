@@ -11,7 +11,10 @@ class _FakePlugin implements FoundationModelsLlm {
   final String answer;
   final OnDeviceGenerationException? failure;
 
-  final List<({String prompt, String? field, int? maxTokens})> calls = [];
+  final List<
+    ({String prompt, String? field, int? maxTokens, OnDeviceSampling? sampling})
+  >
+  calls = [];
   OnDeviceModelAvailability availabilityAnswer =
       OnDeviceModelAvailability.available;
 
@@ -23,11 +26,13 @@ class _FakePlugin implements FoundationModelsLlm {
     required String prompt,
     String? schemaFieldName,
     int? maxResponseTokens,
+    OnDeviceSampling? sampling,
   }) async {
     calls.add((
       prompt: prompt,
       field: schemaFieldName,
       maxTokens: maxResponseTokens,
+      sampling: sampling,
     ));
     if (failure != null) throw failure!;
     return answer;
