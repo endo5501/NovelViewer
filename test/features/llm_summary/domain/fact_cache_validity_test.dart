@@ -5,6 +5,7 @@ import 'package:novel_viewer/shared/utils/content_hash.dart';
 FactCacheEntry _entry({
   required String contentHash,
   required int promptVersion,
+  String modelId = 'ollama:qwen3:30b',
 }) {
   return FactCacheEntry(
     word: 'アリス',
@@ -12,6 +13,7 @@ FactCacheEntry _entry({
     facts: '- 事実',
     contentHash: contentHash,
     promptVersion: promptVersion,
+    modelId: modelId,
     updatedAt: DateTime.utc(2026),
   );
 }
@@ -91,6 +93,22 @@ void main() {
         isFalse,
         reason: 'sentinel must not be reusable even if currentHash is empty',
       );
+    });
+  });
+
+  group('FactCacheEntry.fromMap', () {
+    test('reads the model identity the row was written with', () {
+      final entry = FactCacheEntry.fromMap({
+        'word': 'アリス',
+        'file_name': '005.txt',
+        'facts': '- 事実',
+        'content_hash': 'h',
+        'prompt_version': 1,
+        'model_id': 'apple:on-device',
+        'updated_at': '2026-01-01T00:00:00.000Z',
+      });
+
+      expect(entry.modelId, 'apple:on-device');
     });
   });
 }

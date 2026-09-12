@@ -8,15 +8,20 @@ import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_pr
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_detail_provider.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
-FactCacheEntry _fact(String file, String facts, {String hash = 'h'}) =>
-    FactCacheEntry(
-      word: 'アリス',
-      fileName: file,
-      facts: facts,
-      contentHash: hash,
-      promptVersion: 1,
-      updatedAt: DateTime.utc(2026, 5, 21),
-    );
+FactCacheEntry _fact(
+  String file,
+  String facts, {
+  String hash = 'h',
+  String modelId = 'ollama:qwen3:30b',
+}) => FactCacheEntry(
+  word: 'アリス',
+  fileName: file,
+  facts: facts,
+  contentHash: hash,
+  promptVersion: 1,
+  modelId: modelId,
+  updatedAt: DateTime.utc(2026, 5, 21),
+);
 
 WordSummary _snap(int episode, String text) => WordSummary(
   word: 'アリス',

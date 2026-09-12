@@ -122,7 +122,7 @@ void main() {
   }
 
   test(
-    'copies each folder\'s rows into its novel_data.db then drops globals',
+    'copies summaries and bookmarks into novel_data.db then drops globals',
     () async {
       await global.insert('word_summaries', {
         'folder_name': 'novelA',
@@ -159,9 +159,11 @@ void main() {
       expect(ws.first['word'], 'アリス');
       expect(ws.first.containsKey('folder_name'), isFalse);
 
-      final fc = await folderDb.query('fact_cache');
-      expect(fc, hasLength(1));
-      expect(fc.first['file_name'], '030.txt');
+      // The global fact rows are NOT carried over: nothing records which
+      // model extracted them, and a fact-cache row without a model identity
+      // can never be found or replaced, so copying one would only plant
+      // residue. The word is simply re-extracted on its next analysis.
+      expect(await folderDb.query('fact_cache'), isEmpty);
 
       final bm = await folderDb.query('bookmarks');
       expect(bm, hasLength(1));
