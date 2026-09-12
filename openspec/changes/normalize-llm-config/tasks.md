@@ -31,9 +31,9 @@ TDDのため、まずテストのみを用意して失敗を確認し、赤の�
 
 ## 4. 不足判定 — 実装
 
-- [ ] 4.1 `LlmConfigProblem` enum と `findLlmConfigProblem` を実装する
-- [ ] 4.2 3章のテストがすべて通ることを確認する
-- [ ] 4.3 コミットする
+- [x] 4.1 `LlmConfigProblem` enum と `findLlmConfigProblem` を実装する
+- [x] 4.2 3章のテストがすべて通ることを確認する
+- [x] 4.3 コミットする
 
 ## 5. クライアント生成への接続 — テスト
 
