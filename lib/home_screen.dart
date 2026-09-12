@@ -429,16 +429,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // the only way to open either drawer.
             drawerEnableOpenDragGesture: false,
             endDrawerEnableOpenDragGesture: false,
+            // A drawer is laid out at the origin at the full height of the
+            // scaffold, so it reaches behind the status bar and the home
+            // indicator; the inset handling the app bar gives the body does
+            // not reach it. The SafeArea sits inside the drawer rather than
+            // in the panel because the panels are shared with the wide
+            // layout, where they need no inset of their own, and because the
+            // drawer's own surface should keep covering the inset area.
             drawer: isNarrow
                 ? const Drawer(
                     width: kLeftColumnWidth,
-                    child: LeftColumnPanel(key: Key('left_column')),
+                    child: SafeArea(
+                      child: LeftColumnPanel(key: Key('left_column')),
+                    ),
                   )
                 : null,
             endDrawer: isNarrow
                 ? const Drawer(
                     width: kRightColumnWidth,
-                    child: SearchResultsPanel(key: Key('right_column')),
+                    child: SafeArea(
+                      child: SearchResultsPanel(key: Key('right_column')),
+                    ),
                   )
                 : null,
             onEndDrawerChanged: _onEndDrawerChanged,
