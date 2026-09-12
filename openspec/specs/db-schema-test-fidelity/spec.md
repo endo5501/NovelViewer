@@ -3,6 +3,7 @@
 ## Purpose
 TBD - created by archiving change harden-db-test-schema-fidelity. Update Purpose after archive.
 ## Requirements
+
 ### Requirement: テストは本番スキーマ定義経由でDBを構築する
 
 `novel_metadata.db` を対象とするテストは、テーブルスキーマを手書きの `CREATE TABLE` DDL で定義してはならない（MUST NOT）。代わりに、本番の `NovelDatabase._onCreate`（またはそれを単一の正として露出する共有スキーマヘルパー）を経由してテスト用DBを構築しなければならない（SHALL）。これにより、本番スキーマの変更がテスト側に追従しないことに起因するスキーマドリフトを排除する。
@@ -19,7 +20,9 @@ TBD - created by archiving change harden-db-test-schema-fidelity. Update Purpose
 
 ### Requirement: バージョン移行のデータ保存をテストで固定する
 
-`novel_metadata.db` の各バージョン移行は、旧バージョンでシードしたDBを本番の `NovelDatabase` 昇格パス（`_onUpgrade`）経由で開いたうえで、データ保存とスキーマ変換を検証しなければならない（SHALL）。`_onUpgrade` のステップ順序を迂回する検証専用ヘルパーのみに依存してはならない（MUST NOT）。
+`novel_metadata.db` および `novel_data.db` の各バージョン移行は、旧バージョンでシードしたDBを本番の昇格パス（それぞれ `NovelDatabase._onUpgrade` / `NovelDataDatabase` の `onUpgrade`）経由で開いたうえで、データ保存とスキーマ変換を検証しなければならない（SHALL）。`_onUpgrade` のステップ順序を迂回する検証専用ヘルパーのみに依存してはならない（MUST NOT）。
+
+旧バージョンのDBをシードする目的に限り、手書きの歴史的 DDL を用いてよい。現行スキーマを手書き DDL で代用することの禁止（前要件）とは両立する。旧バージョンの定義は本番コードにもう存在しないため、それを再現する手段は他にない。
 
 #### Scenario: v3→v4 ブックマーク移行のデータ保存
 
@@ -30,3 +33,8 @@ TBD - created by archiving change harden-db-test-schema-fidelity. Update Purpose
 
 - **WHEN** 旧バージョン（v1 を含む各歴史版）でシードしたDBを `NovelDatabase` の本番昇格パスで開く
 - **THEN** 各 `_onUpgrade` ステップが宣言順に適用され、最終スキーマと移行済みデータが期待どおりになる
+
+#### Scenario: `novel_data.db` の移行も本番昇格パスで検証される
+
+- **WHEN** `model_id` を持たない歴史的スキーマでシードした `novel_data.db` を、本番の `NovelDataDatabase` から最新バージョンで開く
+- **THEN** 本番の `onUpgrade` が適用され、`fact_cache` が現行スキーマになり、`word_summaries` と `bookmarks` の行が保持される
