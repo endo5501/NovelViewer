@@ -1870,11 +1870,11 @@ abstract class AppLocalizations {
   /// **'読み上げ 再生/一時停止'**
   String get shortcutAction_ttsToggle;
 
-  /// No description provided for @shortcutAction_switchPane.
+  /// No description provided for @shortcutAction_toggleFileBrowser.
   ///
   /// In ja, this message translates to:
-  /// **'ペイン切替'**
-  String get shortcutAction_switchPane;
+  /// **'ファイル一覧の表示切替'**
+  String get shortcutAction_toggleFileBrowser;
 }
 
 class _AppLocalizationsDelegate

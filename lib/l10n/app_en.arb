@@ -421,5 +421,5 @@
   "shortcutAction_search": "Search",
   "shortcutAction_bookmark": "Bookmark",
   "shortcutAction_ttsToggle": "Play/Pause speech",
-  "shortcutAction_switchPane": "Switch pane"
+  "shortcutAction_toggleFileBrowser": "Toggle file browser"
 }

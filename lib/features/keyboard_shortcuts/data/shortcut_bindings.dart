@@ -82,8 +82,9 @@ class KeyBinding {
 ///
 /// The primary command modifier is platform dependent: Meta (⌘) on the Apple
 /// platforms — macOS, and iPadOS with a hardware keyboard attached, where ⌘ is
-/// equally what a reader reaches for — Control everywhere else. `switchPane`
-/// uses a bare Tab.
+/// equally what a reader reaches for — Control everywhere else.
+/// `toggleFileBrowser` uses a bare Tab: it is the same key on every platform,
+/// and it carries no modifier.
 Map<ShortcutAction, KeyBinding> defaultShortcutBindings({
   required bool isApplePlatform,
 }) {
@@ -97,7 +98,9 @@ Map<ShortcutAction, KeyBinding> defaultShortcutBindings({
     ShortcutAction.search: cmd(LogicalKeyboardKey.keyF),
     ShortcutAction.bookmark: cmd(LogicalKeyboardKey.keyB),
     ShortcutAction.ttsToggle: cmd(LogicalKeyboardKey.keyT),
-    ShortcutAction.switchPane: KeyBinding(keyId: LogicalKeyboardKey.tab.keyId),
+    ShortcutAction.toggleFileBrowser: KeyBinding(
+      keyId: LogicalKeyboardKey.tab.keyId,
+    ),
   };
 }
 

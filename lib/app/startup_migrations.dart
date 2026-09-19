@@ -17,4 +17,14 @@ Future<void> runStartupMigrations(SettingsRepository repo) async {
       stack,
     );
   }
+
+  try {
+    await repo.pruneRetiredShortcutBindings();
+  } catch (e, stack) {
+    _log.warning(
+      'runStartupMigrations: shortcut binding prune failed: $e',
+      e,
+      stack,
+    );
+  }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +9,7 @@ import 'package:novel_viewer/app.dart';
 import 'package:novel_viewer/app/selected_file_progress_title_provider.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/presentation/search_results_panel.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
@@ -20,7 +23,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
   });
-  group('HomeScreen 3-column layout', () {
+  group('HomeScreen body layout', () {
     testWidgets('right column is hidden by default on launch', (
       WidgetTester tester,
     ) async {
@@ -29,19 +32,24 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
           ],
           child: const NovelViewerApp(),
         ),
       );
 
-      expect(find.byKey(const Key('left_column')), findsOneWidget);
+      // The file browser is in the drawer, so the body on launch is the text
+      // viewer alone — no columns, and nothing to divide.
       expect(find.byKey(const Key('center_column')), findsOneWidget);
+      expect(find.byKey(const Key('left_column')), findsNothing);
       expect(find.byKey(const Key('right_column')), findsNothing);
-      expect(find.byType(VerticalDivider), findsNWidgets(1));
+      expect(find.byType(VerticalDivider), findsNothing);
     });
 
     testWidgets(
-      'displays three columns separated by vertical dividers when right column shown',
+      'puts the search results beside the text when the right column is shown',
       (WidgetTester tester) async {
         late ProviderContainer container;
         await tester.pumpWidget(
@@ -49,6 +57,9 @@ void main() {
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
               libraryPathProvider.overrideWithValue('/library'),
+              readingProgressStartupProvider.overrideWith(
+                (ref) => Completer<void>().future,
+              ),
             ],
             child: const NovelViewerApp(),
           ),
@@ -60,34 +71,12 @@ void main() {
         container.read(rightColumnVisibleProvider.notifier).toggle();
         await tester.pump();
 
-        expect(find.byKey(const Key('left_column')), findsOneWidget);
         expect(find.byKey(const Key('center_column')), findsOneWidget);
         expect(find.byKey(const Key('right_column')), findsOneWidget);
-        expect(find.byType(VerticalDivider), findsNWidgets(2));
+        expect(find.byKey(const Key('left_column')), findsNothing);
+        expect(find.byType(VerticalDivider), findsNWidgets(1));
       },
     );
-
-    testWidgets('left column has fixed width', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            libraryPathProvider.overrideWithValue('/library'),
-          ],
-          child: const NovelViewerApp(),
-        ),
-      );
-
-      final leftColumn = tester.widget<SizedBox>(
-        find
-            .ancestor(
-              of: find.byKey(const Key('left_column')),
-              matching: find.byType(SizedBox),
-            )
-            .first,
-      );
-      expect(leftColumn.width, isNotNull);
-    });
 
     testWidgets('right column has fixed width when shown', (
       WidgetTester tester,
@@ -97,6 +86,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
           ],
           child: const NovelViewerApp(),
         ),
@@ -127,6 +119,9 @@ void main() {
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
               libraryPathProvider.overrideWithValue('/library'),
+              readingProgressStartupProvider.overrideWith(
+                (ref) => Completer<void>().future,
+              ),
             ],
             child: const NovelViewerApp(),
           ),
@@ -161,6 +156,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
             selectedNovelTitleProvider.overrideWith((ref) async => null),
           ],
           child: const NovelViewerApp(),
@@ -181,6 +179,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
             selectedNovelTitleProvider.overrideWith((ref) async => '異世界転生物語'),
           ],
           child: const NovelViewerApp(),
@@ -205,6 +206,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
             selectedFileProgressTitleProvider.overrideWithValue(
               '異世界転生 — 049-戦闘.txt (49/200)',
             ),
@@ -229,6 +233,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
             selectedFileProgressTitleProvider.overrideWithValue(
               '非常に長い小説タイトルがここにあって — '
               '049-非常に長いエピソードタイトル.txt (49/200)',
@@ -257,6 +264,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
           ],
           child: const NovelViewerApp(),
         ),
@@ -273,14 +283,18 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
           ],
           child: const NovelViewerApp(),
         ),
       );
 
-      // Initially right column is hidden (default false)
+      // Initially right column is hidden (default false), and with the file
+      // browser in the drawer the body has nothing to divide.
       expect(find.byKey(const Key('right_column')), findsNothing);
-      expect(find.byType(VerticalDivider), findsNWidgets(1));
+      expect(find.byType(VerticalDivider), findsNothing);
 
       // Click toggle button
       await tester.tap(find.byKey(toggleButtonKey));
@@ -288,7 +302,7 @@ void main() {
 
       // Right column and its divider should now be visible
       expect(find.byKey(const Key('right_column')), findsOneWidget);
-      expect(find.byType(VerticalDivider), findsNWidgets(2));
+      expect(find.byType(VerticalDivider), findsNWidgets(1));
     });
 
     testWidgets('icon is view_sidebar by default (right column hidden)', (
@@ -299,6 +313,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
           ],
           child: const NovelViewerApp(),
         ),
@@ -316,6 +333,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
           ],
           child: const NovelViewerApp(),
         ),
@@ -337,6 +357,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
           ],
           child: const NovelViewerApp(),
         ),
@@ -352,7 +375,7 @@ void main() {
       await tester.pump();
 
       expect(find.byKey(const Key('right_column')), findsNothing);
-      expect(find.byType(VerticalDivider), findsNWidgets(1));
+      expect(find.byType(VerticalDivider), findsNothing);
       expect(find.byIcon(Icons.view_sidebar), findsOneWidget);
     });
   });
@@ -368,6 +391,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
             fileContentProvider.overrideWith((ref) async => 'テスト小説の内容です。'),
           ],
           child: Builder(
@@ -376,6 +402,9 @@ void main() {
                 overrides: [
                   sharedPreferencesProvider.overrideWithValue(prefs),
                   libraryPathProvider.overrideWithValue('/library'),
+                  readingProgressStartupProvider.overrideWith(
+                    (ref) => Completer<void>().future,
+                  ),
                 ],
                 child: const NovelViewerApp(),
               );
@@ -410,6 +439,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
           ],
           child: const NovelViewerApp(),
         ),
@@ -453,6 +485,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
           ],
           child: const NovelViewerApp(),
         ),
@@ -483,6 +518,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
           ],
           child: const NovelViewerApp(),
         ),
@@ -514,6 +552,9 @@ void main() {
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
               libraryPathProvider.overrideWithValue('/library'),
+              readingProgressStartupProvider.overrideWith(
+                (ref) => Completer<void>().future,
+              ),
             ],
             child: const NovelViewerApp(),
           ),
@@ -560,6 +601,9 @@ void main() {
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
               libraryPathProvider.overrideWithValue('/library'),
+              readingProgressStartupProvider.overrideWith(
+                (ref) => Completer<void>().future,
+              ),
             ],
             child: const NovelViewerApp(),
           ),
@@ -603,6 +647,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
           ],
           child: const NovelViewerApp(),
         ),
@@ -643,6 +690,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
           ],
           child: const NovelViewerApp(),
         ),
@@ -678,6 +728,9 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
           ],
           child: const NovelViewerApp(),
         ),

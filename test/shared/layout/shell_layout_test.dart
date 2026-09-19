@@ -11,8 +11,9 @@ void main() {
     });
 
     test('a width equal to the breakpoint selects the wide layout', () {
-      // The breakpoint is the narrowest width the three-column layout is
-      // supported at, so it belongs to the wide side.
+      // The breakpoint is the narrowest width at which the text viewer and
+      // the search results column share the body, so it belongs to the wide
+      // side.
       expect(resolveShellLayout(width: 800, breakpoint: 800), ShellLayout.wide);
     });
 
@@ -31,6 +32,42 @@ void main() {
         ShellLayout.narrow,
       );
       expect(resolveShellLayout(width: 800, breakpoint: 700), ShellLayout.wide);
+    });
+  });
+
+  group('fileBrowserDrawerWidth', () {
+    test('a wide display is capped rather than followed', () {
+      // The drawer is a file list, not a second body: past the cap the extra
+      // width buys nothing and only hides more of the text behind it.
+      expect(fileBrowserDrawerWidth(displayWidth: 1440), 560);
+    });
+
+    test(
+      'the cap is reached exactly at the display width that produces it',
+      () {
+        expect(fileBrowserDrawerWidth(displayWidth: 624), 560);
+      },
+    );
+
+    test(
+      'a display narrower than the cap keeps a strip of the body visible',
+      () {
+        // 390 is a phone in portrait. Subtracting the gutter is what makes the
+        // drawer read as an overlay rather than as the whole screen.
+        expect(fileBrowserDrawerWidth(displayWidth: 390), 326);
+      },
+    );
+
+    test('a display just under the cap follows the width', () {
+      expect(fileBrowserDrawerWidth(displayWidth: 600), 536);
+    });
+
+    test('never goes negative on a display narrower than the gutter', () {
+      // No minimum size is imposed on the native window, so a reader can drag
+      // one this narrow. A negative width fails a BoxConstraints assertion
+      // rather than producing a small drawer.
+      expect(fileBrowserDrawerWidth(displayWidth: 40), 0);
+      expect(fileBrowserDrawerWidth(displayWidth: 0), 0);
     });
   });
 }

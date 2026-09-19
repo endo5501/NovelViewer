@@ -50,10 +50,20 @@ void main() {
       );
     });
 
-    test('switchPane defaults to bare Tab', () {
+    test('toggleFileBrowser defaults to bare Tab', () {
       final b = defaultShortcutBindings(isApplePlatform: false);
       expect(
-        b[ShortcutAction.switchPane],
+        b[ShortcutAction.toggleFileBrowser],
+        KeyBinding(keyId: LogicalKeyboardKey.tab.keyId),
+      );
+    });
+
+    test('toggleFileBrowser takes no modifier on the Apple platforms', () {
+      // Tab is the same key everywhere; only the command modifier is
+      // platform dependent, and this action carries none.
+      final b = defaultShortcutBindings(isApplePlatform: true);
+      expect(
+        b[ShortcutAction.toggleFileBrowser],
         KeyBinding(keyId: LogicalKeyboardKey.tab.keyId),
       );
     });

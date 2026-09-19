@@ -987,5 +987,5 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shortcutAction_ttsToggle => '読み上げ 再生/一時停止';
 
   @override
-  String get shortcutAction_switchPane => 'ペイン切替';
+  String get shortcutAction_toggleFileBrowser => 'ファイル一覧の表示切替';
 }

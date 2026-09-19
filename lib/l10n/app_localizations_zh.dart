@@ -980,5 +980,5 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shortcutAction_ttsToggle => '朗读 播放/暂停';
 
   @override
-  String get shortcutAction_switchPane => '切换面板';
+  String get shortcutAction_toggleFileBrowser => '切换文件列表';
 }

@@ -1,8 +1,4 @@
-## Purpose
-
-The tabbed left column (`TabBar` + `TabBarView`) whose first two tabs are the file browser and the bookmark list, followed by any further tabs contributed by capabilities available on the running platform. Despite this capability's name the column is no longer one of three: it is presented in a `Drawer` at every display width, sized to the display up to a cap rather than fixed at 250px, because the long novel titles and episode names it lists were truncated at that width. The main row is therefore the text viewer, beside the search panel when that one is shown. A closed drawer unmounts the panel, so the file browser tab is the selected tab every time the drawer opens — which is what a reader opening it is usually after.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Left column displays file browser
 The left column SHALL contain a tabbed interface whose first two tabs are a file browser tab and a bookmark list tab, followed by any further tabs contributed by capabilities that are available on the running platform. The left column SHALL use a `TabBar` + `TabBarView` for switching between the panels.

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/app.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
@@ -29,6 +32,12 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           libraryPathProvider.overrideWithValue('/library'),
+          // Escape closes an open drawer before it reaches TTS, and the
+          // drawer opens on its own once the reading session settles. These
+          // tests are about the TTS branch, so restoration is left pending.
+          readingProgressStartupProvider.overrideWith(
+            (ref) => Completer<void>().future,
+          ),
           ttsSupportedProvider.overrideWithValue(ttsSupported),
         ],
         child: const NovelViewerApp(),
@@ -91,6 +100,12 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           libraryPathProvider.overrideWithValue('/library'),
+          // Escape closes an open drawer before it reaches TTS, and the
+          // drawer opens on its own once the reading session settles. These
+          // tests are about the TTS branch, so restoration is left pending.
+          readingProgressStartupProvider.overrideWith(
+            (ref) => Completer<void>().future,
+          ),
           fileContentProvider.overrideWith((ref) async => '小説の本文です。' * 50),
         ],
         child: const NovelViewerApp(),
@@ -165,6 +180,12 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           libraryPathProvider.overrideWithValue('/library'),
+          // Escape closes an open drawer before it reaches TTS, and the
+          // drawer opens on its own once the reading session settles. These
+          // tests are about the TTS branch, so restoration is left pending.
+          readingProgressStartupProvider.overrideWith(
+            (ref) => Completer<void>().future,
+          ),
           ttsSupportedProvider.overrideWithValue(false),
         ],
         child: Shortcuts(

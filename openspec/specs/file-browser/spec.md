@@ -2,6 +2,7 @@
 
 Browse the local library directory, list episode files for the active novel, and surface per-file TTS status badges.
 ## Requirements
+
 ### Requirement: File listing
 The system SHALL list all text files in the selected directory, displayed as a scrollable list in the left column. Each episode file SHALL display a TTS status icon in the trailing position when the episode has TTS data (status `completed` or `partial`).
 
@@ -209,15 +210,19 @@ When the file browser's TTS status query against the cached `TtsAudioDatabase` f
 - **THEN** ツールチップは表示されず、コンテキストメニューが表示される
 
 ### Requirement: Reliable focus and preserved standard keyboard operation
-ファイルブラウザ（左カラム）は、アプリ起動直後に既定でキーボードフォーカスを持たなければならない（SHALL）。`switchPane`（既定Tab）によりファイルブラウザへフォーカスが移ったとき、フォーカスは確実にファイルブラウザ内へ入らなければならない（SHALL）。ファイルブラウザにフォーカスがある間、Flutter標準のフォーカス操作（方向移動によるタイル/タブ/ボタン間の移動、Enter/Spaceによる選択・フォルダ移動・タブ切替・新規フォルダ作成などの実行）が維持されなければならない（SHALL）。本変更では、ファイルブラウザに独自のキーボードナビゲーション（`selectedFileProvider`を直接動かす等）を新設してはならない（SHALL NOT）。
+ファイルブラウザ（左カラム）は `Drawer` の中にあり、閉じている間はツリーに存在しない。したがって「起動直後にファイルブラウザがキーボードフォーカスを保持する」という形は取れない。代わりに、キーボードだけでファイルブラウザへ到達できることを要件とする。
+
+アプリは読書セッションの復元が決着した時点で `Drawer` を開かなければならない（SHALL）。`Drawer` が開いたとき、フォーカスは `Drawer` 自身のスコープへ移らなければならず（SHALL）、そこからの標準の方向移動でファイルブラウザのタイル/タブ/ボタンへ到達できなければならない（SHALL）。`toggleFileBrowser`（既定Tab）で開いた場合も同様とする（SHALL）。
+
+ファイルブラウザにフォーカスがある間、Flutter標準のフォーカス操作（方向移動によるタイル/タブ/ボタン間の移動、Enter/Spaceによる選択・フォルダ移動・タブ切替・新規フォルダ作成などの実行）が維持されなければならない（SHALL）。ファイルブラウザに独自のキーボードナビゲーション（`selectedFileProvider`を直接動かす等）を新設してはならない（SHALL NOT）。
 
 #### Scenario: 起動直後はファイルブラウザにフォーカスがある
-- **WHEN** アプリが起動して初期画面が表示される
-- **THEN** キーボードフォーカスはファイルブラウザ（左カラム）にある
+- **WHEN** アプリが起動し、読書セッションの復元が決着して `Drawer` が開く
+- **THEN** フォーカスは `Drawer` のスコープにあり、矢印キーを押すとファイルブラウザ内の要素へ移動する
 
 #### Scenario: ペイン切替でファイルブラウザへ確実にフォーカスが入る
-- **WHEN** 小説画面にフォーカスがある状態で `switchPane`（Tab）を押す
-- **THEN** フォーカスがファイルブラウザ内へ移動し、標準のフォーカス操作が可能になる
+- **WHEN** 小説画面にフォーカスがある状態で `toggleFileBrowser`（既定Tab）を押す
+- **THEN** `Drawer` が開き、続く矢印キーでファイルブラウザ内の要素へフォーカスが移動して標準のフォーカス操作が可能になる
 
 #### Scenario: フォーカス時に標準の矢印キー操作が機能する
 - **WHEN** ファイルブラウザにフォーカスがある状態でカーソルキーを押す
@@ -225,5 +230,4 @@ When the file browser's TTS status query against the cached `TtsAudioDatabase` f
 
 #### Scenario: 標準操作で小説を選択できる
 - **WHEN** ファイルブラウザにフォーカスがあり、フォーカスされたファイル行でEnter/Spaceを押す
-- **THEN** そのファイルが選択され、小説画面に内容が表示される
-
+- **THEN** そのファイルが選択され、`Drawer` が閉じて小説画面に内容が表示される
