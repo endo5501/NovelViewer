@@ -11,8 +11,9 @@ void main() {
     });
 
     test('a width equal to the breakpoint selects the wide layout', () {
-      // The breakpoint is the narrowest width the three-column layout is
-      // supported at, so it belongs to the wide side.
+      // The breakpoint is the narrowest width at which the text viewer and
+      // the search results column share the body, so it belongs to the wide
+      // side.
       expect(resolveShellLayout(width: 800, breakpoint: 800), ShellLayout.wide);
     });
 
@@ -41,15 +42,21 @@ void main() {
       expect(fileBrowserDrawerWidth(displayWidth: 1440), 560);
     });
 
-    test('the cap is reached exactly at the display width that produces it', () {
-      expect(fileBrowserDrawerWidth(displayWidth: 624), 560);
-    });
+    test(
+      'the cap is reached exactly at the display width that produces it',
+      () {
+        expect(fileBrowserDrawerWidth(displayWidth: 624), 560);
+      },
+    );
 
-    test('a display narrower than the cap keeps a strip of the body visible', () {
-      // 390 is a phone in portrait. Subtracting the gutter is what makes the
-      // drawer read as an overlay rather than as the whole screen.
-      expect(fileBrowserDrawerWidth(displayWidth: 390), 326);
-    });
+    test(
+      'a display narrower than the cap keeps a strip of the body visible',
+      () {
+        // 390 is a phone in portrait. Subtracting the gutter is what makes the
+        // drawer read as an overlay rather than as the whole screen.
+        expect(fileBrowserDrawerWidth(displayWidth: 390), 326);
+      },
+    );
 
     test('a display just under the cap follows the width', () {
       expect(fileBrowserDrawerWidth(displayWidth: 600), 536);

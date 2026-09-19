@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/app.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
@@ -61,13 +64,25 @@ void main() {
   /// The breakpoint is always overridden — with its own default value unless a
   /// test asks for another — because Riverpod forbids changing the *number* of
   /// overrides across pumps, and some tests mount both layouts in turn.
-  Future<void> pumpApp(WidgetTester tester, {double breakpoint = 800}) async {
+  ///
+  /// [restore] stands in for the restoration of the last reading session,
+  /// which is what decides when the drawer opens. It is left unresolved by
+  /// default so that a test which is not about startup sees a closed drawer
+  /// and opens it itself.
+  Future<void> pumpApp(
+    WidgetTester tester, {
+    double breakpoint = 800,
+    Future<void>? restore,
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           libraryPathProvider.overrideWithValue('/library'),
           shellBreakpointProvider.overrideWithValue(breakpoint),
+          readingProgressStartupProvider.overrideWith(
+            (ref) => restore ?? Completer<void>().future,
+          ),
         ],
         child: const NovelViewerApp(),
       ),
@@ -614,6 +629,11 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(prefs),
             libraryPathProvider.overrideWithValue('/library'),
             shellBreakpointProvider.overrideWithValue(900),
+            // Left unresolved, as pumpApp does, so the drawer stays closed
+            // until this test opens it itself.
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
             directoryContentsProvider.overrideWith((ref) async {
               return DirectoryContents(files: files, subdirectories: const []);
             }),
@@ -821,6 +841,79 @@ void main() {
       );
 
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsNothing);
+    });
+  });
+
+  group('opening the drawer at startup', () {
+    testWidgets('stays closed while the reading session is being restored', (
+      tester,
+    ) async {
+      // Restoration walks the library directories and then swaps the listing
+      // from the library root to an episode list. Opening before it settles
+      // would show the reader that swap happening under their hands.
+      await pumpApp(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsNothing);
+    });
+
+    testWidgets('opens once the restoration settles', (tester) async {
+      final restore = Completer<void>();
+      await pumpApp(tester, restore: restore.future);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('left_column')), findsNothing);
+
+      restore.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+    });
+
+    testWidgets('opens even when the restoration fails', (tester) async {
+      // A failure leaves the reader at the library root, which is exactly the
+      // case where they most need the file browser in front of them.
+      final restore = Completer<void>();
+      await pumpApp(tester, restore: restore.future);
+      await tester.pumpAndSettle();
+
+      restore.completeError(StateError('the library moved'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+    });
+
+    testWidgets('opens when the restoration settled before the first build', (
+      tester,
+    ) async {
+      // A listener only sees transitions. An empty library settles in a
+      // microtask, so the value can already be there by the time the home
+      // screen first builds.
+      await pumpApp(tester, restore: Future<void>.value());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+    });
+
+    testWidgets('does not reopen a drawer the reader has closed', (
+      tester,
+    ) async {
+      final restore = Completer<void>();
+      await pumpApp(tester, restore: restore.future);
+      restore.complete();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('left_column')), findsNothing);
+
+      // Any rebuild — a resize, a provider change — must not bring it back.
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(900, 600);
+      addTearDown(tester.view.reset);
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('left_column')), findsNothing);

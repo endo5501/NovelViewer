@@ -12,6 +12,7 @@ import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_action.da
 import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_intents.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/providers/keyboard_shortcut_providers.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_host.dart';
+import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
 import 'package:novel_viewer/features/text_download/providers/download_request_providers.dart';
@@ -66,6 +67,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// The layout the last build produced, so a crossing of the breakpoint can
   /// be told apart from an ordinary rebuild.
   ShellLayout? _lastLayout;
+
+  /// Whether the drawer has already been opened for this launch.
+  ///
+  /// The reader is free to close it again; nothing reopens it.
+  bool _startupDrawerOpened = false;
 
   /// Whether the download dialog is on screen. A request that arrives while it
   /// is open is handled by the dialog itself, which knows whether it is in a
@@ -188,6 +194,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (isOpened) return;
     if (!ref.read(rightColumnVisibleProvider)) return;
     closeSearchSession(ref);
+  }
+
+  /// Opens the file browser once the last reading session has settled.
+  ///
+  /// The app starts by asking what to read, so the drawer is the first thing
+  /// on screen. It waits for the restoration because that is what turns the
+  /// listing from the library root into the episodes of the novel being read:
+  /// opening first would show the reader that substitution happening.
+  ///
+  /// Settled covers all three endings — a novel restored, nothing to restore,
+  /// or a failure — so there is no case where the drawer never opens.
+  void _openStartupDrawer() {
+    if (_startupDrawerOpened) return;
+    _startupDrawerOpened = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _scaffoldKey.currentState?.openDrawer();
+    });
   }
 
   /// Shows or hides the file browser (Tab).
@@ -342,6 +366,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.listen(fileOpenRequestProvider, (_, _) {
       _closeDrawerIfOpen();
     });
+    // A listener sees transitions only, and an empty library settles in a
+    // microtask — soon enough to be done before this first build. Reading the
+    // current value as well is what covers that case.
+    ref.listen(readingProgressStartupProvider, (_, next) {
+      if (next.isLoading) return;
+      _openStartupDrawer();
+    });
+    if (!ref.read(readingProgressStartupProvider).isLoading) {
+      _openStartupDrawer();
+    }
     // A download asked for from outside the app — a shared link, a shortcut —
     // reaches the reader as a pre-filled dialog awaiting confirmation, never as
     // a download that simply starts.

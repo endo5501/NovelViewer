@@ -65,7 +65,10 @@ void main() {
     await pumpSection(tester);
 
     expect(find.byKey(const Key('shortcut_row_search')), findsOneWidget);
-    expect(find.byKey(const Key('shortcut_row_toggleFileBrowser')), findsOneWidget);
+    expect(
+      find.byKey(const Key('shortcut_row_toggleFileBrowser')),
+      findsOneWidget,
+    );
     expect(find.text('Ctrl+F'), findsOneWidget);
     expect(find.text('Tab'), findsOneWidget);
   });

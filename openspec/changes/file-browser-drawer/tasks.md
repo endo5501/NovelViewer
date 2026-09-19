@@ -26,15 +26,15 @@
 
 ## 5. 起動時の Drawer オープン
 
-- [ ] 5.1 起動時オープンのウィジェットテストを書く。`readingProgressStartupProvider` を `Completer` 制御の override に差し替え、「未決着の間は `Drawer` が閉じている」「決着後に開く」「復元が失敗しても開く」「初回 build 時点で既に決着していても開く」の4ケース。未実装により失敗することを確認する
-- [ ] 5.2 `HomeScreen` で `readingProgressStartupProvider` を購読し、決着（`AsyncData` / `AsyncError`）で一度だけ `openDrawer()` を呼ぶ。`ref.listen` は遷移しか拾わないため初回 build 時の現在値も確認し、`_startupDrawerOpened` フラグで多重実行を防いで 5.1 が通ることを確認する（design D2）
+- [x] 5.1 起動時オープンのウィジェットテストを書く。`readingProgressStartupProvider` を `Completer` 制御の override に差し替え、「未決着の間は `Drawer` が閉じている」「決着後に開く」「復元が失敗しても開く」「初回 build 時点で既に決着していても開く」の4ケース。未実装により失敗することを確認する
+- [x] 5.2 `HomeScreen` で `readingProgressStartupProvider` を購読し、決着（`AsyncData` / `AsyncError`）で一度だけ `openDrawer()` を呼ぶ。`ref.listen` は遷移しか拾わないため初回 build 時の現在値も確認し、`_startupDrawerOpened` フラグで多重実行を防いで 5.1 が通ることを確認する（design D2）
 
 ## 6. 既存テストの整理
 
-- [ ] 6.1 `test/home_screen_pane_focus_test.dart` を削除する（`switchPane` の廃止により対象機能が存在しない）
-- [ ] 6.2 `test/home_screen_dynamic_shortcuts_test.dart` を更新し、`toggleFileBrowser` が wide / narrow のどちらでも登録されることを検証する
-- [ ] 6.3 `test/shared/providers/layout_providers_test.dart` と `test/shared/layout/shell_layout_test.dart` を見直し、narrow / wide の判定が右カラムの置き場所だけを決める前提に合わせる。breakpoint 800 と `kMinimumWindowSize` の一致を確認するテストは維持する
-- [ ] 6.4 `fvm flutter test` 全体を実行し、左カラムの固定幅や起動時フォーカスに依存していた他のテストがないことを確認する
+- [x] 6.1 `test/home_screen_pane_focus_test.dart` を削除する（`switchPane` の廃止により対象機能が存在しない）
+- [x] 6.2 `test/home_screen_dynamic_shortcuts_test.dart` を更新し、`toggleFileBrowser` が wide / narrow のどちらでも登録されることを検証する
+- [x] 6.3 `test/shared/providers/layout_providers_test.dart` と `test/shared/layout/shell_layout_test.dart` を見直し、narrow / wide の判定が右カラムの置き場所だけを決める前提に合わせる。breakpoint 800 と `kMinimumWindowSize` の一致を確認するテストは維持する
+- [x] 6.4 `fvm flutter test` 全体を実行し、左カラムの固定幅や起動時フォーカスに依存していた他のテストがないことを確認する
 
 ## 7. 実機確認
 

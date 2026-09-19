@@ -33,7 +33,7 @@ void main() {
 
   group('shellBreakpointProvider', () {
     test(
-      'defaults to the narrowest width the three columns are supported at',
+      'defaults to the narrowest width the text and the search results share',
       () {
         final container = ProviderContainer();
         addTearDown(container.dispose);
@@ -46,10 +46,10 @@ void main() {
       'the default matches the size the desktop build restores no smaller than',
       () {
         // Not a coincidence to be kept in sync by hand: the desktop build
-        // already treats that width as the smallest the three columns fit in,
-        // which is what makes 800 the principled place to fold them away. It
-        // is not a floor on the window itself — a reader can drag one
-        // narrower, and then gets the narrow layout.
+        // already treats that width as the smallest it will restore a window
+        // to, which is what makes 800 the principled place to fold the search
+        // results into a drawer. It is not a floor on the window itself — a
+        // reader can drag one narrower, and then gets the narrow layout.
         final container = ProviderContainer();
         addTearDown(container.dispose);
 

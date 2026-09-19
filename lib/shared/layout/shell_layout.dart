@@ -2,26 +2,30 @@
 ///
 /// The app is a reader, so the question this answers is "how much room is left
 /// for the body text", not "which device is this". A window narrow enough that
-/// the fixed side columns would crowd the text gets [narrow], where those
-/// columns move into drawers and the viewer takes the whole body; anything
-/// wider keeps the three-column [wide] arrangement.
+/// a fixed search results column would crowd the text gets [narrow], where
+/// that column moves into an end drawer and the viewer takes the whole body;
+/// anything wider keeps them side by side in [wide].
+///
+/// The file browser is not part of this decision. It lives in a drawer at
+/// every width — see `fileBrowserDrawerWidth`.
 ///
 /// Deciding by width rather than by platform keeps the application's single
 /// `dart:io` `Platform` read — the one in the capability provider — the only
 /// one there is, and it lets a widget test render either shape, which reading
 /// the platform would not.
 enum ShellLayout {
-  /// Side panels live in drawers; the text viewer owns the full body width.
+  /// The search results live in an end drawer; the text viewer owns the full
+  /// body width.
   narrow,
 
-  /// The three-column row: left column, text viewer, optional right column.
+  /// The text viewer with the search results column beside it when shown.
   wide,
 }
 
 /// The one mapping from a display width to the shell's shape.
 ///
 /// [breakpoint] belongs to the wide side: it is the narrowest width at which
-/// the three-column layout is supported, not the first width that fails.
+/// the search results column is supported, not the first width that fails.
 ShellLayout resolveShellLayout({
   required double width,
   required double breakpoint,
