@@ -13,16 +13,16 @@
 
 ## 3. home_screen の再構成
 
-- [ ] 3.1 `test/home_screen_adaptive_shell_test.dart` を更新し、wide レイアウトでも左カラムが `body` になく `Drawer` にあること、`Drawer` の幅が `fileBrowserDrawerWidth` と一致することを検証するケースを追加する。未実装により失敗することを確認する
-- [ ] 3.2 `Scaffold.drawer` を `isNarrow` 条件なしに常設し、幅に `fileBrowserDrawerWidth` を渡す。`kLeftColumnWidth` を削除し、`SafeArea` と `drawerEnableOpenDragGesture: false` を分岐なしで適用して 3.1 が通ることを確認する
-- [ ] 3.3 `body` を1本の `Row` に統一する。左カラムとその `VerticalDivider` を除去し、右カラムは `!isNarrow && rightColumnVisible` のときだけ足す。`isNarrow` の参照が `endDrawer` の生成・右カラムの追加・AppBar のトグルボタンの3箇所だけになったことを確認する（design D4）
-- [ ] 3.4 `_fileBrowserPaneFocus` / `_switchPane` / `_SwitchPaneAction` と `initState` の post-frame フォーカス要求を削除し、`ToggleFileBrowserIntent` を `Drawer` の開閉につなぐ `Action`（`isEnabled` は `!isTextInputFocused()`）を配線する。`Shortcuts` マップ構築の `if (!isNarrow)` 条件を削除する（design D5）
-- [ ] 3.5 Tab による `Drawer` 開閉のウィジェットテストを追加する。「閉→開」「開→閉」「wide / narrow の両方で登録される」「検索入力にフォーカスがある間は発火しない」の4ケースが通ることを確認する
+- [x] 3.1 `test/home_screen_adaptive_shell_test.dart` を更新し、wide レイアウトでも左カラムが `body` になく `Drawer` にあること、`Drawer` の幅が `fileBrowserDrawerWidth` と一致することを検証するケースを追加する。未実装により失敗することを確認する
+- [x] 3.2 `Scaffold.drawer` を `isNarrow` 条件なしに常設し、幅に `fileBrowserDrawerWidth` を渡す。`kLeftColumnWidth` を削除し、`SafeArea` と `drawerEnableOpenDragGesture: false` を分岐なしで適用して 3.1 が通ることを確認する
+- [x] 3.3 `body` を1本の `Row` に統一する。左カラムとその `VerticalDivider` を除去し、右カラムは `!isNarrow && rightColumnVisible` のときだけ足す。`isNarrow` の参照が `endDrawer` の生成・右カラムの追加・AppBar のトグルボタンの3箇所だけになったことを確認する（design D4）
+- [x] 3.4 `_fileBrowserPaneFocus` / `_switchPane` / `_SwitchPaneAction` と `initState` の post-frame フォーカス要求を削除し、`ToggleFileBrowserIntent` を `Drawer` の開閉につなぐ `Action`（`isEnabled` は `!isTextInputFocused()`）を配線する。`Shortcuts` マップ構築の `if (!isNarrow)` 条件を削除する（design D5）
+- [x] 3.5 Tab による `Drawer` 開閉のウィジェットテストを追加する。「閉→開」「開→閉」「wide / narrow の両方で登録される」「検索入力にフォーカスがある間は発火しない」の4ケースが通ることを確認する
 
 ## 4. Esc の優先順位
 
-- [ ] 4.1 Esc の2段階動作のウィジェットテストを書く。「検索中にファイルブラウザ `Drawer` を開いて Esc → `Drawer` だけ閉じ、`searchQuery` は保持」「続けて Esc → 検索終了」「`Drawer` が閉じているときは従来どおり」「narrow で `endDrawer` だけが開いているときは従来どおり一度の押下で検索終了」。未実装により失敗することを確認する
-- [ ] 4.2 `_handleGlobalEscape` の `isTextInputFocused()` ガード直後に、左 `Drawer` が開いていれば閉じて `true` を返す分岐を追加する。`endDrawer` は対象に含めず、4.1 が通ることを確認する（design D3）
+- [x] 4.1 Esc の2段階動作のウィジェットテストを書く。「検索中にファイルブラウザ `Drawer` を開いて Esc → `Drawer` だけ閉じ、`searchQuery` は保持」「続けて Esc → 検索終了」「`Drawer` が閉じているときは従来どおり」「narrow で `endDrawer` だけが開いているときは従来どおり一度の押下で検索終了」。未実装により失敗することを確認する
+- [x] 4.2 `_handleGlobalEscape` の `isTextInputFocused()` ガード直後に、左 `Drawer` が開いていれば閉じて `true` を返す分岐を追加する。`endDrawer` は対象に含めず、4.1 が通ることを確認する（design D3）
 
 ## 5. 起動時の Drawer オープン
 

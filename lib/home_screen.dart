@@ -25,14 +25,7 @@ import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart'
 import 'package:novel_viewer/shared/layout/shell_layout.dart';
 import 'package:novel_viewer/shared/providers/layout_providers.dart';
 
-/// Width of the left column, in both shell layouts.
-///
-/// The narrow layout puts the same panel in a drawer of this width rather than
-/// the material default, so the panel never lays out at a width the wide
-/// layout does not also produce.
-const double kLeftColumnWidth = 250;
-
-/// Width of the right column, in both shell layouts.
+/// Width of the right column, where it is a column.
 const double kRightColumnWidth = 300;
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -42,31 +35,27 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-/// Action for `SwitchPaneIntent` (Tab). Disabled while a text field is focused
-/// so Tab keeps its normal behavior during text entry (e.g. the search box)
-/// instead of switching panes.
-class _SwitchPaneAction extends Action<SwitchPaneIntent> {
-  _SwitchPaneAction(this.onToggle);
+/// Action for `ToggleFileBrowserIntent` (Tab). Disabled while a text field is
+/// focused so Tab keeps its normal behavior during text entry (e.g. the search
+/// box) instead of opening the drawer.
+class _ToggleFileBrowserAction extends Action<ToggleFileBrowserIntent> {
+  _ToggleFileBrowserAction(this.onToggle);
 
   final VoidCallback onToggle;
 
   @override
-  bool isEnabled(SwitchPaneIntent intent) => !isTextInputFocused();
+  bool isEnabled(ToggleFileBrowserIntent intent) => !isTextInputFocused();
 
   @override
-  Object? invoke(SwitchPaneIntent intent) {
+  Object? invoke(ToggleFileBrowserIntent intent) {
     onToggle();
     return null;
   }
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  /// Focus scopes for the two panes that `switchPane` (Tab) cycles between.
-  /// The debug labels are also used by widget tests to assert which pane holds
-  /// focus.
-  final FocusScopeNode _fileBrowserPaneFocus = FocusScopeNode(
-    debugLabel: 'fileBrowserPane',
-  );
+  /// Focus scope for the text viewer. The debug label is also used by widget
+  /// tests to assert where focus lands.
   final FocusScopeNode _novelPaneFocus = FocusScopeNode(
     debugLabel: 'novelPane',
   );
@@ -88,37 +77,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_handleGlobalEscape);
-    // Start with the file browser focused so the user can immediately navigate
-    // files. A post-frame request wins over the descendant viewer's autofocus.
-    //
-    // In the narrow layout that pane is inside a closed drawer and its scope is
-    // not in the tree, so there is nothing to focus; asking anyway happens to
-    // be ignored, but only because an unattached node has no focus manager to
-    // ask. MediaQuery is unavailable in initState and available here.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final layout = resolveShellLayout(
-        width: MediaQuery.sizeOf(context).width,
-        breakpoint: ref.read(shellBreakpointProvider),
-      );
-      if (layout == ShellLayout.narrow) return;
-      _fileBrowserPaneFocus.requestFocus();
-    });
   }
 
   @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_handleGlobalEscape);
-    _fileBrowserPaneFocus.dispose();
     _novelPaneFocus.dispose();
     super.dispose();
   }
 
   /// Escape as a context-dependent cancel key. When a real text input is focused
   /// (e.g. the search box), Escape is left to that field — it closes search.
-  /// Otherwise Escape closes an active search first (this covers a selection
+  /// Otherwise Escape dismisses whatever is in front of the reader: the file
+  /// browser drawer first, then an active search (this covers a selection
   /// search, which shows results but no editable field to receive Escape), and
-  /// only stops TTS when no search is open.
+  /// only stops TTS when neither is up.
   bool _handleGlobalEscape(KeyEvent event) {
     if (event is! KeyDownEvent) return false;
     if (event.logicalKey != LogicalKeyboardKey.escape) return false;
@@ -126,6 +99,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // A genuine text field handles its own Escape. Read-only SelectableText
     // (focused novel body) is not a text field, so Escape still works there.
     if (isTextInputFocused()) return false;
+
+    // The drawer is over everything else, so it goes first and alone; a second
+    // press then reaches the search beneath it.
+    //
+    // The end drawer is deliberately not handled here. Dismissing it is itself
+    // the end of the search session — `_onEndDrawerChanged` says so — and
+    // closing it separately would end the search on the same press anyway,
+    // which is exactly the one-press-one-layer promise this branch makes.
+    final scaffold = _scaffoldKey.currentState;
+    if (scaffold != null && scaffold.isDrawerOpen) {
+      scaffold.closeDrawer();
+      return true;
+    }
 
     final searchActive =
         ref.read(searchBoxVisibleProvider) ||
@@ -204,12 +190,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     closeSearchSession(ref);
   }
 
-  /// Toggles focus between the file browser and novel panes (Tab).
-  void _switchPane() {
-    if (_fileBrowserPaneFocus.hasFocus) {
-      _novelPaneFocus.requestFocus();
+  /// Shows or hides the file browser (Tab).
+  ///
+  /// The drawer is the only place the file browser lives, at every display
+  /// width, so this is the whole of "go and pick something else to read".
+  void _toggleFileBrowser() {
+    final scaffold = _scaffoldKey.currentState;
+    if (scaffold == null) return;
+    if (scaffold.isDrawerOpen) {
+      scaffold.closeDrawer();
     } else {
-      _fileBrowserPaneFocus.requestFocus();
+      scaffold.openDrawer();
     }
   }
 
@@ -335,8 +326,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // The only place the display width is read to choose a shell shape. The
     // resolved layout is passed down; no other widget consults MediaQuery for
     // it.
+    final displayWidth = MediaQuery.sizeOf(context).width;
     final layout = resolveShellLayout(
-      width: MediaQuery.sizeOf(context).width,
+      width: displayWidth,
       breakpoint: ref.watch(shellBreakpointProvider),
     );
     final isNarrow = layout == ShellLayout.narrow;
@@ -378,16 +370,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // key press and do nothing — for a row the reader cannot see or rebind.
     final ttsSupported = ref.watch(ttsSupportedProvider);
     // Dynamic Shortcuts map built from the customizable bindings. Only actions
-    // with a wired Actions handler below are included; switchPane (Tab) and
-    // ttsToggle (Ctrl+T) are added with their handlers in their own groups.
+    // with a wired Actions handler below are included; toggleFileBrowser (Tab)
+    // and ttsToggle (Ctrl+T) are added with their handlers in their own groups.
     final shortcuts = <ShortcutActivator, Intent>{
       for (final action in [
         ShortcutAction.search,
         ShortcutAction.bookmark,
-        // The narrow layout keeps the file browser pane in a closed drawer,
-        // so a registered binding would swallow Tab and move focus nowhere.
-        // Unregistered, it falls through to normal focus traversal.
-        if (!isNarrow) ShortcutAction.switchPane,
+        // The file browser drawer exists at every display width, so its
+        // binding is registered at every display width too.
+        ShortcutAction.toggleFileBrowser,
         if (ttsSupported) ShortcutAction.ttsToggle,
       ])
         if (bindings[action] != null)
@@ -410,7 +401,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               return null;
             },
           ),
-          SwitchPaneIntent: _SwitchPaneAction(_switchPane),
+          ToggleFileBrowserIntent: _ToggleFileBrowserAction(_toggleFileBrowser),
           TtsToggleIntent: CallbackAction<TtsToggleIntent>(
             onInvoke: (_) {
               ref.read(ttsToggleRequestProvider.notifier).request();
@@ -433,17 +424,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // scaffold, so it reaches behind the status bar and the home
             // indicator; the inset handling the app bar gives the body does
             // not reach it. The SafeArea sits inside the drawer rather than
-            // in the panel because the panels are shared with the wide
-            // layout, where they need no inset of their own, and because the
-            // drawer's own surface should keep covering the inset area.
-            drawer: isNarrow
-                ? const Drawer(
-                    width: kLeftColumnWidth,
-                    child: SafeArea(
-                      child: LeftColumnPanel(key: Key('left_column')),
-                    ),
-                  )
-                : null,
+            // in the panel so the drawer's own surface keeps covering the
+            // inset area.
+            //
+            // The file browser lives here at every display width: a reader
+            // picks an episode and returns to the text, so a column standing
+            // beside the text the whole time only narrowed it — and narrowed
+            // the file names past legibility.
+            drawer: Drawer(
+              width: fileBrowserDrawerWidth(displayWidth: displayWidth),
+              child: const SafeArea(
+                child: LeftColumnPanel(key: Key('left_column')),
+              ),
+            ),
             endDrawer: isNarrow
                 ? const Drawer(
                     width: kRightColumnWidth,
@@ -527,41 +520,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ],
             ),
+            // One row in both layouts. With the file browser in the drawer
+            // the only thing the layout decides is whether the search results
+            // stand beside the text or come over it.
             body: HoverPopupHost(
-              child: isNarrow
-                  ? FocusScope(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: FocusScope(
                       node: _novelPaneFocus,
                       child: const TextViewerPanel(key: Key('center_column')),
-                    )
-                  : Row(
-                      children: [
-                        SizedBox(
-                          width: kLeftColumnWidth,
-                          child: FocusScope(
-                            node: _fileBrowserPaneFocus,
-                            child: const LeftColumnPanel(
-                              key: Key('left_column'),
-                            ),
-                          ),
-                        ),
-                        const VerticalDivider(width: 1),
-                        Expanded(
-                          child: FocusScope(
-                            node: _novelPaneFocus,
-                            child: const TextViewerPanel(
-                              key: Key('center_column'),
-                            ),
-                          ),
-                        ),
-                        if (ref.watch(rightColumnVisibleProvider)) ...[
-                          const VerticalDivider(width: 1),
-                          const SizedBox(
-                            width: kRightColumnWidth,
-                            child: SearchResultsPanel(key: Key('right_column')),
-                          ),
-                        ],
-                      ],
                     ),
+                  ),
+                  if (!isNarrow && ref.watch(rightColumnVisibleProvider)) ...[
+                    const VerticalDivider(width: 1),
+                    const SizedBox(
+                      width: kRightColumnWidth,
+                      child: SearchResultsPanel(key: Key('right_column')),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ),

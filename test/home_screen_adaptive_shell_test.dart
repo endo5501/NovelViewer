@@ -9,6 +9,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
+import 'package:novel_viewer/shared/layout/shell_layout.dart';
 import 'package:novel_viewer/shared/providers/layout_providers.dart';
 
 ProviderContainer containerOf(WidgetTester tester) =>
@@ -37,16 +38,6 @@ void useInsetDisplay(WidgetTester tester) {
     bottom: kBottomInset,
   );
   addTearDown(tester.view.reset);
-}
-
-/// Walks up the focus tree looking for a node whose debugLabel marks a pane.
-bool paneHasFocus(WidgetTester tester, String label) {
-  FocusNode? node = tester.binding.focusManager.primaryFocus;
-  while (node != null) {
-    if (node.debugLabel == label) return true;
-    node = node.parent;
-  }
-  return false;
 }
 
 Future<void> pressSearchShortcut(WidgetTester tester) async {
@@ -93,7 +84,7 @@ void main() {
       expect(find.byType(VerticalDivider), findsNothing);
     });
 
-    testWidgets('holds the left column in a drawer at its usual width', (
+    testWidgets('holds the left column in a drawer that follows the display', (
       tester,
     ) async {
       await pumpApp(tester, breakpoint: 900);
@@ -102,7 +93,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('left_column')), findsOneWidget);
-      expect(tester.getSize(find.byKey(const Key('left_column'))).width, 250);
+      expect(
+        tester.getSize(find.byKey(const Key('left_column'))).width,
+        fileBrowserDrawerWidth(displayWidth: 800),
+      );
     });
   });
 
@@ -168,9 +162,11 @@ void main() {
       expect(tester.getRect(drawer).bottom, 600);
     });
 
-    testWidgets('the wide layout carries no inset of its own', (tester) async {
-      // The same panels are used in both layouts, so an inset placed on a
-      // panel rather than on the drawer would leave a gap under the left
+    testWidgets('the right column in the body carries no inset', (
+      tester,
+    ) async {
+      // The search panel is shared with the end drawer, so an inset placed on
+      // the panel rather than on the drawer would leave a gap under the right
       // column that the text viewer beside it does not have.
       useInsetDisplay(tester);
       await pumpApp(tester);
@@ -178,7 +174,6 @@ void main() {
       containerOf(tester).read(rightColumnVisibleProvider.notifier).toggle();
       await tester.pumpAndSettle();
 
-      expect(tester.getRect(find.byKey(const Key('left_column'))).bottom, 600);
       expect(tester.getRect(find.byKey(const Key('right_column'))).bottom, 600);
     });
   });
@@ -348,6 +343,81 @@ void main() {
     });
   });
 
+  group('Escape while the file browser drawer is open', () {
+    /// Puts a search session on screen without leaving a text field focused,
+    /// the way a selection search does. Escape then reaches the global
+    /// handler rather than being taken by the field.
+    Future<void> startSelectionSearch(WidgetTester tester) async {
+      containerOf(tester)
+          .read(selectedTextProvider.notifier)
+          .setSelection(const ViewerSelection(text: '太郎', plainTextOffset: 0));
+      await pressSearchShortcut(tester);
+    }
+
+    testWidgets('the first press closes the drawer and keeps the search', (
+      tester,
+    ) async {
+      // Escape acts on whatever is in front of the reader. The drawer is.
+      await pumpApp(tester);
+      final container = containerOf(tester);
+      await startSelectionSearch(tester);
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsNothing);
+      expect(container.read(searchQueryProvider), '太郎');
+      expect(container.read(rightColumnVisibleProvider), isTrue);
+    });
+
+    testWidgets('the second press ends the search', (tester) async {
+      await pumpApp(tester);
+      final container = containerOf(tester);
+      await startSelectionSearch(tester);
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(container.read(searchQueryProvider), isNull);
+      expect(container.read(rightColumnVisibleProvider), isFalse);
+    });
+
+    testWidgets('a closed drawer leaves Escape as it was', (tester) async {
+      await pumpApp(tester);
+      final container = containerOf(tester);
+      await startSelectionSearch(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(container.read(searchQueryProvider), isNull);
+    });
+
+    testWidgets('the search end drawer is still closed in one press', (
+      tester,
+    ) async {
+      // Dismissing the end drawer is itself the end of the search, so there
+      // is no second layer to reveal and no second press to make.
+      await pumpApp(tester, breakpoint: 900);
+      final container = containerOf(tester);
+      await startSelectionSearch(tester);
+      expect(find.byKey(const Key('right_column')), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(container.read(searchQueryProvider), isNull);
+      expect(find.byKey(const Key('right_column')), findsNothing);
+    });
+  });
+
   group('closing a drawer that has stopped being useful', () {
     testWidgets('selecting a file closes the drawer', (tester) async {
       // Otherwise the reader picks an episode and is left looking at the file
@@ -422,12 +492,12 @@ void main() {
       expect(find.byKey(const Key('left_column')), findsOneWidget);
     });
 
-    testWidgets('widening past the breakpoint closes an open drawer', (
+    testWidgets('widening past the breakpoint leaves the drawer open', (
       tester,
     ) async {
-      // Standing in for a rotation on an iPad: the display grows past the
-      // breakpoint while a drawer is open, and the layout that owned it goes
-      // away.
+      // Standing in for a rotation on an iPad. The drawer belongs to both
+      // layouts now, so a reader part-way through choosing keeps their place
+      // instead of having the list shut under them.
       await pumpApp(tester, breakpoint: 900);
       await tester.tap(find.byIcon(Icons.menu));
       await tester.pumpAndSettle();
@@ -438,10 +508,9 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.pumpAndSettle();
 
-      expect(find.byType(Drawer), findsNothing);
       expect(find.byKey(const Key('left_column')), findsOneWidget);
       expect(find.byKey(const Key('center_column')), findsOneWidget);
-      expect(find.byType(VerticalDivider), findsNWidgets(1));
+      expect(find.byType(VerticalDivider), findsNothing);
     });
 
     testWidgets('widening keeps an open search session', (tester) async {
@@ -461,8 +530,8 @@ void main() {
 
       expect(container.read(rightColumnVisibleProvider), isTrue);
       expect(find.byKey(const Key('right_column')), findsOneWidget);
-      expect(find.byType(Drawer), findsNothing);
-      expect(find.byType(VerticalDivider), findsNWidgets(2));
+      expect(find.byKey(const Key('left_column')), findsNothing);
+      expect(find.byType(VerticalDivider), findsNWidgets(1));
     });
   });
 
@@ -522,13 +591,13 @@ void main() {
       expect(find.byKey(const Key('right_column')), findsNothing);
     });
 
-    testWidgets('widening rebuilds the file list on the selected file', (
+    testWidgets('opening the drawer builds the file list on the selection', (
       tester,
     ) async {
-      // The narrow layout keeps the file browser in a closed drawer, so it is
-      // not mounted at all; widening builds it for the first time with a
-      // selection already in place. Nothing tells it the selection changed, so
-      // without the reveal the reader lands back at episode 1.
+      // A closed drawer unmounts the file browser, so every open builds it
+      // for the first time with a selection already in place. Nothing tells it
+      // the selection changed, so without the reveal the reader lands back at
+      // episode 1.
       final files = List.generate(200, (i) {
         final n = (i + 1).toString().padLeft(3, '0');
         return FileEntry(name: '$n-ep${i + 1}.txt', path: '/library/$n.txt');
@@ -566,10 +635,10 @@ void main() {
       expect(
         find.byKey(const Key('left_column')),
         findsNothing,
-        reason: 'Precondition: the narrow layout leaves the browser unmounted',
+        reason: 'Precondition: a closed drawer leaves the browser unmounted',
       );
 
-      tester.view.physicalSize = const Size(1000, 600);
+      await tester.tap(find.byIcon(Icons.menu));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -692,57 +761,93 @@ void main() {
     });
   });
 
-  group('pane switching', () {
-    testWidgets('Tab still switches panes in the wide layout', (tester) async {
+  group('the file browser drawer toggle', () {
+    testWidgets('Tab opens the drawer in the wide layout', (tester) async {
       await pumpApp(tester);
       await tester.pumpAndSettle();
-      expect(paneHasFocus(tester, 'fileBrowserPane'), isTrue);
+      expect(find.byKey(const Key('left_column')), findsNothing);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(paneHasFocus(tester, 'novelPane'), isTrue);
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
     });
 
-    testWidgets('Tab is left to normal traversal in the narrow layout', (
-      tester,
-    ) async {
-      // The file browser pane lives in a closed drawer, so a registered
-      // switchPane would swallow the key press and move focus nowhere — for an
-      // action the reader can neither see nor rebind.
-      await pumpApp(tester, breakpoint: 900);
+    testWidgets('Tab closes a drawer it opened', (tester) async {
+      await pumpApp(tester);
       await tester.pumpAndSettle();
-      final before = tester.binding.focusManager.primaryFocus;
 
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
 
-      expect(
-        tester.binding.focusManager.primaryFocus,
-        isNot(before),
-        reason: 'an unregistered Tab falls through to focus traversal',
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsNothing);
+    });
+
+    testWidgets('Tab opens the drawer in the narrow layout too', (
+      tester,
+    ) async {
+      // The binding used to be withheld here, because the pane it switched to
+      // was not in the tree. The drawer is, at every width.
+      await pumpApp(tester, breakpoint: 900);
+      await tester.pumpAndSettle();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+    });
+
+    testWidgets('Tab is left to the search field while it has focus', (
+      tester,
+    ) async {
+      // Otherwise the one key a reader presses to leave a text field would
+      // throw the file browser over what they were typing into.
+      await pumpApp(tester);
+      await pressSearchShortcut(tester);
+      final field = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(const Key('right_column')),
+          matching: find.byType(EditableText),
+        ),
       );
-    });
+      expect(
+        field.focusNode.hasPrimaryFocus,
+        isTrue,
+        reason: 'Precondition: the search field holds focus',
+      );
 
-    testWidgets('no pane holds focus at launch in the narrow layout', (
-      tester,
-    ) async {
-      await pumpApp(tester, breakpoint: 900);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pumpAndSettle();
 
-      expect(paneHasFocus(tester, 'fileBrowserPane'), isFalse);
+      expect(find.byKey(const Key('left_column')), findsNothing);
     });
   });
 
   group('wide layout', () {
-    testWidgets('keeps the three-column row and has no drawer', (tester) async {
+    testWidgets('keeps the file browser out of the body', (tester) async {
       await pumpApp(tester);
 
-      expect(find.byKey(const Key('left_column')), findsOneWidget);
       expect(find.byKey(const Key('center_column')), findsOneWidget);
-      expect(find.byType(VerticalDivider), findsNWidgets(1));
-      expect(find.byIcon(Icons.menu), findsNothing);
-      expect(find.byType(Drawer), findsNothing);
+      expect(find.byKey(const Key('left_column')), findsNothing);
+      expect(find.byType(VerticalDivider), findsNothing);
+      expect(find.byIcon(Icons.menu), findsOneWidget);
+    });
+
+    testWidgets('opens the same drawer the narrow layout does', (tester) async {
+      await pumpApp(tester);
+
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const Key('left_column'))).width,
+        fileBrowserDrawerWidth(displayWidth: 800),
+      );
     });
   });
 }
