@@ -404,6 +404,36 @@ void main() {
       expect(container.read(rightColumnVisibleProvider), isFalse);
     });
 
+    testWidgets('a dialog over the drawer takes the press by itself', (
+      tester,
+    ) async {
+      // The file browser opens confirmation dialogs of its own — delete a
+      // novel, pick a move target. Escape dismisses those through the focus
+      // tree, and the global handler cannot stop that: the platform message is
+      // dispatched to the focus tree whatever the handler returns. Closing the
+      // drawer on the same press would drop the reader back into the text
+      // after nothing more than cancelling a confirmation.
+      await pumpApp(tester);
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+
+      unawaited(
+        showDialog<void>(
+          context: tester.element(find.byKey(const Key('left_column'))),
+          builder: (_) => const AlertDialog(content: Text('really delete?')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('really delete?'), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(find.text('really delete?'), findsNothing);
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+    });
+
     testWidgets('a closed drawer leaves Escape as it was', (tester) async {
       await pumpApp(tester);
       final container = containerOf(tester);
@@ -897,6 +927,29 @@ void main() {
       expect(find.byKey(const Key('left_column')), findsOneWidget);
     });
 
+    testWidgets('does not reopen a drawer the reader closed while waiting', (
+      tester,
+    ) async {
+      // Restoration can take a while on a large library. A reader who goes to
+      // the file browser themselves and comes back must not have it thrown
+      // over the text when the restoration finally lands.
+      final restore = Completer<void>();
+      await pumpApp(tester, restore: restore.future);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('left_column')), findsNothing);
+
+      restore.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsNothing);
+    });
+
     testWidgets('does not reopen a drawer the reader has closed', (
       tester,
     ) async {
@@ -928,6 +981,28 @@ void main() {
       expect(find.byKey(const Key('left_column')), findsNothing);
       expect(find.byType(VerticalDivider), findsNothing);
       expect(find.byIcon(Icons.menu), findsOneWidget);
+    });
+
+    testWidgets('is reachable by arrow key once it opens', (tester) async {
+      // A reader who opened the browser with the keyboard should be able to
+      // walk it with the keyboard, without reaching for the mouse first. The
+      // drawer's own scope takes focus when it opens; directional traversal
+      // from there is what lands on the panel.
+      await pumpApp(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('left_column')),
+          matching: find.byWidget(
+            tester.binding.focusManager.primaryFocus!.context!.widget,
+          ),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('opens the same drawer the narrow layout does', (tester) async {

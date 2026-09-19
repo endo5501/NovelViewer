@@ -61,17 +61,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     debugLabel: 'novelPane',
   );
 
-  /// Lets the narrow layout drive its drawers from provider state.
+  /// Lets the shell drive its drawers directly: the search results follow
+  /// provider state, and the file browser is opened at startup and toggled by
+  /// its shortcut.
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   /// The layout the last build produced, so a crossing of the breakpoint can
   /// be told apart from an ordinary rebuild.
   ShellLayout? _lastLayout;
 
-  /// Whether the drawer has already been opened for this launch.
+  /// Whether the startup open has been dealt with, one way or another.
   ///
-  /// The reader is free to close it again; nothing reopens it.
-  bool _startupDrawerOpened = false;
+  /// Set when the drawer is opened for the launch, and also as soon as the
+  /// reader touches the drawer themselves: on a large library the restoration
+  /// can still be running then, and it must not throw the file browser back
+  /// over whatever they have gone on to do.
+  bool _startupDrawerSettled = false;
 
   /// Whether the download dialog is on screen. A request that arrives while it
   /// is open is handled by the dialog itself, which knows whether it is in a
@@ -109,12 +114,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // The drawer is over everything else, so it goes first and alone; a second
     // press then reaches the search beneath it.
     //
+    // Unless a dialog is over the drawer in turn — the file browser opens
+    // several, to confirm a delete or pick a move target. Those dismiss
+    // themselves through the focus tree, and returning true here would not
+    // stop that: `KeyEventManager` dispatches the message to the focus tree
+    // whatever a `HardwareKeyboard` handler returns. Taking the same press
+    // for the drawer would close it under the dialog.
+    //
     // The end drawer is deliberately not handled here. Dismissing it is itself
     // the end of the search session — `_onEndDrawerChanged` says so — and
     // closing it separately would end the search on the same press anyway,
     // which is exactly the one-press-one-layer promise this branch makes.
     final scaffold = _scaffoldKey.currentState;
-    if (scaffold != null && scaffold.isDrawerOpen) {
+    final nothingModalAbove = ModalRoute.of(context)?.isCurrent ?? true;
+    if (nothingModalAbove && scaffold != null && scaffold.isDrawerOpen) {
       scaffold.closeDrawer();
       return true;
     }
@@ -206,12 +219,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// Settled covers all three endings — a novel restored, nothing to restore,
   /// or a failure — so there is no case where the drawer never opens.
   void _openStartupDrawer() {
-    if (_startupDrawerOpened) return;
-    _startupDrawerOpened = true;
+    if (_startupDrawerSettled) return;
+    _startupDrawerSettled = true;
+    // This runs from a provider listener or from build, so the drawer cannot
+    // be opened on the spot. `addPostFrameCallback` does not request a frame
+    // of its own — its callback runs "after the next frame (whenever that may
+    // be, if ever)" — and nothing here rebuilds anything, so the frame has to
+    // be asked for. `ensureVisualUpdate` is the form that does nothing when a
+    // frame is already under way, where the callback will run at its end.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _scaffoldKey.currentState?.openDrawer();
     });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   /// Shows or hides the file browser (Tab).
@@ -479,6 +499,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   )
                 : null,
+            // A drawer the reader opens or closes themselves means they have
+            // taken over from the launch: a restoration settling afterwards
+            // must not reopen what they just put away.
+            onDrawerChanged: (_) => _startupDrawerSettled = true,
             onEndDrawerChanged: _onEndDrawerChanged,
             appBar: AppBar(
               title: Text(
@@ -487,8 +511,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
               // AppBar buttons are excluded from keyboard focus traversal so
-              // Tab only cycles between the file browser and novel panes. They
-              // remain fully usable via mouse.
+              // that Tab keeps reaching the file browser drawer rather than
+              // walking along this row. They remain fully usable via mouse.
               actions: [
                 ExcludeFocus(
                   child: Row(

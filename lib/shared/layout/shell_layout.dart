@@ -1,3 +1,5 @@
+import 'dart:ui' show clampDouble;
+
 /// Which of the two shell shapes the main screen presents.
 ///
 /// The app is a reader, so the question this answers is "how much room is left
@@ -52,9 +54,11 @@ const double kFileBrowserDrawerGutter = 64;
 /// screen stays the only place that reads `MediaQuery`, and the boundaries —
 /// the cap, the width that reaches it, a phone in portrait — are unit
 /// testable without building a widget.
+/// The lower bound keeps a display narrower than the gutter — which nothing
+/// prevents, since no minimum size is imposed on the native window — from
+/// producing a negative width, which fails a `BoxConstraints` assertion
+/// rather than laying out a small drawer.
 double fileBrowserDrawerWidth({required double displayWidth}) {
   final available = displayWidth - kFileBrowserDrawerGutter;
-  return available < kFileBrowserDrawerMaxWidth
-      ? available
-      : kFileBrowserDrawerMaxWidth;
+  return clampDouble(available, 0, kFileBrowserDrawerMaxWidth);
 }

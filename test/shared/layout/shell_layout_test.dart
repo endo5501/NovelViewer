@@ -61,5 +61,13 @@ void main() {
     test('a display just under the cap follows the width', () {
       expect(fileBrowserDrawerWidth(displayWidth: 600), 536);
     });
+
+    test('never goes negative on a display narrower than the gutter', () {
+      // No minimum size is imposed on the native window, so a reader can drag
+      // one this narrow. A negative width fails a BoxConstraints assertion
+      // rather than producing a small drawer.
+      expect(fileBrowserDrawerWidth(displayWidth: 40), 0);
+      expect(fileBrowserDrawerWidth(displayWidth: 0), 0);
+    });
   });
 }
