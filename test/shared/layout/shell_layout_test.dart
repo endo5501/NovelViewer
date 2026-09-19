@@ -33,4 +33,26 @@ void main() {
       expect(resolveShellLayout(width: 800, breakpoint: 700), ShellLayout.wide);
     });
   });
+
+  group('fileBrowserDrawerWidth', () {
+    test('a wide display is capped rather than followed', () {
+      // The drawer is a file list, not a second body: past the cap the extra
+      // width buys nothing and only hides more of the text behind it.
+      expect(fileBrowserDrawerWidth(displayWidth: 1440), 560);
+    });
+
+    test('the cap is reached exactly at the display width that produces it', () {
+      expect(fileBrowserDrawerWidth(displayWidth: 624), 560);
+    });
+
+    test('a display narrower than the cap keeps a strip of the body visible', () {
+      // 390 is a phone in portrait. Subtracting the gutter is what makes the
+      // drawer read as an overlay rather than as the whole screen.
+      expect(fileBrowserDrawerWidth(displayWidth: 390), 326);
+    });
+
+    test('a display just under the cap follows the width', () {
+      expect(fileBrowserDrawerWidth(displayWidth: 600), 536);
+    });
+  });
 }

@@ -1010,5 +1010,5 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shortcutAction_ttsToggle => 'Play/Pause speech';
 
   @override
-  String get shortcutAction_switchPane => 'Switch pane';
+  String get shortcutAction_toggleFileBrowser => 'Toggle file browser';
 }

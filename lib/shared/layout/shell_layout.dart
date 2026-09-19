@@ -26,3 +26,31 @@ ShellLayout resolveShellLayout({
   required double width,
   required double breakpoint,
 }) => width < breakpoint ? ShellLayout.narrow : ShellLayout.wide;
+
+/// The widest the file browser drawer is allowed to get.
+///
+/// The drawer holds a list of file names, not a second body, so past this
+/// width the extra room buys no more of the name and only hides more of the
+/// text behind it. 560 fits the long episode names that made the old fixed
+/// 250pt column unreadable.
+const double kFileBrowserDrawerMaxWidth = 560;
+
+/// How much of the display the drawer leaves uncovered.
+///
+/// On a display too narrow to reach the cap the drawer would otherwise take
+/// the whole screen, which reads as a new page rather than as a panel over
+/// the text. Leaving this strip keeps it legible as an overlay.
+const double kFileBrowserDrawerGutter = 64;
+
+/// The one mapping from a display width to the file browser drawer's width.
+///
+/// Kept beside [resolveShellLayout] and pure for the same reason: the home
+/// screen stays the only place that reads `MediaQuery`, and the boundaries —
+/// the cap, the width that reaches it, a phone in portrait — are unit
+/// testable without building a widget.
+double fileBrowserDrawerWidth({required double displayWidth}) {
+  final available = displayWidth - kFileBrowserDrawerGutter;
+  return available < kFileBrowserDrawerMaxWidth
+      ? available
+      : kFileBrowserDrawerMaxWidth;
+}

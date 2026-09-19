@@ -611,5 +611,5 @@
   "shortcutAction_search": "検索",
   "shortcutAction_bookmark": "しおり",
   "shortcutAction_ttsToggle": "読み上げ 再生/一時停止",
-  "shortcutAction_switchPane": "ペイン切替"
+  "shortcutAction_toggleFileBrowser": "ファイル一覧の表示切替"
 }

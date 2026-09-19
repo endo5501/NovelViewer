@@ -10,7 +10,7 @@ void main() {
         ShortcutAction.search,
         ShortcutAction.bookmark,
         ShortcutAction.ttsToggle,
-        ShortcutAction.switchPane,
+        ShortcutAction.toggleFileBrowser,
       ]);
     });
 
@@ -18,6 +18,13 @@ void main() {
       final names = ShortcutAction.values.map((a) => a.name).toList();
       expect(names, isNot(contains('nextPage')));
       expect(names, isNot(contains('prevPage')));
+    });
+
+    test('no longer offers the retired pane-switch action', () {
+      // Its binding is migrated away rather than left in the enum: an action
+      // nobody can reach would still consume its key.
+      final names = ShortcutAction.values.map((a) => a.name).toList();
+      expect(names, isNot(contains('switchPane')));
     });
   });
 
@@ -27,7 +34,7 @@ void main() {
         SearchIntent(),
         BookmarkIntent(),
         TtsToggleIntent(),
-        SwitchPaneIntent(),
+        ToggleFileBrowserIntent(),
       ];
       expect(intents, everyElement(isA<Intent>()));
     });
@@ -41,7 +48,10 @@ void main() {
       expect(intentFor(ShortcutAction.search), isA<SearchIntent>());
       expect(intentFor(ShortcutAction.bookmark), isA<BookmarkIntent>());
       expect(intentFor(ShortcutAction.ttsToggle), isA<TtsToggleIntent>());
-      expect(intentFor(ShortcutAction.switchPane), isA<SwitchPaneIntent>());
+      expect(
+        intentFor(ShortcutAction.toggleFileBrowser),
+        isA<ToggleFileBrowserIntent>(),
+      );
     });
   });
 }

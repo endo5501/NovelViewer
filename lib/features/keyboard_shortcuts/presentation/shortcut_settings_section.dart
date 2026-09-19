@@ -21,8 +21,8 @@ class ShortcutSettingsSection extends ConsumerWidget {
         return l10n.shortcutAction_bookmark;
       case ShortcutAction.ttsToggle:
         return l10n.shortcutAction_ttsToggle;
-      case ShortcutAction.switchPane:
-        return l10n.shortcutAction_switchPane;
+      case ShortcutAction.toggleFileBrowser:
+        return l10n.shortcutAction_toggleFileBrowser;
     }
   }
 

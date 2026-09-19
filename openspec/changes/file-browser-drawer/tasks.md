@@ -1,15 +1,15 @@
 ## 1. Drawer 幅のピュア関数
 
-- [ ] 1.1 `test/shared/layout/shell_layout_test.dart` に隣接する形で `fileBrowserDrawerWidth` のユニットテストを書く。境界値は「1440pt → 560（上限に張り付く）」「390pt → 326（表示幅 − 64）」「624pt → 560（上限ちょうど）」。`fvm flutter test` が未実装により失敗することを確認する
-- [ ] 1.2 `lib/shared/layout/shell_layout.dart` に `fileBrowserDrawerWidth({required double displayWidth})` と上限・インセットの名前付き定数を追加し、1.1 のテストが通ることを確認する（design D1）
+- [x] 1.1 `test/shared/layout/shell_layout_test.dart` に隣接する形で `fileBrowserDrawerWidth` のユニットテストを書く。境界値は「1440pt → 560（上限に張り付く）」「390pt → 326（表示幅 − 64）」「624pt → 560（上限ちょうど）」。`fvm flutter test` が未実装により失敗することを確認する
+- [x] 1.2 `lib/shared/layout/shell_layout.dart` に `fileBrowserDrawerWidth({required double displayWidth})` と上限・インセットの名前付き定数を追加し、1.1 のテストが通ることを確認する（design D1）
 
 ## 2. ショートカットアクションの入れ替え
 
-- [ ] 2.1 既定バインディングのテストを更新・追加し、`toggleFileBrowser` の既定が修飾子なしの `Tab` であること、`switchPane` が `ShortcutAction.values` に存在しないことを検証する。未実装により失敗することを確認する
-- [ ] 2.2 保存済み設定から廃止アクションのエントリが除去されることのテストを書く。「廃止済みエントリが消える」「現存アクションのカスタマイズは保持される」「解放されたキーを別アクションへ割り当てられる」の3ケース。未実装により失敗することを確認する
-- [ ] 2.3 `ShortcutAction.switchPane` を削除し `toggleFileBrowser` を追加。`shortcut_bindings.dart` の既定値と dartdoc、`shortcut_intents.dart` の `Intent`（`SwitchPaneIntent` → `ToggleFileBrowserIntent`）を差し替え、2.1 が通ることを確認する（design D5）
-- [ ] 2.4 `lib/app/startup_migrations.dart` に廃止アクションのバインディング除去を追加する。既存の `migrateApiKeyToSecureStorage` と同じく try/catch で包み、失敗が起動を妨げないようにして 2.2 が通ることを確認する（design D6）
-- [ ] 2.5 `lib/l10n/app_ja.arb` / `app_en.arb` / `app_zh.arb` の `shortcutAction_switchPane` を `shortcutAction_toggleFileBrowser` に差し替え（ja「ファイル一覧の表示切替」/ en "Toggle file browser" / zh 相当）、`lib/features/keyboard_shortcuts/presentation/shortcut_settings_section.dart` の `switch` を更新する。`fvm flutter analyze` が通り、設定画面に新しいラベルが出ることを確認する
+- [x] 2.1 既定バインディングのテストを更新・追加し、`toggleFileBrowser` の既定が修飾子なしの `Tab` であること、`switchPane` が `ShortcutAction.values` に存在しないことを検証する。未実装により失敗することを確認する
+- [x] 2.2 保存済み設定から廃止アクションのエントリが除去されることのテストを書く。「廃止済みエントリが消える」「現存アクションのカスタマイズは保持される」「解放されたキーを別アクションへ割り当てられる」の3ケース。未実装により失敗することを確認する
+- [x] 2.3 `ShortcutAction.switchPane` を削除し `toggleFileBrowser` を追加。`shortcut_bindings.dart` の既定値と dartdoc、`shortcut_intents.dart` の `Intent`（`SwitchPaneIntent` → `ToggleFileBrowserIntent`）を差し替え、2.1 が通ることを確認する（design D5）
+- [x] 2.4 `lib/app/startup_migrations.dart` に廃止アクションのバインディング除去を追加する。既存の `migrateApiKeyToSecureStorage` と同じく try/catch で包み、失敗が起動を妨げないようにして 2.2 が通ることを確認する（design D6）
+- [x] 2.5 `lib/l10n/app_ja.arb` / `app_en.arb` / `app_zh.arb` の `shortcutAction_switchPane` を `shortcutAction_toggleFileBrowser` に差し替え（ja「ファイル一覧の表示切替」/ en "Toggle file browser" / zh 相当）、`lib/features/keyboard_shortcuts/presentation/shortcut_settings_section.dart` の `switch` を更新する。`fvm flutter analyze` が通り、設定画面に新しいラベルが出ることを確認する
 
 ## 3. home_screen の再構成
 

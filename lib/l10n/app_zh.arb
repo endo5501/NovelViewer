@@ -421,5 +421,5 @@
   "shortcutAction_search": "搜索",
   "shortcutAction_bookmark": "书签",
   "shortcutAction_ttsToggle": "朗读 播放/暂停",
-  "shortcutAction_switchPane": "切换面板"
+  "shortcutAction_toggleFileBrowser": "切换文件列表"
 }

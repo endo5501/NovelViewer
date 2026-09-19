@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logging/logging.dart';
@@ -347,5 +349,39 @@ class SettingsRepository {
       _shortcutBindingsKey,
       ShortcutBindingCodec.encode(bindings),
     );
+  }
+
+  /// Drops stored bindings for actions that no longer exist.
+  ///
+  /// The map is keyed by the enum's own names, so retiring an action leaves an
+  /// entry behind that nothing reads and no settings row can rebind. Decoding
+  /// already ignores it, so this is hygiene rather than a fix: it keeps the
+  /// stored JSON to the actions that are actually offered.
+  ///
+  /// Returns `true` when something was removed, so a caller can tell a
+  /// migration that did work from one that found nothing to do.
+  Future<bool> pruneRetiredShortcutBindings() async {
+    final raw = _prefs.getString(_shortcutBindingsKey);
+    if (raw == null || raw.isEmpty) return false;
+
+    final Object? parsed;
+    try {
+      parsed = jsonDecode(raw);
+    } catch (_) {
+      // Malformed storage is already handled by decode falling back to the
+      // defaults; rewriting it here would only guess at what it meant.
+      return false;
+    }
+    if (parsed is! Map) return false;
+
+    final known = {for (final action in ShortcutAction.values) action.name};
+    final retained = <String, dynamic>{
+      for (final entry in parsed.entries)
+        if (known.contains(entry.key)) '${entry.key}': entry.value,
+    };
+    if (retained.length == parsed.length) return false;
+
+    await _prefs.setString(_shortcutBindingsKey, jsonEncode(retained));
+    return true;
   }
 }

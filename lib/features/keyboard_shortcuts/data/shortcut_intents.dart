@@ -4,7 +4,7 @@ import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_action.da
 /// Intents dispatched by the centralized keyboard-shortcut system.
 ///
 /// The customizable-action intents ([SearchIntent], [BookmarkIntent],
-/// [TtsToggleIntent], [SwitchPaneIntent]) are produced by HomeScreen's dynamic
+/// [TtsToggleIntent], [ToggleFileBrowserIntent]) are produced by HomeScreen's dynamic
 /// `Shortcuts` map. The page-navigation intents ([NextPageIntent],
 /// [PrevPageIntent]) are produced by fixed, viewer-scoped `Shortcuts` and are
 /// implemented by whichever viewer currently holds focus.
@@ -21,8 +21,11 @@ class TtsToggleIntent extends Intent {
   const TtsToggleIntent();
 }
 
-class SwitchPaneIntent extends Intent {
-  const SwitchPaneIntent();
+/// Logical "show or hide the file browser" action. The file browser lives in a
+/// drawer at every display width, so this opens the drawer when it is closed
+/// and closes it when it is open.
+class ToggleFileBrowserIntent extends Intent {
+  const ToggleFileBrowserIntent();
 }
 
 /// Logical "advance one page" action. Each viewer translates it into its own
@@ -46,7 +49,7 @@ Intent intentFor(ShortcutAction action) {
       return const BookmarkIntent();
     case ShortcutAction.ttsToggle:
       return const TtsToggleIntent();
-    case ShortcutAction.switchPane:
-      return const SwitchPaneIntent();
+    case ShortcutAction.toggleFileBrowser:
+      return const ToggleFileBrowserIntent();
   }
 }
