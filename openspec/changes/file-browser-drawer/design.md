@@ -102,6 +102,10 @@
 
 **`isNarrow` 分岐削減によるリグレッション** → `body` を1本の `Row` に統一する D4 は見た目の変化を伴わないはずだが、`FocusScope` の位置や `VerticalDivider` の有無で差が出る余地がある。`home_screen_adaptive_shell_test.dart` の両レイアウトのケースで担保する。
 
+**Drawer を開き直すとタブ選択が失われる** → 閉じた `Drawer` は子を完全にアンマウントするため、`LeftColumnPanel` の `TabController` は開くたびに作り直され、常にファイルタブから始まる。wide レイアウトでは以前パネルが常駐していたため、これは PC 側の挙動変更にあたる。意図した仕様として受け入れる: `Drawer` を開くのは「次に何を読むか選ぶ」ためであり、その答えはブックマーク一覧よりファイル一覧であることが多い。`three-column-layout` の要件に明記した。
+
+**narrow で Tab を押すと検索セッションが終了する** → `ScaffoldState.openDrawer()` は先に `endDrawer` を閉じ、その dismiss を `_onEndDrawerChanged` が検索終了と解釈する。ただしこれは narrow のハンバーガーボタン経由で以前から起きていた挙動で、Tab は入口を増やしたにすぎない。本変更が持ち込んだものではないため、別の change の対象とする。
+
 **移行を revert したときのカスタムキー消失** → D6 の移行で `switchPane` エントリを消した後に本変更を revert すると、`switchPane` に独自キーを割り当てていた利用者は既定の Tab に戻る。非可逆だが影響は軽微。
 
 ## Migration Plan

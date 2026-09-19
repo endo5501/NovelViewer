@@ -983,6 +983,29 @@ void main() {
       expect(find.byIcon(Icons.menu), findsOneWidget);
     });
 
+    testWidgets('comes back on the files tab after being closed', (
+      tester,
+    ) async {
+      // A closed drawer unmounts the panel, so its TabController is rebuilt on
+      // every open and the files tab always wins. That is the intent — opening
+      // the browser is how a reader goes to choose what to read next — so it
+      // is pinned here rather than left to the widget's lifecycle.
+      await pumpApp(tester);
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(Tab, 'ブックマーク'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TabBar>(find.byType(TabBar)).controller?.index, 1);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<TabBar>(find.byType(TabBar)).controller?.index, 0);
+    });
+
     testWidgets('is reachable by arrow key once it opens', (tester) async {
       // A reader who opened the browser with the keyboard should be able to
       // walk it with the keyboard, without reaching for the mouse first. The

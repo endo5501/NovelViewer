@@ -1,7 +1,9 @@
 ## MODIFIED Requirements
 
 ### Requirement: Left column displays file browser
-The left column SHALL contain a tabbed interface whose first two tabs are a file browser tab and a bookmark list tab, followed by any further tabs contributed by capabilities that are available on the running platform. The file browser tab SHALL be selected by default on application launch. The left column SHALL use a `TabBar` + `TabBarView` for switching between the panels.
+The left column SHALL contain a tabbed interface whose first two tabs are a file browser tab and a bookmark list tab, followed by any further tabs contributed by capabilities that are available on the running platform. The left column SHALL use a `TabBar` + `TabBarView` for switching between the panels.
+
+The file browser tab SHALL be the selected tab every time the drawer opens, not only on application launch. A closed drawer unmounts its contents, so the panel is built afresh on each open; the file browser tab is therefore where a reader always starts, whichever tab they left from. This is intended: opening the file browser is how a reader goes to choose what to read next, and the file listing is the answer to that far more often than the bookmark list is.
 
 The left column SHALL be presented in a `Drawer` at every display width, in the wide layout and in the narrow layout alike, and SHALL NOT occupy a share of the main row in either. The main row is therefore the text viewer, beside the search panel when that one is visible.
 
@@ -11,6 +13,10 @@ The drawer SHALL be as wide as the display less 64 logical pixels, capped at 560
 - **WHEN** the application launches and the drawer holding the left column is opened
 - **THEN** the left column SHALL display a tab bar at the top whose first two tabs are "ファイル" and "ブックマーク"
 - **AND** the "ファイル" tab SHALL be selected by default showing the file browser widget
+
+#### Scenario: Left column returns to the file tab on every open
+- **WHEN** the reader selects the "ブックマーク" tab, closes the drawer, and opens it again
+- **THEN** the "ファイル" tab SHALL be selected once more
 
 #### Scenario: Left column maintains fixed width with tabs
 - **WHEN** the left column displays the tabbed interface inside the drawer
