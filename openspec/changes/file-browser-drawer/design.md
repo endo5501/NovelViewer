@@ -38,9 +38,13 @@
 
 ### D2. 起動時の Drawer オープンは `readingProgressStartupProvider` の決着を `ref.listen` で待つ
 
-`HomeScreen` で当該 provider を購読し、`AsyncLoading` から `AsyncData` / `AsyncError` へ遷移した時点で一度だけ `openDrawer()` を呼ぶ。実行済みかどうかは `_startupDrawerOpened` のような `State` のフラグで持つ。
+`HomeScreen` で当該 provider を購読し、`AsyncLoading` から `AsyncData` / `AsyncError` へ遷移した時点で一度だけ `openDrawer()` を呼ぶ。済みかどうかは `_startupDrawerSettled` という `State` のフラグで持つ。
 
 補足として、初回 `build` の時点で既に決着している場合（ライブラリが空、テスト環境など）もあるため、`listen` だけに頼らず現在値も確認して post-frame で開く。`ref.listen` は遷移しか拾わない。
+
+post-frame コールバックは**フレームを要求しない**。SDK の文言どおり「次のフレームの後（それがいつであれ、来るとすれば）」に走るだけで、ここでは `ref.listen` も `ref.read` も何も再描画しない。したがって `ensureVisualUpdate()` でフレームを要求する。フレーム進行中は何もしない形であり、その場合コールバックは当該フレームの末尾で走る。
+
+`_startupDrawerSettled` は「開いた」ではなく「決着した」を意味する。`Scaffold.onDrawerChanged` で、利用者が自分で Drawer を開閉した時点でも立てる。蔵書が多いと復元が走っている間に利用者が先に Drawer を使い終えていることがあり、そこへ後から起動時オープンが届くと、読み始めた本文の上に一覧が被さる。復元側は `interrupted` で降りるのに Drawer だけ開く、という噛み合わせの悪さを断つ。
 
 この provider は成功・復元対象なし・失敗のいずれでも正常完了する（`catch` で握って `warning` を出す）。さらに、利用者が復元完了前に操作した場合は `interrupted` フラグで復元自体が降りるが、Future は完了する。つまり「決着は必ず来る」ことが保証されており、Drawer が永久に開かない状態には陥らない。
 
@@ -57,6 +61,10 @@
 `endDrawer` を対象外にしても後退はない。現状 narrow レイアウトで検索結果 Drawer が開いているときに Esc を押すと「検索終了 → `_syncEndDrawer` が Drawer を閉じる」で同じ見た目になる。振る舞いは変わらない。
 
 この決定に合わせ、`specs/adaptive-shell-layout/spec.md` の要件 "Escape closes an open drawer before anything else" の本文を、対象がファイルブラウザ Drawer であると明示する形に限定した（シナリオは元から左 Drawer を前提に書いてある）。
+
+もう一つ除外するものがある。`Drawer` の上にモーダルが乗っている場合、この分岐は通さない（`ModalRoute.of(context)?.isCurrent`）。ファイルブラウザは削除確認や移動先選択のダイアログを自ら開き、それらは Esc をフォーカスツリー経由で受けて自分を閉じる。`HardwareKeyboard` のハンドラが `true` を返してもそれは止まらない——`KeyEventManager` は戻り値に関わらずフォーカスツリーへメッセージを配る。ガードがないと、確認をキャンセルしただけの一押しで背後の `Drawer` まで閉じ、利用者は本文に放り出される。
+
+このガードは `Drawer` の分岐だけに掛け、検索終了・TTS 停止には掛けない。それらの挙動は本変更以前からのもので、ここで変える理由がない。
 
 ### D4. `body` を1本の `Row` に統一し、`isNarrow` の分岐を減らす
 

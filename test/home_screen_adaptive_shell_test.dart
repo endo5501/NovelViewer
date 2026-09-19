@@ -145,6 +145,25 @@ void main() {
       expect(tester.getBottomLeft(panel).dy, 600 - kBottomInset);
     });
 
+    testWidgets('the left drawer is inset in the wide layout too', (
+      tester,
+    ) async {
+      // The inset is no longer a narrow-layout measure: the file browser
+      // drawer exists at every width, and so does whatever the system draws
+      // over the top of the screen.
+      useInsetDisplay(tester);
+      await pumpApp(tester);
+
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+
+      expect(tester.getRect(find.byType(TabBar)).top, kTopInset);
+      expect(
+        tester.getRect(find.byKey(const Key('left_column'))).bottom,
+        600 - kBottomInset,
+      );
+    });
+
     testWidgets('the search drawer is inset the same way', (tester) async {
       useInsetDisplay(tester);
       await pumpApp(tester, breakpoint: 900);
@@ -199,6 +218,17 @@ void main() {
       // drawer that opened on an edge drag would take page turning away at
       // exactly the edges of the screen.
       await pumpApp(tester, breakpoint: 900);
+
+      await tester.dragFrom(const Offset(1, 300), const Offset(300, 0));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsNothing);
+    });
+
+    testWidgets('an edge drag does not open the drawer in the wide layout', (
+      tester,
+    ) async {
+      await pumpApp(tester);
 
       await tester.dragFrom(const Offset(1, 300), const Offset(300, 0));
       await tester.pumpAndSettle();
@@ -981,6 +1011,11 @@ void main() {
       expect(find.byKey(const Key('left_column')), findsNothing);
       expect(find.byType(VerticalDivider), findsNothing);
       expect(find.byIcon(Icons.menu), findsOneWidget);
+      expect(
+        tester.state<ScaffoldState>(find.byType(Scaffold)).hasEndDrawer,
+        isFalse,
+        reason: 'the search results are a column here, not a drawer',
+      );
     });
 
     testWidgets('comes back on the files tab after being closed', (
@@ -1026,6 +1061,70 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('selects a file on Enter and closes behind it', (tester) async {
+      // The whole keyboard path in one go: open the browser, walk to a row,
+      // choose it. Without this, nothing checks that a reader who never
+      // reaches for the mouse can actually open an episode.
+      const files = [
+        FileEntry(name: '001-ep1.txt', path: '/library/001.txt'),
+        FileEntry(name: '002-ep2.txt', path: '/library/002.txt'),
+      ];
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/library'),
+            shellBreakpointProvider.overrideWithValue(800),
+            readingProgressStartupProvider.overrideWith(
+              (ref) => Completer<void>().future,
+            ),
+            directoryContentsProvider.overrideWith(
+              (ref) async =>
+                  const DirectoryContents(files: files, subdirectories: []),
+            ),
+            currentDirectoryProvider.overrideWith(
+              () => _FixedDirectoryNotifier('/library'),
+            ),
+          ],
+          child: const NovelViewerApp(),
+        ),
+      );
+      // Not pumpAndSettle: the selected episode does not exist on disk, so the
+      // viewer keeps a progress indicator spinning.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      final container = containerOf(tester);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+
+      // Directional traversal starts at the drawer's own scope and passes the
+      // tab bar on the way, so the row is a few presses down.
+      var onARow = false;
+      for (var i = 0; i < 8 && !onARow; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        tester.binding.focusManager.primaryFocus?.context
+            ?.visitAncestorElements((element) {
+              if (element.widget is ListTile) {
+                onARow = true;
+                return false;
+              }
+              return true;
+            });
+      }
+      expect(onARow, isTrue, reason: 'arrow keys must reach a file row');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(container.read(selectedFileProvider)?.name, '001-ep1.txt');
+      expect(find.byKey(const Key('left_column')), findsNothing);
     });
 
     testWidgets('opens the same drawer the narrow layout does', (tester) async {
