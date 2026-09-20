@@ -193,6 +193,20 @@ void main() {
       expect(hasNovelData(subFolder.path), isFalse);
     });
 
+    test('小説フォルダでないフォルダを渡されても削除せず、DBも作らない', () async {
+      // The folder is a parameter, so the panel is no longer the only thing
+      // standing between a caller and a novel_data.db in a folder that is not
+      // a novel. Opening one creates the file, so the check belongs here too.
+      final organizational = await makeDir('完結済み');
+      final container = containerAt(organizational.path);
+
+      await container
+          .read(llmSummaryHistoryProvider.notifier)
+          .deleteEntry('アリス', novelFolder: organizational.path);
+
+      expect(hasNovelData(organizational.path), isFalse);
+    });
+
     test('削除は呼び出し側が渡した小説に対して行われる', () async {
       // A rebuild of the notifier replaces whatever folder it resolved for
       // itself, so the folder cannot come from the notifier: the list and the
