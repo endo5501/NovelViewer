@@ -57,7 +57,7 @@ void main() {
             (ref) async =>
                 const DirectoryContents(files: [], subdirectories: [_folder]),
           ),
-          allNovelsProvider.overrideWith((ref) async => [_novel]),
+          allNovelsProvider.overrideWith((ref) => [_novel]),
         ],
         child: const NovelViewerApp(),
       ),

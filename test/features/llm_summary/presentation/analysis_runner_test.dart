@@ -153,7 +153,7 @@ ProviderContainer _container(
         () => CurrentDirectoryNotifier(directory),
       ),
       libraryPathProvider.overrideWithValue('/library'),
-      allNovelsProvider.overrideWith((ref) async => [_novelA]),
+      allNovelsProvider.overrideWith((ref) => [_novelA]),
       selectedFileProvider.overrideWith(() => _MockSelectedFile(file)),
       localeProvider.overrideWith(() => _StubLocale(language)),
       llmSummaryServiceProvider.overrideWith((ref, folderPath) => stub),
@@ -207,7 +207,7 @@ void main() {
             () => CurrentDirectoryNotifier('/library/novel_a'),
           ),
           libraryPathProvider.overrideWithValue('/library'),
-          allNovelsProvider.overrideWith((ref) async => [_novelA]),
+          allNovelsProvider.overrideWith((ref) => [_novelA]),
           selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
           localeProvider.overrideWith(() => _StubLocale('ja')),
           llmSummaryServiceProvider.overrideWith((ref, folderPath) => null),
@@ -286,7 +286,7 @@ void main() {
             () => CurrentDirectoryNotifier('/library/novel_a'),
           ),
           libraryPathProvider.overrideWithValue('/library'),
-          allNovelsProvider.overrideWith((ref) async => [_novelA]),
+          allNovelsProvider.overrideWith((ref) => [_novelA]),
           selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
           localeProvider.overrideWith(() => _StubLocale('ja')),
           llmSummaryServiceProvider.overrideWith((ref, folderPath) => null),
@@ -319,7 +319,7 @@ void main() {
             () => CurrentDirectoryNotifier('/library/novel_a'),
           ),
           libraryPathProvider.overrideWithValue('/library'),
-          allNovelsProvider.overrideWith((ref) async => [_novelA]),
+          allNovelsProvider.overrideWith((ref) => [_novelA]),
           selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
           localeProvider.overrideWith(() => _StubLocale('ja')),
           llmSummaryServiceProvider.overrideWith((ref, folderPath) => null),
@@ -1283,7 +1283,7 @@ void main() {
               () => CurrentDirectoryNotifier('/library/novel_a'),
             ),
             libraryPathProvider.overrideWithValue('/library'),
-            allNovelsProvider.overrideWith((ref) async => [_novelA]),
+            allNovelsProvider.overrideWith((ref) => [_novelA]),
             selectedFileProvider.overrideWith(
               () => _MockSelectedFile(
                 const FileEntry(
@@ -1416,7 +1416,7 @@ extension on ProviderContainer {
           () => CurrentDirectoryNotifier(directory),
         ),
         libraryPathProvider.overrideWithValue('/library'),
-        allNovelsProvider.overrideWith((ref) async => [_novelA]),
+        allNovelsProvider.overrideWith((ref) => [_novelA]),
         selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
         llmSummaryServiceProvider.overrideWith(
           (ref, folderPath) => _StubService(

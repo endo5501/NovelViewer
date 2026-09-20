@@ -31,9 +31,7 @@ void main() {
       ProviderScope(
         overrides: [
           libraryPathProvider.overrideWithValue('/library'),
-          allNovelsProvider.overrideWith(
-            (ref) => novels ?? Future.value([_novel]),
-          ),
+          allNovelsProvider.overrideWith((ref) => novels ?? [_novel]),
           currentDirectoryProvider.overrideWith(
             () => CurrentDirectoryNotifier(currentDirectory),
           ),

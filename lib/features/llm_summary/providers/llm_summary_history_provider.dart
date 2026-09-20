@@ -10,17 +10,22 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_provider
 import 'package:path/path.dart' as p;
 
 class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
-  /// The history belongs to a novel, so it is read from the novel folder that
-  /// owns the browser's current directory — not from the directory itself.
+  /// The folder this list was read from, held so that acting on an entry
+  /// cannot reach a different novel's database than the one the entry came
+  /// from — the browser may have moved between the list being built and the
+  /// user picking something out of it.
+  String? _folder;
+
+  /// The history belongs to a novel, so it is read from the novel folder the
+  /// browser is at — not from whatever directory it happens to show.
   ///
-  /// Resolving it is what keeps `novel_data.db` out of folders that are not
+  /// That is also what keeps `novel_data.db` out of folders that are not
   /// novels: opening one creates the file, so treating any non-root directory
-  /// as a novel left an organizational folder holding a novel's database. The
-  /// bookmark panel, which reads the same file, has always resolved it this
-  /// way; this is the same rule, not a second one.
+  /// as a novel left an organizational folder holding a novel's database.
   @override
   Future<List<HistoryEntry>> build() async {
-    final novelFolder = await ref.watch(currentNovelFolderPathProvider.future);
+    final novelFolder = ref.watch(summaryNovelFolderProvider);
+    _folder = novelFolder;
     if (novelFolder == null) return const [];
 
     final repo = await ref.watch(
@@ -31,7 +36,7 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
   }
 
   Future<void> deleteEntry(String word) async {
-    final novelFolder = await ref.read(currentNovelFolderPathProvider.future);
+    final novelFolder = _folder;
     if (novelFolder == null) return;
 
     final repo = await ref.read(
@@ -52,13 +57,11 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
 
   /// Opens the file a snapshot was taken from.
   ///
-  /// The folder here is the browser's current directory, not the novel folder
-  /// the database came from. A `source_file` is a bare file name recorded
-  /// against the folder the episodes were read from, so resolving it against
-  /// the novel folder would look for the file one level up from where it is.
-  /// The two are the same folder in every layout the application can produce.
+  /// A `source_file` is a bare file name recorded against the folder the
+  /// episodes were counted in, which is the novel folder this list was read
+  /// from — analysis only runs while the browser is at one.
   Future<void> openEntry(HistoryEntry entry) async {
-    final directory = ref.read(currentDirectoryProvider);
+    final directory = _folder;
     if (directory == null) return;
 
     // Try every snapshot's source_file (largest episode first, since that's

@@ -26,6 +26,8 @@ ProviderContainer _containerFor({
   required LlmSummaryRepository repository,
   required FactCacheRepository factCacheRepository,
   required String? directoryPath,
+  String libraryPath = '/library',
+  String folderName = 'my_novel',
 }) {
   return ProviderContainer(
     overrides: [
@@ -42,18 +44,18 @@ ProviderContainer _containerFor({
       // The notifier resolves its novel folder from the browser's location, so
       // the library root and the registered novel list have to be present for
       // '/library/my_novel' to be a novel folder at all.
-      libraryPathProvider.overrideWithValue('/library'),
-      allNovelsProvider.overrideWith((ref) async => [_myNovel]),
+      libraryPathProvider.overrideWithValue(libraryPath),
+      allNovelsProvider.overrideWith((ref) => [_novelNamed(folderName)]),
     ],
   );
 }
 
-final _myNovel = NovelMetadata(
+NovelMetadata _novelNamed(String folderName) => NovelMetadata(
   siteType: 'narou',
-  novelId: 'my_novel',
-  title: 'My Novel',
-  url: 'https://ncode.syosetu.com/my_novel/',
-  folderName: 'my_novel',
+  novelId: folderName,
+  title: 'Novel $folderName',
+  url: 'https://ncode.syosetu.com/$folderName/',
+  folderName: folderName,
   episodeCount: 3,
   downloadedAt: DateTime(2024, 1, 1),
 );
@@ -356,13 +358,16 @@ void main() {
           await tempDir.delete(recursive: true);
         }
       });
-      final file = File('${tempDir.path}/040_chapter.txt');
+      final novelDir = Directory('${tempDir.path}/my_novel')
+        ..createSync(recursive: true);
+      final file = File('${novelDir.path}/040_chapter.txt');
       await file.writeAsString('line1\nアリスが登場した。\nline3');
 
       final container = _containerFor(
         repository: repository,
         factCacheRepository: factCacheRepository,
-        directoryPath: tempDir.path,
+        directoryPath: novelDir.path,
+        libraryPath: tempDir.path,
       );
       addTearDown(container.dispose);
 
@@ -385,13 +390,16 @@ void main() {
           await tempDir.delete(recursive: true);
         }
       });
-      final file = File('${tempDir.path}/050_chapter.txt');
+      final novelDir = Directory('${tempDir.path}/my_novel')
+        ..createSync(recursive: true);
+      final file = File('${novelDir.path}/050_chapter.txt');
       await file.writeAsString('全く関係ない本文だけ\nが書かれている');
 
       final container = _containerFor(
         repository: repository,
         factCacheRepository: factCacheRepository,
-        directoryPath: tempDir.path,
+        directoryPath: novelDir.path,
+        libraryPath: tempDir.path,
       );
       addTearDown(container.dispose);
 

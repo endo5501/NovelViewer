@@ -50,7 +50,7 @@ ProviderContainer _containerAt(String directory) {
     overrides: [
       displayModeProvider.overrideWith(_MockDisplayMode.new),
       libraryPathProvider.overrideWithValue('/library'),
-      allNovelsProvider.overrideWith((ref) async => [_novel]),
+      allNovelsProvider.overrideWith((ref) => [_novel]),
       currentDirectoryProvider.overrideWith(
         () => CurrentDirectoryNotifier(directory),
       ),

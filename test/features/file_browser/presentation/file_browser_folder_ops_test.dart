@@ -99,7 +99,7 @@ Widget _panel({
         () => _TestCurrentDirectoryNotifier(currentDir),
       ),
       libraryPathProvider.overrideWithValue(libraryPath),
-      allNovelsProvider.overrideWith((ref) async => novels),
+      allNovelsProvider.overrideWith((ref) => novels),
       fileSystemServiceProvider.overrideWithValue(fs),
       if (deleteService != null)
         novelDeleteServiceProvider.overrideWith((ref) async => deleteService),
@@ -517,9 +517,7 @@ void main() {
             () => _TestCurrentDirectoryNotifier('/library'),
           ),
           libraryPathProvider.overrideWithValue('/library'),
-          allNovelsProvider.overrideWith(
-            (ref) async => const <NovelMetadata>[],
-          ),
+          allNovelsProvider.overrideWith((ref) => const <NovelMetadata>[]),
           fileSystemServiceProvider.overrideWithValue(fs),
           directoryContentsProvider.overrideWith((ref) async {
             browserBuilds++;

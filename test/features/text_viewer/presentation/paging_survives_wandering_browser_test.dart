@@ -85,7 +85,7 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
         displayModeProvider.overrideWith(() => _StubDisplayMode(mode)),
         libraryPathProvider.overrideWithValue('/library'),
-        allNovelsProvider.overrideWith((ref) async => [_novel]),
+        allNovelsProvider.overrideWith((ref) => [_novel]),
         fileSystemServiceProvider.overrideWithValue(_FakeFileSystemService()),
         currentDirectoryProvider.overrideWith(
           () => CurrentDirectoryNotifier('/library'),

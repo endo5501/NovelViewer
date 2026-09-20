@@ -62,7 +62,7 @@ ProviderContainer _makeContainer({
       currentDirectoryProvider.overrideWith(
         () => CurrentDirectoryNotifier(browserDirectory),
       ),
-      allNovelsProvider.overrideWith((ref) async => novels ?? [_novel]),
+      allNovelsProvider.overrideWith((ref) => novels ?? [_novel]),
       fileSystemServiceProvider.overrideWithValue(_FakeFileSystemService(tree)),
       selectedFileProvider.overrideWith(() => _StubSelectedFileNotifier(open)),
     ],

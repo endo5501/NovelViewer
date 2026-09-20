@@ -12,11 +12,12 @@
 
 ## What Changes
 
-**`novel_data.db` を開く場所を、登録済み小説フォルダに限定する。**
+**`novel_data.db` を開く場所を、ブラウザが「いる」登録済み小説フォルダに限定する。**
 
-- LLM 解析が対象とするフォルダを、ブラウザの現在地そのものではなく `resolveNovelFolderPath` で解決した登録済み小説フォルダにする。ブックマークの `currentNovelFolderPathProvider` と同じ解決規則になり、同一の `novel_data.db` を2つの機能が別の鍵で開くことがなくなる。入れ子の深さには依存しない。
-- 解決できない場所（ライブラリルート、および登録済み小説フォルダを祖先に持たない整理フォルダ）では、解析履歴パネルはこれまでライブラリルートで出していたのと同じ「作品フォルダを選択してください」を表示し、provider を watch しない。解析の実行は既存の「小説フォルダを開いてください」で断る。どちらも `novel_data.db` を開かない。
-- 話数の算出（`resolveUpperBoundForCurrent` / `resolveUpperBoundForAll` / `resolveSourceFileForAll`）と、履歴からの本文ジャンプのパス組み立ては、これまで通り**表示中のファイルが置かれているフォルダ**を使う。これらはDBの鍵ではなくエピソードの並びであり、小説フォルダへ寄せると `source_file` の記録と食い違う。
+- LLM 機能（履歴の表示・削除・ジャンプ、詳細ダイアログ、解析の実行、hover popup）が対象とするフォルダを、`summaryNovelFolderProvider` 1本に統一する。これは、ブラウザの現在地が登録済み小説フォルダ**そのもの**であればその現在地を、そうでなければ null を返す同期 Provider。入れ子の深さには依存しない（整理フォルダの配下にある小説フォルダも対象）。
+- null になる場所 — ライブラリルート、登録済み小説フォルダを祖先に持たない整理フォルダ、**登録済み小説フォルダの中のサブフォルダ** — では、解析履歴パネルはこれまでライブラリルートで出していたのと同じ「作品フォルダを選択してください」を表示し、provider を watch しない。解析の実行と hover popup は既存の「小説フォルダを開いてください」で断る、あるいは何も出さない。いずれも `novel_data.db` を開かない。
+- サブフォルダを除くのは、書き込み先と話数の数え場所が食い違うため。スナップショットの鍵となる話数と `source_file` は表示中のフォルダの `.txt` から数えられるので、サブフォルダから解析すると、その中で数えた話数を鍵に親の小説の DB へ書き込み、小説自身が同じ鍵で持つスナップショットを静かに上書きする。
+- 話数の算出（`resolveUpperBoundForCurrent` / `resolveUpperBoundForAll` / `resolveSourceFileForAll`）、本文の読み取り、履歴からのジャンプ先の組み立ても、すべて同じフォルダを使う。1つのフォルダが両方の役割を持つため、食い違いが構造的に起こらない。
 
 **小説フォルダの中に整理フォルダを作らせない。**
 
@@ -26,6 +27,7 @@
 
 - 整理フォルダで解析履歴タブを開くと、これまで空リスト（と副作用のDBファイル）だったものが「作品フォルダを選択してください」になる。
 - 整理フォルダに直接置かれたテキストを読んでいるとき、LLM 解析が実行できなくなる。ブックマークが同じ場所で既に無効であるのと揃う。
+- 小説フォルダの中のサブフォルダでは、LLM 機能が一切使えなくなる。そこにエピソードを置く経路はアプリに無く、アプリ外で手動配置した場合にのみ到達する。親の小説フォルダへ戻れば従来どおり使える。
 - 小説フォルダにいる間、新規フォルダ作成ボタンが押せなくなる。
 - 登録済み小説フォルダの中で読んでいる限り、何も変わらない。解析も履歴もこれまで通り動く。
 
@@ -39,16 +41,17 @@
 
 ### Modified Capabilities
 
-- `llm-summary-history-ui`: 「History entries scoped to active novel」の対象判定を、「ライブラリルートでなければ現在地を小説とみなす」から「`resolveNovelFolderPath` で解決した登録済み小説フォルダ。解決できなければ対象なし」へ変更する。
-- `llm-summary-context-menu-trigger`: 解析を開始できる場所の制約を追加する。登録済み小説フォルダが解決できない場所では解析を開始せず、`novel_data.db` を作らない。
+- `llm-summary-history-ui`: 「History entries scoped to active novel」の対象判定を、「ライブラリルートでなければ現在地を小説とみなす」から「ブラウザが登録済み小説フォルダそのものを表示しているとき」へ変更する。「Delete entry via context menu」に、削除が一覧を読んだ小説に対して行われるという制約を追加する。
+- `llm-summary-context-menu-trigger`: 解析を開始できる場所の制約を追加する。登録済み小説フォルダを表示していない場所では解析を開始せず、`novel_data.db` を作らない。
 - `novel-folder-management`: 「整理フォルダの作成」に、小説フォルダおよびその配下では作成できないという制約を追加する。移動先・ダウンロード先が既に持っている「小説フォルダの内部を候補として表示してはならない」と揃える。
 
 ## Impact
 
-- `lib/features/llm_summary/presentation/llm_summary_history_panel.dart` — ガード条件の差し替え
-- `lib/features/llm_summary/providers/llm_summary_history_provider.dart` — DBの対象フォルダとジャンプ先パスの分離（`build` / `deleteEntry` / `openEntry`）
-- `lib/features/llm_summary/presentation/analysis_runner.dart` — DBの対象フォルダと話数算出フォルダの分離、解決できない場所での中断
+- `lib/features/llm_summary/providers/llm_summary_providers.dart` — `summaryNovelFolderProvider` の新設
+- `lib/features/llm_summary/providers/llm_summary_history_provider.dart` — 対象フォルダの差し替えと、一覧を読んだフォルダの保持（`build` / `deleteEntry` / `openEntry`）
+- `lib/features/llm_summary/presentation/llm_summary_history_panel.dart` — ガード条件の差し替えと、詳細ダイアログへのフォルダ受け渡し
+- `lib/features/llm_summary/presentation/analysis_runner.dart` — 対象フォルダの一度きりの決定と、null の場所での中断
 - `lib/features/llm_summary/presentation/hover_popup_host.dart` — 同上
 - `lib/features/file_browser/presentation/file_browser_panel.dart` — ツールバーの新規フォルダ作成ボタンの有効条件
-- `lib/features/bookmark/providers/bookmark_providers.dart` — `currentNovelFolderPathProvider` を参照する。実装は変更しない
+- `lib/features/bookmark/providers/bookmark_providers.dart` — 変更しない。ブックマークは祖先解決のまま
 - データ移行なし。スキーマ変更なし。l10n の新規文言なし

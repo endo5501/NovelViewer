@@ -71,7 +71,7 @@ final _myNovel = NovelMetadata(
 Widget _wrap({required List<Object> overrides}) {
   return ProviderScope(
     overrides: [
-      allNovelsProvider.overrideWith((ref) async => [_myNovel]),
+      allNovelsProvider.overrideWith((ref) => [_myNovel]),
       ...overrides,
     ].cast(),
     child: const MaterialApp(

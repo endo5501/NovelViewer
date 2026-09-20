@@ -70,7 +70,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         libraryPathProvider.overrideWithValue(libraryRoot.path),
-        allNovelsProvider.overrideWith((ref) async => _novels),
+        allNovelsProvider.overrideWith((ref) => _novels),
         currentDirectoryProvider.overrideWith(
           () => CurrentDirectoryNotifier(directory),
         ),

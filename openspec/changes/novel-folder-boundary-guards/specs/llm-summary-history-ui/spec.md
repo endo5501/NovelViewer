@@ -1,9 +1,13 @@
 ## MODIFIED Requirements
 
 ### Requirement: History entries scoped to active novel
-The analysis history panel SHALL display only `word_summaries` entries belonging to the **registered novel folder resolved from the browser's current directory** — the nearest registered novel folder at or above it, by the same nesting-aware rule the bookmark panel uses to reach the same `novel_data.db`. The panel SHALL NOT treat the current directory as a novel folder merely because it is not the library root.
+The analysis history panel SHALL display only `word_summaries` entries belonging to the **registered novel folder the file browser is at**. The panel SHALL NOT treat the current directory as a novel folder merely because it is not the library root, and SHALL NOT treat a directory inside a novel folder as that novel.
 
-When no registered novel folder can be resolved — at the library root, and in any organizational folder with no registered novel folder among its ancestors — a message SHALL be displayed instead of an entry list, and the panel SHALL NOT open a `novel_data.db` for that folder. Opening one creates the file, so a folder that is not a novel folder would be left holding a novel's database.
+Depth is irrelevant: a novel folder nested under organizational folders is still its own folder.
+
+When the browser is not at a registered novel folder — at the library root, in an organizational folder, or in a subfolder inside a novel — a message SHALL be displayed instead of an entry list, and the panel SHALL NOT open a `novel_data.db` for that folder. Opening one creates the file, so a folder that is not a novel would be left holding a novel's database.
+
+A subfolder inside a novel is excluded for a second reason: a snapshot's episode number and its `source_file` are both counted within the folder the browser is at, while the rows would land in the novel's database. Showing that novel's entries from a subfolder would offer jump targets that do not resolve there.
 
 #### Scenario: Display entries for active novel
 - **WHEN** the user is browsing files within a novel folder and switches to the history tab
@@ -22,28 +26,45 @@ When no registered novel folder can be resolved — at the library root, and in 
 - **THEN** a message "作品フォルダを選択してください" SHALL be displayed
 - **AND** no `novel_data.db` SHALL be created in that folder
 
+#### Scenario: No active novel in a subfolder inside a novel
+- **WHEN** the user is in a subfolder inside a registered novel folder and switches to the history tab
+- **THEN** a message "作品フォルダを選択してください" SHALL be displayed
+- **AND** the novel's entries SHALL NOT be listed there
+- **AND** no `novel_data.db` SHALL be created in the subfolder
+
 #### Scenario: No entries exist
 - **WHEN** the user switches to the history tab and the active novel has no cached summaries
 - **THEN** a message "解析履歴がありません" SHALL be displayed
 
-### Requirement: Click jumps to first occurrence in source file
-The user SHALL be able to click a history entry to open its source file and scroll to the first occurrence of the cached word within that file. The source file resolution SHALL use the `source_file` from the snapshot with the highest `covered_up_to_episode` that has a non-NULL `source_file`; if no snapshot has a `source_file`, the click SHALL be a no-op (the entry SHALL be visually indicated as not jumpable).
+### Requirement: Delete entry via context menu
+The user SHALL be able to right-click **or long-press** a history entry to open a context menu with a "削除" option. The menu the long press opens SHALL be identical to the one the right click opens. The long press SHALL apply only to pointers that have no secondary button, so that a mouse held down on an entry still jumps to it rather than opening the menu. Selecting "削除" SHALL remove every snapshot row for `(folder_name=active novel, word=entry's word)` from `word_summaries`. The list SHALL refresh to reflect the deletion. Per-snapshot deletion SHALL NOT be exposed in this UI.
 
-A snapshot's `source_file` is a file name recorded against the folder the episodes were read from, not against the novel folder that owns the database. The jump SHALL therefore resolve the file within the browser's current directory, even when the novel folder the history was read from is an ancestor of it.
+The delete SHALL act on the novel folder the displayed list was read from, not on wherever the file browser has moved to since. The list and the entry in it belong to one novel; a delete that resolved its folder again could remove the word from a different novel's database than the one the user was looking at.
 
-#### Scenario: Jump using latest snapshot's source file
-- **WHEN** the user clicks an entry whose highest-`covered_up_to_episode` snapshot has `source_file="040_chapter.txt"`
-- **THEN** "040_chapter.txt" SHALL be opened in the text viewer and the viewer SHALL scroll to the first occurrence of the cached word within that file
+#### Scenario: Right-click shows context menu
+- **WHEN** the user right-clicks a history entry
+- **THEN** a context menu SHALL appear with a "削除" option
 
-#### Scenario: Jump falls back to next-highest with source_file
-- **WHEN** the user clicks an entry whose highest-`covered_up_to_episode` snapshot has `source_file=NULL` and the next snapshot down has `source_file="060_chapter.txt"`
-- **THEN** "060_chapter.txt" SHALL be opened in the text viewer and the viewer SHALL scroll to the first occurrence of the cached word
+#### Scenario: Long press shows context menu
+- **WHEN** the user long-presses a history entry with a finger or a stylus
+- **THEN** the same context menu SHALL appear at the press position
 
-#### Scenario: Entry without any source file is not jumpable
-- **WHEN** the user clicks an entry whose all snapshots have `source_file=NULL` (legacy migrated data)
-- **THEN** the click SHALL NOT change the current file or scroll position
-- **AND** the entry SHALL be displayed with a visual cue indicating it is not jumpable (e.g., reduced opacity or a small "未追跡" badge)
+#### Scenario: A slow mouse click still jumps to the entry
+- **WHEN** the user holds the primary mouse button on a jumpable history entry past the long-press threshold and releases
+- **THEN** no context menu SHALL appear and the entry SHALL be opened
 
-#### Scenario: Word not present in resolved source file
-- **WHEN** the resolved `source_file` is opened but does not actually contain the cached word
-- **THEN** the file SHALL be opened normally without scrolling, and no error dialog SHALL be shown
+#### Scenario: Delete removes every snapshot for the word
+- **WHEN** the user selects "削除" on an entry for the word "アリス" with three snapshots
+- **THEN** all three rows for `(folder_name=active novel, word="アリス")` SHALL be deleted from `word_summaries`
+
+#### Scenario: Delete acts on the novel the list came from
+- **WHEN** the file browser leaves the novel folder between the list being displayed and the delete being confirmed
+- **THEN** the rows SHALL be deleted from the novel the list was read from
+
+#### Scenario: Delete refreshes the list
+- **WHEN** a delete completes successfully
+- **THEN** the history panel SHALL refresh and the deleted entry SHALL no longer appear
+
+#### Scenario: Delete reflects in mark rendering
+- **WHEN** the user deletes a history entry for a word that was being marked in the text viewer
+- **THEN** the marks for that word SHALL be removed from the text viewer on the next render

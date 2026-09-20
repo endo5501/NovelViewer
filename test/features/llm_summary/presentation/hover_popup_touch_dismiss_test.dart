@@ -51,7 +51,7 @@ ProviderContainer _makeContainer() => ProviderContainer(
       () => CurrentDirectoryNotifier('/library/novel_a'),
     ),
     libraryPathProvider.overrideWithValue('/library'),
-    allNovelsProvider.overrideWith((ref) async => [_novelA]),
+    allNovelsProvider.overrideWith((ref) => [_novelA]),
     selectedFileProvider.overrideWith(_MockSelectedFile.new),
     hoverPopupCacheProvider(_aliceKey).overrideWith(
       (_) async => [

@@ -52,9 +52,7 @@ Future<void> _pumpAt(WidgetTester tester, String directory) async {
     ProviderScope(
       overrides: [
         libraryPathProvider.overrideWithValue('/library'),
-        allNovelsProvider.overrideWith(
-          (ref) async => [_novel('narou_n1234ab')],
-        ),
+        allNovelsProvider.overrideWith((ref) => [_novel('narou_n1234ab')]),
         currentDirectoryProvider.overrideWith(
           () => CurrentDirectoryNotifier(directory),
         ),

@@ -53,7 +53,7 @@ void main() {
     final c = ProviderContainer(
       overrides: [
         libraryPathProvider.overrideWithValue('/library'),
-        allNovelsProvider.overrideWith((ref) async => [_novel]),
+        allNovelsProvider.overrideWith((ref) => [_novel]),
         fileSystemServiceProvider.overrideWithValue(fs),
         currentDirectoryProvider.overrideWith(
           () => CurrentDirectoryNotifier(browserDirectory),

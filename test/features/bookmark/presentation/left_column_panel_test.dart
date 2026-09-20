@@ -68,7 +68,7 @@ void main() {
             currentDirectoryProvider.overrideWith(
               () => _TestCurrentDirectoryNotifier('/library/my_novel'),
             ),
-            allNovelsProvider.overrideWith((ref) async => [_myNovel]),
+            allNovelsProvider.overrideWith((ref) => [_myNovel]),
             directoryContentsProvider.overrideWith((ref) async {
               return DirectoryContents.empty();
             }),

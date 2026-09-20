@@ -162,9 +162,7 @@ void main() {
         packageInfoProvider.overrideWithValue(_packageInfo),
         libraryPathProvider.overrideWithValue(libraryRoot.path),
         allNovelsProvider.overrideWith(
-          (ref) =>
-              novels ??
-              Future.value([_novel('narou_n1234ab'), _novel('narou_n5678cd')]),
+          (ref) => novels ?? [_novel('narou_n1234ab'), _novel('narou_n5678cd')],
         ),
         currentDirectoryProvider.overrideWith(
           () => CurrentDirectoryNotifier(directory),

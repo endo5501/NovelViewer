@@ -25,7 +25,7 @@ Future<ProviderContainer> _containerAt(
     overrides: [
       libraryPathProvider.overrideWithValue('/library'),
       allNovelsProvider.overrideWith(
-        (ref) => novels ?? Future.value([_novel('narou_n1234ab')]),
+        (ref) => novels ?? [_novel('narou_n1234ab')],
       ),
       currentDirectoryProvider.overrideWith(
         () => CurrentDirectoryNotifier(directory),
@@ -33,9 +33,6 @@ Future<ProviderContainer> _containerAt(
     ],
   );
   addTearDown(container.dispose);
-  if (novels == null) {
-    await container.read(allNovelsProvider.future);
-  }
   return container;
 }
 

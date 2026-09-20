@@ -30,3 +30,11 @@
 - [x] 5.3 `fvm dart format .`でフォーマットを実行
 - [x] 5.4 `fvm flutter analyze`でリントを実行
 - [x] 5.5 `fvm flutter test`でテストを実行
+
+## 6. レビュー指摘への対応
+
+- [x] 6.1 `run()` が `FutureProvider` の `.future` を await している間にその provider が再計算されると `Bad state: ... disposed during loading state` で解析が黙って死ぬ問題を、プローブで再現して確認する
+- [x] 6.2 対象フォルダの決定を、ブラウザが登録済み小説フォルダ「そのもの」を表示しているときだけに狭める（`summaryNovelFolderProvider`）。サブフォルダから親の小説のスナップショットを同一鍵で上書きする退行を構造的に防ぎ、その provider 単体テストが通ることを確認する
+- [x] 6.3 履歴・パネル・解析・hover popup を `summaryNovelFolderProvider` 1本に統一し、`episodeFolder` / `novelFolder` の二重管理を削除して既存テストが通ることを確認する
+- [x] 6.4 `LlmSummaryHistoryNotifier` が `build` で決まったフォルダを保持し、`deleteEntry` / `openEntry` がそれを使うようにして、一覧表示後にブラウザが動いても別の小説に作用しないことを確認する
+- [x] 6.5 proposal / design / specs をこの判断に合わせて更新し、`openspec validate --strict` が通ることを確認する
