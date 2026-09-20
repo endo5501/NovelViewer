@@ -83,6 +83,15 @@ void main() {
   bool hasNovelData(String folderPath) =>
       File(p.join(folderPath, NovelDataDatabase.databaseName)).existsSync();
 
+  /// Reads the words held by the `novel_data.db` of [folderPath].
+  Future<List<String>> summaryWords(String folderPath) async {
+    final db = await NovelDataDatabase.openFile(
+      p.join(folderPath, NovelDataDatabase.databaseName),
+    );
+    final rows = await db.query('word_summaries', columns: ['word']);
+    return [for (final row in rows) row['word'] as String];
+  }
+
   group('llmSummaryHistoryProvider の対象フォルダ', () {
     test('整理フォルダでは履歴が空で、novel_data.db も作られない', () async {
       final organizational = await makeDir('完結済み');
@@ -121,6 +130,40 @@ void main() {
       final entries = await container.read(llmSummaryHistoryProvider.future);
 
       expect(entries.map((e) => e.word), ['ボブ']);
+    });
+
+    test('サブフォルダにいても、削除は小説フォルダのDBに対して行われる', () async {
+      final novelFolder = await makeDir('narou_n1234ab');
+      final subFolder = await makeDir(p.join('narou_n1234ab', '第二部'));
+      await seedSummary(novelFolder.path, 'アリス');
+      final container = containerAt(subFolder.path);
+
+      await container.read(llmSummaryHistoryProvider.future);
+      await container
+          .read(llmSummaryHistoryProvider.notifier)
+          .deleteEntry('アリス');
+
+      expect(await summaryWords(novelFolder.path), isEmpty);
+      expect(hasNovelData(subFolder.path), isFalse);
+    });
+
+    test('ジャンプ先は小説フォルダではなく、表示中のフォルダから組み立てる', () async {
+      await makeDir('narou_n1234ab');
+      final novelFolder = Directory(lib('narou_n1234ab'));
+      final subFolder = await makeDir(p.join('narou_n1234ab', '第二部'));
+      await seedSummary(novelFolder.path, 'アリス');
+      await File(p.join(subFolder.path, '001.txt')).writeAsString('アリスが現れた\n');
+      final container = containerAt(subFolder.path);
+
+      final entries = await container.read(llmSummaryHistoryProvider.future);
+      await container
+          .read(llmSummaryHistoryProvider.notifier)
+          .openEntry(entries.single);
+
+      expect(
+        container.read(selectedFileProvider)?.path,
+        p.join(subFolder.path, '001.txt'),
+      );
     });
 
     test('小説フォルダ内のサブフォルダでは、小説フォルダの履歴を読む', () async {
