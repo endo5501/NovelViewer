@@ -1,10 +1,13 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_detail_dialog.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_history_panel.dart';
+import 'package:novel_viewer/features/llm_summary/providers/llm_summary_detail_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
@@ -56,6 +59,9 @@ Future<void> _pumpAt(WidgetTester tester, String directory) async {
           () => CurrentDirectoryNotifier(directory),
         ),
         llmSummaryHistoryProvider.overrideWith(_RecordingHistoryNotifier.new),
+        // Keeps the detail dialog off the filesystem whichever folder it is
+        // handed; the test asserts on the folder it was handed, not on rows.
+        historyDetailFactsProvider.overrideWith((ref, key) async => const []),
       ],
       child: const MaterialApp(
         locale: Locale('ja'),
@@ -99,6 +105,29 @@ void main() {
 
       expect(find.text('アリス'), findsOneWidget);
       expect(_RecordingHistoryNotifier.builds, 1);
+    });
+
+    testWidgets('詳細ダイアログには小説フォルダが渡される', (tester) async {
+      await _pumpAt(tester, '/library/narou_n1234ab/第二部');
+
+      final target = tester.getCenter(find.text('アリス'));
+      final gesture = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kSecondaryMouseButton,
+      );
+      await gesture.addPointer(location: target);
+      await tester.pump();
+      await gesture.down(target);
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('詳細を表示'));
+      await tester.pumpAndSettle();
+
+      final dialog = tester.widget<LlmSummaryDetailDialog>(
+        find.byType(LlmSummaryDetailDialog),
+      );
+      expect(dialog.folderPath, '/library/narou_n1234ab');
     });
   });
 }
