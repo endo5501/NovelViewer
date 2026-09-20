@@ -17,18 +17,18 @@
 
 - [x] 3.1 `test/home_screen_download_button_test.dart` を作成し、AppBar ボタンの2状態を検証するウィジェットテストを書く（更新対象が解決できる場合は `Icons.sync` と更新ツールチップ・押下で `refreshNovel` が呼ばれ進捗ダイアログが出る / 解決できない場合は `Icons.download` とダウンロードツールチップ・押下で `DownloadDialog` が出る / どちらの状態でもボタンは有効 / 更新完了後も更新状態が保たれる / ダウンロード実行中に押すと SnackBar 警告のみで新たな更新が始まらない）。テストが失敗することを確認する
 - [x] 3.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
-- [ ] 3.3 `lib/home_screen.dart` の AppBar ダウンロードボタンを `refreshTargetProvider` の値で分岐させる。解決できる場合は `Icons.sync` + 更新ツールチップ + `startNovelRefresh`、解決できない場合は現状どおり `Icons.download` + `_openDownloadDialog`。3.1 のテストが通ることを確認する
-- [ ] 3.4 既存の `test/home_screen_test.dart` / `test/home_screen_download_request_test.dart` / `test/home_screen_adaptive_shell_test.dart` が通ることを確認する。外部からのダウンロード要求がボタンの状態に影響されないことが担保されていない場合は、そのケースを `test/home_screen_download_request_test.dart` に追加する
+- [x] 3.3 `lib/home_screen.dart` の AppBar ダウンロードボタンを `refreshTargetProvider` の値で分岐させる。解決できる場合は `Icons.sync` + 更新ツールチップ + `startNovelRefresh`、解決できない場合は現状どおり `Icons.download` + `_openDownloadDialog`。3.1 のテストが通ることを確認する
+- [x] 3.4 既存の `test/home_screen_test.dart` / `test/home_screen_download_request_test.dart` / `test/home_screen_adaptive_shell_test.dart` が通ることを確認する。外部からのダウンロード要求がボタンの状態に影響されないことが担保されていない場合は、そのケースを `test/home_screen_download_request_test.dart` に追加する
 
 ## 4. ファイルブラウザのツールバーに新規ダウンロードボタン
 
-- [ ] 4.1 `test/features/file_browser/presentation/toolbar_download_button_test.dart` を作成し、ツールバーの新規ダウンロードボタンを検証するテストを書く（ライブラリルートでも整理用サブフォルダでも小説フォルダでもボタンが表示され有効 / 押下で `DownloadDialog` が表示される）。テストが失敗することを確認する
-- [ ] 4.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
+- [x] 4.1 `test/features/file_browser/presentation/toolbar_download_button_test.dart` を作成し、ツールバーの新規ダウンロードボタンを検証するテストを書く（ライブラリルートでも整理用サブフォルダでも小説フォルダでもボタンが表示され有効 / 押下で `DownloadDialog` が表示される）。テストが失敗することを確認する
+- [x] 4.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
 - [ ] 4.3 `file_browser_panel.dart` の `_buildToolbar` に `Icons.download` のボタンを追加し、`DownloadDialog.show` を呼ぶ。4.1 のテストが通ることを確認する
 
 ## 5. ローカライズ
 
-- [ ] 5.1 `lib/l10n/app_ja.arb` / `app_en.arb` / `app_zh.arb` に AppBar の更新ツールチップとファイルブラウザのダウンロードボタンのツールチップを追加する。`fvm flutter pub get`（または `gen-l10n`）を実行し、未翻訳の警告が出ないことを確認する
+- [x] 5.1 `lib/l10n/app_ja.arb` / `app_en.arb` / `app_zh.arb` に AppBar の更新ツールチップとファイルブラウザのダウンロードボタンのツールチップを追加する。`fvm flutter pub get`（または `gen-l10n`）を実行し、未翻訳の警告が出ないことを確認する
 - [ ] 5.2 `test/l10n/` の既存パリティテストを実行し、3言語のキーが揃っていることを確認する
 
 ## 6. 最終確認

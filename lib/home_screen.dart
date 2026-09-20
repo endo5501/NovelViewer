@@ -12,6 +12,8 @@ import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_action.da
 import 'package:novel_viewer/features/keyboard_shortcuts/data/shortcut_intents.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/providers/keyboard_shortcut_providers.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_host.dart';
+import 'package:novel_viewer/features/novel_refresh/presentation/refresh_progress_dialog.dart';
+import 'package:novel_viewer/features/novel_refresh/providers/refresh_target_provider.dart';
 import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
@@ -177,6 +179,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final scaffold = _scaffoldKey.currentState;
     if (scaffold == null || !scaffold.isDrawerOpen) return;
     scaffold.closeDrawer();
+  }
+
+  /// The app bar's download button, which means whichever of its two things
+  /// the reader is in a position to want.
+  ///
+  /// Reading an episode of a novel that can be re-fetched, the useful download
+  /// is that novel's own update — the reason to press it is that the site has
+  /// gone on without them. Anywhere else there is nothing to update, so the
+  /// button is what it always was: the way to fetch something new.
+  ///
+  /// The icon and the tooltip change together with the behavior, so the button
+  /// never has to be pressed to find out which one it is. It is never disabled:
+  /// each state has something to do.
+  Widget _buildDownloadButton() {
+    final l10n = AppLocalizations.of(context)!;
+    final target = ref.watch(refreshTargetProvider);
+
+    return IconButton(
+      key: const Key('appbar_download_button'),
+      icon: Icon(target == null ? Icons.download : Icons.sync),
+      onPressed: target == null
+          ? _openDownloadDialog
+          : () => startNovelRefresh(context, ref, target),
+      tooltip: target == null
+          ? l10n.homeScreen_downloadTooltip
+          : l10n.homeScreen_refreshNovelTooltip,
+    );
   }
 
   /// Opens the download dialog, optionally with a URL already in it, and
@@ -562,13 +591,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           context,
                         )!.homeScreen_searchTooltip,
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.download),
-                        onPressed: _openDownloadDialog,
-                        tooltip: AppLocalizations.of(
-                          context,
-                        )!.homeScreen_downloadTooltip,
-                      ),
+                      _buildDownloadButton(),
                       IconButton(
                         icon: const Icon(Icons.settings),
                         onPressed: () => SettingsDialog.show(context),

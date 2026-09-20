@@ -318,6 +318,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get fileBrowser_newFolderTooltip => '新規フォルダ';
 
   @override
+  String get fileBrowser_downloadTooltip => '小説ダウンロード';
+
+  @override
   String get fileBrowser_newFolderTitle => '新規フォルダ';
 
   @override
@@ -816,6 +819,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get homeScreen_downloadTooltip => '小説ダウンロード';
+
+  @override
+  String get homeScreen_refreshNovelTooltip => '小説を更新';
 
   @override
   String get homeScreen_searchTooltip => '検索';

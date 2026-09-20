@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/app.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/novel_refresh/domain/refresh_target.dart';
+import 'package:novel_viewer/features/novel_refresh/providers/refresh_target_provider.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_download/data/incoming_link_source.dart';
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
@@ -67,7 +69,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
   }
 
-  Future<void> pumpHome(WidgetTester tester) async {
+  Future<void> pumpHome(WidgetTester tester, {RefreshTarget? refreshTarget}) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -82,6 +84,7 @@ void main() {
           downloadProvider.overrideWith(
             () => _RecordingDownloadNotifier(started),
           ),
+          refreshTargetProvider.overrideWithValue(refreshTarget),
         ],
         child: const NovelViewerApp(),
       ),
@@ -163,6 +166,29 @@ void main() {
 
       expect(find.byType(DownloadDialog), findsOneWidget);
       expect(urlFieldText(tester), shared.toString());
+    });
+
+    testWidgets('arrives as a dialog even while the button means refresh', (
+      tester,
+    ) async {
+      // The app bar's button turns into a refresh while a novel is open, but
+      // a request from outside is about a URL of its own and has nothing to do
+      // with what is being read.
+      await pumpHome(
+        tester,
+        refreshTarget: const RefreshTarget(
+          folderName: 'narou_n0001aa',
+          parentPath: '/library',
+          title: '読みかけの小説',
+        ),
+      );
+
+      platform.add(sharedLink);
+      await settle(tester);
+
+      expect(find.byType(DownloadDialog), findsOneWidget);
+      expect(urlFieldText(tester), shared.toString());
+      expect(started, isEmpty);
     });
 
     testWidgets('ignores a link that is not a download request', (

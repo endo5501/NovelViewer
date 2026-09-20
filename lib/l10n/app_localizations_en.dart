@@ -324,6 +324,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileBrowser_newFolderTooltip => 'New folder';
 
   @override
+  String get fileBrowser_downloadTooltip => 'Download novel';
+
+  @override
   String get fileBrowser_newFolderTitle => 'New folder';
 
   @override
@@ -837,6 +840,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeScreen_downloadTooltip => 'Download novel';
+
+  @override
+  String get homeScreen_refreshNovelTooltip => 'Update novel';
 
   @override
   String get homeScreen_searchTooltip => 'Search';
