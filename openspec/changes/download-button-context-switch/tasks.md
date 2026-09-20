@@ -15,8 +15,8 @@
 
 ## 3. AppBar ボタンの文脈切り替え
 
-- [ ] 3.1 `test/home_screen_download_button_test.dart` を作成し、AppBar ボタンの2状態を検証するウィジェットテストを書く（更新対象が解決できる場合は `Icons.sync` と更新ツールチップ・押下で `refreshNovel` が呼ばれ進捗ダイアログが出る / 解決できない場合は `Icons.download` とダウンロードツールチップ・押下で `DownloadDialog` が出る / どちらの状態でもボタンは有効 / 更新完了後も更新状態が保たれる / ダウンロード実行中に押すと SnackBar 警告のみで新たな更新が始まらない）。テストが失敗することを確認する
-- [ ] 3.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
+- [x] 3.1 `test/home_screen_download_button_test.dart` を作成し、AppBar ボタンの2状態を検証するウィジェットテストを書く（更新対象が解決できる場合は `Icons.sync` と更新ツールチップ・押下で `refreshNovel` が呼ばれ進捗ダイアログが出る / 解決できない場合は `Icons.download` とダウンロードツールチップ・押下で `DownloadDialog` が出る / どちらの状態でもボタンは有効 / 更新完了後も更新状態が保たれる / ダウンロード実行中に押すと SnackBar 警告のみで新たな更新が始まらない）。テストが失敗することを確認する
+- [x] 3.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
 - [ ] 3.3 `lib/home_screen.dart` の AppBar ダウンロードボタンを `refreshTargetProvider` の値で分岐させる。解決できる場合は `Icons.sync` + 更新ツールチップ + `startNovelRefresh`、解決できない場合は現状どおり `Icons.download` + `_openDownloadDialog`。3.1 のテストが通ることを確認する
 - [ ] 3.4 既存の `test/home_screen_test.dart` / `test/home_screen_download_request_test.dart` / `test/home_screen_adaptive_shell_test.dart` が通ることを確認する。外部からのダウンロード要求がボタンの状態に影響されないことが担保されていない場合は、そのケースを `test/home_screen_download_request_test.dart` に追加する
 
