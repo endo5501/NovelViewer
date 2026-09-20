@@ -17,6 +17,7 @@ import 'package:novel_viewer/features/novel_delete/providers/novel_delete_provid
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/novel_refresh/domain/refresh_target.dart';
 import 'package:novel_viewer/features/novel_refresh/presentation/refresh_progress_dialog.dart';
+import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
 import 'package:novel_viewer/features/file_browser/presentation/rename_title_dialog.dart';
 import 'package:novel_viewer/features/file_browser/presentation/new_folder_dialog.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
@@ -233,6 +234,16 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
                 context,
               )!.fileBrowser_newFolderTooltip,
             ),
+          // The drawer covers the app bar, so while the reader is here its
+          // download button is out of reach — and it would mean a refresh
+          // anyway if they had a novel open. Fetching something new belongs
+          // with the library, which is what they are looking at.
+          IconButton(
+            key: const Key('file_browser_download_button'),
+            icon: const Icon(Icons.download),
+            onPressed: () => DownloadDialog.show(context),
+            tooltip: AppLocalizations.of(context)!.fileBrowser_downloadTooltip,
+          ),
         ],
       ),
     );

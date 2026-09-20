@@ -69,7 +69,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
   }
 
-  Future<void> pumpHome(WidgetTester tester, {RefreshTarget? refreshTarget}) async {
+  Future<void> pumpHome(
+    WidgetTester tester, {
+    RefreshTarget? refreshTarget,
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [

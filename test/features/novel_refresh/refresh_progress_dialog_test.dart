@@ -26,9 +26,7 @@ void main() {
       ProviderScope(
         overrides: [downloadProvider.overrideWith(() => notifier)],
         child: const LocalizedMaterialApp(
-          home: Scaffold(
-            body: RefreshProgressDialog(novelTitle: '異世界転生物語'),
-          ),
+          home: Scaffold(body: RefreshProgressDialog(novelTitle: '異世界転生物語')),
         ),
       ),
     );

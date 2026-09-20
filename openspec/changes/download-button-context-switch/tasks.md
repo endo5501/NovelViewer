@@ -24,17 +24,17 @@
 
 - [x] 4.1 `test/features/file_browser/presentation/toolbar_download_button_test.dart` を作成し、ツールバーの新規ダウンロードボタンを検証するテストを書く（ライブラリルートでも整理用サブフォルダでも小説フォルダでもボタンが表示され有効 / 押下で `DownloadDialog` が表示される）。テストが失敗することを確認する
 - [x] 4.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
-- [ ] 4.3 `file_browser_panel.dart` の `_buildToolbar` に `Icons.download` のボタンを追加し、`DownloadDialog.show` を呼ぶ。4.1 のテストが通ることを確認する
+- [x] 4.3 `file_browser_panel.dart` の `_buildToolbar` に `Icons.download` のボタンを追加し、`DownloadDialog.show` を呼ぶ。4.1 のテストが通ることを確認する
 
 ## 5. ローカライズ
 
 - [x] 5.1 `lib/l10n/app_ja.arb` / `app_en.arb` / `app_zh.arb` に AppBar の更新ツールチップとファイルブラウザのダウンロードボタンのツールチップを追加する。`fvm flutter pub get`（または `gen-l10n`）を実行し、未翻訳の警告が出ないことを確認する
-- [ ] 5.2 `test/l10n/` の既存パリティテストを実行し、3言語のキーが揃っていることを確認する
+- [x] 5.2 `test/l10n/` の既存パリティテストを実行し、3言語のキーが揃っていることを確認する
 
 ## 6. 最終確認
 
 - [ ] 6.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 6.3 `fvm dart format .`でフォーマットを実行
-- [ ] 6.4 `fvm flutter analyze`でリントを実行
-- [ ] 6.5 `fvm flutter test`でテストを実行
+- [x] 6.3 `fvm dart format .`でフォーマットを実行
+- [x] 6.4 `fvm flutter analyze`でリントを実行
+- [x] 6.5 `fvm flutter test`でテストを実行

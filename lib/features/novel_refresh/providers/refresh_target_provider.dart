@@ -36,8 +36,7 @@ final refreshTargetProvider = Provider<RefreshTarget?>((ref) {
   final libraryPath = ref.watch(libraryPathProvider);
   if (libraryPath == null) return null;
 
-  final novels =
-      ref.watch(allNovelsProvider).value ?? const <NovelMetadata>[];
+  final novels = ref.watch(allNovelsProvider).value ?? const <NovelMetadata>[];
   if (novels.isEmpty) return null;
 
   // The shared rule (also used to key reading progress and the per-folder

@@ -102,10 +102,7 @@ void main() {
 
       expect(buttonIcon(tester), Icons.sync);
       expect(find.byTooltip('小説を更新'), findsOneWidget);
-      expect(
-        tester.widget<IconButton>(downloadButton()).onPressed,
-        isNotNull,
-      );
+      expect(tester.widget<IconButton>(downloadButton()).onPressed, isNotNull);
     });
 
     testWidgets('更新対象がないときダウンロードボタンとして表示される', (tester) async {
@@ -113,10 +110,7 @@ void main() {
 
       expect(buttonIcon(tester), Icons.download);
       expect(find.byTooltip('小説ダウンロード'), findsOneWidget);
-      expect(
-        tester.widget<IconButton>(downloadButton()).onPressed,
-        isNotNull,
-      );
+      expect(tester.widget<IconButton>(downloadButton()).onPressed, isNotNull);
     });
 
     testWidgets('更新対象があるとき押下で更新が始まり進捗ダイアログが出る', (tester) async {
