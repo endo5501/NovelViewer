@@ -314,6 +314,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fileBrowser_newFolderTooltip => '新建文件夹';
 
   @override
+  String get fileBrowser_downloadTooltip => '下载小说';
+
+  @override
   String get fileBrowser_newFolderTitle => '新建文件夹';
 
   @override
@@ -810,6 +813,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeScreen_downloadTooltip => '下载小说';
+
+  @override
+  String get homeScreen_refreshNovelTooltip => '更新小说';
 
   @override
   String get homeScreen_searchTooltip => '搜索';

@@ -676,6 +676,12 @@ abstract class AppLocalizations {
   /// **'新規フォルダ'**
   String get fileBrowser_newFolderTooltip;
 
+  /// No description provided for @fileBrowser_downloadTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'小説ダウンロード'**
+  String get fileBrowser_downloadTooltip;
+
   /// No description provided for @fileBrowser_newFolderTitle.
   ///
   /// In ja, this message translates to:
@@ -1557,6 +1563,12 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'小説ダウンロード'**
   String get homeScreen_downloadTooltip;
+
+  /// No description provided for @homeScreen_refreshNovelTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'小説を更新'**
+  String get homeScreen_refreshNovelTooltip;
 
   /// No description provided for @homeScreen_searchTooltip.
   ///

@@ -1,19 +1,4 @@
-## Purpose
-
-ライブラリ画面のコンテキストメニューから既存の小説フォルダを「更新」（再ダウンロード）する機能。保存済みURLを用いてDownloadNotifierを起動し、進捗ダイアログ表示・完了後のUI再読込・並行実行ガードを提供する。
-
-## Requirements
-
-### Requirement: Context menu displays refresh option
-ライブラリルートにおいて、小説フォルダを右クリックした際のコンテキストメニューに「更新」オプションが表示されなければならない（SHALL）。「更新」は「削除」の上に配置されなければならない（SHALL）。
-
-#### Scenario: Right-click on novel folder at library root
-- **WHEN** ユーザーがライブラリルートの小説フォルダを右クリックする
-- **THEN** コンテキストメニューに「更新」と「削除」の2つのオプションが表示される
-
-#### Scenario: Not shown outside library root
-- **WHEN** ユーザーがライブラリルート以外のディレクトリ内のフォルダを右クリックする
-- **THEN** コンテキストメニューは表示されない（既存動作と同一）
+## MODIFIED Requirements
 
 ### Requirement: Refresh triggers download with stored URL
 
@@ -94,17 +79,6 @@
 #### Scenario: The listing is reloaded however the refresh ended
 - **WHEN** 更新がキャンセルまたは失敗で終わり、ユーザーがダイアログを閉じる
 - **THEN** ファイル一覧とメタデータが再読込され、中断までに保存されたエピソードが表示される
-
-### Requirement: UI refreshes after completion
-更新処理完了後、ファイル一覧とメタデータが自動的にリフレッシュされなければならない（SHALL）。
-
-#### Scenario: File list updates after refresh
-- **WHEN** 更新処理が完了し、新しいエピソードが追加された
-- **THEN** ファイルブラウザのディレクトリ内容が自動的に再読み込みされ、新しいエピソードが表示される
-
-#### Scenario: Metadata updates after refresh
-- **WHEN** 更新処理が完了する
-- **THEN** `allNovelsProvider`がinvalidateされ、小説メタデータ（エピソード数、更新日時）が最新の状態に更新される
 
 ### Requirement: Concurrent operation guard
 

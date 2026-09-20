@@ -16,6 +16,46 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 /// or appended to an existing one.
 enum _CollectionMode { create, existing }
 
+/// Whether the download dialog is on screen, wherever it was opened from.
+///
+/// A request arriving from outside the app is handed to the dialog that is
+/// already up, which knows whether it is in a state to take another URL. The
+/// shell needs to know one is up to leave it alone, and it is not the only
+/// thing that opens one: the file browser's drawer covers the app bar, so it
+/// has a button of its own. Holding this in a provider rather than in the
+/// shell's own state is what keeps every entry point on the same footing.
+class DownloadDialogOpenNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void setOpen(bool value) => state = value;
+}
+
+final downloadDialogOpenProvider =
+    NotifierProvider<DownloadDialogOpenNotifier, bool>(
+      DownloadDialogOpenNotifier.new,
+    );
+
+/// Opens the download dialog and marks it open for as long as it stays there.
+///
+/// Every entry point goes through here. The notifier is taken before the await
+/// because the widget that opened the dialog may be gone by the time it closes
+/// — selecting a file puts the drawer away, and with it the panel whose `ref`
+/// this is.
+Future<void> showDownloadDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  Uri? initialUrl,
+}) async {
+  final openState = ref.read(downloadDialogOpenProvider.notifier);
+  openState.setOpen(true);
+  try {
+    await DownloadDialog.show(context, initialUrl: initialUrl);
+  } finally {
+    openState.setOpen(false);
+  }
+}
+
 class DownloadDialog extends ConsumerStatefulWidget {
   const DownloadDialog({super.key, this.initialUrl});
 

@@ -255,6 +255,117 @@ void main() {
     },
   );
 
+  testWidgets('moving a novel folder follows the open episode to it', (
+    tester,
+  ) async {
+    // The refresh target is resolved from the path of the file on screen, so a
+    // selection left pointing at where the novel used to be would send the
+    // next update back to the old location and duplicate the folder there.
+    final fs = _RecordingFileSystemService();
+    fs.orgFolderTree = ['/library/完結済み'];
+    await tester.pumpWidget(
+      _panel(
+        currentDir: '/library',
+        libraryPath: '/library',
+        fs: fs,
+        novels: [novel('narou_n1', 'テスト小説')],
+        subdirectories: const [
+          DirectoryEntry(
+            name: 'narou_n1',
+            path: '/library/narou_n1',
+            displayName: 'テスト小説',
+          ),
+          DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(FileBrowserPanel)),
+    );
+    container
+        .read(selectedFileProvider.notifier)
+        .selectFile(
+          const FileEntry(name: '0001.txt', path: '/library/narou_n1/0001.txt'),
+        );
+    await tester.pumpAndSettle();
+
+    await tester.tapAt(
+      tester.getCenter(find.text('テスト小説')),
+      buttons: kSecondaryButton,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('移動'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('完結済み'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      container.read(selectedFileProvider)?.path,
+      '/library/完結済み/narou_n1/0001.txt',
+    );
+  });
+
+  testWidgets('moving an unrelated folder leaves the open episode alone', (
+    tester,
+  ) async {
+    final fs = _RecordingFileSystemService();
+    fs.orgFolderTree = ['/library/完結済み'];
+    await tester.pumpWidget(
+      _panel(
+        currentDir: '/library',
+        libraryPath: '/library',
+        fs: fs,
+        novels: [novel('narou_n1', 'テスト小説'), novel('narou_n2', '別の小説')],
+        subdirectories: const [
+          DirectoryEntry(
+            name: 'narou_n2',
+            path: '/library/narou_n2',
+            displayName: '別の小説',
+          ),
+          DirectoryEntry(name: '完結済み', path: '/library/完結済み'),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(FileBrowserPanel)),
+    );
+    container
+        .read(selectedFileProvider.notifier)
+        .selectFile(
+          const FileEntry(name: '0001.txt', path: '/library/narou_n1/0001.txt'),
+        );
+    await tester.pumpAndSettle();
+
+    await tester.tapAt(
+      tester.getCenter(find.text('別の小説')),
+      buttons: kSecondaryButton,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('移動'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('完結済み'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      container.read(selectedFileProvider)?.path,
+      '/library/narou_n1/0001.txt',
+    );
+  });
+
   testWidgets('move name collision shows an error message', (tester) async {
     final fs = _RecordingFileSystemService();
     fs.orgFolderTree = ['/library/完結済み'];
