@@ -1,0 +1,52 @@
+## Why
+
+ファイルブラウザが `Drawer` に移り、本文表示とライブラリ操作が画面上で排他になった。その結果、ファイルブラウザの現在地は「次に何を読むか探している場所」になり、**いま読んでいるもの**とは独立に動くようになった。
+
+ところが、読者が開いているエピソードについての情報は、いまだにブラウザの現在地から導かれている。読書中に Drawer を開いて別の場所を覗き、選ばずに閉じると、本文はそのままなのに次のことが起きる。
+
+```
+  読書中（002.txt を表示）→ Drawerでライブラリルートへ → 選ばずにDrawerを閉じる
+
+                        Drawerが小説フォルダ内        Drawerがライブラリルート
+  AppBarタイトル        異世界転生 — 002.txt (2/3)     NovelViewer
+  次話                  003.txt                        なし
+  前話                  001.txt                        なし
+```
+
+タイトルが作品名を失うのは見えるほうの症状で、実害が大きいのはもう一方である。`adjacentFilesProvider` は次話・前話の唯一の供給源であり、`episode_navigation_controller`、縦書きビューアのページ送り（`vertical_text_viewer.dart:808,844`）、横書き側（`text_content_renderer.dart:592,643`）がこれを読む。つまり**このアプリの主要な読書ジェスチャーである「最終ページをめくって次の話へ進む」が、何の表示もなく止まる**。読者にはアプリが壊れたようにしか見えない。
+
+どちらも原因は1つで、`episode-navigation` の言う「現在の閲覧ディレクトリ」と `app-title-display` の言う「現在のディレクトリ状態」が、Drawer 化以前は本文と一致していたのに、いまは一致しないことである。
+
+## What Changes
+
+- **読書コンテキストという概念を導入する。** 読者がいま開いているエピソードから、それが属する小説フォルダと、そのフォルダ自身の話一覧を導く。ファイルブラウザの現在地は一切参照しない。
+- **AppBar のタイトルを読書コンテキストから導く。** 作品名は開いているエピソードが属する小説のもの、`(N/M)` はその小説自身の話一覧における位置と総数になる。ブラウザがどこにいてもタイトルは変わらない。
+- **次話・前話を読書コンテキストから導く。** ブラウザの現在地によらず、開いているエピソードの隣が返る。ページ送りでの話送りが常に効く。
+- **話一覧は軽量な専用プロバイダから供給する。** ファイルブラウザ用の `directoryContentsProvider` はサブディレクトリの列挙・小説タイトルの解決・TTS 状態の読み出し（フォルダ別DBを開く）を伴うが、読書コンテキストに必要なのは `.txt` の並びだけである。
+
+### 非目標
+
+- **ファイルブラウザの挙動の変更。** `directoryContentsProvider` は引き続きブラウザの現在地を表し、タイル表示・TTS 状態・選択ハイライトはそのままである。
+- **読書位置の復元（`reading-progress` の自動オープン）の変更。** あちらはブラウザが小説フォルダへ入ったことを契機に、その同じディレクトリの一覧を読む。ブラウザの現在地と結びついているのが正しい。
+- **`episode-boundary-prompt` の判定条件の変更。** 境界の検出は隣接ファイルの有無に従うため、本変更で自然に正しくなる。プロンプト自体の仕様は触らない。
+- **話一覧に TTS 状態を持たせること。** TTS のアイコンはブラウザのタイルの話であり、読書コンテキストには要らない。
+
+## Capabilities
+
+### New Capabilities
+
+- `reading-context`: 読者がいま開いているエピソードから、それが属する小説フォルダとその話一覧を導く規則。ファイルブラウザの現在地とは独立であることを定める。
+
+### Modified Capabilities
+
+- `app-title-display`: タイトルの導出元を、ファイルブラウザの現在地から読書コンテキストへ移す。`(N/M)` の分母・分子も同様。
+- `episode-navigation`: 隣接ファイルの導出元を、ブラウザの現在地の一覧から読書コンテキストの話一覧へ移す。
+
+## Impact
+
+- 新規プロバイダ — 開いているエピソードのパスから小説フォルダを解決し（`resolveNovelFolderPath`）、そのフォルダの `.txt` を数値プレフィックス順に並べた一覧を返す。並び順は `file-browser` の `sortByNumericPrefix` と同一でなければならない。
+- `lib/features/episode_navigation/providers/adjacent_files_provider.dart` — 参照先を `directoryContentsProvider` から新プロバイダへ。
+- `lib/app/selected_file_progress_title_provider.dart` — 同上。作品名の解決も `currentDirectoryProvider` 依存の `selectedNovelTitleProvider` から切り離す。
+- `lib/features/file_browser/providers/file_browser_providers.dart` — `selectedNovelTitleProvider` は `app-title-display` 以外に利用者がいるか確認し、無ければ読書コンテキスト側へ集約する。
+- ダウンロード・更新の完了時に `directoryContentsProvider` を無効化している箇所（`home_screen.dart`、`refresh_progress_dialog.dart`、`download_dialog.dart`、`tts_controls_bar.dart`）は、新しい話一覧も無効化する必要がある。更新で増えたエピソードが、読書中の話送りに現れないままになるため。
+- `directoryContentsProvider` とファイルブラウザの表示には変更を加えない。
