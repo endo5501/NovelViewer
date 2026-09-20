@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/episode_navigation/providers/adjacent_file
 import 'package:novel_viewer/features/episode_navigation/providers/pending_file_entry_intent_provider.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/data/viewer_selection.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
@@ -35,9 +36,7 @@ Widget _wrap({
 }) {
   return ProviderScope(
     overrides: [
-      directoryContentsProvider.overrideWith((ref) async {
-        return DirectoryContents(files: files, subdirectories: const []);
-      }),
+      readingEpisodesProvider.overrideWith((ref) async => files),
       selectedFileProvider.overrideWith(
         () => _StubSelectedFileNotifier(selected),
       ),
@@ -61,12 +60,8 @@ Widget _wrap({
   );
 }
 
-/// Force-loads the directory listing so that `adjacentFilesProvider` resolves
-/// to its real value before the first synchronous `ref.read` from
-/// `_handleBoundaryNavigation`. Without this, the provider would observe
-/// `directoryContentsProvider` in its initial loading state and report
-/// `AdjacentFiles.empty`.
-/// Force-loads the directory listing AND materialises `adjacentFilesProvider`
+/// Force-loads the reading context's episode listing AND materialises
+/// `adjacentFilesProvider`
 /// before the test sends any input. Without this, the viewer's first
 /// synchronous `ref.read(adjacentFilesProvider)` from `_handleBoundaryNavigation`
 /// can capture the listing while it is still in its `AsyncLoading` state and
@@ -75,7 +70,7 @@ Future<void> _primeAdjacentFiles(WidgetTester tester) async {
   final container = ProviderScope.containerOf(
     tester.element(find.byType(VerticalTextViewer)),
   );
-  await container.read(directoryContentsProvider.future);
+  await container.read(readingEpisodesProvider.future);
   await tester.pumpAndSettle();
   container.read(adjacentFilesProvider);
 }

@@ -9,9 +9,10 @@
 
 - [x] 2.1 `test/features/episode_navigation/adjacent_files_reading_context_test.dart` を作成し、ブラウザの現在地から独立していることを検証するテストを書く（ブラウザが小説フォルダにいるとき従来どおり隣接を返す / ブラウザをライブラリルートへ移しても同じ隣接を返す / ブラウザを別の小説フォルダへ移しても変わらない / 先頭・末尾・単独・未選択の各境界が従来どおり）。テストが失敗することを確認する
 - [x] 2.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
-- [ ] 2.3 `adjacent_files_provider.dart` の参照先を `directoryContentsProvider` から `readingEpisodesProvider` に変更する。2.1 と既存の `test/features/episode_navigation/` が通ることを確認する
-- [ ] 2.4 縦書き（`vertical_text_viewer.dart:808,844`）・横書き（`text_content_renderer.dart:592,643`）のページ送りによる話送りが、ブラウザをライブラリルートへ移した状態でも機能することをウィジェットテストで確認する
-- [ ] 2.5 `episode-boundary-prompt` の境界判定が隣接ファイルの有無に従っていることを確認し、話送りの修正で境界プロンプトも正しく出るようになったことをテストで裏づける。仕様の変更が必要と判明した場合は実装を止めて相談する
+- [x] 2.3 `adjacent_files_provider.dart` の参照先を `directoryContentsProvider` から `readingEpisodesProvider` に変更する。2.1 と既存の `test/features/episode_navigation/` が通ることを確認する
+- [x] 2.4 縦書き（`vertical_text_viewer.dart:808,844`）・横書き（`text_content_renderer.dart:592,643`）のページ送りによる話送りが、ブラウザをライブラリルートへ移した状態でも機能することをウィジェットテストで確認する
+- [x] 2.5 `episode-boundary-prompt` の境界判定が隣接ファイルの有無に従っていることを確認し、話送りの修正で境界プロンプトも正しく出るようになったことをテストで裏づける。仕様の変更が必要と判明した場合は実装を止めて相談する
+  - 確認結果: `episode-boundary-prompt` は「`episode-navigation` の隣接ファイル導出 Provider が当該方向に `null` を返す」と委譲して書かれており、`directoryContentsProvider` を名指ししていない。したがって仕様の変更は不要で、隣接の修正でプロンプトも正しくなる。縦書きの end-to-end テストが、ブラウザをライブラリルートへ移した状態で次話名のプロンプトが出ることを確認している（修正前は出ない）
 
 ## 3. タイトルの付け替え
 
