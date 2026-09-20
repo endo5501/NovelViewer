@@ -36,3 +36,13 @@
 - [x] 5.3 `fvm dart format .`でフォーマットを実行
 - [x] 5.4 `fvm flutter analyze`でリントを実行
 - [x] 5.5 `fvm flutter test`でテストを実行
+
+## 6. レビュー指摘の反映
+
+- [ ] 6.1 ファイルブラウザの移動が表示中のエピソードを閉じてしまう問題を、再現テストで確認する（親へ移動／別フォルダへ入る の双方で、選択・本文・読書コンテキスト・話一覧が維持されること）
+- [ ] 6.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
+- [ ] 6.3 `file_browser_panel.dart:442`（フォルダタップ）と `:802`（親へ移動）の `selectedFileProvider.clear()` を外す。削除時のクリア（対象を失うため必要）は残す。6.1 のテストが通ることを確認する
+- [ ] 6.4 フォルダの移動・改名・削除（`file_browser_panel.dart:600, 676, 781`）を `invalidateEpisodeListings` に通し、話一覧の family が古いまま残らないようにする
+- [ ] 6.5 フォルダ改名時に、表示中エピソードの選択パスを改名後の位置へ付け替える（移動と同じ扱い）。テストで確認する
+- [ ] 6.6 `novel_id_resolver.dart` のコメントから、退役した `selectedNovelTitleProvider` への参照を外す
+- [ ] 6.7 反映内容を spec に追記し、`openspec validate --strict`・format・analyze・全テストを再実行
