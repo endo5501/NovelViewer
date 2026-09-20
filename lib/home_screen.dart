@@ -80,12 +80,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// over whatever they have gone on to do.
   bool _startupDrawerSettled = false;
 
-  /// Whether the download dialog is on screen. A request that arrives while it
-  /// is open is handled by the dialog itself, which knows whether it is in a
-  /// state to take another URL; opening a second one over it would only stack
-  /// two dialogs.
-  bool _downloadDialogOpen = false;
-
   @override
   void initState() {
     super.initState();
@@ -210,14 +204,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   /// Opens the download dialog, optionally with a URL already in it, and
   /// remembers that it is up for as long as it stays there.
-  Future<void> _openDownloadDialog({Uri? initialUrl}) async {
-    _downloadDialogOpen = true;
-    try {
-      await DownloadDialog.show(context, initialUrl: initialUrl);
-    } finally {
-      _downloadDialogOpen = false;
-    }
-  }
+  Future<void> _openDownloadDialog({Uri? initialUrl}) =>
+      showDownloadDialog(context, ref, initialUrl: initialUrl);
 
   /// Ends the search session when the reader dismisses the drawer themselves —
   /// a tap on the scrim, a back gesture.
@@ -429,7 +417,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // reaches the reader as a pre-filled dialog awaiting confirmation, never as
     // a download that simply starts.
     ref.listen(pendingDownloadRequestProvider, (_, next) {
-      if (next == null || _downloadDialogOpen) return;
+      if (next == null || ref.read(downloadDialogOpenProvider)) return;
       ref.read(pendingDownloadRequestProvider.notifier).markHandled(next);
       _openDownloadDialog(initialUrl: next.url);
     });

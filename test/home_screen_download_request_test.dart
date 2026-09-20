@@ -194,6 +194,27 @@ void main() {
       expect(started, isEmpty);
     });
 
+    testWidgets('does not stack a second dialog over the drawer\'s own', (
+      tester,
+    ) async {
+      // The drawer covers the app bar, so it has a download button of its own.
+      // A request arriving while that dialog is up must reach it rather than
+      // push another one behind it.
+      await pumpHome(tester);
+      tester.state<ScaffoldState>(find.byType(Scaffold).first).openDrawer();
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('file_browser_download_button')));
+      await settle(tester);
+      expect(find.byType(DownloadDialog), findsOneWidget);
+
+      platform.add(sharedLink);
+      await settle(tester);
+
+      expect(find.byType(DownloadDialog), findsOneWidget);
+      expect(urlFieldText(tester), shared.toString());
+      expect(started, isEmpty);
+    });
+
     testWidgets('ignores a link that is not a download request', (
       tester,
     ) async {

@@ -241,7 +241,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
           IconButton(
             key: const Key('file_browser_download_button'),
             icon: const Icon(Icons.download),
-            onPressed: () => DownloadDialog.show(context),
+            onPressed: () => showDownloadDialog(context, ref),
             tooltip: AppLocalizations.of(context)!.fileBrowser_downloadTooltip,
           ),
         ],

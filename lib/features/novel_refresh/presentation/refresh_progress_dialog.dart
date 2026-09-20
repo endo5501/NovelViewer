@@ -76,10 +76,13 @@ class RefreshProgressDialog extends ConsumerWidget {
           TextButton(
             key: const Key('refresh_close_button'),
             onPressed: () {
-              if (downloadState.status == DownloadStatus.completed) {
-                ref.invalidate(allNovelsProvider);
-                ref.invalidate(directoryContentsProvider);
-              }
+              // Whatever ended the refresh, episodes fetched before it ended
+              // are on disk: a cancelled or failed run keeps what it got so a
+              // later one can resume from there. The listing is cached until
+              // something invalidates it, so leaving it alone would hide those
+              // episodes until the reader navigated away and back.
+              ref.invalidate(allNovelsProvider);
+              ref.invalidate(directoryContentsProvider);
               ref.read(downloadProvider.notifier).reset();
               Navigator.of(context).pop();
             },
