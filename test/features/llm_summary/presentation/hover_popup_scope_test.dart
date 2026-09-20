@@ -26,6 +26,16 @@ class _MockSelectedFile extends SelectedFileNotifier {
   FileEntry? build() => _initial;
 }
 
+final _otherNovel = NovelMetadata(
+  siteType: 'narou',
+  novelId: 'narou_n5678cd',
+  title: '別の小説',
+  url: 'https://ncode.syosetu.com/narou_n5678cd/',
+  folderName: 'narou_n5678cd',
+  episodeCount: 3,
+  downloadedAt: DateTime(2024, 1, 1),
+);
+
 final _novel = NovelMetadata(
   siteType: 'narou',
   novelId: 'narou_n1234ab',
@@ -65,7 +75,10 @@ ProviderContainer _containerAt(String directory) {
   );
 }
 
-Future<void> _showPopupAt(WidgetTester tester, String directory) async {
+Future<ProviderContainer> _showPopupAt(
+  WidgetTester tester,
+  String directory,
+) async {
   final container = _containerAt(directory);
   addTearDown(container.dispose);
 
@@ -91,6 +104,7 @@ Future<void> _showPopupAt(WidgetTester tester, String directory) async {
         token: (start: 0, end: 3),
       );
   await tester.pumpAndSettle();
+  return container;
 }
 
 void main() {
@@ -118,6 +132,34 @@ void main() {
 
     testWidgets('小説フォルダ内のサブフォルダでは popup を出さない', (tester) async {
       await _showPopupAt(tester, '/library/narou_n1234ab/第二部');
+
+      expect(find.byType(HoverPopupWidget), findsNothing);
+    });
+
+    testWidgets('表示中にブラウザが別の小説へ移ると popup は消える', (tester) async {
+      // Navigating by keyboard never sends a pointer down, so the dismissal
+      // that a click would cause does not happen. A popup left behind would
+      // hand the previous novel's episode number and file name to a
+      // re-analysis that writes into the new one.
+      final container = await _showPopupAt(tester, '/library/narou_n1234ab');
+      expect(find.byType(HoverPopupWidget), findsOneWidget);
+
+      container
+          .read(currentDirectoryProvider.notifier)
+          .setDirectory('/library/narou_n5678cd');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HoverPopupWidget), findsNothing);
+    });
+
+    testWidgets('表示中にブラウザが小説の外へ出ても popup は消える', (tester) async {
+      final container = await _showPopupAt(tester, '/library/narou_n1234ab');
+      expect(find.byType(HoverPopupWidget), findsOneWidget);
+
+      container
+          .read(currentDirectoryProvider.notifier)
+          .setDirectory('/library/完結済み');
+      await tester.pumpAndSettle();
 
       expect(find.byType(HoverPopupWidget), findsNothing);
     });

@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
@@ -23,6 +25,18 @@ NovelMetadata _novel(String folderName) => NovelMetadata(
 );
 
 final _novels = [_novel('narou_n1234ab'), _novel('narou_n5678cd')];
+
+HistoryEntry _entryFor(String word, String sourceFile) =>
+    HistoryEntry.mergeRows([
+      WordSummary(
+        word: word,
+        coveredUpToEpisode: 1,
+        summary: '$wordの要約',
+        sourceFile: sourceFile,
+        createdAt: DateTime.utc(2024, 1, 1),
+        updatedAt: DateTime.utc(2024, 1, 1),
+      ),
+    ]).single;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -140,7 +154,7 @@ void main() {
       await container.read(llmSummaryHistoryProvider.future);
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .deleteEntry('アリス');
+          .deleteEntry('アリス', novelFolder: novelFolder.path);
 
       expect(await summaryWords(novelFolder.path), isEmpty);
     });
@@ -156,7 +170,7 @@ void main() {
       final entries = await container.read(llmSummaryHistoryProvider.future);
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .openEntry(entries.single);
+          .openEntry(entries.single, novelFolder: novelFolder.path);
 
       expect(
         container.read(selectedFileProvider)?.path,
@@ -179,19 +193,40 @@ void main() {
       expect(hasNovelData(subFolder.path), isFalse);
     });
 
-    test('サブフォルダからは削除も行われない', () async {
-      final novelFolder = await makeDir('narou_n1234ab');
-      final subFolder = await makeDir(p.join('narou_n1234ab', '第二部'));
-      await seedSummary(novelFolder.path, 'アリス');
-      final container = containerAt(subFolder.path);
+    test('削除は呼び出し側が渡した小説に対して行われる', () async {
+      // A rebuild of the notifier replaces whatever folder it resolved for
+      // itself, so the folder cannot come from the notifier: the list and the
+      // entry picked out of it belong to one novel, and the browser may have
+      // moved since. The caller holds that novel and hands it over.
+      final novelA = await makeDir('narou_n1234ab');
+      final novelB = await makeDir('narou_n5678cd');
+      await seedSummary(novelA.path, 'アリス');
+      await seedSummary(novelB.path, 'アリス');
+      final container = containerAt(novelB.path);
 
       await container.read(llmSummaryHistoryProvider.future);
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .deleteEntry('アリス');
+          .deleteEntry('アリス', novelFolder: novelA.path);
 
-      expect(await summaryWords(novelFolder.path), ['アリス']);
-      expect(hasNovelData(subFolder.path), isFalse);
+      expect(await summaryWords(novelA.path), isEmpty);
+      expect(await summaryWords(novelB.path), ['アリス']);
+    });
+
+    test('ジャンプも呼び出し側が渡した小説を起点にする', () async {
+      final novelA = await makeDir('narou_n1234ab');
+      await makeDir('narou_n5678cd');
+      await File(p.join(novelA.path, '001.txt')).writeAsString('アリスが現れた\n');
+      final container = containerAt(lib('narou_n5678cd'));
+
+      await container
+          .read(llmSummaryHistoryProvider.notifier)
+          .openEntry(_entryFor('アリス', '001.txt'), novelFolder: novelA.path);
+
+      expect(
+        container.read(selectedFileProvider)?.path,
+        p.join(novelA.path, '001.txt'),
+      );
     });
   });
 }
