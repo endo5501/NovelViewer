@@ -5,8 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/presentation/file_browser_panel.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/novel_delete/data/novel_delete_service.dart';
+import 'package:novel_viewer/features/novel_delete/providers/novel_delete_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:path/path.dart' as p;
 
@@ -73,12 +76,22 @@ class _RecordingFileSystemService extends FileSystemService {
   }
 }
 
+/// Records the novels it is asked to delete instead of touching disk or DB.
+class _RecordingNovelDeleteService extends Fake implements NovelDeleteService {
+  final deleted = <String>[];
+
+  @override
+  Future<void> delete(String folderName, String folderPath) async =>
+      deleted.add(folderName);
+}
+
 Widget _panel({
   required String currentDir,
   required String libraryPath,
   required FileSystemService fs,
   List<NovelMetadata> novels = const [],
   List<DirectoryEntry> subdirectories = const [],
+  NovelDeleteService? deleteService,
 }) {
   return ProviderScope(
     overrides: [
@@ -88,6 +101,8 @@ Widget _panel({
       libraryPathProvider.overrideWithValue(libraryPath),
       allNovelsProvider.overrideWith((ref) async => novels),
       fileSystemServiceProvider.overrideWithValue(fs),
+      if (deleteService != null)
+        novelDeleteServiceProvider.overrideWith((ref) async => deleteService),
       directoryContentsProvider.overrideWith(
         (ref) async =>
             DirectoryContents(files: const [], subdirectories: subdirectories),
@@ -488,6 +503,119 @@ void main() {
     expect(fs.deletedEmpty, ['/library/完結済み']);
   });
 
+  testWidgets('a folder operation reloads both listings', (tester) async {
+    // The reader's listing and the browser's are separate providers over the
+    // same directories, so a folder operation has to reload both — otherwise
+    // the reader pages through a tree that no longer exists.
+    final fs = _RecordingFileSystemService();
+    var browserBuilds = 0;
+    var readingBuilds = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentDirectoryProvider.overrideWith(
+            () => _TestCurrentDirectoryNotifier('/library'),
+          ),
+          libraryPathProvider.overrideWithValue('/library'),
+          allNovelsProvider.overrideWith(
+            (ref) async => const <NovelMetadata>[],
+          ),
+          fileSystemServiceProvider.overrideWithValue(fs),
+          directoryContentsProvider.overrideWith((ref) async {
+            browserBuilds++;
+            return DirectoryContents.empty();
+          }),
+          readingEpisodesProvider.overrideWith((ref) async {
+            readingBuilds++;
+            return const <FileEntry>[];
+          }),
+        ],
+        child: const MaterialApp(
+          locale: Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Column(
+              children: [
+                // Something has to be listening for an invalidation to
+                // recompute anything.
+                _ListingWatcher(),
+                Expanded(child: FileBrowserPanel()),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final before = (browserBuilds, readingBuilds);
+
+    await tester.tap(find.byIcon(Icons.create_new_folder));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '完結済み');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('作成'));
+    await tester.pumpAndSettle();
+
+    expect(fs.created, hasLength(1));
+    expect(browserBuilds, greaterThan(before.$1));
+    expect(readingBuilds, greaterThan(before.$2));
+  });
+
+  testWidgets('deleting the novel holding the open episode clears it', (
+    tester,
+  ) async {
+    // Unlike a move or a rename, a delete leaves nothing to read, so the
+    // selection goes rather than following. (An organisational folder cannot
+    // reach this state: it must be empty to be deleted at all.)
+    final fs = _RecordingFileSystemService();
+    final deleteService = _RecordingNovelDeleteService();
+    await tester.pumpWidget(
+      _panel(
+        currentDir: '/library',
+        libraryPath: '/library',
+        fs: fs,
+        novels: [novel('narou_n1', 'テスト小説')],
+        subdirectories: const [
+          DirectoryEntry(
+            name: 'narou_n1',
+            path: '/library/narou_n1',
+            displayName: 'テスト小説',
+          ),
+        ],
+        deleteService: deleteService,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(FileBrowserPanel)),
+    );
+    container
+        .read(selectedFileProvider.notifier)
+        .selectFile(
+          const FileEntry(name: '0001.txt', path: '/library/narou_n1/0001.txt'),
+        );
+    await tester.pumpAndSettle();
+    expect(container.read(readingNovelFolderProvider), '/library/narou_n1');
+
+    await tester.tapAt(
+      tester.getCenter(find.text('テスト小説')),
+      buttons: kSecondaryButton,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('削除'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: find.byType(AlertDialog), matching: find.text('削除')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(deleteService.deleted, ['narou_n1']);
+    expect(container.read(selectedFileProvider), isNull);
+    expect(container.read(readingNovelFolderProvider), isNull);
+  });
+
   testWidgets('deleting a non-empty folder shows the not-empty error', (
     tester,
   ) async {
@@ -519,4 +647,15 @@ void main() {
 
     expect(find.text('フォルダが空ではないため削除できません'), findsOneWidget);
   });
+}
+
+class _ListingWatcher extends ConsumerWidget {
+  const _ListingWatcher();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(directoryContentsProvider);
+    ref.watch(readingEpisodesProvider);
+    return const SizedBox.shrink();
+  }
 }
