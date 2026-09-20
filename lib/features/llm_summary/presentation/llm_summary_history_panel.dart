@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:novel_viewer/shared/gestures/pointer_kinds.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_detail_dialog.dart';
@@ -9,7 +10,6 @@ import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_histo
 import 'package:novel_viewer/features/llm_summary/presentation/outlined_text_badge.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
-import 'package:path/path.dart' as p;
 
 class LlmSummaryHistoryPanel extends ConsumerWidget {
   const LlmSummaryHistoryPanel({super.key});
@@ -17,13 +17,14 @@ class LlmSummaryHistoryPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final directory = ref.watch(currentDirectoryProvider);
-    final libraryPath = ref.watch(libraryPathProvider);
+    // The same resolution, and the same `.value` reading of it, as the
+    // bookmark tab beside this one — both read the novel's `novel_data.db`,
+    // so both have to agree on which folder that is. Checking for the library
+    // root instead let every organizational folder through, and asking for
+    // history is what creates the database file there.
+    final novelFolder = ref.watch(currentNovelFolderPathProvider).value;
 
-    final isAtRoot =
-        directory == null ||
-        (libraryPath != null && p.equals(directory, libraryPath));
-    if (isAtRoot) {
+    if (novelFolder == null) {
       return Center(child: Text(l10n.bookmark_selectNovelPrompt));
     }
 
