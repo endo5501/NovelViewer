@@ -9,9 +9,9 @@
 
 ## 2. 解析実行（書き側）
 
-- [ ] 2.1 `test/features/llm_summary/presentation/analysis_runner_scope_test.dart` を新規作成し、整理フォルダおよびライブラリルートで `runWithScope` / `run` が解析を開始せず「小説フォルダを開いてください」を提示し、`novel_data.db` を作らないことを検証する。赤を確認する
-- [ ] 2.2 `analysis_runner.dart` の `runWithScope` / `run` で `novelFolder`（`currentNovelFolderPathProvider`）と `episodeFolder`（`currentDirectoryProvider`）を分けて持ち、`novelFolder` が null なら中断するよう実装して 2.1 を緑にする
-- [ ] 2.3 上限話数（`resolveUpperBoundForCurrent` / `resolveUpperBoundForAll`）と全話スコープの `source_file` が `episodeFolder` から導かれることを検証するテストを 2.1 のファイルに追加し、`novelFolder` と `episodeFolder` が異なる配置で緑になることを確認する
+- [x] 2.1 `test/features/llm_summary/presentation/analysis_runner_scope_test.dart` を新規作成し、整理フォルダおよびライブラリルートで `runWithScope` / `run` が解析を開始せず「小説フォルダを開いてください」を提示し、`novel_data.db` を作らないことを検証する。赤を確認する
+- [x] 2.2 `analysis_runner.dart` の `runWithScope` / `run` で `novelFolder`（`currentNovelFolderPathProvider`）と `episodeFolder`（`currentDirectoryProvider`）を分けて持ち、`novelFolder` が null なら中断するよう実装して 2.1 を緑にする
+- [x] 2.3 上限話数（`resolveUpperBoundForCurrent` / `resolveUpperBoundForAll`）と全話スコープの `source_file` が `episodeFolder` から導かれることを検証するテストを 2.1 のファイルに追加し、`novelFolder` と `episodeFolder` が異なる配置で緑になることを確認する
 - [ ] 2.4 `test/features/llm_summary/presentation/hover_popup_scope_test.dart` を新規作成して整理フォルダで popup が出ないことを検証し、赤を確認したうえで `hover_popup_host.dart` を `allNovelsProvider` の現在値からの同期解決（未ロードなら出さない）に変更して緑にする
 
 ## 3. 新規フォルダ作成の境界

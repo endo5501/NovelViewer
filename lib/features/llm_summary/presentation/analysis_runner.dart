@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
+import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/shared/episode/episode_resolver.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
@@ -112,8 +113,21 @@ class DefaultAnalysisRunner implements AnalysisRunner {
   }) async {
     if (!_supported) return;
     final l10n = AppLocalizations.of(context)!;
-    final directory = _ref.read(currentDirectoryProvider);
-    if (directory == null) {
+    // Two folders, deliberately separate.
+    //
+    // `episodeFolder` is where the episodes are: the text to analyse is read
+    // from it, and the `source_file` a snapshot records is a bare name within
+    // it. `novelFolder` is the registered novel folder that owns the
+    // `novel_data.db` the summaries are written to. Resolving that one is what
+    // keeps the database out of folders that are not novels — opening a
+    // per-folder repository creates the file — so analysis stops here when
+    // there is no novel to write to, exactly as bookmarks are unavailable in
+    // the same places. In every layout the application can produce, the two
+    // are the same folder.
+    final episodeFolder = _ref.read(currentDirectoryProvider);
+    final novelFolder = await _ref.read(currentNovelFolderPathProvider.future);
+    if (!context.mounted) return;
+    if (episodeFolder == null || novelFolder == null) {
       _snack(context, l10n.llmAnalysis_noFolderOpen);
       return;
     }
@@ -127,9 +141,9 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     // `factCacheRepositoryProvider`, so without this the first analysis after
     // launch would no-op.
     await _ref.read(llmClientProvider.future);
-    await _ref.read(llmSummaryRepositoryProvider(directory).future);
-    await _ref.read(factCacheRepositoryProvider(directory).future);
-    final service = _ref.read(llmSummaryServiceProvider(directory));
+    await _ref.read(llmSummaryRepositoryProvider(novelFolder).future);
+    await _ref.read(factCacheRepositoryProvider(novelFolder).future);
+    final service = _ref.read(llmSummaryServiceProvider(novelFolder));
     if (service == null) {
       final message = await _noServiceMessage(l10n);
       if (!context.mounted) return;
@@ -158,7 +172,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     FailureReport? failure;
     try {
       await service.generateSummary(
-        directoryPath: directory,
+        directoryPath: episodeFolder,
         word: word,
         coveredUpToEpisode: coveredUpToEpisode,
         sourceFileName: resolvedSourceFile,
@@ -170,7 +184,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       );
       _ref.invalidate(llmSummaryHistoryProvider);
       _ref.invalidate(
-        hoverPopupCacheProvider((folderPath: directory, word: word)),
+        hoverPopupCacheProvider((folderPath: novelFolder, word: word)),
       );
       // The popup's manual activeEpisode override may now point at a
       // snapshot that no longer exists post-overwrite — reset it so the
