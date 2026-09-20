@@ -216,6 +216,14 @@ class SelectedFileNotifier extends Notifier<FileEntry?> {
     ref.read(fileOpenRequestProvider.notifier).request();
   }
 
+  /// Points the selection at the same episode in its new location, after the
+  /// folder holding it was moved or renamed.
+  ///
+  /// Deliberately not [selectFile]: nothing was opened, so this must not count
+  /// as a file-open request. One would close the drawer out from under a
+  /// reader who had only just renamed a folder in it.
+  void rebase(FileEntry file) => state = file;
+
   void clear() => state = null;
 }
 

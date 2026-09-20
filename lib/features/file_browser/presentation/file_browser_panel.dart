@@ -438,13 +438,20 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         ),
       ),
       subtitle: badge == null ? null : _ReadingProgressBar(badge: badge),
-      // Entering a folder does not put down what is open. The selection is
-      // what the viewer is showing, not what this listing highlights — and
-      // since the browser moved into a drawer, coming in here to look for the
-      // next thing to read is not a decision to stop reading this one. A
-      // selection from elsewhere simply highlights nothing in this listing.
-      onTap: () =>
-          ref.read(currentDirectoryProvider.notifier).setDirectory(dir.path),
+      // Entering a folder still clears the selection, for now.
+      //
+      // Keeping the episode open while the browser moves elsewhere is the
+      // point of the reading context, but it is not safe yet: TTS, bookmarks,
+      // the dictionary and LLM analysis all still resolve "the current novel"
+      // from this directory, and `setDirectory` releases the per-folder
+      // database handles of the folder being left. With a selection left
+      // behind, those would act on one novel's folder using another novel's
+      // file. The clear is what makes that unreachable, so it stays until
+      // those consumers move onto the reading context too.
+      onTap: () {
+        ref.read(currentDirectoryProvider.notifier).setDirectory(dir.path);
+        ref.read(selectedFileProvider.notifier).clear();
+      },
     );
 
     return GestureDetector(
@@ -693,7 +700,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     if (followed == null) return;
     ref
         .read(selectedFileProvider.notifier)
-        .selectFile(FileEntry(name: selected!.name, path: followed));
+        .rebase(FileEntry(name: selected!.name, path: followed));
   }
 
   /// Refreshes a novel the reader is not necessarily looking at.
@@ -811,9 +818,9 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     final libraryPath = ref.read(libraryPathProvider);
     final parent = getParentDirectory(currentDir, libraryPath: libraryPath);
     if (parent != null) {
-      // Going up is looking around, not closing the book. See the folder
-      // tile's onTap.
+      // Cleared for the same reason as the folder tile's onTap; see there.
       ref.read(currentDirectoryProvider.notifier).setDirectory(parent);
+      ref.read(selectedFileProvider.notifier).clear();
     }
   }
 }
