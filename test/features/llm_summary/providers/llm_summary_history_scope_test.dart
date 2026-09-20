@@ -132,7 +132,54 @@ void main() {
       expect(entries.map((e) => e.word), ['ボブ']);
     });
 
-    test('サブフォルダにいても、削除は小説フォルダのDBに対して行われる', () async {
+    test('削除は小説フォルダのDBに対して行われる', () async {
+      final novelFolder = await makeDir('narou_n1234ab');
+      await seedSummary(novelFolder.path, 'アリス');
+      final container = containerAt(novelFolder.path);
+
+      await container.read(llmSummaryHistoryProvider.future);
+      await container
+          .read(llmSummaryHistoryProvider.notifier)
+          .deleteEntry('アリス');
+
+      expect(await summaryWords(novelFolder.path), isEmpty);
+    });
+
+    test('ジャンプ先は小説フォルダのファイルになる', () async {
+      final novelFolder = await makeDir('narou_n1234ab');
+      await seedSummary(novelFolder.path, 'アリス');
+      await File(
+        p.join(novelFolder.path, '001.txt'),
+      ).writeAsString('アリスが現れた\n');
+      final container = containerAt(novelFolder.path);
+
+      final entries = await container.read(llmSummaryHistoryProvider.future);
+      await container
+          .read(llmSummaryHistoryProvider.notifier)
+          .openEntry(entries.single);
+
+      expect(
+        container.read(selectedFileProvider)?.path,
+        p.join(novelFolder.path, '001.txt'),
+      );
+    });
+
+    test('小説フォルダ内のサブフォルダでは履歴を読まない', () async {
+      // Being inside a novel is not being at it: a snapshot written from here
+      // would be numbered among this folder's own files and land on the
+      // novel's rows at the same keys.
+      final novelFolder = await makeDir('narou_n1234ab');
+      final subFolder = await makeDir(p.join('narou_n1234ab', '第二部'));
+      await seedSummary(novelFolder.path, 'アリス');
+      final container = containerAt(subFolder.path);
+
+      final entries = await container.read(llmSummaryHistoryProvider.future);
+
+      expect(entries, isEmpty);
+      expect(hasNovelData(subFolder.path), isFalse);
+    });
+
+    test('サブフォルダからは削除も行われない', () async {
       final novelFolder = await makeDir('narou_n1234ab');
       final subFolder = await makeDir(p.join('narou_n1234ab', '第二部'));
       await seedSummary(novelFolder.path, 'アリス');
@@ -143,38 +190,7 @@ void main() {
           .read(llmSummaryHistoryProvider.notifier)
           .deleteEntry('アリス');
 
-      expect(await summaryWords(novelFolder.path), isEmpty);
-      expect(hasNovelData(subFolder.path), isFalse);
-    });
-
-    test('ジャンプ先は小説フォルダではなく、表示中のフォルダから組み立てる', () async {
-      await makeDir('narou_n1234ab');
-      final novelFolder = Directory(lib('narou_n1234ab'));
-      final subFolder = await makeDir(p.join('narou_n1234ab', '第二部'));
-      await seedSummary(novelFolder.path, 'アリス');
-      await File(p.join(subFolder.path, '001.txt')).writeAsString('アリスが現れた\n');
-      final container = containerAt(subFolder.path);
-
-      final entries = await container.read(llmSummaryHistoryProvider.future);
-      await container
-          .read(llmSummaryHistoryProvider.notifier)
-          .openEntry(entries.single);
-
-      expect(
-        container.read(selectedFileProvider)?.path,
-        p.join(subFolder.path, '001.txt'),
-      );
-    });
-
-    test('小説フォルダ内のサブフォルダでは、小説フォルダの履歴を読む', () async {
-      final novelFolder = await makeDir('narou_n1234ab');
-      final subFolder = await makeDir(p.join('narou_n1234ab', '第二部'));
-      await seedSummary(novelFolder.path, 'アリス');
-      final container = containerAt(subFolder.path);
-
-      final entries = await container.read(llmSummaryHistoryProvider.future);
-
-      expect(entries.map((e) => e.word), ['アリス']);
+      expect(await summaryWords(novelFolder.path), ['アリス']);
       expect(hasNovelData(subFolder.path), isFalse);
     });
   });

@@ -278,47 +278,26 @@ void main() {
       expect(openedFolders, everyElement(novelFolder.path));
     });
 
-    testWidgets('小説一覧の解決を待つ間に移動しても、本文と保存先は同じ作品のまま', (tester) async {
-      // The novel list is invalidated after every download and folder
-      // operation, so a request made while it is refetching really can be
-      // resolved after the reader has moved on. The text being analysed is
-      // fixed when the request is made; the database it lands in must be that
-      // same novel's, not wherever the browser ended up.
-      final novelA = makeDir('narou_n1234ab');
-      writeEpisode(novelA.path, '001.txt');
-      final novelB = makeDir('narou_n5678cd');
-      writeEpisode(novelB.path, '001.txt');
+    testWidgets('小説一覧が未解決の間は解析が始まらない', (tester) async {
+      // With no registered-name set there is no way to tell a novel folder
+      // from an organizational one, and guessing wrong means writing a
+      // novel_data.db somewhere it does not belong.
+      final novelFolder = makeDir('narou_n1234ab');
+      writeEpisode(novelFolder.path, '001.txt');
       final pending = Completer<List<NovelMetadata>>();
+      addTearDown(() => pending.complete([_novel('narou_n1234ab')]));
 
-      final container = containerAt(novelA.path, novels: pending.future);
-      await tester.pumpWidget(
-        harness(
-          container,
-          (runner, context) => runner.runWithScope(
-            context: context,
-            word: 'アリス',
-            scope: AnalysisScope.upToAll,
-          ),
-        ),
-      );
-      await tester.tap(find.text('go'));
-      await tester.pump();
+      final container = containerAt(novelFolder.path, novels: pending.future);
+      await runAll(tester, container);
 
-      container
-          .read(currentDirectoryProvider.notifier)
-          .setDirectory(novelB.path);
-      pending.complete([_novel('narou_n1234ab'), _novel('narou_n5678cd')]);
-      for (var i = 0; i < 6; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
-
-      expect(service.lastDirectoryPath, novelA.path);
-      expect(openedFolders, isNotEmpty);
-      expect(openedFolders, everyElement(novelA.path));
+      expect(service.callCount, 0);
+      expect(openedFolders, isEmpty);
     });
 
-    testWidgets('サブフォルダでは、DBは小説フォルダ・話数は表示中のフォルダから', (tester) async {
-      final novelFolder = makeDir('narou_n1234ab');
+    testWidgets('小説フォルダ内のサブフォルダでは解析が始まらない', (tester) async {
+      // The episodes here would be numbered among this folder's own files
+      // while the rows landed in the novel's database, overwriting its
+      // snapshots at the same keys.
       final subFolder = makeDir(p.join('narou_n1234ab', '第二部'));
       for (final name in ['001.txt', '002.txt', '003.txt']) {
         writeEpisode(subFolder.path, name);
@@ -327,16 +306,8 @@ void main() {
 
       await runAll(tester, container);
 
-      expect(service.callCount, 1);
-      expect(
-        service.lastDirectoryPath,
-        subFolder.path,
-        reason: '本文を読むのは表示中のフォルダ',
-      );
-      expect(service.lastCoveredUpToEpisode, 3);
-      expect(service.lastSourceFileName, '003.txt');
-      expect(openedFolders, isNotEmpty);
-      expect(openedFolders, everyElement(novelFolder.path));
+      expect(service.callCount, 0);
+      expect(openedFolders, isEmpty);
     });
   });
 }

@@ -8,12 +8,16 @@ import 'package:novel_viewer/features/llm_summary/data/ollama_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/openai_compatible_client.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config_problem.dart';
+import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'package:novel_viewer/shared/database/novel_data_database_provider.dart';
+import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dart';
+import 'package:path/path.dart' as p;
 
 final llmConfigProvider = Provider<LlmConfig>((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
@@ -100,6 +104,41 @@ final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
     case LlmProvider.none:
       return null;
   }
+});
+
+/// The registered novel folder the file browser is **at**, or null when it is
+/// showing anything else: the library root, an organizational folder, or a
+/// subfolder inside a novel.
+///
+/// Every per-novel artifact this feature stores — summaries and the fact cache
+/// — lives in that folder's `novel_data.db`, and the episode number a snapshot
+/// is keyed by, and the `source_file` it records, are both counted within the
+/// same folder. Requiring the browser to be *at* the novel folder rather than
+/// merely inside one is what keeps those three agreeing: from a subfolder the
+/// episodes would be numbered among its own files while the rows landed in the
+/// novel's database, overwriting the novel's own snapshots at the same
+/// `(word, covered_up_to_episode)` keys.
+///
+/// Depth is irrelevant — a novel nested under organizational folders is still
+/// its own folder. Returning null is also what keeps `novel_data.db` out of
+/// folders that are not novels, since opening one creates the file.
+///
+/// While the novel list is still loading there is no registered-name set to
+/// judge by, so the answer is null. A *refresh* of that list keeps the
+/// previous value, which is sound here: the operations that invalidate it add
+/// or remove some other folder, never change whether the one being browsed is
+/// registered.
+final summaryNovelFolderProvider = Provider<String?>((ref) {
+  final currentDir = ref.watch(currentDirectoryProvider);
+  final libraryPath = ref.watch(libraryPathProvider);
+  final novels = ref.watch(allNovelsProvider).value;
+  if (currentDir == null || libraryPath == null || novels == null) return null;
+
+  final resolved = resolveNovelFolderPath(libraryPath, currentDir, {
+    for (final novel in novels) novel.folderName,
+  });
+  if (resolved == null || !p.equals(resolved, currentDir)) return null;
+  return currentDir;
 });
 
 /// Folder-scoped `LlmSummaryRepository`, backed by the novel's per-folder

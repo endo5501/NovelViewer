@@ -60,10 +60,7 @@ ProviderContainer _containerAt(String directory) {
         ),
       ),
       // Keyed on the novel folder, which is the folder the popup must ask for.
-      hoverPopupCacheProvider((
-        folderPath: '/library/narou_n1234ab',
-        word: 'アリス',
-      )).overrideWith((_) async => [_snapshot()]),
+      hoverPopupCacheProvider.overrideWith((_, _) async => [_snapshot()]),
     ],
   );
 }
@@ -119,13 +116,19 @@ void main() {
       expect(popup.folderPath, '/library/narou_n1234ab');
     });
 
-    testWidgets('小説フォルダ内のサブフォルダでも小説フォルダを渡す', (tester) async {
+    testWidgets('小説フォルダ内のサブフォルダでは popup を出さない', (tester) async {
       await _showPopupAt(tester, '/library/narou_n1234ab/第二部');
+
+      expect(find.byType(HoverPopupWidget), findsNothing);
+    });
+
+    testWidgets('整理フォルダに入れ子の小説フォルダでは出す', (tester) async {
+      await _showPopupAt(tester, '/library/完結済み/narou_n1234ab');
 
       final popup = tester.widget<HoverPopupWidget>(
         find.byType(HoverPopupWidget),
       );
-      expect(popup.folderPath, '/library/narou_n1234ab');
+      expect(popup.folderPath, '/library/完結済み/narou_n1234ab');
     });
   });
 }

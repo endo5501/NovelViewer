@@ -100,15 +100,16 @@ void main() {
       expect(_RecordingHistoryNotifier.builds, 1);
     });
 
-    testWidgets('小説フォルダ内のサブフォルダでも履歴を表示する', (tester) async {
+    testWidgets('小説フォルダ内のサブフォルダでは案内を出し、履歴を要求しない', (tester) async {
       await _pumpAt(tester, '/library/narou_n1234ab/第二部');
 
-      expect(find.text('アリス'), findsOneWidget);
-      expect(_RecordingHistoryNotifier.builds, 1);
+      expect(find.text('作品フォルダを選択してください'), findsOneWidget);
+      expect(find.text('アリス'), findsNothing);
+      expect(_RecordingHistoryNotifier.builds, 0);
     });
 
     testWidgets('詳細ダイアログには小説フォルダが渡される', (tester) async {
-      await _pumpAt(tester, '/library/narou_n1234ab/第二部');
+      await _pumpAt(tester, '/library/narou_n1234ab');
 
       final target = tester.getCenter(find.text('アリス'));
       final gesture = await tester.createGesture(
