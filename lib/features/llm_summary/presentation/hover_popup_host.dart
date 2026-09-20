@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_anchor.dart';
@@ -131,26 +132,37 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
       }
     });
 
+    // The popup's folder is the novel folder, because that is what
+    // `hoverPopupCacheProvider` resolves a `novel_data.db` from — while the
+    // episode numbers below come from where the episodes actually are.
+    //
+    // Subscribed here rather than only read in the callback: the resolution is
+    // a Future, and reading an unsubscribed one starts it and hands back a
+    // loading value, so the first hover after launch would find nothing. The
+    // value itself is read in the callback, which is the frame that needs it.
+    ref.watch(currentNovelFolderPathProvider);
+
     ref.listen<HoverPopupState>(hoverPopupProvider, (_, next) {
       if (!next.isVisible) {
         _removeEntry();
         return;
       }
-      final directory = ref.read(currentDirectoryProvider);
-      if (directory == null) {
+      final episodeFolder = ref.read(currentDirectoryProvider);
+      final novelFolder = ref.read(currentNovelFolderPathProvider).value;
+      if (episodeFolder == null || novelFolder == null) {
         _removeEntry();
         return;
       }
       final selectedFile = ref.read(selectedFileProvider);
       final currentEpisode = resolveUpperBoundForCurrent(
-        directoryPath: directory,
+        directoryPath: episodeFolder,
         currentFile: selectedFile,
       );
-      final maxEpisode = resolveUpperBoundForAll(directory);
-      final maxFileName = resolveSourceFileForAll(directory);
+      final maxEpisode = resolveUpperBoundForAll(episodeFolder);
+      final maxFileName = resolveSourceFileForAll(episodeFolder);
       _insertEntry(
         position: next.position!,
-        folderPath: directory,
+        folderPath: novelFolder,
         word: next.word!,
         currentEpisode: currentEpisode,
         currentFileName: selectedFile?.name,

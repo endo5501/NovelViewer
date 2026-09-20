@@ -10,6 +10,8 @@ import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_widge
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -68,6 +70,18 @@ class _RecordingRunner implements AnalysisRunner {
   }) async {}
 }
 
+/// The popup resolves its folder from the registered novel list, so
+/// '/library/novel_a' has to actually be a novel folder.
+final _novelA = NovelMetadata(
+  siteType: 'narou',
+  novelId: 'novel_a',
+  title: 'Novel A',
+  url: 'https://ncode.syosetu.com/novel_a/',
+  folderName: 'novel_a',
+  episodeCount: 3,
+  downloadedAt: DateTime(2024, 1, 1),
+);
+
 ProviderContainer _makeContainer({
   TextDisplayMode mode = TextDisplayMode.horizontal,
   String directory = '/library/novel_a',
@@ -80,6 +94,8 @@ ProviderContainer _makeContainer({
       currentDirectoryProvider.overrideWith(
         () => CurrentDirectoryNotifier(directory),
       ),
+      libraryPathProvider.overrideWithValue('/library'),
+      allNovelsProvider.overrideWith((ref) async => [_novelA]),
       selectedFileProvider.overrideWith(() => _MockSelectedFile(selectedFile)),
       hoverPopupCacheProvider(
         _aliceKey,
