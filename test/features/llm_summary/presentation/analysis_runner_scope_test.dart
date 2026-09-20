@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -143,7 +144,11 @@ void main() {
   void writeEpisode(String folderPath, String name) =>
       File(p.join(folderPath, name)).writeAsStringSync('アリスが現れた\n');
 
-  ProviderContainer containerAt(String directory, {FileEntry? file}) {
+  ProviderContainer containerAt(
+    String directory, {
+    FileEntry? file,
+    Future<List<NovelMetadata>>? novels,
+  }) {
     final container = ProviderContainer(
       overrides: [
         llmSummarySupportedProvider.overrideWithValue(true),
@@ -157,7 +162,9 @@ void main() {
         packageInfoProvider.overrideWithValue(_packageInfo),
         libraryPathProvider.overrideWithValue(libraryRoot.path),
         allNovelsProvider.overrideWith(
-          (ref) async => [_novel('narou_n1234ab')],
+          (ref) =>
+              novels ??
+              Future.value([_novel('narou_n1234ab'), _novel('narou_n5678cd')]),
         ),
         currentDirectoryProvider.overrideWith(
           () => CurrentDirectoryNotifier(directory),
@@ -269,6 +276,45 @@ void main() {
 
       expect(service.callCount, 1);
       expect(openedFolders, everyElement(novelFolder.path));
+    });
+
+    testWidgets('小説一覧の解決を待つ間に移動しても、本文と保存先は同じ作品のまま', (tester) async {
+      // The novel list is invalidated after every download and folder
+      // operation, so a request made while it is refetching really can be
+      // resolved after the reader has moved on. The text being analysed is
+      // fixed when the request is made; the database it lands in must be that
+      // same novel's, not wherever the browser ended up.
+      final novelA = makeDir('narou_n1234ab');
+      writeEpisode(novelA.path, '001.txt');
+      final novelB = makeDir('narou_n5678cd');
+      writeEpisode(novelB.path, '001.txt');
+      final pending = Completer<List<NovelMetadata>>();
+
+      final container = containerAt(novelA.path, novels: pending.future);
+      await tester.pumpWidget(
+        harness(
+          container,
+          (runner, context) => runner.runWithScope(
+            context: context,
+            word: 'アリス',
+            scope: AnalysisScope.upToAll,
+          ),
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pump();
+
+      container
+          .read(currentDirectoryProvider.notifier)
+          .setDirectory(novelB.path);
+      pending.complete([_novel('narou_n1234ab'), _novel('narou_n5678cd')]);
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(service.lastDirectoryPath, novelA.path);
+      expect(openedFolders, isNotEmpty);
+      expect(openedFolders, everyElement(novelA.path));
     });
 
     testWidgets('サブフォルダでは、DBは小説フォルダ・話数は表示中のフォルダから', (tester) async {

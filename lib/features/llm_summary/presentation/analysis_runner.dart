@@ -4,8 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
-import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 import 'package:novel_viewer/shared/episode/episode_resolver.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
@@ -124,9 +125,24 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     // there is no novel to write to, exactly as bookmarks are unavailable in
     // the same places. In every layout the application can produce, the two
     // are the same folder.
+    //
+    // The novel folder is derived from `episodeFolder` rather than read from
+    // `currentNovelFolderPathProvider`. That provider follows the browser,
+    // and this method spans awaits: a reader who moves on mid-request would
+    // otherwise have the text of one novel written to the database of
+    // another. Deriving it from the folder already captured keeps the pair
+    // consistent by construction. (Awaiting that provider is also unsafe in
+    // its own right — recomputing it while its future is pending makes the
+    // await throw, which would kill the analysis with nothing on screen.)
     final episodeFolder = _ref.read(currentDirectoryProvider);
-    final novelFolder = await _ref.read(currentNovelFolderPathProvider.future);
+    final libraryPath = _ref.read(libraryPathProvider);
+    final novels = await _ref.read(allNovelsProvider.future);
     if (!context.mounted) return;
+    final novelFolder = episodeFolder == null || libraryPath == null
+        ? null
+        : resolveNovelFolderPath(libraryPath, episodeFolder, {
+            for (final novel in novels) novel.folderName,
+          });
     if (episodeFolder == null || novelFolder == null) {
       _snack(context, l10n.llmAnalysis_noFolderOpen);
       return;
