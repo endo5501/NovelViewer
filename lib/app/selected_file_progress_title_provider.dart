@@ -27,15 +27,19 @@ final selectedFileProgressTitleProvider = Provider<String>((ref) {
   if (folder == null) return _kAppTitleFallback;
 
   // A registered novel is named by its metadata; anything else — a folder of
-  // hand-placed text — is named by its folder, as it always has been.
+  // hand-placed text — is named by its folder, as it always has been. The
+  // library folder is the exception: it is not a work, so a text file sitting
+  // loose at the root has no title to take.
+  final libraryPath = ref.watch(libraryPathProvider);
   final novels = ref.watch(allNovelsProvider).value ?? const <NovelMetadata>[];
   final folderName = p.basename(folder);
-  final base =
-      novels
-          .where((novel) => novel.folderName == folderName)
-          .firstOrNull
-          ?.title ??
-      folderName;
+  final base = libraryPath != null && p.equals(folder, libraryPath)
+      ? _kAppTitleFallback
+      : novels
+                .where((novel) => novel.folderName == folderName)
+                .firstOrNull
+                ?.title ??
+            folderName;
 
   final episodes = ref.watch(readingEpisodesProvider).value ?? const [];
   if (episodes.isEmpty) return base;

@@ -7,6 +7,19 @@ import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata
 import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 import 'package:path/path.dart' as p;
 
+/// The folder the open episode actually sits in, or null when the text viewer
+/// is showing nothing.
+///
+/// This is what the episodes beside it are: the files alongside it on disk.
+/// A novel folder may hold organisational subfolders of its own, and an
+/// episode inside one belongs to that subfolder's run, not to the novel
+/// folder's top level.
+final readingEpisodeFolderProvider = Provider<String?>((ref) {
+  final selected = ref.watch(selectedFileProvider);
+  if (selected == null) return null;
+  return p.dirname(selected.path);
+});
+
 /// The absolute path of the novel folder the reader currently has open, or
 /// null when the text viewer is showing nothing.
 ///
@@ -16,8 +29,12 @@ import 'package:path/path.dart' as p;
 /// it says nothing about what they are reading now. Anything that describes
 /// the open episode belongs here rather than on the browser's listing.
 ///
-/// A path with no registered novel folder on it falls back to the file's own
-/// parent directory. A hand-placed text file is still something the reader is
+/// This names the *work*, which is what the app bar says. It is not where the
+/// episodes are listed from — see [readingEpisodeFolderProvider], which they
+/// differ from whenever a novel keeps episodes in a subfolder.
+///
+/// A path with no registered novel folder on it falls back to the episode's
+/// own folder. A hand-placed text file is still something the reader is
 /// reading, and the app bar has always named its folder.
 final readingNovelFolderProvider = Provider<String?>((ref) {
   final selected = ref.watch(selectedFileProvider);
@@ -34,10 +51,10 @@ final readingNovelFolderProvider = Provider<String?>((ref) {
     });
     if (resolved != null) return resolved;
   }
-  return p.dirname(selected.path);
+  return ref.watch(readingEpisodeFolderProvider);
 });
 
-/// The episodes of the novel the reader has open, in the same order the file
+/// The episodes beside the one the reader has open, in the same order the file
 /// browser would show them.
 ///
 /// Deliberately not `directoryContentsProvider`. That one also enumerates
@@ -47,39 +64,31 @@ final readingNovelFolderProvider = Provider<String?>((ref) {
 /// reading folder would sit outside that release path. Listing and sorting is
 /// all this needs, and it touches no database.
 ///
-/// Keyed by folder, so moving between episodes of the same novel does not
-/// re-list anything.
+/// It depends on the folder, not on the file, so turning the page inside one
+/// folder rebuilds nothing — the watched value is unchanged. Moving to another
+/// folder re-lists, which is also what makes an episode added outside the app
+/// show up on the reader's next visit rather than never.
 final readingEpisodesProvider = FutureProvider<List<FileEntry>>((ref) async {
-  final folder = ref.watch(readingNovelFolderProvider);
+  final folder = ref.watch(readingEpisodeFolderProvider);
   if (folder == null) return const [];
-  return ref.watch(episodesInFolderProvider(folder).future);
-});
 
-/// The text files directly inside [folderPath], numeric-prefix sorted.
-///
-/// The family key is the folder rather than the file, which is what keeps a
-/// page turn from costing a directory listing. Public only so that
-/// [invalidateEpisodeListings] can name it; read [readingEpisodesProvider].
-final episodesInFolderProvider = FutureProvider.family<List<FileEntry>, String>(
-  (ref, folderPath) async {
-    final service = ref.watch(fileSystemServiceProvider);
-    final files = await service.listTextFiles(folderPath);
-    return service.sortByNumericPrefix(files);
-  },
-);
+  final service = ref.watch(fileSystemServiceProvider);
+  final files = await service.listTextFiles(folder);
+  return service.sortByNumericPrefix(files);
+});
 
 /// Reloads both episode listings: the reader's and the file browser's.
 ///
 /// They are separate providers over the same directories, so anything that can
-/// add or remove episodes — a download, a refresh, a TTS operation that writes
-/// files — has to invalidate both. Going through one helper is what stops the
-/// next call site from remembering only one of them, which would show up as
-/// newly fetched episodes that the reader cannot page into.
+/// add, remove or move episodes — a download, a refresh, a folder operation —
+/// has to invalidate both. Going through one helper is what stops the next call
+/// site from remembering only one of them, which would show up as episodes the
+/// reader cannot page into.
 ///
 /// [invalidate] is passed as a tear-off from a `WidgetRef`, a provider `Ref`
-/// or a container, the way [releaseFolderDbHandles] already takes one, so the
+/// or a container, the way `releaseFolderDbHandles` already takes one, so the
 /// widget flows and the provider flows share one implementation.
 void invalidateEpisodeListings(void Function(ProviderOrFamily) invalidate) {
   invalidate(directoryContentsProvider);
-  invalidate(episodesInFolderProvider);
+  invalidate(readingEpisodesProvider);
 }

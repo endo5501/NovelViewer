@@ -312,6 +312,55 @@ void main() {
     );
   });
 
+  testWidgets('renaming a folder follows the open episode into it', (
+    tester,
+  ) async {
+    // The reading context resolves from the open file's path, so a selection
+    // left at the old name would list a folder that no longer exists.
+    final fs = _RecordingFileSystemService();
+    await tester.pumpWidget(
+      _panel(
+        currentDir: '/library',
+        libraryPath: '/library',
+        fs: fs,
+        subdirectories: const [
+          DirectoryEntry(name: '連載中', path: '/library/連載中'),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(FileBrowserPanel)),
+    );
+    container
+        .read(selectedFileProvider.notifier)
+        .selectFile(
+          const FileEntry(
+            name: '0001.txt',
+            path: '/library/連載中/narou_n1/0001.txt',
+          ),
+        );
+    await tester.pumpAndSettle();
+
+    await tester.tapAt(
+      tester.getCenter(find.text('連載中')),
+      buttons: kSecondaryButton,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('フォルダ名変更'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '完結済み');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('変更'));
+    await tester.pumpAndSettle();
+
+    expect(
+      container.read(selectedFileProvider)?.path,
+      '/library/完結済み/narou_n1/0001.txt',
+    );
+  });
+
   testWidgets('moving an unrelated folder leaves the open episode alone', (
     tester,
   ) async {

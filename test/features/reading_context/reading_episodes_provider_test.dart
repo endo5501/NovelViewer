@@ -73,6 +73,7 @@ void main() {
   }
 
   const novelDir = '/library/narou_n1234ab';
+  const otherDir = '/library/narou_other';
 
   group('readingEpisodesProvider', () {
     test('読書中の小説フォルダのテキストファイルを返す', () async {
@@ -112,6 +113,51 @@ void main() {
 
       final episodes = await c.read(readingEpisodesProvider.future);
       expect(episodes.map((e) => e.name), ['0001.txt', '0002.txt', '0003.txt']);
+    });
+
+    test('小説フォルダのサブフォルダのエピソードは、そのサブフォルダの一覧を返す', () async {
+      // A novel folder can hold organisational subfolders of its own, and the
+      // episodes beside the open one are the ones it actually sits with.
+      const subDir = '$novelDir/分冊';
+      final c = await container(
+        openFilePath: '$subDir/001.txt',
+        tree: {
+          novelDir: ['0001.txt'],
+          subDir: ['001.txt', '002.txt'],
+        },
+      );
+
+      final episodes = await c.read(readingEpisodesProvider.future);
+      expect(episodes.map((e) => e.name), ['001.txt', '002.txt']);
+    });
+
+    test('小説を離れて戻ると一覧を取り直す', () async {
+      final c = await container(
+        openFilePath: '$novelDir/0001.txt',
+        tree: {
+          novelDir: ['0001.txt'],
+          otherDir: ['a.txt'],
+        },
+      );
+      await c.read(readingEpisodesProvider.future);
+      final afterFirst = fs.listedForText.length;
+
+      // Read something else, then come back. A listing cached for the whole
+      // life of the container would never see a file added meanwhile.
+      c
+          .read(selectedFileProvider.notifier)
+          .selectFile(const FileEntry(name: 'a.txt', path: '$otherDir/a.txt'));
+      await c.read(readingEpisodesProvider.future);
+      c
+          .read(selectedFileProvider.notifier)
+          .selectFile(
+            const FileEntry(name: '0001.txt', path: '$novelDir/0001.txt'),
+          );
+      await c.read(readingEpisodesProvider.future);
+
+      // Leaving the folder drops its listing, so returning asks the disk
+      // again rather than serving a cache from before the trip.
+      expect(fs.listedForText.length, greaterThan(afterFirst + 1));
     });
 
     test('読書コンテキストが無いときは空を返す', () async {

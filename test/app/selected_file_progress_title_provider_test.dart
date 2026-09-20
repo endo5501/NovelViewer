@@ -170,10 +170,21 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      // The nearest registered ancestor names it, whatever the depth. There
-      // is no progress to show: a file in a subdirectory is not one of the
-      // novel's episodes, which live directly in the novel folder.
-      expect(await _readTitle(container), '異世界転生');
+      // The nearest registered ancestor names it, whatever the depth, and the
+      // progress counts the files it actually sits with.
+      expect(await _readTitle(container), '異世界転生 — 001-ep1.txt (1/2)');
+    });
+
+    test('ライブラリルート直下のファイルはNovelViewerを名乗る', () async {
+      // There is no novel to name: the library folder is not a work.
+      final files = _files(2, dir: '/library');
+      final container = _makeContainer(
+        open: files[0],
+        tree: {'/library': files},
+      );
+      addTearDown(container.dispose);
+
+      expect(await _readTitle(container), 'NovelViewer — 001-ep1.txt (1/2)');
     });
 
     test('ライブラリ外のファイルはその親フォルダ名を使う', () async {
