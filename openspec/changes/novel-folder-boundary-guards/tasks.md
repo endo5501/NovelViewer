@@ -25,8 +25,8 @@
 
 ## 5. 最終確認
 
-- [ ] 5.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 5.1 code-reviewスキルを使用してコードレビューを実施
+- [x] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
 - [x] 5.3 `fvm dart format .`でフォーマットを実行
 - [x] 5.4 `fvm flutter analyze`でリントを実行
 - [x] 5.5 `fvm flutter test`でテストを実行
@@ -41,3 +41,6 @@
 - [x] 6.6 `deleteEntry` / `openEntry` がフォルダを引数で受け取るようにし、notifier の再 build で対象が入れ替わらないことをテストで確認する
 - [x] 6.7 対象フォルダが変わったら表示中の hover popup を閉じるようにし、キーボード操作での移動でも残らないことをテストで確認する
 - [x] 6.8 解析の `source_file` 補完を await 前に捕捉し、解析中の移動で対象が変わらないことをテストで確認する
+- [x] 6.9 `runWithScope` の話数算出も `summaryNovelFolderProvider` に寄せ、`run()` が断る場所で実 I/O が走らないことを確認する
+- [x] 6.10 `deleteEntry` が渡されたフォルダを自分でも検証し、小説フォルダでない場所に `novel_data.db` を作らないことをテストで確認する
+- [x] 6.11 `summaryNovelFolderProvider` がブラウザの現在地起点であり、`clear()` の不変条件に依存していることを doc と design に明記する

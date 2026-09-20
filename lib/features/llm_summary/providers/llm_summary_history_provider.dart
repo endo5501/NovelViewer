@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/llm_summary/domain/first_line_containing.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:path/path.dart' as p;
 
 class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
@@ -35,6 +36,18 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
   /// would be the browser's latest novel, not the one whose list the user is
   /// acting on. The caller holds that list, so the caller holds its folder.
   Future<void> deleteEntry(String word, {required String novelFolder}) async {
+    // Checked here as well as by the caller: this opens a per-folder
+    // repository, and opening one creates that folder's `novel_data.db`. The
+    // folder arrives as a parameter, so trusting it would put the only guard
+    // outside the code that does the opening.
+    if (!isRegisteredNovelFolder(
+      folderPath: novelFolder,
+      libraryPath: ref.read(libraryPathProvider),
+      novels: ref.read(allNovelsProvider).value,
+    )) {
+      return;
+    }
+
     final repo = await ref.read(
       llmSummaryRepositoryProvider(novelFolder).future,
     );

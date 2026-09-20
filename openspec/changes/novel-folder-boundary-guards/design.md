@@ -60,7 +60,7 @@ D1 の帰結として、1つのフォルダが両方の役割を持つ。`novel_
 
 パネルだけに置くと、将来この provider を watch する別の consumer が現れた瞬間に同じ不具合が戻る。`markedWordsProvider` が既に `llmSummaryHistoryProvider` を無条件に watch しているため、これは仮定の話ではない。DBを開かない責任は、DBを開く側に置く。
 
-`deleteEntry` と `openEntry` はフォルダを**引数で受け取る**。一覧を表示している widget が自分の `novelFolder` を渡す。
+`deleteEntry` と `openEntry` はフォルダを**引数で受け取る**。一覧を表示している widget が自分の `novelFolder` を渡す。ただし `deleteEntry` はフォルダ別リポジトリを開く（＝ファイルを作る）ので、渡されたフォルダが登録済み小説フォルダであることを自分でも確かめる。引数化によって、DBを開かない責任が呼び出し側だけに移ってしまうのを避ける。判定は `summaryNovelFolderProvider` と同じ述語（`isRegisteredNovelFolder`）を共有する。
 
 当初は `build` で決まったフォルダを notifier のフィールドに持たせたが、これは誤りだった。Riverpod は依存が変わると notifier のインスタンスを保持したまま `build` を再実行するため、そのフィールドは「一覧の出自」ではなく常に最新の対象になる。フォルダを自分で解決できる場所に置く限り、同じ間違いが形を変えて戻る。widget は不変なので、メニューのコールバックが捕捉するのは一覧を描いたときのフォルダそのものになる。
 
@@ -83,6 +83,14 @@ D1 の帰結として、1つのフォルダが両方の役割を持つ。`novel_
 - **hover popup は同期 provider を読む** → `ref.listen` のコールバック内で await すると popup の表示が1フレーム以上遅れる。`summaryNovelFolderProvider` は同期 `Provider` なので待つものが無く、null なら popup を出さない。
 - **表示中の popup は対象フォルダの変化で閉じる** → 表示モードの変化で閉じるのと同じ形で `hide()` する。ブラウザの移動は通常ポインタ押下を伴い、既存の dismissal barrier が拾うが、ファイルブラウザはキーボードだけでも操作できる。残った popup からの再解析は、前の小説の話数とファイル名を新しい小説の DB に書き込む経路になる。
 - **ブックマークと LLM で解決規則が揃うことで、両者の失敗条件も揃う** → 片方だけが動く状況が無くなるのは利点だが、小説フォルダの判定が壊れた場合の影響範囲は広がる。判定は既存の共有関数 `resolveNovelFolderPath` 一本であり、新しい分岐は増やさない。
+
+## 後続 change への申し送り
+
+`summaryNovelFolderProvider` は**ファイルブラウザの現在地**から解決する。一方、解析対象の単語と `selectedFileProvider` は本文ビューア側から来る。この2つが同じ小説を指すのは、ブラウザを動かすと選択が解除される（`file_browser_panel.dart` の3箇所の `clear()`）ためであって、この provider が保証しているからではない。
+
+`clear()` を外す change では、この provider を `readingNovelFolderProvider` 起点へ移す必要がある。移さないと、A を読みながらブラウザが B にいる状態で解析でき、A の本文の要約が B の `novel_data.db` に同じ鍵で書き込まれる — D1 がサブフォルダについて潰したのと同型の事故が、フォルダの組を変えて復活する。
+
+同時に、履歴パネル・ブックマーク一覧・検索が「ブラウザに従うか読者に従うか」も決める必要がある（この change の探索で洗い出した論点）。`summaryNovelFolderProvider` はその決定の単一の適用点になる。
 
 ## Migration Plan
 

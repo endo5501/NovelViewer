@@ -68,7 +68,11 @@ class DefaultAnalysisRunner implements AnalysisRunner {
   }) async {
     if (!_supported) return;
     final l10n = AppLocalizations.of(context)!;
-    final directory = _ref.read(currentDirectoryProvider);
+    // The same folder [run] will use. Reading the browser's directory here
+    // instead would leave a second notion of "which folder" in the one method
+    // that decides the episode numbers, which is where a mismatch does its
+    // damage — and it would list a folder that [run] is about to refuse.
+    final directory = _ref.read(summaryNovelFolderProvider);
     if (directory == null) {
       _snack(context, l10n.llmAnalysis_noFolderOpen);
       return;

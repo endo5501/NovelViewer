@@ -10,6 +10,7 @@ import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config_problem.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
@@ -128,18 +129,47 @@ final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
 /// previous value, which is sound here: the operations that invalidate it add
 /// or remove some other folder, never change whether the one being browsed is
 /// registered.
+///
+/// This resolves from where the **file browser** is, while the word being
+/// analysed comes from the episode on screen. Those are the same novel only
+/// because moving the browser clears the selection — the invariant that makes
+/// `reading-context` unobservable today. Should that clear ever go away, this
+/// must resolve from `readingNovelFolderProvider` instead, or the analysis of
+/// one novel's text would land on another novel's rows at the same keys. That
+/// is the same failure this provider exists to prevent, one folder pair over.
 final summaryNovelFolderProvider = Provider<String?>((ref) {
   final currentDir = ref.watch(currentDirectoryProvider);
   final libraryPath = ref.watch(libraryPathProvider);
   final novels = ref.watch(allNovelsProvider).value;
-  if (currentDir == null || libraryPath == null || novels == null) return null;
+  if (currentDir == null) return null;
+  return isRegisteredNovelFolder(
+        folderPath: currentDir,
+        libraryPath: libraryPath,
+        novels: novels,
+      )
+      ? currentDir
+      : null;
+});
 
-  final resolved = resolveNovelFolderPath(libraryPath, currentDir, {
+/// Whether [folderPath] is a registered novel folder in its own right — not
+/// merely inside one, and not an organizational folder.
+///
+/// Split out of [summaryNovelFolderProvider] so a caller holding a folder it
+/// captured earlier can ask the same question of it. Opening a per-folder
+/// repository creates that folder's `novel_data.db`, so every entry point that
+/// can open one answers this first rather than trusting whoever handed the
+/// path over.
+bool isRegisteredNovelFolder({
+  required String folderPath,
+  required String? libraryPath,
+  required List<NovelMetadata>? novels,
+}) {
+  if (libraryPath == null || novels == null) return false;
+  final resolved = resolveNovelFolderPath(libraryPath, folderPath, {
     for (final novel in novels) novel.folderName,
   });
-  if (resolved == null || !p.equals(resolved, currentDir)) return null;
-  return currentDir;
-});
+  return resolved != null && p.equals(resolved, folderPath);
+}
 
 /// Folder-scoped `LlmSummaryRepository`, backed by the novel's per-folder
 /// `novel_data.db`. The family argument is the novel folder's absolute path.
