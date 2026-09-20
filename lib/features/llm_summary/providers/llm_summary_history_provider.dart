@@ -10,12 +10,6 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_provider
 import 'package:path/path.dart' as p;
 
 class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
-  /// The folder this list was read from, held so that acting on an entry
-  /// cannot reach a different novel's database than the one the entry came
-  /// from — the browser may have moved between the list being built and the
-  /// user picking something out of it.
-  String? _folder;
-
   /// The history belongs to a novel, so it is read from the novel folder the
   /// browser is at — not from whatever directory it happens to show.
   ///
@@ -25,7 +19,6 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
   @override
   Future<List<HistoryEntry>> build() async {
     final novelFolder = ref.watch(summaryNovelFolderProvider);
-    _folder = novelFolder;
     if (novelFolder == null) return const [];
 
     final repo = await ref.watch(
@@ -35,10 +28,13 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
     return HistoryEntry.mergeRows(rows);
   }
 
-  Future<void> deleteEntry(String word) async {
-    final novelFolder = _folder;
-    if (novelFolder == null) return;
-
+  /// Deletes every snapshot of [word] from [novelFolder].
+  ///
+  /// The folder is a parameter rather than something resolved here: a
+  /// dependency change rebuilds this notifier in place, so anything it held
+  /// would be the browser's latest novel, not the one whose list the user is
+  /// acting on. The caller holds that list, so the caller holds its folder.
+  Future<void> deleteEntry(String word, {required String novelFolder}) async {
     final repo = await ref.read(
       llmSummaryRepositoryProvider(novelFolder).future,
     );
@@ -55,14 +51,17 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
     ref.invalidateSelf();
   }
 
-  /// Opens the file a snapshot was taken from.
+  /// Opens the file a snapshot was taken from, inside [novelFolder].
   ///
   /// A `source_file` is a bare file name recorded against the folder the
-  /// episodes were counted in, which is the novel folder this list was read
-  /// from — analysis only runs while the browser is at one.
-  Future<void> openEntry(HistoryEntry entry) async {
-    final directory = _folder;
-    if (directory == null) return;
+  /// episodes were counted in — the novel folder the entry's list was read
+  /// from, since analysis only runs while the browser is at one. Passed in
+  /// for the same reason as in [deleteEntry].
+  Future<void> openEntry(
+    HistoryEntry entry, {
+    required String novelFolder,
+  }) async {
+    final directory = novelFolder;
 
     // Try every snapshot's source_file (largest episode first, since that's
     // the canonical "primary" jump target per spec) and fall through to the

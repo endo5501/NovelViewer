@@ -38,3 +38,6 @@
 - [x] 6.3 履歴・パネル・解析・hover popup を `summaryNovelFolderProvider` 1本に統一し、`episodeFolder` / `novelFolder` の二重管理を削除して既存テストが通ることを確認する
 - [x] 6.4 `LlmSummaryHistoryNotifier` が `build` で決まったフォルダを保持し、`deleteEntry` / `openEntry` がそれを使うようにして、一覧表示後にブラウザが動いても別の小説に作用しないことを確認する
 - [x] 6.5 proposal / design / specs をこの判断に合わせて更新し、`openspec validate --strict` が通ることを確認する
+- [x] 6.6 `deleteEntry` / `openEntry` がフォルダを引数で受け取るようにし、notifier の再 build で対象が入れ替わらないことをテストで確認する
+- [x] 6.7 対象フォルダが変わったら表示中の hover popup を閉じるようにし、キーボード操作での移動でも残らないことをテストで確認する
+- [x] 6.8 解析の `source_file` 補完を await 前に捕捉し、解析中の移動で対象が変わらないことをテストで確認する

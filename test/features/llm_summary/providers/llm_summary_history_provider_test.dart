@@ -214,7 +214,7 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .deleteEntry('アリス');
+          .deleteEntry('アリス', novelFolder: '/library/my_novel');
 
       final remaining = await repository.findAll();
       expect(remaining.map((r) => r.word).toSet(), {'ボブ'});
@@ -250,7 +250,7 @@ void main() {
       await container.read(llmSummaryHistoryProvider.future);
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .deleteEntry('アリス');
+          .deleteEntry('アリス', novelFolder: '/library/my_novel');
 
       expect(
         await factCacheRepository.findForWord(word: 'アリス'),
@@ -280,7 +280,7 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .deleteEntry('アリス');
+          .deleteEntry('アリス', novelFolder: '/library/my_novel');
 
       final refreshed = await container.read(llmSummaryHistoryProvider.future);
       expect(refreshed, isEmpty);
@@ -329,7 +329,7 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .deleteEntry('アリス');
+          .deleteEntry('アリス', novelFolder: '/library/my_novel');
     });
   });
 
@@ -375,7 +375,10 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .openEntry(entry(word: 'アリス', sourceFile: '040_chapter.txt'));
+          .openEntry(
+            entry(word: 'アリス', sourceFile: '040_chapter.txt'),
+            novelFolder: novelDir.path,
+          );
 
       final selected = container.read(selectedFileProvider);
       expect(selected?.name, '040_chapter.txt');
@@ -407,7 +410,10 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .openEntry(entry(word: 'いない単語', sourceFile: '050_chapter.txt'));
+          .openEntry(
+            entry(word: 'いない単語', sourceFile: '050_chapter.txt'),
+            novelFolder: novelDir.path,
+          );
 
       expect(
         p.equals(container.read(selectedFileProvider)?.path ?? '', file.path),
@@ -428,7 +434,10 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .openEntry(entry(word: 'アリス', sourceFile: null));
+          .openEntry(
+            entry(word: 'アリス', sourceFile: null),
+            novelFolder: '/library/my_novel',
+          );
 
       expect(container.read(selectedFileProvider), isNull);
       expect(container.read(bookmarkJumpLineProvider), isNull);
@@ -446,7 +455,10 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .openEntry(entry(word: 'アリス', sourceFile: '040_chapter.txt'));
+          .openEntry(
+            entry(word: 'アリス', sourceFile: '040_chapter.txt'),
+            novelFolder: '/library/nonexistent',
+          );
 
       expect(container.read(selectedFileProvider), isNull);
       expect(container.read(bookmarkJumpLineProvider), isNull);

@@ -128,6 +128,10 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       _snack(context, l10n.llmAnalysis_noFolderOpen);
       return;
     }
+    // Captured with the folder, for the same reason: the file a snapshot is
+    // recorded against has to be the one that was open when the analysis was
+    // asked for, not whatever the reader moved to while it was starting up.
+    final openFileName = _ref.read(selectedFileProvider)?.name;
 
     // Wait for the async dependencies of `llmSummaryServiceProvider` to settle
     // before reading it. The service is a *synchronous* provider that returns
@@ -149,8 +153,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     }
     if (!context.mounted) return;
 
-    final selectedFile = _ref.read(selectedFileProvider);
-    final resolvedSourceFile = sourceFileName ?? selectedFile?.name;
+    final resolvedSourceFile = sourceFileName ?? openFileName;
 
     if (!context.mounted) return;
     final navigator = Navigator.of(context, rootNavigator: true);

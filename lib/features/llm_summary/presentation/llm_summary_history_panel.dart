@@ -138,8 +138,9 @@ class _HistoryEntryTile extends ConsumerWidget {
           SnackBar(content: Text(l10n.contextMenu_copiedToClipboard)),
         );
       },
-      onDelete: () =>
-          ref.read(llmSummaryHistoryProvider.notifier).deleteEntry(entry.word),
+      onDelete: () => ref
+          .read(llmSummaryHistoryProvider.notifier)
+          .deleteEntry(entry.word, novelFolder: novelFolder),
       onViewDetails: () {
         if (!context.mounted) return;
         showDialog<void>(
@@ -152,7 +153,9 @@ class _HistoryEntryTile extends ConsumerWidget {
   }
 
   Future<void> _jumpToEntry(BuildContext context, WidgetRef ref) {
-    return ref.read(llmSummaryHistoryProvider.notifier).openEntry(entry);
+    return ref
+        .read(llmSummaryHistoryProvider.notifier)
+        .openEntry(entry, novelFolder: novelFolder);
   }
 
   static String _formatDate(DateTime dt) {

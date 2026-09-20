@@ -148,6 +148,7 @@ void main() {
     String directory, {
     FileEntry? file,
     Future<List<NovelMetadata>>? novels,
+    Future<LlmClient?>? client,
   }) {
     final container = ProviderContainer(
       overrides: [
@@ -169,7 +170,7 @@ void main() {
         ),
         selectedFileProvider.overrideWith(() => _MockSelectedFile(file)),
         localeProvider.overrideWith(_StubLocale.new),
-        llmClientProvider.overrideWith((_) async => _DummyClient()),
+        llmClientProvider.overrideWith((_) => client ?? _DummyClient()),
         llmSummaryRepositoryProvider.overrideWith((ref, folderPath) async {
           openedFolders.add(folderPath);
           return _DummyRepo();
@@ -290,6 +291,45 @@ void main() {
 
       expect(service.callCount, 0);
       expect(openedFolders, isEmpty);
+    });
+
+    testWidgets('解析の途中でブラウザが移動しても対象は変わらない', (tester) async {
+      // run() spans several awaits before it reaches the service. The novel
+      // whose text is being analysed was decided when the request was made;
+      // the reader moving on in the meantime must not redirect where the rows
+      // land.
+      final novelA = makeDir('narou_n1234ab');
+      writeEpisode(novelA.path, '001.txt');
+      final novelB = makeDir('narou_n5678cd');
+      writeEpisode(novelB.path, '001.txt');
+      final client = Completer<LlmClient?>();
+
+      final container = containerAt(novelA.path, client: client.future);
+      await tester.pumpWidget(
+        harness(
+          container,
+          (runner, context) => runner.runWithScope(
+            context: context,
+            word: 'アリス',
+            scope: AnalysisScope.upToAll,
+          ),
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pump();
+
+      container
+          .read(currentDirectoryProvider.notifier)
+          .setDirectory(novelB.path);
+      client.complete(_DummyClient());
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(service.callCount, 1);
+      expect(service.lastDirectoryPath, novelA.path);
+      expect(openedFolders, isNotEmpty);
+      expect(openedFolders, everyElement(novelA.path));
     });
 
     testWidgets('小説フォルダ内のサブフォルダでは解析が始まらない', (tester) async {

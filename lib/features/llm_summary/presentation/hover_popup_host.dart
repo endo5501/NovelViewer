@@ -132,6 +132,18 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
       }
     });
 
+    // A popup belongs to the novel it was opened over. Moving the browser
+    // normally takes a pointer press, which the dismissal barrier already
+    // catches — but the file browser can be driven entirely from the
+    // keyboard, and a popup left behind would hand the previous novel's
+    // episode number and file name to a re-analysis that writes into the new
+    // one.
+    ref.listen<String?>(summaryNovelFolderProvider, (prev, next) {
+      if (prev != next) {
+        ref.read(hoverPopupProvider.notifier).hide();
+      }
+    });
+
     ref.listen<HoverPopupState>(hoverPopupProvider, (_, next) {
       if (!next.isVisible) {
         _removeEntry();
