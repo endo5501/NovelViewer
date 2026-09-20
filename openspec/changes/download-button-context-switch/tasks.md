@@ -9,9 +9,9 @@
 - [x] 2.1 `test/features/novel_refresh/refresh_progress_dialog_test.dart` を作成し、`RefreshProgressDialog` を直接組み立てて検証するテストを書く（`downloading` 中は有効なキャンセルボタンが表示される / キャンセル押下で `DownloadNotifier.cancel()` が呼ばれる / `cancelled` 状態ではキャンセルメッセージと「閉じる」が表示され赤いエラー表示にならない / `downloading` 中は「閉じる」が無い / 完了・エラー時の既存表示が保たれる）。テストが失敗することを確認する
 - [x] 2.2 `test/features/novel_refresh/start_novel_refresh_test.dart` を作成し、`startNovelRefresh` を検証するテストを書く（ダウンロード実行中に呼ぶと SnackBar で警告し `refreshNovel` を呼ばない / 待機中に呼ぶと `refreshNovel` が渡した `folderName`・`parentPath` で呼ばれ進捗ダイアログが表示される）。テストが失敗することを確認する
 - [x] 2.3 テストが正しいことを確認した時点でコミットする（実装は含めない）
-- [ ] 2.4 `lib/features/novel_refresh/presentation/refresh_progress_dialog.dart` を作成し、`file_browser_panel.dart` の `_RefreshProgressDialog` を `RefreshProgressDialog` として移設したうえで、`downloading` 中のキャンセルボタン（`common_cancelButton` / `download_cancelledMessage` を再利用）を追加する。同ファイルに `startNovelRefresh` を実装し、`_startRefresh` の並行ガードと起動処理を移す。2.1 と 2.2 のテストが通ることを確認する
-- [ ] 2.5 `file_browser_panel.dart` の `_startRefresh` と `_RefreshProgressDialog` を削除し、コンテキストメニューの「更新」を `startNovelRefresh` 呼び出しに置き換える。`fvm flutter test test/features/file_browser test/features/text_download` が通ることを確認する
-- [ ] 2.6 旧 `test/features/file_browser/presentation/refresh_progress_dialog_test.dart`（本物のダイアログを組み立てられず代替ウィジェットを検証していたもの）を削除し、カバー範囲が 2.1 に引き継がれていることを確認する
+- [x] 2.4 `lib/features/novel_refresh/presentation/refresh_progress_dialog.dart` を作成し、`file_browser_panel.dart` の `_RefreshProgressDialog` を `RefreshProgressDialog` として移設したうえで、`downloading` 中のキャンセルボタン（`common_cancelButton` / `download_cancelledMessage` を再利用）を追加する。同ファイルに `startNovelRefresh` を実装し、`_startRefresh` の並行ガードと起動処理を移す。2.1 と 2.2 のテストが通ることを確認する
+- [x] 2.5 `file_browser_panel.dart` の `_startRefresh` と `_RefreshProgressDialog` を削除し、コンテキストメニューの「更新」を `startNovelRefresh` 呼び出しに置き換える。`fvm flutter test test/features/file_browser test/features/text_download` が通ることを確認する
+- [x] 2.6 旧 `test/features/file_browser/presentation/refresh_progress_dialog_test.dart`（本物のダイアログを組み立てられず代替ウィジェットを検証していたもの）を削除し、カバー範囲が 2.1 に引き継がれていることを確認する
 
 ## 3. AppBar ボタンの文脈切り替え
 

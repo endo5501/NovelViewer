@@ -44,10 +44,16 @@ void main() {
         child: LocalizedMaterialApp(
           home: Scaffold(
             body: Consumer(
-              builder: (context, ref, _) => TextButton(
-                onPressed: () => startNovelRefresh(context, ref, target),
-                child: const Text('start'),
-              ),
+              builder: (context, ref, _) {
+                // Watched so the notifier is built before the test drives it,
+                // the way a real caller (the app bar) watches it to decide
+                // what its button means.
+                ref.watch(downloadProvider);
+                return TextButton(
+                  onPressed: () => startNovelRefresh(context, ref, target),
+                  child: const Text('start'),
+                );
+              },
             ),
           ),
         ),
@@ -60,7 +66,8 @@ void main() {
       await pumpStarter(tester);
 
       await tester.tap(find.text('start'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(notifier.refreshCalls, hasLength(1));
       expect(notifier.refreshCalls.single.folderName, 'narou_n1234ab');
@@ -75,7 +82,8 @@ void main() {
       await tester.pump();
 
       await tester.tap(find.text('start'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(notifier.refreshCalls, isEmpty);
       expect(find.byType(RefreshProgressDialog), findsNothing);

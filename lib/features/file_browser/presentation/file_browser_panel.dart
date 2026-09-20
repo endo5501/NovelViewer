@@ -15,7 +15,8 @@ import 'package:novel_viewer/features/file_browser/presentation/move_destination
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_delete/providers/novel_delete_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
-import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
+import 'package:novel_viewer/features/novel_refresh/domain/refresh_target.dart';
+import 'package:novel_viewer/features/novel_refresh/presentation/refresh_progress_dialog.dart';
 import 'package:novel_viewer/features/file_browser/presentation/rename_title_dialog.dart';
 import 'package:novel_viewer/features/file_browser/presentation/new_folder_dialog.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
@@ -653,31 +654,20 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     });
   }
 
+  /// Refreshes a novel the reader is not necessarily looking at.
+  ///
+  /// The tile carries the novel folder's absolute path, so the destination is
+  /// its parent directory: a novel kept in an organizational subfolder updates
+  /// in place instead of being duplicated at the library root.
   void _startRefresh(BuildContext context, DirectoryEntry dir) {
-    final downloadState = ref.read(downloadProvider);
-    if (downloadState.status == DownloadStatus.downloading) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.fileBrowser_downloadInProgressWarning,
-          ),
-        ),
-      );
-      return;
-    }
-
-    // Re-download into the novel folder's current physical parent so a novel
-    // stored inside an organizational subfolder updates in place instead of
-    // being duplicated at the library root. `dir.path` is the novel folder's
-    // absolute path; its dirname is the parent directory.
-    ref
-        .read(downloadProvider.notifier)
-        .refreshNovel(dir.name, parentPath: p.dirname(dir.path));
-
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _RefreshProgressDialog(novelTitle: dir.displayName),
+    startNovelRefresh(
+      context,
+      ref,
+      RefreshTarget(
+        folderName: dir.name,
+        parentPath: p.dirname(dir.path),
+        title: dir.displayName,
+      ),
     );
   }
 
@@ -816,107 +806,5 @@ class _ReadingProgressBar extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-class _RefreshProgressDialog extends ConsumerWidget {
-  final String novelTitle;
-
-  const _RefreshProgressDialog({required this.novelTitle});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final downloadState = ref.watch(downloadProvider);
-
-    return AlertDialog(
-      title: Text(
-        AppLocalizations.of(
-          context,
-        )!.fileBrowser_refreshProgressTitle(novelTitle),
-      ),
-      content: _buildContent(context, downloadState),
-      actions: [
-        if (downloadState.status == DownloadStatus.completed ||
-            downloadState.status == DownloadStatus.error ||
-            downloadState.status == DownloadStatus.cancelled)
-          TextButton(
-            onPressed: () {
-              if (downloadState.status == DownloadStatus.completed) {
-                ref.invalidate(allNovelsProvider);
-                ref.invalidate(directoryContentsProvider);
-              }
-              ref.read(downloadProvider.notifier).reset();
-              Navigator.of(context).pop();
-            },
-            child: Text(AppLocalizations.of(context)!.common_closeButton),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildContent(BuildContext context, DownloadState state) {
-    final l10n = AppLocalizations.of(context)!;
-
-    String failedSuffix(int failed) {
-      if (failed <= 0) return '';
-      final lang = Localizations.localeOf(context).languageCode;
-      return switch (lang) {
-        'ja' => ' (失敗: $failed件)',
-        'zh' => ' （失败：$failed个）',
-        _ => ' (failed: $failed)',
-      };
-    }
-
-    String episodeSummary(DownloadState s) {
-      if (s.totalEpisodes <= 0) return '';
-      final skipped = s.skippedEpisodes > 0
-          ? l10n.fileBrowser_skippedEpisodesSuffix(s.skippedEpisodes)
-          : '';
-      final tail = skipped + failedSuffix(s.failedEpisodes);
-      return l10n.fileBrowser_episodeCountFormat(s.totalEpisodes, tail);
-    }
-
-    switch (state.status) {
-      case DownloadStatus.idle:
-      case DownloadStatus.downloading:
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const LinearProgressIndicator(),
-            const SizedBox(height: 16),
-            if (state.totalEpisodes > 0)
-              Text('${state.currentEpisode} / ${episodeSummary(state)}'),
-          ],
-        );
-      case DownloadStatus.completed:
-        final summary = episodeSummary(state);
-        final completedText = Text(
-          l10n.fileBrowser_refreshCompleted(
-            summary.isNotEmpty ? '\n$summary' : '',
-          ),
-        );
-        if (!state.indexTruncated) return completedText;
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            completedText,
-            const SizedBox(height: 8),
-            Text(
-              l10n.download_indexTruncatedWarning,
-              style: const TextStyle(color: Colors.orange),
-            ),
-          ],
-        );
-      case DownloadStatus.cancelled:
-        return Text(l10n.download_cancelledMessage);
-      case DownloadStatus.error:
-        return Text(
-          l10n.common_errorPrefix(
-            state.errorMessage ?? l10n.common_unknownError,
-          ),
-          style: const TextStyle(color: Colors.red),
-        );
-    }
   }
 }
