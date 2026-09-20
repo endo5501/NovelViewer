@@ -28,8 +28,7 @@ final selectedFileProgressTitleProvider = Provider<String>((ref) {
 
   // A registered novel is named by its metadata; anything else — a folder of
   // hand-placed text — is named by its folder, as it always has been.
-  final novels =
-      ref.watch(allNovelsProvider).value ?? const <NovelMetadata>[];
+  final novels = ref.watch(allNovelsProvider).value ?? const <NovelMetadata>[];
   final folderName = p.basename(folder);
   final base =
       novels

@@ -24,15 +24,15 @@
 
 ## 4. 一覧の無効化の集約
 
-- [ ] 4.1 `test/features/reading_context/listing_invalidation_test.dart` を作成し、共有ヘルパーが両方の一覧を無効化することを検証するテストを書く。あわせて、更新完了後に話一覧が取り直され、増えたエピソードが話送りに現れることを検証する。テストが失敗することを確認する
-- [ ] 4.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
-- [ ] 4.3 読書コンテキスト側に共有の無効化ヘルパーを実装し、`home_screen.dart:343` / `refresh_progress_dialog.dart:85` / `download_dialog.dart:590` / `tts_controls_bar.dart:204,325,378` の5ファイル6箇所を置き換える。4.1 のテストが通ることを確認する
-- [ ] 4.4 `grep` で `invalidate(directoryContentsProvider)` の直接呼び出しがファイルブラウザ自身の外に残っていないことを確認する
+- [x] 4.1 `test/features/reading_context/listing_invalidation_test.dart` を作成し、共有ヘルパーが両方の一覧を無効化することを検証するテストを書く。あわせて、更新完了後に話一覧が取り直され、増えたエピソードが話送りに現れることを検証する。テストが失敗することを確認する
+- [x] 4.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
+- [x] 4.3 読書コンテキスト側に共有の無効化ヘルパーを実装し、`home_screen.dart:343` / `refresh_progress_dialog.dart:85` / `download_dialog.dart:590` / `tts_controls_bar.dart:204,325,378` の5ファイル6箇所を置き換える。4.1 のテストが通ることを確認する
+- [x] 4.4 `grep` で `invalidate(directoryContentsProvider)` の直接呼び出しがファイルブラウザ自身の外に残っていないことを確認する
 
 ## 5. 最終確認
 
 - [ ] 5.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 5.3 `fvm dart format .`でフォーマットを実行
-- [ ] 5.4 `fvm flutter analyze`でリントを実行
-- [ ] 5.5 `fvm flutter test`でテストを実行
+- [x] 5.3 `fvm dart format .`でフォーマットを実行
+- [x] 5.4 `fvm flutter analyze`でリントを実行
+- [x] 5.5 `fvm flutter test`でテストを実行

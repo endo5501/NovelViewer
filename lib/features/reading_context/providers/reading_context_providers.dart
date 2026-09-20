@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
@@ -51,19 +52,21 @@ final readingNovelFolderProvider = Provider<String?>((ref) {
 final readingEpisodesProvider = FutureProvider<List<FileEntry>>((ref) async {
   final folder = ref.watch(readingNovelFolderProvider);
   if (folder == null) return const [];
-  return ref.watch(_episodesInFolderProvider(folder).future);
+  return ref.watch(episodesInFolderProvider(folder).future);
 });
 
 /// The text files directly inside [folderPath], numeric-prefix sorted.
 ///
 /// The family key is the folder rather than the file, which is what keeps a
-/// page turn from costing a directory listing.
-final _episodesInFolderProvider =
-    FutureProvider.family<List<FileEntry>, String>((ref, folderPath) async {
-      final service = ref.watch(fileSystemServiceProvider);
-      final files = await service.listTextFiles(folderPath);
-      return service.sortByNumericPrefix(files);
-    });
+/// page turn from costing a directory listing. Public only so that
+/// [invalidateEpisodeListings] can name it; read [readingEpisodesProvider].
+final episodesInFolderProvider = FutureProvider.family<List<FileEntry>, String>(
+  (ref, folderPath) async {
+    final service = ref.watch(fileSystemServiceProvider);
+    final files = await service.listTextFiles(folderPath);
+    return service.sortByNumericPrefix(files);
+  },
+);
 
 /// Reloads both episode listings: the reader's and the file browser's.
 ///
@@ -72,13 +75,11 @@ final _episodesInFolderProvider =
 /// files — has to invalidate both. Going through one helper is what stops the
 /// next call site from remembering only one of them, which would show up as
 /// newly fetched episodes that the reader cannot page into.
-void invalidateEpisodeListings(WidgetRef ref) {
-  ref.invalidate(directoryContentsProvider);
-  ref.invalidate(_episodesInFolderProvider);
-}
-
-/// [invalidateEpisodeListings] for a [Ref], for callers inside a provider.
-void invalidateEpisodeListingsRef(Ref ref) {
-  ref.invalidate(directoryContentsProvider);
-  ref.invalidate(_episodesInFolderProvider);
+///
+/// [invalidate] is passed as a tear-off from a `WidgetRef`, a provider `Ref`
+/// or a container, the way [releaseFolderDbHandles] already takes one, so the
+/// widget flows and the provider flows share one implementation.
+void invalidateEpisodeListings(void Function(ProviderOrFamily) invalidate) {
+  invalidate(directoryContentsProvider);
+  invalidate(episodesInFolderProvider);
 }
