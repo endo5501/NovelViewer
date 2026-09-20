@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/episode_navigation/providers/episode_navig
 import 'package:novel_viewer/features/episode_navigation/providers/pending_file_entry_intent_provider.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
 
 class _StubSelectedFileNotifier extends SelectedFileNotifier {
   final FileEntry? _initial;
@@ -30,9 +31,7 @@ ProviderContainer _makeContainer({
 }) {
   return ProviderContainer(
     overrides: [
-      directoryContentsProvider.overrideWith((ref) async {
-        return DirectoryContents(files: files, subdirectories: const []);
-      }),
+      readingEpisodesProvider.overrideWith((ref) async => files),
       selectedFileProvider.overrideWith(
         () => _StubSelectedFileNotifier(selected),
       ),
@@ -48,7 +47,7 @@ void main() {
         final files = _files(3);
         final container = _makeContainer(files: files, selected: files[0]);
         addTearDown(container.dispose);
-        await container.read(directoryContentsProvider.future);
+        await container.read(readingEpisodesProvider.future);
 
         container.read(episodeNavigationControllerProvider).navigateToNext();
 
@@ -66,7 +65,7 @@ void main() {
         final files = _files(3);
         final container = _makeContainer(files: files, selected: files[2]);
         addTearDown(container.dispose);
-        await container.read(directoryContentsProvider.future);
+        await container.read(readingEpisodesProvider.future);
 
         container
             .read(episodeNavigationControllerProvider)
@@ -86,7 +85,7 @@ void main() {
         final files = _files(3);
         final container = _makeContainer(files: files, selected: files.last);
         addTearDown(container.dispose);
-        await container.read(directoryContentsProvider.future);
+        await container.read(readingEpisodesProvider.future);
 
         container.read(episodeNavigationControllerProvider).navigateToNext();
 
@@ -99,7 +98,7 @@ void main() {
       final files = _files(3);
       final container = _makeContainer(files: files, selected: files.first);
       addTearDown(container.dispose);
-      await container.read(directoryContentsProvider.future);
+      await container.read(readingEpisodesProvider.future);
 
       container.read(episodeNavigationControllerProvider).navigateToPrevious();
 
@@ -111,7 +110,7 @@ void main() {
       final files = _files(3);
       final container = _makeContainer(files: files, selected: null);
       addTearDown(container.dispose);
-      await container.read(directoryContentsProvider.future);
+      await container.read(readingEpisodesProvider.future);
 
       container.read(episodeNavigationControllerProvider).navigateToNext();
 
@@ -127,7 +126,7 @@ void main() {
       final files = _files(3);
       final container = _makeContainer(files: files, selected: files[0]);
       addTearDown(container.dispose);
-      await container.read(directoryContentsProvider.future);
+      await container.read(readingEpisodesProvider.future);
 
       FileEntryStartIntent? observedIntentWhenSelectionChanged;
       container.listen<FileEntry?>(selectedFileProvider, (prev, next) {

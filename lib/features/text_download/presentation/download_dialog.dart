@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
 import 'package:novel_viewer/features/text_download/data/sites/generic_web_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/features/text_download/domain/download_request.dart';
@@ -587,7 +588,7 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
       return [
         TextButton(
           onPressed: () {
-            ref.invalidate(directoryContentsProvider);
+            invalidateEpisodeListings(ref.invalidate);
             ref.read(downloadProvider.notifier).reset();
             Navigator.of(context).pop();
           },

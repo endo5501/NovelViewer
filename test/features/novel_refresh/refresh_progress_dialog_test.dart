@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/novel_refresh/presentation/refresh_progress_dialog.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 
 import '../../helpers/localized_material_app.dart';
@@ -23,11 +24,13 @@ void main() {
   late _ControlledDownloadNotifier notifier;
   var novelsBuilds = 0;
   var listingBuilds = 0;
+  var episodeBuilds = 0;
 
   Future<void> pumpDialog(WidgetTester tester, DownloadState initial) async {
     notifier = _ControlledDownloadNotifier();
     novelsBuilds = 0;
     listingBuilds = 0;
+    episodeBuilds = 0;
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -40,6 +43,10 @@ void main() {
             listingBuilds++;
             return DirectoryContents.empty();
           }),
+          readingEpisodesProvider.overrideWith((ref) async {
+            episodeBuilds++;
+            return const [];
+          }),
         ],
         child: LocalizedMaterialApp(
           home: Scaffold(
@@ -51,6 +58,7 @@ void main() {
                   builder: (context, ref, _) {
                     ref.watch(allNovelsProvider);
                     ref.watch(directoryContentsProvider);
+                    ref.watch(readingEpisodesProvider);
                     return const SizedBox.shrink();
                   },
                 ),
@@ -146,13 +154,18 @@ void main() {
         const DownloadState(status: DownloadStatus.cancelled),
       );
       await tester.pumpAndSettle();
-      final before = (novelsBuilds, listingBuilds);
+      final before = (novelsBuilds, listingBuilds, episodeBuilds);
 
       await tester.tap(find.byKey(const Key('refresh_close_button')));
       await tester.pumpAndSettle();
 
       expect(novelsBuilds, greaterThan(before.$1));
       expect(listingBuilds, greaterThan(before.$2));
+      expect(
+        episodeBuilds,
+        greaterThan(before.$3),
+        reason: '中断までに保存されたエピソードは話送りにも現れなければならない',
+      );
     });
 
     testWidgets('エラー後に閉じてもファイル一覧を読み直す', (tester) async {
@@ -164,13 +177,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final before = (novelsBuilds, listingBuilds);
+      final before = (novelsBuilds, listingBuilds, episodeBuilds);
 
       await tester.tap(find.byKey(const Key('refresh_close_button')));
       await tester.pumpAndSettle();
 
       expect(novelsBuilds, greaterThan(before.$1));
       expect(listingBuilds, greaterThan(before.$2));
+      expect(episodeBuilds, greaterThan(before.$3));
     });
 
     testWidgets('タイトルに小説名を表示する', (tester) async {

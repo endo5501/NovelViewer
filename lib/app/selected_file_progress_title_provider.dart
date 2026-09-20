@@ -1,27 +1,51 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
+import 'package:path/path.dart' as p;
 
 const _kAppTitleFallback = 'NovelViewer';
 
 /// AppBar 表示用の組み立て済みタイトル文字列。
 ///
 /// 形式:
-/// - ライブラリルート / 小説タイトル解決不能 → `NovelViewer`
-/// - 小説フォルダ + ファイル未選択 → `{小説名}`
-/// - 小説フォルダ + ファイル選択中 + 一覧内 → `{小説名} — {ファイル名} (N/M)`
-/// - 小説フォルダ + ファイル選択中 + 一覧外 → `{小説名}` (進捗算出不可のため fallback)
+/// - 表示中のエピソードなし → `NovelViewer`
+/// - 表示中のエピソードあり + 一覧内 → `{小説名} — {ファイル名} (N/M)`
+/// - 表示中のエピソードあり + 一覧外 → `{小説名}` (進捗算出不可のため fallback)
+///
+/// The app bar sits above the body, so it answers "what am I reading" — and
+/// since the file browser moved into a drawer, the browser's location is no
+/// longer an answer to that. Everything here comes from the open episode and
+/// the novel folder it belongs to; neither [currentDirectoryProvider] nor
+/// [directoryContentsProvider] is consulted.
 final selectedFileProgressTitleProvider = Provider<String>((ref) {
-  final base =
-      ref.watch(selectedNovelTitleProvider).value ?? _kAppTitleFallback;
-
   final selected = ref.watch(selectedFileProvider);
-  if (selected == null) return base;
+  if (selected == null) return _kAppTitleFallback;
 
-  final files = ref.watch(directoryContentsProvider).value?.files ?? const [];
-  if (files.isEmpty) return base;
+  final folder = ref.watch(readingNovelFolderProvider);
+  if (folder == null) return _kAppTitleFallback;
 
-  final idx = files.indexWhere((f) => f.path == selected.path);
+  // A registered novel is named by its metadata; anything else — a folder of
+  // hand-placed text — is named by its folder, as it always has been. The
+  // library folder is the exception: it is not a work, so a text file sitting
+  // loose at the root has no title to take.
+  final libraryPath = ref.watch(libraryPathProvider);
+  final novels = ref.watch(allNovelsProvider).value ?? const <NovelMetadata>[];
+  final folderName = p.basename(folder);
+  final base = libraryPath != null && p.equals(folder, libraryPath)
+      ? _kAppTitleFallback
+      : novels
+                .where((novel) => novel.folderName == folderName)
+                .firstOrNull
+                ?.title ??
+            folderName;
+
+  final episodes = ref.watch(readingEpisodesProvider).value ?? const [];
+  if (episodes.isEmpty) return base;
+
+  final idx = episodes.indexWhere((f) => f.path == selected.path);
   if (idx < 0) return base;
 
-  return '$base — ${selected.name} (${idx + 1}/${files.length})';
+  return '$base — ${selected.name} (${idx + 1}/${episodes.length})';
 });

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/novel_refresh/domain/refresh_target.dart';
+import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -82,7 +82,7 @@ class RefreshProgressDialog extends ConsumerWidget {
               // something invalidates it, so leaving it alone would hide those
               // episodes until the reader navigated away and back.
               ref.invalidate(allNovelsProvider);
-              ref.invalidate(directoryContentsProvider);
+              invalidateEpisodeListings(ref.invalidate);
               ref.read(downloadProvider.notifier).reset();
               Navigator.of(context).pop();
             },

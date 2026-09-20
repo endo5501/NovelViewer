@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/episode_navigation/providers/adjacent_files_provider.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -29,12 +30,9 @@ const _ep3 = FileEntry(name: '003-ep3.txt', path: '/novel/003-ep3.txt');
 Widget _wrap({required List<TextSegment> segments, int? targetLineNumber}) {
   return ProviderScope(
     overrides: [
-      directoryContentsProvider.overrideWith((ref) async {
-        return const DirectoryContents(
-          files: [_ep1, _ep2, _ep3],
-          subdirectories: [],
-        );
-      }),
+      readingEpisodesProvider.overrideWith(
+        (ref) async => const [_ep1, _ep2, _ep3],
+      ),
       selectedFileProvider.overrideWith(() => _StubSelectedFileNotifier(_ep2)),
     ],
     child: MaterialApp(
@@ -59,7 +57,7 @@ Future<void> _primeAdjacentFiles(WidgetTester tester) async {
   final container = ProviderScope.containerOf(
     tester.element(find.byType(VerticalTextViewer)),
   );
-  await container.read(directoryContentsProvider.future);
+  await container.read(readingEpisodesProvider.future);
   await tester.pumpAndSettle();
   container.read(adjacentFilesProvider);
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_adapters.dart';
 import 'package:novel_viewer/features/tts/data/tts_toggle.dart';
@@ -201,7 +202,7 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
         ref.read(activeStreamingFileProvider.notifier).set(null);
         if (mounted) {
           ref.invalidate(ttsAudioStateProvider(filePath));
-          ref.invalidate(directoryContentsProvider);
+          invalidateEpisodeListings(ref.invalidate);
         }
       }
     }
@@ -322,7 +323,7 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
     if (selectedPath != null) {
       ref.invalidate(ttsAudioStateProvider(selectedPath));
     }
-    ref.invalidate(directoryContentsProvider);
+    invalidateEpisodeListings(ref.invalidate);
   }
 
   Future<void> _exportAudio() async {
@@ -375,7 +376,7 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
 
     // Refresh audio state and file browser TTS icons after dialog closes
     if (mounted) {
-      ref.invalidate(directoryContentsProvider);
+      invalidateEpisodeListings(ref.invalidate);
       final selectedPath = ref.read(selectedFileProvider)?.path;
       if (selectedPath != null) {
         ref.invalidate(ttsAudioStateProvider(selectedPath));

@@ -16,6 +16,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/novel_delete/providers/novel_delete_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/novel_refresh/domain/refresh_target.dart';
+import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
 import 'package:novel_viewer/features/novel_refresh/presentation/refresh_progress_dialog.dart';
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
 import 'package:novel_viewer/features/file_browser/presentation/rename_title_dialog.dart';
@@ -261,7 +262,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
             .read(fileSystemServiceProvider)
             .createDirectory(currentDir, name);
         if (!context.mounted) return;
-        ref.invalidate(directoryContentsProvider);
+        invalidateEpisodeListings(ref.invalidate);
       } on DirectoryOpException catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -437,6 +438,16 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         ),
       ),
       subtitle: badge == null ? null : _ReadingProgressBar(badge: badge),
+      // Entering a folder still clears the selection, for now.
+      //
+      // Keeping the episode open while the browser moves elsewhere is the
+      // point of the reading context, but it is not safe yet: TTS, bookmarks,
+      // the dictionary and LLM analysis all still resolve "the current novel"
+      // from this directory, and `setDirectory` releases the per-folder
+      // database handles of the folder being left. With a selection left
+      // behind, those would act on one novel's folder using another novel's
+      // file. The clear is what makes that unreachable, so it stays until
+      // those consumers move onto the reading context too.
       onTap: () {
         ref.read(currentDirectoryProvider.notifier).setDirectory(dir.path);
         ref.read(selectedFileProvider.notifier).clear();
@@ -583,21 +594,9 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       // the refresh target from, so a selection left at the old location would
       // send the next update back there and duplicate the folder — the very
       // thing resolving the destination from the novel's physical parent
-      // exists to prevent. The delete path clears the selection for the same
-      // reason; a move rebases it instead, because the reader is still reading
-      // it.
-      final selected = ref.read(selectedFileProvider);
-      final followedFile = followedCurrentDirectory(
-        currentDir: selected?.path,
-        sourcePath: dir.path,
-        newSourcePath: newPath,
-      );
-      if (followedFile != null) {
-        ref
-            .read(selectedFileProvider.notifier)
-            .selectFile(FileEntry(name: selected!.name, path: followedFile));
-      }
-      ref.invalidate(directoryContentsProvider);
+      // exists to prevent.
+      _followOpenEpisode(from: dir.path, to: newPath);
+      invalidateEpisodeListings(ref.invalidate);
     } on DirectoryOpException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(
@@ -639,7 +638,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
             .read(fileSystemServiceProvider)
             .deleteEmptyDirectory(dir.path);
         if (!context.mounted) return;
-        ref.invalidate(directoryContentsProvider);
+        invalidateEpisodeListings(ref.invalidate);
       } on DirectoryOpException catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -669,11 +668,15 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
           read: ref.read,
           invalidate: ref.invalidate,
         );
-        await ref
+        final renamed = await ref
             .read(fileSystemServiceProvider)
             .renameDirectory(dir.path, newName);
         if (!context.mounted) return;
-        ref.invalidate(directoryContentsProvider);
+        // The open episode follows the rename, exactly as it follows a move:
+        // its path is what the reading context resolves from, so a selection
+        // left at the old name would list a folder that is no longer there.
+        _followOpenEpisode(from: dir.path, to: renamed.path);
+        invalidateEpisodeListings(ref.invalidate);
       } on DirectoryOpException catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -681,6 +684,23 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         );
       }
     });
+  }
+
+  /// Rebases the open episode's path when the folder holding it is moved or
+  /// renamed, so the reading context keeps resolving to where it now lives.
+  ///
+  /// Deleting clears the selection instead — there is nothing left to read.
+  void _followOpenEpisode({required String from, required String to}) {
+    final selected = ref.read(selectedFileProvider);
+    final followed = followedCurrentDirectory(
+      currentDir: selected?.path,
+      sourcePath: from,
+      newSourcePath: to,
+    );
+    if (followed == null) return;
+    ref
+        .read(selectedFileProvider.notifier)
+        .rebase(FileEntry(name: selected!.name, path: followed));
   }
 
   /// Refreshes a novel the reader is not necessarily looking at.
@@ -711,7 +731,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         final repository = ref.read(novelRepositoryProvider);
         await repository.updateTitle(dir.name, newTitle);
         ref.invalidate(allNovelsProvider);
-        ref.invalidate(directoryContentsProvider);
+        invalidateEpisodeListings(ref.invalidate);
       } catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -778,7 +798,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         final deleteService = await ref.read(novelDeleteServiceProvider.future);
         await deleteService.delete(dir.name, dir.path);
         ref.invalidate(allNovelsProvider);
-        ref.invalidate(directoryContentsProvider);
+        invalidateEpisodeListings(ref.invalidate);
       } catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -798,6 +818,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     final libraryPath = ref.read(libraryPathProvider);
     final parent = getParentDirectory(currentDir, libraryPath: libraryPath);
     if (parent != null) {
+      // Cleared for the same reason as the folder tile's onTap; see there.
       ref.read(currentDirectoryProvider.notifier).setDirectory(parent);
       ref.read(selectedFileProvider.notifier).clear();
     }
