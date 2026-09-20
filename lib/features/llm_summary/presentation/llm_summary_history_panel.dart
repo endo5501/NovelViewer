@@ -3,7 +3,6 @@ import 'package:novel_viewer/shared/gestures/pointer_kinds.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/bookmark/providers/bookmark_providers.dart';
-import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_detail_dialog.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_history_menu.dart';
@@ -39,8 +38,10 @@ class LlmSummaryHistoryPanel extends ConsumerWidget {
         }
         return ListView.builder(
           itemCount: entries.length,
-          itemBuilder: (context, index) =>
-              _HistoryEntryTile(entry: entries[index]),
+          itemBuilder: (context, index) => _HistoryEntryTile(
+            entry: entries[index],
+            novelFolder: novelFolder,
+          ),
         );
       },
     );
@@ -50,7 +51,12 @@ class LlmSummaryHistoryPanel extends ConsumerWidget {
 class _HistoryEntryTile extends ConsumerWidget {
   final HistoryEntry entry;
 
-  const _HistoryEntryTile({required this.entry});
+  /// The folder whose `novel_data.db` these entries came from. Passed down
+  /// rather than re-read, so the detail dialog cannot end up reading a
+  /// different database than the list that opened it.
+  final String novelFolder;
+
+  const _HistoryEntryTile({required this.entry, required this.novelFolder});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -111,7 +117,6 @@ class _HistoryEntryTile extends ConsumerWidget {
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final directory = ref.read(currentDirectoryProvider);
     final value = await showMenu<HistoryContextAction>(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -136,11 +141,11 @@ class _HistoryEntryTile extends ConsumerWidget {
       onDelete: () =>
           ref.read(llmSummaryHistoryProvider.notifier).deleteEntry(entry.word),
       onViewDetails: () {
-        if (directory == null || !context.mounted) return;
+        if (!context.mounted) return;
         showDialog<void>(
           context: context,
           builder: (_) =>
-              LlmSummaryDetailDialog(folderPath: directory, word: entry.word),
+              LlmSummaryDetailDialog(folderPath: novelFolder, word: entry.word),
         );
       },
     );

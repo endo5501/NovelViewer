@@ -31,12 +31,14 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
   }
 
   Future<void> deleteEntry(String word) async {
-    final directory = ref.read(currentDirectoryProvider);
-    if (directory == null) return;
+    final novelFolder = await ref.read(currentNovelFolderPathProvider.future);
+    if (novelFolder == null) return;
 
-    final repo = await ref.read(llmSummaryRepositoryProvider(directory).future);
+    final repo = await ref.read(
+      llmSummaryRepositoryProvider(novelFolder).future,
+    );
     final factCache = await ref.read(
-      factCacheRepositoryProvider(directory).future,
+      factCacheRepositoryProvider(novelFolder).future,
     );
 
     await repo.deleteAllForWord(word: word);
@@ -48,6 +50,13 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
     ref.invalidateSelf();
   }
 
+  /// Opens the file a snapshot was taken from.
+  ///
+  /// The folder here is the browser's current directory, not the novel folder
+  /// the database came from. A `source_file` is a bare file name recorded
+  /// against the folder the episodes were read from, so resolving it against
+  /// the novel folder would look for the file one level up from where it is.
+  /// The two are the same folder in every layout the application can produce.
   Future<void> openEntry(HistoryEntry entry) async {
     final directory = ref.read(currentDirectoryProvider);
     if (directory == null) return;
