@@ -3,12 +3,12 @@
 - [x] 1.1 `test/features/reading_context/reading_novel_folder_provider_test.dart` を作成し、`readingNovelFolderProvider` を `ProviderContainer` で検証するテストを書く（表示中ファイル無し → null / 登録済み小説のエピソード → その小説フォルダ / 整理用サブフォルダに入れ子 → 最も近い登録済みフォルダ / 登録外のパス → ファイルの親フォルダ / ファイルブラウザの現在地を動かしても結果が変わらない）。テストが失敗することを確認する
 - [x] 1.2 `test/features/reading_context/reading_episodes_provider_test.dart` を作成し、`readingEpisodesProvider` を検証するテストを書く（読書中フォルダの `.txt` のみを返す / 並び順が `sortByNumericPrefix` と一致する / サブディレクトリを含まない / 読書コンテキストが無いとき空 / ブラウザがライブラリルートにいても小説フォルダの一覧を返す / フォルダ別DBを開かない）。テストが失敗することを確認する
 - [x] 1.3 テストが正しいことを確認した時点でコミットする（実装は含めない）
-- [ ] 1.4 `lib/features/reading_context/providers/reading_context_providers.dart` に `readingNovelFolderProvider` と `readingEpisodesProvider` を実装する。フォルダ解決は `resolveNovelFolderPath` + 親フォルダフォールバック、一覧は `listTextFiles` + `sortByNumericPrefix` のみ。1.1・1.2 のテストが通ることを確認する
+- [x] 1.4 `lib/features/reading_context/providers/reading_context_providers.dart` に `readingNovelFolderProvider` と `readingEpisodesProvider` を実装する。フォルダ解決は `resolveNovelFolderPath` + 親フォルダフォールバック、一覧は `listTextFiles` + `sortByNumericPrefix` のみ。1.1・1.2 のテストが通ることを確認する
 
 ## 2. 話送りの付け替え
 
-- [ ] 2.1 `test/features/episode_navigation/adjacent_files_reading_context_test.dart` を作成し、ブラウザの現在地から独立していることを検証するテストを書く（ブラウザが小説フォルダにいるとき従来どおり隣接を返す / ブラウザをライブラリルートへ移しても同じ隣接を返す / ブラウザを別の小説フォルダへ移しても変わらない / 先頭・末尾・単独・未選択の各境界が従来どおり）。テストが失敗することを確認する
-- [ ] 2.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
+- [x] 2.1 `test/features/episode_navigation/adjacent_files_reading_context_test.dart` を作成し、ブラウザの現在地から独立していることを検証するテストを書く（ブラウザが小説フォルダにいるとき従来どおり隣接を返す / ブラウザをライブラリルートへ移しても同じ隣接を返す / ブラウザを別の小説フォルダへ移しても変わらない / 先頭・末尾・単独・未選択の各境界が従来どおり）。テストが失敗することを確認する
+- [x] 2.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
 - [ ] 2.3 `adjacent_files_provider.dart` の参照先を `directoryContentsProvider` から `readingEpisodesProvider` に変更する。2.1 と既存の `test/features/episode_navigation/` が通ることを確認する
 - [ ] 2.4 縦書き（`vertical_text_viewer.dart:808,844`）・横書き（`text_content_renderer.dart:592,643`）のページ送りによる話送りが、ブラウザをライブラリルートへ移した状態でも機能することをウィジェットテストで確認する
 - [ ] 2.5 `episode-boundary-prompt` の境界判定が隣接ファイルの有無に従っていることを確認し、話送りの修正で境界プロンプトも正しく出るようになったことをテストで裏づける。仕様の変更が必要と判明した場合は実装を止めて相談する
