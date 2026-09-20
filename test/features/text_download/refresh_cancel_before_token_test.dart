@@ -6,6 +6,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_repository.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/features/text_download/data/download_service.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 
 /// Holds the metadata lookup open so the test occupies the window between
@@ -15,25 +16,25 @@ class _SlowNovelRepository extends Fake implements NovelRepository {
 
   final NovelMetadata? _result;
   final lookup = Completer<void>();
+  final lookup2 = Completer<void>();
+  var _calls = 0;
 
   @override
   Future<NovelMetadata?> findByFolderName(String folderName) async {
-    await lookup.future;
+    await (_calls++ == 0 ? lookup.future : lookup2.future);
     return _result;
   }
 }
 
-/// Reports whether the download ever got underway.
-class _SpyDownloadNotifier extends DownloadNotifier {
-  var startDownloadCalled = false;
+/// Counts the download services handed out, which is the first thing
+/// `startDownload` does once it has decided to go ahead — so a count of zero
+/// means no transfer was ever set up.
+class _ServiceFactorySpy {
+  var built = 0;
 
-  @override
-  Future<void> startDownload({
-    required Uri url,
-    required String outputPath,
-  }) async {
-    startDownloadCalled = true;
-    await super.startDownload(url: url, outputPath: outputPath);
+  DownloadService call() {
+    built++;
+    return DownloadService();
   }
 }
 
@@ -50,16 +51,15 @@ void main() {
 
   test('更新開始直後のキャンセルはダウンロードを始めさせない', () async {
     final repo = _SlowNovelRepository(metadata);
-    final notifier = _SpyDownloadNotifier();
+    final factory = _ServiceFactorySpy();
     final container = ProviderContainer(
       overrides: [
         novelRepositoryProvider.overrideWithValue(repo),
         libraryPathProvider.overrideWithValue('/library'),
-        downloadProvider.overrideWith(() => notifier),
+        downloadServiceFactoryProvider.overrideWithValue(factory.call),
       ],
     );
     addTearDown(container.dispose);
-    container.read(downloadProvider);
 
     final refresh = container
         .read(downloadProvider.notifier)
@@ -74,22 +74,21 @@ void main() {
     repo.lookup.complete();
     await refresh;
 
-    expect(notifier.startDownloadCalled, isFalse);
+    expect(factory.built, 0);
     expect(container.read(downloadProvider).status, DownloadStatus.cancelled);
   });
 
   test('キャンセルしていなければ更新はそのまま進む', () async {
     final repo = _SlowNovelRepository(metadata);
-    final notifier = _SpyDownloadNotifier();
+    final factory = _ServiceFactorySpy();
     final container = ProviderContainer(
       overrides: [
         novelRepositoryProvider.overrideWithValue(repo),
         libraryPathProvider.overrideWithValue('/library'),
-        downloadProvider.overrideWith(() => notifier),
+        downloadServiceFactoryProvider.overrideWithValue(factory.call),
       ],
     );
     addTearDown(container.dispose);
-    container.read(downloadProvider);
 
     final refresh = container
         .read(downloadProvider.notifier)
@@ -98,21 +97,20 @@ void main() {
     repo.lookup.complete();
     await refresh;
 
-    expect(notifier.startDownloadCalled, isTrue);
+    expect(factory.built, 1);
   });
 
   test('前回のキャンセルは次の更新を巻き込まない', () async {
     final repo = _SlowNovelRepository(metadata);
-    final notifier = _SpyDownloadNotifier();
+    final factory = _ServiceFactorySpy();
     final container = ProviderContainer(
       overrides: [
         novelRepositoryProvider.overrideWithValue(repo),
         libraryPathProvider.overrideWithValue('/library'),
-        downloadProvider.overrideWith(() => notifier),
+        downloadServiceFactoryProvider.overrideWithValue(factory.call),
       ],
     );
     addTearDown(container.dispose);
-    container.read(downloadProvider);
 
     final first = container
         .read(downloadProvider.notifier)
@@ -121,24 +119,15 @@ void main() {
     container.read(downloadProvider.notifier).cancel();
     repo.lookup.complete();
     await first;
-    expect(notifier.startDownloadCalled, isFalse);
+    expect(factory.built, 0);
 
     // Closing the dialog resets, and the next refresh must start clean.
     container.read(downloadProvider.notifier).reset();
-    final repo2 = _SlowNovelRepository(metadata);
-    final container2 = ProviderContainer(
-      overrides: [
-        novelRepositoryProvider.overrideWithValue(repo2),
-        libraryPathProvider.overrideWithValue('/library'),
-        downloadProvider.overrideWith(() => notifier),
-      ],
-    );
-    addTearDown(container2.dispose);
-    repo2.lookup.complete();
-    await container2
+    repo.lookup2.complete();
+    await container
         .read(downloadProvider.notifier)
         .refreshNovel('narou_n1234ab', parentPath: '/library');
 
-    expect(notifier.startDownloadCalled, isTrue);
+    expect(factory.built, 1);
   });
 }

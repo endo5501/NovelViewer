@@ -41,6 +41,8 @@
 
 キャンセルに用いる文字列は既存のものを再利用する。
 
+更新は、対象小説のURLを引くために一度データベースを参照してからダウンロードを開始する。その待ち時間の間もダイアログは表示されているため、システムはこの時点でのキャンセル要求を保持し、ダウンロードを開始しないまま中断しなければならない（SHALL）。キャンセルされないまま終わった更新の要求が、次の更新に持ち越されてはならない（SHALL NOT）。
+
 #### Scenario: Progress display during refresh
 - **WHEN** 更新処理が実行中である
 - **THEN** モーダルダイアログに現在のエピソード番号、総エピソード数、スキップ数が表示される
@@ -64,6 +66,18 @@
 #### Scenario: A cancelled refresh keeps what it downloaded
 - **WHEN** N話を保存した時点で更新がキャンセルされ、その後同じ小説を再度更新する
 - **THEN** そのN話は再ダウンロードされずスキップされ、続きから取得される
+
+#### Scenario: Cancelling before the download begins stops it too
+- **WHEN** 更新の開始直後、対象URLの参照が完了する前にキャンセルボタンを押す
+- **THEN** ダウンロードは一度も開始されず、ダイアログはキャンセルメッセージを表示する
+
+#### Scenario: A cancel does not carry over to the next refresh
+- **WHEN** 上記のキャンセルの後にダイアログを閉じ、あらためて更新を開始する
+- **THEN** その更新は中断されずに進む
+
+#### Scenario: The listing is reloaded however the refresh ended
+- **WHEN** 更新がキャンセルまたは失敗で終わり、ユーザーがダイアログを閉じる
+- **THEN** ファイル一覧とメタデータが再読込され、中断までに保存されたエピソードが表示される
 
 ### Requirement: Concurrent operation guard
 

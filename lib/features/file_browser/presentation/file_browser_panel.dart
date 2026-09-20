@@ -579,6 +579,24 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       if (followed != null) {
         ref.read(currentDirectoryProvider.notifier).setDirectory(followed);
       }
+      // The open episode follows too. Its path is what the app bar resolves
+      // the refresh target from, so a selection left at the old location would
+      // send the next update back there and duplicate the folder — the very
+      // thing resolving the destination from the novel's physical parent
+      // exists to prevent. The delete path clears the selection for the same
+      // reason; a move rebases it instead, because the reader is still reading
+      // it.
+      final selected = ref.read(selectedFileProvider);
+      final followedFile = followedCurrentDirectory(
+        currentDir: selected?.path,
+        sourcePath: dir.path,
+        newSourcePath: newPath,
+      );
+      if (followedFile != null) {
+        ref
+            .read(selectedFileProvider.notifier)
+            .selectFile(FileEntry(name: selected!.name, path: followedFile));
+      }
       ref.invalidate(directoryContentsProvider);
     } on DirectoryOpException catch (e) {
       if (!context.mounted) return;
