@@ -44,3 +44,8 @@
 - [x] 6.9 `runWithScope` の話数算出も `summaryNovelFolderProvider` に寄せ、`run()` が断る場所で実 I/O が走らないことを確認する
 - [x] 6.10 `deleteEntry` が渡されたフォルダを自分でも検証し、小説フォルダでない場所に `novel_data.db` を作らないことをテストで確認する
 - [x] 6.11 `summaryNovelFolderProvider` がブラウザの現在地起点であり、`clear()` の不変条件に依存していることを doc と design に明記する
+
+## 7. verify 指摘への対応
+
+- [x] 7.1 メニューを開いた後にブラウザが動いても削除が一覧の小説に向くことを、パネル層のテストで検証する（捕捉を外すと落ちることも確認）
+- [x] 7.2 hover popup がフォルダ変更で閉じる挙動を proposal の「ユーザーに見える変化」に追記する
