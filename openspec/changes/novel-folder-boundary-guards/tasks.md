@@ -21,12 +21,12 @@
 
 ## 4. 仕様との突き合わせ
 
-- [ ] 4.1 `openspec validate "novel-folder-boundary-guards" --strict` が通ること、および3つの delta spec の全シナリオに対応するテストが存在することを確認する
+- [x] 4.1 `openspec validate "novel-folder-boundary-guards" --strict` が通ること、および3つの delta spec の全シナリオに対応するテストが存在することを確認する
 
 ## 5. 最終確認
 
 - [ ] 5.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 5.3 `fvm dart format .`でフォーマットを実行
-- [ ] 5.4 `fvm flutter analyze`でリントを実行
-- [ ] 5.5 `fvm flutter test`でテストを実行
+- [x] 5.3 `fvm dart format .`でフォーマットを実行
+- [x] 5.4 `fvm flutter analyze`でリントを実行
+- [x] 5.5 `fvm flutter test`でテストを実行

@@ -260,6 +260,17 @@ void main() {
       expect(openedFolders, everyElement(novelFolder.path));
     });
 
+    testWidgets('整理フォルダに入れ子の小説フォルダでも解析が始まる', (tester) async {
+      final novelFolder = makeDir(p.join('完結済み', 'narou_n1234ab'));
+      writeEpisode(novelFolder.path, '001.txt');
+      final container = containerAt(novelFolder.path);
+
+      await runAll(tester, container);
+
+      expect(service.callCount, 1);
+      expect(openedFolders, everyElement(novelFolder.path));
+    });
+
     testWidgets('サブフォルダでは、DBは小説フォルダ・話数は表示中のフォルダから', (tester) async {
       final novelFolder = makeDir('narou_n1234ab');
       final subFolder = makeDir(p.join('narou_n1234ab', '第二部'));
