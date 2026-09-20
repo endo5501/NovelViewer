@@ -16,8 +16,8 @@
 
 ## 3. 新規フォルダ作成の境界
 
-- [ ] 3.1 `test/features/file_browser/presentation/toolbar_new_folder_button_test.dart` を新規作成し、(a) 登録済み小説フォルダで作成ボタンが無効、(b) 整理フォルダの配下に入れ子になった小説フォルダでも無効、(c) ライブラリルートと通常の整理フォルダでは有効、(d) `allNovelsProvider` が未解決の間は無効、を検証する。赤を確認する
-- [ ] 3.2 `file_browser_panel.dart` のツールバーで、`allNovelsProvider` が解決済みかつ `resolveNovelFolderPath` が null のときにのみ `onPressed` を渡すよう変更し、3.1 を緑にする
+- [x] 3.1 `test/features/file_browser/presentation/toolbar_new_folder_button_test.dart` を新規作成し、(a) 登録済み小説フォルダで作成ボタンが無効、(b) 整理フォルダの配下に入れ子になった小説フォルダでも無効、(c) ライブラリルートと通常の整理フォルダでは有効、(d) `allNovelsProvider` が未解決の間は無効、を検証する。赤を確認する
+- [x] 3.2 `file_browser_panel.dart` のツールバーで、`allNovelsProvider` が解決済みかつ `resolveNovelFolderPath` が null のときにのみ `onPressed` を渡すよう変更し、3.1 を緑にする
 
 ## 4. 仕様との突き合わせ
 

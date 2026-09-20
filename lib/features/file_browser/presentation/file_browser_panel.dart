@@ -15,6 +15,7 @@ import 'package:novel_viewer/features/file_browser/presentation/move_destination
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_delete/providers/novel_delete_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 import 'package:novel_viewer/features/novel_refresh/domain/refresh_target.dart';
 import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
 import 'package:novel_viewer/features/novel_refresh/presentation/refresh_progress_dialog.dart';
@@ -208,12 +209,35 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     );
   }
 
+  /// Whether a new organizational folder may be created in [currentDir].
+  ///
+  /// Only where we positively know it is neither a novel folder nor inside
+  /// one. Everything else that puts content into the library — the move
+  /// destination dialog, the download destination list — already refuses the
+  /// inside of a novel folder, and nothing in the application can move an
+  /// episode into a subfolder afterwards, so a folder created there could
+  /// only ever sit empty.
+  ///
+  /// The novel list still loading counts as "don't know": the registered-name
+  /// set is empty then, and an empty set makes every folder look unregistered.
+  bool _canCreateFolderIn(String currentDir) {
+    final libraryPath = ref.watch(libraryPathProvider);
+    final novels = ref.watch(allNovelsProvider).value;
+    if (libraryPath == null || novels == null) return false;
+    return resolveNovelFolderPath(libraryPath, currentDir, {
+          for (final novel in novels) novel.folderName,
+        }) ==
+        null;
+  }
+
   Widget _buildToolbar(BuildContext context, String? currentDir) {
     var hasParent = false;
+    var canCreateFolder = false;
     if (currentDir != null) {
       final libraryPath = ref.watch(libraryPathProvider);
       hasParent =
           getParentDirectory(currentDir, libraryPath: libraryPath) != null;
+      canCreateFolder = _canCreateFolderIn(currentDir);
     }
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -229,8 +253,11 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
             ),
           if (currentDir != null)
             IconButton(
+              key: const Key('file_browser_new_folder_button'),
               icon: const Icon(Icons.create_new_folder),
-              onPressed: () => _showNewFolderDialog(context, currentDir),
+              onPressed: canCreateFolder
+                  ? () => _showNewFolderDialog(context, currentDir)
+                  : null,
               tooltip: AppLocalizations.of(
                 context,
               )!.fileBrowser_newFolderTooltip,
