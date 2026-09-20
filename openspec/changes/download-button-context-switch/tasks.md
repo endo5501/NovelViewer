@@ -46,3 +46,10 @@
 - [x] 7.3 小説フォルダの移動時に、表示中エピソードの選択パスを移動後の位置へ付け替える（移動後の更新先テストが通ることを確認）
 - [x] 7.4 トークン生成前のキャンセル要求を保持し、ダウンロードを開始させない（3件のテストが通ることを確認）
 - [x] 7.5 反映内容をspecに追記し、`openspec validate --strict`・format・analyze・全テストを再実行
+
+## 8. 検証（opsx:verify）の指摘反映
+
+- [x] 8.1 design.md に D8（トークン生成前のキャンセル保持）・D9（ダイアログ開閉状態の provider 化）・D10（移動時の選択パス付け替え）を追記し、Context と Non-Goals の「パイプラインに触れない」記述を実態に合わせる
+- [x] 8.2 proposal.md の Impact に `download_dialog.dart` / `text_download_providers.dart` / 移動処理の3箇所を追記し、変更しない範囲を `DownloadService` と `refreshNovel` の署名・保存先解決・差分判定に限定して言い直す
+- [x] 8.3 `novel-refresh` の `Metadata not found` シナリオを実装に合わせ、SnackBar ではなく進捗ダイアログにエラーを表示すると記述する（AppBar 経路からは到達不能であることも明記）
+- [x] 8.4 `openspec validate --strict` を再実行して valid を確認

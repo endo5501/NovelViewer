@@ -5,7 +5,7 @@
 - **Drawer は AppBar を覆う。** `Scaffold.drawer` はスキャフォルド全高に敷かれるため、ファイルブラウザを開いている間 AppBar のボタンには触れない。これが「ライブラリ操作中の新規ダウンロード入口を Drawer 内に置く」必然性である。
 - **本文とファイルブラウザの現在地は独立している。** `selectedFileProvider`（表示中のファイル）と `currentDirectoryProvider`（ブラウザの現在地）は、Drawer 化以降は自由にずれる。
 - **更新対象の解決規則は既にある。** `lib/shared/utils/novel_id_resolver.dart` の `resolveNovelFolderPath(libraryRoot, path, registeredFolderNames)` が、任意のパスから最も近い登録済み小説フォルダの絶対パスを返す。reading-progress やフォルダ別 DB が既に依存している共有ルール。
-- **更新の実行部は完成している。** `DownloadNotifier.refreshNovel(folderName, parentPath:)`（`lib/features/text_download/providers/text_download_providers.dart:356`）と `cancel()`（同 `:74`）。本変更でパイプラインには触れない。
+- **更新の実行部はほぼ完成している。** `DownloadNotifier.refreshNovel(folderName, parentPath:)` と `cancel()`（`lib/features/text_download/providers/text_download_providers.dart`）。ダウンロードそのもの（`DownloadService`）には触れないが、`cancel()` には穴がある。`refreshNovel` は自身を downloading と報告してから小説URLの参照を await し、キャンセル用トークンは `startDownload` に入ってから生成されるため、その間のキャンセル要求は落ちる。進捗ダイアログにキャンセルを新設する以上、ここは塞ぐ必要がある（D8）。
 - **更新の起動と進捗ダイアログはファイルブラウザに私有されている。** `_startRefresh`（`file_browser_panel.dart:656`）と `_RefreshProgressDialog`（同 `:822`）はいずれも private。AppBar からも使うには切り出しが要る。
 
 ## Goals / Non-Goals
@@ -18,7 +18,7 @@
 
 **Non-Goals:**
 
-- ダウンロード／更新パイプラインの変更。`refreshNovel` の署名も挙動も据え置く。
+- ダウンロード処理そのものの変更。`DownloadService` と `refreshNovel` の署名・保存先解決・差分判定は据え置く。`DownloadNotifier` に加えるのはキャンセル要求の保持だけである（D8）。
 - 保存先選択ロジックの変更（proposal.md「非目標」参照）。
 - ファイルブラウザのツールバーの再設計。ボタンを1つ増やすだけで、既存の2つには触れない。
 
@@ -78,6 +78,29 @@
 - ファイルブラウザのダウンロードボタンのツールチップ
 
 いずれも en/ja/zh の3ファイルに追加する。
+
+### D8: トークン生成前のキャンセル要求を保持する
+
+`DownloadNotifier` に `_cancelRequested` を持たせる。トークンがまだ無い状態で `cancel()` が呼ばれたらこれを立て、`startDownload` が処理を始める前に見て、立っていれば何も開始せずキャンセル状態で返る。
+
+フラグは1回の操作に閉じる。`startDownload` は、自分が外側の呼び出しか（ダイアログから直接）内側の呼び出しか（`refreshNovel` が委譲）を `state.status` で判別する — `refreshNovel` は委譲前に自身を downloading にしているため。外側ならフラグをクリアしてから始め、内側なら参照待ちの間に届いた要求を尊重する。`reset()`（ダイアログを閉じたとき）でもクリアする。
+
+- **なぜ必要か:** キャンセルボタンを新設したのに、押しても何も起きない窓が残る。窓はローカルDB1クエリ分と短いが、押して止まらないボタンは無いほうがましである。
+- **代案:** `refreshNovel` が await の前にトークンを生成し `startDownload` へ渡す。`startDownload` の署名とトークン所有権が変わり、ダウンロードダイアログ経路にも影響する。フラグ1つのほうが影響範囲が小さい。
+
+### D9: ダイアログの開閉状態を provider に置き、全入口を1つのヘルパーに通す
+
+`downloadDialogOpenProvider` と `showDownloadDialog(context, ref, {initialUrl})` を `download_dialog.dart` に置く。AppBar もファイルブラウザのツールバーもこれを呼ぶ。
+
+- **なぜ:** 外部から届いたダウンロード要求は、既に開いているダイアログが受け取る。シェルはそれを知るために開閉状態を見るが、ダイアログを開くのはシェルだけではなくなった。状態がシェルの `State` にある限り、Drawer の入口は必ずそれを迂回し、2枚目が積まれる。
+- **注意:** ヘルパーは await の前に notifier を取る。ダイアログが閉じる頃には、それを開いたウィジェットが消えていることがある（ファイル選択で Drawer が閉じ、パネルごと外れる）。
+
+### D10: 移動は表示中エピソードの選択パスも連れていく
+
+`_showMoveDialog` は既に `followedCurrentDirectory` でブラウザの現在地を移動先へ付け替えている。同じ関数で `selectedFileProvider` のパスも付け替える。
+
+- **なぜ:** 更新対象は表示中ファイルのパスから解決される（D2）。移動後も古いパスを指したままだと、次の更新が移動前の場所へ書き戻され、重複フォルダを作る — `parentPath` を物理位置から解決している目的そのものを裏切る。コンテキストメニュー経由は生の `DirectoryEntry` を読むため無傷で、この穴は AppBar 経路にだけ開く。
+- **削除経路との違い:** 削除は選択をクリアする（読むものが無くなるため）。移動は付け替える（読者はまだ読んでいるため）。
 
 ## Risks / Trade-offs
 

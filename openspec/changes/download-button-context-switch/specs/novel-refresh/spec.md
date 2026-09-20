@@ -26,7 +26,8 @@
 #### Scenario: Metadata not found
 
 - **WHEN** ユーザーがメタデータが存在しない小説フォルダの「更新」を選択する
-- **THEN** システムはエラーメッセージ「小説のメタデータが見つかりません」をSnackBarで表示し、ダウンロードは開始しない
+- **THEN** システムは進捗ダイアログにエラーメッセージ「小説のメタデータが見つかりません」を表示し、ダウンロードは開始しない
+- **AND** この経路はコンテキストメニューにのみ存在する。AppBar のボタンは、メタデータのある小説を表示しているときにしか更新を意味しないため（`download-entry-points` 参照）、そこから到達することはない
 
 #### Scenario: Refresh from the app bar takes the same path
 

@@ -39,5 +39,8 @@
 - `lib/home_screen.dart` — AppBar のダウンロードボタン（`:566`）を状態依存に。更新の起動と進捗ダイアログの表示を追加。
 - `lib/features/file_browser/presentation/file_browser_panel.dart` — `_buildToolbar`（`:208`）に新規ダウンロードボタンを追加。`_RefreshProgressDialog`（`:822`）は AppBar からも使うため共有可能な場所へ切り出し、キャンセルボタンを追加。`_startRefresh`（`:656`）の共通化。
 - 新規プロバイダ — `selectedFileProvider` / `libraryPathProvider` / `allNovelsProvider` から更新対象（フォルダ名と親ディレクトリ）を導出する。`resolveNovelFolderPath` を利用し、Web コレクションを除外する。
+- `lib/features/text_download/presentation/download_dialog.dart` — ダウンロードダイアログの開閉状態を provider に持たせ、全入口が通る `showDownloadDialog` を追加。`home_screen.dart` が私有していた開閉フラグはここへ移る。Drawer の入口がそれを迂回すると、外部から届いた要求が2枚目のダイアログを積むため。
+- `lib/features/text_download/providers/text_download_providers.dart` — `DownloadNotifier` に、トークン生成前に届いたキャンセル要求を保持する仕組みを追加。`refreshNovel` は自身を downloading と報告してから小説URLを参照するため、その間のキャンセルが落ちる。
+- `lib/features/file_browser/presentation/file_browser_panel.dart`（移動処理） — 小説フォルダの移動時に、表示中エピソードの選択パスを移動後の位置へ付け替える。更新対象は表示中ファイルのパスから解決されるため、付け替えないと次の更新が移動前の場所へ重複フォルダを作る。
 - `lib/l10n/*.arb` — 更新ボタンのツールチップ、Drawer のダウンロードボタンのツールチップ。en/ja/zh の3言語。キャンセル関連の文字列は既存のものを再利用する。
-- 既存のダウンロード／更新パイプライン（`DownloadNotifier.refreshNovel`、`DownloadService`）には変更を加えない。
+- `DownloadService`（ダウンロード処理そのもの）と `refreshNovel` の署名・保存先解決・差分判定には変更を加えない。
