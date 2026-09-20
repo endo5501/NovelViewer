@@ -1,8 +1,8 @@
 ## 1. 読書コンテキストの導出
 
-- [ ] 1.1 `test/features/reading_context/reading_novel_folder_provider_test.dart` を作成し、`readingNovelFolderProvider` を `ProviderContainer` で検証するテストを書く（表示中ファイル無し → null / 登録済み小説のエピソード → その小説フォルダ / 整理用サブフォルダに入れ子 → 最も近い登録済みフォルダ / 登録外のパス → ファイルの親フォルダ / ファイルブラウザの現在地を動かしても結果が変わらない）。テストが失敗することを確認する
-- [ ] 1.2 `test/features/reading_context/reading_episodes_provider_test.dart` を作成し、`readingEpisodesProvider` を検証するテストを書く（読書中フォルダの `.txt` のみを返す / 並び順が `sortByNumericPrefix` と一致する / サブディレクトリを含まない / 読書コンテキストが無いとき空 / ブラウザがライブラリルートにいても小説フォルダの一覧を返す / フォルダ別DBを開かない）。テストが失敗することを確認する
-- [ ] 1.3 テストが正しいことを確認した時点でコミットする（実装は含めない）
+- [x] 1.1 `test/features/reading_context/reading_novel_folder_provider_test.dart` を作成し、`readingNovelFolderProvider` を `ProviderContainer` で検証するテストを書く（表示中ファイル無し → null / 登録済み小説のエピソード → その小説フォルダ / 整理用サブフォルダに入れ子 → 最も近い登録済みフォルダ / 登録外のパス → ファイルの親フォルダ / ファイルブラウザの現在地を動かしても結果が変わらない）。テストが失敗することを確認する
+- [x] 1.2 `test/features/reading_context/reading_episodes_provider_test.dart` を作成し、`readingEpisodesProvider` を検証するテストを書く（読書中フォルダの `.txt` のみを返す / 並び順が `sortByNumericPrefix` と一致する / サブディレクトリを含まない / 読書コンテキストが無いとき空 / ブラウザがライブラリルートにいても小説フォルダの一覧を返す / フォルダ別DBを開かない）。テストが失敗することを確認する
+- [x] 1.3 テストが正しいことを確認した時点でコミットする（実装は含めない）
 - [ ] 1.4 `lib/features/reading_context/providers/reading_context_providers.dart` に `readingNovelFolderProvider` と `readingEpisodesProvider` を実装する。フォルダ解決は `resolveNovelFolderPath` + 親フォルダフォールバック、一覧は `listTextFiles` + `sortByNumericPrefix` のみ。1.1・1.2 のテストが通ることを確認する
 
 ## 2. 話送りの付け替え
