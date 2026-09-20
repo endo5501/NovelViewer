@@ -2,13 +2,13 @@
 
 - [x] 1.1 `test/features/novel_refresh/refresh_target_provider_test.dart` を作成し、`refreshTargetProvider` の全分岐を `ProviderContainer` で検証するテストを書く（表示中ファイル無し → null / 登録済み小説のエピソード → `folderName`・`parentPath`・`title` が解決される / 整理用サブフォルダに入れ子の小説 → 親がそのサブフォルダになる / 登録済み小説フォルダを含まないパス → null / Web 記事コレクション → null / ファイルブラウザの現在地を別ディレクトリへ動かしても結果が変わらない）。`fvm flutter test test/features/novel_refresh/refresh_target_provider_test.dart` が失敗することを確認する
 - [x] 1.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
-- [ ] 1.3 `lib/features/novel_refresh/domain/refresh_target.dart` に `RefreshTarget`（`folderName` / `parentPath` / `title`）を追加し、`lib/features/novel_refresh/providers/refresh_target_provider.dart` に `refreshTargetProvider` を実装する。解決には `resolveNovelFolderPath` を用い、Web 記事コレクションを除外する。1.1 のテストが全て通ることを確認する
+- [x] 1.3 `lib/features/novel_refresh/domain/refresh_target.dart` に `RefreshTarget`（`folderName` / `parentPath` / `title`）を追加し、`lib/features/novel_refresh/providers/refresh_target_provider.dart` に `refreshTargetProvider` を実装する。解決には `resolveNovelFolderPath` を用い、Web 記事コレクションを除外する。1.1 のテストが全て通ることを確認する
 
 ## 2. 更新の起動と進捗ダイアログの切り出し
 
-- [ ] 2.1 `test/features/novel_refresh/refresh_progress_dialog_test.dart` を作成し、`RefreshProgressDialog` を直接組み立てて検証するテストを書く（`downloading` 中は有効なキャンセルボタンが表示される / キャンセル押下で `DownloadNotifier.cancel()` が呼ばれる / `cancelled` 状態ではキャンセルメッセージと「閉じる」が表示され赤いエラー表示にならない / `downloading` 中は「閉じる」が無い / 完了・エラー時の既存表示が保たれる）。テストが失敗することを確認する
-- [ ] 2.2 `test/features/novel_refresh/start_novel_refresh_test.dart` を作成し、`startNovelRefresh` を検証するテストを書く（ダウンロード実行中に呼ぶと SnackBar で警告し `refreshNovel` を呼ばない / 待機中に呼ぶと `refreshNovel` が渡した `folderName`・`parentPath` で呼ばれ進捗ダイアログが表示される）。テストが失敗することを確認する
-- [ ] 2.3 テストが正しいことを確認した時点でコミットする（実装は含めない）
+- [x] 2.1 `test/features/novel_refresh/refresh_progress_dialog_test.dart` を作成し、`RefreshProgressDialog` を直接組み立てて検証するテストを書く（`downloading` 中は有効なキャンセルボタンが表示される / キャンセル押下で `DownloadNotifier.cancel()` が呼ばれる / `cancelled` 状態ではキャンセルメッセージと「閉じる」が表示され赤いエラー表示にならない / `downloading` 中は「閉じる」が無い / 完了・エラー時の既存表示が保たれる）。テストが失敗することを確認する
+- [x] 2.2 `test/features/novel_refresh/start_novel_refresh_test.dart` を作成し、`startNovelRefresh` を検証するテストを書く（ダウンロード実行中に呼ぶと SnackBar で警告し `refreshNovel` を呼ばない / 待機中に呼ぶと `refreshNovel` が渡した `folderName`・`parentPath` で呼ばれ進捗ダイアログが表示される）。テストが失敗することを確認する
+- [x] 2.3 テストが正しいことを確認した時点でコミットする（実装は含めない）
 - [ ] 2.4 `lib/features/novel_refresh/presentation/refresh_progress_dialog.dart` を作成し、`file_browser_panel.dart` の `_RefreshProgressDialog` を `RefreshProgressDialog` として移設したうえで、`downloading` 中のキャンセルボタン（`common_cancelButton` / `download_cancelledMessage` を再利用）を追加する。同ファイルに `startNovelRefresh` を実装し、`_startRefresh` の並行ガードと起動処理を移す。2.1 と 2.2 のテストが通ることを確認する
 - [ ] 2.5 `file_browser_panel.dart` の `_startRefresh` と `_RefreshProgressDialog` を削除し、コンテキストメニューの「更新」を `startNovelRefresh` 呼び出しに置き換える。`fvm flutter test test/features/file_browser test/features/text_download` が通ることを確認する
 - [ ] 2.6 旧 `test/features/file_browser/presentation/refresh_progress_dialog_test.dart`（本物のダイアログを組み立てられず代替ウィジェットを検証していたもの）を削除し、カバー範囲が 2.1 に引き継がれていることを確認する
