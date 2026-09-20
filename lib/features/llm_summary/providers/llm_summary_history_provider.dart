@@ -10,13 +10,21 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_provider
 import 'package:path/path.dart' as p;
 
 class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
+  /// The history belongs to a novel, so it is read from the novel folder that
+  /// owns the browser's current directory — not from the directory itself.
+  ///
+  /// Resolving it is what keeps `novel_data.db` out of folders that are not
+  /// novels: opening one creates the file, so treating any non-root directory
+  /// as a novel left an organizational folder holding a novel's database. The
+  /// bookmark panel, which reads the same file, has always resolved it this
+  /// way; this is the same rule, not a second one.
   @override
   Future<List<HistoryEntry>> build() async {
-    final directory = ref.watch(currentDirectoryProvider);
-    if (directory == null) return const [];
+    final novelFolder = await ref.watch(currentNovelFolderPathProvider.future);
+    if (novelFolder == null) return const [];
 
     final repo = await ref.watch(
-      llmSummaryRepositoryProvider(directory).future,
+      llmSummaryRepositoryProvider(novelFolder).future,
     );
     final rows = await repo.findAll();
     return HistoryEntry.mergeRows(rows);

@@ -1,7 +1,7 @@
 ## 1. 解析履歴の対象フォルダ（読み側）
 
-- [ ] 1.1 `test/features/llm_summary/providers/llm_summary_history_scope_test.dart` を新規作成し、(a) 登録済み小説フォルダを祖先に持たない整理フォルダを現在地としたとき `llmSummaryHistoryProvider` が空を返すこと、(b) そのフォルダに `novel_data.db` が作られないこと、(c) 入れ子の登録済み小説フォルダでは従来どおり履歴を返すこと、を検証するテストを書く。`fvm flutter test` で赤になることを確認する
-- [ ] 1.2 `llm_summary_history_provider.dart` の `build` を `currentNovelFolderPathProvider` 経由に変更し、解決できなければリポジトリを開かずに空を返すようにして 1.1 を緑にする
+- [x] 1.1 `test/features/llm_summary/providers/llm_summary_history_scope_test.dart` を新規作成し、(a) 登録済み小説フォルダを祖先に持たない整理フォルダを現在地としたとき `llmSummaryHistoryProvider` が空を返すこと、(b) そのフォルダに `novel_data.db` が作られないこと、(c) 入れ子の登録済み小説フォルダでは従来どおり履歴を返すこと、を検証するテストを書く。`fvm flutter test` で赤になることを確認する
+- [x] 1.2 `llm_summary_history_provider.dart` の `build` を `currentNovelFolderPathProvider` 経由に変更し、解決できなければリポジトリを開かずに空を返すようにして 1.1 を緑にする
 - [ ] 1.3 `test/features/llm_summary/presentation/llm_summary_history_panel_scope_test.dart` を新規作成し、整理フォルダで「作品フォルダを選択してください」が表示され `llmSummaryHistoryProvider` が watch されないこと、入れ子の小説フォルダでは一覧が表示されること、ライブラリルートでは従来どおりメッセージが出ることを検証する。赤を確認する
 - [ ] 1.4 `llm_summary_history_panel.dart` の `isAtRoot` ガードを `currentNovelFolderPathProvider` の解決結果によるガードへ差し替え、1.3 を緑にする
 - [ ] 1.5 `deleteEntry` と `openEntry` について、削除は小説フォルダの `novel_data.db` に対して行われ、ジャンプ先のパスはブラウザの現在地（`episodeFolder`）から組み立てられることを検証するテストを 1.1 のファイルに追加し、赤を確認する
