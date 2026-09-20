@@ -149,6 +149,44 @@ void main() {
       expect(await _readTitle(container), 'unknown — 001-ep1.txt (1/3)');
     });
 
+    test('整理フォルダ配下に入れ子の小説でも作品名を表示する', () async {
+      final files = _files(3, dir: '/library/完結済み/n1234');
+      final container = _makeContainer(
+        open: files[1],
+        tree: {'/library/完結済み/n1234': files},
+        browserDirectory: '/library',
+      );
+      addTearDown(container.dispose);
+
+      expect(await _readTitle(container), '異世界転生 — 002-ep2.txt (2/3)');
+    });
+
+    test('小説フォルダのサブディレクトリのファイルでも作品名を表示する', () async {
+      final files = _files(2, dir: '/library/n1234/extra');
+      final container = _makeContainer(
+        open: files[0],
+        tree: {'/library/n1234/extra': files},
+        browserDirectory: '/library',
+      );
+      addTearDown(container.dispose);
+
+      // The nearest registered ancestor names it, whatever the depth. There
+      // is no progress to show: a file in a subdirectory is not one of the
+      // novel's episodes, which live directly in the novel folder.
+      expect(await _readTitle(container), '異世界転生');
+    });
+
+    test('ライブラリ外のファイルはその親フォルダ名を使う', () async {
+      final files = _files(1, dir: '/elsewhere');
+      final container = _makeContainer(
+        open: files[0],
+        tree: {'/elsewhere': files},
+      );
+      addTearDown(container.dispose);
+
+      expect(await _readTitle(container), 'elsewhere — 001-ep1.txt (1/1)');
+    });
+
     test('開いているファイルが自身のフォルダの一覧に無ければ作品名のみ', () async {
       // The listing has not caught up, or the file was deleted underneath.
       final container = _makeContainer(

@@ -18,9 +18,9 @@
 
 - [x] 3.1 `test/app/selected_file_progress_title_provider_test.dart` を更新し、読書コンテキスト基準の期待に書き換える（小説のエピソードを開いていれば作品名と `(N/M)` / ブラウザをライブラリルートへ移しても変わらない / メタデータ未登録フォルダはフォルダ名 + そのフォルダの件数 / 表示中ファイル無しは `NovelViewer` / ブラウザが小説フォルダにいても表示中ファイルが無ければ `NovelViewer`）。テストが失敗することを確認する
 - [x] 3.2 テストが正しいことを確認した時点でコミットする（実装は含めない）
-- [ ] 3.3 `selected_file_progress_title_provider.dart` を `readingNovelFolderProvider` / `readingEpisodesProvider` / `allNovelsProvider` から導出するよう書き換える。`currentDirectoryProvider` と `directoryContentsProvider` に依存しないことを確認する。3.1 のテストが通ることを確認する
-- [ ] 3.4 `selectedNovelTitleProvider` を削除し、`test/features/file_browser/providers/selected_novel_title_provider_test.dart` のうち入れ子解決とフォルダ名フォールバックのケースを 1.1 のテストへ引き継いでから削除する。`test/home_screen_test.dart` の override を新しい導出に合わせて更新する
-- [ ] 3.5 `fvm flutter analyze` で未使用の参照が残っていないことを確認する
+- [x] 3.3 `selected_file_progress_title_provider.dart` を `readingNovelFolderProvider` / `readingEpisodesProvider` / `allNovelsProvider` から導出するよう書き換える。`currentDirectoryProvider` と `directoryContentsProvider` に依存しないことを確認する。3.1 のテストが通ることを確認する
+- [x] 3.4 `selectedNovelTitleProvider` を削除し、`test/features/file_browser/providers/selected_novel_title_provider_test.dart` のうち入れ子解決とフォルダ名フォールバックのケースを 1.1 のテストへ引き継いでから削除する。`test/home_screen_test.dart` の override を新しい導出に合わせて更新する
+- [x] 3.5 `fvm flutter analyze` で未使用の参照が残っていないことを確認する
 
 ## 4. 一覧の無効化の集約
 

@@ -159,7 +159,7 @@ void main() {
             readingProgressStartupProvider.overrideWith(
               (ref) => Completer<void>().future,
             ),
-            selectedNovelTitleProvider.overrideWith((ref) async => null),
+            selectedFileProgressTitleProvider.overrideWithValue('NovelViewer'),
           ],
           child: const NovelViewerApp(),
         ),
@@ -182,7 +182,7 @@ void main() {
             readingProgressStartupProvider.overrideWith(
               (ref) => Completer<void>().future,
             ),
-            selectedNovelTitleProvider.overrideWith((ref) async => '異世界転生物語'),
+            selectedFileProgressTitleProvider.overrideWithValue('異世界転生物語'),
           ],
           child: const NovelViewerApp(),
         ),
