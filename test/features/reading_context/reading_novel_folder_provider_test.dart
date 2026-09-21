@@ -27,7 +27,7 @@ Future<ProviderContainer> _container({
   final container = ProviderContainer(
     overrides: [
       libraryPathProvider.overrideWithValue(libraryPath),
-      allNovelsProvider.overrideWith((ref) async => novels),
+      allNovelsProvider.overrideWith((ref) => novels),
       currentDirectoryProvider.overrideWith(
         () => CurrentDirectoryNotifier(browserDirectory ?? libraryPath),
       ),

@@ -83,7 +83,7 @@ ProviderContainer _buildContainer({
       ),
       readingProgressRepositoryProvider.overrideWithValue(repository),
       allNovelsProvider.overrideWith(
-        (ref) async => [for (final f in registeredFolders) _novel(f)],
+        (ref) => [for (final f in registeredFolders) _novel(f)],
       ),
       directoryContentsProvider.overrideWith((ref) async {
         final dir = ref.watch(currentDirectoryProvider);

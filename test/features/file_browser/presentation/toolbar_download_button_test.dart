@@ -30,7 +30,7 @@ void main() {
       ProviderScope(
         overrides: [
           libraryPathProvider.overrideWithValue('/library'),
-          allNovelsProvider.overrideWith((ref) async => [_novel]),
+          allNovelsProvider.overrideWith((ref) => [_novel]),
           currentDirectoryProvider.overrideWith(
             () => CurrentDirectoryNotifier(currentDirectory),
           ),

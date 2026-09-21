@@ -68,7 +68,7 @@ void main() {
         currentDirectoryProvider.overrideWith(
           () => CurrentDirectoryNotifier('/tmp/test_novels'),
         ),
-        allNovelsProvider.overrideWith((ref) async => novels),
+        allNovelsProvider.overrideWith((ref) => novels),
       ],
       child: MaterialApp(
         locale: const Locale('ja'),

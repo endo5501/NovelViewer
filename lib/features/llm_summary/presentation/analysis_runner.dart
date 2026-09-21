@@ -68,7 +68,11 @@ class DefaultAnalysisRunner implements AnalysisRunner {
   }) async {
     if (!_supported) return;
     final l10n = AppLocalizations.of(context)!;
-    final directory = _ref.read(currentDirectoryProvider);
+    // The same folder [run] will use. Reading the browser's directory here
+    // instead would leave a second notion of "which folder" in the one method
+    // that decides the episode numbers, which is where a mismatch does its
+    // damage — and it would list a folder that [run] is about to refuse.
+    final directory = _ref.read(summaryNovelFolderProvider);
     if (directory == null) {
       _snack(context, l10n.llmAnalysis_noFolderOpen);
       return;
@@ -112,11 +116,26 @@ class DefaultAnalysisRunner implements AnalysisRunner {
   }) async {
     if (!_supported) return;
     final l10n = AppLocalizations.of(context)!;
-    final directory = _ref.read(currentDirectoryProvider);
-    if (directory == null) {
+    // One folder does both jobs: the summaries are written to its
+    // `novel_data.db`, and the text to analyse — along with the episode number
+    // the snapshot is keyed by and the `source_file` it records — is read from
+    // the same place. [summaryNovelFolderProvider] is null wherever those
+    // would not be the same folder, and refusing there is what keeps a
+    // `novel_data.db` from being created outside a novel, since opening one
+    // creates the file.
+    //
+    // Read once, synchronously, and captured: this method spans awaits, and a
+    // reader who moves on mid-request must not have one novel's text written
+    // to another novel's database.
+    final novelFolder = _ref.read(summaryNovelFolderProvider);
+    if (novelFolder == null) {
       _snack(context, l10n.llmAnalysis_noFolderOpen);
       return;
     }
+    // Captured with the folder, for the same reason: the file a snapshot is
+    // recorded against has to be the one that was open when the analysis was
+    // asked for, not whatever the reader moved to while it was starting up.
+    final openFileName = _ref.read(selectedFileProvider)?.name;
 
     // Wait for the async dependencies of `llmSummaryServiceProvider` to settle
     // before reading it. The service is a *synchronous* provider that returns
@@ -127,9 +146,9 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     // `factCacheRepositoryProvider`, so without this the first analysis after
     // launch would no-op.
     await _ref.read(llmClientProvider.future);
-    await _ref.read(llmSummaryRepositoryProvider(directory).future);
-    await _ref.read(factCacheRepositoryProvider(directory).future);
-    final service = _ref.read(llmSummaryServiceProvider(directory));
+    await _ref.read(llmSummaryRepositoryProvider(novelFolder).future);
+    await _ref.read(factCacheRepositoryProvider(novelFolder).future);
+    final service = _ref.read(llmSummaryServiceProvider(novelFolder));
     if (service == null) {
       final message = await _noServiceMessage(l10n);
       if (!context.mounted) return;
@@ -138,8 +157,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     }
     if (!context.mounted) return;
 
-    final selectedFile = _ref.read(selectedFileProvider);
-    final resolvedSourceFile = sourceFileName ?? selectedFile?.name;
+    final resolvedSourceFile = sourceFileName ?? openFileName;
 
     if (!context.mounted) return;
     final navigator = Navigator.of(context, rootNavigator: true);
@@ -158,7 +176,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     FailureReport? failure;
     try {
       await service.generateSummary(
-        directoryPath: directory,
+        directoryPath: novelFolder,
         word: word,
         coveredUpToEpisode: coveredUpToEpisode,
         sourceFileName: resolvedSourceFile,
@@ -170,7 +188,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       );
       _ref.invalidate(llmSummaryHistoryProvider);
       _ref.invalidate(
-        hoverPopupCacheProvider((folderPath: directory, word: word)),
+        hoverPopupCacheProvider((folderPath: novelFolder, word: word)),
       );
       // The popup's manual activeEpisode override may now point at a
       // snapshot that no longer exists post-overwrite — reset it so the

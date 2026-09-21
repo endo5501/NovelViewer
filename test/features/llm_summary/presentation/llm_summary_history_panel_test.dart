@@ -7,6 +7,8 @@ import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_history_panel.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
+import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
@@ -54,9 +56,24 @@ HistoryEntry _entry({
   return HistoryEntry.mergeRows(all).single;
 }
 
+/// The panel resolves its novel folder from the registered novel list, so
+/// every case here needs '/library/my_novel' to actually be a novel folder.
+final _myNovel = NovelMetadata(
+  siteType: 'narou',
+  novelId: 'my_novel',
+  title: 'My Novel',
+  url: 'https://ncode.syosetu.com/my_novel/',
+  folderName: 'my_novel',
+  episodeCount: 3,
+  downloadedAt: DateTime(2024, 1, 1),
+);
+
 Widget _wrap({required List<Object> overrides}) {
   return ProviderScope(
-    overrides: overrides.cast(),
+    overrides: [
+      allNovelsProvider.overrideWith((ref) => [_myNovel]),
+      ...overrides,
+    ].cast(),
     child: const MaterialApp(
       locale: Locale('ja'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,

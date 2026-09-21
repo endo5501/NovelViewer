@@ -36,7 +36,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         libraryPathProvider.overrideWithValue(tempDir.path),
-        allNovelsProvider.overrideWith((ref) async => novels),
+        allNovelsProvider.overrideWith((ref) => novels),
       ],
     );
     addTearDown(container.dispose);

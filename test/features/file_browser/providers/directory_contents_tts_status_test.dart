@@ -88,7 +88,7 @@ void main() {
             return _TestCurrentDirectoryNotifier(tempDir.path);
           }),
           libraryPathProvider.overrideWithValue('/library'),
-          allNovelsProvider.overrideWith((ref) async => []),
+          allNovelsProvider.overrideWith((ref) => []),
         ],
       );
       addDbContainerTearDown(container);
@@ -116,7 +116,7 @@ void main() {
             return _TestCurrentDirectoryNotifier(tempDir.path);
           }),
           libraryPathProvider.overrideWithValue('/library'),
-          allNovelsProvider.overrideWith((ref) async => []),
+          allNovelsProvider.overrideWith((ref) => []),
         ],
       );
       addDbContainerTearDown(container);

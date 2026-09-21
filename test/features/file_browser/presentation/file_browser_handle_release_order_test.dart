@@ -118,7 +118,7 @@ Widget _panel({
         () => _TestCurrentDirectoryNotifier(currentDir),
       ),
       libraryPathProvider.overrideWithValue(libraryPath),
-      allNovelsProvider.overrideWith((ref) async => novels),
+      allNovelsProvider.overrideWith((ref) => novels),
       fileSystemServiceProvider.overrideWithValue(fs),
       directoryContentsProvider.overrideWith(
         (ref) async =>

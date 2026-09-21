@@ -14,6 +14,8 @@ import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart'
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
@@ -110,6 +112,19 @@ class _StubLocale extends LocaleNotifier {
   Locale build() => Locale(_language);
 }
 
+/// The runner resolves the novel folder that owns `novel_data.db` from the
+/// browser's location, so '/library/novel_a' has to be a registered novel for
+/// any of these cases to get as far as the service.
+final _novelA = NovelMetadata(
+  siteType: 'narou',
+  novelId: 'novel_a',
+  title: 'Novel A',
+  url: 'https://ncode.syosetu.com/novel_a/',
+  folderName: 'novel_a',
+  episodeCount: 3,
+  downloadedAt: DateTime(2024, 1, 1),
+);
+
 final _testPackageInfo = PackageInfo(
   appName: 'NovelViewer',
   packageName: 'com.example.novelViewer',
@@ -137,6 +152,8 @@ ProviderContainer _container(
       currentDirectoryProvider.overrideWith(
         () => CurrentDirectoryNotifier(directory),
       ),
+      libraryPathProvider.overrideWithValue('/library'),
+      allNovelsProvider.overrideWith((ref) => [_novelA]),
       selectedFileProvider.overrideWith(() => _MockSelectedFile(file)),
       localeProvider.overrideWith(() => _StubLocale(language)),
       llmSummaryServiceProvider.overrideWith((ref, folderPath) => stub),
@@ -189,6 +206,8 @@ void main() {
           currentDirectoryProvider.overrideWith(
             () => CurrentDirectoryNotifier('/library/novel_a'),
           ),
+          libraryPathProvider.overrideWithValue('/library'),
+          allNovelsProvider.overrideWith((ref) => [_novelA]),
           selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
           localeProvider.overrideWith(() => _StubLocale('ja')),
           llmSummaryServiceProvider.overrideWith((ref, folderPath) => null),
@@ -266,6 +285,8 @@ void main() {
           currentDirectoryProvider.overrideWith(
             () => CurrentDirectoryNotifier('/library/novel_a'),
           ),
+          libraryPathProvider.overrideWithValue('/library'),
+          allNovelsProvider.overrideWith((ref) => [_novelA]),
           selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
           localeProvider.overrideWith(() => _StubLocale('ja')),
           llmSummaryServiceProvider.overrideWith((ref, folderPath) => null),
@@ -297,6 +318,8 @@ void main() {
           currentDirectoryProvider.overrideWith(
             () => CurrentDirectoryNotifier('/library/novel_a'),
           ),
+          libraryPathProvider.overrideWithValue('/library'),
+          allNovelsProvider.overrideWith((ref) => [_novelA]),
           selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
           localeProvider.overrideWith(() => _StubLocale('ja')),
           llmSummaryServiceProvider.overrideWith((ref, folderPath) => null),
@@ -1259,6 +1282,8 @@ void main() {
             currentDirectoryProvider.overrideWith(
               () => CurrentDirectoryNotifier('/library/novel_a'),
             ),
+            libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) => [_novelA]),
             selectedFileProvider.overrideWith(
               () => _MockSelectedFile(
                 const FileEntry(
@@ -1390,6 +1415,8 @@ extension on ProviderContainer {
         currentDirectoryProvider.overrideWith(
           () => CurrentDirectoryNotifier(directory),
         ),
+        libraryPathProvider.overrideWithValue('/library'),
+        allNovelsProvider.overrideWith((ref) => [_novelA]),
         selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
         llmSummaryServiceProvider.overrideWith(
           (ref, folderPath) => _StubService(

@@ -1159,7 +1159,7 @@ void main() {
               }),
               libraryPathProvider.overrideWithValue('/library'),
               allNovelsProvider.overrideWith(
-                (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')],
+                (ref) => [_registeredNovel('narou_n1234ab', 'テスト小説')],
               ),
             ],
             child: const MaterialApp(
@@ -1334,7 +1334,7 @@ void main() {
               }),
               libraryPathProvider.overrideWithValue('/library'),
               allNovelsProvider.overrideWith(
-                (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')],
+                (ref) => [_registeredNovel('narou_n1234ab', 'テスト小説')],
               ),
               readingProgressBadgesProvider.overrideWith(
                 (ref) async => {
@@ -1386,7 +1386,7 @@ void main() {
             }),
             libraryPathProvider.overrideWithValue('/library'),
             allNovelsProvider.overrideWith(
-              (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')],
+              (ref) => [_registeredNovel('narou_n1234ab', 'テスト小説')],
             ),
             readingProgressBadgesProvider.overrideWith(
               (ref) async => {
@@ -1429,7 +1429,7 @@ void main() {
               return _TestCurrentDirectoryNotifier('/library');
             }),
             libraryPathProvider.overrideWithValue('/library'),
-            allNovelsProvider.overrideWith((ref) async => const []),
+            allNovelsProvider.overrideWith((ref) => const []),
             readingProgressBadgesProvider.overrideWith((ref) async => const {}),
           ],
           child: const MaterialApp(
@@ -1469,7 +1469,7 @@ void main() {
             }),
             libraryPathProvider.overrideWithValue('/library'),
             allNovelsProvider.overrideWith(
-              (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')],
+              (ref) => [_registeredNovel('narou_n1234ab', 'テスト小説')],
             ),
           ],
           child: const MaterialApp(
@@ -1695,7 +1695,7 @@ Future<void> _pumpBrowserAtLibraryRoot(WidgetTester tester) async {
         }),
         libraryPathProvider.overrideWithValue('/library'),
         allNovelsProvider.overrideWith(
-          (ref) async => [_registeredNovel('narou_n1234ab', 'テスト小説')],
+          (ref) => [_registeredNovel('narou_n1234ab', 'テスト小説')],
         ),
       ],
       child: const MaterialApp(

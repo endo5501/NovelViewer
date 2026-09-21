@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.d
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_anchor.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_widget.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
+import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/shared/gestures/pointer_kinds.dart';
@@ -131,26 +132,43 @@ class _HoverPopupHostState extends ConsumerState<HoverPopupHost> {
       }
     });
 
+    // A popup belongs to the novel it was opened over. Moving the browser
+    // normally takes a pointer press, which the dismissal barrier already
+    // catches — but the file browser can be driven entirely from the
+    // keyboard, and a popup left behind would hand the previous novel's
+    // episode number and file name to a re-analysis that writes into the new
+    // one.
+    ref.listen<String?>(summaryNovelFolderProvider, (prev, next) {
+      if (prev != next) {
+        ref.read(hoverPopupProvider.notifier).hide();
+      }
+    });
+
     ref.listen<HoverPopupState>(hoverPopupProvider, (_, next) {
       if (!next.isVisible) {
         _removeEntry();
         return;
       }
-      final directory = ref.read(currentDirectoryProvider);
-      if (directory == null) {
+      // One folder for both jobs: the popup resolves a `novel_data.db` from
+      // what it is given, and the episode numbers beside it are counted in
+      // the same place. [summaryNovelFolderProvider] is null wherever those
+      // two would not be the same folder — and it is a plain Provider, so
+      // there is no pending future to miss on the first hover.
+      final novelFolder = ref.read(summaryNovelFolderProvider);
+      if (novelFolder == null) {
         _removeEntry();
         return;
       }
       final selectedFile = ref.read(selectedFileProvider);
       final currentEpisode = resolveUpperBoundForCurrent(
-        directoryPath: directory,
+        directoryPath: novelFolder,
         currentFile: selectedFile,
       );
-      final maxEpisode = resolveUpperBoundForAll(directory);
-      final maxFileName = resolveSourceFileForAll(directory);
+      final maxEpisode = resolveUpperBoundForAll(novelFolder);
+      final maxFileName = resolveSourceFileForAll(novelFolder);
       _insertEntry(
         position: next.position!,
-        folderPath: directory,
+        folderPath: novelFolder,
         word: next.word!,
         currentEpisode: currentEpisode,
         currentFileName: selectedFile?.name,
