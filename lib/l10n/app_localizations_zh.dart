@@ -754,6 +754,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hoverPopup_reanalyzeButton => '重新分析';
 
   @override
+  String get hoverPopup_reanalyzeSimple => '简易分析';
+
+  @override
   String hoverPopup_reanalyzeUpToCurrent(int episode) {
     return '至当前页（第$episode文件）';
   }

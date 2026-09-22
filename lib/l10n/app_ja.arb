@@ -482,6 +482,7 @@
   },
   "hoverPopup_futureSnapshotWarning": "現在より先の解析です",
   "hoverPopup_reanalyzeButton": "再解析",
+  "hoverPopup_reanalyzeSimple": "簡易解析",
   "hoverPopup_reanalyzeUpToCurrent": "現在ページまで ({episode}ファイル時点)",
   "@hoverPopup_reanalyzeUpToCurrent": {
     "placeholders": {

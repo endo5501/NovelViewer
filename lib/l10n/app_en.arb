@@ -292,6 +292,7 @@
   },
   "hoverPopup_futureSnapshotWarning": "Snapshot is ahead of the current page",
   "hoverPopup_reanalyzeButton": "Re-analyze",
+  "hoverPopup_reanalyzeSimple": "Quick analysis",
   "hoverPopup_reanalyzeUpToCurrent": "Up to current page (file {episode})",
   "@hoverPopup_reanalyzeUpToCurrent": {
     "placeholders": {

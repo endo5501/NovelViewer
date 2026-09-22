@@ -781,6 +781,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hoverPopup_reanalyzeButton => 'Re-analyze';
 
   @override
+  String get hoverPopup_reanalyzeSimple => 'Quick analysis';
+
+  @override
   String hoverPopup_reanalyzeUpToCurrent(int episode) {
     return 'Up to current page (file $episode)';
   }

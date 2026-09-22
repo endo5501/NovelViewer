@@ -1450,6 +1450,12 @@ abstract class AppLocalizations {
   /// **'再解析'**
   String get hoverPopup_reanalyzeButton;
 
+  /// No description provided for @hoverPopup_reanalyzeSimple.
+  ///
+  /// In ja, this message translates to:
+  /// **'簡易解析'**
+  String get hoverPopup_reanalyzeSimple;
+
   /// No description provided for @hoverPopup_reanalyzeUpToCurrent.
   ///
   /// In ja, this message translates to:

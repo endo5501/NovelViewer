@@ -292,6 +292,7 @@
   },
   "hoverPopup_futureSnapshotWarning": "该摘要包含尚未阅读的内容",
   "hoverPopup_reanalyzeButton": "重新分析",
+  "hoverPopup_reanalyzeSimple": "简易分析",
   "hoverPopup_reanalyzeUpToCurrent": "至当前页（第{episode}文件）",
   "@hoverPopup_reanalyzeUpToCurrent": {
     "placeholders": {

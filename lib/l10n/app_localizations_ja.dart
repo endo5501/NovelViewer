@@ -760,6 +760,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get hoverPopup_reanalyzeButton => '再解析';
 
   @override
+  String get hoverPopup_reanalyzeSimple => '簡易解析';
+
+  @override
   String hoverPopup_reanalyzeUpToCurrent(int episode) {
     return '現在ページまで ($episodeファイル時点)';
   }
