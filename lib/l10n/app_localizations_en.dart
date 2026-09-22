@@ -697,6 +697,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contextMenu_copy => 'Copy';
 
   @override
+  String get contextMenu_analyzeSimple => 'Analyze (quick)';
+
+  @override
   String get contextMenu_analyzeNoSpoiler => 'Analyze (no spoilers)';
 
   @override

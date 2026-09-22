@@ -680,6 +680,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get contextMenu_copy => 'コピー';
 
   @override
+  String get contextMenu_analyzeSimple => '解析開始(簡易)';
+
+  @override
   String get contextMenu_analyzeNoSpoiler => '解析開始(ネタバレなし)';
 
   @override

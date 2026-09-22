@@ -1318,6 +1318,12 @@ abstract class AppLocalizations {
   /// **'コピー'**
   String get contextMenu_copy;
 
+  /// No description provided for @contextMenu_analyzeSimple.
+  ///
+  /// In ja, this message translates to:
+  /// **'解析開始(簡易)'**
+  String get contextMenu_analyzeSimple;
+
   /// No description provided for @contextMenu_analyzeNoSpoiler.
   ///
   /// In ja, this message translates to:

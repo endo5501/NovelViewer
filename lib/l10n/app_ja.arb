@@ -402,6 +402,7 @@
   "ttsDictionary_deleteTooltip": "削除",
   "contextMenu_addToDictionary": "辞書追加",
   "contextMenu_copy": "コピー",
+  "contextMenu_analyzeSimple": "解析開始(簡易)",
   "contextMenu_analyzeNoSpoiler": "解析開始(ネタバレなし)",
   "contextMenu_analyzeSpoiler": "解析開始(ネタバレあり)",
   "contextMenu_copySubmenu": "コピー",

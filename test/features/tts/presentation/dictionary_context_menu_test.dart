@@ -16,6 +16,7 @@ void main() {
         baseItems: base,
         selectedText: '',
         addToDictionaryLabel: '辞書追加',
+        analyzeSimpleLabel: '解析開始(簡易)',
         analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
         analyzeSpoilerLabel: '解析開始(ネタバレあり)',
         onAddToDictionary: (_) {},
@@ -25,13 +26,14 @@ void main() {
     });
 
     test(
-      'appends dictionary + two analyze items when the selection is non-empty',
+      'appends dictionary + three analyze items when the selection is non-empty',
       () {
         final base = [ContextMenuButtonItem(label: 'Copy', onPressed: () {})];
         final result = buildAnalysisButtonItems(
           baseItems: base,
           selectedText: 'アリス',
           addToDictionaryLabel: '辞書追加',
+          analyzeSimpleLabel: '解析開始(簡易)',
           analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
           analyzeSpoilerLabel: '解析開始(ネタバレあり)',
           onAddToDictionary: (_) {},
@@ -39,7 +41,13 @@ void main() {
         );
         expect(
           result.map((i) => i.label).toList(),
-          equals(['Copy', '辞書追加', '解析開始(ネタバレなし)', '解析開始(ネタバレあり)']),
+          equals([
+            'Copy',
+            '辞書追加',
+            '解析開始(簡易)',
+            '解析開始(ネタバレなし)',
+            '解析開始(ネタバレあり)',
+          ]),
         );
       },
     );
@@ -49,13 +57,35 @@ void main() {
       final result = buildAnalysisButtonItems(
         baseItems: base,
         selectedText: 'アリス',
+        analyzeSimpleLabel: '解析開始(簡易)',
         analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
         analyzeSpoilerLabel: '解析開始(ネタバレあり)',
         onAnalyze: (_, _) {},
       );
       expect(
         result.map((i) => i.label).toList(),
-        equals(['Copy', '解析開始(ネタバレなし)', '解析開始(ネタバレあり)']),
+        equals([
+          'Copy',
+          '解析開始(簡易)',
+          '解析開始(ネタバレなし)',
+          '解析開始(ネタバレあり)',
+        ]),
+      );
+    });
+
+    test('withholds all three analyze items but keeps the dictionary', () {
+      // The three analysis items are gated by one condition -- whether
+      // analysis is available at all -- so they appear together or not at all.
+      final base = [ContextMenuButtonItem(label: 'Copy', onPressed: () {})];
+      final result = buildAnalysisButtonItems(
+        baseItems: base,
+        selectedText: 'アリス',
+        addToDictionaryLabel: '辞書追加',
+        onAddToDictionary: (_) {},
+      );
+      expect(
+        result.map((i) => i.label).toList(),
+        equals(['Copy', '辞書追加']),
       );
     });
 
@@ -68,13 +98,14 @@ void main() {
       expect(result.map((i) => i.label).toList(), equals(['Copy']));
     });
 
-    test('the two analyze items pass the correct word + AnalysisScope', () {
+    test('the three analyze items pass the correct word + AnalysisScope', () {
       String? capturedWord;
       AnalysisScope? capturedType;
       final result = buildAnalysisButtonItems(
         baseItems: const [],
         selectedText: 'アリス',
         addToDictionaryLabel: '辞書追加',
+        analyzeSimpleLabel: '解析開始(簡易)',
         analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
         analyzeSpoilerLabel: '解析開始(ネタバレあり)',
         onAddToDictionary: (_) {},
@@ -83,6 +114,10 @@ void main() {
           capturedType = type;
         },
       );
+
+      result.firstWhere((i) => i.label == '解析開始(簡易)').onPressed!();
+      expect(capturedWord, 'アリス');
+      expect(capturedType, AnalysisScope.firstOccurrence);
 
       result.firstWhere((i) => i.label == '解析開始(ネタバレなし)').onPressed!();
       expect(capturedWord, 'アリス');
@@ -101,6 +136,7 @@ void main() {
           baseItems: const [],
           selectedText: 'アリス',
           addToDictionaryLabel: '辞書追加',
+          analyzeSimpleLabel: '解析開始(簡易)',
           analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
           analyzeSpoilerLabel: '解析開始(ネタバレあり)',
           onAddToDictionary: (w) => captured = w,
@@ -153,6 +189,7 @@ void main() {
           baseItems: base,
           selectedText: '宇宙',
           addToDictionaryLabel: '辞書追加',
+          analyzeSimpleLabel: '解析開始(簡易)',
           analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
           analyzeSpoilerLabel: '解析開始(ネタバレあり)',
           onAddToDictionary: (_) {},
@@ -199,6 +236,7 @@ void main() {
           baseItems: base,
           selectedText: '宇宙',
           addToDictionaryLabel: '辞書追加',
+          analyzeSimpleLabel: '解析開始(簡易)',
           analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
           analyzeSpoilerLabel: '解析開始(ネタバレあり)',
           onAddToDictionary: (_) {},
@@ -224,6 +262,7 @@ void main() {
         baseItems: const [],
         selectedText: '   ',
         addToDictionaryLabel: '辞書追加',
+        analyzeSimpleLabel: '解析開始(簡易)',
         analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
         analyzeSpoilerLabel: '解析開始(ネタバレあり)',
         onAddToDictionary: (_) {},

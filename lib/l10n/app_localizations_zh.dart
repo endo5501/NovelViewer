@@ -674,6 +674,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contextMenu_copy => '复制';
 
   @override
+  String get contextMenu_analyzeSimple => '开始分析（简易）';
+
+  @override
   String get contextMenu_analyzeNoSpoiler => '开始分析（无剧透）';
 
   @override

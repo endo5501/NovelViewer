@@ -212,6 +212,7 @@
   "ttsDictionary_deleteTooltip": "Delete",
   "contextMenu_addToDictionary": "Add to Dictionary",
   "contextMenu_copy": "Copy",
+  "contextMenu_analyzeSimple": "Analyze (quick)",
   "contextMenu_analyzeNoSpoiler": "Analyze (no spoilers)",
   "contextMenu_analyzeSpoiler": "Analyze (with spoilers)",
   "contextMenu_copySubmenu": "Copy",
