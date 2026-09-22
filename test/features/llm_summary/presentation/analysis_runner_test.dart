@@ -78,6 +78,47 @@ class _CannedSearch implements TextSearchService {
   Object? noSuchMethod(Invocation invocation) => null;
 }
 
+/// Runs [onSearch] before returning, so a test can move the file browser
+/// during the folder search the first-occurrence bound needs.
+class _MovingSearch implements TextSearchService {
+  _MovingSearch(this.fileNames);
+  final List<String> fileNames;
+  void Function()? onSearch;
+
+  @override
+  Future<List<SearchResult>> searchWithContext(
+    String directoryPath,
+    String query, {
+    int contextLines = 2,
+  }) async {
+    onSearch?.call();
+    return [
+      for (final name in fileNames)
+        SearchResult(
+          fileName: name,
+          filePath: '$directoryPath/$name',
+          matches: const [SearchMatch(lineNumber: 1, contextText: 'x')],
+        ),
+    ];
+  }
+
+  @override
+  Object? noSuchMethod(Invocation invocation) => null;
+}
+
+/// Moves the browser by setting state directly, skipping the per-folder
+/// database eviction the real `setDirectory` performs (which this test has no
+/// handles for).
+class _MovableDirectory extends CurrentDirectoryNotifier {
+  _MovableDirectory(this._initial);
+  final String _initial;
+
+  @override
+  String? build() => _initial;
+
+  void moveTo(String path) => state = path;
+}
+
 class _ThrowingSearch implements TextSearchService {
   @override
   Future<List<SearchResult>> searchWithContext(
@@ -114,6 +155,7 @@ class _StubService extends LlmSummaryService {
   int? lastCoveredUpToEpisode;
   String? lastSourceFileName;
   String? lastLanguage;
+  String? lastDirectoryPath;
   void Function(AnalysisProgress)? lastOnProgress;
 
   @override
@@ -126,6 +168,7 @@ class _StubService extends LlmSummaryService {
     void Function(AnalysisProgress)? onProgress,
   }) async {
     callCount++;
+    lastDirectoryPath = directoryPath;
     lastCoveredUpToEpisode = coveredUpToEpisode;
     lastSourceFileName = sourceFileName;
     lastLanguage = language;
@@ -165,6 +208,18 @@ final _novelA = NovelMetadata(
   downloadedAt: DateTime(2024, 1, 1),
 );
 
+/// A second registered novel, so a test can move the browser from one novel to
+/// another mid-request.
+final _novelB = NovelMetadata(
+  siteType: 'narou',
+  novelId: 'novel_b',
+  title: 'Novel B',
+  url: 'https://ncode.syosetu.com/novel_b/',
+  folderName: 'novel_b',
+  episodeCount: 3,
+  downloadedAt: DateTime(2024, 1, 1),
+);
+
 final _testPackageInfo = PackageInfo(
   appName: 'NovelViewer',
   packageName: 'com.example.novelViewer',
@@ -175,6 +230,9 @@ final _testPackageInfo = PackageInfo(
 ProviderContainer _container(
   _StubService stub, {
   String directory = '/library/novel_a',
+  String libraryPath = '/library',
+  List<NovelMetadata>? novels,
+  CurrentDirectoryNotifier? directoryNotifier,
   TextSearchService? searchService,
   FileEntry? file,
   String language = 'ja',
@@ -191,10 +249,10 @@ ProviderContainer _container(
       llmConfigProvider.overrideWithValue(config),
       packageInfoProvider.overrideWithValue(_testPackageInfo),
       currentDirectoryProvider.overrideWith(
-        () => CurrentDirectoryNotifier(directory),
+        () => directoryNotifier ?? CurrentDirectoryNotifier(directory),
       ),
-      libraryPathProvider.overrideWithValue('/library'),
-      allNovelsProvider.overrideWith((ref) => [_novelA]),
+      libraryPathProvider.overrideWithValue(libraryPath),
+      allNovelsProvider.overrideWith((ref) => novels ?? [_novelA]),
       selectedFileProvider.overrideWith(() => _MockSelectedFile(file)),
       localeProvider.overrideWith(() => _StubLocale(language)),
       if (searchService != null)
@@ -1536,6 +1594,38 @@ void main() {
       // Without a page on screen there is no reading position to keep the
       // bound at or below, and no snapshot should be fabricated.
       expect(stub.callCount, 0);
+    });
+
+    testWidgets('keeps the novel it was asked about when the browser moves', (
+      tester,
+    ) async {
+      // The bound and source file are resolved against the novel the reader
+      // triggered this on. Resolving it takes a folder search, and run() picks
+      // its own target folder afterwards -- so a reader who switches novels
+      // in that window must not have one novel's word, bound and source file
+      // written into another novel's database.
+      final stub = stubbed();
+      final search = _MovingSearch(const ['005_chapter.txt']);
+      final directory = _MovableDirectory('/library/novel_a');
+      final container = _container(
+        stub,
+        directory: '/library/novel_a',
+        novels: [_novelA, _novelB],
+        directoryNotifier: directory,
+        searchService: search,
+        file: const FileEntry(name: '040_chapter.txt', path: ''),
+      );
+      addTearDown(container.dispose);
+      search.onSearch = () => directory.moveTo('/library/novel_b');
+
+      await trigger(tester, container);
+
+      expect(
+        stub.lastDirectoryPath,
+        '/library/novel_a',
+        reason: 'the analysis belongs to the novel the request was made on',
+      );
+      expect(stub.lastCoveredUpToEpisode, 5);
     });
 
     testWidgets('a word that occurs nowhere reports the no-facts failure', (
