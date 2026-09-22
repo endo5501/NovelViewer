@@ -486,9 +486,7 @@ void main() {
       addTearDown(container.dispose);
 
       await openDropdown(tester, container);
-      await tester.tap(
-        find.byKey(const Key('hover_popup_reanalyze_simple')),
-      );
+      await tester.tap(find.byKey(const Key('hover_popup_reanalyze_simple')));
       await tester.pumpAndSettle();
 
       expect(runner.callCount, 1);

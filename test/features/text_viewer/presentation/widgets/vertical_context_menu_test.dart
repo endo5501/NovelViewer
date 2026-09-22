@@ -5,31 +5,28 @@ import 'package:novel_viewer/features/text_viewer/presentation/widgets/vertical_
 
 void main() {
   group('buildVerticalContextMenuItems', () {
-    test(
-      'produces 5 entries: copy, addToDictionary, analyze(簡易/なし/あり)',
-      () {
-        final items = buildVerticalContextMenuItems(
-          copyLabel: 'コピー',
-          addToDictionaryLabel: '辞書追加',
-          analyzeSimpleLabel: '解析開始(簡易)',
-          analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
-          analyzeSpoilerLabel: '解析開始(ネタバレあり)',
-        );
-        expect(items, hasLength(5));
-        final values = items
-            .whereType<PopupMenuItem<VerticalContextAction>>()
-            .map((i) => i.value)
-            .toList();
-        // Lightest (and most spoiler-safe) analysis first.
-        expect(values, [
-          VerticalContextAction.copy,
-          VerticalContextAction.addToDictionary,
-          VerticalContextAction.analyzeSimple,
-          VerticalContextAction.analyzeNoSpoiler,
-          VerticalContextAction.analyzeSpoiler,
-        ]);
-      },
-    );
+    test('produces 5 entries: copy, addToDictionary, analyze(簡易/なし/あり)', () {
+      final items = buildVerticalContextMenuItems(
+        copyLabel: 'コピー',
+        addToDictionaryLabel: '辞書追加',
+        analyzeSimpleLabel: '解析開始(簡易)',
+        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
+      );
+      expect(items, hasLength(5));
+      final values = items
+          .whereType<PopupMenuItem<VerticalContextAction>>()
+          .map((i) => i.value)
+          .toList();
+      // Lightest (and most spoiler-safe) analysis first.
+      expect(values, [
+        VerticalContextAction.copy,
+        VerticalContextAction.addToDictionary,
+        VerticalContextAction.analyzeSimple,
+        VerticalContextAction.analyzeNoSpoiler,
+        VerticalContextAction.analyzeSpoiler,
+      ]);
+    });
 
     testWidgets('items display their labels', (tester) async {
       final items = buildVerticalContextMenuItems(

@@ -41,13 +41,7 @@ void main() {
         );
         expect(
           result.map((i) => i.label).toList(),
-          equals([
-            'Copy',
-            '辞書追加',
-            '解析開始(簡易)',
-            '解析開始(ネタバレなし)',
-            '解析開始(ネタバレあり)',
-          ]),
+          equals(['Copy', '辞書追加', '解析開始(簡易)', '解析開始(ネタバレなし)', '解析開始(ネタバレあり)']),
         );
       },
     );
@@ -64,12 +58,7 @@ void main() {
       );
       expect(
         result.map((i) => i.label).toList(),
-        equals([
-          'Copy',
-          '解析開始(簡易)',
-          '解析開始(ネタバレなし)',
-          '解析開始(ネタバレあり)',
-        ]),
+        equals(['Copy', '解析開始(簡易)', '解析開始(ネタバレなし)', '解析開始(ネタバレあり)']),
       );
     });
 
@@ -83,10 +72,7 @@ void main() {
         addToDictionaryLabel: '辞書追加',
         onAddToDictionary: (_) {},
       );
-      expect(
-        result.map((i) => i.label).toList(),
-        equals(['Copy', '辞書追加']),
-      );
+      expect(result.map((i) => i.label).toList(), equals(['Copy', '辞書追加']));
     });
 
     test('omits both optional groups when neither callback is given', () {
@@ -270,12 +256,7 @@ void main() {
       );
       expect(
         result.map((i) => i.label).toList(),
-        equals([
-          '辞書追加',
-          '解析開始(簡易)',
-          '解析開始(ネタバレなし)',
-          '解析開始(ネタバレあり)',
-        ]),
+        equals(['辞書追加', '解析開始(簡易)', '解析開始(ネタバレなし)', '解析開始(ネタバレあり)']),
       );
     });
   });

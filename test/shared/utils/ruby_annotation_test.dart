@@ -4,17 +4,12 @@ import 'package:novel_viewer/shared/utils/ruby_annotation.dart';
 void main() {
   group('stripRubyAnnotations', () {
     test('keeps the base and drops the reading', () {
-      expect(
-        stripRubyAnnotations('<ruby>紅蓮<rt>ぐれん</rt></ruby>'),
-        '紅蓮',
-      );
+      expect(stripRubyAnnotations('<ruby>紅蓮<rt>ぐれん</rt></ruby>'), '紅蓮');
     });
 
     test('drops rp fallback parentheses', () {
       expect(
-        stripRubyAnnotations(
-          '<ruby>紅蓮<rp>（</rp><rt>ぐれん</rt><rp>）</rp></ruby>',
-        ),
+        stripRubyAnnotations('<ruby>紅蓮<rp>（</rp><rt>ぐれん</rt><rp>）</rp></ruby>'),
         '紅蓮',
       );
     });
@@ -43,10 +38,7 @@ void main() {
     });
 
     test('is case-insensitive about the tag names', () {
-      expect(
-        stripRubyAnnotations('<RUBY>紅蓮<RT>ぐれん</RT></RUBY>の剣'),
-        '紅蓮の剣',
-      );
+      expect(stripRubyAnnotations('<RUBY>紅蓮<RT>ぐれん</RT></RUBY>の剣'), '紅蓮の剣');
     });
 
     test('returns the empty string unchanged', () {

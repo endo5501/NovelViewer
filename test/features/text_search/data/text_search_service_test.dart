@@ -179,10 +179,7 @@ void main() {
     // tag boundaries would list a hit the viewer cannot then highlight, so the
     // two methods differ on purpose and this pins that.
     test('a word spanning a ruby boundary is not matched', () async {
-      await createFile(
-        '001.txt',
-        '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした',
-      );
+      await createFile('001.txt', '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした');
 
       final results = await service.search(tempDir.path, '紅蓮の剣');
 
@@ -190,10 +187,7 @@ void main() {
     });
 
     test('a word wholly inside one ruby base is matched', () async {
-      await createFile(
-        '001.txt',
-        '<ruby>紅蓮の剣<rt>ぐれんのけん</rt></ruby>を手にした',
-      );
+      await createFile('001.txt', '<ruby>紅蓮の剣<rt>ぐれんのけん</rt></ruby>を手にした');
 
       final results = await service.search(tempDir.path, '紅蓮の剣');
 
@@ -203,10 +197,7 @@ void main() {
 
   group('TextSearchService.searchWithContext matches on ruby base text', () {
     test('a word spanning a ruby base and the plain text after it', () async {
-      await createFile(
-        '001.txt',
-        '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした',
-      );
+      await createFile('001.txt', '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした');
 
       final results = await service.searchWithContext(tempDir.path, '紅蓮の剣');
 
@@ -236,10 +227,7 @@ void main() {
     });
 
     test('a word wholly inside one ruby base (unchanged)', () async {
-      await createFile(
-        '001.txt',
-        '<ruby>紅蓮の剣<rt>ぐれんのけん</rt></ruby>を手にした',
-      );
+      await createFile('001.txt', '<ruby>紅蓮の剣<rt>ぐれんのけん</rt></ruby>を手にした');
 
       final results = await service.searchWithContext(tempDir.path, '紅蓮の剣');
 
@@ -263,10 +251,7 @@ void main() {
     });
 
     test('the returned context keeps the ruby markup', () async {
-      await createFile(
-        '001.txt',
-        '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした',
-      );
+      await createFile('001.txt', '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした');
 
       final results = await service.searchWithContext(tempDir.path, '紅蓮の剣');
 

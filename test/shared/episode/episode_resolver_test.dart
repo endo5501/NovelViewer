@@ -206,12 +206,7 @@ void main() {
     test('returns the lowest episode among the matched files', () {
       final resolved = resolveFirstOccurrenceEpisode(
         matchedFileNames: const ['040_c.txt', '005_a.txt', '012_b.txt'],
-        folderFiles: const [
-          '005_a.txt',
-          '012_b.txt',
-          '040_c.txt',
-          '100_d.txt',
-        ],
+        folderFiles: const ['005_a.txt', '012_b.txt', '040_c.txt', '100_d.txt'],
       );
       expect(resolved?.episode, 5);
       expect(resolved?.fileName, '005_a.txt');

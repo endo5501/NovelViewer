@@ -1343,10 +1343,7 @@ void main() {
       // annotated where it is introduced and written plainly later. Matching
       // the raw text would find only the later page, putting the bound past
       // what the reader has read.
-      await write(
-        '020_chapter.txt',
-        '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした',
-      );
+      await write('020_chapter.txt', '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした');
       await write('080_chapter.txt', '紅蓮の剣を抜いた');
 
       final resolved = await resolveFirstOccurrence(
@@ -1432,11 +1429,13 @@ void main() {
         _harness(
           container: container,
           onPressed: (ref, context) {
-            ref.read(analysisRunnerProvider).runWithScope(
-              context: context,
-              word: '紅蓮の剣',
-              scope: AnalysisScope.firstOccurrence,
-            );
+            ref
+                .read(analysisRunnerProvider)
+                .runWithScope(
+                  context: context,
+                  word: '紅蓮の剣',
+                  scope: AnalysisScope.firstOccurrence,
+                );
           },
         ),
       );
@@ -1448,7 +1447,10 @@ void main() {
       final stub = stubbed();
       final container = _container(
         stub,
-        searchService: _CannedSearch(const ['040_chapter.txt', '005_chapter.txt']),
+        searchService: _CannedSearch(const [
+          '040_chapter.txt',
+          '005_chapter.txt',
+        ]),
         file: const FileEntry(name: '040_chapter.txt', path: ''),
       );
       addTearDown(container.dispose);

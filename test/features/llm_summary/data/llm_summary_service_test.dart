@@ -160,10 +160,7 @@ void main() {
           isFalse,
           reason: 'no later file may reach a prompt',
         );
-        expect(
-          mockClient.prompts.any((p) => p.contains('帰還した')),
-          isFalse,
-        );
+        expect(mockClient.prompts.any((p) => p.contains('帰還した')), isFalse);
 
         final cached = await repository.findSnapshotsForWord(word: 'アリス');
         expect(cached.single.coveredUpToEpisode, 5);
@@ -200,10 +197,7 @@ void main() {
       );
 
       expect(mockClient.callCount, 3);
-      expect(
-        mockClient.prompts.any((p) => p.contains('帰還した')),
-        isFalse,
-      );
+      expect(mockClient.prompts.any((p) => p.contains('帰還した')), isFalse);
     });
 
     test('passes the display language through to every prompt', () async {
