@@ -207,11 +207,12 @@ void main() {
     });
 
     test('a word spanning an explicit rb base and plain text', () async {
-      // `<rb>` is accepted by the ruby parser and its contents are what the
-      // reader sees, so the evidence search has to see the same thing.
+      // The full spelling Aozora Bunko emits: `<rb>` around the base and `<rp>`
+      // fallback parentheses around the reading. The base is what the reader
+      // sees, so the evidence search has to see the same thing.
       await createFile(
         '001.txt',
-        '<ruby><rb>紅蓮</rb><rt>ぐれん</rt></ruby>の剣を手にした',
+        '<ruby><rb>紅蓮</rb><rp>（</rp><rt>ぐれん</rt><rp>）</rp></ruby>の剣を手にした',
       );
 
       final results = await service.searchWithContext(tempDir.path, '紅蓮の剣');

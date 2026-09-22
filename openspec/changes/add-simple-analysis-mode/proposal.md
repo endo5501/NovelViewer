@@ -36,7 +36,9 @@
 | `lib/shared/` (新規) | ルビ除去ヘルパを共有化（現在3箇所目の重複になるため） |
 | `lib/features/llm_summary/domain/mark_matcher.dart` | 共有ヘルパを使うよう置換。`<rb>` 対応で挙動も改善される |
 | `lib/features/llm_summary/domain/first_line_containing.dart` | 同上 |
-| `lib/features/llm_summary/presentation/analysis_runner.dart` | `AnalysisScope` に1値追加、初出話数の解決、`run` に「要求時に確定した小説フォルダ」を渡す経路 |
+| `lib/shared/episode/episode_resolver.dart` | 初出話数を求める純粋関数を追加 |
+| `lib/features/llm_summary/presentation/analysis_runner.dart` | `AnalysisScope` に1値追加、初出話数の解決、`run` に「要求時に確定した小説フォルダ」を渡す経路、解析中の再入ガード |
+| `lib/features/text_viewer/presentation/widgets/text_content_renderer.dart` | 縦書きメニューへ新ラベルを渡す |
 | `lib/features/text_viewer/presentation/widgets/vertical_context_menu.dart` | 項目1つとdispatchの1ケース |
 | `lib/features/tts/presentation/dictionary_context_menu.dart` | 項目1つ |
 | `lib/features/llm_summary/presentation/hover_popup_widget.dart` | ドロップダウン項目1つ |
