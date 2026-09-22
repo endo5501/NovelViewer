@@ -1514,6 +1514,29 @@ void main() {
       // bound at or below, and no snapshot should be fabricated.
       expect(stub.callCount, 0);
     });
+
+    testWidgets('a word that occurs nowhere reports the no-facts failure', (
+      tester,
+    ) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            throw const LlmAnalysisNoFactsFailure(),
+      );
+      final container = _container(
+        stub,
+        searchService: _CannedSearch(const []),
+        file: const FileEntry(name: '020_chapter.txt', path: ''),
+      );
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      // Same outcome the no-spoiler scope would give for this word: the
+      // existing notification names it, and no snapshot is saved.
+      expect(find.textContaining('「紅蓮の剣」'), findsOneWidget);
+      expect(find.textContaining('解析失敗:'), findsNothing);
+      expect(find.byKey(const Key('analysis_modal')), findsNothing);
+    });
   });
 
   group('DefaultAnalysisRunner provider resolution (regression)', () {
