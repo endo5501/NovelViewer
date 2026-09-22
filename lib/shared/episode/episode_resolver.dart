@@ -111,6 +111,42 @@ int resolveUpperBoundForAllFiles(List<String> folderFiles) {
   return maxPrefix > lengthBased ? maxPrefix : lengthBased;
 }
 
+/// Resolves the "解析開始(簡易)" upper bound: the lowest effective episode
+/// among [matchedFileNames] — the folder's text files that contain the word —
+/// together with the file that bound was read from.
+///
+/// The bound doubles as the scope: the upper-bound filter keeps only files at
+/// or below it that contain the word, and by construction no file below the
+/// word's first occurrence contains it, so the evidence left is exactly that
+/// episode's files. Simple analysis therefore needs no scope of its own.
+///
+/// The returned file name is the snapshot's `source_file`, so a jump from the
+/// analysis history lands where the word was introduced. When several matched
+/// files share the lowest episode — `005_a.txt` and `005_b.txt` both resolve
+/// to 5 under `^(\d+)`, and both pass the filter — the lexically first is
+/// reported, which is the order the pipeline groups files in.
+///
+/// Returns `null` when no matched file has a resolvable episode, which
+/// includes the case of no matches at all. A prefix-less file absent from
+/// [folderFiles] is unresolvable: the scope filter would drop it, so it must
+/// not become the bound either.
+({int episode, String fileName})? resolveFirstOccurrenceEpisode({
+  required List<String> matchedFileNames,
+  required List<String> folderFiles,
+}) {
+  ({int episode, String fileName})? best;
+  for (final name in matchedFileNames) {
+    final episode = effectiveEpisodeOrNull(name, folderFiles);
+    if (episode == null) continue;
+    if (best == null ||
+        episode < best.episode ||
+        (episode == best.episode && name.compareTo(best.fileName) < 0)) {
+      best = (episode: episode, fileName: name);
+    }
+  }
+  return best;
+}
+
 /// Resolves the file a spoiler-mode (全話) snapshot should link back to:
 /// the highest-prefix file when any prefix exists, otherwise the last lexical
 /// file. Returns `null` when [folderFiles] is empty.
