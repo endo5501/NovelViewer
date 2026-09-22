@@ -119,6 +119,33 @@ class _MovableDirectory extends CurrentDirectoryNotifier {
   void moveTo(String path) => state = path;
 }
 
+/// Counts searches, so a test can prove a refused request never paid for one.
+class _CountingSearch implements TextSearchService {
+  _CountingSearch(this.fileNames);
+  final List<String> fileNames;
+  int callCount = 0;
+
+  @override
+  Future<List<SearchResult>> searchWithContext(
+    String directoryPath,
+    String query, {
+    int contextLines = 2,
+  }) async {
+    callCount++;
+    return [
+      for (final name in fileNames)
+        SearchResult(
+          fileName: name,
+          filePath: '$directoryPath/$name',
+          matches: const [SearchMatch(lineNumber: 1, contextText: 'x')],
+        ),
+    ];
+  }
+
+  @override
+  Object? noSuchMethod(Invocation invocation) => null;
+}
+
 class _ThrowingSearch implements TextSearchService {
   @override
   Future<List<SearchResult>> searchWithContext(
@@ -1655,6 +1682,171 @@ void main() {
       expect(find.textContaining('「紅蓮の剣」'), findsOneWidget);
       expect(find.textContaining('解析失敗:'), findsNothing);
       expect(find.byKey(const Key('analysis_modal')), findsNothing);
+    });
+  });
+
+  group('DefaultAnalysisRunner re-entrancy', () {
+    // Nothing is on screen between the request and the modal: run() pushes it
+    // only after the client and repository futures settle, and the
+    // first-occurrence scope searches the folder before that. A reader who
+    // reads that silence as "nothing happened" and asks again must not get a
+    // second analysis -- two runs would double the LLM cost and race each
+    // other's saveSnapshot and fact-cache writes for the same word.
+    testWidgets('a second run while one is in flight is refused', (
+      tester,
+    ) async {
+      final completer = Completer<String>();
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) =>
+            completer.future,
+      );
+      final container = _container(stub);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          // Both requests are issued from one tap: once the modal is up it
+          // swallows a second tap, so tapping twice would pass whether or not
+          // the runner refuses anything.
+          onPressed: (ref, context) {
+            final runner = ref.read(analysisRunnerProvider);
+            runner.run(
+              context: context,
+              word: 'アリス',
+              coveredUpToEpisode: 40,
+            );
+            runner.run(
+              context: context,
+              word: 'アリス',
+              coveredUpToEpisode: 40,
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.text('go'));
+      await tester.pump();
+
+      expect(stub.callCount, 1, reason: 'the second request is refused');
+
+      completer.complete('mock summary');
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a later run is allowed once the first finishes', (
+      tester,
+    ) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            '要約',
+      );
+      final container = _container(stub);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            ref.read(analysisRunnerProvider).run(
+              context: context,
+              word: 'アリス',
+              coveredUpToEpisode: 40,
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+
+      expect(stub.callCount, 2);
+    });
+
+    testWidgets('a later run is allowed once the first fails', (tester) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            throw const LlmAnalysisNoFactsFailure(),
+      );
+      final container = _container(stub);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            ref.read(analysisRunnerProvider).run(
+              context: context,
+              word: 'アリス',
+              coveredUpToEpisode: 40,
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('go'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(
+        stub.callCount,
+        2,
+        reason: 'a failed run must not wedge the runner shut',
+      );
+    });
+
+    testWidgets('a refused scoped request does not even search', (
+      tester,
+    ) async {
+      final completer = Completer<String>();
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) =>
+            completer.future,
+      );
+      final search = _CountingSearch(const ['005_chapter.txt']);
+      final container = _container(
+        stub,
+        searchService: search,
+        file: const FileEntry(name: '040_chapter.txt', path: ''),
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            final runner = ref.read(analysisRunnerProvider);
+            runner.runWithScope(
+              context: context,
+              word: 'アリス',
+              scope: AnalysisScope.firstOccurrence,
+            );
+            runner.runWithScope(
+              context: context,
+              word: 'アリス',
+              scope: AnalysisScope.firstOccurrence,
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.text('go'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        search.callCount,
+        1,
+        reason: 'reading every file in the folder again buys nothing, so the '
+            'refusal has to come before the search, not after it',
+      );
+      expect(stub.callCount, 1);
+
+      completer.complete('mock summary');
+      await tester.pumpAndSettle();
     });
   });
 
