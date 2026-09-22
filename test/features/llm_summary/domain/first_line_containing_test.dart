@@ -46,6 +46,14 @@ void main() {
       },
     );
 
+    test('strips the explicit rb form Aozora Bunko uses', () {
+      const content =
+          '冒頭\n'
+          '<ruby><rb>聖印</rb><rp>（</rp><rt>せいいん</rt><rp>）</rp></ruby>を持つ\n'
+          '末尾';
+      expect(findFirstLineContaining1Indexed(content, '聖印を持つ'), 2);
+    });
+
     test('matches a non-ruby word on the same line that has ruby tags', () {
       const content = '冒頭\nアリスと<ruby>聖印<rt>せいいん</rt></ruby>を持つ\n末尾';
       expect(findFirstLineContaining1Indexed(content, 'アリス'), 2);
