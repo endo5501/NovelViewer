@@ -4,6 +4,7 @@
 
 The hover popup that shows a stored LLM summary over a marked word in the text viewer, in both horizontal and vertical display mode: when it appears and how the pointer grace period keeps it alive, how it is positioned for the display mode and dismissed on a mode switch, the snapshot selector with its "X話時点" label and the warning icon on a snapshot analysed beyond the currently viewed file, and the re-analysis dropdown offering the current-page and full-scope bounds with an overwrite hint. Where LLM summary is unavailable on the running platform the re-analysis control is withheld, while reading a summary stored earlier remains available. A pointer that does not hover reaches the same popup by tapping a marked word, and a touch elsewhere dismisses it.
 ## Requirements
+
 ### Requirement: Hover popup on marked words in horizontal mode
 In horizontal display mode, the text viewer SHALL display a popup widget over the text when the mouse pointer enters the screen region of any marked word (a word with a solid mark from `llm-summary`'s uniform mark rendering). The popup SHALL be displayed while the pointer remains within either the marked word's character range OR the popup widget itself (including any of its child overlays such as the re-analysis dropdown); when the pointer leaves the marked word, a short grace period (~150 ms) SHALL allow the pointer to travel into the popup to interact with controls such as the snapshot navigator (◀/▶) or the re-analysis dropdown. The popup SHALL NOT trigger for unmarked text.
 
@@ -27,7 +28,6 @@ In horizontal display mode, the text viewer SHALL display a popup widget over th
 #### Scenario: Hover over unmarked text does not show popup
 - **WHEN** the user moves the mouse pointer over text that is not marked (no cached snapshot)
 - **THEN** no popup SHALL appear
-
 ### Requirement: Hover popup on marked characters in vertical mode
 In vertical display mode, the text viewer SHALL display the hover popup over the text when the mouse pointer enters the screen region of any marked character (a character that falls inside a mark range derived from the active `markedWords` set, rendered with a sidebar line by `llm-summary`). The popup SHALL remain visible while the pointer continues to hover within the same mark range OR enters the popup widget itself (including any of its child overlays); when the pointer transitions outside the mark range, into a different mark range, or leaves the text region entirely, the same grace period (~150 ms) defined for horizontal mode SHALL apply. The popup body, the snapshot label, the snapshot navigator, the warning icon, the re-analysis dropdown, the loading indicator, and non-selectable text behavior SHALL be identical to horizontal mode.
 
@@ -64,7 +64,6 @@ In vertical display mode, the text viewer SHALL display the hover popup over the
 #### Scenario: Page transition in vertical mode hides popup
 - **WHEN** the popup is visible in vertical mode and the user triggers a page change (swipe, arrow key, or scroll wheel)
 - **THEN** the popup SHALL be hidden as the page transition starts
-
 ### Requirement: Popup position adjusts for display mode
 The hover popup SHALL be positioned relative to the pointer based on the active display mode so the popup does not obscure the natural reading flow. In horizontal mode the popup SHALL appear with its top-left corner offset 16 px right and 16 px below the pointer position. In vertical mode the popup SHALL appear with its bottom-left corner offset 16 px right and 16 px above the pointer position; if this placement would cause the popup to overflow the right edge of the screen, the horizontal anchor SHALL flip so the popup appears to the left of the pointer instead; if the placement would cause the popup to overflow the top edge of the screen, the vertical anchor SHALL flip so the popup appears below the pointer instead.
 
@@ -97,7 +96,6 @@ In horizontal mode the same edge handling SHALL apply, so that the popup stays o
 #### Scenario: Vertical mode flips vertically near the top screen edge
 - **WHEN** the popup is shown in vertical mode at pointer global position (P) and placing the popup above would extend beyond the screen's top edge
 - **THEN** the popup SHALL be placed below the pointer instead (popup appears down-right, mirroring the horizontal-mode placement)
-
 ### Requirement: Popup hides on display mode switch
 When the user changes the text display mode (horizontal ↔ vertical) while a popup is visible, the system SHALL hide the popup immediately. This prevents a popup whose position was computed for the previous mode's layout from lingering after the mode switch.
 
@@ -108,7 +106,6 @@ When the user changes the text display mode (horizontal ↔ vertical) while a po
 #### Scenario: Switching from vertical to horizontal hides an open popup
 - **WHEN** the popup is visible in vertical mode and the user switches the display mode to horizontal
 - **THEN** the popup SHALL be hidden before the new mode renders
-
 ### Requirement: Snapshot selector and "X話時点" label
 When a marked word has at least one cached snapshot, the popup SHALL display the selected snapshot's summary together with a label of the form "Xファイル時点の要約" (where X is the snapshot's `covered_up_to_episode`). When more than one snapshot exists, the popup SHALL also render a navigation control (◀ / ▶) that lets the user step through snapshots in ascending order of `covered_up_to_episode`. The initial selection SHALL follow the default rule defined in `llm-summary-cache` ("max{Sᵢ | Sᵢ ≤ C}" with fall-back to `min{Sᵢ}` when no past snapshot exists). When only one snapshot exists, the navigation arrows SHALL still be rendered for layout stability but SHALL be disabled (visibly dimmed, tap inert).
 
@@ -133,7 +130,6 @@ When a marked word has at least one cached snapshot, the popup SHALL display the
 #### Scenario: Forward control disabled at the highest snapshot
 - **WHEN** the popup is displaying the highest-`covered_up_to_episode` snapshot
 - **THEN** the ▶ control SHALL be disabled and only ◀ SHALL be active
-
 ### Requirement: Future-snapshot warning icon
 When the currently selected snapshot's `covered_up_to_episode` is strictly greater than the numeric prefix `C` of the currently viewed file, the popup SHALL render a small warning icon (Material `warning_amber_outlined` in an orange shade) next to the "Xファイル時点の要約" label, signaling that the snapshot may reveal information from files the user has not yet read. No warning SHALL be shown when `covered_up_to_episode <= C`. The popup body itself SHALL be displayed immediately without any blur, opacity reduction, or click-to-reveal gate.
 
@@ -149,20 +145,28 @@ When the currently selected snapshot's `covered_up_to_episode` is strictly great
 #### Scenario: No warning when snapshot equals current
 - **WHEN** the popup is displaying a snapshot whose `covered_up_to_episode` equals the current file's prefix
 - **THEN** no warning icon SHALL be displayed
-
 ### Requirement: Re-analysis dropdown on the popup
-On a platform where LLM summary is available, the popup SHALL include a re-analysis control (e.g., a button labeled "再解析" with a dropdown indicator) in the top-right area of the popup. Activating the control SHALL open a dropdown menu containing two items:
+On a platform where LLM summary is available, the popup SHALL include a re-analysis control (e.g., a button labeled "再解析" with a dropdown indicator) in the top-right area of the popup. Activating the control SHALL open a dropdown menu containing three items:
 
-1. "現在ページまで (Nファイル時点)" — where N is the numeric prefix of the currently viewed file (or its lexical rank when no numeric prefix exists). Selecting this item SHALL invoke the LLM analysis pipeline with `covered_up_to_episode=N` (equivalent to the "解析開始(ネタバレなし)" trigger).
-2. "全話まで (Mファイル時点)" — where M is the highest numeric prefix in the folder. Selecting this item SHALL invoke the pipeline with `covered_up_to_episode=M` (equivalent to "解析開始(ネタバレあり)").
+1. "簡易解析" — selecting this item SHALL invoke the LLM analysis pipeline over the episode of the word's first occurrence (equivalent to the "解析開始(簡易)" trigger). This item SHALL NOT carry an episode hint and SHALL NOT carry the "(上書き)" suffix: which episode it resolves to is only known after searching the folder, and opening the dropdown MUST NOT trigger that search.
+2. "現在ページまで (Nファイル時点)" — where N is the numeric prefix of the currently viewed file (or its lexical rank when no numeric prefix exists). Selecting this item SHALL invoke the LLM analysis pipeline with `covered_up_to_episode=N` (equivalent to the "解析開始(ネタバレなし)" trigger).
+3. "全話まで (Mファイル時点)" — where M is the highest numeric prefix in the folder. Selecting this item SHALL invoke the pipeline with `covered_up_to_episode=M` (equivalent to "解析開始(ネタバレあり)").
 
-Each item SHALL append the localized suffix " (上書き)" when an existing snapshot row already matches the would-be `covered_up_to_episode`. Selecting an item that would overwrite SHALL proceed without a confirmation dialog (mirroring the existing context-menu re-analysis behavior). The popup itself SHALL remain visible while the re-analysis dropdown is open; the existing pointer grace period and `MouseRegion` handling SHALL be extended to cover the dropdown menu so that opening it does not cause the popup to dismiss.
+The second and third items SHALL append the localized suffix " (上書き)" when an existing snapshot row already matches the would-be `covered_up_to_episode`. Selecting an item that would overwrite SHALL proceed without a confirmation dialog (mirroring the existing context-menu re-analysis behavior) — this holds for the first item too, which overwrites silently like the others when its resolved episode already has a snapshot. The popup itself SHALL remain visible while the re-analysis dropdown is open; the existing pointer grace period and `MouseRegion` handling SHALL be extended to cover the dropdown menu so that opening it does not cause the popup to dismiss.
 
 Where LLM summary is unavailable, the control SHALL be absent while the rest of the popup keeps working: reading a summary stored earlier — by a desktop install whose novel folder was carried over — is not gated, only producing a new one. The popup is reachable on such a platform by a touch tap on the marked word, and also by hover wherever a hovering pointer is present, such as a tablet with a trackpad attached.
 
 #### Scenario: Both items present with episode hints
 - **WHEN** the popup is open while viewing "040_chapter.txt" in a folder whose highest-prefix file is "120_chapter.txt", and no snapshot currently exists at episodes 40 or 120
-- **THEN** the re-analysis dropdown SHALL list "現在ページまで (40ファイル時点)" and "全話まで (120ファイル時点)" with no "(上書き)" suffix on either item
+- **THEN** the re-analysis dropdown SHALL list "簡易解析", "現在ページまで (40ファイル時点)" and "全話まで (120ファイル時点)", in that order, with no "(上書き)" suffix on any item
+
+#### Scenario: The 簡易解析 item carries no episode hint
+- **WHEN** the popup's re-analysis dropdown is opened for a word with snapshots at several episodes
+- **THEN** the "簡易解析" item SHALL read "簡易解析" with no episode number and no "(上書き)" suffix, whatever snapshots exist
+
+#### Scenario: Opening the dropdown does not search the folder
+- **WHEN** the user opens the re-analysis dropdown
+- **THEN** no search over the folder's text files SHALL be performed to build the menu
 
 #### Scenario: Overwrite suffix when current-page snapshot already exists
 - **WHEN** the popup is open while viewing "040_chapter.txt" and a snapshot at `covered_up_to_episode=40` already exists for the word
@@ -176,6 +180,11 @@ Where LLM summary is unavailable, the control SHALL be absent while the rest of 
 - **WHEN** the user selects "現在ページまで (40ファイル時点) (上書き)"
 - **THEN** the existing snapshot at `covered_up_to_episode=40` SHALL be overwritten by the new analysis result; no confirmation dialog SHALL be shown
 - **AND** the standard analysis modal (with spinner and pipeline progress label) SHALL appear during the call
+
+#### Scenario: Selecting 簡易解析 triggers the first-occurrence analysis
+- **WHEN** the user selects "簡易解析" for a word whose first occurrence is in "005_chapter.txt"
+- **THEN** the pipeline SHALL be invoked with `covered_up_to_episode=5`; no confirmation dialog SHALL be shown
+- **AND** the standard analysis modal SHALL appear during the call
 
 #### Scenario: Popup stays visible while the dropdown is open
 - **WHEN** the user opens the re-analysis dropdown and the pointer is anywhere within the dropdown menu region
@@ -192,14 +201,12 @@ Where LLM summary is unavailable, the control SHALL be absent while the rest of 
 #### Scenario: A stored summary is still readable where analysis is unavailable
 - **WHEN** the popup opens on a platform where LLM summary is unavailable and a stored snapshot exists for the word
 - **THEN** the snapshot's summary text and its episode label are displayed as usual
-
 ### Requirement: Popup body text is non-selectable
 The popup body SHALL render the summary text as non-selectable plain text. (Users who want to copy summary text use the copy actions on the analysis history panel — see `llm-summary-history-ui`.)
 
 #### Scenario: Popup text is not selectable
 - **WHEN** the popup is displayed and the user attempts to drag-select text within it
 - **THEN** no text selection SHALL occur in the popup
-
 ### Requirement: Popup display while cache is loading
 When the popup is triggered, the system SHALL fetch the cached summary asynchronously from the `word_summaries` table. While the fetch is in flight, the popup SHALL display a small loading indicator. If the fetch resolves to a value, the popup SHALL display the resolved content. If the pointer leaves the marked word range (and does not enter the popup within the grace period) before the fetch resolves, the popup SHALL be hidden and the resolved data SHALL be discarded.
 
@@ -210,7 +217,6 @@ When the popup is triggered, the system SHALL fetch the cached summary asynchron
 #### Scenario: Content replaces loading indicator on resolve
 - **WHEN** the cache fetch resolves with summary data while the pointer is still within the marked word range
 - **THEN** the popup SHALL replace the loading indicator with the resolved summary content
-
 ### Requirement: Popup visual separation from background
 The hover popup SHALL render a visible visual boundary against the underlying text content in both light and dark themes. The popup SHALL use the Material 3 `colorScheme.surfaceContainerHighest` token as its background color and SHALL render a 1 logical-pixel (`width: 1.0`) border using the `colorScheme.outlineVariant` token along its rounded rectangle perimeter. The existing 6 logical-pixel corner radius, elevation, and child layout SHALL be preserved. The same background-and-border treatment SHALL be applied uniformly to the loaded summary card and the loading-state card.
 
@@ -229,7 +235,6 @@ The hover popup SHALL render a visible visual boundary against the underlying te
 #### Scenario: Corner radius is preserved
 - **WHEN** the popup is rendered in either theme
 - **THEN** the popup SHALL maintain its 6 logical-pixel rounded corners and its existing elevation, with no change to its overall size or child layout
-
 ### Requirement: 桁の視覚的折り返しにまたがる単語のマーク判定
 
 縦書き表示において、単語マーク判定（傍線およびホバーポップアップのためのマーク範囲算出）は、ページネーションが桁（column）の折り返しのために挿入した「視覚的改行」を単語の区切りとして扱ってはならない（SHALL NOT）。本物の段落改行（元テキストの `\n` に対応する改行）は、従来どおり単語マッチの境界として扱わなければならない（SHALL）。
@@ -248,7 +253,6 @@ The hover popup SHALL render a visible visual boundary against the underlying te
 #### Scenario: lineBreakEntryIndices 未指定時は全改行を境界として扱う
 - **WHEN** マーク判定がライン改行エントリ集合の指定なしで実行される
 - **THEN** すべての改行エントリが従来どおり単語マッチの境界として扱われる（後方互換）
-
 ### Requirement: A marked word opens its popup on a touch tap
 The summary popup SHALL be reachable from a pointer that does not hover. In both display modes, a tap on a marked word from a pointer kind that has no secondary button — touch and stylus — SHALL open the popup for that word, anchored at the tap position, showing the same content the hover trigger shows.
 
@@ -305,7 +309,6 @@ In horizontal mode the tapped position SHALL be resolved through the selection t
 #### Scenario: Hover behaviour is unchanged
 - **WHEN** a mouse pointer enters a marked word, leaves it, and re-enters it
 - **THEN** the popup SHALL appear, dismiss after the grace period, and reappear, exactly as before this trigger was added
-
 ### Requirement: A touch outside the popup dismisses it
 While the popup is visible, a pointer-down from a pointer kind that has no secondary button — touch and stylus — that lands outside the popup's own bounds SHALL dismiss the popup. This is the counterpart of the pointer leaving the popup's `MouseRegion`, which a pointer that does not hover never does.
 
@@ -341,7 +344,6 @@ A pointer-down SHALL NOT dismiss the popup while a popup-owned child overlay is 
 - **WHEN** the popup's re-analysis dropdown is open and the reader touches one of its items
 - **THEN** the selected re-analysis SHALL run
 - **AND** the touch SHALL NOT be taken for a press on what the item covers, either as a dismissal or as a tap on a word beneath it
-
 ### Requirement: Scrolling in horizontal mode dismisses the popup
 In horizontal display mode, a scroll the reader initiated SHALL dismiss the popup. The popup is anchored at a screen position computed when it opened, so text that scrolls out from under it leaves the popup pointing at nothing. Vertical mode already dismisses the popup on a page change and on the start of a drag selection; horizontal mode SHALL dismiss it on the reader's scroll for the same reason.
 
