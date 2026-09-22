@@ -4,7 +4,7 @@ D7 の純粋な移動。後続の変更の差分を読みやすくするため�
 
 - [x] 1.1 `lib/shared/` にルビ注釈除去ヘルパを新設し、`<rt>…</rt>` / `<rp>…</rp>` / `<ruby>` / `</ruby>` を除去して base を残すことを確認する単体テストを追加する（テストのみ。実行して失敗することを確認する）
 - [x] 1.2 ヘルパを実装し、1.1 のテストが通ることを `fvm flutter test` で確認する
-- [ ] 1.3 `mark_matcher.dart` と `first_line_containing.dart` の重複した除去パターンを共有ヘルパの呼び出しに置き換え、両ファイルの既存テストが**1件も変更せずに**通ることを `fvm flutter test test/features/llm_summary/` で確認する
+- [x] 1.3 `mark_matcher.dart` と `first_line_containing.dart` の重複した除去パターンを共有ヘルパの呼び出しに置き換え、両ファイルの既存テストが**1件も変更せずに**通ることを `fvm flutter test test/features/llm_summary/` で確認する
 
 ## 2. 拡張文脈検索のルビ対応
 

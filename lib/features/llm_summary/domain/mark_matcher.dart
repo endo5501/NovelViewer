@@ -1,3 +1,5 @@
+import 'package:novel_viewer/shared/utils/ruby_annotation.dart';
+
 /// The style applied to a cached-word mark. v5 uses a uniform `solid` style
 /// for every mark; the `dotted` value is retained on the enum for callers
 /// that still discriminate (and for forward compatibility) but no production
@@ -80,11 +82,6 @@ List<MarkSpan> findMarks({
   return marks;
 }
 
-final _rubyTagPattern = RegExp(
-  r'<rt>.*?</rt>|<rp>.*?</rp>|<ruby>|</ruby>',
-  caseSensitive: false,
-);
-
 /// Like [findMarks] but operates on the base text only — ruby annotations
 /// (`<rt>...</rt>`), parenthesis tags (`<rp>...</rp>`), and the outer
 /// `<ruby>` / `</ruby>` tags are stripped before scanning, so words that
@@ -94,7 +91,7 @@ List<MarkSpan> findMarksOnBaseText({
   required Map<String, MarkStyle> wordsByStyle,
   int minWordLength = 2,
 }) {
-  final base = text.replaceAll(_rubyTagPattern, '');
+  final base = stripRubyAnnotations(text);
   return findMarks(
     text: base,
     wordsByStyle: wordsByStyle,
