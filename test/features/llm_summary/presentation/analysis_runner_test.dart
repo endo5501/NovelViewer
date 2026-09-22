@@ -1561,7 +1561,7 @@ void main() {
       expect(stub.lastSourceFileName, '020_chapter.txt');
     });
 
-    testWidgets('falls back to the current file when the search throws', (
+    testWidgets('reports a failed search instead of widening the scope', (
       tester,
     ) async {
       final stub = stubbed();
@@ -1574,9 +1574,12 @@ void main() {
 
       await trigger(tester, container);
 
-      // The run searches the same folder again and reports the error through
-      // the existing failure notification; the runner must not report it too.
-      expect(stub.lastCoveredUpToEpisode, 20);
+      // Falling back to the reading position here would run the scope the
+      // reader was avoiding -- one extraction per hit file rather than one --
+      // and save it as though it were a simple analysis. Nothing runs.
+      expect(stub.callCount, 0);
+      expect(find.text('解析失敗'), findsOneWidget);
+      expect(find.byKey(const Key('analysis_modal')), findsNothing);
     });
 
     testWidgets('performs no analysis when no file is selected', (
