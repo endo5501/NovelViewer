@@ -135,6 +135,8 @@ final _testPackageInfo = PackageInfo(
 ProviderContainer _container(
   _StubService stub, {
   String directory = '/library/novel_a',
+  String libraryPath = '/library',
+  List<NovelMetadata>? novels,
   FileEntry? file,
   String language = 'ja',
   bool llmSupported = true,
@@ -152,8 +154,8 @@ ProviderContainer _container(
       currentDirectoryProvider.overrideWith(
         () => CurrentDirectoryNotifier(directory),
       ),
-      libraryPathProvider.overrideWithValue('/library'),
-      allNovelsProvider.overrideWith((ref) => [_novelA]),
+      libraryPathProvider.overrideWithValue(libraryPath),
+      allNovelsProvider.overrideWith((ref) => novels ?? [_novelA]),
       selectedFileProvider.overrideWith(() => _MockSelectedFile(file)),
       localeProvider.overrideWith(() => _StubLocale(language)),
       llmSummaryServiceProvider.overrideWith((ref, folderPath) => stub),
@@ -1257,6 +1259,196 @@ void main() {
         expect(resolveSourceFileForAll(tempDir.path), 'part2.txt');
       },
     );
+  });
+
+  group('AnalysisScope.firstOccurrence', () {
+    late Directory libraryDir;
+    late Directory novelDir;
+
+    setUp(() async {
+      libraryDir = await Directory.systemTemp.createTemp('runner_simple_');
+      // _novelA registers the folder name 'novel_a', so the browser location
+      // has to be a real directory of that name inside the library for
+      // summaryNovelFolderProvider to hand it over.
+      novelDir = Directory('${libraryDir.path}/novel_a');
+      await novelDir.create();
+    });
+
+    tearDown(() async {
+      if (libraryDir.existsSync()) {
+        await libraryDir.delete(recursive: true);
+      }
+    });
+
+    Future<void> write(String name, String content) async {
+      await File('${novelDir.path}/$name').writeAsString(content);
+    }
+
+    _StubService stubbed() => _StubService(
+      ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+          '要約',
+    );
+
+    ProviderContainer containerFor(
+      _StubService stub, {
+      required String? currentFileName,
+    }) => _container(
+      stub,
+      directory: novelDir.path,
+      libraryPath: libraryDir.path,
+      file: currentFileName == null
+          ? null
+          : FileEntry(
+              name: currentFileName,
+              path: '${novelDir.path}/$currentFileName',
+            ),
+    );
+
+    Future<void> trigger(
+      WidgetTester tester,
+      ProviderContainer container,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            ref.read(analysisRunnerProvider).runWithScope(
+              context: context,
+              word: '紅蓮の剣',
+              scope: AnalysisScope.firstOccurrence,
+            );
+          },
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('bounds the analysis at the word\'s first occurrence', (
+      tester,
+    ) async {
+      await write('005_chapter.txt', '紅蓮の剣を手にした');
+      await write('012_chapter.txt', '紅蓮の剣を研いだ');
+      await write('040_chapter.txt', '紅蓮の剣を抜いた');
+
+      final stub = stubbed();
+      final container = containerFor(stub, currentFileName: '040_chapter.txt');
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      expect(stub.callCount, 1);
+      expect(stub.lastCoveredUpToEpisode, 5);
+      expect(
+        stub.lastSourceFileName,
+        '005_chapter.txt',
+        reason: 'the history jump should land where the word was introduced',
+      );
+    });
+
+    testWidgets('a ruby-split occurrence on the current page still bounds it', (
+      tester,
+    ) async {
+      // The authoring convention this mode has to survive: the term is
+      // annotated where it is introduced and written plainly later. Matching
+      // the raw text would find only the later page and bound the analysis
+      // past what the reader has read.
+      await write(
+        '020_chapter.txt',
+        '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした',
+      );
+      await write('080_chapter.txt', '紅蓮の剣を抜いた');
+
+      final stub = stubbed();
+      final container = containerFor(stub, currentFileName: '020_chapter.txt');
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      expect(stub.lastCoveredUpToEpisode, 20);
+      expect(stub.lastSourceFileName, '020_chapter.txt');
+    });
+
+    testWidgets('never bounds past the file the reader is on', (tester) async {
+      await write('020_chapter.txt', '紅蓮の剣を手にした');
+      await write('080_chapter.txt', '紅蓮の剣を抜いた');
+
+      final stub = stubbed();
+      final container = containerFor(stub, currentFileName: '020_chapter.txt');
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      expect(stub.lastCoveredUpToEpisode, lessThanOrEqualTo(20));
+    });
+
+    testWidgets('resolves the shared episode when two files carry it', (
+      tester,
+    ) async {
+      await write('005_a.txt', '紅蓮の剣を手にした');
+      await write('005_b.txt', '紅蓮の剣を研いだ');
+      await write('040_c.txt', '紅蓮の剣を抜いた');
+
+      final stub = stubbed();
+      final container = containerFor(stub, currentFileName: '040_c.txt');
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      expect(stub.lastCoveredUpToEpisode, 5);
+      expect(stub.lastSourceFileName, '005_a.txt');
+    });
+
+    testWidgets('uses the lexical rank in a prefix-less folder', (
+      tester,
+    ) async {
+      await write('intro.txt', 'なにもない');
+      await write('part1.txt', '紅蓮の剣を手にした');
+      await write('part2.txt', '紅蓮の剣を抜いた');
+
+      final stub = stubbed();
+      final container = containerFor(stub, currentFileName: 'part2.txt');
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      expect(stub.lastCoveredUpToEpisode, 2);
+      expect(stub.lastSourceFileName, 'part1.txt');
+    });
+
+    testWidgets('falls back to the current file when the word occurs nowhere', (
+      tester,
+    ) async {
+      await write('010_chapter.txt', 'なにもない');
+      await write('020_chapter.txt', 'ここにもない');
+
+      final stub = stubbed();
+      final container = containerFor(stub, currentFileName: '020_chapter.txt');
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      // Any bound yields the same empty evidence, so this only has to be
+      // defined and spoiler-free; the run then fails with the existing
+      // "no facts" notification.
+      expect(stub.lastCoveredUpToEpisode, 20);
+    });
+
+    testWidgets('performs no analysis when no file is selected', (
+      tester,
+    ) async {
+      await write('005_chapter.txt', '紅蓮の剣を手にした');
+
+      final stub = stubbed();
+      final container = containerFor(stub, currentFileName: null);
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      // Without a page on screen there is no reading position to keep the
+      // bound at or below, and no snapshot should be fabricated.
+      expect(stub.callCount, 0);
+    });
   });
 
   group('DefaultAnalysisRunner provider resolution (regression)', () {
