@@ -58,13 +58,34 @@ Stage-1 も応答予算で切る案は、呼び出し回数が倍以上になり
 
 ここで LLM をもう一度呼ぶ案は、まさにその呼び出しが縮まなかったから到達している経路であり、堂々巡りになる。
 
-### D5: 拒否の判定はネイティブ側で行う
+### D5: エラー面は2つあり、両方を `switch` で写像する
 
-`LanguageModelError` は Swift 側の型であり、Dart からは見えない。`FoundationModelsLlmPlugin` の `catch` を広げ、`LanguageModelSession.GenerationError` に一致しないエラーについても、フレームワークが拒否として報告しているものを `guardrailViolation` / `refusal` のワイヤコードに写像する。
+SDK の定義を確認した結果（`MacOSX27.0.sdk` の `FoundationModels.swiftinterface`）、当初の想定は誤りだった。`LanguageModelError` は「拒否専用の別型」ではなく、**`LanguageModelSession.GenerationError` の後継**である。
 
-型で判定できない場合にメッセージ文字列で判定する誘惑があるが、**文字列一致は採らない**。ローカライズや文言変更で静かに壊れ、しかも壊れたことが分からない。型で判定できる範囲にとどめ、分類できないものは `unknown` のまま残す（spec の「分類できない失敗は拒否として読まない」に対応）。
+```
+GenerationError    : introduced 26.0, deprecated 27.0
+LanguageModelError : available   27.0+   (enum, 9ケース)
+  contextSizeExceeded / rateLimited / guardrailViolation / refusal /
+  unsupportedCapability / unsupportedTranscriptContent /
+  unsupportedGenerationGuide / unsupportedLanguageOrLocale / timeout
+```
 
-macOS 27 と iPadOS 26.6 で報告型が異なるため、**両方の型を認識**する必要がある。片方だけに切り替えると他方が壊れる。
+したがって影響は拒否に限らない。**macOS 27 では全てのエラーが新しい面から飛び、現行プラグインはその全てを `unknown` に落としている。** `unknown` は再試行対象なので、再試行しても無駄なもの（`contextSizeExceeded` など）まで再送している。
+
+両方とも列挙型なので、**`switch` でケースごとに写像する**。文字列一致は不要になった。分類できないものは `unknown` のまま残す。
+
+`LanguageModelError` は macOS/iOS 27.0 以降なので、プラグインの既存ガード（26.0）の内側に**入れ子の `if #available(iOS 27.0, macOS 27.0, *)`** を置く。26.0 のデプロイメントターゲットは変えない。
+
+新しい面には `decodingFailure` に相当するケースが無い。これは切り捨てが macOS 27 で黙って成功することの裏付けであり、同時に、iPadOS 27 に上げると iPad の症状がクラッシュから沈黙の欠落へ変わることを意味する。古い面ではまだ報告されるため、`decodingFailure` の写像は残す。
+
+### D6: 新しい3ケースの扱い
+
+`timeout` / `unsupportedCapability` / `unsupportedTranscriptContent` に対応するワイヤコードが無い。`unsupportedGenerationGuide` はワイヤコード `unsupportedGuide` が既にプラグイン側にあるが、**Dart 側に写像が無く `unknown` に落ちている**（既存の穴）。
+
+- `timeout` → 新しい理由を追加。再試行する（通る可能性がある）
+- `unsupportedCapability` / `unsupportedTranscriptContent` / `unsupportedGenerationGuide` → **1つの理由にまとめる**。再試行しない
+
+3つをまとめるのは、`rateLimited` と `concurrentRequests` を既に1つにまとめているのと同じ判断による。求めたものが違うだけで、**実行にとっても読者にとっても違いが無い**（どれも同一リクエストの再送では成功しない、どれも「このモデルが受け付けない形の要求」）。
 
 ## Risks / Trade-offs
 

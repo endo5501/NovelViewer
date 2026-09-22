@@ -32,7 +32,7 @@ The permissive guardrails do not take effect on the schema-constrained path: the
 
 Unconstrained generation SHALL request greedy sampling. Without the schema the model falls into repeating a sentence until the response cap cuts the answer off mid-object, which reaches the caller as a response that will not parse. Greedy sampling removes that: measured over the same passages, every unconstrained answer parsed, where under the framework's default sampling half of them did not.
 
-Every way the framework has of saying the text was refused SHALL qualify, whatever type it reports the refusal as. It reports a guardrail block and the model declining as separate cases, and a later version of the framework reports the model declining outside the generation-error type the earlier one used: on macOS 26A428 that refusal arrives as a distinct error type carrying the framework's own wording, and a provider that recognises only the earlier type reads it as an unclassified failure. Such a failure is then retried identically instead of being answered by the unconstrained request, and is reported to the reader without naming the text as its cause. The native side SHALL therefore recognise a refusal by whichever type the framework reports it as, and SHALL report it to the client as a refusal; a failure it cannot classify SHALL remain unclassified rather than being read as a refusal.
+Every way the framework has of saying the text was refused SHALL qualify, through whichever error surface it reports the refusal. It reports a guardrail block and the model declining as separate cases, and on a system carrying the newer error surface both arrive through that one instead: measured on macOS 26A428, the model declining reached the provider as a case of the replacement type, where a provider recognising only the deprecated type read it as unclassified. Such a failure is then retried identically instead of being answered by the unconstrained request, and is reported to the reader without naming the text as its cause. The native side SHALL therefore recognise a refusal through either surface and SHALL report it to the client as a refusal; a failure it cannot classify SHALL remain unclassified rather than being read as a refusal.
 
 The retry SHALL be issued at most once per generation request. Where it is also refused, the refusal SHALL be reported as it is today, so that the existing per-file failure isolation applies.
 
@@ -87,3 +87,87 @@ The decision to retry SHALL live in the client rather than in the native plugin.
 #### Scenario: The plugin makes exactly the call it was asked for
 - **WHEN** the client asks the plugin to generate
 - **THEN** the plugin SHALL issue one generation request using the schema and sampling mode it was given, and SHALL NOT issue a second
+
+### Requirement: Generation failures are reported with their cause
+The on-device provider SHALL translate the model framework's generation failures into failures that name their cause, rather than a single opaque error.
+
+The framework reports generation failures through more than one error surface, and which one it uses depends on the operating system version rather than on what went wrong. The surface the provider was written against is deprecated from the version that introduced its replacement, and on a system carrying the replacement every failure arrives through it — not only the ones that are new. A provider that recognises one surface therefore reports every failure on such a system as unrecognised, and each of them loses the cause it had. The provider SHALL recognise every surface the framework reports failures through, and SHALL name the same cause whichever surface carried it.
+
+The causes that SHALL be distinguished are: the content was refused by the model's safety guardrails, the request exceeded the context window, the response would not parse against the schema it was given, the request was rate limited, the language is not supported, the model's assets are unavailable, the request timed out, and the request asked for something the model does not support.
+
+The response that will not parse is named separately because it has been seen in practice, caused by the response cap cutting a structured answer off before it closes. Reading it as an unrecognised failure would hide a cause with a clear remedy. It SHALL remain a distinguished cause even though the newer error surface has no case for it, because the older surface still reports it on the systems that carry it.
+
+The ways a request can ask for something unsupported — an unsupported capability, unsupported content in the transcript, and an unsupported generation guide — SHALL be reported as one cause. They differ in what the framework was asked for, but not in anything the run or the reader can act on differently: none of them can succeed on a second identical attempt, and all of them say the request was shaped in a way this model does not accept.
+
+A guardrail refusal SHALL be reported as a failure of the file being extracted, so that the existing per-file failure isolation applies: the remaining files are still extracted, and the run reports a partial failure. A novel containing violent or sexual description can be refused, and one refused file SHALL NOT end the analysis of the rest.
+
+A failure the provider cannot match to any cause it knows SHALL remain unrecognised rather than be forced into the nearest one, so that a cause added by a later framework version is not silently reported as something it is not.
+
+#### Scenario: A guardrail refusal fails one file only
+- **WHEN** extraction of one source file is refused by the model's safety guardrails and the other files succeed
+- **THEN** that file SHALL be recorded as failed, the remaining files SHALL still be extracted, and the run SHALL report a partial failure
+
+#### Scenario: A refusal is distinguishable from a transport failure
+- **WHEN** a generation request is refused by the safety guardrails
+- **THEN** the failure SHALL name the refusal as its cause, distinctly from a failure to reach the model at all
+
+#### Scenario: A context overflow is distinguishable
+- **WHEN** a generation request exceeds the model's context window
+- **THEN** the failure SHALL name the context window as its cause
+
+#### Scenario: A truncated structured answer is distinguishable
+- **WHEN** the model's response does not parse against the schema it was given
+- **THEN** the failure SHALL name that as its cause, distinctly from an unrecognised failure
+
+#### Scenario: The same cause is named whichever surface reported it
+- **WHEN** the framework reports a context overflow through the deprecated error surface on one system, and through its replacement on another
+- **THEN** both SHALL be reported as the context window being exceeded, and neither SHALL be reported as unrecognised
+
+#### Scenario: A failure on the newer surface keeps its cause
+- **WHEN** generation fails on a system where the framework reports through the replacement surface, for a reason other than a refusal
+- **THEN** the failure SHALL name that reason, and SHALL NOT be reported as unrecognised
+
+#### Scenario: A timeout is distinguishable
+- **WHEN** a generation request times out
+- **THEN** the failure SHALL name the timeout as its cause
+
+#### Scenario: The unsupported-request causes are reported as one
+- **WHEN** generation fails because a capability, transcript content, or generation guide is not supported
+- **THEN** each SHALL be reported as the request asking for something unsupported, rather than as three causes the run treats alike
+
+#### Scenario: An unrecognised cause stays unrecognised
+- **WHEN** the framework reports a failure the provider has no cause for
+- **THEN** it SHALL be reported as unrecognised, and SHALL NOT be reported as any of the named causes
+
+### Requirement: A failure that cannot change is not retried
+Where a generation failure could not possibly answer differently to the identical request, the pipeline SHALL NOT issue that request again. A prompt that overran the context window overruns it again; an unsupported language, a request shaped in a way the model does not support, and a model that is not there do not change between two attempts a moment apart. Text refused by the safety guardrails is refused again on the identical request, and by the time such a refusal reaches the pipeline the provider has already tried the one request that differs — the same prompt with the schema constraint removed — so a further attempt by the pipeline would be the identical request once more.
+
+A failure that can answer differently SHALL keep the single retry: rate limiting passes, a request that timed out can complete on a second attempt, and a response that would not parse depends on how much the model chose to say.
+
+A failure the provider could not match to any cause it knows SHALL keep the retry. Nothing is known about whether it can change, and the alternative is to refuse a second attempt on a cause that may well be transient.
+
+On-device generation is the slowest of the three providers, and a run gives up only after several consecutive file failures. Retrying what cannot succeed would double the delay before a reader learns that the analysis is not going to work.
+
+#### Scenario: A refusal is not retried by the pipeline
+- **WHEN** extraction fails because the model's safety guardrails refused the text, after the provider's own unconstrained retry was also refused
+- **THEN** the pipeline SHALL NOT issue the extraction again
+
+#### Scenario: A context overflow is reported without a second attempt
+- **WHEN** extraction fails because the request exceeded the context window
+- **THEN** the request SHALL be issued exactly once
+
+#### Scenario: A transient failure keeps its retry
+- **WHEN** extraction fails because the request was rate limited
+- **THEN** the request SHALL be issued a second time
+
+#### Scenario: A response that would not parse keeps its retry
+- **WHEN** extraction fails because the response did not parse against its schema
+- **THEN** the request SHALL be issued a second time
+
+#### Scenario: A timeout keeps its retry
+- **WHEN** extraction fails because the request timed out
+- **THEN** the request SHALL be issued a second time
+
+#### Scenario: An unsupported request is not retried
+- **WHEN** extraction fails because the request asked for something the model does not support
+- **THEN** the request SHALL be issued exactly once
