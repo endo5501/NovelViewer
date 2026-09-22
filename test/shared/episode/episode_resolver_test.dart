@@ -201,4 +201,80 @@ void main() {
       expect(resolveSourceFileForAllFiles(const []), isNull);
     });
   });
+
+  group('resolveFirstOccurrenceEpisode (簡易解析上限)', () {
+    test('returns the lowest episode among the matched files', () {
+      final resolved = resolveFirstOccurrenceEpisode(
+        matchedFileNames: const ['040_c.txt', '005_a.txt', '012_b.txt'],
+        folderFiles: const [
+          '005_a.txt',
+          '012_b.txt',
+          '040_c.txt',
+          '100_d.txt',
+        ],
+      );
+      expect(resolved?.episode, 5);
+      expect(resolved?.fileName, '005_a.txt');
+    });
+
+    test('ignores folder files the word does not occur in', () {
+      final resolved = resolveFirstOccurrenceEpisode(
+        matchedFileNames: const ['040_c.txt'],
+        folderFiles: const ['005_a.txt', '012_b.txt', '040_c.txt'],
+      );
+      expect(resolved?.episode, 40);
+      expect(resolved?.fileName, '040_c.txt');
+    });
+
+    test('uses the lexical rank for a prefix-less matched file', () {
+      final resolved = resolveFirstOccurrenceEpisode(
+        matchedFileNames: const ['part2.txt'],
+        folderFiles: const ['intro.txt', 'part1.txt', 'part2.txt'],
+      );
+      expect(resolved?.episode, 3);
+      expect(resolved?.fileName, 'part2.txt');
+    });
+
+    test('picks the lexically first file when several share the episode', () {
+      // `^(\d+)` gives both files episode 5, and both pass the upper-bound
+      // filter, so the reported source file has to be decided somehow. Lexical
+      // order matches the order the pipeline groups files in.
+      final resolved = resolveFirstOccurrenceEpisode(
+        matchedFileNames: const ['005_b.txt', '005_a.txt'],
+        folderFiles: const ['005_a.txt', '005_b.txt', '010_c.txt'],
+      );
+      expect(resolved?.episode, 5);
+      expect(resolved?.fileName, '005_a.txt');
+    });
+
+    test('resolves a prefixed file absent from the folder listing', () {
+      final resolved = resolveFirstOccurrenceEpisode(
+        matchedFileNames: const ['005_a.txt'],
+        folderFiles: const [],
+      );
+      expect(resolved?.episode, 5);
+    });
+
+    test('returns null when no file matched', () {
+      expect(
+        resolveFirstOccurrenceEpisode(
+          matchedFileNames: const [],
+          folderFiles: const ['005_a.txt'],
+        ),
+        isNull,
+      );
+    });
+
+    test('returns null when no matched file has a resolvable episode', () {
+      // Prefix-less and absent from the listing: the scope filter would drop
+      // it, so it cannot be the bound either.
+      expect(
+        resolveFirstOccurrenceEpisode(
+          matchedFileNames: const ['stray.txt'],
+          folderFiles: const ['005_a.txt'],
+        ),
+        isNull,
+      );
+    });
+  });
 }
