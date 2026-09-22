@@ -172,4 +172,131 @@ void main() {
       expect(results, hasLength(2));
     });
   });
+
+  group('TextSearchService.search is deliberately not ruby-aware', () {
+    // The Ctrl+F path highlights per segment, matching a ruby base against the
+    // query one segment at a time. Teaching only its match decision to span
+    // tag boundaries would list a hit the viewer cannot then highlight, so the
+    // two methods differ on purpose and this pins that.
+    test('a word spanning a ruby boundary is not matched', () async {
+      await createFile('001.txt', '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした');
+
+      final results = await service.search(tempDir.path, '紅蓮の剣');
+
+      expect(results, isEmpty);
+    });
+
+    test('a word wholly inside one ruby base is matched', () async {
+      await createFile('001.txt', '<ruby>紅蓮の剣<rt>ぐれんのけん</rt></ruby>を手にした');
+
+      final results = await service.search(tempDir.path, '紅蓮の剣');
+
+      expect(results, hasLength(1));
+    });
+  });
+
+  group('TextSearchService.searchWithContext matches on ruby base text', () {
+    test('a word spanning a ruby base and the plain text after it', () async {
+      await createFile('001.txt', '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした');
+
+      final results = await service.searchWithContext(tempDir.path, '紅蓮の剣');
+
+      expect(results, hasLength(1));
+      expect(results[0].matches, hasLength(1));
+      expect(results[0].matches[0].lineNumber, 1);
+    });
+
+    test('a word spanning an explicit rb base and plain text', () async {
+      // The full spelling Aozora Bunko emits: `<rb>` around the base and `<rp>`
+      // fallback parentheses around the reading. The base is what the reader
+      // sees, so the evidence search has to see the same thing.
+      await createFile(
+        '001.txt',
+        '<ruby><rb>紅蓮</rb><rp>（</rp><rt>ぐれん</rt><rp>）</rp></ruby>の剣を手にした',
+      );
+
+      final results = await service.searchWithContext(tempDir.path, '紅蓮の剣');
+
+      expect(results, hasLength(1));
+    });
+
+    test('a word spanning two adjacent ruby groups', () async {
+      await createFile(
+        '001.txt',
+        '<ruby>紅蓮<rt>ぐれん</rt></ruby>の<ruby>剣<rt>けん</rt></ruby>を抜いた',
+      );
+
+      final results = await service.searchWithContext(tempDir.path, '紅蓮の剣');
+
+      expect(results, hasLength(1));
+      expect(results[0].matches, hasLength(1));
+    });
+
+    test('a word spanning a ruby base and the plain text before it', () async {
+      await createFile('001.txt', '彼の<ruby>剣<rt>けん</rt></ruby>が光った');
+
+      final results = await service.searchWithContext(tempDir.path, '彼の剣');
+
+      expect(results, hasLength(1));
+    });
+
+    test('a word wholly inside one ruby base (unchanged)', () async {
+      await createFile('001.txt', '<ruby>紅蓮の剣<rt>ぐれんのけん</rt></ruby>を手にした');
+
+      final results = await service.searchWithContext(tempDir.path, '紅蓮の剣');
+
+      expect(results, hasLength(1));
+    });
+
+    test('a word in a line with no ruby at all (unchanged)', () async {
+      await createFile('001.txt', '紅蓮の剣を抜いた');
+
+      final results = await service.searchWithContext(tempDir.path, '紅蓮の剣');
+
+      expect(results, hasLength(1));
+    });
+
+    test('the reading itself does not match', () async {
+      await createFile('001.txt', '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣');
+
+      final results = await service.searchWithContext(tempDir.path, 'ぐれん');
+
+      expect(results, isEmpty);
+    });
+
+    test('the returned context keeps the ruby markup', () async {
+      await createFile('001.txt', '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした');
+
+      final results = await service.searchWithContext(tempDir.path, '紅蓮の剣');
+
+      // Ruby carries meaning beyond the reading, so the evidence handed to the
+      // LLM must still contain it: only the match decision is ruby-stripped.
+      expect(
+        results[0].matches[0].contextText,
+        '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした',
+      );
+    });
+
+    test('the extended context keeps the ruby markup of every line', () async {
+      await createFile(
+        '001.txt',
+        '前の<ruby>行<rt>ぎょう</rt></ruby>\n'
+            '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした\n'
+            '後の<ruby>行<rt>ぎょう</rt></ruby>',
+      );
+
+      final results = await service.searchWithContext(
+        tempDir.path,
+        '紅蓮の剣',
+        contextLines: 1,
+      );
+
+      expect(
+        results[0].matches[0].extendedContext,
+        '前の<ruby>行<rt>ぎょう</rt></ruby>\n'
+        '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした\n'
+        '後の<ruby>行<rt>ぎょう</rt></ruby>',
+      );
+    });
+  });
 }

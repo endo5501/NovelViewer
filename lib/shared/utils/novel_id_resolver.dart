@@ -14,10 +14,11 @@ import 'package:path/path.dart' as p;
 /// - [path] is outside [libraryRoot], or
 /// - no path component is a registered novel folder.
 ///
-/// Unlike `selectedNovelTitleProvider`, this resolver does **not** fall back to
-/// the first path segment when no registered ancestor is found: a `novel_id` is
-/// a persisted key, and returning an organizational folder name here is exactly
-/// the bug (F106) this function exists to prevent.
+/// This resolver does **not** fall back to a containing folder when no
+/// registered ancestor is found: a `novel_id` is a persisted key, and returning
+/// an organizational folder name here is exactly the bug (F106) this function
+/// exists to prevent. Callers that need a display fallback (the app bar's
+/// title) apply it themselves on top of a null result.
 String? resolveNovelId(
   String libraryRoot,
   String path,

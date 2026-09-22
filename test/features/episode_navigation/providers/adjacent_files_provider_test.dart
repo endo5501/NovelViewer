@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/episode_navigation/providers/adjacent_files_provider.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
 
 class _StubSelectedFileNotifier extends SelectedFileNotifier {
   final FileEntry? _initial;
@@ -29,9 +30,7 @@ ProviderContainer _makeContainer({
 }) {
   return ProviderContainer(
     overrides: [
-      directoryContentsProvider.overrideWith((ref) async {
-        return DirectoryContents(files: files, subdirectories: const []);
-      }),
+      readingEpisodesProvider.overrideWith((ref) async => files),
       selectedFileProvider.overrideWith(
         () => _StubSelectedFileNotifier(selected),
       ),
@@ -46,8 +45,8 @@ void main() {
       final container = _makeContainer(files: files, selected: files[2]);
       addTearDown(container.dispose);
 
-      // Ensure directory contents are loaded before reading the derived provider.
-      await container.read(directoryContentsProvider.future);
+      // Ensure the reading context's listing is loaded before the derived provider.
+      await container.read(readingEpisodesProvider.future);
 
       final adjacent = container.read(adjacentFilesProvider);
       expect(adjacent.prev, files[1]);
@@ -59,7 +58,7 @@ void main() {
       final container = _makeContainer(files: files, selected: files.first);
       addTearDown(container.dispose);
 
-      await container.read(directoryContentsProvider.future);
+      await container.read(readingEpisodesProvider.future);
 
       final adjacent = container.read(adjacentFilesProvider);
       expect(adjacent.prev, isNull);
@@ -71,7 +70,7 @@ void main() {
       final container = _makeContainer(files: files, selected: files.last);
       addTearDown(container.dispose);
 
-      await container.read(directoryContentsProvider.future);
+      await container.read(readingEpisodesProvider.future);
 
       final adjacent = container.read(adjacentFilesProvider);
       expect(adjacent.prev, files[3]);
@@ -83,7 +82,7 @@ void main() {
       final container = _makeContainer(files: files, selected: files.first);
       addTearDown(container.dispose);
 
-      await container.read(directoryContentsProvider.future);
+      await container.read(readingEpisodesProvider.future);
 
       final adjacent = container.read(adjacentFilesProvider);
       expect(adjacent.prev, isNull);
@@ -95,7 +94,7 @@ void main() {
       final container = _makeContainer(files: files, selected: null);
       addTearDown(container.dispose);
 
-      await container.read(directoryContentsProvider.future);
+      await container.read(readingEpisodesProvider.future);
 
       final adjacent = container.read(adjacentFilesProvider);
       expect(adjacent.prev, isNull);
@@ -111,7 +110,7 @@ void main() {
       final container = _makeContainer(files: files, selected: orphan);
       addTearDown(container.dispose);
 
-      await container.read(directoryContentsProvider.future);
+      await container.read(readingEpisodesProvider.future);
 
       final adjacent = container.read(adjacentFilesProvider);
       expect(adjacent.prev, isNull);
@@ -122,7 +121,7 @@ void main() {
       final container = _makeContainer(files: const [], selected: null);
       addTearDown(container.dispose);
 
-      await container.read(directoryContentsProvider.future);
+      await container.read(readingEpisodesProvider.future);
 
       final adjacent = container.read(adjacentFilesProvider);
       expect(adjacent.prev, isNull);

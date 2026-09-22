@@ -684,6 +684,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         addToDictionaryLabel: ttsSupported
             ? l10n.contextMenu_addToDictionary
             : null,
+        analyzeSimpleLabel: llmSupported
+            ? l10n.contextMenu_analyzeSimple
+            : null,
         analyzeNoSpoilerLabel: llmSupported
             ? l10n.contextMenu_analyzeNoSpoiler
             : null,

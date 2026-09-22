@@ -11,6 +11,8 @@ import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../../helpers/novel_data_db_fixture.dart';
@@ -24,6 +26,8 @@ ProviderContainer _containerFor({
   required LlmSummaryRepository repository,
   required FactCacheRepository factCacheRepository,
   required String? directoryPath,
+  String libraryPath = '/library',
+  String folderName = 'my_novel',
 }) {
   return ProviderContainer(
     overrides: [
@@ -37,9 +41,24 @@ ProviderContainer _containerFor({
       currentDirectoryProvider.overrideWith(
         () => CurrentDirectoryNotifier(directoryPath),
       ),
+      // The notifier resolves its novel folder from the browser's location, so
+      // the library root and the registered novel list have to be present for
+      // '/library/my_novel' to be a novel folder at all.
+      libraryPathProvider.overrideWithValue(libraryPath),
+      allNovelsProvider.overrideWith((ref) => [_novelNamed(folderName)]),
     ],
   );
 }
+
+NovelMetadata _novelNamed(String folderName) => NovelMetadata(
+  siteType: 'narou',
+  novelId: folderName,
+  title: 'Novel $folderName',
+  url: 'https://ncode.syosetu.com/$folderName/',
+  folderName: folderName,
+  episodeCount: 3,
+  downloadedAt: DateTime(2024, 1, 1),
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -195,7 +214,7 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .deleteEntry('アリス');
+          .deleteEntry('アリス', novelFolder: '/library/my_novel');
 
       final remaining = await repository.findAll();
       expect(remaining.map((r) => r.word).toSet(), {'ボブ'});
@@ -231,7 +250,7 @@ void main() {
       await container.read(llmSummaryHistoryProvider.future);
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .deleteEntry('アリス');
+          .deleteEntry('アリス', novelFolder: '/library/my_novel');
 
       expect(
         await factCacheRepository.findForWord(word: 'アリス'),
@@ -261,7 +280,7 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .deleteEntry('アリス');
+          .deleteEntry('アリス', novelFolder: '/library/my_novel');
 
       final refreshed = await container.read(llmSummaryHistoryProvider.future);
       expect(refreshed, isEmpty);
@@ -310,7 +329,7 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .deleteEntry('アリス');
+          .deleteEntry('アリス', novelFolder: '/library/my_novel');
     });
   });
 
@@ -339,13 +358,16 @@ void main() {
           await tempDir.delete(recursive: true);
         }
       });
-      final file = File('${tempDir.path}/040_chapter.txt');
+      final novelDir = Directory('${tempDir.path}/my_novel')
+        ..createSync(recursive: true);
+      final file = File('${novelDir.path}/040_chapter.txt');
       await file.writeAsString('line1\nアリスが登場した。\nline3');
 
       final container = _containerFor(
         repository: repository,
         factCacheRepository: factCacheRepository,
-        directoryPath: tempDir.path,
+        directoryPath: novelDir.path,
+        libraryPath: tempDir.path,
       );
       addTearDown(container.dispose);
 
@@ -353,7 +375,10 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .openEntry(entry(word: 'アリス', sourceFile: '040_chapter.txt'));
+          .openEntry(
+            entry(word: 'アリス', sourceFile: '040_chapter.txt'),
+            novelFolder: novelDir.path,
+          );
 
       final selected = container.read(selectedFileProvider);
       expect(selected?.name, '040_chapter.txt');
@@ -368,13 +393,16 @@ void main() {
           await tempDir.delete(recursive: true);
         }
       });
-      final file = File('${tempDir.path}/050_chapter.txt');
+      final novelDir = Directory('${tempDir.path}/my_novel')
+        ..createSync(recursive: true);
+      final file = File('${novelDir.path}/050_chapter.txt');
       await file.writeAsString('全く関係ない本文だけ\nが書かれている');
 
       final container = _containerFor(
         repository: repository,
         factCacheRepository: factCacheRepository,
-        directoryPath: tempDir.path,
+        directoryPath: novelDir.path,
+        libraryPath: tempDir.path,
       );
       addTearDown(container.dispose);
 
@@ -382,7 +410,10 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .openEntry(entry(word: 'いない単語', sourceFile: '050_chapter.txt'));
+          .openEntry(
+            entry(word: 'いない単語', sourceFile: '050_chapter.txt'),
+            novelFolder: novelDir.path,
+          );
 
       expect(
         p.equals(container.read(selectedFileProvider)?.path ?? '', file.path),
@@ -403,7 +434,10 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .openEntry(entry(word: 'アリス', sourceFile: null));
+          .openEntry(
+            entry(word: 'アリス', sourceFile: null),
+            novelFolder: '/library/my_novel',
+          );
 
       expect(container.read(selectedFileProvider), isNull);
       expect(container.read(bookmarkJumpLineProvider), isNull);
@@ -421,7 +455,10 @@ void main() {
 
       await container
           .read(llmSummaryHistoryProvider.notifier)
-          .openEntry(entry(word: 'アリス', sourceFile: '040_chapter.txt'));
+          .openEntry(
+            entry(word: 'アリス', sourceFile: '040_chapter.txt'),
+            novelFolder: '/library/nonexistent',
+          );
 
       expect(container.read(selectedFileProvider), isNull);
       expect(container.read(bookmarkJumpLineProvider), isNull);

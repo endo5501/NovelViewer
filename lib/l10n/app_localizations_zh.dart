@@ -314,6 +314,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fileBrowser_newFolderTooltip => '新建文件夹';
 
   @override
+  String get fileBrowser_downloadTooltip => '下载小说';
+
+  @override
   String get fileBrowser_newFolderTitle => '新建文件夹';
 
   @override
@@ -671,6 +674,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contextMenu_copy => '复制';
 
   @override
+  String get contextMenu_analyzeSimple => '开始分析（简易）';
+
+  @override
   String get contextMenu_analyzeNoSpoiler => '开始分析（无剧透）';
 
   @override
@@ -748,6 +754,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hoverPopup_reanalyzeButton => '重新分析';
 
   @override
+  String get hoverPopup_reanalyzeSimple => '简易分析';
+
+  @override
   String hoverPopup_reanalyzeUpToCurrent(int episode) {
     return '至当前页（第$episode文件）';
   }
@@ -810,6 +819,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeScreen_downloadTooltip => '下载小说';
+
+  @override
+  String get homeScreen_refreshNovelTooltip => '更新小说';
 
   @override
   String get homeScreen_searchTooltip => '搜索';

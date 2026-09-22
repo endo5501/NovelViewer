@@ -45,7 +45,7 @@ void main() {
           () => _TestCurrentDirectoryNotifier(currentDir),
         ),
         libraryPathProvider.overrideWithValue(libraryRoot.path),
-        allNovelsProvider.overrideWith((ref) async => novels),
+        allNovelsProvider.overrideWith((ref) => novels),
       ],
     );
     addTearDown(container.dispose);

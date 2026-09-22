@@ -147,6 +147,7 @@
   "fileBrowser_moveMenuItem": "移動",
   "fileBrowser_renameFolderMenuItem": "フォルダ名変更",
   "fileBrowser_newFolderTooltip": "新規フォルダ",
+  "fileBrowser_downloadTooltip": "小説ダウンロード",
   "fileBrowser_newFolderTitle": "新規フォルダ",
   "fileBrowser_folderNameLabel": "フォルダ名",
   "fileBrowser_createButton": "作成",
@@ -401,6 +402,7 @@
   "ttsDictionary_deleteTooltip": "削除",
   "contextMenu_addToDictionary": "辞書追加",
   "contextMenu_copy": "コピー",
+  "contextMenu_analyzeSimple": "解析開始(簡易)",
   "contextMenu_analyzeNoSpoiler": "解析開始(ネタバレなし)",
   "contextMenu_analyzeSpoiler": "解析開始(ネタバレあり)",
   "contextMenu_copySubmenu": "コピー",
@@ -480,6 +482,7 @@
   },
   "hoverPopup_futureSnapshotWarning": "現在より先の解析です",
   "hoverPopup_reanalyzeButton": "再解析",
+  "hoverPopup_reanalyzeSimple": "簡易解析",
   "hoverPopup_reanalyzeUpToCurrent": "現在ページまで ({episode}ファイル時点)",
   "@hoverPopup_reanalyzeUpToCurrent": {
     "placeholders": {
@@ -514,6 +517,7 @@
   "homeScreen_hideRightColumnTooltip": "右カラムを非表示",
   "homeScreen_showRightColumnTooltip": "右カラムを表示",
   "homeScreen_downloadTooltip": "小説ダウンロード",
+  "homeScreen_refreshNovelTooltip": "小説を更新",
   "homeScreen_searchTooltip": "検索",
   "leftColumn_filesTab": "ファイル",
   "leftColumn_bookmarksTab": "ブックマーク",

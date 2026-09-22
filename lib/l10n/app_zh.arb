@@ -105,6 +105,7 @@
   "fileBrowser_moveMenuItem": "移动",
   "fileBrowser_renameFolderMenuItem": "重命名文件夹",
   "fileBrowser_newFolderTooltip": "新建文件夹",
+  "fileBrowser_downloadTooltip": "下载小说",
   "fileBrowser_newFolderTitle": "新建文件夹",
   "fileBrowser_folderNameLabel": "文件夹名称",
   "fileBrowser_createButton": "创建",
@@ -211,6 +212,7 @@
   "ttsDictionary_deleteTooltip": "删除",
   "contextMenu_addToDictionary": "添加到词典",
   "contextMenu_copy": "复制",
+  "contextMenu_analyzeSimple": "开始分析（简易）",
   "contextMenu_analyzeNoSpoiler": "开始分析（无剧透）",
   "contextMenu_analyzeSpoiler": "开始分析（含剧透）",
   "contextMenu_copySubmenu": "复制",
@@ -290,6 +292,7 @@
   },
   "hoverPopup_futureSnapshotWarning": "该摘要包含尚未阅读的内容",
   "hoverPopup_reanalyzeButton": "重新分析",
+  "hoverPopup_reanalyzeSimple": "简易分析",
   "hoverPopup_reanalyzeUpToCurrent": "至当前页（第{episode}文件）",
   "@hoverPopup_reanalyzeUpToCurrent": {
     "placeholders": {
@@ -324,6 +327,7 @@
   "homeScreen_hideRightColumnTooltip": "隐藏右栏",
   "homeScreen_showRightColumnTooltip": "显示右栏",
   "homeScreen_downloadTooltip": "下载小说",
+  "homeScreen_refreshNovelTooltip": "更新小说",
   "homeScreen_searchTooltip": "搜索",
   "leftColumn_filesTab": "文件",
   "leftColumn_bookmarksTab": "书签",

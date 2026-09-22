@@ -8,8 +8,18 @@ import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_widge
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
+import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
+import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+/// Throws if the dropdown ever reaches for a folder search while building
+/// itself.
+class _ForbiddenSearch implements TextSearchService {
+  @override
+  Object? noSuchMethod(Invocation invocation) =>
+      fail('building the re-analyze menu must not search the folder');
+}
 
 /// Recording stub: lets the test observe what episode / sourceFile the
 /// re-analyze menu hands to the runner without invoking the real LLM stack.
@@ -25,6 +35,7 @@ class _RecordingAnalysisRunner implements AnalysisRunner {
     required String word,
     required int coveredUpToEpisode,
     String? sourceFileName,
+    String? novelFolderPath,
   }) async {
     callCount++;
     lastWord = word;
@@ -32,14 +43,20 @@ class _RecordingAnalysisRunner implements AnalysisRunner {
     lastSourceFileName = sourceFileName;
   }
 
+  AnalysisScope? lastScope;
+
+  /// The simple-analysis item goes through here rather than [run]: which
+  /// episode it resolves to is only known after searching the folder, which
+  /// building the menu must not do.
   @override
   Future<void> runWithScope({
     required BuildContext context,
     required String word,
     required AnalysisScope scope,
   }) async {
-    // Not exercised by the re-analyze menu (which calls `run` directly with
-    // a resolved episode/source).
+    callCount++;
+    lastWord = word;
+    lastScope = scope;
   }
 }
 
@@ -369,6 +386,118 @@ void main() {
       expect(runner.callCount, 1);
       expect(runner.lastCoveredUpToEpisode, 120);
       expect(runner.lastSourceFileName, '120.txt');
+    });
+  });
+
+  group('Re-analysis menu simple-analysis item', () {
+    /// Fails the test if the dropdown ever searches the folder to build
+    /// itself: which episode simple analysis resolves to is only known after
+    /// a search, and opening a menu must not pay for one.
+    ProviderContainer containerWith(
+      _RecordingAnalysisRunner runner, {
+      List<WordSummary> snapshots = const [],
+    }) => ProviderContainer(
+      overrides: [
+        hoverPopupCacheProvider((
+          folderPath: 'novel_a',
+          word: 'アリス',
+        )).overrideWith((_) async => snapshots),
+        llmSummaryRepositoryProvider.overrideWith(
+          (ref, folderPath) async =>
+              throw UnsupportedError('not needed in this test'),
+        ),
+        textSearchServiceProvider.overrideWithValue(_ForbiddenSearch()),
+        analysisRunnerProvider.overrideWithValue(runner),
+      ],
+    );
+
+    Future<void> openDropdown(
+      WidgetTester tester,
+      ProviderContainer container,
+    ) async {
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            locale: Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Material(
+              child: HoverPopupWidget(
+                folderPath: 'novel_a',
+                word: 'アリス',
+                currentEpisode: 6,
+                currentFileName: '006.txt',
+                maxEpisodeInFolder: 120,
+                maxEpisodeFileName: '120.txt',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('hover_popup_reanalyze_button')));
+      await tester.pumpAndSettle();
+    }
+
+    List<String?> menuLabels(WidgetTester tester) => tester
+        .widgetList<MenuItemButton>(find.byType(MenuItemButton))
+        .map((b) => (b.child as Text).data)
+        .toList();
+
+    testWidgets('lists three items, simple analysis first', (tester) async {
+      final runner = _RecordingAnalysisRunner();
+      final container = containerWith(runner, snapshots: [_snap(3, '序盤要約')]);
+      addTearDown(container.dispose);
+
+      await openDropdown(tester, container);
+
+      expect(menuLabels(tester), [
+        '簡易解析',
+        '現在ページまで (6ファイル時点)',
+        '全話まで (120ファイル時点)',
+      ]);
+    });
+
+    testWidgets('carries no episode and no overwrite suffix', (tester) async {
+      final runner = _RecordingAnalysisRunner();
+      // Snapshots at several episodes, including the current page's, so the
+      // other two items do get the suffix and this one still must not.
+      final container = containerWith(
+        runner,
+        snapshots: [_snap(3, 'あ'), _snap(6, 'い'), _snap(120, 'う')],
+      );
+      addTearDown(container.dispose);
+
+      await openDropdown(tester, container);
+
+      final labels = menuLabels(tester);
+      expect(labels.first, '簡易解析');
+      expect(labels.first, isNot(contains('上書き')));
+      expect(
+        labels[1],
+        contains('上書き'),
+        reason: 'the scoped items keep their suffix behaviour',
+      );
+    });
+
+    testWidgets('tapping it runs the first-occurrence scope', (tester) async {
+      final runner = _RecordingAnalysisRunner();
+      final container = containerWith(runner, snapshots: [_snap(3, '序盤要約')]);
+      addTearDown(container.dispose);
+
+      await openDropdown(tester, container);
+      await tester.tap(find.byKey(const Key('hover_popup_reanalyze_simple')));
+      await tester.pumpAndSettle();
+
+      expect(runner.callCount, 1);
+      expect(runner.lastWord, 'アリス');
+      expect(runner.lastScope, AnalysisScope.firstOccurrence);
+      expect(
+        runner.lastCoveredUpToEpisode,
+        isNull,
+        reason: 'the episode is resolved by the runner, not by the menu',
+      );
     });
   });
 

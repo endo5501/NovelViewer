@@ -13,9 +13,12 @@ import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
+import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config_problem.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/shared/failure/failure_report.dart';
@@ -25,14 +28,26 @@ import 'package:novel_viewer/shared/failure/failure_snackbar.dart';
 /// resolves a `scope` into a concrete `coveredUpToEpisode` using the current
 /// directory and file. Persistence is keyed by the resolved integer; the
 /// scope itself is never written to disk.
-enum AnalysisScope { upToCurrent, upToAll }
+///
+/// [firstOccurrence] is the "簡易解析" scope. It needs no representation of its
+/// own beyond a bound: the service keeps only files at or below the bound that
+/// contain the word, and no file below the word's first occurrence contains
+/// it, so a bound of that episode leaves exactly its files as evidence.
+enum AnalysisScope { firstOccurrence, upToCurrent, upToAll }
 
 abstract class AnalysisRunner {
+  /// Runs an analysis of [word] bounded by [coveredUpToEpisode].
+  ///
+  /// [novelFolderPath] is the novel the request was made against, for a caller
+  /// that already resolved one and may have awaited something since. Omitting
+  /// it resolves the novel here, which is correct only for a caller that
+  /// reaches this synchronously from the reader's action.
   Future<void> run({
     required BuildContext context,
     required String word,
     required int coveredUpToEpisode,
     String? sourceFileName,
+    String? novelFolderPath,
   });
 
   /// Convenience entry-point for context menus and the hover popup re-analyze
@@ -60,6 +75,24 @@ class DefaultAnalysisRunner implements AnalysisRunner {
   /// user-facing action to explain, because no control was offered.
   bool get _supported => _ref.read(llmSummarySupportedProvider);
 
+  /// Whether an analysis is already under way.
+  ///
+  /// Nothing is on screen between the request and the modal: [_run] pushes it
+  /// only once the client and repository futures settle, and the
+  /// first-occurrence scope searches the folder before that. A reader who
+  /// reads that silence as "nothing happened" and asks again would otherwise
+  /// start a second analysis — twice the LLM calls, and two runs racing each
+  /// other's snapshot and fact-cache writes for the same word.
+  ///
+  /// Both entry points take the flag, so a refused request does not even pay
+  /// for the folder search, and both release it in a `finally`: a run that
+  /// fails must not leave the runner shut for the rest of the session.
+  ///
+  /// Refusing is silent. The second request asked for the analysis that is
+  /// already starting, so there is nothing to tell the reader that the modal
+  /// is not about to say.
+  bool _analysisInFlight = false;
+
   @override
   Future<void> runWithScope({
     required BuildContext context,
@@ -67,8 +100,26 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     required AnalysisScope scope,
   }) async {
     if (!_supported) return;
+    if (_analysisInFlight) return;
+    _analysisInFlight = true;
+    try {
+      await _runWithScope(context: context, word: word, scope: scope);
+    } finally {
+      _analysisInFlight = false;
+    }
+  }
+
+  Future<void> _runWithScope({
+    required BuildContext context,
+    required String word,
+    required AnalysisScope scope,
+  }) async {
     final l10n = AppLocalizations.of(context)!;
-    final directory = _ref.read(currentDirectoryProvider);
+    // The same folder [run] will use. Reading the browser's directory here
+    // instead would leave a second notion of "which folder" in the one method
+    // that decides the episode numbers, which is where a mismatch does its
+    // damage — and it would list a folder that [run] is about to refuse.
+    final directory = _ref.read(summaryNovelFolderProvider);
     if (directory == null) {
       _snack(context, l10n.llmAnalysis_noFolderOpen);
       return;
@@ -77,6 +128,54 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     final int episode;
     final String? sourceFile;
     switch (scope) {
+      case AnalysisScope.firstOccurrence:
+        // A selection came from a page on screen, so without one there is no
+        // reading position to keep the bound at or below — refuse rather than
+        // fabricate a snapshot, as the no-spoiler scope does.
+        if (selectedFile == null) {
+          _snack(context, l10n.llmAnalysis_noFolderOpen);
+          return;
+        }
+        final currentEpisode = resolveUpperBoundForCurrent(
+          directoryPath: directory,
+          currentFile: selectedFile,
+        );
+        final ({int episode, String fileName})? first;
+        try {
+          first = await resolveFirstOccurrence(
+            directoryPath: directory,
+            searchService: _ref.read(textSearchServiceProvider),
+            word: word,
+          );
+        } catch (e, st) {
+          // Report it and stop. Treating a broken search as "the word occurs
+          // nowhere" would fall through to the reading-position bound below
+          // and run the scope this mode exists to avoid — one extraction per
+          // hit file instead of one — and save the result as though it were a
+          // simple analysis. The bound is named as unresolved because it never
+          // was.
+          if (!context.mounted) return;
+          showFailureSnackBar(
+            context,
+            FailureReport(
+              headline: l10n.llmAnalysis_failed,
+              cause: e.toString(),
+              stackTrace: st,
+              diagnostics: _diagnostics(
+                word: word,
+                coveredUpToEpisode: null,
+                sourceFileName: selectedFile.name,
+              ),
+            ),
+          );
+          return;
+        }
+        // A word that occurs nowhere is different: every bound leaves the same
+        // empty evidence, so fall back to the reading position, which is
+        // defined and spoiler-free. The run then fails with the existing "no
+        // facts" notification, exactly as the no-spoiler scope would for it.
+        episode = first?.episode ?? currentEpisode;
+        sourceFile = first?.fileName ?? selectedFile.name;
       case AnalysisScope.upToCurrent:
         // Refuse to fabricate a phantom episode-1 snapshot for a state where
         // the user hasn't opened any file — the resulting snapshot would
@@ -95,11 +194,16 @@ class DefaultAnalysisRunner implements AnalysisRunner {
         episode = resolveUpperBoundForAll(directory);
         sourceFile = resolveSourceFileForAll(directory);
     }
-    await run(
+    // Resolving the first occurrence searches the folder, so the widget may
+    // have gone by the time we get here.
+    if (!context.mounted) return;
+    // The inner one: this method already holds the flag.
+    await _run(
       context: context,
       word: word,
       coveredUpToEpisode: episode,
       sourceFileName: sourceFile,
+      novelFolderPath: directory,
     );
   }
 
@@ -109,14 +213,74 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     required String word,
     required int coveredUpToEpisode,
     String? sourceFileName,
+    String? novelFolderPath,
   }) async {
     if (!_supported) return;
+    if (_analysisInFlight) return;
+    _analysisInFlight = true;
+    try {
+      await _run(
+        context: context,
+        word: word,
+        coveredUpToEpisode: coveredUpToEpisode,
+        sourceFileName: sourceFileName,
+        novelFolderPath: novelFolderPath,
+      );
+    } finally {
+      _analysisInFlight = false;
+    }
+  }
+
+  Future<void> _run({
+    required BuildContext context,
+    required String word,
+    required int coveredUpToEpisode,
+    String? sourceFileName,
+    String? novelFolderPath,
+  }) async {
     final l10n = AppLocalizations.of(context)!;
-    final directory = _ref.read(currentDirectoryProvider);
-    if (directory == null) {
+    // One folder does both jobs: the summaries are written to its
+    // `novel_data.db`, and the text to analyse — along with the episode number
+    // the snapshot is keyed by and the `source_file` it records — is read from
+    // the same place. [summaryNovelFolderProvider] is null wherever those
+    // would not be the same folder, and refusing there is what keeps a
+    // `novel_data.db` from being created outside a novel, since opening one
+    // creates the file.
+    //
+    // Read once, synchronously, and captured: this method spans awaits, and a
+    // reader who moves on mid-request must not have one novel's text written
+    // to another novel's database.
+    //
+    // A caller that already resolved the novel passes it in rather than
+    // letting it be read again here. [runWithScope] does, because resolving a
+    // first-occurrence bound searches the folder and that search is awaited:
+    // by the time this runs the reader may be in another novel, and reading
+    // the provider again would key one novel's word, bound and source file
+    // into another novel's database. The captured path is still checked rather
+    // than trusted — the novel may have been deleted or unregistered while the
+    // search ran, and opening a repository creates `novel_data.db` wherever it
+    // points.
+    final String? novelFolder;
+    if (novelFolderPath == null) {
+      novelFolder = _ref.read(summaryNovelFolderProvider);
+    } else {
+      novelFolder =
+          isRegisteredNovelFolder(
+            folderPath: novelFolderPath,
+            libraryPath: _ref.read(libraryPathProvider),
+            novels: _ref.read(allNovelsProvider).value,
+          )
+          ? novelFolderPath
+          : null;
+    }
+    if (novelFolder == null) {
       _snack(context, l10n.llmAnalysis_noFolderOpen);
       return;
     }
+    // Captured with the folder, for the same reason: the file a snapshot is
+    // recorded against has to be the one that was open when the analysis was
+    // asked for, not whatever the reader moved to while it was starting up.
+    final openFileName = _ref.read(selectedFileProvider)?.name;
 
     // Wait for the async dependencies of `llmSummaryServiceProvider` to settle
     // before reading it. The service is a *synchronous* provider that returns
@@ -127,9 +291,9 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     // `factCacheRepositoryProvider`, so without this the first analysis after
     // launch would no-op.
     await _ref.read(llmClientProvider.future);
-    await _ref.read(llmSummaryRepositoryProvider(directory).future);
-    await _ref.read(factCacheRepositoryProvider(directory).future);
-    final service = _ref.read(llmSummaryServiceProvider(directory));
+    await _ref.read(llmSummaryRepositoryProvider(novelFolder).future);
+    await _ref.read(factCacheRepositoryProvider(novelFolder).future);
+    final service = _ref.read(llmSummaryServiceProvider(novelFolder));
     if (service == null) {
       final message = await _noServiceMessage(l10n);
       if (!context.mounted) return;
@@ -138,8 +302,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     }
     if (!context.mounted) return;
 
-    final selectedFile = _ref.read(selectedFileProvider);
-    final resolvedSourceFile = sourceFileName ?? selectedFile?.name;
+    final resolvedSourceFile = sourceFileName ?? openFileName;
 
     if (!context.mounted) return;
     final navigator = Navigator.of(context, rootNavigator: true);
@@ -158,7 +321,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     FailureReport? failure;
     try {
       await service.generateSummary(
-        directoryPath: directory,
+        directoryPath: novelFolder,
         word: word,
         coveredUpToEpisode: coveredUpToEpisode,
         sourceFileName: resolvedSourceFile,
@@ -170,7 +333,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       );
       _ref.invalidate(llmSummaryHistoryProvider);
       _ref.invalidate(
-        hoverPopupCacheProvider((folderPath: directory, word: word)),
+        hoverPopupCacheProvider((folderPath: novelFolder, word: word)),
       );
       // The popup's manual activeEpisode override may now point at a
       // snapshot that no longer exists post-overwrite — reset it so the
@@ -238,9 +401,12 @@ class DefaultAnalysisRunner implements AnalysisRunner {
   /// Deliberately no endpoint: a self-hosted `baseUrl` carries the reader's
   /// private network address, and this text is meant to be pasted into a bug
   /// report. The provider kind and model still identify the configuration.
+  ///
+  /// [coveredUpToEpisode] is null when the run failed before a bound could be
+  /// resolved, which simple analysis can: it has to search the folder first.
   Map<String, String?> _diagnostics({
     required String word,
-    required int coveredUpToEpisode,
+    required int? coveredUpToEpisode,
     required String? sourceFileName,
   }) {
     final config = _ref.read(llmConfigProvider);
@@ -250,7 +416,9 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       'provider': config.provider.name,
       'model': config.model,
       'word': word,
-      'covered up to': '$coveredUpToEpisode',
+      'covered up to': coveredUpToEpisode == null
+          ? '(unresolved)'
+          : '$coveredUpToEpisode',
       'file': sourceFileName,
     };
   }
@@ -308,6 +476,29 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
   }
+}
+
+/// Resolve "解析開始(簡易)" → the episode of [word]'s first occurrence in
+/// [directoryPath] and the file it was read from, or `null` when the word
+/// occurs in none of the folder's text files.
+///
+/// The occurrences are found with the same search the pipeline uses to collect
+/// evidence, rather than a cheaper lookup of its own. A second implementation
+/// of the match rule could disagree with the first, and then the bound would
+/// name a file the run finds nothing in — failing with "no facts" on a word
+/// the reader can see on the page. One full folder read is noise beside the
+/// two LLM calls this mode costs, and consistency is structural instead of
+/// maintained.
+Future<({int episode, String fileName})?> resolveFirstOccurrence({
+  required String directoryPath,
+  required TextSearchService searchService,
+  required String word,
+}) async {
+  final results = await searchService.searchWithContext(directoryPath, word);
+  return resolveFirstOccurrenceEpisode(
+    matchedFileNames: results.map((r) => r.fileName).toList(),
+    folderFiles: listSortedTextFileNames(directoryPath),
+  );
 }
 
 /// Resolve "解析開始(ネタバレなし)" → the inclusive upper bound corresponding

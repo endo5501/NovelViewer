@@ -318,6 +318,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get fileBrowser_newFolderTooltip => '新規フォルダ';
 
   @override
+  String get fileBrowser_downloadTooltip => '小説ダウンロード';
+
+  @override
   String get fileBrowser_newFolderTitle => '新規フォルダ';
 
   @override
@@ -677,6 +680,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get contextMenu_copy => 'コピー';
 
   @override
+  String get contextMenu_analyzeSimple => '解析開始(簡易)';
+
+  @override
   String get contextMenu_analyzeNoSpoiler => '解析開始(ネタバレなし)';
 
   @override
@@ -754,6 +760,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get hoverPopup_reanalyzeButton => '再解析';
 
   @override
+  String get hoverPopup_reanalyzeSimple => '簡易解析';
+
+  @override
   String hoverPopup_reanalyzeUpToCurrent(int episode) {
     return '現在ページまで ($episodeファイル時点)';
   }
@@ -816,6 +825,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get homeScreen_downloadTooltip => '小説ダウンロード';
+
+  @override
+  String get homeScreen_refreshNovelTooltip => '小説を更新';
 
   @override
   String get homeScreen_searchTooltip => '検索';

@@ -59,7 +59,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
-            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
+            allNovelsProvider.overrideWith((ref) => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
               () => _TestCurrentDirectoryNotifier('/library/n1234'),
             ),
@@ -105,7 +105,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
-            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
+            allNovelsProvider.overrideWith((ref) => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
               () => _TestCurrentDirectoryNotifier('/library/n1234'),
             ),
@@ -148,7 +148,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
-            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
+            allNovelsProvider.overrideWith((ref) => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
               () => _TestCurrentDirectoryNotifier('/library/n1234'),
             ),
@@ -182,7 +182,7 @@ void main() {
         ProviderScope(
           overrides: [
             libraryPathProvider.overrideWithValue('/library'),
-            allNovelsProvider.overrideWith((ref) async => [_novel('n1234')]),
+            allNovelsProvider.overrideWith((ref) => [_novel('n1234')]),
             currentDirectoryProvider.overrideWith(
               () => _TestCurrentDirectoryNotifier('/library'),
             ),

@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.d
 enum VerticalContextAction {
   copy,
   addToDictionary,
+  analyzeSimple,
   analyzeNoSpoiler,
   analyzeSpoiler,
 }
@@ -18,9 +19,15 @@ enum VerticalContextAction {
 /// supplied. The caller withholds the dictionary label where speech synthesis
 /// is unavailable and the analysis labels where LLM summary is, which keeps
 /// this builder a pure function that knows nothing about platforms.
+///
+/// The three analysis entries are offered together — one condition, whether
+/// analysis is available at all, gates all of them — and run lightest first:
+/// simple analysis reads only the episode that introduces the word, so it is
+/// both the cheapest and the one that can reveal the least.
 List<PopupMenuEntry<VerticalContextAction>> buildVerticalContextMenuItems({
   required String copyLabel,
   String? addToDictionaryLabel,
+  String? analyzeSimpleLabel,
   String? analyzeNoSpoilerLabel,
   String? analyzeSpoilerLabel,
 }) {
@@ -30,6 +37,11 @@ List<PopupMenuEntry<VerticalContextAction>> buildVerticalContextMenuItems({
       PopupMenuItem(
         value: VerticalContextAction.addToDictionary,
         child: Text(addToDictionaryLabel),
+      ),
+    if (analyzeSimpleLabel != null)
+      PopupMenuItem(
+        value: VerticalContextAction.analyzeSimple,
+        child: Text(analyzeSimpleLabel),
       ),
     if (analyzeNoSpoilerLabel != null)
       PopupMenuItem(
@@ -62,6 +74,8 @@ void dispatchVerticalContextAction(
       onCopy(selectedText);
     case VerticalContextAction.addToDictionary:
       onAddToDictionary?.call(selectedText);
+    case VerticalContextAction.analyzeSimple:
+      onAnalyze?.call(selectedText, AnalysisScope.firstOccurrence);
     case VerticalContextAction.analyzeNoSpoiler:
       onAnalyze?.call(selectedText, AnalysisScope.upToCurrent);
     case VerticalContextAction.analyzeSpoiler:

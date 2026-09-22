@@ -15,7 +15,11 @@ import 'package:novel_viewer/features/file_browser/presentation/move_destination
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_delete/providers/novel_delete_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
-import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
+import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
+import 'package:novel_viewer/features/novel_refresh/domain/refresh_target.dart';
+import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
+import 'package:novel_viewer/features/novel_refresh/presentation/refresh_progress_dialog.dart';
+import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
 import 'package:novel_viewer/features/file_browser/presentation/rename_title_dialog.dart';
 import 'package:novel_viewer/features/file_browser/presentation/new_folder_dialog.dart';
 import 'package:novel_viewer/features/tts/domain/tts_episode_status.dart';
@@ -205,12 +209,35 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     );
   }
 
+  /// Whether a new organizational folder may be created in [currentDir].
+  ///
+  /// Only where we positively know it is neither a novel folder nor inside
+  /// one. Everything else that puts content into the library — the move
+  /// destination dialog, the download destination list — already refuses the
+  /// inside of a novel folder, and nothing in the application can move an
+  /// episode into a subfolder afterwards, so a folder created there could
+  /// only ever sit empty.
+  ///
+  /// The novel list still loading counts as "don't know": the registered-name
+  /// set is empty then, and an empty set makes every folder look unregistered.
+  bool _canCreateFolderIn(String currentDir) {
+    final libraryPath = ref.watch(libraryPathProvider);
+    final novels = ref.watch(allNovelsProvider).value;
+    if (libraryPath == null || novels == null) return false;
+    return resolveNovelFolderPath(libraryPath, currentDir, {
+          for (final novel in novels) novel.folderName,
+        }) ==
+        null;
+  }
+
   Widget _buildToolbar(BuildContext context, String? currentDir) {
     var hasParent = false;
+    var canCreateFolder = false;
     if (currentDir != null) {
       final libraryPath = ref.watch(libraryPathProvider);
       hasParent =
           getParentDirectory(currentDir, libraryPath: libraryPath) != null;
+      canCreateFolder = _canCreateFolderIn(currentDir);
     }
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -226,12 +253,25 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
             ),
           if (currentDir != null)
             IconButton(
+              key: const Key('file_browser_new_folder_button'),
               icon: const Icon(Icons.create_new_folder),
-              onPressed: () => _showNewFolderDialog(context, currentDir),
+              onPressed: canCreateFolder
+                  ? () => _showNewFolderDialog(context, currentDir)
+                  : null,
               tooltip: AppLocalizations.of(
                 context,
               )!.fileBrowser_newFolderTooltip,
             ),
+          // The drawer covers the app bar, so while the reader is here its
+          // download button is out of reach — and it would mean a refresh
+          // anyway if they had a novel open. Fetching something new belongs
+          // with the library, which is what they are looking at.
+          IconButton(
+            key: const Key('file_browser_download_button'),
+            icon: const Icon(Icons.download),
+            onPressed: () => showDownloadDialog(context, ref),
+            tooltip: AppLocalizations.of(context)!.fileBrowser_downloadTooltip,
+          ),
         ],
       ),
     );
@@ -249,7 +289,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
             .read(fileSystemServiceProvider)
             .createDirectory(currentDir, name);
         if (!context.mounted) return;
-        ref.invalidate(directoryContentsProvider);
+        invalidateEpisodeListings(ref.invalidate);
       } on DirectoryOpException catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -425,6 +465,16 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         ),
       ),
       subtitle: badge == null ? null : _ReadingProgressBar(badge: badge),
+      // Entering a folder still clears the selection, for now.
+      //
+      // Keeping the episode open while the browser moves elsewhere is the
+      // point of the reading context, but it is not safe yet: TTS, bookmarks,
+      // the dictionary and LLM analysis all still resolve "the current novel"
+      // from this directory, and `setDirectory` releases the per-folder
+      // database handles of the folder being left. With a selection left
+      // behind, those would act on one novel's folder using another novel's
+      // file. The clear is what makes that unreachable, so it stays until
+      // those consumers move onto the reading context too.
       onTap: () {
         ref.read(currentDirectoryProvider.notifier).setDirectory(dir.path);
         ref.read(selectedFileProvider.notifier).clear();
@@ -567,7 +617,13 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
       if (followed != null) {
         ref.read(currentDirectoryProvider.notifier).setDirectory(followed);
       }
-      ref.invalidate(directoryContentsProvider);
+      // The open episode follows too. Its path is what the app bar resolves
+      // the refresh target from, so a selection left at the old location would
+      // send the next update back there and duplicate the folder — the very
+      // thing resolving the destination from the novel's physical parent
+      // exists to prevent.
+      _followOpenEpisode(from: dir.path, to: newPath);
+      invalidateEpisodeListings(ref.invalidate);
     } on DirectoryOpException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(
@@ -609,7 +665,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
             .read(fileSystemServiceProvider)
             .deleteEmptyDirectory(dir.path);
         if (!context.mounted) return;
-        ref.invalidate(directoryContentsProvider);
+        invalidateEpisodeListings(ref.invalidate);
       } on DirectoryOpException catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -639,11 +695,15 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
           read: ref.read,
           invalidate: ref.invalidate,
         );
-        await ref
+        final renamed = await ref
             .read(fileSystemServiceProvider)
             .renameDirectory(dir.path, newName);
         if (!context.mounted) return;
-        ref.invalidate(directoryContentsProvider);
+        // The open episode follows the rename, exactly as it follows a move:
+        // its path is what the reading context resolves from, so a selection
+        // left at the old name would list a folder that is no longer there.
+        _followOpenEpisode(from: dir.path, to: renamed.path);
+        invalidateEpisodeListings(ref.invalidate);
       } on DirectoryOpException catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -653,31 +713,37 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     });
   }
 
-  void _startRefresh(BuildContext context, DirectoryEntry dir) {
-    final downloadState = ref.read(downloadProvider);
-    if (downloadState.status == DownloadStatus.downloading) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.fileBrowser_downloadInProgressWarning,
-          ),
-        ),
-      );
-      return;
-    }
-
-    // Re-download into the novel folder's current physical parent so a novel
-    // stored inside an organizational subfolder updates in place instead of
-    // being duplicated at the library root. `dir.path` is the novel folder's
-    // absolute path; its dirname is the parent directory.
+  /// Rebases the open episode's path when the folder holding it is moved or
+  /// renamed, so the reading context keeps resolving to where it now lives.
+  ///
+  /// Deleting clears the selection instead — there is nothing left to read.
+  void _followOpenEpisode({required String from, required String to}) {
+    final selected = ref.read(selectedFileProvider);
+    final followed = followedCurrentDirectory(
+      currentDir: selected?.path,
+      sourcePath: from,
+      newSourcePath: to,
+    );
+    if (followed == null) return;
     ref
-        .read(downloadProvider.notifier)
-        .refreshNovel(dir.name, parentPath: p.dirname(dir.path));
+        .read(selectedFileProvider.notifier)
+        .rebase(FileEntry(name: selected!.name, path: followed));
+  }
 
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _RefreshProgressDialog(novelTitle: dir.displayName),
+  /// Refreshes a novel the reader is not necessarily looking at.
+  ///
+  /// The tile carries the novel folder's absolute path, so the destination is
+  /// its parent directory: a novel kept in an organizational subfolder updates
+  /// in place instead of being duplicated at the library root.
+  void _startRefresh(BuildContext context, DirectoryEntry dir) {
+    startNovelRefresh(
+      context,
+      ref,
+      RefreshTarget(
+        folderName: dir.name,
+        parentPath: p.dirname(dir.path),
+        title: dir.displayName,
+      ),
     );
   }
 
@@ -692,7 +758,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         final repository = ref.read(novelRepositoryProvider);
         await repository.updateTitle(dir.name, newTitle);
         ref.invalidate(allNovelsProvider);
-        ref.invalidate(directoryContentsProvider);
+        invalidateEpisodeListings(ref.invalidate);
       } catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -759,7 +825,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         final deleteService = await ref.read(novelDeleteServiceProvider.future);
         await deleteService.delete(dir.name, dir.path);
         ref.invalidate(allNovelsProvider);
-        ref.invalidate(directoryContentsProvider);
+        invalidateEpisodeListings(ref.invalidate);
       } catch (e) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -779,6 +845,7 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     final libraryPath = ref.read(libraryPathProvider);
     final parent = getParentDirectory(currentDir, libraryPath: libraryPath);
     if (parent != null) {
+      // Cleared for the same reason as the folder tile's onTap; see there.
       ref.read(currentDirectoryProvider.notifier).setDirectory(parent);
       ref.read(selectedFileProvider.notifier).clear();
     }
@@ -816,107 +883,5 @@ class _ReadingProgressBar extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-class _RefreshProgressDialog extends ConsumerWidget {
-  final String novelTitle;
-
-  const _RefreshProgressDialog({required this.novelTitle});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final downloadState = ref.watch(downloadProvider);
-
-    return AlertDialog(
-      title: Text(
-        AppLocalizations.of(
-          context,
-        )!.fileBrowser_refreshProgressTitle(novelTitle),
-      ),
-      content: _buildContent(context, downloadState),
-      actions: [
-        if (downloadState.status == DownloadStatus.completed ||
-            downloadState.status == DownloadStatus.error ||
-            downloadState.status == DownloadStatus.cancelled)
-          TextButton(
-            onPressed: () {
-              if (downloadState.status == DownloadStatus.completed) {
-                ref.invalidate(allNovelsProvider);
-                ref.invalidate(directoryContentsProvider);
-              }
-              ref.read(downloadProvider.notifier).reset();
-              Navigator.of(context).pop();
-            },
-            child: Text(AppLocalizations.of(context)!.common_closeButton),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildContent(BuildContext context, DownloadState state) {
-    final l10n = AppLocalizations.of(context)!;
-
-    String failedSuffix(int failed) {
-      if (failed <= 0) return '';
-      final lang = Localizations.localeOf(context).languageCode;
-      return switch (lang) {
-        'ja' => ' (失敗: $failed件)',
-        'zh' => ' （失败：$failed个）',
-        _ => ' (failed: $failed)',
-      };
-    }
-
-    String episodeSummary(DownloadState s) {
-      if (s.totalEpisodes <= 0) return '';
-      final skipped = s.skippedEpisodes > 0
-          ? l10n.fileBrowser_skippedEpisodesSuffix(s.skippedEpisodes)
-          : '';
-      final tail = skipped + failedSuffix(s.failedEpisodes);
-      return l10n.fileBrowser_episodeCountFormat(s.totalEpisodes, tail);
-    }
-
-    switch (state.status) {
-      case DownloadStatus.idle:
-      case DownloadStatus.downloading:
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const LinearProgressIndicator(),
-            const SizedBox(height: 16),
-            if (state.totalEpisodes > 0)
-              Text('${state.currentEpisode} / ${episodeSummary(state)}'),
-          ],
-        );
-      case DownloadStatus.completed:
-        final summary = episodeSummary(state);
-        final completedText = Text(
-          l10n.fileBrowser_refreshCompleted(
-            summary.isNotEmpty ? '\n$summary' : '',
-          ),
-        );
-        if (!state.indexTruncated) return completedText;
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            completedText,
-            const SizedBox(height: 8),
-            Text(
-              l10n.download_indexTruncatedWarning,
-              style: const TextStyle(color: Colors.orange),
-            ),
-          ],
-        );
-      case DownloadStatus.cancelled:
-        return Text(l10n.download_cancelledMessage);
-      case DownloadStatus.error:
-        return Text(
-          l10n.common_errorPrefix(
-            state.errorMessage ?? l10n.common_unknownError,
-          ),
-          style: const TextStyle(color: Colors.red),
-        );
-    }
   }
 }

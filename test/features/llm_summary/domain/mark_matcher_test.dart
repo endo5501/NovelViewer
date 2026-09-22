@@ -110,5 +110,16 @@ void main() {
       );
       expect(marks.map((m) => m.word).toList(), ['聖印']);
     });
+
+    test('marks a word spanning an explicit rb base and the text after', () {
+      // Aozora Bunko writes ruby in the full form, tags around the base
+      // included. Those tags are not part of what the reader sees, so a word
+      // running from the base into the plain text after it must still mark.
+      final marks = findMarksOnBaseText(
+        text: '<ruby><rb>聖印</rb><rp>（</rp><rt>せいいん</rt><rp>）</rp></ruby>を持つ',
+        wordsByStyle: const {'聖印を持つ': MarkStyle.solid},
+      );
+      expect(marks.map((m) => m.word).toList(), ['聖印を持つ']);
+    });
   });
 }

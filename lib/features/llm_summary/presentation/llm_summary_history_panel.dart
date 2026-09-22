@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:novel_viewer/shared/gestures/pointer_kinds.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_detail_dialog.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_history_menu.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/outlined_text_badge.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
+import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
-import 'package:path/path.dart' as p;
 
 class LlmSummaryHistoryPanel extends ConsumerWidget {
   const LlmSummaryHistoryPanel({super.key});
@@ -17,13 +16,14 @@ class LlmSummaryHistoryPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final directory = ref.watch(currentDirectoryProvider);
-    final libraryPath = ref.watch(libraryPathProvider);
+    // Checking only for the library root let every organizational folder
+    // through, and asking for history is what creates a `novel_data.db`
+    // there. The panel shows a list only where there is a novel to show one
+    // for — see [summaryNovelFolderProvider] for why being inside a novel
+    // does not count.
+    final novelFolder = ref.watch(summaryNovelFolderProvider);
 
-    final isAtRoot =
-        directory == null ||
-        (libraryPath != null && p.equals(directory, libraryPath));
-    if (isAtRoot) {
+    if (novelFolder == null) {
       return Center(child: Text(l10n.bookmark_selectNovelPrompt));
     }
 
@@ -38,8 +38,10 @@ class LlmSummaryHistoryPanel extends ConsumerWidget {
         }
         return ListView.builder(
           itemCount: entries.length,
-          itemBuilder: (context, index) =>
-              _HistoryEntryTile(entry: entries[index]),
+          itemBuilder: (context, index) => _HistoryEntryTile(
+            entry: entries[index],
+            novelFolder: novelFolder,
+          ),
         );
       },
     );
@@ -49,7 +51,12 @@ class LlmSummaryHistoryPanel extends ConsumerWidget {
 class _HistoryEntryTile extends ConsumerWidget {
   final HistoryEntry entry;
 
-  const _HistoryEntryTile({required this.entry});
+  /// The folder whose `novel_data.db` these entries came from. Passed down
+  /// rather than re-read, so the detail dialog cannot end up reading a
+  /// different database than the list that opened it.
+  final String novelFolder;
+
+  const _HistoryEntryTile({required this.entry, required this.novelFolder});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -110,7 +117,6 @@ class _HistoryEntryTile extends ConsumerWidget {
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final directory = ref.read(currentDirectoryProvider);
     final value = await showMenu<HistoryContextAction>(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -132,21 +138,24 @@ class _HistoryEntryTile extends ConsumerWidget {
           SnackBar(content: Text(l10n.contextMenu_copiedToClipboard)),
         );
       },
-      onDelete: () =>
-          ref.read(llmSummaryHistoryProvider.notifier).deleteEntry(entry.word),
+      onDelete: () => ref
+          .read(llmSummaryHistoryProvider.notifier)
+          .deleteEntry(entry.word, novelFolder: novelFolder),
       onViewDetails: () {
-        if (directory == null || !context.mounted) return;
+        if (!context.mounted) return;
         showDialog<void>(
           context: context,
           builder: (_) =>
-              LlmSummaryDetailDialog(folderPath: directory, word: entry.word),
+              LlmSummaryDetailDialog(folderPath: novelFolder, word: entry.word),
         );
       },
     );
   }
 
   Future<void> _jumpToEntry(BuildContext context, WidgetRef ref) {
-    return ref.read(llmSummaryHistoryProvider.notifier).openEntry(entry);
+    return ref
+        .read(llmSummaryHistoryProvider.notifier)
+        .openEntry(entry, novelFolder: novelFolder);
   }
 
   static String _formatDate(DateTime dt) {

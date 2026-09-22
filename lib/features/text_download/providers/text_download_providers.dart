@@ -65,6 +65,14 @@ class DownloadState {
 class DownloadNotifier extends Notifier<DownloadState> {
   CancellationToken? _cancelToken;
 
+  /// A cancellation that arrived before there was a token to receive it.
+  ///
+  /// [refreshNovel] reports itself as downloading and then awaits the metadata
+  /// lookup, so the progress dialog is on screen — cancel button and all —
+  /// while [_cancelToken] is still null. Without this, that press would be
+  /// dropped and the refresh would go on to run to completion.
+  bool _cancelRequested = false;
+
   @override
   DownloadState build() => const DownloadState();
 
@@ -72,6 +80,11 @@ class DownloadNotifier extends Notifier<DownloadState> {
   /// stops at the next safe point, already-saved episodes are kept, and the
   /// state becomes [DownloadStatus.cancelled].
   void cancel() {
+    if (_cancelToken == null) {
+      // Nothing to cancel yet; remember it for whoever gets there first.
+      _cancelRequested = true;
+      return;
+    }
     _cancelToken?.cancel();
   }
 
@@ -85,6 +98,18 @@ class DownloadNotifier extends Notifier<DownloadState> {
     // Using the token (not `state.status`) lets `refreshNovel`, which sets the
     // downloading state before delegating here, still proceed.
     if (_cancelToken != null) return;
+
+    // A refresh has already reported itself as downloading by the time it
+    // delegates here, so that is what tells an inner call from an outer one.
+    // An outer call starts a new operation and must not inherit a cancel left
+    // over from an earlier one; an inner call has to honour the one that
+    // arrived while it was looking the novel's URL up.
+    if (state.status != DownloadStatus.downloading) _cancelRequested = false;
+    if (_cancelRequested) {
+      _cancelRequested = false;
+      state = const DownloadState(status: DownloadStatus.cancelled);
+      return;
+    }
 
     final registry = ref.read(novelSiteRegistryProvider);
     final site = registry.findSite(url);
@@ -396,6 +421,7 @@ class DownloadNotifier extends Notifier<DownloadState> {
   }
 
   void reset() {
+    _cancelRequested = false;
     state = const DownloadState();
   }
 }

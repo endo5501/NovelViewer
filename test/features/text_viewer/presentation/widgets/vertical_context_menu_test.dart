@@ -5,33 +5,34 @@ import 'package:novel_viewer/features/text_viewer/presentation/widgets/vertical_
 
 void main() {
   group('buildVerticalContextMenuItems', () {
-    test(
-      'produces 4 entries: copy, addToDictionary, analyze(なし), analyze(あり)',
-      () {
-        final items = buildVerticalContextMenuItems(
-          copyLabel: 'コピー',
-          addToDictionaryLabel: '辞書追加',
-          analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
-          analyzeSpoilerLabel: '解析開始(ネタバレあり)',
-        );
-        expect(items, hasLength(4));
-        final values = items
-            .whereType<PopupMenuItem<VerticalContextAction>>()
-            .map((i) => i.value)
-            .toList();
-        expect(values, [
-          VerticalContextAction.copy,
-          VerticalContextAction.addToDictionary,
-          VerticalContextAction.analyzeNoSpoiler,
-          VerticalContextAction.analyzeSpoiler,
-        ]);
-      },
-    );
+    test('produces 5 entries: copy, addToDictionary, analyze(簡易/なし/あり)', () {
+      final items = buildVerticalContextMenuItems(
+        copyLabel: 'コピー',
+        addToDictionaryLabel: '辞書追加',
+        analyzeSimpleLabel: '解析開始(簡易)',
+        analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
+        analyzeSpoilerLabel: '解析開始(ネタバレあり)',
+      );
+      expect(items, hasLength(5));
+      final values = items
+          .whereType<PopupMenuItem<VerticalContextAction>>()
+          .map((i) => i.value)
+          .toList();
+      // Lightest (and most spoiler-safe) analysis first.
+      expect(values, [
+        VerticalContextAction.copy,
+        VerticalContextAction.addToDictionary,
+        VerticalContextAction.analyzeSimple,
+        VerticalContextAction.analyzeNoSpoiler,
+        VerticalContextAction.analyzeSpoiler,
+      ]);
+    });
 
     testWidgets('items display their labels', (tester) async {
       final items = buildVerticalContextMenuItems(
         copyLabel: 'コピー',
         addToDictionaryLabel: '辞書追加',
+        analyzeSimpleLabel: '解析開始(簡易)',
         analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
         analyzeSpoilerLabel: '解析開始(ネタバレあり)',
       );
@@ -51,6 +52,7 @@ void main() {
 
       expect(find.text('コピー'), findsOneWidget);
       expect(find.text('辞書追加'), findsOneWidget);
+      expect(find.text('解析開始(簡易)'), findsOneWidget);
       expect(find.text('解析開始(ネタバレなし)'), findsOneWidget);
       expect(find.text('解析開始(ネタバレあり)'), findsOneWidget);
     });
@@ -58,6 +60,7 @@ void main() {
     test('omits the dictionary entry when its label is absent', () {
       final items = buildVerticalContextMenuItems(
         copyLabel: 'コピー',
+        analyzeSimpleLabel: '解析開始(簡易)',
         analyzeNoSpoilerLabel: '解析開始(ネタバレなし)',
         analyzeSpoilerLabel: '解析開始(ネタバレあり)',
       );
@@ -67,6 +70,7 @@ void main() {
           .toList();
       expect(values, [
         VerticalContextAction.copy,
+        VerticalContextAction.analyzeSimple,
         VerticalContextAction.analyzeNoSpoiler,
         VerticalContextAction.analyzeSpoiler,
       ]);
@@ -120,6 +124,23 @@ void main() {
         onAnalyze: (_, _) => fail('analyze should not fire'),
       );
       expect(captured, 'アリス');
+    });
+
+    test('analyzeSimple → onAnalyze(selectedText, firstOccurrence)', () {
+      String? capturedWord;
+      AnalysisScope? capturedType;
+      dispatchVerticalContextAction(
+        VerticalContextAction.analyzeSimple,
+        selectedText: 'アリス',
+        onCopy: (_) => fail('copy should not fire'),
+        onAddToDictionary: (_) => fail('addToDictionary should not fire'),
+        onAnalyze: (w, t) {
+          capturedWord = w;
+          capturedType = t;
+        },
+      );
+      expect(capturedWord, 'アリス');
+      expect(capturedType, AnalysisScope.firstOccurrence);
     });
 
     test('analyzeNoSpoiler → onAnalyze(selectedText, noSpoiler)', () {
@@ -178,10 +199,11 @@ void main() {
       expect(analyzed, isFalse);
     });
 
-    test('a withheld analysis handler makes both actions no-ops', () {
+    test('a withheld analysis handler makes all three actions no-ops', () {
       var addedToDictionary = false;
 
       for (final action in [
+        VerticalContextAction.analyzeSimple,
         VerticalContextAction.analyzeNoSpoiler,
         VerticalContextAction.analyzeSpoiler,
       ]) {

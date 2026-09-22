@@ -248,6 +248,18 @@ class _ReanalyzeMenuButtonState extends ConsumerState<_ReanalyzeMenuButton> {
       );
     }
 
+    // Simple analysis goes through the scope entry point instead: the episode
+    // it covers is the word's first occurrence, which is only known after
+    // searching the folder. Resolving it here would make merely opening this
+    // menu read every text file in the novel.
+    void runSimpleAnalysis() {
+      runner.runWithScope(
+        context: rootContext,
+        word: word,
+        scope: AnalysisScope.firstOccurrence,
+      );
+    }
+
     return MenuAnchor(
       controller: _menuController,
       // Notify the hover-popup notifier when the menu opens / closes so the
@@ -264,6 +276,14 @@ class _ReanalyzeMenuButtonState extends ConsumerState<_ReanalyzeMenuButton> {
         ref.read(hoverPopupProvider.notifier).onChildMenuClose();
       },
       menuChildren: [
+        // No episode hint and no overwrite suffix on this one: both would need
+        // the folder searched to know which episode it lands on, and the mode
+        // exists precisely for the reader who does not care which.
+        MenuItemButton(
+          key: const Key('hover_popup_reanalyze_simple'),
+          onPressed: runSimpleAnalysis,
+          child: Text(l10n.hoverPopup_reanalyzeSimple),
+        ),
         MenuItemButton(
           key: const Key('hover_popup_reanalyze_up_to_current'),
           onPressed: () => runAnalysis(currentEpisode, currentFileName),

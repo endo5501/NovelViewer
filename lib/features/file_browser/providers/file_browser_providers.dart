@@ -12,7 +12,6 @@ import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.
 import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'package:novel_viewer/shared/database/novel_data_database_provider.dart';
 import 'package:novel_viewer/shared/database/per_folder_db_registry_provider.dart';
-import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 import 'package:path/path.dart' as p;
 
 final _fileBrowserLog = Logger('file_browser');
@@ -208,33 +207,6 @@ final downloadDestinationFoldersProvider =
       ];
     });
 
-final selectedNovelTitleProvider = FutureProvider<String?>((ref) async {
-  final currentDir = ref.watch(currentDirectoryProvider);
-  final libraryPath = ref.watch(libraryPathProvider);
-
-  if (currentDir == null || libraryPath == null) return null;
-  if (p.equals(currentDir, libraryPath)) return null;
-  if (!p.isWithin(libraryPath, currentDir)) return null;
-
-  final novels = await ref.watch(allNovelsProvider.future);
-  final titleByFolder = {
-    for (final novel in novels) novel.folderName: novel.title,
-  };
-
-  // Resolve the nearest registered novel folder using the shared rule (also
-  // used to key bookmarks/reading-progress) so the title lookup is independent
-  // of nesting depth. If no ancestor is a registered novel, fall back to the
-  // first component's folder name (legacy title-based / organizational
-  // folders) — the one piece of behavior unique to the title display.
-  final novelId = resolveNovelId(
-    libraryPath,
-    currentDir,
-    titleByFolder.keys.toSet(),
-  );
-  if (novelId != null) return titleByFolder[novelId];
-  return p.split(p.relative(currentDir, from: libraryPath)).first;
-});
-
 class SelectedFileNotifier extends Notifier<FileEntry?> {
   @override
   FileEntry? build() => null;
@@ -243,6 +215,14 @@ class SelectedFileNotifier extends Notifier<FileEntry?> {
     state = file;
     ref.read(fileOpenRequestProvider.notifier).request();
   }
+
+  /// Points the selection at the same episode in its new location, after the
+  /// folder holding it was moved or renamed.
+  ///
+  /// Deliberately not [selectFile]: nothing was opened, so this must not count
+  /// as a file-open request. One would close the drawer out from under a
+  /// reader who had only just renamed a folder in it.
+  void rebase(FileEntry file) => state = file;
 
   void clear() => state = null;
 }

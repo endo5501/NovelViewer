@@ -119,6 +119,87 @@ void main() {
       },
     );
 
+    test(
+      'a first-occurrence bound extracts only the introducing episode',
+      () async {
+        await createFile('005_chapter.txt', 'アリスが登場した。');
+        await createFile('012_chapter.txt', 'アリスが旅に出た。');
+        await createFile('040_chapter.txt', 'アリスが帰還した。');
+
+        final mockClient = _MockLlmClient([
+          jsonEncode({'facts': '- 物語の序盤に登場'}),
+          jsonEncode({'summary': 'アリスは冒険者。'}),
+        ]);
+
+        final service = LlmSummaryService(
+          llmClient: mockClient,
+          repository: repository,
+          factCacheRepository: factCache,
+          searchService: searchService,
+        );
+
+        // What the 簡易解析 scope resolves to for this folder. No file below
+        // the first occurrence contains the word, so the existing upper-bound
+        // filter leaves exactly that episode's files — the mode needs no
+        // scope of its own in the service.
+        final result = await service.generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 5,
+          sourceFileName: '005_chapter.txt',
+        );
+
+        expect(result, 'アリスは冒険者。');
+        expect(
+          mockClient.callCount,
+          2,
+          reason: '1 extraction for the introducing file + 1 final summary',
+        );
+        expect(
+          mockClient.prompts.any((p) => p.contains('旅に出た')),
+          isFalse,
+          reason: 'no later file may reach a prompt',
+        );
+        expect(mockClient.prompts.any((p) => p.contains('帰還した')), isFalse);
+
+        final cached = await repository.findSnapshotsForWord(word: 'アリス');
+        expect(cached.single.coveredUpToEpisode, 5);
+        expect(cached.single.sourceFile, '005_chapter.txt');
+      },
+    );
+
+    test('a shared episode extracts every file carrying it', () async {
+      // `^(\d+)` gives both files episode 5, so both pass the bound. This is
+      // why simple analysis costs "two LLM calls" only in a folder of one
+      // file per episode.
+      await createFile('005_a.txt', 'アリスが登場した。');
+      await createFile('005_b.txt', 'アリスが名乗った。');
+      await createFile('040_c.txt', 'アリスが帰還した。');
+
+      final mockClient = _MockLlmClient([
+        jsonEncode({'facts': '- 物語の序盤に登場'}),
+        jsonEncode({'facts': '- 名乗った'}),
+        jsonEncode({'summary': 'アリスは冒険者。'}),
+      ]);
+
+      final service = LlmSummaryService(
+        llmClient: mockClient,
+        repository: repository,
+        factCacheRepository: factCache,
+        searchService: searchService,
+      );
+
+      await service.generateSummary(
+        directoryPath: tempDir.path,
+        word: 'アリス',
+        coveredUpToEpisode: 5,
+        sourceFileName: '005_a.txt',
+      );
+
+      expect(mockClient.callCount, 3);
+      expect(mockClient.prompts.any((p) => p.contains('帰還した')), isFalse);
+    });
+
     test('passes the display language through to every prompt', () async {
       await createFile('001_chapter.txt', 'アリスが登場した。');
 

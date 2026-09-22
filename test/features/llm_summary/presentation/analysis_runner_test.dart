@@ -14,8 +14,12 @@ import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart'
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
+import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config_problem.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
@@ -48,6 +52,112 @@ class _DummySearch implements TextSearchService {
   Object? noSuchMethod(Invocation invocation) => null;
 }
 
+/// Reports the word as occurring in exactly [fileNames], so the bound the
+/// runner forwards can be checked without the folder existing on disk. Every
+/// name used with this carries a numeric prefix, which resolves to an episode
+/// without a folder listing.
+class _CannedSearch implements TextSearchService {
+  _CannedSearch(this.fileNames);
+  final List<String> fileNames;
+
+  @override
+  Future<List<SearchResult>> searchWithContext(
+    String directoryPath,
+    String query, {
+    int contextLines = 2,
+  }) async => [
+    for (final name in fileNames)
+      SearchResult(
+        fileName: name,
+        filePath: '$directoryPath/$name',
+        matches: const [SearchMatch(lineNumber: 1, contextText: 'x')],
+      ),
+  ];
+
+  @override
+  Object? noSuchMethod(Invocation invocation) => null;
+}
+
+/// Runs [onSearch] before returning, so a test can move the file browser
+/// during the folder search the first-occurrence bound needs.
+class _MovingSearch implements TextSearchService {
+  _MovingSearch(this.fileNames);
+  final List<String> fileNames;
+  void Function()? onSearch;
+
+  @override
+  Future<List<SearchResult>> searchWithContext(
+    String directoryPath,
+    String query, {
+    int contextLines = 2,
+  }) async {
+    onSearch?.call();
+    return [
+      for (final name in fileNames)
+        SearchResult(
+          fileName: name,
+          filePath: '$directoryPath/$name',
+          matches: const [SearchMatch(lineNumber: 1, contextText: 'x')],
+        ),
+    ];
+  }
+
+  @override
+  Object? noSuchMethod(Invocation invocation) => null;
+}
+
+/// Moves the browser by setting state directly, skipping the per-folder
+/// database eviction the real `setDirectory` performs (which this test has no
+/// handles for).
+class _MovableDirectory extends CurrentDirectoryNotifier {
+  _MovableDirectory(this._initial);
+  final String _initial;
+
+  @override
+  String? build() => _initial;
+
+  void moveTo(String path) => state = path;
+}
+
+/// Counts searches, so a test can prove a refused request never paid for one.
+class _CountingSearch implements TextSearchService {
+  _CountingSearch(this.fileNames);
+  final List<String> fileNames;
+  int callCount = 0;
+
+  @override
+  Future<List<SearchResult>> searchWithContext(
+    String directoryPath,
+    String query, {
+    int contextLines = 2,
+  }) async {
+    callCount++;
+    return [
+      for (final name in fileNames)
+        SearchResult(
+          fileName: name,
+          filePath: '$directoryPath/$name',
+          matches: const [SearchMatch(lineNumber: 1, contextText: 'x')],
+        ),
+    ];
+  }
+
+  @override
+  Object? noSuchMethod(Invocation invocation) => null;
+}
+
+class _ThrowingSearch implements TextSearchService {
+  @override
+  Future<List<SearchResult>> searchWithContext(
+    String directoryPath,
+    String query, {
+    int contextLines = 2,
+  }) async => throw const FileSystemException('unreadable');
+
+  @override
+  Object? noSuchMethod(Invocation invocation) => null;
+}
+
 class _DummyFactCache implements FactCacheRepository {
   @override
   Object? noSuchMethod(Invocation invocation) => null;
@@ -72,6 +182,7 @@ class _StubService extends LlmSummaryService {
   int? lastCoveredUpToEpisode;
   String? lastSourceFileName;
   String? lastLanguage;
+  String? lastDirectoryPath;
   void Function(AnalysisProgress)? lastOnProgress;
 
   @override
@@ -84,6 +195,7 @@ class _StubService extends LlmSummaryService {
     void Function(AnalysisProgress)? onProgress,
   }) async {
     callCount++;
+    lastDirectoryPath = directoryPath;
     lastCoveredUpToEpisode = coveredUpToEpisode;
     lastSourceFileName = sourceFileName;
     lastLanguage = language;
@@ -110,6 +222,31 @@ class _StubLocale extends LocaleNotifier {
   Locale build() => Locale(_language);
 }
 
+/// The runner resolves the novel folder that owns `novel_data.db` from the
+/// browser's location, so '/library/novel_a' has to be a registered novel for
+/// any of these cases to get as far as the service.
+final _novelA = NovelMetadata(
+  siteType: 'narou',
+  novelId: 'novel_a',
+  title: 'Novel A',
+  url: 'https://ncode.syosetu.com/novel_a/',
+  folderName: 'novel_a',
+  episodeCount: 3,
+  downloadedAt: DateTime(2024, 1, 1),
+);
+
+/// A second registered novel, so a test can move the browser from one novel to
+/// another mid-request.
+final _novelB = NovelMetadata(
+  siteType: 'narou',
+  novelId: 'novel_b',
+  title: 'Novel B',
+  url: 'https://ncode.syosetu.com/novel_b/',
+  folderName: 'novel_b',
+  episodeCount: 3,
+  downloadedAt: DateTime(2024, 1, 1),
+);
+
 final _testPackageInfo = PackageInfo(
   appName: 'NovelViewer',
   packageName: 'com.example.novelViewer',
@@ -120,6 +257,10 @@ final _testPackageInfo = PackageInfo(
 ProviderContainer _container(
   _StubService stub, {
   String directory = '/library/novel_a',
+  String libraryPath = '/library',
+  List<NovelMetadata>? novels,
+  CurrentDirectoryNotifier? directoryNotifier,
+  TextSearchService? searchService,
   FileEntry? file,
   String language = 'ja',
   bool llmSupported = true,
@@ -135,10 +276,14 @@ ProviderContainer _container(
       llmConfigProvider.overrideWithValue(config),
       packageInfoProvider.overrideWithValue(_testPackageInfo),
       currentDirectoryProvider.overrideWith(
-        () => CurrentDirectoryNotifier(directory),
+        () => directoryNotifier ?? CurrentDirectoryNotifier(directory),
       ),
+      libraryPathProvider.overrideWithValue(libraryPath),
+      allNovelsProvider.overrideWith((ref) => novels ?? [_novelA]),
       selectedFileProvider.overrideWith(() => _MockSelectedFile(file)),
       localeProvider.overrideWith(() => _StubLocale(language)),
+      if (searchService != null)
+        textSearchServiceProvider.overrideWithValue(searchService),
       llmSummaryServiceProvider.overrideWith((ref, folderPath) => stub),
       llmClientProvider.overrideWith((_) async => _DummyClient()),
       // run() awaits these FutureProviders before reading the (overridden)
@@ -189,6 +334,8 @@ void main() {
           currentDirectoryProvider.overrideWith(
             () => CurrentDirectoryNotifier('/library/novel_a'),
           ),
+          libraryPathProvider.overrideWithValue('/library'),
+          allNovelsProvider.overrideWith((ref) => [_novelA]),
           selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
           localeProvider.overrideWith(() => _StubLocale('ja')),
           llmSummaryServiceProvider.overrideWith((ref, folderPath) => null),
@@ -266,6 +413,8 @@ void main() {
           currentDirectoryProvider.overrideWith(
             () => CurrentDirectoryNotifier('/library/novel_a'),
           ),
+          libraryPathProvider.overrideWithValue('/library'),
+          allNovelsProvider.overrideWith((ref) => [_novelA]),
           selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
           localeProvider.overrideWith(() => _StubLocale('ja')),
           llmSummaryServiceProvider.overrideWith((ref, folderPath) => null),
@@ -297,6 +446,8 @@ void main() {
           currentDirectoryProvider.overrideWith(
             () => CurrentDirectoryNotifier('/library/novel_a'),
           ),
+          libraryPathProvider.overrideWithValue('/library'),
+          allNovelsProvider.overrideWith((ref) => [_novelA]),
           selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
           localeProvider.overrideWith(() => _StubLocale('ja')),
           llmSummaryServiceProvider.overrideWith((ref, folderPath) => null),
@@ -1236,6 +1387,458 @@ void main() {
     );
   });
 
+  group('resolveFirstOccurrence (簡易解析上限)', () {
+    late Directory tempDir;
+    final service = TextSearchService();
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('runner_first_');
+    });
+    tearDown(() async {
+      if (tempDir.existsSync()) {
+        await tempDir.delete(recursive: true);
+      }
+    });
+
+    Future<void> write(String name, String content) async {
+      await File('${tempDir.path}/$name').writeAsString(content);
+    }
+
+    test('returns the episode and file of the first occurrence', () async {
+      await write('005_chapter.txt', '紅蓮の剣を手にした');
+      await write('012_chapter.txt', '紅蓮の剣を研いだ');
+      await write('040_chapter.txt', '紅蓮の剣を抜いた');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: '紅蓮の剣',
+      );
+
+      expect(resolved?.episode, 5);
+      expect(
+        resolved?.fileName,
+        '005_chapter.txt',
+        reason: 'the history jump should land where the word was introduced',
+      );
+    });
+
+    test('a ruby-split occurrence on the introducing page counts', () async {
+      // The authoring convention this mode has to survive: the term is
+      // annotated where it is introduced and written plainly later. Matching
+      // the raw text would find only the later page, putting the bound past
+      // what the reader has read.
+      await write('020_chapter.txt', '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした');
+      await write('080_chapter.txt', '紅蓮の剣を抜いた');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: '紅蓮の剣',
+      );
+
+      expect(resolved?.episode, 20);
+      expect(resolved?.fileName, '020_chapter.txt');
+    });
+
+    test('an rb-wrapped occurrence on the introducing page counts', () async {
+      // Same shape as the ruby-split case, written with the explicit <rb>
+      // tags the ruby parser also accepts. If these survive stripping, the
+      // bound lands on the later plain occurrence -- past what the reader has
+      // read.
+      await write(
+        '020_chapter.txt',
+        '<ruby><rb>紅蓮</rb><rt>ぐれん</rt></ruby>の剣を手にした',
+      );
+      await write('080_chapter.txt', '紅蓮の剣を抜いた');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: '紅蓮の剣',
+      );
+
+      expect(resolved?.episode, 20);
+      expect(resolved?.fileName, '020_chapter.txt');
+    });
+
+    test('picks the lexically first file when two share the episode', () async {
+      await write('005_a.txt', '紅蓮の剣を手にした');
+      await write('005_b.txt', '紅蓮の剣を研いだ');
+      await write('040_c.txt', '紅蓮の剣を抜いた');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: '紅蓮の剣',
+      );
+
+      expect(resolved?.episode, 5);
+      expect(resolved?.fileName, '005_a.txt');
+    });
+
+    test('uses the lexical rank in a prefix-less folder', () async {
+      await write('intro.txt', 'なにもない');
+      await write('part1.txt', '紅蓮の剣を手にした');
+      await write('part2.txt', '紅蓮の剣を抜いた');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: '紅蓮の剣',
+      );
+
+      expect(resolved?.episode, 2);
+      expect(resolved?.fileName, 'part1.txt');
+    });
+
+    test('returns null when the word occurs nowhere', () async {
+      await write('010_chapter.txt', 'なにもない');
+      await write('020_chapter.txt', 'ここにもない');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: '紅蓮の剣',
+      );
+
+      expect(resolved, isNull);
+    });
+
+    test('does not match the reading of a ruby annotation', () async {
+      await write('010_chapter.txt', '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: 'ぐれん',
+      );
+
+      expect(resolved, isNull);
+    });
+  });
+
+  group('AnalysisScope.firstOccurrence', () {
+    /// Canned search results, so the bound the runner forwards can be checked
+    /// without the folder existing. Every file name here carries a numeric
+    /// prefix, which resolves without a folder listing.
+    _StubService stubbed() => _StubService(
+      ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+          '要約',
+    );
+
+    Future<void> trigger(
+      WidgetTester tester,
+      ProviderContainer container,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            ref
+                .read(analysisRunnerProvider)
+                .runWithScope(
+                  context: context,
+                  word: '紅蓮の剣',
+                  scope: AnalysisScope.firstOccurrence,
+                );
+          },
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('forwards the resolved bound and source file', (tester) async {
+      final stub = stubbed();
+      final container = _container(
+        stub,
+        searchService: _CannedSearch(const [
+          '040_chapter.txt',
+          '005_chapter.txt',
+        ]),
+        file: const FileEntry(name: '040_chapter.txt', path: ''),
+      );
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      expect(stub.callCount, 1);
+      expect(stub.lastCoveredUpToEpisode, 5);
+      expect(stub.lastSourceFileName, '005_chapter.txt');
+    });
+
+    testWidgets('falls back to the current file when the word occurs nowhere', (
+      tester,
+    ) async {
+      final stub = stubbed();
+      final container = _container(
+        stub,
+        searchService: _CannedSearch(const []),
+        file: const FileEntry(name: '020_chapter.txt', path: ''),
+      );
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      // Any bound leaves the same empty evidence, so this only has to be
+      // defined and no further than the reading position. The run then fails
+      // with the existing "no facts" notification.
+      expect(stub.lastCoveredUpToEpisode, 20);
+      expect(stub.lastSourceFileName, '020_chapter.txt');
+    });
+
+    testWidgets('reports a failed search instead of widening the scope', (
+      tester,
+    ) async {
+      final stub = stubbed();
+      final container = _container(
+        stub,
+        searchService: _ThrowingSearch(),
+        file: const FileEntry(name: '020_chapter.txt', path: ''),
+      );
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      // Falling back to the reading position here would run the scope the
+      // reader was avoiding -- one extraction per hit file rather than one --
+      // and save it as though it were a simple analysis. Nothing runs.
+      expect(stub.callCount, 0);
+      // The shared failure path appends the cause to the headline, so match
+      // the headline loosely and assert the cause reached the reader.
+      expect(find.textContaining('解析失敗'), findsOneWidget);
+      expect(find.textContaining('unreadable'), findsOneWidget);
+      expect(find.byKey(const Key('analysis_modal')), findsNothing);
+    });
+
+    testWidgets('performs no analysis when no file is selected', (
+      tester,
+    ) async {
+      final stub = stubbed();
+      final container = _container(
+        stub,
+        searchService: _CannedSearch(const ['005_chapter.txt']),
+      );
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      // Without a page on screen there is no reading position to keep the
+      // bound at or below, and no snapshot should be fabricated.
+      expect(stub.callCount, 0);
+    });
+
+    testWidgets('keeps the novel it was asked about when the browser moves', (
+      tester,
+    ) async {
+      // The bound and source file are resolved against the novel the reader
+      // triggered this on. Resolving it takes a folder search, and run() picks
+      // its own target folder afterwards -- so a reader who switches novels
+      // in that window must not have one novel's word, bound and source file
+      // written into another novel's database.
+      final stub = stubbed();
+      final search = _MovingSearch(const ['005_chapter.txt']);
+      final directory = _MovableDirectory('/library/novel_a');
+      final container = _container(
+        stub,
+        directory: '/library/novel_a',
+        novels: [_novelA, _novelB],
+        directoryNotifier: directory,
+        searchService: search,
+        file: const FileEntry(name: '040_chapter.txt', path: ''),
+      );
+      addTearDown(container.dispose);
+      search.onSearch = () => directory.moveTo('/library/novel_b');
+
+      await trigger(tester, container);
+
+      expect(
+        stub.lastDirectoryPath,
+        '/library/novel_a',
+        reason: 'the analysis belongs to the novel the request was made on',
+      );
+      expect(stub.lastCoveredUpToEpisode, 5);
+    });
+
+    testWidgets('a word that occurs nowhere reports the no-facts failure', (
+      tester,
+    ) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            throw const LlmAnalysisNoFactsFailure(),
+      );
+      final container = _container(
+        stub,
+        searchService: _CannedSearch(const []),
+        file: const FileEntry(name: '020_chapter.txt', path: ''),
+      );
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      // Same outcome the no-spoiler scope would give for this word: the
+      // existing notification names it, and no snapshot is saved.
+      expect(find.textContaining('「紅蓮の剣」'), findsOneWidget);
+      expect(find.textContaining('解析失敗:'), findsNothing);
+      expect(find.byKey(const Key('analysis_modal')), findsNothing);
+    });
+  });
+
+  group('DefaultAnalysisRunner re-entrancy', () {
+    // Nothing is on screen between the request and the modal: run() pushes it
+    // only after the client and repository futures settle, and the
+    // first-occurrence scope searches the folder before that. A reader who
+    // reads that silence as "nothing happened" and asks again must not get a
+    // second analysis -- two runs would double the LLM cost and race each
+    // other's saveSnapshot and fact-cache writes for the same word.
+    testWidgets('a second run while one is in flight is refused', (
+      tester,
+    ) async {
+      final completer = Completer<String>();
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) =>
+            completer.future,
+      );
+      final container = _container(stub);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          // Both requests are issued from one tap: once the modal is up it
+          // swallows a second tap, so tapping twice would pass whether or not
+          // the runner refuses anything.
+          onPressed: (ref, context) {
+            final runner = ref.read(analysisRunnerProvider);
+            runner.run(context: context, word: 'アリス', coveredUpToEpisode: 40);
+            runner.run(context: context, word: 'アリス', coveredUpToEpisode: 40);
+          },
+        ),
+      );
+
+      await tester.tap(find.text('go'));
+      await tester.pump();
+
+      expect(stub.callCount, 1, reason: 'the second request is refused');
+
+      completer.complete('mock summary');
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a later run is allowed once the first finishes', (
+      tester,
+    ) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            '要約',
+      );
+      final container = _container(stub);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            ref
+                .read(analysisRunnerProvider)
+                .run(context: context, word: 'アリス', coveredUpToEpisode: 40);
+          },
+        ),
+      );
+
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+
+      expect(stub.callCount, 2);
+    });
+
+    testWidgets('a later run is allowed once the first fails', (tester) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            throw const LlmAnalysisNoFactsFailure(),
+      );
+      final container = _container(stub);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            ref
+                .read(analysisRunnerProvider)
+                .run(context: context, word: 'アリス', coveredUpToEpisode: 40);
+          },
+        ),
+      );
+
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('go'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(
+        stub.callCount,
+        2,
+        reason: 'a failed run must not wedge the runner shut',
+      );
+    });
+
+    testWidgets('a refused scoped request does not even search', (
+      tester,
+    ) async {
+      final completer = Completer<String>();
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) =>
+            completer.future,
+      );
+      final search = _CountingSearch(const ['005_chapter.txt']);
+      final container = _container(
+        stub,
+        searchService: search,
+        file: const FileEntry(name: '040_chapter.txt', path: ''),
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            final runner = ref.read(analysisRunnerProvider);
+            runner.runWithScope(
+              context: context,
+              word: 'アリス',
+              scope: AnalysisScope.firstOccurrence,
+            );
+            runner.runWithScope(
+              context: context,
+              word: 'アリス',
+              scope: AnalysisScope.firstOccurrence,
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.text('go'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        search.callCount,
+        1,
+        reason:
+            'reading every file in the folder again buys nothing, so the '
+            'refusal has to come before the search, not after it',
+      );
+      expect(stub.callCount, 1);
+
+      completer.complete('mock summary');
+      await tester.pumpAndSettle();
+    });
+  });
+
   group('DefaultAnalysisRunner provider resolution (regression)', () {
     testWidgets(
       'waits for factCacheRepositoryProvider before reading the service '
@@ -1259,6 +1862,8 @@ void main() {
             currentDirectoryProvider.overrideWith(
               () => CurrentDirectoryNotifier('/library/novel_a'),
             ),
+            libraryPathProvider.overrideWithValue('/library'),
+            allNovelsProvider.overrideWith((ref) => [_novelA]),
             selectedFileProvider.overrideWith(
               () => _MockSelectedFile(
                 const FileEntry(
@@ -1390,6 +1995,8 @@ extension on ProviderContainer {
         currentDirectoryProvider.overrideWith(
           () => CurrentDirectoryNotifier(directory),
         ),
+        libraryPathProvider.overrideWithValue('/library'),
+        allNovelsProvider.overrideWith((ref) => [_novelA]),
         selectedFileProvider.overrideWith(() => _MockSelectedFile(null)),
         llmSummaryServiceProvider.overrideWith(
           (ref, folderPath) => _StubService(

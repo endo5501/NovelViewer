@@ -676,6 +676,12 @@ abstract class AppLocalizations {
   /// **'新規フォルダ'**
   String get fileBrowser_newFolderTooltip;
 
+  /// No description provided for @fileBrowser_downloadTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'小説ダウンロード'**
+  String get fileBrowser_downloadTooltip;
+
   /// No description provided for @fileBrowser_newFolderTitle.
   ///
   /// In ja, this message translates to:
@@ -1312,6 +1318,12 @@ abstract class AppLocalizations {
   /// **'コピー'**
   String get contextMenu_copy;
 
+  /// No description provided for @contextMenu_analyzeSimple.
+  ///
+  /// In ja, this message translates to:
+  /// **'解析開始(簡易)'**
+  String get contextMenu_analyzeSimple;
+
   /// No description provided for @contextMenu_analyzeNoSpoiler.
   ///
   /// In ja, this message translates to:
@@ -1438,6 +1450,12 @@ abstract class AppLocalizations {
   /// **'再解析'**
   String get hoverPopup_reanalyzeButton;
 
+  /// No description provided for @hoverPopup_reanalyzeSimple.
+  ///
+  /// In ja, this message translates to:
+  /// **'簡易解析'**
+  String get hoverPopup_reanalyzeSimple;
+
   /// No description provided for @hoverPopup_reanalyzeUpToCurrent.
   ///
   /// In ja, this message translates to:
@@ -1557,6 +1575,12 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'小説ダウンロード'**
   String get homeScreen_downloadTooltip;
+
+  /// No description provided for @homeScreen_refreshNovelTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'小説を更新'**
+  String get homeScreen_refreshNovelTooltip;
 
   /// No description provided for @homeScreen_searchTooltip.
   ///

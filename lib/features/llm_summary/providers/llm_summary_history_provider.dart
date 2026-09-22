@@ -7,28 +7,52 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/llm_summary/domain/first_line_containing.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:path/path.dart' as p;
 
 class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
+  /// The history belongs to a novel, so it is read from the novel folder the
+  /// browser is at — not from whatever directory it happens to show.
+  ///
+  /// That is also what keeps `novel_data.db` out of folders that are not
+  /// novels: opening one creates the file, so treating any non-root directory
+  /// as a novel left an organizational folder holding a novel's database.
   @override
   Future<List<HistoryEntry>> build() async {
-    final directory = ref.watch(currentDirectoryProvider);
-    if (directory == null) return const [];
+    final novelFolder = ref.watch(summaryNovelFolderProvider);
+    if (novelFolder == null) return const [];
 
     final repo = await ref.watch(
-      llmSummaryRepositoryProvider(directory).future,
+      llmSummaryRepositoryProvider(novelFolder).future,
     );
     final rows = await repo.findAll();
     return HistoryEntry.mergeRows(rows);
   }
 
-  Future<void> deleteEntry(String word) async {
-    final directory = ref.read(currentDirectoryProvider);
-    if (directory == null) return;
+  /// Deletes every snapshot of [word] from [novelFolder].
+  ///
+  /// The folder is a parameter rather than something resolved here: a
+  /// dependency change rebuilds this notifier in place, so anything it held
+  /// would be the browser's latest novel, not the one whose list the user is
+  /// acting on. The caller holds that list, so the caller holds its folder.
+  Future<void> deleteEntry(String word, {required String novelFolder}) async {
+    // Checked here as well as by the caller: this opens a per-folder
+    // repository, and opening one creates that folder's `novel_data.db`. The
+    // folder arrives as a parameter, so trusting it would put the only guard
+    // outside the code that does the opening.
+    if (!isRegisteredNovelFolder(
+      folderPath: novelFolder,
+      libraryPath: ref.read(libraryPathProvider),
+      novels: ref.read(allNovelsProvider).value,
+    )) {
+      return;
+    }
 
-    final repo = await ref.read(llmSummaryRepositoryProvider(directory).future);
+    final repo = await ref.read(
+      llmSummaryRepositoryProvider(novelFolder).future,
+    );
     final factCache = await ref.read(
-      factCacheRepositoryProvider(directory).future,
+      factCacheRepositoryProvider(novelFolder).future,
     );
 
     await repo.deleteAllForWord(word: word);
@@ -40,9 +64,17 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
     ref.invalidateSelf();
   }
 
-  Future<void> openEntry(HistoryEntry entry) async {
-    final directory = ref.read(currentDirectoryProvider);
-    if (directory == null) return;
+  /// Opens the file a snapshot was taken from, inside [novelFolder].
+  ///
+  /// A `source_file` is a bare file name recorded against the folder the
+  /// episodes were counted in — the novel folder the entry's list was read
+  /// from, since analysis only runs while the browser is at one. Passed in
+  /// for the same reason as in [deleteEntry].
+  Future<void> openEntry(
+    HistoryEntry entry, {
+    required String novelFolder,
+  }) async {
+    final directory = novelFolder;
 
     // Try every snapshot's source_file (largest episode first, since that's
     // the canonical "primary" jump target per spec) and fall through to the
