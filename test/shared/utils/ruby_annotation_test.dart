@@ -45,6 +45,25 @@ void main() {
       expect(stripRubyAnnotations(''), '');
     });
 
+    test('drops the explicit rb tags around the base', () {
+      // `parseRubyText` accepts `<rb>` and takes its contents as the displayed
+      // base, so anything comparing a reader's selection against the source
+      // has to remove those tags too. Leaving them in put the displayed text
+      // and the searched text out of step: the reader sees 紅蓮の剣 while the
+      // stripped line still read <rb>紅蓮</rb>の剣.
+      expect(
+        stripRubyAnnotations('<ruby><rb>紅蓮</rb><rt>ぐれん</rt></ruby>の剣'),
+        '紅蓮の剣',
+      );
+    });
+
+    test('drops rb tags case-insensitively', () {
+      expect(
+        stripRubyAnnotations('<RUBY><RB>紅蓮</RB><RT>ぐれん</RT></RUBY>の剣'),
+        '紅蓮の剣',
+      );
+    });
+
     test('keeps an empty-base annotation from swallowing its neighbours', () {
       expect(stripRubyAnnotations('前<ruby><rt>よみ</rt></ruby>後'), '前後');
     });

@@ -206,6 +206,19 @@ void main() {
       expect(results[0].matches[0].lineNumber, 1);
     });
 
+    test('a word spanning an explicit rb base and plain text', () async {
+      // `<rb>` is accepted by the ruby parser and its contents are what the
+      // reader sees, so the evidence search has to see the same thing.
+      await createFile(
+        '001.txt',
+        '<ruby><rb>紅蓮</rb><rt>ぐれん</rt></ruby>の剣を手にした',
+      );
+
+      final results = await service.searchWithContext(tempDir.path, '紅蓮の剣');
+
+      expect(results, hasLength(1));
+    });
+
     test('a word spanning two adjacent ruby groups', () async {
       await createFile(
         '001.txt',

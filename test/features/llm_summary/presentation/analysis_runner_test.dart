@@ -1356,6 +1356,27 @@ void main() {
       expect(resolved?.fileName, '020_chapter.txt');
     });
 
+    test('an rb-wrapped occurrence on the introducing page counts', () async {
+      // Same shape as the ruby-split case, written with the explicit <rb>
+      // tags the ruby parser also accepts. If these survive stripping, the
+      // bound lands on the later plain occurrence -- past what the reader has
+      // read.
+      await write(
+        '020_chapter.txt',
+        '<ruby><rb>紅蓮</rb><rt>ぐれん</rt></ruby>の剣を手にした',
+      );
+      await write('080_chapter.txt', '紅蓮の剣を抜いた');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: '紅蓮の剣',
+      );
+
+      expect(resolved?.episode, 20);
+      expect(resolved?.fileName, '020_chapter.txt');
+    });
+
     test('picks the lexically first file when two share the episode', () async {
       await write('005_a.txt', '紅蓮の剣を手にした');
       await write('005_b.txt', '紅蓮の剣を研いだ');
