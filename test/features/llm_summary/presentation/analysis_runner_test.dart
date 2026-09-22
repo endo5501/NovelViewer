@@ -1711,16 +1711,8 @@ void main() {
           // the runner refuses anything.
           onPressed: (ref, context) {
             final runner = ref.read(analysisRunnerProvider);
-            runner.run(
-              context: context,
-              word: 'アリス',
-              coveredUpToEpisode: 40,
-            );
-            runner.run(
-              context: context,
-              word: 'アリス',
-              coveredUpToEpisode: 40,
-            );
+            runner.run(context: context, word: 'アリス', coveredUpToEpisode: 40);
+            runner.run(context: context, word: 'アリス', coveredUpToEpisode: 40);
           },
         ),
       );
@@ -1748,11 +1740,9 @@ void main() {
         _harness(
           container: container,
           onPressed: (ref, context) {
-            ref.read(analysisRunnerProvider).run(
-              context: context,
-              word: 'アリス',
-              coveredUpToEpisode: 40,
-            );
+            ref
+                .read(analysisRunnerProvider)
+                .run(context: context, word: 'アリス', coveredUpToEpisode: 40);
           },
         ),
       );
@@ -1777,11 +1767,9 @@ void main() {
         _harness(
           container: container,
           onPressed: (ref, context) {
-            ref.read(analysisRunnerProvider).run(
-              context: context,
-              word: 'アリス',
-              coveredUpToEpisode: 40,
-            );
+            ref
+                .read(analysisRunnerProvider)
+                .run(context: context, word: 'アリス', coveredUpToEpisode: 40);
           },
         ),
       );
@@ -1840,7 +1828,8 @@ void main() {
       expect(
         search.callCount,
         1,
-        reason: 'reading every file in the folder again buys nothing, so the '
+        reason:
+            'reading every file in the folder again buys nothing, so the '
             'refusal has to come before the search, not after it',
       );
       expect(stub.callCount, 1);

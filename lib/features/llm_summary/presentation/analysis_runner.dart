@@ -75,6 +75,24 @@ class DefaultAnalysisRunner implements AnalysisRunner {
   /// user-facing action to explain, because no control was offered.
   bool get _supported => _ref.read(llmSummarySupportedProvider);
 
+  /// Whether an analysis is already under way.
+  ///
+  /// Nothing is on screen between the request and the modal: [_run] pushes it
+  /// only once the client and repository futures settle, and the
+  /// first-occurrence scope searches the folder before that. A reader who
+  /// reads that silence as "nothing happened" and asks again would otherwise
+  /// start a second analysis — twice the LLM calls, and two runs racing each
+  /// other's snapshot and fact-cache writes for the same word.
+  ///
+  /// Both entry points take the flag, so a refused request does not even pay
+  /// for the folder search, and both release it in a `finally`: a run that
+  /// fails must not leave the runner shut for the rest of the session.
+  ///
+  /// Refusing is silent. The second request asked for the analysis that is
+  /// already starting, so there is nothing to tell the reader that the modal
+  /// is not about to say.
+  bool _analysisInFlight = false;
+
   @override
   Future<void> runWithScope({
     required BuildContext context,
@@ -82,6 +100,20 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     required AnalysisScope scope,
   }) async {
     if (!_supported) return;
+    if (_analysisInFlight) return;
+    _analysisInFlight = true;
+    try {
+      await _runWithScope(context: context, word: word, scope: scope);
+    } finally {
+      _analysisInFlight = false;
+    }
+  }
+
+  Future<void> _runWithScope({
+    required BuildContext context,
+    required String word,
+    required AnalysisScope scope,
+  }) async {
     final l10n = AppLocalizations.of(context)!;
     // The same folder [run] will use. Reading the browser's directory here
     // instead would leave a second notion of "which folder" in the one method
@@ -165,7 +197,8 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     // Resolving the first occurrence searches the folder, so the widget may
     // have gone by the time we get here.
     if (!context.mounted) return;
-    await run(
+    // The inner one: this method already holds the flag.
+    await _run(
       context: context,
       word: word,
       coveredUpToEpisode: episode,
@@ -183,6 +216,28 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     String? novelFolderPath,
   }) async {
     if (!_supported) return;
+    if (_analysisInFlight) return;
+    _analysisInFlight = true;
+    try {
+      await _run(
+        context: context,
+        word: word,
+        coveredUpToEpisode: coveredUpToEpisode,
+        sourceFileName: sourceFileName,
+        novelFolderPath: novelFolderPath,
+      );
+    } finally {
+      _analysisInFlight = false;
+    }
+  }
+
+  Future<void> _run({
+    required BuildContext context,
+    required String word,
+    required int coveredUpToEpisode,
+    String? sourceFileName,
+    String? novelFolderPath,
+  }) async {
     final l10n = AppLocalizations.of(context)!;
     // One folder does both jobs: the summaries are written to its
     // `novel_data.db`, and the text to analyse — along with the episode number
