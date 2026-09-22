@@ -2,8 +2,8 @@
 
 design.md D5 / D6 を参照。macOS 27 では全てのエラーが `LanguageModelError` から飛び、現状その全てが `unknown` に落ちている。統合プロンプトが誘発する拒否もここに含まれるため、先に片付ける。
 
-- [ ] 1.1 `OnDeviceGenerationFailure` に `timeout` と「要求が未対応」を表す理由を追加するテストを書き、`unsupportedGuide` を含むワイヤコードがそれぞれに写像されることを検証して、失敗を確認する
-- [ ] 1.2 `fromWireCode` を拡張して 1.1 を通す
+- [x] 1.1 `OnDeviceGenerationFailure` に `timeout` と「要求が未対応」を表す理由を追加するテストを書き、`unsupportedGuide` を含むワイヤコードがそれぞれに写像されることを検証して、失敗を確認する
+- [x] 1.2 `fromWireCode` を拡張して 1.1 を通す
 - [ ] 1.3 `LlmOnDeviceGenerationFailure.isWorthRetrying` が `timeout` を再試行し、未対応要求を再試行しないことを検証するテストを書き、失敗を確認する
 - [ ] 1.4 `isWorthRetrying` を拡張して 1.3 を通す
 - [ ] 1.5 Swift テストターゲットを SPM パッケージに追加し、空のテストが実行できることを確認する

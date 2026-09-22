@@ -64,6 +64,16 @@ enum OnDeviceGenerationFailure {
       OnDeviceGenerationFailure.unsupportedLanguage,
     'assetsUnavailable' => OnDeviceGenerationFailure.assetsUnavailable,
     'decodingFailure' => OnDeviceGenerationFailure.decodingFailure,
+    'timeout' => OnDeviceGenerationFailure.timeout,
+    // What the request asked for is not supported. The framework names the
+    // capability, the transcript content and the generation guide
+    // separately; they arrive here as one reason because the run answers
+    // them alike. `unsupportedGuide` is the older surface's name for the
+    // last of them.
+    'unsupportedCapability' ||
+    'unsupportedTranscriptContent' ||
+    'unsupportedGenerationGuide' ||
+    'unsupportedGuide' => OnDeviceGenerationFailure.unsupportedRequest,
     'modelUnavailable' => OnDeviceGenerationFailure.modelUnavailable,
     _ => OnDeviceGenerationFailure.unknown,
   };
