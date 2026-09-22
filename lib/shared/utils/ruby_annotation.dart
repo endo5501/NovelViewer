@@ -1,7 +1,14 @@
 /// Matches everything a ruby annotation contributes beyond its base: the
-/// reading, the `rp` fallback parentheses, and the outer tags.
+/// reading, the `rp` fallback parentheses, and the tags around both the
+/// annotation and the base.
+///
+/// The set of tags here has to stay in step with what `parseRubyText`
+/// recognises, because that decides what the reader sees. `<rb>` in
+/// particular is optional in the source but its contents are the displayed
+/// base, so leaving those tags behind would put the displayed text and the
+/// searched text out of step.
 final _rubyTagPattern = RegExp(
-  r'<rt>.*?</rt>|<rp>.*?</rp>|<ruby>|</ruby>',
+  r'<rt>.*?</rt>|<rp>.*?</rp>|</?ruby>|</?rb>',
   caseSensitive: false,
 );
 
