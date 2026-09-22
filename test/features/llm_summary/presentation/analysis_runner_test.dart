@@ -17,7 +17,9 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_provider
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
+import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config_problem.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
@@ -46,6 +48,44 @@ class _DummyRepo implements LlmSummaryRepository {
 }
 
 class _DummySearch implements TextSearchService {
+  @override
+  Object? noSuchMethod(Invocation invocation) => null;
+}
+
+/// Reports the word as occurring in exactly [fileNames], so the bound the
+/// runner forwards can be checked without the folder existing on disk. Every
+/// name used with this carries a numeric prefix, which resolves to an episode
+/// without a folder listing.
+class _CannedSearch implements TextSearchService {
+  _CannedSearch(this.fileNames);
+  final List<String> fileNames;
+
+  @override
+  Future<List<SearchResult>> searchWithContext(
+    String directoryPath,
+    String query, {
+    int contextLines = 2,
+  }) async => [
+    for (final name in fileNames)
+      SearchResult(
+        fileName: name,
+        filePath: '$directoryPath/$name',
+        matches: const [SearchMatch(lineNumber: 1, contextText: 'x')],
+      ),
+  ];
+
+  @override
+  Object? noSuchMethod(Invocation invocation) => null;
+}
+
+class _ThrowingSearch implements TextSearchService {
+  @override
+  Future<List<SearchResult>> searchWithContext(
+    String directoryPath,
+    String query, {
+    int contextLines = 2,
+  }) async => throw const FileSystemException('unreadable');
+
   @override
   Object? noSuchMethod(Invocation invocation) => null;
 }
@@ -135,8 +175,7 @@ final _testPackageInfo = PackageInfo(
 ProviderContainer _container(
   _StubService stub, {
   String directory = '/library/novel_a',
-  String libraryPath = '/library',
-  List<NovelMetadata>? novels,
+  TextSearchService? searchService,
   FileEntry? file,
   String language = 'ja',
   bool llmSupported = true,
@@ -154,10 +193,12 @@ ProviderContainer _container(
       currentDirectoryProvider.overrideWith(
         () => CurrentDirectoryNotifier(directory),
       ),
-      libraryPathProvider.overrideWithValue(libraryPath),
-      allNovelsProvider.overrideWith((ref) => novels ?? [_novelA]),
+      libraryPathProvider.overrideWithValue('/library'),
+      allNovelsProvider.overrideWith((ref) => [_novelA]),
       selectedFileProvider.overrideWith(() => _MockSelectedFile(file)),
       localeProvider.overrideWith(() => _StubLocale(language)),
+      if (searchService != null)
+        textSearchServiceProvider.overrideWithValue(searchService),
       llmSummaryServiceProvider.overrideWith((ref, folderPath) => stub),
       llmClientProvider.overrideWith((_) async => _DummyClient()),
       // run() awaits these FutureProviders before reading the (overridden)
@@ -1261,47 +1302,126 @@ void main() {
     );
   });
 
-  group('AnalysisScope.firstOccurrence', () {
-    late Directory libraryDir;
-    late Directory novelDir;
+  group('resolveFirstOccurrence (簡易解析上限)', () {
+    late Directory tempDir;
+    final service = TextSearchService();
 
     setUp(() async {
-      libraryDir = await Directory.systemTemp.createTemp('runner_simple_');
-      // _novelA registers the folder name 'novel_a', so the browser location
-      // has to be a real directory of that name inside the library for
-      // summaryNovelFolderProvider to hand it over.
-      novelDir = Directory('${libraryDir.path}/novel_a');
-      await novelDir.create();
+      tempDir = await Directory.systemTemp.createTemp('runner_first_');
     });
-
     tearDown(() async {
-      if (libraryDir.existsSync()) {
-        await libraryDir.delete(recursive: true);
+      if (tempDir.existsSync()) {
+        await tempDir.delete(recursive: true);
       }
     });
 
     Future<void> write(String name, String content) async {
-      await File('${novelDir.path}/$name').writeAsString(content);
+      await File('${tempDir.path}/$name').writeAsString(content);
     }
 
+    test('returns the episode and file of the first occurrence', () async {
+      await write('005_chapter.txt', '紅蓮の剣を手にした');
+      await write('012_chapter.txt', '紅蓮の剣を研いだ');
+      await write('040_chapter.txt', '紅蓮の剣を抜いた');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: '紅蓮の剣',
+      );
+
+      expect(resolved?.episode, 5);
+      expect(
+        resolved?.fileName,
+        '005_chapter.txt',
+        reason: 'the history jump should land where the word was introduced',
+      );
+    });
+
+    test('a ruby-split occurrence on the introducing page counts', () async {
+      // The authoring convention this mode has to survive: the term is
+      // annotated where it is introduced and written plainly later. Matching
+      // the raw text would find only the later page, putting the bound past
+      // what the reader has read.
+      await write(
+        '020_chapter.txt',
+        '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした',
+      );
+      await write('080_chapter.txt', '紅蓮の剣を抜いた');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: '紅蓮の剣',
+      );
+
+      expect(resolved?.episode, 20);
+      expect(resolved?.fileName, '020_chapter.txt');
+    });
+
+    test('picks the lexically first file when two share the episode', () async {
+      await write('005_a.txt', '紅蓮の剣を手にした');
+      await write('005_b.txt', '紅蓮の剣を研いだ');
+      await write('040_c.txt', '紅蓮の剣を抜いた');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: '紅蓮の剣',
+      );
+
+      expect(resolved?.episode, 5);
+      expect(resolved?.fileName, '005_a.txt');
+    });
+
+    test('uses the lexical rank in a prefix-less folder', () async {
+      await write('intro.txt', 'なにもない');
+      await write('part1.txt', '紅蓮の剣を手にした');
+      await write('part2.txt', '紅蓮の剣を抜いた');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: '紅蓮の剣',
+      );
+
+      expect(resolved?.episode, 2);
+      expect(resolved?.fileName, 'part1.txt');
+    });
+
+    test('returns null when the word occurs nowhere', () async {
+      await write('010_chapter.txt', 'なにもない');
+      await write('020_chapter.txt', 'ここにもない');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: '紅蓮の剣',
+      );
+
+      expect(resolved, isNull);
+    });
+
+    test('does not match the reading of a ruby annotation', () async {
+      await write('010_chapter.txt', '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣');
+
+      final resolved = await resolveFirstOccurrence(
+        directoryPath: tempDir.path,
+        searchService: service,
+        word: 'ぐれん',
+      );
+
+      expect(resolved, isNull);
+    });
+  });
+
+  group('AnalysisScope.firstOccurrence', () {
+    /// Canned search results, so the bound the runner forwards can be checked
+    /// without the folder existing. Every file name here carries a numeric
+    /// prefix, which resolves without a folder listing.
     _StubService stubbed() => _StubService(
       ({required word, required coveredUpToEpisode, sourceFileName}) async =>
           '要約',
-    );
-
-    ProviderContainer containerFor(
-      _StubService stub, {
-      required String? currentFileName,
-    }) => _container(
-      stub,
-      directory: novelDir.path,
-      libraryPath: libraryDir.path,
-      file: currentFileName == null
-          ? null
-          : FileEntry(
-              name: currentFileName,
-              path: '${novelDir.path}/$currentFileName',
-            ),
     );
 
     Future<void> trigger(
@@ -1324,123 +1444,68 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('bounds the analysis at the word\'s first occurrence', (
-      tester,
-    ) async {
-      await write('005_chapter.txt', '紅蓮の剣を手にした');
-      await write('012_chapter.txt', '紅蓮の剣を研いだ');
-      await write('040_chapter.txt', '紅蓮の剣を抜いた');
-
+    testWidgets('forwards the resolved bound and source file', (tester) async {
       final stub = stubbed();
-      final container = containerFor(stub, currentFileName: '040_chapter.txt');
+      final container = _container(
+        stub,
+        searchService: _CannedSearch(const ['040_chapter.txt', '005_chapter.txt']),
+        file: const FileEntry(name: '040_chapter.txt', path: ''),
+      );
       addTearDown(container.dispose);
 
       await trigger(tester, container);
 
       expect(stub.callCount, 1);
       expect(stub.lastCoveredUpToEpisode, 5);
-      expect(
-        stub.lastSourceFileName,
-        '005_chapter.txt',
-        reason: 'the history jump should land where the word was introduced',
-      );
-    });
-
-    testWidgets('a ruby-split occurrence on the current page still bounds it', (
-      tester,
-    ) async {
-      // The authoring convention this mode has to survive: the term is
-      // annotated where it is introduced and written plainly later. Matching
-      // the raw text would find only the later page and bound the analysis
-      // past what the reader has read.
-      await write(
-        '020_chapter.txt',
-        '<ruby>紅蓮<rt>ぐれん</rt></ruby>の剣を手にした',
-      );
-      await write('080_chapter.txt', '紅蓮の剣を抜いた');
-
-      final stub = stubbed();
-      final container = containerFor(stub, currentFileName: '020_chapter.txt');
-      addTearDown(container.dispose);
-
-      await trigger(tester, container);
-
-      expect(stub.lastCoveredUpToEpisode, 20);
-      expect(stub.lastSourceFileName, '020_chapter.txt');
-    });
-
-    testWidgets('never bounds past the file the reader is on', (tester) async {
-      await write('020_chapter.txt', '紅蓮の剣を手にした');
-      await write('080_chapter.txt', '紅蓮の剣を抜いた');
-
-      final stub = stubbed();
-      final container = containerFor(stub, currentFileName: '020_chapter.txt');
-      addTearDown(container.dispose);
-
-      await trigger(tester, container);
-
-      expect(stub.lastCoveredUpToEpisode, lessThanOrEqualTo(20));
-    });
-
-    testWidgets('resolves the shared episode when two files carry it', (
-      tester,
-    ) async {
-      await write('005_a.txt', '紅蓮の剣を手にした');
-      await write('005_b.txt', '紅蓮の剣を研いだ');
-      await write('040_c.txt', '紅蓮の剣を抜いた');
-
-      final stub = stubbed();
-      final container = containerFor(stub, currentFileName: '040_c.txt');
-      addTearDown(container.dispose);
-
-      await trigger(tester, container);
-
-      expect(stub.lastCoveredUpToEpisode, 5);
-      expect(stub.lastSourceFileName, '005_a.txt');
-    });
-
-    testWidgets('uses the lexical rank in a prefix-less folder', (
-      tester,
-    ) async {
-      await write('intro.txt', 'なにもない');
-      await write('part1.txt', '紅蓮の剣を手にした');
-      await write('part2.txt', '紅蓮の剣を抜いた');
-
-      final stub = stubbed();
-      final container = containerFor(stub, currentFileName: 'part2.txt');
-      addTearDown(container.dispose);
-
-      await trigger(tester, container);
-
-      expect(stub.lastCoveredUpToEpisode, 2);
-      expect(stub.lastSourceFileName, 'part1.txt');
+      expect(stub.lastSourceFileName, '005_chapter.txt');
     });
 
     testWidgets('falls back to the current file when the word occurs nowhere', (
       tester,
     ) async {
-      await write('010_chapter.txt', 'なにもない');
-      await write('020_chapter.txt', 'ここにもない');
-
       final stub = stubbed();
-      final container = containerFor(stub, currentFileName: '020_chapter.txt');
+      final container = _container(
+        stub,
+        searchService: _CannedSearch(const []),
+        file: const FileEntry(name: '020_chapter.txt', path: ''),
+      );
       addTearDown(container.dispose);
 
       await trigger(tester, container);
 
-      // Any bound yields the same empty evidence, so this only has to be
-      // defined and spoiler-free; the run then fails with the existing
-      // "no facts" notification.
+      // Any bound leaves the same empty evidence, so this only has to be
+      // defined and no further than the reading position. The run then fails
+      // with the existing "no facts" notification.
+      expect(stub.lastCoveredUpToEpisode, 20);
+      expect(stub.lastSourceFileName, '020_chapter.txt');
+    });
+
+    testWidgets('falls back to the current file when the search throws', (
+      tester,
+    ) async {
+      final stub = stubbed();
+      final container = _container(
+        stub,
+        searchService: _ThrowingSearch(),
+        file: const FileEntry(name: '020_chapter.txt', path: ''),
+      );
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+
+      // The run searches the same folder again and reports the error through
+      // the existing failure notification; the runner must not report it too.
       expect(stub.lastCoveredUpToEpisode, 20);
     });
 
     testWidgets('performs no analysis when no file is selected', (
       tester,
     ) async {
-      await write('005_chapter.txt', '紅蓮の剣を手にした');
-
       final stub = stubbed();
-      final container = containerFor(stub, currentFileName: null);
+      final container = _container(
+        stub,
+        searchService: _CannedSearch(const ['005_chapter.txt']),
+      );
       addTearDown(container.dispose);
 
       await trigger(tester, container);

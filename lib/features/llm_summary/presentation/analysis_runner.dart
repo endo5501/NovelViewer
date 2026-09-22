@@ -13,6 +13,8 @@ import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
+import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config_problem.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
@@ -25,7 +27,12 @@ import 'package:novel_viewer/shared/failure/failure_snackbar.dart';
 /// resolves a `scope` into a concrete `coveredUpToEpisode` using the current
 /// directory and file. Persistence is keyed by the resolved integer; the
 /// scope itself is never written to disk.
-enum AnalysisScope { upToCurrent, upToAll }
+///
+/// [firstOccurrence] is the "簡易解析" scope. It needs no representation of its
+/// own beyond a bound: the service keeps only files at or below the bound that
+/// contain the word, and no file below the word's first occurrence contains
+/// it, so a bound of that episode leaves exactly its files as evidence.
+enum AnalysisScope { firstOccurrence, upToCurrent, upToAll }
 
 abstract class AnalysisRunner {
   Future<void> run({
@@ -81,6 +88,28 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     final int episode;
     final String? sourceFile;
     switch (scope) {
+      case AnalysisScope.firstOccurrence:
+        // A selection came from a page on screen, so without one there is no
+        // reading position to keep the bound at or below — refuse rather than
+        // fabricate a snapshot, as the no-spoiler scope does.
+        if (selectedFile == null) {
+          _snack(context, l10n.llmAnalysis_noFolderOpen);
+          return;
+        }
+        final currentEpisode = resolveUpperBoundForCurrent(
+          directoryPath: directory,
+          currentFile: selectedFile,
+        );
+        final first = await _resolveFirstOccurrence(
+          directory: directory,
+          word: word,
+        );
+        // No match leaves any bound equivalent — the evidence is empty either
+        // way — so fall back to the reading position, which is defined and
+        // spoiler-free. The run then fails with the existing "no facts"
+        // notification, exactly as the no-spoiler scope would for this word.
+        episode = first?.episode ?? currentEpisode;
+        sourceFile = first?.fileName ?? selectedFile.name;
       case AnalysisScope.upToCurrent:
         // Refuse to fabricate a phantom episode-1 snapshot for a state where
         // the user hasn't opened any file — the resulting snapshot would
@@ -99,12 +128,37 @@ class DefaultAnalysisRunner implements AnalysisRunner {
         episode = resolveUpperBoundForAll(directory);
         sourceFile = resolveSourceFileForAll(directory);
     }
+    // Resolving the first occurrence searches the folder, so the widget may
+    // have gone by the time we get here.
+    if (!context.mounted) return;
     await run(
       context: context,
       word: word,
       coveredUpToEpisode: episode,
       sourceFileName: sourceFile,
     );
+  }
+
+  /// [resolveFirstOccurrence] against the configured search service, with a
+  /// search failure resolving to null.
+  ///
+  /// The run that follows searches the same folder again and hits the same
+  /// error, where the existing failure notification reports it with
+  /// diagnostics; surfacing it from here as well would report one error twice,
+  /// from two places.
+  Future<({int episode, String fileName})?> _resolveFirstOccurrence({
+    required String directory,
+    required String word,
+  }) async {
+    try {
+      return await resolveFirstOccurrence(
+        directoryPath: directory,
+        searchService: _ref.read(textSearchServiceProvider),
+        word: word,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -326,6 +380,29 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
   }
+}
+
+/// Resolve "解析開始(簡易)" → the episode of [word]'s first occurrence in
+/// [directoryPath] and the file it was read from, or `null` when the word
+/// occurs in none of the folder's text files.
+///
+/// The occurrences are found with the same search the pipeline uses to collect
+/// evidence, rather than a cheaper lookup of its own. A second implementation
+/// of the match rule could disagree with the first, and then the bound would
+/// name a file the run finds nothing in — failing with "no facts" on a word
+/// the reader can see on the page. One full folder read is noise beside the
+/// two LLM calls this mode costs, and consistency is structural instead of
+/// maintained.
+Future<({int episode, String fileName})?> resolveFirstOccurrence({
+  required String directoryPath,
+  required TextSearchService searchService,
+  required String word,
+}) async {
+  final results = await searchService.searchWithContext(directoryPath, word);
+  return resolveFirstOccurrenceEpisode(
+    matchedFileNames: results.map((r) => r.fileName).toList(),
+    folderFiles: listSortedTextFileNames(directoryPath),
+  );
 }
 
 /// Resolve "解析開始(ネタバレなし)" → the inclusive upper bound corresponding
