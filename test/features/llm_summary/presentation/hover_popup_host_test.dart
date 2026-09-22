@@ -56,6 +56,7 @@ class _RecordingRunner implements AnalysisRunner {
     required String word,
     required int coveredUpToEpisode,
     String? sourceFileName,
+    String? novelFolderPath,
   }) async {
     callCount++;
     lastEpisode = coveredUpToEpisode;

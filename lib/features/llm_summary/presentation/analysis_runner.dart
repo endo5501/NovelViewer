@@ -18,6 +18,7 @@ import 'package:novel_viewer/features/text_search/providers/text_search_provider
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config_problem.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/shared/failure/failure_report.dart';
@@ -35,11 +36,18 @@ import 'package:novel_viewer/shared/failure/failure_snackbar.dart';
 enum AnalysisScope { firstOccurrence, upToCurrent, upToAll }
 
 abstract class AnalysisRunner {
+  /// Runs an analysis of [word] bounded by [coveredUpToEpisode].
+  ///
+  /// [novelFolderPath] is the novel the request was made against, for a caller
+  /// that already resolved one and may have awaited something since. Omitting
+  /// it resolves the novel here, which is correct only for a caller that
+  /// reaches this synchronously from the reader's action.
   Future<void> run({
     required BuildContext context,
     required String word,
     required int coveredUpToEpisode,
     String? sourceFileName,
+    String? novelFolderPath,
   });
 
   /// Convenience entry-point for context menus and the hover popup re-analyze
@@ -136,6 +144,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       word: word,
       coveredUpToEpisode: episode,
       sourceFileName: sourceFile,
+      novelFolderPath: directory,
     );
   }
 
@@ -167,6 +176,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     required String word,
     required int coveredUpToEpisode,
     String? sourceFileName,
+    String? novelFolderPath,
   }) async {
     if (!_supported) return;
     final l10n = AppLocalizations.of(context)!;
@@ -181,7 +191,29 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     // Read once, synchronously, and captured: this method spans awaits, and a
     // reader who moves on mid-request must not have one novel's text written
     // to another novel's database.
-    final novelFolder = _ref.read(summaryNovelFolderProvider);
+    //
+    // A caller that already resolved the novel passes it in rather than
+    // letting it be read again here. [runWithScope] does, because resolving a
+    // first-occurrence bound searches the folder and that search is awaited:
+    // by the time this runs the reader may be in another novel, and reading
+    // the provider again would key one novel's word, bound and source file
+    // into another novel's database. The captured path is still checked rather
+    // than trusted — the novel may have been deleted or unregistered while the
+    // search ran, and opening a repository creates `novel_data.db` wherever it
+    // points.
+    final String? novelFolder;
+    if (novelFolderPath == null) {
+      novelFolder = _ref.read(summaryNovelFolderProvider);
+    } else {
+      novelFolder =
+          isRegisteredNovelFolder(
+            folderPath: novelFolderPath,
+            libraryPath: _ref.read(libraryPathProvider),
+            novels: _ref.read(allNovelsProvider).value,
+          )
+          ? novelFolderPath
+          : null;
+    }
     if (novelFolder == null) {
       _snack(context, l10n.llmAnalysis_noFolderOpen);
       return;
