@@ -22,6 +22,9 @@ Widget buildDictionaryContextMenu(
     addToDictionaryLabel: onAddToDictionary == null
         ? null
         : l10n.contextMenu_addToDictionary,
+    analyzeSimpleLabel: onAnalyze == null
+        ? null
+        : l10n.contextMenu_analyzeSimple,
     analyzeNoSpoilerLabel: onAnalyze == null
         ? null
         : l10n.contextMenu_analyzeNoSpoiler,
@@ -42,10 +45,17 @@ Widget buildDictionaryContextMenu(
 /// An optional group is included only when its label and its callback are both
 /// supplied; omitting either drops it. This keeps the builder a pure function
 /// with no knowledge of platforms or providers, so both outcomes are testable.
+///
+/// The three analysis items form one such group: a single condition — whether
+/// analysis is available at all — gates them, so they appear together or not
+/// at all. They run lightest first, simple analysis ahead of the two
+/// spoiler-scoped ones, since it reads only the episode that introduces the
+/// word and so is both the cheapest and the one that can reveal the least.
 List<ContextMenuButtonItem> buildAnalysisButtonItems({
   required List<ContextMenuButtonItem> baseItems,
   required String selectedText,
   String? addToDictionaryLabel,
+  String? analyzeSimpleLabel,
   String? analyzeNoSpoilerLabel,
   String? analyzeSpoilerLabel,
   void Function(String selectedText)? onAddToDictionary,
@@ -86,8 +96,18 @@ List<ContextMenuButtonItem> buildAnalysisButtonItems({
     );
   }
   if (onAnalyze != null &&
+      analyzeSimpleLabel != null &&
       analyzeNoSpoilerLabel != null &&
       analyzeSpoilerLabel != null) {
+    items.add(
+      ContextMenuButtonItem(
+        label: analyzeSimpleLabel,
+        onPressed: () {
+          ContextMenuController.removeAny();
+          onAnalyze(selectedText, AnalysisScope.firstOccurrence);
+        },
+      ),
+    );
     items.add(
       ContextMenuButtonItem(
         label: analyzeNoSpoilerLabel,

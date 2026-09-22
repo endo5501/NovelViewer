@@ -114,6 +114,7 @@ void main() {
     );
 
     expect(labels, contains('辞書追加'));
+    expect(labels, contains('解析開始(簡易)'));
     expect(labels, contains('解析開始(ネタバレなし)'));
     expect(labels, contains('解析開始(ネタバレあり)'));
   });
@@ -126,6 +127,7 @@ void main() {
     );
 
     expect(labels, isNot(contains('辞書追加')));
+    expect(labels, contains('解析開始(簡易)'));
     expect(labels, contains('解析開始(ネタバレなし)'));
   });
 
@@ -137,6 +139,7 @@ void main() {
     );
 
     expect(labels, contains('辞書追加'));
+    expect(labels, isNot(contains('解析開始(簡易)')));
     expect(labels, isNot(contains('解析開始(ネタバレなし)')));
     expect(labels, isNot(contains('解析開始(ネタバレあり)')));
   });
@@ -151,6 +154,7 @@ void main() {
     );
 
     expect(labels, isNot(contains('辞書追加')));
+    expect(labels, isNot(contains('解析開始(簡易)')));
     expect(labels, isNot(contains('解析開始(ネタバレなし)')));
     expect(labels, isNot(contains('解析開始(ネタバレあり)')));
     expect(labels, isNotEmpty);
@@ -203,6 +207,7 @@ void main() {
 
     expect(labels, contains('コピー'));
     expect(labels, contains('辞書追加'));
+    expect(labels, contains('解析開始(簡易)'));
     expect(labels, contains('解析開始(ネタバレなし)'));
     expect(labels, contains('解析開始(ネタバレあり)'));
   });
@@ -218,6 +223,7 @@ void main() {
 
     expect(labels, contains('コピー'));
     expect(labels, isNot(contains('辞書追加')));
+    expect(labels, isNot(contains('解析開始(簡易)')));
     expect(labels, isNot(contains('解析開始(ネタバレなし)')));
     expect(labels, isNot(contains('解析開始(ネタバレあり)')));
   });

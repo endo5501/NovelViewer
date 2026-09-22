@@ -47,8 +47,8 @@ specs/llm-summary-context-menu-trigger を参照。D8。
   - 解析ラベルが与えられないとき3項目すべてが出ず、辞書項目は出る（グループとして扱われること）
   - 簡易項目のディスパッチが選択語と簡易スコープを渡す
   - 解析ハンドラが与えられないとき3項目すべてが no-op になる
-- [ ] 4.3 `vertical_context_menu.dart` に項目と `dispatchVerticalContextAction` のケースを追加し、`dictionary_context_menu.dart` のグループ条件に新ラベルを加えて実装し、4.2 のテストと両ファイルの既存テストが通ることを確認する
-- [ ] 4.4 `text_content_renderer.dart` の呼び出し側で新ラベルを渡し、LLM 非対応プラットフォームでは3項目すべてが withheld されることを既存の capability ゲートのテストで確認する
+- [x] 4.3 `vertical_context_menu.dart` に項目と `dispatchVerticalContextAction` のケースを追加し、`dictionary_context_menu.dart` のグループ条件に新ラベルを加えて実装し、4.2 のテストと両ファイルの既存テストが通ることを確認する
+- [x] 4.4 `text_content_renderer.dart` の呼び出し側で新ラベルを渡し、LLM 非対応プラットフォームでは3項目すべてが withheld されることを既存の capability ゲートのテストで確認する
 
 ## 5. ホバーポップアップのドロップダウン項目
 
