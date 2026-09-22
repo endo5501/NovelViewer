@@ -1578,7 +1578,10 @@ void main() {
       // reader was avoiding -- one extraction per hit file rather than one --
       // and save it as though it were a simple analysis. Nothing runs.
       expect(stub.callCount, 0);
-      expect(find.text('解析失敗'), findsOneWidget);
+      // The shared failure path appends the cause to the headline, so match
+      // the headline loosely and assert the cause reached the reader.
+      expect(find.textContaining('解析失敗'), findsOneWidget);
+      expect(find.textContaining('unreadable'), findsOneWidget);
       expect(find.byKey(const Key('analysis_modal')), findsNothing);
     });
 

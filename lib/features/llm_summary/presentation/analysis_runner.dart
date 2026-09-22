@@ -108,14 +108,40 @@ class DefaultAnalysisRunner implements AnalysisRunner {
           directoryPath: directory,
           currentFile: selectedFile,
         );
-        final first = await _resolveFirstOccurrence(
-          directory: directory,
-          word: word,
-        );
-        // No match leaves any bound equivalent — the evidence is empty either
-        // way — so fall back to the reading position, which is defined and
-        // spoiler-free. The run then fails with the existing "no facts"
-        // notification, exactly as the no-spoiler scope would for this word.
+        final ({int episode, String fileName})? first;
+        try {
+          first = await resolveFirstOccurrence(
+            directoryPath: directory,
+            searchService: _ref.read(textSearchServiceProvider),
+            word: word,
+          );
+        } catch (e, st) {
+          // Report it and stop. Treating a broken search as "the word occurs
+          // nowhere" would fall through to the reading-position bound below
+          // and run the scope this mode exists to avoid — one extraction per
+          // hit file instead of one — and save the result as though it were a
+          // simple analysis. The bound is named as unresolved because it never
+          // was.
+          if (!context.mounted) return;
+          showFailureSnackBar(
+            context,
+            FailureReport(
+              headline: l10n.llmAnalysis_failed,
+              cause: e.toString(),
+              stackTrace: st,
+              diagnostics: _diagnostics(
+                word: word,
+                coveredUpToEpisode: null,
+                sourceFileName: selectedFile.name,
+              ),
+            ),
+          );
+          return;
+        }
+        // A word that occurs nowhere is different: every bound leaves the same
+        // empty evidence, so fall back to the reading position, which is
+        // defined and spoiler-free. The run then fails with the existing "no
+        // facts" notification, exactly as the no-spoiler scope would for it.
         episode = first?.episode ?? currentEpisode;
         sourceFile = first?.fileName ?? selectedFile.name;
       case AnalysisScope.upToCurrent:
@@ -146,28 +172,6 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       sourceFileName: sourceFile,
       novelFolderPath: directory,
     );
-  }
-
-  /// [resolveFirstOccurrence] against the configured search service, with a
-  /// search failure resolving to null.
-  ///
-  /// The run that follows searches the same folder again and hits the same
-  /// error, where the existing failure notification reports it with
-  /// diagnostics; surfacing it from here as well would report one error twice,
-  /// from two places.
-  Future<({int episode, String fileName})?> _resolveFirstOccurrence({
-    required String directory,
-    required String word,
-  }) async {
-    try {
-      return await resolveFirstOccurrence(
-        directoryPath: directory,
-        searchService: _ref.read(textSearchServiceProvider),
-        word: word,
-      );
-    } catch (_) {
-      return null;
-    }
   }
 
   @override
@@ -342,9 +346,12 @@ class DefaultAnalysisRunner implements AnalysisRunner {
   /// Deliberately no endpoint: a self-hosted `baseUrl` carries the reader's
   /// private network address, and this text is meant to be pasted into a bug
   /// report. The provider kind and model still identify the configuration.
+  ///
+  /// [coveredUpToEpisode] is null when the run failed before a bound could be
+  /// resolved, which simple analysis can: it has to search the folder first.
   Map<String, String?> _diagnostics({
     required String word,
-    required int coveredUpToEpisode,
+    required int? coveredUpToEpisode,
     required String? sourceFileName,
   }) {
     final config = _ref.read(llmConfigProvider);
@@ -354,7 +361,9 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       'provider': config.provider.name,
       'model': config.model,
       'word': word,
-      'covered up to': '$coveredUpToEpisode',
+      'covered up to': coveredUpToEpisode == null
+          ? '(unresolved)'
+          : '$coveredUpToEpisode',
       'file': sourceFileName,
     };
   }
