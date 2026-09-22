@@ -4,8 +4,8 @@ design.md D5 / D6 を参照。macOS 27 では全てのエラーが `LanguageMode
 
 - [x] 1.1 `OnDeviceGenerationFailure` に `timeout` と「要求が未対応」を表す理由を追加するテストを書き、`unsupportedGuide` を含むワイヤコードがそれぞれに写像されることを検証して、失敗を確認する
 - [x] 1.2 `fromWireCode` を拡張して 1.1 を通す
-- [ ] 1.3 `LlmOnDeviceGenerationFailure.isWorthRetrying` が `timeout` を再試行し、未対応要求を再試行しないことを検証するテストを書き、失敗を確認する
-- [ ] 1.4 `isWorthRetrying` を拡張して 1.3 を通す
+- [x] 1.3 `LlmOnDeviceGenerationFailure.isWorthRetrying` が `timeout` を再試行し、未対応要求を再試行しないことを検証するテストを書き、失敗を確認する
+- [x] 1.4 `isWorthRetrying` を拡張して 1.3 を通す
 - [ ] 1.5 Swift テストターゲットを SPM パッケージに追加し、空のテストが実行できることを確認する
 - [ ] 1.6 `LanguageModelError` の9ケースが正しいワイヤコードへ写像されることを検証する Swift テストを書き、失敗を確認する（各ペイロードは public init で構築できる）
 - [ ] 1.7 `GenerationError` の既存9ケースの写像が変わらないことを検証する Swift テストを書き、通ることを確認する（回帰防止。ここは既に通るはず）
