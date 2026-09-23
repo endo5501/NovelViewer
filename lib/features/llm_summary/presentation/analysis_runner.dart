@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/shared/episode/episode_resolver.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
@@ -154,6 +155,11 @@ class DefaultAnalysisRunner implements AnalysisRunner {
           // hit file instead of one — and save the result as though it were a
           // simple analysis. The bound is named as unresolved because it never
           // was.
+          final diagnostics = await _diagnostics(
+            word: word,
+            coveredUpToEpisode: null,
+            sourceFileName: selectedFile.name,
+          );
           if (!context.mounted) return;
           showFailureSnackBar(
             context,
@@ -161,11 +167,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
               headline: l10n.llmAnalysis_failed,
               cause: e.toString(),
               stackTrace: st,
-              diagnostics: _diagnostics(
-                word: word,
-                coveredUpToEpisode: null,
-                sourceFileName: selectedFile.name,
-              ),
+              diagnostics: diagnostics,
             ),
           );
           return;
@@ -368,7 +370,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
         headline: headline,
         cause: cause,
         stackTrace: st,
-        diagnostics: _diagnostics(
+        diagnostics: await _diagnostics(
           word: word,
           coveredUpToEpisode: coveredUpToEpisode,
           sourceFileName: resolvedSourceFile,
@@ -402,19 +404,33 @@ class DefaultAnalysisRunner implements AnalysisRunner {
   /// private network address, and this text is meant to be pasted into a bug
   /// report. The provider kind and model still identify the configuration.
   ///
+  /// The model is the one the client names, not the configured one. A
+  /// provider that takes no model from the configuration leaves there
+  /// whatever a previously selected provider put, and the report would then
+  /// name a model that had no part in the run. With no client there is no
+  /// model to name, and falling back to the setting would bring that back.
+  ///
   /// [coveredUpToEpisode] is null when the run failed before a bound could be
   /// resolved, which simple analysis can: it has to search the folder first.
-  Map<String, String?> _diagnostics({
+  Future<Map<String, String?>> _diagnostics({
     required String word,
     required int? coveredUpToEpisode,
     required String? sourceFileName,
-  }) {
+  }) async {
     final config = _ref.read(llmConfigProvider);
+    // A search failure reports before the client was ever asked for, and the
+    // report must survive a client that cannot be built at all.
+    LlmClient? client;
+    try {
+      client = await _ref.read(llmClientProvider.future);
+    } catch (_) {
+      client = null;
+    }
     return {
       'time': DateTime.now().toUtc().toIso8601String(),
       'app version': _ref.read(appVersionLabelProvider),
       'provider': config.provider.name,
-      'model': config.model,
+      'model': client?.modelId ?? '(no client)',
       'word': word,
       'covered up to': coveredUpToEpisode == null
           ? '(unresolved)'
