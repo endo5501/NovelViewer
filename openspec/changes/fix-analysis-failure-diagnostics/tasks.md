@@ -21,7 +21,8 @@
 
 ## 4. 確認
 
-- [ ] 4.1 オンデバイスプロバイダで解析を失敗させ、障害ダイアログのコピーテキストが `provider: appleOnDevice` と整合する `model` を含み、`app version` が commit ハッシュを含むことを実機で確認する
+- [ ] 4.1 `scripts/build_app.sh` で作ったビルドで障害ダイアログを開き、コピーテキストの `app version` が commit ハッシュを含むことを実機で確認する（LLM / TTS どちらの障害レポートでもよい）
+  - `model` の確認は、オンデバイスで解析失敗を狙って起こすのが難しいため自動テストで代える。設定に別プロバイダのモデル名が残っていても `model: apple:on-device` と報告されることを `analysis_runner_test.dart` で確認済み
 
 ## 5. 最終確認
 
