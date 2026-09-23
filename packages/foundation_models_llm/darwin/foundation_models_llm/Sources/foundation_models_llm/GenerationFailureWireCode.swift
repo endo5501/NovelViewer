@@ -31,4 +31,10 @@ enum GenerationFailureWireCode {
     @unknown default: return unknown
     }
   }
+
+  @available(iOS 27.0, macOS 27.0, *)
+  static func of(_ error: LanguageModelError) -> String { unknown }
+
+  @available(iOS 26.0, macOS 26.0, *)
+  static func ofAnyError(_ error: Error) -> String? { nil }
 }
