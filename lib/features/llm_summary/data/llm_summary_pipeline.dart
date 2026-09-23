@@ -38,6 +38,11 @@ class LlmSummaryPipeline {
   /// keeps malformed answers from being generated in the first place, rather
   /// than relying on the parser to reject them after the fact.
   static const factsSchema = LlmResponseSchema.singleStringField('facts');
+
+  /// What an aggregation round puts between the facts it hands over. It is
+  /// counted when the round is sized, so the facts reach the prompt within
+  /// the response budget rather than past it by the separators.
+  static const _refinementSeparator = '\n---\n';
   static const summarySchema = LlmResponseSchema.singleStringField('summary');
 
   final LlmClient llmClient;
@@ -206,7 +211,11 @@ class LlmSummaryPipeline {
     // Sized by what the model may return, not by what it may be handed: a
     // round answers at close to the length of the facts it was given, so a
     // window-sized chunk asks for an answer the response cap cuts off.
-    final chunks = ContextChunker.split(entries, maxChunkSize: maxResponseSize);
+    final chunks = ContextChunker.split(
+      entries,
+      maxChunkSize: maxResponseSize,
+      separator: _refinementSeparator,
+    );
     final round = depth + 1;
 
     final factsList = <String>[];
@@ -220,7 +229,7 @@ class LlmSummaryPipeline {
       );
       final prompt = LlmPromptBuilder.buildFactRefinementPrompt(
         word: word,
-        facts: chunks[i].join('\n---\n'),
+        facts: chunks[i].join(_refinementSeparator),
         maxResponseSize: maxResponseSize,
         language: language,
       );
