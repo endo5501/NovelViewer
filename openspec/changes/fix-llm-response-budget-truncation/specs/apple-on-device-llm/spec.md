@@ -4,7 +4,7 @@
 
 The on-device provider SHALL declare a response budget to the pipeline, so that what the pipeline asks for is sized against what the provider can return. The provider's own response cap SHALL remain a backstop against an answer that will not end, and SHALL NOT be the thing that decides how long an answer is.
 
-The framework does not report that the cap ended an answer. Measured on macOS 26A428, a request whose answer exceeded its cap returned a string cut mid-word inside a correctly closed JSON object: the caller's decode succeeded, the answer was marked structured, and the facts beyond the cut were lost with nothing to indicate it. On iPadOS 26.6.2 the same overrun was reported as a decoding failure instead, ending the analysis. A caller therefore cannot distinguish a complete answer from a truncated one, and SHALL NOT be asked to.
+The framework does not report that the cap ended an answer. Measured on macOS 27.0 (26A428), a request whose answer exceeded its cap returned a string cut mid-word inside a correctly closed JSON object: the caller's decode succeeded, the answer was marked structured, and the facts beyond the cut were lost with nothing to indicate it. On iPadOS 26.6.2 the same overrun was reported as a decoding failure instead, ending the analysis. A caller therefore cannot distinguish a complete answer from a truncated one, and SHALL NOT be asked to.
 
 The provider SHALL therefore be configured so that an answer produced as instructed never approaches the cap. The declared response budget SHALL sit below the cap with margin, and the cap SHALL exceed what a correct answer needs by enough that reaching it means something other than a long answer has gone wrong.
 
@@ -32,7 +32,7 @@ The permissive guardrails do not take effect on the schema-constrained path: the
 
 Unconstrained generation SHALL request greedy sampling. Without the schema the model falls into repeating a sentence until the response cap cuts the answer off mid-object, which reaches the caller as a response that will not parse. Greedy sampling removes that: measured over the same passages, every unconstrained answer parsed, where under the framework's default sampling half of them did not.
 
-Every way the framework has of saying the text was refused SHALL qualify, through whichever error surface it reports the refusal. It reports a guardrail block and the model declining as separate cases, and on a system carrying the newer error surface both arrive through that one instead: measured on macOS 26A428, the model declining reached the provider as a case of the replacement type, where a provider recognising only the deprecated type read it as unclassified. Such a failure is then retried identically instead of being answered by the unconstrained request, and is reported to the reader without naming the text as its cause. The native side SHALL therefore recognise a refusal through either surface and SHALL report it to the client as a refusal; a failure it cannot classify SHALL remain unclassified rather than being read as a refusal.
+Every way the framework has of saying the text was refused SHALL qualify, through whichever error surface it reports the refusal. It reports a guardrail block and the model declining as separate cases, and on a system carrying the newer error surface both arrive through that one instead: measured on macOS 27.0 (26A428), the model declining reached the provider as a case of the replacement type, where a provider recognising only the deprecated type read it as unclassified. Such a failure is then retried identically instead of being answered by the unconstrained request, and is reported to the reader without naming the text as its cause. The native side SHALL therefore recognise a refusal through either surface and SHALL report it to the client as a refusal; a failure it cannot classify SHALL remain unclassified rather than being read as a refusal.
 
 The retry SHALL be issued at most once per generation request. Where it is also refused, the refusal SHALL be reported as it is today, so that the existing per-file failure isolation applies.
 
@@ -64,7 +64,7 @@ The decision to retry SHALL live in the client rather than in the native plugin.
 - **THEN** the provider SHALL issue the unconstrained retry, as it does for a guardrail block
 
 #### Scenario: A refusal reported outside the generation-error type counts as a refusal
-- **WHEN** the framework reports the model declining as an error type other than the generation-error type, as it does on macOS 26A428
+- **WHEN** the framework reports the model declining as an error type other than the generation-error type, as it does on macOS 27.0 (26A428)
 - **THEN** the native side SHALL report it to the client as a refusal
 - **AND** the provider SHALL issue the unconstrained retry rather than repeating the identical request
 
