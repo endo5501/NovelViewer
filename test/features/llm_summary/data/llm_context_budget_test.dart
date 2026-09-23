@@ -127,6 +127,25 @@ void main() {
       expect(client.refinementPrompts, everyElement(contains('$bound文字以内')));
     });
 
+    test('a round\'s facts fit the budget with their separators', () async {
+      // Pairs of 650-character facts fill a 1300 budget exactly. Joined for
+      // the prompt, each pair gains a separator and comes to 1305.
+      final client = _TwoBudgetClient(window: 4000, response: 1300);
+
+      await pipelineFor(client).summarizeFromFacts(
+        word: 'アリス',
+        perFileFacts: List.generate(8, (i) => '- ${'事' * 647}$i'),
+      );
+
+      expect(client.refinementPrompts, isNotEmpty);
+      for (final prompt in client.refinementPrompts) {
+        final facts = RegExp(
+          r'<facts>\n([\s\S]*)\n</facts>',
+        ).firstMatch(prompt)!.group(1)!;
+        expect(facts.length, lessThanOrEqualTo(1300));
+      }
+    });
+
     test('a pipeline given no response budget takes the client\'s', () async {
       // Handed only the window, the pipeline must still size aggregation by
       // what the client says it can return, not fall back to the window.
