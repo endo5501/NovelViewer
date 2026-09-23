@@ -1,0 +1,1 @@
+../../../foundation_models_llm/Sources/foundation_models_llm/GenerationFailureWireCode.swift

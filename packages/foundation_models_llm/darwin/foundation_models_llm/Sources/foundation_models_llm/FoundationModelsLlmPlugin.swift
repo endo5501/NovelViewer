@@ -147,7 +147,7 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
       } catch let error as LanguageModelSession.GenerationError {
         result(
           FlutterError(
-            code: Self.wireCode(for: error),
+            code: GenerationFailureWireCode.of(error),
             message: error.failureReason ?? String(describing: error),
             details: nil))
       } catch {
@@ -215,26 +215,4 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
     }
   }
 
-  /// The error code Dart reads back.
-  ///
-  /// A guardrail block and the model's own refusal are reported separately by
-  /// the framework and kept separate here, so a log says which happened; Dart
-  /// reads both as the text having been refused.
-  @available(iOS 26.0, macOS 26.0, *)
-  private static func wireCode(
-    for error: LanguageModelSession.GenerationError
-  ) -> String {
-    switch error {
-    case .exceededContextWindowSize: return "exceededContextWindowSize"
-    case .assetsUnavailable: return "assetsUnavailable"
-    case .guardrailViolation: return "guardrailViolation"
-    case .refusal: return "refusal"
-    case .unsupportedGuide: return "unsupportedGuide"
-    case .unsupportedLanguageOrLocale: return "unsupportedLanguageOrLocale"
-    case .decodingFailure: return "decodingFailure"
-    case .rateLimited: return "rateLimited"
-    case .concurrentRequests: return "concurrentRequests"
-    @unknown default: return "unknown"
-    }
-  }
 }
