@@ -127,6 +127,27 @@ void main() {
       expect(client.refinementPrompts, everyElement(contains('$bound文字以内')));
     });
 
+    test('a pipeline given no response budget takes the client\'s', () async {
+      // Handed only the window, the pipeline must still size aggregation by
+      // what the client says it can return, not fall back to the window.
+      final client = _TwoBudgetClient(window: 4000, response: 1000);
+      final pipeline = LlmSummaryPipeline(
+        llmClient: client,
+        maxChunkSize: client.maxChunkSize,
+      );
+
+      expect(pipeline.maxResponseSize, 1000);
+    });
+
+    test('the response budget never exceeds the window', () async {
+      // A client that declares none answers with its own window, which can
+      // be larger than the window the pipeline was given.
+      final client = _BudgetedClient(budget: 4000);
+      final pipeline = LlmSummaryPipeline(llmClient: client, maxChunkSize: 40);
+
+      expect(pipeline.maxResponseSize, 40);
+    });
+
     test('Stage-1 keeps the window, not the response budget', () async {
       // Stage-1 compresses prose into a list, so its answer sits well inside
       // the response budget; sizing it by that would multiply the requests.
