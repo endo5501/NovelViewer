@@ -132,7 +132,9 @@ class LlmSummaryPipeline {
       facts = combined;
     } else {
       // Refinement starts at depth 1 so the first emitted round is 2.
-      facts = await _extractFactsRecursive(word, nonEmpty, 1, notify);
+      facts = _withinWindow(
+        await _extractFactsRecursive(word, nonEmpty, 1, notify),
+      );
     }
 
     notify(const AnalysisGeneratingFinalSummary());
@@ -160,6 +162,28 @@ class LlmSummaryPipeline {
         _log.warning('onProgress callback threw; ignoring', e, st);
       }
     };
+  }
+
+  /// [facts], cut to what the final summary prompt can carry.
+  ///
+  /// Aggregation stops in three ways, and two of them — a round that did not
+  /// shrink the facts, and the depth limit — stop without the facts having
+  /// come within the window. Handed on as they are, they overrun the final
+  /// summary request after every extraction has already been paid for.
+  ///
+  /// The cut is mechanical rather than another round, because both of those
+  /// exits are reached precisely when another round would not help. It lands
+  /// on a line break where one falls within the window, so no fact is left
+  /// half-written for the summary to read as a fact of its own.
+  String _withinWindow(String facts) {
+    if (facts.length <= maxChunkSize) return facts;
+    var cut = facts.lastIndexOf('\n', maxChunkSize);
+    if (cut <= 0) cut = maxChunkSize;
+    _log.warning(
+      'aggregated facts exceed the window; cutting to fit. '
+      'length=${facts.length} window=$maxChunkSize kept=$cut',
+    );
+    return facts.substring(0, cut);
   }
 
   Future<String> _extractFactsRecursive(
