@@ -245,6 +245,31 @@ void main() {
     });
   });
 
+  group('OllamaClient response budget', () {
+    OllamaClient client() => OllamaClient(
+      baseUrl: 'http://localhost:11434',
+      model: 'gemma4:e4b',
+      httpClient: MockClient((_) async => http.Response('{}', 200)),
+    );
+
+    test('declares a response budget any model can return in full', () {
+      // The model is the reader's choice, so its tokenizer is unknown here.
+      // Measured on the merge-stage input against num_predict 1024: gemma4
+      // 1.46-3.74, qwen3.5 1.44-1.58, llama2 0.81-0.84 characters per token.
+      // gemma4 answering in Japanese ran into the cap and came back as JSON
+      // cut off mid-string. The budget converts below the lowest ratio seen.
+      expect(
+        client().maxResponseSize,
+        lessThanOrEqualTo(OllamaClient.maxOutputTokens * 0.81),
+      );
+      expect(client().maxResponseSize, 768);
+    });
+
+    test('leaves its context budget where it was', () {
+      expect(client().maxChunkSize, 4000);
+    });
+  });
+
   group('OllamaClient generation efficiency', () {
     OllamaClient clientWith(MockClient mockClient) => OllamaClient(
       baseUrl: 'http://localhost:11434',
