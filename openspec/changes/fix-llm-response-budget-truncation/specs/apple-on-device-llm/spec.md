@@ -91,11 +91,11 @@ The decision to retry SHALL live in the client rather than in the native plugin.
 ### Requirement: Generation failures are reported with their cause
 The on-device provider SHALL translate the model framework's generation failures into failures that name their cause, rather than a single opaque error.
 
-The framework reports generation failures through more than one error surface, and which one it uses depends on the operating system version rather than on what went wrong. The surface the provider was written against is deprecated from the version that introduced its replacement, and on a system carrying the replacement every failure arrives through it — not only the ones that are new. A provider that recognises one surface therefore reports every failure on such a system as unrecognised, and each of them loses the cause it had. The provider SHALL recognise every surface the framework reports failures through, and SHALL name the same cause whichever surface carried it.
+The framework reports generation failures through more than one error surface, and which one it uses depends on the operating system version rather than on what went wrong. The surface the provider was written against is deprecated from the version that introduced its replacement, and on a system carrying the replacement every failure arrives through the replacement — not only the ones that are new. The replacement is not a single type: the framework's own deprecation notes send most causes to one new type, and the model's assets being unavailable, a response that would not parse, and a concurrent request each to a type of its own. A provider that recognises only the deprecated surface therefore reports every failure on such a system as unrecognised, and each of them loses the cause it had. The provider SHALL recognise every type the framework reports failures through, and SHALL name the same cause whichever type carried it.
 
 The causes that SHALL be distinguished are: the content was refused by the model's safety guardrails, the request exceeded the context window, the response would not parse against the schema it was given, the request was rate limited, the language is not supported, the model's assets are unavailable, the request timed out, and the request asked for something the model does not support.
 
-The response that will not parse is named separately because it has been seen in practice, caused by the response cap cutting a structured answer off before it closes. Reading it as an unrecognised failure would hide a cause with a clear remedy. It SHALL remain a distinguished cause even though the newer error surface has no case for it, because the older surface still reports it on the systems that carry it.
+The response that will not parse is named separately because it has been seen in practice, caused by the response cap cutting a structured answer off before it closes. Reading it as an unrecognised failure would hide a cause with a clear remedy. It SHALL remain a distinguished cause on both surfaces: the deprecated surface reports it as a case of its own, and the replacement as a parsing error of a separate type.
 
 The ways a request can ask for something unsupported — an unsupported capability, unsupported content in the transcript, and an unsupported generation guide — SHALL be reported as one cause. They differ in what the framework was asked for, but not in anything the run or the reader can act on differently: none of them can succeed on a second identical attempt, and all of them say the request was shaped in a way this model does not accept.
 
@@ -134,6 +134,10 @@ A failure the provider cannot match to any cause it knows SHALL remain unrecogni
 #### Scenario: The unsupported-request causes are reported as one
 - **WHEN** generation fails because a capability, transcript content, or generation guide is not supported
 - **THEN** each SHALL be reported as the request asking for something unsupported, rather than as three causes the run treats alike
+
+#### Scenario: A cause moved to a type of its own keeps its name
+- **WHEN** the framework reports the model's assets being unavailable, a response that would not parse, or a concurrent request through the type its deprecation note names for it
+- **THEN** the failure SHALL name the same cause it named on the deprecated surface
 
 #### Scenario: An unrecognised cause stays unrecognised
 - **WHEN** the framework reports a failure the provider has no cause for

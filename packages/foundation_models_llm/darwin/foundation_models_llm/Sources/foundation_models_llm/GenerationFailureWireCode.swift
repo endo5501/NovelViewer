@@ -32,15 +32,12 @@ enum GenerationFailureWireCode {
     }
   }
 
-  /// The surface that replaces it from 27.0. On a system carrying it every
-  /// failure arrives through it, not only the ones it added, so each case
-  /// here names the code its counterpart names above.
+  /// The type that replaces it from 27.0 for most of its cases. Each case
+  /// here names the code its deprecated counterpart names above.
   ///
-  /// It has no case for a response that would not parse. Where it reports,
-  /// the framework ends an answer that ran out of budget by closing it rather
-  /// than by failing, so there is nothing left to report — which is why the
-  /// same overrun that fails on iPadOS 26.6.2 is silently truncated on
-  /// macOS 27.
+  /// Three deprecated cases went elsewhere — the model's assets, a response
+  /// that would not parse, and a concurrent request each have a type of
+  /// their own — and `ofAnyError` reads those.
   @available(iOS 27.0, macOS 27.0, *)
   static func of(_ error: LanguageModelError) -> String {
     switch error {
@@ -61,13 +58,46 @@ enum GenerationFailureWireCode {
   /// reported it, or nil where neither did. The caller decides what to say
   /// about an error that is not the framework's; forcing it into a named
   /// cause would report it as something it is not.
+  ///
+  /// From 27.0 the deprecated type's cases are reported through four types,
+  /// not one: the SDK's deprecation notes send the model's assets to
+  /// `SystemLanguageModel.Error`, a response that would not parse to
+  /// `GeneratedContent.ParsingError`, and a concurrent request to
+  /// `LanguageModelSession.Error`, and everything else to
+  /// `LanguageModelError`. Each keeps the code its deprecated case had.
   @available(iOS 26.0, macOS 26.0, *)
   static func ofAnyError(_ error: Error) -> String? {
-    if #available(iOS 27.0, macOS 27.0, *), let e = error as? LanguageModelError {
-      return of(e)
+    if #available(iOS 27.0, macOS 27.0, *), let code = ofReplacement(error) {
+      return code
     }
     if let e = error as? LanguageModelSession.GenerationError {
       return of(e)
+    }
+    return nil
+  }
+
+  @available(iOS 27.0, macOS 27.0, *)
+  private static func ofReplacement(_ error: Error) -> String? {
+    if let e = error as? LanguageModelError {
+      return of(e)
+    }
+    if let e = error as? SystemLanguageModel.Error {
+      switch e {
+      case .assetsUnavailable: return "assetsUnavailable"
+      @unknown default: return unknown
+      }
+    }
+    if error is GeneratedContent.ParsingError {
+      return "decodingFailure"
+    }
+    if let e = error as? LanguageModelSession.Error {
+      switch e {
+      case .concurrentRequests: return "concurrentRequests"
+      // Each request starts a fresh session, so its transcript cannot be
+      // changed while it responds, and no cause Dart knows describes it.
+      case .transcriptMutationWhileResponding: return unknown
+      @unknown default: return unknown
+      }
     }
     return nil
   }

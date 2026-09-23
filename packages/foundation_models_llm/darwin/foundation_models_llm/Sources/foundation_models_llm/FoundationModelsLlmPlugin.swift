@@ -145,9 +145,9 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
           sampling: sampling)
         result(text)
       } catch {
-        // The framework reports through one of two error surfaces depending
-        // on the system, and a catch naming only one type reads every
-        // failure on the other as unknown. `ofAnyError` looks for both.
+        // The framework reports through different error types depending on
+        // the system, and a catch naming only one reads every failure
+        // reported through the others as unknown. `ofAnyError` knows them all.
         let reason = (error as? LocalizedError)?.failureReason
         result(
           FlutterError(

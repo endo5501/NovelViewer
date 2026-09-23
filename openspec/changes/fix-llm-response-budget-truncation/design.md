@@ -76,7 +76,17 @@ LanguageModelError : available   27.0+   (enum, 9ケース)
 
 `LanguageModelError` は macOS/iOS 27.0 以降なので、プラグインの既存ガード（26.0）の内側に**入れ子の `if #available(iOS 27.0, macOS 27.0, *)`** を置く。26.0 のデプロイメントターゲットは変えない。
 
-新しい面には `decodingFailure` に相当するケースが無い。これは切り捨てが macOS 27 で黙って成功することの裏付けであり、同時に、iPadOS 27 に上げると iPad の症状がクラッシュから沈黙の欠落へ変わることを意味する。古い面ではまだ報告されるため、`decodingFailure` の写像は残す。
+**置き換え先は1つの型ではない**（Codex レビューで判明、SDK の deprecation メッセージで確認）。旧9ケースのうち3つは `LanguageModelError` 以外へ移っている。
+
+```
+assetsUnavailable   --> SystemLanguageModel.Error.assetsUnavailable
+decodingFailure     --> GeneratedContent.ParsingError
+concurrentRequests  --> LanguageModelSession.Error.concurrentRequests
+```
+
+当初「新しい面には `decodingFailure` が無い＝切り捨てを表現できなくなったから macOS 27 では黙って成功する」と説明していたが、これは誤り。解析失敗は `GeneratedContent.ParsingError` として残っている。macOS 27 で上限到達の答えが JSON を閉じて成功扱いで返ってきた事実（実測）は変わらないが、その理由は説明できていない。したがって「iPadOS 27 に上げると症状が沈黙の欠落へ変わる」という予測も根拠を失った。いずれにせよ予防の設計は現れ方に依存しない。
+
+4つの型すべてを読む。`LanguageModelSession.Error.transcriptMutationWhileResponding` はリクエストごとに新しいセッションを作るため起こりえず、対応する理由も無いので `unknown` とする。
 
 ### D6: 新しい3ケースの扱い
 

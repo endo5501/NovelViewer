@@ -12,8 +12,8 @@ design.md D5 / D6 を参照。macOS 27 では全てのエラーが `LanguageMode
 - [x] 1.8 プラグインに `LanguageModelError` の `catch` と `switch` を追加して 1.6 を通す。`if #available(iOS 27.0, macOS 27.0, *)` を既存ガードの内側に置き、デプロイメントターゲットは変えない
 - [x] 1.9 `scratchpad/spike/fm_probe` 相当で、統合プロンプトが拒否されるチャンクを流し、拒否が非制約再試行で救われて答えが返ることを実機（macOS 27）で確認する
 
-- [ ] 1.10 （Codex レビュー指摘）27.0 で `LanguageModelError` 以外へ移った3ケース（`SystemLanguageModel.Error.assetsUnavailable` / `GeneratedContent.ParsingError` / `LanguageModelSession.Error.concurrentRequests`）が旧面と同じワイヤコードへ写像されることを検証する Swift テストを書き、失敗を確認する
-- [ ] 1.11 `GenerationFailureWireCode.ofAnyError` を拡張して 1.10 を通し、`decodingFailure` の置き換え先についての不正確なコメントと design D5 を訂正する
+- [x] 1.10 （Codex レビュー指摘）27.0 で `LanguageModelError` 以外へ移った3ケース（`SystemLanguageModel.Error.assetsUnavailable` / `GeneratedContent.ParsingError` / `LanguageModelSession.Error.concurrentRequests`）が旧面と同じワイヤコードへ写像されることを検証する Swift テストを書き、失敗を確認する
+- [x] 1.11 `GenerationFailureWireCode.ofAnyError` を拡張して 1.10 を通し、`decodingFailure` の置き換え先についての不正確なコメントと design D5 を訂正する
 
 ## 2. 応答予算の宣言
 
