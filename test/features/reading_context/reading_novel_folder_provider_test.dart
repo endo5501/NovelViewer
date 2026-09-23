@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
+import 'package:path/path.dart' as p;
 
 final _novel = NovelMetadata(
   siteType: 'narou',
@@ -62,7 +63,7 @@ void main() {
 
       expect(
         container.read(readingNovelFolderProvider),
-        '/library/narou_n1234ab',
+        p.join('/library', 'narou_n1234ab'),
       );
     });
 
@@ -74,7 +75,7 @@ void main() {
 
       expect(
         container.read(readingNovelFolderProvider),
-        '/library/完結済み/異世界/narou_n1234ab',
+        p.join('/library', '完結済み', '異世界', 'narou_n1234ab'),
       );
     });
 
@@ -115,7 +116,7 @@ void main() {
       for (final container in [atRoot, elsewhere]) {
         expect(
           container.read(readingNovelFolderProvider),
-          '/library/narou_n1234ab',
+          p.join('/library', 'narou_n1234ab'),
         );
       }
     });

@@ -323,7 +323,7 @@ void main() {
 
     expect(
       container.read(selectedFileProvider)?.path,
-      '/library/完結済み/narou_n1/0001.txt',
+      p.join('/library/完結済み', 'narou_n1', '0001.txt'),
     );
   });
 
@@ -372,7 +372,7 @@ void main() {
 
     expect(
       container.read(selectedFileProvider)?.path,
-      '/library/完結済み/narou_n1/0001.txt',
+      p.join('/library', '完結済み', 'narou_n1', '0001.txt'),
     );
   });
 
@@ -595,7 +595,10 @@ void main() {
           const FileEntry(name: '0001.txt', path: '/library/narou_n1/0001.txt'),
         );
     await tester.pumpAndSettle();
-    expect(container.read(readingNovelFolderProvider), '/library/narou_n1');
+    expect(
+      container.read(readingNovelFolderProvider),
+      p.join('/library', 'narou_n1'),
+    );
 
     await tester.tapAt(
       tester.getCenter(find.text('テスト小説')),

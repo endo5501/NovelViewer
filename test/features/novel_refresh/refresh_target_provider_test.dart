@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/novel_refresh/providers/refresh_target_provider.dart';
+import 'package:path/path.dart' as p;
 
 /// The novel the reader is looking at in most of these cases.
 final _narouNovel = NovelMetadata(
@@ -95,7 +96,7 @@ void main() {
       final target = container.read(refreshTargetProvider);
       expect(target, isNotNull);
       expect(target!.folderName, 'narou_n1234ab');
-      expect(target.parentPath, '/library/完結済み/異世界');
+      expect(target.parentPath, p.join('/library', '完結済み', '異世界'));
     });
 
     test('登録済み小説フォルダを含まないパスのファイルはnullを返す', () async {
