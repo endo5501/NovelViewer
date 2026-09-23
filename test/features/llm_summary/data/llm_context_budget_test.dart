@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_prompt_builder.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
@@ -39,7 +40,107 @@ class _BudgetedClient extends LlmClient {
   }
 }
 
+/// Declares a window and a response budget that differ, answers Stage-1
+/// with facts of a set length, and keeps every refinement prompt it is sent,
+/// so a test can make aggregation happen and see how it was sized.
+class _TwoBudgetClient extends LlmClient {
+  _TwoBudgetClient({
+    required this.window,
+    required this.response,
+    this.factsLength = 4,
+  });
+
+  final int window;
+  final int response;
+  final int factsLength;
+
+  final List<String> refinementPrompts = [];
+  int extractionCalls = 0;
+
+  @override
+  int get maxChunkSize => window;
+
+  @override
+  int get maxResponseSize => response;
+
+  @override
+  String get modelId => 'test:fake';
+
+  @override
+  Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
+    if (schema?.fieldName == 'summary') {
+      return jsonEncode({'summary': 'まとめ'});
+    }
+    if (prompt.contains('<facts>')) {
+      refinementPrompts.add(prompt);
+      return jsonEncode({'facts': '- 統合'});
+    }
+    extractionCalls++;
+    return jsonEncode({'facts': '- ${'事' * factsLength}'});
+  }
+}
+
 void main() {
+  group('aggregation is sized by the response budget', () {
+    /// Six files' facts of 900 characters: 5400 in all, over a 4000 window.
+    List<String> facts() => List.generate(6, (i) => '- ${'事' * 897}$i');
+
+    LlmSummaryPipeline pipelineFor(_TwoBudgetClient client) =>
+        LlmSummaryPipeline(
+          llmClient: client,
+          maxChunkSize: client.maxChunkSize,
+          maxResponseSize: client.maxResponseSize,
+        );
+
+    test('each aggregation chunk fits the response budget', () async {
+      // At the 4000 window the six would pack into two chunks, and each
+      // chunk's answer would be asked to hold up to 3600 characters of facts.
+      final client = _TwoBudgetClient(window: 4000, response: 1000);
+
+      await pipelineFor(
+        client,
+      ).summarizeFromFacts(word: 'アリス', perFileFacts: facts());
+
+      expect(client.refinementPrompts, hasLength(6));
+    });
+
+    test('aggregation uses the refinement prompt, not extraction', () async {
+      final client = _TwoBudgetClient(window: 4000, response: 1000);
+
+      await pipelineFor(
+        client,
+      ).summarizeFromFacts(word: 'アリス', perFileFacts: facts());
+
+      expect(client.refinementPrompts, isNotEmpty);
+      expect(client.extractionCalls, 0);
+    });
+
+    test('the refinement bound follows the response budget', () async {
+      final client = _TwoBudgetClient(window: 4000, response: 1000);
+      final bound = LlmPromptBuilder.refinementBound(1000);
+
+      await pipelineFor(
+        client,
+      ).summarizeFromFacts(word: 'アリス', perFileFacts: facts());
+
+      expect(client.refinementPrompts, isNotEmpty);
+      expect(client.refinementPrompts, everyElement(contains('$bound文字以内')));
+    });
+
+    test('Stage-1 keeps the window, not the response budget', () async {
+      // Stage-1 compresses prose into a list, so its answer sits well inside
+      // the response budget; sizing it by that would multiply the requests.
+      final client = _TwoBudgetClient(window: 4000, response: 1000);
+
+      await pipelineFor(client).extractFileFacts(
+        word: 'アリス',
+        contexts: List.generate(12, (i) => 'アリス${'あ' * 994}$i'),
+      );
+
+      expect(client.extractionCalls, 3);
+    });
+  });
+
   group('the pipeline chunks to the budget it was given', () {
     /// Twelve context entries of a thousand characters each.
     List<String> contexts() => List.generate(12, (i) => 'アリス${'あ' * 994}$i');
@@ -149,6 +250,36 @@ void main() {
       );
       return client.extractionCalls;
     }
+
+    test('aggregation is sized by the client\'s response budget', () async {
+      // Six files whose facts come back at 900 characters each: 5400 in all,
+      // over the 4000 window, so aggregation runs. Handed the client's
+      // response budget, the service splits it into six rounds; handed only
+      // the window, it would pack them into two.
+      for (var i = 2; i <= 6; i++) {
+        await File(
+          '${tempDir.path}/00${i}_ch.txt',
+        ).writeAsString('アリス${'い' * 20}$i');
+      }
+      final client = _TwoBudgetClient(
+        window: 4000,
+        response: 1000,
+        factsLength: 898,
+      );
+
+      await LlmSummaryService(
+        llmClient: client,
+        repository: repository,
+        factCacheRepository: factCache,
+        searchService: TextSearchService(),
+      ).generateSummary(
+        directoryPath: tempDir.path,
+        word: 'アリス',
+        coveredUpToEpisode: 6,
+      );
+
+      expect(client.refinementPrompts, hasLength(6));
+    });
 
     test('a client with a smaller budget is asked more times', () async {
       final atFourThousand = await extractionCallsWith(4000);

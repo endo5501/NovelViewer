@@ -41,6 +41,7 @@ class LlmSummaryPipeline {
 
   final LlmClient llmClient;
   final int maxChunkSize;
+  final int maxResponseSize;
   final int maxRecursionDepth;
 
   /// UI display language (`ja`/`en`/`zh`) that both prompt stages instruct the
@@ -51,9 +52,10 @@ class LlmSummaryPipeline {
   LlmSummaryPipeline({
     required this.llmClient,
     this.maxChunkSize = 4000,
+    int? maxResponseSize,
     this.maxRecursionDepth = 5,
     this.language = 'ja',
-  });
+  }) : maxResponseSize = maxResponseSize ?? maxChunkSize;
 
   /// Stage-1 for a single source file: split this file's own contexts into
   /// chunks (only chunking when the file alone exceeds [maxChunkSize]) and
