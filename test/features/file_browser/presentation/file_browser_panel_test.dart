@@ -38,24 +38,16 @@ void main() {
       expect(getParentDirectory('/home/user'), equals('/home'));
     });
 
-    test(
-      'returns parent for Windows path',
-      () {
-        expect(
-          getParentDirectory(r'C:\Users\name\novels\book1'),
-          equals(r'C:\Users\name\novels'),
-        );
-      },
-      skip: !Platform.isWindows ? 'Windows-only path test' : null,
-    );
+    test('returns parent for Windows path', () {
+      expect(
+        getParentDirectory(r'C:\Users\name\novels\book1'),
+        equals(r'C:\Users\name\novels'),
+      );
+    }, skip: !Platform.isWindows ? 'Windows-only path test' : null);
 
-    test(
-      'returns parent for nested Windows path',
-      () {
-        expect(getParentDirectory(r'C:\Users'), equals(r'C:\'));
-      },
-      skip: !Platform.isWindows ? 'Windows-only path test' : null,
-    );
+    test('returns parent for nested Windows path', () {
+      expect(getParentDirectory(r'C:\Users'), equals(r'C:\'));
+    }, skip: !Platform.isWindows ? 'Windows-only path test' : null);
 
     test('returns null for Unix root', () {
       expect(getParentDirectory('/'), isNull);
@@ -79,41 +71,29 @@ void main() {
       );
     });
 
-    test(
-      'returns null at the library root on Windows',
-      () {
-        expect(
-          getParentDirectory(
-            r'C:\Lib\NovelViewer',
-            libraryPath: r'C:\Lib\NovelViewer',
-          ),
-          isNull,
-        );
-      },
-      skip: !Platform.isWindows ? 'Windows-only path test' : null,
-    );
+    test('returns null at the library root on Windows', () {
+      expect(
+        getParentDirectory(
+          r'C:\Lib\NovelViewer',
+          libraryPath: r'C:\Lib\NovelViewer',
+        ),
+        isNull,
+      );
+    }, skip: !Platform.isWindows ? 'Windows-only path test' : null);
 
-    test(
-      'returns parent below the library root on Windows',
-      () {
-        expect(
-          getParentDirectory(
-            r'C:\Lib\NovelViewer\genre\book',
-            libraryPath: r'C:\Lib\NovelViewer',
-          ),
-          equals(r'C:\Lib\NovelViewer\genre'),
-        );
-      },
-      skip: !Platform.isWindows ? 'Windows-only path test' : null,
-    );
+    test('returns parent below the library root on Windows', () {
+      expect(
+        getParentDirectory(
+          r'C:\Lib\NovelViewer\genre\book',
+          libraryPath: r'C:\Lib\NovelViewer',
+        ),
+        equals(r'C:\Lib\NovelViewer\genre'),
+      );
+    }, skip: !Platform.isWindows ? 'Windows-only path test' : null);
 
-    test(
-      'returns null for Windows root',
-      () {
-        expect(getParentDirectory(r'C:\'), isNull);
-      },
-      skip: !Platform.isWindows ? 'Windows-only path test' : null,
-    );
+    test('returns null for Windows root', () {
+      expect(getParentDirectory(r'C:\'), isNull);
+    }, skip: !Platform.isWindows ? 'Windows-only path test' : null);
   });
 
   group('FileBrowserPanel', () {

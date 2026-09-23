@@ -35,6 +35,52 @@ $contextChunk
 JSON形式で回答してください: {"facts": "- 事実1\\n- 事実2\\n..."}''';
   }
 
+  /// Share of the client's response budget a refinement answer is asked to
+  /// stay within.
+  ///
+  /// Measured on macOS 27: asked for 400 characters, the model answered in
+  /// 342 to 464. The rest of the budget is room for that overshoot, so an
+  /// answer that honours the bound roughly is still never cut short.
+  static const double _refinementShare = 0.3;
+
+  /// The length, in characters, a refinement answer is asked to stay within.
+  ///
+  /// The same in every display language. The client's budget is already
+  /// converted at the densest language's ratio, and a model asked for English
+  /// may answer in Japanese — measured with the on-device model and qwen3.5 —
+  /// so a bound raised for English would be filled with Japanese.
+  static int refinementBound(int maxResponseSize) =>
+      (maxResponseSize * _refinementShare).floor();
+
+  /// The prompt for aggregation rounds 2 and later.
+  ///
+  /// Not the extraction prompt. Those rounds take facts that are already
+  /// extracted, and asked to enumerate them the model copies them back: the
+  /// answer tracks its input until the response cap cuts it off, which on
+  /// macOS 27 arrives as a well-formed answer missing its tail. This one asks
+  /// for the facts merged, and says how long the answer may be.
+  static String buildFactRefinementPrompt({
+    required String word,
+    required String facts,
+    required int maxResponseSize,
+    String language = 'ja',
+  }) {
+    final bound = refinementBound(maxResponseSize);
+    return '''$_baseInstruction
+以下の<facts>タグ内は、<term>タグ内の用語について複数の箇所から抽出された事実の断片です。
+重複する内容や言い換えを統合し、重要な事実だけを残して簡潔にまとめてください。
+出力は箇条書き10項目以内、全体で$bound文字以内にしてください。
+${_languageInstruction(language)}
+
+<term>$word</term>
+
+<facts>
+$facts
+</facts>
+
+JSON形式で回答してください: {"facts": "- 事実1\\n- 事実2\\n..."}''';
+  }
+
   static String buildFinalSummaryPrompt({
     required String word,
     required String facts,

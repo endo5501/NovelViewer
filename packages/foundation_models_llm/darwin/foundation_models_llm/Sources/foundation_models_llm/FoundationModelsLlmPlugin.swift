@@ -144,17 +144,16 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
           maxResponseTokens: maxResponseTokens,
           sampling: sampling)
         result(text)
-      } catch let error as LanguageModelSession.GenerationError {
-        result(
-          FlutterError(
-            code: Self.wireCode(for: error),
-            message: error.failureReason ?? String(describing: error),
-            details: nil))
       } catch {
+        // The framework reports through different error types depending on
+        // the system, and a catch naming only one reads every failure
+        // reported through the others as unknown. `ofAnyError` knows them all.
+        let reason = (error as? LocalizedError)?.failureReason
         result(
           FlutterError(
-            code: "unknown",
-            message: error.localizedDescription,
+            code: GenerationFailureWireCode.ofAnyError(error)
+              ?? GenerationFailureWireCode.unknown,
+            message: reason ?? error.localizedDescription,
             details: nil))
       }
     }
@@ -215,26 +214,4 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
     }
   }
 
-  /// The error code Dart reads back.
-  ///
-  /// A guardrail block and the model's own refusal are reported separately by
-  /// the framework and kept separate here, so a log says which happened; Dart
-  /// reads both as the text having been refused.
-  @available(iOS 26.0, macOS 26.0, *)
-  private static func wireCode(
-    for error: LanguageModelSession.GenerationError
-  ) -> String {
-    switch error {
-    case .exceededContextWindowSize: return "exceededContextWindowSize"
-    case .assetsUnavailable: return "assetsUnavailable"
-    case .guardrailViolation: return "guardrailViolation"
-    case .refusal: return "refusal"
-    case .unsupportedGuide: return "unsupportedGuide"
-    case .unsupportedLanguageOrLocale: return "unsupportedLanguageOrLocale"
-    case .decodingFailure: return "decodingFailure"
-    case .rateLimited: return "rateLimited"
-    case .concurrentRequests: return "concurrentRequests"
-    @unknown default: return "unknown"
-    }
-  }
 }

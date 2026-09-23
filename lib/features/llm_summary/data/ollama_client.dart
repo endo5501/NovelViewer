@@ -6,9 +6,22 @@ import 'package:novel_viewer/features/llm_summary/data/llm_response_format_excep
 import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 
 class OllamaClient extends LlmClient {
-  /// Upper bound on generated tokens per call. Valid fact/summary outputs
-  /// measure well under half of this; the cap only cuts off runaway output.
+  /// Upper bound on generated tokens per call.
+  ///
+  /// Meant only to stop runaway output, but a stage that merges extracted
+  /// facts answers at close to the length it was given: measured with
+  /// gemma4:e4b, that answer reached this cap and came back as JSON cut off
+  /// mid-string. [maxResponseSize] is what keeps the pipeline from asking
+  /// for that much.
   static const int maxOutputTokens = 1024;
+
+  /// Characters per token the response budget is converted at.
+  ///
+  /// The model is the reader's choice, so its tokenizer is not known here.
+  /// Measured on the merge-stage input: gemma4 1.46 to 3.74, qwen3.5 1.44 to
+  /// 1.58, llama2 0.81 to 0.84. This sits below the lowest, so the declared
+  /// budget holds whichever model is chosen.
+  static const double _charactersPerToken = 0.75;
 
   final String baseUrl;
   final String model;
@@ -26,6 +39,10 @@ class OllamaClient extends LlmClient {
 
   @override
   String get modelId => 'ollama:$model';
+
+  /// What [maxOutputTokens] returns in full, in characters, rounded down.
+  @override
+  int get maxResponseSize => (maxOutputTokens * _charactersPerToken).floor();
 
   static Future<List<String>> fetchModels({
     required String baseUrl,

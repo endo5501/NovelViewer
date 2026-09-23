@@ -4,6 +4,12 @@ analyzer:
   exclude:
     - memo/**
     - openspec/**
+    - build/**
+    - android/**
+    - ios/**
+    - windows/**
+    - macos/**
+    - linux/**
 
 linter:
   rules:

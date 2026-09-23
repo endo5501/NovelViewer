@@ -28,6 +28,17 @@ enum OnDeviceGenerationFailure {
   /// before it is closed, so a larger cap or a smaller prompt is the remedy.
   decodingFailure,
 
+  /// The request did not complete in the time the framework allows it.
+  /// Transient, like rate limiting: a second attempt can finish.
+  timeout,
+
+  /// The request asked for something this model does not support — a
+  /// capability, content in the transcript, or a generation guide. They are
+  /// one reason because they differ only in what was asked for: none of them
+  /// can succeed on an identical second attempt, and none leaves the reader
+  /// anything different to do.
+  unsupportedRequest,
+
   /// The model could not be reached at all. Distinct from a refusal: nothing
   /// was judged about the content.
   modelUnavailable,
@@ -53,6 +64,16 @@ enum OnDeviceGenerationFailure {
       OnDeviceGenerationFailure.unsupportedLanguage,
     'assetsUnavailable' => OnDeviceGenerationFailure.assetsUnavailable,
     'decodingFailure' => OnDeviceGenerationFailure.decodingFailure,
+    'timeout' => OnDeviceGenerationFailure.timeout,
+    // What the request asked for is not supported. The framework names the
+    // capability, the transcript content and the generation guide
+    // separately; they arrive here as one reason because the run answers
+    // them alike. `unsupportedGuide` is the older surface's name for the
+    // last of them.
+    'unsupportedCapability' ||
+    'unsupportedTranscriptContent' ||
+    'unsupportedGenerationGuide' ||
+    'unsupportedGuide' => OnDeviceGenerationFailure.unsupportedRequest,
     'modelUnavailable' => OnDeviceGenerationFailure.modelUnavailable,
     _ => OnDeviceGenerationFailure.unknown,
   };

@@ -304,11 +304,9 @@ void main() {
 
         await session.ensureModelLoaded(_qwen3());
         await session.ensureModelLoaded(_piper());
-        expect(
-          installer.installedIn,
-          ['/i/m'],
-          reason: 'only the Irodori engine reads this contract',
-        );
+        expect(installer.installedIn, [
+          '/i/m',
+        ], reason: 'only the Irodori engine reads this contract');
 
         await session.dispose();
       },

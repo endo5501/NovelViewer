@@ -72,18 +72,25 @@ class LlmOnDeviceGenerationFailure
   final String? detail;
 
   /// Only the causes that depend on something other than the request itself.
-  /// A refusal, an overrun window, an unsupported language and a missing
-  /// model all answer the same way to the same prompt. Rate limiting passes,
-  /// and a truncated answer depends on how much the model chose to say, so
-  /// both are worth one more attempt.
+  /// A refusal, an overrun window, an unsupported language, a request the
+  /// model does not accept the shape of, and a missing model all answer the
+  /// same way to the same prompt. Rate limiting passes, a timeout can finish
+  /// on a second attempt, and a truncated answer depends on how much the
+  /// model chose to say, so those are worth one more attempt.
+  ///
+  /// An unrecognised cause keeps its retry. Nothing is known about whether
+  /// it can change, and refusing a second attempt on a cause that may well
+  /// be transient costs more than the attempt does.
   @override
   bool get isWorthRetrying => switch (cause) {
     OnDeviceGenerationFailure.rateLimited ||
+    OnDeviceGenerationFailure.timeout ||
     OnDeviceGenerationFailure.decodingFailure ||
     OnDeviceGenerationFailure.unknown => true,
     OnDeviceGenerationFailure.guardrailViolation ||
     OnDeviceGenerationFailure.contextWindowExceeded ||
     OnDeviceGenerationFailure.unsupportedLanguage ||
+    OnDeviceGenerationFailure.unsupportedRequest ||
     OnDeviceGenerationFailure.assetsUnavailable ||
     OnDeviceGenerationFailure.modelUnavailable => false,
   };

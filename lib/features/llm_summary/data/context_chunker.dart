@@ -1,9 +1,16 @@
 class ContextChunker {
   static const _defaultMaxChunkSize = 4000;
 
+  /// Packs [contexts] into chunks of at most [maxChunkSize] characters.
+  ///
+  /// [separator] is what the caller will put between the entries of a chunk
+  /// when it joins them, and it counts toward the size. Left empty, only the
+  /// entries count, so a chunk joined with a separator can run past the
+  /// size by the separators' length.
   static List<List<String>> split(
     List<String> contexts, {
     int maxChunkSize = _defaultMaxChunkSize,
+    String separator = '',
   }) {
     if (contexts.isEmpty) return [];
 
@@ -13,15 +20,19 @@ class ContextChunker {
 
     for (final context in _withinLimit(contexts, maxChunkSize)) {
       final entrySize = context.length;
+      final joinedSize = currentChunk.isEmpty
+          ? entrySize
+          : currentSize + separator.length + entrySize;
 
-      if (currentChunk.isNotEmpty && currentSize + entrySize > maxChunkSize) {
+      if (currentChunk.isNotEmpty && joinedSize > maxChunkSize) {
         chunks.add(currentChunk);
-        currentChunk = <String>[];
-        currentSize = 0;
+        currentChunk = <String>[context];
+        currentSize = entrySize;
+        continue;
       }
 
       currentChunk.add(context);
-      currentSize += entrySize;
+      currentSize = joinedSize;
     }
 
     if (currentChunk.isNotEmpty) {

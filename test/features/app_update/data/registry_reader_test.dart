@@ -6,20 +6,16 @@ import 'package:novel_viewer/features/app_update/data/registry_reader.dart';
 
 void main() {
   group('Win32RegistryReader', () {
-    test(
-      'returns null on non-Windows without touching the registry',
-      () {
-        const reader = Win32RegistryReader();
-        // On non-Windows this returns null before any registry access; on Windows
-        // a clearly-nonexistent path returns null via the caught failure below.
-        final value = reader.readString(
-          r'Software\NovelViewer\__definitely_missing__',
-          'InstallType',
-        );
-        expect(value, isNull);
-      },
-      skip: Platform.isWindows ? 'Covered by the Windows-specific test' : null,
-    );
+    test('returns null on non-Windows without touching the registry', () {
+      const reader = Win32RegistryReader();
+      // On non-Windows this returns null before any registry access; on Windows
+      // a clearly-nonexistent path returns null via the caught failure below.
+      final value = reader.readString(
+        r'Software\NovelViewer\__definitely_missing__',
+        'InstallType',
+      );
+      expect(value, isNull);
+    }, skip: Platform.isWindows ? 'Covered by the Windows-specific test' : null);
 
     test('logs the read failure at FINE (expected fallback) and returns null '
         'for a missing key', () {

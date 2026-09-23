@@ -184,6 +184,34 @@ void main() {
       );
     });
 
+    test('names a timed-out request as its own reason', () async {
+      // The newer error surface reports a timeout, which the older one had
+      // no case for. It passes on its own, so reading it as unknown would
+      // lose nothing today but would hide a cause with a clear meaning.
+      expect(
+        await reasonFor(PlatformException(code: 'timeout')),
+        OnDeviceGenerationFailure.timeout,
+      );
+    });
+
+    test('reads every unsupported-request code as one reason', () async {
+      // A capability, transcript content or generation guide the model does
+      // not support differ in what was asked for, but not in anything the
+      // run can do about it: none succeeds on an identical second attempt.
+      for (final code in const [
+        'unsupportedCapability',
+        'unsupportedTranscriptContent',
+        'unsupportedGenerationGuide',
+        'unsupportedGuide',
+      ]) {
+        expect(
+          await reasonFor(PlatformException(code: code)),
+          OnDeviceGenerationFailure.unsupportedRequest,
+          reason: '$code should be read as an unsupported request',
+        );
+      }
+    });
+
     test('names an error code it does not know as unknown', () async {
       expect(
         await reasonFor(PlatformException(code: 'somethingNewInAFutureOs')),

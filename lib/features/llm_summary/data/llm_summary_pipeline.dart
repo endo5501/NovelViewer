@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/llm_summary/data/context_chunker.dart';
@@ -37,10 +38,21 @@ class LlmSummaryPipeline {
   /// keeps malformed answers from being generated in the first place, rather
   /// than relying on the parser to reject them after the fact.
   static const factsSchema = LlmResponseSchema.singleStringField('facts');
+
+  /// What an aggregation round puts between the facts it hands over. It is
+  /// counted when the round is sized, so the facts reach the prompt within
+  /// the response budget rather than past it by the separators.
+  static const _refinementSeparator = '\n---\n';
   static const summarySchema = LlmResponseSchema.singleStringField('summary');
 
   final LlmClient llmClient;
   final int maxChunkSize;
+
+  /// What aggregation rounds are sized by. Unless given, the client's own
+  /// response budget, capped at [maxChunkSize]: a round cannot be handed
+  /// more than the window, and a client that declares no response budget
+  /// answers with its own window, which can be larger than this one.
+  final int maxResponseSize;
   final int maxRecursionDepth;
 
   /// UI display language (`ja`/`en`/`zh`) that both prompt stages instruct the
@@ -51,9 +63,11 @@ class LlmSummaryPipeline {
   LlmSummaryPipeline({
     required this.llmClient,
     this.maxChunkSize = 4000,
+    int? maxResponseSize,
     this.maxRecursionDepth = 5,
     this.language = 'ja',
-  });
+  }) : maxResponseSize =
+           maxResponseSize ?? min(llmClient.maxResponseSize, maxChunkSize);
 
   /// Stage-1 for a single source file: split this file's own contexts into
   /// chunks (only chunking when the file alone exceeds [maxChunkSize]) and
@@ -130,7 +144,9 @@ class LlmSummaryPipeline {
       facts = combined;
     } else {
       // Refinement starts at depth 1 so the first emitted round is 2.
-      facts = await _extractFactsRecursive(word, nonEmpty, 1, notify);
+      facts = _withinWindow(
+        await _extractFactsRecursive(word, nonEmpty, 1, notify),
+      );
     }
 
     notify(const AnalysisGeneratingFinalSummary());
@@ -160,6 +176,28 @@ class LlmSummaryPipeline {
     };
   }
 
+  /// [facts], cut to what the final summary prompt can carry.
+  ///
+  /// Aggregation stops in three ways, and two of them — a round that did not
+  /// shrink the facts, and the depth limit — stop without the facts having
+  /// come within the window. Handed on as they are, they overrun the final
+  /// summary request after every extraction has already been paid for.
+  ///
+  /// The cut is mechanical rather than another round, because both of those
+  /// exits are reached precisely when another round would not help. It lands
+  /// on a line break where one falls within the window, so no fact is left
+  /// half-written for the summary to read as a fact of its own.
+  String _withinWindow(String facts) {
+    if (facts.length <= maxChunkSize) return facts;
+    var cut = facts.lastIndexOf('\n', maxChunkSize);
+    if (cut <= 0) cut = maxChunkSize;
+    _log.warning(
+      'aggregated facts exceed the window; cutting to fit. '
+      'length=${facts.length} window=$maxChunkSize kept=$cut',
+    );
+    return facts.substring(0, cut);
+  }
+
   Future<String> _extractFactsRecursive(
     String word,
     List<String> entries,
@@ -170,7 +208,14 @@ class LlmSummaryPipeline {
       return entries.join('\n');
     }
 
-    final chunks = ContextChunker.split(entries, maxChunkSize: maxChunkSize);
+    // Sized by what the model may return, not by what it may be handed: a
+    // round answers at close to the length of the facts it was given, so a
+    // window-sized chunk asks for an answer the response cap cuts off.
+    final chunks = ContextChunker.split(
+      entries,
+      maxChunkSize: maxResponseSize,
+      separator: _refinementSeparator,
+    );
     final round = depth + 1;
 
     final factsList = <String>[];
@@ -182,10 +227,10 @@ class LlmSummaryPipeline {
           total: chunks.length,
         ),
       );
-      final contextBlock = chunks[i].join('\n---\n');
-      final prompt = LlmPromptBuilder.buildFactExtractionPrompt(
+      final prompt = LlmPromptBuilder.buildFactRefinementPrompt(
         word: word,
-        contextChunk: contextBlock,
+        facts: chunks[i].join(_refinementSeparator),
+        maxResponseSize: maxResponseSize,
         language: language,
       );
       factsList.add((await _generateFacts(prompt)).value);

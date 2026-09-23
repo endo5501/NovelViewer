@@ -129,6 +129,26 @@ void main() {
       );
     });
 
+    test('declares a response budget it can return in full', () async {
+      // Measured on macOS 27 by letting the cap cut the answer: 1.37 to 1.45
+      // characters per token, whichever of ja, en or zh was asked for — the
+      // model answered in Japanese each time. The budget converts at a ratio
+      // below every observation, so it never promises more than returns.
+      final client = FoundationModelsClient(plugin: _FakePlugin());
+      expect(
+        client.maxResponseSize,
+        lessThanOrEqualTo(FoundationModelsClient.maxResponseTokens * 1.37),
+      );
+      expect(client.maxResponseSize, 1300);
+    });
+
+    test('keeps its two budgets apart', () async {
+      // The window bounds what is handed over; the response budget bounds
+      // what comes back. On this model the second is the smaller.
+      final client = FoundationModelsClient(plugin: _FakePlugin());
+      expect(client.maxResponseSize, lessThan(client.maxChunkSize));
+    });
+
     test(
       'declares a context budget smaller than a server client would',
       () async {

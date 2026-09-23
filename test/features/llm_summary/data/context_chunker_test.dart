@@ -110,4 +110,38 @@ void main() {
       expect(chunks.length, 3);
     });
   });
+
+  group('a separator counts toward the budget', () {
+    test('entries that fill the budget alone are not packed together', () {
+      final chunks = ContextChunker.split(
+        ['a' * 5, 'b' * 5, 'c' * 5],
+        maxChunkSize: 10,
+        separator: '--',
+      );
+
+      // 5 + 2 + 5 = 12 exceeds 10, so no two entries share a chunk.
+      expect(chunks, hasLength(3));
+    });
+
+    test('entries that fit with the separator are packed together', () {
+      final chunks = ContextChunker.split(
+        ['a' * 4, 'b' * 4, 'c' * 4],
+        maxChunkSize: 10,
+        separator: '--',
+      );
+
+      expect(chunks.first, ['a' * 4, 'b' * 4]);
+      expect(chunks.first.join('--').length, lessThanOrEqualTo(10));
+    });
+
+    test('without a separator the packing is unchanged', () {
+      final chunks = ContextChunker.split([
+        'a' * 5,
+        'b' * 5,
+        'c' * 5,
+      ], maxChunkSize: 10);
+
+      expect(chunks, hasLength(2));
+    });
+  });
 }

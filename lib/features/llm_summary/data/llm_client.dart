@@ -39,5 +39,23 @@ abstract class LlmClient {
   /// a client with no view on the matter behaves exactly as it did.
   int get maxChunkSize => 4000;
 
+  /// How much text, in characters, one generation may hand back in full.
+  ///
+  /// A separate quantity from [maxChunkSize], and not derived from it: that
+  /// one bounds what the model may be handed, this one what it may return.
+  /// A stage whose answer tracks its input — merging facts that are already
+  /// extracted — has to be sized by this one, or it asks for an answer the
+  /// provider will cut short. Where the provider cuts an answer short it may
+  /// close it and report success, so the loss cannot be detected afterwards.
+  ///
+  /// A client that bounds its provider in tokens converts that bound to
+  /// characters and rounds down, so this never promises more than the
+  /// provider returns.
+  ///
+  /// The default is [maxChunkSize], which is how every client behaved before
+  /// this existed: the one budget bounded what was sent and, by implication,
+  /// what was asked for.
+  int get maxResponseSize => maxChunkSize;
+
   Future<void> releaseResources() async {}
 }

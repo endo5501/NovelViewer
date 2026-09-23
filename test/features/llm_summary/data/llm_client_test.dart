@@ -23,12 +23,41 @@ class _MinimalLlmClient extends LlmClient {
   }
 }
 
+/// A client that states only how much it may be handed.
+class _WindowOnlyLlmClient extends _MinimalLlmClient {
+  @override
+  int get maxChunkSize => 3000;
+}
+
+/// A client that states both budgets, which differ.
+class _TwoBudgetLlmClient extends _MinimalLlmClient {
+  @override
+  int get maxChunkSize => 3000;
+
+  @override
+  int get maxResponseSize => 1400;
+}
+
 void main() {
   group('LlmClient default behavior', () {
     test('declares 4000 characters when it names no budget of its own', () {
       // The value every client used before the budget existed, so adding the
       // notion changes nothing for a client that does not care about it.
       expect(_MinimalLlmClient().maxChunkSize, 4000);
+    });
+
+    test('a client that names no response budget answers with its window', () {
+      // Every client behaved this way before the response budget existed:
+      // the one budget bounded what was sent and, by implication, what was
+      // asked for.
+      expect(_MinimalLlmClient().maxResponseSize, 4000);
+      expect(_WindowOnlyLlmClient().maxResponseSize, 3000);
+    });
+
+    test('the two budgets are declared independently', () {
+      final client = _TwoBudgetLlmClient();
+      expect(client.maxChunkSize, 3000);
+      expect(client.maxResponseSize, 1400);
     });
 
     test(
@@ -213,6 +242,31 @@ void main() {
           throwsException,
         );
       });
+    });
+  });
+
+  group('OllamaClient response budget', () {
+    OllamaClient client() => OllamaClient(
+      baseUrl: 'http://localhost:11434',
+      model: 'gemma4:e4b',
+      httpClient: MockClient((_) async => http.Response('{}', 200)),
+    );
+
+    test('declares a response budget any model can return in full', () {
+      // The model is the reader's choice, so its tokenizer is unknown here.
+      // Measured on the merge-stage input against num_predict 1024: gemma4
+      // 1.46-3.74, qwen3.5 1.44-1.58, llama2 0.81-0.84 characters per token.
+      // gemma4 answering in Japanese ran into the cap and came back as JSON
+      // cut off mid-string. The budget converts below the lowest ratio seen.
+      expect(
+        client().maxResponseSize,
+        lessThanOrEqualTo(OllamaClient.maxOutputTokens * 0.81),
+      );
+      expect(client().maxResponseSize, 768);
+    });
+
+    test('leaves its context budget where it was', () {
+      expect(client().maxChunkSize, 4000);
     });
   });
 
