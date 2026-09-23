@@ -14,6 +14,7 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `fvm flutter build windows` - 本番ビルド(windows)
  - `fvm flutter build ios` - ビルド(iPad。ビューア機能のみでTTS/LLMは非対応。Xcodeのplatform componentと`ios/Flutter/Local.xcconfig`のDEVELOPMENT_TEAMが必要。詳細はREADME参照)
  - `fvm flutter test` - テスト実行
+ - `swift test --package-path packages/foundation_models_llm/darwin/wire_code_tests` - オンデバイスLLMプラグインのエラー写像テスト(mac。プラグイン本体はFlutterビルド外で走らないため写像だけを独立パッケージで実行)
  - `fvm dart format .` - フォーマット実行(lib/とtest/が対象)
  - `fvm flutter analyze` - リント実行
  - `fvm flutter pub get` - 依存パッケージ取得
