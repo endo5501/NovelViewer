@@ -19,6 +19,14 @@ final packageInfoProvider = Provider<PackageInfo>((ref) {
   throw UnimplementedError('Must be overridden in ProviderScope');
 });
 
+/// The source the build was made from, or empty when the build was not told.
+///
+/// Injected at build time with `--dart-define=BUILD_COMMIT=<hash>`. A provider
+/// rather than a bare constant so tests can stand in for either kind of build.
+final buildCommitProvider = Provider<String>(
+  (ref) => const String.fromEnvironment('BUILD_COMMIT'),
+);
+
 /// The version string reports and diagnostics quote, e.g. `1.8.2+41`.
 final appVersionLabelProvider = Provider<String>((ref) {
   final info = ref.watch(packageInfoProvider);
