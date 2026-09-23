@@ -15,8 +15,8 @@
 ## 3. ビルド経路への注入
 
 - [ ] 3.1 `.github/workflows/release.yml` の `flutter build windows --release` に commit ハッシュの `--dart-define` を追加し、ワークフローが成功することを確認する
-- [ ] 3.2 macOS / iOS 向けに識別子を注入するビルドスクリプトを用意し、生成物の version ラベルに識別子が入ることを実機または `flutter run` で確認する（design.md D3）
-- [ ] 3.3 `.claude/CLAUDE.md` の開発コマンド一覧を、識別子を注入するビルド経路が正であるよう更新する
+- [x] 3.2 macOS / iOS 向けに識別子を注入するビルドスクリプトを用意し、生成物の version ラベルに識別子が入ることを実機または `flutter run` で確認する（design.md D3）
+- [x] 3.3 `.claude/CLAUDE.md` の開発コマンド一覧を、識別子を注入するビルド経路が正であるよう更新する
 
 ## 4. 確認
 

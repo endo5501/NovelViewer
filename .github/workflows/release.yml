@@ -86,8 +86,11 @@ jobs:
         shell: pwsh
         run: choco install innosetup -y --no-progress
 
+      # The commit lets a failure report name the build it came from; without
+      # it the report says "commit unknown".
       - name: Build Windows release
-        run: flutter build windows --release
+        shell: bash
+        run: flutter build windows --release --dart-define=BUILD_COMMIT="$(git rev-parse --short HEAD)"
 
       - name: Copy LAME LGPL license to release
         shell: pwsh
