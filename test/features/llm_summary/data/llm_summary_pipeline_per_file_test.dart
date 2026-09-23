@@ -163,6 +163,36 @@ void main() {
       expect(mock.callCount, 1);
     });
 
+    test('a timed-out request is issued a second time', () async {
+      final mock = _ThrowingClient(
+        const LlmOnDeviceGenerationFailure(OnDeviceGenerationFailure.timeout),
+      );
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      await expectLater(
+        pipeline.extractFileFacts(word: 'アリス', contexts: ['本文']),
+        throwsA(isA<LlmOnDeviceGenerationFailure>()),
+      );
+
+      expect(mock.callCount, 2);
+    });
+
+    test('an unsupported request is issued exactly once', () async {
+      final mock = _ThrowingClient(
+        const LlmOnDeviceGenerationFailure(
+          OnDeviceGenerationFailure.unsupportedRequest,
+        ),
+      );
+      final pipeline = LlmSummaryPipeline(llmClient: mock);
+
+      await expectLater(
+        pipeline.extractFileFacts(word: 'アリス', contexts: ['本文']),
+        throwsA(isA<LlmOnDeviceGenerationFailure>()),
+      );
+
+      expect(mock.callCount, 1);
+    });
+
     test('a transient on-device failure is still retried', () async {
       final mock = _ThrowingClient(
         const LlmOnDeviceGenerationFailure(
