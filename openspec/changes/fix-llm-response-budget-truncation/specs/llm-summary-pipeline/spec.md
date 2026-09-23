@@ -29,7 +29,7 @@ The system SHALL construct a refinement prompt for rounds 2 and later that is di
 
 The stated bound SHALL be derived from the client's declared response budget rather than fixed in the prompt text, and SHALL leave margin below that budget so that an answer which honours the bound is never cut short. Rounds 2 and later take already-extracted facts as their input, so the compression an enumeration instruction achieves on prose does not occur; without a stated bound the answer grows until the provider's own cap ends it.
 
-The bound SHALL account for the output language, because the same budget in tokens corresponds to a different number of characters in each of `ja`, `en` and `zh`.
+The bound SHALL be the same whichever display language is requested, and SHALL NOT be raised for a language that fits more characters into a token. Whether a model answers in the requested language depends on the model: measured against the refinement input, the on-device model and qwen3.5 answered requests for English and Chinese in Japanese, and gemma4 answered a request for Chinese in Japanese. A bound raised for English would be filled with Japanese by such a model, spending the margin the bound exists to keep. The client's response budget is already converted at a ratio that holds for the densest language, so one bound in characters is safe for all of them.
 
 The refinement prompt SHALL instruct the LLM to produce its output in the UI display language supplied to the builder, and SHALL instruct it to keep work-specific proper nouns in their original language, as both other prompt stages do.
 
@@ -48,10 +48,10 @@ The refinement prompt SHALL instruct the LLM to produce its output in the UI dis
 - **WHEN** a refinement prompt is built for a client declaring a response budget of 1400 characters, and again for a client declaring 4000
 - **THEN** each prompt SHALL state a bound derived from its own client's budget, and neither SHALL state a bound that reaches that budget
 
-#### Scenario: The bound follows the output language
+#### Scenario: The bound does not grow with the requested language
 
-- **WHEN** refinement prompts are built for the same client with display language `ja` and with `en`
-- **THEN** the stated character bound SHALL reflect that the same response budget holds a different number of characters in each language
+- **WHEN** refinement prompts are built for the same client with display language `ja`, `en` and `zh`
+- **THEN** each SHALL state the same character bound
 
 #### Scenario: Output language and proper nouns
 
