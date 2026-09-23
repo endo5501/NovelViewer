@@ -7,10 +7,10 @@
 
 ## 2. ビルド識別子
 
-- [ ] 2.1 識別子が注入されていないビルドで、version ラベルが識別子不在を明示することを検証するテストを書き、失敗を確認する
-- [ ] 2.2 識別子が注入されたビルドで、version ラベルがそれを含むことを検証するテストを書き、失敗を確認する
-- [ ] 2.3 `appVersionLabelProvider` が `String.fromEnvironment` を読むよう変更し、2.1 / 2.2 を通す（design.md D2）
-- [ ] 2.4 TTS の障害レポートも同じラベルを共有しているため、`tts_failure_report_test.dart` が通ることを確認する
+- [x] 2.1 識別子が注入されていないビルドで、version ラベルが識別子不在を明示することを検証するテストを書き、失敗を確認する
+- [x] 2.2 識別子が注入されたビルドで、version ラベルがそれを含むことを検証するテストを書き、失敗を確認する
+- [x] 2.3 `appVersionLabelProvider` が `String.fromEnvironment` を読むよう変更し、2.1 / 2.2 を通す（design.md D2）
+- [x] 2.4 TTS の障害レポートも同じラベルを共有しているため、`tts_failure_report_test.dart` が通ることを確認する
 
 ## 3. ビルド経路への注入
 
