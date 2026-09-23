@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/llm_summary/data/context_chunker.dart';
@@ -41,6 +42,11 @@ class LlmSummaryPipeline {
 
   final LlmClient llmClient;
   final int maxChunkSize;
+
+  /// What aggregation rounds are sized by. Unless given, the client's own
+  /// response budget, capped at [maxChunkSize]: a round cannot be handed
+  /// more than the window, and a client that declares no response budget
+  /// answers with its own window, which can be larger than this one.
   final int maxResponseSize;
   final int maxRecursionDepth;
 
@@ -55,7 +61,8 @@ class LlmSummaryPipeline {
     int? maxResponseSize,
     this.maxRecursionDepth = 5,
     this.language = 'ja',
-  }) : maxResponseSize = maxResponseSize ?? maxChunkSize;
+  }) : maxResponseSize =
+           maxResponseSize ?? min(llmClient.maxResponseSize, maxChunkSize);
 
   /// Stage-1 for a single source file: split this file's own contexts into
   /// chunks (only chunking when the file alone exceeds [maxChunkSize]) and
