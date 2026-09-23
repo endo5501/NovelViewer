@@ -344,6 +344,93 @@ void main() {
   // (recursion depth guard / no-progress termination), `_parseSummaryResponse`
   // (JSON parsing, code-fence stripping, F132 regression) and
   // `_isolatedNotifier` (progress-callback isolation) helpers.
+  group('every aggregation exit fits the final summary prompt', () {
+    /// The facts the final summary prompt carries.
+    String finalFacts(_MockLlmClient mock) => RegExp(
+      r'<facts>\n([\s\S]*)\n</facts>',
+    ).firstMatch(mock.prompts.last)!.group(1)!;
+
+    test('a round that did not reduce the facts is cut to fit', () async {
+      // 121 characters over a 100 window. Each round answers longer than it
+      // was given, so aggregation stops for lack of progress holding 161.
+      final mock = _MockLlmClient([
+        jsonEncode({'facts': 'う' * 80}),
+        jsonEncode({'facts': 'え' * 80}),
+        jsonEncode({'summary': '要約'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock, maxChunkSize: 100);
+
+      await pipeline.summarizeFromFacts(
+        word: 'テスト',
+        perFileFacts: ['あ' * 60, 'い' * 60],
+      );
+
+      expect(finalFacts(mock).length, lessThanOrEqualTo(100));
+    });
+
+    test('the depth limit is cut to fit', () async {
+      // One round shrinks 300 characters to 182, still over the window, and
+      // the depth limit stops aggregation there.
+      final mock = _MockLlmClient([
+        jsonEncode({'facts': 'う' * 60}),
+        jsonEncode({'facts': 'え' * 60}),
+        jsonEncode({'facts': 'お' * 60}),
+        jsonEncode({'summary': '要約'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(
+        llmClient: mock,
+        maxChunkSize: 100,
+        maxRecursionDepth: 2,
+      );
+
+      await pipeline.summarizeFromFacts(word: 'テスト', perFileFacts: ['あ' * 300]);
+
+      expect(finalFacts(mock).length, lessThanOrEqualTo(100));
+    });
+
+    test('facts that came within the window are passed whole', () async {
+      final mock = _MockLlmClient([
+        jsonEncode({'facts': '- 縮約'}),
+        jsonEncode({'facts': '- 縮約'}),
+        jsonEncode({'summary': '要約'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock, maxChunkSize: 100);
+
+      await pipeline.summarizeFromFacts(
+        word: 'テスト',
+        perFileFacts: ['あ' * 60, 'い' * 60],
+      );
+
+      expect(finalFacts(mock), '- 縮約\n- 縮約');
+    });
+
+    test('a cut prefers a line break', () async {
+      // Cutting mid-line leaves half a fact, which reads as a fact of its
+      // own to the model that summarises it.
+      final mock = _MockLlmClient([
+        jsonEncode({
+          'facts': List.generate(9, (i) => '- ${'う' * 10}$i').join('\n'),
+        }),
+        jsonEncode({
+          'facts': List.generate(9, (i) => '- ${'え' * 10}$i').join('\n'),
+        }),
+        jsonEncode({'summary': '要約'}),
+      ]);
+      final pipeline = LlmSummaryPipeline(llmClient: mock, maxChunkSize: 100);
+
+      await pipeline.summarizeFromFacts(
+        word: 'テスト',
+        perFileFacts: ['あ' * 60, 'い' * 60],
+      );
+
+      final facts = finalFacts(mock);
+      expect(facts.length, lessThanOrEqualTo(100));
+      for (final line in facts.split('\n')) {
+        expect(line, matches(RegExp(r'^- [うえ]{10}\d$')), reason: line);
+      }
+    });
+  });
+
   group('LlmSummaryPipeline.summarizeFromFacts (shared-helper behavior)', () {
     test('recursion depth limit prevents infinite refinement', () async {
       // Combined facts (20ch) exceed maxChunkSize(10) → refinement starts at
