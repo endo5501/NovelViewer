@@ -80,11 +80,15 @@ fvm flutter run -d macos
 # Release build for macOS
 scripts/build_tts_macos.sh
 scripts/build_lame_macos.sh
-fvm flutter build macos
+# Embeds the commit hash so failure reports can name the build
+# (plain `fvm flutter build macos` works too, but reports say "commit unknown")
+scripts/build_app.sh macos
 
 # Release build for Windows
 scripts/build_tts_windows.bat
 scripts/build_lame_windows.bat
+# Local builds embed no commit hash, so failure reports say "commit unknown"
+# (builds from the release workflow carry it)
 fvm flutter build windows
 ```
 
