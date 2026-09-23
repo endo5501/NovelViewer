@@ -44,10 +44,29 @@ class FoundationModelsClient extends LlmClient {
   /// than as anything mentioning a limit.
   static const int maxResponseTokens = 1000;
 
+  /// Characters per token the response budget is converted at.
+  ///
+  /// Measured on macOS 27 by letting the cap cut an answer short and counting
+  /// what came back: 1.37 to 1.45 characters per token. Asked for English or
+  /// Chinese, the model still answered in Japanese, so the densest language
+  /// the application asks for is also the one it gets. This sits below every
+  /// observation, so the declared budget is never more than the cap returns.
+  static const double _charactersPerToken = 1.3;
+
   final FoundationModelsLlm _plugin;
 
   @override
   int get maxChunkSize => onDeviceChunkSize;
+
+  /// What [maxResponseTokens] returns in full, in characters, rounded down.
+  ///
+  /// Far smaller than [maxChunkSize]. A stage that merges extracted facts
+  /// answers at close to the length it was given, so sizing it by the window
+  /// asked for about 1500 characters of a cap that returns about 1400. On
+  /// macOS 27 the framework ends such an answer by closing it mid-word and
+  /// reporting success; on iPadOS 26.6.2 it reports a decoding failure.
+  @override
+  int get maxResponseSize => (maxResponseTokens * _charactersPerToken).floor();
 
   /// Generates, giving up the schema constraint if that is what was refused.
   ///

@@ -16,7 +16,7 @@ design.md D5 / D6 を参照。macOS 27 では全てのエラーが `LanguageMode
 
 - [x] 2.1 `LlmClient` に応答予算（文字）を宣言するインタフェースを追加するテストを書き、宣言しないクライアントが文脈予算にフォールバックすることを検証して、失敗を確認する
 - [x] 2.2 `LlmClient` に応答予算を実装し 2.1 を通す
-- [ ] 2.3 `FoundationModelsClient` が `maxResponseTokens` を文字数へ切り下げ換算して宣言することを検証するテストを書き、実装して通す（実測 0.69 トークン/字）
+- [x] 2.3 `FoundationModelsClient` が `maxResponseTokens` を文字数へ切り下げ換算して宣言することを検証するテストを書き、実装して通す（macOS 27 で ja/en/zh の要求に対し実測 1.37〜1.45字/トークン、いずれも日本語で回答。全観測値を下回る 1.3字/トークン で換算し 1300字）
 - [ ] 2.4 `OllamaClient` が `num_predict` を同様に宣言することを検証するテストを書き、実装して通す
 
 ## 3. refinement 専用プロンプト
