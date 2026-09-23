@@ -32,9 +32,43 @@ enum GenerationFailureWireCode {
     }
   }
 
+  /// The surface that replaces it from 27.0. On a system carrying it every
+  /// failure arrives through it, not only the ones it added, so each case
+  /// here names the code its counterpart names above.
+  ///
+  /// It has no case for a response that would not parse. Where it reports,
+  /// the framework ends an answer that ran out of budget by closing it rather
+  /// than by failing, so there is nothing left to report — which is why the
+  /// same overrun that fails on iPadOS 26.6.2 is silently truncated on
+  /// macOS 27.
   @available(iOS 27.0, macOS 27.0, *)
-  static func of(_ error: LanguageModelError) -> String { unknown }
+  static func of(_ error: LanguageModelError) -> String {
+    switch error {
+    case .contextSizeExceeded: return "exceededContextWindowSize"
+    case .rateLimited: return "rateLimited"
+    case .guardrailViolation: return "guardrailViolation"
+    case .refusal: return "refusal"
+    case .unsupportedCapability: return "unsupportedCapability"
+    case .unsupportedTranscriptContent: return "unsupportedTranscriptContent"
+    case .unsupportedGenerationGuide: return "unsupportedGenerationGuide"
+    case .unsupportedLanguageOrLocale: return "unsupportedLanguageOrLocale"
+    case .timeout: return "timeout"
+    @unknown default: return unknown
+    }
+  }
 
+  /// The code for whatever was thrown, found through whichever surface
+  /// reported it, or nil where neither did. The caller decides what to say
+  /// about an error that is not the framework's; forcing it into a named
+  /// cause would report it as something it is not.
   @available(iOS 26.0, macOS 26.0, *)
-  static func ofAnyError(_ error: Error) -> String? { nil }
+  static func ofAnyError(_ error: Error) -> String? {
+    if #available(iOS 27.0, macOS 27.0, *), let e = error as? LanguageModelError {
+      return of(e)
+    }
+    if let e = error as? LanguageModelSession.GenerationError {
+      return of(e)
+    }
+    return nil
+  }
 }

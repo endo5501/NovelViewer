@@ -144,17 +144,16 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
           maxResponseTokens: maxResponseTokens,
           sampling: sampling)
         result(text)
-      } catch let error as LanguageModelSession.GenerationError {
-        result(
-          FlutterError(
-            code: GenerationFailureWireCode.of(error),
-            message: error.failureReason ?? String(describing: error),
-            details: nil))
       } catch {
+        // The framework reports through one of two error surfaces depending
+        // on the system, and a catch naming only one type reads every
+        // failure on the other as unknown. `ofAnyError` looks for both.
+        let reason = (error as? LocalizedError)?.failureReason
         result(
           FlutterError(
-            code: "unknown",
-            message: error.localizedDescription,
+            code: GenerationFailureWireCode.ofAnyError(error)
+              ?? GenerationFailureWireCode.unknown,
+            message: reason ?? error.localizedDescription,
             details: nil))
       }
     }
