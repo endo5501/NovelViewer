@@ -38,17 +38,6 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_macos_build_settings(target)
-
-    # Xcode 27 refuses a macOS deployment target below 12.0. The Flutter SDK
-    # in use predates it: its generated FlutterMacOS podspec still declares
-    # 10.15, and podhelper takes 10.15 to be the lowest Xcode accepts, so it
-    # leaves such pods as they are. Raise them to the Runner's own target.
-    target.build_configurations.each do |config|
-      current = config.build_settings['MACOSX_DEPLOYMENT_TARGET']
-      if current && Gem::Version.new(current) < Gem::Version.new('12.0')
-        config.build_settings['MACOSX_DEPLOYMENT_TARGET'] = '12.0'
-      end
-    end
   end
 
   # Embed native dylibs into the app bundle
