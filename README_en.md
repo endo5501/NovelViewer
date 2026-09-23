@@ -87,9 +87,8 @@ scripts/build_app.sh macos
 # Release build for Windows
 scripts/build_tts_windows.bat
 scripts/build_lame_windows.bat
-# Local builds embed no commit hash, so failure reports say "commit unknown"
-# (builds from the release workflow carry it)
-fvm flutter build windows
+# Embeds the commit hash, as on macOS
+scripts\build_app.bat windows
 ```
 
 ### Testing

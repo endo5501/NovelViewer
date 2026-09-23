@@ -87,9 +87,8 @@ scripts/build_app.sh macos
 # Windows Release 构建
 scripts/build_tts_windows.bat
 scripts/build_lame_windows.bat
-# 本地构建不嵌入 commit 哈希，故障报告会显示 "commit unknown"
-#（发布工作流的构建会嵌入）
-fvm flutter build windows
+# 与 macOS 相同，嵌入 commit 哈希
+scripts\build_app.bat windows
 ```
 
 ### 测试

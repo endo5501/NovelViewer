@@ -101,9 +101,8 @@ scripts/build_tts_windows.bat
 scripts/build_lame_windows.bat
 scripts/build_piper_windows.bat
 scripts/build_irodori_windows.bat
-# ローカルビルドは commit ハッシュを埋め込まないため、障害レポートは commit unknown になる
-# （リリースワークフローのビルドには埋め込まれる）
-fvm flutter build windows
+# commit ハッシュの埋め込みは macOS と同じ
+scripts\build_app.bat windows
 
 # iPad向けビルド（ビューア機能のみ。TTS / LLM は非対応）
 scripts/build_app.sh ios --release

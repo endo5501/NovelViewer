@@ -11,10 +11,11 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `scripts/build_app.sh macos` - 本番ビルド(mac)。commit ハッシュを `--dart-define=BUILD_COMMIT` で注入し、障害レポートの app version に載せる。素の `fvm flutter build macos` でも動くが、レポートは `commit unknown` になる
  - `scripts/build_tts_windows.bat` - TTSエンジンビルド(windows)
  - `scripts/build_lame_windows.bat` - LAMEビルド(windows)
- - `fvm flutter build windows` - 本番ビルド(windows)
+ - `scripts\build_app.bat windows` - 本番ビルド(windows)。commit ハッシュの注入は mac と同じ
  - `scripts/build_app.sh ios` - ビルド(iPad。commit ハッシュの注入は mac と同じ。ビューア機能のみでTTS/LLMは非対応。Xcodeのplatform componentと`ios/Flutter/Local.xcconfig`のDEVELOPMENT_TEAMが必要。詳細はREADME参照)
  - `fvm flutter test` - テスト実行
  - `bash scripts/test/build_app_test.sh` - `build_app.sh` のテスト(スタブの fvm / git で実行し、実ビルドはしない)
+ - `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test/build_app_test.ps1` - `build_app.bat` のテスト(windows。同上)
  - `swift test --package-path packages/foundation_models_llm/darwin/wire_code_tests` - オンデバイスLLMプラグインのエラー写像テスト(mac。プラグイン本体はFlutterビルド外で走らないため写像だけを独立パッケージで実行)
  - `fvm dart format .` - フォーマット実行(lib/とtest/が対象)
  - `fvm flutter analyze` - リント実行
