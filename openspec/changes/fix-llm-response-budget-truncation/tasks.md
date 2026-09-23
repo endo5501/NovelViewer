@@ -7,8 +7,8 @@ design.md D5 / D6 を参照。macOS 27 では全てのエラーが `LanguageMode
 - [x] 1.3 `LlmOnDeviceGenerationFailure.isWorthRetrying` が `timeout` を再試行し、未対応要求を再試行しないことを検証するテストを書き、失敗を確認する
 - [x] 1.4 `isWorthRetrying` を拡張して 1.3 を通す
 - [x] 1.5 Swift テストターゲットを追加し、空のテストが実行できることを確認する（プラグインのパッケージは FlutterFramework に依存し CLI で走らないため、写像を Flutter 非依存の `GenerationFailureWireCode.swift` に切り出し、それをシンボリックリンクで取り込む独立パッケージ `darwin/wire_code_tests` で実行する）
-- [ ] 1.6 `LanguageModelError` の9ケースが正しいワイヤコードへ写像されることを検証する Swift テストを書き、失敗を確認する（各ペイロードは public init で構築できる）
-- [ ] 1.7 `GenerationError` の既存9ケースの写像が変わらないことを検証する Swift テストを書き、通ることを確認する（回帰防止。ここは既に通るはず）
+- [x] 1.6 `LanguageModelError` の9ケースが正しいワイヤコードへ写像されることを検証する Swift テストを書き、失敗を確認する（各ペイロードは public init で構築できる）
+- [x] 1.7 `GenerationError` の既存9ケースの写像が変わらないことを検証する Swift テストを書き、通ることを確認する（回帰防止。ここは既に通るはず）
 - [ ] 1.8 プラグインに `LanguageModelError` の `catch` と `switch` を追加して 1.6 を通す。`if #available(iOS 27.0, macOS 27.0, *)` を既存ガードの内側に置き、デプロイメントターゲットは変えない
 - [ ] 1.9 `scratchpad/spike/fm_probe` 相当で、統合プロンプトが拒否されるチャンクを流し、拒否が非制約再試行で救われて答えが返ることを実機（macOS 27）で確認する
 
