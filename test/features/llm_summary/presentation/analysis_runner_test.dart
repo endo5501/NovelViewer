@@ -167,9 +167,9 @@ class _DummyFactCache implements FactCacheRepository {
 }
 
 class _StubService extends LlmSummaryService {
-  _StubService(this._behavior)
+  _StubService(this._behavior, {LlmClient? client})
     : super(
-        llmClient: _DummyClient(),
+        llmClient: client ?? _DummyClient(),
         repository: _DummyRepo(),
         factCacheRepository: _DummyFactCache(),
         searchService: _DummySearch(),
@@ -867,10 +867,12 @@ void main() {
         model: 'qwen3:8b',
       ),
       Future<LlmClient?> Function()? client,
+      LlmClient? serviceClient,
     }) async {
       final stub = _StubService(
         ({required word, required coveredUpToEpisode, sourceFileName}) async =>
             throw error,
+        client: serviceClient,
       );
       final container = _container(stub, config: config, client: client);
       addTearDown(container.dispose);
@@ -950,6 +952,7 @@ void main() {
           model: 'gemma4:e4b',
         ),
         client: () async => FoundationModelsClient(),
+        serviceClient: FoundationModelsClient(),
       );
 
       final text = await openDetails(tester);
@@ -959,16 +962,60 @@ void main() {
       expect(text, isNot(contains('gemma4:e4b')));
     });
 
-    testWidgets('a run with no client names no model', (tester) async {
+    testWidgets('the model is the one the run used, not a rebuilt client', (
+      tester,
+    ) async {
+      // The client provider rebuilds when the on-device availability is
+      // re-checked, which a resume does mid-run. The report has to name the
+      // client the service ran with, not whatever the provider holds now.
       await runFailing(
         tester,
         error: StateError('boom'),
-        client: () async => null,
+        serviceClient: FoundationModelsClient(),
       );
 
       final text = await openDetails(tester);
 
+      expect(text, contains('model: apple:on-device'));
+      expect(text, isNot(contains('test:fake')));
+    });
+
+    testWidgets('a client that fails to build is reported with no model', (
+      tester,
+    ) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            'unused',
+      );
+      final container = _container(
+        stub,
+        client: () => Future.error(StateError('secure storage locked')),
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            ref
+                .read(analysisRunnerProvider)
+                .run(
+                  context: context,
+                  word: 'アリス',
+                  coveredUpToEpisode: 40,
+                  sourceFileName: '040_chapter.txt',
+                );
+          },
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+
+      expect(stub.callCount, 0);
+      expect(find.textContaining('secure storage locked'), findsOneWidget);
+      final text = await openDetails(tester);
       expect(text, contains('model: (no client)'));
+      expect(text, contains('covered up to: 40'));
+      expect(text, contains('file: 040_chapter.txt'));
       expect(text, isNot(contains('qwen3:8b')));
     });
 
