@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/shared/episode/episode_resolver.dart';
-import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
@@ -155,7 +154,8 @@ class DefaultAnalysisRunner implements AnalysisRunner {
           // hit file instead of one — and save the result as though it were a
           // simple analysis. The bound is named as unresolved because it never
           // was.
-          final diagnostics = await _diagnostics(
+          final diagnostics = _diagnostics(
+            model: await _modelOfCurrentClient(),
             word: word,
             coveredUpToEpisode: null,
             sourceFileName: selectedFile.name,
@@ -292,7 +292,29 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     // futures must be awaited too — nothing else pre-resolves
     // `factCacheRepositoryProvider`, so without this the first analysis after
     // launch would no-op.
-    await _ref.read(llmClientProvider.future);
+    try {
+      await _ref.read(llmClientProvider.future);
+    } catch (e, st) {
+      // A client that throws while being built (a secure-storage read that
+      // fails, say) would otherwise escape as an unhandled error and leave the
+      // reader with nothing on screen at all.
+      if (!context.mounted) return;
+      showFailureSnackBar(
+        context,
+        FailureReport(
+          headline: l10n.llmAnalysis_failed,
+          cause: e.toString(),
+          stackTrace: st,
+          diagnostics: _diagnostics(
+            model: _noClient,
+            word: word,
+            coveredUpToEpisode: coveredUpToEpisode,
+            sourceFileName: sourceFileName ?? openFileName,
+          ),
+        ),
+      );
+      return;
+    }
     await _ref.read(llmSummaryRepositoryProvider(novelFolder).future);
     await _ref.read(factCacheRepositoryProvider(novelFolder).future);
     final service = _ref.read(llmSummaryServiceProvider(novelFolder));
@@ -370,7 +392,10 @@ class DefaultAnalysisRunner implements AnalysisRunner {
         headline: headline,
         cause: cause,
         stackTrace: st,
-        diagnostics: await _diagnostics(
+        diagnostics: _diagnostics(
+          // The client the service ran with. The provider can have rebuilt
+          // since: a resume re-checks the on-device availability mid-run.
+          model: service.llmClient.modelId,
           word: word,
           coveredUpToEpisode: coveredUpToEpisode,
           sourceFileName: resolvedSourceFile,
@@ -404,39 +429,47 @@ class DefaultAnalysisRunner implements AnalysisRunner {
   /// private network address, and this text is meant to be pasted into a bug
   /// report. The provider kind and model still identify the configuration.
   ///
-  /// The model is the one the client names, not the configured one. A
-  /// provider that takes no model from the configuration leaves there
-  /// whatever a previously selected provider put, and the report would then
-  /// name a model that had no part in the run. With no client there is no
-  /// model to name, and falling back to the setting would bring that back.
+  /// [model] is the identity a client names for itself, never the configured
+  /// model name. A provider that takes no model from the configuration leaves
+  /// there whatever a previously selected provider put, and the report would
+  /// then name a model that had no part in the run. With no client there is
+  /// no model to name, and [_noClient] says so rather than falling back to the
+  /// setting.
   ///
   /// [coveredUpToEpisode] is null when the run failed before a bound could be
   /// resolved, which simple analysis can: it has to search the folder first.
-  Future<Map<String, String?>> _diagnostics({
+  Map<String, String?> _diagnostics({
+    required String model,
     required String word,
     required int? coveredUpToEpisode,
     required String? sourceFileName,
-  }) async {
+  }) {
     final config = _ref.read(llmConfigProvider);
-    // A search failure reports before the client was ever asked for, and the
-    // report must survive a client that cannot be built at all.
-    LlmClient? client;
-    try {
-      client = await _ref.read(llmClientProvider.future);
-    } catch (_) {
-      client = null;
-    }
     return {
       'time': DateTime.now().toUtc().toIso8601String(),
       'app version': _ref.read(appVersionLabelProvider),
       'provider': config.provider.name,
-      'model': client?.modelId ?? '(no client)',
+      'model': model,
       'word': word,
       'covered up to': coveredUpToEpisode == null
           ? '(unresolved)'
           : '$coveredUpToEpisode',
       'file': sourceFileName,
     };
+  }
+
+  /// What the model diagnostic says when no client could be built.
+  static const _noClient = '(no client)';
+
+  /// The model of the client a run would use, for a failure that happened
+  /// before the run asked for one. The report must survive a client that
+  /// cannot be built at all.
+  Future<String> _modelOfCurrentClient() async {
+    try {
+      return (await _ref.read(llmClientProvider.future))?.modelId ?? _noClient;
+    } catch (_) {
+      return _noClient;
+    }
   }
 
   /// What to say when no client could be built.
