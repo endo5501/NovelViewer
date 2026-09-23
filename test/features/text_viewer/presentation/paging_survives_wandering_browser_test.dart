@@ -125,34 +125,27 @@ void main() {
     (i) => 'これは ${i + 1} 行目の内容です。',
   ).join('\n');
 
-  testWidgets(
-    '縦書き: ブラウザがライブラリルートでも最終ページで次話プロンプトが出る',
-    (tester) async {
-      final c = container(TextDisplayMode.vertical);
-      await tester.pumpWidget(
-        wrap(
-          c,
-          const SizedBox(width: 100, height: 400, child: _VerticalHost()),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await prime(c, tester);
+  testWidgets('縦書き: ブラウザがライブラリルートでも最終ページで次話プロンプトが出る', (tester) async {
+    final c = container(TextDisplayMode.vertical);
+    await tester.pumpWidget(
+      wrap(c, const SizedBox(width: 100, height: 400, child: _VerticalHost())),
+    );
+    await tester.pumpAndSettle();
+    await prime(c, tester);
 
-      // Walk to the last page, then ask for one more.
-      for (var i = 0; i < 300; i++) {
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-        await tester.pump();
-        if (find.textContaining(_ep3.name).evaluate().isNotEmpty) break;
-      }
+    // Walk to the last page, then ask for one more.
+    for (var i = 0; i < 300; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      if (find.textContaining(_ep3.name).evaluate().isNotEmpty) break;
+    }
 
-      expect(
-        find.textContaining(_ep3.name),
-        findsOneWidget,
-        reason: '次話が解決できていれば、境界で次話名のプロンプトが出る',
-      );
-    },
-    variant: const TargetPlatformVariant({TargetPlatform.macOS}),
-  );
+    expect(
+      find.textContaining(_ep3.name),
+      findsOneWidget,
+      reason: '次話が解決できていれば、境界で次話名のプロンプトが出る',
+    );
+  }, variant: const TargetPlatformVariant({TargetPlatform.macOS}));
 
   testWidgets('横書き: ブラウザがライブラリルートでも末尾で次話へ遷移する', (tester) async {
     final c = container(TextDisplayMode.horizontal);

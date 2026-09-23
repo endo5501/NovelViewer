@@ -1565,11 +1565,9 @@ void main() {
         startOffset: 13, // inside segment 4 (offset 12)
       );
 
-      expect(
-        isolate.synthesizeRequests,
-        ['文5。'],
-        reason: 'must start at segment 4, not at the last stored segment 1',
-      );
+      expect(isolate.synthesizeRequests, [
+        '文5。',
+      ], reason: 'must start at segment 4, not at the last stored segment 1');
       expect(player.playedFiles, hasLength(1));
     });
 
