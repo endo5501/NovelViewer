@@ -48,6 +48,6 @@ design.md D5 / D6 を参照。macOS 27 では全てのエラーが `LanguageMode
 
 - [x] 6.1 code-reviewスキルを使用してコードレビューを実施（medium・指摘なし）
 - [x] 6.2 codexスキルを使用して現在開発中のコードレビューを実施（指摘3件: 1.10/1.11・4.5・4.6 で対応）
-- [ ] 6.3 `fvm dart format .`でフォーマットを実行
-- [ ] 6.4 `fvm flutter analyze`でリントを実行
-- [ ] 6.5 `fvm flutter test`でテストを実行
+- [x] 6.3 `fvm dart format .`でフォーマットを実行
+- [x] 6.4 `fvm flutter analyze`でリントを実行
+- [x] 6.5 `fvm flutter test`でテストを実行
