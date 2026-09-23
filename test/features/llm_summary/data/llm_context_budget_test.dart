@@ -278,7 +278,16 @@ void main() {
         coveredUpToEpisode: 6,
       );
 
-      expect(client.refinementPrompts, hasLength(6));
+      // Each round carries at most the response budget. Counting rounds would
+      // tie this to the fixture: the shared first file matches ten times, and
+      // its facts exceed the budget on their own, so they are split too.
+      expect(client.refinementPrompts.length, greaterThan(2));
+      for (final prompt in client.refinementPrompts) {
+        final facts = RegExp(
+          r'<facts>\n([\s\S]*)\n</facts>',
+        ).firstMatch(prompt)!.group(1)!;
+        expect(facts.length, lessThanOrEqualTo(1000));
+      }
     });
 
     test('a client with a smaller budget is asked more times', () async {

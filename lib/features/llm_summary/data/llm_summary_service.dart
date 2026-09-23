@@ -148,6 +148,7 @@ class LlmSummaryService {
       final pipeline = LlmSummaryPipeline(
         llmClient: llmClient,
         maxChunkSize: llmClient.maxChunkSize,
+        maxResponseSize: llmClient.maxResponseSize,
         language: language,
       );
 

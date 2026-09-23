@@ -172,7 +172,10 @@ class LlmSummaryPipeline {
       return entries.join('\n');
     }
 
-    final chunks = ContextChunker.split(entries, maxChunkSize: maxChunkSize);
+    // Sized by what the model may return, not by what it may be handed: a
+    // round answers at close to the length of the facts it was given, so a
+    // window-sized chunk asks for an answer the response cap cuts off.
+    final chunks = ContextChunker.split(entries, maxChunkSize: maxResponseSize);
     final round = depth + 1;
 
     final factsList = <String>[];
@@ -184,10 +187,10 @@ class LlmSummaryPipeline {
           total: chunks.length,
         ),
       );
-      final contextBlock = chunks[i].join('\n---\n');
-      final prompt = LlmPromptBuilder.buildFactExtractionPrompt(
+      final prompt = LlmPromptBuilder.buildFactRefinementPrompt(
         word: word,
-        contextChunk: contextBlock,
+        facts: chunks[i].join('\n---\n'),
+        maxResponseSize: maxResponseSize,
         language: language,
       );
       factsList.add((await _generateFacts(prompt)).value);
