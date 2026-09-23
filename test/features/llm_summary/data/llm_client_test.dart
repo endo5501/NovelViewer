@@ -23,12 +23,41 @@ class _MinimalLlmClient extends LlmClient {
   }
 }
 
+/// A client that states only how much it may be handed.
+class _WindowOnlyLlmClient extends _MinimalLlmClient {
+  @override
+  int get maxChunkSize => 3000;
+}
+
+/// A client that states both budgets, which differ.
+class _TwoBudgetLlmClient extends _MinimalLlmClient {
+  @override
+  int get maxChunkSize => 3000;
+
+  @override
+  int get maxResponseSize => 1400;
+}
+
 void main() {
   group('LlmClient default behavior', () {
     test('declares 4000 characters when it names no budget of its own', () {
       // The value every client used before the budget existed, so adding the
       // notion changes nothing for a client that does not care about it.
       expect(_MinimalLlmClient().maxChunkSize, 4000);
+    });
+
+    test('a client that names no response budget answers with its window', () {
+      // Every client behaved this way before the response budget existed:
+      // the one budget bounded what was sent and, by implication, what was
+      // asked for.
+      expect(_MinimalLlmClient().maxResponseSize, 4000);
+      expect(_WindowOnlyLlmClient().maxResponseSize, 3000);
+    });
+
+    test('the two budgets are declared independently', () {
+      final client = _TwoBudgetLlmClient();
+      expect(client.maxChunkSize, 3000);
+      expect(client.maxResponseSize, 1400);
     });
 
     test(
