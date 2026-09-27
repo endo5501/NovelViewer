@@ -8,7 +8,7 @@ Web小説サイトから小説をダウンロードし、ローカルで閲覧�
 
 - macOS
 - Windows
-- iPad（ビューア機能のみ。TTS / LLM は非対応。詳細は [docs/ipad.md](docs/ipad.md)）
+- iPad（TTS は非対応。詳細は [docs/ipad.md](docs/ipad.md)）
 - Linux(未確認)
 
 ## 機能
@@ -17,7 +17,7 @@ Web小説サイトから小説をダウンロードし、ローカルで閲覧�
 - **テキスト検索**: ライブラリ内の全テキストを横断検索
 - **ブックマーク**: ブックマークの登録・解除 
 - **LLM要約**: 指定した単語をネタばれあり/なしを指定して確認可能  
-(Ollama / OpenAI互換APIに対応)
+(Ollama / OpenAI互換API / オンデバイス (Apple、macOS・iPad) に対応)
 - **音声読み上げ**: 指定したリファレンス音声を使った読み上げ/読み上げテキストの編集
 - **URL スキームからの登録**: `novelviewer://download?url=...` を開くと、その URL 入りでダウンロードダイアログが開く(macOS / iPad)
 
@@ -71,6 +71,17 @@ Web小説サイトから小説をダウンロードし、ローカルで閲覧�
 ollama pull gemma4:e4b
 ```
 3. NovelVeiwerの設定画面にてLLMプロバイダを`Ollama`、エンドポイントURLに`http://localhost:11434`、モデル名にダウンロードしたモデル名(上記の場合、`gemma4:e4b`)を設定
+
+iPad から PC 上の Ollama に接続する場合は [docs/ipad.md](docs/ipad.md#llm-要約) を参照してください。
+
+### LLM(オンデバイス)設定
+
+macOS / iPad では、Apple のオンデバイス AI モデルでも要約できます。サーバは不要で、本文は端末の外に送られません。
+
+1. Apple Intelligence に対応した端末で、システム設定から Apple Intelligence を有効にする
+2. NovelViewerの設定画面にてLLMプロバイダを`オンデバイス (Apple)`に設定
+
+Apple Intelligence が無効な場合やモデルの準備中は、選択肢が選べない状態で理由が表示されます。非対応の端末・OS では選択肢自体が表示されません。
 
 ### URL スキームでダウンロードを依頼する
 
@@ -178,7 +189,7 @@ scripts\build_app.bat windows
 
 #### iPad向けビルド
 
-ビューア機能のみ（TTS / LLM は非対応）。前提条件（Xcode の iOS platform component、署名設定など）とインストール手順は [docs/ipad.md](docs/ipad.md#ビルドとインストール) を参照してください。
+TTS は非対応。前提条件（Xcode の iOS platform component、署名設定など）とインストール手順は [docs/ipad.md](docs/ipad.md#ビルドとインストール) を参照してください。
 
 ```bash
 scripts/build_app.sh ios --release
