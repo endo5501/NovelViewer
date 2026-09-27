@@ -27,13 +27,13 @@
 
   失敗を確認したら、テストだけをコミットする。
 - [x] 2.2 `file_browser_providers.dart` に `fileBrowserOpenRequestProvider` を追加し、`HomeScreen` で `ref.listen` して、Drawer が閉じていれば `openDrawer()` を呼ぶ。2.1 のテストが通ることを確認する。
-- [ ] 2.3 次のテストを書く。
+- [x] 2.3 次のテストを書く。
   - `VerticalTextViewer` が `onCenterDoubleTap` を表示中のページへ中継する。
   - 縦書きモードの `TextContentRenderer` で中央をダブルタップすると、`fileBrowserOpenRequestProvider` が増える。
   - 横書きモードでは増えない。
 
   失敗を確認したら、テストだけをコミットする。
-- [ ] 2.4 `VerticalTextViewer`（incoming page にだけ渡す）と `TextContentRenderer`（`request()` を呼ぶ）に配線を実装する。2.3 のテストが通ることを確認する。
+- [x] 2.4 `VerticalTextViewer`（incoming page にだけ渡す）と `TextContentRenderer`（`request()` を呼ぶ）に配線を実装する。2.3 のテストが通ることを確認する。
 
 ## 3. 統合確認
 

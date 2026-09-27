@@ -1107,6 +1107,9 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         onMarkExit: _onMarkExit,
         onMarkTap: _onMarkTap,
         onHoverHideRequest: _onHoverHideRequest,
+        onCenterDoubleTap: () {
+          ref.read(fileBrowserOpenRequestProvider.notifier).request();
+        },
         onPageLineChanged: (lineNumber) {
           ref.read(currentViewLineProvider.notifier).set(lineNumber);
         },
