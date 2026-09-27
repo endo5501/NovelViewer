@@ -191,4 +191,18 @@ void main() {
 
     expect(container.read(hoverPopupProvider).isVisible, isTrue);
   });
+
+  testWidgets('a finger on the delete control opens its confirmation', (
+    tester,
+  ) async {
+    // The control sits inside the popup, so the dismissal barrier must read
+    // the press as inside and leave the popup to act on it.
+    await pumpHost(tester);
+    await showPopup(tester);
+
+    await tester.tap(find.byKey(const Key('hover_popup_delete_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('「アリス」の解析結果を削除'), findsOneWidget);
+  });
 }
