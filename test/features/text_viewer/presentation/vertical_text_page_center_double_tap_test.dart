@@ -171,6 +171,48 @@ void main() {
       expect(calls, 0);
     });
 
+    testWidgets('the interval runs to the second press, not its release', (
+      tester,
+    ) async {
+      // As with the platform's own double tap: the second finger has to come
+      // down within the interval, however long it then stays on the glass.
+      var calls = 0;
+      await tester.pumpWidget(_build(onCenterDoubleTap: () => calls++));
+      await tester.pump();
+
+      final center = _emptyAt(tester, 0.5);
+      await tester.tapAt(center);
+      await tester.pump(kDoubleTapTimeout - const Duration(milliseconds: 100));
+      final second = await tester.startGesture(center);
+      await tester.pump(const Duration(milliseconds: 150));
+      await second.up();
+      await tester.pump();
+
+      expect(calls, 1);
+    });
+
+    testWidgets('a second press that never lands as a tap is not kept', (
+      tester,
+    ) async {
+      // The second press arrived in time but was cancelled. The first tap
+      // must not survive it to pair with some later tap.
+      var calls = 0;
+      await tester.pumpWidget(_build(onCenterDoubleTap: () => calls++));
+      await tester.pump();
+
+      final center = _emptyAt(tester, 0.5);
+      await tester.tapAt(center);
+      await tester.pump();
+      final cancelled = await tester.startGesture(center);
+      await tester.pump();
+      await cancelled.cancel();
+      await tester.pump(kDoubleTapTimeout * 2);
+      await tester.tapAt(center);
+      await tester.pump();
+
+      expect(calls, 0);
+    });
+
     testWidgets('a second tap beyond the double-tap slop reports nothing', (
       tester,
     ) async {
