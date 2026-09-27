@@ -178,6 +178,40 @@ void main() {
       );
     });
 
+    testWidgets('a three-line summary fits the height the anchor assumes', (
+      tester,
+    ) async {
+      // The anchor flips the popup above the pointer, or pulls it up, only
+      // when a card of this height would pass the bottom edge. The constant
+      // promises room for a summary of a few lines; a card taller than that
+      // hangs off the bottom by the difference, controls included.
+      await tester.pumpWidget(
+        _scopedWith(
+          snapshots: [_snap(3, 'あ' * 72)],
+          child: const Align(
+            alignment: Alignment.topLeft,
+            child: HoverPopupWidget(
+              folderPath: 'novel_a',
+              word: 'アリス',
+              currentEpisode: 3,
+              currentFileName: '003.txt',
+              maxEpisodeInFolder: 3,
+              maxEpisodeFileName: '003.txt',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final summary = tester.getSize(find.text('あ' * 72)).height;
+      final lineHeight = tester.getSize(find.text('3ファイル時点の要約')).height;
+      expect(summary, greaterThan(lineHeight * 2), reason: 'three lines');
+      expect(
+        tester.getSize(find.byKey(const Key('hover_popup_card'))).height,
+        lessThanOrEqualTo(kHoverPopupApproxHeight),
+      );
+    });
+
     testWidgets('renders the default snapshot label and summary text', (
       tester,
     ) async {
