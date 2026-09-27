@@ -9,9 +9,11 @@ import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 const double kHoverPopupApproxWidth = 360.0;
 
 /// Approximate popup height for edge-flip math. The popup may be shorter
-/// than this, but never meaningfully taller: 2-3 lines of summary plus
-/// the optional toggle and reference warning.
-const double kHoverPopupApproxHeight = 140.0;
+/// than this, but never meaningfully taller: the snapshot navigator row, up
+/// to three lines of summary, and the detail/delete action row below it.
+/// Pinned by a test against a three-line card laid out with touch-sized
+/// navigator buttons, the tallest header the popup draws.
+const double kHoverPopupApproxHeight = 176.0;
 
 /// Gap between the pointer and the popup's near edge.
 const double kHoverPopupGap = 16.0;

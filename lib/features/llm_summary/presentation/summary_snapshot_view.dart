@@ -113,9 +113,17 @@ class _SnapshotSelector extends StatelessWidget {
               : null,
         ),
         const SizedBox(width: 4),
-        Text(
-          l10n.hoverPopup_snapshotLabel(displayed.coveredUpToEpisode),
-          style: theme.textTheme.bodySmall,
+        // Flexible so a label too long for the row is cut short rather than
+        // pushing the next button and the host's trailing action off the
+        // card — the width it can have depends on the language, the episode
+        // number, and how wide the pointer's tap targets are.
+        Flexible(
+          child: Text(
+            l10n.hoverPopup_snapshotLabel(displayed.coveredUpToEpisode),
+            style: theme.textTheme.bodySmall,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         const SizedBox(width: 4),
         IconButton(

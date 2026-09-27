@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_anchor.dart';
+import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_widget.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_detail_dialog.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
+import 'package:novel_viewer/features/llm_summary/providers/llm_summary_detail_provider.dart';
+import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
@@ -91,6 +96,22 @@ ProviderScope _scopedWith({
   );
 }
 
+/// Records deletions instead of touching a database: what the popup owes is
+/// handing the right word and folder to the same delete the history menu
+/// uses. What that delete does to the tables is covered by the notifier's
+/// own tests.
+class _RecordingHistoryNotifier extends LlmSummaryHistoryNotifier {
+  final List<({String word, String novelFolder})> deletions = [];
+
+  @override
+  Future<List<HistoryEntry>> build() async => const [];
+
+  @override
+  Future<void> deleteEntry(String word, {required String novelFolder}) async {
+    deletions.add((word: word, novelFolder: novelFolder));
+  }
+}
+
 WordSummary _snap(int episode, String text) => WordSummary(
   word: 'アリス',
   coveredUpToEpisode: episode,
@@ -154,6 +175,40 @@ void main() {
       expect(
         tester.getSize(find.byKey(const Key('hover_popup_card'))).width,
         lessThanOrEqualTo(kHoverPopupApproxWidth),
+      );
+    });
+
+    testWidgets('a three-line summary fits the height the anchor assumes', (
+      tester,
+    ) async {
+      // The anchor flips the popup above the pointer, or pulls it up, only
+      // when a card of this height would pass the bottom edge. The constant
+      // promises room for a summary of a few lines; a card taller than that
+      // hangs off the bottom by the difference, controls included.
+      await tester.pumpWidget(
+        _scopedWith(
+          snapshots: [_snap(3, 'あ' * 72)],
+          child: const Align(
+            alignment: Alignment.topLeft,
+            child: HoverPopupWidget(
+              folderPath: 'novel_a',
+              word: 'アリス',
+              currentEpisode: 3,
+              currentFileName: '003.txt',
+              maxEpisodeInFolder: 3,
+              maxEpisodeFileName: '003.txt',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final summary = tester.getSize(find.text('あ' * 72)).height;
+      final lineHeight = tester.getSize(find.text('3ファイル時点の要約')).height;
+      expect(summary, greaterThan(lineHeight * 2), reason: 'three lines');
+      expect(
+        tester.getSize(find.byKey(const Key('hover_popup_card'))).height,
+        lessThanOrEqualTo(kHoverPopupApproxHeight),
       );
     });
 
@@ -594,5 +649,232 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+
+  group('Detail and delete controls', () {
+    late _RecordingHistoryNotifier history;
+
+    setUp(() => history = _RecordingHistoryNotifier());
+
+    /// [visible] lets a test take the popup out of the tree while a dialog it
+    /// opened is still up, the way the host removes it once the pointer leaves.
+    Future<void> pumpPopup(
+      WidgetTester tester, {
+      bool llmSupported = true,
+      Locale locale = const Locale('ja'),
+      ValueNotifier<bool>? visible,
+    }) async {
+      final shown = visible ?? ValueNotifier(true);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            llmSummarySupportedProvider.overrideWithValue(llmSupported),
+            hoverPopupCacheProvider((
+              folderPath: 'novel_a',
+              word: 'アリス',
+            )).overrideWith((_) async => [_snap(3, '序盤要約')]),
+            llmSummaryRepositoryProvider.overrideWith(
+              (ref, folderPath) async =>
+                  throw UnsupportedError('not needed in this test'),
+            ),
+            llmSummaryHistoryProvider.overrideWith(() => history),
+            historyDetailFactsProvider.overrideWith(
+              (ref, key) async => const [],
+            ),
+          ],
+          child: MaterialApp(
+            locale: locale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Material(
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: shown,
+                  builder: (_, isShown, _) => isShown
+                      ? const HoverPopupWidget(
+                          folderPath: 'novel_a',
+                          word: 'アリス',
+                          currentEpisode: 6,
+                          currentFileName: '006.txt',
+                          maxEpisodeInFolder: 9,
+                          maxEpisodeFileName: '009.txt',
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    final details = find.byKey(const Key('hover_popup_details_button'));
+    final delete = find.byKey(const Key('hover_popup_delete_button'));
+    final confirm = find.byKey(const Key('hover_popup_delete_confirm'));
+    final cancel = find.byKey(const Key('hover_popup_delete_cancel'));
+
+    testWidgets('both sit labelled below the summary, re-analyze stays up', (
+      tester,
+    ) async {
+      await pumpPopup(tester);
+
+      expect(
+        find.descendant(of: details, matching: find.text('詳細を表示')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: delete, matching: find.text('削除')),
+        findsOneWidget,
+      );
+      final summaryBottom = tester.getBottomLeft(find.text('序盤要約')).dy;
+      expect(
+        tester.getTopLeft(details).dy,
+        greaterThanOrEqualTo(summaryBottom),
+      );
+      expect(tester.getTopLeft(delete).dy, greaterThanOrEqualTo(summaryBottom));
+      expect(
+        tester
+            .getBottomLeft(
+              find.byKey(const Key('hover_popup_reanalyze_button')),
+            )
+            .dy,
+        lessThanOrEqualTo(summaryBottom),
+      );
+    });
+
+    testWidgets('both are shown where LLM summary is unavailable', (
+      tester,
+    ) async {
+      await pumpPopup(tester, llmSupported: false);
+
+      expect(details, findsOneWidget);
+      expect(delete, findsOneWidget);
+      expect(
+        find.byKey(const Key('hover_popup_reanalyze_button')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('the detail control opens the word detail dialog', (
+      tester,
+    ) async {
+      await pumpPopup(tester);
+
+      await tester.tap(details);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LlmSummaryDetailDialog), findsOneWidget);
+      expect(find.text('「アリス」の詳細'), findsOneWidget);
+      expect(
+        tester
+            .widget<LlmSummaryDetailDialog>(find.byType(LlmSummaryDetailDialog))
+            .folderPath,
+        'novel_a',
+        reason: 'the dialog SHALL read the novel the popup was opened over',
+      );
+      final tabs = DefaultTabController.of(
+        tester.element(find.text('事実').first),
+      );
+      expect(tabs.index, 0, reason: 'the facts tab SHALL be selected first');
+    });
+
+    testWidgets('the delete control asks before deleting', (tester) async {
+      await pumpPopup(tester);
+
+      await tester.tap(delete);
+      await tester.pumpAndSettle();
+
+      expect(find.text('「アリス」の解析結果を削除'), findsOneWidget);
+      expect(history.deletions, isEmpty);
+    });
+
+    testWidgets('confirming deletes the word from the popup\'s novel', (
+      tester,
+    ) async {
+      await pumpPopup(tester);
+
+      await tester.tap(delete);
+      await tester.pumpAndSettle();
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+
+      expect(history.deletions, [(word: 'アリス', novelFolder: 'novel_a')]);
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
+    testWidgets('cancelling deletes nothing', (tester) async {
+      await pumpPopup(tester);
+
+      await tester.tap(delete);
+      await tester.pumpAndSettle();
+      await tester.tap(cancel);
+      await tester.pumpAndSettle();
+
+      expect(history.deletions, isEmpty);
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
+    testWidgets('dismissing by the barrier deletes nothing', (tester) async {
+      await pumpPopup(tester);
+
+      await tester.tap(delete);
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(5, 590));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(history.deletions, isEmpty);
+    });
+
+    testWidgets('dismissing by Esc deletes nothing', (tester) async {
+      await pumpPopup(tester);
+
+      await tester.tap(delete);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(history.deletions, isEmpty);
+    });
+
+    testWidgets('the delete completes after the popup has gone', (
+      tester,
+    ) async {
+      // Opening the dialog moves the pointer off the popup, and the host then
+      // removes it: whatever confirming needs has to outlive the popup.
+      final visible = ValueNotifier(true);
+      await pumpPopup(tester, visible: visible);
+
+      await tester.tap(delete);
+      await tester.pumpAndSettle();
+      visible.value = false;
+      await tester.pumpAndSettle();
+      expect(find.byType(HoverPopupWidget), findsNothing);
+
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(history.deletions, [(word: 'アリス', novelFolder: 'novel_a')]);
+    });
+
+    for (final locale in const [Locale('en'), Locale('zh')]) {
+      testWidgets('fits the popup width in ${locale.languageCode}', (
+        tester,
+      ) async {
+        await pumpPopup(tester, locale: locale);
+
+        expect(details, findsOneWidget);
+        expect(delete, findsOneWidget);
+        expect(tester.takeException(), isNull, reason: 'no overflow');
+        expect(
+          tester.getSize(find.byKey(const Key('hover_popup_card'))).width,
+          lessThanOrEqualTo(kHoverPopupApproxWidth),
+        );
+      });
+    }
   });
 }

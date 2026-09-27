@@ -191,4 +191,41 @@ void main() {
 
     expect(container.read(hoverPopupProvider).isVisible, isTrue);
   });
+
+  testWidgets('a finger on the delete control opens its confirmation', (
+    tester,
+  ) async {
+    // The control sits inside the popup, so the dismissal barrier must read
+    // the press as inside and leave the popup to act on it.
+    await pumpHost(tester);
+    await showPopup(tester);
+
+    await tester.tap(find.byKey(const Key('hover_popup_delete_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('「アリス」の解析結果を削除'), findsOneWidget);
+  });
+
+  // The host puts the popup straight into the root overlay, and a route the
+  // navigator pushes is not guaranteed to land above an entry it did not
+  // create. A popup left up could then sit over the dialog and take the very
+  // touch meant for its buttons, so it goes before either dialog opens.
+  for (final (name, key) in const [
+    ('detail', 'hover_popup_details_button'),
+    ('delete', 'hover_popup_delete_button'),
+  ]) {
+    testWidgets('the $name dialog does not open under the popup', (
+      tester,
+    ) async {
+      await pumpHost(tester);
+      await showPopup(tester);
+
+      await tester.tap(find.byKey(Key(key)));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(container.read(hoverPopupProvider).isVisible, isFalse);
+      expect(find.byType(HoverPopupWidget), findsNothing);
+    });
+  }
 }

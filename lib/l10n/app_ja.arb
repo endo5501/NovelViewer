@@ -502,6 +502,17 @@
   "hoverPopup_reanalyzeOverwriteSuffix": " (上書き)",
   "hoverPopup_snapshotNavPrev": "前のスナップショット",
   "hoverPopup_snapshotNavNext": "次のスナップショット",
+  "hoverPopup_detailsButton": "詳細を表示",
+  "hoverPopup_deleteButton": "削除",
+  "hoverPopup_deleteConfirmTitle": "「{word}」の解析結果を削除",
+  "@hoverPopup_deleteConfirmTitle": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "hoverPopup_deleteConfirmMessage": "この単語の要約と、その元になった事実がすべて削除されます。この操作は取り消せません。",
   "bookmark_selectNovelPrompt": "作品フォルダを選択してください",
   "bookmark_noBookmarks": "ブックマークがありません",
   "bookmark_deleteMenuItem": "削除",

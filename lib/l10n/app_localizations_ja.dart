@@ -782,6 +782,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get hoverPopup_snapshotNavNext => '次のスナップショット';
 
   @override
+  String get hoverPopup_detailsButton => '詳細を表示';
+
+  @override
+  String get hoverPopup_deleteButton => '削除';
+
+  @override
+  String hoverPopup_deleteConfirmTitle(String word) {
+    return '「$word」の解析結果を削除';
+  }
+
+  @override
+  String get hoverPopup_deleteConfirmMessage =>
+      'この単語の要約と、その元になった事実がすべて削除されます。この操作は取り消せません。';
+
+  @override
   String get bookmark_selectNovelPrompt => '作品フォルダを選択してください';
 
   @override
