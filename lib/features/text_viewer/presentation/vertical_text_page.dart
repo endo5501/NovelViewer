@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
@@ -50,6 +51,7 @@ class VerticalTextPage extends StatefulWidget {
     this.onMarkExit,
     this.onMarkTap,
     this.onHoverHideRequest,
+    this.onCenterDoubleTap,
   }) : assert(columnSpacing >= 0);
 
   final List<TextSegment> segments;
@@ -94,6 +96,10 @@ class VerticalTextPage extends StatefulWidget {
   /// only carries the most recently entered token.
   final VoidCallback? onHoverHideRequest;
 
+  /// Reports two quick taps in the middle third of the page, for a pointer
+  /// that has no secondary button, where neither tap meant anything else.
+  final VoidCallback? onCenterDoubleTap;
+
   @override
   State<VerticalTextPage> createState() => _VerticalTextPageState();
 }
@@ -137,6 +143,12 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   /// character or two of vertical text.
   Offset? _panDownLocalPosition;
   _GestureMode _gestureMode = _GestureMode.undecided;
+
+  /// Where the first of a possible center double tap landed, while the
+  /// second may still follow. [_pendingCenterTapTimer] drops it once the
+  /// double-tap interval has passed.
+  Offset? _pendingCenterTap;
+  Timer? _pendingCenterTapTimer;
 
   late List<VerticalCharEntry> _charEntries;
   late List<List<int>> _columns;
@@ -184,6 +196,9 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     if (oldWidget.segments != widget.segments) {
       _rebuildEntries();
       _clearInternalSelection();
+      // A page moved by the keyboard or the wheel is not where the first tap
+      // landed.
+      _discardPendingCenterTap();
       // Entry indices change meaning when segments rebuild, so any stale
       // hover state would otherwise suppress the next onMarkEnter via the
       // _lastHoverCharIndex differential check.
@@ -198,6 +213,12 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         oldWidget.columnSpacing != widget.columnSpacing) {
       _scheduleHitRegionRebuild();
     }
+  }
+
+  @override
+  void dispose() {
+    _pendingCenterTapTimer?.cancel();
+    super.dispose();
   }
 
   void _rebuildEntries() {
@@ -364,6 +385,9 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   }
 
   void _onPanStart(DragStartDetails details) {
+    // A swipe or a selection drag between two taps makes them two taps.
+    // Not in onPanDown: that fires for every press, the second tap included.
+    _discardPendingCenterTap();
     // Snap within a column gap, for the same reason the tap path does: nothing
     // is painted between two columns, but a finger aimed at a character lands
     // there often enough, and an anchor that resolves to nothing abandons the
@@ -528,8 +552,13 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   /// recognizer from the gesture arena — abandoning a selection drag that
   /// began with the finger held still. Reusing the tap leaves the recognizer
   /// set of this detector, and therefore the drag/swipe arbitration, untouched.
+  ///
+  /// A touch tap that means none of these — no selection to clear, nothing
+  /// to open — may be the first or second half of a center double tap; see
+  /// [_registerCenterTap].
   void _onTapUp(TapUpDetails details) {
-    if (kNoSecondaryButtonPointerKinds.contains(details.kind)) {
+    final isTouch = kNoSecondaryButtonPointerKinds.contains(details.kind);
+    if (isTouch) {
       // Nothing is painted in the gap between two columns, but a finger aimed
       // at a character lands there often enough — the gap is columnSpacing
       // wide, so its midpoint is only half that from either column. Snapping
@@ -543,15 +572,57 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
         maxSnapDistance: widget.columnSpacing,
       );
       if (index != null && _isInSelection(index)) {
+        _discardPendingCenterTap();
         _openContextMenuAt(details.globalPosition);
         return;
       }
       if (index != null && _reportMarkTapAt(index, details.globalPosition)) {
+        _discardPendingCenterTap();
         return;
       }
     }
+    final hadSelection = _effectiveStart != null && _effectiveEnd != null;
     _clearInternalSelection();
     widget.onSelectionChanged?.call(null);
+    if (isTouch && !hadSelection && _isInMiddleThird(details.localPosition)) {
+      _registerCenterTap(details.globalPosition);
+    } else {
+      _discardPendingCenterTap();
+    }
+  }
+
+  /// Whether [localPosition] falls in the middle third of the page's width.
+  /// The side thirds are left alone, free for a later tap-to-turn gesture.
+  bool _isInMiddleThird(Offset localPosition) {
+    final width = context.size?.width;
+    if (width == null || width <= 0) return false;
+    return localPosition.dx >= width / 3 && localPosition.dx < width * 2 / 3;
+  }
+
+  /// Counts a tap towards a center double tap, reporting it on the second.
+  ///
+  /// Tracked by hand rather than with a double-tap recognizer: one in this
+  /// detector's arena would hold every single tap for the double-tap interval
+  /// before resolving it, delaying the menu, the summary and the clearing
+  /// alike. A timer rather than a clock reading, so the interval follows the
+  /// test binding's fake time.
+  void _registerCenterTap(Offset globalPosition) {
+    final onCenterDoubleTap = widget.onCenterDoubleTap;
+    if (onCenterDoubleTap == null) return;
+    final first = _pendingCenterTap;
+    _discardPendingCenterTap();
+    if (first != null && (globalPosition - first).distance <= kDoubleTapSlop) {
+      onCenterDoubleTap();
+      return;
+    }
+    _pendingCenterTap = globalPosition;
+    _pendingCenterTapTimer = Timer(kDoubleTapTimeout, _discardPendingCenterTap);
+  }
+
+  void _discardPendingCenterTap() {
+    _pendingCenterTapTimer?.cancel();
+    _pendingCenterTapTimer = null;
+    _pendingCenterTap = null;
   }
 
   /// Reports the mark covering the character at [index], if there is one.

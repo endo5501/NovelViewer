@@ -2,7 +2,7 @@
 
 ## 1. VerticalTextPage の中央ダブルタップ判定（TDD）
 
-- [ ] 1.1 `test/features/text_viewer/presentation/vertical_text_page_center_double_tap_test.dart` を新規作成し、次のテストを書く。
+- [x] 1.1 `test/features/text_viewer/presentation/vertical_text_page_center_double_tap_test.dart` を新規作成し、次のテストを書く。
   - タッチで中央 1/3 を `kDoubleTapTimeout` 内に 2 回タップすると `onCenterDoubleTap` が 1 回呼ばれる。
   - スタイラスでも同様に呼ばれる。
   - 左 1/3 と右 1/3 では呼ばれない。
@@ -16,8 +16,8 @@
   - 3 回連続でタップしても `onCenterDoubleTap` は 1 回しか呼ばれない。
 
   `fvm flutter test` でコンパイルエラーまたは失敗になることを確認したら、テストだけをコミットする。
-- [ ] 1.2 `VerticalTextPage` に `onCenterDoubleTap` を追加し、design.md の決定 1〜4 のとおり `_onTapUp` / `onPanStart` / `didUpdateWidget` / `dispose` に判定と破棄を実装する。「選択があったか」は、そのタップが実際に解除する選択を基準に判定する（ウィジェット引数の `selectionStart` / `selectionEnd` と内部の選択状態が食い違わないよう、`_effectiveStart` / `_effectiveEnd` を確認する）。1.1 のテストがすべて通ることを確認する。
-- [ ] 1.3 既存のテスト（`vertical_text_page_test.dart`、`vertical_text_page_mark_tap_test.dart`、`vertical_text_viewer_swipe_test.dart`、`vertical_swipe_hit_area_test.dart`）が変更なしで通ることを確認し、シングルタップとスワイプが退行していないことを確かめる。
+- [x] 1.2 `VerticalTextPage` に `onCenterDoubleTap` を追加し、design.md の決定 1〜4 のとおり `_onTapUp` / `onPanStart` / `didUpdateWidget` / `dispose` に判定と破棄を実装する。「選択があったか」は、そのタップが実際に解除する選択を基準に判定する（ウィジェット引数の `selectionStart` / `selectionEnd` と内部の選択状態が食い違わないよう、`_effectiveStart` / `_effectiveEnd` を確認する）。1.1 のテストがすべて通ることを確認する。
+- [x] 1.3 既存のテスト（`vertical_text_page_test.dart`、`vertical_text_page_mark_tap_test.dart`、`vertical_text_viewer_swipe_test.dart`、`vertical_swipe_hit_area_test.dart`）が変更なしで通ることを確認し、シングルタップとスワイプが退行していないことを確かめる。
 
 ## 2. Drawer を開く要求の伝達（TDD）
 
