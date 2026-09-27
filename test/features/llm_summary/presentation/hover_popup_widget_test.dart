@@ -682,18 +682,30 @@ void main() {
     final confirm = find.byKey(const Key('hover_popup_delete_confirm'));
     final cancel = find.byKey(const Key('hover_popup_delete_cancel'));
 
-    testWidgets('both sit to the left of re-analyze, with tooltips', (
+    testWidgets('both sit labelled below the summary, re-analyze stays up', (
       tester,
     ) async {
       await pumpPopup(tester);
 
-      expect(find.byTooltip('詳細を表示'), findsOneWidget);
-      expect(find.byTooltip('削除'), findsOneWidget);
-      final reanalyze = tester.getCenter(
-        find.byKey(const Key('hover_popup_reanalyze_button')),
+      expect(
+        find.descendant(of: details, matching: find.text('詳細を表示')),
+        findsOneWidget,
       );
-      expect(tester.getCenter(details).dx, lessThan(reanalyze.dx));
-      expect(tester.getCenter(delete).dx, lessThan(reanalyze.dx));
+      expect(
+        find.descendant(of: delete, matching: find.text('削除')),
+        findsOneWidget,
+      );
+      final summaryBottom = tester.getBottomLeft(find.text('序盤要約')).dy;
+      expect(tester.getTopLeft(details).dy, greaterThanOrEqualTo(summaryBottom));
+      expect(tester.getTopLeft(delete).dy, greaterThanOrEqualTo(summaryBottom));
+      expect(
+        tester
+            .getBottomLeft(
+              find.byKey(const Key('hover_popup_reanalyze_button')),
+            )
+            .dy,
+        lessThanOrEqualTo(summaryBottom),
+      );
     });
 
     testWidgets('both are shown where LLM summary is unavailable', (

@@ -776,10 +776,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hoverPopup_snapshotNavNext => '下一个快照';
 
   @override
-  String get hoverPopup_detailsTooltip => '显示详情';
+  String get hoverPopup_detailsButton => '显示详情';
 
   @override
-  String get hoverPopup_deleteTooltip => '删除';
+  String get hoverPopup_deleteButton => '删除';
 
   @override
   String hoverPopup_deleteConfirmTitle(String word) {

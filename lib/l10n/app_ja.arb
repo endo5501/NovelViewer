@@ -502,8 +502,8 @@
   "hoverPopup_reanalyzeOverwriteSuffix": " (上書き)",
   "hoverPopup_snapshotNavPrev": "前のスナップショット",
   "hoverPopup_snapshotNavNext": "次のスナップショット",
-  "hoverPopup_detailsTooltip": "詳細を表示",
-  "hoverPopup_deleteTooltip": "削除",
+  "hoverPopup_detailsButton": "詳細を表示",
+  "hoverPopup_deleteButton": "削除",
   "hoverPopup_deleteConfirmTitle": "「{word}」の解析結果を削除",
   "@hoverPopup_deleteConfirmTitle": {
     "placeholders": {

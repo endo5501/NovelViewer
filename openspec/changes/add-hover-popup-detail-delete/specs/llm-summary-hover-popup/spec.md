@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Detail and delete controls on the popup
-The popup SHALL include two icon controls placed immediately to the left of the re-analysis control (or at the same trailing position when the re-analysis control is absent): a "詳細を表示" control and a "削除" control. Each SHALL expose its localized label as a tooltip, because it carries no visible text. They sit beside re-analysis because the moment a reader judges a summary unsatisfactory, or wants to see what it was built from, is while reading it in the popup.
+The popup SHALL include two controls, a "詳細を表示" control and a "削除" control, on a row of their own below the summary text, aligned to the trailing edge. Each SHALL show an icon together with its localized label. They live in the popup because the moment a reader judges a summary unsatisfactory, or wants to see what it was built from, is while reading it there. They take a row of their own rather than joining the re-analysis control in the header: the header's width is shared with the snapshot label, and on a touch device the label would otherwise have to be cut short to make room.
 
 Both controls SHALL be present whether or not LLM summary is available on the running platform. Neither needs the LLM: one reads stored data and the other removes it. Where analysis is unavailable, the popup is the only place a stored analysis can be removed, since the analysis history tab is absent there.
 
@@ -15,10 +15,10 @@ Cancelling SHALL leave `word_summaries` and `fact_cache` unchanged.
 
 Opening either dialog MAY dismiss the popup; the popup SHALL NOT be required to reappear once the dialog closes. The action SHALL still complete when the popup is dismissed as the dialog opens. The action and the confirmed deletion SHALL still take effect after the popup that started them has gone.
 
-#### Scenario: Both controls are shown beside re-analysis
+#### Scenario: Both controls are shown below the summary
 - **WHEN** the popup opens for a word with a stored snapshot on a platform where LLM summary is available
-- **THEN** the "詳細を表示" and "削除" icon controls SHALL be displayed to the left of the re-analysis control
-- **AND** hovering each SHALL show its localized label as a tooltip
+- **THEN** the "詳細を表示" and "削除" controls SHALL be displayed with their labels below the summary text
+- **AND** the re-analysis control SHALL remain in the header
 
 #### Scenario: Both controls are shown where analysis is unavailable
 - **WHEN** the popup opens for a word with a stored snapshot on a platform where LLM summary is unavailable

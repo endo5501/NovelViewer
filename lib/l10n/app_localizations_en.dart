@@ -803,10 +803,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hoverPopup_snapshotNavNext => 'Next snapshot';
 
   @override
-  String get hoverPopup_detailsTooltip => 'Show details';
+  String get hoverPopup_detailsButton => 'Show details';
 
   @override
-  String get hoverPopup_deleteTooltip => 'Delete';
+  String get hoverPopup_deleteButton => 'Delete';
 
   @override
   String hoverPopup_deleteConfirmTitle(String word) {

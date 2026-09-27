@@ -782,10 +782,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get hoverPopup_snapshotNavNext => '次のスナップショット';
 
   @override
-  String get hoverPopup_detailsTooltip => '詳細を表示';
+  String get hoverPopup_detailsButton => '詳細を表示';
 
   @override
-  String get hoverPopup_deleteTooltip => '削除';
+  String get hoverPopup_deleteButton => '削除';
 
   @override
   String hoverPopup_deleteConfirmTitle(String word) {

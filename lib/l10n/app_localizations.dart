@@ -1486,17 +1486,17 @@ abstract class AppLocalizations {
   /// **'次のスナップショット'**
   String get hoverPopup_snapshotNavNext;
 
-  /// No description provided for @hoverPopup_detailsTooltip.
+  /// No description provided for @hoverPopup_detailsButton.
   ///
   /// In ja, this message translates to:
   /// **'詳細を表示'**
-  String get hoverPopup_detailsTooltip;
+  String get hoverPopup_detailsButton;
 
-  /// No description provided for @hoverPopup_deleteTooltip.
+  /// No description provided for @hoverPopup_deleteButton.
   ///
   /// In ja, this message translates to:
   /// **'削除'**
-  String get hoverPopup_deleteTooltip;
+  String get hoverPopup_deleteButton;
 
   /// No description provided for @hoverPopup_deleteConfirmTitle.
   ///
