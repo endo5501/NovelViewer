@@ -235,9 +235,12 @@ void main() {
       var calls = 0;
       var markTaps = 0;
       await tester.pumpWidget(
-        _build(onCenterDoubleTap: () => calls++, onMarkTap: (_, _, _) {
-          markTaps++;
-        }),
+        _build(
+          onCenterDoubleTap: () => calls++,
+          onMarkTap: (_, _, _) {
+            markTaps++;
+          },
+        ),
       );
       await tester.pump();
 
