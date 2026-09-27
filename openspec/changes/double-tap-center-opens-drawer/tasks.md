@@ -21,12 +21,12 @@
 
 ## 2. Drawer を開く要求の伝達（TDD）
 
-- [ ] 2.1 次のテストを書く。
+- [x] 2.1 次のテストを書く。
   - `fileBrowserOpenRequestProvider` の `request()` でカウンタが増える単体テスト。
   - `test/home_screen_adaptive_shell_test.dart` に、要求を発行すると閉じている Drawer が開き、開いている Drawer は閉じないことを確認するテスト（wide と narrow の両方）。
 
   失敗を確認したら、テストだけをコミットする。
-- [ ] 2.2 `file_browser_providers.dart` に `fileBrowserOpenRequestProvider` を追加し、`HomeScreen` で `ref.listen` して、Drawer が閉じていれば `openDrawer()` を呼ぶ。2.1 のテストが通ることを確認する。
+- [x] 2.2 `file_browser_providers.dart` に `fileBrowserOpenRequestProvider` を追加し、`HomeScreen` で `ref.listen` して、Drawer が閉じていれば `openDrawer()` を呼ぶ。2.1 のテストが通ることを確認する。
 - [ ] 2.3 次のテストを書く。
   - `VerticalTextViewer` が `onCenterDoubleTap` を表示中のページへ中継する。
   - 縦書きモードの `TextContentRenderer` で中央をダブルタップすると、`fileBrowserOpenRequestProvider` が増える。
