@@ -46,8 +46,8 @@
 
 ## 4. 仕様の整備
 
-- [ ] 4.1 アーカイブ前に `openspec/specs/adaptive-shell-layout/spec.md` の Purpose 節を更新する。"Both drawers open only from the app bar or a shortcut" を、縦書き中央のダブルタップを含む記述に改める。`openspec validate double-tap-center-opens-drawer --strict` が通ることを確認する。
-- [ ] 4.2 sync 後、`adaptive-shell-layout/spec.md` に "Drawers do not open from an edge drag" が 1 つだけあり、旧名 "Drawers open only from the app bar" が残っていないことを確認する（RENAMED と MODIFIED を併用しているため）。重複や取り残しがあれば、delta を REMOVED（旧名）と ADDED（新名）の組に書き換える。
+- [x] 4.1 アーカイブ前に `openspec/specs/adaptive-shell-layout/spec.md` の Purpose 節を更新する。"Both drawers open only from the app bar or a shortcut" を、縦書き中央のダブルタップを含む記述に改める。`openspec validate double-tap-center-opens-drawer --strict` が通ることを確認する。
+- [x] 4.2 sync 後、`adaptive-shell-layout/spec.md` に "Drawers do not open from an edge drag" が 1 つだけあり、旧名 "Drawers open only from the app bar" が残っていないことを確認する（RENAMED と MODIFIED を併用しているため）。重複や取り残しがあれば、delta を REMOVED（旧名）と ADDED（新名）の組に書き換える。
 
 ## 5. 最終確認
 
