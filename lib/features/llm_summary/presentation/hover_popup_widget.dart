@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_anchor.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
+import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_detail_dialog.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/summary_snapshot_view.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
+import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -66,6 +68,7 @@ class HoverPopupWidget extends ConsumerWidget {
         if (displayed == null) return const SizedBox.shrink();
 
         return _Card(
+          folderPath: folderPath,
           snapshots: snapshots,
           displayed: displayed,
           currentEpisode: currentEpisode,
@@ -100,6 +103,7 @@ class HoverPopupWidget extends ConsumerWidget {
 
 class _Card extends ConsumerWidget {
   const _Card({
+    required this.folderPath,
     required this.snapshots,
     required this.displayed,
     required this.currentEpisode,
@@ -109,6 +113,7 @@ class _Card extends ConsumerWidget {
     required this.onSelectEpisode,
   });
 
+  final String folderPath;
   final List<WordSummary> snapshots;
   final WordSummary displayed;
   final int currentEpisode;
@@ -133,27 +138,48 @@ class _Card extends ConsumerWidget {
         constraints: const BoxConstraints(maxWidth: kHoverPopupApproxWidth),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-          child: SummarySnapshotView(
-            snapshots: snapshots,
-            displayed: displayed,
-            onSelectEpisode: onSelectEpisode,
-            keyPrefix: 'hover_popup',
-            showWarning: showWarning,
-            // Reading a stored summary stays available everywhere — a folder
-            // carried over from a desktop install keeps its analysis
-            // readable. Starting a new one does not: this popup is reachable
-            // on an iPad whenever a trackpad is attached, since iPadOS
-            // delivers hover events then.
-            trailing: ref.watch(llmSummarySupportedProvider)
-                ? _ReanalyzeMenuButton(
-                    word: displayed.word,
-                    snapshots: snapshots,
-                    currentEpisode: currentEpisode,
-                    currentFileName: currentFileName,
-                    maxEpisodeInFolder: maxEpisodeInFolder,
-                    maxEpisodeFileName: maxEpisodeFileName,
-                  )
-                : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SummarySnapshotView(
+                snapshots: snapshots,
+                displayed: displayed,
+                onSelectEpisode: onSelectEpisode,
+                keyPrefix: 'hover_popup',
+                showWarning: showWarning,
+                // Reading a stored summary stays available everywhere — a
+                // folder carried over from a desktop install keeps its
+                // analysis readable. Starting a new one does not: this popup
+                // is reachable on an iPad whenever a trackpad is attached,
+                // since iPadOS delivers hover events then.
+                trailing: ref.watch(llmSummarySupportedProvider)
+                    ? _ReanalyzeMenuButton(
+                        word: displayed.word,
+                        snapshots: snapshots,
+                        currentEpisode: currentEpisode,
+                        currentFileName: currentFileName,
+                        maxEpisodeInFolder: maxEpisodeInFolder,
+                        maxEpisodeFileName: maxEpisodeFileName,
+                      )
+                    : null,
+              ),
+              const SizedBox(height: 4),
+              // A row of their own rather than beside re-analyze: the header
+              // shares its width with the snapshot label, which on a touch
+              // layout would have to be cut short to make room.
+              //
+              // Neither needs the LLM — one reads stored data, the other
+              // removes it — so they stay where analysis cannot run. There
+              // the popup is the only way to remove an analysis, since the
+              // history tab is absent.
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  _DetailsButton(folderPath: folderPath, word: displayed.word),
+                  _DeleteButton(folderPath: folderPath, word: displayed.word),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -316,6 +342,121 @@ class _ReanalyzeMenuButtonState extends ConsumerState<_ReanalyzeMenuButton> {
         ),
       ),
     );
+  }
+}
+
+/// Labelled action styled like the re-analyze button beside the navigator.
+class _PopupActionButton extends StatelessWidget {
+  const _PopupActionButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+        minimumSize: const Size(0, 24),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
+  }
+}
+
+/// Opens the same read-only word detail dialog the history menu opens.
+class _DetailsButton extends StatelessWidget {
+  const _DetailsButton({required this.folderPath, required this.word});
+
+  final String folderPath;
+  final String word;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PopupActionButton(
+      key: const Key('hover_popup_details_button'),
+      icon: Icons.info_outline,
+      label: AppLocalizations.of(context)!.hoverPopup_detailsButton,
+      // The dialog covers the popup, which then goes away and takes this
+      // context with it — so it is shown from the root navigator instead.
+      onPressed: () => showDialog<void>(
+        context: Navigator.of(context, rootNavigator: true).context,
+        builder: (_) =>
+            LlmSummaryDetailDialog(folderPath: folderPath, word: word),
+      ),
+    );
+  }
+}
+
+/// Deletes the word's analysis — every snapshot and its facts, as the history
+/// menu's delete does — after a confirmation. The history menu deletes without
+/// one; a control inside a transient popup over the text is easier to press by
+/// mistake than a context-menu item.
+class _DeleteButton extends ConsumerWidget {
+  const _DeleteButton({required this.folderPath, required this.word});
+
+  final String folderPath;
+  final String word;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return _PopupActionButton(
+      key: const Key('hover_popup_delete_button'),
+      icon: Icons.delete_outline,
+      label: AppLocalizations.of(context)!.hoverPopup_deleteButton,
+      onPressed: () => _confirmAndDelete(context, ref),
+    );
+  }
+
+  Future<void> _confirmAndDelete(BuildContext context, WidgetRef ref) async {
+    // Everything the deletion needs is taken now, while this widget is still
+    // mounted. The dialog covers the popup, the pointer leaves it, and the
+    // host removes it — by the time the dialog returns, `context` and `ref`
+    // are defunct. Same constraint as the re-analyze menu.
+    final rootContext = Navigator.of(context, rootNavigator: true).context;
+    final history = ref.read(llmSummaryHistoryProvider.notifier);
+    final popup = ref.read(hoverPopupProvider.notifier);
+    final folderPath = this.folderPath;
+    final word = this.word;
+
+    final confirmed = await showDialog<bool>(
+      context: rootContext,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext)!;
+        return AlertDialog(
+          title: Text(l10n.hoverPopup_deleteConfirmTitle(word)),
+          content: Text(l10n.hoverPopup_deleteConfirmMessage),
+          actions: [
+            TextButton(
+              key: const Key('hover_popup_delete_cancel'),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.common_cancelButton),
+            ),
+            TextButton(
+              key: const Key('hover_popup_delete_confirm'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: Text(l10n.bookmark_deleteMenuItem),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+
+    // A touch-opened popup is still up under the dialog — no pointer left it.
+    // Once its word is gone it has nothing left to show.
+    popup.hide();
+    await history.deleteEntry(word, novelFolder: folderPath);
   }
 }
 
