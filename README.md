@@ -92,17 +92,20 @@ scripts/build_tts_macos.sh
 scripts/build_lame_macos.sh
 scripts/build_piper_macos.sh
 scripts/build_irodori_macos.sh
-fvm flutter build macos
+# commit ハッシュを埋め込み、障害レポートの app version に載せる
+# （素の fvm flutter build macos でも動くが、レポートは commit unknown になる）
+scripts/build_app.sh macos
 
 # Windows向けReleaseビルド
 scripts/build_tts_windows.bat
 scripts/build_lame_windows.bat
 scripts/build_piper_windows.bat
 scripts/build_irodori_windows.bat
-fvm flutter build windows
+# commit ハッシュの埋め込みは macOS と同じ
+scripts\build_app.bat windows
 
 # iPad向けビルド（ビューア機能のみ。TTS / LLM は非対応）
-fvm flutter build ios --release
+scripts/build_app.sh ios --release
 xcrun devicectl device install app --device <デバイスUDID> build/ios/iphoneos/Runner.app
 ```
 

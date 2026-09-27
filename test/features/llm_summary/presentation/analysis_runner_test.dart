@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
+import 'package:novel_viewer/features/llm_summary/data/foundation_models_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
@@ -166,9 +167,9 @@ class _DummyFactCache implements FactCacheRepository {
 }
 
 class _StubService extends LlmSummaryService {
-  _StubService(this._behavior)
+  _StubService(this._behavior, {LlmClient? client})
     : super(
-        llmClient: _DummyClient(),
+        llmClient: client ?? _DummyClient(),
         repository: _DummyRepo(),
         factCacheRepository: _DummyFactCache(),
         searchService: _DummySearch(),
@@ -271,6 +272,7 @@ ProviderContainer _container(
     baseUrl: 'http://192.168.1.20:11434',
     model: 'qwen3:8b',
   ),
+  Future<LlmClient?> Function()? client,
 }) {
   final container = ProviderContainer(
     overrides: [
@@ -287,7 +289,9 @@ ProviderContainer _container(
       if (searchService != null)
         textSearchServiceProvider.overrideWithValue(searchService),
       llmSummaryServiceProvider.overrideWith((ref, folderPath) => stub),
-      llmClientProvider.overrideWith((_) async => _DummyClient()),
+      llmClientProvider.overrideWith(
+        (_) => client?.call() ?? Future.value(_DummyClient()),
+      ),
       // run() awaits these FutureProviders before reading the (overridden)
       // service, so they must resolve in tests too. The values are unused here
       // because the service itself is stubbed.
@@ -862,12 +866,15 @@ void main() {
         baseUrl: 'http://192.168.1.20:11434',
         model: 'qwen3:8b',
       ),
+      Future<LlmClient?> Function()? client,
+      LlmClient? serviceClient,
     }) async {
       final stub = _StubService(
         ({required word, required coveredUpToEpisode, sourceFileName}) async =>
             throw error,
+        client: serviceClient,
       );
-      final container = _container(stub, config: config);
+      final container = _container(stub, config: config, client: client);
       addTearDown(container.dispose);
 
       await tester.pumpWidget(
@@ -926,10 +933,90 @@ void main() {
       expect(text, contains('time: '));
       expect(text, contains('app version: 1.8.2+41'));
       expect(text, contains('provider: ollama'));
-      expect(text, contains('model: qwen3:8b'));
+      expect(text, contains('model: test:fake'));
       expect(text, contains('word: アリス'));
       expect(text, contains('covered up to: 40'));
       expect(text, contains('file: 040_chapter.txt'));
+    });
+
+    testWidgets('the model is the one the client names, not the setting', (
+      tester,
+    ) async {
+      // The on-device provider takes no model name from the configuration, so
+      // whatever a previously selected server provider left there stays put.
+      await runFailing(
+        tester,
+        error: StateError('boom'),
+        config: const LlmConfig(
+          provider: LlmProvider.appleOnDevice,
+          model: 'gemma4:e4b',
+        ),
+        client: () async => FoundationModelsClient(),
+        serviceClient: FoundationModelsClient(),
+      );
+
+      final text = await openDetails(tester);
+
+      expect(text, contains('provider: appleOnDevice'));
+      expect(text, contains('model: apple:on-device'));
+      expect(text, isNot(contains('gemma4:e4b')));
+    });
+
+    testWidgets('the model is the one the run used, not a rebuilt client', (
+      tester,
+    ) async {
+      // The client provider rebuilds when the on-device availability is
+      // re-checked, which a resume does mid-run. The report has to name the
+      // client the service ran with, not whatever the provider holds now.
+      await runFailing(
+        tester,
+        error: StateError('boom'),
+        serviceClient: FoundationModelsClient(),
+      );
+
+      final text = await openDetails(tester);
+
+      expect(text, contains('model: apple:on-device'));
+      expect(text, isNot(contains('test:fake')));
+    });
+
+    testWidgets('a client that fails to build is reported with no model', (
+      tester,
+    ) async {
+      final stub = _StubService(
+        ({required word, required coveredUpToEpisode, sourceFileName}) async =>
+            'unused',
+      );
+      final container = _container(
+        stub,
+        client: () => Future.error(StateError('secure storage locked')),
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        _harness(
+          container: container,
+          onPressed: (ref, context) {
+            ref
+                .read(analysisRunnerProvider)
+                .run(
+                  context: context,
+                  word: 'アリス',
+                  coveredUpToEpisode: 40,
+                  sourceFileName: '040_chapter.txt',
+                );
+          },
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+
+      expect(stub.callCount, 0);
+      expect(find.textContaining('secure storage locked'), findsOneWidget);
+      final text = await openDetails(tester);
+      expect(text, contains('model: (no client)'));
+      expect(text, contains('covered up to: 40'));
+      expect(text, contains('file: 040_chapter.txt'));
+      expect(text, isNot(contains('qwen3:8b')));
     });
 
     testWidgets('the report withholds the endpoint', (tester) async {
@@ -1612,6 +1699,38 @@ void main() {
       expect(find.textContaining('解析失敗'), findsOneWidget);
       expect(find.textContaining('unreadable'), findsOneWidget);
       expect(find.byKey(const Key('analysis_modal')), findsNothing);
+    });
+
+    testWidgets('a failed search names no model when the client fails too', (
+      tester,
+    ) async {
+      // The search runs before the client is built, so the report is the
+      // first thing to ask for it. A client that cannot be built must still
+      // leave a report, and one that does not fall back to the setting.
+      final stub = stubbed();
+      final container = _container(
+        stub,
+        searchService: _ThrowingSearch(),
+        file: const FileEntry(name: '020_chapter.txt', path: ''),
+        client: () => Future.error(StateError('secure storage locked')),
+      );
+      addTearDown(container.dispose);
+
+      await trigger(tester, container);
+      final l10n = await AppLocalizations.delegate.load(const Locale('ja'));
+      await tester.tap(find.text(l10n.failure_detailsAction));
+      await tester.pumpAndSettle();
+      final text = tester
+          .widget<SelectableText>(
+            find.descendant(
+              of: find.byType(FailureDetailDialog),
+              matching: find.byType(SelectableText),
+            ),
+          )
+          .data!;
+
+      expect(text, contains('model: (no client)'));
+      expect(text, isNot(contains('qwen3:8b')));
     });
 
     testWidgets('performs no analysis when no file is selected', (

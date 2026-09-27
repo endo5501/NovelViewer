@@ -19,10 +19,25 @@ final packageInfoProvider = Provider<PackageInfo>((ref) {
   throw UnimplementedError('Must be overridden in ProviderScope');
 });
 
-/// The version string reports and diagnostics quote, e.g. `1.8.2+41`.
+/// The source the build was made from, or empty when the build was not told.
+///
+/// Injected at build time with `--dart-define=BUILD_COMMIT=<hash>`. A provider
+/// rather than a bare constant so tests can stand in for either kind of build.
+final buildCommitProvider = Provider<String>(
+  (ref) => const String.fromEnvironment('BUILD_COMMIT'),
+);
+
+/// The version string reports and diagnostics quote, e.g. `1.8.2+41 (a1b2c3d)`.
+///
+/// The declared version holds still between releases, so on its own it names
+/// every build since the last one. The commit tells them apart. A build that
+/// was not given one says so rather than leaving it out, so a report from it
+/// cannot pass for one that was.
 final appVersionLabelProvider = Provider<String>((ref) {
   final info = ref.watch(packageInfoProvider);
-  return '${info.version}+${info.buildNumber}';
+  final commit = ref.watch(buildCommitProvider);
+  return '${info.version}+${info.buildNumber} '
+      '(${commit.isEmpty ? 'commit unknown' : commit})';
 });
 
 final updatePreferencesProvider = Provider<UpdatePreferences>((ref) {

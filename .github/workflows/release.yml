@@ -86,8 +86,21 @@ jobs:
         shell: pwsh
         run: choco install innosetup -y --no-progress
 
+      # The commit lets a failure report name the build it came from. Resolved
+      # in its own step because a failing substitution inside the build command
+      # would not fail it, and a release must not ship reporting "commit
+      # unknown".
+      - name: Resolve build commit
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          hash="$(git rev-parse --short HEAD)"
+          [ -n "$hash" ] || { echo "git named no commit" >&2; exit 1; }
+          echo "hash=$hash" >> "$GITHUB_OUTPUT"
+
       - name: Build Windows release
-        run: flutter build windows --release
+        run: flutter build windows --release --dart-define=BUILD_COMMIT=${{ steps.commit.outputs.hash }}
 
       - name: Copy LAME LGPL license to release
         shell: pwsh

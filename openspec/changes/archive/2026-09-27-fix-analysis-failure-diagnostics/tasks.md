@@ -1,0 +1,33 @@
+## 1. 診断の model を実クライアントから取る
+
+- [x] 1.1 オンデバイスプロバイダ選択時に、設定に別プロバイダのモデル名が残っていても `model` 診断がそれを含まないことを検証するテストを書き、失敗を確認する
+- [x] 1.2 クライアントが作れずに失敗した場合、`model` 診断がクライアント不在を示し、モデル名を名乗らないことを検証するテストを書き、失敗を確認する
+- [x] 1.3 `_diagnostics` が `LlmClient.modelId` を読むよう変更し、1.1 / 1.2 を通す。クライアント取得が例外を投げる場合も含めてフォールバックする（design.md D1）
+- [x] 1.4 既存の `analysis_runner_test.dart` の診断関連テストが、新しい `model` の値で通ることを確認する
+
+## 2. ビルド識別子
+
+- [x] 2.1 識別子が注入されていないビルドで、version ラベルが識別子不在を明示することを検証するテストを書き、失敗を確認する
+- [x] 2.2 識別子が注入されたビルドで、version ラベルがそれを含むことを検証するテストを書き、失敗を確認する
+- [x] 2.3 `appVersionLabelProvider` が `String.fromEnvironment` を読むよう変更し、2.1 / 2.2 を通す（design.md D2）
+- [x] 2.4 TTS の障害レポートも同じラベルを共有しているため、`tts_failure_report_test.dart` が通ることを確認する
+
+## 3. ビルド経路への注入
+
+- [x] 3.1 `.github/workflows/release.yml` の `flutter build windows --release` に commit ハッシュの `--dart-define` を追加し、ワークフローが成功することを確認する（未検証。ユーザー判断で完了扱い）
+- [x] 3.2 macOS / iOS 向けに識別子を注入するビルドスクリプトを用意し、生成物の version ラベルに識別子が入ることを実機または `flutter run` で確認する（design.md D3）
+- [x] 3.3 `.claude/CLAUDE.md` の開発コマンド一覧を、識別子を注入するビルド経路が正であるよう更新する
+- [x] 3.4 Windows 向けに `scripts/build_app.bat` を用意し、`scripts/test/build_app_test.ps1` が Windows 上で通ることを確認する（未検証。ユーザー判断で完了扱い）
+
+## 4. 確認
+
+- [x] 4.1 `scripts/build_app.sh` で作ったビルドで障害ダイアログを開き、コピーテキストの `app version` が commit ハッシュを含むことを実機で確認する（LLM / TTS どちらの障害レポートでもよい）（未検証。ユーザー判断で完了扱い）
+  - `model` の確認は、オンデバイスで解析失敗を狙って起こすのが難しいため自動テストで代える。設定に別プロバイダのモデル名が残っていても `model: apple:on-device` と報告されることを `analysis_runner_test.dart` で確認済み
+
+## 5. 最終確認
+
+- [x] 5.1 code-reviewスキルを使用してコードレビューを実施
+- [x] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 5.3 `fvm dart format .`でフォーマットを実行
+- [x] 5.4 `fvm flutter analyze`でリントを実行
+- [x] 5.5 `fvm flutter test`でテストを実行

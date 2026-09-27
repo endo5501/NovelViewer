@@ -80,12 +80,15 @@ fvm flutter run -d macos
 # macOS Release 构建
 scripts/build_tts_macos.sh
 scripts/build_lame_macos.sh
-fvm flutter build macos
+# 嵌入 commit 哈希，使故障报告能够指明构建来源
+#（直接运行 fvm flutter build macos 也可以，但报告会显示 "commit unknown"）
+scripts/build_app.sh macos
 
 # Windows Release 构建
 scripts/build_tts_windows.bat
 scripts/build_lame_windows.bat
-fvm flutter build windows
+# 与 macOS 相同，嵌入 commit 哈希
+scripts\build_app.bat windows
 ```
 
 ### 测试
