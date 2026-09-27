@@ -96,7 +96,6 @@ ProviderScope _scopedWith({
   );
 }
 
-
 /// Records deletions instead of touching a database: what the popup owes is
 /// handing the right word and folder to the same delete the history menu
 /// uses. What that delete does to the tables is covered by the notifier's
@@ -696,7 +695,10 @@ void main() {
         findsOneWidget,
       );
       final summaryBottom = tester.getBottomLeft(find.text('序盤要約')).dy;
-      expect(tester.getTopLeft(details).dy, greaterThanOrEqualTo(summaryBottom));
+      expect(
+        tester.getTopLeft(details).dy,
+        greaterThanOrEqualTo(summaryBottom),
+      );
       expect(tester.getTopLeft(delete).dy, greaterThanOrEqualTo(summaryBottom));
       expect(
         tester
