@@ -776,6 +776,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hoverPopup_snapshotNavNext => '下一个快照';
 
   @override
+  String get hoverPopup_detailsTooltip => '显示详情';
+
+  @override
+  String get hoverPopup_deleteTooltip => '删除';
+
+  @override
+  String hoverPopup_deleteConfirmTitle(String word) {
+    return '删除「$word」的解析结果';
+  }
+
+  @override
+  String get hoverPopup_deleteConfirmMessage => '该词的所有摘要及其依据的事实都将被删除。此操作无法撤销。';
+
+  @override
   String get bookmark_selectNovelPrompt => '请选择作品文件夹';
 
   @override

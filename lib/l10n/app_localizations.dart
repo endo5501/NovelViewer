@@ -1486,6 +1486,30 @@ abstract class AppLocalizations {
   /// **'次のスナップショット'**
   String get hoverPopup_snapshotNavNext;
 
+  /// No description provided for @hoverPopup_detailsTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'詳細を表示'**
+  String get hoverPopup_detailsTooltip;
+
+  /// No description provided for @hoverPopup_deleteTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get hoverPopup_deleteTooltip;
+
+  /// No description provided for @hoverPopup_deleteConfirmTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{word}」の解析結果を削除'**
+  String hoverPopup_deleteConfirmTitle(String word);
+
+  /// No description provided for @hoverPopup_deleteConfirmMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'この単語の要約と、その元になった事実がすべて削除されます。この操作は取り消せません。'**
+  String get hoverPopup_deleteConfirmMessage;
+
   /// No description provided for @bookmark_selectNovelPrompt.
   ///
   /// In ja, this message translates to:

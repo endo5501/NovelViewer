@@ -312,6 +312,17 @@
   "hoverPopup_reanalyzeOverwriteSuffix": "（覆盖）",
   "hoverPopup_snapshotNavPrev": "上一个快照",
   "hoverPopup_snapshotNavNext": "下一个快照",
+  "hoverPopup_detailsTooltip": "显示详情",
+  "hoverPopup_deleteTooltip": "删除",
+  "hoverPopup_deleteConfirmTitle": "删除「{word}」的解析结果",
+  "@hoverPopup_deleteConfirmTitle": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "hoverPopup_deleteConfirmMessage": "该词的所有摘要及其依据的事实都将被删除。此操作无法撤销。",
   "bookmark_selectNovelPrompt": "请选择作品文件夹",
   "bookmark_noBookmarks": "没有书签",
   "bookmark_deleteMenuItem": "删除",

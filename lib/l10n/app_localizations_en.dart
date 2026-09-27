@@ -803,6 +803,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hoverPopup_snapshotNavNext => 'Next snapshot';
 
   @override
+  String get hoverPopup_detailsTooltip => 'Show details';
+
+  @override
+  String get hoverPopup_deleteTooltip => 'Delete';
+
+  @override
+  String hoverPopup_deleteConfirmTitle(String word) {
+    return 'Delete analysis for \"$word\"';
+  }
+
+  @override
+  String get hoverPopup_deleteConfirmMessage =>
+      'All summaries for this word and the facts they were built from will be deleted. This cannot be undone.';
+
+  @override
   String get bookmark_selectNovelPrompt => 'Please select a novel folder';
 
   @override
