@@ -14,14 +14,14 @@
 
 ## 3. ビルド経路への注入
 
-- [ ] 3.1 `.github/workflows/release.yml` の `flutter build windows --release` に commit ハッシュの `--dart-define` を追加し、ワークフローが成功することを確認する
+- [x] 3.1 `.github/workflows/release.yml` の `flutter build windows --release` に commit ハッシュの `--dart-define` を追加し、ワークフローが成功することを確認する（未検証。ユーザー判断で完了扱い）
 - [x] 3.2 macOS / iOS 向けに識別子を注入するビルドスクリプトを用意し、生成物の version ラベルに識別子が入ることを実機または `flutter run` で確認する（design.md D3）
 - [x] 3.3 `.claude/CLAUDE.md` の開発コマンド一覧を、識別子を注入するビルド経路が正であるよう更新する
-- [ ] 3.4 Windows 向けに `scripts/build_app.bat` を用意し、`scripts/test/build_app_test.ps1` が Windows 上で通ることを確認する
+- [x] 3.4 Windows 向けに `scripts/build_app.bat` を用意し、`scripts/test/build_app_test.ps1` が Windows 上で通ることを確認する（未検証。ユーザー判断で完了扱い）
 
 ## 4. 確認
 
-- [ ] 4.1 `scripts/build_app.sh` で作ったビルドで障害ダイアログを開き、コピーテキストの `app version` が commit ハッシュを含むことを実機で確認する（LLM / TTS どちらの障害レポートでもよい）
+- [x] 4.1 `scripts/build_app.sh` で作ったビルドで障害ダイアログを開き、コピーテキストの `app version` が commit ハッシュを含むことを実機で確認する（LLM / TTS どちらの障害レポートでもよい）（未検証。ユーザー判断で完了扱い）
   - `model` の確認は、オンデバイスで解析失敗を狙って起こすのが難しいため自動テストで代える。設定に別プロバイダのモデル名が残っていても `model: apple:on-device` と報告されることを `analysis_runner_test.dart` で確認済み
 
 ## 5. 最終確認
