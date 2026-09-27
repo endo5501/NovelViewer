@@ -1,7 +1,7 @@
 # per-novel-folder-database Specification
 
 ## Purpose
-TBD - created by archiving change migrate-per-novel-data-to-folder-db. Update Purpose after archive.
+要約・fact キャッシュ・ブックマークといった小説ごとのデータを各小説フォルダ直下の `novel_data.db` に集約し、フォルダ単位で移動・削除できるようにする。ハンドルの一元管理、open 失敗時のデータ保全、グローバルDBからの初回移行とスキーマ昇格経路を定める。
 ## Requirements
 
 ### Requirement: 小説フォルダ内データDBの提供

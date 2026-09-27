@@ -1,7 +1,7 @@
 # generic-web-import Specification
 
 ## Purpose
-TBD - created by archiving change generic-web-html-import. Update Purpose after archive.
+専用サイト（なろう・カクヨム・青空文庫・ハーメルン）に該当しない任意の静的Webページを汎用Webアダプタ（`siteType='web'`）で受理し、本文・タイトル・文字コードをヒューリスティックに判定して取り込めるようにする。
 ## Requirements
 ### Requirement: 任意の静的Webページの受理
 

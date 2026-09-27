@@ -1,7 +1,7 @@
 # episode-boundary-prompt Specification
 
 ## Purpose
-TBD - created by archiving change episode-boundary-two-step. Update Purpose after archive.
+本文の末尾・先頭でさらにページ送りした時に即座に隣接話へ遷移せず、隣接ファイル名を示すヒントを出したうえで同方向の再入力で遷移を確定する 2 段階確認を提供し、誤操作による意図しない話送りを防ぐ。
 ## Requirements
 ### Requirement: 境界での話送りは 2 段階確認を経る
 

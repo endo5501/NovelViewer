@@ -1,7 +1,7 @@
 # window-size-persistence Specification
 
 ## Purpose
-TBD - created by archiving change remember-window-size. Update Purpose after archive.
+Windows でメインウィンドウのサイズと最大化状態を保存し、次回起動時に復元する。復元値の検証・保存タイミング・失敗時の扱いを定め、位置は保存せず、他プラットフォームの挙動や設定 UI には手を加えない。
 ## Requirements
 ### Requirement: ウィンドウサイズの永続化
 Windows において、システムはメインウィンドウの幅と高さを永続ストレージへ保存し、次回起動時に復元しなければならない（SHALL）。

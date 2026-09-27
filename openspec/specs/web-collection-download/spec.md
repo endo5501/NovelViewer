@@ -1,7 +1,7 @@
 # web-collection-download Specification
 
 ## Purpose
-TBD - created by archiving change generic-web-html-import. Update Purpose after archive.
+汎用Web記事を「コレクション」（`siteType='web'` の小説フォルダ）へ取り込むためのダウンロードフローを定める。新規・既存コレクションの選択、空コレクションの事前作成、エピソードの追記と採番、同一URL再取得時の上書き更新を扱う。
 ## Requirements
 ### Requirement: 取り込み先コレクションの選択
 

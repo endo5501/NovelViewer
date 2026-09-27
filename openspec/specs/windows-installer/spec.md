@@ -1,7 +1,7 @@
 # windows-installer Specification
 
 ## Purpose
-TBD - created by archiving change add-windows-installer. Update Purpose after archive.
+Windows 版を Inno Setup 6 によるユーザ単位（UAC 不要）のインストーラで配布する。ショートカット、アンインストーラ登録、固定 AppId による上書きアップグレード、ユーザデータの保護、バージョン注入、配布形態識別レジストリキーの書き込みを定める。
 ## Requirements
 ### Requirement: Inno Setup 6 を使ったインストーラ生成
 Windows 版のインストーラは Inno Setup 6 系で生成しなければならない（SHALL）。スクリプトはリポジトリ内の `installer/novel_viewer.iss` に配置しなければならない（SHALL）。

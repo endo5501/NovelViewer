@@ -1,7 +1,7 @@
 # reading-position Specification
 
 ## Purpose
-TBD - created by archiving change restore-reading-position. Update Purpose after archive.
+Remember where the reader was in each episode as a layout-independent body-text offset, persist it periodically and on lifecycle events, and restore it in both horizontal and vertical viewers—keeping the anchor stable across font/width changes and discarding positions that no longer match the content.
 ## Requirements
 ### Requirement: Layout-independent body position
 The system SHALL identify a reading position using a zero-based UTF-16 offset into the parsed body text, concatenating plain text and ruby base text while excluding ruby annotations and tags. Newlines SHALL retain their parsed representation. Positions SHALL resolve to valid displayed character boundaries and SHALL NOT split surrogate pairs or combining character sequences. Ruby positions that cannot be represented individually SHALL resolve to the start of the ruby base. The same coordinate contract SHALL be shared by horizontal and vertical viewers without OS-specific behavior.

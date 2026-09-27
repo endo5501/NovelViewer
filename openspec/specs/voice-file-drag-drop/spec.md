@@ -1,6 +1,6 @@
 ## Purpose
 
-TBD - Voice file drag and drop functionality for adding audio files to the voices directory via the TTS settings UI.
+Let users add reference voice files by dragging `.wav` / `.mp3` files from the platform file manager onto the voice reference selector in the TTS settings tab, copying them into the `voices` directory with visual drop feedback.
 
 ## Requirements
 

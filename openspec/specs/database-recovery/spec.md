@@ -1,7 +1,7 @@
 # database-recovery Specification
 
 ## Purpose
-TBD - created by archiving change type-tts-dtos-and-cache-databases. Update Purpose after archive.
+Open SQLite databases through a shared helper (`openOrResetDatabase`) that logs open failures and applies an explicit, per-database recovery policy: databases whose contents can be regenerated are deleted and recreated, while databases holding user-authored or non-regenerable data are never deleted automatically.
 ## Requirements
 ### Requirement: Database open helper with explicit recovery policy
 The system SHALL provide a shared helper `openOrResetDatabase` that opens a SQLite database and applies a caller-specified recovery policy when the open fails. The helper SHALL accept a `deleteOnFailure` parameter (default `false`) that controls whether a corrupt database file is deleted and recreated. The helper SHALL log the open failure at WARNING level via the caller-supplied `Logger` before any recovery action.

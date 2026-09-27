@@ -1,7 +1,7 @@
 # db-schema-test-fidelity Specification
 
 ## Purpose
-TBD - created by archiving change harden-db-test-schema-fidelity. Update Purpose after archive.
+`novel_metadata.db` / `novel_data.db` を扱うテストが本番スキーマ定義と本番の昇格パスを経由してDBを構築・移行するよう定め、手書きDDLや検証専用ヘルパーによるスキーマドリフトでテストが本番の不具合を見逃すことを防ぐ。
 ## Requirements
 
 ### Requirement: テストは本番スキーマ定義経由でDBを構築する

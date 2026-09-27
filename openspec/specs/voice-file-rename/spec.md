@@ -1,6 +1,6 @@
 ## Purpose
 
-TBD - Voice file rename functionality allowing users to rename voice reference files from the TTS settings UI.
+Let users rename voice reference files in the `voices` directory from the TTS settings tab through a validated rename dialog, keeping the current selection pointing at the renamed file.
 
 ## Requirements
 
