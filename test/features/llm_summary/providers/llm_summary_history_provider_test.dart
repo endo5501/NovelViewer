@@ -9,6 +9,7 @@ import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dar
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
@@ -284,6 +285,37 @@ void main() {
 
       final refreshed = await container.read(llmSummaryHistoryProvider.future);
       expect(refreshed, isEmpty);
+    });
+
+    test('drops the popup snapshot cache for the deleted word', () async {
+      final now = DateTime.utc(2026, 5, 20, 10).toIso8601String();
+      await insert(word: 'アリス', episode: 30, summary: 'a30', updatedAt: now);
+
+      final container = _containerFor(
+        repository: repository,
+        factCacheRepository: factCacheRepository,
+        directoryPath: '/library/my_novel',
+      );
+      addTearDown(container.dispose);
+
+      const key = (folderPath: '/library/my_novel', word: 'アリス');
+      // Keep the family alive the way an open popup would, so a stale value
+      // would still be served if the delete left it in place.
+      container.listen(hoverPopupCacheProvider(key), (_, _) {});
+      expect(await container.read(hoverPopupCacheProvider(key).future), [
+        isA<WordSummary>(),
+      ]);
+
+      await container.read(llmSummaryHistoryProvider.future);
+      await container
+          .read(llmSummaryHistoryProvider.notifier)
+          .deleteEntry('アリス', novelFolder: '/library/my_novel');
+
+      expect(
+        await container.read(hoverPopupCacheProvider(key).future),
+        isEmpty,
+        reason: 'the deleted snapshots SHALL NOT stay cached for the popup',
+      );
     });
 
     test('external invalidate re-reads new snapshots', () async {
