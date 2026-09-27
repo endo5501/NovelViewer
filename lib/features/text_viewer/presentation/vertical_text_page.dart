@@ -146,9 +146,11 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
 
   /// Where the first of a possible center double tap landed, while the
   /// second may still follow. [_pendingCenterTapTimer] drops it once the
-  /// double-tap interval has passed.
+  /// double-tap interval has passed, unless a second press arrives first —
+  /// then [_secondPressArrived] holds it until that press resolves.
   Offset? _pendingCenterTap;
   Timer? _pendingCenterTapTimer;
+  bool _secondPressArrived = false;
 
   late List<VerticalCharEntry> _charEntries;
   late List<List<int>> _columns;
@@ -378,6 +380,7 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
   }
 
   void _onPanDown(DragDownDetails details) {
+    _noteCenterTapPress();
     _panStartGlobalPosition = details.globalPosition;
     _panLastGlobalPosition = details.globalPosition;
     _panDownLocalPosition = details.localPosition;
@@ -619,10 +622,27 @@ class _VerticalTextPageState extends State<VerticalTextPage> {
     _pendingCenterTapTimer = Timer(kDoubleTapTimeout, _discardPendingCenterTap);
   }
 
+  /// Stops the double-tap interval at the second press, as the platform's own
+  /// double tap does, so the time that finger then spends on the glass does
+  /// not count against it. A press that finds an earlier one already arrived
+  /// means that one never resolved as a tap or a drag — it was cancelled —
+  /// and the first tap is dropped rather than kept to pair with a later one.
+  void _noteCenterTapPress() {
+    if (_pendingCenterTap == null) return;
+    if (_secondPressArrived) {
+      _discardPendingCenterTap();
+      return;
+    }
+    _secondPressArrived = true;
+    _pendingCenterTapTimer?.cancel();
+    _pendingCenterTapTimer = null;
+  }
+
   void _discardPendingCenterTap() {
     _pendingCenterTapTimer?.cancel();
     _pendingCenterTapTimer = null;
     _pendingCenterTap = null;
+    _secondPressArrived = false;
   }
 
   /// Reports the mark covering the character at [index], if there is one.
