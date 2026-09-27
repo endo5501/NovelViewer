@@ -148,7 +148,9 @@ The failure notification SHALL be shown through the shared failure notification 
 
 The report's cause SHALL contribute only what the localized headline does not already say, because the shared path appends it to the headline on screen. For a partial extraction failure the cause SHALL be the first file's error; for a run that yielded no facts there SHALL be no cause; for any other failure the cause SHALL be the exception's string form. A typed failure's Dart class name SHALL NOT reach the snackbar body.
 
-The report's diagnostics SHALL carry the time of the failure, the application version, the configured LLM provider kind, the configured model name, the analyzed word, the resolved inclusive episode bound (`covered up to`), and the source file name. The bound is recorded rather than the `AnalysisScope` value because `run()` receives only the resolved integer. They SHALL NOT carry the configured endpoint URL.
+The report's diagnostics SHALL carry the time of the failure, the application version, the configured LLM provider kind, the identity of the model that answered, the analyzed word, the resolved inclusive episode bound (`covered up to`), and the source file name.
+
+The model diagnostic SHALL be the identity the client used for the run names for itself, not the model name held in the configuration. The two differ: a provider that does not take its model from the configuration leaves whatever a previously selected provider put there, and the diagnostic then names a model that had no part in the run. A reader of the bug report cannot tell the difference, and the name they are given is the one they will investigate. Where no client could be built, the diagnostic SHALL say that rather than naming a model. The bound is recorded rather than the `AnalysisScope` value because `run()` receives only the resolved integer. They SHALL NOT carry the configured endpoint URL.
 
 The success notification SHALL be unchanged and SHALL continue to dismiss itself automatically.
 
@@ -185,7 +187,17 @@ The success notification SHALL be unchanged and SHALL continue to dismiss itself
 #### Scenario: The report carries the analysis diagnostics
 
 - **WHEN** an analysis of "アリス" resolved to the episode bound 40 over the file `040_chapter.txt` fails while the configured provider is `ollama`
-- **THEN** the detail dialog's copied text SHALL contain the time, the application version, `ollama`, the configured model name, `アリス`, the bound 40, and `040_chapter.txt`
+- **THEN** the detail dialog's copied text SHALL contain the time, the application version, `ollama`, the model identity the client names, `アリス`, the bound 40, and `040_chapter.txt`
+
+#### Scenario: The on-device provider does not report a configured model name
+
+- **WHEN** an analysis fails while the on-device provider is selected, and the configuration still holds a model name left by a previously selected server provider
+- **THEN** the `model` diagnostic SHALL name the on-device model, and SHALL NOT contain the leftover configured model name
+
+#### Scenario: A run with no client says so
+
+- **WHEN** an analysis fails before any LLM client could be built
+- **THEN** the `model` diagnostic SHALL state that no client was built, and SHALL NOT name a model
 
 #### Scenario: A typed failure keeps its class name off the body
 
@@ -206,6 +218,7 @@ The success notification SHALL be unchanged and SHALL continue to dismiss itself
 
 - **WHEN** an analysis fails with an exception raised inside the pipeline
 - **THEN** the detail dialog SHALL present the stack trace captured at the catch site
+
 ### Requirement: Incomplete LLM configuration names the missing setting
 When analysis cannot start because the selected provider's configuration is incomplete, the system SHALL tell the reader which setting is missing rather than asking them to configure an LLM they have already selected.
 
