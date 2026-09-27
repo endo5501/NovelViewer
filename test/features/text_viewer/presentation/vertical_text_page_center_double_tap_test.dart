@@ -271,6 +271,34 @@ void main() {
       expect(calls, 0);
     });
 
+    testWidgets('once a dragged selection is cleared, taps count again', (
+      tester,
+    ) async {
+      // The viewer leaves the selection to the page, so this is the reader's
+      // own path: drag to select, tap to clear, then double tap.
+      var calls = 0;
+      await tester.pumpWidget(_build(onCenterDoubleTap: () => calls++));
+      await tester.pump();
+
+      await tester.dragFrom(
+        tester.getCenter(find.text('ア')),
+        tester.getCenter(find.text('ス')) - tester.getCenter(find.text('ア')),
+      );
+      await tester.pump();
+
+      final center = _emptyAt(tester, 0.5);
+      await tester.tapAt(center);
+      await tester.pump();
+      await tester.tapAt(center);
+      await tester.pump();
+      expect(calls, 0, reason: 'the first tap only cleared the selection');
+
+      await tester.tapAt(center);
+      await tester.pump();
+
+      expect(calls, 1);
+    });
+
     testWidgets('a tap that opens a summary does not start a double tap', (
       tester,
     ) async {
