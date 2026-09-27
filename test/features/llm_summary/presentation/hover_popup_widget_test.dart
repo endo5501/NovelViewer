@@ -767,6 +767,13 @@ void main() {
 
       expect(find.byType(LlmSummaryDetailDialog), findsOneWidget);
       expect(find.text('「アリス」の詳細'), findsOneWidget);
+      expect(
+        tester
+            .widget<LlmSummaryDetailDialog>(find.byType(LlmSummaryDetailDialog))
+            .folderPath,
+        'novel_a',
+        reason: 'the dialog SHALL read the novel the popup was opened over',
+      );
       final tabs = DefaultTabController.of(
         tester.element(find.text('事実').first),
       );

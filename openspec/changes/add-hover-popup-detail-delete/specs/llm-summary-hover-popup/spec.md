@@ -54,7 +54,7 @@ Activating either control SHALL dismiss the popup before its dialog opens, and t
 - **THEN** the popup SHALL be dismissed
 - **AND** the dialog SHALL open with nothing from the popup drawn over it
 
-#### Scenario: A touch on either control does not dismiss the popup before it acts
+#### Scenario: A touch on either control reaches it rather than the dismissal barrier
 - **WHEN** the reader touches the "削除" control with a finger
 - **THEN** the confirmation dialog SHALL appear
 - **AND** the touch SHALL NOT be treated as a touch outside the popup
