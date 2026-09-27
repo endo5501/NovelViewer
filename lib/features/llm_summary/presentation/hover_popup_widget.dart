@@ -373,26 +373,43 @@ class _PopupActionButton extends StatelessWidget {
   }
 }
 
+/// Takes the popup down and returns the root navigator's context to show a
+/// dialog from.
+///
+/// The host puts the popup straight into the root overlay, and a route pushed
+/// afterwards does not land above an entry the navigator did not create: left
+/// up, the popup and its touch-dismissal layer would sit over the dialog and
+/// take the touches meant for its buttons. Hiding it removes this widget too,
+/// so the context is read first, and everything else a caller needs has to be
+/// taken before calling this.
+BuildContext _dismissPopupForDialog(BuildContext context, WidgetRef ref) {
+  final rootContext = Navigator.of(context, rootNavigator: true).context;
+  ref.read(hoverPopupProvider.notifier).hide();
+  return rootContext;
+}
+
 /// Opens the same read-only word detail dialog the history menu opens.
-class _DetailsButton extends StatelessWidget {
+class _DetailsButton extends ConsumerWidget {
   const _DetailsButton({required this.folderPath, required this.word});
 
   final String folderPath;
   final String word;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return _PopupActionButton(
       key: const Key('hover_popup_details_button'),
       icon: Icons.info_outline,
       label: AppLocalizations.of(context)!.hoverPopup_detailsButton,
-      // The dialog covers the popup, which then goes away and takes this
-      // context with it — so it is shown from the root navigator instead.
-      onPressed: () => showDialog<void>(
-        context: Navigator.of(context, rootNavigator: true).context,
-        builder: (_) =>
-            LlmSummaryDetailDialog(folderPath: folderPath, word: word),
-      ),
+      onPressed: () {
+        final folderPath = this.folderPath;
+        final word = this.word;
+        showDialog<void>(
+          context: _dismissPopupForDialog(context, ref),
+          builder: (_) =>
+              LlmSummaryDetailDialog(folderPath: folderPath, word: word),
+        );
+      },
     );
   }
 }
@@ -419,17 +436,14 @@ class _DeleteButton extends ConsumerWidget {
 
   Future<void> _confirmAndDelete(BuildContext context, WidgetRef ref) async {
     // Everything the deletion needs is taken now, while this widget is still
-    // mounted. The dialog covers the popup, the pointer leaves it, and the
-    // host removes it — by the time the dialog returns, `context` and `ref`
-    // are defunct. Same constraint as the re-analyze menu.
-    final rootContext = Navigator.of(context, rootNavigator: true).context;
+    // mounted: the popup goes before the dialog opens, and `context` and `ref`
+    // go with it. Same constraint as the re-analyze menu.
     final history = ref.read(llmSummaryHistoryProvider.notifier);
-    final popup = ref.read(hoverPopupProvider.notifier);
     final folderPath = this.folderPath;
     final word = this.word;
 
     final confirmed = await showDialog<bool>(
-      context: rootContext,
+      context: _dismissPopupForDialog(context, ref),
       builder: (dialogContext) {
         final l10n = AppLocalizations.of(dialogContext)!;
         return AlertDialog(
@@ -453,9 +467,6 @@ class _DeleteButton extends ConsumerWidget {
     );
     if (confirmed != true) return;
 
-    // A touch-opened popup is still up under the dialog — no pointer left it.
-    // Once its word is gone it has nothing left to show.
-    popup.hide();
     await history.deleteEntry(word, novelFolder: folderPath);
   }
 }

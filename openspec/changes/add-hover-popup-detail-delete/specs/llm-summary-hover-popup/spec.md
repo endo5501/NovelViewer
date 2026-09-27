@@ -13,7 +13,7 @@ Confirming SHALL delete the word's analysis exactly as the analysis history cont
 
 Cancelling SHALL leave `word_summaries` and `fact_cache` unchanged.
 
-Opening either dialog MAY dismiss the popup; the popup SHALL NOT be required to reappear once the dialog closes. The action SHALL still complete when the popup is dismissed as the dialog opens. The action and the confirmed deletion SHALL still take effect after the popup that started them has gone.
+Activating either control SHALL dismiss the popup before its dialog opens, and the popup SHALL NOT reappear when the dialog closes. Left up, the popup could sit over the dialog and take the touches meant for the dialog's buttons. The dialog and the confirmed deletion SHALL still take effect after the popup that started them has gone.
 
 #### Scenario: Both controls are shown below the summary
 - **WHEN** the popup opens for a word with a stored snapshot on a platform where LLM summary is available
@@ -48,6 +48,11 @@ Opening either dialog MAY dismiss the popup; the popup SHALL NOT be required to 
 #### Scenario: Deletion acts on the novel the popup was opened over
 - **WHEN** the popup was opened over novel A and the user confirms deletion
 - **THEN** the rows SHALL be deleted from novel A's data only
+
+#### Scenario: The popup is gone before either dialog opens
+- **WHEN** the user activates "詳細を表示" or "削除" in the popup, by mouse or by touch
+- **THEN** the popup SHALL be dismissed
+- **AND** the dialog SHALL open with nothing from the popup drawn over it
 
 #### Scenario: A touch on either control does not dismiss the popup before it acts
 - **WHEN** the reader touches the "削除" control with a finger
