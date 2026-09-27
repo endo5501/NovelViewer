@@ -20,7 +20,7 @@
   - en／zh ロケールで、カードが 360px 幅に収まりオーバーフローしない
 - [x] 3.2 `hover_popup_touch_dismiss_test.dart` に、指のタップで削除ボタンを押すと確認ダイアログが開くテストを追加する（外側タップとして扱われないこと）。失敗または期待どおりであることを確認してコミットする
 - [x] 3.3 `hover_popup_widget.dart` の `_Card` を、`SummarySnapshotView` と、その下の右寄せボタン行（詳細・削除）からなる `Column` にする（D3）。ボタンの `onPressed` では、`await` より前に root navigator の context・history notifier・`folderPath`・`word` を確保する（D2）。3.1／3.2 と既存のポップアップ系テストがすべて通ることを確認する
-- [ ] 3.3a `SummarySnapshotView` のラベルを `Flexible` と `overflow: ellipsis` で包み（D3）、3.1 の en／zh の幅テストがオーバーフローせずに通ることを確認する
+- [x] 3.3a `SummarySnapshotView` のラベルを `Flexible` と `overflow: ellipsis` で包み（D3）、3.1 の en／zh の幅テストがオーバーフローせずに通ることを確認する
 - [x] 3.4 確認ダイアログを実装する（`showDialog<bool>`、`true` のときだけ削除する、「削除」ボタンは赤系、D4）。3.1 の確認系テストが通ることを確認する
 
 ## 4. 動作確認
