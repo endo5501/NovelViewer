@@ -1,7 +1,7 @@
 ## 1. 削除時のポップアップ用キャッシュ破棄（D5）
 
-- [ ] 1.1 `test/features/llm_summary/providers/llm_summary_history_provider_test.dart` に、`deleteEntry` の後で `hoverPopupCacheProvider((folderPath, word))` が再取得され、空リストを返すことを確かめるテストを追加する。失敗することを確認してコミットする
-- [ ] 1.2 `deleteEntry` の末尾で該当キャッシュを invalidate し、1.1 と既存の履歴 provider テストが通ることを確認する
+- [x] 1.1 `test/features/llm_summary/providers/llm_summary_history_provider_test.dart` に、`deleteEntry` の後で `hoverPopupCacheProvider((folderPath, word))` が再取得され、空リストを返すことを確かめるテストを追加する。失敗することを確認してコミットする
+- [x] 1.2 `deleteEntry` の末尾で該当キャッシュを invalidate し、1.1 と既存の履歴 provider テストが通ることを確認する
 
 ## 2. l10n
 

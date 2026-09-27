@@ -6,6 +6,7 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/domain/first_line_containing.dart';
 import 'package:novel_viewer/features/llm_summary/domain/history_entry.dart';
+import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:path/path.dart' as p;
@@ -61,6 +62,11 @@ class LlmSummaryHistoryNotifier extends AsyncNotifier<List<HistoryEntry>> {
     // cleanup").
     await factCache.deleteAllForWord(word: word);
 
+    // The popup's per-word snapshot cache is not autoDispose, so without this
+    // the deleted snapshots would stay held for the rest of the session.
+    ref.invalidate(
+      hoverPopupCacheProvider((folderPath: novelFolder, word: word)),
+    );
     ref.invalidateSelf();
   }
 
