@@ -246,6 +246,49 @@ void main() {
     });
   });
 
+  group('a request to open the file browser drawer', () {
+    testWidgets('opens a closed drawer', (tester) async {
+      await pumpApp(tester, breakpoint: 900);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('left_column')), findsNothing);
+
+      containerOf(
+        tester,
+      ).read(fileBrowserOpenRequestProvider.notifier).request();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+    });
+
+    testWidgets('opens a closed drawer in the wide layout too', (tester) async {
+      await pumpApp(tester);
+      await tester.pumpAndSettle();
+
+      containerOf(
+        tester,
+      ).read(fileBrowserOpenRequestProvider.notifier).request();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+    });
+
+    testWidgets('leaves an open drawer open', (tester) async {
+      // It asks for the drawer, not for a toggle: a request arriving while
+      // the drawer is already showing must not take it away.
+      await pumpApp(tester, breakpoint: 900);
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+
+      containerOf(
+        tester,
+      ).read(fileBrowserOpenRequestProvider.notifier).request();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('left_column')), findsOneWidget);
+    });
+  });
+
   testWidgets(
     'an actual iPad mini portrait viewport selects the narrow layout',
     (tester) async {
