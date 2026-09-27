@@ -298,6 +298,7 @@ class VerticalTextViewer extends ConsumerStatefulWidget {
     this.onMarkExit,
     this.onMarkTap,
     this.onHoverHideRequest,
+    this.onCenterDoubleTap,
   }) : assert(columnSpacing >= 0);
 
   final List<TextSegment> segments;
@@ -331,6 +332,10 @@ class VerticalTextViewer extends ConsumerStatefulWidget {
   /// Fired when the viewer-level hover state should be dropped wholesale —
   /// page turn, selection drag started, etc.
   final VoidCallback? onHoverHideRequest;
+
+  /// Reports a center double tap on the page being read. See
+  /// `VerticalTextPage.onCenterDoubleTap`.
+  final VoidCallback? onCenterDoubleTap;
 
   @override
   ConsumerState<VerticalTextViewer> createState() => _VerticalTextViewerState();
@@ -641,6 +646,10 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
                   onMarkExit: widget.onMarkExit,
                   onMarkTap: widget.onMarkTap,
                   onHoverHideRequest: widget.onHoverHideRequest,
+                  // The incoming page only: the outgoing one is sliding away,
+                  // and a double tap meant for the text now in view must not
+                  // be split between the two.
+                  onCenterDoubleTap: widget.onCenterDoubleTap,
                 );
 
                 final Widget pageContent;

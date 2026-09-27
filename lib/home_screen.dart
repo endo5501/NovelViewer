@@ -176,6 +176,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     scaffold.closeDrawer();
   }
 
+  /// Opens the file browser drawer for a request from the text viewer's
+  /// center double tap. Opening only: a drawer already showing stays put.
+  void _openDrawerIfClosed() {
+    final scaffold = _scaffoldKey.currentState;
+    if (scaffold == null || scaffold.isDrawerOpen) return;
+    scaffold.openDrawer();
+  }
+
   /// The app bar's download button, which means whichever of its two things
   /// the reader is in a position to want.
   ///
@@ -403,6 +411,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // selection — the reader is still choosing — and does not count.
     ref.listen(fileOpenRequestProvider, (_, _) {
       _closeDrawerIfOpen();
+    });
+    ref.listen(fileBrowserOpenRequestProvider, (_, _) {
+      _openDrawerIfClosed();
     });
     // A listener sees transitions only, and an empty library settles in a
     // microtask — soon enough to be done before this first build. Reading the

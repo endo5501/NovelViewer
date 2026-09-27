@@ -251,6 +251,23 @@ final fileOpenRequestProvider = NotifierProvider<FileOpenRequestNotifier, int>(
   FileOpenRequestNotifier.new,
 );
 
+/// Counts requests to open the file browser drawer from somewhere that does
+/// not own it — the text viewer's center double tap. The shell, which holds
+/// the scaffold, listens and opens the drawer if it is closed; a request never
+/// closes it. A counter rather than a flag, so a second request after the
+/// reader dismissed the drawer notifies again.
+class FileBrowserOpenRequestNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void request() => state = state + 1;
+}
+
+final fileBrowserOpenRequestProvider =
+    NotifierProvider<FileBrowserOpenRequestNotifier, int>(
+      FileBrowserOpenRequestNotifier.new,
+    );
+
 class DirectoryContents {
   final List<FileEntry> files;
   final List<DirectoryEntry> subdirectories;
