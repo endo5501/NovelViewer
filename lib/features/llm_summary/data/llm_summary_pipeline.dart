@@ -134,8 +134,23 @@ class LlmSummaryPipeline {
     required List<String> perFileFacts,
     void Function(AnalysisProgress progress)? onProgress,
   }) async {
-    final notify = _isolatedNotifier(onProgress);
+    return _summarizeOwn(
+      word,
+      perFileFacts,
+      _isolatedNotifier(onProgress),
+      firstRound: 2,
+    );
+  }
 
+  /// [summarizeFromFacts] numbering its aggregation rounds from [firstRound],
+  /// so a run that already used rounds on its reference sources goes on from
+  /// there.
+  Future<String> _summarizeOwn(
+    String word,
+    List<String> perFileFacts,
+    void Function(AnalysisProgress) notify, {
+    required int firstRound,
+  }) async {
     final nonEmpty = _nonEmpty(perFileFacts);
 
     // With no facts there is nothing to summarize: asking the LLM anyway would
@@ -154,7 +169,7 @@ class LlmSummaryPipeline {
         word,
         nonEmpty,
         target: maxChunkSize,
-        firstRound: 2,
+        firstRound: firstRound,
         notify: notify,
       );
       facts = _withinWindow(aggregated);
@@ -175,7 +190,9 @@ class LlmSummaryPipeline {
   /// follow it, and a header is lost whenever the chunker splits an entry.
   ///
   /// With no reference source contributing facts, this is
-  /// [summarizeFromFacts] exactly — same requests, same prompts.
+  /// [summarizeFromFacts] exactly — same requests, same prompts — except
+  /// that rounds already spent compressing a source that came to nothing are
+  /// not numbered again.
   Future<String> summarizeFromSources({
     required String word,
     required List<String> ownFacts,
@@ -206,11 +223,7 @@ class LlmSummaryPipeline {
     }
 
     if (labeled.isEmpty) {
-      return summarizeFromFacts(
-        word: word,
-        perFileFacts: ownFacts,
-        onProgress: onProgress,
-      );
+      return _summarizeOwn(word, ownFacts, notify, firstRound: round);
     }
 
     final entries = [...labeled, ..._nonEmpty(ownFacts)];
