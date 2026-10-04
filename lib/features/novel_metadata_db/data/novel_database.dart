@@ -55,7 +55,7 @@ class NovelDatabaseSnapshotResolver {
 
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
-  static const _databaseVersion = 10;
+  static const _databaseVersion = 11;
 
   /// The current `novel_metadata.db` schema version. Exposed so test fixtures
   /// open in-memory databases at the same version the production schema targets.
@@ -145,6 +145,7 @@ class NovelDatabase {
     // for the cross-novel "how far read" view).
     await _createReadingProgressTableV8(db);
     await _addReadingPositionColumns(db);
+    await _createReferenceSourcesTable(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -184,6 +185,29 @@ class NovelDatabase {
     if (oldVersion < 10) {
       await _addReadingPositionColumns(db);
     }
+    if (oldVersion < 11) {
+      await _createReferenceSourcesTable(db);
+    }
+  }
+
+  /// v11: which novels each novel draws on as reference sources for LLM
+  /// analysis. Many-to-many, keyed by `folder_name` on both sides so a novel
+  /// moved between organizing folders or retitled keeps its relations. No
+  /// foreign key to `novels`, as elsewhere in this file: deletion keeps the
+  /// two consistent inside the delete transaction.
+  static Future<void> _createReferenceSourcesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE novel_reference_sources (
+        child_folder_name TEXT NOT NULL,
+        parent_folder_name TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (child_folder_name, parent_folder_name)
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX idx_novel_reference_sources_parent
+      ON novel_reference_sources(parent_folder_name)
+    ''');
   }
 
   static Future<void> _addReadingPositionColumns(Database db) async {
