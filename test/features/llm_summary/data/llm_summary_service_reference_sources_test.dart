@@ -114,24 +114,27 @@ void main() {
       expect(client.summaryPrompts.single, contains('『第1部』より:'));
     });
 
-    test('first-occurrence scope reads only the ancestor\'s first file', () async {
-      write(ownDir, '001.txt', '本作でアリスが旅に出る。');
-      write(ancestorDir, '003.txt', '祖先三話でアリスが登場。');
-      write(ancestorDir, '020.txt', '祖先二十話でアリスが再登場。');
-      final client = _EchoClient();
+    test(
+      'first-occurrence scope reads only the ancestor\'s first file',
+      () async {
+        write(ownDir, '001.txt', '本作でアリスが旅に出る。');
+        write(ancestorDir, '003.txt', '祖先三話でアリスが登場。');
+        write(ancestorDir, '020.txt', '祖先二十話でアリスが再登場。');
+        final client = _EchoClient();
 
-      await service(client).generateSummary(
-        directoryPath: ownDir.path,
-        word: 'アリス',
-        coveredUpToEpisode: 1,
-        referenceSources: [ancestor()],
-        referenceScope: ReferenceScope.firstOccurrence,
-      );
+        await service(client).generateSummary(
+          directoryPath: ownDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 1,
+          referenceSources: [ancestor()],
+          referenceScope: ReferenceScope.firstOccurrence,
+        );
 
-      final extracted = client.extractionPrompts.join('\n');
-      expect(extracted, contains('祖先三話'));
-      expect(extracted, isNot(contains('祖先二十話')));
-    });
+        final extracted = client.extractionPrompts.join('\n');
+        expect(extracted, contains('祖先三話'));
+        expect(extracted, isNot(contains('祖先二十話')));
+      },
+    );
 
     test('an ancestor without the word contributes nothing', () async {
       write(ownDir, '001.txt', '本作でアリスが旅に出る。');
@@ -167,9 +170,7 @@ void main() {
         ancestorDb,
       ).findForWord(word: 'アリス');
       expect(ancestorRows.map((r) => r.fileName), ['003.txt']);
-      final ownRows = await FactCacheRepository(ownDb).findForWord(
-        word: 'アリス',
-      );
+      final ownRows = await FactCacheRepository(ownDb).findForWord(word: 'アリス');
       expect(ownRows.map((r) => r.fileName), ['001.txt']);
     });
 
@@ -224,27 +225,30 @@ void main() {
       expect(round1.last.current, 5);
     });
 
-    test('an ancestor file failure is a partial failure and saves nothing', () async {
-      write(ownDir, '001.txt', 'アリス本作一。');
-      write(ancestorDir, '001.txt', 'アリス祖先一。');
+    test(
+      'an ancestor file failure is a partial failure and saves nothing',
+      () async {
+        write(ownDir, '001.txt', 'アリス本作一。');
+        write(ancestorDir, '001.txt', 'アリス祖先一。');
 
-      await expectLater(
-        service(_EchoClient(failOn: ['祖先一'])).generateSummary(
-          directoryPath: ownDir.path,
-          word: 'アリス',
-          coveredUpToEpisode: 1,
-          referenceSources: [ancestor()],
-        ),
-        throwsA(
-          isA<LlmAnalysisPartialFailure>().having(
-            (f) => f.failedFileCount,
-            'failedFileCount',
-            1,
+        await expectLater(
+          service(_EchoClient(failOn: ['祖先一'])).generateSummary(
+            directoryPath: ownDir.path,
+            word: 'アリス',
+            coveredUpToEpisode: 1,
+            referenceSources: [ancestor()],
           ),
-        ),
-      );
-      expect(await LlmSummaryRepository(ownDb).findAll(), isEmpty);
-    });
+          throwsA(
+            isA<LlmAnalysisPartialFailure>().having(
+              (f) => f.failedFileCount,
+              'failedFileCount',
+              1,
+            ),
+          ),
+        );
+        expect(await LlmSummaryRepository(ownDb).findAll(), isEmpty);
+      },
+    );
 
     test('consecutive failures are counted across sources', () async {
       write(ownDir, '001.txt', 'アリス本作一。');

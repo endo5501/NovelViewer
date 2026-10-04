@@ -11,10 +11,11 @@ final novelReferenceRepositoryProvider = Provider<NovelReferenceRepository>((
 });
 
 /// Every stored reference-source relation. Invalidate after saving.
-final novelReferenceRelationsProvider =
-    FutureProvider<List<ReferenceRelation>>((ref) {
-      return ref.watch(novelReferenceRepositoryProvider).findAll();
-    });
+final novelReferenceRelationsProvider = FutureProvider<List<ReferenceRelation>>(
+  (ref) {
+    return ref.watch(novelReferenceRepositoryProvider).findAll();
+  },
+);
 
 /// The signature of [locateNovelFolders], so the walk can be observed or
 /// replaced in tests.

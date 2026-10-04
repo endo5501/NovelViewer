@@ -246,9 +246,7 @@ class LlmSummaryService {
       final missCount = cachedFactsByFile.values.where((f) => f == null).length;
 
       final perFileFacts = <String>[];
-      final referenceFacts = [
-        for (final _ in referenceSources) <String>[],
-      ];
+      final referenceFacts = [for (final _ in referenceSources) <String>[]];
       void collect(_FileWork file, String facts) => file.source == null
           ? perFileFacts.add(facts)
           : referenceFacts[file.source!].add(facts);
@@ -396,7 +394,8 @@ class LlmSummaryService {
     if (first == null) return const [];
     return results
         .where(
-          (r) => effectiveEpisodeOrNull(r.fileName, folderFiles) == first.episode,
+          (r) =>
+              effectiveEpisodeOrNull(r.fileName, folderFiles) == first.episode,
         )
         .toList();
   }

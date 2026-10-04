@@ -43,31 +43,34 @@ String _factsBlock(String prompt) {
 
 void main() {
   group('summarizeFromSources', () {
-    test('labels every line of a reference source and places it first', () async {
-      final client = _RecordingClient();
-      final pipeline = LlmSummaryPipeline(llmClient: client);
+    test(
+      'labels every line of a reference source and places it first',
+      () async {
+        final client = _RecordingClient();
+        final pipeline = LlmSummaryPipeline(llmClient: client);
 
-      await pipeline.summarizeFromSources(
-        word: 'アリス',
-        ownFacts: const ['- 冒険者になった'],
-        referenceFacts: const [
-          ReferenceSourceFacts(
-            title: '第1部',
-            perFileFacts: ['- 王女である\n- 剣が得意', '城で育った'],
-          ),
-        ],
-      );
+        await pipeline.summarizeFromSources(
+          word: 'アリス',
+          ownFacts: const ['- 冒険者になった'],
+          referenceFacts: const [
+            ReferenceSourceFacts(
+              title: '第1部',
+              perFileFacts: ['- 王女である\n- 剣が得意', '城で育った'],
+            ),
+          ],
+        );
 
-      expect(client.refinementPrompts, isEmpty);
-      final facts = _factsBlock(client.summaryPrompts.single);
-      expect(
-        facts,
-        '- 『第1部』より: 王女である\n'
-        '- 『第1部』より: 剣が得意\n'
-        '『第1部』より: 城で育った\n'
-        '- 冒険者になった',
-      );
-    });
+        expect(client.refinementPrompts, isEmpty);
+        final facts = _factsBlock(client.summaryPrompts.single);
+        expect(
+          facts,
+          '- 『第1部』より: 王女である\n'
+          '- 『第1部』より: 剣が得意\n'
+          '『第1部』より: 城で育った\n'
+          '- 冒険者になった',
+        );
+      },
+    );
 
     test('asks the final summary to prefer this work', () async {
       final client = _RecordingClient();
@@ -173,7 +176,11 @@ void main() {
         llmClient: viaSources,
         maxChunkSize: 200,
         maxResponseSize: 100,
-      ).summarizeFromSources(word: 'アリス', ownFacts: own, referenceFacts: const []);
+      ).summarizeFromSources(
+        word: 'アリス',
+        ownFacts: own,
+        referenceFacts: const [],
+      );
       final viaFacts = _RecordingClient();
       await LlmSummaryPipeline(
         llmClient: viaFacts,
@@ -214,44 +221,50 @@ void main() {
       expect(client.allPrompts, isEmpty);
     });
 
-    test('merged aggregation keeps labels and rounds never step back', () async {
-      final client = _RecordingClient();
-      final events = <AnalysisProgress>[];
-      final pipeline = LlmSummaryPipeline(
-        llmClient: client,
-        maxChunkSize: 200,
-        maxResponseSize: 100,
-      );
-      final bigAncestor = List.generate(3, (i) => '- 祖先$i ${'う' * 70}');
-      final bigOwn = List.generate(3, (i) => '- 本作$i ${'え' * 80}');
+    test(
+      'merged aggregation keeps labels and rounds never step back',
+      () async {
+        final client = _RecordingClient();
+        final events = <AnalysisProgress>[];
+        final pipeline = LlmSummaryPipeline(
+          llmClient: client,
+          maxChunkSize: 200,
+          maxResponseSize: 100,
+        );
+        final bigAncestor = List.generate(3, (i) => '- 祖先$i ${'う' * 70}');
+        final bigOwn = List.generate(3, (i) => '- 本作$i ${'え' * 80}');
 
-      await pipeline.summarizeFromSources(
-        word: 'アリス',
-        ownFacts: bigOwn,
-        referenceFacts: [
-          ReferenceSourceFacts(title: '第1部', perFileFacts: bigAncestor),
-        ],
-        onProgress: events.add,
-      );
+        await pipeline.summarizeFromSources(
+          word: 'アリス',
+          ownFacts: bigOwn,
+          referenceFacts: [
+            ReferenceSourceFacts(title: '第1部', perFileFacts: bigAncestor),
+          ],
+          onProgress: events.add,
+        );
 
-      final rounds = events
-          .whereType<AnalysisExtractingFacts>()
-          .map((e) => e.round)
-          .toList();
-      expect(rounds.first, 2);
-      for (var i = 1; i < rounds.length; i++) {
-        expect(rounds[i], greaterThanOrEqualTo(rounds[i - 1]));
-      }
-      expect(rounds.toSet().length, greaterThan(1),
-          reason: 'the merged aggregation numbers on from the ancestor one');
-      final mergedPrompts = client.refinementPrompts.where(
-        (p) => p.contains('本作0'),
-      );
-      expect(mergedPrompts, isNotEmpty);
-      for (final prompt in mergedPrompts) {
-        expect(prompt, contains('出典ラベル'));
-      }
-    });
+        final rounds = events
+            .whereType<AnalysisExtractingFacts>()
+            .map((e) => e.round)
+            .toList();
+        expect(rounds.first, 2);
+        for (var i = 1; i < rounds.length; i++) {
+          expect(rounds[i], greaterThanOrEqualTo(rounds[i - 1]));
+        }
+        expect(
+          rounds.toSet().length,
+          greaterThan(1),
+          reason: 'the merged aggregation numbers on from the ancestor one',
+        );
+        final mergedPrompts = client.refinementPrompts.where(
+          (p) => p.contains('本作0'),
+        );
+        expect(mergedPrompts, isNotEmpty);
+        for (final prompt in mergedPrompts) {
+          expect(prompt, contains('出典ラベル'));
+        }
+      },
+    );
 
     test('fitting the window keeps the tail where this work sits', () async {
       // Refinement echoes its input, so it never shrinks and the facts reach
@@ -268,7 +281,10 @@ void main() {
         word: 'アリス',
         ownFacts: List.generate(4, (i) => '- 本作$i ${'か' * 30}'),
         referenceFacts: [
-          ReferenceSourceFacts(title: '資料', perFileFacts: [ancestor.join('\n')]),
+          ReferenceSourceFacts(
+            title: '資料',
+            perFileFacts: [ancestor.join('\n')],
+          ),
         ],
       );
 

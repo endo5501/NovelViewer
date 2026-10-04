@@ -74,17 +74,20 @@ void main() {
       );
     });
 
-    test('records the direct reference source each ancestor is reached via', () {
-      final ancestors = resolveAncestors('part3', [
-        _r('part3', 'part2'),
-        _r('part2', 'part1'),
-        _r('part3', 'wiki'),
-      ]);
-      final byName = {for (final a in ancestors) a.folderName: a};
-      expect(byName['part1']!.via, 'part2');
-      expect(byName['part2']!.via, 'part2');
-      expect(byName['wiki']!.via, 'wiki');
-    });
+    test(
+      'records the direct reference source each ancestor is reached via',
+      () {
+        final ancestors = resolveAncestors('part3', [
+          _r('part3', 'part2'),
+          _r('part2', 'part1'),
+          _r('part3', 'wiki'),
+        ]);
+        final byName = {for (final a in ancestors) a.folderName: a};
+        expect(byName['part1']!.via, 'part2');
+        expect(byName['part2']!.via, 'part2');
+        expect(byName['wiki']!.via, 'wiki');
+      },
+    );
   });
 
   group('resolveDescendants', () {
@@ -104,10 +107,7 @@ void main() {
 
   group('hasCycle', () {
     test('is false for a chain and a diamond', () {
-      expect(
-        hasCycle([_r('c', 'b'), _r('b', 'a'), _r('c', 'a')]),
-        isFalse,
-      );
+      expect(hasCycle([_r('c', 'b'), _r('b', 'a'), _r('c', 'a')]), isFalse);
     });
 
     test('is true for a self reference', () {

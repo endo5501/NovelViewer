@@ -65,7 +65,10 @@ class WordSummary {
 /// identifies it and the title it had when the analysis ran, so the record
 /// still reads correctly after the novel is retitled or removed.
 class SnapshotReferenceSource {
-  const SnapshotReferenceSource({required this.folderName, required this.title});
+  const SnapshotReferenceSource({
+    required this.folderName,
+    required this.title,
+  });
 
   final String folderName;
   final String title;

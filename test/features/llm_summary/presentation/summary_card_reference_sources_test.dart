@@ -10,7 +10,10 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_provider
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 const _part1 = SnapshotReferenceSource(folderName: 'narou_p1', title: '第1部');
-const _wiki = SnapshotReferenceSource(folderName: 'web_wiki', title: 'Wiki 記事集');
+const _wiki = SnapshotReferenceSource(
+  folderName: 'web_wiki',
+  title: 'Wiki 記事集',
+);
 
 WordSummary _snap(
   int episode, {
@@ -66,7 +69,11 @@ void main() {
   testWidgets('the popup lists the snapshot\'s reference sources', (
     tester,
   ) async {
-    await tester.pumpWidget(_popup([_snap(3, sources: const [_part1, _wiki])]));
+    await tester.pumpWidget(
+      _popup([
+        _snap(3, sources: const [_part1, _wiki]),
+      ]),
+    );
     await tester.pumpAndSettle();
 
     expect(
@@ -109,7 +116,11 @@ void main() {
   );
 
   testWidgets('the detail dialog shows the same list', (tester) async {
-    await tester.pumpWidget(dialog([_snap(3, sources: const [_part1])]));
+    await tester.pumpWidget(
+      dialog([
+        _snap(3, sources: const [_part1]),
+      ]),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('解析結果'));
     await tester.pumpAndSettle();

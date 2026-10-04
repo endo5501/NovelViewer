@@ -31,10 +31,10 @@ void main() {
     test('stores several reference sources for one novel', () async {
       await repository.replaceParents('part3', ['part2', 'wiki']);
 
-      expect(
-        (await repository.findAll()).toSet(),
-        {_r('part3', 'part2'), _r('part3', 'wiki')},
-      );
+      expect((await repository.findAll()).toSet(), {
+        _r('part3', 'part2'),
+        _r('part3', 'wiki'),
+      });
     });
 
     test('replaces the previous set rather than adding to it', () async {
@@ -76,10 +76,10 @@ void main() {
         repository.replaceParents('a', ['b']),
         throwsA(isA<ReferenceCycleException>()),
       );
-      expect(
-        (await repository.findAll()).toSet(),
-        {_r('b', 'a'), _r('a', 'wiki')},
-      );
+      expect((await repository.findAll()).toSet(), {
+        _r('b', 'a'),
+        _r('a', 'wiki'),
+      });
     });
   });
 

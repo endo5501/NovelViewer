@@ -13,16 +13,19 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../../helpers/novel_metadata_db_fixture.dart';
 
-NovelMetadata _novel(String folderName, String title, {String site = 'narou'}) =>
-    NovelMetadata(
-      siteType: site,
-      novelId: folderName,
-      title: title,
-      url: 'https://example.com/$folderName',
-      folderName: folderName,
-      episodeCount: 1,
-      downloadedAt: DateTime(2024, 1, 1),
-    );
+NovelMetadata _novel(
+  String folderName,
+  String title, {
+  String site = 'narou',
+}) => NovelMetadata(
+  siteType: site,
+  novelId: folderName,
+  title: title,
+  url: 'https://example.com/$folderName',
+  folderName: folderName,
+  episodeCount: 1,
+  downloadedAt: DateTime(2024, 1, 1),
+);
 
 final _novels = [
   _novel('part3', '第3部'),
@@ -129,7 +132,10 @@ void main() {
     ) async {
       await pumpDialog(tester);
 
-      expect(find.text(l10n.referenceSources_dialogTitle('第3部')), findsOneWidget);
+      expect(
+        find.text(l10n.referenceSources_dialogTitle('第3部')),
+        findsOneWidget,
+      );
       expect(
         inSection('reference_sources_direct', find.text('第2部')),
         findsOneWidget,
@@ -168,14 +174,11 @@ void main() {
       await tester.tap(find.text(l10n.common_cancelButton));
       await settle(tester);
 
-      expect(
-        (await tester.runAsync(repository.findAll))!.toSet(),
-        {
-          const ReferenceRelation(child: 'part3', parent: 'part2'),
-          const ReferenceRelation(child: 'part2', parent: 'part1'),
-          const ReferenceRelation(child: 'gaiden', parent: 'part3'),
-        },
-      );
+      expect((await tester.runAsync(repository.findAll))!.toSet(), {
+        const ReferenceRelation(child: 'part3', parent: 'part2'),
+        const ReferenceRelation(child: 'part2', parent: 'part1'),
+        const ReferenceRelation(child: 'gaiden', parent: 'part3'),
+      });
     });
 
     testWidgets('save persists an added source', (tester) async {

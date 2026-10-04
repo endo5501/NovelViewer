@@ -107,9 +107,7 @@ JSON形式で回答してください: {"facts": "- 事実1\\n- 事実2\\n..."}'
     String language = 'ja',
     bool hasReferenceSources = false,
   }) {
-    final sources = hasReferenceSources
-        ? '\n$_preferThisWorkInstruction'
-        : '';
+    final sources = hasReferenceSources ? '\n$_preferThisWorkInstruction' : '';
     return '''$_baseInstruction
 以下の<facts>タグ内の情報を元に、<term>タグ内の用語について1〜2文で簡潔に説明してください。
 重複する情報は統合してください。$sources

@@ -91,7 +91,10 @@ void main() {
 
     await rightClick(tester, '第1部');
 
-    expect(find.text(l10n.fileBrowser_referenceSourcesMenuItem), findsOneWidget);
+    expect(
+      find.text(l10n.fileBrowser_referenceSourcesMenuItem),
+      findsOneWidget,
+    );
   });
 
   testWidgets('choosing it opens the dialog for that novel', (tester) async {
@@ -102,10 +105,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ReferenceSourcesDialog), findsOneWidget);
-    expect(
-      find.text(l10n.referenceSources_dialogTitle('第1部')),
-      findsOneWidget,
-    );
+    expect(find.text(l10n.referenceSources_dialogTitle('第1部')), findsOneWidget);
   });
 
   testWidgets('an organizing folder does not offer it', (tester) async {

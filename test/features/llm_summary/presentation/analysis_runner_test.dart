@@ -2005,7 +2005,9 @@ void main() {
             llmSummaryRepositoryProvider.overrideWith(
               (ref, folderPath) async => _DummyRepo(),
             ),
-            novelReferenceRelationsProvider.overrideWith((ref) async => const []),
+            novelReferenceRelationsProvider.overrideWith(
+              (ref) async => const [],
+            ),
             factCacheRepositoryProvider.overrideWith(
               (ref, folderPath) async => _DummyFactCache(),
             ),

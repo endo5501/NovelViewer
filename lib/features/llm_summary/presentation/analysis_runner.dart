@@ -525,7 +525,9 @@ class DefaultAnalysisRunner implements AnalysisRunner {
         .toList();
     if (missing.isNotEmpty) {
       throw LlmReferenceSourcesMissingFailure(
-        titles: [for (final a in missing) titleOf[a.folderName] ?? a.folderName],
+        titles: [
+          for (final a in missing) titleOf[a.folderName] ?? a.folderName,
+        ],
         folderNames: [for (final a in missing) a.folderName],
       );
     }

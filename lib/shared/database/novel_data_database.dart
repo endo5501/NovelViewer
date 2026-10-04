@@ -121,9 +121,7 @@ class NovelDataDatabase {
     Database db,
   ) async {
     await db.execute('DROP INDEX IF EXISTS idx_word_summaries_unique');
-    await db.execute(
-      'ALTER TABLE word_summaries RENAME TO word_summaries_v2',
-    );
+    await db.execute('ALTER TABLE word_summaries RENAME TO word_summaries_v2');
     await _createWordSummaries(db);
     await db.execute('''
       INSERT INTO word_summaries (id, word, covered_up_to_episode, summary,

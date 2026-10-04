@@ -234,7 +234,9 @@ class _ReferenceSourcePickerDialogState
     final query = _query.trim().toLowerCase();
     final shown =
         widget.candidates
-            .where((n) => query.isEmpty || n.title.toLowerCase().contains(query))
+            .where(
+              (n) => query.isEmpty || n.title.toLowerCase().contains(query),
+            )
             .toList()
           ..sort((a, b) => a.title.compareTo(b.title));
 
@@ -265,7 +267,8 @@ class _ReferenceSourcePickerDialogState
                           _NovelRow(
                             title: n.title,
                             isWeb: n.siteType == 'web',
-                            onTap: () => Navigator.of(context).pop(n.folderName),
+                            onTap: () =>
+                                Navigator.of(context).pop(n.folderName),
                           ),
                       ],
                     ),

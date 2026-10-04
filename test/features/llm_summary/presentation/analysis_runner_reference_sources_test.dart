@@ -316,9 +316,7 @@ void main() {
     tester,
   ) async {
     Directory(part1Path).deleteSync(recursive: true);
-    final h = build(
-      relations: [_r('part3', 'part1'), _r('part3', 'gone')],
-    );
+    final h = build(relations: [_r('part3', 'part1'), _r('part3', 'gone')]);
 
     await pump(tester, h.container, runUpToCurrent);
 

@@ -30,8 +30,9 @@ void main() {
       referenceSources: const [part1, wiki],
     );
 
-    final snapshot = (await repository.findSnapshotsForWord(word: 'アリス'))
-        .single;
+    final snapshot = (await repository.findSnapshotsForWord(
+      word: 'アリス',
+    )).single;
     expect(snapshot.referenceSources, const [part1, wiki]);
   });
 
@@ -42,8 +43,9 @@ void main() {
       summary: 's',
     );
 
-    final snapshot = (await repository.findSnapshotsForWord(word: 'アリス'))
-        .single;
+    final snapshot = (await repository.findSnapshotsForWord(
+      word: 'アリス',
+    )).single;
     expect(snapshot.referenceSources, isEmpty);
   });
 
@@ -74,8 +76,9 @@ void main() {
       referenceSources: const [part1],
     );
 
-    final snapshot = (await repository.findSnapshotsForWord(word: 'アリス'))
-        .single;
+    final snapshot = (await repository.findSnapshotsForWord(
+      word: 'アリス',
+    )).single;
     expect(snapshot.summary, 'second');
     expect(snapshot.referenceSources, const [part1]);
   });
@@ -93,8 +96,9 @@ void main() {
       summary: 'second',
     );
 
-    final snapshot = (await repository.findSnapshotsForWord(word: 'アリス'))
-        .single;
+    final snapshot = (await repository.findSnapshotsForWord(
+      word: 'アリス',
+    )).single;
     expect(snapshot.referenceSources, isEmpty);
   });
 }

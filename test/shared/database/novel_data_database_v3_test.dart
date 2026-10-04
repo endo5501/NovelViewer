@@ -167,7 +167,9 @@ void main() {
     addTearDown(upgraded.close);
     final upgradedSql = await _wordSummariesSql(await upgraded.database);
 
-    final freshDir = Directory.systemTemp.createTempSync('novel_data_v3_fresh_');
+    final freshDir = Directory.systemTemp.createTempSync(
+      'novel_data_v3_fresh_',
+    );
     addTearDown(() {
       if (freshDir.existsSync()) freshDir.deleteSync(recursive: true);
     });
