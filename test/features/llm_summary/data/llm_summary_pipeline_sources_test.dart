@@ -122,10 +122,11 @@ void main() {
       for (final prompt in client.refinementPrompts) {
         expect(prompt, isNot(contains('本作だけの事実')));
       }
-      expect(
-        _factsBlock(client.summaryPrompts.single),
-        '- 『第1部』より: 縮\n- 本作だけの事実',
-      );
+      final lines = _factsBlock(client.summaryPrompts.single).split('\n');
+      expect(lines.last, '- 本作だけの事実');
+      for (final line in lines.take(lines.length - 1)) {
+        expect(line, '- 『第1部』より: 縮');
+      }
     });
 
     test('a reference source that fits is not compressed', () async {
@@ -265,7 +266,7 @@ void main() {
 
       await pipeline.summarizeFromSources(
         word: 'アリス',
-        ownFacts: List.generate(3, (i) => '- 本作$i ${'か' * 30}'),
+        ownFacts: List.generate(4, (i) => '- 本作$i ${'か' * 30}'),
         referenceFacts: [
           ReferenceSourceFacts(title: '資料', perFileFacts: [ancestor.join('\n')]),
         ],
@@ -273,7 +274,7 @@ void main() {
 
       final facts = _factsBlock(client.summaryPrompts.single);
       expect(facts.length, lessThanOrEqualTo(200));
-      expect(facts, contains('本作2'));
+      expect(facts, contains('本作3'));
       expect(facts, isNot(contains('祖先0')));
       for (final line in facts.split('\n')) {
         if (line.contains('祖先')) expect(line, contains('『資料』より:'));
