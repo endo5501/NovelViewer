@@ -143,10 +143,14 @@ class LlmSummaryPipeline {
     if (combined.length <= maxChunkSize) {
       facts = combined;
     } else {
-      // Refinement starts at depth 1 so the first emitted round is 2.
-      facts = _withinWindow(
-        await _extractFactsRecursive(word, nonEmpty, 1, notify),
+      final (aggregated, _) = await _aggregate(
+        word,
+        nonEmpty,
+        target: maxChunkSize,
+        firstRound: 2,
+        notify: notify,
       );
+      facts = _withinWindow(aggregated);
     }
 
     notify(const AnalysisGeneratingFinalSummary());
@@ -198,53 +202,70 @@ class LlmSummaryPipeline {
     return facts.substring(0, cut);
   }
 
-  Future<String> _extractFactsRecursive(
+  /// Merges [entries] in aggregation rounds until they fit [target], and
+  /// returns the merged facts together with the round number the next
+  /// aggregation should start from.
+  ///
+  /// Rounds are numbered from [firstRound], so several aggregations in one
+  /// run (one per reference source, then the merged set) count on from one
+  /// another and the progress shown never steps back. The depth limit counts
+  /// rounds within this one aggregation.
+  ///
+  /// [preserveSourceLabels] asks each round to keep the "『作品名』より:" labels
+  /// reference-source facts carry.
+  Future<(String, int)> _aggregate(
     String word,
-    List<String> entries,
-    int depth,
-    void Function(AnalysisProgress progress) notify,
-  ) async {
-    if (depth >= maxRecursionDepth) {
-      return entries.join('\n');
-    }
+    List<String> entries, {
+    required int target,
+    required int firstRound,
+    required void Function(AnalysisProgress progress) notify,
+    bool preserveSourceLabels = false,
+  }) async {
+    var current = entries;
+    var round = firstRound;
+    for (var depth = 1; ; depth++) {
+      if (depth >= maxRecursionDepth) {
+        return (current.join('\n'), round);
+      }
 
-    // Sized by what the model may return, not by what it may be handed: a
-    // round answers at close to the length of the facts it was given, so a
-    // window-sized chunk asks for an answer the response cap cuts off.
-    final chunks = ContextChunker.split(
-      entries,
-      maxChunkSize: maxResponseSize,
-      separator: _refinementSeparator,
-    );
-    final round = depth + 1;
-
-    final factsList = <String>[];
-    for (var i = 0; i < chunks.length; i++) {
-      notify(
-        AnalysisExtractingFacts(
-          round: round,
-          current: i + 1,
-          total: chunks.length,
-        ),
+      // Sized by what the model may return, not by what it may be handed: a
+      // round answers at close to the length of the facts it was given, so a
+      // window-sized chunk asks for an answer the response cap cuts off.
+      final chunks = ContextChunker.split(
+        current,
+        maxChunkSize: maxResponseSize,
+        separator: _refinementSeparator,
       );
-      final prompt = LlmPromptBuilder.buildFactRefinementPrompt(
-        word: word,
-        facts: chunks[i].join(_refinementSeparator),
-        maxResponseSize: maxResponseSize,
-        language: language,
-      );
-      factsList.add((await _generateFacts(prompt)).value);
+
+      final factsList = <String>[];
+      for (var i = 0; i < chunks.length; i++) {
+        notify(
+          AnalysisExtractingFacts(
+            round: round,
+            current: i + 1,
+            total: chunks.length,
+          ),
+        );
+        final prompt = LlmPromptBuilder.buildFactRefinementPrompt(
+          word: word,
+          facts: chunks[i].join(_refinementSeparator),
+          maxResponseSize: maxResponseSize,
+          language: language,
+          preserveSourceLabels: preserveSourceLabels,
+        );
+        factsList.add((await _generateFacts(prompt)).value);
+      }
+      round++;
+
+      final combinedFacts = factsList.join('\n');
+      final afterLen = factsList.fold<int>(0, (s, e) => s + e.length);
+      final beforeLen = current.fold<int>(0, (s, e) => s + e.length);
+
+      if (combinedFacts.length <= target || afterLen >= beforeLen) {
+        return (combinedFacts, round);
+      }
+      current = factsList;
     }
-
-    final combinedFacts = factsList.join('\n');
-    final afterLen = factsList.fold<int>(0, (s, e) => s + e.length);
-    final beforeLen = entries.fold<int>(0, (s, e) => s + e.length);
-
-    if (combinedFacts.length <= maxChunkSize || afterLen >= beforeLen) {
-      return combinedFacts;
-    }
-
-    return _extractFactsRecursive(word, factsList, depth + 1, notify);
   }
 
   /// Runs one Stage-1 extraction request and parses its response, retrying once
