@@ -87,52 +87,29 @@ void main() {
     );
   });
 
-  testWidgets('stepping to another snapshot follows its list', (tester) async {
-    await tester.pumpWidget(
-      _popup([
-        _snap(3, sources: const [_part1]),
-        _snap(9),
-      ]),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const Key('hover_popup_reference_sources')),
-      findsOneWidget,
-    );
-
-    await tester.tap(find.byKey(const Key('hover_popup_snapshot_next')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('要約9'), findsOneWidget);
-    expect(
-      find.byKey(const Key('hover_popup_reference_sources')),
-      findsNothing,
-    );
-  });
+  Widget dialog(List<WordSummary> snapshots) => ProviderScope(
+    overrides: [
+      historyDetailFactsProvider((
+        folderPath: 'novel_a',
+        word: 'アリス',
+      )).overrideWith((_) async => const []),
+      hoverPopupCacheProvider((
+        folderPath: 'novel_a',
+        word: 'アリス',
+      )).overrideWith((_) async => snapshots),
+    ],
+    child: const MaterialApp(
+      locale: Locale('ja'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: LlmSummaryDetailDialog(folderPath: 'novel_a', word: 'アリス'),
+      ),
+    ),
+  );
 
   testWidgets('the detail dialog shows the same list', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          historyDetailFactsProvider((
-            folderPath: 'novel_a',
-            word: 'アリス',
-          )).overrideWith((_) async => const []),
-          hoverPopupCacheProvider((
-            folderPath: 'novel_a',
-            word: 'アリス',
-          )).overrideWith((_) async => [_snap(3, sources: const [_part1])]),
-        ],
-        child: const MaterialApp(
-          locale: Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: LlmSummaryDetailDialog(folderPath: 'novel_a', word: 'アリス'),
-          ),
-        ),
-      ),
-    );
+    await tester.pumpWidget(dialog([_snap(3, sources: const [_part1])]));
     await tester.pumpAndSettle();
     await tester.tap(find.text('解析結果'));
     await tester.pumpAndSettle();
@@ -141,5 +118,27 @@ void main() {
       find.text(l10n.summaryCard_referenceSources('『第1部』')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('stepping to another snapshot follows its list', (tester) async {
+    await tester.pumpWidget(
+      dialog([
+        _snap(3, sources: const [_part1]),
+        _snap(9),
+      ]),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('解析結果'));
+    await tester.pumpAndSettle();
+    final shown = find.byKey(const Key('history_detail_reference_sources'));
+    // The dialog opens on the latest snapshot, which has no reference sources.
+    expect(find.text('要約9'), findsOneWidget);
+    expect(shown, findsNothing);
+
+    await tester.tap(find.byKey(const Key('history_detail_snapshot_prev')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('要約3'), findsOneWidget);
+    expect(shown, findsOneWidget);
   });
 }

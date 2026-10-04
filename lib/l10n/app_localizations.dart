@@ -1438,6 +1438,12 @@ abstract class AppLocalizations {
   /// **'解析を中止しました: 「{word}」に関する情報を抽出できなかったため、要約は保存されていません。'**
   String llmAnalysis_noFacts(String word);
 
+  /// No description provided for @summaryCard_referenceSources.
+  ///
+  /// In ja, this message translates to:
+  /// **'参照元: {names}'**
+  String summaryCard_referenceSources(String names);
+
   /// No description provided for @hoverPopup_snapshotLabel.
   ///
   /// In ja, this message translates to:

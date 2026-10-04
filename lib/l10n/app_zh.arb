@@ -290,6 +290,14 @@
       }
     }
   },
+  "summaryCard_referenceSources": "参考来源：{names}",
+  "@summaryCard_referenceSources": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "hoverPopup_snapshotLabel": "第{episode}文件时的摘要",
   "@hoverPopup_snapshotLabel": {
     "placeholders": {

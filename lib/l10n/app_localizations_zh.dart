@@ -748,6 +748,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String summaryCard_referenceSources(String names) {
+    return '参考来源：$names';
+  }
+
+  @override
   String hoverPopup_snapshotLabel(int episode) {
     return '第$episode文件时的摘要';
   }

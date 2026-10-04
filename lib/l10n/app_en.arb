@@ -290,6 +290,14 @@
       }
     }
   },
+  "summaryCard_referenceSources": "Reference sources: {names}",
+  "@summaryCard_referenceSources": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "hoverPopup_snapshotLabel": "Summary at file {episode}",
   "@hoverPopup_snapshotLabel": {
     "placeholders": {

@@ -480,6 +480,14 @@
       }
     }
   },
+  "summaryCard_referenceSources": "参照元: {names}",
+  "@summaryCard_referenceSources": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "hoverPopup_snapshotLabel": "{episode}ファイル時点の要約",
   "@hoverPopup_snapshotLabel": {
     "placeholders": {

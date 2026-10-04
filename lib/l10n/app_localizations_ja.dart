@@ -754,6 +754,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String summaryCard_referenceSources(String names) {
+    return '参照元: $names';
+  }
+
+  @override
   String hoverPopup_snapshotLabel(int episode) {
     return '$episodeファイル時点の要約';
   }

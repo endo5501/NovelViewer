@@ -774,6 +774,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String summaryCard_referenceSources(String names) {
+    return 'Reference sources: $names';
+  }
+
+  @override
   String hoverPopup_snapshotLabel(int episode) {
     return 'Summary at file $episode';
   }
