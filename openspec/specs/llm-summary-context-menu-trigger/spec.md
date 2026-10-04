@@ -38,9 +38,11 @@ The menu builders SHALL remain pure functions that receive each optional item's 
 ### Requirement: Trigger analysis from context menu items
 When the user selects "解析開始(簡易)", "解析開始(ネタバレなし)" or "解析開始(ネタバレあり)" from the context menu, the system SHALL invoke the LLM summary pipeline for the selected text with a `coveredUpToEpisode` argument derived from the menu choice:
 
-- "解析開始(簡易)" → `coveredUpToEpisode` equals the lowest episode number among the folder's text files that contain the selected word, where a file's episode number is its numeric prefix (or its 1-origin lexical rank within the folder when no numeric prefix exists). When no file in the folder contains the word, it equals the currently viewed file's episode number; the value is not observable in that case because the run saves no snapshot.
+- "解析開始(簡易)" → `coveredUpToEpisode` equals the lowest episode number among the folder's text files that contain the selected word, where a file's episode number is its numeric prefix (or its 1-origin lexical rank within the folder when no numeric prefix exists). When no file in the folder contains the word, it equals the currently viewed file's episode number and the recorded `source_file` is the currently viewed file. In that case a snapshot is saved only when the novel's reference-source ancestors yield facts (see "簡易解析での祖先の初出ファイル"); otherwise the run saves no snapshot.
 - "解析開始(ネタバレなし)" → `coveredUpToEpisode` equals the numeric prefix of the currently viewed file (or its 1-origin lexical rank within the folder when no numeric prefix exists).
 - "解析開始(ネタバレあり)" → `coveredUpToEpisode` equals the numeric prefix of the highest-prefix text file in the folder (or the lexical rank of the last file when no numeric prefix exists).
+
+The bound and the recorded `source_file` SHALL be derived from the viewed novel's own folder only. Files read from reference-source ancestors SHALL NOT affect either value.
 
 Which files the word occurs in SHALL be determined by the same matching used to collect the analysis evidence, so that the bound "解析開始(簡易)" resolves to always names a file the pipeline then finds the word in.
 
@@ -55,13 +57,18 @@ The trigger SHALL NOT depend on the existence of prior cached entries — if a `
 
 #### Scenario: 簡易 trigger reads only the first-occurrence episode's files
 - **WHEN** an analysis started by "解析開始(簡易)" resolves to `coveredUpToEpisode=5` in a folder where the word also occurs in later files
-- **THEN** the evidence the pipeline assembles SHALL come only from files whose episode number is 5
-- **AND** no later file SHALL be extracted
+- **THEN** the evidence the pipeline assembles from the viewed novel's own folder SHALL come only from files whose episode number is 5
+- **AND** no later file of the viewed novel SHALL be extracted
+- **AND** files from reference-source ancestors, if any, SHALL be limited as defined in "簡易解析での祖先の初出ファイル"
 
 #### Scenario: 簡易 trigger on a word the folder does not contain
-- **WHEN** the user selects a word that no text file in the folder contains and chooses "解析開始(簡易)"
+- **WHEN** the user selects a word that no text file in the folder contains, the novel has no reference-source ancestor that contains the word either, and chooses "解析開始(簡易)"
 - **THEN** no snapshot SHALL be saved
 - **AND** the existing "情報を抽出できなかった" failure notification naming the word SHALL be shown
+
+#### Scenario: 簡易 trigger on a word only an ancestor contains
+- **WHEN** the user selects a word that no text file in the folder contains while viewing "040_chapter.txt", a reference-source ancestor contains the word, and chooses "解析開始(簡易)"
+- **THEN** a snapshot SHALL be saved at `coveredUpToEpisode=40` with `source_file="040_chapter.txt"`
 
 #### Scenario: ネタバレなし trigger writes a snapshot for current file's episode
 - **WHEN** the user selects "アリス" while viewing "040_chapter.txt" and chooses "解析開始(ネタバレなし)", and no snapshot exists at `covered_up_to_episode=40`
@@ -87,6 +94,11 @@ The trigger SHALL NOT depend on the existence of prior cached entries — if a `
 #### Scenario: ネタバレあり captures the current "全話" boundary
 - **WHEN** the folder originally contained files with prefixes `[10, 20]` and the user ran "解析開始(ネタバレあり)" producing a snapshot at `covered_up_to_episode=20`; later the folder grows to `[10, 20, 30, 40]` and the user runs "解析開始(ネタバレあり)" again
 - **THEN** a new snapshot SHALL be written at `covered_up_to_episode=40`, leaving the existing `covered_up_to_episode=20` snapshot intact
+
+#### Scenario: Ancestor files do not move the bound
+- **WHEN** the user runs "解析開始(ネタバレあり)" on a novel whose highest-prefix file is "030_chapter.txt" and whose reference-source ancestor has files up to "500_chapter.txt"
+- **THEN** the snapshot SHALL be written at `covered_up_to_episode=30` with `source_file="030_chapter.txt"`
+
 ### Requirement: Analysis-in-progress modal dialog
 While an LLM analysis triggered from the context menu is in progress, the system SHALL display a modal dialog over the application that prevents the user from interacting with the rest of the UI. The dialog SHALL display a spinner (circular progress indicator) and a label indicating analysis is in progress. The dialog SHALL NOT include a cancel button and SHALL NOT be dismissible by tapping outside (`barrierDismissible: false`). The dialog SHALL be dismissed only when the analysis call resolves (success or failure).
 
@@ -370,3 +382,31 @@ The on-device provider SHALL keep its own availability messages, which describe 
 
 - **WHEN** 任意の語について、任意の閲覧位置から「解析開始(簡易)」を実行する
 - **THEN** 読まれるファイルはいずれも、同じ閲覧位置での「解析開始(ネタバレなし)」が読む範囲に含まれる
+
+### Requirement: 見つからない参照元があると解析を開始しない
+
+解析対象の小説の祖先のうち1つでも、ライブラリ内にフォルダが見つからない場合、システムは解析を失敗させなければならない（SHALL）。この判定は、LLM 呼び出しの前に行わなければならない（SHALL）。祖先を飛ばして続行してはならない（SHALL NOT）。スナップショットとファクトキャッシュには、何も書き込んではならない（SHALL NOT）。
+
+失敗は、共有の失敗通知経路で通知しなければならない（SHALL）。見出しには、見つからない参照元のタイトル（`novels` に記録が無い場合は `folder_name`）を含めなければならない（SHALL）。さらに、「参照元の設定」で関係を確認するよう促さなければならない（SHALL）。見つからない参照元が複数ある場合は、すべてを示さなければならない（SHALL）。文言は en / ja / zh の `.arb` にすべて存在しなければならない（SHALL）。
+
+#### Scenario: 祖先のフォルダが消えている
+- **WHEN** 『第2部』の参照元『第1部』のフォルダがアプリ外で削除された状態で、『第2部』で解析を開始する
+- **THEN** LLM は呼び出されず、スナップショットは保存されない
+- **AND** 『第1部』が見つからないこと、参照元の設定を確認するよう促す通知が表示される
+
+#### Scenario: 祖先の祖先が見つからない場合も失敗する
+- **WHEN** 『第3部』→『第2部』→『第1部』の関係があり、『第1部』のフォルダだけが見つからない状態で、『第3部』で解析を開始する
+- **THEN** 解析は『第1部』が見つからないことを示して失敗する
+
+### Requirement: 簡易解析での祖先の初出ファイル
+
+「解析開始(簡易)」で開始された解析では、システムは、各祖先についてその語を含む話数が最小のファイルを解決し、そのファイルを証拠に含めなければならない（SHALL）。祖先の話数は、表示中の小説と同じ規則（数値プレフィックス、無い場合はフォルダ内の辞書順の順位）で、その祖先のフォルダ内で数えなければならない（SHALL）。
+
+その語を含むファイルが無い祖先は、証拠に何も加えてはならない（SHALL NOT）。これは失敗ではない。
+
+祖先の初出ファイルは、表示中の小説の `coveredUpToEpisode` と、記録される `source_file` に影響してはならない（SHALL NOT）。
+
+#### Scenario: 祖先の初出ファイルが加わる
+- **WHEN** 『第2部』の参照元が『第1部』で、「アリス」が『第1部』の003話と020話に出てくる状態で、『第2部』で「アリス」を簡易解析する
+- **THEN** 証拠には、『第2部』の初出ファイルに加えて『第1部』の003話が含まれ、020話は含まれない
+- **AND** スナップショットの `coveredUpToEpisode` と `source_file` は、『第2部』の初出ファイルから決まる
