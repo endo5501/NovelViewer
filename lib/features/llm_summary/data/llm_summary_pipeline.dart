@@ -264,16 +264,26 @@ class LlmSummaryPipeline {
 
   /// [facts] with "『[title]』より: " on every non-blank line, after the bullet
   /// where the line has one.
-  static String _labelLines(String title, String facts) {
+  ///
+  /// A line that would run past [maxResponseSize] once labeled is split into
+  /// pieces that each carry the label. An aggregation round hard-splits any
+  /// entry line longer than that budget, and the piece cut off there would
+  /// otherwise reach the model unlabeled — read as this work's own fact.
+  String _labelLines(String title, String facts) {
     final label = '『$title』より: ';
-    return facts
-        .split('\n')
-        .where((line) => line.trim().isNotEmpty)
-        .map((line) {
-          final m = _bullet.firstMatch(line);
-          return m == null ? '$label$line' : '${m.group(1)}$label${m.group(2)}';
-        })
-        .join('\n');
+    final labeled = <String>[];
+    for (final line in facts.split('\n')) {
+      if (line.trim().isEmpty) continue;
+      final m = _bullet.firstMatch(line);
+      final prefix = m == null ? label : '${m.group(1)}$label';
+      final text = m == null ? line : m.group(2)!;
+      final room = max(1, maxResponseSize - prefix.length);
+      for (var i = 0; i < text.length; i += room) {
+        labeled.add('$prefix${text.substring(i, min(i + room, text.length))}');
+      }
+      if (text.isEmpty) labeled.add(prefix);
+    }
+    return labeled.join('\n');
   }
 
   /// The last part of [facts] that fits [limit], starting on a line where

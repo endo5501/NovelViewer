@@ -297,35 +297,38 @@ void main() {
       }
     });
 
-    test('a source fact longer than a round keeps its label in every piece', () async {
-      // The refinement chunker hard-splits an entry line longer than the
-      // response budget; a label only at the start of the line would leave
-      // the rest reading as this work's own fact.
-      final client = _RecordingClient(refine: (facts) => facts);
-      final pipeline = LlmSummaryPipeline(
-        llmClient: client,
-        maxChunkSize: 200,
-        maxResponseSize: 100,
-      );
+    test(
+      'a source fact longer than a round keeps its label in every piece',
+      () async {
+        // The refinement chunker hard-splits an entry line longer than the
+        // response budget; a label only at the start of the line would leave
+        // the rest reading as this work's own fact.
+        final client = _RecordingClient(refine: (facts) => facts);
+        final pipeline = LlmSummaryPipeline(
+          llmClient: client,
+          maxChunkSize: 200,
+          maxResponseSize: 100,
+        );
 
-      await pipeline.summarizeFromSources(
-        word: 'アリス',
-        ownFacts: List.generate(3, (i) => '- 本作$i ${'か' * 60}'),
-        referenceFacts: [
-          ReferenceSourceFacts(title: '第1部', perFileFacts: ['- ${'あ' * 95}']),
-        ],
-      );
+        await pipeline.summarizeFromSources(
+          word: 'アリス',
+          ownFacts: List.generate(3, (i) => '- 本作$i ${'か' * 60}'),
+          referenceFacts: [
+            ReferenceSourceFacts(title: '第1部', perFileFacts: ['- ${'あ' * 95}']),
+          ],
+        );
 
-      final pieces = [
-        for (final prompt in client.refinementPrompts)
-          ..._factsBlock(prompt).split('\n'),
-        ..._factsBlock(client.summaryPrompts.single).split('\n'),
-      ].where((line) => line.contains('あ'));
-      expect(pieces, isNotEmpty);
-      for (final line in pieces) {
-        expect(line, contains('『第1部』より:'));
-        expect(line.length, lessThanOrEqualTo(100));
-      }
-    });
+        final pieces = [
+          for (final prompt in client.refinementPrompts)
+            ..._factsBlock(prompt).split('\n'),
+          ..._factsBlock(client.summaryPrompts.single).split('\n'),
+        ].where((line) => line.contains('あ'));
+        expect(pieces, isNotEmpty);
+        for (final line in pieces) {
+          expect(line, contains('『第1部』より:'));
+          expect(line.length, lessThanOrEqualTo(100));
+        }
+      },
+    );
   });
 }
