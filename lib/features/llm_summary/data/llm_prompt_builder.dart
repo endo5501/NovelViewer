@@ -35,6 +35,24 @@ $contextChunk
 JSON形式で回答してください: {"facts": "- 事実1\\n- 事実2\\n..."}''';
   }
 
+  /// Added to a refinement round whose facts carry source labels. A round
+  /// merges what it is given, and a label is one line among many: without
+  /// this the merge drops it, and the final summary can no longer tell a
+  /// reference source's facts from this work's own.
+  static const _preserveLabelsInstruction =
+      '事実の一部には「『作品名』より:」という出典ラベルが付いています。'
+      '出典ラベルはそのまま残し、異なる出典の事実を1つの事実に混ぜないでください。'
+      'ラベルの無い事実はラベルの無いまま残してください。';
+
+  /// Added to the final summary when reference-source facts are present.
+  /// Contradicting facts side by side give the model nothing to choose by;
+  /// this says which one the reader of this work needs.
+  static const _preferThisWorkInstruction =
+      '事実の一部には「『作品名』より:」という出典ラベルが付いており、参照元の作品の情報です。'
+      'ラベルの無い事実は本作（いま読んでいる作品）のものです。'
+      '本作の事実と参照元の事実が矛盾する場合は、本作の事実を優先してください。'
+      '同じ名前でも参照元の記述が本作の対象とは別のものを指していると判断できる場合は、混同しないでください。';
+
   /// Share of the client's response budget a refinement answer is asked to
   /// stay within.
   ///
@@ -64,12 +82,14 @@ JSON形式で回答してください: {"facts": "- 事実1\\n- 事実2\\n..."}'
     required String facts,
     required int maxResponseSize,
     String language = 'ja',
+    bool preserveSourceLabels = false,
   }) {
     final bound = refinementBound(maxResponseSize);
+    final labels = preserveSourceLabels ? '\n$_preserveLabelsInstruction' : '';
     return '''$_baseInstruction
 以下の<facts>タグ内は、<term>タグ内の用語について複数の箇所から抽出された事実の断片です。
 重複する内容や言い換えを統合し、重要な事実だけを残して簡潔にまとめてください。
-出力は箇条書き10項目以内、全体で$bound文字以内にしてください。
+出力は箇条書き10項目以内、全体で$bound文字以内にしてください。$labels
 ${_languageInstruction(language)}
 
 <term>$word</term>
@@ -85,10 +105,12 @@ JSON形式で回答してください: {"facts": "- 事実1\\n- 事実2\\n..."}'
     required String word,
     required String facts,
     String language = 'ja',
+    bool hasReferenceSources = false,
   }) {
+    final sources = hasReferenceSources ? '\n$_preferThisWorkInstruction' : '';
     return '''$_baseInstruction
 以下の<facts>タグ内の情報を元に、<term>タグ内の用語について1〜2文で簡潔に説明してください。
-重複する情報は統合してください。
+重複する情報は統合してください。$sources
 ${_languageInstruction(language)}
 
 <term>$word</term>

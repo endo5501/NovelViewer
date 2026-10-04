@@ -17,6 +17,7 @@ import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.d
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/features/novel_reference/providers/novel_reference_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/data/search_models.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
@@ -195,6 +196,8 @@ class _StubService extends LlmSummaryService {
     required int coveredUpToEpisode,
     String? sourceFileName,
     String language = 'ja',
+    List<ReferenceSourceScope> referenceSources = const [],
+    ReferenceScope referenceScope = ReferenceScope.whole,
     void Function(AnalysisProgress)? onProgress,
   }) async {
     callCount++;
@@ -298,6 +301,7 @@ ProviderContainer _container(
       llmSummaryRepositoryProvider.overrideWith(
         (ref, folderPath) async => _DummyRepo(),
       ),
+      novelReferenceRelationsProvider.overrideWith((ref) async => const []),
       factCacheRepositoryProvider.overrideWith(
         (ref, folderPath) async => _DummyFactCache(),
       ),
@@ -355,6 +359,7 @@ void main() {
           llmSummaryRepositoryProvider.overrideWith(
             (ref, folderPath) async => _DummyRepo(),
           ),
+          novelReferenceRelationsProvider.overrideWith((ref) async => const []),
           factCacheRepositoryProvider.overrideWith(
             (ref, folderPath) async => _DummyFactCache(),
           ),
@@ -429,6 +434,7 @@ void main() {
           llmSummaryRepositoryProvider.overrideWith(
             (ref, folderPath) async => _DummyRepo(),
           ),
+          novelReferenceRelationsProvider.overrideWith((ref) async => const []),
           factCacheRepositoryProvider.overrideWith(
             (ref, folderPath) async => _DummyFactCache(),
           ),
@@ -463,6 +469,7 @@ void main() {
           llmSummaryRepositoryProvider.overrideWith(
             (ref, folderPath) async => _DummyRepo(),
           ),
+          novelReferenceRelationsProvider.overrideWith((ref) async => const []),
           factCacheRepositoryProvider.overrideWith(
             (ref, folderPath) async => _DummyFactCache(),
           ),
@@ -1997,6 +2004,9 @@ void main() {
             llmClientProvider.overrideWith((_) async => _DummyClient()),
             llmSummaryRepositoryProvider.overrideWith(
               (ref, folderPath) async => _DummyRepo(),
+            ),
+            novelReferenceRelationsProvider.overrideWith(
+              (ref) async => const [],
             ),
             factCacheRepositoryProvider.overrideWith(
               (ref, folderPath) async => _DummyFactCache(),

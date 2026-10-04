@@ -33,6 +33,15 @@ class _ParsedValue {
   final bool isStructured;
 }
 
+/// One reference-source ancestor's Stage-1 facts, per file, with the title
+/// its facts are labeled by.
+class ReferenceSourceFacts {
+  const ReferenceSourceFacts({required this.title, required this.perFileFacts});
+
+  final String title;
+  final List<String> perFileFacts;
+}
+
 class LlmSummaryPipeline {
   /// Shapes the two stages constrain their responses to. Requesting these
   /// keeps malformed answers from being generated in the first place, rather
@@ -125,11 +134,24 @@ class LlmSummaryPipeline {
     required List<String> perFileFacts,
     void Function(AnalysisProgress progress)? onProgress,
   }) async {
-    final notify = _isolatedNotifier(onProgress);
+    return _summarizeOwn(
+      word,
+      perFileFacts,
+      _isolatedNotifier(onProgress),
+      firstRound: 2,
+    );
+  }
 
-    final nonEmpty = perFileFacts
-        .where((f) => f.trim().isNotEmpty)
-        .toList(growable: false);
+  /// [summarizeFromFacts] numbering its aggregation rounds from [firstRound],
+  /// so a run that already used rounds on its reference sources goes on from
+  /// there.
+  Future<String> _summarizeOwn(
+    String word,
+    List<String> perFileFacts,
+    void Function(AnalysisProgress) notify, {
+    required int firstRound,
+  }) async {
+    final nonEmpty = _nonEmpty(perFileFacts);
 
     // With no facts there is nothing to summarize: asking the LLM anyway would
     // have it invent a summary from an empty evidence set, which then gets
@@ -143,17 +165,102 @@ class LlmSummaryPipeline {
     if (combined.length <= maxChunkSize) {
       facts = combined;
     } else {
-      // Refinement starts at depth 1 so the first emitted round is 2.
-      facts = _withinWindow(
-        await _extractFactsRecursive(word, nonEmpty, 1, notify),
+      final (aggregated, _) = await _aggregate(
+        word,
+        nonEmpty,
+        target: maxChunkSize,
+        firstRound: firstRound,
+        notify: notify,
       );
+      facts = _withinWindow(aggregated);
     }
 
+    return _finalSummary(word, facts, notify, hasReferenceSources: false);
+  }
+
+  /// [summarizeFromFacts] with the facts of the novel's reference-source
+  /// ancestors merged in.
+  ///
+  /// Each reference source is compressed on its own first, so a long parent
+  /// work arrives as no more than one response's worth of facts instead of
+  /// burying this work's. Its facts are then labeled line by line with the
+  /// source's title and placed, in the given order, ahead of this work's own
+  /// facts, which stay unlabeled. Per-line rather than one header per source:
+  /// in the merged text a header would appear to cover this work's facts that
+  /// follow it, and a header is lost whenever the chunker splits an entry.
+  ///
+  /// With no reference source contributing facts, this is
+  /// [summarizeFromFacts] exactly — same requests, same prompts — except
+  /// that rounds already spent compressing a source that came to nothing are
+  /// not numbered again.
+  Future<String> summarizeFromSources({
+    required String word,
+    required List<String> ownFacts,
+    required List<ReferenceSourceFacts> referenceFacts,
+    void Function(AnalysisProgress progress)? onProgress,
+  }) async {
+    final notify = _isolatedNotifier(onProgress);
+
+    var round = 2;
+    final labeled = <String>[];
+    for (final source in referenceFacts) {
+      final nonEmpty = _nonEmpty(source.perFileFacts);
+      if (nonEmpty.isEmpty) continue;
+      var facts = nonEmpty.join('\n');
+      if (facts.length > maxResponseSize) {
+        final (aggregated, nextRound) = await _aggregate(
+          word,
+          nonEmpty,
+          target: maxResponseSize,
+          firstRound: round,
+          notify: notify,
+        );
+        round = nextRound;
+        facts = _keepingHead(aggregated, maxResponseSize);
+      }
+      final labeledFacts = _labelLines(source.title, facts);
+      if (labeledFacts.isNotEmpty) labeled.add(labeledFacts);
+    }
+
+    if (labeled.isEmpty) {
+      return _summarizeOwn(word, ownFacts, notify, firstRound: round);
+    }
+
+    final entries = [...labeled, ..._nonEmpty(ownFacts)];
+    final String facts;
+    final combined = entries.join('\n');
+    if (combined.length <= maxChunkSize) {
+      facts = combined;
+    } else {
+      final (aggregated, _) = await _aggregate(
+        word,
+        entries,
+        target: maxChunkSize,
+        firstRound: round,
+        notify: notify,
+        preserveSourceLabels: true,
+      );
+      // This work's facts sit at the end, so keeping the tail cuts from the
+      // reference sources. Their lines carry their own labels, so whatever of
+      // them survives the cut still says where it came from.
+      facts = _keepingTail(aggregated, maxChunkSize);
+    }
+
+    return _finalSummary(word, facts, notify, hasReferenceSources: true);
+  }
+
+  Future<String> _finalSummary(
+    String word,
+    String facts,
+    void Function(AnalysisProgress) notify, {
+    required bool hasReferenceSources,
+  }) async {
     notify(const AnalysisGeneratingFinalSummary());
     final prompt = LlmPromptBuilder.buildFinalSummaryPrompt(
       word: word,
       facts: facts,
       language: language,
+      hasReferenceSources: hasReferenceSources,
     );
     final parsed = await _withSingleRetry(
       () async => _parseSummaryResponse(
@@ -161,6 +268,50 @@ class LlmSummaryPipeline {
       ),
     );
     return (await _readableOr(parsed, prompt)).value;
+  }
+
+  static List<String> _nonEmpty(List<String> facts) =>
+      facts.where((f) => f.trim().isNotEmpty).toList(growable: false);
+
+  static final _bullet = RegExp(r'^(\s*[-・*]\s*)(.*)$');
+
+  /// [facts] with "『[title]』より: " on every non-blank line, after the bullet
+  /// where the line has one.
+  ///
+  /// A line that would run past [maxResponseSize] once labeled is split into
+  /// pieces that each carry the label. An aggregation round hard-splits any
+  /// entry line longer than that budget, and the piece cut off there would
+  /// otherwise reach the model unlabeled — read as this work's own fact.
+  String _labelLines(String title, String facts) {
+    final label = '『$title』より: ';
+    final labeled = <String>[];
+    for (final line in facts.split('\n')) {
+      if (line.trim().isEmpty) continue;
+      final m = _bullet.firstMatch(line);
+      final prefix = m == null ? label : '${m.group(1)}$label';
+      final text = m == null ? line : m.group(2)!;
+      final room = max(1, maxResponseSize - prefix.length);
+      for (var i = 0; i < text.length; i += room) {
+        labeled.add('$prefix${text.substring(i, min(i + room, text.length))}');
+      }
+      if (text.isEmpty) labeled.add(prefix);
+    }
+    return labeled.join('\n');
+  }
+
+  /// The last part of [facts] that fits [limit], starting on a line where
+  /// one falls within it.
+  String _keepingTail(String facts, int limit) {
+    if (facts.length <= limit) return facts;
+    final breakAt = facts.indexOf('\n', facts.length - limit - 1);
+    final kept = breakAt < 0
+        ? facts.substring(facts.length - limit)
+        : facts.substring(breakAt + 1);
+    _log.warning(
+      'merged facts exceed the window; keeping the tail. '
+      'length=${facts.length} window=$limit kept=${kept.length}',
+    );
+    return kept;
   }
 
   static void Function(AnalysisProgress) _isolatedNotifier(
@@ -187,64 +338,85 @@ class LlmSummaryPipeline {
   /// exits are reached precisely when another round would not help. It lands
   /// on a line break where one falls within the window, so no fact is left
   /// half-written for the summary to read as a fact of its own.
-  String _withinWindow(String facts) {
-    if (facts.length <= maxChunkSize) return facts;
-    var cut = facts.lastIndexOf('\n', maxChunkSize);
-    if (cut <= 0) cut = maxChunkSize;
+  String _withinWindow(String facts) => _keepingHead(facts, maxChunkSize);
+
+  /// The first part of [facts] that fits [limit], ending on a line break
+  /// where one falls within it.
+  String _keepingHead(String facts, int limit) {
+    if (facts.length <= limit) return facts;
+    var cut = facts.lastIndexOf('\n', limit);
+    if (cut <= 0) cut = limit;
     _log.warning(
       'aggregated facts exceed the window; cutting to fit. '
-      'length=${facts.length} window=$maxChunkSize kept=$cut',
+      'length=${facts.length} window=$limit kept=$cut',
     );
     return facts.substring(0, cut);
   }
 
-  Future<String> _extractFactsRecursive(
+  /// Merges [entries] in aggregation rounds until they fit [target], and
+  /// returns the merged facts together with the round number the next
+  /// aggregation should start from.
+  ///
+  /// Rounds are numbered from [firstRound], so several aggregations in one
+  /// run (one per reference source, then the merged set) count on from one
+  /// another and the progress shown never steps back. The depth limit counts
+  /// rounds within this one aggregation.
+  ///
+  /// [preserveSourceLabels] asks each round to keep the "『作品名』より:" labels
+  /// reference-source facts carry.
+  Future<(String, int)> _aggregate(
     String word,
-    List<String> entries,
-    int depth,
-    void Function(AnalysisProgress progress) notify,
-  ) async {
-    if (depth >= maxRecursionDepth) {
-      return entries.join('\n');
-    }
+    List<String> entries, {
+    required int target,
+    required int firstRound,
+    required void Function(AnalysisProgress progress) notify,
+    bool preserveSourceLabels = false,
+  }) async {
+    var current = entries;
+    var round = firstRound;
+    for (var depth = 1; ; depth++) {
+      if (depth >= maxRecursionDepth) {
+        return (current.join('\n'), round);
+      }
 
-    // Sized by what the model may return, not by what it may be handed: a
-    // round answers at close to the length of the facts it was given, so a
-    // window-sized chunk asks for an answer the response cap cuts off.
-    final chunks = ContextChunker.split(
-      entries,
-      maxChunkSize: maxResponseSize,
-      separator: _refinementSeparator,
-    );
-    final round = depth + 1;
-
-    final factsList = <String>[];
-    for (var i = 0; i < chunks.length; i++) {
-      notify(
-        AnalysisExtractingFacts(
-          round: round,
-          current: i + 1,
-          total: chunks.length,
-        ),
+      // Sized by what the model may return, not by what it may be handed: a
+      // round answers at close to the length of the facts it was given, so a
+      // window-sized chunk asks for an answer the response cap cuts off.
+      final chunks = ContextChunker.split(
+        current,
+        maxChunkSize: maxResponseSize,
+        separator: _refinementSeparator,
       );
-      final prompt = LlmPromptBuilder.buildFactRefinementPrompt(
-        word: word,
-        facts: chunks[i].join(_refinementSeparator),
-        maxResponseSize: maxResponseSize,
-        language: language,
-      );
-      factsList.add((await _generateFacts(prompt)).value);
+
+      final factsList = <String>[];
+      for (var i = 0; i < chunks.length; i++) {
+        notify(
+          AnalysisExtractingFacts(
+            round: round,
+            current: i + 1,
+            total: chunks.length,
+          ),
+        );
+        final prompt = LlmPromptBuilder.buildFactRefinementPrompt(
+          word: word,
+          facts: chunks[i].join(_refinementSeparator),
+          maxResponseSize: maxResponseSize,
+          language: language,
+          preserveSourceLabels: preserveSourceLabels,
+        );
+        factsList.add((await _generateFacts(prompt)).value);
+      }
+      round++;
+
+      final combinedFacts = factsList.join('\n');
+      final afterLen = factsList.fold<int>(0, (s, e) => s + e.length);
+      final beforeLen = current.fold<int>(0, (s, e) => s + e.length);
+
+      if (combinedFacts.length <= target || afterLen >= beforeLen) {
+        return (combinedFacts, round);
+      }
+      current = factsList;
     }
-
-    final combinedFacts = factsList.join('\n');
-    final afterLen = factsList.fold<int>(0, (s, e) => s + e.length);
-    final beforeLen = entries.fold<int>(0, (s, e) => s + e.length);
-
-    if (combinedFacts.length <= maxChunkSize || afterLen >= beforeLen) {
-      return combinedFacts;
-    }
-
-    return _extractFactsRecursive(word, factsList, depth + 1, notify);
   }
 
   /// Runs one Stage-1 extraction request and parses its response, retrying once

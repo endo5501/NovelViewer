@@ -1426,11 +1426,23 @@ abstract class AppLocalizations {
   /// **'解析を中止しました: {count}件のファイルを解析できなかったため、要約は保存されていません。再実行すると失敗した分だけ再試行します。'**
   String llmAnalysis_partialFailure(int count);
 
+  /// No description provided for @llmAnalysis_referenceSourcesMissing.
+  ///
+  /// In ja, this message translates to:
+  /// **'解析を中止しました: 参照元 {names} が見つかりません。ファイルブラウザの「参照元の設定」で関係を確認してください。'**
+  String llmAnalysis_referenceSourcesMissing(String names);
+
   /// No description provided for @llmAnalysis_noFacts.
   ///
   /// In ja, this message translates to:
   /// **'解析を中止しました: 「{word}」に関する情報を抽出できなかったため、要約は保存されていません。'**
   String llmAnalysis_noFacts(String word);
+
+  /// No description provided for @summaryCard_referenceSources.
+  ///
+  /// In ja, this message translates to:
+  /// **'参照元: {names}'**
+  String summaryCard_referenceSources(String names);
 
   /// No description provided for @hoverPopup_snapshotLabel.
   ///
@@ -1923,6 +1935,114 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'ファイル一覧の表示切替'**
   String get shortcutAction_toggleFileBrowser;
+
+  /// No description provided for @common_saveButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'保存'**
+  String get common_saveButton;
+
+  /// No description provided for @fileBrowser_referenceSourcesMenuItem.
+  ///
+  /// In ja, this message translates to:
+  /// **'参照元の設定...'**
+  String get fileBrowser_referenceSourcesMenuItem;
+
+  /// No description provided for @referenceSources_dialogTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'参照元の設定: 『{title}』'**
+  String referenceSources_dialogTitle(String title);
+
+  /// No description provided for @referenceSources_directSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'直接の参照元'**
+  String get referenceSources_directSection;
+
+  /// No description provided for @referenceSources_inheritedSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'祖先から含まれるもの'**
+  String get referenceSources_inheritedSection;
+
+  /// No description provided for @referenceSources_childrenSection.
+  ///
+  /// In ja, this message translates to:
+  /// **'この作品を参照している作品'**
+  String get referenceSources_childrenSection;
+
+  /// No description provided for @referenceSources_via.
+  ///
+  /// In ja, this message translates to:
+  /// **'{title} 経由'**
+  String referenceSources_via(String title);
+
+  /// No description provided for @referenceSources_addButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'参照元を追加'**
+  String get referenceSources_addButton;
+
+  /// No description provided for @referenceSources_removeTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'外す'**
+  String get referenceSources_removeTooltip;
+
+  /// No description provided for @referenceSources_webCollection.
+  ///
+  /// In ja, this message translates to:
+  /// **'Webコレクション'**
+  String get referenceSources_webCollection;
+
+  /// No description provided for @referenceSources_none.
+  ///
+  /// In ja, this message translates to:
+  /// **'なし'**
+  String get referenceSources_none;
+
+  /// No description provided for @referenceSources_saveFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'参照元を保存できませんでした。関係が循環していないか確認してください。'**
+  String get referenceSources_saveFailed;
+
+  /// No description provided for @referenceSources_pickerTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'参照元を選択'**
+  String get referenceSources_pickerTitle;
+
+  /// No description provided for @referenceSources_searchHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'タイトルで検索'**
+  String get referenceSources_searchHint;
+
+  /// No description provided for @referenceSources_noCandidates.
+  ///
+  /// In ja, this message translates to:
+  /// **'候補がありません'**
+  String get referenceSources_noCandidates;
+
+  /// No description provided for @referenceSources_loadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'参照元を読み込めませんでした。'**
+  String get referenceSources_loadFailed;
+
+  /// No description provided for @referenceSources_quotedTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'『{title}』'**
+  String referenceSources_quotedTitle(String title);
+
+  /// No description provided for @referenceSources_listSeparator.
+  ///
+  /// In ja, this message translates to:
+  /// **'、'**
+  String get referenceSources_listSeparator;
 }
 
 class _AppLocalizationsDelegate

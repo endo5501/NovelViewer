@@ -744,8 +744,18 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String llmAnalysis_referenceSourcesMissing(String names) {
+    return '解析を中止しました: 参照元 $names が見つかりません。ファイルブラウザの「参照元の設定」で関係を確認してください。';
+  }
+
+  @override
   String llmAnalysis_noFacts(String word) {
     return '解析を中止しました: 「$word」に関する情報を抽出できなかったため、要約は保存されていません。';
+  }
+
+  @override
+  String summaryCard_referenceSources(String names) {
+    return '参照元: $names';
   }
 
   @override
@@ -1015,4 +1025,65 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get shortcutAction_toggleFileBrowser => 'ファイル一覧の表示切替';
+
+  @override
+  String get common_saveButton => '保存';
+
+  @override
+  String get fileBrowser_referenceSourcesMenuItem => '参照元の設定...';
+
+  @override
+  String referenceSources_dialogTitle(String title) {
+    return '参照元の設定: 『$title』';
+  }
+
+  @override
+  String get referenceSources_directSection => '直接の参照元';
+
+  @override
+  String get referenceSources_inheritedSection => '祖先から含まれるもの';
+
+  @override
+  String get referenceSources_childrenSection => 'この作品を参照している作品';
+
+  @override
+  String referenceSources_via(String title) {
+    return '$title 経由';
+  }
+
+  @override
+  String get referenceSources_addButton => '参照元を追加';
+
+  @override
+  String get referenceSources_removeTooltip => '外す';
+
+  @override
+  String get referenceSources_webCollection => 'Webコレクション';
+
+  @override
+  String get referenceSources_none => 'なし';
+
+  @override
+  String get referenceSources_saveFailed =>
+      '参照元を保存できませんでした。関係が循環していないか確認してください。';
+
+  @override
+  String get referenceSources_pickerTitle => '参照元を選択';
+
+  @override
+  String get referenceSources_searchHint => 'タイトルで検索';
+
+  @override
+  String get referenceSources_noCandidates => '候補がありません';
+
+  @override
+  String get referenceSources_loadFailed => '参照元を読み込めませんでした。';
+
+  @override
+  String referenceSources_quotedTitle(String title) {
+    return '『$title』';
+  }
+
+  @override
+  String get referenceSources_listSeparator => '、';
 }

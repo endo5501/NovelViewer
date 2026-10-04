@@ -41,5 +41,10 @@ class TtsDictionaryDatabase {
     ''');
   }
 
+  /// Holds the first open until an earlier handle on this file has closed;
+  /// see [DbConnectionGate.deferOpenUntil].
+  void deferOpenUntil(Future<void> previousClose) =>
+      _gate.deferOpenUntil(previousClose);
+
   Future<void> close() => _gate.close();
 }

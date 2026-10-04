@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/novel_delete/data/novel_delete_service.dart';
+import 'package:novel_viewer/features/novel_reference/data/novel_reference_repository.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_repository.dart';
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
@@ -39,6 +40,14 @@ class _RecordingProgressRepo extends Fake implements ReadingProgressRepository {
       log.add('progress');
 }
 
+class _RecordingReferenceRepo extends Fake implements NovelReferenceRepository {
+  final List<String> log;
+  _RecordingReferenceRepo(this.log);
+  @override
+  Future<void> deleteAllFor(String folderName, {DatabaseExecutor? txn}) async =>
+      log.add('references');
+}
+
 /// Minimal in-memory stand-in that runs the transaction callback inline with a
 /// dummy executor — the recording repos ignore [txn], so only ordering and the
 /// roll-back-on-throw contract matter here.
@@ -69,6 +78,7 @@ void main() {
       novelDatabase: _FakeNovelDatabase(),
       novelRepository: _RecordingNovelRepo(log),
       readingProgressRepository: _RecordingProgressRepo(log),
+      novelReferenceRepository: _RecordingReferenceRepo(log),
       fileSystemService: _RecordingFileSystemService(
         log,
         throwOnDelete: throwOnDelete,

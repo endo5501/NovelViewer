@@ -45,22 +45,47 @@ class PerFolderDbRegistry {
 
   EpisodeCacheDatabase episodeCache(String folder) {
     final key = folderDbKey(folder);
-    return _episode.putIfAbsent(key, () => _episodeFactory(key));
+    return _episode.putIfAbsent(key, () {
+      final db = _episodeFactory(key);
+      _openAfterClosing(key, db.deferOpenUntil);
+      return db;
+    });
   }
 
   TtsAudioDatabase ttsAudio(String folder) {
     final key = folderDbKey(folder);
-    return _audio.putIfAbsent(key, () => _audioFactory(key));
+    return _audio.putIfAbsent(key, () {
+      final db = _audioFactory(key);
+      _openAfterClosing(key, db.deferOpenUntil);
+      return db;
+    });
   }
 
   TtsDictionaryDatabase ttsDictionary(String folder) {
     final key = folderDbKey(folder);
-    return _dictionary.putIfAbsent(key, () => _dictionaryFactory(key));
+    return _dictionary.putIfAbsent(key, () {
+      final db = _dictionaryFactory(key);
+      _openAfterClosing(key, db.deferOpenUntil);
+      return db;
+    });
+  }
+
+  /// A handle created while [releaseInBackground] is still closing this
+  /// folder's previous one opens only after that close: sqflite would
+  /// otherwise hand it the very connection being closed, and once that closed
+  /// every later access through the new handle would fail.
+  void _openAfterClosing(String key, void Function(Future<void>) defer) {
+    final closing = _closing[key];
+    if (closing != null) defer(closing);
   }
 
   NovelDataDatabase novelData(String folder) {
     final key = folderDbKey(folder);
-    return _novelData.putIfAbsent(key, () => _novelDataFactory(key));
+    return _novelData.putIfAbsent(key, () {
+      final db = _novelDataFactory(key);
+      _openAfterClosing(key, db.deferOpenUntil);
+      return db;
+    });
   }
 
   /// Closes the three handles bound to [folder] (if open), awaiting each

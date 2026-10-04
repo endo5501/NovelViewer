@@ -764,8 +764,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String llmAnalysis_referenceSourcesMissing(String names) {
+    return 'Analysis stopped: reference source $names could not be found. Check the relations in \"Reference sources...\" in the file browser.';
+  }
+
+  @override
   String llmAnalysis_noFacts(String word) {
     return 'Analysis stopped: no information about \"$word\" could be extracted, so no summary was saved.';
+  }
+
+  @override
+  String summaryCard_referenceSources(String names) {
+    return 'Reference sources: $names';
   }
 
   @override
@@ -1038,4 +1048,66 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shortcutAction_toggleFileBrowser => 'Toggle file browser';
+
+  @override
+  String get common_saveButton => 'Save';
+
+  @override
+  String get fileBrowser_referenceSourcesMenuItem => 'Reference sources...';
+
+  @override
+  String referenceSources_dialogTitle(String title) {
+    return 'Reference sources: $title';
+  }
+
+  @override
+  String get referenceSources_directSection => 'Direct reference sources';
+
+  @override
+  String get referenceSources_inheritedSection => 'Included through ancestors';
+
+  @override
+  String get referenceSources_childrenSection => 'Works that draw on this one';
+
+  @override
+  String referenceSources_via(String title) {
+    return 'via $title';
+  }
+
+  @override
+  String get referenceSources_addButton => 'Add reference source';
+
+  @override
+  String get referenceSources_removeTooltip => 'Remove';
+
+  @override
+  String get referenceSources_webCollection => 'Web collection';
+
+  @override
+  String get referenceSources_none => 'None';
+
+  @override
+  String get referenceSources_saveFailed =>
+      'Could not save the reference sources. Check that they do not form a loop.';
+
+  @override
+  String get referenceSources_pickerTitle => 'Choose a reference source';
+
+  @override
+  String get referenceSources_searchHint => 'Search by title';
+
+  @override
+  String get referenceSources_noCandidates => 'No candidates';
+
+  @override
+  String get referenceSources_loadFailed =>
+      'Could not load the reference sources.';
+
+  @override
+  String referenceSources_quotedTitle(String title) {
+    return '“$title”';
+  }
+
+  @override
+  String get referenceSources_listSeparator => ', ';
 }

@@ -5,9 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
+import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
+import 'package:novel_viewer/features/novel_reference/domain/reference_graph.dart';
+import 'package:novel_viewer/features/novel_reference/presentation/reference_source_titles.dart';
+import 'package:novel_viewer/features/novel_reference/providers/novel_reference_providers.dart';
+import 'package:path/path.dart' as p;
 import 'package:novel_viewer/shared/episode/episode_resolver.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
-import 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
@@ -206,6 +210,9 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       coveredUpToEpisode: episode,
       sourceFileName: sourceFile,
       novelFolderPath: directory,
+      referenceScope: scope == AnalysisScope.firstOccurrence
+          ? ReferenceScope.firstOccurrence
+          : ReferenceScope.whole,
     );
   }
 
@@ -239,6 +246,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     required int coveredUpToEpisode,
     String? sourceFileName,
     String? novelFolderPath,
+    ReferenceScope referenceScope = ReferenceScope.whole,
   }) async {
     final l10n = AppLocalizations.of(context)!;
     // One folder does both jobs: the summaries are written to its
@@ -328,6 +336,55 @@ class DefaultAnalysisRunner implements AnalysisRunner {
 
     final resolvedSourceFile = sourceFileName ?? openFileName;
 
+    // Resolved before the modal and before any request: a reference source
+    // that cannot be found stops the run with nothing written, rather than
+    // leaving a summary built from part of the evidence.
+    final List<ReferenceSourceScope> referenceSources;
+    try {
+      referenceSources = await _resolveReferenceSources(novelFolder);
+    } on LlmReferenceSourcesMissingFailure catch (e, st) {
+      if (!context.mounted) return;
+      showFailureSnackBar(
+        context,
+        FailureReport(
+          headline: l10n.llmAnalysis_referenceSourcesMissing(
+            formatReferenceSourceTitles(l10n, e.titles),
+          ),
+          stackTrace: st,
+          diagnostics: {
+            ..._diagnostics(
+              model: service.llmClient.modelId,
+              word: word,
+              coveredUpToEpisode: coveredUpToEpisode,
+              sourceFileName: resolvedSourceFile,
+            ),
+            'missing reference sources': e.folderNames.join(', '),
+          },
+        ),
+      );
+      return;
+    } catch (e, st) {
+      // Reading the relations, the novel list, or a source's novel_data.db
+      // can fail too. Reported like any other failure before the run, so the
+      // reader is not left with nothing happening.
+      if (!context.mounted) return;
+      showFailureSnackBar(
+        context,
+        FailureReport(
+          headline: l10n.llmAnalysis_failed,
+          cause: e.toString(),
+          stackTrace: st,
+          diagnostics: _diagnostics(
+            model: service.llmClient.modelId,
+            word: word,
+            coveredUpToEpisode: coveredUpToEpisode,
+            sourceFileName: resolvedSourceFile,
+          ),
+        ),
+      );
+      return;
+    }
+
     if (!context.mounted) return;
     final navigator = Navigator.of(context, rootNavigator: true);
     final messenger = ScaffoldMessenger.of(context);
@@ -350,6 +407,8 @@ class DefaultAnalysisRunner implements AnalysisRunner {
         coveredUpToEpisode: coveredUpToEpisode,
         sourceFileName: resolvedSourceFile,
         language: language,
+        referenceSources: referenceSources,
+        referenceScope: referenceScope,
         onProgress: (event) {
           if (progressDisposed) return;
           progress.value = event;
@@ -456,6 +515,55 @@ class DefaultAnalysisRunner implements AnalysisRunner {
           : '$coveredUpToEpisode',
       'file': sourceFileName,
     };
+  }
+
+  /// The reference-source ancestors of the novel at [novelFolder], each with
+  /// its folder and its own fact cache, in the order [resolveAncestors] gives.
+  ///
+  /// The library is walked only when the novel has ancestors, since a novel's
+  /// folder can only be found by walking. Throws
+  /// [LlmReferenceSourcesMissingFailure] naming every ancestor whose folder
+  /// the walk did not find.
+  Future<List<ReferenceSourceScope>> _resolveReferenceSources(
+    String novelFolder,
+  ) async {
+    final relations = await _ref.read(novelReferenceRelationsProvider.future);
+    final ancestors = resolveAncestors(p.basename(novelFolder), relations);
+    if (ancestors.isEmpty) return const [];
+
+    final novels = await _ref.read(allNovelsProvider.future);
+    final titleOf = {for (final n in novels) n.folderName: n.title};
+    final libraryPath = _ref.read(libraryPathProvider);
+    final located = libraryPath == null
+        ? const <String, String>{}
+        : await _ref.read(novelFolderLocatorProvider)(
+            libraryRoot: libraryPath,
+            registeredFolderNames: titleOf.keys.toSet(),
+          );
+
+    final missing = ancestors
+        .where((a) => !located.containsKey(a.folderName))
+        .toList();
+    if (missing.isNotEmpty) {
+      throw LlmReferenceSourcesMissingFailure(
+        titles: [
+          for (final a in missing) titleOf[a.folderName] ?? a.folderName,
+        ],
+        folderNames: [for (final a in missing) a.folderName],
+      );
+    }
+
+    return [
+      for (final a in ancestors)
+        ReferenceSourceScope(
+          folderName: a.folderName,
+          title: titleOf[a.folderName]!,
+          folderPath: located[a.folderName]!,
+          factCacheRepository: await _ref.read(
+            factCacheRepositoryProvider(located[a.folderName]!).future,
+          ),
+        ),
+    ];
   }
 
   /// What the model diagnostic says when no client could be built.

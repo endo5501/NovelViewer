@@ -274,10 +274,26 @@
       }
     }
   },
+  "llmAnalysis_referenceSourcesMissing": "Analysis stopped: reference source {names} could not be found. Check the relations in \"Reference sources...\" in the file browser.",
+  "@llmAnalysis_referenceSourcesMissing": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "llmAnalysis_noFacts": "Analysis stopped: no information about \"{word}\" could be extracted, so no summary was saved.",
   "@llmAnalysis_noFacts": {
     "placeholders": {
       "word": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryCard_referenceSources": "Reference sources: {names}",
+  "@summaryCard_referenceSources": {
+    "placeholders": {
+      "names": {
         "type": "String"
       }
     }
@@ -436,5 +452,44 @@
   "shortcutAction_search": "Search",
   "shortcutAction_bookmark": "Bookmark",
   "shortcutAction_ttsToggle": "Play/Pause speech",
-  "shortcutAction_toggleFileBrowser": "Toggle file browser"
+  "shortcutAction_toggleFileBrowser": "Toggle file browser",
+  "common_saveButton": "Save",
+  "fileBrowser_referenceSourcesMenuItem": "Reference sources...",
+  "referenceSources_dialogTitle": "Reference sources: {title}",
+  "@referenceSources_dialogTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "referenceSources_directSection": "Direct reference sources",
+  "referenceSources_inheritedSection": "Included through ancestors",
+  "referenceSources_childrenSection": "Works that draw on this one",
+  "referenceSources_via": "via {title}",
+  "@referenceSources_via": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "referenceSources_addButton": "Add reference source",
+  "referenceSources_removeTooltip": "Remove",
+  "referenceSources_webCollection": "Web collection",
+  "referenceSources_none": "None",
+  "referenceSources_saveFailed": "Could not save the reference sources. Check that they do not form a loop.",
+  "referenceSources_pickerTitle": "Choose a reference source",
+  "referenceSources_searchHint": "Search by title",
+  "referenceSources_noCandidates": "No candidates",
+  "referenceSources_loadFailed": "Could not load the reference sources.",
+  "referenceSources_quotedTitle": "“{title}”",
+  "@referenceSources_quotedTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "referenceSources_listSeparator": ", "
 }
