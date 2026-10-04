@@ -63,25 +63,25 @@
 
 ### D5. 見つからない参照元の検出は Runner で、LLM 呼び出しの前に行う
 
-`AnalysisRunner` は、範囲を解決した後、サービスを呼ぶ前に、祖先を解決してパスを引く。見つからない祖先があれば、新しい型付きの失敗 `LlmReferenceSourcesMissingFailure(missing)` を投げる。`missing` には、`novels` のタイトル（無ければ `folder_name`）を入れる。これを既存の失敗通知経路で `FailureReport` にする。診断情報には、見つからない `folder_name` を加える。
+`AnalysisRunner` は、範囲を解決した後、サービスを呼ぶ前に、祖先を解決してパスを引く。見つからない祖先があれば、新しい型付きの失敗 `LlmReferenceSourcesMissingFailure(titles, folderNames)` を投げる。`titles` には、`novels` のタイトル（無ければ `folder_name`）を、`folderNames` には `folder_name` を入れる。これを既存の失敗通知経路で `FailureReport` にする。見出しには `titles` を、診断情報には `folderNames` を使う。
 
 この検査は、解析中の二重起動を防ぐガードの後、モーダルの表示の前に置く。そうすれば、スナップショットとキャッシュには何も触れずに終わる。
 
 ### D6. サービスは「出典」の列として証拠を扱う
 
-`LlmSummaryService.generateSummary` に、祖先の列 `ancestors: List<ReferenceSourceScope>` を加える。既定は空。各要素は、`folderName`・`title`・`folderPath`・その祖先の `FactCacheRepository`・読む範囲（全体か初出のみか）を持つ。
+`LlmSummaryService.generateSummary` に、祖先の列 `referenceSources: List<ReferenceSourceScope>` と、祖先を読む範囲 `referenceScope: ReferenceScope` を加える。既定はそれぞれ、空と `ReferenceScope.whole`。各要素は、`folderName`・`title`・`folderPath`・その祖先の `FactCacheRepository` を持つ。範囲は1回の解析ですべての祖先に共通なので、要素ごとには持たせない。Runner は、簡易のときに `ReferenceScope.firstOccurrence` を、それ以外では `ReferenceScope.whole` を渡す。
 
-- 範囲：ネタバレなし・ネタバレありでは、祖先の検索結果をすべて使う。簡易では、祖先のフォルダ内で話数が最小の、語を含むファイルだけを使う。話数は既存の `effectiveEpisodeOrNull` で、そのフォルダ内で数える。
+- 範囲：`ReferenceScope.whole`（ネタバレなし・ネタバレあり）では、祖先の検索結果をすべて使う。`ReferenceScope.firstOccurrence`（簡易）では、祖先のフォルダ内で話数が最小の、語を含むファイルだけを使う。話数は既存の `effectiveEpisodeOrNull` で、そのフォルダ内で数える。
 - キャッシュ：祖先のファイルは、その祖先の `FactCacheRepository` で引き、保存する。Runner はこれを `factCacheRepositoryProvider(ancestorPath)` で取得する。こうすればハンドルは既存のレジストリに乗るので、削除時の解放も従来の経路で行われる。
 - 抽出のループ：表示中の小説と祖先のキャッシュミスをまとめて数え、進捗の `total` にする。連続失敗の打ち切りと、部分失敗の数も、出典を通して数える。
 - 再解析：既存の境界（表示中の小説での、その語の最新スナップショットの `updated_at`）を、各祖先のリポジトリの `invalidateWord` にもそのまま渡す。
 - 保存：`saveSnapshot` に `referenceSources`（D3 の順の `folderName` と `title`）を渡す。
 
-`ancestors` が空のときは、追加の分岐を一切通らない。そのため、現状と同じ呼び出しの並びになる（Goals）。
+`referenceSources` が空のときは、追加の分岐を一切通らない。そのため、現状と同じ呼び出しの並びになる（Goals）。
 
 ### D7. パイプラインは「祖先ごとに圧縮 → ラベル付きで合流」する
 
-`LlmSummaryPipeline` に `summarizeFromSources(word, ownFacts, ancestorFacts)` を加える。`ancestorFacts` は `(title, List<String> perFileFacts)` の列。既存の `summarizeFromFacts` は、`ancestorFacts` が空の場合の特殊形として残す。
+`LlmSummaryPipeline` に `summarizeFromSources(word, ownFacts, referenceFacts)` を加える。`referenceFacts` は `ReferenceSourceFacts(title, perFileFacts)` の列。既存の `summarizeFromFacts` は、`referenceFacts` が空の場合の特殊形として残す。
 
 1. 各祖先について、空でない事実を連結する。`maxResponseSize` 以下ならそのまま使う。超える場合は、その祖先の事実だけで集約ラウンドを回し、`maxResponseSize` に収める。集約ラウンドは、終了条件の閾値・開始の周回番号を引数に取り、使い終えた周回番号を返す。出口では `_withinWindow` と同じ要領で閾値に収める。
 2. 圧縮後の祖先の事実を**1行ずつ**ラベル付けする（例：`- 『第1部』より: アリスは王女`）。箇条書きの記号があればその後ろに、無ければ行頭にラベルを入れる。ラベル付けした祖先の事実を D3 の順に並べ、その後に本作のファイル別の事実を並べる。
@@ -103,7 +103,7 @@
 
 `novel_data.db` v3 で、`word_summaries` に `reference_sources TEXT`（NULL 可。JSON 配列 `[{"folder_name":..., "title":...}]`）を加える。NULL と空配列は、どちらも「参照元なし」として読む。
 
-昇格は `ALTER TABLE ADD COLUMN` ではなく、作り直しで行う。手順は「新定義で一時テーブルを作成 → 全行をコピー → 旧テーブルを削除 → 名前を変更 → 一意インデックスを作り直す」で、1つのトランザクションの中で行う。v1→v2 で `fact_cache` を作り直したのと同じく、新規作成の DDL と完全に一致させるためである（`db-schema-test-fidelity`）。違いは、今回は行を保持すること。
+昇格は `ALTER TABLE ADD COLUMN` ではなく、作り直しで行う。手順は「旧テーブルの一意インデックスを削除 → 旧テーブルを `word_summaries_v2` に改名 → 新規作成と同じ関数で `word_summaries` とインデックスを作成 → 全行をコピー → 旧テーブルを削除」で、昇格のトランザクション（`onUpgrade`）の中で行う。v1→v2 で `fact_cache` を作り直したのと同じく、新規作成の DDL と完全に一致させるためである（`db-schema-test-fidelity`）。違いは、今回は行を保持すること。
 
 `WordSummary` に `referenceSources` を足し、要約カードはそれを表示する。
 
