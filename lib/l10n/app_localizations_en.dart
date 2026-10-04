@@ -764,6 +764,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String llmAnalysis_referenceSourcesMissing(String names) {
+    return 'Analysis stopped: reference source $names could not be found. Check the relations in \"Reference sources...\" in the file browser.';
+  }
+
+  @override
   String llmAnalysis_noFacts(String word) {
     return 'Analysis stopped: no information about \"$word\" could be extracted, so no summary was saved.';
   }

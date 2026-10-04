@@ -738,6 +738,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String llmAnalysis_referenceSourcesMissing(String names) {
+    return '分析已中止：找不到参考来源 $names。请在文件浏览器的“参考来源设置”中检查关系。';
+  }
+
+  @override
   String llmAnalysis_noFacts(String word) {
     return '分析已中止：未能提取关于「$word」的信息，因此未保存摘要。';
   }

@@ -133,3 +133,27 @@ class LlmOnDeviceUnavailableFailure extends LlmOnDeviceGenerationFailure {
       : 'LlmOnDeviceUnavailableFailure: '
             'the on-device model is not available: $detail';
 }
+
+/// The analysis could not start because reference-source ancestors of the
+/// novel have no folder in the library.
+///
+/// Raised before any LLM request: running without them would save a summary
+/// built from part of the evidence the reader asked for, and nothing on the
+/// saved snapshot would show what was left out.
+class LlmReferenceSourcesMissingFailure implements LlmAnalysisFailure {
+  const LlmReferenceSourcesMissingFailure({
+    required this.titles,
+    required this.folderNames,
+  });
+
+  /// What the reader knows each missing source as: its title, or its folder
+  /// name when the library no longer records one.
+  final List<String> titles;
+
+  /// The missing sources' folder names, for the failure details.
+  final List<String> folderNames;
+
+  @override
+  String toString() =>
+      'LlmReferenceSourcesMissingFailure(${folderNames.join(', ')})';
+}

@@ -274,6 +274,14 @@
       }
     }
   },
+  "llmAnalysis_referenceSourcesMissing": "Analysis stopped: reference source {names} could not be found. Check the relations in \"Reference sources...\" in the file browser.",
+  "@llmAnalysis_referenceSourcesMissing": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "llmAnalysis_noFacts": "Analysis stopped: no information about \"{word}\" could be extracted, so no summary was saved.",
   "@llmAnalysis_noFacts": {
     "placeholders": {

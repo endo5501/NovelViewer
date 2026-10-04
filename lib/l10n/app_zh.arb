@@ -274,6 +274,14 @@
       }
     }
   },
+  "llmAnalysis_referenceSourcesMissing": "分析已中止：找不到参考来源 {names}。请在文件浏览器的“参考来源设置”中检查关系。",
+  "@llmAnalysis_referenceSourcesMissing": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "llmAnalysis_noFacts": "分析已中止：未能提取关于「{word}」的信息，因此未保存摘要。",
   "@llmAnalysis_noFacts": {
     "placeholders": {

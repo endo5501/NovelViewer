@@ -744,6 +744,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String llmAnalysis_referenceSourcesMissing(String names) {
+    return '解析を中止しました: 参照元 $names が見つかりません。ファイルブラウザの「参照元の設定」で関係を確認してください。';
+  }
+
+  @override
   String llmAnalysis_noFacts(String word) {
     return '解析を中止しました: 「$word」に関する情報を抽出できなかったため、要約は保存されていません。';
   }

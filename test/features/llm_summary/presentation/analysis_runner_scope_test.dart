@@ -18,6 +18,7 @@ import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.d
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/features/novel_reference/providers/novel_reference_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
@@ -179,6 +180,7 @@ void main() {
           openedFolders.add(folderPath);
           return _DummyRepo();
         }),
+        novelReferenceRelationsProvider.overrideWith((ref) async => const []),
         factCacheRepositoryProvider.overrideWith((ref, folderPath) async {
           openedFolders.add(folderPath);
           return _DummyFactCache();

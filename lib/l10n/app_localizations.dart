@@ -1426,6 +1426,12 @@ abstract class AppLocalizations {
   /// **'解析を中止しました: {count}件のファイルを解析できなかったため、要約は保存されていません。再実行すると失敗した分だけ再試行します。'**
   String llmAnalysis_partialFailure(int count);
 
+  /// No description provided for @llmAnalysis_referenceSourcesMissing.
+  ///
+  /// In ja, this message translates to:
+  /// **'解析を中止しました: 参照元 {names} が見つかりません。ファイルブラウザの「参照元の設定」で関係を確認してください。'**
+  String llmAnalysis_referenceSourcesMissing(String names);
+
   /// No description provided for @llmAnalysis_noFacts.
   ///
   /// In ja, this message translates to:

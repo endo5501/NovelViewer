@@ -464,6 +464,14 @@
       }
     }
   },
+  "llmAnalysis_referenceSourcesMissing": "解析を中止しました: 参照元 {names} が見つかりません。ファイルブラウザの「参照元の設定」で関係を確認してください。",
+  "@llmAnalysis_referenceSourcesMissing": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "llmAnalysis_noFacts": "解析を中止しました: 「{word}」に関する情報を抽出できなかったため、要約は保存されていません。",
   "@llmAnalysis_noFacts": {
     "placeholders": {
