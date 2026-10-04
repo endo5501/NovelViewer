@@ -481,5 +481,15 @@
   "referenceSources_saveFailed": "无法保存参考来源。请确认关系没有形成循环。",
   "referenceSources_pickerTitle": "选择参考来源",
   "referenceSources_searchHint": "按标题搜索",
-  "referenceSources_noCandidates": "没有候选"
+  "referenceSources_noCandidates": "没有候选",
+  "referenceSources_loadFailed": "无法读取参考来源。",
+  "referenceSources_quotedTitle": "《{title}》",
+  "@referenceSources_quotedTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "referenceSources_listSeparator": "、"
 }

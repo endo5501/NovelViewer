@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
 import 'package:novel_viewer/features/novel_reference/domain/reference_graph.dart';
+import 'package:novel_viewer/features/novel_reference/presentation/reference_source_titles.dart';
 import 'package:novel_viewer/features/novel_reference/providers/novel_reference_providers.dart';
 import 'package:path/path.dart' as p;
 import 'package:novel_viewer/shared/episode/episode_resolver.dart';
@@ -347,7 +348,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
         context,
         FailureReport(
           headline: l10n.llmAnalysis_referenceSourcesMissing(
-            e.titles.map((t) => '『$t』').join('、'),
+            formatReferenceSourceTitles(l10n, e.titles),
           ),
           stackTrace: st,
           diagnostics: {
@@ -359,6 +360,26 @@ class DefaultAnalysisRunner implements AnalysisRunner {
             ),
             'missing reference sources': e.folderNames.join(', '),
           },
+        ),
+      );
+      return;
+    } catch (e, st) {
+      // Reading the relations, the novel list, or a source's novel_data.db
+      // can fail too. Reported like any other failure before the run, so the
+      // reader is not left with nothing happening.
+      if (!context.mounted) return;
+      showFailureSnackBar(
+        context,
+        FailureReport(
+          headline: l10n.llmAnalysis_failed,
+          cause: e.toString(),
+          stackTrace: st,
+          diagnostics: _diagnostics(
+            model: service.llmClient.modelId,
+            word: word,
+            coveredUpToEpisode: coveredUpToEpisode,
+            sourceFileName: resolvedSourceFile,
+          ),
         ),
       );
       return;
@@ -515,7 +536,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
     final libraryPath = _ref.read(libraryPathProvider);
     final located = libraryPath == null
         ? const <String, String>{}
-        : _ref.read(novelFolderLocatorProvider)(
+        : await _ref.read(novelFolderLocatorProvider)(
             libraryRoot: libraryPath,
             registeredFolderNames: titleOf.keys.toSet(),
           );

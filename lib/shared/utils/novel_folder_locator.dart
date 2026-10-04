@@ -12,13 +12,18 @@ import 'package:path/path.dart' as p;
 ///
 /// Returns `folder_name → absolute path` for every registered name found. A
 /// registered name with no folder in the library is simply absent, which is
-/// how callers learn that a folder has gone missing. An unreadable directory
-/// is skipped rather than failing the whole walk.
+/// how callers learn that a folder has gone missing. So is a name found in
+/// more than one place: which of two copies is the novel cannot be told from
+/// the name, and picking one would read — and write a fact cache into — what
+/// may be a stale backup. The v8→v9 migration's walk refuses ambiguous
+/// matches for the same reason. An unreadable directory is skipped rather
+/// than failing the whole walk.
 Map<String, String> locateNovelFolders({
   required String libraryRoot,
   required Set<String> registeredFolderNames,
 }) {
   final located = <String, String>{};
+  final ambiguous = <String>{};
   final pending = <Directory>[Directory(libraryRoot)];
   while (pending.isNotEmpty) {
     final dir = pending.removeLast();
@@ -32,11 +37,12 @@ Map<String, String> locateNovelFolders({
       if (entry is! Directory) continue;
       final name = p.basename(entry.path);
       if (registeredFolderNames.contains(name)) {
+        if (located.containsKey(name)) ambiguous.add(name);
         located.putIfAbsent(name, () => entry.path);
       } else {
         pending.add(entry);
       }
     }
   }
-  return located;
+  return located..removeWhere((name, _) => ambiguous.contains(name));
 }

@@ -481,5 +481,15 @@
   "referenceSources_saveFailed": "Could not save the reference sources. Check that they do not form a loop.",
   "referenceSources_pickerTitle": "Choose a reference source",
   "referenceSources_searchHint": "Search by title",
-  "referenceSources_noCandidates": "No candidates"
+  "referenceSources_noCandidates": "No candidates",
+  "referenceSources_loadFailed": "Could not load the reference sources.",
+  "referenceSources_quotedTitle": "“{title}”",
+  "@referenceSources_quotedTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "referenceSources_listSeparator": ", "
 }

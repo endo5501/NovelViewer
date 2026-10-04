@@ -1075,4 +1075,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get referenceSources_noCandidates => '候補がありません';
+
+  @override
+  String get referenceSources_loadFailed => '参照元を読み込めませんでした。';
+
+  @override
+  String referenceSources_quotedTitle(String title) {
+    return '『$title』';
+  }
+
+  @override
+  String get referenceSources_listSeparator => '、';
 }

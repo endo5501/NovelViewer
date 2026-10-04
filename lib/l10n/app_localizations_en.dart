@@ -1098,4 +1098,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get referenceSources_noCandidates => 'No candidates';
+
+  @override
+  String get referenceSources_loadFailed =>
+      'Could not load the reference sources.';
+
+  @override
+  String referenceSources_quotedTitle(String title) {
+    return '“$title”';
+  }
+
+  @override
+  String get referenceSources_listSeparator => ', ';
 }

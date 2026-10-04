@@ -1066,4 +1066,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get referenceSources_noCandidates => '没有候选';
+
+  @override
+  String get referenceSources_loadFailed => '无法读取参考来源。';
+
+  @override
+  String referenceSources_quotedTitle(String title) {
+    return '《$title》';
+  }
+
+  @override
+  String get referenceSources_listSeparator => '、';
 }

@@ -16,6 +16,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/novel_delete/providers/novel_delete_providers.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/features/novel_reference/presentation/reference_sources_dialog.dart';
+import 'package:novel_viewer/features/novel_reference/providers/novel_reference_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 import 'package:novel_viewer/features/novel_refresh/domain/refresh_target.dart';
@@ -840,6 +841,9 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
         final deleteService = await ref.read(novelDeleteServiceProvider.future);
         await deleteService.delete(dir.name, dir.path);
         ref.invalidate(allNovelsProvider);
+        // The delete removed the novel's reference-source relations; anyone
+        // holding the old list must not go on seeing them.
+        ref.invalidate(novelReferenceRelationsProvider);
         invalidateEpisodeListings(ref.invalidate);
       } catch (e) {
         if (!context.mounted) return;

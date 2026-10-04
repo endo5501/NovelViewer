@@ -80,8 +80,11 @@ class _ReferenceSourcesDialogState
       await ref
           .read(novelReferenceRepositoryProvider)
           .replaceParents(widget.folderName, _parents!);
+      // The dialog cannot be dismissed while saving, but `ref` must not be
+      // touched once the state is gone, whatever took it away.
+      if (!mounted) return;
       ref.invalidate(novelReferenceRelationsProvider);
-      if (mounted) Navigator.of(context).pop();
+      Navigator.of(context).pop();
     } catch (e, st) {
       _log.warning('saving reference sources failed', e, st);
       if (!mounted) return;
@@ -101,7 +104,12 @@ class _ReferenceSourcesDialogState
     final Widget content;
     final relations = relationsAsync.value;
     final novels = novelsAsync.value;
-    if (relations == null || novels == null) {
+    if (relationsAsync.hasError || novelsAsync.hasError) {
+      content = Text(
+        l10n.referenceSources_loadFailed,
+        style: TextStyle(color: Theme.of(context).colorScheme.error),
+      );
+    } else if (relations == null || novels == null) {
       content = const Center(child: CircularProgressIndicator());
     } else {
       _parents ??= {
@@ -194,19 +202,25 @@ class _ReferenceSourcesDialogState
       );
     }
 
-    return AlertDialog(
-      title: Text(l10n.referenceSources_dialogTitle(widget.title)),
-      content: SizedBox(width: double.maxFinite, child: content),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.common_cancelButton),
-        ),
-        TextButton(
-          onPressed: _parents == null || _saving ? null : _save,
-          child: Text(l10n.common_saveButton),
-        ),
-      ],
+    // While a save is in flight the dialog stays up — Cancel, Escape and the
+    // barrier included — so its outcome is always shown and the relations
+    // cache is always refreshed afterwards.
+    return PopScope(
+      canPop: !_saving,
+      child: AlertDialog(
+        title: Text(l10n.referenceSources_dialogTitle(widget.title)),
+        content: SizedBox(width: double.maxFinite, child: content),
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : () => Navigator.of(context).pop(),
+            child: Text(l10n.common_cancelButton),
+          ),
+          TextButton(
+            onPressed: _parents == null || _saving ? null : _save,
+            child: Text(l10n.common_saveButton),
+          ),
+        ],
+      ),
     );
   }
 }

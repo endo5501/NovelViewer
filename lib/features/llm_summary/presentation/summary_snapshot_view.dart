@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
+import 'package:novel_viewer/features/novel_reference/presentation/reference_source_titles.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 /// Read-only presentational view of a single `word_summaries` snapshot: a
@@ -75,7 +76,8 @@ class SummarySnapshotView extends StatelessWidget {
   }
 }
 
-/// "参照元: 『A』、『B』" under the navigator: which reference sources the
+/// "参照元: 『A』、『B』" (in the display language's punctuation) under the
+/// navigator: which reference sources the
 /// shown snapshot's analysis read, by the titles they had then. One line, cut
 /// short when long, so the card stays within the height the popup anchor
 /// assumes; the tooltip carries the full list.
@@ -89,7 +91,7 @@ class _ReferenceSources extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final text = l10n.summaryCard_referenceSources(
-      sources.map((s) => '『${s.title}』').join('、'),
+      formatReferenceSourceTitles(l10n, sources.map((s) => s.title)),
     );
     return Padding(
       padding: const EdgeInsets.only(left: 4, top: 2),

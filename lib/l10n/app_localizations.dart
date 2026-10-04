@@ -2025,6 +2025,24 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'候補がありません'**
   String get referenceSources_noCandidates;
+
+  /// No description provided for @referenceSources_loadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'参照元を読み込めませんでした。'**
+  String get referenceSources_loadFailed;
+
+  /// No description provided for @referenceSources_quotedTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'『{title}』'**
+  String referenceSources_quotedTitle(String title);
+
+  /// No description provided for @referenceSources_listSeparator.
+  ///
+  /// In ja, this message translates to:
+  /// **'、'**
+  String get referenceSources_listSeparator;
 }
 
 class _AppLocalizationsDelegate

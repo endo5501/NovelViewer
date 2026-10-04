@@ -671,5 +671,15 @@
   "referenceSources_saveFailed": "参照元を保存できませんでした。関係が循環していないか確認してください。",
   "referenceSources_pickerTitle": "参照元を選択",
   "referenceSources_searchHint": "タイトルで検索",
-  "referenceSources_noCandidates": "候補がありません"
+  "referenceSources_noCandidates": "候補がありません",
+  "referenceSources_loadFailed": "参照元を読み込めませんでした。",
+  "referenceSources_quotedTitle": "『{title}』",
+  "@referenceSources_quotedTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "referenceSources_listSeparator": "、"
 }

@@ -99,6 +99,11 @@ void main() {
     await tester.runAsync(() async {
       // The database answers on the real event loop, so the relations are
       // loaded here rather than from inside a fake-async frame.
+      // Held for the test, as the open dialog would hold it: the provider is
+      // auto-disposed, and an unheld read would be dropped and redone inside
+      // a fake-async frame where the database cannot answer.
+      final held = container.listen(novelReferenceRelationsProvider, (_, _) {});
+      addTearDown(held.close);
       await container.read(novelReferenceRelationsProvider.future);
       await container.read(allNovelsProvider.future);
       await tester.pumpWidget(
@@ -270,11 +275,11 @@ void main() {
             ),
             allNovelsProvider.overrideWith((ref) => _novels),
           ],
-          child: MaterialApp(
-            locale: const Locale('ja'),
+          child: const MaterialApp(
+            locale: Locale('ja'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const Scaffold(
+            home: Scaffold(
               body: ReferenceSourcesDialog(folderName: 'part3', title: '第3部'),
             ),
           ),

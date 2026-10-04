@@ -27,24 +27,31 @@ void main() {
     await novelDatabase.close();
   });
 
-  test('relations are read afresh once nothing holds the earlier read', () async {
-    // A cache that outlived its readers would keep serving a relation to a
-    // novel deleted since, and a dialog seeded from it would save it back.
-    final container = ProviderContainer(
-      overrides: [novelDatabaseProvider.overrideWithValue(novelDatabase)],
-    );
-    addTearDown(container.dispose);
-    final repository = NovelReferenceRepository(novelDatabase);
-    await repository.replaceParents('part2', ['part1']);
+  test(
+    'relations are read afresh once nothing holds the earlier read',
+    () async {
+      // A cache that outlived its readers would keep serving a relation to a
+      // novel deleted since, and a dialog seeded from it would save it back.
+      final container = ProviderContainer(
+        overrides: [novelDatabaseProvider.overrideWithValue(novelDatabase)],
+      );
+      addTearDown(container.dispose);
+      final repository = NovelReferenceRepository(novelDatabase);
+      await repository.replaceParents('part2', ['part1']);
 
-    final first = await container.read(novelReferenceRelationsProvider.future);
-    expect(first, hasLength(1));
-    await repository.deleteAllFor('part1');
-    await Future<void>.delayed(Duration.zero);
+      final first = await container.read(
+        novelReferenceRelationsProvider.future,
+      );
+      expect(first, hasLength(1));
+      await repository.deleteAllFor('part1');
+      await Future<void>.delayed(Duration.zero);
 
-    final second = await container.read(novelReferenceRelationsProvider.future);
-    expect(second, isEmpty);
-  });
+      final second = await container.read(
+        novelReferenceRelationsProvider.future,
+      );
+      expect(second, isEmpty);
+    },
+  );
 
   test('the default locator walks the library asynchronously', () async {
     final library = Directory.systemTemp.createTempSync('locator_provider_');
