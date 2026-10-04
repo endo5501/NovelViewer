@@ -33,6 +33,15 @@ class _ParsedValue {
   final bool isStructured;
 }
 
+/// One reference-source ancestor's Stage-1 facts, per file, with the title
+/// its facts are labeled by.
+class ReferenceSourceFacts {
+  const ReferenceSourceFacts({required this.title, required this.perFileFacts});
+
+  final String title;
+  final List<String> perFileFacts;
+}
+
 class LlmSummaryPipeline {
   /// Shapes the two stages constrain their responses to. Requesting these
   /// keeps malformed answers from being generated in the first place, rather
@@ -127,9 +136,7 @@ class LlmSummaryPipeline {
   }) async {
     final notify = _isolatedNotifier(onProgress);
 
-    final nonEmpty = perFileFacts
-        .where((f) => f.trim().isNotEmpty)
-        .toList(growable: false);
+    final nonEmpty = _nonEmpty(perFileFacts);
 
     // With no facts there is nothing to summarize: asking the LLM anyway would
     // have it invent a summary from an empty evidence set, which then gets
@@ -153,11 +160,94 @@ class LlmSummaryPipeline {
       facts = _withinWindow(aggregated);
     }
 
+    return _finalSummary(word, facts, notify, hasReferenceSources: false);
+  }
+
+  /// [summarizeFromFacts] with the facts of the novel's reference-source
+  /// ancestors merged in.
+  ///
+  /// Each reference source is compressed on its own first, so a long parent
+  /// work arrives as no more than one response's worth of facts instead of
+  /// burying this work's. Its facts are then labeled line by line with the
+  /// source's title and placed, in the given order, ahead of this work's own
+  /// facts, which stay unlabeled. Per-line rather than one header per source:
+  /// in the merged text a header would appear to cover this work's facts that
+  /// follow it, and a header is lost whenever the chunker splits an entry.
+  ///
+  /// With no reference source contributing facts, this is
+  /// [summarizeFromFacts] exactly — same requests, same prompts.
+  Future<String> summarizeFromSources({
+    required String word,
+    required List<String> ownFacts,
+    required List<ReferenceSourceFacts> referenceFacts,
+    void Function(AnalysisProgress progress)? onProgress,
+  }) async {
+    final notify = _isolatedNotifier(onProgress);
+
+    var round = 2;
+    final labeled = <String>[];
+    for (final source in referenceFacts) {
+      final nonEmpty = _nonEmpty(source.perFileFacts);
+      if (nonEmpty.isEmpty) continue;
+      var facts = nonEmpty.join('\n');
+      if (facts.length > maxResponseSize) {
+        final (aggregated, nextRound) = await _aggregate(
+          word,
+          nonEmpty,
+          target: maxResponseSize,
+          firstRound: round,
+          notify: notify,
+        );
+        round = nextRound;
+        facts = _keepingHead(aggregated, maxResponseSize);
+      }
+      final labeledFacts = _labelLines(source.title, facts);
+      if (labeledFacts.isNotEmpty) labeled.add(labeledFacts);
+    }
+
+    if (labeled.isEmpty) {
+      return summarizeFromFacts(
+        word: word,
+        perFileFacts: ownFacts,
+        onProgress: onProgress,
+      );
+    }
+
+    final entries = [...labeled, ..._nonEmpty(ownFacts)];
+    final String facts;
+    final combined = entries.join('\n');
+    if (combined.length <= maxChunkSize) {
+      facts = combined;
+    } else {
+      final (aggregated, _) = await _aggregate(
+        word,
+        entries,
+        target: maxChunkSize,
+        firstRound: round,
+        notify: notify,
+        preserveSourceLabels: true,
+      );
+      // This work's facts sit at the end, so keeping the tail cuts from the
+      // reference sources. Their lines carry their own labels, so whatever of
+      // them survives the cut still says where it came from.
+      facts = _keepingTail(aggregated, maxChunkSize);
+    }
+
+    return _finalSummary(word, facts, notify, hasReferenceSources: true);
+  }
+
+  Future<String> _finalSummary(
+    String word,
+    String facts,
+    void Function(AnalysisProgress) notify, {
+    required bool hasReferenceSources,
+  }) async {
     notify(const AnalysisGeneratingFinalSummary());
     final prompt = LlmPromptBuilder.buildFinalSummaryPrompt(
       word: word,
       facts: facts,
       language: language,
+      hasReferenceSources: hasReferenceSources,
     );
     final parsed = await _withSingleRetry(
       () async => _parseSummaryResponse(
@@ -165,6 +255,40 @@ class LlmSummaryPipeline {
       ),
     );
     return (await _readableOr(parsed, prompt)).value;
+  }
+
+  static List<String> _nonEmpty(List<String> facts) =>
+      facts.where((f) => f.trim().isNotEmpty).toList(growable: false);
+
+  static final _bullet = RegExp(r'^(\s*[-・*]\s*)(.*)$');
+
+  /// [facts] with "『[title]』より: " on every non-blank line, after the bullet
+  /// where the line has one.
+  static String _labelLines(String title, String facts) {
+    final label = '『$title』より: ';
+    return facts
+        .split('\n')
+        .where((line) => line.trim().isNotEmpty)
+        .map((line) {
+          final m = _bullet.firstMatch(line);
+          return m == null ? '$label$line' : '${m.group(1)}$label${m.group(2)}';
+        })
+        .join('\n');
+  }
+
+  /// The last part of [facts] that fits [limit], starting on a line where
+  /// one falls within it.
+  String _keepingTail(String facts, int limit) {
+    if (facts.length <= limit) return facts;
+    final breakAt = facts.indexOf('\n', facts.length - limit - 1);
+    final kept = breakAt < 0
+        ? facts.substring(facts.length - limit)
+        : facts.substring(breakAt + 1);
+    _log.warning(
+      'merged facts exceed the window; keeping the tail. '
+      'length=${facts.length} window=$limit kept=${kept.length}',
+    );
+    return kept;
   }
 
   static void Function(AnalysisProgress) _isolatedNotifier(
@@ -191,13 +315,17 @@ class LlmSummaryPipeline {
   /// exits are reached precisely when another round would not help. It lands
   /// on a line break where one falls within the window, so no fact is left
   /// half-written for the summary to read as a fact of its own.
-  String _withinWindow(String facts) {
-    if (facts.length <= maxChunkSize) return facts;
-    var cut = facts.lastIndexOf('\n', maxChunkSize);
-    if (cut <= 0) cut = maxChunkSize;
+  String _withinWindow(String facts) => _keepingHead(facts, maxChunkSize);
+
+  /// The first part of [facts] that fits [limit], ending on a line break
+  /// where one falls within it.
+  String _keepingHead(String facts, int limit) {
+    if (facts.length <= limit) return facts;
+    var cut = facts.lastIndexOf('\n', limit);
+    if (cut <= 0) cut = limit;
     _log.warning(
       'aggregated facts exceed the window; cutting to fit. '
-      'length=${facts.length} window=$maxChunkSize kept=$cut',
+      'length=${facts.length} window=$limit kept=$cut',
     );
     return facts.substring(0, cut);
   }
