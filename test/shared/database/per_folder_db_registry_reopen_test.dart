@@ -27,44 +27,38 @@ void main() {
     if (folder.existsSync()) folder.deleteSync(recursive: true);
   });
 
-  test(
-    'a novel_data handle reopened while the evicted one is still closing '
-    'stays usable',
-    () async {
-      await (await registry.novelData(folder.path).database).query(
-        'word_summaries',
-      );
+  test('a novel_data handle reopened while the evicted one is still closing '
+      'stays usable', () async {
+    await (await registry.novelData(folder.path).database).query(
+      'word_summaries',
+    );
 
-      // Leaving the folder, then coming straight back: the reopen starts
-      // before the background close has reached novel_data.db.
-      registry.releaseInBackground(folder.path);
-      final reopened = await registry.novelData(folder.path).database;
+    // Leaving the folder, then coming straight back: the reopen starts
+    // before the background close has reached novel_data.db.
+    registry.releaseInBackground(folder.path);
+    final reopened = await registry.novelData(folder.path).database;
 
-      await pumpEventQueue();
-      expect(reopened.isOpen, isTrue);
-      await expectLater(reopened.query('word_summaries'), completes);
-    },
-  );
+    await pumpEventQueue();
+    expect(reopened.isOpen, isTrue);
+    await expectLater(reopened.query('word_summaries'), completes);
+  });
 
-  test(
-    'the other per-folder handles reopened during a background close stay '
-    'usable',
-    () async {
-      await registry.episodeCache(folder.path).database;
-      await registry.ttsAudio(folder.path).database;
-      await registry.ttsDictionary(folder.path).database;
+  test('the other per-folder handles reopened during a background close stay '
+      'usable', () async {
+    await registry.episodeCache(folder.path).database;
+    await registry.ttsAudio(folder.path).database;
+    await registry.ttsDictionary(folder.path).database;
 
-      registry.releaseInBackground(folder.path);
-      final episode = await registry.episodeCache(folder.path).database;
-      final audio = await registry.ttsAudio(folder.path).database;
-      final dictionary = await registry.ttsDictionary(folder.path).database;
+    registry.releaseInBackground(folder.path);
+    final episode = await registry.episodeCache(folder.path).database;
+    final audio = await registry.ttsAudio(folder.path).database;
+    final dictionary = await registry.ttsDictionary(folder.path).database;
 
-      await pumpEventQueue();
-      expect(episode.isOpen, isTrue);
-      expect(audio.isOpen, isTrue);
-      expect(dictionary.isOpen, isTrue);
-    },
-  );
+    await pumpEventQueue();
+    expect(episode.isOpen, isTrue);
+    expect(audio.isOpen, isTrue);
+    expect(dictionary.isOpen, isTrue);
+  });
   test(
     'closeAll on a handle reopened during a background close leaves the file '
     'closed',

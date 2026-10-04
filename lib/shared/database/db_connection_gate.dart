@@ -36,6 +36,19 @@ class DbConnectionGate<T> {
 
   Future<T>? _open;
   bool _closing = false;
+  Future<void>? _openAfter;
+
+  /// Holds the first open until [previousClose] settles.
+  ///
+  /// For a handle created while an earlier handle on the same file is still
+  /// closing. sqflite gives a second open of a path the connection already
+  /// open there, so opening during that close would receive the connection
+  /// the close is about to shut, and every later access would fail. A failed
+  /// close does not stop the open: it is the earlier handle's failure, and
+  /// the file is still there to open.
+  void deferOpenUntil(Future<void> previousClose) {
+    _openAfter = previousClose;
+  }
 
   /// Test seam: pre-populate the gate with an already-open resource, bypassing
   /// the opener. Mirrors the wrappers' existing `@visibleForTesting`
@@ -54,6 +67,12 @@ class DbConnectionGate<T> {
   }
 
   Future<T> _openOnce() async {
+    final openAfter = _openAfter;
+    if (openAfter != null) {
+      try {
+        await openAfter;
+      } catch (_) {}
+    }
     try {
       return await _opener();
     } catch (_) {
