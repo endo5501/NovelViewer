@@ -92,8 +92,10 @@ class _MockSelectedFile extends SelectedFileNotifier {
 }
 
 class _StubLocale extends LocaleNotifier {
+  _StubLocale(this._language);
+  final String _language;
   @override
-  Locale build() => const Locale('ja');
+  Locale build() => Locale(_language);
 }
 
 NovelMetadata _novel(String folderName, String title) => NovelMetadata(
@@ -140,6 +142,8 @@ void main() {
   build({
     required List<ReferenceRelation> relations,
     List<NovelMetadata>? registered,
+    Object? relationsError,
+    String language = 'ja',
   }) {
     final service = _RecordingService();
     final scans = <int>[];
@@ -171,7 +175,7 @@ void main() {
             FileEntry(name: '001.txt', path: p.join(part3Path, '001.txt')),
           ),
         ),
-        localeProvider.overrideWith(_StubLocale.new),
+        localeProvider.overrideWith(() => _StubLocale(language)),
         llmSummaryServiceProvider.overrideWith((ref, folderPath) => service),
         llmClientProvider.overrideWith((_) async => _DummyClient()),
         llmSummaryRepositoryProvider.overrideWith(
@@ -180,11 +184,14 @@ void main() {
         factCacheRepositoryProvider.overrideWith(
           (ref, folderPath) async => _DummyFactCache(folderPath),
         ),
-        novelReferenceRelationsProvider.overrideWith((ref) async => relations),
+        novelReferenceRelationsProvider.overrideWith((ref) async {
+          if (relationsError != null) throw relationsError;
+          return relations;
+        }),
         novelFolderLocatorProvider.overrideWithValue(({
           required String libraryRoot,
           required Set<String> registeredFolderNames,
-        }) {
+        }) async {
           scans.add(1);
           return locateNovelFolders(
             libraryRoot: libraryRoot,
@@ -200,13 +207,14 @@ void main() {
   Future<void> pump(
     WidgetTester tester,
     ProviderContainer container,
-    void Function(WidgetRef ref, BuildContext context) onPressed,
-  ) async {
+    void Function(WidgetRef ref, BuildContext context) onPressed, {
+    Locale locale = const Locale('ja'),
+  }) async {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
-          locale: const Locale('ja'),
+          locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -344,5 +352,37 @@ void main() {
         )
         .data!;
     expect(details, contains('part1'));
+  });
+
+  testWidgets('an unexpected failure resolving sources is reported', (
+    tester,
+  ) async {
+    final h = build(relations: const [], relationsError: StateError('db'));
+    final l10n = await AppLocalizations.delegate.load(const Locale('ja'));
+
+    await pump(tester, h.container, runUpToCurrent);
+
+    expect(h.service.callCount, 0);
+    expect(find.textContaining(l10n.llmAnalysis_failed), findsOneWidget);
+  });
+
+  testWidgets('the missing-source message uses the locale\'s punctuation', (
+    tester,
+  ) async {
+    Directory(part1Path).deleteSync(recursive: true);
+    final h = build(
+      relations: [_r('part3', 'part1'), _r('part3', 'gone')],
+      language: 'en',
+    );
+
+    await pump(tester, h.container, runUpToCurrent, locale: const Locale('en'));
+
+    final message = find.textContaining('could not be found');
+    expect(message, findsOneWidget);
+    final text = tester.widget<Text>(message).data!;
+    expect(text, isNot(contains('『')));
+    expect(text, isNot(contains('、')));
+    expect(text, contains('第1部'));
+    expect(text, contains('gone'));
   });
 }

@@ -28,7 +28,10 @@ WordSummary _snap(
   updatedAt: DateTime.utc(2026, 5, 21),
 );
 
-Widget _popup(List<WordSummary> snapshots) => ProviderScope(
+Widget _popup(
+  List<WordSummary> snapshots, {
+  Locale locale = const Locale('ja'),
+}) => ProviderScope(
   overrides: [
     llmSummarySupportedProvider.overrideWithValue(true),
     hoverPopupCacheProvider((
@@ -39,11 +42,11 @@ Widget _popup(List<WordSummary> snapshots) => ProviderScope(
       (ref, folderPath) async => throw UnsupportedError('unused'),
     ),
   ],
-  child: const MaterialApp(
-    locale: Locale('ja'),
+  child: MaterialApp(
+    locale: locale,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    home: Material(
+    home: const Material(
       child: Align(
         alignment: Alignment.topLeft,
         child: HoverPopupWidget(
@@ -80,6 +83,30 @@ void main() {
       find.text(l10n.summaryCard_referenceSources('『第1部』、『Wiki 記事集』')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('the list uses the locale\'s quotes and separator', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _popup([
+        _snap(3, sources: const [_part1, _wiki]),
+      ], locale: const Locale('en')),
+    );
+    await tester.pumpAndSettle();
+
+    final line = tester
+        .widget<Text>(
+          find.descendant(
+            of: find.byKey(const Key('hover_popup_reference_sources')),
+            matching: find.byType(Text),
+          ),
+        )
+        .data!;
+    expect(line, isNot(contains('『')));
+    expect(line, isNot(contains('、')));
+    expect(line, contains('第1部'));
+    expect(line, contains('Wiki 記事集'));
   });
 
   testWidgets('a snapshot without reference sources shows none', (

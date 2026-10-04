@@ -83,4 +83,17 @@ void main() {
 
     expect(located, isEmpty);
   });
+
+  test('a name found in two places is ambiguous and left out', () {
+    mkdir(p.join('series', 'narou_n1'));
+    mkdir(p.join('backup', 'narou_n1'));
+    final other = mkdir('narou_n2');
+
+    final located = locateNovelFolders(
+      libraryRoot: library.path,
+      registeredFolderNames: {'narou_n1', 'narou_n2'},
+    );
+
+    expect(located, {'narou_n2': other.path});
+  });
 }

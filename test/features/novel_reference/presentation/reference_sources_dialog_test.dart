@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,6 +37,18 @@ final _novels = [
   _novel('wiki', 'Wiki 記事集', site: 'web'),
   _novel('other', '別作品'),
 ];
+
+class _SlowRepository extends NovelReferenceRepository {
+  _SlowRepository(super.db);
+
+  final gate = Completer<void>();
+
+  @override
+  Future<void> replaceParents(String child, Iterable<String> parents) async {
+    await gate.future;
+    await super.replaceParents(child, parents);
+  }
+}
 
 class _FailingRepository extends NovelReferenceRepository {
   _FailingRepository(super.db);
@@ -220,6 +234,56 @@ void main() {
 
       expect(find.byType(ReferenceSourcesDialog), findsOneWidget);
       expect(find.text(l10n.referenceSources_saveFailed), findsOneWidget);
+    });
+  });
+
+  group('while saving', () {
+    testWidgets('the dialog cannot be dismissed until the save settles', (
+      tester,
+    ) async {
+      final slow = _SlowRepository(novelDatabase);
+      await pumpDialog(tester, repo: slow);
+
+      await tester.tap(find.text(l10n.common_saveButton));
+      await tester.pump();
+      await tester.tap(find.text(l10n.common_cancelButton));
+      await tester.pump();
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pump();
+      expect(find.byType(ReferenceSourcesDialog), findsOneWidget);
+
+      slow.gate.complete();
+      await settle(tester);
+
+      expect(find.byType(ReferenceSourcesDialog), findsNothing);
+      expect(find.text(l10n.referenceSources_saveFailed), findsNothing);
+    });
+  });
+
+  group('load failure', () {
+    testWidgets('says the relations could not be read', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            novelReferenceRelationsProvider.overrideWith(
+              (ref) async => throw StateError('db broken'),
+            ),
+            allNovelsProvider.overrideWith((ref) => _novels),
+          ],
+          child: MaterialApp(
+            locale: const Locale('ja'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(
+              body: ReferenceSourcesDialog(folderName: 'part3', title: '第3部'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.referenceSources_loadFailed), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
     });
   });
 
