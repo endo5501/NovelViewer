@@ -266,6 +266,55 @@ void main() {
       },
     );
 
+    test(
+      'rounds never step back when a compressed source leaves nothing',
+      () async {
+        // The source is compressed to blank lines, so no labeled fact
+        // remains and only this work's facts go on to be aggregated.
+        final client = _RecordingClient(
+          refine: (facts) => facts.contains('祖先') ? '   ' : '- 縮',
+        );
+        final events = <AnalysisProgress>[];
+        final pipeline = LlmSummaryPipeline(
+          llmClient: client,
+          maxChunkSize: 200,
+          maxResponseSize: 100,
+        );
+        final bigAncestor = List.generate(3, (i) => '- 祖先$i ${'う' * 70}');
+        final bigOwn = List.generate(3, (i) => '- 本作$i ${'え' * 80}');
+
+        await pipeline.summarizeFromSources(
+          word: 'アリス',
+          ownFacts: bigOwn,
+          referenceFacts: [
+            ReferenceSourceFacts(title: '第1部', perFileFacts: bigAncestor),
+          ],
+          onProgress: events.add,
+        );
+
+        final rounds = events
+            .whereType<AnalysisExtractingFacts>()
+            .map((e) => e.round)
+            .toList();
+        final ancestorRounds = client.refinementPrompts
+            .where((p) => p.contains('祖先'))
+            .length;
+        expect(ancestorRounds, greaterThan(0));
+        expect(
+          rounds.any((r) => r > 2),
+          isTrue,
+          reason: 'this work is aggregated after the source used round 2',
+        );
+        for (var i = 1; i < rounds.length; i++) {
+          expect(rounds[i], greaterThanOrEqualTo(rounds[i - 1]));
+        }
+        expect(
+          _factsBlock(client.summaryPrompts.single),
+          isNot(contains('祖先')),
+        );
+      },
+    );
+
     test('fitting the window keeps the tail where this work sits', () async {
       // Refinement echoes its input, so it never shrinks and the facts reach
       // the window cut unchanged.
