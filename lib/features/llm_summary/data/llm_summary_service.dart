@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 
 export 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
 import 'package:novel_viewer/shared/utils/content_hash.dart';
@@ -18,8 +19,46 @@ import 'package:novel_viewer/features/text_search/data/text_search_service.dart'
 class _FileWork {
   final String fileName;
   final String filePath;
+
+  /// Index into the run's reference sources, or null for the analyzed
+  /// novel's own file.
+  final int? source;
+  final FactCacheRepository cache;
   final List<String> contexts = [];
-  _FileWork({required this.fileName, required this.filePath});
+  _FileWork({
+    required this.fileName,
+    required this.filePath,
+    required this.source,
+    required this.cache,
+  });
+}
+
+/// How much of each reference source an analysis reads.
+enum ReferenceScope {
+  /// Every text file containing the word (no-spoiler and spoiler analyses).
+  whole,
+
+  /// Only the files of the source's lowest episode containing the word (the
+  /// quick analysis).
+  firstOccurrence,
+}
+
+/// One reference-source ancestor as an analysis run needs it: where its text
+/// lives, the title its facts are labeled by, and its own fact cache, so the
+/// facts extracted from it are shared with every other novel that draws on
+/// it and with the source's own analyses.
+class ReferenceSourceScope {
+  const ReferenceSourceScope({
+    required this.folderName,
+    required this.title,
+    required this.folderPath,
+    required this.factCacheRepository,
+  });
+
+  final String folderName;
+  final String title;
+  final String folderPath;
+  final FactCacheRepository factCacheRepository;
 }
 
 class LlmSummaryService {
@@ -82,6 +121,8 @@ class LlmSummaryService {
     required int coveredUpToEpisode,
     String? sourceFileName,
     String language = 'ja',
+    List<ReferenceSourceScope> referenceSources = const [],
+    ReferenceScope referenceScope = ReferenceScope.whole,
     void Function(AnalysisProgress progress)? onProgress,
   }) async {
     try {
@@ -121,11 +162,21 @@ class LlmSummaryService {
         final lastSuccessfulRun = existing
             .map((s) => s.updatedAt)
             .reduce((a, b) => a.isAfter(b) ? a : b);
-        await factCacheRepository.invalidateWord(
-          word: word,
-          modelId: llmClient.modelId,
-          notNewerThan: lastSuccessfulRun,
-        );
+        //
+        // A reference source's rows were part of the result being discarded
+        // too, so they are invalidated under the same bound. Rows the source
+        // or a sibling work wrote after this novel's last successful run are
+        // fresh by the same argument and survive.
+        for (final cache in [
+          factCacheRepository,
+          for (final r in referenceSources) r.factCacheRepository,
+        ]) {
+          await cache.invalidateWord(
+            word: word,
+            modelId: llmClient.modelId,
+            notNewerThan: lastSuccessfulRun,
+          );
+        }
       }
 
       final searchResults = await searchService.searchWithContext(
@@ -139,7 +190,27 @@ class LlmSummaryService {
         directoryPath: directoryPath,
       );
 
-      final files = _groupByFile(filteredResults);
+      final files = _groupByFile(
+        filteredResults,
+        source: null,
+        cache: factCacheRepository,
+      );
+      for (var i = 0; i < referenceSources.length; i++) {
+        final ref = referenceSources[i];
+        final results = await searchService.searchWithContext(
+          ref.folderPath,
+          word,
+        );
+        files.addAll(
+          _groupByFile(
+            referenceScope == ReferenceScope.firstOccurrence
+                ? _firstOccurrenceOnly(results, ref.folderPath)
+                : results,
+            source: i,
+            cache: ref.factCacheRepository,
+          ),
+        );
+      }
 
       // How much text may go out at once belongs to the model behind the
       // client, not to this service: an on-device model's window is a
@@ -155,12 +226,12 @@ class LlmSummaryService {
       // Resolve hit/miss for each file before extracting, so progress totals
       // reflect only the files actually extracted (the misses).
       const currentPromptVersion = FactCacheRepository.currentPromptVersion;
-      final cachedFactsByFile = <String, String?>{};
-      final currentHashByFile = <String, String>{};
+      final cachedFactsByFile = <_FileWork, String?>{};
+      final currentHashByFile = <_FileWork, String>{};
       for (final file in files) {
         final currentHash = await _hashFile(file.filePath);
-        currentHashByFile[file.fileName] = currentHash;
-        final cached = await factCacheRepository.find(
+        currentHashByFile[file] = currentHash;
+        final cached = await file.cache.find(
           word: word,
           fileName: file.fileName,
           modelId: llmClient.modelId,
@@ -170,19 +241,25 @@ class LlmSummaryService {
           currentHash: currentHash,
           currentPromptVersion: currentPromptVersion,
         );
-        cachedFactsByFile[file.fileName] = valid ? cached!.facts : null;
+        cachedFactsByFile[file] = valid ? cached!.facts : null;
       }
       final missCount = cachedFactsByFile.values.where((f) => f == null).length;
 
       final perFileFacts = <String>[];
+      final referenceFacts = [
+        for (final _ in referenceSources) <String>[],
+      ];
+      void collect(_FileWork file, String facts) => file.source == null
+          ? perFileFacts.add(facts)
+          : referenceFacts[file.source!].add(facts);
       var missDone = 0;
       var failedFileCount = 0;
       var consecutiveFailures = 0;
       Object? firstError;
       for (final file in files) {
-        final cachedFacts = cachedFactsByFile[file.fileName];
+        final cachedFacts = cachedFactsByFile[file];
         if (cachedFacts != null) {
-          perFileFacts.add(cachedFacts);
+          collect(file, cachedFacts);
           continue;
         }
         missDone++;
@@ -219,16 +296,16 @@ class LlmSummaryService {
         // every later analysis of this word. Withholding the row makes the next
         // run treat the file as a miss and extract it again.
         if (extracted.isStructured && extracted.facts.trim().isNotEmpty) {
-          await factCacheRepository.upsert(
+          await file.cache.upsert(
             word: word,
             fileName: file.fileName,
             facts: extracted.facts,
-            contentHash: currentHashByFile[file.fileName]!,
+            contentHash: currentHashByFile[file]!,
             promptVersion: currentPromptVersion,
             modelId: llmClient.modelId,
           );
         }
-        perFileFacts.add(extracted.facts);
+        collect(file, extracted.facts);
       }
 
       // An incomplete evidence set never becomes a saved summary: fail here,
@@ -240,9 +317,16 @@ class LlmSummaryService {
         );
       }
 
-      final summary = await pipeline.summarizeFromFacts(
+      final summary = await pipeline.summarizeFromSources(
         word: word,
-        perFileFacts: perFileFacts,
+        ownFacts: perFileFacts,
+        referenceFacts: [
+          for (var i = 0; i < referenceSources.length; i++)
+            ReferenceSourceFacts(
+              title: referenceSources[i].title,
+              perFileFacts: referenceFacts[i],
+            ),
+        ],
         onProgress: onProgress,
       );
 
@@ -251,6 +335,10 @@ class LlmSummaryService {
         coveredUpToEpisode: coveredUpToEpisode,
         summary: summary,
         sourceFile: sourceFileName,
+        referenceSources: [
+          for (final r in referenceSources)
+            SnapshotReferenceSource(folderName: r.folderName, title: r.title),
+        ],
       );
 
       return summary;
@@ -267,12 +355,21 @@ class LlmSummaryService {
   /// Group search results by source file, preserving deterministic file order
   /// (lexical by file name) so the assembled facts and progress counters are
   /// stable across runs.
-  List<_FileWork> _groupByFile(List<SearchResult> results) {
+  List<_FileWork> _groupByFile(
+    List<SearchResult> results, {
+    required int? source,
+    required FactCacheRepository cache,
+  }) {
     final byFile = <String, _FileWork>{};
     for (final r in results) {
       final work = byFile.putIfAbsent(
         r.fileName,
-        () => _FileWork(fileName: r.fileName, filePath: r.filePath),
+        () => _FileWork(
+          fileName: r.fileName,
+          filePath: r.filePath,
+          source: source,
+          cache: cache,
+        ),
       );
       for (final m in r.matches) {
         work.contexts.add(m.extendedContext ?? m.contextText);
@@ -281,6 +378,27 @@ class LlmSummaryService {
     final files = byFile.values.toList()
       ..sort((a, b) => a.fileName.compareTo(b.fileName));
     return files;
+  }
+
+  /// The results from the files of the lowest episode among [results], with
+  /// episodes counted inside [folderPath] by the same rule the quick
+  /// analysis applies to the analyzed novel.
+  List<SearchResult> _firstOccurrenceOnly(
+    List<SearchResult> results,
+    String folderPath,
+  ) {
+    if (results.isEmpty) return results;
+    final folderFiles = listSortedTextFileNames(folderPath);
+    final first = resolveFirstOccurrenceEpisode(
+      matchedFileNames: results.map((r) => r.fileName).toList(),
+      folderFiles: folderFiles,
+    );
+    if (first == null) return const [];
+    return results
+        .where(
+          (r) => effectiveEpisodeOrNull(r.fileName, folderFiles) == first.episode,
+        )
+        .toList();
   }
 
   /// Hash the file's full content. On any read failure return the sentinel so

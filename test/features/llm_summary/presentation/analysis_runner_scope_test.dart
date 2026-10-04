@@ -75,6 +75,8 @@ class _RecordingService extends LlmSummaryService {
     required int coveredUpToEpisode,
     String? sourceFileName,
     String language = 'ja',
+    List<ReferenceSourceScope> referenceSources = const [],
+    ReferenceScope referenceScope = ReferenceScope.whole,
     void Function(AnalysisProgress)? onProgress,
   }) async {
     callCount++;
