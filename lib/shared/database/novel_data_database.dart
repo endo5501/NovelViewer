@@ -28,7 +28,7 @@ class NovelDataDatabase {
   /// is — a target created at an older number would carry the current tables
   /// under a stale `user_version`, which is the drift this file works to
   /// avoid.
-  static const int currentVersion = 2;
+  static const int currentVersion = 3;
   static final _log = Logger('novel_data_db');
 
   final String _folderPath;
@@ -105,6 +105,34 @@ class NovelDataDatabase {
         );
       }
     }
+    if (oldVersion < 3) {
+      await _rebuildWordSummariesWithReferenceSources(db);
+    }
+  }
+
+  /// v2 → v3: `word_summaries` gains `reference_sources`, keeping every row.
+  ///
+  /// Rebuilt rather than altered, for the same reason v1 → v2 rebuilt
+  /// `fact_cache`: an added column leaves the table's stored SQL differing
+  /// forever from a freshly created one. Unlike that step, every row is a
+  /// reader's saved summary and is copied across; the new column starts NULL,
+  /// which reads as "no reference sources".
+  static Future<void> _rebuildWordSummariesWithReferenceSources(
+    Database db,
+  ) async {
+    await db.execute('DROP INDEX IF EXISTS idx_word_summaries_unique');
+    await db.execute(
+      'ALTER TABLE word_summaries RENAME TO word_summaries_v2',
+    );
+    await _createWordSummaries(db);
+    await db.execute('''
+      INSERT INTO word_summaries (id, word, covered_up_to_episode, summary,
+        source_file, created_at, updated_at)
+      SELECT id, word, covered_up_to_episode, summary, source_file,
+        created_at, updated_at
+      FROM word_summaries_v2
+    ''');
+    await db.execute('DROP TABLE word_summaries_v2');
   }
 
   /// Creates the full current-version schema on [db]. Single source of truth
@@ -112,21 +140,7 @@ class NovelDataDatabase {
   /// ([NovelDataMigrator]), and for test fixtures — so the schema cannot drift
   /// between them.
   static Future<void> createCurrentSchema(Database db) async {
-    await db.execute('''
-      CREATE TABLE word_summaries (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        word TEXT NOT NULL,
-        covered_up_to_episode INTEGER NOT NULL,
-        summary TEXT NOT NULL,
-        source_file TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      )
-    ''');
-    await db.execute('''
-      CREATE UNIQUE INDEX idx_word_summaries_unique
-      ON word_summaries(word, covered_up_to_episode)
-    ''');
+    await _createWordSummaries(db);
     await _createFactCache(db);
     await db.execute('''
       CREATE TABLE bookmarks (
@@ -161,6 +175,31 @@ class NovelDataDatabase {
       'version $newVersion this build understands. Refusing to open it '
       'rather than stamp it down and write rows the schema cannot hold.',
     );
+  }
+
+  /// `word_summaries` alone, so the v2 → v3 upgrade can rebuild exactly the
+  /// table a fresh database gets.
+  ///
+  /// `reference_sources` is a JSON array of `{folder_name, title}`: the
+  /// reference-source ancestors the snapshot's analysis read, in the order it
+  /// resolved them. NULL and an empty array both mean none.
+  static Future<void> _createWordSummaries(Database db) async {
+    await db.execute('''
+      CREATE TABLE word_summaries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        word TEXT NOT NULL,
+        covered_up_to_episode INTEGER NOT NULL,
+        summary TEXT NOT NULL,
+        source_file TEXT,
+        reference_sources TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE UNIQUE INDEX idx_word_summaries_unique
+      ON word_summaries(word, covered_up_to_episode)
+    ''');
   }
 
   /// `fact_cache` alone, so the v1 → v2 upgrade can rebuild exactly the table
