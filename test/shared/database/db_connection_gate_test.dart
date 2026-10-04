@@ -149,5 +149,34 @@ void main() {
 
       expect(openCount, 2);
     });
+
+    test('a deferred open waits for the given future', () async {
+      var openCount = 0;
+      final previousClose = Completer<void>();
+      final gate = DbConnectionGate<_FakeResource>(
+        opener: () async {
+          openCount++;
+          return _FakeResource();
+        },
+        closer: (r) async {},
+      )..deferOpenUntil(previousClose.future);
+
+      final opening = gate.resource;
+      await pumpEventQueue();
+      expect(openCount, 0, reason: 'opened before the earlier close ended');
+
+      previousClose.complete();
+      await opening;
+      expect(openCount, 1);
+    });
+
+    test('a failed earlier close does not stop the deferred open', () async {
+      final gate = DbConnectionGate<_FakeResource>(
+        opener: () async => _FakeResource(),
+        closer: (r) async {},
+      )..deferOpenUntil(Future<void>.error(StateError('close failed')));
+
+      await expectLater(gate.resource, completion(isA<_FakeResource>()));
+    });
   });
 }

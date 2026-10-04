@@ -65,4 +65,21 @@ void main() {
       expect(dictionary.isOpen, isTrue);
     },
   );
+  test(
+    'closeAll on a handle reopened during a background close leaves the file '
+    'closed',
+    () async {
+      await registry.novelData(folder.path).database;
+
+      registry.releaseInBackground(folder.path);
+      final reopening = registry.novelData(folder.path).database;
+      await registry.closeAll(folder.path);
+
+      final reopened = await reopening;
+      expect(reopened.isOpen, isFalse);
+      // A fresh visit after the mutation opens a working handle again.
+      final fresh = await registry.novelData(folder.path).database;
+      await expectLater(fresh.query('word_summaries'), completes);
+    },
+  );
 }
