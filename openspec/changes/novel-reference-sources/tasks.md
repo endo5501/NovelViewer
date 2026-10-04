@@ -15,7 +15,7 @@
 ## 3. `novel_data.db` v3 とスナップショットの参照元
 
 - [x] 3.1 `novel_data.db` v2→v3 で `word_summaries` を作り直し、`reference_sources` 列を加える（一時テーブル→コピー→削除→改名→インデックス）。全行が保持されること、`fact_cache`/`bookmarks` に触れないこと、新規作成とスキーマが一致すること、v8→v9 の移送が v3 を刻むことを、テストで確認する
-- [ ] 3.2 `WordSummary` に `referenceSources` を加え、`LlmSummaryRepository.saveSnapshot` で保存・読み出しできるようにする。NULL と空配列が空として読まれること、再解析の上書きで一覧が置き換わることを、リポジトリのテストで確認する
+- [x] 3.2 `WordSummary` に `referenceSources` を加え、`LlmSummaryRepository.saveSnapshot` で保存・読み出しできるようにする。NULL と空配列が空として読まれること、再解析の上書きで一覧が置き換わることを、リポジトリのテストで確認する
 
 ## 4. パイプライン：祖先ごとの圧縮とラベル付き合流
 

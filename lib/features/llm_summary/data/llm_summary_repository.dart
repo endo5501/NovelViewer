@@ -40,6 +40,7 @@ class LlmSummaryRepository {
     required int coveredUpToEpisode,
     required String summary,
     String? sourceFile,
+    List<SnapshotReferenceSource> referenceSources = const [],
   }) async {
     if (word.runes.length < minWordLength) {
       throw ArgumentError.value(
@@ -53,14 +54,23 @@ class LlmSummaryRepository {
       '''
       INSERT INTO word_summaries
         (word, covered_up_to_episode, summary, source_file,
-         created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+         reference_sources, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(word, covered_up_to_episode) DO UPDATE SET
         summary = excluded.summary,
         source_file = excluded.source_file,
+        reference_sources = excluded.reference_sources,
         updated_at = excluded.updated_at
       ''',
-      [word, coveredUpToEpisode, summary, sourceFile, now, now],
+      [
+        word,
+        coveredUpToEpisode,
+        summary,
+        sourceFile,
+        SnapshotReferenceSource.encodeList(referenceSources),
+        now,
+        now,
+      ],
     );
   }
 
