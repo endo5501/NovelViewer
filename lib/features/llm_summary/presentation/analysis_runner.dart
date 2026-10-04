@@ -11,7 +11,6 @@ import 'package:novel_viewer/features/novel_reference/providers/novel_reference_
 import 'package:path/path.dart' as p;
 import 'package:novel_viewer/shared/episode/episode_resolver.dart';
 import 'package:novel_viewer/features/llm_summary/domain/analysis_progress.dart';
-import 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
