@@ -5,7 +5,7 @@
 ## 1. 関係テーブルとリポジトリ
 
 - [x] 1.1 `novel_metadata.db` v10→v11 で `novel_reference_sources` テーブルと `parent_folder_name` のインデックスを追加する。新規作成と昇格で同じ定義を使う。v10 の DB を昇格させ、`novels`/`reading_progress` の行が保持されること、新規作成の v11 とスキーマが一致することを、テストで確認する
-- [ ] 1.2 祖先の解決 `resolveAncestors`（幅優先探索、重複の除去、子をたどらない、depth の降順＋`folder_name` 昇順、via の付与）と、子孫を求める関数を純粋関数として実装する。チェーン・ダイヤモンド・子の除外・順序の決定性をユニットテストで確認する
+- [x] 1.2 祖先の解決 `resolveAncestors`（幅優先探索、重複の除去、子をたどらない、depth の降順＋`folder_name` 昇順、via の付与）と、子孫を求める関数を純粋関数として実装する。チェーン・ダイヤモンド・子の除外・順序の決定性をユニットテストで確認する
 - [ ] 1.3 `NovelReferenceRepository`（`findAll` / `replaceParents` / `deleteAllFor(txn:)`）を実装する。`replaceParents` は自己参照と循環を拒否してロールバックし、重複した組は1行になる。これらをテストで確認する
 
 ## 2. 小説フォルダの実パス解決
