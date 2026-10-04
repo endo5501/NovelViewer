@@ -66,6 +66,6 @@
 
 - [x] 11.1 code-reviewスキルを使用してコードレビューを実施
 - [x] 11.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 11.3 `fvm dart format .`でフォーマットを実行
-- [ ] 11.4 `fvm flutter analyze`でリントを実行
-- [ ] 11.5 `fvm flutter test`でテストを実行
+- [x] 11.3 `fvm dart format .`でフォーマットを実行
+- [x] 11.4 `fvm flutter analyze`でリントを実行
+- [x] 11.5 `fvm flutter test`でテストを実行
