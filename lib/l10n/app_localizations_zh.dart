@@ -1017,4 +1017,53 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get shortcutAction_toggleFileBrowser => '切换文件列表';
+
+  @override
+  String get common_saveButton => '保存';
+
+  @override
+  String get fileBrowser_referenceSourcesMenuItem => '参考来源设置...';
+
+  @override
+  String referenceSources_dialogTitle(String title) {
+    return '参考来源设置：『$title』';
+  }
+
+  @override
+  String get referenceSources_directSection => '直接参考来源';
+
+  @override
+  String get referenceSources_inheritedSection => '通过祖先包含';
+
+  @override
+  String get referenceSources_childrenSection => '引用本作品的作品';
+
+  @override
+  String referenceSources_via(String title) {
+    return '经由 $title';
+  }
+
+  @override
+  String get referenceSources_addButton => '添加参考来源';
+
+  @override
+  String get referenceSources_removeTooltip => '移除';
+
+  @override
+  String get referenceSources_webCollection => '网页合集';
+
+  @override
+  String get referenceSources_none => '无';
+
+  @override
+  String get referenceSources_saveFailed => '无法保存参考来源。请确认关系没有形成循环。';
+
+  @override
+  String get referenceSources_pickerTitle => '选择参考来源';
+
+  @override
+  String get referenceSources_searchHint => '按标题搜索';
+
+  @override
+  String get referenceSources_noCandidates => '没有候选';
 }

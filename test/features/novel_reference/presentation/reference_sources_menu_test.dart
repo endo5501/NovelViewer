@@ -61,11 +61,11 @@ void main() {
           llmSummarySupportedProvider.overrideWithValue(llm),
           novelReferenceRelationsProvider.overrideWith((ref) async => const []),
         ],
-        child: MaterialApp(
-          locale: const Locale('ja'),
+        child: const MaterialApp(
+          locale: Locale('ja'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const Scaffold(body: FileBrowserPanel()),
+          home: Scaffold(body: FileBrowserPanel()),
         ),
       ),
     );

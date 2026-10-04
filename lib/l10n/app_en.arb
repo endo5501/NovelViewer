@@ -452,5 +452,34 @@
   "shortcutAction_search": "Search",
   "shortcutAction_bookmark": "Bookmark",
   "shortcutAction_ttsToggle": "Play/Pause speech",
-  "shortcutAction_toggleFileBrowser": "Toggle file browser"
+  "shortcutAction_toggleFileBrowser": "Toggle file browser",
+  "common_saveButton": "Save",
+  "fileBrowser_referenceSourcesMenuItem": "Reference sources...",
+  "referenceSources_dialogTitle": "Reference sources: {title}",
+  "@referenceSources_dialogTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "referenceSources_directSection": "Direct reference sources",
+  "referenceSources_inheritedSection": "Included through ancestors",
+  "referenceSources_childrenSection": "Works that draw on this one",
+  "referenceSources_via": "via {title}",
+  "@referenceSources_via": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "referenceSources_addButton": "Add reference source",
+  "referenceSources_removeTooltip": "Remove",
+  "referenceSources_webCollection": "Web collection",
+  "referenceSources_none": "None",
+  "referenceSources_saveFailed": "Could not save the reference sources. Check that they do not form a loop.",
+  "referenceSources_pickerTitle": "Choose a reference source",
+  "referenceSources_searchHint": "Search by title",
+  "referenceSources_noCandidates": "No candidates"
 }

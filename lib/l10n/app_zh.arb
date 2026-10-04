@@ -452,5 +452,34 @@
   "shortcutAction_search": "搜索",
   "shortcutAction_bookmark": "书签",
   "shortcutAction_ttsToggle": "朗读 播放/暂停",
-  "shortcutAction_toggleFileBrowser": "切换文件列表"
+  "shortcutAction_toggleFileBrowser": "切换文件列表",
+  "common_saveButton": "保存",
+  "fileBrowser_referenceSourcesMenuItem": "参考来源设置...",
+  "referenceSources_dialogTitle": "参考来源设置：『{title}』",
+  "@referenceSources_dialogTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "referenceSources_directSection": "直接参考来源",
+  "referenceSources_inheritedSection": "通过祖先包含",
+  "referenceSources_childrenSection": "引用本作品的作品",
+  "referenceSources_via": "经由 {title}",
+  "@referenceSources_via": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "referenceSources_addButton": "添加参考来源",
+  "referenceSources_removeTooltip": "移除",
+  "referenceSources_webCollection": "网页合集",
+  "referenceSources_none": "无",
+  "referenceSources_saveFailed": "无法保存参考来源。请确认关系没有形成循环。",
+  "referenceSources_pickerTitle": "选择参考来源",
+  "referenceSources_searchHint": "按标题搜索",
+  "referenceSources_noCandidates": "没有候选"
 }

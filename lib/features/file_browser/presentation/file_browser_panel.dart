@@ -14,6 +14,8 @@ import 'package:novel_viewer/features/file_browser/domain/move_follow.dart';
 import 'package:novel_viewer/features/file_browser/presentation/move_destination_dialog.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_delete/providers/novel_delete_providers.dart';
+import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
+import 'package:novel_viewer/features/novel_reference/presentation/reference_sources_dialog.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 import 'package:novel_viewer/features/novel_refresh/domain/refresh_target.dart';
@@ -522,6 +524,11 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
           value: 'renameFolder',
           child: Text(l10n.fileBrowser_renameFolderMenuItem),
         ),
+      if (isNovel && ref.read(llmSummarySupportedProvider))
+        PopupMenuItem<String>(
+          value: 'referenceSources',
+          child: Text(l10n.fileBrowser_referenceSourcesMenuItem),
+        ),
       PopupMenuItem<String>(
         value: 'move',
         child: Text(l10n.fileBrowser_moveMenuItem),
@@ -553,6 +560,14 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
           _showRenameTitleDialog(context, dir);
         case 'renameFolder':
           _showRenameFolderDialog(context, dir);
+        case 'referenceSources':
+          showDialog<void>(
+            context: context,
+            builder: (_) => ReferenceSourcesDialog(
+              folderName: dir.name,
+              title: dir.displayName,
+            ),
+          );
         case 'move':
           _showMoveDialog(context, dir);
         case 'delete':

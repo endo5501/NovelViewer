@@ -642,5 +642,34 @@
   "shortcutAction_search": "検索",
   "shortcutAction_bookmark": "しおり",
   "shortcutAction_ttsToggle": "読み上げ 再生/一時停止",
-  "shortcutAction_toggleFileBrowser": "ファイル一覧の表示切替"
+  "shortcutAction_toggleFileBrowser": "ファイル一覧の表示切替",
+  "common_saveButton": "保存",
+  "fileBrowser_referenceSourcesMenuItem": "参照元の設定...",
+  "referenceSources_dialogTitle": "参照元の設定: 『{title}』",
+  "@referenceSources_dialogTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "referenceSources_directSection": "直接の参照元",
+  "referenceSources_inheritedSection": "祖先から含まれるもの",
+  "referenceSources_childrenSection": "この作品を参照している作品",
+  "referenceSources_via": "{title} 経由",
+  "@referenceSources_via": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "referenceSources_addButton": "参照元を追加",
+  "referenceSources_removeTooltip": "外す",
+  "referenceSources_webCollection": "Webコレクション",
+  "referenceSources_none": "なし",
+  "referenceSources_saveFailed": "参照元を保存できませんでした。関係が循環していないか確認してください。",
+  "referenceSources_pickerTitle": "参照元を選択",
+  "referenceSources_searchHint": "タイトルで検索",
+  "referenceSources_noCandidates": "候補がありません"
 }

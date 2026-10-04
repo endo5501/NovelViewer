@@ -70,15 +70,23 @@ void main() {
     WidgetTester tester, {
     NovelReferenceRepository? repo,
   }) async {
+    final container = ProviderContainer(
+      overrides: [
+        novelDatabaseProvider.overrideWithValue(novelDatabase),
+        allNovelsProvider.overrideWith((ref) => _novels),
+        if (repo != null)
+          novelReferenceRepositoryProvider.overrideWithValue(repo),
+      ],
+    );
+    addTearDown(container.dispose);
     await tester.runAsync(() async {
+      // The database answers on the real event loop, so the relations are
+      // loaded here rather than from inside a fake-async frame.
+      await container.read(novelReferenceRelationsProvider.future);
+      await container.read(allNovelsProvider.future);
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            novelDatabaseProvider.overrideWithValue(novelDatabase),
-            allNovelsProvider.overrideWith((ref) => _novels),
-            if (repo != null)
-              novelReferenceRepositoryProvider.overrideWithValue(repo),
-          ],
+        UncontrolledProviderScope(
+          container: container,
           child: MaterialApp(
             locale: const Locale('ja'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -101,7 +109,6 @@ void main() {
         ),
       );
       await tester.tap(find.text('open'));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
     });
     await tester.pumpAndSettle();
   }
