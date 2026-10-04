@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/novel_metadata_db/data/novel_repository.da
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/novel_delete/data/novel_delete_service.dart';
+import 'package:novel_viewer/features/novel_reference/data/novel_reference_repository.dart';
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
 import 'package:novel_viewer/features/episode_cache/data/episode_cache_database.dart';
 
@@ -46,6 +47,7 @@ void main() {
       novelDatabase: novelDatabase,
       novelRepository: novelRepository,
       readingProgressRepository: readingProgressRepository,
+      novelReferenceRepository: NovelReferenceRepository(novelDatabase),
       fileSystemService: fileSystemService,
     );
     tempDir = Directory.systemTemp.createTempSync('novel_delete_test_');
@@ -143,6 +145,7 @@ void main() {
         novelDatabase: novelDatabase,
         novelRepository: novelRepository,
         readingProgressRepository: readingProgressRepository,
+        novelReferenceRepository: NovelReferenceRepository(novelDatabase),
         fileSystemService: fileSystemService,
         releaseFolderHandles: (dir) async {
           await cacheDb.close();
@@ -175,6 +178,7 @@ void main() {
         readingProgressRepository: _ThrowingReadingProgressRepository(
           novelDatabase,
         ),
+        novelReferenceRepository: NovelReferenceRepository(novelDatabase),
         fileSystemService: fileSystemService,
       );
 

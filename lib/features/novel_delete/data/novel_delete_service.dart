@@ -1,12 +1,14 @@
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_repository.dart';
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
+import 'package:novel_viewer/features/novel_reference/data/novel_reference_repository.dart';
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
 
 class NovelDeleteService {
   final NovelDatabase novelDatabase;
   final NovelRepository novelRepository;
   final ReadingProgressRepository readingProgressRepository;
+  final NovelReferenceRepository novelReferenceRepository;
   final FileSystemService fileSystemService;
 
   /// Releases (and awaits the close of) the per-folder database handles bound
@@ -22,6 +24,7 @@ class NovelDeleteService {
     required this.novelDatabase,
     required this.novelRepository,
     required this.readingProgressRepository,
+    required this.novelReferenceRepository,
     required this.fileSystemService,
     this.releaseFolderHandles,
   });
@@ -49,11 +52,15 @@ class NovelDeleteService {
     //    view). Both in a single transaction so a failure part-way rolls back
     //    every delete. `novel_id` for reading_progress equals the folder's leaf
     //    name (`folder_name`), matching the shared `resolveNovelId` key used
-    //    when these rows are written.
+    //    when these rows are written. The novel's reference-source relations
+    //    go in the same transaction, on both sides: a relation naming a novel
+    //    that no longer exists would fail every later analysis of its child
+    //    as a missing reference source.
     final db = await novelDatabase.database;
     await db.transaction((txn) async {
       await novelRepository.deleteByFolderName(folderName, txn: txn);
       await readingProgressRepository.deleteByNovelId(folderName, txn: txn);
+      await novelReferenceRepository.deleteAllFor(folderName, txn: txn);
     });
   }
 }

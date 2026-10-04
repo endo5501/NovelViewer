@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_delete/data/novel_delete_service.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/features/novel_reference/providers/novel_reference_providers.dart';
 import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 import 'package:novel_viewer/features/reading_progress/providers/reading_position_providers.dart';
 import 'package:novel_viewer/shared/database/folder_db_handles.dart';
@@ -20,6 +21,7 @@ final novelDeleteServiceProvider = FutureProvider<NovelDeleteService>((
     novelDatabase: novelDatabase,
     novelRepository: novelRepository,
     readingProgressRepository: readingProgressRepository,
+    novelReferenceRepository: ref.watch(novelReferenceRepositoryProvider),
     fileSystemService: fileSystemService,
     // Close the per-folder DB handles and WAIT for the close to finish before
     // the caller deletes the directory, then invalidate the thin-view
