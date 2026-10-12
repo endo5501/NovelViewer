@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/episode_cache/data/episode_cache_repositor
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/text_download/data/download_service.dart';
+import 'package:novel_viewer/features/text_download/providers/episode_rename_propagation.dart';
 import 'package:novel_viewer/features/text_download/data/sites/generic_web_site.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
@@ -146,6 +147,12 @@ class DownloadNotifier extends Notifier<DownloadState> {
         outputPath: outputPath,
         episodeCacheRepository: cacheRepo,
         cancelToken: cancelToken,
+        // Files renamed on disk take the reading progress, bookmarks, TTS audio
+        // and the open episode with them, before any episode is fetched and
+        // whether or not the download then completes.
+        onEpisodeFilesRenamed: (renames) => ref
+            .read(episodeRenamePropagatorProvider)
+            .propagate(novelFolderPath: novelDirPath, renames: renames),
         onProgress: (current, total, skipped, failed) {
           state = state.copyWith(
             currentEpisode: current,

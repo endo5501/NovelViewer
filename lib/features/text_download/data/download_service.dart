@@ -13,6 +13,11 @@ import 'package:novel_viewer/shared/utils/file_name_utils.dart' as file_names;
 typedef ProgressCallback =
     void Function(int current, int total, int skipped, int failed);
 
+/// Receives the episode files a download renamed on disk, old name -> new name,
+/// before any episode is fetched. See [migrateEpisodeFileNamePadding].
+typedef EpisodeFilesRenamedCallback =
+    Future<void> Function(Map<String, String> renames);
+
 final _log = Logger('text_download');
 
 const _maxIndexPages = 100;
@@ -128,13 +133,21 @@ final RegExp _episodeFileNamePattern = RegExp(r'^(\d+)_(.*)\.txt$');
 /// width increase and decrease, and does not modify the episode cache.
 /// Individual rename/delete failures are logged and skipped (that episode falls
 /// back to being re-downloaded) rather than aborting the whole download.
-Future<void> migrateEpisodeFileNamePadding({
+///
+/// Returns every old name -> new name it applied, so that state keyed by the
+/// episode's file name (reading progress, bookmarks, TTS audio, ...) can follow.
+/// A stale file deleted because the new name already existed is reported too:
+/// to anything keyed by file name, that episode is now the new name all the
+/// same. A rename or delete that failed is not reported, because the old file
+/// is still there under its old name.
+Future<Map<String, String>> migrateEpisodeFileNamePadding({
   required Directory directory,
   required List<({int index, String title, Uri url})> episodes,
   required int totalEpisodes,
   Map<String, EpisodeCache> cache = const {},
 }) async {
-  if (!directory.existsSync()) return;
+  final renames = <String, String>{};
+  if (!directory.existsSync()) return renames;
 
   // Index existing .txt files by (parsedIndex, restName); a given key may have
   // more than one file when corruption left differently-padded duplicates.
@@ -151,7 +164,7 @@ Future<void> migrateEpisodeFileNamePadding({
       e,
       st,
     );
-    return;
+    return renames;
   }
   for (final entity in entries) {
     if (entity is! File) continue;
@@ -205,6 +218,7 @@ Future<void> migrateEpisodeFileNamePadding({
           // Migrate the old-width file to the current-width name.
           existingFile.renameSync(target.path);
         }
+        renames[existing] = newName;
       } catch (e, st) {
         _log.warning(
           'Failed to migrate episode file "$existing" -> "$newName" in ${directory.path}',
@@ -214,6 +228,7 @@ Future<void> migrateEpisodeFileNamePadding({
       }
     }
   }
+  return renames;
 }
 
 /// Thrown when the first index page is fetched successfully but parses to no
@@ -419,6 +434,7 @@ class DownloadService {
     EpisodeCacheRepository? episodeCacheRepository,
     ProgressCallback? onProgress,
     CancellationToken? cancelToken,
+    EpisodeFilesRenamedCallback? onEpisodeFilesRenamed,
   }) async {
     // When cancelled, abort the in-flight request by closing the client. The
     // episodes saved before cancellation are intentionally left in place so the
@@ -489,6 +505,7 @@ class DownloadService {
       onProgress: onProgress,
       indexTruncated: collected.truncated,
       cancelToken: cancelToken,
+      onEpisodeFilesRenamed: onEpisodeFilesRenamed,
     );
   }
 
@@ -640,6 +657,7 @@ class DownloadService {
     ProgressCallback? onProgress,
     bool indexTruncated = false,
     CancellationToken? cancelToken,
+    EpisodeFilesRenamedCallback? onEpisodeFilesRenamed,
   }) async {
     final total = novelIndex.episodes.length;
 
@@ -653,7 +671,7 @@ class DownloadService {
     // re-download or leaves stale files behind (F104). Uses the merged index
     // total (= the new pad width) and the cache (= what was last written for
     // each episode URL, which is what identifies a title-changed file).
-    await migrateEpisodeFileNamePadding(
+    final renames = await migrateEpisodeFileNamePadding(
       directory: dir,
       episodes: [
         for (final e in novelIndex.episodes)
@@ -662,6 +680,22 @@ class DownloadService {
       totalEpisodes: total,
       cache: cache,
     );
+    // The renames are final on disk from here on, whatever becomes of the rest
+    // of the download, so whoever keys state by file name hears of them now:
+    // a cancelled or failed download returns no result to carry them in.
+    // Awaited, so that state has followed before any episode is fetched.
+    if (renames.isNotEmpty && onEpisodeFilesRenamed != null) {
+      try {
+        await onEpisodeFilesRenamed(renames);
+      } catch (e, st) {
+        _log.warning(
+          'Failed to handle renamed episode files in ${dir.path}; '
+          'continuing the download',
+          e,
+          st,
+        );
+      }
+    }
 
     var skippedCount = 0;
     var failedCount = 0;

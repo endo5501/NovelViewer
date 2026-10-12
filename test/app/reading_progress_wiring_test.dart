@@ -52,6 +52,13 @@ class _RecordingRepository implements ReadingProgressRepository {
 
   @override
   Future<void> deleteByNovelId(String novelId, {DatabaseExecutor? txn}) async {}
+
+  @override
+  Future<void> renameFileName({
+    required String novelId,
+    required String from,
+    required String to,
+  }) async {}
 }
 
 void main() {

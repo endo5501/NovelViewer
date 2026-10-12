@@ -82,4 +82,34 @@ class BookmarkRepository {
     );
     return result.isNotEmpty;
   }
+
+  /// Moves the bookmarks of the episode file [from] to [to], after a download
+  /// renamed that file on disk.
+  ///
+  /// A bookmark already under [to] at the same line wins and the one under
+  /// [from] is dropped: [to] is the file as it is now. Lines are matched with
+  /// `IS` so that file-level bookmarks (`line_number` NULL) — which the UNIQUE
+  /// constraint does not stop from duplicating — collide too.
+  Future<void> renameFileName({required String from, required String to}) {
+    return _db.transaction((txn) async {
+      await txn.rawDelete(
+        '''
+        DELETE FROM $_tableName
+        WHERE file_name = ?
+          AND EXISTS (
+            SELECT 1 FROM $_tableName AS kept
+            WHERE kept.file_name = ?
+              AND kept.line_number IS $_tableName.line_number
+          )
+        ''',
+        [from, to],
+      );
+      await txn.update(
+        _tableName,
+        {'file_name': to},
+        where: 'file_name = ?',
+        whereArgs: [from],
+      );
+    });
+  }
 }

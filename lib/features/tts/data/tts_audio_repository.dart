@@ -265,4 +265,41 @@ class TtsAudioRepository {
     // UI thread (incremental_vacuum on a 100MB+ DB stalls hundreds of ms).
     _onEpisodeDeleted?.call();
   }
+
+  /// Moves the TTS episode of the episode file [from] to [to], after a download
+  /// renamed that file on disk. Its segments follow through `episode_id`.
+  ///
+  /// When [to] already has an episode, that one wins: [to] is the file as it
+  /// is now. The episode under [from] is deleted, its segments with it by the
+  /// foreign key's cascade, and reclamation is scheduled as for any deletion.
+  Future<void> renameFileName({
+    required String from,
+    required String to,
+  }) async {
+    final db = await _database.database;
+    final deleted = await db.transaction((txn) async {
+      final existing = await txn.query(
+        'tts_episodes',
+        columns: ['id'],
+        where: 'file_name = ?',
+        whereArgs: [to],
+        limit: 1,
+      );
+      if (existing.isEmpty) {
+        await txn.update(
+          'tts_episodes',
+          {'file_name': to},
+          where: 'file_name = ?',
+          whereArgs: [from],
+        );
+        return 0;
+      }
+      return txn.delete(
+        'tts_episodes',
+        where: 'file_name = ?',
+        whereArgs: [from],
+      );
+    });
+    if (deleted > 0) _onEpisodeDeleted?.call();
+  }
 }

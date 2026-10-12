@@ -210,4 +210,55 @@ void main() {
       expect(map.containsKey('file_path'), isFalse);
     });
   });
+
+  group('renameFileName', () {
+    test('moves line and file-level bookmarks to the new name', () async {
+      await repository.add(fileName: '3_x.txt', lineNumber: 10);
+      await repository.add(fileName: '3_x.txt');
+      final before = await repository.findByFile(fileName: '3_x.txt');
+
+      await repository.renameFileName(from: '3_x.txt', to: '03_x.txt');
+
+      expect(await repository.findByFile(fileName: '3_x.txt'), isEmpty);
+      final moved = await repository.findByFile(fileName: '03_x.txt');
+      expect(moved.map((b) => b.lineNumber).toSet(), {10, null});
+      expect(
+        moved.map((b) => b.createdAt).toSet(),
+        before.map((b) => b.createdAt).toSet(),
+      );
+    });
+
+    test('keeps one bookmark when the same line exists under both', () async {
+      await repository.add(fileName: '3_x.txt', lineNumber: 10);
+      await repository.add(fileName: '03_x.txt', lineNumber: 10);
+
+      await repository.renameFileName(from: '3_x.txt', to: '03_x.txt');
+
+      final all = await repository.findAll();
+      expect(all, hasLength(1));
+      expect(all.single.fileName, '03_x.txt');
+      expect(all.single.lineNumber, 10);
+    });
+
+    test('keeps one file-level bookmark when both names have one', () async {
+      await repository.add(fileName: '3_x.txt');
+      await repository.add(fileName: '03_x.txt');
+
+      await repository.renameFileName(from: '3_x.txt', to: '03_x.txt');
+
+      final all = await repository.findAll();
+      expect(all, hasLength(1));
+      expect(all.single.fileName, '03_x.txt');
+      expect(all.single.lineNumber, isNull);
+    });
+
+    test('leaves bookmarks of other files alone', () async {
+      await repository.add(fileName: '4_y.txt', lineNumber: 2);
+
+      await repository.renameFileName(from: '3_x.txt', to: '03_x.txt');
+
+      final all = await repository.findAll();
+      expect(all.single.fileName, '4_y.txt');
+    });
+  });
 }
