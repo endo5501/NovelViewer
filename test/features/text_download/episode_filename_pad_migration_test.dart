@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/episode_cache/data/episode_cache_repositor
 import 'package:novel_viewer/features/episode_cache/domain/episode_cache.dart';
 import 'package:novel_viewer/features/text_download/data/download_service.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
+import 'package:novel_viewer/shared/utils/cancellation_token.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Site that returns an arbitrary list of episodes for the index, so tests can
@@ -600,6 +601,156 @@ void main() {
         expect(names.any((n) => RegExp(r'^\d{2}_').hasMatch(n)), isFalse);
       },
     );
+
+    /// Seeds [count] cached episodes on disk at the pad width of [count].
+    Future<void> seedEpisodes(int count) async {
+      for (var i = 1; i <= count; i++) {
+        final title = '第$i話';
+        await cacheRepo.upsert(
+          EpisodeCache(
+            url: 'https://example.com/$i',
+            episodeIndex: i,
+            title: title,
+            lastModified: '2025/01/01 00:00',
+            downloadedAt: DateTime.utc(2025, 1, 1),
+          ),
+        );
+        File(
+          '${novelDir.path}/${formatEpisodeFileName(i, title, count)}',
+        ).writeAsStringSync('cached $i');
+      }
+    }
+
+    List<Episode> indexOf(int count) => [
+      for (var i = 1; i <= count; i++)
+        Episode(
+          index: i,
+          title: '第$i話',
+          url: Uri.parse('https://example.com/$i'),
+          updatedAt: '2025/01/01 00:00',
+        ),
+    ];
+
+    test(
+      'delivers the renames and awaits them before fetching any episode',
+      () async {
+        await seedEpisodes(9);
+        final events = <String>[];
+        final mockClient = MockClient((request) async {
+          final u = request.url.toString();
+          if (u == 'https://example.com/index') {
+            return http.Response('index html', 200);
+          }
+          events.add('fetch $u');
+          return http.Response('new episode content', 200);
+        });
+        final service = DownloadService(
+          client: mockClient,
+          requestDelay: Duration.zero,
+        );
+
+        await service.downloadNovel(
+          site: _ListSite(indexOf(12)),
+          url: Uri.parse('https://example.com/index'),
+          outputPath: tempDir.path,
+          episodeCacheRepository: cacheRepo,
+          onEpisodeFilesRenamed: (renames) async {
+            events.add('renamed ${renames.length}');
+            // Still awaited: nothing may be fetched while this runs.
+            await Future<void>.delayed(const Duration(milliseconds: 20));
+            events.add('handled');
+            expect(renames['9_第9話.txt'], '09_第9話.txt');
+          },
+        );
+
+        expect(events.take(2), ['renamed 9', 'handled']);
+        expect(events.skip(2), [
+          'fetch https://example.com/10',
+          'fetch https://example.com/11',
+          'fetch https://example.com/12',
+        ]);
+      },
+    );
+
+    test('the renames are delivered even when the download is cancelled', () async {
+      await seedEpisodes(9);
+      final token = CancellationToken();
+      Map<String, String>? delivered;
+      final mockClient = MockClient((request) async {
+        final u = request.url.toString();
+        if (u == 'https://example.com/index') {
+          return http.Response('index html', 200);
+        }
+        token.cancel();
+        throw http.ClientException('aborted');
+      });
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      await expectLater(
+        service.downloadNovel(
+          site: _ListSite(indexOf(12)),
+          url: Uri.parse('https://example.com/index'),
+          outputPath: tempDir.path,
+          episodeCacheRepository: cacheRepo,
+          cancelToken: token,
+          onEpisodeFilesRenamed: (renames) async => delivered = renames,
+        ),
+        throwsA(isA<CancelledException>()),
+      );
+
+      expect(delivered, hasLength(9));
+    });
+
+    test('is not called when nothing was renamed', () async {
+      await seedEpisodes(12);
+      var called = false;
+      final mockClient = MockClient(
+        (request) async => http.Response('index html', 200),
+      );
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      await service.downloadNovel(
+        site: _ListSite(indexOf(12)),
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+        episodeCacheRepository: cacheRepo,
+        onEpisodeFilesRenamed: (_) async => called = true,
+      );
+
+      expect(called, isFalse);
+    });
+
+    test('a failing rename handler does not abort the download', () async {
+      await seedEpisodes(9);
+      final episodeGets = <String>[];
+      final mockClient = MockClient((request) async {
+        final u = request.url.toString();
+        if (u != 'https://example.com/index') episodeGets.add(u);
+        return http.Response('content', 200);
+      });
+      final service = DownloadService(
+        client: mockClient,
+        requestDelay: Duration.zero,
+      );
+
+      final result = await service.downloadNovel(
+        site: _ListSite(indexOf(12)),
+        url: Uri.parse('https://example.com/index'),
+        outputPath: tempDir.path,
+        episodeCacheRepository: cacheRepo,
+        onEpisodeFilesRenamed: (_) async => throw StateError('boom'),
+      );
+
+      expect(result.episodeCount, 12);
+      expect(result.skippedCount, 9);
+      expect(episodeGets, hasLength(3));
+    });
 
     test('migration does not modify the episode cache', () async {
       for (var i = 1; i <= 99; i++) {
