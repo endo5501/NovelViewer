@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
+import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_history_provider.dart';
 import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
 import 'package:novel_viewer/features/reading_progress/providers/reading_position_providers.dart';
@@ -40,10 +42,12 @@ class EpisodeRenamePropagator {
   /// [novelFolderPath].
   ///
   /// The order matters:
-  /// 1. Pending body positions are flushed first. They carry the old name, and
-  ///    once the row is rekeyed a save under the old name matches nothing.
-  /// 2. The stores are rekeyed, each on its own: one failing is logged and
-  ///    does not stop the others, nor the download that asked.
+  /// 1. The per-folder stores are rekeyed, each on its own: one failing is
+  ///    logged and does not stop the others, nor the download that asked.
+  /// 2. Reading progress goes last among the stores, behind a flush of the
+  ///    pending body position, and a position observed after that flush is
+  ///    moved over to the new name. Positions carry the file name, and once
+  ///    the row is rekeyed a save under the old name matches nothing.
   /// 3. Only then is the open episode rebased. The rebase makes the auto-save
   ///    listener upsert the new name, which keeps the body position only if
   ///    the row already carries that name.
@@ -55,36 +59,21 @@ class EpisodeRenamePropagator {
     // Defensive: the migration only pairs files of one episode with that
     // episode's canonical name, so no new name is another pair's old one. Were
     // it ever so, applying both would depend on their order.
-    final chained = renames.keys.where(renames.values.contains).toSet();
+    final targets = renames.values.toSet();
+    final chained = renames.keys.where(targets.contains).toSet();
     if (chained.isNotEmpty) {
       _log.warning(
         'Skipping chained episode renames in $novelFolderPath: $chained',
       );
     }
-    final pairs = [
+    final applied = {
       for (final MapEntry(key: from, value: to) in renames.entries)
-        if (!chained.contains(from)) (from: from, to: to),
+        if (!chained.contains(from)) from: to,
+    };
+    final pairs = [
+      for (final MapEntry(key: from, value: to) in applied.entries)
+        (from: from, to: to),
     ];
-
-    // Through the writer's queue, behind the pending position it flushes and
-    // ahead of the auto-save the rebase below enqueues: every write to the row
-    // is serialised there, so the order holds by construction rather than by
-    // which async write happens to reach the database first.
-    final writer = _ref.read(readingPositionWriterProvider);
-    await writer.flush();
-    final novelId = p.basename(novelFolderPath);
-    await writer.enqueue(
-      () => _attempt('reading progress', novelFolderPath, () async {
-        final repository = _ref.read(readingProgressRepositoryProvider);
-        for (final pair in pairs) {
-          await repository.renameFileName(
-            novelId: novelId,
-            from: pair.from,
-            to: pair.to,
-          );
-        }
-      }),
-    );
 
     // Opened only when the file is already there: the registry creates a
     // missing database, and a novel that never had a bookmark or TTS audio
@@ -124,13 +113,38 @@ class EpisodeRenamePropagator {
       });
     }
 
-    _rebaseOpenEpisode(novelFolderPath, renames);
+    // Through the writer's queue, behind the pending position the flush hands
+    // it and ahead of the auto-save the rebase below enqueues: every write to
+    // the row is serialised there, so the order holds by construction rather
+    // than by which async write happens to reach the database first.
+    final writer = _ref.read(readingPositionWriterProvider);
+    final novelId = p.basename(novelFolderPath);
+    unawaited(writer.flush());
+    await writer.enqueue(
+      () => _attempt('reading progress', novelFolderPath, () async {
+        final repository = _ref.read(readingProgressRepositoryProvider);
+        for (final pair in pairs) {
+          await repository.renameFileName(
+            novelId: novelId,
+            from: pair.from,
+            to: pair.to,
+          );
+        }
+      }),
+    );
+
+    // Anything observed while the stores were being rekeyed still names the
+    // old file; it is moved over before the rebase flushes it.
+    writer.renamePending(novelId, applied);
+    _rebaseOpenEpisode(novelFolderPath, applied);
 
     invalidateEpisodeListings(_ref.invalidate);
     _ref.invalidate(bookmarksForCurrentNovelProvider);
     _ref.invalidate(bookmarkLineNumbersForFileProvider);
     _ref.invalidate(ttsAudioStateProvider);
     _ref.invalidate(llmSummaryHistoryProvider);
+    // Holds snapshots, jump targets included, for as long as the app runs.
+    _ref.invalidate(hoverPopupCacheProvider);
     _ref.read(readingProgressRevisionProvider.notifier).bump();
   }
 

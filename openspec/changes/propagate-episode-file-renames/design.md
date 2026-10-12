@@ -72,20 +72,24 @@
 順序は spec（「読書位置の保存待ちを失わない」）が要求している。
 
 ```
-1. await readingPositionWriter.flush()
-2. 保存先ごとに書き換え（各 try/catch -> WARNING）
-   a. reading_progress   (novel_id = basename(novelFolderPath))
-                         ※ readingPositionWriter.enqueue 経由で実行する
-   b. bookmarks / fact_cache / word_summaries   (novel_data.db があれば)
-   c. tts_episodes                               (tts_audio.db があれば)
+1. フォルダ別DBの書き換え（各 try/catch -> WARNING）
+   a. bookmarks / fact_cache / word_summaries   (novel_data.db があれば)
+   b. tts_episodes                               (tts_audio.db があれば)
+2. 読書進捗
+   a. readingPositionWriter.flush()（await しない）
+   b. reading_progress の書き換えを readingPositionWriter.enqueue に積んで待つ
+      (novel_id = basename(novelFolderPath))
+   c. readingPositionWriter.renamePending(novelId, 対応表)
 3. 選択の付け替え (rebase)
-4. 無効化: invalidateEpisodeListings、ブックマーク系、TTS状態、LLM要約履歴
+4. 無効化: invalidateEpisodeListings、ブックマーク系、TTS状態、LLM要約履歴、ホバーポップアップのキャッシュ
 ```
 
-- **1 を最初に置く理由**: 保存待ちのスナップショットは旧名を持っている。書き換えの後に flush すると、`savePosition` は旧名の行を探して何も更新せず、その位置が失われる。
-- **2a を書き込みキューに積む理由**: 本文位置の保存と自動保存は、すべて `ReadingPositionWriter` のキューで直列化されている。2a を同じキューに積めば、1 で flush した位置の後、3 の付け替えが起こす自動保存の前に、必ず実行される。非同期の書き込みがどちらが先にDBへ届くかという偶然に、順序を頼らずに済む。
-- **3 を 2a の後に置く理由**: 付け替えると自動保存のリスナーが `upsert(newName)` を呼ぶ。その時点で行が既に `newName` を指していれば、`sameFile` が真になり、本文位置が保たれる。逆の順序だと位置がリセットされる。
-- **書き換えと付け替えの後の保存**: flush から付け替えまでの間に観測された位置は、旧名のまま `savePosition` に渡され、何も更新しない。これはモーダルダイアログ表示中の短い区間なので、許容する。
+- **2a の flush**: 保存待ちのスナップショットは旧名を持っている。書き換えの後に保存すると、`savePosition` は旧名の行を探して何も更新せず、その位置が失われる。そこで、書き換えより前にキューへ流す。
+- **2b を書き込みキューに積む理由**: 本文位置の保存と自動保存は、すべて `ReadingPositionWriter` のキューで直列化されている。2b を同じキューに積めば、2a で流した位置の後、3 の付け替えが起こす自動保存の前に、必ず実行される。非同期の書き込みがどちらが先にDBへ届くかという偶然に、順序を頼らずに済む。
+- **2c の renamePending**: flush の後、書き換えの間にも位置は観測されうる（TTS の追従、ダイアログが出る前のスクロールなど）。それらは旧名のまま保存待ちになっているので、書き換えの直後に新名へ差し替える。2c と 3 は同期的に続けて実行するので、その間に観測が割り込むことはない。
+- **読書進捗を最後に回す理由**: 1 には await が多く、その間に観測された位置を拾い漏らす区間が長くなる。読書進捗を最後にすると、2c がその区間をまとめて引き受けられる。
+- **3 を 2 の後に置く理由**: 付け替えると自動保存のリスナーが `upsert(newName)` を呼ぶ。その時点で行が既に `newName` を指していれば、`sameFile` が真になり、本文位置が保たれる。逆の順序だと位置がリセットされる。
+- **残る区間**: 2 秒タイマーによる flush が、2a と 2b の間にキューへ旧名の保存を積んだ場合は、その1回分の保存が失われる。モーダルダイアログ表示中のごく短い区間なので、許容する。
 
 ### D4. 衝突方針は「新名の記録を優先」で統一し、各リポジトリに `renameFileName` 系の操作を追加する
 

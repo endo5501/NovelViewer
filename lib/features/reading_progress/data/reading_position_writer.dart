@@ -77,6 +77,24 @@ class ReadingPositionWriter {
     });
   }
 
+  /// Points a pending position of [novelId] at its file's new name, after a
+  /// download renamed the file ([renames] maps old name -> new name).
+  ///
+  /// The stored row is rekeyed to the new name, and a save only updates the
+  /// row of the file it names, so one left under the old name would match
+  /// nothing and the position would be lost.
+  void renamePending(String novelId, Map<String, String> renames) {
+    PositionSnapshot? follow(PositionSnapshot? snapshot) {
+      if (snapshot == null || snapshot.novelId != novelId) return snapshot;
+      final newName = renames[snapshot.fileName];
+      if (newName == null) return snapshot;
+      return PositionSnapshot(novelId, newName, snapshot.offset, snapshot.hash);
+    }
+
+    _dirty = follow(_dirty);
+    _last = follow(_last);
+  }
+
   /// Drops any pending position for [novelId] and blocks further writes for
   /// it until the in-flight queue has drained, so a deletion cannot race a
   /// save that would put the row back. The block is released once the returned
