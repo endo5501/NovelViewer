@@ -420,6 +420,28 @@ To prevent this, before downloading episodes (after the full index — and there
 - The migration SHALL only ever rename to / delete files matching the stale-filename condition above for episodes present in the current index; it SHALL NEVER delete the canonical `newName` file.
 - The migration SHALL NOT modify the episode cache database (`episode_cache.db`); skip detection recomputes the filename and therefore hits correctly after the physical files are renamed.
 - A `rename`/delete that throws (e.g. a Windows file lock) SHALL be caught and logged at WARNING level, and SHALL NOT abort the overall download; at worst that single episode falls back to being re-downloaded (legacy behavior). Likewise, a failure to list the target folder SHALL be caught and logged, skipping the migration without aborting the download.
+- The migration SHALL report every old-name → new-name pair it applied: each successful `rename`, and each stale match it deleted because `newName` already existed (from the point of view of state keyed by file name, both mean "the episode formerly known as the old name is now the new name"). A `rename`/delete that failed SHALL NOT be reported, because the old file is still on disk under its old name. When nothing was renamed or deleted, the report SHALL be empty.
+- The download SHALL deliver this report to its caller before the per-episode skip/download loop begins and SHALL await the caller's handling of it before fetching any episode, so that the report reaches the caller even when the download is later cancelled or fails. A failure in the caller's handling SHALL be logged at WARNING level and SHALL NOT abort the download.
+
+#### Scenario: Renames are reported before any episode is fetched
+- **WHEN** a novel whose files are named `1_…9_` (pad width 1) is updated to 12 episodes, so the migration renames `1_a.txt` → `01_a.txt` … `9_i.txt` → `09_i.txt`
+- **THEN** the caller receives the nine `old → new` pairs before the first episode request is made
+
+#### Scenario: Report survives a cancelled download
+- **WHEN** the migration renames files and the user cancels the download while new episodes are being fetched
+- **THEN** the caller has already received the rename report, even though the download ends as cancelled rather than returning a result
+
+#### Scenario: A deleted stale duplicate is reported
+- **WHEN** an episode has both the canonical `newName` and a stale differently-named duplicate, and the migration deletes the duplicate
+- **THEN** the report includes `duplicate → newName`
+
+#### Scenario: A failed rename is not reported
+- **WHEN** renaming one episode's file throws (e.g. a Windows file lock)
+- **THEN** that episode's pair is absent from the report, and the other successful renames are still reported
+
+#### Scenario: Nothing to migrate
+- **WHEN** all existing episode files already have their current names
+- **THEN** the report is empty
 
 #### Scenario: Pad width increases (99 → 100)
 - **WHEN** a novel that previously had 99 episodes (files named `01_…99_`, pad width 2) is updated and now has 100 episodes (pad width 3)
