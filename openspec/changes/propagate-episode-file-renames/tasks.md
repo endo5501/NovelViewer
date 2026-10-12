@@ -25,7 +25,7 @@
 
 ## 3. 伝播の処理（episode-file-rename-propagation / reading-context）
 
-- [ ] 3.1 `propagateEpisodeFileRenames` のテストを `ProviderContainer` で追加して、失敗を確認する。実DBは一時ディレクトリに作る。確認する内容は次のとおり。
+- [x] 3.1 `propagateEpisodeFileRenames` のテストを `ProviderContainer` で追加して、失敗を確認する。実DBは一時ディレクトリに作る。確認する内容は次のとおり。
   - 6つの保存先が書き換わること
   - 書き込み待ちの位置が flush されてから書き換わり、位置が失われないこと
   - 表示中のファイルが対象なら `rebase` され、`fileOpenRequestProvider` が増えないこと
@@ -33,7 +33,7 @@
   - `novel_data.db` や `tts_audio.db` が無いフォルダでDBファイルが作られないこと
   - 一つの保存先が失敗しても他は書き換わり、WARNING が記録されること
   - 別の小説の `reading_progress` が変わらないこと
-- [ ] 3.2 design D2〜D7 に従って `propagateEpisodeFileRenames` を実装し、3.1 を通す。実行順序は flush → 書き換え → rebase → 無効化とする。D7 の無効化対象は、実装時に provider 名を確認して確定する
+- [x] 3.2 design D2〜D7 に従って `propagateEpisodeFileRenames` を実装し、3.1 を通す。実行順序は flush → 書き換え → rebase → 無効化とする。D7 の無効化対象は、実装時に provider 名を確認して確定する
 - [ ] 3.3 `DownloadNotifier.startDownload` から `onEpisodeFilesRenamed` 経由で伝播を呼ぶテストを追加して、失敗を確認する。確認する内容は次の三つ。その後、実装して通す
   - 更新（`refreshNovel`）とダウンロードダイアログの両経路で呼ばれること
   - キャンセルで終わった場合も伝播済みであること

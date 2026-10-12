@@ -61,7 +61,7 @@
 
 ### D2. 伝播は `DownloadNotifier` が受け、専用の関数に委ねる
 
-- 伝播の処理は `propagateEpisodeFileRenames(Ref ref, {required String novelFolderPath, required Map<String, String> renames})` とする。仮置き場所は `lib/features/text_download/providers/episode_rename_propagation.dart`。
+- 伝播の処理は `EpisodeRenamePropagator.propagate({required String novelFolderPath, required Map<String, String> renames})` とし、`episodeRenamePropagatorProvider` から取得する（`lib/features/text_download/providers/episode_rename_propagation.dart`）。`EpisodeNavigationController` と同じく `Ref` を持つクラスにして、`ProviderContainer` から直接テストできるようにした。
 - `startDownload` は `onEpisodeFilesRenamed` にこの関数を渡す。`novelFolderPath` は `p.join(outputPath, folderName)` で、`startDownload` が既に計算している値をそのまま使う。
 - 関数は `Ref` を受け取る。理由は二つある。
   - 選択の付け替え、書き込み待ちの flush、provider の無効化はいずれも Riverpod の状態を扱う。
@@ -75,6 +75,7 @@
 1. await readingPositionWriter.flush()
 2. 保存先ごとに書き換え（各 try/catch -> WARNING）
    a. reading_progress   (novel_id = basename(novelFolderPath))
+                         ※ readingPositionWriter.enqueue 経由で実行する
    b. bookmarks / fact_cache / word_summaries   (novel_data.db があれば)
    c. tts_episodes                               (tts_audio.db があれば)
 3. 選択の付け替え (rebase)
@@ -82,6 +83,7 @@
 ```
 
 - **1 を最初に置く理由**: 保存待ちのスナップショットは旧名を持っている。書き換えの後に flush すると、`savePosition` は旧名の行を探して何も更新せず、その位置が失われる。
+- **2a を書き込みキューに積む理由**: 本文位置の保存と自動保存は、すべて `ReadingPositionWriter` のキューで直列化されている。2a を同じキューに積めば、1 で flush した位置の後、3 の付け替えが起こす自動保存の前に、必ず実行される。非同期の書き込みがどちらが先にDBへ届くかという偶然に、順序を頼らずに済む。
 - **3 を 2a の後に置く理由**: 付け替えると自動保存のリスナーが `upsert(newName)` を呼ぶ。その時点で行が既に `newName` を指していれば、`sameFile` が真になり、本文位置が保たれる。逆の順序だと位置がリセットされる。
 - **書き換えと付け替えの後の保存**: flush から付け替えまでの間に観測された位置は、旧名のまま `savePosition` に渡され、何も更新しない。これはモーダルダイアログ表示中の短い区間なので、許容する。
 
