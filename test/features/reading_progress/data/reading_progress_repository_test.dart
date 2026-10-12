@@ -198,4 +198,58 @@ void main() {
       await expectLater(repository.findAll(), throwsA(isA<Object>()));
     });
   });
+
+  group('renameFileName', () {
+    test('moves the row to the new name and keeps the body position', () async {
+      await repository.upsert(novelId: 'narou_n1234ab', fileName: '9_x.txt');
+      await repository.savePosition(
+        novelId: 'narou_n1234ab',
+        fileName: '9_x.txt',
+        bodyOffset: 1200,
+        bodyHash: 'hash-9',
+      );
+      final before = await repository.findByNovelId('narou_n1234ab');
+
+      await repository.renameFileName(
+        novelId: 'narou_n1234ab',
+        from: '9_x.txt',
+        to: '09_x.txt',
+      );
+
+      final after = await repository.findByNovelId('narou_n1234ab');
+      expect(after!.fileName, '09_x.txt');
+      expect(after.bodyOffset, 1200);
+      expect(after.bodyHash, 'hash-9');
+      // The last-read novel at startup is picked by updated_at; a rename must
+      // not make this novel jump ahead of the one actually read last.
+      expect(after.updatedAt, before!.updatedAt);
+    });
+
+    test('leaves a row pointing at another file alone', () async {
+      await repository.upsert(novelId: 'narou_n1234ab', fileName: '5_x.txt');
+
+      await repository.renameFileName(
+        novelId: 'narou_n1234ab',
+        from: '9_x.txt',
+        to: '09_x.txt',
+      );
+
+      final after = await repository.findByNovelId('narou_n1234ab');
+      expect(after!.fileName, '5_x.txt');
+    });
+
+    test("leaves another novel's row with the same file name alone", () async {
+      await repository.upsert(novelId: 'narou_n1234ab', fileName: '9_x.txt');
+      await repository.upsert(novelId: 'kakuyomu_999', fileName: '9_x.txt');
+
+      await repository.renameFileName(
+        novelId: 'narou_n1234ab',
+        from: '9_x.txt',
+        to: '09_x.txt',
+      );
+
+      final other = await repository.findByNovelId('kakuyomu_999');
+      expect(other!.fileName, '9_x.txt');
+    });
+  });
 }

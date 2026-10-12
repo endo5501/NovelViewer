@@ -288,4 +288,38 @@ void main() {
       expect(ws.coveredUpToEpisode, 1);
     });
   });
+
+  group('renameSourceFile', () {
+    test('repoints the jump target and changes nothing else', () async {
+      await repository.saveSnapshot(
+        word: 'アリス',
+        coveredUpToEpisode: 9,
+        summary: 'アリスは少女。',
+        sourceFile: '9_x.txt',
+      );
+      final before = await db.query('word_summaries');
+
+      await repository.renameSourceFile(from: '9_x.txt', to: '09_x.txt');
+
+      final after = await db.query('word_summaries');
+      expect(after.single['source_file'], '09_x.txt');
+      expect(after.single['covered_up_to_episode'], 9);
+      expect(after.single['summary'], 'アリスは少女。');
+      expect(after.single['updated_at'], before.single['updated_at']);
+    });
+
+    test('leaves snapshots pointing at other files alone', () async {
+      await repository.saveSnapshot(
+        word: 'アリス',
+        coveredUpToEpisode: 5,
+        summary: 's',
+        sourceFile: '5_x.txt',
+      );
+
+      await repository.renameSourceFile(from: '9_x.txt', to: '09_x.txt');
+
+      final rows = await repository.findSnapshotsForWord(word: 'アリス');
+      expect(rows.single.sourceFile, '5_x.txt');
+    });
+  });
 }

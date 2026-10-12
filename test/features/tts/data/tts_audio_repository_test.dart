@@ -828,4 +828,78 @@ void main() {
       });
     });
   });
+
+  group('renameFileName', () {
+    Future<int> episodeWithSegment(String fileName, String text) async {
+      final id = await repository.createEpisode(
+        fileName: fileName,
+        sampleRate: 24000,
+        status: TtsEpisodeStatus.completed,
+        textHash: 'hash-$fileName',
+      );
+      await repository.insertSegment(
+        episodeId: id,
+        segmentIndex: 0,
+        text: text,
+        textOffset: 0,
+        textLength: text.length,
+        audioData: Uint8List.fromList([1, 2, 3]),
+        sampleCount: 3,
+      );
+      return id;
+    }
+
+    test('moves the episode and keeps its status and segments', () async {
+      final id = await episodeWithSegment('3_x.txt', '本文');
+
+      await repository.renameFileName(from: '3_x.txt', to: '03_x.txt');
+
+      expect(await repository.findEpisodeByFileName('3_x.txt'), isNull);
+      final moved = await repository.findEpisodeByFileName('03_x.txt');
+      expect(moved!.id, id);
+      expect(moved.status, TtsEpisodeStatus.completed);
+      expect(moved.textHash, 'hash-3_x.txt');
+      final segments = await repository.getSegments(id);
+      expect(segments.single.text, '本文');
+      expect(segments.single.audioData, [1, 2, 3]);
+    });
+
+    test(
+      'keeps the new-name episode and deletes the old one with its segments',
+      () async {
+        final oldId = await episodeWithSegment('3_x.txt', '旧');
+        final newId = await episodeWithSegment('03_x.txt', '新');
+
+        await repository.renameFileName(from: '3_x.txt', to: '03_x.txt');
+
+        expect(await repository.findEpisodeByFileName('3_x.txt'), isNull);
+        final kept = await repository.findEpisodeByFileName('03_x.txt');
+        expect(kept!.id, newId);
+        expect(await repository.getSegments(oldId), isEmpty);
+        expect((await repository.getSegments(newId)).single.text, '新');
+      },
+    );
+
+    test('a collision deletion schedules disk reclamation', () async {
+      var reclaimed = 0;
+      final reclaiming = TtsAudioRepository(
+        database,
+        onEpisodeDeleted: () => reclaimed++,
+      );
+      await episodeWithSegment('3_x.txt', '旧');
+      await episodeWithSegment('03_x.txt', '新');
+
+      await reclaiming.renameFileName(from: '3_x.txt', to: '03_x.txt');
+
+      expect(reclaimed, 1);
+    });
+
+    test('does nothing when the old name has no episode', () async {
+      await episodeWithSegment('03_x.txt', '新');
+
+      await repository.renameFileName(from: '3_x.txt', to: '03_x.txt');
+
+      expect(await repository.findEpisodeByFileName('03_x.txt'), isNotNull);
+    });
+  });
 }

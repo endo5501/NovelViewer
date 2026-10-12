@@ -418,4 +418,87 @@ void main() {
       expect(await repository.findForWord(word: alice), isEmpty);
     });
   });
+
+  group('renameFileName', () {
+    test('moves the row and keeps facts, hash and model', () async {
+      await repository.upsert(
+        word: 'アリス',
+        fileName: '3_x.txt',
+        facts: 'アリスは少女。',
+        contentHash: 'h3',
+        promptVersion: 2,
+        modelId: onlyModel,
+      );
+
+      await repository.renameFileName(from: '3_x.txt', to: '03_x.txt');
+
+      expect(
+        await repository.find(
+          word: 'アリス',
+          fileName: '3_x.txt',
+          modelId: onlyModel,
+        ),
+        isNull,
+      );
+      final moved = await repository.find(
+        word: 'アリス',
+        fileName: '03_x.txt',
+        modelId: onlyModel,
+      );
+      expect(moved!.facts, 'アリスは少女。');
+      expect(moved.contentHash, 'h3');
+      expect(moved.promptVersion, 2);
+    });
+
+    test(
+      'keeps the new-name row when the same word and model collide',
+      () async {
+        for (final (file, facts) in [('3_x.txt', 'old'), ('03_x.txt', 'new')]) {
+          await repository.upsert(
+            word: 'アリス',
+            fileName: file,
+            facts: facts,
+            contentHash: 'h',
+            promptVersion: 2,
+            modelId: onlyModel,
+          );
+        }
+
+        await repository.renameFileName(from: '3_x.txt', to: '03_x.txt');
+
+        final rows = await repository.findForWord(word: 'アリス');
+        expect(rows, hasLength(1));
+        expect(rows.single.fileName, '03_x.txt');
+        expect(rows.single.facts, 'new');
+      },
+    );
+
+    test(
+      'moves a row of another model even when this model collides',
+      () async {
+        for (final (file, model) in [
+          ('3_x.txt', onlyModel),
+          ('3_x.txt', 'other:model'),
+          ('03_x.txt', onlyModel),
+        ]) {
+          await repository.upsert(
+            word: 'アリス',
+            fileName: file,
+            facts: '$file $model',
+            contentHash: 'h',
+            promptVersion: 2,
+            modelId: model,
+          );
+        }
+
+        await repository.renameFileName(from: '3_x.txt', to: '03_x.txt');
+
+        final rows = await repository.findForWord(word: 'アリス');
+        expect(rows.map((r) => (r.fileName, r.modelId)).toSet(), {
+          ('03_x.txt', onlyModel),
+          ('03_x.txt', 'other:model'),
+        });
+      },
+    );
+  });
 }
