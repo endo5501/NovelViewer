@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
+import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/reading_progress/data/reading_position_writer.dart';
@@ -260,4 +261,56 @@ void main() {
     expect((await progress.findByNovelId(novelId))!.fileName, '09_x.txt');
     expect(await ttsRepo().findEpisodeByFileName('09_x.txt'), isNotNull);
   });
+
+  test('a position observed while propagating is not lost', () async {
+    final progress = container.read(readingProgressRepositoryProvider);
+    await progress.upsert(novelId: novelId, fileName: '9_x.txt');
+    container
+        .read(selectedFileProvider.notifier)
+        .rebase(entry(novelDir, '9_x.txt'));
+
+    final propagation = propagate();
+    // The reader is still on the page (or TTS still moves it) after the
+    // propagation has started: this snapshot carries the old name too.
+    container
+        .read(readingPositionWriterProvider)
+        .observe(const PositionSnapshot(novelId, '9_x.txt', 1500, 'hash'));
+    await propagation;
+    await container.read(readingPositionWriterProvider).flush();
+
+    final saved = await progress.findByNovelId(novelId);
+    expect(saved!.fileName, '09_x.txt');
+    expect(saved.bodyOffset, 1500);
+  });
+
+  test('a skipped chained rename does not move the open episode', () async {
+    container
+        .read(selectedFileProvider.notifier)
+        .rebase(entry(novelDir, '09_x.txt'));
+
+    await propagate({'9_x.txt': '09_x.txt', '09_x.txt': '009_x.txt'});
+
+    expect(container.read(selectedFileProvider)!.name, '09_x.txt');
+  });
+
+  test(
+    'cached summary snapshots are reloaded with the new jump target',
+    () async {
+      final data = await novelDataDb();
+      await LlmSummaryRepository(data).saveSnapshot(
+        word: 'アリス',
+        coveredUpToEpisode: 9,
+        summary: 's',
+        sourceFile: '9_x.txt',
+      );
+      final key = (folderPath: novelDir, word: 'アリス');
+      final before = await container.read(hoverPopupCacheProvider(key).future);
+      expect(before.single.sourceFile, '9_x.txt');
+
+      await propagate();
+
+      final after = await container.read(hoverPopupCacheProvider(key).future);
+      expect(after.single.sourceFile, '09_x.txt');
+    },
+  );
 }
