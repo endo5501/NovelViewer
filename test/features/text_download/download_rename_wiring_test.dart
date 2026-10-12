@@ -38,9 +38,13 @@ class _FakeNovelRepository extends Fake implements NovelRepository {
 /// Renames one file the way the migration would, then either finishes or is
 /// cancelled while fetching.
 class _RenamingDownloadService extends Fake implements DownloadService {
-  _RenamingDownloadService({required this.cancelAfterRename});
+  _RenamingDownloadService({
+    required this.cancelAfterRename,
+    required this.failAfterRename,
+  });
 
   final bool cancelAfterRename;
+  final bool failAfterRename;
 
   @override
   String buildFolderName(NovelSite site, Uri url) => 'narou_n1234ab';
@@ -57,6 +61,7 @@ class _RenamingDownloadService extends Fake implements DownloadService {
   }) async {
     await onEpisodeFilesRenamed?.call({'9_x.txt': '09_x.txt'});
     if (cancelAfterRename) throw const CancelledException();
+    if (failAfterRename) throw Exception('index page 2 failed');
     return DownloadResult(
       siteType: 'narou',
       novelId: 'n1234ab',
@@ -89,6 +94,7 @@ void main() {
 
   ({ProviderContainer container, _RecordingPropagator propagator}) setUpWith({
     bool cancelAfterRename = false,
+    bool failAfterRename = false,
   }) {
     final propagator = _RecordingPropagator();
     final container = ProviderContainer(
@@ -96,7 +102,10 @@ void main() {
         novelSiteRegistryProvider.overrideWithValue(_FakeRegistry()),
         novelRepositoryProvider.overrideWithValue(_FakeNovelRepository()),
         downloadServiceFactoryProvider.overrideWithValue(
-          () => _RenamingDownloadService(cancelAfterRename: cancelAfterRename),
+          () => _RenamingDownloadService(
+            cancelAfterRename: cancelAfterRename,
+            failAfterRename: failAfterRename,
+          ),
         ),
         episodeRenamePropagatorProvider.overrideWithValue(propagator),
       ],
@@ -148,6 +157,17 @@ void main() {
         .refreshNovel('narou_n1234ab', parentPath: outputPath);
 
     expect(container.read(downloadProvider).status, DownloadStatus.cancelled);
+    expect(propagator.calls.single.renames, {'9_x.txt': '09_x.txt'});
+  });
+
+  test('a failed download has already propagated', () async {
+    final (:container, :propagator) = setUpWith(failAfterRename: true);
+
+    await container
+        .read(downloadProvider.notifier)
+        .refreshNovel('narou_n1234ab', parentPath: outputPath);
+
+    expect(container.read(downloadProvider).status, DownloadStatus.error);
     expect(propagator.calls.single.renames, {'9_x.txt': '09_x.txt'});
   });
 }
