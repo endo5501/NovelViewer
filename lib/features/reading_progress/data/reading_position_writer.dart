@@ -32,6 +32,10 @@ class ReadingPositionWriter {
   bool _disposed = false;
   final Set<String> _forgotten = {};
 
+  /// Renames still to apply to saves already queued, per novel. See
+  /// [renamePending].
+  final Map<String, Map<String, String>> _renamed = {};
+
   void observe(PositionSnapshot snapshot) {
     if (_disposed ||
         _forgotten.contains(snapshot.novelId) ||
@@ -65,7 +69,7 @@ class ReadingPositionWriter {
     return enqueue(() async {
       if (_forgotten.contains(snapshot.novelId)) return;
       try {
-        await save(snapshot);
+        await save(_followRename(snapshot));
       } catch (_) {
         // The write is discarded per the failure contract, but the dedupe
         // guard must not go on suppressing it: a reader sitting still would
@@ -83,6 +87,10 @@ class ReadingPositionWriter {
   /// The stored row is rekeyed to the new name, and a save only updates the
   /// row of the file it names, so one left under the old name would match
   /// nothing and the position would be lost.
+  ///
+  /// That covers saves already flushed into the queue too: the rename is
+  /// applied when they run, for as long as the queue as it stands now takes to
+  /// drain. Past that, an old name is just a name — a later file may reuse it.
   void renamePending(String novelId, Map<String, String> renames) {
     PositionSnapshot? follow(PositionSnapshot? snapshot) {
       if (snapshot == null || snapshot.novelId != novelId) return snapshot;
@@ -93,6 +101,24 @@ class ReadingPositionWriter {
 
     _dirty = follow(_dirty);
     _last = follow(_last);
+
+    final active = {...?_renamed[novelId], ...renames};
+    _renamed[novelId] = active;
+    _queue.whenComplete(() {
+      // A later rename of the same novel owns the entry from then on.
+      if (identical(_renamed[novelId], active)) _renamed.remove(novelId);
+    });
+  }
+
+  PositionSnapshot _followRename(PositionSnapshot snapshot) {
+    final newName = _renamed[snapshot.novelId]?[snapshot.fileName];
+    if (newName == null) return snapshot;
+    return PositionSnapshot(
+      snapshot.novelId,
+      newName,
+      snapshot.offset,
+      snapshot.hash,
+    );
   }
 
   /// Drops any pending position for [novelId] and blocks further writes for

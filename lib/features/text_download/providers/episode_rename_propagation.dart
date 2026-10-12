@@ -22,6 +22,7 @@ import 'package:novel_viewer/shared/database/folder_db_key.dart';
 import 'package:novel_viewer/shared/database/novel_data_database.dart';
 import 'package:novel_viewer/shared/database/novel_data_database_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:sqflite/sqflite.dart' show Database;
 
 final _log = Logger('text_download');
 
@@ -80,21 +81,25 @@ class EpisodeRenamePropagator {
     // must not gain an empty one.
     final folderKey = folderDbKey(novelFolderPath);
     if (_exists(novelFolderPath, NovelDataDatabase.databaseName)) {
-      final db = await _ref.read(novelDataDatabaseProvider(folderKey)).database;
+      // Opened inside the attempt: a database that cannot be opened (corrupt,
+      // or from a newer app version) is one store failing, not a reason to
+      // leave TTS, reading progress and the open episode behind.
+      Future<Database> db() =>
+          _ref.read(novelDataDatabaseProvider(folderKey)).database;
       await _attempt('bookmarks', novelFolderPath, () async {
-        final repository = BookmarkRepository(db);
+        final repository = BookmarkRepository(await db());
         for (final pair in pairs) {
           await repository.renameFileName(from: pair.from, to: pair.to);
         }
       });
       await _attempt('fact cache', novelFolderPath, () async {
-        final repository = FactCacheRepository(db);
+        final repository = FactCacheRepository(await db());
         for (final pair in pairs) {
           await repository.renameFileName(from: pair.from, to: pair.to);
         }
       });
       await _attempt('summary jump targets', novelFolderPath, () async {
-        final repository = LlmSummaryRepository(db);
+        final repository = LlmSummaryRepository(await db());
         for (final pair in pairs) {
           await repository.renameSourceFile(from: pair.from, to: pair.to);
         }
