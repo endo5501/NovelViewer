@@ -129,4 +129,41 @@ void main() {
       writer.dispose();
     },
   );
+
+  test(
+    'a position already queued under the old name is saved under the new',
+    () async {
+      final saved = <PositionSnapshot>[];
+      final writer = ReadingPositionWriter(save: (s) async => saved.add(s));
+      final gate = Completer<void>();
+      // Stands in for the rekey still running in the queue.
+      final rekey = writer.enqueue(() => gate.future);
+      writer.observe(const PositionSnapshot('book', '9_x.txt', 1500, 'hash'));
+      final queued = writer.flush();
+
+      writer.renamePending('book', {'9_x.txt': '09_x.txt'});
+      gate.complete();
+      await Future.wait([rekey, queued]);
+
+      expect(saved, [const PositionSnapshot('book', '09_x.txt', 1500, 'hash')]);
+      writer.dispose();
+    },
+  );
+
+  test(
+    'a rename stops applying once the queue it covered has drained',
+    () async {
+      final saved = <PositionSnapshot>[];
+      final writer = ReadingPositionWriter(save: (s) async => saved.add(s));
+      writer.renamePending('book', {'9_x.txt': '09_x.txt'});
+      await writer.flush();
+
+      // A later file that happens to reuse the old name is its own file.
+      writer.observe(const PositionSnapshot('book', '9_x.txt', 7, 'hash'));
+      await writer.flush();
+
+      expect(saved.single.fileName, '9_x.txt');
+      writer.dispose();
+    },
+  );
 }

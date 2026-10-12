@@ -313,4 +313,26 @@ void main() {
       expect(after.single.sourceFile, '09_x.txt');
     },
   );
+
+  test('a novel_data.db that cannot be opened stops nothing else', () async {
+    final progress = container.read(readingProgressRepositoryProvider);
+    await progress.upsert(novelId: novelId, fileName: '9_x.txt');
+    File(
+      p.join(novelDir, 'novel_data.db'),
+    ).writeAsStringSync('this is not a database');
+    await ttsRepo().createEpisode(
+      fileName: '9_x.txt',
+      sampleRate: 24000,
+      status: TtsEpisodeStatus.completed,
+    );
+    container
+        .read(selectedFileProvider.notifier)
+        .rebase(entry(novelDir, '9_x.txt'));
+
+    await propagate();
+
+    expect((await progress.findByNovelId(novelId))!.fileName, '09_x.txt');
+    expect(await ttsRepo().findEpisodeByFileName('09_x.txt'), isNotNull);
+    expect(container.read(selectedFileProvider)!.name, '09_x.txt');
+  });
 }
