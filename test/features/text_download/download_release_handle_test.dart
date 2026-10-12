@@ -45,6 +45,7 @@ class _ConfigurableDownloadService extends Fake implements DownloadService {
     EpisodeCacheRepository? episodeCacheRepository,
     ProgressCallback? onProgress,
     CancellationToken? cancelToken,
+    EpisodeFilesRenamedCallback? onEpisodeFilesRenamed,
   }) async {
     if (throws) throw Exception('boom');
     return DownloadResult(

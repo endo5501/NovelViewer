@@ -4,16 +4,16 @@
 
 ## 1. 移行処理がリネームを報告する（text-download）
 
-- [ ] 1.1 `test/features/text_download/episode_filename_pad_migration_test.dart` に、`migrateEpisodeFileNamePadding` の戻り値のテストを追加する。対象は、桁上がり（`1_a`→`01_a` … `9_i`→`09_i`）、桁下がり、正規名が既にあるときの旧名削除の報告、リネーム失敗が報告されないこと、何もしないときの空マップ、タイトル変更（キャッシュあり）の報告。失敗を確認してコミットする
-- [ ] 1.2 `migrateEpisodeFileNamePadding` の戻り値を `Future<Map<String, String>>` に変える。成功したリネームと削除した旧名を記録して返す。1.1 と既存の移行テストがすべて通ることを確認する
-- [ ] 1.3 `download_service_test.dart`（またはキャンセルを扱う `download_cancellation_test.dart`）に、`downloadNovel` の通知のテストを追加する。内容は次の四つ。
+- [x] 1.1 `test/features/text_download/episode_filename_pad_migration_test.dart` に、`migrateEpisodeFileNamePadding` の戻り値のテストを追加する。対象は、桁上がり（`1_a`→`01_a` … `9_i`→`09_i`）、桁下がり、正規名が既にあるときの旧名削除の報告、リネーム失敗が報告されないこと、何もしないときの空マップ、タイトル変更（キャッシュあり）の報告。失敗を確認してコミットする
+- [x] 1.2 `migrateEpisodeFileNamePadding` の戻り値を `Future<Map<String, String>>` に変える。成功したリネームと削除した旧名を記録して返す。1.1 と既存の移行テストがすべて通ることを確認する
+- [x] 1.3 `download_service_test.dart`（またはキャンセルを扱う `download_cancellation_test.dart`）に、`downloadNovel` の通知のテストを追加する。内容は次の四つ。
   - `onEpisodeFilesRenamed` が最初の話のリクエストより前に呼ばれ、await されること
   - その後に取得をキャンセルしても呼び出し済みであること
   - 対応表が空なら呼ばれないこと
   - コールバックが例外を投げてもダウンロードが続行されること
 
   失敗を確認してコミットする
-- [ ] 1.4 `downloadNovel` / `_downloadEpisodes` に `onEpisodeFilesRenamed` を追加して 1.3 を通す。既存の `DownloadService` の Fake（`download_release_handle_test.dart` など）のシグネチャを合わせ、`fvm flutter test test/features/text_download` が通ることを確認する
+- [x] 1.4 `downloadNovel` / `_downloadEpisodes` に `onEpisodeFilesRenamed` を追加して 1.3 を通す。既存の `DownloadService` の Fake（`download_release_handle_test.dart` など）のシグネチャを合わせ、`fvm flutter test test/features/text_download` が通ることを確認する
 
 ## 2. 保存先ごとのファイル名付け替え操作
 

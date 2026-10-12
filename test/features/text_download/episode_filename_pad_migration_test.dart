@@ -451,11 +451,7 @@ void main() {
       final renames = await migrateEpisodeFileNamePadding(
         directory: dir,
         episodes: [
-          (
-            index: 1,
-            title: '新しいタイトル',
-            url: Uri.parse('https://example.com/1'),
-          ),
+          (index: 1, title: '新しいタイトル', url: Uri.parse('https://example.com/1')),
         ],
         totalEpisodes: 100,
         cache: {'https://example.com/1': cacheEntry(1, '古いタイトル')},
@@ -672,37 +668,40 @@ void main() {
       },
     );
 
-    test('the renames are delivered even when the download is cancelled', () async {
-      await seedEpisodes(9);
-      final token = CancellationToken();
-      Map<String, String>? delivered;
-      final mockClient = MockClient((request) async {
-        final u = request.url.toString();
-        if (u == 'https://example.com/index') {
-          return http.Response('index html', 200);
-        }
-        token.cancel();
-        throw http.ClientException('aborted');
-      });
-      final service = DownloadService(
-        client: mockClient,
-        requestDelay: Duration.zero,
-      );
+    test(
+      'the renames are delivered even when the download is cancelled',
+      () async {
+        await seedEpisodes(9);
+        final token = CancellationToken();
+        Map<String, String>? delivered;
+        final mockClient = MockClient((request) async {
+          final u = request.url.toString();
+          if (u == 'https://example.com/index') {
+            return http.Response('index html', 200);
+          }
+          token.cancel();
+          throw http.ClientException('aborted');
+        });
+        final service = DownloadService(
+          client: mockClient,
+          requestDelay: Duration.zero,
+        );
 
-      await expectLater(
-        service.downloadNovel(
-          site: _ListSite(indexOf(12)),
-          url: Uri.parse('https://example.com/index'),
-          outputPath: tempDir.path,
-          episodeCacheRepository: cacheRepo,
-          cancelToken: token,
-          onEpisodeFilesRenamed: (renames) async => delivered = renames,
-        ),
-        throwsA(isA<CancelledException>()),
-      );
+        await expectLater(
+          service.downloadNovel(
+            site: _ListSite(indexOf(12)),
+            url: Uri.parse('https://example.com/index'),
+            outputPath: tempDir.path,
+            episodeCacheRepository: cacheRepo,
+            cancelToken: token,
+            onEpisodeFilesRenamed: (renames) async => delivered = renames,
+          ),
+          throwsA(isA<CancelledException>()),
+        );
 
-      expect(delivered, hasLength(9));
-    });
+        expect(delivered, hasLength(9));
+      },
+    );
 
     test('is not called when nothing was renamed', () async {
       await seedEpisodes(12);

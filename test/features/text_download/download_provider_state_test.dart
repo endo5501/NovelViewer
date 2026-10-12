@@ -62,6 +62,7 @@ class _ProgrammableService extends DownloadService {
     episodeCacheRepository,
     ProgressCallback? onProgress,
     CancellationToken? cancelToken,
+    EpisodeFilesRenamedCallback? onEpisodeFilesRenamed,
   }) async {
     downloadCalls++;
     capturedToken = cancelToken;

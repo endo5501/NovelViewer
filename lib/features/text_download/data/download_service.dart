@@ -13,6 +13,11 @@ import 'package:novel_viewer/shared/utils/file_name_utils.dart' as file_names;
 typedef ProgressCallback =
     void Function(int current, int total, int skipped, int failed);
 
+/// Receives the episode files a download renamed on disk, old name -> new name,
+/// before any episode is fetched. See [migrateEpisodeFileNamePadding].
+typedef EpisodeFilesRenamedCallback =
+    Future<void> Function(Map<String, String> renames);
+
 final _log = Logger('text_download');
 
 const _maxIndexPages = 100;
@@ -429,6 +434,7 @@ class DownloadService {
     EpisodeCacheRepository? episodeCacheRepository,
     ProgressCallback? onProgress,
     CancellationToken? cancelToken,
+    EpisodeFilesRenamedCallback? onEpisodeFilesRenamed,
   }) async {
     // When cancelled, abort the in-flight request by closing the client. The
     // episodes saved before cancellation are intentionally left in place so the
@@ -499,6 +505,7 @@ class DownloadService {
       onProgress: onProgress,
       indexTruncated: collected.truncated,
       cancelToken: cancelToken,
+      onEpisodeFilesRenamed: onEpisodeFilesRenamed,
     );
   }
 
@@ -650,6 +657,7 @@ class DownloadService {
     ProgressCallback? onProgress,
     bool indexTruncated = false,
     CancellationToken? cancelToken,
+    EpisodeFilesRenamedCallback? onEpisodeFilesRenamed,
   }) async {
     final total = novelIndex.episodes.length;
 
@@ -663,7 +671,7 @@ class DownloadService {
     // re-download or leaves stale files behind (F104). Uses the merged index
     // total (= the new pad width) and the cache (= what was last written for
     // each episode URL, which is what identifies a title-changed file).
-    await migrateEpisodeFileNamePadding(
+    final renames = await migrateEpisodeFileNamePadding(
       directory: dir,
       episodes: [
         for (final e in novelIndex.episodes)
@@ -672,6 +680,22 @@ class DownloadService {
       totalEpisodes: total,
       cache: cache,
     );
+    // The renames are final on disk from here on, whatever becomes of the rest
+    // of the download, so whoever keys state by file name hears of them now:
+    // a cancelled or failed download returns no result to carry them in.
+    // Awaited, so that state has followed before any episode is fetched.
+    if (renames.isNotEmpty && onEpisodeFilesRenamed != null) {
+      try {
+        await onEpisodeFilesRenamed(renames);
+      } catch (e, st) {
+        _log.warning(
+          'Failed to handle renamed episode files in ${dir.path}; '
+          'continuing the download',
+          e,
+          st,
+        );
+      }
+    }
 
     var skippedCount = 0;
     var failedCount = 0;
