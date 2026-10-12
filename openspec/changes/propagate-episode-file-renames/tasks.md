@@ -17,11 +17,11 @@
 
 ## 2. 保存先ごとのファイル名付け替え操作
 
-- [ ] 2.1 `ReadingProgressRepository` の付け替え操作のテストを `test/features/reading_progress/data` に追加して、失敗を確認する。確認する内容は、`file_name` だけが変わり `body_offset`・`body_hash`・`updated_at` が保持されること、別ファイルを指す行や別の小説の行は変わらないこと。その後、実装して通す
-- [ ] 2.2 `BookmarkRepository` の付け替え操作のテストを `bookmark_repository_test.dart` に追加して、失敗を確認する。確認する内容は、通常の付け替え、同じ行番号の衝突で新名の行が1件だけ残ること、行番号なし同士の衝突で1件だけ残ること。その後、実装して通す
-- [ ] 2.3 `FactCacheRepository` の付け替え操作のテストを追加して、失敗を確認する。確認する内容は、事実・ハッシュ・モデルの保持、`(word, model_id)` が同じ行の衝突で新名の行が残ること。その後、実装して通す
-- [ ] 2.4 `LlmSummaryRepository` の `source_file` 付け替えのテストを追加して、失敗を確認する。確認する内容は、`summary`・`covered_up_to_episode`・`updated_at` が変わらないこと。その後、実装して通す
-- [ ] 2.5 `TtsAudioRepository` の付け替え操作のテストを `tts_audio_repository_test.dart` に追加して、失敗を確認する。確認する内容は、状態とセグメントの保持、新名にエピソードがある場合に旧名のエピソードとセグメントが削除されること。その後、実装して通す
+- [x] 2.1 `ReadingProgressRepository` の付け替え操作のテストを `test/features/reading_progress/data` に追加して、失敗を確認する。確認する内容は、`file_name` だけが変わり `body_offset`・`body_hash`・`updated_at` が保持されること、別ファイルを指す行や別の小説の行は変わらないこと。その後、実装して通す
+- [x] 2.2 `BookmarkRepository` の付け替え操作のテストを `bookmark_repository_test.dart` に追加して、失敗を確認する。確認する内容は、通常の付け替え、同じ行番号の衝突で新名の行が1件だけ残ること、行番号なし同士の衝突で1件だけ残ること。その後、実装して通す
+- [x] 2.3 `FactCacheRepository` の付け替え操作のテストを追加して、失敗を確認する。確認する内容は、事実・ハッシュ・モデルの保持、`(word, model_id)` が同じ行の衝突で新名の行が残ること。その後、実装して通す
+- [x] 2.4 `LlmSummaryRepository` の `source_file` 付け替えのテストを追加して、失敗を確認する。確認する内容は、`summary`・`covered_up_to_episode`・`updated_at` が変わらないこと。その後、実装して通す
+- [x] 2.5 `TtsAudioRepository` の付け替え操作のテストを `tts_audio_repository_test.dart` に追加して、失敗を確認する。確認する内容は、状態とセグメントの保持、新名にエピソードがある場合に旧名のエピソードとセグメントが削除されること。その後、実装して通す
 
 ## 3. 伝播の処理（episode-file-rename-propagation / reading-context）
 

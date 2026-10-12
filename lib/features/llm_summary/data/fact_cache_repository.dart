@@ -133,4 +133,21 @@ class FactCacheRepository {
   Future<void> deleteAllForWord({required String word}) async {
     await _db.delete('fact_cache', where: 'word = ?', whereArgs: [word]);
   }
+
+  /// Moves the cache rows of the episode file [from] to [to], after a download
+  /// renamed that file on disk. The text is unchanged, so the rows stay valid
+  /// hits under the new name.
+  ///
+  /// A row already under [to] for the same word and model wins and the one
+  /// under [from] is dropped: [to] is the file as it is now.
+  Future<void> renameFileName({required String from, required String to}) {
+    return _db.transaction((txn) async {
+      await txn.rawUpdate(
+        'UPDATE OR IGNORE fact_cache SET file_name = ? WHERE file_name = ?',
+        [to, from],
+      );
+      // What is left under [from] collided with a row under [to].
+      await txn.delete('fact_cache', where: 'file_name = ?', whereArgs: [from]);
+    });
+  }
 }

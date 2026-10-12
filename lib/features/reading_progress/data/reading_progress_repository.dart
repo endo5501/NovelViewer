@@ -64,6 +64,26 @@ class ReadingProgressRepository {
     );
   }
 
+  /// Repoints [novelId]'s progress from the episode file [from] to [to], after
+  /// a download renamed that file on disk.
+  ///
+  /// The body position goes with it — the text is the same, only its name
+  /// changed — and `updated_at` does not move: startup restores the novel with
+  /// the newest `updated_at`, and a rename is not the reader reading it.
+  Future<void> renameFileName({
+    required String novelId,
+    required String from,
+    required String to,
+  }) async {
+    final db = await _novelDatabase.database;
+    await db.update(
+      _tableName,
+      {'file_name': to},
+      where: 'novel_id = ? AND file_name = ?',
+      whereArgs: [novelId, from],
+    );
+  }
+
   Future<ReadingProgress?> findLatest() async {
     final db = await _novelDatabase.database;
     final rows = await db.query(

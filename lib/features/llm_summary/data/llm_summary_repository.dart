@@ -91,4 +91,19 @@ class LlmSummaryRepository {
   Future<void> deleteAllForWord({required String word}) async {
     await _db.delete('word_summaries', where: 'word = ?', whereArgs: [word]);
   }
+
+  /// Repoints snapshots whose jump target is the episode file [from] to [to],
+  /// after a download renamed that file on disk.
+  ///
+  /// Only `source_file` changes. `covered_up_to_episode` is the file name's
+  /// numeric prefix, which a zero-pad width change leaves the same, and the
+  /// summary was not re-analysed, so `updated_at` stays too.
+  Future<void> renameSourceFile({required String from, required String to}) {
+    return _db.update(
+      'word_summaries',
+      {'source_file': to},
+      where: 'source_file = ?',
+      whereArgs: [from],
+    );
+  }
 }
