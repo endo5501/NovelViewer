@@ -102,4 +102,31 @@ void main() {
       writer.dispose();
     },
   );
+
+  test('a pending position follows its file to a new name', () async {
+    final saved = <PositionSnapshot>[];
+    final writer = ReadingPositionWriter(save: (s) async => saved.add(s));
+    writer.observe(const PositionSnapshot('book', '9_x.txt', 1500, 'hash'));
+
+    writer.renamePending('book', {'9_x.txt': '09_x.txt'});
+    await writer.flush();
+
+    expect(saved, [const PositionSnapshot('book', '09_x.txt', 1500, 'hash')]);
+    writer.dispose();
+  });
+
+  test(
+    'renamePending leaves positions of other novels and files alone',
+    () async {
+      final saved = <PositionSnapshot>[];
+      final writer = ReadingPositionWriter(save: (s) async => saved.add(s));
+      writer.observe(const PositionSnapshot('other', '9_x.txt', 5, 'hash'));
+
+      writer.renamePending('book', {'9_x.txt': '09_x.txt'});
+      await writer.flush();
+
+      expect(saved.single.fileName, '9_x.txt');
+      writer.dispose();
+    },
+  );
 }
