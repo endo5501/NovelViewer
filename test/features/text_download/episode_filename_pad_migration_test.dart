@@ -392,6 +392,124 @@ void main() {
     );
   });
 
+  group('migrateEpisodeFileNamePadding rename report', () {
+    EpisodeCache cacheEntry(int index, String title) => EpisodeCache(
+      url: 'https://example.com/$index',
+      episodeIndex: index,
+      title: title,
+      lastModified: '2025/01/01 00:00',
+      downloadedAt: DateTime.utc(2025, 1, 1),
+    );
+
+    test('reports every rename when the pad width grows (9 -> 12)', () async {
+      for (var i = 1; i <= 9; i++) {
+        File(
+          '${dir.path}/${formatEpisodeFileName(i, '第$i話', 9)}',
+        ).writeAsStringSync('content $i');
+      }
+
+      final renames = await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: episodesUpTo(12),
+        totalEpisodes: 12,
+      );
+
+      expect(renames, {
+        for (var i = 1; i <= 9; i++) '${i}_第$i話.txt': '0${i}_第$i話.txt',
+      });
+    });
+
+    test('reports every rename when the pad width shrinks', () async {
+      File('${dir.path}/001_第1話.txt').writeAsStringSync('content');
+
+      final renames = await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: episodesUpTo(99),
+        totalEpisodes: 99,
+      );
+
+      expect(renames, {'001_第1話.txt': '01_第1話.txt'});
+    });
+
+    test('reports a stale duplicate it deleted as old -> new', () async {
+      File('${dir.path}/001_第1話.txt').writeAsStringSync('canonical');
+      File('${dir.path}/01_第1話.txt').writeAsStringSync('garbage');
+
+      final renames = await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: episodesUpTo(100),
+        totalEpisodes: 100,
+      );
+
+      expect(renames, {'01_第1話.txt': '001_第1話.txt'});
+    });
+
+    test('reports a title-changed file confirmed by the cache', () async {
+      File('${dir.path}/01_古いタイトル.txt').writeAsStringSync('old content');
+
+      final renames = await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: [
+          (
+            index: 1,
+            title: '新しいタイトル',
+            url: Uri.parse('https://example.com/1'),
+          ),
+        ],
+        totalEpisodes: 100,
+        cache: {'https://example.com/1': cacheEntry(1, '古いタイトル')},
+      );
+
+      expect(renames, {'01_古いタイトル.txt': '001_新しいタイトル.txt'});
+    });
+
+    test('does not report a rename that failed', () async {
+      File('${dir.path}/1_第1話.txt').writeAsStringSync('content 1');
+      File('${dir.path}/2_第2話.txt').writeAsStringSync('content 2');
+      // A directory squatting on episode 1's new name makes its rename throw
+      // (and `File.existsSync` reports it absent, so it is not treated as the
+      // canonical file and deleted around).
+      Directory('${dir.path}/01_第1話.txt').createSync();
+
+      final renames = await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: episodesUpTo(10),
+        totalEpisodes: 10,
+      );
+
+      expect(renames, {'2_第2話.txt': '02_第2話.txt'});
+      expect(File('${dir.path}/1_第1話.txt').existsSync(), isTrue);
+    });
+
+    test('reports nothing when every file already has its name', () async {
+      for (var i = 1; i <= 12; i++) {
+        File(
+          '${dir.path}/${formatEpisodeFileName(i, '第$i話', 12)}',
+        ).writeAsStringSync('content $i');
+      }
+
+      final renames = await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: episodesUpTo(12),
+        totalEpisodes: 12,
+      );
+
+      expect(renames, isEmpty);
+    });
+
+    test('reports nothing when the folder does not exist', () async {
+      dir.deleteSync(recursive: true);
+
+      final renames = await migrateEpisodeFileNamePadding(
+        directory: dir,
+        episodes: episodesUpTo(12),
+        totalEpisodes: 12,
+      );
+
+      expect(renames, isEmpty);
+    });
+  });
+
   group('Download skip detection after pad migration', () {
     late Directory tempDir;
     late Directory novelDir;
