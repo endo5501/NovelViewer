@@ -128,13 +128,21 @@ final RegExp _episodeFileNamePattern = RegExp(r'^(\d+)_(.*)\.txt$');
 /// width increase and decrease, and does not modify the episode cache.
 /// Individual rename/delete failures are logged and skipped (that episode falls
 /// back to being re-downloaded) rather than aborting the whole download.
-Future<void> migrateEpisodeFileNamePadding({
+///
+/// Returns every old name -> new name it applied, so that state keyed by the
+/// episode's file name (reading progress, bookmarks, TTS audio, ...) can follow.
+/// A stale file deleted because the new name already existed is reported too:
+/// to anything keyed by file name, that episode is now the new name all the
+/// same. A rename or delete that failed is not reported, because the old file
+/// is still there under its old name.
+Future<Map<String, String>> migrateEpisodeFileNamePadding({
   required Directory directory,
   required List<({int index, String title, Uri url})> episodes,
   required int totalEpisodes,
   Map<String, EpisodeCache> cache = const {},
 }) async {
-  if (!directory.existsSync()) return;
+  final renames = <String, String>{};
+  if (!directory.existsSync()) return renames;
 
   // Index existing .txt files by (parsedIndex, restName); a given key may have
   // more than one file when corruption left differently-padded duplicates.
@@ -151,7 +159,7 @@ Future<void> migrateEpisodeFileNamePadding({
       e,
       st,
     );
-    return;
+    return renames;
   }
   for (final entity in entries) {
     if (entity is! File) continue;
@@ -205,6 +213,7 @@ Future<void> migrateEpisodeFileNamePadding({
           // Migrate the old-width file to the current-width name.
           existingFile.renameSync(target.path);
         }
+        renames[existing] = newName;
       } catch (e, st) {
         _log.warning(
           'Failed to migrate episode file "$existing" -> "$newName" in ${directory.path}',
@@ -214,6 +223,7 @@ Future<void> migrateEpisodeFileNamePadding({
       }
     }
   }
+  return renames;
 }
 
 /// Thrown when the first index page is fetched successfully but parses to no
