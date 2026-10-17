@@ -61,9 +61,9 @@
 
 ## 4. Windows ネイティブビルドと CI
 
-- [ ] 4.1 `scripts/build_piper_windows.bat` を design D9 に従って更新する(`PIPER_PLUS_BUILD_SHARED=ON`、`--target piper_plus`、`piper_plus.dll` のコピー)。Windows 機で実行し、`build\windows\x64\runner\Release\` に `piper_plus.dll` と `onnxruntime.dll` が置かれることを確認する
-- [ ] 4.2 `.github/workflows/release.yml` の Piper DLL 存在検証を `piper_plus.dll` に変更する。ONNX Runtime のライセンスを探すグロブ(`build/onnxruntime/onnxruntime-win-*`)が v2.0.2 のビルドディレクトリ構成で一致するかを、4.1 のビルド結果で確認し、必要なら直す
-- [ ] 4.3 Windows 機で `scripts\build_app.bat windows` を実行してアプリを起動し、Piper で日本語の読み上げができることを確認する
+- [x] 4.1 `scripts/build_piper_windows.bat` を design D9 に従って更新する(`PIPER_PLUS_BUILD_SHARED=ON`、`--target piper_plus`、`piper_plus.dll` のコピー)。Windows 機で実行し、`build\windows\x64\runner\Release\` に `piper_plus.dll` と `onnxruntime.dll` が置かれることを確認する
+- [x] 4.2 `.github/workflows/release.yml` の Piper DLL 存在検証を `piper_plus.dll` に変更する。ONNX Runtime のライセンスを探すグロブ(`build/onnxruntime/onnxruntime-win-*`)が v2.0.2 のビルドディレクトリ構成で一致するかを、4.1 のビルド結果で確認し、必要なら直す
+- [x] 4.3 Windows 機で `scripts\build_app.bat windows` を実行してアプリを起動し、Piper で日本語の読み上げができることを確認する(2026-10-17: ユーザーが Windows で確認して OK)
 
 ## 5. ドキュメント
 
@@ -72,13 +72,13 @@
 
 ## 6. 統合確認
 
-- [ ] 6.1 macOS でアプリを起動し、Piper モデルの再ダウンロードを促されることを確認して再ダウンロードする。そのうえで、ピン留め済みモデル(36b59c8)で Piper による日本語の読み上げを手動確認する(2026-10-17 の初回確認で、eb9b882 では文末の音節が欠落したため D10 でモデルを更新した)。確認する内容は次の 3 点
+- [x] 6.1 macOS でアプリを起動し、Piper モデルの再ダウンロードを促されることを確認して再ダウンロードする。そのうえで、ピン留め済みモデル(36b59c8)で Piper による日本語の読み上げを手動確認する(2026-10-17 の初回確認で、eb9b882 では文末の音節が欠落したため D10 でモデルを更新した)。確認する内容は次の 3 点
   - 合成エラーが出ない
   - 速度・抑揚スライダの変更が音声に反映される
   - 生成済み音声の保存と再生ができる
   - 英語交じりの文(例:「今日はGitHubでcodeを書いた。」)を v1.8 と同じ程度に扱える(英単語は CMU 辞書がないため読み飛ばされるのが既存の挙動)
 
-  文末の音節(例:「彼はそういった」の「た」)が欠けないことを聴いて確かめ、結果を記録する
+  文末の音節(例:「彼はそういった」の「た」)が欠けないことを聴いて確かめ、結果を記録する(2026-10-17: ユーザーが macOS で確認して OK)
 - [x] 6.2 `scripts/build_app.sh macos` の本番ビルドの後に `scripts/test/verify_macos_bundle.sh` を実行し、同梱集合が spec(macos-native-library-embedding)どおりであることを確認する
 
 ## 7. 最終確認
