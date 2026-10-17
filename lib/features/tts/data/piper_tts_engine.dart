@@ -126,9 +126,23 @@ class PiperTtsEngine {
     final derived = Map<String, dynamic>.of(modelConfig!)
       ..['language_id_map'] = japaneseLanguages;
     final derivedPath = '$modelPath.ja.json';
+    // Written beside the target and renamed into place: the playback and the
+    // edit-dialog isolates can load the same model concurrently, and an
+    // in-place rewrite would let one's native loader read the other's
+    // half-written file. A per-call name keeps concurrent writers apart.
+    final temp = File(
+      '$derivedPath.${DateTime.now().microsecondsSinceEpoch}'
+      '.${identityHashCode(derived)}.tmp',
+    );
     try {
-      File(derivedPath).writeAsStringSync(jsonEncode(derived));
+      temp.writeAsStringSync(jsonEncode(derived));
+      temp.renameSync(derivedPath);
     } on FileSystemException {
+      try {
+        if (temp.existsSync()) temp.deleteSync();
+      } on FileSystemException {
+        // Nothing more to do; the load itself must not fail over cleanup.
+      }
       // Losing kanji-only sentences beats losing Piper altogether: the
       // downloaded config still loads and speaks everything else.
       return downloaded;
