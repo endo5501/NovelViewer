@@ -162,6 +162,95 @@ void main() {
     });
   });
 
+  group('native frameworks', () {
+    /// Parses "16.3" into comparable integer parts, missing parts as zero.
+    List<int> version(String v) {
+      final parts = v.trim().split('.').map(int.parse).toList();
+      while (parts.length < 3) {
+        parts.add(0);
+      }
+      return parts;
+    }
+
+    bool atLeast(String actual, String floor) {
+      final a = version(actual), f = version(floor);
+      for (var i = 0; i < 3; i++) {
+        if (a[i] != f[i]) return a[i] > f[i];
+      }
+      return true;
+    }
+
+    test('the app deployment target is not below any embedded framework', () {
+      // The embed phase ships every xcframework in ios/Frameworks with every
+      // build. An embedded framework requiring a newer OS than the app declares
+      // fails App Store validation, and on the older OS the framework cannot
+      // load at all. The xcframeworks are built locally and not tracked, so
+      // this only has something to compare once they have been built.
+      final frameworkPlists = Directory('ios/Frameworks').existsSync()
+          ? Directory('ios/Frameworks')
+                .listSync(recursive: true)
+                .whereType<File>()
+                .where(
+                  (f) =>
+                      f.path.endsWith('.framework/Info.plist') &&
+                      f.path.contains('.xcframework/'),
+                )
+                .toList()
+          : <File>[];
+      final floors = [
+        for (final plist in frameworkPlists)
+          RegExp(
+            r'<key>MinimumOSVersion</key>\s*<string>([0-9.]+)</string>',
+          ).firstMatch(plist.readAsStringSync())!.group(1)!,
+      ];
+
+      final targets = RegExp(
+        r'IPHONEOS_DEPLOYMENT_TARGET = ([0-9.]+);',
+      ).allMatches(pbxproj).map((m) => m.group(1)!).toList();
+      expect(targets, isNotEmpty);
+
+      for (final floor in floors) {
+        for (final target in targets) {
+          expect(
+            atLeast(target, floor),
+            isTrue,
+            reason:
+                'IPHONEOS_DEPLOYMENT_TARGET $target is below an embedded '
+                'framework that requires $floor',
+          );
+        }
+      }
+    });
+
+    test('the embed phase reads ios/Frameworks and keeps no name list', () {
+      final phase = RegExp(
+        r'/\* Embed Native Frameworks \*/ = \{(.*?)\n\t\t\};',
+        dotAll: true,
+      ).firstMatch(pbxproj);
+      expect(phase, isNotNull, reason: 'the embed phase must exist');
+      final body = phase!.group(1)!;
+
+      expect(body, contains('alwaysOutOfDate = 1;'));
+      expect(body, contains(RegExp(r'inputPaths = \(\s*\);')));
+      expect(body, contains(RegExp(r'outputPaths = \(\s*\);')));
+      expect(body, contains(r'/Frameworks/*.xcframework'));
+      expect(
+        body.contains('piper_plus'),
+        isFalse,
+        reason: 'the directory is the only list of what ships',
+      );
+    });
+
+    test('the embed phase runs in the Runner target', () {
+      final runner = RegExp(
+        r'/\* Runner \*/ = \{\s*isa = PBXNativeTarget;.*?buildPhases = \((.*?)\);',
+        dotAll: true,
+      ).firstMatch(pbxproj);
+      expect(runner, isNotNull);
+      expect(runner!.group(1), contains('/* Embed Native Frameworks */'));
+    });
+  });
+
   group('Swift Package Manager is the only integration', () {
     test('no Podfile remains', () {
       expect(
