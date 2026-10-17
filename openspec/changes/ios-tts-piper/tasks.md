@@ -9,7 +9,7 @@
 - [x] 2.1 `TtsEngineTypeNotifier` のテストを書く(spec `tts-engine-selection` の追加要件)。iOS で保存値なしなら piper。iOS で保存値が irodori なら piper になり、保存値は irodori のまま。デスクトップで irodori なら irodori。`setEngineType` は保存する。確認: テストが失敗する
 - [x] 2.2 `TtsEngineTypeNotifier.build()` で、保存値を使えるエンジンに解決する(design D2)。確認: 2.1 と既存の TTS 関連テストが通る
 - [x] 2.3 設定ダイアログのテストを書く。iOS の値では、エンジン選択が無く Piper の設定が表示され、参照音声の欄は無い。一部のエンジンだけが使える値では、選択肢がそれだけになる。デスクトップでは従来どおり 3 つ。確認: テストが失敗する
-- [ ] 2.4 `_EngineSelector` を `supportedTtsEnginesProvider` から組み立て、1 つしかなければ出さないようにする(design D3)。確認: 2.3 と `settings_dialog_*` の既存テストが通る
+- [x] 2.4 `_EngineSelector` を `supportedTtsEnginesProvider` から組み立て、1 つしかなければ出さないようにする(design D3)。確認: 2.3 と `settings_dialog_*` の既存テストが通る
 
 ## 3. MP3 書き出しと参照音声の列
 
