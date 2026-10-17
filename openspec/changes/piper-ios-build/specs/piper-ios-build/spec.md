@@ -50,7 +50,7 @@ ONNX Runtime は、piper-plus v2.0.2 が iOS 向けに使うバージョン(1.20
 
 スクリプトは既存の xcframework を置き換え、古いスライスや iOS 以外のスライスを残してはならない (MUST NOT)。
 
-#### Scenario: 2つの xcframework が生成される
+#### Scenario: xcframework が生成される
 - **WHEN** macOS 上で `scripts/build_piper_ios.sh` を実行する
 - **THEN** `ios/Frameworks/piper_plus.xcframework` が生成され、`ios-arm64` と `ios-arm64-simulator` の2スライスだけを含み、`ios/Frameworks/` に ONNX Runtime 単独の xcframework は無い
 

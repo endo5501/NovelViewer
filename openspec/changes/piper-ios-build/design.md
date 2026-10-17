@@ -198,6 +198,7 @@ D1 と同じ内容の修正を ayutaz/piper-plus に提案する。当初は本 
 - **iOS Simulator(iPad mini A17 Pro, iOS 27.0)**: 最小の C ハーネスを `xcrun simctl spawn` で実行した。
   - パッチあり: `piper_plus_phonemize("こんにちは、世界。")` は `lang=ja`、18 音素を返した。「こんにちは、世界。」(rms 0.136)と「多分。」(rms 0.202)はどちらも無音ではない音声になった。
   - パッチなし(対照): 音素は 0 個、合成結果は 0 サンプルだった。
+- **辞書が無い場合**(2026-10-17、検証時に手動で確認): 存在しない `dict_dir` を渡して同じハーネスを Simulator で実行した。音素は 0 個、合成結果は 0 サンプルで、クラッシュしなかった(spec「辞書が無いと失敗として報告される」)。アプリ側では、`PiperTtsEngine` が空の結果を例外にする。自動テストには入れていない。
 - **ライブラリ**: `-force_load` で包んだ dylib(ORT 込みで約 29MB)は、`piper_plus_*` 以外のシンボルを公開しなかった。`nm -u` には `popen` / `system` / `posix_spawn` 系のシンボルが無かった。
 - **ONNX Runtime について、D4 の前提が誤っていた**: Microsoft の CDN が配る 1.20.0 の `onnxruntime.framework` は、upstream の文書にある動的ライブラリではなかった。中身は静的ライブラリ(ar アーカイブ。`prelinked_objects.o` を 1 つ含む)で、`minos 13.0` だった。そのため、ORT を独立した動的 framework として同梱することはできない。piper_plus の dylib に静的にリンクする方式に改めた(D3 / D4、ユーザ判断)。
 
