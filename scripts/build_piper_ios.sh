@@ -89,7 +89,8 @@ fetch_ort() {
     done
 }
 
-# prepare_source : extract the pinned submodule tree and apply the patches.
+# prepare_source : extract the submodule tree NovelViewer records and apply the
+# patches.
 prepare_source() {
     local src="$WORK_DIR/src"
 
@@ -98,10 +99,27 @@ prepare_source() {
         exit 1
     fi
 
-    echo "=== Extracting piper-plus $(git -C "$PIPER_DIR" describe --tags --always) ==="
+    # The commit NovelViewer records (its index), not whatever the submodule
+    # happens to have checked out: after switching branches without updating
+    # submodules the two differ, and the patch could still apply to the wrong
+    # tree.
+    local pinned
+    pinned="$(git -C "$PROJECT_ROOT" ls-files -s third_party/piper-plus | awk '{print $2}')"
+    if [ -z "$pinned" ] || ! git -C "$PIPER_DIR" cat-file -e "$pinned^{commit}" 2>/dev/null; then
+        echo "ERROR: the recorded piper-plus commit ${pinned:-<none>} is not in" \
+            "$PIPER_DIR; run git submodule update --init" >&2
+        exit 1
+    fi
+    if [ "$(git -C "$PIPER_DIR" rev-parse HEAD)" != "$pinned" ]; then
+        echo "Note: third_party/piper-plus is checked out at a different commit;" \
+            "building the recorded $pinned."
+    fi
+    PIPER_VERSION="$(git -C "$PIPER_DIR" describe --tags --always "$pinned")"
+
+    echo "=== Extracting piper-plus $PIPER_VERSION ==="
     rm -rf "$src"
     mkdir -p "$src"
-    git -C "$PIPER_DIR" archive HEAD | tar -x -C "$src"
+    git -C "$PIPER_DIR" archive "$pinned" | tar -x -C "$src"
     # Its own repository, so git apply resolves paths against this tree rather
     # than against NovelViewer, which build/ lives in.
     git -C "$src" init -q
@@ -112,7 +130,7 @@ prepare_source() {
         echo "Applying $(basename "$patch")"
         if ! git -C "$src" apply "$patch"; then
             echo "ERROR: patch $(basename "$patch") does not apply to piper-plus" \
-                "$(git -C "$PIPER_DIR" describe --tags --always)." >&2
+                "$PIPER_VERSION." >&2
             echo "If upstream has shipped the fix, delete the patch." >&2
             exit 1
         fi
