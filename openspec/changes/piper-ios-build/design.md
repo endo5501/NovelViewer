@@ -154,7 +154,7 @@ CDN の zip を SHA-256 で検証して展開する。iOS の 2 スライスの�
 
 ### D7: upstream PR
 
-D1 と同じ内容の PR を ayutaz/piper-plus の `dev` に出す。PR を出すことは本 change のタスクに含めるが、取り込まれることは完了条件にしない。PR の URL はパッチの先頭に書く。PR を出すまでは、仮に「upstream PR 未提出」と書いておく。
+D1 と同じ内容の修正を ayutaz/piper-plus に提案する。当初は本 change の中で PR を出す計画だった。しかし本家は GitHub の PR をタスク管理の仕組みの一部として使っているように見えるため、いきなり PR を出すのは控え、文面を `upstream-pr-draft.md` に残すことにした(2026-10-17、ユーザ判断)。パッチの先頭には「upstream PR 未提出」と、文面の置き場所を書く。提出したら URL に書き換える。
 
 ### D8: OpenJTalk 辞書はアプリ内で展開する(実装中に追加)
 

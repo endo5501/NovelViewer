@@ -8,7 +8,7 @@ ONNX Runtime を含む iOS 向けの piper-plus の作り方を定める。対�
 
 `scripts/build_piper_ios.sh` は、`third_party/piper-plus` サブモジュールの記録済みコミットのツリーをビルド用ディレクトリへ取り出し、`patches/piper-plus/` 配下のパッチをファイル名順にすべて当ててからビルドしなければならない (MUST)。スクリプトはサブモジュールの作業ツリーを変更してはならない (MUST NOT)。パッチが1つでも当たらなければ、スクリプトは当たらなかったパッチ名を示して非ゼロで終了し、成果物を更新してはならない (MUST)。
 
-パッチは、upstream に出した PR と同じ修正でなければならない (MUST)。各パッチの先頭には、その PR の URL と「upstream に取り込まれたら削除する」旨を記さなければならない (MUST)。
+パッチは、upstream に提案する修正と同じものでなければならない (MUST)。各パッチの先頭には、「upstream に取り込まれたら削除する」旨と、upstream PR の状態を記さなければならない (MUST)。PR の状態は、提出済みならその URL、未提出ならその旨と PR 文面の置き場所である。
 
 #### Scenario: サブモジュールが汚れない
 - **WHEN** `scripts/build_piper_ios.sh` を実行し終える
@@ -20,7 +20,7 @@ ONNX Runtime を含む iOS 向けの piper-plus の作り方を定める。対�
 
 #### Scenario: パッチに由来が記されている
 - **WHEN** `patches/piper-plus/` 配下の各パッチを確認する
-- **THEN** 先頭に upstream PR の URL と、取り込まれたら削除する旨が書かれている
+- **THEN** 先頭に、取り込まれたら削除する旨と、upstream PR の URL(未提出ならその旨と PR 文面の置き場所)が書かれている
 
 ### Requirement: iOS でも日本語の文が OpenJTalk で音素化される
 

@@ -8,7 +8,7 @@ iPad 版 NovelViewer では TTS を無効にしている。前回の試み(Irodo
 
 ## What Changes
 
-- iOS ビルドでも OpenJTalk の直接呼び出し経路(MeCab / NJD / JPCommon)を有効にするパッチを `patches/piper-plus/` に置く。パッチはサブモジュールそのものには当てず、`git archive` で取り出したコピーに当てる。同じ修正を upstream に PR として出す。取り込まれたらパッチは削除する。
+- iOS ビルドでも OpenJTalk の直接呼び出し経路(MeCab / NJD / JPCommon)を有効にするパッチを `patches/piper-plus/` に置く。パッチはサブモジュールそのものには当てず、`git archive` で取り出したコピーに当てる。同じ修正を upstream に提案するための PR の文面を用意する(提出は本家の運用を確かめてから)。取り込まれたらパッチは削除する。
 - 新しい `scripts/build_piper_ios.sh` を追加する。このスクリプトは次の処理を行う。
   - パッチを当てたソースを iOS 実機(arm64)と Simulator(arm64)向けにビルドする。
   - できた静的ライブラリを動的 framework に包み、`ios/Frameworks/piper_plus.xcframework` を作る。
@@ -40,5 +40,5 @@ iPad 版 NovelViewer では TTS を無効にしている。前回の試み(Irodo
 - **Dart**: `lib/features/tts/data/piper_native_bindings.dart`(iOS のライブラリ名)、`lib/features/tts/data/piper_model_download_service.dart`(辞書の展開)。`pubspec.yaml` に `archive` と `integration_test` を追加する。`integration_test/` と `test_driver/` は新規。
 - **テスト**: `test/platform/ios_project_config_test.dart` と `test/features/tts/data/piper_native_bindings_test.dart` を拡張する。
 - **アプリサイズ**: iOS 版に piper_plus.framework(ONNX Runtime を含めて約 30MB)が加わる。
-- **外部依存**: Microsoft の ONNX Runtime CDN(取得物は SHA-256 で検証する)。upstream piper-plus への PR。
+- **外部依存**: Microsoft の ONNX Runtime CDN(取得物は SHA-256 で検証する)。upstream piper-plus への PR(文面のみ用意し、未提出)。
 - **macOS / Windows**: 影響しない(パッチは iOS ビルドだけに当てる)。

@@ -1,6 +1,8 @@
 # Project-maintained patch for third_party/piper-plus (iOS build only).
 #
-# Upstream PR: not yet submitted
+# Upstream PR: not yet submitted. The prepared PR text is
+# openspec/changes/piper-ios-build/upstream-pr-draft.md (moved under
+# openspec/changes/archive/ once the change is archived).
 # Remove this patch once upstream ships the fix and the submodule is bumped
 # to that release. scripts/build_piper_ios.sh fails when the patch no longer
 # applies, which is the signal to check upstream and drop it.

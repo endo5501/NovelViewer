@@ -43,7 +43,7 @@
 ## 6. ドキュメントと upstream PR
 
 - [x] 6.1 `docs/ipad.md` に追記する。内容は、`scripts/build_piper_ios.sh` によるビルド手順、パッチの位置づけと削除する条件、成果物は Git で管理しないので iOS で TTS を使うなら各自ビルドが必要なこと、ビューアだけならビルドしなくてよいこと、Simulator と実機で合成テストを実行するコマンドと、計測値の出力先。確認: spec `ios-build-target` のシナリオ「The native TTS framework build is discoverable」「The on-device synthesis test procedure is discoverable」を満たす記述がある
-- [ ] 6.2 1.1 のブランチから ayutaz/piper-plus の `dev` へ PR を出す。PR の説明には、iOS で日本語が音素化されない原因、修正の範囲、Simulator と実機での確認結果を書く。確認: PR の URL をパッチの先頭に書いて `scripts/build_piper_ios.sh` を再実行し、成果物が変わらない(`verify_piper_ios.sh` が合格する)
+- [x] 6.2 upstream PR の文面を `openspec/changes/piper-ios-build/upstream-pr-draft.md` に用意する(提出はしない。design D7)。パッチの先頭には、未提出であることと文面の置き場所を書く。確認: `scripts/build_piper_ios.sh` を再実行しても成果物が変わらず、`verify_piper_ios.sh` が合格する
 
 ## 7. 最終確認
 
