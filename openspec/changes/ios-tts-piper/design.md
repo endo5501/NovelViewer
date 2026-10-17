@@ -56,7 +56,7 @@
 
 ### D3: エンジン選択は使えるものだけを並べ、1 つしかなければ出さない
 
-`_EngineSelector` は `supportedTtsEnginesProvider` から選択肢を作り、要素が 1 つなら `SizedBox.shrink()` を返す。設定タブは、従来どおり `ttsEngineTypeProvider`(D2 で解決済み)に応じた設定を表示する。iOS では Piper の設定(モデルのダウンロードと合成パラメータ)だけが並び、参照音声の欄は自然に出なくなる。
+`_EngineSelector` は、`supportedTtsEnginesProvider` の一覧を受け取って選択肢を作る。一覧の要素が 1 つなら、`_TtsTab` は選択欄も、その下の余白も出さない(選択欄の中で空のウィジェットを返すと、余白だけが残るため)。設定タブは、従来どおり `ttsEngineTypeProvider`(D2 で解決済み)に応じた設定を表示する。iOS では Piper の設定(モデルのダウンロードと合成パラメータ)だけが並び、参照音声の欄は自然に出なくなる。
 
 ### D4: 書き出しボタンは `ttsAudioExportSupportedProvider` が false なら作らない
 

@@ -42,6 +42,7 @@ void main() {
     bool skip = false,
     bool enabled = true,
     bool showReferenceAudio = true,
+    void Function(String? value)? onRefWavPathChanged,
     void Function(String? memo)? onMemoEditComplete,
     VoidCallback? onCursorRequested,
     VoidCallback? onSkipToggled,
@@ -65,7 +66,7 @@ void main() {
                 isCursor: isCursor,
                 voiceFiles: const [],
                 onTextEditComplete: (_) {},
-                onRefWavPathChanged: (_) {},
+                onRefWavPathChanged: onRefWavPathChanged ?? (_) {},
                 onMemoEditComplete: onMemoEditComplete ?? (_) {},
                 onPlay: () {},
                 onGenerate: () {},
@@ -465,6 +466,31 @@ void main() {
         find.widgetWithIcon(IconButton, Icons.restart_alt),
         findsOneWidget,
       );
+    });
+
+    testWidgets('a hidden selector never writes the stored value', (
+      tester,
+    ) async {
+      // The stored ref_wav_path is only written through this callback, so a
+      // row that never calls it leaves the segment's value as it was.
+      final changes = <String?>[];
+      await pumpRow(
+        tester,
+        rowWidth: 1000,
+        showReferenceAudio: false,
+        hasAudio: true,
+        onRefWavPathChanged: changes.add,
+      );
+
+      // Interact with everything the row still offers for editing.
+      for (final field in find.byType(TextField).evaluate().toList()) {
+        await tester.tap(find.byWidget(field.widget));
+        await tester.pump();
+      }
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+
+      expect(changes, isEmpty);
     });
   });
 }
