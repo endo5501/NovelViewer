@@ -2,7 +2,7 @@
 
 - [x] 1.1 `test/shared/platform/platform_capabilities_test.dart` を書き換える(spec `platform-capabilities` の新しい要件のシナリオ)。iOS では `piperTts` だけが true で、`qwen3Tts` / `irodoriTts` / `ttsAudioExport` / `appUpdate` は false、`textToSpeech` は true。デスクトップではすべて true。`textToSpeech` は、どれかのエンジンが使えるときだけ true。確認: テストが失敗する
 - [x] 1.2 `PlatformCapabilities` にフィールドを加え、`textToSpeech` を getter にする(design D1)。確認: 1.1 と既存の `platform_capabilities_provider_test.dart` が通る
-- [ ] 1.3 `features/tts/providers/` に `supportedTtsEnginesProvider`(表示順は Qwen3-TTS → Piper → Irodori-TTS)と `ttsAudioExportSupportedProvider` を加える。テストを先に書き、機能モデルの provider を上書きして iOS とデスクトップの両方を確かめる。`tts_availability_provider.dart` のコメントの iOS についての説明も、実態に合わせて直す。確認: 追加したテストと、既存の `tts_availability_gate_test.dart` が通る
+- [x] 1.3 `features/tts/providers/` に `supportedTtsEnginesProvider`(表示順は Qwen3-TTS → Piper → Irodori-TTS)と `ttsAudioExportSupportedProvider` を加える。テストを先に書き、機能モデルの provider を上書きして iOS とデスクトップの両方を確かめる。`tts_availability_provider.dart` のコメントの iOS についての説明も、実態に合わせて直す。確認: 追加したテストと、既存の `tts_availability_gate_test.dart` が通る
 
 ## 2. 使うエンジンの解決とエンジン選択の UI
 
