@@ -126,7 +126,13 @@ class PiperTtsEngine {
     final derived = Map<String, dynamic>.of(modelConfig!)
       ..['language_id_map'] = japaneseLanguages;
     final derivedPath = '$modelPath.ja.json';
-    File(derivedPath).writeAsStringSync(jsonEncode(derived));
+    try {
+      File(derivedPath).writeAsStringSync(jsonEncode(derived));
+    } on FileSystemException {
+      // Losing kanji-only sentences beats losing Piper altogether: the
+      // downloaded config still loads and speaks everything else.
+      return downloaded;
+    }
     return derivedPath;
   }
 
