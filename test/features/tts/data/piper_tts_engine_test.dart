@@ -1,6 +1,8 @@
 // ignore_for_file: prefer_function_declarations_over_variables
 
+import 'dart:convert';
 import 'dart:ffi';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
@@ -19,6 +21,14 @@ typedef SynthesizeFn =
       Pointer<Pointer<Float>>,
       Pointer<Int32>,
       Pointer<Int32>,
+    );
+
+typedef PhonemizeFn =
+    int Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Pointer<PiperPlusPhonemeResult>,
     );
 
 /// Snapshot of the options struct the engine passed to one synthesize call.
@@ -59,6 +69,9 @@ class MockPiperNativeBindings extends PiperNativeBindings {
   /// samples.
   bool returnEmptyBuffer = false;
 
+  /// Space-separated phonemes piper_plus_phonemize reports for any text.
+  String phonemizeOutput = 't a';
+
   // --- recorded calls ---
   int createCalls = 0;
   String? lastModelPath;
@@ -68,6 +81,8 @@ class MockPiperNativeBindings extends PiperNativeBindings {
   final List<SynthCall> synthCalls = [];
   final List<Pointer<Float>> returnedBuffers = [];
   final List<Pointer<Float>> freedBuffers = [];
+  final List<String> phonemizedTexts = [];
+  final List<String?> phonemizeLanguages = [];
 
   final List<Pointer<Utf8>> _errorStrings = [];
 
@@ -77,7 +92,11 @@ class MockPiperNativeBindings extends PiperNativeBindings {
     calloc.free(_defaults);
     _errorStrings.forEach(calloc.free);
     _errorStrings.clear();
+    _phonemeStrings.forEach(calloc.free);
+    _phonemeStrings.clear();
   }
+
+  final List<Pointer<Utf8>> _phonemeStrings = [];
 
   late final Pointer<PiperPlusSynthOptions> _defaults = () {
     final p = calloc<PiperPlusSynthOptions>();
@@ -179,6 +198,33 @@ class MockPiperNativeBindings extends PiperNativeBindings {
   // ignore: overridden_fields
   late final int Function(Pointer<Void>) sampleRate = (Pointer<Void> engine) =>
       fakeSampleRate;
+
+  @override
+  // ignore: overridden_fields
+  late final PhonemizeFn phonemize =
+      (
+        Pointer<Void> engine,
+        Pointer<Utf8> text,
+        Pointer<Utf8> language,
+        Pointer<PiperPlusPhonemeResult> out,
+      ) {
+        phonemizedTexts.add(text.toDartString());
+        phonemizeLanguages.add(
+          language == nullptr ? null : language.toDartString(),
+        );
+        final phonemes = phonemizeOutput.toNativeUtf8();
+        final lang = 'ja'.toNativeUtf8();
+        _phonemeStrings
+          ..add(phonemes)
+          ..add(lang);
+        out.ref
+          ..phonemes = phonemes
+          ..language = lang
+          ..numPhonemes = phonemizeOutput.trim().isEmpty
+              ? 0
+              : phonemizeOutput.trim().split(' ').length;
+        return 0;
+      };
 
   @override
   // ignore: overridden_fields
@@ -388,6 +434,95 @@ void main() {
         engine.synthesize('テスト');
 
         expect(mockBindings.synthCalls.single.languageId, -1);
+      });
+    });
+
+    group('model config', () {
+      late Directory tmp;
+
+      setUp(() => tmp = Directory.systemTemp.createTempSync('piper_cfg_'));
+      tearDown(() => tmp.deleteSync(recursive: true));
+
+      String writeConfig(Map<String, int> languages) {
+        final modelPath = '${tmp.path}/model.onnx';
+        File('$modelPath.json').writeAsStringSync(
+          jsonEncode({
+            'audio': {'sample_rate': 22050},
+            'language_id_map': languages,
+            'phoneme_id_map': {
+              't': [38],
+              'a': [10],
+            },
+          }),
+        );
+        return modelPath;
+      }
+
+      test('hands the native engine a config without zh when ja and zh '
+          'coexist', () {
+        final modelPath = writeConfig({'ja': 0, 'en': 1, 'zh': 2, 'es': 3});
+        final original = File('$modelPath.json').readAsStringSync();
+
+        engine.loadModel(modelPath, dicDir: '/fake/dic');
+
+        expect(mockBindings.lastConfigPath, '$modelPath.ja.json');
+        final derived =
+            jsonDecode(File('$modelPath.ja.json').readAsStringSync())
+                as Map<String, dynamic>;
+        expect(derived['language_id_map'], {'ja': 0, 'en': 1, 'es': 3});
+        expect(derived['phoneme_id_map'], {
+          't': [38],
+          'a': [10],
+        });
+        expect(derived['audio'], {'sample_rate': 22050});
+        expect(File('$modelPath.json').readAsStringSync(), original);
+      });
+
+      test('uses the downloaded config as-is when there is no zh', () {
+        final modelPath = writeConfig({'ja': 0, 'en': 1});
+
+        engine.loadModel(modelPath, dicDir: '/fake/dic');
+
+        expect(mockBindings.lastConfigPath, '$modelPath.json');
+        expect(File('$modelPath.ja.json').existsSync(), isFalse);
+      });
+
+      test('returns 0.2 s of silence for text with no known phoneme', () {
+        final modelPath = writeConfig({'ja': 0, 'zh': 2});
+        mockBindings
+          ..fakeSampleRate = 22050
+          ..phonemizeOutput = '.';
+        engine.loadModel(modelPath, dicDir: '/fake/dic');
+
+        final result = engine.synthesize('---');
+
+        expect(mockBindings.synthCalls, isEmpty);
+        expect(result.sampleRate, 22050);
+        expect(result.audio, hasLength(4410));
+        expect(result.audio.every((s) => s == 0), isTrue);
+      });
+
+      test('returns silence when phonemization yields nothing', () {
+        final modelPath = writeConfig({'ja': 0});
+        mockBindings.phonemizeOutput = '';
+        engine.loadModel(modelPath, dicDir: '/fake/dic');
+
+        final result = engine.synthesize('…');
+
+        expect(mockBindings.synthCalls, isEmpty);
+        expect(result.audio, hasLength(4410));
+      });
+
+      test('synthesizes text that has a known phoneme', () {
+        final modelPath = writeConfig({'ja': 0, 'zh': 2});
+        mockBindings.phonemizeOutput = '. t a';
+        engine.loadModel(modelPath, dicDir: '/fake/dic');
+
+        engine.synthesize('多分だ。');
+
+        expect(mockBindings.phonemizedTexts, ['多分だ。']);
+        expect(mockBindings.phonemizeLanguages, ['ja']);
+        expect(mockBindings.synthCalls.single.text, '多分だ。');
       });
     });
 

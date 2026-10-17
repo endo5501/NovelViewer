@@ -51,7 +51,7 @@
 ## 3B. 漢字だけの文と発音できない文(実装中に追加。design D11 / D12)
 
 - [x] 3B.1 `PiperNativeBindings` に `piper_plus_phonemize` と `PiperPlusPhonemeResult` の構造体を追加する。構造体のサイズを C の `sizeof` と照合するテストと、実物の dylib で「多分だ。」が音素に変換できるテストを追加して通す(「多分だ。」の音素化にはモデルが必要なので、モデルを使う 3B.4 のテストで確認する)
-- [ ] 3B.2 `piper_tts_engine_test.dart` に次のテストを先に追加し、RED を確認してからコミットする
+- [x] 3B.2 `piper_tts_engine_test.dart` に次のテストを先に追加し、RED を確認してからコミットする
   - `language_id_map` に ja と zh があるとき、zh だけを除いた config が `<model>.onnx.ja.json` に書かれ、create に渡されること。元の config は変わらないこと
   - zh がないとき、元の config のパスが create に渡されること
   - 音素化の結果に `phoneme_id_map` の音素がないとき、合成を呼ばずに 0.2 秒の無音が返ること
