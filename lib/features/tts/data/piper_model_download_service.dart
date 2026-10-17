@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:archive/archive_io.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
@@ -123,38 +124,65 @@ class PiperModelDownloadService {
 
     // Download tar.gz to temp file
     final tarGzPath = p.join(parentDir.path, 'open_jtalk_dic.tar.gz');
-    await downloadFile(
-      _client,
-      _dicUrl,
-      tarGzPath,
-      'open_jtalk_dic.tar.gz',
-      onProgress,
+    // Extracted beside the target and moved into place only once complete, so
+    // a failed or interrupted extraction never leaves a directory that
+    // isDictionaryDownloaded would take for a whole dictionary.
+    final staging = Directory(
+      p.join(parentDir.path, '.open_jtalk_dic_extract'),
     );
+    try {
+      await downloadFile(
+        _client,
+        _dicUrl,
+        tarGzPath,
+        'open_jtalk_dic.tar.gz',
+        onProgress,
+      );
 
-    // Extract tar.gz
-    final result = await Process.run('tar', [
-      'xzf',
-      tarGzPath,
-      '-C',
-      parentDir.path,
-    ]);
+      if (staging.existsSync()) await staging.delete(recursive: true);
+      await staging.create();
+      // In-process rather than through `tar`: iOS cannot start a process, and
+      // one code path for every platform keeps that one exercised everywhere.
+      // The writer skips an entry that would land outside [staging]; the
+      // callback turns that into a failure instead of a silently partial
+      // dictionary.
+      await extractFileToDisk(
+        tarGzPath,
+        staging.path,
+        callback: (entry) {
+          if (_escapesTarget(entry.name)) {
+            throw Exception(
+              'Dictionary archive entry escapes its directory: ${entry.name}',
+            );
+          }
+        },
+      );
 
-    if (result.exitCode != 0) {
-      throw Exception('Failed to extract dictionary: ${result.stderr}');
-    }
-
-    // Rename extracted directory to target dicDir
-    final extractedDir = Directory(
-      p.join(parentDir.path, 'open_jtalk_dic_utf_8-1.11'),
-    );
-    if (extractedDir.existsSync() && !Directory(dicDir).existsSync()) {
+      final extractedDir = Directory(
+        p.join(staging.path, 'open_jtalk_dic_utf_8-1.11'),
+      );
+      if (!extractedDir.existsSync()) {
+        throw Exception(
+          'Dictionary archive has no open_jtalk_dic_utf_8-1.11 directory',
+        );
+      }
+      // A leftover without any .dic file (isDictionaryDownloaded was false).
+      final target = Directory(dicDir);
+      if (target.existsSync()) await target.delete(recursive: true);
       await extractedDir.rename(dicDir);
+    } finally {
+      if (staging.existsSync()) await staging.delete(recursive: true);
+      final tarGzFile = File(tarGzPath);
+      if (tarGzFile.existsSync()) await tarGzFile.delete();
     }
+  }
 
-    // Clean up tar.gz
-    final tarGzFile = File(tarGzPath);
-    if (tarGzFile.existsSync()) {
-      await tarGzFile.delete();
-    }
+  /// Whether a tar entry [name] points outside the directory it is extracted
+  /// into: an absolute path, or one that climbs out with `..`.
+  static bool _escapesTarget(String name) {
+    final normalized = p.posix.normalize(name.replaceAll(r'\', '/'));
+    return p.posix.isAbsolute(normalized) ||
+        normalized == '..' ||
+        normalized.startsWith('../');
   }
 }

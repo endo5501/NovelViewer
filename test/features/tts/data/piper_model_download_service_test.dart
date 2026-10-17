@@ -213,7 +213,7 @@ void main() {
       entries.forEach((name, content) {
         archive.add(ArchiveFile.string(name, content));
       });
-      return GZipEncoder().encodeBytes(TarEncoder().encodeBytes(archive));
+      return const GZipEncoder().encodeBytes(TarEncoder().encodeBytes(archive));
     }
 
     PiperModelDownloadService serving(List<int> body) =>
