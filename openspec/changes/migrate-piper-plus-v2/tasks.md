@@ -20,7 +20,7 @@
   - `otool -L` の ONNX Runtime 参照が `@rpath/libonnxruntime.dylib` だけである
   - `nm -gU` で `_piper_plus_create` / `_piper_plus_synthesize` / `_piper_plus_free_audio` / `_piper_plus_api_version` が公開されている
 - [x] 2.3 `otool -l macos/Frameworks/libonnxruntime.dylib` の `LC_BUILD_VERSION` minos と `otool -l macos/Frameworks/libpiper_plus.dylib` の minos が、`macos/Runner.xcodeproj` の `MACOSX_DEPLOYMENT_TARGET` 以下であることを確認する。超えている場合は作業を止めて対応を相談する(2026-10-17: ONNX Runtime 1.20.0 の minos 13.3 が 12.0 を超えた。相談の結果、`build_piper_macos.sh` で deployment target 13.3 を指定する方針に決定(design D8)。再ビルド後は両 dylib とも minos 13.3 で、ExternalProject の「built for newer」警告もない)
-- [ ] 2.4 `scripts/test/verify_macos_bundle.sh` の期待集合を `libpiper_tts_ffi.dylib` から `libpiper_plus.dylib` に書き換える。`fvm flutter build macos` の後にスクリプトを実行し、全項目が ok になることを確認する
+- [x] 2.4 `scripts/test/verify_macos_bundle.sh` の期待集合を `libpiper_tts_ffi.dylib` から `libpiper_plus.dylib` に書き換える。`fvm flutter build macos` の後にスクリプトを実行し、全項目が ok になることを確認する(2026-10-17: 差分ビルドでは、以前の `.app` に旧 `libpiper_tts_ffi.dylib` が残り FAIL した。Embed フェーズは追加しかしないため。`.app` を削除して再ビルドすると 5/5 ok。移行時の注意として 5.1 の README に記載する)
 
 ## 3. Dart FFI バインディング(TDD)
 
@@ -60,7 +60,7 @@
   - 英語交じりの文(例:「今日はGitHubでcodeを書いた。」)を v1.8 と同じ程度に扱える(英単語は CMU 辞書がないため読み飛ばされるのが既存の挙動)
 
   v1.8 との末尾の音の違いに違和感がないかを聴いて判断し、結果を記録する
-- [ ] 6.2 `scripts/build_app.sh macos` の本番ビルドの後に `scripts/test/verify_macos_bundle.sh` を実行し、同梱集合が spec(macos-native-library-embedding)どおりであることを確認する
+- [x] 6.2 `scripts/build_app.sh macos` の本番ビルドの後に `scripts/test/verify_macos_bundle.sh` を実行し、同梱集合が spec(macos-native-library-embedding)どおりであることを確認する
 
 ## 7. 最終確認
 
