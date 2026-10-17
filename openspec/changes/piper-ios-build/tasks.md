@@ -23,7 +23,7 @@
 
 ## 4. Dart FFI バインディング
 
-- [ ] 4.1 `test/features/tts/data/piper_native_bindings_test.dart` に、iOS のライブラリ名が `piper_plus.framework/piper_plus` であることを確かめるテストを加える。ホスト以外のプラットフォームでも評価できるよう、プラットフォームを引数に取る形にする(`9ebc79a6` の audiocpp の書き方にならう)。確認: テストが失敗する
+- [x] 4.1 `test/features/tts/data/piper_native_bindings_test.dart` に、iOS のライブラリ名が `piper_plus.framework/piper_plus` であることを確かめるテストを加える。ホスト以外のプラットフォームでも評価できるよう、プラットフォームを引数に取る形にする(`9ebc79a6` の audiocpp の書き方にならう)。確認: テストが失敗する
 - [ ] 4.2 `PiperNativeBindings.libraryName` を iOS に対応させる。確認: 4.1 のテストと既存の macOS / Windows のテストが通る
 
 ## 5. iOS 上での合成テスト
