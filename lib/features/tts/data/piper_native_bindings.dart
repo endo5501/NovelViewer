@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 
+import 'tts_engine.dart';
+
 // Bindings for upstream piper-plus's official C API (src/cpp/piper_plus.h,
 // PIPER_PLUS_API_VERSION 1). The struct layouts below mirror that header field
 // for field, reserved arrays included; piper_native_bindings_test pins their
@@ -162,9 +164,43 @@ typedef _PPhonemizeDart =
 class PiperNativeBindings {
   PiperNativeBindings(DynamicLibrary library) : _library = library;
 
-  factory PiperNativeBindings.open() {
-    final library = DynamicLibrary.open(libraryName);
-    return PiperNativeBindings(library);
+  factory PiperNativeBindings.open() => PiperNativeBindings(
+    openLibrary(libraryName, operatingSystem: Platform.operatingSystem),
+  );
+
+  /// Opens the native library [name], or throws a [TtsEngineException] that
+  /// says which library is missing and how to build it.
+  ///
+  /// The library is built separately from the app — on iOS it is not even
+  /// tracked by Git — so a build that skipped that step is a real case, and
+  /// the dynamic loader's own error names neither the step nor the script.
+  /// Its text is kept after the explanation, for diagnosis.
+  static DynamicLibrary openLibrary(
+    String name, {
+    required String operatingSystem,
+  }) {
+    try {
+      return DynamicLibrary.open(name);
+    } on ArgumentError catch (e) {
+      throw TtsEngineException(
+        'Piper native library $name is not in this build. '
+        '${buildInstructionsFor(operatingSystem)} (${e.message})',
+      );
+    }
+  }
+
+  /// How to produce the Piper native library for [operatingSystem] (a
+  /// `Platform.operatingSystem` value).
+  static String buildInstructionsFor(String operatingSystem) {
+    return switch (operatingSystem) {
+      'ios' =>
+        'Build it with scripts/build_piper_ios.sh, then rebuild the app.',
+      'macos' =>
+        'Build it with scripts/build_piper_macos.sh, then rebuild the app.',
+      'windows' =>
+        r'Build it with scripts\build_piper_windows.bat, then rebuild the app.',
+      _ => 'Piper is not built for $operatingSystem.',
+    };
   }
 
   final DynamicLibrary _library;
