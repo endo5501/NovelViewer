@@ -13,7 +13,7 @@
   - `PiperPlusSynthOptions` の既定値は noise 0.4 / length 1.0 / noise_w 0.5 / 文間無音 0.2 秒 / language_id -1(自動判定)。
   - 共有ライブラリは `PIPER_PLUS_BUILD_SHARED=ON` のときだけビルドされる。出力名は `piper_plus` で、macOS では VERSION/SOVERSION が付く(`libpiper_plus.2.0.2.dylib` / `libpiper_plus.1.dylib` のシンボリックリンク群)。
 - **ONNX Runtime**: 本家 CMake が 1.20.0 を取得する(v1.8 は 1.14.1)。macOS では `build/ort/lib`、Windows では `build/onnxruntime/onnxruntime-win-*` に置かれる。
-- **モデル互換性(実測済み)**: ピン留め中のモデル(eb9b882)の ONNX 入力は `input / input_lengths / scales / lid / prosody_features` である。v2.0.2 はセッションの入力名を見て送る入力を決める。v2.0.2 CLI で日本語文を合成したところ、エラーも音素欠落の警告も出なかった。
+- **モデル互換性(当初の調査時点の実測。モデルは後に D10 で 36b59c8 へ更新)**: 当時ピン留めしていたモデル(eb9b882)の ONNX 入力は `input / input_lengths / scales / lid / prosody_features` である。v2.0.2 はセッションの入力名を見て送る入力を決める。v2.0.2 CLI で日本語文を合成したところ、エラーも音素欠落の警告も出なかった。
 - **EOS trim と旧モデル(実装中に判明)**: v2.0.2 は合成のたびに文末の EOS 区間(`ceil(durations[-1])` フレーム)を削る(`trim_helpers.hpp`、Issue #499、`TRIM_EOS_MAX_FRAMES = 0` の定数で、無効化する設定はない)。旧モデル eb9b882 は最終母音の後半を EOS 区間で生成するため、母音が削られる。実測では「彼はそういった」の最後の「た」が、v1.8 の約 100ms から約 40ms に短くなった。スクラッチ環境で trim を無効にすると v1.8 と同じ長さ(0.931 秒)に戻ることも確かめた。新しいモデル(36b59c8 / zs-v1)では、trim がかかっても最終音節は欠けない。
 - **英語・中国語の音素化辞書**(`cmudict_data.json` / `pinyin_*.json`): v1.8 も v2.0.2 も、実行時にモデルのディレクトリ → 実行ファイルからの相対パス → 環境変数の順で探す。アプリはどちらも同梱していないため、英単語の部分は v1.8 でも v2.0.2 でも読み飛ばされる(実測: 「今日はGitHubでcodeを書いた。Hello world!」で、両版とも英語部分がほぼ無音)。これは移行前からある制約で、この change では変えない。言語 ID に `ja` を明示しても、v2.0.2 は文字種による区間分割を止めない(`language_id` を使うのは、ラテン系言語の既定を選ぶときだけ)。
 - **OpenJTalk 辞書の自動ダウンロード**: v1.8 も v2.0.2 も、辞書が見つからないと自動でダウンロードしようとする(`PIPER_PLUS_AUTO_DOWNLOAD_DICT=0` で無効化)。アプリは取得済みを検証した `dict_dir` を必ず渡すので、この経路には入らない。挙動は移行前と同じ。

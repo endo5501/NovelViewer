@@ -1,6 +1,7 @@
 import 'dart:ffi';
 import 'dart:io';
 
+import 'package:ffi/ffi.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/piper_native_bindings.dart';
 import 'package:novel_viewer/features/tts/data/piper_tts_engine.dart';
@@ -51,6 +52,46 @@ void main() {
       final result = engine.synthesize('多分。');
 
       expect(isSilent(result), isFalse);
+    });
+
+    test('phonemizes a kanji-only sentence with Japanese phonemes', () {
+      // loadModel wrote the zh-free config the engine hands to the native
+      // side; phonemize through it to see which phonemizer picks the text up.
+      final bindings = PiperNativeBindings(DynamicLibrary.open(libPath));
+      final config = calloc<PiperPlusConfig>();
+      final outEngine = calloc<Pointer<Void>>();
+      final result = calloc<PiperPlusPhonemeResult>();
+      final model = modelPath!.toNativeUtf8();
+      final configPath = '$modelPath.ja.json'.toNativeUtf8();
+      final dic = dicDir!.toNativeUtf8();
+      final text = '多分。'.toNativeUtf8();
+      final language = 'ja'.toNativeUtf8();
+      try {
+        config.ref
+          ..modelPath = model
+          ..configPath = configPath
+          ..dictDir = dic;
+        expect(bindings.create(config, outEngine), piperPlusOk);
+        try {
+          expect(
+            bindings.phonemize(outEngine.value, text, language, result),
+            piperPlusOk,
+          );
+          // 「多分」 is "tabun": Japanese phonemes, not the lone "." the
+          // Chinese path leaves without a pinyin dictionary.
+          expect(result.ref.phonemes.toDartString(), contains('b u'));
+          expect(result.ref.language.toDartString(), 'ja');
+        } finally {
+          bindings.free(outEngine.value);
+        }
+      } finally {
+        for (final p in [model, configPath, dic, text, language]) {
+          calloc.free(p);
+        }
+        calloc.free(result);
+        calloc.free(outEngine);
+        calloc.free(config);
+      }
     });
 
     test('speaks kanji with kana', () {

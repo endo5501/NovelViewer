@@ -32,7 +32,7 @@ On macOS, `scripts/build_piper_macos.sh` SHALL place exactly one piper-plus libr
 - **THEN** the submodule URL is `https://github.com/ayutaz/piper-plus.git` and the pinned commit is the one tagged `v2.0.2`
 
 ### Requirement: Dart FFI bindings for piper-plus
-The system SHALL provide a `PiperNativeBindings` class that loads `libpiper_plus.dylib` (macOS) or `piper_plus.dll` (Windows) and exposes the subset of upstream's official C API (`piper_plus.h`) that the app uses as Dart members: engine creation and release, default synthesis options, synthesis, audio buffer release, sample rate, language-name lookup, last-error retrieval, and API version retrieval. The C structs `PiperPlusConfig` and `PiperPlusSynthOptions` SHALL be represented with a memory layout identical to `piper_plus.h`, including their reserved fields.
+The system SHALL provide a `PiperNativeBindings` class that loads `libpiper_plus.dylib` (macOS) or `piper_plus.dll` (Windows) and exposes the subset of upstream's official C API (`piper_plus.h`) that the app uses as Dart members: engine creation and release, default synthesis options, synthesis, audio buffer release, sample rate, language-name lookup, phonemization, last-error retrieval, and API version retrieval. The C structs `PiperPlusConfig`, `PiperPlusSynthOptions` and `PiperPlusPhonemeResult` SHALL be represented with a memory layout identical to `piper_plus.h`, including their reserved fields.
 
 #### Scenario: Load shared library on macOS
 - **WHEN** `PiperNativeBindings.open()` is called on macOS
