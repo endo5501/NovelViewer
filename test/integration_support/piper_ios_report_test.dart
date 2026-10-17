@@ -22,7 +22,11 @@ PiperSynthesisSample _sample({
 );
 
 PiperMemorySample _memory(String stage, {int? available, int rss = 100}) =>
-    PiperMemorySample(stage: stage, availableBytes: available, maxRssBytes: rss);
+    PiperMemorySample(
+      stage: stage,
+      availableBytes: available,
+      maxRssBytes: rss,
+    );
 
 void main() {
   group('rootMeanSquare', () {
@@ -85,15 +89,18 @@ void main() {
 
   group('isJapanesePhonemization', () {
     test('accepts a non-empty result resolved as Japanese', () {
-      expect(
-        isJapanesePhonemization(language: 'ja', phonemeCount: 18),
-        isTrue,
-      );
+      expect(isJapanesePhonemization(language: 'ja', phonemeCount: 18), isTrue);
     });
 
-    test('rejects an empty result, which is what the unpatched build gives', () {
-      expect(isJapanesePhonemization(language: 'ja', phonemeCount: 0), isFalse);
-    });
+    test(
+      'rejects an empty result, which is what the unpatched build gives',
+      () {
+        expect(
+          isJapanesePhonemization(language: 'ja', phonemeCount: 0),
+          isFalse,
+        );
+      },
+    );
 
     test('rejects a result resolved as another language', () {
       expect(
