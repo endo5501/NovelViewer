@@ -24,8 +24,8 @@
 
 ## 3. Dart FFI バインディング(TDD)
 
-- [ ] 3.1 `lib/features/tts/data/piper_native_bindings.dart` を design D7 に従って書き換える。`PiperPlusConfig` / `PiperPlusSynthOptions` の Struct 定義、`piper_plus_*` 関数の lookup、ライブラリ名 `libpiper_plus.dylib` / `piper_plus.dll` を含める。構造体のサイズを `sizeOf<PiperPlusConfig>()` / `sizeOf<PiperPlusSynthOptions>()` で検査するテストを追加し、C ヘッダから求めた値と一致することを確認する。C 側の値は、スクラッチ領域の小さな C プログラムで `sizeof` を出して求める。この時点では Dart 側の宣言だけでロジックはないので、サイズ検査のテストで十分とする。旧バインディングに依存する `piper_tts_engine.dart` は、公開 API のシグネチャを保ったまま各メソッドが `UnimplementedError` を投げるスタブにしておく。こうしておくと、`fvm flutter analyze` が通る状態で 3.2 の RED を実行時の失敗として観測できる
-- [ ] 3.2 `test/features/tts/data/piper_tts_engine_test.dart` のモックを 3.1 のバインディングに合わせて書き換え、spec の各シナリオに対応するテストを先に追加する。spec は piper-tts-native-engine の Dart TTS engine wrapper / Native audio buffer ownership / Piper synthesis language is Japanese / Native C API version check。追加するテストは次の 9 つ
+- [x] 3.1 `lib/features/tts/data/piper_native_bindings.dart` を design D7 に従って書き換える。`PiperPlusConfig` / `PiperPlusSynthOptions` の Struct 定義、`piper_plus_*` 関数の lookup、ライブラリ名 `libpiper_plus.dylib` / `piper_plus.dll` を含める。構造体のサイズを `sizeOf<PiperPlusConfig>()` / `sizeOf<PiperPlusSynthOptions>()` で検査するテストを追加し、C ヘッダから求めた値と一致することを確認する。C 側の値は、スクラッチ領域の小さな C プログラムで `sizeof` を出して求める。この時点では Dart 側の宣言だけでロジックはないので、サイズ検査のテストで十分とする。旧バインディングに依存する `piper_tts_engine.dart` は、公開 API のシグネチャを保ったまま各メソッドが `UnimplementedError` を投げるスタブにしておく。こうしておくと、`fvm flutter analyze` が通る状態で 3.2 の RED を実行時の失敗として観測できる
+- [x] 3.2 `test/features/tts/data/piper_tts_engine_test.dart` のモックを 3.1 のバインディングに合わせて書き換え、spec の各シナリオに対応するテストを先に追加する。spec は piper-tts-native-engine の Dart TTS engine wrapper / Native audio buffer ownership / Piper synthesis language is Japanese / Native C API version check。追加するテストは次の 9 つ
   - ロード成功
   - ロード失敗でネイティブのエラー文字列を含む例外
   - 未ロードでの合成は例外になり、ネイティブ合成を呼ばない

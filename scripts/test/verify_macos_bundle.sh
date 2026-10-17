@@ -22,7 +22,7 @@ BUNDLE_FRAMEWORKS="$APP/Contents/Frameworks"
 EXPECTED_DYLIBS="libaudiocpp_ffi.dylib
 liblame_enc_ffi.dylib
 libonnxruntime.dylib
-libpiper_tts_ffi.dylib
+libpiper_plus.dylib
 libqwen3_tts_ffi.dylib"
 
 pass=0
