@@ -16,7 +16,7 @@ iPad 版は小説ビューアと LLM 要約を提供します（読み上げは�
 
 | 機能 | iPad で提供しない理由 |
 | --- | --- |
-| 読み上げ（TTS） | 音声合成エンジンはデスクトップ向けにのみビルドしたネイティブライブラリで、iOS 版が無い。読み上げ辞書も同時に非表示 |
+| 読み上げ（TTS） | iOS 向けの Piper のビルドと合成の確認までは済んでいるが（[下記](#5-読み上げttsのネイティブライブラリ任意開発中)）、UI はまだ対応していない。読み上げ辞書も同時に非表示 |
 | アプリ内の更新確認 | 配布経路が無く、更新は下記の手順でビルドし直して入れ替える |
 
 外付けキーボードを接続した場合、ショートカットの既定修飾キーは macOS と同じ ⌘ です。
@@ -82,6 +82,37 @@ IDEs with Flutter plugins or from Xcode.
 ### 4. 依存の管理方式
 
 iOS は Swift Package Manager 単独構成です（CocoaPods は使用しません）。`ios/Podfile` は存在せず、依存のピンは 2 つの `xcshareddata/swiftpm/Package.resolved` が保持します。macOS は従来どおり CocoaPods です。
+
+### 5. 読み上げ（TTS）のネイティブライブラリ（任意・開発中）
+
+iOS で読み上げを有効にする作業の途中です。今は Piper エンジンのライブラリをビルドしてアプリに同梱し、日本語を合成できることを確かめるところまでで、読み上げの UI は表示されません。ビューアとして使うだけなら、この手順は不要です。
+
+```bash
+scripts/build_piper_ios.sh           # ios/Frameworks/piper_plus.xcframework を生成（約 1 分）
+scripts/test/verify_piper_ios.sh     # 成果物の検証
+```
+
+- 成果物（実機用と Simulator 用、約 17MB ずつ）は **Git で管理していません**。iOS で読み上げを試す場合は、チェックアウトごとに上のスクリプトを実行してください。成果物が無ければ、アプリは読み上げのライブラリを含まずにビルドされます。
+- ONNX Runtime 1.20.0 を Microsoft の配布元から取得し（SHA-256 で検証）、piper-plus と一緒に 1 つの framework にリンクします。iOS 向けの ONNX Runtime は静的ライブラリとして配布されているので、単独の framework は作りません。
+- Runner の Run Script フェーズ「Embed Native Frameworks」が、`ios/Frameworks/` にある xcframework をすべて `.app` に同梱して署名します。Xcode の設定を変える必要はありません。
+
+**piper-plus へのパッチ:** upstream の piper-plus v2.0.2 は、iOS では OpenJTalk を無効にしてビルドされます。そのため日本語の文から音素が得られず、音声も出ません。`scripts/build_piper_ios.sh` は、サブモジュールを `git archive` で取り出したコピーに `patches/piper-plus/` のパッチを当ててからビルドします（サブモジュールは変更しません。macOS / Windows のビルドにも当てません）。同じ修正を upstream に提案しており、取り込まれたリリースにサブモジュールを上げたら、パッチを削除します。パッチが当たらなくなるとスクリプトはエラーで止まるので、そのときは upstream の対応状況を確認してください。
+
+**合成テスト:** `integration_test/piper_ios_synthesis_test.dart` は、アプリと同じ経路で Piper を読み込み、日本語の音素化と合成を確かめて、所要時間とメモリを記録します。モデルと辞書が無ければ、アプリのダウンロード処理で取得します。
+
+```bash
+# Simulator（`xcrun simctl list devices` の UDID）
+fvm flutter drive --driver=test_driver/integration_test.dart \
+  --target=integration_test/piper_ios_synthesis_test.dart -d <Simulator の UDID>
+
+# 実機（profile ビルドが必須。`fvm flutter devices` が表示する ID を指定）
+fvm flutter drive --profile --driver=test_driver/integration_test.dart \
+  --target=integration_test/piper_ios_synthesis_test.dart -d <デバイス ID>
+```
+
+- 実機では `flutter test` は使えません。debug ビルド（JIT）は、iPadOS 26 ではデバッガ無しだと起動直後に終了します。
+- 計測結果はホストの `build/integration_response_data.json` と、端末の `Documents/benchmarks/piper_ios_<日時>.json` に出力されます。
+- Simulator では実行後にアプリのデータが残らないので、毎回モデルを取得し直します。
 
 ## ライブラリの場所
 
