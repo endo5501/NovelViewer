@@ -241,6 +241,28 @@ void main() {
       );
     });
 
+    test('the embed phase removes frameworks it embedded before', () {
+      // An incremental build reuses the app bundle, and the phase declares no
+      // outputs Xcode could clean: without this, removing an xcframework left
+      // its old signed binary in the app (spec ios-build-target).
+      final phase = RegExp(
+        r'/\* Embed Native Frameworks \*/ = \{(.*?)\n\t\t\};',
+        dotAll: true,
+      ).firstMatch(pbxproj);
+      expect(phase, isNotNull);
+      final body = phase!.group(1)!;
+
+      // What it embedded is recorded outside the app bundle...
+      expect(body, contains(r'${TARGET_TEMP_DIR}'));
+      expect(body, contains('embedded_native_frameworks.txt'));
+      // ...and read back to remove what is no longer embedded.
+      expect(
+        RegExp(r'while (IFS= )?read').hasMatch(body),
+        isTrue,
+        reason: 'the previous list must be read back',
+      );
+    });
+
     test('the embed phase runs in the Runner target', () {
       final runner = RegExp(
         r'/\* Runner \*/ = \{\s*isa = PBXNativeTarget;.*?buildPhases = \((.*?)\);',
