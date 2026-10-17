@@ -210,6 +210,11 @@ D1 と同じ内容の PR を ayutaz/piper-plus の `dev` に出す。PR を出�
 - `os_proc_available_memory` は Simulator では 0 を返すので、空きメモリは実機でしか判断できない。ピーク RSS は 881MiB だった。
 - 結果は `benchmarks/piper_ios_sim_20261017.json` に保存した(`benchmarks/` は Git 管理外)。
 
+## レビューで見送った指摘(2026-10-17)
+
+- **同梱フェーズは、xcframework を削除した後の差分ビルドで、以前に同梱した framework を取り除かない**(コードレビューと Codex の両方が指摘): タスク 3.4 で実際に、framework ありでビルドしてから xcframework を退避し、`flutter build ios --simulator` で再ビルドした。その結果、`Runner.app/Frameworks/` から `piper_plus.framework` は消えていた。指摘の状況は再現しなかったので、取り除く仕組みは加えない。Xcode の IDE から差分ビルドしたときに再現した場合は、改めて対応する。
+- **署名を無効にしたビルドでは、実機向けでも ad-hoc 署名になる**: 署名なしのビルドでは Flutter 自身の framework も未署名のままで、書き出しの段階で Xcode がアプリ内のコードをまとめて署名し直す。このフェーズだけ扱いが変わるわけではない。
+
 ## Open Questions
 
 - 中文の RTF が 1.0 を超えた場合の対策(CoreML EP、`intra_op_num_threads` の調整、文の分割を短くする)。D6 の計測結果を見て `ios-tts-piper` で決める。
