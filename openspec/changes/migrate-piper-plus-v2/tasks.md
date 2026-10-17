@@ -38,7 +38,7 @@
 
   `fvm flutter test test/features/tts/data/piper_tts_engine_test.dart` で、コンパイルエラーではなく実行時の失敗(RED)になることを確認してからコミットする
 - [x] 3.3 `lib/features/tts/data/piper_tts_engine.dart` を design D2〜D6 に従って書き換え、テストは変更しないまま 3.2 のテストをすべて通す。公開 API(`loadModel` / `synthesize` / `setLengthScale` / `setNoiseScale` / `setNoiseW` / `isLoaded` / `dispose`)のシグネチャが変わっていないことを、`tts_isolate.dart` に変更なしで `fvm flutter analyze` が通ることで確認する(2026-10-17: 実物の dylib と eb9b882 モデルを使った一時テストで、C API 経由の合成(4.47 秒、CLI と一致)、lengthScale の反映、ロード失敗時のネイティブエラー伝搬も確認済み)
-- [ ] 3.4 `lib/features/tts/data/piper_model_download_service.dart` のピン留め理由コメントを更新する。「submodule pinned 2026-03-23 の C++ ランナーが `speaker_embedding_mask` を供給しない」という記述を、「ランナーは v2.0.2 に更新済み。eb9b882 は互換性を実測で確認済みのため据え置き、モデル更新は別 change で扱う」という趣旨に書き換える。既存の `piper_model_download_service_test.dart` が引き続き通ることを確認する
+- [x] 3.4 `lib/features/tts/data/piper_model_download_service.dart` のピン留め理由コメントを更新する。「submodule pinned 2026-03-23 の C++ ランナーが `speaker_embedding_mask` を供給しない」という記述を、「ランナーは v2.0.2 に更新済み。eb9b882 は互換性を実測で確認済みのため据え置き、モデル更新は別 change で扱う」という趣旨に書き換える。既存の `piper_model_download_service_test.dart` が引き続き通ることを確認する
 
 ## 4. Windows ネイティブビルドと CI
 
