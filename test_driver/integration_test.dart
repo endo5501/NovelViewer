@@ -3,8 +3,9 @@
 // Physical iOS devices need `flutter drive --profile`: `flutter test` always
 // launches a JIT debug build, which iPadOS 26 refuses to execute without a
 // debugger attached (EXC_BAD_ACCESS, KERN_CODESIGN_ERROR at startup).
-// `flutter drive` is used on the simulator too, because `flutter test`
-// uninstalls the app afterwards and with it the downloaded model.
+// On a device, `flutter drive` also leaves the app installed, so the downloaded
+// model is reused on the next run. The simulator keeps no app data between
+// runs either way, so there the model is downloaded each time.
 //
 // The test's reportData lands in build/integration_response_data.json on the
 // host, including when the test fails, so a partial measurement is not lost.

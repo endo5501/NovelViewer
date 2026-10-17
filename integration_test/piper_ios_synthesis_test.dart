@@ -11,8 +11,9 @@
 // (<library>/../models/piper) and downloaded there with the app's own
 // downloader when missing.
 //
-// Run with flutter drive, which leaves the app and the downloaded model
-// installed (flutter test uninstalls both):
+// Run with flutter drive. On a device it leaves the app, and with it the
+// downloaded model, installed; the simulator keeps no app data between runs,
+// so there the model is downloaded each time:
 //   simulator:
 //     fvm flutter drive --driver=test_driver/integration_test.dart \
 //       --target=integration_test/piper_ios_synthesis_test.dart -d <simulator>

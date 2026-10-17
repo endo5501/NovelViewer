@@ -143,7 +143,7 @@ CDN の zip を SHA-256 で検証して展開する。iOS の 2 スライスの�
     - `ProcessInfo.maxRss`
     - `os_proc_available_memory`
   - 開発者はこれを `benchmarks/` に持ち帰る。
-- **実行方法**: Simulator でも実機でも `flutter drive` を使う。`flutter test` は終了時にアプリをアンインストールしてデータごと消すので、毎回モデルを取得し直すことになる。`flutter drive` ならモデルが残る。
+- **実行方法**: Simulator でも実機でも `flutter drive` を使う。実機では `flutter test` が使えない(下記)。また実機の `flutter drive` はアプリを残すので、モデルを取得し直さずに済む。Simulator では `flutter drive` でも実行後にアプリのデータが残らず、毎回モデルと辞書を取得し直すことが実装中に分かった(1 回あたり十数秒)。テスト時間が延びるだけなので、そのまま受け入れる。
   - Simulator: `fvm flutter drive --driver=test_driver/integration_test.dart --target=integration_test/piper_ios_synthesis_test.dart -d <sim>`
   - 実機: `fvm flutter drive --profile --driver=test_driver/integration_test.dart --target=integration_test/piper_ios_synthesis_test.dart -d <UDID>`(`flutter test` が使う JIT のデバッグビルドは、iPadOS 26 の実機では起動直後に強制終了される)
 
@@ -197,6 +197,15 @@ D1 と同じ内容の PR を ayutaz/piper-plus の `dev` に出す。PR を出�
   - パッチなし(対照): 音素は 0 個、合成結果は 0 サンプルだった。
 - **ライブラリ**: `-force_load` で包んだ dylib(ORT 込みで約 29MB)は、`piper_plus_*` 以外のシンボルを公開しなかった。`nm -u` には `popen` / `system` / `posix_spawn` 系のシンボルが無かった。
 - **ONNX Runtime について、D4 の前提が誤っていた**: Microsoft の CDN が配る 1.20.0 の `onnxruntime.framework` は、upstream の文書にある動的ライブラリではなかった。中身は静的ライブラリ(ar アーカイブ。`prelinked_objects.o` を 1 つ含む)で、`minos 13.0` だった。そのため、ORT を独立した動的 framework として同梱することはできない。piper_plus の dylib に静的にリンクする方式に改めた(D3 / D4、ユーザ判断)。
+
+## iOS Simulator での合成テストの結果(2026-10-17、タスク 5.5)
+
+- 環境: iPad mini (A17 Pro) Simulator、iOS 27.0。`flutter drive` で実行した。
+- 辞書をアプリ内で展開する修正(D8)の後、テストが成功した。修正前は `tar` を起動できずに失敗していた。
+- 音素化: `ja`、18 音素。4 文(short / kanji_only / medium / long)は、すべて無音ではない音声になった(rms 0.10〜0.20)。
+- 中文の 10 回連続の合成は 80〜89ms で、劣化は見られなかった。ただし Simulator は Mac の CPU で動くので、RTF(約 0.011)は実機の参考にならない。
+- `os_proc_available_memory` は Simulator では 0 を返すので、空きメモリは実機でしか判断できない。ピーク RSS は 881MiB だった。
+- 結果は `benchmarks/piper_ios_sim_20261017.json` に保存した(`benchmarks/` は Git 管理外)。
 
 ## Open Questions
 
