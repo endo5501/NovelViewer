@@ -96,7 +96,7 @@ scripts/test/verify_piper_ios.sh     # 成果物の検証
 - ONNX Runtime 1.20.0 を Microsoft の配布元から取得し（SHA-256 で検証）、piper-plus と一緒に 1 つの framework にリンクします。iOS 向けの ONNX Runtime は静的ライブラリとして配布されているので、単独の framework は作りません。
 - Runner の Run Script フェーズ「Embed Native Frameworks」が、`ios/Frameworks/` にある xcframework をすべて `.app` に同梱して署名します。Xcode の設定を変える必要はありません。
 
-**piper-plus へのパッチ:** upstream の piper-plus v2.0.2 は、iOS では OpenJTalk を無効にしてビルドされます。そのため日本語の文から音素が得られず、音声も出ません。`scripts/build_piper_ios.sh` は、サブモジュールを `git archive` で取り出したコピーに `patches/piper-plus/` のパッチを当ててからビルドします（サブモジュールは変更しません。macOS / Windows のビルドにも当てません）。同じ修正を upstream に提案する予定です（PR の文面は `openspec/changes/piper-ios-build/upstream-pr-draft.md`、未提出）。取り込まれたリリースにサブモジュールを上げたら、パッチを削除します。パッチが当たらなくなるとスクリプトはエラーで止まるので、そのときは upstream の対応状況を確認してください。
+**piper-plus へのパッチ:** upstream の piper-plus v2.0.2 は、iOS では OpenJTalk を無効にしてビルドされます。そのため日本語の文から音素が得られず、音声も出ません。`scripts/build_piper_ios.sh` は、サブモジュールを `git archive` で取り出したコピーに `patches/piper-plus/` のパッチを当ててからビルドします（サブモジュールは変更しません。macOS / Windows のビルドにも当てません）。同じ修正を upstream に提案する予定です（PR の文面は `openspec/changes/archive/2026-10-17-piper-ios-build/upstream-pr-draft.md`、未提出）。取り込まれたリリースにサブモジュールを上げたら、パッチを削除します。パッチが当たらなくなるとスクリプトはエラーで止まるので、そのときは upstream の対応状況を確認してください。
 
 **合成テスト:** `integration_test/piper_ios_synthesis_test.dart` は、アプリと同じ経路で Piper を読み込み、日本語の音素化と合成を確かめて、所要時間とメモリを記録します。モデルと辞書が無ければ、アプリのダウンロード処理で取得します。
 
