@@ -48,7 +48,7 @@
 
 ## 5. ドキュメント
 
-- [ ] 5.1 README(日本語・英語・中国語)の Piper ビルド手順を更新する。サブモジュールを切り替えた既存の clone 向けに、`git submodule sync --recursive` と `third_party/piper-plus/build` の削除が必要であることを追記する。ネイティブライブラリ名の記載があれば `libpiper_plus` / `piper_plus.dll` に直す。トラブルシューティング節の `speaker_embedding_mask` の説明は、v2.0.2 ランタイムでは同じエラーが出なくなるので見直す(固定リビジョンより前に取得した古いモデルを再取得させる案内として残すか、記述を変えるか)。手順どおりにコマンドを実行できることを確認する
+- [x] 5.1 README(日本語・英語・中国語)の Piper ビルド手順を更新する。サブモジュールを切り替えた既存の clone 向けに、`git submodule sync --recursive` と `third_party/piper-plus/build` の削除が必要であることを追記する。ネイティブライブラリ名の記載があれば `libpiper_plus` / `piper_plus.dll` に直す。トラブルシューティング節の `speaker_embedding_mask` の説明は、v2.0.2 ランタイムでは同じエラーが出なくなるので見直す(固定リビジョンより前に取得した古いモデルを再取得させる案内として残すか、記述を変えるか)。手順どおりにコマンドを実行できることを確認する
 - [ ] 5.2 アーカイブの前に、`openspec/specs/ci-tts-dll-build/spec.md` の Purpose にある `piper_tts_ffi.dll` を `piper_plus.dll` に直接書き換える。delta では Purpose を更新できないため、この手作業が必要になる。`openspec validate --specs --strict` が通ることを確認する
 
 ## 6. 統合確認

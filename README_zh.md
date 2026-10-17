@@ -175,9 +175,9 @@ scripts/release.sh 1.2.0
 
 ### Piper TTS 无法播放语音（合成失败）
 
-如果你之前下载过 Piper 模型，磁盘上可能残留旧版（与推理引擎不兼容）模型，导致合成失败（日志会出现 `Missing Input: speaker_embedding_mask` 等）。Piper 模型按与内置推理引擎兼容的修订版固定分发，但已下载的模型不会自动替换。
+Piper 模型按已在内置推理引擎上验证过的修订版固定分发。如果磁盘上的模型与该修订版不一致，应用会在开始朗读时以及在设置界面中提示重新下载，请在设置界面重新下载 Piper 模型。
 
-请按以下步骤替换为兼容模型：
+如果仍然合成失败，请按以下步骤替换模型：
 
 1. 手动删除 `models/piper/` 下的模型文件（`*.onnx` / `*.onnx.json` / `.piper_models_complete`）。**无需**删除 `open_jtalk_dic/`。
 2. 在应用的设置界面重新下载 Piper 模型。

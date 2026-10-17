@@ -175,9 +175,9 @@ Data is stored directly beside the extracted executable with the same layout as 
 
 ### Piper TTS produces no audio (synthesis fails)
 
-If you downloaded a Piper model previously, an older model (incompatible with the bundled inference engine) may remain on disk and cause synthesis to fail (the log shows e.g. `Missing Input: speaker_embedding_mask`). Piper models are distributed pinned to a revision compatible with the bundled engine, but an already-downloaded model is not replaced automatically.
+Piper models are distributed pinned to a revision verified against the bundled inference engine. If the model on disk does not match that revision, the app asks you to re-download it when you start reading aloud and in the settings screen; re-download the Piper model from the settings screen.
 
-To switch to the compatible model:
+If synthesis still fails, replace the model as follows:
 
 1. Manually delete the model files under `models/piper/` (`*.onnx` / `*.onnx.json` / `.piper_models_complete`). You do **not** need to delete `open_jtalk_dic/`.
 2. Re-download the Piper model from the app's settings screen.
