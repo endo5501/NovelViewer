@@ -49,6 +49,6 @@
 
 - [ ] 7.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 7.3 `fvm dart format lib test`でフォーマットを実行
-- [ ] 7.4 `fvm flutter analyze`でリントを実行
-- [ ] 7.5 `fvm flutter test`でテストを実行
+- [x] 7.3 `fvm dart format lib test`でフォーマットを実行
+- [x] 7.4 `fvm flutter analyze`でリントを実行
+- [x] 7.5 `fvm flutter test`でテストを実行
