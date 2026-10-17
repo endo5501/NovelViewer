@@ -45,7 +45,7 @@
 - [x] 3A.1 `test/features/tts/data/piper_model_download_service_test.dart` に、次の 2 つのテストを先に入れて RED を確認し、コミットする
   - ピン留めの SHA が `36b59c825c36bd386b8960cf3f604382f52f2a87` であることを固定するテスト(既存の eb9b882 を固定しているテストの期待値を更新する)
   - 完了マーカーの内容が eb9b882 の場合に `areModelsDownloaded()` が `false` を返すテスト(spec: 旧リビジョンで取得済みのモデルは再取得対象になる)
-- [ ] 3A.2 `lib/features/tts/data/piper_model_download_service.dart` の `modelRevision` と、ピン留め理由のコメントを更新して 3A.1 を通す。コメントには EOS trim との関係を書く。`fvm flutter test test/features/tts/data/piper_model_download_service_test.dart` が通ることを確認する
+- [x] 3A.2 `lib/features/tts/data/piper_model_download_service.dart` の `modelRevision` と、ピン留め理由のコメントを更新して 3A.1 を通す。コメントには EOS trim との関係を書く。`fvm flutter test test/features/tts/data/piper_model_download_service_test.dart` が通ることを確認する
 - [ ] 3A.3 36b59c8 から取得したモデルを、実物の `libpiper_plus.dylib` と `PiperTtsEngine` で合成する(一時テスト。コミットしない)。「彼はそういった」の最終音節のエネルギーが v1.8 + eb9b882 と同じ程度に残り、末尾が欠けないことを確認する
 
 ## 4. Windows ネイティブビルドと CI
