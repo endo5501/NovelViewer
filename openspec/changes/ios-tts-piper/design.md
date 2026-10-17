@@ -85,6 +85,15 @@
 - 通知の組み立て(`TtsControlsBar` の `buildTtsFailureReport`)は、すでに `controller.lastFailureReason` を cause として使っているので、変えなくてよい。
 - 編集ダイアログの単体生成も同じセッションを使う。読み込みに失敗したときの理由の扱いは、そちらにも同じ形で渡す。
 
+### D9: 同梱フェーズは、前回同梱したもので今は無いものを取り除く(実装中に追加)
+
+5.4 の準備で xcframework を外して release ビルドを作り直したところ、`.app` に前回の `piper_plus.framework` が残っていた。Xcode の差分ビルドは `.app` を作り直さず、同梱フェーズは出力を宣言していないので、Xcode が片付けることもない。前の change でレビューに指摘され、Simulator の debug ビルドで再現しなかったので見送った問題で、実機向けの release ビルドでは再現した。
+
+- 同梱フェーズは、同梱した framework 名の一覧を `$TARGET_TEMP_DIR/embedded_native_frameworks.txt` に書く。`.app` の中に置かないのは、余計なファイルがバンドルの検証を乱さないようにするためである。
+- フェーズの最初に、その一覧にあって今回同梱しないものを `.app` の `Frameworks/` から削除する。一覧に無いもの(Flutter や SPM が入れた framework)には触れない。
+- 一覧の名前は実行時に xcframework から得るので、フェーズに静的な名前の一覧は持たない(既存の要件を保つ)。
+- 確かめ方は 2 つ。pbxproj の定義を確かめる既存のテストに「一覧を使って取り除く」ことの検査を加え、5.4 で実際にビルドして確かめる。
+
 ### D8: iPad での確認は手動で行う
 
 UI の振る舞いはウィジェットテストで確かめる。iOS の扱いは、機能モデルの provider を iOS の値で上書きして確かめる。実機では `scripts/build_app.sh ios --release` でインストールし、次を手で確かめる。
