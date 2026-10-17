@@ -37,6 +37,10 @@ coverage
 /tmp
 /.claude/settings.local.json
 /third_party/lame_enc_ffi/build
+
+# iOS native frameworks are built locally by scripts/build_piper_ios.sh and are
+# not tracked (unlike macos/Frameworks/); the iOS app builds without them.
+/ios/Frameworks/*.xcframework
 /benchmarks/
 
 # Release artifacts produced by Inno Setup / CI at the repo root

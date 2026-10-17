@@ -8,6 +8,8 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `scripts/build_irodori_macos.sh` - Irodori-TTSエンジンビルド(mac、要 `brew install libomp`)
  - `scripts/test/verify_irodori_macos.sh` - Irodori-TTSビルド成果物の検証(mac)
  - `scripts/build_lame_macos.sh` - LAMEビルド(mac)
+ - `scripts/build_piper_ios.sh` - Piper(piper-plus + ONNX Runtime)のiOS向けxcframeworkビルド(mac)。`patches/piper-plus/` のパッチを当ててビルドする。成果物 `ios/Frameworks/piper_plus.xcframework` はGit管理外
+ - `scripts/test/verify_piper_ios.sh` - Piper iOSビルド成果物の検証(mac)
  - `scripts/build_app.sh macos` - 本番ビルド(mac)。commit ハッシュを `--dart-define=BUILD_COMMIT` で注入し、障害レポートの app version に載せる。素の `fvm flutter build macos` でも動くが、レポートは `commit unknown` になる
  - `scripts/build_tts_windows.bat` - TTSエンジンビルド(windows)
  - `scripts/build_lame_windows.bat` - LAMEビルド(windows)
