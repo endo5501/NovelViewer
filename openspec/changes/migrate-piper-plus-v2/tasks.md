@@ -79,12 +79,12 @@
   - 英語交じりの文(例:「今日はGitHubでcodeを書いた。」)を v1.8 と同じ程度に扱える(英単語は CMU 辞書がないため読み飛ばされるのが既存の挙動)
 
   文末の音節(例:「彼はそういった」の「た」)が欠けないことを聴いて確かめ、結果を記録する
-- [ ] 6.2 `scripts/build_app.sh macos` の本番ビルドの後に `scripts/test/verify_macos_bundle.sh` を実行し、同梱集合が spec(macos-native-library-embedding)どおりであることを確認する
+- [x] 6.2 `scripts/build_app.sh macos` の本番ビルドの後に `scripts/test/verify_macos_bundle.sh` を実行し、同梱集合が spec(macos-native-library-embedding)どおりであることを確認する
 
 ## 7. 最終確認
 
 - [ ] 7.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 7.3 `fvm dart format lib test`でフォーマットを実行
-- [ ] 7.4 `fvm flutter analyze`でリントを実行
-- [ ] 7.5 `fvm flutter test`でテストを実行
+- [x] 7.3 `fvm dart format lib test`でフォーマットを実行
+- [x] 7.4 `fvm flutter analyze`でリントを実行
+- [x] 7.5 `fvm flutter test`でテストを実行
