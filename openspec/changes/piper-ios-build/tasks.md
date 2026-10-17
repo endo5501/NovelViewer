@@ -17,7 +17,7 @@
 ## 3. iOS Runner への同梱
 
 - [x] 3.1 `feat/irodori-ios-build` の `4295a0b4`(deployment target のガードテスト)の `test/platform/ios_project_config_test.dart` を取り込み、テストが期待する値を現在の 15.0 に合わせる。あわせて、同梱フェーズの定義(`inputPaths` / `outputPaths` が空、framework 名を含まない、`alwaysOutOfDate = 1`)を確かめるテストを `test/platform/ios_project_config_test.dart` に加える。確認: `fvm flutter test test/platform/ios_project_config_test.dart` で、同梱フェーズのテストが失敗する
-- [ ] 3.2 `5835525d` 時点の `ios/Runner.xcodeproj/project.pbxproj` から `Embed Native Frameworks` フェーズ(`7cfb3573` で追加し、`5835525d` で修正したもの)を取り込む。cherry-pick は使わない。これらのコミットは `openspec/changes/irodori-ios-build/` や audiocpp 用のスクリプトにも触れているので、フェーズの定義と Runner のビルドフェーズ一覧の 1 行だけを移す。また、`5835525d` 時点の pbxproj は deployment target などを main と異なる値にしている可能性がある。そのため `git checkout <commit> -- <path>` でファイルごと持ち込むことはしない。確認: 3.1 のテストが通り、`xcodebuild -list -project ios/Runner.xcodeproj` がエラーなく動く
+- [x] 3.2 `5835525d` 時点の `ios/Runner.xcodeproj/project.pbxproj` から `Embed Native Frameworks` フェーズ(`7cfb3573` で追加し、`5835525d` で修正したもの)を取り込む。cherry-pick は使わない。これらのコミットは `openspec/changes/irodori-ios-build/` や audiocpp 用のスクリプトにも触れているので、フェーズの定義と Runner のビルドフェーズ一覧の 1 行だけを移す。また、`5835525d` 時点の pbxproj は deployment target などを main と異なる値にしている可能性がある。そのため `git checkout <commit> -- <path>` でファイルごと持ち込むことはしない。確認: 3.1 のテストが通り、`xcodebuild -list -project ios/Runner.xcodeproj` がエラーなく動く
 - [ ] 3.3 xcframework がある状態で Simulator 向けと実機向けにビルドする。確認: 両方の `Runner.app/Frameworks/` に `piper_plus.framework` があり、`codesign --verify` が成功する
 - [ ] 3.4 `ios/Frameworks/` を一時的に退避してビルドする。確認: 同梱フェーズは何もせずに終わり、ビルドが成功する(確認後に元へ戻す)
 
