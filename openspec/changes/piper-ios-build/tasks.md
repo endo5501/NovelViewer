@@ -38,7 +38,7 @@
 - [x] 5.3 `test/features/tts/data/piper_model_download_service_test.dart` に、辞書の展開のテストを加える(spec `piper-tts-model-download` の追加シナリオ)。内容は、gzip した tar を返す偽のサーバから展開できること、展開先の外へ出るエントリで失敗し外へ書き出さないこと、壊れた archive で失敗し `open_jtalk_dic` も archive も残らないこと。確認: テストが失敗する
 - [x] 5.4 `archive` パッケージを追加し、`downloadDictionary` をアプリ内での展開に置き換える(design D8)。確認: 5.3 と既存のダウンロードのテストが通り、`lib/features/tts/data/piper_model_download_service.dart` から `Process` の参照が無くなる
 - [x] 5.5 iPad Simulator で `flutter drive` を使って実行する。確認: テストが成功し、計測値の JSON が出力される(Simulator では実行後にアプリのデータが残らず、毎回モデルを取得し直す。design D6)
-- [ ] 5.6 iPad 実機で、`flutter drive --profile` で実行する。確認: テストが成功し、design D6 の進む条件(RTF ≤ 1.0、空きメモリ ≥ 1GiB)を満たすかを判断できる計測値が得られる。結果を `benchmarks/` に持ち帰り、判断を design.md に追記する
+- [x] 5.6 iPad 実機で、`flutter drive --profile` で実行する。確認: テストが成功し、design D6 の進む条件(RTF ≤ 1.0、空きメモリ ≥ 1GiB)を満たすかを判断できる計測値が得られる。結果を `benchmarks/` に持ち帰り、判断を design.md に追記する
 
 ## 6. ドキュメントと upstream PR
 

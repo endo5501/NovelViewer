@@ -210,6 +210,24 @@ D1 と同じ内容の PR を ayutaz/piper-plus の `dev` に出す。PR を出�
 - `os_proc_available_memory` は Simulator では 0 を返すので、空きメモリは実機でしか判断できない。ピーク RSS は 881MiB だった。
 - 結果は `benchmarks/piper_ios_sim_20261017.json` に保存した(`benchmarks/` は Git 管理外)。
 
+## iPad 実機での合成テストの結果(2026-10-17、タスク 5.6)
+
+- 環境: iPad mini (A17 Pro, 8GB)、iPadOS 26.6.2。`flutter drive --profile` で実行した。結果は `benchmarks/piper_ios_device_20261017.json`(Git 管理外)。
+- モデルの読み込み: 277ms。音素化: `ja`、18 音素。
+- 合成時間と RTF:
+
+| 文 | 音声長 | 合成時間 | RTF | rms |
+|---|---|---|---|---|
+| short | 2.5 秒 | 79ms | 0.032 | 0.135 |
+| kanji_only | 0.6 秒 | 30ms | 0.047 | 0.188 |
+| medium | 8.4 秒 | 249ms | 0.030 | 0.130 |
+| long | 20.1 秒 | 531ms | 0.026 | 0.118 |
+
+- 中文の 10 回連続の合成は 231〜254ms(平均 RTF 0.031)で、発熱による劣化は見られなかった。
+- メモリ: ピーク RSS は 361MiB、`os_proc_available_memory` の最小値は 3150MiB。連続合成の間、空きメモリは減らなかった。
+- **判断**: D6 の進む条件(両環境でテスト成功、中文の平均 RTF ≤ 1.0、空きメモリ ≥ 1GiB)をすべて満たした。後続の `ios-tts-piper` に進める。Irodori(読み込み後の空きが 1.4GiB、中文で 1.6GB の確保に失敗)と比べて、メモリ・速度の両面で大きな余裕がある。
+- 実機テストの前提として、Mac に Rosetta が必要だった(Flutter が USB 接続に使う `iproxy` が Intel 用のバイナリのため)。ターミナルにローカルネットワークの許可も必要。
+
 ## レビューで見送った指摘(2026-10-17)
 
 - **同梱フェーズは、xcframework を削除した後の差分ビルドで、以前に同梱した framework を取り除かない**(コードレビューと Codex の両方が指摘): タスク 3.4 で実際に、framework ありでビルドしてから xcframework を退避し、`flutter build ios --simulator` で再ビルドした。その結果、`Runner.app/Frameworks/` から `piper_plus.framework` は消えていた。指摘の状況は再現しなかったので、取り除く仕組みは加えない。Xcode の IDE から差分ビルドしたときに再現した場合は、改めて対応する。

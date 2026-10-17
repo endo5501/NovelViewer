@@ -110,6 +110,7 @@ fvm flutter drive --profile --driver=test_driver/integration_test.dart \
   --target=integration_test/piper_ios_synthesis_test.dart -d <デバイス ID>
 ```
 
+- 実機で実行するには、Mac に Rosetta（`sudo softwareupdate --install-rosetta --agree-to-license`）と、ターミナルへのローカルネットワークの許可（システム設定 > プライバシーとセキュリティ > ローカルネットワーク）が必要です。Flutter が USB 接続に使う `iproxy` が Intel 用のバイナリのためです。
 - 実機では `flutter test` は使えません。debug ビルド（JIT）は、iPadOS 26 ではデバッガ無しだと起動直後に終了します。
 - 計測結果はホストの `build/integration_response_data.json` と、端末の `Documents/benchmarks/piper_ios_<日時>.json` に出力されます。
 - Simulator では実行後にアプリのデータが残らないので、毎回モデルを取得し直します。
