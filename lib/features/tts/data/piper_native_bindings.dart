@@ -71,6 +71,22 @@ final class PiperPlusSynthOptions extends Struct {
   external Array<Int32> reserved;
 }
 
+final class PiperPlusPhonemeResult extends Struct {
+  /// BORROWED: space-separated phoneme string, valid until the next
+  /// phonemize or synthesis call on the same engine.
+  external Pointer<Utf8> phonemes;
+
+  /// BORROWED: detected/resolved language code.
+  external Pointer<Utf8> language;
+
+  @Int32()
+  external int numPhonemes;
+
+  /// Must be zero.
+  @Array(4)
+  external Array<Int32> reserved;
+}
+
 // int32_t piper_plus_api_version(void)
 typedef _PApiVersionC = Int32 Function();
 typedef _PApiVersionDart = int Function();
@@ -125,6 +141,23 @@ typedef _PSampleRateDart = int Function(Pointer<Void>);
 // int32_t piper_plus_language_id(const PiperPlusEngine *, const char *)
 typedef _PLanguageIdC = Int32 Function(Pointer<Void>, Pointer<Utf8>);
 typedef _PLanguageIdDart = int Function(Pointer<Void>, Pointer<Utf8>);
+
+// PiperPlusStatus piper_plus_phonemize(engine, text, language,
+//     PiperPlusPhonemeResult *out_result)
+typedef _PPhonemizeC =
+    Int32 Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Pointer<PiperPlusPhonemeResult>,
+    );
+typedef _PPhonemizeDart =
+    int Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Pointer<PiperPlusPhonemeResult>,
+    );
 
 class PiperNativeBindings {
   PiperNativeBindings(DynamicLibrary library) : _library = library;
@@ -186,4 +219,10 @@ class PiperNativeBindings {
       .lookupFunction<_PLanguageIdC, _PLanguageIdDart>(
         'piper_plus_language_id',
       );
+
+  /// Phonemizes without synthesizing. The result's strings are borrowed from
+  /// the engine: copy them before the next call on the same engine.
+  late final phonemize = _library.lookupFunction<_PPhonemizeC, _PPhonemizeDart>(
+    'piper_plus_phonemize',
+  );
 }

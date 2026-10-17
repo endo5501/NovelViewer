@@ -40,6 +40,10 @@ void main() {
     test('PiperPlusSynthOptions matches the C struct size', () {
       expect(sizeOf<PiperPlusSynthOptions>(), 56);
     });
+
+    test('PiperPlusPhonemeResult matches the C struct size', () {
+      expect(sizeOf<PiperPlusPhonemeResult>(), 40);
+    });
   });
 
   group('PiperNativeBindings - shared library', () {
@@ -66,6 +70,7 @@ void main() {
       expect(bindings.freeAudio, isNotNull);
       expect(bindings.sampleRate, isNotNull);
       expect(bindings.languageId, isNotNull);
+      expect(bindings.phonemize, isNotNull);
     });
 
     test('the built library reports C API version 1', () {
