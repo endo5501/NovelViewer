@@ -28,6 +28,7 @@ class TtsEditSegmentRow extends StatefulWidget {
     required this.onCursorRequested,
     required this.onSkipToggled,
     required this.enabled,
+    this.showReferenceAudio = true,
     this.dictRepository,
   });
 
@@ -57,6 +58,11 @@ class TtsEditSegmentRow extends StatefulWidget {
   final VoidCallback onSkipToggled;
 
   final bool enabled;
+
+  /// Whether the per-segment reference audio selector is shown. False for an
+  /// engine that ignores reference audio, where a choice would do nothing; the
+  /// segment's stored value is left untouched either way.
+  final bool showReferenceAudio;
 
   @override
   State<TtsEditSegmentRow> createState() => _TtsEditSegmentRowState();
@@ -203,54 +209,58 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
                     },
             ),
           ),
-          const SizedBox(width: 8),
-          // Reference audio dropdown
-          SizedBox(
-            width: 120,
-            child: DropdownButtonFormField<String?>(
-              // ignore: deprecated_member_use
-              value: effectiveRefValue,
-              isDense: true,
-              isExpanded: true,
-              decoration: const InputDecoration(
+          if (widget.showReferenceAudio) ...[
+            const SizedBox(width: 8),
+            // Reference audio dropdown
+            SizedBox(
+              width: 120,
+              child: DropdownButtonFormField<String?>(
+                // ignore: deprecated_member_use
+                value: effectiveRefValue,
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 8,
-                ),
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text(
-                    AppLocalizations.of(context)!.ttsEdit_referenceSettingValue,
-                    style: const TextStyle(fontSize: 12),
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
                   ),
+                  border: OutlineInputBorder(),
                 ),
-                DropdownMenuItem<String?>(
-                  value: '',
-                  child: Text(
-                    AppLocalizations.of(context)!.ttsEdit_referenceNone,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-                ...widget.voiceFiles.map(
-                  (file) => DropdownMenuItem<String?>(
-                    value: file,
+                items: [
+                  DropdownMenuItem<String?>(
+                    value: null,
                     child: Text(
-                      file,
+                      AppLocalizations.of(
+                        context,
+                      )!.ttsEdit_referenceSettingValue,
                       style: const TextStyle(fontSize: 12),
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-              ],
-              onChanged: widget.enabled
-                  ? (value) => widget.onRefWavPathChanged(value)
-                  : null,
+                  DropdownMenuItem<String?>(
+                    value: '',
+                    child: Text(
+                      AppLocalizations.of(context)!.ttsEdit_referenceNone,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                  ...widget.voiceFiles.map(
+                    (file) => DropdownMenuItem<String?>(
+                      value: file,
+                      child: Text(
+                        file,
+                        style: const TextStyle(fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+                onChanged: widget.enabled
+                    ? (value) => widget.onRefWavPathChanged(value)
+                    : null,
+              ),
             ),
-          ),
+          ],
           const SizedBox(width: 8),
           // Memo field. Doubles as the Irodori caption, so it holds a short
           // sentence rather than a keyword — it wraps to a second line instead
