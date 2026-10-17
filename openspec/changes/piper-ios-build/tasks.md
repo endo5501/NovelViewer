@@ -1,9 +1,9 @@
 ## 1. スパイク: パッチで日本語の音素化が iOS で動くか確かめる
 
-- [ ] 1.1 サブモジュールが指している v2.0.2 のコミットから作業ブランチを作り、design D1 の修正を入れる。対象は `cmake/PiperCommon.cmake` の iOS 分岐、`openjtalk_wrapper.c`、`openjtalk_dictionary_manager.c`、`openjtalk_ios_stub.c`。upstream の `dev` に合わせるのは PR を出すとき(6.2)にする。確認: macOS 向けのデスクトップビルド(`cmake -DBUILD_TESTS=ON` → `ctest`)が、修正前と同じ結果で通る
-- [ ] 1.2 修正したツリーを `cmake/ios.toolchain.cmake` で Simulator(arm64)向けにビルドする。ORT は CDN の 1.20.0 を使う。確認: `libpiper_plus.a` ができ、`nm -u` に `_popen` / `_system` / `_posix_spawn` が出ない
-- [ ] 1.3 1.2 の `.a` を design D3 の方法で動的ライブラリに包む。それをリンクした最小の C プログラムを Simulator 向けにビルドし、`xcrun simctl spawn booted` で実行する。プログラムは `piper_plus_create`(`dict_dir` を指定)、`piper_plus_phonemize("こんにちは、世界。")`、「多分。」の `piper_plus_synthesize` を順に呼ぶ。確認: 日本語の音素列(ピンインではないもの)が返り、合成結果が無音ではない。成立しなければ、ここで止めて design D1 の代替案 2 を検討する
-- [ ] 1.4 1.1 の修正を `git format-patch` で `patches/piper-plus/0001-ios-enable-openjtalk.patch` に書き出す。先頭に「upstream PR 未提出」と「取り込まれたら削除する」旨を書く。確認: `git -C third_party/piper-plus archive HEAD` で取り出したツリーに `git apply --check` が通る
+- [x] 1.1 サブモジュールが指している v2.0.2 のコミットから作業ブランチを作り、design D1 の修正を入れる。対象は `cmake/PiperCommon.cmake` の iOS 分岐、`openjtalk_wrapper.c`、`openjtalk_dictionary_manager.c`、`openjtalk_ios_stub.c`。upstream の `dev` に合わせるのは PR を出すとき(6.2)にする。確認: macOS 向けのデスクトップビルド(`cmake -DBUILD_TESTS=ON` → `ctest`)が、修正前と同じ結果で通る
+- [x] 1.2 修正したツリーを `cmake/ios.toolchain.cmake` で Simulator(arm64)向けにビルドする。ORT は CDN の 1.20.0 を使う。確認: `libpiper_plus.a` ができ、`nm -u` に `_popen` / `_system` / `_posix_spawn` が出ない
+- [x] 1.3 1.2 の `.a` を design D3 の方法で動的ライブラリに包む。それをリンクした最小の C プログラムを Simulator 向けにビルドし、`xcrun simctl spawn booted` で実行する。プログラムは `piper_plus_create`(`dict_dir` を指定)、`piper_plus_phonemize("こんにちは、世界。")`、「多分。」の `piper_plus_synthesize` を順に呼ぶ。確認: 日本語の音素列(ピンインではないもの)が返り、合成結果が無音ではない。成立しなければ、ここで止めて design D1 の代替案 2 を検討する
+- [x] 1.4 1.1 の修正を `git format-patch` で `patches/piper-plus/0001-ios-enable-openjtalk.patch` に書き出す。先頭に「upstream PR 未提出」と「取り込まれたら削除する」旨を書く。確認: `git -C third_party/piper-plus archive HEAD` で取り出したツリーに `git apply --check` が通る
 
 ## 2. iOS 向け xcframework のビルドスクリプト
 

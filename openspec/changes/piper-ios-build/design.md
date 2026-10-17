@@ -180,6 +180,16 @@ D1 と同じ内容の PR を ayutaz/piper-plus の `dev` に出す。PR を出�
   3. `scripts/build_piper_ios.sh` と macOS / Windows のビルドを実行する。
   4. 検証スクリプトと integration test を通す。
 
+## スパイクの結果(2026-10-17、タスク 1)
+
+- **パッチの実装**: D1 の方針どおり。wrapper では `find_openjtalk_binary()` を iOS 用の `return NULL` 版に差し替え、`execute_openjtalk_argv` は `piper_run_argv` を呼ばないようにした。dictionary_manager では `verify_checksum` と `download_and_extract_dictionary` を `#ifndef` で外し、`ensure_openjtalk_dictionary` は Android と同じく失敗を返す。スタブには、ビルドから外れたままの `openjtalk_optimized.c` のシンボルだけを残した(スタブを参照している upstream の CI があるので、ファイル自体は残す)。マクロは `PIPER_PLUS_APPLE_EMBEDDED` とし、upstream の `PIPER_PLUS_EMBEDDED_*` の命名に合わせた。
+- **デスクトップ**: 修正前も修正後も、`ctest` は 51/51 通った。
+- **iOS Simulator(iPad mini A17 Pro, iOS 27.0)**: 最小の C ハーネスを `xcrun simctl spawn` で実行した。
+  - パッチあり: `piper_plus_phonemize("こんにちは、世界。")` は `lang=ja`、18 音素を返した。「こんにちは、世界。」(rms 0.136)と「多分。」(rms 0.202)はどちらも無音ではない音声になった。
+  - パッチなし(対照): 音素は 0 個、合成結果は 0 サンプルだった。
+- **ライブラリ**: `-force_load` で包んだ dylib(ORT 込みで約 29MB)は、`piper_plus_*` 以外のシンボルを公開しなかった。`nm -u` には `popen` / `system` / `posix_spawn` 系のシンボルが無かった。
+- **ONNX Runtime について、D4 の前提が誤っていた**: Microsoft の CDN が配る 1.20.0 の `onnxruntime.framework` は、upstream の文書にある動的ライブラリではなかった。中身は静的ライブラリ(ar アーカイブ。`prelinked_objects.o` を 1 つ含む)で、`minos 13.0` だった。そのため、ORT を独立した動的 framework として同梱することはできない。スパイクでは piper_plus の dylib に静的にリンクした。この扱いは別途決める。
+
 ## Open Questions
 
 - 中文の RTF が 1.0 を超えた場合の対策(CoreML EP、`intra_op_num_threads` の調整、文の分割を短くする)。D6 の計測結果を見て `ios-tts-piper` で決める。
