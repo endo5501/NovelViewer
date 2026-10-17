@@ -1,11 +1,11 @@
 ## Purpose
 
-Tabbed (一般 / 読み上げ, the 読み上げ tab present only where the platform supports TTS) settings dialog for TTS configuration: engine selector (Qwen3-TTS / Piper), model size, model download status/progress, voice cloning reference selection (with drop zone, refresh, rename, folder open), and SharedPreferences persistence of all TTS settings.
+Tabbed (一般 / 読み上げ, the 読み上げ tab present only where the platform supports TTS) settings dialog for TTS configuration: engine selector (the engines the platform runs; omitted where there is only one), model size, model download status/progress, voice cloning reference selection (with drop zone, refresh, rename, folder open), and SharedPreferences persistence of all TTS settings.
 
 ## Requirements
 
 ### Requirement: Tabbed settings dialog
-The settings dialog SHALL use a tabbed layout with `TabBar` and `TabBarView`. On a platform where text-to-speech is available, the TTS tabs SHALL be: "一般" (General) containing all existing settings, and "読み上げ" (TTS) containing TTS-specific settings. All existing settings functionality SHALL be preserved in the "一般" tab. The TTS tab SHALL display an engine selector (`SegmentedButton<TtsEngineType>`) at the top, followed by engine-specific settings that change based on the selected engine.
+The settings dialog SHALL use a tabbed layout with `TabBar` and `TabBarView`. On a platform where text-to-speech is available, the TTS tabs SHALL be: "一般" (General) containing all existing settings, and "読み上げ" (TTS) containing TTS-specific settings. All existing settings functionality SHALL be preserved in the "一般" tab. The TTS tab SHALL display, at the top, the engine selector where the platform supports more than one engine (`tts-engine-selection`), followed by the settings of the engine in use.
 
 On a platform where text-to-speech is unavailable, the "読み上げ" tab SHALL NOT be listed and its content SHALL NOT be built, so that no control capable of loading the TTS native library, requesting microphone access, or invoking a desktop-only drag-and-drop plugin is reachable. The "一般" tab SHALL retain all of its settings unchanged.
 
@@ -23,11 +23,15 @@ On a platform where text-to-speech is unavailable, the "読み上げ" tab SHALL 
 
 #### Scenario: Switch between tabs
 - **WHEN** the user clicks the "読み上げ" tab
-- **THEN** the TTS settings are displayed with engine selector at the top
+- **THEN** the TTS settings are displayed
 
 #### Scenario: TTS tab shows engine selector first
-- **WHEN** the user opens the "読み上げ" tab
-- **THEN** a SegmentedButton for engine selection (Qwen3-TTS / Piper) is displayed at the top, before all other TTS settings
+- **WHEN** the user opens the "読み上げ" tab on a platform that supports more than one engine
+- **THEN** a SegmentedButton for engine selection is displayed at the top, before all other TTS settings
+
+#### Scenario: TTS tab on a single-engine platform
+- **WHEN** the user opens the "読み上げ" tab on iOS
+- **THEN** no engine selector is displayed, and the Piper settings (model download and synthesis parameters) are shown
 
 #### Scenario: Engine-specific settings displayed for qwen3
 - **WHEN** the "Qwen3-TTS" engine is selected

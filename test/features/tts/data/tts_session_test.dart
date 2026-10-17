@@ -439,6 +439,82 @@ void main() {
       },
     );
 
+    test('a failed model load retains its reason', () async {
+      final isolate = _FakeTtsIsolate()..blockModelLoad = true;
+      final session = TtsSession(isolate: isolate);
+
+      final loading = session.ensureModelLoaded(_qwen3());
+      await Future.delayed(Duration.zero);
+      isolate.emitModelLoaded(
+        success: false,
+        error: 'Piper native library piper_plus.framework is not in this build',
+      );
+
+      expect(await loading, isFalse);
+      expect(
+        session.lastModelLoadError,
+        contains('piper_plus.framework is not in this build'),
+      );
+      await session.dispose();
+    });
+
+    test('a load ended by the worker dying retains that reason', () async {
+      final isolate = _FakeTtsIsolate()..blockModelLoad = true;
+      final session = TtsSession(isolate: isolate);
+
+      final loading = session.ensureModelLoaded(_qwen3());
+      await Future.delayed(Duration.zero);
+      isolate.emitWorkerDied('worker crashed: dlopen');
+
+      expect(await loading, isFalse);
+      expect(session.lastModelLoadError, contains('worker crashed'));
+      await session.dispose();
+    });
+
+    test('a load after the worker died still says why', () async {
+      final isolate = _FakeTtsIsolate();
+      final session = TtsSession(isolate: isolate);
+      await session.ensureModelLoaded(_qwen3());
+      isolate.emitWorkerDied('worker crashed: dlopen');
+      await Future.delayed(Duration.zero);
+
+      // A different config forces a reload, which takes the fast path.
+      expect(
+        await session.ensureModelLoaded(_qwen3(modelDir: '/other')),
+        isFalse,
+      );
+      expect(session.lastModelLoadError, contains('worker crashed: dlopen'));
+      await session.dispose();
+    });
+
+    test('a timed-out load says it timed out', () async {
+      final isolate = _FakeTtsIsolate()..blockModelLoad = true;
+      final session = TtsSession(
+        isolate: isolate,
+        modelLoadTimeout: const Duration(milliseconds: 50),
+      );
+
+      expect(await session.ensureModelLoaded(_qwen3()), isFalse);
+      expect(session.lastModelLoadError, contains('timed out'));
+      await session.dispose();
+    });
+
+    test('a later load clears the previous load reason', () async {
+      final isolate = _FakeTtsIsolate()..blockModelLoad = true;
+      final session = TtsSession(isolate: isolate);
+
+      final failing = session.ensureModelLoaded(_qwen3());
+      await Future.delayed(Duration.zero);
+      isolate.emitModelLoaded(success: false, error: 'missing library');
+      await failing;
+      expect(session.lastModelLoadError, isNotNull);
+
+      isolate.blockModelLoad = false;
+      expect(await session.ensureModelLoaded(_qwen3()), isTrue);
+      expect(session.lastModelLoadError, isNull);
+      await session.dispose();
+    });
+
     test('synthesize retains the native error for the caller', () async {
       final isolate = _FakeTtsIsolate();
       isolate.autoSucceedSynthesis = false;
@@ -879,8 +955,8 @@ void main() {
   });
 }
 
-Qwen3EngineConfig _qwen3() => const Qwen3EngineConfig(
-  modelDir: '/q/m',
+Qwen3EngineConfig _qwen3({String modelDir = '/q/m'}) => Qwen3EngineConfig(
+  modelDir: modelDir,
   sampleRate: 24000,
   languageId: 2058,
   embeddingCacheDir: '/cache',

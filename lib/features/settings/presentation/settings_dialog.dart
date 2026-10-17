@@ -115,14 +115,19 @@ class _TtsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final engineType = ref.watch(ttsEngineTypeProvider);
+    // A selector with one segment offers no choice: where the platform runs a
+    // single engine (Piper on iOS) its settings are shown directly.
+    final engines = ref.watch(supportedTtsEnginesProvider);
     return SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 16),
-          const _EngineSelector(),
-          const SizedBox(height: 16),
+          if (engines.length > 1) ...[
+            _EngineSelector(engines: engines),
+            const SizedBox(height: 16),
+          ],
           if (engineType == TtsEngineType.qwen3) ...[
             const Qwen3SettingsSection(),
             const SizedBox(height: 16),
@@ -151,7 +156,10 @@ class _TtsTab extends ConsumerWidget {
 }
 
 class _EngineSelector extends ConsumerWidget {
-  const _EngineSelector();
+  const _EngineSelector({required this.engines});
+
+  /// The engines this platform runs, in display order.
+  final List<TtsEngineType> engines;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -171,7 +179,7 @@ class _EngineSelector extends ConsumerWidget {
           SizedBox(
             width: double.infinity,
             child: SegmentedButton<TtsEngineType>(
-              segments: TtsEngineType.values
+              segments: engines
                   .map((e) => ButtonSegment(value: e, label: Text(e.label)))
                   .toList(),
               selected: {engineType},

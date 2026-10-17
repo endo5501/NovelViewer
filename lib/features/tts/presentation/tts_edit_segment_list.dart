@@ -29,10 +29,15 @@ class TtsEditSegmentList extends StatefulWidget {
     required this.onReset,
     required this.onSkipToggled,
     required this.onCursorChanged,
+    this.showReferenceAudio = true,
     this.dictRepository,
   });
 
   final List<TtsEditSegment> segments;
+
+  /// Whether rows show the per-segment reference audio selector; see
+  /// [TtsEditSegmentRow.showReferenceAudio].
+  final bool showReferenceAudio;
 
   /// True while bulk or single generation is running. Disables row actions.
   final bool isGenerating;
@@ -149,6 +154,7 @@ class _TtsEditSegmentListState extends State<TtsEditSegmentList> {
             isPlaying: widget.isPlaying && widget.cursorIndex == index,
             isCursor: widget.cursorIndex == index,
             voiceFiles: widget.voiceFiles,
+            showReferenceAudio: widget.showReferenceAudio,
             onTextEditComplete: (text) =>
                 widget.onTextEditComplete(index, text),
             onRefWavPathChanged: (value) =>

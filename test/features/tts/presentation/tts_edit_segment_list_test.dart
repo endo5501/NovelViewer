@@ -27,6 +27,7 @@ void main() {
     required int count,
     required int cursorIndex,
     bool isPlaying = false,
+    bool showReferenceAudio = true,
     void Function(int index)? onCursorChanged,
   }) async {
     await tester.binding.setSurfaceSize(const Size(1100, 700));
@@ -53,6 +54,7 @@ void main() {
                 onReset: (_) {},
                 onSkipToggled: (_) {},
                 onCursorChanged: onCursorChanged ?? (_) {},
+                showReferenceAudio: showReferenceAudio,
               ),
             ),
           ),
@@ -296,5 +298,14 @@ void main() {
         expect(scrollOffset(tester), 0);
       },
     );
+  });
+
+  testWidgets('no row shows a reference audio selector when hidden', (
+    tester,
+  ) async {
+    await pumpList(tester, count: 3, cursorIndex: 0, showReferenceAudio: false);
+
+    expect(find.byType(TtsEditSegmentRow), findsWidgets);
+    expect(find.byType(DropdownButtonFormField<String?>), findsNothing);
   });
 }

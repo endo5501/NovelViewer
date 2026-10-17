@@ -8,6 +8,8 @@ import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
+import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -151,6 +153,56 @@ void main() {
           .setTtsRefWavPath('voice_sample.wav');
       expect(container.read(ttsRefWavPathProvider), 'voice_sample.wav');
       expect(prefs.getString('tts_ref_wav_path'), 'voice_sample.wav');
+    });
+  });
+
+  group('ttsEngineTypeProvider resolves to an engine the platform runs', () {
+    ProviderContainer containerOn({required bool isIOS}) {
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          platformCapabilitiesProvider.overrideWithValue(
+            PlatformCapabilities.forPlatform(isIOS: isIOS, isMacOS: false),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('the default engine resolves to Piper on iOS', () {
+      final container = containerOn(isIOS: true);
+
+      expect(container.read(ttsEngineTypeProvider), TtsEngineType.piper);
+    });
+
+    test(
+      'an unsupported persisted engine resolves without being rewritten',
+      () async {
+        await prefs.setString('tts_engine_type', 'irodori');
+        final container = containerOn(isIOS: true);
+
+        expect(container.read(ttsEngineTypeProvider), TtsEngineType.piper);
+        expect(prefs.getString('tts_engine_type'), 'irodori');
+      },
+    );
+
+    test('a supported persisted engine is used as is', () async {
+      await prefs.setString('tts_engine_type', 'irodori');
+      final container = containerOn(isIOS: false);
+
+      expect(container.read(ttsEngineTypeProvider), TtsEngineType.irodori);
+    });
+
+    test('selecting a supported engine still persists it', () async {
+      final container = containerOn(isIOS: true);
+
+      await container
+          .read(ttsEngineTypeProvider.notifier)
+          .setEngineType(TtsEngineType.piper);
+
+      expect(container.read(ttsEngineTypeProvider), TtsEngineType.piper);
+      expect(prefs.getString('tts_engine_type'), 'piper');
     });
   });
 

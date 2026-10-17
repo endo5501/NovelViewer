@@ -238,6 +238,9 @@ class TtsEditController {
     required String Function(String fileName)? resolveRefWavPath,
   }) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
+    // A fresh request: a stopPlayback() or cancel() before it ended earlier
+    // work and must not silence this one's failure report.
+    _cancelled = false;
     final dict = _dictionaryRepository;
     final entries = dict != null ? await dict.getEntriesSortedByLength() : null;
     final refWavPath = TtsRefWavResolver.resolve(
@@ -282,7 +285,14 @@ class TtsEditController {
       return true;
     }
 
-    if (!await _ensureModelLoaded(config)) return false;
+    if (!await _ensureModelLoaded(config)) {
+      // A load ended by cancel() is not a failure; any other is reported with
+      // its reason — a missing native library, an unreadable model — the same
+      // way a synthesis failure is, rather than leaving the row silently
+      // ungenerated.
+      if (!_cancelled) onSynthesisFailed?.call(_session.lastModelLoadError);
+      return false;
+    }
 
     // For Irodori, the segment's memo becomes the caption (design D8); for
     // qwen3/piper captionFromMemo returns null so the memo never affects

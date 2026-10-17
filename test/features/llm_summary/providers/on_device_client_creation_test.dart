@@ -55,7 +55,10 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
         platformCapabilitiesProvider.overrideWithValue(
           const PlatformCapabilities(
-            textToSpeech: true,
+            piperTts: true,
+            qwen3Tts: true,
+            irodoriTts: true,
+            ttsAudioExport: true,
             appUpdate: true,
             llmSummary: true,
             onDeviceLlm: true,
@@ -155,7 +158,10 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(prefs),
           platformCapabilitiesProvider.overrideWithValue(
             const PlatformCapabilities(
-              textToSpeech: true,
+              piperTts: true,
+              qwen3Tts: true,
+              irodoriTts: true,
+              ttsAudioExport: true,
               appUpdate: true,
               llmSummary: true,
               onDeviceLlm: true,

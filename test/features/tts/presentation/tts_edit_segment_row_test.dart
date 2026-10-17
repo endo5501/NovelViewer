@@ -41,6 +41,8 @@ void main() {
     bool isGenerating = false,
     bool skip = false,
     bool enabled = true,
+    bool showReferenceAudio = true,
+    void Function(String? value)? onRefWavPathChanged,
     void Function(String? memo)? onMemoEditComplete,
     VoidCallback? onCursorRequested,
     VoidCallback? onSkipToggled,
@@ -64,7 +66,7 @@ void main() {
                 isCursor: isCursor,
                 voiceFiles: const [],
                 onTextEditComplete: (_) {},
-                onRefWavPathChanged: (_) {},
+                onRefWavPathChanged: onRefWavPathChanged ?? (_) {},
                 onMemoEditComplete: onMemoEditComplete ?? (_) {},
                 onPlay: () {},
                 onGenerate: () {},
@@ -72,6 +74,7 @@ void main() {
                 onCursorRequested: onCursorRequested ?? () {},
                 onSkipToggled: onSkipToggled ?? () {},
                 enabled: enabled,
+                showReferenceAudio: showReferenceAudio,
               ),
             ),
           ),
@@ -434,6 +437,60 @@ void main() {
         find.widgetWithIcon(IconButton, Icons.restart_alt),
       );
       expect(reset.onPressed, isNotNull);
+    });
+  });
+
+  group('reference audio selector', () {
+    testWidgets('is shown for an engine that uses reference audio', (
+      tester,
+    ) async {
+      await pumpRow(tester, rowWidth: 1000);
+
+      expect(find.byType(DropdownButtonFormField<String?>), findsOneWidget);
+    });
+
+    testWidgets('is absent for an engine that ignores it', (tester) async {
+      await pumpRow(
+        tester,
+        rowWidth: 1000,
+        showReferenceAudio: false,
+        hasAudio: true,
+      );
+
+      expect(find.byType(DropdownButtonFormField<String?>), findsNothing);
+      // The rest of the row is unchanged.
+      expect(find.byType(TextField), findsNWidgets(2));
+      expect(find.widgetWithIcon(IconButton, Icons.play_arrow), findsOneWidget);
+      expect(find.widgetWithIcon(IconButton, Icons.refresh), findsOneWidget);
+      expect(
+        find.widgetWithIcon(IconButton, Icons.restart_alt),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a hidden selector never writes the stored value', (
+      tester,
+    ) async {
+      // The stored ref_wav_path is only written through this callback, so a
+      // row that never calls it leaves the segment's value as it was.
+      final changes = <String?>[];
+      await pumpRow(
+        tester,
+        rowWidth: 1000,
+        showReferenceAudio: false,
+        hasAudio: true,
+        onRefWavPathChanged: changes.add,
+      );
+
+      // Interact with everything the row still offers for editing.
+      for (final field in find.byType(TextField).evaluate().toList()) {
+        await tester.tap(find.byWidget(field.widget));
+        await tester.pump();
+      }
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+
+      expect(changes, isEmpty);
     });
   });
 }

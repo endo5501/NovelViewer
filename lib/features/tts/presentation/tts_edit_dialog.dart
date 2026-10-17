@@ -75,6 +75,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   TtsDictionaryRepository? _dictRepository;
   bool _loading = true;
   List<String> _voiceFiles = [];
+  bool _showReferenceAudio = true;
 
   @override
   void initState() {
@@ -152,7 +153,10 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
       sampleRate: config.sampleRate,
     );
 
-    await _loadVoiceFiles();
+    // An engine that ignores reference audio gets no selector, so there is no
+    // list to read (and no voices directory to touch, which iOS does not have).
+    _showReferenceAudio = engineType.usesReferenceVoice;
+    if (_showReferenceAudio) await _loadVoiceFiles();
 
     _dictRepository = dictRepo;
     _controller = controller;
@@ -466,6 +470,7 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
                           .read(ttsEditCursorIndexProvider.notifier)
                           .set(index),
                       voiceFiles: _voiceFiles,
+                      showReferenceAudio: _showReferenceAudio,
                       dictRepository: _dictRepository,
                       onTextEditComplete: _onTextEditComplete,
                       onRefWavPathChanged: _onRefWavPathChanged,

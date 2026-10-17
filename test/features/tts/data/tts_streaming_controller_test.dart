@@ -57,6 +57,9 @@ class _FakeTtsIsolate implements TtsIsolate {
   /// to simulate a native model-load failure.
   bool failModelLoad = false;
 
+  /// When true, `loadModel` never responds, as a load still in progress.
+  bool blockModelLoad = false;
+
   /// 1-based index of the synthesize call that should respond with an engine
   /// error (null audio + error string). null means every call succeeds.
   int? failSynthesisOnCall;
@@ -98,6 +101,7 @@ class _FakeTtsIsolate implements TtsIsolate {
         embeddingCacheDir: embeddingCacheDir,
       ),
     );
+    if (blockModelLoad) return;
     Future.microtask(() {
       if (_responseController.isClosed) return;
       _responseController.add(
@@ -2012,6 +2016,61 @@ void main() {
           contains('unsupported WAV encoding'),
         );
       });
+
+      test(
+        'a model-load failure leaves its reason for the notification',
+        () async {
+          final isolate = _FakeTtsIsolate()..failModelLoad = true;
+          final player = _AutoCompleteAudioPlayer();
+          final controller = TtsStreamingController(
+            read: container.read,
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+            bufferDrainDelay: Duration.zero,
+          );
+
+          final outcome = await controller.start(
+            resolveRefWavPath: null,
+            modelsReady: true,
+            text: '文1。文2。',
+            fileName: 'load_reason.txt',
+            config: _qwen3Config(modelDir: '/models'),
+          );
+
+          expect(outcome, TtsStartOutcome.failed);
+          expect(controller.lastFailureReason, 'model load failed');
+        },
+      );
+
+      test(
+        'a stop during the model load is not reported as a failure',
+        () async {
+          final isolate = _FakeTtsIsolate()..blockModelLoad = true;
+          final controller = TtsStreamingController(
+            read: container.read,
+            ttsIsolate: isolate,
+            audioPlayer: _AutoCompleteAudioPlayer(),
+            repository: repository,
+            tempDirPath: tempDir.path,
+            bufferDrainDelay: Duration.zero,
+          );
+
+          final future = controller.start(
+            resolveRefWavPath: null,
+            modelsReady: true,
+            text: '文1。文2。',
+            fileName: 'stop_during_load.txt',
+            config: _qwen3Config(modelDir: '/models'),
+          );
+          await _pumpUntil(() => isolate.loadModelCalls.isNotEmpty);
+          await controller.stop();
+
+          expect(await future, TtsStartOutcome.stopped);
+          expect(controller.lastFailureReason, isNull);
+        },
+      );
 
       test('a completed run leaves no failure reason', () async {
         final isolate = _FakeTtsIsolate();
