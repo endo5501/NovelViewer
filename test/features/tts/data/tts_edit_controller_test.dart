@@ -57,10 +57,13 @@ IrodoriEngineConfig _irodoriConfig({
 );
 
 class FakeTtsIsolate implements TtsIsolate {
-  FakeTtsIsolate({this.modelLoadSuccess = true});
+  FakeTtsIsolate({this.modelLoadSuccess = true, this.modelLoadError});
 
   final _responseController = StreamController<TtsIsolateResponse>.broadcast();
   final bool modelLoadSuccess;
+
+  /// The reason a failing load reports, as the worker does.
+  final String? modelLoadError;
   bool spawned = false;
   bool disposed = false;
   bool aborted = false;
@@ -100,7 +103,9 @@ class FakeTtsIsolate implements TtsIsolate {
     if (blockModelLoad) return;
     Future.microtask(() {
       if (!_responseController.isClosed) {
-        _responseController.add(ModelLoadedResponse(success: modelLoadSuccess));
+        _responseController.add(
+          ModelLoadedResponse(success: modelLoadSuccess, error: modelLoadError),
+        );
       }
     });
   }
@@ -3028,6 +3033,41 @@ void main() {
           expect(await captureFailureReason(), isNull);
         },
       );
+
+      test('a failed model load is reported with its reason', () async {
+        final isolate = FakeTtsIsolate(
+          modelLoadSuccess: false,
+          modelLoadError:
+              'Piper native library piper_plus.framework is not in this build',
+        );
+        final controller = TtsEditController(
+          ttsIsolate: isolate,
+          audioPlayer: FakeAudioPlayer(),
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+        String? captured;
+        var called = false;
+        controller.onSynthesisFailed = (reason) {
+          captured = reason;
+          called = true;
+        };
+        await controller.loadSegments(
+          text: 'エルリックは勇者だ。',
+          fileName: 'test.txt',
+          sampleRate: 24000,
+        );
+
+        final ok = await controller.generateSegment(
+          resolveRefWavPath: null,
+          segmentIndex: 0,
+          config: _qwen3Config(),
+        );
+
+        expect(ok, isFalse);
+        expect(called, isTrue, reason: 'a load failure must not be silent');
+        expect(captured, contains('piper_plus.framework'));
+      });
 
       test('a user cancel is not reported as a synthesis failure', () async {
         final isolate = FakeTtsIsolate();
