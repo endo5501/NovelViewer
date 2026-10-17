@@ -10,19 +10,63 @@ void main() {
       );
 
       expect(capabilities.textToSpeech, isTrue);
+      expect(capabilities.piperTts, isTrue);
+      expect(capabilities.qwen3Tts, isTrue);
+      expect(capabilities.irodoriTts, isTrue);
+      expect(capabilities.ttsAudioExport, isTrue);
       expect(capabilities.appUpdate, isTrue);
       expect(capabilities.llmSummary, isTrue);
     });
 
-    test('iOS supports LLM summary but neither speech nor self-update', () {
+    test('iOS supports speech with Piper only', () {
+      // Piper is the one engine built and verified for iOS (piper-ios-build).
+      // Qwen3-TTS and Irodori-TTS have no iOS library, and MP3 export needs a
+      // LAME build iOS does not have.
       const capabilities = PlatformCapabilities.forPlatform(
         isIOS: true,
         isMacOS: false,
       );
 
-      expect(capabilities.llmSummary, isTrue);
-      expect(capabilities.textToSpeech, isFalse);
+      expect(capabilities.textToSpeech, isTrue);
+      expect(capabilities.piperTts, isTrue);
+      expect(capabilities.qwen3Tts, isFalse);
+      expect(capabilities.irodoriTts, isFalse);
+      expect(capabilities.ttsAudioExport, isFalse);
       expect(capabilities.appUpdate, isFalse);
+      expect(capabilities.llmSummary, isTrue);
+    });
+
+    test('text-to-speech follows the engines', () {
+      PlatformCapabilities withEngines({
+        required bool piper,
+        required bool qwen3,
+        required bool irodori,
+      }) => PlatformCapabilities(
+        piperTts: piper,
+        qwen3Tts: qwen3,
+        irodoriTts: irodori,
+        ttsAudioExport: false,
+        appUpdate: false,
+        llmSummary: true,
+        onDeviceLlm: false,
+      );
+
+      expect(
+        withEngines(piper: false, qwen3: false, irodori: false).textToSpeech,
+        isFalse,
+      );
+      for (final (piper, qwen3, irodori) in [
+        (true, false, false),
+        (false, true, false),
+        (false, false, true),
+      ]) {
+        expect(
+          withEngines(piper: piper, qwen3: qwen3, irodori: irodori)
+              .textToSpeech,
+          isTrue,
+          reason: 'piper=$piper qwen3=$qwen3 irodori=$irodori',
+        );
+      }
     });
 
     test('LLM summary does not depend on the platform flag', () {
@@ -80,6 +124,10 @@ void main() {
       );
 
       expect(asMacOS.textToSpeech, asWindows.textToSpeech);
+      expect(asMacOS.piperTts, asWindows.piperTts);
+      expect(asMacOS.qwen3Tts, asWindows.qwen3Tts);
+      expect(asMacOS.irodoriTts, asWindows.irodoriTts);
+      expect(asMacOS.ttsAudioExport, asWindows.ttsAudioExport);
       expect(asMacOS.appUpdate, asWindows.appUpdate);
       expect(asMacOS.llmSummary, asWindows.llmSummary);
       expect(asMacOS.onDeviceLlm, isNot(asWindows.onDeviceLlm));
@@ -97,13 +145,16 @@ void main() {
         isMacOS: false,
       );
 
-      expect(asIOS.textToSpeech, isNot(asDesktop.textToSpeech));
+      expect(asIOS.qwen3Tts, isNot(asDesktop.qwen3Tts));
     });
   });
 
   test('capabilities can be constructed feature by feature', () {
     const capabilities = PlatformCapabilities(
-      textToSpeech: true,
+      piperTts: true,
+      qwen3Tts: false,
+      irodoriTts: false,
+      ttsAudioExport: false,
       appUpdate: false,
       llmSummary: true,
       onDeviceLlm: false,
