@@ -96,6 +96,7 @@
 あわせて、古いビルドの残骸を消す。具体的には、Frameworks に残っている `libpiper_tts_ffi.dylib` をスクリプトが削除する。Embed フェーズはグロブで同梱するので、残しておくと同梱集合の検証(`verify_macos_bundle.sh`)で検出される。
 
 - `-DCMAKE_OSX_ARCHITECTURES=arm64` と CPU のみのビルド(`USE_CUDA` OFF)は現状どおり。
+- **最低対応 OS は 13.3 にする**(実装中にユーザーと決定)。本家が取得する ONNX Runtime 1.20.0 のビルド済みバイナリは最低対応が macOS 13.3 で、これが Piper の実際の下限になる。指定しないと CMake はビルドしたマシンの OS(今回は 27.0)を使う。そのため `MACOSX_DEPLOYMENT_TARGET=13.3` を export し、`-DCMAKE_OSX_DEPLOYMENT_TARGET` にも同じ値を渡す。export が必要なのは、OpenJTalk / fmt / spdlog が ExternalProject でビルドされ、親の CMake キャッシュ変数を引き継がないため。アプリの deployment target 12.0 を下回らないのは ONNX Runtime 側の制約である。他の同梱 dylib(qwen3 / audiocpp / lame)は既に最低対応が 26.0 なので、実際の動作要件は変わらない。他のビルドスクリプトの最低対応の扱いはこの change の範囲外とする。
 - `BUILD_TESTS` は既定のまま(gtest の取得が走らないこと)をビルドログで確認する。
 
 ### D9. Windows のビルドスクリプトは DLL 名だけを変える

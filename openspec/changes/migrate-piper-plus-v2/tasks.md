@@ -7,19 +7,19 @@
 
 ## 2. macOS ネイティブビルド
 
-- [ ] 2.1 `scripts/build_piper_macos.sh` を design D8 に従って更新する。手を入れるのは次の 4 点
+- [x] 2.1 `scripts/build_piper_macos.sh` を design D8 に従って更新する。手を入れるのは次の 4 点
   - `-DPIPER_PLUS_BUILD_SHARED=ON` と `--target piper_plus` に変える
   - `libpiper_plus.dylib` を `cp -L` で実体化して配置し、install name を書き換える
   - ONNX Runtime への参照を `@rpath/libonnxruntime.dylib` に揃える
   - 旧 `libpiper_tts_ffi.dylib` を削除する
 
   末尾の「Xcode に手動で追加」という案内は、グロブで同梱する現行方式(macos-native-library-embedding)に合わせて削る
-- [ ] 2.2 `scripts/build_piper_macos.sh` を実行し、次の 4 点を確認する
+- [x] 2.2 `scripts/build_piper_macos.sh` を実行し、次の 4 点を確認する
   - `macos/Frameworks/` に `libpiper_plus.dylib` と `libonnxruntime.dylib` があり、`libpiper_plus.*.dylib` / `libonnxruntime.*.dylib` / `libpiper_tts_ffi.dylib` がない
   - `otool -D` の install name が `@rpath/libpiper_plus.dylib` である
   - `otool -L` の ONNX Runtime 参照が `@rpath/libonnxruntime.dylib` だけである
   - `nm -gU` で `_piper_plus_create` / `_piper_plus_synthesize` / `_piper_plus_free_audio` / `_piper_plus_api_version` が公開されている
-- [ ] 2.3 `otool -l macos/Frameworks/libonnxruntime.dylib` の `LC_BUILD_VERSION` minos と `otool -l macos/Frameworks/libpiper_plus.dylib` の minos が、`macos/Runner.xcodeproj` の `MACOSX_DEPLOYMENT_TARGET` 以下であることを確認する。超えている場合は作業を止めて対応を相談する
+- [x] 2.3 `otool -l macos/Frameworks/libonnxruntime.dylib` の `LC_BUILD_VERSION` minos と `otool -l macos/Frameworks/libpiper_plus.dylib` の minos が、`macos/Runner.xcodeproj` の `MACOSX_DEPLOYMENT_TARGET` 以下であることを確認する。超えている場合は作業を止めて対応を相談する(2026-10-17: ONNX Runtime 1.20.0 の minos 13.3 が 12.0 を超えた。相談の結果、`build_piper_macos.sh` で deployment target 13.3 を指定する方針に決定(design D8)。再ビルド後は両 dylib とも minos 13.3 で、ExternalProject の「built for newer」警告もない)
 - [ ] 2.4 `scripts/test/verify_macos_bundle.sh` の期待集合を `libpiper_tts_ffi.dylib` から `libpiper_plus.dylib` に書き換える。`fvm flutter build macos` の後にスクリプトを実行し、全項目が ok になることを確認する
 
 ## 3. Dart FFI バインディング(TDD)
