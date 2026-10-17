@@ -28,7 +28,7 @@
 
 ## 5. iOS 上での合成テスト
 
-- [ ] 5.1 `pubspec.yaml` の dev_dependencies に `integration_test`(SDK 同梱)を加え、`test_driver/integration_test.dart` を置く。ドライバの待ち時間は 30 分とする。`87718016` の pubspec の変更を参考にする。確認: `fvm flutter pub get` が成功する
+- [x] 5.1 `pubspec.yaml` の dev_dependencies に `integration_test`(SDK 同梱)を加え、`test_driver/integration_test.dart` を置く。ドライバの待ち時間は 30 分とする。`87718016` の pubspec の変更を参考にする。確認: `fvm flutter pub get` が成功する
 - [ ] 5.2 `integration_test/piper_ios_synthesis_test.dart` を書く。design D6 の内容を実装する。
   - モデルと辞書が無ければ `PiperModelDownloadService` で取得する
   - `piper_plus_phonemize` で日本語の音素列が返ることを確かめる
