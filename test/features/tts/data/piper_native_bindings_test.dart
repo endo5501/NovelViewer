@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/piper_native_bindings.dart';
+import 'package:novel_viewer/features/tts/data/tts_engine.dart';
 
 void main() {
   group('PiperNativeBindings', () {
@@ -34,6 +35,83 @@ void main() {
           PiperNativeBindings.libraryNameFor(Platform.operatingSystem),
         );
       }
+    });
+  });
+
+  group('a missing library is reported as such', () {
+    test('each platform names the step that builds its library', () {
+      expect(
+        PiperNativeBindings.buildInstructionsFor('ios'),
+        contains('scripts/build_piper_ios.sh'),
+      );
+      expect(
+        PiperNativeBindings.buildInstructionsFor('macos'),
+        contains('scripts/build_piper_macos.sh'),
+      );
+      expect(
+        PiperNativeBindings.buildInstructionsFor('windows'),
+        contains(r'scripts\build_piper_windows.bat'),
+      );
+    });
+
+    test('opening an absent library on iOS explains what is missing', () {
+      expect(
+        () => PiperNativeBindings.openLibrary(
+          'piper_plus_absent.framework/piper_plus_absent',
+          operatingSystem: 'ios',
+        ),
+        throwsA(
+          isA<TtsEngineException>()
+              .having(
+                (e) => e.message,
+                'names the library',
+                contains('piper_plus_absent.framework'),
+              )
+              .having(
+                (e) => e.message,
+                'says how to build it',
+                contains('scripts/build_piper_ios.sh'),
+              )
+              .having(
+                (e) => e.message,
+                "keeps the loader's error",
+                contains('piper_plus_absent'),
+              ),
+        ),
+      );
+    });
+
+    test('opening an absent library on desktop names its build script', () {
+      expect(
+        () => PiperNativeBindings.openLibrary(
+          'libpiper_plus_absent.dylib',
+          operatingSystem: 'macos',
+        ),
+        throwsA(
+          isA<TtsEngineException>()
+              .having(
+                (e) => e.message,
+                'names the library',
+                contains('libpiper_plus_absent.dylib'),
+              )
+              .having(
+                (e) => e.message,
+                'says how to build it',
+                contains('scripts/build_piper_macos.sh'),
+              ),
+        ),
+      );
+    });
+
+    test('a present library opens as before', () {
+      // The process itself is always loadable; it stands in for a library
+      // that is there.
+      final path = Platform.isMacOS ? '/usr/lib/libSystem.B.dylib' : null;
+      if (path == null) return;
+      expect(
+        () => PiperNativeBindings.openLibrary(path, operatingSystem: 'macos'),
+        returnsNormally,
+      );
     });
   });
 
