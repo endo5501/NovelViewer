@@ -108,6 +108,38 @@ On load, the engine SHALL verify that the native library reports C API version 1
 - **WHEN** the native library reports an API version other than 1
 - **THEN** `loadModel` throws `TtsEngineException` naming the expected version 1 and the actual version, and no native engine is created
 
+### Requirement: Kanji-only Japanese text is phonemized as Japanese
+The engine SHALL make upstream's script-based language detection treat CJK ideographs as Japanese, so that a sentence with no kana (for example 「多分。」 or 「父様。」) is phonemized with the Japanese phonemizer instead of the Chinese one. The engine SHALL do this by giving the native engine a model config derived from the downloaded `<model>.onnx.json` with `zh` removed from `language_id_map`, without changing any other language id. When the model's `language_id_map` does not contain both `ja` and `zh`, the engine SHALL use the downloaded config unchanged. The downloaded config file itself SHALL NOT be modified.
+
+Rationale: upstream piper-plus classifies CJK ideographs as `zh` whenever the text contains no kana and the model knows both `ja` and `zh`, regardless of the requested language. The bundled app ships no pinyin dictionary, so such sentences produced no speakable phonemes (silence on v1.8, a hard synthesis error on v2.0.2).
+
+#### Scenario: Derived config drops only zh
+- **WHEN** a model whose `language_id_map` is `{ja: 0, en: 1, zh: 2, es: 3, fr: 4, pt: 5}` is loaded
+- **THEN** the native engine is created with a config whose `language_id_map` is `{ja: 0, en: 1, es: 3, fr: 4, pt: 5}` and whose other fields equal the downloaded config, and the downloaded `<model>.onnx.json` is unchanged
+
+#### Scenario: Config without both ja and zh is used as-is
+- **WHEN** a model whose `language_id_map` lacks `zh` is loaded
+- **THEN** the native engine is created with the downloaded `<model>.onnx.json` path
+
+#### Scenario: Kanji-only sentence is spoken
+- **WHEN** 「多分。」 is synthesized with the pinned model and the bundled native library
+- **THEN** synthesis succeeds with Japanese phonemes (`t a [ b u N` …) instead of failing or producing only silence
+
+### Requirement: Unspeakable text yields silence instead of an error
+When a text produces no phoneme that exists in the model's `phoneme_id_map` (for example a symbol-only line such as `---`, or English-only text while no English dictionary is bundled), `PiperTtsEngine.synthesize()` SHALL NOT run native synthesis and SHALL return 0.2 seconds of silence at the model's sample rate instead of throwing. This keeps the v1.8 behavior, where such text produced silence and playback continued, and prevents upstream v2.0.2 from running inference on an empty id sequence (`Invalid input shape: {0}`), which stopped playback.
+
+#### Scenario: Symbol-only text
+- **WHEN** `synthesize("---")` is called on a loaded engine
+- **THEN** a `TtsSynthesisResult` of 0.2 s of zero samples at the model's sample rate is returned and native synthesis is not called
+
+#### Scenario: Text whose phonemes are all unknown to the model
+- **WHEN** the native phonemizer returns only phonemes absent from `phoneme_id_map` (for example `.`)
+- **THEN** 0.2 s of silence is returned and native synthesis is not called
+
+#### Scenario: Speakable text is synthesized normally
+- **WHEN** the native phonemizer returns at least one phoneme present in `phoneme_id_map`
+- **THEN** native synthesis runs and its audio is returned
+
 ## REMOVED Requirements
 
 ### Requirement: C API for piper-plus lifecycle

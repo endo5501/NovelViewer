@@ -46,7 +46,18 @@
   - ピン留めの SHA が `36b59c825c36bd386b8960cf3f604382f52f2a87` であることを固定するテスト(既存の eb9b882 を固定しているテストの期待値を更新する)
   - 完了マーカーの内容が eb9b882 の場合に `areModelsDownloaded()` が `false` を返すテスト(spec: 旧リビジョンで取得済みのモデルは再取得対象になる)
 - [x] 3A.2 `lib/features/tts/data/piper_model_download_service.dart` の `modelRevision` と、ピン留め理由のコメントを更新して 3A.1 を通す。コメントには EOS trim との関係を書く。`fvm flutter test test/features/tts/data/piper_model_download_service_test.dart` が通ることを確認する
-- [ ] 3A.3 36b59c8 から取得したモデルを、実物の `libpiper_plus.dylib` と `PiperTtsEngine` で合成する(一時テスト。コミットしない)。「彼はそういった」の最終音節のエネルギーが v1.8 + eb9b882 と同じ程度に残り、末尾が欠けないことを確認する
+- [x] 3A.3 36b59c8 から取得したモデルを、実物の `libpiper_plus.dylib` と `PiperTtsEngine` で合成する(一時テスト。コミットしない)。「彼はそういった」の最終音節のエネルギーが v1.8 + eb9b882 と同じ程度に残り、末尾が欠けないことを確認する(2026-10-17: 数値では v1.8 との差を判別しきれなかったため、ユーザーがアプリで聴いて確認した。「末尾はかなりよくなった」)
+
+## 3B. 漢字だけの文と発音できない文(実装中に追加。design D11 / D12)
+
+- [ ] 3B.1 `PiperNativeBindings` に `piper_plus_phonemize` と `PiperPlusPhonemeResult` の構造体を追加する。構造体のサイズを C の `sizeof` と照合するテストと、実物の dylib で「多分だ。」が音素に変換できるテストを追加して通す
+- [ ] 3B.2 `piper_tts_engine_test.dart` に次のテストを先に追加し、RED を確認してからコミットする
+  - `language_id_map` に ja と zh があるとき、zh だけを除いた config が `<model>.onnx.ja.json` に書かれ、create に渡されること。元の config は変わらないこと
+  - zh がないとき、元の config のパスが create に渡されること
+  - 音素化の結果に `phoneme_id_map` の音素がないとき、合成を呼ばずに 0.2 秒の無音が返ること
+  - 音素化の結果に `phoneme_id_map` の音素があるとき、通常どおり合成されること
+- [ ] 3B.3 `PiperTtsEngine` を design D11 / D12 に従って実装し、3B.2 を通す。`fvm flutter analyze` で指摘がないことも確認する
+- [ ] 3B.4 実物の dylib と 36b59c8 のモデルを使うテストを `piper_native_bindings_test.dart` か新しいテストファイルに追加する(dylib とモデルがない環境ではスキップ)。「多分。」が日本語の音素で合成できること、「---」と「Hello world.」がエラーにならず無音になることを確かめる。さらに一時テストで、`008_第七話「友達」.txt` の全文を合成して失敗が 0 件になることを確認する
 
 ## 4. Windows ネイティブビルドと CI
 
