@@ -3069,6 +3069,40 @@ void main() {
         expect(captured, contains('piper_plus.framework'));
       });
 
+      test(
+        'a stop earlier in the dialog does not silence a later failure',
+        () async {
+          // stopPlayback() and cancel() end the work in flight; a generation the
+          // user starts afterwards is a fresh request and must still report.
+          final isolate = FakeTtsIsolate(
+            modelLoadSuccess: false,
+            modelLoadError: 'Piper native library is not in this build',
+          );
+          final controller = TtsEditController(
+            ttsIsolate: isolate,
+            audioPlayer: FakeAudioPlayer(),
+            repository: repository,
+            tempDirPath: tempDir.path,
+          );
+          String? captured;
+          controller.onSynthesisFailed = (reason) => captured = reason;
+          await controller.loadSegments(
+            text: 'エルリックは勇者だ。',
+            fileName: 'test.txt',
+            sampleRate: 24000,
+          );
+
+          await controller.stopPlayback();
+          await controller.generateSegment(
+            resolveRefWavPath: null,
+            segmentIndex: 0,
+            config: _qwen3Config(),
+          );
+
+          expect(captured, contains('not in this build'));
+        },
+      );
+
       test('a user cancel is not reported as a synthesis failure', () async {
         final isolate = FakeTtsIsolate();
         isolate.synthesizeGate = Completer<void>();
