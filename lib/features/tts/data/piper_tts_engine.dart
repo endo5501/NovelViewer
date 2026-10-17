@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:ffi';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
@@ -16,6 +18,10 @@ class PiperTtsEngine {
   /// the id is resolved explicitly to keep that behavior.
   static const _language = 'ja';
 
+  /// Length of the silence returned for text with nothing to pronounce; the
+  /// same as upstream's default gap between sentences.
+  static const _unspeakableSilenceSeconds = 0.2;
+
   final PiperNativeBindings _bindings;
   Pointer<Void> _engine = nullptr;
 
@@ -25,6 +31,10 @@ class PiperTtsEngine {
   double? _noiseScale;
   double? _noiseW;
   int _languageId = -1;
+
+  /// Phonemes the model has ids for; null when the config could not be read,
+  /// in which case every text goes to native synthesis.
+  Set<String>? _knownPhonemes;
 
   bool get isLoaded => _engine != nullptr;
 
@@ -41,10 +51,13 @@ class PiperTtsEngine {
       );
     }
 
+    final modelConfig = _readModelConfig('$modelPath.json');
+    final configPath = _japaneseConfigPath(modelPath, modelConfig);
+
     final config = calloc<PiperPlusConfig>();
     final outEngine = calloc<Pointer<Void>>();
     final modelPathPtr = modelPath.toNativeUtf8();
-    final configPathPtr = '$modelPath.json'.toNativeUtf8();
+    final configPathPtr = configPath.toNativeUtf8();
     final dicDirPtr = dicDir.toNativeUtf8();
     try {
       // calloc zero-fills, which the C API requires of the reserved fields.
@@ -72,6 +85,49 @@ class PiperTtsEngine {
     } finally {
       calloc.free(languagePtr);
     }
+
+    final phonemeIdMap = modelConfig?['phoneme_id_map'];
+    _knownPhonemes = phonemeIdMap is Map
+        ? phonemeIdMap.keys.cast<String>().toSet()
+        : null;
+  }
+
+  static Map<String, dynamic>? _readModelConfig(String path) {
+    try {
+      final decoded = jsonDecode(File(path).readAsStringSync());
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } on Object {
+      // Leave reporting to the native loader, which reads the same file.
+      return null;
+    }
+  }
+
+  /// Upstream's script detector reads kana-less CJK ideographs as Chinese
+  /// whenever the model also knows `ja` (language_detector.cpp), ignoring the
+  /// requested language. With no pinyin dictionary bundled, a sentence such as
+  /// 「多分。」 then has nothing to pronounce. The detector draws its candidates
+  /// from `language_id_map`, so the native engine gets a copy of the config
+  /// without `zh`; the remaining ids are untouched, so `lid` values match the
+  /// model. The downloaded config stays as fetched.
+  static String _japaneseConfigPath(
+    String modelPath,
+    Map<String, dynamic>? modelConfig,
+  ) {
+    final downloaded = '$modelPath.json';
+    final languages = modelConfig?['language_id_map'];
+    if (languages is! Map ||
+        !languages.containsKey('ja') ||
+        !languages.containsKey('zh')) {
+      return downloaded;
+    }
+    final japaneseLanguages = Map<String, dynamic>.of(
+      languages.cast<String, dynamic>(),
+    )..remove('zh');
+    final derived = Map<String, dynamic>.of(modelConfig!)
+      ..['language_id_map'] = japaneseLanguages;
+    final derivedPath = '$modelPath.ja.json';
+    File(derivedPath).writeAsStringSync(jsonEncode(derived));
+    return derivedPath;
   }
 
   void setLengthScale(double value) {
@@ -91,6 +147,17 @@ class PiperTtsEngine {
 
   TtsSynthesisResult synthesize(String text) {
     _ensureLoaded();
+
+    // Upstream v2 runs inference even on an empty id sequence and fails with
+    // "Invalid input shape: {0}", which would stop playback. v1.8 produced
+    // silence for such text, so keep that.
+    if (!_hasSpeakablePhoneme(text)) {
+      final sampleRate = _bindings.sampleRate(_engine);
+      return TtsSynthesisResult(
+        audio: Float32List((sampleRate * _unspeakableSilenceSeconds).round()),
+        sampleRate: sampleRate,
+      );
+    }
 
     final opts = calloc<PiperPlusSynthOptions>();
     final outSamples = calloc<Pointer<Float>>();
@@ -142,6 +209,29 @@ class PiperTtsEngine {
     }
   }
 
+  /// Whether [text] phonemizes to at least one phoneme the model has an id
+  /// for — the same lookup native synthesis applies before inference.
+  bool _hasSpeakablePhoneme(String text) {
+    final known = _knownPhonemes;
+    if (known == null) return true;
+
+    final result = calloc<PiperPlusPhonemeResult>();
+    final textPtr = text.toNativeUtf8();
+    final languagePtr = _language.toNativeUtf8();
+    try {
+      final status = _bindings.phonemize(_engine, textPtr, languagePtr, result);
+      // Let synthesis report a phonemizer failure with its own message.
+      if (status != piperPlusOk || result.ref.phonemes == nullptr) return true;
+      // Borrowed until the next call on this engine: read it now.
+      final phonemes = result.ref.phonemes.toDartString();
+      return phonemes.split(' ').any(known.contains);
+    } finally {
+      calloc.free(languagePtr);
+      calloc.free(textPtr);
+      calloc.free(result);
+    }
+  }
+
   void dispose() {
     if (_engine != nullptr) {
       _bindings.free(_engine);
@@ -151,6 +241,7 @@ class PiperTtsEngine {
     _noiseScale = null;
     _noiseW = null;
     _languageId = -1;
+    _knownPhonemes = null;
   }
 
   void _ensureLoaded() {

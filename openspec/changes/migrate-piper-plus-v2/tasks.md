@@ -56,7 +56,7 @@
   - zh がないとき、元の config のパスが create に渡されること
   - 音素化の結果に `phoneme_id_map` の音素がないとき、合成を呼ばずに 0.2 秒の無音が返ること
   - 音素化の結果に `phoneme_id_map` の音素があるとき、通常どおり合成されること
-- [ ] 3B.3 `PiperTtsEngine` を design D11 / D12 に従って実装し、3B.2 を通す。`fvm flutter analyze` で指摘がないことも確認する
+- [x] 3B.3 `PiperTtsEngine` を design D11 / D12 に従って実装し、3B.2 を通す。`fvm flutter analyze` で指摘がないことも確認する
 - [ ] 3B.4 実物の dylib と 36b59c8 のモデルを使うテストを `piper_native_bindings_test.dart` か新しいテストファイルに追加する(dylib とモデルがない環境ではスキップ)。「多分。」が日本語の音素で合成できること、「---」と「Hello world.」がエラーにならず無音になることを確かめる。さらに一時テストで、`008_第七話「友達」.txt` の全文を合成して失敗が 0 件になることを確認する
 
 ## 4. Windows ネイティブビルドと CI
