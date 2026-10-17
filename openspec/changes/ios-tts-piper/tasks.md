@@ -31,7 +31,7 @@
 - [x] 5.2 `scripts/build_piper_ios.sh` の後に `scripts/build_app.sh ios --release` でビルドし、iPad 実機にインストールする。確認: インストールして起動できる
 - [x] 5.3 iPad 実機で design D8 の項目を手で確かめ、結果を design.md に記録する。項目は、モデルのダウンロード、読み上げ(生成・再生・一時停止・停止)、編集ダイアログ(参照音声の列が無い、区間の再生・再生成)、読み上げ辞書、書き出しボタンが無いこと、消音設定の有無による再生の違い、縦向き・横向きでの読み上げボタンの重なり。確認: すべての項目に結果が記録されている。消音で音が出ない問題が見つかった場合は、design のリスクに従ってタスクを追加する
 - [x] 5.4 `test/platform/ios_project_config_test.dart` に、同梱フェーズが同梱した一覧を `TARGET_TEMP_DIR` に記録し、その一覧を使って無くなった framework を取り除くことの検査を加える(spec `ios-build-target`、design D9)。確認: テストが失敗する
-- [ ] 5.5 同梱フェーズを直す(design D9)。確認: 5.4 のテストが通り、`xcodebuild -list` がエラーなく動く。xcframework ありでビルドしたあと、外して差分ビルドすると `Runner.app/Frameworks/` から `piper_plus.framework` が消え、Flutter の framework は残る
+- [x] 5.5 同梱フェーズを直す(design D9)。確認: 5.4 のテストが通り、`xcodebuild -list` がエラーなく動く。xcframework ありでビルドしたあと、外して差分ビルドすると `Runner.app/Frameworks/` から `piper_plus.framework` が消え、Flutter の framework は残る
 - [ ] 5.6 xcframework を外したビルドを iPad に入れて読み上げを押し、失敗通知に D6 のメッセージ(`piper_plus.framework` と `scripts/build_piper_ios.sh`)が出ることを確かめる。確認後、xcframework を戻して入れ直す。確認: 通知の詳細に、そのメッセージが表示される
 
 ## 6. 最終確認
