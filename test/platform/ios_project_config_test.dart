@@ -261,6 +261,13 @@ void main() {
         isTrue,
         reason: 'the previous list must be read back',
       );
+
+      // A framework is recorded before it is copied, so one copied by a run
+      // that fails later (signing, another framework) is still known.
+      final recordedAt = body.indexOf(r'>> \"$MANIFEST\"');
+      final copiedAt = body.indexOf('cp -R');
+      expect(recordedAt, isNonNegative, reason: 'ownership must be recorded');
+      expect(recordedAt, lessThan(copiedAt));
     });
 
     test('the embed phase runs in the Runner target', () {
