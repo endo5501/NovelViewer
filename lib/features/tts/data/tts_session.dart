@@ -44,6 +44,11 @@ class TtsSession {
   String? _lastSynthesisError;
   String? _lastModelLoadError;
 
+  /// Why the worker died, kept so that a load attempted afterwards — which
+  /// fails fast without any response to read — can still say why.
+  String? _workerDeathReason;
+  StreamSubscription<TtsIsolateResponse>? _deathWatch;
+
   bool get modelLoaded => _modelLoaded;
   bool get disposed => _disposed;
 
@@ -77,6 +82,9 @@ class TtsSession {
     // reply that never comes (F144 follow-up).
     if (_isolate.hasWorkerDied) {
       _log.warning('ensureModelLoaded skipped; worker already died');
+      _lastModelLoadError = _workerDeathReason == null
+          ? 'TTS worker is no longer running'
+          : 'TTS worker is no longer running: $_workerDeathReason';
       return false;
     }
     if (_modelLoaded && _loadedKey == config.modelLoadKey) return true;
@@ -92,6 +100,11 @@ class TtsSession {
         return false;
       }
       _isolateSpawned = true;
+      _deathWatch = _isolate.responses.listen((response) {
+        if (response is WorkerDiedResponse) {
+          _workerDeathReason = response.error;
+        }
+      });
     }
 
     final completer = Completer<bool>();
@@ -161,6 +174,7 @@ class TtsSession {
             'Model load timed out after $_modelLoadTimeout; '
             'worker may be stuck',
           );
+          _lastModelLoadError = 'Model load timed out after $_modelLoadTimeout';
           return false;
         },
       );
@@ -253,6 +267,8 @@ class TtsSession {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    await _deathWatch?.cancel();
+    _deathWatch = null;
     abort();
     if (_isolateSpawned) {
       try {
