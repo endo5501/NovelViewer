@@ -7,7 +7,7 @@
 
 ## 2. iOS 向け xcframework のビルドスクリプト
 
-- [ ] 2.1 `scripts/test/verify_piper_ios.sh` を先に書く。検査項目は spec `piper-ios-build` の「iOS 成果物の検証スクリプト」に挙げたもの(スライス構成、arm64 の動的ライブラリ、Info.plist、依存、install name、`piper_plus_*` だけを公開していること、プロセスを起動するシンボルを参照していないこと)。確認: 成果物が無い状態で実行すると、ビルドを促すメッセージを出して非ゼロで終了する
+- [x] 2.1 `scripts/test/verify_piper_ios.sh` を先に書く。検査項目は spec `piper-ios-build` の「iOS 成果物の検証スクリプト」に挙げたもの(スライス構成、arm64 の動的ライブラリ、Info.plist、依存、install name、`piper_plus_*` だけを公開していること、プロセスを起動するシンボルを参照していないこと)。確認: 成果物が無い状態で実行すると、ビルドを促すメッセージを出して非ゼロで終了する
 - [ ] 2.2 `scripts/build_piper_ios.sh` の ORT 部分を実装する。CDN から取得して SHA-256 を照合し、実機と Simulator の静的ライブラリを arm64 だけに絞り、ヘッダと一緒に SDK ごとのディレクトリへ置く(design D4)。確認: ハッシュを書き換えて実行すると不一致で止まり、`ios/Frameworks/` が変更されない
 - [ ] 2.3 `scripts/build_piper_ios.sh` の piper_plus 部分を実装する。`git archive` で取り出し、パッチを当て、2 つの SDK 向けにビルドし、ORT と一緒に動的 framework に包んで xcframework にまとめる。組み立ては一時ディレクトリで行い、最後に置き換える。確認: 実行後に `verify_piper_ios.sh` が全項目合格で 0 を返し、`git -C third_party/piper-plus status --porcelain` が空である
 - [ ] 2.4 パッチが当たらないときの動作を確かめる。確認: わざと壊したパッチを置いて実行すると、パッチ名を表示して非ゼロで終了し、既存の `ios/Frameworks/` が変更されない
