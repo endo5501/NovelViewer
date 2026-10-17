@@ -23,7 +23,7 @@
 - [x] 4.1 `PiperNativeBindings` に、OS ごとのビルド手順を返す純粋関数のテストと、ライブラリを開けないときに `TtsEngineException` になることのテストを書く(spec `piper-tts-native-engine` の追加要件)。存在しないパスを開かせ、例外の文言にライブラリ名・手順・元のエラーが含まれることを確かめる。確認: テストが失敗する
 - [x] 4.2 `PiperNativeBindings.open()` で `ArgumentError` を `TtsEngineException` にする(design D6)。確認: 4.1 と既存の `piper_native_bindings_test.dart` が通る
 - [x] 4.3 `TtsSession.lastModelLoadError` と、`TtsStreamingController` が読み込み失敗の理由を `lastFailureReason` に入れることのテストを書く(spec `tts-streaming-pipeline` の追加要件)。読み込み失敗で理由が入ること、中断では通知が出ないこと、後の実行に前の理由が残らないこと。確認: テストが失敗する
-- [ ] 4.4 `TtsSession` と `TtsStreamingController` を直す(design D7)。編集ダイアログの単体生成でも、読み込み失敗の理由が同じように伝わるようにする。確認: 4.3 と `tts_session_test.dart` / `tts_streaming_controller_test.dart` の既存テストが通る
+- [x] 4.4 `TtsSession` と `TtsStreamingController` を直す(design D7)。編集ダイアログの単体生成でも、読み込み失敗の理由が同じように伝わるようにする。確認: 4.3 と `tts_session_test.dart` / `tts_streaming_controller_test.dart` の既存テストが通る
 
 ## 5. ドキュメントと iPad 実機での確認
 

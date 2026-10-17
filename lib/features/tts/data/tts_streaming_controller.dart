@@ -168,7 +168,10 @@ class TtsStreamingController {
         // Read the cause before `finally` disposes the session: the caller
         // only gets a TtsStartOutcome enum back, so the reason has to be
         // stashed here or it is gone by the time the UI can ask for it.
-        _lastFailureReason = _session.lastSynthesisError;
+        // A run fails either loading the model or synthesizing; each clears
+        // its own reason when it starts, so at most one of these is set.
+        _lastFailureReason =
+            _session.lastSynthesisError ?? _session.lastModelLoadError;
         // Use a COUNT query rather than loading every segment's WAV blob just
         // to test for presence of audio on this (failure) path. Audio-only,
         // NOT the satisfied-count: an episode whose only rows are skipped
