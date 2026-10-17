@@ -37,6 +37,7 @@ Piper TTS エンジンは、piper-plus v1.8.0 に独自の C API ラッパー 1 
 - `macos-native-library-embedding`: 同梱される dylib の期待集合のうち、`libpiper_tts_ffi.dylib` を `libpiper_plus.dylib` に置き換える。
 - `ci-tts-dll-build`: CI でビルド・検証する Piper DLL を `piper_tts_ffi.dll` から `piper_plus.dll` に置き換える。
 - `piper-tts-model-download`: モデルとランナーの「互換」に、ランナーの後処理で末尾音節が欠落しないことを含める。旧リビジョンで取得済みのモデルが再取得の対象になることを明記する。
+- `irodori-macos-build`: 「既存ライブラリの同梱に影響しない」シナリオに書かれた Piper の dylib 名を `libpiper_plus.dylib` に直す(アーカイブ時の同期で見つかった記述漏れ)。
 - `github-actions-release`: リリース ZIP に含まれる DLL のうち、`piper_tts_ffi.dll` を `piper_plus.dll` に置き換える。
 
 ## Impact
