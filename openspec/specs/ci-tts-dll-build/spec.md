@@ -1,6 +1,6 @@
 ## Purpose
 
-GitHub Actions CIで Windows用TTS DLL（`qwen3_tts_ffi.dll`、`piper_tts_ffi.dll` + `onnxruntime.dll`、および `audiocpp_ffi.dll`）をflutter buildに先立ってビルドする。サブモジュールの再帰クローン、Vulkan SDKのインストール、ビルド成果物の存在検証までを含む。
+GitHub Actions CIで Windows用TTS DLL（`qwen3_tts_ffi.dll`、`piper_plus.dll` + `onnxruntime.dll`、および `audiocpp_ffi.dll`）をflutter buildに先立ってビルドする。サブモジュールの再帰クローン、Vulkan SDKのインストール、ビルド成果物の存在検証までを含む。
 
 ## Requirements
 
