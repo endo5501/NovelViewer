@@ -489,6 +489,31 @@ void main() {
 
         expect(engine.isLoaded, isTrue);
         expect(mockBindings.lastConfigPath, '$modelPath.json');
+        // The failed attempt must not leave its temporary file behind.
+        expect(
+          tmp
+              .listSync()
+              .map((e) => e.uri.pathSegments.where((s) => s.isNotEmpty).last)
+              .toSet(),
+          {'model.onnx.json', 'model.onnx.ja.json'},
+        );
+      });
+
+      test('replaces a stale derived config and leaves no temporary file', () {
+        final modelPath = writeConfig({'ja': 0, 'zh': 2});
+        File('$modelPath.ja.json').writeAsStringSync('{"stale": true}');
+
+        engine.loadModel(modelPath, dicDir: '/fake/dic');
+
+        final derived =
+            jsonDecode(File('$modelPath.ja.json').readAsStringSync())
+                as Map<String, dynamic>;
+        expect(derived['language_id_map'], {'ja': 0});
+        expect(derived.containsKey('stale'), isFalse);
+        expect(tmp.listSync().map((e) => e.uri.pathSegments.last).toSet(), {
+          'model.onnx.json',
+          'model.onnx.ja.json',
+        });
       });
 
       test('uses the downloaded config as-is when there is no zh', () {
