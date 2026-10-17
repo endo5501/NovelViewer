@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 import 'package:novel_viewer/features/tts/data/voice_reference_service.dart';
+import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
 
 final voiceReferenceServiceProvider = Provider<VoiceReferenceService?>((ref) {
@@ -103,10 +104,29 @@ final ttsEngineTypeProvider =
       TtsEngineTypeNotifier.new,
     );
 
+/// The engine in use: the persisted choice when this platform runs it,
+/// otherwise the first engine it does run.
+///
+/// Every consumer that acts on the engine reads this provider, so resolving
+/// here keeps an engine the platform has no library for — the qwen3 default
+/// on iOS, or a choice restored from a desktop — from ever being loaded. The
+/// persisted value is left alone, so that choice still applies wherever it is
+/// supported.
 class TtsEngineTypeNotifier extends Notifier<TtsEngineType> {
+  /// Piper first: it is the one engine every platform runs.
+  static const _fallbackOrder = [
+    TtsEngineType.piper,
+    TtsEngineType.qwen3,
+    TtsEngineType.irodori,
+  ];
+
   @override
-  TtsEngineType build() =>
-      ref.watch(settingsRepositoryProvider).getTtsEngineType();
+  TtsEngineType build() {
+    final persisted = ref.watch(settingsRepositoryProvider).getTtsEngineType();
+    final supported = ref.watch(supportedTtsEnginesProvider);
+    if (supported.isEmpty || supported.contains(persisted)) return persisted;
+    return _fallbackOrder.firstWhere(supported.contains);
+  }
 
   Future<void> setEngineType(TtsEngineType type) async {
     await ref.read(settingsRepositoryProvider).setTtsEngineType(type);
