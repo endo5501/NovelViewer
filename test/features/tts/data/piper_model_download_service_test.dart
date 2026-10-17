@@ -71,8 +71,10 @@ void main() {
         expect(requestedUrls, contains('$base/config.json'));
         expect(
           PiperModelDownloadService.modelRevision,
-          'eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a',
-          reason: 'The pin must stay on the last runner-compatible revision',
+          '36b59c825c36bd386b8960cf3f604382f52f2a87',
+          reason:
+              'The pin must stay on a revision verified against the bundled '
+              'piper-plus v2.0.2 runner',
         );
       },
     );
@@ -151,6 +153,21 @@ void main() {
         writeModelFiles();
         markerFile().writeAsStringSync(
           '0000000000000000000000000000000000000000',
+        );
+
+        expect(areModelsDownloaded(), isFalse);
+      },
+    );
+
+    test(
+      'areModelsDownloaded is false for a model fetched from the eb9b882 pin',
+      () {
+        // eb9b882 was the pin for the v1.8 runner. The v2.0.2 runner trims the
+        // EOS region, which cuts that model's final vowel, so an install made
+        // under the old pin must be re-fetched.
+        writeModelFiles();
+        markerFile().writeAsStringSync(
+          'eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a',
         );
 
         expect(areModelsDownloaded(), isFalse);
