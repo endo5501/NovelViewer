@@ -2013,6 +2013,66 @@ void main() {
         );
       });
 
+      test(
+        'a model-load failure leaves its reason for the notification',
+        () async {
+          final isolate = _FakeTtsIsolate()..failModelLoad = true;
+          final player = _AutoCompleteAudioPlayer();
+          final controller = TtsStreamingController(
+            read: container.read,
+            ttsIsolate: isolate,
+            audioPlayer: player,
+            repository: repository,
+            tempDirPath: tempDir.path,
+            bufferDrainDelay: Duration.zero,
+          );
+
+          final outcome = await controller.start(
+            resolveRefWavPath: null,
+            modelsReady: true,
+            text: '文1。文2。',
+            fileName: 'load_reason.txt',
+            config: _qwen3Config(modelDir: '/models'),
+          );
+
+          expect(outcome, TtsStartOutcome.failed);
+          expect(controller.lastFailureReason, 'model load failed');
+        },
+      );
+
+      test('a load failure reason does not leak into a later run', () async {
+        final isolate = _FakeTtsIsolate()..failModelLoad = true;
+        final player = _AutoCompleteAudioPlayer();
+        final controller = TtsStreamingController(
+          read: container.read,
+          ttsIsolate: isolate,
+          audioPlayer: player,
+          repository: repository,
+          tempDirPath: tempDir.path,
+          bufferDrainDelay: Duration.zero,
+        );
+        await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: '文1。',
+          fileName: 'leak_first.txt',
+          config: _qwen3Config(modelDir: '/models'),
+        );
+        expect(controller.lastFailureReason, isNotNull);
+
+        isolate.failModelLoad = false;
+        final outcome = await controller.start(
+          resolveRefWavPath: null,
+          modelsReady: true,
+          text: '文1。',
+          fileName: 'leak_second.txt',
+          config: _qwen3Config(modelDir: '/models'),
+        );
+
+        expect(outcome, TtsStartOutcome.completed);
+        expect(controller.lastFailureReason, isNull);
+      });
+
       test('a completed run leaves no failure reason', () async {
         final isolate = _FakeTtsIsolate();
         final player = _AutoCompleteAudioPlayer();
