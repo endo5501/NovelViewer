@@ -33,7 +33,7 @@ iPad 版 NovelViewer では TTS を無効にしている。前回の試み(Irodo
 
 ## Impact
 
-- **ネイティブ**: `patches/piper-plus/`(新規)、`scripts/build_piper_ios.sh`(新規)、`scripts/test/verify_piper_ios.sh`(新規)、`ios/Frameworks/`(新規。macOS の前例に合わせて成果物を Git で管理する)
+- **ネイティブ**: `patches/piper-plus/`(新規)、`scripts/build_piper_ios.sh`(新規)、`scripts/test/verify_piper_ios.sh`(新規)、`ios/Frameworks/`(新規。成果物は Git で管理せず、iOS で TTS を使う開発者が各自ビルドする)
 - **iOS プロジェクト**: `ios/Runner.xcodeproj/project.pbxproj` に Run Script フェーズを追加する。deployment target は現在の 15.0 のままにする見込み。upstream は iOS 15.0 向けにビルドしているが、CDN の ORT framework が宣言している最小 OS はまだ確かめていない。ビルド時に確かめ、15.0 を超えていれば Runner の値を引き上げる。
 - **Dart**: `lib/features/tts/data/piper_native_bindings.dart`(iOS のライブラリ名)。`pubspec.yaml` に `integration_test` を追加する。`integration_test/` と `test_driver/` は新規。
 - **テスト**: `test/platform/ios_project_config_test.dart` と `test/features/tts/data/piper_native_bindings_test.dart` を拡張する。

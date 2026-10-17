@@ -11,7 +11,7 @@
 - [ ] 2.2 `scripts/build_piper_ios.sh` の ORT 部分を実装する。CDN から取得して SHA-256 を照合し、`ios-arm64` と Simulator を arm64 だけにしたスライスから `onnxruntime.xcframework` を作り直す。あわせて、ORT スライスの `Info.plist` の `MinimumOSVersion` を読む。15.0 を超えていたら、Runner の deployment target をその値に引き上げる作業を 3 に追加する。確認: ハッシュを書き換えて実行すると不一致で止まり、`ios/Frameworks/` が変更されない。`MinimumOSVersion` の値を design.md に書き留める
 - [ ] 2.3 `scripts/build_piper_ios.sh` の piper_plus 部分を実装する。`git archive` で取り出し、パッチを当て、2 つの SDK 向けにビルドし、動的 framework に包んで xcframework にまとめる。組み立ては一時ディレクトリで行い、最後に置き換える。確認: 実行後に `verify_piper_ios.sh` が全項目合格で 0 を返し、`git -C third_party/piper-plus status --porcelain` が空である
 - [ ] 2.4 パッチが当たらないときの動作を確かめる。確認: わざと壊したパッチを置いて実行すると、パッチ名を表示して非ゼロで終了し、既存の `ios/Frameworks/` が変更されない
-- [ ] 2.5 成果物の `ios/Frameworks/piper_plus.xcframework` と `ios/Frameworks/onnxruntime.xcframework` をコミットする。`build/piper-ios/` が Git の対象外になっていることも確かめる。確認: `git status` にビルドの中間生成物が出ない
+- [ ] 2.5 `.gitignore` に `ios/Frameworks/*.xcframework` を加える。成果物はコミットしない。確認: ビルド後の `git status` に xcframework もビルドの中間生成物(`build/piper-ios/`)も出ない
 - [ ] 2.6 `CLAUDE.md` の開発コマンドに `scripts/build_piper_ios.sh` と `scripts/test/verify_piper_ios.sh` を追記する。確認: 書いた説明どおりにコマンドが動く
 
 ## 3. iOS Runner への同梱
@@ -40,7 +40,7 @@
 
 ## 6. ドキュメントと upstream PR
 
-- [ ] 6.1 `docs/ipad.md` に追記する。内容は、`scripts/build_piper_ios.sh` によるビルド手順、パッチの位置づけと削除する条件、ビューアだけならビルドしなくてよいこと、Simulator と実機で合成テストを実行するコマンドと、計測値の出力先。確認: spec `ios-build-target` のシナリオ「The native TTS framework build is discoverable」「The on-device synthesis test procedure is discoverable」を満たす記述がある
+- [ ] 6.1 `docs/ipad.md` に追記する。内容は、`scripts/build_piper_ios.sh` によるビルド手順、パッチの位置づけと削除する条件、成果物は Git で管理しないので iOS で TTS を使うなら各自ビルドが必要なこと、ビューアだけならビルドしなくてよいこと、Simulator と実機で合成テストを実行するコマンドと、計測値の出力先。確認: spec `ios-build-target` のシナリオ「The native TTS framework build is discoverable」「The on-device synthesis test procedure is discoverable」を満たす記述がある
 - [ ] 6.2 1.1 のブランチから ayutaz/piper-plus の `dev` へ PR を出す。PR の説明には、iOS で日本語が音素化されない原因、修正の範囲、Simulator と実機での確認結果を書く。確認: PR の URL をパッチの先頭に書いて `scripts/build_piper_ios.sh` を再実行し、成果物が変わらない(`verify_piper_ios.sh` が合格する)
 
 ## 7. 最終確認

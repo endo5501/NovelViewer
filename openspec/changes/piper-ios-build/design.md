@@ -112,7 +112,7 @@ CDN の zip を SHA-256 で検証して展開する。そのうえで次の 2 �
 
 macOS スライスと x86_64 は捨てる。ビルド時に使う ORT のヘッダと framework も、この展開物から CMake に渡す。upstream CI と同じ `ONNXRUNTIME_*` 変数を使う。
 
-- Git で管理するサイズは、実機と Simulator を合わせて約 65MB 見込み。macOS の前例(`libonnxruntime.dylib` 25MB を Git で管理)に合わせ、成果物は Git で管理する。
+- 成果物(実機と Simulator を合わせて約 65MB の見込み)は Git で管理しない。`ios/Frameworks/*.xcframework` を `.gitignore` に入れ、iOS で TTS を使う開発者が `scripts/build_piper_ios.sh` で各自ビルドする。macOS の dylib は Git で管理しているので前例とは異なるが、リポジトリの肥大を避けることを優先した(ユーザ判断)。同梱フェーズは xcframework が無ければ何もしないので、ビルドしていないチェックアウトでもビューアのビルドは壊れない。
 - 展開した ORT スライスの `Info.plist` から `MinimumOSVersion` を読む。Runner の deployment target(15.0)を超えていれば、Runner をその値に引き上げる(`ios-build-target` の最小 OS の要件)。
 - ORT の install name は `@rpath/onnxruntime.framework/onnxruntime` のまま使う。Runner の `LD_RUNPATH_SEARCH_PATHS` にある `@executable_path/Frameworks` から解決される。piper_plus の依存も同じ名前で解決される。
 
@@ -165,8 +165,8 @@ D1 と同じ内容の PR を ayutaz/piper-plus の `dev` に出す。PR を出�
 - [パッチを当てた iOS ビルドで、`_api` 経路が依存する別のシンボル(dictionary_manager の内部関数など)がリンクできない] → 最初のタスクで Simulator スライスだけをビルドし、リンクと日本語の音素化を確かめる(スパイク)。うまくいかなければ、D1 の代替案 2(ファイルの切り出し)に切り替える。
 - [辞書をパスでしか解決しないことで、upstream の他の利用者(Swift の SPM 利用者)の挙動が変わる] → iOS は現状まったく動かないので、悪くなる利用者はいない。PR の説明にそう明記する。
 - [`-exported_symbol` で絞った結果、C API の内部から参照されるシンボルが解決できなくなる] → 公開範囲を絞るのはエクスポートだけで、リンク時の解決には影響しない。検証スクリプトで `piper_plus_*` がすべて公開されていることを確かめ、integration test で実際に呼び出す。
-- [ORT 1.20.0 の CDN の配布物が差し替えられる、または消える] → SHA-256 の照合で検知する。成果物は Git で管理しているので、ビルド済みの状態でアプリのビルドは続けられる。
-- [約 65MB のバイナリを Git で管理するとリポジトリが肥大する] → macOS の前例と一貫させることを優先する。ORT を更新するたびに肥大するので、更新は upstream が ORT を上げたときだけに限る。
+- [ORT 1.20.0 の CDN の配布物が差し替えられる、または消える] → SHA-256 の照合で検知する。成果物を Git で管理しないので、配布物が消えると新しいチェックアウトでは iOS 向け TTS をビルドできなくなる。そのときは ORT のバージョンを upstream に合わせて上げる。
+- [成果物を Git で管理しないため、チェックアウトしただけでは iOS 版に TTS のライブラリが入らない] → `docs/ipad.md` にビルド手順を書く。後続の `ios-tts-piper` で UI を有効にする際は、ライブラリを読み込めないときに TTS を隠すかどうかを検討する。
 - [upstream が別の方式(たとえば Swift の OpenJTalk バインディング)で直す] → パッチは当たらなくなるか不要になり、D2 の手順で削除する。C API が変わらなければ、アプリ側の変更は無い。
 - [無料プロビジョニングの再署名が 7 日ごとに要る] → テストは再実行できるので、影響は小さい。
 
