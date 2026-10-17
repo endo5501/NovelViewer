@@ -13,7 +13,7 @@
 
 ## 3. MP3 書き出しと参照音声の列
 
-- [ ] 3.1 `tts_controls_bar_test.dart` に、書き出しが使えない値ではボタンが無く(削除ボタンなどは表示される)、使える値ではボタンがあることのテストを加える(spec `tts-audio-export`)。確認: テストが失敗する
+- [x] 3.1 `tts_controls_bar_test.dart` に、書き出しが使えない値ではボタンが無く(削除ボタンなどは表示される)、使える値ではボタンがあることのテストを加える(spec `tts-audio-export`)。確認: テストが失敗する
 - [ ] 3.2 `TtsControlsBar` の書き出しボタンと進捗表示を `ttsAudioExportSupportedProvider` で出し分ける(design D4)。確認: 3.1 と既存の `tts_controls_bar_test.dart` が通る
 - [ ] 3.3 `TtsEngineType.usesReferenceVoice` のテストと、編集ダイアログのテストを書く(spec `tts-edit-screen`)。Piper では、どの行にも参照音声の選択が無く、ほかの操作は表示される。Qwen3 / Irodori では従来どおり。Piper で開いて閉じても、区間の `ref_wav_path` は変わらない。確認: テストが失敗する
 - [ ] 3.4 `usesReferenceVoice` を加え、`TtsEditDialog` から `TtsEditSegmentRow` に列を出すかどうかを渡す。出さないときは、参照音声の一覧も読み込まない(design D5)。確認: 3.3 と `tts_edit_*` の既存テストが通る

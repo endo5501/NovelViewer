@@ -11,6 +11,7 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/tts_controls_bar.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_state_provider.dart';
+import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_export_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart'
@@ -52,6 +53,7 @@ void main() {
     String modelDir = '/tmp/tts_model',
     String content = 'テスト内容',
     bool fileSelected = true,
+    bool audioExportSupported = true,
   }) async {
     final filePath = fileSelected ? '${tempDir.path}/test.txt' : null;
     await tester.pumpWidget(
@@ -61,6 +63,9 @@ void main() {
           libraryPathProvider.overrideWithValue('/tmp/test/NovelViewer'),
           ttsAudioStateProvider.overrideWith((ref, _) async => audioState),
           ttsModelDirProvider.overrideWith((ref) => modelDir),
+          ttsAudioExportSupportedProvider.overrideWithValue(
+            audioExportSupported,
+          ),
         ],
         child: MaterialApp(
           locale: const Locale('ja'),
@@ -129,6 +134,22 @@ void main() {
       expect(find.byIcon(Icons.edit_note), findsOneWidget);
       expect(find.byIcon(Icons.play_arrow), findsOneWidget);
       expect(find.byIcon(Icons.download), findsOneWidget);
+      expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+    });
+
+    testWidgets('(ready, stopped) without audio export: no export button', (
+      tester,
+    ) async {
+      // iOS: the LAME encoder has no iOS build (spec tts-audio-export).
+      await pumpBar(
+        tester,
+        audioState: TtsAudioState.ready,
+        playbackState: TtsPlaybackState.stopped,
+        audioExportSupported: false,
+      );
+      expect(find.byIcon(Icons.download), findsNothing);
+      expect(find.byIcon(Icons.edit_note), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow), findsOneWidget);
       expect(find.byIcon(Icons.delete_outline), findsOneWidget);
     });
 
