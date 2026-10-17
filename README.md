@@ -102,9 +102,9 @@ iPad では Safari の共有シートからこのスキームを呼び出せま�
 
 ### Piper TTS で音声が再生されない（合成に失敗する）
 
-以前に Piper モデルをダウンロード済みの場合、古い（推論エンジンと非互換な）モデルが端末に残っていると合成に失敗することがあります（ログに `Missing Input: speaker_embedding_mask` 等が出る）。Piper モデルは同梱の推論エンジンと互換なリビジョンに固定して配布されますが、既にダウンロード済みのモデルは自動では入れ替わりません。
+Piper モデルは、同梱の推論エンジンで動作確認したリビジョンに固定して配布しています。端末に残っているモデルが固定リビジョンと違う場合、アプリは読み上げ開始時と設定画面で再ダウンロードを促すので、設定画面から Piper モデルを再ダウンロードしてください。
 
-次の手順で互換モデルへ入れ替えてください:
+それでも合成に失敗する場合は、次の手順でモデルを入れ替えてください:
 
 1. `models/piper/` 内のモデルファイルを手動削除する（`*.onnx` / `*.onnx.json` / `.piper_models_complete`）。`open_jtalk_dic/` は削除不要です。
 2. アプリの設定画面から Piper モデルを再ダウンロードする。
@@ -186,6 +186,19 @@ scripts/build_irodori_windows.bat
 rem commit ハッシュの埋め込みは macOS と同じ
 scripts\build_app.bat windows
 ```
+
+#### piper-plus サブモジュールの参照先を切り替えた後（既存の clone）
+
+`third_party/piper-plus` はフォーク（`endo5501/piper-plus`）から本家（`ayutaz/piper-plus` v2.0.2）に切り替えました。切り替え前に clone した作業ツリーでは、古い URL と古いビルドの成果物が残っているため、一度だけ次を実行してからビルドしてください。
+
+```bash
+git submodule sync --recursive
+git submodule update --init third_party/piper-plus
+rm -rf third_party/piper-plus/build          # 旧版の CMake キャッシュを捨てる
+rm -rf build/macos/Build/Products/*/novel_viewer.app   # macOS: 旧 libpiper_tts_ffi.dylib を同梱した .app を捨てる
+```
+
+ネイティブライブラリ名は `libpiper_plus.dylib` / `piper_plus.dll` に変わりました（旧 `libpiper_tts_ffi.dylib` / `piper_tts_ffi.dll` はビルドスクリプトが削除します）。
 
 #### iPad向けビルド
 

@@ -119,7 +119,7 @@ macOS 向け `audiocpp_ffi` 共有ライブラリ (Irodori-TTS) のビルド構�
 #### Scenario: 既存ライブラリの同梱に影響しない
 
 - **WHEN** macOS ビルドを実行する
-- **THEN** `libqwen3_tts_ffi.dylib` / `liblame_enc_ffi.dylib` / `libpiper_tts_ffi.dylib` / `libonnxruntime.dylib` は従来どおり同梱・署名される
+- **THEN** `libqwen3_tts_ffi.dylib` / `liblame_enc_ffi.dylib` / `libpiper_plus.dylib` / `libonnxruntime.dylib` は従来どおり同梱・署名される
 
 ### Requirement: macOS ビルド前提条件を README に明記する
 

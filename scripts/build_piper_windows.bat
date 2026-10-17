@@ -5,21 +5,25 @@ set SCRIPT_DIR=%~dp0
 set PROJECT_ROOT=%SCRIPT_DIR%..
 set PIPER_DIR=%PROJECT_ROOT%\third_party\piper-plus
 
-echo === Building piper_tts_ffi shared library (CPU only) ===
+echo === Building piper_plus shared library (upstream C API, CPU only) ===
 if not exist "%PIPER_DIR%\build" mkdir "%PIPER_DIR%\build"
 cmake -S "%PIPER_DIR%" -B "%PIPER_DIR%\build" ^
     -DCMAKE_BUILD_TYPE=Release ^
-    -DPIPER_TTS_BUILD_SHARED=ON ^
+    -DPIPER_PLUS_BUILD_SHARED=ON ^
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-cmake --build "%PIPER_DIR%\build" --config Release --target piper_tts_ffi
+cmake --build "%PIPER_DIR%\build" --config Release --target piper_plus
 
 echo === Copying DLLs to build output ===
-set DLL_SRC=%PIPER_DIR%\build\Release\piper_tts_ffi.dll
-if not exist "%DLL_SRC%" set DLL_SRC=%PIPER_DIR%\build\piper_tts_ffi.dll
+set DLL_SRC=%PIPER_DIR%\build\Release\piper_plus.dll
+if not exist "%DLL_SRC%" set DLL_SRC=%PIPER_DIR%\build\piper_plus.dll
 
 set RUNNER_DIR=%PROJECT_ROOT%\build\windows\x64\runner\Release
 if not exist "%RUNNER_DIR%" mkdir "%RUNNER_DIR%"
 copy "%DLL_SRC%" "%RUNNER_DIR%\" /Y
+
+REM One-shot migration: the fork-era DLL this script used to produce. Safe to
+REM delete once no working tree predates piper-plus v2.
+if exist "%RUNNER_DIR%\piper_tts_ffi.dll" del "%RUNNER_DIR%\piper_tts_ffi.dll"
 
 REM Copy ONNX Runtime DLL
 REM Windows cmake downloads to build/onnxruntime/onnxruntime-win-x64-<version>/lib/

@@ -12,14 +12,18 @@ class PiperModelDownloadService {
 
   static const defaultModelName = 'tsukuyomi-chan-6lang-fp16';
 
-  // Pinned to the 2026-03-18 revision (eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a):
-  // the last model state before the 2026-05-03 MB-iSTFT-VITS2 decoder switch
-  // (e22f5fe), which introduced a `speaker_embedding_mask` ONNX input the bundled
-  // piper-plus C++ runner (submodule pinned 2026-03-23) does not supply.
-  // `resolve/main` would fetch that incompatible newer model and break synthesis.
+  // Pinned to the 2026-06-13 revision (36b59c825c36bd386b8960cf3f604382f52f2a87):
+  // the MB-iSTFT-VITS2 model with the PUA-encoded phoneme_id_map fix, verified
+  // against the bundled piper-plus v2.0.2 runner. The earlier 2026-03-18 pin
+  // (eb9b882) cannot stay: v2 always trims the EOS region after inference
+  // (upstream issue #499), and that model voices the tail of its final vowel
+  // inside the EOS frames, so the trim cut the last syllable ("そういった" came
+  // out as "そういっ"). The reverse also bites: models newer than this pin may
+  // need runner features the bundled version lacks, so `resolve/main` would let
+  // the model drift away from what was verified against the runner.
   // A full commit SHA (not the short form, not a branch) is used so the revision
   // is unambiguous and cannot drift.
-  static const modelRevision = 'eb9b882e7ff738f1f590037d2a0fc7ccfd8a5d0a';
+  static const modelRevision = '36b59c825c36bd386b8960cf3f604382f52f2a87';
 
   static const _baseUrl =
       'https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan/resolve/$modelRevision';
