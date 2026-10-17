@@ -8,11 +8,13 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `scripts/build_irodori_macos.sh` - Irodori-TTSエンジンビルド(mac、要 `brew install libomp`)
  - `scripts/test/verify_irodori_macos.sh` - Irodori-TTSビルド成果物の検証(mac)
  - `scripts/build_lame_macos.sh` - LAMEビルド(mac)
+ - `scripts/build_piper_ios.sh` - Piper(piper-plus + ONNX Runtime)のiOS向けxcframeworkビルド(mac)。`patches/piper-plus/` のパッチを当ててビルドする。成果物 `ios/Frameworks/piper_plus.xcframework` はGit管理外
+ - `scripts/test/verify_piper_ios.sh` - Piper iOSビルド成果物の検証(mac)
  - `scripts/build_app.sh macos` - 本番ビルド(mac)。commit ハッシュを `--dart-define=BUILD_COMMIT` で注入し、障害レポートの app version に載せる。素の `fvm flutter build macos` でも動くが、レポートは `commit unknown` になる
  - `scripts/build_tts_windows.bat` - TTSエンジンビルド(windows)
  - `scripts/build_lame_windows.bat` - LAMEビルド(windows)
  - `scripts\build_app.bat windows` - 本番ビルド(windows)。commit ハッシュの注入は mac と同じ
- - `scripts/build_app.sh ios` - ビルド(iPad。commit ハッシュの注入は mac と同じ。TTSは非対応。Xcodeのplatform componentと`ios/Flutter/Local.xcconfig`のDEVELOPMENT_TEAMが必要。詳細は`docs/ipad.md`参照)
+ - `scripts/build_app.sh ios` - ビルド(iPad。commit ハッシュの注入は mac と同じ。TTSのUIは未対応(Piperのライブラリは `scripts/build_piper_ios.sh` で別途ビルド)。Xcodeのplatform componentと`ios/Flutter/Local.xcconfig`のDEVELOPMENT_TEAMが必要。詳細は`docs/ipad.md`参照)
  - `fvm flutter test` - テスト実行
  - `bash scripts/test/build_app_test.sh` - `build_app.sh` のテスト(スタブの fvm / git で実行し、実ビルドはしない)
  - `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test/build_app_test.ps1` - `build_app.bat` のテスト(windows。同上)

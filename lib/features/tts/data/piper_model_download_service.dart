@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:isolate';
 
+import 'package:archive/archive_io.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
@@ -40,6 +42,17 @@ class PiperModelDownloadService {
       'https://github.com/r9y9/open_jtalk/releases/download/v1.11.1/open_jtalk_dic_utf_8-1.11.tar.gz';
 
   static const _remoteConfigName = 'config.json';
+
+  /// The files OpenJTalk's MeCab loads from the dictionary directory. A
+  /// download is installed only when all of them were extracted: the tar
+  /// decoder treats a damaged header as the end of the archive, so a cut-short
+  /// download would otherwise pass as a smaller, complete one.
+  static const requiredDictionaryFiles = [
+    'sys.dic',
+    'unk.dic',
+    'char.bin',
+    'matrix.bin',
+  ];
 
   static String onnxFileName(String modelName) => '$modelName.onnx';
   static String configFileName(String modelName) => '$modelName.onnx.json';
@@ -121,40 +134,85 @@ class PiperModelDownloadService {
       await parentDir.create(recursive: true);
     }
 
-    // Download tar.gz to temp file
-    final tarGzPath = p.join(parentDir.path, 'open_jtalk_dic.tar.gz');
-    await downloadFile(
-      _client,
-      _dicUrl,
-      tarGzPath,
-      'open_jtalk_dic.tar.gz',
-      onProgress,
-    );
+    // Downloaded and extracted in a directory of this call's own, and moved
+    // into place only once complete: a failed or interrupted extraction never
+    // leaves a directory isDictionaryDownloaded would take for a whole
+    // dictionary, and two downloads cannot remove each other's files.
+    final staging = await parentDir.createTemp('.open_jtalk_dic_');
+    try {
+      final tarGzPath = p.join(staging.path, 'open_jtalk_dic.tar.gz');
+      await downloadFile(
+        _client,
+        _dicUrl,
+        tarGzPath,
+        'open_jtalk_dic.tar.gz',
+        onProgress,
+      );
 
-    // Extract tar.gz
-    final result = await Process.run('tar', [
-      'xzf',
-      tarGzPath,
-      '-C',
-      parentDir.path,
-    ]);
+      final extractPath = p.join(staging.path, 'extracted');
+      // Decompressing and writing ~100 MB is synchronous work; keep it off the
+      // calling isolate, which is the UI's.
+      await Isolate.run(() => _extract(tarGzPath, extractPath));
 
-    if (result.exitCode != 0) {
-      throw Exception('Failed to extract dictionary: ${result.stderr}');
-    }
-
-    // Rename extracted directory to target dicDir
-    final extractedDir = Directory(
-      p.join(parentDir.path, 'open_jtalk_dic_utf_8-1.11'),
-    );
-    if (extractedDir.existsSync() && !Directory(dicDir).existsSync()) {
+      final extractedDir = Directory(
+        p.join(extractPath, 'open_jtalk_dic_utf_8-1.11'),
+      );
+      if (!extractedDir.existsSync()) {
+        throw Exception(
+          'Dictionary archive has no open_jtalk_dic_utf_8-1.11 directory',
+        );
+      }
+      final missing = [
+        for (final f in requiredDictionaryFiles)
+          if (!File(p.join(extractedDir.path, f)).existsSync()) f,
+      ];
+      if (missing.isNotEmpty) {
+        throw Exception(
+          'Dictionary archive is incomplete; missing: ${missing.join(', ')}',
+        );
+      }
+      // A leftover without any .dic file (isDictionaryDownloaded was false).
+      final target = Directory(dicDir);
+      if (target.existsSync()) await target.delete(recursive: true);
       await extractedDir.rename(dicDir);
+    } finally {
+      if (staging.existsSync()) await staging.delete(recursive: true);
     }
+  }
 
-    // Clean up tar.gz
-    final tarGzFile = File(tarGzPath);
-    if (tarGzFile.existsSync()) {
-      await tarGzFile.delete();
-    }
+  /// Extracts the dictionary archive at [archivePath] into [outputPath].
+  ///
+  /// In-process rather than through `tar`: iOS cannot start a process, and
+  /// one code path for every platform keeps that one exercised everywhere.
+  /// The extractor skips an entry that would land outside [outputPath]; the
+  /// callback turns that, and any link (the release holds none), into a
+  /// failure instead of a silently partial dictionary.
+  static Future<void> _extract(String archivePath, String outputPath) {
+    return extractFileToDisk(
+      archivePath,
+      outputPath,
+      callback: (entry) {
+        if (entry.isSymbolicLink) {
+          throw Exception(
+            'Dictionary archive holds a link, which it should not: '
+            '${entry.name}',
+          );
+        }
+        if (_escapesTarget(entry.name)) {
+          throw Exception(
+            'Dictionary archive entry escapes its directory: ${entry.name}',
+          );
+        }
+      },
+    );
+  }
+
+  /// Whether a tar entry [name] points outside the directory it is extracted
+  /// into: an absolute path, or one that climbs out with `..`.
+  static bool _escapesTarget(String name) {
+    final normalized = p.posix.normalize(name.replaceAll(r'\', '/'));
+    return p.posix.isAbsolute(normalized) ||
+        normalized == '..' ||
+        normalized.startsWith('../');
   }
 }

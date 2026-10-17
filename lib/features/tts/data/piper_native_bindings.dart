@@ -169,10 +169,22 @@ class PiperNativeBindings {
 
   final DynamicLibrary _library;
 
-  static String get libraryName {
-    if (Platform.isMacOS) return 'libpiper_plus.dylib';
-    if (Platform.isWindows) return 'piper_plus.dll';
-    throw UnsupportedError('Unsupported platform: ${Platform.operatingSystem}');
+  static String get libraryName => libraryNameFor(Platform.operatingSystem);
+
+  /// The name [DynamicLibrary.open] takes on [operatingSystem] (a
+  /// `Platform.operatingSystem` value).
+  ///
+  /// iOS accepts native code only as a signed framework inside the app, so the
+  /// binary is reached through `piper_plus.framework`, which the runtime
+  /// resolves against the app's `@executable_path/Frameworks` rpath. ONNX
+  /// Runtime is linked into that binary rather than shipped beside it.
+  static String libraryNameFor(String operatingSystem) {
+    return switch (operatingSystem) {
+      'macos' => 'libpiper_plus.dylib',
+      'windows' => 'piper_plus.dll',
+      'ios' => 'piper_plus.framework/piper_plus',
+      _ => throw UnsupportedError('Unsupported platform: $operatingSystem'),
+    };
   }
 
   late final apiVersion = _library

@@ -70,9 +70,13 @@ dependencies:
   # plugin itself only registers an implementation on iOS and macOS.
   foundation_models_llm:
     path: packages/foundation_models_llm
+  archive: ^4.5.2
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  # On-device synthesis check (integration_test/piper_ios_synthesis_test.dart).
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to

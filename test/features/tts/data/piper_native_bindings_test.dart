@@ -19,10 +19,49 @@ void main() {
     });
 
     test('throws on unsupported platform', () {
-      if (!Platform.isMacOS && !Platform.isWindows) {
+      if (!Platform.isMacOS && !Platform.isWindows && !Platform.isIOS) {
         expect(
           () => PiperNativeBindings.libraryName,
           throwsA(isA<UnsupportedError>()),
+        );
+      }
+    });
+
+    test('libraryName matches libraryNameFor on the running platform', () {
+      if (Platform.isMacOS || Platform.isWindows) {
+        expect(
+          PiperNativeBindings.libraryName,
+          PiperNativeBindings.libraryNameFor(Platform.operatingSystem),
+        );
+      }
+    });
+  });
+
+  group('PiperNativeBindings.libraryNameFor', () {
+    test('macOS opens the bundled dylib', () {
+      expect(
+        PiperNativeBindings.libraryNameFor('macos'),
+        'libpiper_plus.dylib',
+      );
+    });
+
+    test('Windows opens the DLL beside the executable', () {
+      expect(PiperNativeBindings.libraryNameFor('windows'), 'piper_plus.dll');
+    });
+
+    test('iOS opens the binary inside the embedded framework', () {
+      expect(
+        PiperNativeBindings.libraryNameFor('ios'),
+        'piper_plus.framework/piper_plus',
+      );
+    });
+
+    test('any other platform is unsupported', () {
+      for (final os in ['linux', 'android', 'fuchsia']) {
+        expect(
+          () => PiperNativeBindings.libraryNameFor(os),
+          throwsA(isA<UnsupportedError>()),
+          reason: os,
         );
       }
     });

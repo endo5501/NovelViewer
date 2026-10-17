@@ -1,0 +1,308 @@
+# Project-maintained patch for third_party/piper-plus (iOS build only).
+#
+# Upstream PR: not yet submitted. The prepared PR text is
+# openspec/changes/archive/2026-10-17-piper-ios-build/upstream-pr-draft.md.
+# Remove this patch once upstream ships the fix and the submodule is bumped
+# to that release. scripts/build_piper_ios.sh fails when the patch no longer
+# applies, which is the signal to check upstream and drop it.
+#
+From cea4a85f4d686f191616fb3620a748008c251b51 Mon Sep 17 00:00:00 2001
+From: endo5501 <endo5501@users.noreply.github.com>
+Date: Sat, 17 Oct 2026 22:23:51 +0900
+Subject: [PATCH] fix(ios): enable in-process OpenJTalk on Apple embedded
+ platforms
+
+On iOS, openjtalk_wrapper.c and openjtalk_dictionary_manager.c were
+excluded from the build and openjtalk_ios_stub.c made
+openjtalk_is_available() always return 0. Japanese text therefore
+produced no phonemes on iOS even when dict_dir was supplied, and
+synthesis returned zero samples.
+
+Only the binary fallback and the dictionary download/checksum spawn
+processes, which the App Sandbox forbids. The primary path calls the
+r9y9/open_jtalk C library in-process and works there. Build both files
+on Apple embedded platforms and compile out only the process-spawning
+parts under PIPER_PLUS_APPLE_EMBEDDED. The dictionary must come from
+dict_dir / OPENJTALK_DICTIONARY_PATH, as on Android.
+---
+ cmake/PiperCommon.cmake                |  25 +++++--
+ src/cpp/openjtalk_dictionary_manager.c |  15 ++++
+ src/cpp/openjtalk_ios_stub.c           | 100 +++----------------------
+ src/cpp/openjtalk_wrapper.c            |  16 +++-
+ 4 files changed, 62 insertions(+), 94 deletions(-)
+
+diff --git a/cmake/PiperCommon.cmake b/cmake/PiperCommon.cmake
+index f899e5b2..18635a97 100644
+--- a/cmake/PiperCommon.cmake
++++ b/cmake/PiperCommon.cmake
+@@ -53,13 +53,23 @@ set(PIPER_COMMON_SOURCES
+   src/cpp/library_path.c
+ )
+ 
+-# Desktop-only sources (std::system / popen / fork unavailable on Apple
+-# embedded platforms — iOS / tvOS / watchOS / visionOS). On those targets,
+-# openjtalk_ios_stub.c provides minimal stand-ins for the symbols referenced
+-# by openjtalk_phonemize.cpp / openjtalk_api.c (which remain in the build),
+-# so libpiper_plus.a links cleanly in consumer Xcode projects.
++# Process spawning (std::system / popen / fork / posix_spawn) is unavailable
++# in the App Sandbox on Apple embedded platforms (iOS / tvOS / watchOS /
++# visionOS).
++#
++# openjtalk_wrapper.c and openjtalk_dictionary_manager.c are built there too:
++# their primary path calls the r9y9/open_jtalk C library in-process, which the
++# sandbox allows, and Japanese phonemization depends on it. Their
++# process-spawning parts (the binary fallback, dictionary download and
++# checksum) are compiled out under PIPER_APPLE_EMBEDDED, so the dictionary must
++# be supplied through dict_dir / OPENJTALK_DICTIONARY_PATH, as on Android.
++#
++# The remaining desktop-only sources stay excluded; openjtalk_ios_stub.c
++# provides stand-ins for the symbols of theirs that the build still references.
+ if(PIPER_APPLE_EMBEDDED)
+   list(APPEND PIPER_COMMON_SOURCES
++    src/cpp/openjtalk_wrapper.c
++    src/cpp/openjtalk_dictionary_manager.c
+     src/cpp/openjtalk_ios_stub.c
+   )
+ else()
+@@ -158,6 +168,11 @@ if(PIPER_APPLE_EMBEDDED OR ANDROID)
+   # (#include "sv_function_words_data.h").
+   target_compile_definitions(piper_common PRIVATE PIPER_PLUS_EMBEDDED_SV_FUNCTION_WORDS)
+   target_include_directories(piper_common PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
++  if(PIPER_APPLE_EMBEDDED)
++    # Compiles out the process-spawning parts of openjtalk_wrapper.c and
++    # openjtalk_dictionary_manager.c (see the source list above).
++    target_compile_definitions(piper_common PRIVATE PIPER_PLUS_APPLE_EMBEDDED)
++  endif()
+ else()
+   # Desktop install: ship the JSON next to the binary so
+   # piper_plus_get_exe_dir() can resolve <exe-dir>/data/zh_en_loanword.json.
+diff --git a/src/cpp/openjtalk_dictionary_manager.c b/src/cpp/openjtalk_dictionary_manager.c
+index f36d8e20..0bef1568 100644
+--- a/src/cpp/openjtalk_dictionary_manager.c
++++ b/src/cpp/openjtalk_dictionary_manager.c
+@@ -31,6 +31,10 @@
+ #define DICTIONARY_DIR "open_jtalk_dic_utf_8-1.11"
+ #define DICTIONARY_SHA256 "fe6ba0e43542cef98339abdffd903e062008ea170b04e7e2a35da805902f382a"
+ 
++// The checksum and download helpers spawn external tools (sha256sum / shasum,
++// curl / wget, tar), which the App Sandbox does not allow. On Apple embedded
++// platforms the host app supplies the dictionary instead, so they are left out.
++#ifndef PIPER_PLUS_APPLE_EMBEDDED
+ // Helper function to verify SHA256 checksum
+ static int verify_checksum(const char* file_path, const char* expected_sha256) {
+     char result[256] = {0};
+@@ -134,6 +138,7 @@ static int verify_checksum(const char* file_path, const char* expected_sha256) {
+             expected_sha256, result);
+     return -1;
+ }
++#endif  // PIPER_PLUS_APPLE_EMBEDDED
+ 
+ // Helper function to create directory with parents
+ static int mkdir_p(const char* path) {
+@@ -349,6 +354,7 @@ void force_openjtalk_dictionary_path(const char* path) {
+     }
+ }
+ 
++#ifndef PIPER_PLUS_APPLE_EMBEDDED
+ // Download and extract the dictionary
+ static int download_and_extract_dictionary() {
+     const char* data_dir = get_data_dir();
+@@ -449,6 +455,7 @@ static int download_and_extract_dictionary() {
+     fprintf(stderr, "OpenJTalk dictionary installed successfully\n");
+     return 0;
+ }
++#endif  // PIPER_PLUS_APPLE_EMBEDDED
+ 
+ // Ensure the OpenJTalk dictionary is available
+ int ensure_openjtalk_dictionary() {
+@@ -466,6 +473,13 @@ int ensure_openjtalk_dictionary() {
+         return -1;
+     }
+ 
++#ifdef PIPER_PLUS_APPLE_EMBEDDED
++    // Apple embedded (iOS etc.): the App Sandbox cannot spawn curl/wget/tar.
++    // The host app must provide the dictionary via dict_dir or OPENJTALK_DICTIONARY_PATH.
++    fprintf(stderr, "Failed to ensure OpenJTalk dictionary: Auto-download is not supported on this platform. "
++                    "Please provide the dictionary via OPENJTALK_DICTIONARY_PATH or the dict_dir API parameter.\n");
++    return -1;
++#else
+ #ifdef __ANDROID__
+     // Android: system()/popen() for curl/wget is not available.
+     // The host app must provide the dictionary via dict_dir or OPENJTALK_DICTIONARY_PATH.
+@@ -483,4 +497,5 @@ int ensure_openjtalk_dictionary() {
+ 
+     // Download and extract dictionary
+     return download_and_extract_dictionary();
++#endif  // PIPER_PLUS_APPLE_EMBEDDED
+ }
+diff --git a/src/cpp/openjtalk_ios_stub.c b/src/cpp/openjtalk_ios_stub.c
+index 7020ec03..f1a23c8c 100644
+--- a/src/cpp/openjtalk_ios_stub.c
++++ b/src/cpp/openjtalk_ios_stub.c
+@@ -1,82 +1,25 @@
+ /*
+  * openjtalk_ios_stub.c — iOS / Apple-embedded stub for OpenJTalk symbols.
+  *
+- * On iOS / Mac Catalyst / tvOS / watchOS / visionOS, the four desktop-only
+- * translation units (openjtalk_wrapper.c, openjtalk_optimized.c,
+- * openjtalk_dictionary_manager.c, model_manager.cpp) are excluded from the
+- * piper_common OBJECT library because they call std::system / popen / fork —
+- * unavailable in the App Sandbox.
++ * On iOS / tvOS / watchOS / visionOS, the App Sandbox does not allow spawning
++ * processes (std::system / popen / fork / posix_spawn).
+  *
+- * However, openjtalk_phonemize.cpp and openjtalk_api.c remain in the build
+- * (their non-network logic is still useful — phoneme post-processing, NJD
+- * pipeline, etc.). They reference symbols defined in the excluded files,
+- * which would cause undefined-symbol link errors when the consumer Xcode
+- * project links libpiper_plus.a.
++ * openjtalk_wrapper.c and openjtalk_dictionary_manager.c are built on these
++ * platforms with their process-spawning parts compiled out
++ * (PIPER_PLUS_APPLE_EMBEDDED), so Japanese phonemization runs through the
++ * in-process r9y9/open_jtalk C library. The consumer app must supply the
++ * OpenJTalk dictionary via dict_dir (or OPENJTALK_DICTIONARY_PATH); it is never
++ * downloaded on these platforms.
+  *
+- * This stub TU provides minimal implementations for those symbols so the
+- * static archive resolves cleanly. Every entry point fails fast (returns
+- * NULL / 0 / -1) so callers get a clean "OpenJTalk unavailable" path
+- * without runtime crashes.
+- *
+- * Consumers that need Japanese TTS on iOS must:
+- *   1. Pre-bundle the OpenJTalk MeCab dictionary in their app bundle, AND
+- *   2. Use a future iOS-specific OpenJTalk binding (e.g. swift-openjtalk,
+- *      pyopenjtalk via Python.framework) — outside the scope of v1.13.0.
++ * openjtalk_optimized.c and model_manager.cpp remain excluded, as they rely on
++ * process spawning throughout. This TU provides a fail-fast stand-in for the
++ * one symbol of theirs that is declared in a shared header, so a consumer that
++ * calls it links cleanly and gets a clean "unavailable" result.
+  *
+  * Issue: #377  Linked from cmake/PiperCommon.cmake.
+  */
+ 
+ #include <stddef.h>
+-#include <stdlib.h>
+-
+-/* Mirror of OpenJTalkProsodyResult declared in openjtalk_phonemize.hpp.
+- * Re-declared here because that header is C++ (it includes piper.hpp); we
+- * need only the layout, which is identical. */
+-typedef struct {
+-    char* phonemes;
+-    int*  prosody_a1;
+-    int*  prosody_a2;
+-    int*  prosody_a3;
+-    int   count;
+-} OpenJTalkProsodyResult;
+-
+-/* ---- openjtalk_wrapper.c stand-ins ---- */
+-
+-int openjtalk_is_available(void) {
+-    return 0;  /* unavailable on Apple-embedded platforms */
+-}
+-
+-int openjtalk_ensure_dictionary(void) {
+-    return 0;  /* false: dictionary cannot be located */
+-}
+-
+-char* openjtalk_text_to_phonemes(const char* text) {
+-    (void)text;
+-    return NULL;
+-}
+-
+-void openjtalk_free_phonemes(char* phonemes) {
+-    /* In the desktop build, openjtalk_text_to_phonemes mallocs the result.
+-     * Stay symmetric with std::malloc/std::free so any caller that obtained
+-     * a buffer from a different allocator path can still be freed safely. */
+-    free(phonemes);
+-}
+-
+-OpenJTalkProsodyResult* openjtalk_text_to_phonemes_with_prosody(const char* text) {
+-    (void)text;
+-    return NULL;
+-}
+-
+-void openjtalk_free_prosody_result(OpenJTalkProsodyResult* result) {
+-    if (!result) {
+-        return;
+-    }
+-    free(result->phonemes);
+-    free(result->prosody_a1);
+-    free(result->prosody_a2);
+-    free(result->prosody_a3);
+-    free(result);
+-}
+ 
+ /* ---- openjtalk_optimized.c stand-ins ---- */
+ 
+@@ -84,22 +27,3 @@ char* openjtalk_text_to_phonemes_optimized(const char* text) {
+     (void)text;
+     return NULL;
+ }
+-
+-/* ---- openjtalk_dictionary_manager.c stand-ins ---- */
+-
+-const char* get_openjtalk_dictionary_path(void) {
+-    return NULL;
+-}
+-
+-int ensure_openjtalk_dictionary(void) {
+-    return -1;  /* non-zero: dictionary cannot be ensured */
+-}
+-
+-void reset_openjtalk_dictionary_cache(void) {
+-    /* no-op */
+-}
+-
+-void force_openjtalk_dictionary_path(const char* path) {
+-    (void)path;
+-    /* no-op */
+-}
+diff --git a/src/cpp/openjtalk_wrapper.c b/src/cpp/openjtalk_wrapper.c
+index 34f4cf6d..fe4dcf93 100644
+--- a/src/cpp/openjtalk_wrapper.c
++++ b/src/cpp/openjtalk_wrapper.c
+@@ -48,7 +48,7 @@
+ __declspec(thread) static char g_openjtalk_bin_path[OPENJTALK_MAX_PATH] = {0};
+ static CRITICAL_SECTION g_path_mutex;
+ static BOOL g_mutex_initialized = FALSE;
+-#else
++#elif !defined(PIPER_PLUS_APPLE_EMBEDDED)
+ static __thread char g_openjtalk_bin_path[OPENJTALK_MAX_PATH] = {0};
+ static pthread_mutex_t g_path_mutex = PTHREAD_MUTEX_INITIALIZER;
+ #endif
+@@ -87,6 +87,13 @@ static void ensure_mutex_initialized() {
+ }
+ #endif
+ 
++#ifdef PIPER_PLUS_APPLE_EMBEDDED
++// The App Sandbox cannot run a separate binary, so there is none to find and
++// the binary fallback below always fails before spawning anything.
++static const char* find_openjtalk_binary() {
++    return NULL;
++}
++#else
+ // Static allow-list of acceptable OpenJTalk binary paths. find_openjtalk_binary()
+ // returns pointers exclusively into this table — no shell-derived
+ // `which`/`where` lookup, and the OPENJTALK_PHONEMIZER_PATH env-var is only
+@@ -214,6 +221,7 @@ static const char* find_openjtalk_binary() {
+ #endif
+     return NULL;
+ }
++#endif  // PIPER_PLUS_APPLE_EMBEDDED
+ 
+ // Check if OpenJTalk is available (API or binary)
+ int openjtalk_is_available() {
+@@ -850,7 +858,13 @@ static OpenJTalkError execute_openjtalk_argv(const char* const argv[],
+         }
+     }
+ 
++#ifdef PIPER_PLUS_APPLE_EMBEDDED
++    // Unreachable in practice (find_openjtalk_binary() returns NULL first),
++    // but kept so the binary path never links a process-spawning helper.
++    int exit_code = -1;
++#else
+     int exit_code = piper_run_argv(argv);
++#endif
+ 
+     if (exit_code != 0) {
+         if (result) {
