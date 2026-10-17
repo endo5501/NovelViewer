@@ -21,6 +21,7 @@ import 'package:novel_viewer/features/tts/presentation/tts_edit_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_database_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_audio_state_provider.dart';
 import 'package:novel_viewer/features/tts/providers/vacuum_lifecycle_provider.dart';
+import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_export_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_readiness_provider.dart';
@@ -595,8 +596,12 @@ class _TtsControlsBarState extends ConsumerState<TtsControlsBar>
           const SizedBox(width: 8),
           _playButton(),
           const SizedBox(width: 8),
-          _exportButtonOrProgress(),
-          const SizedBox(width: 8),
+          // Absent, not disabled, where MP3 export is unsupported (iOS: the
+          // LAME encoder has no iOS build), so the encoder is never loaded.
+          if (ref.watch(ttsAudioExportSupportedProvider)) ...[
+            _exportButtonOrProgress(),
+            const SizedBox(width: 8),
+          ],
           _deleteButton(),
         ],
       ),
