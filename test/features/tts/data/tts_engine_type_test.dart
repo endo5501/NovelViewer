@@ -19,6 +19,14 @@ void main() {
       expect(TtsEngineType.values.length, 3);
     });
 
+    test('only the engines that clone a voice use reference audio', () {
+      // Piper synthesizes from its own fixed voice; a per-segment reference
+      // has no effect on it (spec tts-edit-screen).
+      expect(TtsEngineType.qwen3.usesReferenceVoice, isTrue);
+      expect(TtsEngineType.irodori.usesReferenceVoice, isTrue);
+      expect(TtsEngineType.piper.usesReferenceVoice, isFalse);
+    });
+
     test('name is used for persistence', () {
       expect(TtsEngineType.irodori.name, 'irodori');
     });

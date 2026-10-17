@@ -41,6 +41,7 @@ void main() {
     bool isGenerating = false,
     bool skip = false,
     bool enabled = true,
+    bool showReferenceAudio = true,
     void Function(String? memo)? onMemoEditComplete,
     VoidCallback? onCursorRequested,
     VoidCallback? onSkipToggled,
@@ -72,6 +73,7 @@ void main() {
                 onCursorRequested: onCursorRequested ?? () {},
                 onSkipToggled: onSkipToggled ?? () {},
                 enabled: enabled,
+                showReferenceAudio: showReferenceAudio,
               ),
             ),
           ),
@@ -434,6 +436,35 @@ void main() {
         find.widgetWithIcon(IconButton, Icons.restart_alt),
       );
       expect(reset.onPressed, isNotNull);
+    });
+  });
+
+  group('reference audio selector', () {
+    testWidgets('is shown for an engine that uses reference audio', (
+      tester,
+    ) async {
+      await pumpRow(tester, rowWidth: 1000);
+
+      expect(find.byType(DropdownButtonFormField<String?>), findsOneWidget);
+    });
+
+    testWidgets('is absent for an engine that ignores it', (tester) async {
+      await pumpRow(
+        tester,
+        rowWidth: 1000,
+        showReferenceAudio: false,
+        hasAudio: true,
+      );
+
+      expect(find.byType(DropdownButtonFormField<String?>), findsNothing);
+      // The rest of the row is unchanged.
+      expect(find.byType(TextField), findsNWidgets(2));
+      expect(find.widgetWithIcon(IconButton, Icons.play_arrow), findsOneWidget);
+      expect(find.widgetWithIcon(IconButton, Icons.refresh), findsOneWidget);
+      expect(
+        find.widgetWithIcon(IconButton, Icons.restart_alt),
+        findsOneWidget,
+      );
     });
   });
 }
