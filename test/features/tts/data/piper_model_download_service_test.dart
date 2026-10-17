@@ -206,13 +206,23 @@ void main() {
       dicDir = p.join(tempDir.path, 'models', 'piper', 'open_jtalk_dic');
     });
 
-    /// A gzipped tar holding [entries] (path -> content), as the dictionary
-    /// release is packaged.
-    List<int> tarGz(Map<String, String> entries) {
+    /// The files OpenJTalk's MeCab loads, under the release's top directory.
+    final completeDictionary = {
+      for (final f in PiperModelDownloadService.requiredDictionaryFiles)
+        'open_jtalk_dic_utf_8-1.11/$f': 'content of $f',
+    };
+
+    /// A gzipped tar holding [entries] (path -> content) and [extra] entries,
+    /// as the dictionary release is packaged.
+    List<int> tarGz(
+      Map<String, String> entries, {
+      List<ArchiveFile> extra = const [],
+    }) {
       final archive = Archive();
       entries.forEach((name, content) {
         archive.add(ArchiveFile.string(name, content));
       });
+      extra.forEach(archive.add);
       return const GZipEncoder().encodeBytes(TarEncoder().encodeBytes(archive));
     }
 
@@ -234,20 +244,17 @@ void main() {
     ];
 
     test('extracts the dictionary into open_jtalk_dic', () async {
-      final service = serving(
-        tarGz({
-          'open_jtalk_dic_utf_8-1.11/sys.dic': 'system dictionary',
-          'open_jtalk_dic_utf_8-1.11/char.bin': 'chars',
-        }),
-      );
+      final service = serving(tarGz(completeDictionary));
 
       await service.downloadDictionary(dicDir);
 
-      expect(
-        File(p.join(dicDir, 'sys.dic')).readAsStringSync(),
-        'system dictionary',
-      );
-      expect(File(p.join(dicDir, 'char.bin')).readAsStringSync(), 'chars');
+      for (final f in PiperModelDownloadService.requiredDictionaryFiles) {
+        expect(
+          File(p.join(dicDir, f)).readAsStringSync(),
+          'content of $f',
+          reason: f,
+        );
+      }
       expect(service.isDictionaryDownloaded(dicDir), isTrue);
       // Neither the archive nor any staging directory is left beside it.
       expect(
@@ -258,24 +265,19 @@ void main() {
 
     test('replaces a directory left without any .dic file', () async {
       Directory(dicDir).createSync(recursive: true);
-      File(p.join(dicDir, 'char.bin')).writeAsStringSync('partial');
-      final service = serving(
-        tarGz({'open_jtalk_dic_utf_8-1.11/sys.dic': 'system dictionary'}),
-      );
+      File(p.join(dicDir, 'leftover.txt')).writeAsStringSync('partial');
+      final service = serving(tarGz(completeDictionary));
 
       await service.downloadDictionary(dicDir);
 
       expect(File(p.join(dicDir, 'sys.dic')).existsSync(), isTrue);
-      expect(File(p.join(dicDir, 'char.bin')).existsSync(), isFalse);
+      expect(File(p.join(dicDir, 'leftover.txt')).existsSync(), isFalse);
     });
 
     for (final escaping in ['../escaped.txt', '/escaped.txt']) {
       test('fails on an entry escaping the target ($escaping)', () async {
         final service = serving(
-          tarGz({
-            'open_jtalk_dic_utf_8-1.11/sys.dic': 'system dictionary',
-            escaping: 'outside',
-          }),
+          tarGz({...completeDictionary, escaping: 'outside'}),
         );
 
         await expectLater(service.downloadDictionary(dicDir), throwsException);
@@ -293,6 +295,37 @@ void main() {
       final service = serving([1, 2, 3, 4, 5]);
 
       await expectLater(service.downloadDictionary(dicDir), throwsA(anything));
+
+      expect(Directory(dicDir).existsSync(), isFalse);
+      expect(filesUnderTemp(), isEmpty);
+    });
+
+    test('fails on a symbolic link entry', () async {
+      // The release holds none; the extractor would skip one pointing outside
+      // without telling us, and a link inside could stand in for a file.
+      final service = serving(
+        tarGz(
+          completeDictionary,
+          extra: [
+            ArchiveFile.symlink('open_jtalk_dic_utf_8-1.11/link', '../../x'),
+          ],
+        ),
+      );
+
+      await expectLater(service.downloadDictionary(dicDir), throwsException);
+
+      expect(Directory(dicDir).existsSync(), isFalse);
+      expect(filesUnderTemp(), isEmpty);
+    });
+
+    test('fails when a required dictionary file is missing', () async {
+      // What a tar cut short looks like once the decoder stops at a damaged
+      // header: the earlier entries, and nothing to say the rest is gone.
+      final service = serving(
+        tarGz({'open_jtalk_dic_utf_8-1.11/sys.dic': 'system dictionary'}),
+      );
+
+      await expectLater(service.downloadDictionary(dicDir), throwsException);
 
       expect(Directory(dicDir).existsSync(), isFalse);
       expect(filesUnderTemp(), isEmpty);
