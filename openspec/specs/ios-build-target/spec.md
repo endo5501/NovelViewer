@@ -118,6 +118,8 @@ The iOS Runner target SHALL have a Run Script build phase that globs the xcframe
 
 When `ios/Frameworks/` holds no xcframework, or none has a slice for the SDK being built, the phase SHALL copy nothing and succeed, so that a checkout without the native libraries still builds the viewer.
 
+The phase SHALL also remove from the app's `Frameworks/` folder every framework it embedded in an earlier build whose xcframework is no longer under `ios/Frameworks/`. Xcode's incremental build reuses the app bundle and the phase declares no outputs Xcode could clean, so without this a removed or renamed xcframework would leave its old, signed binary in the app: a build meant to have no Piper library would still load one. The phase SHALL record what it embedded in the target's temporary build directory, not in the app bundle, and SHALL NOT remove a framework it did not embed, such as Flutter's own.
+
 The phase SHALL NOT take part in Swift Package Manager integration, and SHALL NOT introduce CocoaPods on iOS.
 
 #### Scenario: A device build embeds and signs the frameworks
@@ -139,6 +141,10 @@ The phase SHALL NOT take part in Swift Package Manager integration, and SHALL NO
 #### Scenario: The project file still parses
 - **WHEN** `xcodebuild -list -project ios/Runner.xcodeproj` is run after the phase is added
 - **THEN** it lists the targets without a parse error
+
+#### Scenario: A removed xcframework does not survive an incremental build
+- **WHEN** the app is built with `ios/Frameworks/piper_plus.xcframework`, the xcframework is then removed, and the app is built again without cleaning
+- **THEN** `Runner.app/Frameworks/` no longer holds `piper_plus.framework`, and Flutter's frameworks are still present
 
 ### Requirement: The app's minimum OS is not below that of any embedded framework
 For every build configuration, the iOS Runner's `IPHONEOS_DEPLOYMENT_TARGET` SHALL be at least the `MinimumOSVersion` declared by every slice of every xcframework under `ios/Frameworks/`. The embed phase ships these frameworks in every iOS build. A framework that requires a newer OS than the app is rejected by App Store and TestFlight validation, and cannot be loaded at all on an older OS.

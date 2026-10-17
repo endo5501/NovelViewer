@@ -1,31 +1,8 @@
 ## Purpose
 
-Gates every text-to-speech surface behind a single overridable Riverpod provider instead of scattered `dart:io` platform checks, so that on a platform without TTS support (iOS) no control capable of loading the TTS native library, requesting microphone access, or invoking a desktop-only drag-and-drop plugin is reachable: the text viewer's TTS controls bar, the settings dialog's 読み上げ tab, and the text-selection context menu's "add to dictionary" item are all absent, and the TTS playback binding is not registered at all, so the key combination falls through to any other handler and stays out of the way of other rebindings. The availability provider derives its value from the shared platform-capability model rather than reading `Platform` itself.
+Gates every text-to-speech surface behind a single overridable Riverpod provider instead of scattered `dart:io` platform checks, so that on a platform where no speech engine runs no control capable of loading the TTS native library, requesting microphone access, or invoking a desktop-only drag-and-drop plugin is reachable: the text viewer's TTS controls bar, the settings dialog's 読み上げ tab, and the text-selection context menu's "add to dictionary" item are all absent, and the TTS playback binding is not registered at all, so the key combination falls through to any other handler and stays out of the way of other rebindings. The availability provider derives its value from the shared platform-capability model rather than reading `Platform` itself.
 
 ## Requirements
-
-### Requirement: TTS availability is exposed as an overridable provider
-The system SHALL expose whether text-to-speech is available on the running platform through a Riverpod provider rather than reading `dart:io`'s `Platform` at each consumer. That provider SHALL derive its value from the shared platform-capability model rather than reading the platform itself, so that the application-wide platform read occurs in exactly one place. Consumers SHALL keep watching this provider, whose name and type are unchanged, so their behaviour can be exercised for both outcomes: `dart:io`'s `Platform` cannot be overridden from a widget test, but a provider can.
-
-#### Scenario: Consumers depend on the provider, not on Platform
-- **WHEN** the widgets that gate TTS surfaces are inspected
-- **THEN** none of them reads `Platform.isIOS` (or any other `Platform` flag) directly; each reads the availability provider
-
-#### Scenario: The availability provider derives from the capability model
-- **WHEN** the TTS availability provider's implementation is inspected
-- **THEN** it reads the shared platform-capability provider and contains no `Platform` access of its own
-
-#### Scenario: Availability can be overridden in tests
-- **WHEN** a widget test wraps the tree in a `ProviderScope` overriding the availability provider with `false`
-- **THEN** the gated widgets behave as they would on a platform without TTS support
-
-#### Scenario: TTS is unavailable on iOS
-- **WHEN** the provider's value is resolved on iOS
-- **THEN** it reports that TTS is unavailable
-
-#### Scenario: TTS remains available on desktop
-- **WHEN** the provider's value is resolved on Windows, macOS or Linux
-- **THEN** it reports that TTS is available
 
 ### Requirement: No reachable path to the TTS native engine when unavailable
 When TTS is unavailable, the UI SHALL NOT present any control that would load the TTS native library, request microphone access, use a drag-and-drop plugin that is not registered on the platform, or edit data whose only consumer is the speech engine. Specifically, the text viewer's TTS controls bar, the settings dialog's TTS tab, and the text-selection context menu's "add to dictionary" item SHALL be absent.
@@ -80,3 +57,28 @@ The playback toggle binding SHALL NOT be registered at all when TTS is unavailab
 #### Scenario: Conflicts between available actions are still refused
 - **WHEN** the reader assigns to one visible action the key combination held by another visible action
 - **THEN** the assignment is refused, whether or not TTS is available
+
+### Requirement: TTS availability is exposed as an overridable provider derived from the engines
+The system SHALL expose whether text-to-speech is available on the running platform through a Riverpod provider rather than reading `dart:io`'s `Platform` at each consumer. That provider SHALL derive its value from the shared platform-capability model rather than reading the platform itself, so that the application-wide platform read occurs in exactly one place. Consumers SHALL keep watching this provider, whose name and type are unchanged, so their behaviour can be exercised for both outcomes: `dart:io`'s `Platform` cannot be overridden from a widget test, but a provider can.
+
+Text-to-speech is available wherever at least one engine is, which since `ios-tts-piper` includes iOS with the Piper engine. The gating this capability defines remains in force for any platform where no engine is available, and is exercised by overriding the provider.
+
+#### Scenario: Consumers depend on the provider, not on Platform
+- **WHEN** the widgets that gate TTS surfaces are inspected
+- **THEN** none of them reads `Platform.isIOS` (or any other `Platform` flag) directly; each reads the availability provider
+
+#### Scenario: The availability provider derives from the capability model
+- **WHEN** the TTS availability provider's implementation is inspected
+- **THEN** it reads the shared platform-capability provider and contains no `Platform` access of its own
+
+#### Scenario: Availability can be overridden in tests
+- **WHEN** a widget test wraps the tree in a `ProviderScope` overriding the availability provider with `false`
+- **THEN** the gated widgets behave as they would on a platform without TTS support
+
+#### Scenario: TTS is available on iOS
+- **WHEN** the provider's value is resolved on iOS
+- **THEN** it reports that TTS is available
+
+#### Scenario: TTS remains available on desktop
+- **WHEN** the provider's value is resolved on Windows, macOS or Linux
+- **THEN** it reports that TTS is available
