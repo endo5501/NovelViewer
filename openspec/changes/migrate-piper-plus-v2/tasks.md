@@ -2,8 +2,8 @@
 
 ## 1. サブモジュールの切り替え
 
-- [ ] 1.1 `.gitmodules` の `third_party/piper-plus` の URL を `https://github.com/ayutaz/piper-plus.git` に変更し、`git submodule sync --recursive` を実行する。続けてサブモジュール内で `v2.0.2` タグのコミットを checkout する。`git -C third_party/piper-plus describe --tags` が `v2.0.2` を返し、`cat third_party/piper-plus/VERSION` が `2.0.2` であることを確認する
-- [ ] 1.2 古い CMake キャッシュを捨てるため `third_party/piper-plus/build` を削除する。削除の前に、中身がビルド生成物だけであることを確認する
+- [x] 1.1 `.gitmodules` の `third_party/piper-plus` の URL を `https://github.com/ayutaz/piper-plus.git` に変更し、`git submodule sync --recursive` を実行する。続けてサブモジュール内で `v2.0.2` タグのコミットを checkout する。`git -C third_party/piper-plus describe --tags` が `v2.0.2` を返し、`cat third_party/piper-plus/VERSION` が `2.0.2` であることを確認する
+- [x] 1.2 古い CMake キャッシュを捨てるため `third_party/piper-plus/build` を削除する。削除の前に、中身がビルド生成物だけであることを確認する
 
 ## 2. macOS ネイティブビルド
 
