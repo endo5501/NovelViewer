@@ -28,20 +28,27 @@ void main() {
       expect(container.read(llmSummarySupportedProvider), isTrue);
     });
 
-    test('only LLM summary reports available on the iOS capability set', () {
-      final container = _containerWith(
-        const PlatformCapabilities.forPlatform(isIOS: true, isMacOS: false),
-      );
+    test(
+      'the iOS capability set offers speech and LLM summary, not update',
+      () {
+        // Speech comes from Piper, the one engine built for iOS.
+        final container = _containerWith(
+          const PlatformCapabilities.forPlatform(isIOS: true, isMacOS: false),
+        );
 
-      expect(container.read(llmSummarySupportedProvider), isTrue);
-      expect(container.read(ttsSupportedProvider), isFalse);
-      expect(container.read(appUpdateSupportedProvider), isFalse);
-    });
+        expect(container.read(llmSummarySupportedProvider), isTrue);
+        expect(container.read(ttsSupportedProvider), isTrue);
+        expect(container.read(appUpdateSupportedProvider), isFalse);
+      },
+    );
 
     test('withdrawing one feature leaves the others untouched', () {
       final container = _containerWith(
         const PlatformCapabilities(
-          textToSpeech: true,
+          piperTts: true,
+          qwen3Tts: true,
+          irodoriTts: true,
+          ttsAudioExport: true,
           appUpdate: false,
           llmSummary: true,
           onDeviceLlm: false,

@@ -61,8 +61,11 @@ void main() {
         (false, false, true),
       ]) {
         expect(
-          withEngines(piper: piper, qwen3: qwen3, irodori: irodori)
-              .textToSpeech,
+          withEngines(
+            piper: piper,
+            qwen3: qwen3,
+            irodori: irodori,
+          ).textToSpeech,
           isTrue,
           reason: 'piper=$piper qwen3=$qwen3 irodori=$irodori',
         );

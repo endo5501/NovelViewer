@@ -17,7 +17,10 @@
 /// in the provider that wraps it.
 class PlatformCapabilities {
   const PlatformCapabilities({
-    required this.textToSpeech,
+    required this.piperTts,
+    required this.qwen3Tts,
+    required this.irodoriTts,
+    required this.ttsAudioExport,
     required this.appUpdate,
     required this.llmSummary,
     required this.onDeviceLlm,
@@ -25,12 +28,21 @@ class PlatformCapabilities {
 
   /// The one mapping from a platform to the features it supports.
   ///
-  /// iOS has no TTS native library, no microphone usage description, and no
-  /// registration for the drag-and-drop plugin the voice-reference UI uses; and
-  /// it has no distribution channel the app could update itself through. Those
-  /// two features are therefore withheld there.
+  /// Speech synthesis is answered per engine, because each runs on a native
+  /// library built per platform and they do not share an answer. Piper is the
+  /// one built and verified for iOS (piper-ios-build). Qwen3-TTS has no iOS
+  /// library, and Irodori-TTS's model exceeds the memory an iPad grants an
+  /// app, so both are withheld there — and with them the voice-reference UI
+  /// that only they use, which is what needs the microphone and the
+  /// drag-and-drop plugin iOS lacks. MP3 export is withheld too: its LAME
+  /// encoder has no iOS build. Whether the engine library is actually in a
+  /// given build is not answered here; a missing one is reported when it is
+  /// first loaded.
   ///
-  /// LLM summary is not, and takes no notice of [isIOS]. Its work is done by a
+  /// iOS also has no distribution channel the app could update itself
+  /// through, so the in-app update is withheld there.
+  ///
+  /// LLM summary is not withheld, and takes no notice of [isIOS]. Its work is done by a
   /// server the reader runs themselves, reached over plain HTTP, and nothing in
   /// that path is platform-specific: requests go through `dart:io`'s
   /// `HttpClient`, which opens its own sockets rather than using the system's
@@ -63,13 +75,29 @@ class PlatformCapabilities {
   const PlatformCapabilities.forPlatform({
     required bool isIOS,
     required bool isMacOS,
-  }) : textToSpeech = !isIOS,
+  }) : piperTts = true,
+       qwen3Tts = !isIOS,
+       irodoriTts = !isIOS,
+       ttsAudioExport = !isIOS,
        appUpdate = !isIOS,
        llmSummary = true,
        onDeviceLlm = isIOS || isMacOS;
 
-  /// Speech synthesis, its settings, and the reading dictionary that feeds it.
-  final bool textToSpeech;
+  /// Speech synthesis, its settings, and the reading dictionary that feeds it:
+  /// available wherever at least one engine is.
+  bool get textToSpeech => piperTts || qwen3Tts || irodoriTts;
+
+  /// Speech synthesis with the Piper engine.
+  final bool piperTts;
+
+  /// Speech synthesis with the Qwen3-TTS engine.
+  final bool qwen3Tts;
+
+  /// Speech synthesis with the Irodori-TTS engine.
+  final bool irodoriTts;
+
+  /// Exporting synthesized audio to an MP3 file.
+  final bool ttsAudioExport;
 
   /// Checking for, and applying, a newer release of the app itself.
   final bool appUpdate;

@@ -37,7 +37,10 @@ void main() {
       overrides: [
         platformCapabilitiesProvider.overrideWithValue(
           PlatformCapabilities(
-            textToSpeech: true,
+            piperTts: true,
+            qwen3Tts: true,
+            irodoriTts: true,
+            ttsAudioExport: true,
             appUpdate: true,
             llmSummary: true,
             onDeviceLlm: platformCanHost,
@@ -100,7 +103,10 @@ void main() {
       overrides: [
         platformCapabilitiesProvider.overrideWithValue(
           const PlatformCapabilities(
-            textToSpeech: true,
+            piperTts: true,
+            qwen3Tts: true,
+            irodoriTts: true,
+            ttsAudioExport: true,
             appUpdate: true,
             llmSummary: true,
             onDeviceLlm: true,
@@ -138,7 +144,10 @@ void main() {
         overrides: [
           platformCapabilitiesProvider.overrideWithValue(
             const PlatformCapabilities(
-              textToSpeech: true,
+              piperTts: true,
+              qwen3Tts: true,
+              irodoriTts: true,
+              ttsAudioExport: true,
               appUpdate: true,
               llmSummary: true,
               onDeviceLlm: true,
@@ -171,7 +180,10 @@ void main() {
         overrides: [
           platformCapabilitiesProvider.overrideWithValue(
             const PlatformCapabilities(
-              textToSpeech: true,
+              piperTts: true,
+              qwen3Tts: true,
+              irodoriTts: true,
+              ttsAudioExport: true,
               appUpdate: true,
               llmSummary: true,
               onDeviceLlm: true,
@@ -207,7 +219,10 @@ void main() {
         overrides: [
           platformCapabilitiesProvider.overrideWithValue(
             const PlatformCapabilities(
-              textToSpeech: true,
+              piperTts: true,
+              qwen3Tts: true,
+              irodoriTts: true,
+              ttsAudioExport: true,
               appUpdate: true,
               llmSummary: true,
               onDeviceLlm: true,
