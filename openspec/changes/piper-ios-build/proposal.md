@@ -17,6 +17,7 @@ iPad 版 NovelViewer では TTS を無効にしている。前回の試み(Irodo
 - `feat/irodori-ios-build` の成果のうち、エンジンに依存しないものを取り込む。
   - iOS Runner に `ios/Frameworks/*.xcframework` を同梱して署名する Run Script フェーズを追加する。
   - アプリの最小 OS が、同梱する framework の最小 OS を下回らないことを確かめるテストを追加する。
+- Piper の OpenJTalk 辞書のダウンロード処理を、外部コマンドの `tar` ではなくアプリ内で展開するように直す。iOS は外部プロセスを起動できず、従来の処理では辞書を展開できない(合成テストを実行して判明)。展開には `archive` パッケージを使い、全プラットフォームで同じ処理にする。
 - `PiperNativeBindings.libraryName` が iOS では `piper_plus.framework/piper_plus` を返すようにする。
 - `integration_test` を導入し、iOS(Simulator と実機)で Piper による日本語合成が成り立つことを確かめるテストを追加する。モデルと辞書は、アプリの既存のダウンロード処理で取得する。
 - iOS 向けのビルド手順と検証手順を `docs/ipad.md` に追記する。
@@ -29,13 +30,14 @@ iPad 版 NovelViewer では TTS を無効にしている。前回の試み(Irodo
 
 ### Modified Capabilities
 - `piper-tts-native-engine`: 「サブモジュールはフォークを指さない」という要件に、iOS ビルドに限ってプロジェクト管理のパッチを当てるという例外を加える。FFI バインディングが iOS で framework のバイナリを開くことを加える。
+- `piper-tts-model-download`: OpenJTalk 辞書をアプリ内で展開すること、展開先の外へ書き出さないこと、展開に失敗したら不完全な辞書を残さないことを加える。
 - `ios-build-target`: `ios/Frameworks/` の xcframework を同梱・署名するビルドフェーズを加える。アプリの最小 OS と framework の最小 OS の関係を加える。TTS ライブラリのビルド手順を文書化する要件を加える。
 
 ## Impact
 
 - **ネイティブ**: `patches/piper-plus/`(新規)、`scripts/build_piper_ios.sh`(新規)、`scripts/test/verify_piper_ios.sh`(新規)、`ios/Frameworks/`(新規。成果物は Git で管理せず、iOS で TTS を使う開発者が各自ビルドする)
 - **iOS プロジェクト**: `ios/Runner.xcodeproj/project.pbxproj` に Run Script フェーズを追加する。deployment target は現在の 15.0 のままにする。piper-plus は iOS 15.0 向けにビルドし、ORT 1.20.0 の最小 OS は 13.0 である(スパイクで確認済み)。
-- **Dart**: `lib/features/tts/data/piper_native_bindings.dart`(iOS のライブラリ名)。`pubspec.yaml` に `integration_test` を追加する。`integration_test/` と `test_driver/` は新規。
+- **Dart**: `lib/features/tts/data/piper_native_bindings.dart`(iOS のライブラリ名)、`lib/features/tts/data/piper_model_download_service.dart`(辞書の展開)。`pubspec.yaml` に `archive` と `integration_test` を追加する。`integration_test/` と `test_driver/` は新規。
 - **テスト**: `test/platform/ios_project_config_test.dart` と `test/features/tts/data/piper_native_bindings_test.dart` を拡張する。
 - **アプリサイズ**: iOS 版に piper_plus.framework(ONNX Runtime を含めて約 30MB)が加わる。
 - **外部依存**: Microsoft の ONNX Runtime CDN(取得物は SHA-256 で検証する)。upstream piper-plus への PR。
