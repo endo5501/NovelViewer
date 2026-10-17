@@ -69,6 +69,16 @@ class MockPiperNativeBindings extends PiperNativeBindings {
   final List<Pointer<Float>> returnedBuffers = [];
   final List<Pointer<Float>> freedBuffers = [];
 
+  final List<Pointer<Utf8>> _errorStrings = [];
+
+  /// Releases the native memory the mock itself allocated. Buffers handed to
+  /// the engine are released through [freeAudio], as the real API requires.
+  void releaseNative() {
+    calloc.free(_defaults);
+    _errorStrings.forEach(calloc.free);
+    _errorStrings.clear();
+  }
+
   late final Pointer<PiperPlusSynthOptions> _defaults = () {
     final p = calloc<PiperPlusSynthOptions>();
     p.ref
@@ -89,8 +99,11 @@ class MockPiperNativeBindings extends PiperNativeBindings {
 
   @override
   // ignore: overridden_fields
-  late final Pointer<Utf8> Function() getLastError = () =>
-      lastError.toNativeUtf8();
+  late final Pointer<Utf8> Function() getLastError = () {
+    final message = lastError.toNativeUtf8();
+    _errorStrings.add(message);
+    return message;
+  };
 
   @override
   // ignore: overridden_fields
@@ -159,6 +172,7 @@ class MockPiperNativeBindings extends PiperNativeBindings {
         // Overwrite before releasing so a result that still aliases native
         // memory would visibly change.
         samples[0] = 99.0;
+        calloc.free(samples);
       };
 
   @override
@@ -182,6 +196,8 @@ void main() {
       mockBindings = MockPiperNativeBindings();
       engine = PiperTtsEngine(mockBindings);
     });
+
+    tearDown(() => mockBindings.releaseNative());
 
     void load() => engine.loadModel('/fake/model.onnx', dicDir: '/fake/dic');
 
