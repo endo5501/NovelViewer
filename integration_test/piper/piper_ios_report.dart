@@ -73,12 +73,13 @@ class PiperSynthesisSample {
   final int sampleRate;
   final double rms;
 
-  double get audioSeconds => samples / sampleRate;
+  double get audioSeconds => sampleRate > 0 ? samples / sampleRate : 0;
 
   /// Synthesis time over audio length; below 1.0 is faster than real time.
-  /// Null when no audio came back, where the ratio has no meaning.
+  /// Null when there is no audio length to divide by, where the ratio has no
+  /// meaning — and where infinity would make the report unencodable as JSON.
   double? get rtf =>
-      samples == 0 ? null : elapsed.inMicroseconds / 1e6 / audioSeconds;
+      audioSeconds == 0 ? null : elapsed.inMicroseconds / 1e6 / audioSeconds;
 
   bool get isSilent => samples == 0 || rms < silenceRmsThreshold;
 

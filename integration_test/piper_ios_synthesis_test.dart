@@ -7,8 +7,8 @@
 // and records timings and memory headroom. See openspec change piper-ios-build,
 // design D6, for the criteria the measurements feed.
 //
-// The model and dictionary are taken from where the app keeps them
-// (<library>/../models/piper) and downloaded there with the app's own
+// The model and dictionary are taken from where the app keeps them (resolved
+// through the app's own providers) and downloaded there with the app's own
 // downloader when missing.
 //
 // Run with flutter drive. On a device it leaves the app, and with it the
@@ -31,7 +31,9 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_download/data/novel_library_service.dart';
 import 'package:novel_viewer/features/settings/data/settings_repository.dart';
 import 'package:novel_viewer/features/tts/data/piper_model_download_service.dart';
@@ -39,6 +41,7 @@ import 'package:novel_viewer/features/tts/data/piper_native_bindings.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_session.dart';
 import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
+import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -74,9 +77,15 @@ void main() {
         await SharedPreferences.getInstance(),
       );
 
+      // The directories the app itself resolves, from the library location it
+      // uses at startup, so the test checks the files the app would load.
       final library = await NovelLibraryService().ensureLibraryDirectory();
-      final piperDir = p.join(p.dirname(library.path), 'models', 'piper');
-      final dicDir = p.join(piperDir, 'open_jtalk_dic');
+      final container = ProviderContainer(
+        overrides: [libraryPathProvider.overrideWithValue(library.path)],
+      );
+      addTearDown(container.dispose);
+      final piperDir = container.read(piperModelDirProvider);
+      final dicDir = container.read(piperDicDirProvider);
       final modelName = settings.getPiperModelName();
       final modelPath = p.join(
         piperDir,
@@ -191,7 +200,13 @@ void main() {
           persist();
         }
       } catch (error) {
-        persist(failure: '$error');
+        // Must not replace the failure being reported if the write fails too.
+        try {
+          persist(failure: '$error');
+        } catch (persistError) {
+          // ignore: avoid_print
+          print('Could not write the report: $persistError');
+        }
         rethrow;
       } finally {
         await session.dispose();
