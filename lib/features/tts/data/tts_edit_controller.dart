@@ -238,6 +238,9 @@ class TtsEditController {
     required String Function(String fileName)? resolveRefWavPath,
   }) async {
     if (segmentIndex < 0 || segmentIndex >= _segments.length) return false;
+    // A fresh request: a stopPlayback() or cancel() before it ended earlier
+    // work and must not silence this one's failure report.
+    _cancelled = false;
     final dict = _dictionaryRepository;
     final entries = dict != null ? await dict.getEntriesSortedByLength() : null;
     final refWavPath = TtsRefWavResolver.resolve(
