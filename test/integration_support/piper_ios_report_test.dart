@@ -56,11 +56,14 @@ void main() {
       expect(_sample(samples: 0).rtf, isNull);
     });
 
-    test('RTF is null without a sample rate, so the report stays encodable', () {
-      final sample = _sample(sampleRate: 0);
-      expect(sample.rtf, isNull);
-      expect(() => jsonEncode(sample.toJson()), returnsNormally);
-    });
+    test(
+      'RTF is null without a sample rate, so the report stays encodable',
+      () {
+        final sample = _sample(sampleRate: 0);
+        expect(sample.rtf, isNull);
+        expect(() => jsonEncode(sample.toJson()), returnsNormally);
+      },
+    );
 
     test('audio below the silence threshold counts as silent', () {
       expect(_sample(rms: 0.0).isSilent, isTrue);
