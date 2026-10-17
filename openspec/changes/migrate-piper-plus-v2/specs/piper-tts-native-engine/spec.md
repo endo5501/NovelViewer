@@ -109,13 +109,17 @@ On load, the engine SHALL verify that the native library reports C API version 1
 - **THEN** `loadModel` throws `TtsEngineException` naming the expected version 1 and the actual version, and no native engine is created
 
 ### Requirement: Kanji-only Japanese text is phonemized as Japanese
-The engine SHALL make upstream's script-based language detection treat CJK ideographs as Japanese, so that a sentence with no kana (for example 「多分。」 or 「父様。」) is phonemized with the Japanese phonemizer instead of the Chinese one. The engine SHALL do this by giving the native engine a model config derived from the downloaded `<model>.onnx.json` with `zh` removed from `language_id_map`, without changing any other language id. When the model's `language_id_map` does not contain both `ja` and `zh`, the engine SHALL use the downloaded config unchanged. The downloaded config file itself SHALL NOT be modified.
+The engine SHALL make upstream's script-based language detection treat CJK ideographs as Japanese, so that a sentence with no kana (for example 「多分。」 or 「父様。」) is phonemized with the Japanese phonemizer instead of the Chinese one. The engine SHALL do this by giving the native engine a model config derived from the downloaded `<model>.onnx.json` with `zh` removed from `language_id_map`, without changing any other language id. When the model's `language_id_map` does not contain both `ja` and `zh`, the engine SHALL use the downloaded config unchanged. The downloaded config file itself SHALL NOT be modified. If the derived config cannot be written (for example, a full disk), the engine SHALL load the downloaded config instead of failing, so Piper stays usable without the kanji-only improvement.
 
 Rationale: upstream piper-plus classifies CJK ideographs as `zh` whenever the text contains no kana and the model knows both `ja` and `zh`, regardless of the requested language. The bundled app ships no pinyin dictionary, so such sentences produced no speakable phonemes (silence on v1.8, a hard synthesis error on v2.0.2).
 
 #### Scenario: Derived config drops only zh
 - **WHEN** a model whose `language_id_map` is `{ja: 0, en: 1, zh: 2, es: 3, fr: 4, pt: 5}` is loaded
 - **THEN** the native engine is created with a config whose `language_id_map` is `{ja: 0, en: 1, es: 3, fr: 4, pt: 5}` and whose other fields equal the downloaded config, and the downloaded `<model>.onnx.json` is unchanged
+
+#### Scenario: Derived config cannot be written
+- **WHEN** writing `<model>.onnx.ja.json` fails while loading a model whose `language_id_map` has both `ja` and `zh`
+- **THEN** the model loads with the downloaded `<model>.onnx.json` and no exception is thrown
 
 #### Scenario: Config without both ja and zh is used as-is
 - **WHEN** a model whose `language_id_map` lacks `zh` is loaded

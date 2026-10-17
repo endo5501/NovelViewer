@@ -478,6 +478,19 @@ void main() {
         expect(File('$modelPath.json').readAsStringSync(), original);
       });
 
+      test('falls back to the downloaded config when the derived one cannot '
+          'be written', () {
+        final modelPath = writeConfig({'ja': 0, 'zh': 2});
+        // A directory in the way makes the write fail on every platform,
+        // unlike permission bits, which do not stop a root user.
+        Directory('$modelPath.ja.json').createSync();
+
+        engine.loadModel(modelPath, dicDir: '/fake/dic');
+
+        expect(engine.isLoaded, isTrue);
+        expect(mockBindings.lastConfigPath, '$modelPath.json');
+      });
+
       test('uses the downloaded config as-is when there is no zh', () {
         final modelPath = writeConfig({'ja': 0, 'en': 1});
 
