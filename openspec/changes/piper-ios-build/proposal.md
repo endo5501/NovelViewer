@@ -12,7 +12,7 @@ iPad 版 NovelViewer では TTS を無効にしている。前回の試み(Irodo
 - 新しい `scripts/build_piper_ios.sh` を追加する。このスクリプトは次の処理を行う。
   - パッチを当てたソースを iOS 実機(arm64)と Simulator(arm64)向けにビルドする。
   - できた静的ライブラリを動的 framework に包み、`ios/Frameworks/piper_plus.xcframework` を作る。
-  - Microsoft の CDN から ONNX Runtime 1.20.0 を取得し、iOS 用の 2 スライスに絞った `ios/Frameworks/onnxruntime.xcframework` を作る。
+  - Microsoft の CDN から ONNX Runtime 1.20.0 を取得する。iOS 向けの配布物は静的ライブラリなので、piper_plus の動的 framework に一緒にリンクする(同梱する framework は 1 つ)。
 - 新しい `scripts/test/verify_piper_ios.sh` を追加し、成果物の構成、依存関係、公開シンボルを検査する。
 - `feat/irodori-ios-build` の成果のうち、エンジンに依存しないものを取り込む。
   - iOS Runner に `ios/Frameworks/*.xcframework` を同梱して署名する Run Script フェーズを追加する。
@@ -25,7 +25,7 @@ iPad 版 NovelViewer では TTS を無効にしている。前回の試み(Irodo
 ## Capabilities
 
 ### New Capabilities
-- `piper-ios-build`: piper-plus と ONNX Runtime を iOS 用の xcframework として作る手順を定める。対象は、パッチの適用方法とその廃止条件、成果物の要件、検証スクリプト、iOS 上での日本語合成を確かめるテスト。
+- `piper-ios-build`: ONNX Runtime を含む piper-plus を、iOS 用の xcframework として作る手順を定める。対象は、パッチの適用方法とその廃止条件、成果物の要件、検証スクリプト、iOS 上での日本語合成を確かめるテスト。
 
 ### Modified Capabilities
 - `piper-tts-native-engine`: 「サブモジュールはフォークを指さない」という要件に、iOS ビルドに限ってプロジェクト管理のパッチを当てるという例外を加える。FFI バインディングが iOS で framework のバイナリを開くことを加える。
@@ -34,9 +34,9 @@ iPad 版 NovelViewer では TTS を無効にしている。前回の試み(Irodo
 ## Impact
 
 - **ネイティブ**: `patches/piper-plus/`(新規)、`scripts/build_piper_ios.sh`(新規)、`scripts/test/verify_piper_ios.sh`(新規)、`ios/Frameworks/`(新規。成果物は Git で管理せず、iOS で TTS を使う開発者が各自ビルドする)
-- **iOS プロジェクト**: `ios/Runner.xcodeproj/project.pbxproj` に Run Script フェーズを追加する。deployment target は現在の 15.0 のままにする見込み。upstream は iOS 15.0 向けにビルドしているが、CDN の ORT framework が宣言している最小 OS はまだ確かめていない。ビルド時に確かめ、15.0 を超えていれば Runner の値を引き上げる。
+- **iOS プロジェクト**: `ios/Runner.xcodeproj/project.pbxproj` に Run Script フェーズを追加する。deployment target は現在の 15.0 のままにする。piper-plus は iOS 15.0 向けにビルドし、ORT 1.20.0 の最小 OS は 13.0 である(スパイクで確認済み)。
 - **Dart**: `lib/features/tts/data/piper_native_bindings.dart`(iOS のライブラリ名)。`pubspec.yaml` に `integration_test` を追加する。`integration_test/` と `test_driver/` は新規。
 - **テスト**: `test/platform/ios_project_config_test.dart` と `test/features/tts/data/piper_native_bindings_test.dart` を拡張する。
-- **アプリサイズ**: iOS 版に ONNX Runtime(実機スライスで約 31MB)と piper_plus が加わる。
+- **アプリサイズ**: iOS 版に piper_plus.framework(ONNX Runtime を含めて約 30MB)が加わる。
 - **外部依存**: Microsoft の ONNX Runtime CDN(取得物は SHA-256 で検証する)。upstream piper-plus への PR。
 - **macOS / Windows**: 影響しない(パッチは iOS ビルドだけに当てる)。

@@ -8,8 +8,8 @@
 ## 2. iOS 向け xcframework のビルドスクリプト
 
 - [ ] 2.1 `scripts/test/verify_piper_ios.sh` を先に書く。検査項目は spec `piper-ios-build` の「iOS 成果物の検証スクリプト」に挙げたもの(スライス構成、arm64 の動的ライブラリ、Info.plist、依存、install name、`piper_plus_*` だけを公開していること、プロセスを起動するシンボルを参照していないこと)。確認: 成果物が無い状態で実行すると、ビルドを促すメッセージを出して非ゼロで終了する
-- [ ] 2.2 `scripts/build_piper_ios.sh` の ORT 部分を実装する。CDN から取得して SHA-256 を照合し、`ios-arm64` と Simulator を arm64 だけにしたスライスから `onnxruntime.xcframework` を作り直す。あわせて、ORT スライスの `Info.plist` の `MinimumOSVersion` を読む。15.0 を超えていたら、Runner の deployment target をその値に引き上げる作業を 3 に追加する。確認: ハッシュを書き換えて実行すると不一致で止まり、`ios/Frameworks/` が変更されない。`MinimumOSVersion` の値を design.md に書き留める
-- [ ] 2.3 `scripts/build_piper_ios.sh` の piper_plus 部分を実装する。`git archive` で取り出し、パッチを当て、2 つの SDK 向けにビルドし、動的 framework に包んで xcframework にまとめる。組み立ては一時ディレクトリで行い、最後に置き換える。確認: 実行後に `verify_piper_ios.sh` が全項目合格で 0 を返し、`git -C third_party/piper-plus status --porcelain` が空である
+- [ ] 2.2 `scripts/build_piper_ios.sh` の ORT 部分を実装する。CDN から取得して SHA-256 を照合し、実機と Simulator の静的ライブラリを arm64 だけに絞り、ヘッダと一緒に SDK ごとのディレクトリへ置く(design D4)。確認: ハッシュを書き換えて実行すると不一致で止まり、`ios/Frameworks/` が変更されない
+- [ ] 2.3 `scripts/build_piper_ios.sh` の piper_plus 部分を実装する。`git archive` で取り出し、パッチを当て、2 つの SDK 向けにビルドし、ORT と一緒に動的 framework に包んで xcframework にまとめる。組み立ては一時ディレクトリで行い、最後に置き換える。確認: 実行後に `verify_piper_ios.sh` が全項目合格で 0 を返し、`git -C third_party/piper-plus status --porcelain` が空である
 - [ ] 2.4 パッチが当たらないときの動作を確かめる。確認: わざと壊したパッチを置いて実行すると、パッチ名を表示して非ゼロで終了し、既存の `ios/Frameworks/` が変更されない
 - [ ] 2.5 `.gitignore` に `ios/Frameworks/*.xcframework` を加える。成果物はコミットしない。確認: ビルド後の `git status` に xcframework もビルドの中間生成物(`build/piper-ios/`)も出ない
 - [ ] 2.6 `CLAUDE.md` の開発コマンドに `scripts/build_piper_ios.sh` と `scripts/test/verify_piper_ios.sh` を追記する。確認: 書いた説明どおりにコマンドが動く
@@ -18,7 +18,7 @@
 
 - [ ] 3.1 `feat/irodori-ios-build` の `4295a0b4`(deployment target のガードテスト)の `test/platform/ios_project_config_test.dart` を取り込み、テストが期待する値を現在の 15.0 に合わせる。あわせて、同梱フェーズの定義(`inputPaths` / `outputPaths` が空、framework 名を含まない、`alwaysOutOfDate = 1`)を確かめるテストを `test/platform/ios_project_config_test.dart` に加える。確認: `fvm flutter test test/platform/ios_project_config_test.dart` で、同梱フェーズのテストが失敗する
 - [ ] 3.2 `5835525d` 時点の `ios/Runner.xcodeproj/project.pbxproj` から `Embed Native Frameworks` フェーズ(`7cfb3573` で追加し、`5835525d` で修正したもの)を取り込む。cherry-pick は使わない。これらのコミットは `openspec/changes/irodori-ios-build/` や audiocpp 用のスクリプトにも触れているので、フェーズの定義と Runner のビルドフェーズ一覧の 1 行だけを移す。また、`5835525d` 時点の pbxproj は deployment target などを main と異なる値にしている可能性がある。そのため `git checkout <commit> -- <path>` でファイルごと持ち込むことはしない。確認: 3.1 のテストが通り、`xcodebuild -list -project ios/Runner.xcodeproj` がエラーなく動く
-- [ ] 3.3 xcframework がある状態で Simulator 向けと実機向けにビルドする。確認: 両方の `Runner.app/Frameworks/` に `piper_plus.framework` と `onnxruntime.framework` があり、`codesign --verify` が成功する
+- [ ] 3.3 xcframework がある状態で Simulator 向けと実機向けにビルドする。確認: 両方の `Runner.app/Frameworks/` に `piper_plus.framework` があり、`codesign --verify` が成功する
 - [ ] 3.4 `ios/Frameworks/` を一時的に退避してビルドする。確認: 同梱フェーズは何もせずに終わり、ビルドが成功する(確認後に元へ戻す)
 
 ## 4. Dart FFI バインディング

@@ -48,4 +48,4 @@ The system SHALL provide a `PiperNativeBindings` class that loads `libpiper_plus
 
 #### Scenario: Load framework on iOS
 - **WHEN** `PiperNativeBindings.open()` is called on iOS
-- **THEN** `piper_plus.framework/piper_plus` is loaded from the app's `Frameworks` directory, and the `onnxruntime.framework` it depends on is resolved from the same directory
+- **THEN** `piper_plus.framework/piper_plus` is loaded from the app's `Frameworks` directory, with ONNX Runtime linked into it rather than loaded as a separate library

@@ -20,8 +20,8 @@
 - **upstream CI の iOS 手順**(`release-shared-lib.yml`)
   - ONNX Runtime 1.20.0 を CDN(`pod-archive-onnxruntime-c-1.20.0.zip`、SHA-256 `50891a8a…`)から取得する。
   - 取得した ORT を `ONNXRUNTIME_DIR` / `ONNXRUNTIME_LIB` / `ONNXRUNTIME_INCLUDE_DIR` で外から与え、`cmake/ios.toolchain.cmake` で SDK ごとにビルドする。
-  - deployment target は 15.0。ただし、CDN の ORT framework の `Info.plist` が宣言している `MinimumOSVersion` はまだ確かめていない(D4 で確かめる)。
-  - CDN の ORT は動的な `onnxruntime.framework` で、スライスは `ios-arm64`(約 31MB)、`ios-arm64_x86_64-simulator`(約 67MB)、`macos-arm64_x86_64` の 3 つ。
+  - deployment target は 15.0。
+  - CDN の ORT は `onnxruntime.framework` という名前だが、中身は**静的ライブラリ**である(upstream の文書は動的ライブラリとしているが誤り。スパイクで確認)。スライスは `ios-arm64`、`ios-arm64_x86_64-simulator`、`macos-arm64_x86_64` の 3 つで、iOS スライスの最小 OS は 13.0。
 - **NovelViewer の iOS プロジェクト(main)**
   - `IPHONEOS_DEPLOYMENT_TARGET = 15.0`。
   - ネイティブライブラリを同梱する仕組みは無い。
@@ -85,44 +85,40 @@
 代替案 1: サブモジュールに直接 `git apply` し、ビルド後に `git apply -R` で戻す。途中で失敗すると作業ツリーが汚れたまま残る。
 代替案 2: フォークに切り替える(audio.cpp と同じ方式)。iOS のためだけにフォークを持つ維持費が見合わない。
 
-### D3: ライブラリの形 — upstream の静的 archive を、自前で動的 framework に包む
+### D3: ライブラリの形 — upstream の静的 archive と ORT を、自前で 1 つの動的 framework に包む
 
-各 SDK でビルドした `libpiper_plus.a` を、`clang++ -dynamiclib` で動的ライブラリにリンクし直す。指定するオプションは次のとおり。
+各 SDK でビルドした `libpiper_plus.a` と ORT の静的ライブラリ(D4)を、`clang++ -dynamiclib` で 1 つの動的ライブラリにリンクする。指定するオプションは次のとおり。
 
-- `-Wl,-force_load`
-- `-framework onnxruntime`(`-F` で SDK に合う ORT スライスを指す)
+- `-Wl,-force_load,libpiper_plus.a`(C API を確実に取り込む)
+- ORT の静的ライブラリ(参照されたぶんが取り込まれる)
+- `-framework Foundation -lc++`(ORT が CoreML EP のために CoreML と Foundation を参照するので、システムフレームワークへのリンクが加わる)
 - `-install_name @rpath/piper_plus.framework/piper_plus`
 - `-Wl,-exported_symbol,_piper_plus_*`
 - `-mios-version-min=15.0` / `-mios-simulator-version-min=15.0`
 
 できたバイナリを、`Info.plist` と一緒に flat な `piper_plus.framework` に包み、`xcodebuild -create-xcframework` でまとめる。
 
-- 公開シンボルを `piper_plus_*` に絞る。静的 archive には visibility が効かないため、fmt / spdlog / OpenJTalk のシンボルがそのまま外に出てしまい、ORT など他の framework と衝突する恐れがあるからである。
+- 公開シンボルを `piper_plus_*` に絞る。静的 archive には visibility が効かないため、ORT / fmt / spdlog / OpenJTalk のシンボルがそのまま外に出てしまい、他のライブラリと衝突する恐れがあるからである。スパイクでは、`piper_plus_*` 以外の公開シンボルは 0 個だった。
 - `PiperNativeBindings` は、macOS / Windows と同じく `DynamicLibrary.open` で開く(iOS では `piper_plus.framework/piper_plus`)。
 
 代替案 1: Runner に静的リンクし、`DynamicLibrary.process()` で参照する。リンカが未参照のシンボルを削る恐れがあり、Runner のリンク設定(`-force_load`)を pbxproj に書く必要もある。irodori の D4 と同じ理由で採らない。
 代替案 2: upstream の CMake を書き換え、iOS でも SHARED でビルドする。パッチが大きくなり、upstream の「iOS は static」という方針とぶつかる。
 
-### D4: ONNX Runtime — CDN の xcframework を iOS の arm64 スライス 2 つに絞って作り直す
+### D4: ONNX Runtime — CDN の静的ライブラリを piper_plus に取り込み、単独では同梱しない
 
-CDN の zip を SHA-256 で検証して展開する。そのうえで次の 2 つを、`xcodebuild -create-xcframework` で `ios/Frameworks/onnxruntime.xcframework` にまとめ直す。
+CDN の zip を SHA-256 で検証して展開する。iOS の 2 スライスの静的ライブラリを `lipo -thin arm64` で arm64 だけにし、ヘッダと一緒に SDK ごとのディレクトリに置く。CMake にはそれを、upstream CI と同じ `ONNXRUNTIME_DIR` / `ONNXRUNTIME_LIB` / `ONNXRUNTIME_INCLUDE_DIR` で渡す。macOS スライスと x86_64 は捨てる。
 
-- `ios-arm64/onnxruntime.framework`(そのまま使う)
-- `ios-arm64_x86_64-simulator/onnxruntime.framework`(`lipo -thin arm64` で arm64 だけにする)
+配布物が静的ライブラリなので、ORT は D3 で piper_plus の dylib に静的にリンクする。`onnxruntime.xcframework` は作らず、同梱する framework は `piper_plus.framework` だけになる(ユーザ判断。ORT を使うのは piper_plus だけなので、分けておく利点が無い)。
 
-macOS スライスと x86_64 は捨てる。ビルド時に使う ORT のヘッダと framework も、この展開物から CMake に渡す。upstream CI と同じ `ONNXRUNTIME_*` 変数を使う。
+- 代替案 1: ORT の静的ライブラリを自前で動的 framework に包み、2 つの framework に分ける。包む作業が 2 倍になるだけで利点が無い。
+- 代替案 2: ORT を SPM(`onnxruntime-swift-package-manager`)で入れる。Flutter が生成する SPM の構成にパッケージを手で足すことになり、`ios-build-target` の「SPM は Flutter プラグイン由来のみ」という前提を崩す。
 
-- 成果物(実機と Simulator を合わせて約 65MB の見込み)は Git で管理しない。`ios/Frameworks/*.xcframework` を `.gitignore` に入れ、iOS で TTS を使う開発者が `scripts/build_piper_ios.sh` で各自ビルドする。macOS の dylib は Git で管理しているので前例とは異なるが、リポジトリの肥大を避けることを優先した(ユーザ判断)。同梱フェーズは xcframework が無ければ何もしないので、ビルドしていないチェックアウトでもビューアのビルドは壊れない。
-- 展開した ORT スライスの `Info.plist` から `MinimumOSVersion` を読む。Runner の deployment target(15.0)を超えていれば、Runner をその値に引き上げる(`ios-build-target` の最小 OS の要件)。
-- ORT の install name は `@rpath/onnxruntime.framework/onnxruntime` のまま使う。Runner の `LD_RUNPATH_SEARCH_PATHS` にある `@executable_path/Frameworks` から解決される。piper_plus の依存も同じ名前で解決される。
-
-代替案: ORT を SPM(`onnxruntime-swift-package-manager`)で入れる。Flutter が生成する SPM の構成にパッケージを手で足すことになり、`ios-build-target` の「SPM は Flutter プラグイン由来のみ」という前提を崩す。ビルド時に参照する ORT と実行時の ORT が別経路になる点も避けたい。
+- 成果物(実機と Simulator を合わせて約 60MB の見込み)は Git で管理しない。`ios/Frameworks/*.xcframework` を `.gitignore` に入れ、iOS で TTS を使う開発者が `scripts/build_piper_ios.sh` で各自ビルドする。macOS の dylib は Git で管理しているので前例とは異なるが、リポジトリの肥大を避けることを優先した(ユーザ判断)。同梱フェーズは xcframework が無ければ何もしないので、ビルドしていないチェックアウトでもビューアのビルドは壊れない。
+- ORT の最小 OS は 13.0 で、Runner の 15.0 を下回るので、deployment target を変える必要は無い。piper_plus.framework の最小 OS は 15.0 とする。
 
 ### D5: 同梱の仕組みは irodori の Run Script フェーズをそのまま取り込む
 
-`7cfb3573` と `5835525d` のフェーズ(`Embed Native Frameworks`)を取り込む。これらのコミットは `openspec/changes/irodori-ios-build/` や audiocpp 用のスクリプトにも触れている。そのため cherry-pick はせず、`git checkout <commit> -- <path>` で必要なファイルだけを取り込む。このフェーズはエンジンの名前を含まず、xcframework の `Info.plist` からスライスを選ぶので、2 つの xcframework に対してそのまま動く。
-
-- piper_plus は onnxruntime に依存するが、どちらも同じ `Frameworks/` に置かれ、`dlopen` 時に dyld が解決する。そのため同梱する順序は問わない。
+`7cfb3573` と `5835525d` のフェーズ(`Embed Native Frameworks`)を取り込む。これらのコミットは `openspec/changes/irodori-ios-build/` や audiocpp 用のスクリプトにも触れており、当時の pbxproj は main と異なる設定を含む可能性がある。そのため cherry-pick もファイルごとの checkout もせず、フェーズの定義だけを pbxproj に移す。このフェーズはエンジンの名前を含まず、xcframework の `Info.plist` からスライスを選ぶので、`piper_plus.xcframework` に対してそのまま動く。
 - deployment target のガードテスト(`4295a0b4`)も取り込む。ただし、テストが期待する値は 16.3 ではなく、現在の 15.0 に合わせる。`d8f4d9d0`(16.3 への引き上げ)は取り込まない。
 
 ### D6: 合成の確認は integration test で行い、モデルはアプリのダウンロード処理で取得する
@@ -188,7 +184,7 @@ D1 と同じ内容の PR を ayutaz/piper-plus の `dev` に出す。PR を出�
   - パッチあり: `piper_plus_phonemize("こんにちは、世界。")` は `lang=ja`、18 音素を返した。「こんにちは、世界。」(rms 0.136)と「多分。」(rms 0.202)はどちらも無音ではない音声になった。
   - パッチなし(対照): 音素は 0 個、合成結果は 0 サンプルだった。
 - **ライブラリ**: `-force_load` で包んだ dylib(ORT 込みで約 29MB)は、`piper_plus_*` 以外のシンボルを公開しなかった。`nm -u` には `popen` / `system` / `posix_spawn` 系のシンボルが無かった。
-- **ONNX Runtime について、D4 の前提が誤っていた**: Microsoft の CDN が配る 1.20.0 の `onnxruntime.framework` は、upstream の文書にある動的ライブラリではなかった。中身は静的ライブラリ(ar アーカイブ。`prelinked_objects.o` を 1 つ含む)で、`minos 13.0` だった。そのため、ORT を独立した動的 framework として同梱することはできない。スパイクでは piper_plus の dylib に静的にリンクした。この扱いは別途決める。
+- **ONNX Runtime について、D4 の前提が誤っていた**: Microsoft の CDN が配る 1.20.0 の `onnxruntime.framework` は、upstream の文書にある動的ライブラリではなかった。中身は静的ライブラリ(ar アーカイブ。`prelinked_objects.o` を 1 つ含む)で、`minos 13.0` だった。そのため、ORT を独立した動的 framework として同梱することはできない。piper_plus の dylib に静的にリンクする方式に改めた(D3 / D4、ユーザ判断)。
 
 ## Open Questions
 

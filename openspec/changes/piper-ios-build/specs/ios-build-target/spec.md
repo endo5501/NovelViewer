@@ -8,12 +8,12 @@ When `ios/Frameworks/` holds no xcframework, or none has a slice for the SDK bei
 The phase SHALL NOT take part in Swift Package Manager integration, and SHALL NOT introduce CocoaPods on iOS.
 
 #### Scenario: A device build embeds and signs the frameworks
-- **WHEN** `fvm flutter build ios` is run with `ios/Frameworks/piper_plus.xcframework` and `ios/Frameworks/onnxruntime.xcframework` present
-- **THEN** the build succeeds, `Runner.app/Frameworks/piper_plus.framework/piper_plus` and `Runner.app/Frameworks/onnxruntime.framework/onnxruntime` exist, and `codesign --verify` succeeds on both
+- **WHEN** `fvm flutter build ios` is run with `ios/Frameworks/piper_plus.xcframework` present
+- **THEN** the build succeeds, `Runner.app/Frameworks/piper_plus.framework/piper_plus` exists, and `codesign --verify` succeeds on it
 
 #### Scenario: A simulator build embeds the simulator slice
 - **WHEN** the app is built for the iOS Simulator with the xcframeworks present
-- **THEN** `Runner.app/Frameworks/` holds the simulator slice of each framework
+- **THEN** `Runner.app/Frameworks/` holds the simulator slice of each xcframework
 
 #### Scenario: A build without xcframeworks still succeeds
 - **WHEN** an iOS build is run with no xcframework under `ios/Frameworks/`

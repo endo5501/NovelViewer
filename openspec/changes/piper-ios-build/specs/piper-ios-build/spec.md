@@ -1,6 +1,6 @@
 ## Purpose
 
-iOS 向けの piper-plus と ONNX Runtime の作り方を定める。対象は次のとおり。iOS で日本語の音素化を有効にするパッチの適用方法と、そのパッチを廃止する条件。実機と Simulator の xcframework の構成。成果物の検証スクリプト。iOS 上で日本語合成が成り立つことを確かめる再実行可能なテスト。
+ONNX Runtime を含む iOS 向けの piper-plus の作り方を定める。対象は次のとおり。iOS で日本語の音素化を有効にするパッチの適用方法と、そのパッチを廃止する条件。実機と Simulator の xcframework の構成。成果物の検証スクリプト。iOS 上で日本語合成が成り立つことを確かめる再実行可能なテスト。
 
 ## ADDED Requirements
 
@@ -42,24 +42,24 @@ iOS 向けの piper-plus と ONNX Runtime の作り方を定める。対象は�
 - **WHEN** 実機スライスの piper_plus バイナリの未定義シンボルを確認する
 - **THEN** `_popen`、`_system`、`_posix_spawn`、`_fork`、`_execv` 系のシンボルが含まれない
 
-### Requirement: iOS ビルドスクリプトが piper_plus と ONNX Runtime の xcframework を生成する
+### Requirement: iOS ビルドスクリプトが ONNX Runtime を含む piper_plus の xcframework を生成する
 
-`scripts/build_piper_ios.sh` は、iOS 実機(`iphoneos`, arm64)と iOS Simulator(`iphonesimulator`, arm64)の2スライスを持つ `ios/Frameworks/piper_plus.xcframework` と `ios/Frameworks/onnxruntime.xcframework` を生成しなければならない (MUST)。各スライスは、バイナリと `Info.plist` を含む動的 framework(`piper_plus.framework` / `onnxruntime.framework`)でなければならない (MUST)。
+`scripts/build_piper_ios.sh` は、iOS 実機(`iphoneos`, arm64)と iOS Simulator(`iphonesimulator`, arm64)の2スライスを持つ `ios/Frameworks/piper_plus.xcframework` を生成しなければならない (MUST)。各スライスは、バイナリと `Info.plist` を含む動的 framework `piper_plus.framework` でなければならない (MUST)。
 
-ONNX Runtime は、piper-plus v2.0.2 が iOS 向けに使うバージョン(1.20.0)を Microsoft の公式配布から取得しなければならない (MUST)。取得したアーカイブは、スクリプトに記した SHA-256 と照合し、一致しなければ非ゼロで終了しなければならない (MUST)。
+ONNX Runtime は、piper-plus v2.0.2 が iOS 向けに使うバージョン(1.20.0)を Microsoft の公式配布から取得しなければならない (MUST)。iOS 向けの配布物は静的ライブラリなので、piper_plus のバイナリに静的にリンクしなければならず (MUST)、ONNX Runtime 単独の framework を生成・同梱してはならない (MUST NOT)。取得したアーカイブは、スクリプトに記した SHA-256 と照合し、一致しなければ非ゼロで終了しなければならない (MUST)。
 
 スクリプトは既存の xcframework を置き換え、古いスライスや iOS 以外のスライスを残してはならない (MUST NOT)。
 
 #### Scenario: 2つの xcframework が生成される
 - **WHEN** macOS 上で `scripts/build_piper_ios.sh` を実行する
-- **THEN** `ios/Frameworks/piper_plus.xcframework` と `ios/Frameworks/onnxruntime.xcframework` が生成され、それぞれ `ios-arm64` と `ios-arm64-simulator` の2スライスだけを含む
+- **THEN** `ios/Frameworks/piper_plus.xcframework` が生成され、`ios-arm64` と `ios-arm64-simulator` の2スライスだけを含み、`ios/Frameworks/` に ONNX Runtime 単独の xcframework は無い
 
 #### Scenario: 各スライスが arm64 の動的ライブラリである
-- **WHEN** 各スライスのバイナリを `lipo -info` と `otool -h` で確認する
+- **WHEN** 各スライスの piper_plus バイナリを `lipo -info` と `otool -h` で確認する
 - **THEN** アーキテクチャは arm64 のみで、ファイル種別は動的ライブラリである
 
 #### Scenario: framework の Info.plist が揃っている
-- **WHEN** 各スライスの framework の `Info.plist` を確認する
+- **WHEN** 各スライスの `piper_plus.framework/Info.plist` を確認する
 - **THEN** `CFBundleExecutable` がバイナリ名と一致し、`CFBundlePackageType` が `FMWK` で、`MinimumOSVersion` がバイナリの最小 OS バージョンと一致する
 
 #### Scenario: ONNX Runtime のアーカイブが改ざんされていたら止まる
@@ -72,13 +72,13 @@ ONNX Runtime は、piper-plus v2.0.2 が iOS 向けに使うバージョン(1.20
 
 ### Requirement: piper_plus framework の依存とシンボル
 
-piper_plus の各スライスは、実行時に iOS のシステムフレームワーク、システムライブラリ、`onnxruntime.framework` 以外に依存してはならない (MUST NOT)。`onnxruntime.framework` は `@rpath` で参照しなければならない (MUST)。自身の install name は `@rpath/piper_plus.framework/piper_plus` でなければならない (MUST)。
+piper_plus の各スライスは、実行時に iOS のシステムフレームワークとシステムライブラリ以外に依存してはならない (MUST NOT)。自身の install name は `@rpath/piper_plus.framework/piper_plus` でなければならない (MUST)。
 
-Dart FFI バインディングが参照する C API 関数は、外部公開シンボルとして含まれていなければならない (MUST)。C API 以外のシンボル(静的にリンクした fmt / spdlog / OpenJTalk の内部シンボル)は外部に公開してはならない (MUST NOT)。
+Dart FFI バインディングが参照する C API 関数は、外部公開シンボルとして含まれていなければならない (MUST)。C API 以外のシンボル(静的にリンクした ONNX Runtime / fmt / spdlog / OpenJTalk のシンボル)は外部に公開してはならない (MUST NOT)。
 
 #### Scenario: 依存の確認
 - **WHEN** 各スライスの piper_plus バイナリを `otool -L` で確認する
-- **THEN** 自身以外の依存は `/System/Library/` 配下、`/usr/lib/` 配下、`@rpath/onnxruntime.framework/onnxruntime` のいずれかである
+- **THEN** 自身以外の依存はすべて `/System/Library/` 配下か `/usr/lib/` 配下である
 
 #### Scenario: install name の確認
 - **WHEN** 各スライスの piper_plus バイナリを `otool -D` で確認する
