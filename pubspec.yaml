@@ -70,6 +70,7 @@ dependencies:
   # plugin itself only registers an implementation on iOS and macOS.
   foundation_models_llm:
     path: packages/foundation_models_llm
+  archive: ^4.5.2
 
 dev_dependencies:
   flutter_test:

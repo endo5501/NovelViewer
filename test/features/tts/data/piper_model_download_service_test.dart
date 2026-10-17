@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -193,6 +194,117 @@ void main() {
         ),
         isTrue,
       );
+    });
+  });
+
+  // The dictionary is extracted in-process: iOS cannot start `tar`, and the
+  // same code path runs on every platform. See spec: piper-tts-model-download.
+  group('downloadDictionary extracts in-process', () {
+    late String dicDir;
+
+    setUp(() {
+      dicDir = p.join(tempDir.path, 'models', 'piper', 'open_jtalk_dic');
+    });
+
+    /// A gzipped tar holding [entries] (path -> content), as the dictionary
+    /// release is packaged.
+    List<int> tarGz(Map<String, String> entries) {
+      final archive = Archive();
+      entries.forEach((name, content) {
+        archive.add(ArchiveFile.string(name, content));
+      });
+      return GZipEncoder().encodeBytes(TarEncoder().encodeBytes(archive));
+    }
+
+    PiperModelDownloadService serving(List<int> body) =>
+        PiperModelDownloadService(
+          client: MockClient.streaming((request, _) async {
+            return http.StreamedResponse(
+              Stream.value(body),
+              200,
+              contentLength: body.length,
+            );
+          }),
+        );
+
+    /// Every file under the temp directory, relative to it.
+    List<String> filesUnderTemp() => [
+      for (final f in tempDir.listSync(recursive: true).whereType<File>())
+        p.relative(f.path, from: tempDir.path),
+    ];
+
+    test('extracts the dictionary into open_jtalk_dic', () async {
+      final service = serving(
+        tarGz({
+          'open_jtalk_dic_utf_8-1.11/sys.dic': 'system dictionary',
+          'open_jtalk_dic_utf_8-1.11/char.bin': 'chars',
+        }),
+      );
+
+      await service.downloadDictionary(dicDir);
+
+      expect(
+        File(p.join(dicDir, 'sys.dic')).readAsStringSync(),
+        'system dictionary',
+      );
+      expect(File(p.join(dicDir, 'char.bin')).readAsStringSync(), 'chars');
+      expect(service.isDictionaryDownloaded(dicDir), isTrue);
+      // Neither the archive nor any staging directory is left beside it.
+      expect(
+        Directory(p.dirname(dicDir)).listSync().map((e) => p.basename(e.path)),
+        ['open_jtalk_dic'],
+      );
+    });
+
+    test('replaces a directory left without any .dic file', () async {
+      Directory(dicDir).createSync(recursive: true);
+      File(p.join(dicDir, 'char.bin')).writeAsStringSync('partial');
+      final service = serving(
+        tarGz({'open_jtalk_dic_utf_8-1.11/sys.dic': 'system dictionary'}),
+      );
+
+      await service.downloadDictionary(dicDir);
+
+      expect(File(p.join(dicDir, 'sys.dic')).existsSync(), isTrue);
+      expect(File(p.join(dicDir, 'char.bin')).existsSync(), isFalse);
+    });
+
+    for (final escaping in ['../escaped.txt', '/escaped.txt']) {
+      test('fails on an entry escaping the target ($escaping)', () async {
+        final service = serving(
+          tarGz({
+            'open_jtalk_dic_utf_8-1.11/sys.dic': 'system dictionary',
+            escaping: 'outside',
+          }),
+        );
+
+        await expectLater(service.downloadDictionary(dicDir), throwsException);
+
+        expect(Directory(dicDir).existsSync(), isFalse);
+        expect(
+          filesUnderTemp().where((f) => f.endsWith('escaped.txt')),
+          isEmpty,
+        );
+        expect(File('/escaped.txt').existsSync(), isFalse);
+      });
+    }
+
+    test('a corrupt archive leaves neither dictionary nor archive', () async {
+      final service = serving([1, 2, 3, 4, 5]);
+
+      await expectLater(service.downloadDictionary(dicDir), throwsA(anything));
+
+      expect(Directory(dicDir).existsSync(), isFalse);
+      expect(filesUnderTemp(), isEmpty);
+    });
+
+    test('an archive without the dictionary directory fails', () async {
+      final service = serving(tarGz({'README': 'nothing useful'}));
+
+      await expectLater(service.downloadDictionary(dicDir), throwsException);
+
+      expect(Directory(dicDir).existsSync(), isFalse);
+      expect(filesUnderTemp(), isEmpty);
     });
   });
 }
