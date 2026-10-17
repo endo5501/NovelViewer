@@ -471,6 +471,34 @@ void main() {
       await session.dispose();
     });
 
+    test('a load after the worker died still says why', () async {
+      final isolate = _FakeTtsIsolate();
+      final session = TtsSession(isolate: isolate);
+      await session.ensureModelLoaded(_qwen3());
+      isolate.emitWorkerDied('worker crashed: dlopen');
+      await Future.delayed(Duration.zero);
+
+      // A different config forces a reload, which takes the fast path.
+      expect(
+        await session.ensureModelLoaded(_qwen3(modelDir: '/other')),
+        isFalse,
+      );
+      expect(session.lastModelLoadError, contains('worker crashed: dlopen'));
+      await session.dispose();
+    });
+
+    test('a timed-out load says it timed out', () async {
+      final isolate = _FakeTtsIsolate()..blockModelLoad = true;
+      final session = TtsSession(
+        isolate: isolate,
+        modelLoadTimeout: const Duration(milliseconds: 50),
+      );
+
+      expect(await session.ensureModelLoaded(_qwen3()), isFalse);
+      expect(session.lastModelLoadError, contains('timed out'));
+      await session.dispose();
+    });
+
     test('a later load clears the previous load reason', () async {
       final isolate = _FakeTtsIsolate()..blockModelLoad = true;
       final session = TtsSession(isolate: isolate);
@@ -927,8 +955,8 @@ void main() {
   });
 }
 
-Qwen3EngineConfig _qwen3() => const Qwen3EngineConfig(
-  modelDir: '/q/m',
+Qwen3EngineConfig _qwen3({String modelDir = '/q/m'}) => Qwen3EngineConfig(
+  modelDir: modelDir,
   sampleRate: 24000,
   languageId: 2058,
   embeddingCacheDir: '/cache',
