@@ -17,7 +17,7 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `bash scripts/test/build_app_test.sh` - `build_app.sh` のテスト(スタブの fvm / git で実行し、実ビルドはしない)
  - `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test/build_app_test.ps1` - `build_app.bat` のテスト(windows。同上)
  - `swift test --package-path packages/foundation_models_llm/darwin/wire_code_tests` - オンデバイスLLMプラグインのエラー写像テスト(mac。プラグイン本体はFlutterビルド外で走らないため写像だけを独立パッケージで実行)
- - `fvm dart format .` - フォーマット実行(lib/とtest/が対象)
+ - `fvm dart format lib test` - フォーマット実行(`.` を指定すると third_party/piper-plus 同梱の Dart サンプルまで書き換えるため、lib/ と test/ に限定する)
  - `fvm flutter analyze` - リント実行
  - `fvm flutter pub get` - 依存パッケージ取得
  - `scripts/benchmark_tts.sh --model-dir <dir> --max-tokens 200` - TTSベンチマーク実行（結果はbenchmarks/に保存）
@@ -38,7 +38,7 @@ OpenSpecのスキルでtasks.mdを作成する際、最終確認のため以下�
 
 - [ ] X.1 code-reviewスキルを使用してコードレビューを実施
 - [ ] X.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] X.3 `fvm dart format .`でフォーマットを実行
+- [ ] X.3 `fvm dart format lib test`でフォーマットを実行
 - [ ] X.4 `fvm flutter analyze`でリントを実行
 - [ ] X.5 `fvm flutter test`でテストを実行
 ```
