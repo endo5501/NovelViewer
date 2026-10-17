@@ -40,6 +40,14 @@
 - [x] 3.3 `lib/features/tts/data/piper_tts_engine.dart` を design D2〜D6 に従って書き換え、テストは変更しないまま 3.2 のテストをすべて通す。公開 API(`loadModel` / `synthesize` / `setLengthScale` / `setNoiseScale` / `setNoiseW` / `isLoaded` / `dispose`)のシグネチャが変わっていないことを、`tts_isolate.dart` に変更なしで `fvm flutter analyze` が通ることで確認する(2026-10-17: 実物の dylib と eb9b882 モデルを使った一時テストで、C API 経由の合成(4.47 秒、CLI と一致)、lengthScale の反映、ロード失敗時のネイティブエラー伝搬も確認済み)
 - [x] 3.4 `lib/features/tts/data/piper_model_download_service.dart` のピン留め理由コメントを更新する。「submodule pinned 2026-03-23 の C++ ランナーが `speaker_embedding_mask` を供給しない」という記述を、「ランナーは v2.0.2 に更新済み。eb9b882 は互換性を実測で確認済みのため据え置き、モデル更新は別 change で扱う」という趣旨に書き換える。既存の `piper_model_download_service_test.dart` が引き続き通ることを確認する
 
+## 3A. モデルのピン留め更新(実装中に追加。design D10)
+
+- [ ] 3A.1 `test/features/tts/data/piper_model_download_service_test.dart` に、次の 2 つのテストを先に入れて RED を確認し、コミットする
+  - ピン留めの SHA が `36b59c825c36bd386b8960cf3f604382f52f2a87` であることを固定するテスト(既存の eb9b882 を固定しているテストの期待値を更新する)
+  - 完了マーカーの内容が eb9b882 の場合に `areModelsDownloaded()` が `false` を返すテスト(spec: 旧リビジョンで取得済みのモデルは再取得対象になる)
+- [ ] 3A.2 `lib/features/tts/data/piper_model_download_service.dart` の `modelRevision` と、ピン留め理由のコメントを更新して 3A.1 を通す。コメントには EOS trim との関係を書く。`fvm flutter test test/features/tts/data/piper_model_download_service_test.dart` が通ることを確認する
+- [ ] 3A.3 36b59c8 から取得したモデルを、実物の `libpiper_plus.dylib` と `PiperTtsEngine` で合成する(一時テスト。コミットしない)。「彼はそういった」の最終音節のエネルギーが v1.8 + eb9b882 と同じ程度に残り、末尾が欠けないことを確認する
+
 ## 4. Windows ネイティブビルドと CI
 
 - [ ] 4.1 `scripts/build_piper_windows.bat` を design D9 に従って更新する(`PIPER_PLUS_BUILD_SHARED=ON`、`--target piper_plus`、`piper_plus.dll` のコピー)。Windows 機で実行し、`build\windows\x64\runner\Release\` に `piper_plus.dll` と `onnxruntime.dll` が置かれることを確認する
@@ -53,19 +61,19 @@
 
 ## 6. 統合確認
 
-- [ ] 6.1 macOS でアプリを起動し、ピン留め済みモデル(eb9b882)で Piper による日本語の読み上げを手動確認する。確認する内容は次の 3 点
+- [ ] 6.1 macOS でアプリを起動し、Piper モデルの再ダウンロードを促されることを確認して再ダウンロードする。そのうえで、ピン留め済みモデル(36b59c8)で Piper による日本語の読み上げを手動確認する(2026-10-17 の初回確認で、eb9b882 では文末の音節が欠落したため D10 でモデルを更新した)。確認する内容は次の 3 点
   - 合成エラーが出ない
   - 速度・抑揚スライダの変更が音声に反映される
   - 生成済み音声の保存と再生ができる
   - 英語交じりの文(例:「今日はGitHubでcodeを書いた。」)を v1.8 と同じ程度に扱える(英単語は CMU 辞書がないため読み飛ばされるのが既存の挙動)
 
-  v1.8 との末尾の音の違いに違和感がないかを聴いて判断し、結果を記録する
-- [x] 6.2 `scripts/build_app.sh macos` の本番ビルドの後に `scripts/test/verify_macos_bundle.sh` を実行し、同梱集合が spec(macos-native-library-embedding)どおりであることを確認する
+  文末の音節(例:「彼はそういった」の「た」)が欠けないことを聴いて確かめ、結果を記録する
+- [ ] 6.2 `scripts/build_app.sh macos` の本番ビルドの後に `scripts/test/verify_macos_bundle.sh` を実行し、同梱集合が spec(macos-native-library-embedding)どおりであることを確認する
 
 ## 7. 最終確認
 
-- [x] 7.1 code-reviewスキルを使用してコードレビューを実施
-- [x] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [x] 7.3 `fvm dart format lib test`でフォーマットを実行
-- [x] 7.4 `fvm flutter analyze`でリントを実行
-- [x] 7.5 `fvm flutter test`でテストを実行
+- [ ] 7.1 code-reviewスキルを使用してコードレビューを実施
+- [ ] 7.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [ ] 7.3 `fvm dart format lib test`でフォーマットを実行
+- [ ] 7.4 `fvm flutter analyze`でリントを実行
+- [ ] 7.5 `fvm flutter test`でテストを実行

@@ -13,11 +13,11 @@ Piper TTS エンジンは、piper-plus v1.8.0 に独自の C API ラッパー 1 
 - 合成言語は、従来の v1.8 と同じく日本語(モデルの `language_id_map` にある `ja`)を明示的に指定する。v2 の既定である言語自動判定は使わない。
 - ビルドスクリプト(`scripts/build_piper_macos.sh` / `scripts/build_piper_windows.bat`)、リリースワークフロー(`.github/workflows/release.yml`)、同梱検証スクリプト(`scripts/test/verify_macos_bundle.sh`)を新しいライブラリ名とビルドオプションに合わせる。
 - 依存する ONNX Runtime は本家 CMake の指定どおり 1.14.1 から 1.20.0 に上がる。
-- Piper モデルは現行のピン留めリビジョン `eb9b882` のまま変えない。v2.0.2 ランタイムで合成できることは探索段階で実測確認済み。
+- Piper モデルのピン留めリビジョンを `eb9b882`(2026-03-18)から `36b59c8`(2026-06-13、main 直下の `tsukuyomi-chan-6lang-fp16`)に更新する。当初はモデルを据え置く予定だった。しかし実機確認で、v2.0.2 ランタイムの EOS trim(Issue #499)が旧モデルの最終母音を削ることが分かった(「彼はそういった」→「かれはそういっ」)。そのため、ランタイムの前提に合うモデルへの更新をこの change に取り込む。ファイル名と取得パスは変わらない。既存ユーザーは、完了マーカーの不一致により再ダウンロードを促される。
 
 ### 非ゴール(別の change で扱う)
 
-- Piper モデルの更新(e22f5fe 以降、36b59c8、zs-v1)
+- zs-v1 モデルへの更新(パス・ファイル名・推論の既定値が変わるため)
 - 本家 C API のストリーミング合成(`piper_plus_synth_start/next`、callback)の採用
 - 本家 C API のユーザー辞書(`piper_plus_load_custom_dict` 等)の採用
 - iPad(iOS)での Piper 対応
@@ -33,12 +33,13 @@ Piper TTS エンジンは、piper-plus v1.8.0 に独自の C API ラッパー 1 
 - `piper-tts-native-engine`: ネイティブライブラリの出所(フォーク → 本家 v2.0.2)、ライブラリ名、C API(独自 `piper_tts_*` → 公式 `piper_plus_*`)、合成バッファの所有権、合成パラメータの受け渡し方、合成言語の指定方法についての要件を変える。
 - `macos-native-library-embedding`: 同梱される dylib の期待集合のうち、`libpiper_tts_ffi.dylib` を `libpiper_plus.dylib` に置き換える。
 - `ci-tts-dll-build`: CI でビルド・検証する Piper DLL を `piper_tts_ffi.dll` から `piper_plus.dll` に置き換える。
+- `piper-tts-model-download`: モデルとランナーの「互換」に、ランナーの後処理で末尾音節が欠落しないことを含める。旧リビジョンで取得済みのモデルが再取得の対象になることを明記する。
 - `github-actions-release`: リリース ZIP に含まれる DLL のうち、`piper_tts_ffi.dll` を `piper_plus.dll` に置き換える。
 
 ## Impact
 
-- **コード**: `lib/features/tts/data/piper_native_bindings.dart`(全面的に書き換え)、`lib/features/tts/data/piper_tts_engine.dart`(内部実装)、`test/features/tts/data/piper_tts_engine_test.dart`(モックの更新)。`lib/features/tts/data/piper_model_download_service.dart` は、ピン留め理由を書いたコメントのうちランナーに触れている記述だけを更新する。
+- **コード**: `lib/features/tts/data/piper_native_bindings.dart`(全面的に書き換え)、`lib/features/tts/data/piper_tts_engine.dart`(内部実装)、`test/features/tts/data/piper_tts_engine_test.dart`(モックの更新)。`lib/features/tts/data/piper_model_download_service.dart` はピン留めリビジョンとその理由のコメントを更新し、`test/features/tts/data/piper_model_download_service_test.dart` もそれに合わせる。
 - **ビルド/CI**: `.gitmodules`、`third_party/piper-plus` サブモジュール、`scripts/build_piper_macos.sh`、`scripts/build_piper_windows.bat`、`scripts/test/verify_macos_bundle.sh`、`.github/workflows/release.yml`、README のビルド手順。
 - **依存関係**: piper-plus 1.8.0 → 2.0.2、ONNX Runtime 1.14.1 → 1.20.0。
-- **ユーザーへの影響**: 同じモデルでも、末尾の EOS trim 修正などにより合成音声の末尾や長さが少し変わる。設定値(lengthScale / noiseScale / noiseW)とダウンロード済みのモデル・辞書はそのまま使える。
+- **ユーザーへの影響**: Piper の声質が新しいモデル(MB-iSTFT-VITS2 デコーダ)のものに変わる。既存ユーザーは Piper モデル(約 40MB)の再ダウンロードが必要になる(アプリが促す)。設定値(lengthScale / noiseScale / noiseW)と OpenJTalk 辞書はそのまま使える。
 - **開発環境**: 既存の `third_party/piper-plus/build` は古い CMake キャッシュを含むため、クリーンビルドが必要になる。

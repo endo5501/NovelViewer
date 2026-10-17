@@ -14,6 +14,7 @@
   - 共有ライブラリは `PIPER_PLUS_BUILD_SHARED=ON` のときだけビルドされる。出力名は `piper_plus` で、macOS では VERSION/SOVERSION が付く(`libpiper_plus.2.0.2.dylib` / `libpiper_plus.1.dylib` のシンボリックリンク群)。
 - **ONNX Runtime**: 本家 CMake が 1.20.0 を取得する(v1.8 は 1.14.1)。macOS では `build/ort/lib`、Windows では `build/onnxruntime/onnxruntime-win-*` に置かれる。
 - **モデル互換性(実測済み)**: ピン留め中のモデル(eb9b882)の ONNX 入力は `input / input_lengths / scales / lid / prosody_features` である。v2.0.2 はセッションの入力名を見て送る入力を決める。v2.0.2 CLI で日本語文を合成したところ、エラーも音素欠落の警告も出なかった。
+- **EOS trim と旧モデル(実装中に判明)**: v2.0.2 は合成のたびに文末の EOS 区間(`ceil(durations[-1])` フレーム)を削る(`trim_helpers.hpp`、Issue #499、`TRIM_EOS_MAX_FRAMES = 0` の定数で、無効化する設定はない)。旧モデル eb9b882 は最終母音の後半を EOS 区間で生成するため、母音が削られる。実測では「彼はそういった」の最後の「た」が、v1.8 の約 100ms から約 40ms に短くなった。スクラッチ環境で trim を無効にすると v1.8 と同じ長さ(0.931 秒)に戻ることも確かめた。新しいモデル(36b59c8 / zs-v1)では、trim がかかっても最終音節は欠けない。
 - **英語・中国語の音素化辞書**(`cmudict_data.json` / `pinyin_*.json`): v1.8 も v2.0.2 も、実行時にモデルのディレクトリ → 実行ファイルからの相対パス → 環境変数の順で探す。アプリはどちらも同梱していないため、英単語の部分は v1.8 でも v2.0.2 でも読み飛ばされる(実測: 「今日はGitHubでcodeを書いた。Hello world!」で、両版とも英語部分がほぼ無音)。これは移行前からある制約で、この change では変えない。言語 ID に `ja` を明示しても、v2.0.2 は文字種による区間分割を止めない(`language_id` を使うのは、ラテン系言語の既定を選ぶときだけ)。
 - **OpenJTalk 辞書の自動ダウンロード**: v1.8 も v2.0.2 も、辞書が見つからないと自動でダウンロードしようとする(`PIPER_PLUS_AUTO_DOWNLOAD_DICT=0` で無効化)。アプリは取得済みを検証した `dict_dir` を必ず渡すので、この経路には入らない。挙動は移行前と同じ。
 - **macOS への同梱**: Xcode の Embed フェーズは `macos/Frameworks/*.dylib` をグロブで丸ごと同梱する。そのため、Frameworks に置いたファイルがそのままバンドルの中身になる。
@@ -103,11 +104,20 @@
 
 `-DPIPER_PLUS_BUILD_SHARED=ON --target piper_plus` に変え、`build\Release\piper_plus.dll`(見つからなければ `build\piper_plus.dll`)を runner の出力ディレクトリへコピーする。ONNX Runtime DLL の探索は今の再帰検索のままでよい。`release.yml` の DLL 存在検証と、ONNX Runtime のライセンスを探すグロブ(`onnxruntime-win-*`)は v2 のディレクトリ構成で通るかを確認し、必要なら直す。
 
+### D10. モデルのピン留めを 36b59c8 に更新する(実装中にユーザーと決定)
+
+EOS trim はランナーの固定の後処理で、C API からは変えられない。旧モデルを使い続けるには、本家にパッチを当てる(フォークに戻る)か、本家に設定の追加を依頼するしかない。そこで、ランナーが想定しているモデルの側を合わせる。
+
+- 採用: `36b59c825c36bd386b8960cf3f604382f52f2a87`(2026-06-13)。MB-iSTFT-VITS2 デコーダで、`phoneme_id_map` の PUA 修正後の版。ファイル名(`tsukuyomi-chan-6lang-fp16.onnx`)と config の取得パス(リポジトリ直下の `config.json`)は eb9b882 と同じなので、変更は `modelRevision` の値だけで済む。config の推論既定値(0.667 / 0.8)もアプリの設定の既定値と同じ。
+- 他の案 A: zs-v1(2026-10-14)。パスとファイル名が変わり(`releases/zs-v1/tsukuyomi.onnx`)、推論の既定値も 0.4 / 0.5 に変わる。そのためダウンロード処理と設定の初期値まで見直す必要があり、quality も `experimental` なので見送る。
+- 他の案 B: 本家に、EOS trim を無効にするオプションの追加を依頼する。取り込まれるまで移行が止まるので見送る。
+- 既存ユーザーへの影響: 完了マーカーには eb9b882 が記録されているので、`areModelsDownloaded()` が不一致と判定する。アプリは読み上げ開始時と設定画面で再ダウンロードを促す(既存の仕組みで、追加の実装は不要)。
+
 ## Risks / Trade-offs
 
 - [C API 経由の合成結果が CLI 経由と違う可能性がある(探索の実測は CLI で行った)] → `piper_plus_synthesize` は内部で同じ `textToAudioFloat` を通る。とはいえ実装タスクの中で、C API 経由(アプリ実機)で旧モデルが合成できることを手動確認する手順を設ける。
 - [英単語を含む文で、v1.8 と読み飛ばし方が変わる可能性がある(どちらも CMU 辞書なしで動く)] → 統合確認で英語交じりの文を v1.8 と聴き比べる。CMU 辞書の同梱は別の change の候補とする。
-- [合成音声の末尾や長さが v1.8 と少し変わる(EOS trim 修正、本家の推論改善)] → 仕様どおりの変化として受け入れる。実機確認で、聴いて違和感がないかを判断する。
+- [モデル更新で Piper の声質が変わる] → ユーザーが聴き比べたうえで 36b59c8 を選んだ。統合確認で、日本語の読み上げを改めて聴いて確認する。
 - [ONNX Runtime 1.20.0 で macOS の最低 OS バージョン要件が上がる可能性がある] → ビルド後に `otool -l` で `LC_BUILD_VERSION` の minos を確認し、アプリの deployment target(macOS)を超えていないかを見る。
 - [サブモジュールの URL 変更で、既存の clone の `.git/config` に旧 URL が残る] → `git submodule sync --recursive` の実行を README のビルド手順と tasks に入れる。
 - [既存の `third_party/piper-plus/build` の CMake キャッシュが新しいソースツリーと合わない] → ビルドスクリプトは既存の build ディレクトリを使い回す作りである。そのため移行時は build ディレクトリを削除して作り直すよう tasks で明示する。スクリプト側でキャッシュの食い違いを検出する仕組みは入れない(1 回限りの移行のため)。
