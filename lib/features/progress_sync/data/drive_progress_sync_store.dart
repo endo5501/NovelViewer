@@ -98,15 +98,16 @@ class DriveProgressSyncStore implements ProgressSyncStore {
   Future<bool> _update(String id, String body) async {
     try {
       await _send(
-        () => http.Request(
-            'PATCH',
-            _upload.replace(
-              path: '${_upload.path}/$id',
-              queryParameters: {'uploadType': 'media'},
-            ),
-          )
-          ..headers['content-type'] = 'application/json; charset=utf-8'
-          ..body = body,
+        () =>
+            http.Request(
+                'PATCH',
+                _upload.replace(
+                  path: '${_upload.path}/$id',
+                  queryParameters: {'uploadType': 'media'},
+                ),
+              )
+              ..headers['content-type'] = 'application/json; charset=utf-8'
+              ..body = body,
       );
       return true;
     } on ProgressSyncHttpException catch (e) {
@@ -130,12 +131,13 @@ class DriveProgressSyncStore implements ProgressSyncStore {
         '$body\r\n'
         '--$boundary--';
     final response = await _send(
-      () => http.Request(
-          'POST',
-          _upload.replace(queryParameters: {'uploadType': 'multipart'}),
-        )
-        ..headers['content-type'] = 'multipart/related; boundary=$boundary'
-        ..body = multipart,
+      () =>
+          http.Request(
+              'POST',
+              _upload.replace(queryParameters: {'uploadType': 'multipart'}),
+            )
+            ..headers['content-type'] = 'multipart/related; boundary=$boundary'
+            ..body = multipart,
     );
     return (jsonDecode(response.body) as Map<String, dynamic>)['id'] as String;
   }

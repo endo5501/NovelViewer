@@ -254,7 +254,10 @@ void main() {
       final decision = decideOnEntry(
         local: null,
         currentOwn: null,
-        remote: [_remote(_rec(3, readAt: _t1), device: 'mac'), newest],
+        remote: [
+          _remote(_rec(3, readAt: _t1), device: 'mac'),
+          newest,
+        ],
         handled: null,
         folderFiles: files,
       );

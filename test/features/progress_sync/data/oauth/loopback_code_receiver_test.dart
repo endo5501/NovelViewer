@@ -53,10 +53,7 @@ void main() {
     });
 
     test('each pair is different', () {
-      expect(
-        PkcePair.generate().verifier,
-        isNot(PkcePair.generate().verifier),
-      );
+      expect(PkcePair.generate().verifier, isNot(PkcePair.generate().verifier));
     });
   });
 
@@ -86,7 +83,9 @@ void main() {
   group('LoopbackCodeReceiver', () {
     test('returns the code the browser hands back on loopback', () async {
       final receiver = LoopbackCodeReceiver(
-        openBrowser: _browserReplying((state) => {'code': 'c0de', 'state': state}),
+        openBrowser: _browserReplying(
+          (state) => {'code': 'c0de', 'state': state},
+        ),
       );
 
       final result = await receiver.obtainCode(
@@ -101,7 +100,9 @@ void main() {
 
     test('refuses a redirect whose state does not match', () async {
       final receiver = LoopbackCodeReceiver(
-        openBrowser: _browserReplying((_) => {'code': 'c0de', 'state': 'other'}),
+        openBrowser: _browserReplying(
+          (_) => {'code': 'c0de', 'state': 'other'},
+        ),
       );
 
       expect(

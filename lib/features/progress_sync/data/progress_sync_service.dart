@@ -10,6 +10,7 @@ import '../domain/sync_progress_record.dart';
 import '../domain/sync_rules.dart';
 import 'progress_sync_repository.dart';
 import 'progress_sync_store.dart';
+import 'progress_sync_runner.dart';
 
 final _log = Logger('progress_sync');
 
@@ -30,7 +31,7 @@ class SyncRunStatus {
 /// Runs pulls and pushes one at a time (design D7). A request made while a
 /// run is in flight joins the next run, so a burst of triggers costs one
 /// extra run, not one each.
-class ProgressSyncService {
+class ProgressSyncService implements ProgressSyncRunner {
   final bool Function() _isAvailable;
   final bool Function() _isSignedIn;
   final ProgressSyncStore _store;
@@ -80,12 +81,15 @@ class ProgressSyncService {
   Stream<void> get pulled => _pulled.stream;
 
   /// Publishes this device's progress.
+  @override
   Future<void> push() => _request(push: true);
 
   /// Fetches the other devices' progress.
+  @override
   Future<void> pull() => _request(pull: true);
 
   /// The settings screen's "sync now": push, then pull.
+  @override
   Future<void> syncNow() => _request(push: true, pull: true);
 
   void dispose() {

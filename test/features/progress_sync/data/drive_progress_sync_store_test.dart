@@ -105,10 +105,16 @@ void main() {
       expect(devices.map((d) => d.deviceId).toSet(), {'win', 'pad'});
       final list = requests.first;
       expect(list.url.queryParameters['spaces'], 'appDataFolder');
-      expect(list.url.queryParameters['q'], contains("name contains 'device-'"));
+      expect(
+        list.url.queryParameters['q'],
+        contains("name contains 'device-'"),
+      );
       expect(list.headers['authorization'], 'Bearer token-1');
       final reads = requests.skip(1);
-      expect(reads.every((r) => r.url.queryParameters['alt'] == 'media'), isTrue);
+      expect(
+        reads.every((r) => r.url.queryParameters['alt'] == 'media'),
+        isTrue,
+      );
     });
 
     test('follows the next page of the listing', () async {
@@ -211,7 +217,10 @@ void main() {
       await store.writeOwn(_device('self'));
 
       final search = requests[0];
-      expect(search.url.queryParameters['q'], contains("name = 'device-self.json'"));
+      expect(
+        search.url.queryParameters['q'],
+        contains("name = 'device-self.json'"),
+      );
       final create = requests[1];
       expect(create.method, 'POST');
       expect(create.url.path, '/upload/drive/v3/files');
@@ -233,10 +242,7 @@ void main() {
       expect(update.method, 'PATCH');
       expect(update.url.path, '/upload/drive/v3/files/known');
       expect(update.url.queryParameters['uploadType'], 'media');
-      expect(
-        decodeDeviceProgress(update.body).records.single.episode,
-        6,
-      );
+      expect(decodeDeviceProgress(update.body).records.single.episode, 6);
     });
 
     test('finds the file by name when the remembered one is gone', () async {
@@ -257,14 +263,11 @@ void main() {
 
       await store.writeOwn(_device('self'));
 
-      expect(
-        requests.map((r) => '${r.method} ${r.url.path}'),
-        [
-          'PATCH /upload/drive/v3/files/stale',
-          'GET /drive/v3/files',
-          'PATCH /upload/drive/v3/files/found',
-        ],
-      );
+      expect(requests.map((r) => '${r.method} ${r.url.path}'), [
+        'PATCH /upload/drive/v3/files/stale',
+        'GET /drive/v3/files',
+        'PATCH /upload/drive/v3/files/found',
+      ]);
       expect(ids.id, 'found');
     });
   });

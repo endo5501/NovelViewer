@@ -67,7 +67,7 @@ void main() {
   });
 
   test('a build without injected values has no sync', () {
-    expect(OAuthClientConfig.fromEnvironment().isEmpty, isTrue);
+    expect(const OAuthClientConfig.fromEnvironment().isEmpty, isTrue);
   });
 
   group('providers', () {

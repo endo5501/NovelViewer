@@ -118,7 +118,10 @@ void main() {
         pkceChallengeOf(verifier),
         reason: 'the verifier must belong to the challenge that was sent',
       );
-      expect(auth.state.value, const SyncAccountState.signedIn('reader@example.com'));
+      expect(
+        auth.state.value,
+        const SyncAccountState.signedIn('reader@example.com'),
+      );
       expect(credentials.stored!.refreshToken, 'rt-1');
       expect(credentials.stored!.email, 'reader@example.com');
       expect(await auth.accessToken(), 'at-1');
@@ -179,7 +182,10 @@ void main() {
       final auth = signedInAuth((_) async => _json({}));
       await auth.load();
 
-      expect(auth.state.value, const SyncAccountState.signedIn('reader@example.com'));
+      expect(
+        auth.state.value,
+        const SyncAccountState.signedIn('reader@example.com'),
+      );
     });
 
     test('refreshes when no access token is held', () async {
@@ -227,10 +233,7 @@ void main() {
       );
       await auth.load();
 
-      await expectLater(
-        auth.accessToken(),
-        throwsA(isA<SyncReauthRequired>()),
-      );
+      await expectLater(auth.accessToken(), throwsA(isA<SyncReauthRequired>()));
       expect(
         auth.state.value,
         const SyncAccountState.needsReauth('reader@example.com'),

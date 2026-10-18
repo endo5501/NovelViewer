@@ -173,27 +173,30 @@ void main() {
     });
   });
 
-  test('clearAll empties every sync table but keeps reading progress', () async {
-    final progress = ReadingProgressRepository(novelDatabase);
-    await progress.upsert(novelId: 'narou_a', fileName: '005.txt');
-    await repository.replaceRemote(
-      selfDeviceId: 'self',
-      devices: [
-        DeviceProgress(
-          deviceId: 'win',
-          deviceName: 'Windows',
-          records: [_record('narou_a')],
-        ),
-      ],
-    );
-    await repository.replaceOwn([_record('narou_a')]);
-    await repository.saveHandled('narou_a', DateTime.utc(2026, 10, 18));
+  test(
+    'clearAll empties every sync table but keeps reading progress',
+    () async {
+      final progress = ReadingProgressRepository(novelDatabase);
+      await progress.upsert(novelId: 'narou_a', fileName: '005.txt');
+      await repository.replaceRemote(
+        selfDeviceId: 'self',
+        devices: [
+          DeviceProgress(
+            deviceId: 'win',
+            deviceName: 'Windows',
+            records: [_record('narou_a')],
+          ),
+        ],
+      );
+      await repository.replaceOwn([_record('narou_a')]);
+      await repository.saveHandled('narou_a', DateTime.utc(2026, 10, 18));
 
-    await repository.clearAll();
+      await repository.clearAll();
 
-    expect(await repository.findRemoteByNovel('narou_a'), isEmpty);
-    expect(await repository.findAllOwn(), isEmpty);
-    expect(await repository.findHandled('narou_a'), isNull);
-    expect(await progress.findByNovelId('narou_a'), isNotNull);
-  });
+      expect(await repository.findRemoteByNovel('narou_a'), isEmpty);
+      expect(await repository.findAllOwn(), isEmpty);
+      expect(await repository.findHandled('narou_a'), isNull);
+      expect(await progress.findByNovelId('narou_a'), isNotNull);
+    },
+  );
 }

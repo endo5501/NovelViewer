@@ -259,10 +259,7 @@ void main() {
 
       expect(sync.status.value.lastError, contains('offline'));
       expect(sync.status.value.lastSuccessAt, isNull);
-      expect(
-        records.where((r) => r.level == Level.WARNING),
-        isNotEmpty,
-      );
+      expect(records.where((r) => r.level == Level.WARNING), isNotEmpty);
     });
 
     test('a later success clears the shown failure', () async {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
+import 'package:novel_viewer/features/progress_sync/providers/progress_sync_config_providers.dart';
+import 'package:novel_viewer/features/progress_sync/providers/progress_sync_providers.dart';
 import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 import 'package:novel_viewer/features/reading_progress/providers/reading_position_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
@@ -29,6 +31,13 @@ class NovelViewerApp extends ConsumerWidget {
     ref.read(readingProgressAutoOpenListenerProvider);
     ref.read(readingPositionLifecycleProvider);
     ref.read(readingProgressStartupProvider);
+    // Progress sync exists only in a build that carries the OAuth client
+    // values; without them nothing of it is constructed.
+    if (ref.read(progressSyncAvailableProvider)) {
+      ref.read(progressSyncLifecycleProvider);
+      ref.read(progressSyncLeaveNovelListenerProvider);
+      ref.read(progressSyncStartupProvider);
+    }
 
     return MaterialApp(
       title: 'NovelViewer',
