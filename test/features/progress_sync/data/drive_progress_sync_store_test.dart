@@ -229,6 +229,61 @@ void main() {
     });
   });
 
+  test('two devices writing in turn keep each other\'s records', () async {
+    // A small in-memory appDataFolder shared by both devices' stores.
+    final drive = <String, ({String name, String body})>{};
+    var nextId = 0;
+    Future<http.Response> serve(http.Request request) async {
+      final path = request.url.path;
+      if (request.method == 'GET' && path == '/drive/v3/files') {
+        final q = request.url.queryParameters['q']!;
+        final exact = RegExp(r"name = '([^']+)'").firstMatch(q)?.group(1);
+        return _json({
+          'files': [
+            for (final MapEntry(:key, :value) in drive.entries)
+              if (exact == null || value.name == exact)
+                {'id': key, 'name': value.name},
+          ],
+        });
+      }
+      if (request.method == 'GET') {
+        return http.Response.bytes(
+          utf8.encode(drive[request.url.pathSegments.last]!.body),
+          200,
+        );
+      }
+      if (request.method == 'POST') {
+        final name = RegExp(r'"name":"([^"]+)"').firstMatch(request.body)!;
+        final body = request.body.split('\r\n\r\n')[2].split('\r\n--')[0];
+        final id = 'f${nextId++}';
+        drive[id] = (name: name.group(1)!, body: body);
+        return _json({'id': id});
+      }
+      final id = request.url.pathSegments.last;
+      drive[id] = (name: drive[id]!.name, body: request.body);
+      return _json({'id': id});
+    }
+
+    DriveProgressSyncStore storeFor() => DriveProgressSyncStore(
+      client: MockClient(serve),
+      tokens: tokens,
+      fileIds: _MemoryIds(),
+    );
+    final deviceA = storeFor();
+    final deviceB = storeFor();
+
+    await deviceA.writeOwn(_device('a', episode: 1));
+    await deviceB.writeOwn(_device('b', episode: 2));
+    await deviceA.writeOwn(_device('a', episode: 3));
+
+    final devices = await deviceA.fetchAll();
+    expect(
+      {for (final d in devices) d.deviceId: d.records.single.episode},
+      {'a': 3, 'b': 2},
+    );
+    expect(drive, hasLength(2));
+  });
+
   group('writeOwn', () {
     test('creates the file in appDataFolder the first time', () async {
       final store = storeWith((request) async {
