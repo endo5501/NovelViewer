@@ -80,7 +80,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('progressSyncStartupProvider', () {
-    test('restores the account and pulls when signed in', () async {
+    test('restores the account, then pushes and pulls when signed in', () async {
       final runner = _RecordingRunner();
       final credentials = _MemoryCredentials()
         ..stored = const StoredCredentials(
@@ -99,7 +99,9 @@ void main() {
       await container.read(progressSyncStartupProvider.future);
 
       expect(auth.state.value.status, SyncAccountStatus.signedIn);
-      expect(runner.calls, ['pull']);
+      // A push the last run made on its way out may have been cut short;
+      // nothing else would send it again until the reader leaves a novel.
+      expect(runner.calls, ['syncNow']);
     });
 
     test('does not pull while signed out', () async {

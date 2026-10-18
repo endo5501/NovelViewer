@@ -114,13 +114,16 @@ Future<String?> findNovelFolder(String? libraryRoot, String folderName) async {
   return matches.length == 1 ? matches.single : null;
 }
 
-/// Restores the account a previous run signed in with, then pulls.
+/// Restores the account a previous run signed in with, then pushes and
+/// pulls. The push resends what the last run's exit push may not have
+/// delivered (an exit or a suspension can cut it short); when nothing changed
+/// it uploads nothing.
 final progressSyncStartupProvider = FutureProvider<void>((ref) async {
   final auth = ref.read(progressSyncAuthProvider);
   if (auth == null) return;
   await auth.load();
   if (auth.state.value.status != SyncAccountStatus.signedIn) return;
-  await ref.read(progressSyncRunnerProvider).pull();
+  await ref.read(progressSyncRunnerProvider).syncNow();
 });
 
 /// Pulls and pushes on the app's lifecycle for as long as it is read.

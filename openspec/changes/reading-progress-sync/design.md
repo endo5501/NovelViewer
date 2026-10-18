@@ -124,7 +124,7 @@
 - `ProgressSyncService` が pull と push を直列に実行する。実行中に来た要求は 1 つにまとめ、終わった後に 1 回だけ実行する。
 - push の前には `ReadingPositionWriter.flush()` を待つ。中身が前回送った内容と同じなら、アップロードしない。
 - 契機:
-  - **pull**: 起動時（ログイン済みのとき）と `AppLifecycleState.resumed` のとき。
+  - **pull**: 起動時（ログイン済みのとき）と `AppLifecycleState.resumed` のとき。起動時は push してから pull する。前回の終了時やバックグラウンドへの移行時の push は打ち切られることがあり、そのままでは次に小説を離れるまで送り直されないためである。
   - **push**: 小説フォルダを離れたとき（`currentDirectoryProvider` が別の小説、または小説の外に変わったとき）、`hidden` か `paused` になったとき、アプリの終了要求のとき（3 秒で打ち切る）。
   - **手動**: 「今すぐ同期」で push してから pull する。
 - デスクトップでは、ウィンドウがフォーカスを失うたびに `inactive` になるため、`inactive` を push の契機にはしない。
