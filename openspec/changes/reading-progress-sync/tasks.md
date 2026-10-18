@@ -81,7 +81,7 @@
   - `config/google_oauth.json` の置き方
   - 開発時の `fvm flutter run --dart-define-from-file=config/google_oauth.json`
   - GitHub Secrets の設定
-- [ ] 10.2 `.claude/CLAUDE.md` の開発コマンドの `build_app` の説明に、OAuth の設定ファイルを読み込むことを追記する
+- [x] 10.2 `.claude/CLAUDE.md` の開発コマンドの `build_app` の説明に、OAuth の設定ファイルを読み込むことを追記する
 
 ## 11. 実機での確認
 
