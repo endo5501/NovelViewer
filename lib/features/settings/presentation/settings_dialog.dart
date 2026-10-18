@@ -6,9 +6,12 @@ import 'package:novel_viewer/features/settings/presentation/sections/irodori_set
 import 'package:novel_viewer/features/settings/presentation/sections/llm_settings_section.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/piper_settings_section.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/qwen3_settings_section.dart';
+import 'package:novel_viewer/features/settings/presentation/sections/tts_engine_selector.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/voice_reference_section.dart';
 import 'package:novel_viewer/features/keyboard_shortcuts/presentation/shortcut_settings_section.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
+import 'package:novel_viewer/features/progress_sync/presentation/sync_settings_section.dart';
+import 'package:novel_viewer/features/progress_sync/providers/progress_sync_config_providers.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
@@ -31,8 +34,11 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
   /// has to be fixed before the controller exists.
   late final bool _ttsSupported = ref.read(ttsSupportedProvider);
 
+  /// Likewise fixed for the session: it depends on the build's OAuth values.
+  late final bool _syncAvailable = ref.read(progressSyncAvailableProvider);
+
   late final TabController _tabController = TabController(
-    length: _ttsSupported ? 3 : 2,
+    length: 2 + (_ttsSupported ? 1 : 0) + (_syncAvailable ? 1 : 0),
     vsync: this,
   );
 
@@ -59,6 +65,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
                 // Withheld where TTS cannot run: this tab reaches the native
                 // engine, the microphone, and a desktop-only drop target.
                 if (_ttsSupported) Tab(text: l10n.settings_ttsTabLabel),
+                if (_syncAvailable) Tab(text: l10n.syncSettings_tab),
                 Tab(text: l10n.settings_aboutUpdateTab),
               ],
             ),
@@ -68,6 +75,8 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
                 children: [
                   const _GeneralTab(),
                   if (_ttsSupported) const _TtsTab(),
+                  if (_syncAvailable)
+                    const SingleChildScrollView(child: SyncSettingsSection()),
                   const SingleChildScrollView(child: AboutAndUpdateSection()),
                 ],
               ),
@@ -125,7 +134,7 @@ class _TtsTab extends ConsumerWidget {
         children: [
           const SizedBox(height: 16),
           if (engines.length > 1) ...[
-            _EngineSelector(engines: engines),
+            TtsEngineSelector(engines: engines),
             const SizedBox(height: 16),
           ],
           if (engineType == TtsEngineType.qwen3) ...[
@@ -149,47 +158,6 @@ class _TtsTab extends ConsumerWidget {
               child: VoiceReferenceSection(),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _EngineSelector extends ConsumerWidget {
-  const _EngineSelector({required this.engines});
-
-  /// The engines this platform runs, in display order.
-  final List<TtsEngineType> engines;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final engineType = ref.watch(ttsEngineTypeProvider);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.settings_ttsEngine,
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: SegmentedButton<TtsEngineType>(
-              segments: engines
-                  .map((e) => ButtonSegment(value: e, label: Text(e.label)))
-                  .toList(),
-              selected: {engineType},
-              onSelectionChanged: (selected) {
-                ref
-                    .read(ttsEngineTypeProvider.notifier)
-                    .setEngineType(selected.first);
-              },
-            ),
-          ),
         ],
       ),
     );
