@@ -17,6 +17,14 @@ import '../helpers/novel_metadata_db_fixture.dart';
 
 class _RecordingRepository implements ReadingProgressRepository {
   @override
+  Future<void> adoptPosition({
+    required String novelId,
+    required String fileName,
+    required int bodyOffset,
+    required String? bodyHash,
+  }) async {}
+
+  @override
   Future<ReadingProgress?> findLatest() async => null;
 
   @override

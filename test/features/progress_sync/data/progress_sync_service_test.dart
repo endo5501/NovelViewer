@@ -238,6 +238,89 @@ void main() {
     });
   });
 
+  group('signing out mid-run', () {
+    test('a pull that lands after sign-out stores nothing', () async {
+      store.files['win'] = DeviceProgress(
+        deviceId: 'win',
+        deviceName: 'Windows',
+        records: [
+          SyncProgressRecord(
+            novelId: 'narou_a',
+            episode: 5,
+            fileName: '005_t.txt',
+            bodyOffset: 1,
+            bodyHash: 'h',
+            readAt: _t1,
+          ),
+        ],
+      );
+      final gate = Completer<void>();
+      store.beforeFetchReturns = () => gate.future;
+      final sync = service();
+
+      final pull = sync.pull();
+      await Future<void>.delayed(Duration.zero);
+      signedIn = false;
+      gate.complete();
+      await pull;
+
+      expect(await repository.findRemoteByNovel('narou_a'), isEmpty);
+    });
+
+    test('a push that lands after sign-out records nothing', () async {
+      final gate = Completer<void>();
+      store.beforeWriteReturns = () => gate.future;
+      final sync = service();
+
+      final push = sync.push();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      signedIn = false;
+      gate.complete();
+      await push;
+
+      expect(await repository.findAllOwn(), isEmpty);
+    });
+
+    test('idle completes once the running sync has finished', () async {
+      final gate = Completer<void>();
+      final sync = service(flush: () => gate.future);
+
+      final push = sync.push();
+      await Future<void>.delayed(Duration.zero);
+      var idle = false;
+      unawaited(sync.idle.then((_) => idle = true));
+      await Future<void>.delayed(Duration.zero);
+      expect(idle, isFalse);
+
+      gate.complete();
+      await push;
+      await Future<void>.delayed(Duration.zero);
+      expect(idle, isTrue);
+    });
+  });
+
+  test('a push does not overwrite a record adopted meanwhile', () async {
+    final gate = Completer<void>();
+    store.beforeWriteReturns = () => gate.future;
+    final sync = service();
+    final adopted = SyncProgressRecord(
+      novelId: 'narou_a',
+      episode: 5,
+      fileName: '005_t.txt',
+      bodyOffset: 7,
+      bodyHash: 'h',
+      readAt: DateTime.utc(2026, 9, 9),
+    );
+
+    final push = sync.push();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await repository.upsertOwn(adopted);
+    gate.complete();
+    await push;
+
+    expect((await repository.findAllOwn())['narou_a'], adopted);
+  });
+
   group('status', () {
     test('records when a sync last succeeded', () async {
       final sync = service();

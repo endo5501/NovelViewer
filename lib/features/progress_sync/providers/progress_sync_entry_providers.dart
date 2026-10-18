@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
+import 'package:novel_viewer/features/text_download/data/sites/generic_web_site.dart';
 import 'package:novel_viewer/features/reading_progress/domain/reading_progress.dart';
 import 'package:novel_viewer/shared/episode/episode_resolver.dart';
 
@@ -23,8 +25,14 @@ export '../domain/sync_rules.dart'
 /// D6). Kept free of the reading-progress providers, which call into it.
 class ProgressSyncEntry {
   final ProgressSyncRepository _sync;
+  final Future<Set<String>> Function() _syncableNovelIds;
 
-  ProgressSyncEntry(this._sync);
+  /// [syncableNovelIds] names the novels sync covers: registered ones other
+  /// than generic-web collections, whose ids do not match across devices.
+  ProgressSyncEntry(
+    this._sync, {
+    required Future<Set<String>> Function() syncableNovelIds,
+  }) : _syncableNovelIds = syncableNovelIds;
 
   /// Decides against [local] as it was before the entry selected anything.
   /// [folderFiles] is the novel folder's `.txt` names.
@@ -33,6 +41,9 @@ class ProgressSyncEntry {
     required ReadingProgress? local,
     required List<String> folderFiles,
   }) async {
+    if (!(await _syncableNovelIds()).contains(novelId)) {
+      return const NoSyncAction();
+    }
     final remote = await _sync.findRemoteByNovel(novelId);
     if (remote.isEmpty) return const NoSyncAction();
     final sortedFiles = [...folderFiles]..sort();
@@ -66,16 +77,13 @@ class ProgressSyncEntry {
     required String fileName,
   }) async {
     final record = remote.record;
-    await progress.upsert(novelId: record.novelId, fileName: fileName);
     final hash = record.bodyHash;
-    if (hash != null) {
-      await progress.savePosition(
-        novelId: record.novelId,
-        fileName: fileName,
-        bodyOffset: record.bodyOffset,
-        bodyHash: hash,
-      );
-    }
+    await progress.adoptPosition(
+      novelId: record.novelId,
+      fileName: fileName,
+      bodyOffset: record.bodyOffset,
+      bodyHash: hash,
+    );
     await _sync.upsertOwn(
       SyncProgressRecord(
         novelId: record.novelId,
@@ -101,8 +109,21 @@ final progressSyncEntryProvider = Provider<ProgressSyncEntry?>((ref) {
       SyncAccountStatus.signedIn) {
     return null;
   }
-  return ProgressSyncEntry(ref.watch(progressSyncRepositoryProvider));
+  return ProgressSyncEntry(
+    ref.watch(progressSyncRepositoryProvider),
+    syncableNovelIds: () => loadSyncableNovelIds(ref),
+  );
 });
+
+/// The novels sync covers: every registered novel except generic-web
+/// collections (reading-progress-sync).
+Future<Set<String>> loadSyncableNovelIds(Ref ref) async {
+  final novels = await ref.read(allNovelsProvider.future);
+  return {
+    for (final novel in novels)
+      if (novel.siteType != GenericWebSite.siteTypeId) novel.folderName,
+  };
+}
 
 /// A pending "move to the other device's position?" question.
 class SyncPromptRequest {

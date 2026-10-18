@@ -10,33 +10,45 @@ import '../providers/progress_sync_prompt_actions.dart';
 /// Asks "move to the other device's position?" whenever entering a novel
 /// raises the question (reading-progress-sync). Closing the dialog counts as
 /// staying.
-class SyncPromptHost extends ConsumerWidget {
+class SyncPromptHost extends ConsumerStatefulWidget {
   final Widget child;
 
   const SyncPromptHost({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SyncPromptHost> createState() => _SyncPromptHostState();
+}
+
+class _SyncPromptHostState extends ConsumerState<SyncPromptHost> {
+  /// One question at a time. The same record can be raised again while it
+  /// is still unanswered (entering the novel, then a pull ending); one that
+  /// is still open after the answer comes back with the next pull.
+  bool _asking = false;
+
+  @override
+  Widget build(BuildContext context) {
     ref.listen<SyncPromptRequest?>(syncPromptProvider, (_, request) {
       if (request == null) return;
       ref.read(syncPromptProvider.notifier).clear();
+      if (_asking) return;
       if (ref.read(currentDirectoryProvider) != request.directory) return;
-      _ask(context, ref, request);
+      _ask(request);
     });
-    return child;
+    return widget.child;
   }
 
-  Future<void> _ask(
-    BuildContext context,
-    WidgetRef ref,
-    SyncPromptRequest request,
-  ) async {
-    final actions = ref.read(syncPromptActionsProvider);
-    final move = await showDialog<bool>(
-      context: context,
-      builder: (context) => _SyncPromptDialog(request: request),
-    );
-    await actions.answer(request, move: move ?? false);
+  Future<void> _ask(SyncPromptRequest request) async {
+    _asking = true;
+    try {
+      final actions = ref.read(syncPromptActionsProvider);
+      final move = await showDialog<bool>(
+        context: context,
+        builder: (context) => _SyncPromptDialog(request: request),
+      );
+      await actions.answer(request, move: move ?? false);
+    } finally {
+      _asking = false;
+    }
   }
 }
 

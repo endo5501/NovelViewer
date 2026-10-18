@@ -11,7 +11,6 @@ import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata
 import 'package:novel_viewer/features/reading_progress/providers/reading_position_providers.dart';
 import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
-import 'package:novel_viewer/features/text_download/data/sites/generic_web_site.dart';
 import 'package:novel_viewer/shared/episode/episode_resolver.dart';
 import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 
@@ -48,13 +47,7 @@ final progressSyncServiceProvider = Provider<ProgressSyncService>((ref) {
         ref.read(readingPositionWriterProvider).flush(),
     loadLocalProgress: () =>
         ref.read(readingProgressRepositoryProvider).findAll(),
-    syncableNovelIds: () async {
-      final novels = await ref.read(allNovelsProvider.future);
-      return {
-        for (final novel in novels)
-          if (novel.siteType != GenericWebSite.siteTypeId) novel.folderName,
-      };
-    },
+    syncableNovelIds: () => loadSyncableNovelIds(ref),
     episodeOf: (novelId, fileName) async {
       final prefix = extractNumericPrefix(fileName);
       if (prefix != null) return prefix;

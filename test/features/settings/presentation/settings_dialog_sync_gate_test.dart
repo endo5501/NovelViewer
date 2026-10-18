@@ -54,9 +54,7 @@ void main() {
     );
   }
 
-  testWidgets('the sync tab is listed where sync is available', (
-    tester,
-  ) async {
+  testWidgets('the sync tab is listed where sync is available', (tester) async {
     await tester.pumpWidget(build(syncAvailable: true));
     await tester.pumpAndSettle();
 

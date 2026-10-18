@@ -30,6 +30,9 @@ class _RecordingRunner implements ProgressSyncRunner {
 
   @override
   Future<void> syncNow() async => calls.add('syncNow');
+
+  @override
+  Future<void> get idle async {}
 }
 
 NovelMetadata _novel(String folderName) => NovelMetadata(
@@ -80,29 +83,32 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('progressSyncStartupProvider', () {
-    test('restores the account, then pushes and pulls when signed in', () async {
-      final runner = _RecordingRunner();
-      final credentials = _MemoryCredentials()
-        ..stored = const StoredCredentials(
-          refreshToken: 'rt',
-          email: 'reader@example.com',
+    test(
+      'restores the account, then pushes and pulls when signed in',
+      () async {
+        final runner = _RecordingRunner();
+        final credentials = _MemoryCredentials()
+          ..stored = const StoredCredentials(
+            refreshToken: 'rt',
+            email: 'reader@example.com',
+          );
+        final auth = _auth(credentials);
+        final container = ProviderContainer(
+          overrides: [
+            progressSyncRunnerProvider.overrideWithValue(runner),
+            progressSyncAuthProvider.overrideWithValue(auth),
+          ],
         );
-      final auth = _auth(credentials);
-      final container = ProviderContainer(
-        overrides: [
-          progressSyncRunnerProvider.overrideWithValue(runner),
-          progressSyncAuthProvider.overrideWithValue(auth),
-        ],
-      );
-      addTearDown(container.dispose);
+        addTearDown(container.dispose);
 
-      await container.read(progressSyncStartupProvider.future);
+        await container.read(progressSyncStartupProvider.future);
 
-      expect(auth.state.value.status, SyncAccountStatus.signedIn);
-      // A push the last run made on its way out may have been cut short;
-      // nothing else would send it again until the reader leaves a novel.
-      expect(runner.calls, ['syncNow']);
-    });
+        expect(auth.state.value.status, SyncAccountStatus.signedIn);
+        // A push the last run made on its way out may have been cut short;
+        // nothing else would send it again until the reader leaves a novel.
+        expect(runner.calls, ['syncNow']);
+      },
+    );
 
     test('does not pull while signed out', () async {
       final runner = _RecordingRunner();

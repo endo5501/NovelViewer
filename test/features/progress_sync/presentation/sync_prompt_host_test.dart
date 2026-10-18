@@ -114,9 +114,23 @@ void main() {
     expect(actions.answers.single.$2, isFalse);
   });
 
-  testWidgets('does not ask about a novel the reader has left', (
+  testWidgets('asks once even when the question is raised again', (
     tester,
   ) async {
+    await pumpHost(tester);
+    container.read(syncPromptProvider.notifier).show(_request);
+    await tester.pumpAndSettle();
+    container.read(syncPromptProvider.notifier).show(_request);
+    await tester.pumpAndSettle();
+
+    expect(find.text('移動する'), findsOneWidget);
+    await tester.tap(find.text('このまま'));
+    await tester.pumpAndSettle();
+    expect(find.text('移動する'), findsNothing);
+    expect(actions.answers, hasLength(1));
+  });
+
+  testWidgets('does not ask about a novel the reader has left', (tester) async {
     await pumpHost(tester);
     container.read(currentDirectoryProvider.notifier).setDirectory('/library');
 

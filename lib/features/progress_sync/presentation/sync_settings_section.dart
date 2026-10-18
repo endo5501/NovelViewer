@@ -46,10 +46,7 @@ class _SyncSettingsSectionState extends ConsumerState<SyncSettingsSection> {
           ...switch (account.status) {
             SyncAccountStatus.signedOut => _signedOut(l10n),
             SyncAccountStatus.signedIn => _signedIn(l10n, account.email!),
-            SyncAccountStatus.needsReauth => _needsReauth(
-              l10n,
-              account.email!,
-            ),
+            SyncAccountStatus.needsReauth => _needsReauth(l10n, account.email!),
           },
         ],
       ),

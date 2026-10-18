@@ -66,7 +66,9 @@ void main() {
           () => CurrentDirectoryNotifier(_dir),
         ),
         readingProgressRepositoryProvider.overrideWithValue(progress),
-        progressSyncEntryProvider.overrideWithValue(ProgressSyncEntry(sync)),
+        progressSyncEntryProvider.overrideWithValue(
+          ProgressSyncEntry(sync, syncableNovelIds: () async => {'narou_a'}),
+        ),
         readingPositionWriterProvider.overrideWith((ref) {
           final writer = _RecordingWriter(calls);
           ref.onDispose(writer.dispose);
@@ -81,7 +83,9 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
-    container.read(selectedFileProvider.notifier).selectFile(_file('003_t.txt'));
+    container
+        .read(selectedFileProvider.notifier)
+        .selectFile(_file('003_t.txt'));
   });
 
   tearDown(() async {
@@ -103,7 +107,9 @@ void main() {
   });
 
   test('moving within the open episode asks the viewer to restore', () async {
-    container.read(selectedFileProvider.notifier).selectFile(_file('005_t.txt'));
+    container
+        .read(selectedFileProvider.notifier)
+        .selectFile(_file('005_t.txt'));
     await progress.upsert(novelId: 'narou_a', fileName: '005_t.txt');
     final before = container.read(readingPositionRestoreRequestProvider);
 

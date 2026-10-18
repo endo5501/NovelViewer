@@ -111,7 +111,9 @@ void main() {
             subdirectories: const [],
           );
         }),
-        progressSyncEntryProvider.overrideWithValue(ProgressSyncEntry(sync)),
+        progressSyncEntryProvider.overrideWithValue(
+          ProgressSyncEntry(sync, syncableNovelIds: () async => {'narou_a'}),
+        ),
         progressSyncPulledProvider.overrideWithValue(pulls.stream),
       ],
     );
@@ -135,16 +137,19 @@ void main() {
     expect(prompt.fileName, '005_t.txt');
   });
 
-  test('opens the received progress after a pull when there was none', () async {
-    final c = container(initialDirectory: _dir);
+  test(
+    'opens the received progress after a pull when there was none',
+    () async {
+      final c = container(initialDirectory: _dir);
 
-    await receive(5, DateTime.utc(2026, 10, 1));
-    pulls.add(null);
-    await _settle();
+      await receive(5, DateTime.utc(2026, 10, 1));
+      pulls.add(null);
+      await _settle();
 
-    expect(c.read(selectedFileProvider)!.name, '005_t.txt');
-    expect((await progress.findByNovelId('narou_a'))!.bodyOffset, 500);
-  });
+      expect(c.read(selectedFileProvider)!.name, '005_t.txt');
+      expect((await progress.findByNovelId('narou_a'))!.bodyOffset, 500);
+    },
+  );
 
   test('does nothing after a pull outside any novel', () async {
     final c = container();

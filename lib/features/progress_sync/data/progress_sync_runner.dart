@@ -3,4 +3,7 @@ abstract class ProgressSyncRunner {
   Future<void> push();
   Future<void> pull();
   Future<void> syncNow();
+
+  /// Completes once no sync is running.
+  Future<void> get idle;
 }

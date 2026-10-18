@@ -38,7 +38,9 @@ class _SyncAccountActions implements SyncAccountActions {
   }
 
   @override
-  Future<void> signOut() async => _auth?.signOut();
+  Future<void> signOut() async => _auth?.signOut(
+    beforeClear: () => _ref.read(progressSyncRunnerProvider).idle,
+  );
 
   @override
   Future<void> syncNow() => _ref.read(progressSyncRunnerProvider).syncNow();

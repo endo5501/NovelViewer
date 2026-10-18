@@ -70,6 +70,41 @@ class ProgressSyncRepository {
     });
   }
 
+  /// Records the set a push just uploaded, novel by novel, but only where the
+  /// stored row is still [expected] (what the push started from). A row that
+  /// changed meanwhile was adopted from another device during the upload and
+  /// is newer than [records].
+  Future<void> commitOwn(
+    List<SyncProgressRecord> records, {
+    required Map<String, SyncProgressRecord> expected,
+  }) async {
+    final db = await _novelDatabase.database;
+    final next = {for (final record in records) record.novelId: record};
+    await db.transaction((txn) async {
+      final rows = await txn.query(_ownTable);
+      final current = {
+        for (final row in rows) row['novel_id'] as String: _rowToRecord(row),
+      };
+      for (final novelId in {...current.keys, ...next.keys}) {
+        if (current[novelId] != expected[novelId]) continue;
+        final record = next[novelId];
+        if (record == null) {
+          await txn.delete(
+            _ownTable,
+            where: 'novel_id = ?',
+            whereArgs: [novelId],
+          );
+        } else {
+          await txn.insert(
+            _ownTable,
+            _recordToRow(record),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+      }
+    });
+  }
+
   /// Records [record] as this device's last pushed position for its novel,
   /// used when the device adopts another device's record so the next push
   /// keeps that record's `read_at` (design D6).

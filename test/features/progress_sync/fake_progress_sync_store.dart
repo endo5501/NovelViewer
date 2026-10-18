@@ -10,17 +10,24 @@ class FakeProgressSyncStore implements ProgressSyncStore {
   int writes = 0;
   Object? failWith;
 
+  /// Awaited before a fetch or a write returns, to hold a call in flight.
+  Future<void> Function()? beforeFetchReturns;
+  Future<void> Function()? beforeWriteReturns;
+
   @override
   Future<List<DeviceProgress>> fetchAll() async {
     fetches++;
     if (failWith case final error?) throw error;
-    return files.values.toList();
+    final result = files.values.toList();
+    await beforeFetchReturns?.call();
+    return result;
   }
 
   @override
   Future<void> writeOwn(DeviceProgress own) async {
     writes++;
     if (failWith case final error?) throw error;
+    await beforeWriteReturns?.call();
     files[own.deviceId] = own;
   }
 }

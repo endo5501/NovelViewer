@@ -27,6 +27,14 @@ class _UpsertCall {
 
 class _FakeRepository implements ReadingProgressRepository {
   @override
+  Future<void> adoptPosition({
+    required String novelId,
+    required String fileName,
+    required int bodyOffset,
+    required String? bodyHash,
+  }) async {}
+
+  @override
   Future<ReadingProgress?> findLatest() async => null;
 
   @override

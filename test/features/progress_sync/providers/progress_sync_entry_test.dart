@@ -49,6 +49,7 @@ void main() {
   late NovelDatabase novelDatabase;
   late ReadingProgressRepository progress;
   late ProgressSyncRepository sync;
+  late Set<String> syncable;
 
   setUpAll(() {
     sqfliteFfiInit();
@@ -59,6 +60,7 @@ void main() {
     novelDatabase = await seedNovelDatabaseFixture();
     progress = ReadingProgressRepository(novelDatabase);
     sync = ProgressSyncRepository(novelDatabase);
+    syncable = {'narou_a'};
   });
 
   tearDown(() async {
@@ -96,7 +98,9 @@ void main() {
           );
         }),
         progressSyncEntryProvider.overrideWithValue(
-          syncEnabled ? ProgressSyncEntry(sync) : null,
+          syncEnabled
+              ? ProgressSyncEntry(sync, syncableNovelIds: () async => syncable)
+              : null,
         ),
       ],
     );
@@ -182,6 +186,46 @@ void main() {
     expect(c.read(selectedFileProvider)?.name, '005_t.txt');
     expect(c.read(syncPromptProvider), isNull);
     expect(await sync.findHandled('narou_a'), readAt);
+  });
+
+  test(
+    'moving to a record without a hash opens its episode at the start',
+    () async {
+      await progress.upsert(novelId: 'narou_a', fileName: '005_t.txt');
+      await progress.savePosition(
+        novelId: 'narou_a',
+        fileName: '005_t.txt',
+        bodyOffset: 5000,
+        bodyHash: 'old',
+      );
+      final entry = ProgressSyncEntry(
+        sync,
+        syncableNovelIds: () async => syncable,
+      );
+      await receive(_record(5, readAt: DateTime.utc(2026, 10, 1), hash: null));
+      final remote = (await sync.findRemoteByNovel('narou_a')).single;
+
+      await entry.adopt(
+        progress: progress,
+        remote: remote,
+        fileName: '005_t.txt',
+      );
+
+      final local = await progress.findByNovelId('narou_a');
+      expect(local!.bodyOffset, 0);
+      expect(local.bodyHash, isNull);
+    },
+  );
+
+  test('a received record for a non-syncable novel is ignored', () async {
+    syncable = {};
+    await receive(_record(5, readAt: DateTime.utc(2026, 10, 1)));
+    final c = container();
+
+    await enterNovel(c);
+
+    expect(c.read(selectedFileProvider), isNull);
+    expect(await progress.findByNovelId('narou_a'), isNull);
   });
 
   test('without sync, a novel with no progress opens nothing', () async {

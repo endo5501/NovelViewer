@@ -149,6 +149,51 @@ void main() {
       expect(form['client_id'], 'ios-cid');
     });
 
+    test('signing in as another account forgets the old sync state', () async {
+      credentials.stored = const StoredCredentials(
+        refreshToken: 'rt-old',
+        email: 'old@example.com',
+      );
+      final auth = authWith(
+        (_) async => _json({
+          'access_token': 'at-1',
+          'expires_in': 3600,
+          'refresh_token': 'rt-new',
+          'id_token': _idToken('new@example.com'),
+        }),
+      );
+      await auth.load();
+
+      expect(await auth.signIn(), isTrue);
+
+      expect(cleared, 1);
+      expect(
+        auth.state.value,
+        const SyncAccountState.signedIn('new@example.com'),
+      );
+    });
+
+    test('signing in again as the same account keeps the sync state', () async {
+      credentials.stored = const StoredCredentials(
+        refreshToken: 'rt-old',
+        email: 'reader@example.com',
+      );
+      final auth = authWith(
+        (_) async => _json({
+          'access_token': 'at-1',
+          'expires_in': 3600,
+          'refresh_token': 'rt-new',
+          'id_token': _idToken('reader@example.com'),
+        }),
+      );
+      await auth.load();
+
+      await auth.signIn();
+
+      expect(cleared, 0);
+      expect(credentials.stored!.refreshToken, 'rt-new');
+    });
+
     test('stays signed out when the reader cancels', () async {
       receiver.result = null;
       final auth = authWith((_) async => _json({}));
@@ -272,6 +317,28 @@ void main() {
       expect(cleared, 1);
       expect(auth.state.value, const SyncAccountState.signedOut());
       await expectLater(auth.accessToken(), throwsA(isA<SyncNotSignedIn>()));
+    });
+
+    test('is signed out before the sync state is cleared', () async {
+      credentials.stored = const StoredCredentials(
+        refreshToken: 'rt-1',
+        email: 'reader@example.com',
+      );
+      late ProgressSyncAuth auth;
+      SyncAccountState? stateWhenCleared;
+      auth = ProgressSyncAuth(
+        client: _client,
+        receiver: receiver,
+        credentials: credentials,
+        httpClient: MockClient((_) async => _json({})),
+        clearSyncState: () async => stateWhenCleared = auth.state.value,
+        now: () => now,
+      );
+      await auth.load();
+
+      await auth.signOut();
+
+      expect(stateWhenCleared, const SyncAccountState.signedOut());
     });
 
     test('a failed revoke only logs a warning', () async {

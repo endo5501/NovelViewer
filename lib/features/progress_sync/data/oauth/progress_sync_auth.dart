@@ -167,6 +167,10 @@ class ProgressSyncAuth implements AccessTokenSource {
         _log.warning('Google sign-in returned no refresh token or email');
         return false;
       }
+      // Another account must not inherit what sync learned under the last
+      // one (its pushed baseline, received records, answered prompts).
+      final previous = _stored?.email ?? state.value.email;
+      if (previous != null && previous != email) await _clearSyncState();
       _stored = StoredCredentials(refreshToken: refreshToken, email: email);
       await _credentials.write(_stored!);
       _holdAccessToken(json);
@@ -181,8 +185,17 @@ class ProgressSyncAuth implements AccessTokenSource {
   /// Signs out: asks Google to revoke the grant (best effort), then forgets
   /// the grant and everything sync learned under it. The device's own reading
   /// progress and its file on Drive stay.
-  Future<void> signOut() async {
+  ///
+  /// The account is signed out first, so no new sync starts and a running one
+  /// commits nothing; [beforeClear] then waits for that run to end, so it
+  /// cannot write sync state back after it has been cleared.
+  Future<void> signOut({Future<void> Function()? beforeClear}) async {
     final stored = _stored;
+    _stored = null;
+    _accessToken = null;
+    _expiresAt = null;
+    state.value = const SyncAccountState.signedOut();
+    await beforeClear?.call();
     if (stored != null) {
       try {
         final response = await _http.post(
@@ -198,12 +211,8 @@ class ProgressSyncAuth implements AccessTokenSource {
         _log.warning('Could not reach Google to revoke the sync grant', e, st);
       }
     }
-    _stored = null;
-    _accessToken = null;
-    _expiresAt = null;
     await _credentials.delete();
     await _clearSyncState();
-    state.value = const SyncAccountState.signedOut();
   }
 
   @override

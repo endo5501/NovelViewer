@@ -77,6 +77,9 @@ class ProgressSyncService implements ProgressSyncRunner {
        _episodeOf = episodeOf,
        _now = now ?? DateTime.now;
 
+  @override
+  Future<void> get idle => _running ?? Future.value();
+
   /// Fires after each pull has stored what it received.
   Stream<void> get pulled => _pulled.stream;
 
@@ -168,11 +171,17 @@ class ProgressSyncService implements ProgressSyncRunner {
         records: records,
       ),
     );
-    await _repository.replaceOwn(records);
+    // Signed out while uploading: sign-out clears sync state, which this
+    // must not write back.
+    if (!_isSignedIn()) return;
+    // A record adopted while the upload was in flight is newer than this
+    // push's view of it, and keeps its place.
+    await _repository.commitOwn(records, expected: lastPushed);
   }
 
   Future<void> _pull() async {
     final devices = await _store.fetchAll();
+    if (!_isSignedIn()) return;
     await _repository.replaceRemote(
       selfDeviceId: await _deviceId(),
       devices: devices,
