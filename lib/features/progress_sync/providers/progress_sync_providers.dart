@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -20,6 +21,7 @@ import '../data/oauth/progress_sync_auth.dart';
 import '../data/progress_sync_service.dart';
 import 'progress_sync_account_providers.dart';
 import 'progress_sync_config_providers.dart';
+import 'progress_sync_entry_providers.dart';
 
 export 'progress_sync_account_providers.dart';
 import 'progress_sync_triggers.dart';
@@ -146,3 +148,78 @@ final progressSyncLeaveNovelListenerProvider = Provider<void>((ref) {
     unawaited(ref.read(progressSyncRunnerProvider).push());
   });
 });
+
+/// Fires after each pull has stored what it received.
+final progressSyncPulledProvider = Provider<Stream<void>>(
+  (ref) => ref.watch(progressSyncServiceProvider).pulled,
+);
+
+/// Weighs freshly pulled records against the novel the reader is in, as
+/// entering it would have (design D6). At startup the last-read novel is
+/// usually open before the pull ends; the open file is left alone and only
+/// the question is asked. A novel with no progress here opens the record.
+final progressSyncPullReconcileProvider = Provider<void>((ref) {
+  final subscription = ref
+      .watch(progressSyncPulledProvider)
+      .listen((_) => _reconcileOpenNovel(ref));
+  ref.onDispose(subscription.cancel);
+});
+
+Future<void> _reconcileOpenNovel(Ref ref) async {
+  final entry = ref.read(progressSyncEntryProvider);
+  final libraryPath = ref.read(libraryPathProvider);
+  final directory = ref.read(currentDirectoryProvider);
+  if (entry == null || libraryPath == null || directory == null) return;
+  try {
+    final novels = await ref.read(allNovelsProvider.future);
+    final novelId = resolveNovelId(libraryPath, directory, {
+      for (final n in novels) n.folderName,
+    });
+    if (novelId == null) return;
+    final progress = ref.read(readingProgressRepositoryProvider);
+    final local = await progress.findByNovelId(novelId);
+    final contents = await ref.read(directoryContentsProvider.future);
+    final decision = await entry.decide(
+      novelId: novelId,
+      local: local,
+      folderFiles: [for (final file in contents.files) file.name],
+    );
+    if (ref.read(currentDirectoryProvider) != directory) return;
+    switch (decision) {
+      case AutoApplySync(:final remote, :final fileName):
+        await entry.adopt(
+          progress: progress,
+          remote: remote,
+          fileName: fileName,
+        );
+        if (ref.read(currentDirectoryProvider) != directory) return;
+        final selected = ref.read(selectedFileProvider);
+        if (selected != null && p.isWithin(directory, selected.path)) return;
+        for (final file in contents.files) {
+          if (p.equals(file.name, fileName)) {
+            ref.read(selectedFileProvider.notifier).selectFile(file);
+            return;
+          }
+        }
+      case PromptSync(:final remote, :final fileName):
+        ref
+            .read(syncPromptProvider.notifier)
+            .show(
+              SyncPromptRequest(
+                novelId: novelId,
+                directory: directory,
+                remote: remote,
+                fileName: fileName,
+              ),
+            );
+      case MarkHandledSync(:final readAt):
+        await entry.markHandled(novelId, readAt);
+      case NoSyncAction():
+        break;
+    }
+  } catch (e, st) {
+    Logger(
+      'progress_sync',
+    ).warning('Failed to weigh pulled progress for the open novel', e, st);
+  }
+}

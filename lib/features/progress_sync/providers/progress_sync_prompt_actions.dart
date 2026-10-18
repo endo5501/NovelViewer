@@ -29,11 +29,9 @@ class _SyncPromptActions implements SyncPromptActions {
       if (move) await _move(entry, request);
       await entry.markHandled(request.novelId, request.remote.record.readAt);
     } catch (e, st) {
-      Logger('progress_sync').warning(
-        'Failed to apply the answer for ${request.novelId}',
-        e,
-        st,
-      );
+      Logger(
+        'progress_sync',
+      ).warning('Failed to apply the answer for ${request.novelId}', e, st);
     }
   }
 

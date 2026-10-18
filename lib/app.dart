@@ -36,6 +36,7 @@ class NovelViewerApp extends ConsumerWidget {
     if (ref.read(progressSyncAvailableProvider)) {
       ref.read(progressSyncLifecycleProvider);
       ref.read(progressSyncLeaveNovelListenerProvider);
+      ref.read(progressSyncPullReconcileProvider);
       ref.read(progressSyncStartupProvider);
     }
 
