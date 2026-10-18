@@ -1091,4 +1091,54 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get syncPrompt_stay => '保持不变';
+
+  @override
+  String get syncSettings_tab => '同步';
+
+  @override
+  String get syncSettings_title => '阅读进度同步';
+
+  @override
+  String get syncSettings_description => '通过 Google 云端硬盘与其他设备共享阅读位置。';
+
+  @override
+  String get syncSettings_signIn => '使用 Google 登录';
+
+  @override
+  String get syncSettings_signingIn => '请在浏览器中完成登录…';
+
+  @override
+  String syncSettings_signedInAs(String email) {
+    return '已登录：$email';
+  }
+
+  @override
+  String get syncSettings_syncNow => '立即同步';
+
+  @override
+  String get syncSettings_syncing => '同步中…';
+
+  @override
+  String syncSettings_lastSynced(String time) {
+    return '上次同步：$time';
+  }
+
+  @override
+  String get syncSettings_neverSynced => '尚未同步';
+
+  @override
+  String syncSettings_lastError(String message) {
+    return '上次同步失败：$message';
+  }
+
+  @override
+  String get syncSettings_signOut => '退出登录';
+
+  @override
+  String syncSettings_needsReauth(String email) {
+    return '$email 的登录已失效，请重新登录。';
+  }
+
+  @override
+  String get syncSettings_signInAgain => '重新登录';
 }

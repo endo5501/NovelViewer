@@ -1100,4 +1100,54 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get syncPrompt_stay => 'このまま';
+
+  @override
+  String get syncSettings_tab => '同期';
+
+  @override
+  String get syncSettings_title => '読書進捗の同期';
+
+  @override
+  String get syncSettings_description => 'Google ドライブを使って、読んでいる位置を他の端末と共有します。';
+
+  @override
+  String get syncSettings_signIn => 'Google でログイン';
+
+  @override
+  String get syncSettings_signingIn => 'ブラウザでログインを完了してください…';
+
+  @override
+  String syncSettings_signedInAs(String email) {
+    return '$email でログイン中';
+  }
+
+  @override
+  String get syncSettings_syncNow => '今すぐ同期';
+
+  @override
+  String get syncSettings_syncing => '同期中…';
+
+  @override
+  String syncSettings_lastSynced(String time) {
+    return '最後の同期: $time';
+  }
+
+  @override
+  String get syncSettings_neverSynced => 'まだ同期していません';
+
+  @override
+  String syncSettings_lastError(String message) {
+    return '前回の同期に失敗しました: $message';
+  }
+
+  @override
+  String get syncSettings_signOut => 'ログアウト';
+
+  @override
+  String syncSettings_needsReauth(String email) {
+    return '$email のログインの有効期限が切れました。もう一度ログインしてください。';
+  }
+
+  @override
+  String get syncSettings_signInAgain => 'もう一度ログイン';
 }

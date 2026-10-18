@@ -495,5 +495,19 @@
   "syncPrompt_title": "Reading position on another device",
   "syncPrompt_message": "You were reading episode {episode} on {device} ({readAt}). Move there?",
   "syncPrompt_move": "Move",
-  "syncPrompt_stay": "Stay here"
+  "syncPrompt_stay": "Stay here",
+  "syncSettings_tab": "Sync",
+  "syncSettings_title": "Reading progress sync",
+  "syncSettings_description": "Shares where you are reading with your other devices through Google Drive.",
+  "syncSettings_signIn": "Sign in with Google",
+  "syncSettings_signingIn": "Finish signing in in the browser…",
+  "syncSettings_signedInAs": "Signed in as {email}",
+  "syncSettings_syncNow": "Sync now",
+  "syncSettings_syncing": "Syncing…",
+  "syncSettings_lastSynced": "Last synced: {time}",
+  "syncSettings_neverSynced": "Not synced yet",
+  "syncSettings_lastError": "The last sync failed: {message}",
+  "syncSettings_signOut": "Sign out",
+  "syncSettings_needsReauth": "The sign-in for {email} has expired. Please sign in again.",
+  "syncSettings_signInAgain": "Sign in again"
 }

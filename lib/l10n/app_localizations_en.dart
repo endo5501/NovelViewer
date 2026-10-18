@@ -1124,4 +1124,55 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get syncPrompt_stay => 'Stay here';
+
+  @override
+  String get syncSettings_tab => 'Sync';
+
+  @override
+  String get syncSettings_title => 'Reading progress sync';
+
+  @override
+  String get syncSettings_description =>
+      'Shares where you are reading with your other devices through Google Drive.';
+
+  @override
+  String get syncSettings_signIn => 'Sign in with Google';
+
+  @override
+  String get syncSettings_signingIn => 'Finish signing in in the browser…';
+
+  @override
+  String syncSettings_signedInAs(String email) {
+    return 'Signed in as $email';
+  }
+
+  @override
+  String get syncSettings_syncNow => 'Sync now';
+
+  @override
+  String get syncSettings_syncing => 'Syncing…';
+
+  @override
+  String syncSettings_lastSynced(String time) {
+    return 'Last synced: $time';
+  }
+
+  @override
+  String get syncSettings_neverSynced => 'Not synced yet';
+
+  @override
+  String syncSettings_lastError(String message) {
+    return 'The last sync failed: $message';
+  }
+
+  @override
+  String get syncSettings_signOut => 'Sign out';
+
+  @override
+  String syncSettings_needsReauth(String email) {
+    return 'The sign-in for $email has expired. Please sign in again.';
+  }
+
+  @override
+  String get syncSettings_signInAgain => 'Sign in again';
 }
