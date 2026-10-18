@@ -5,11 +5,11 @@
 ## 1. 依存パッケージとビルド設定
 
 - [ ] 1.1 `pubspec.yaml` に `uuid` と `flutter_web_auth_2` を追加し、`fvm flutter pub get` が成功すること、および macOS・iOS・Windows のビルドが通ることを確認する（`flutter_web_auth_2` は Windows 用のプラグインも含むため）
-- [ ] 1.2 `config/google_oauth.example.json`（`GOOGLE_OAUTH_DESKTOP_CLIENT_ID`、`GOOGLE_OAUTH_DESKTOP_CLIENT_SECRET`、`GOOGLE_OAUTH_IOS_CLIENT_ID` の見本）を追加し、`config/google_oauth.json` を `.gitignore` に入れる。`git status` に実ファイルが現れないことを確認する
-- [ ] 1.3 `scripts/test/build_app_test.sh` に「`config/google_oauth.json` があれば `--dart-define-from-file` が付き、無ければ付かない」テストを先に追加して失敗を確認し、`scripts/build_app.sh` を直してテストを通す
+- [x] 1.2 `config/google_oauth.example.json`（`GOOGLE_OAUTH_DESKTOP_CLIENT_ID`、`GOOGLE_OAUTH_DESKTOP_CLIENT_SECRET`、`GOOGLE_OAUTH_IOS_CLIENT_ID` の見本）を追加し、`config/google_oauth.json` を `.gitignore` に入れる。`git status` に実ファイルが現れないことを確認する
+- [x] 1.3 `scripts/test/build_app_test.sh` に「`config/google_oauth.json` があれば `--dart-define-from-file` が付き、無ければ付かない」テストを先に追加して失敗を確認し、`scripts/build_app.sh` を直してテストを通す
 - [ ] 1.4 1.3 と同じテストを `scripts/test/build_app_test.ps1` に追加し、`scripts/build_app.bat` を直してテストを通す（Windows で確認する）
-- [ ] 1.5 `.github/workflows/release.yml` の Windows ビルドに、Secrets から 3 つの値を `--dart-define` で渡す設定を追加する。Secret が無くてもワークフローの構文が有効なことを `actionlint` などで確認する
-- [ ] 1.6 `macos/Runner/Release.entitlements` に `com.apple.security.network.server` を追加し、Release ビルドで `codesign -d --entitlements -` の出力に含まれることを確認する
+- [x] 1.5 `.github/workflows/release.yml` の Windows ビルドに、Secrets から 3 つの値を `--dart-define` で渡す設定を追加する。Secret が無くてもワークフローの構文が有効なことを `actionlint` などで確認する
+- [x] 1.6 `macos/Runner/Release.entitlements` に `com.apple.security.network.server` を追加し、Release ビルドで `codesign -d --entitlements -` の出力に含まれることを確認する
 
 ## 2. DB スキーマ v12 と同期用リポジトリ
 

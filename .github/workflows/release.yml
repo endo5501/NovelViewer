@@ -99,8 +99,18 @@ jobs:
           [ -n "$hash" ] || { echo "git named no commit" >&2; exit 1; }
           echo "hash=$hash" >> "$GITHUB_OUTPUT"
 
+      # The Google OAuth client values for progress sync come from repository
+      # secrets (docs/progress-sync.md). A missing secret reaches the build as
+      # an empty string, which leaves sync off and changes nothing else.
       - name: Build Windows release
-        run: flutter build windows --release --dart-define=BUILD_COMMIT=${{ steps.commit.outputs.hash }}
+        env:
+          GOOGLE_OAUTH_DESKTOP_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_DESKTOP_CLIENT_ID }}
+          GOOGLE_OAUTH_DESKTOP_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_DESKTOP_CLIENT_SECRET }}
+        run: >-
+          flutter build windows --release
+          --dart-define=BUILD_COMMIT=${{ steps.commit.outputs.hash }}
+          "--dart-define=GOOGLE_OAUTH_DESKTOP_CLIENT_ID=$env:GOOGLE_OAUTH_DESKTOP_CLIENT_ID"
+          "--dart-define=GOOGLE_OAUTH_DESKTOP_CLIENT_SECRET=$env:GOOGLE_OAUTH_DESKTOP_CLIENT_SECRET"
 
       - name: Copy LAME LGPL license to release
         shell: pwsh

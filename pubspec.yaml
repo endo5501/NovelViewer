@@ -71,6 +71,8 @@ dependencies:
   foundation_models_llm:
     path: packages/foundation_models_llm
   archive: ^4.5.2
+  uuid: ^4.6.0
+  flutter_web_auth_2: ^5.1.0
 
 dev_dependencies:
   flutter_test:
