@@ -57,6 +57,8 @@ What the model answers for the on-device LLM is only whether the platform could 
 
 Likewise, whether the engine's native library is actually present in a given build is not part of this model. On iOS the library is built separately and is not tracked by Git, so a build can lack it; that is reported when the engine is first loaded (`piper-tts-native-engine`), not by hiding the feature.
 
+The model SHALL also name how the reader signs in for progress sync, because the two OAuth flows depend on the platform: iOS SHALL use the system authentication session, and every other platform SHALL use the desktop flow that receives the redirect on a loopback address. Whether sync is offered at all also depends on which OAuth client values the build carries, which is a property of the build rather than of the platform, so it is decided by `progress-sync-account` from this answer and not here.
+
 #### Scenario: Desktop platforms support every optional feature
 - **WHEN** the capability model is derived for a desktop platform
 - **THEN** text-to-speech with all three engines, audio export, in-app update and LLM summary are all reported as supported
@@ -90,3 +92,8 @@ Likewise, whether the engine's native library is actually present in a given bui
 #### Scenario: The model is evaluated without touching the platform
 - **WHEN** the derivation function is called from a unit test with an explicit platform flag
 - **THEN** it returns the capability set for that flag, regardless of the platform the test itself runs on
+
+#### Scenario: Progress sync sign-in follows the platform
+- **WHEN** the capability model is derived for iOS, and again for a desktop platform
+- **THEN** iOS names the system authentication session and the desktop platform names the loopback flow
+
