@@ -4,9 +4,9 @@ title: NovelViewer
 
 # NovelViewer
 
-NovelViewer は、Web 小説サイト（小説家になろう、カクヨム、ハーメルン、青空文庫など）から小説をダウンロードし、端末内で閲覧するためのアプリケーションです。Windows・macOS・iPad で動作します。
+NovelViewer は、Web 小説サイト（カクヨム、ハーメルン、青空文庫など）から小説をダウンロードし、端末内で閲覧するためのアプリケーションです。Windows・macOS・iPad で動作します。
 
-NovelViewer is an application for downloading novels from web fiction sites (Shōsetsuka ni Narō, Kakuyomu, Hameln, Aozora Bunko and others) and reading them on your own device. It runs on Windows, macOS and iPad.
+NovelViewer is an application for downloading novels from web fiction sites (Kakuyomu, Hameln, Aozora Bunko and others) and reading them on your own device. It runs on Windows, macOS and iPad.
 
 - ソースコード / Source code: [github.com/endo5501/NovelViewer](https://github.com/endo5501/NovelViewer)
 - プライバシーポリシー / Privacy policy: [privacy-policy](privacy-policy.html)
