@@ -2043,6 +2043,30 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'、'**
   String get referenceSources_listSeparator;
+
+  /// No description provided for @syncPrompt_title.
+  ///
+  /// In ja, this message translates to:
+  /// **'他の端末で読んだ位置があります'**
+  String get syncPrompt_title;
+
+  /// No description provided for @syncPrompt_message.
+  ///
+  /// In ja, this message translates to:
+  /// **'{device} で {episode} 話を読んでいました（{readAt}）。その位置に移動しますか？'**
+  String syncPrompt_message(String device, int episode, String readAt);
+
+  /// No description provided for @syncPrompt_move.
+  ///
+  /// In ja, this message translates to:
+  /// **'移動する'**
+  String get syncPrompt_move;
+
+  /// No description provided for @syncPrompt_stay.
+  ///
+  /// In ja, this message translates to:
+  /// **'このまま'**
+  String get syncPrompt_stay;
 }
 
 class _AppLocalizationsDelegate

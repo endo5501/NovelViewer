@@ -681,5 +681,22 @@
       }
     }
   },
-  "referenceSources_listSeparator": "、"
+  "referenceSources_listSeparator": "、",
+  "syncPrompt_title": "他の端末で読んだ位置があります",
+  "syncPrompt_message": "{device} で {episode} 話を読んでいました（{readAt}）。その位置に移動しますか？",
+  "@syncPrompt_message": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      },
+      "episode": {
+        "type": "int"
+      },
+      "readAt": {
+        "type": "String"
+      }
+    }
+  },
+  "syncPrompt_move": "移動する",
+  "syncPrompt_stay": "このまま"
 }

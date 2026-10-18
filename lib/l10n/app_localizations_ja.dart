@@ -1086,4 +1086,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get referenceSources_listSeparator => '、';
+
+  @override
+  String get syncPrompt_title => '他の端末で読んだ位置があります';
+
+  @override
+  String syncPrompt_message(String device, int episode, String readAt) {
+    return '$device で $episode 話を読んでいました（$readAt）。その位置に移動しますか？';
+  }
+
+  @override
+  String get syncPrompt_move => '移動する';
+
+  @override
+  String get syncPrompt_stay => 'このまま';
 }

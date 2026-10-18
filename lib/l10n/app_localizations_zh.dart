@@ -1077,4 +1077,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get referenceSources_listSeparator => '、';
+
+  @override
+  String get syncPrompt_title => '其他设备上的阅读位置';
+
+  @override
+  String syncPrompt_message(String device, int episode, String readAt) {
+    return '您在 $device 上读到第 $episode 话（$readAt）。要移动到该位置吗？';
+  }
+
+  @override
+  String get syncPrompt_move => '移动';
+
+  @override
+  String get syncPrompt_stay => '保持不变';
 }

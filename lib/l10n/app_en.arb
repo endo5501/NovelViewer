@@ -491,5 +491,9 @@
       }
     }
   },
-  "referenceSources_listSeparator": ", "
+  "referenceSources_listSeparator": ", ",
+  "syncPrompt_title": "Reading position on another device",
+  "syncPrompt_message": "You were reading episode {episode} on {device} ({readAt}). Move there?",
+  "syncPrompt_move": "Move",
+  "syncPrompt_stay": "Stay here"
 }

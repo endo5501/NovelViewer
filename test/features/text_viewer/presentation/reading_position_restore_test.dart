@@ -145,6 +145,31 @@ void main() {
     harness.dispose();
   });
 
+  testWidgets('a new restore request shows the newly saved position', (
+    tester,
+  ) async {
+    // Moving to another device's position inside the open episode rewrites
+    // the saved position without changing the selection; a restore request
+    // makes the viewer read it again.
+    var saved = _progress(offset: 100);
+    final harness = await _reader(
+      tester,
+      Future.value(saved),
+      progressFor: () async => saved,
+    );
+    await tester.pumpAndSettle();
+    final scroll = tester.state<ScrollableState>(find.byType(Scrollable).first);
+    final before = scroll.position.pixels;
+
+    saved = _progress(offset: 1500);
+    harness.read(readingPositionRestoreRequestProvider.notifier).request();
+    await tester.pumpAndSettle();
+
+    expect(scroll.position.pixels, greaterThan(before + 100));
+    await tester.pumpWidget(const SizedBox());
+    harness.dispose();
+  });
+
   testWidgets('restoring then re-capturing is a fixed point (no line creep)', (
     tester,
   ) async {
@@ -291,13 +316,16 @@ Future<ProviderContainer> _reader(
   Future<ReadingProgress?> progress, {
   bool fromStart = false,
   List<PositionSnapshot>? saves,
+  Future<ReadingProgress?> Function()? progressFor,
 }) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   final container = ProviderContainer(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
-      readingPositionForFileProvider.overrideWith((ref, path) => progress),
+      readingPositionForFileProvider.overrideWith(
+        (ref, path) => progressFor?.call() ?? progress,
+      ),
       readingPositionWriterProvider.overrideWith((ref) {
         final writer = ReadingPositionWriter(
           save: (snapshot) async {

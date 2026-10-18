@@ -1110,4 +1110,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get referenceSources_listSeparator => ', ';
+
+  @override
+  String get syncPrompt_title => 'Reading position on another device';
+
+  @override
+  String syncPrompt_message(String device, int episode, String readAt) {
+    return 'You were reading episode $episode on $device ($readAt). Move there?';
+  }
+
+  @override
+  String get syncPrompt_move => 'Move';
+
+  @override
+  String get syncPrompt_stay => 'Stay here';
 }

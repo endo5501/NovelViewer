@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:novel_viewer/features/progress_sync/presentation/sync_prompt_host.dart';
 import 'package:novel_viewer/features/reading_context/providers/reading_context_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:novel_viewer/app/selected_file_progress_title_provider.dart';
@@ -468,159 +469,165 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           bindings[action]!.toActivator(): intentFor(action),
     };
 
-    return Shortcuts(
-      shortcuts: shortcuts,
-      child: Actions(
-        actions: {
-          SearchIntent: CallbackAction<SearchIntent>(
-            onInvoke: (_) {
-              _onSearchShortcut();
-              return null;
-            },
-          ),
-          BookmarkIntent: CallbackAction<BookmarkIntent>(
-            onInvoke: (_) {
-              _toggleBookmark();
-              return null;
-            },
-          ),
-          ToggleFileBrowserIntent: _ToggleFileBrowserAction(_toggleFileBrowser),
-          TtsToggleIntent: CallbackAction<TtsToggleIntent>(
-            onInvoke: (_) {
-              ref.read(ttsToggleRequestProvider.notifier).request();
-              return null;
-            },
-          ),
-        },
-        child: Focus(
-          autofocus: true,
-          child: Scaffold(
-            key: _scaffoldKey,
-            // The vertical viewer already reads a horizontal drag as a page
-            // turn (see _tryDecideGestureMode in vertical_text_page.dart), so
-            // leaving the edge-drag gestures on would take page turning away
-            // at exactly the edges of the screen. The app bar's buttons are
-            // the only way to open either drawer.
-            drawerEnableOpenDragGesture: false,
-            endDrawerEnableOpenDragGesture: false,
-            // A drawer is laid out at the origin at the full height of the
-            // scaffold, so it reaches behind the status bar and the home
-            // indicator; the inset handling the app bar gives the body does
-            // not reach it. The SafeArea sits inside the drawer rather than
-            // in the panel so the drawer's own surface keeps covering the
-            // inset area.
-            //
-            // The file browser lives here at every display width: a reader
-            // picks an episode and returns to the text, so a column standing
-            // beside the text the whole time only narrowed it — and narrowed
-            // the file names past legibility.
-            drawer: Drawer(
-              width: fileBrowserDrawerWidth(displayWidth: displayWidth),
-              child: const SafeArea(
-                child: LeftColumnPanel(key: Key('left_column')),
-              ),
+    // Asks whether to move to another device's position when entering a
+    // novel raises the question (reading-progress-sync).
+    return SyncPromptHost(
+      child: Shortcuts(
+        shortcuts: shortcuts,
+        child: Actions(
+          actions: {
+            SearchIntent: CallbackAction<SearchIntent>(
+              onInvoke: (_) {
+                _onSearchShortcut();
+                return null;
+              },
             ),
-            endDrawer: isNarrow
-                ? const Drawer(
-                    width: kRightColumnWidth,
-                    child: SafeArea(
-                      child: SearchResultsPanel(key: Key('right_column')),
-                    ),
-                  )
-                : null,
-            // A drawer the reader opens or closes themselves means they have
-            // taken over from the launch: a restoration settling afterwards
-            // must not reopen what they just put away.
-            onDrawerChanged: (_) => _startupDrawerSettled = true,
-            onEndDrawerChanged: _onEndDrawerChanged,
-            appBar: AppBar(
-              title: Text(
-                ref.watch(selectedFileProgressTitleProvider),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            BookmarkIntent: CallbackAction<BookmarkIntent>(
+              onInvoke: (_) {
+                _toggleBookmark();
+                return null;
+              },
+            ),
+            ToggleFileBrowserIntent: _ToggleFileBrowserAction(
+              _toggleFileBrowser,
+            ),
+            TtsToggleIntent: CallbackAction<TtsToggleIntent>(
+              onInvoke: (_) {
+                ref.read(ttsToggleRequestProvider.notifier).request();
+                return null;
+              },
+            ),
+          },
+          child: Focus(
+            autofocus: true,
+            child: Scaffold(
+              key: _scaffoldKey,
+              // The vertical viewer already reads a horizontal drag as a page
+              // turn (see _tryDecideGestureMode in vertical_text_page.dart), so
+              // leaving the edge-drag gestures on would take page turning away
+              // at exactly the edges of the screen. The app bar's buttons are
+              // the only way to open either drawer.
+              drawerEnableOpenDragGesture: false,
+              endDrawerEnableOpenDragGesture: false,
+              // A drawer is laid out at the origin at the full height of the
+              // scaffold, so it reaches behind the status bar and the home
+              // indicator; the inset handling the app bar gives the body does
+              // not reach it. The SafeArea sits inside the drawer rather than
+              // in the panel so the drawer's own surface keeps covering the
+              // inset area.
+              //
+              // The file browser lives here at every display width: a reader
+              // picks an episode and returns to the text, so a column standing
+              // beside the text the whole time only narrowed it — and narrowed
+              // the file names past legibility.
+              drawer: Drawer(
+                width: fileBrowserDrawerWidth(displayWidth: displayWidth),
+                child: const SafeArea(
+                  child: LeftColumnPanel(key: Key('left_column')),
+                ),
               ),
-              // AppBar buttons are excluded from keyboard focus traversal so
-              // that Tab keeps reaching the file browser drawer rather than
-              // walking along this row. They remain fully usable via mouse.
-              actions: [
-                ExcludeFocus(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const UpdateBadge(),
-                      _buildBookmarkButton(),
-                      // In the narrow layout the right pane is the search
-                      // results drawer, which the search button opens; a
-                      // second button for the same drawer, labelled as showing
-                      // a column, would describe a layout that is not there.
-                      if (!isNarrow)
-                        IconButton(
-                          key: const Key('toggle_right_column_button'),
-                          icon: Icon(
-                            ref.watch(rightColumnVisibleProvider)
-                                ? Icons.vertical_split
-                                : Icons.view_sidebar,
+              endDrawer: isNarrow
+                  ? const Drawer(
+                      width: kRightColumnWidth,
+                      child: SafeArea(
+                        child: SearchResultsPanel(key: Key('right_column')),
+                      ),
+                    )
+                  : null,
+              // A drawer the reader opens or closes themselves means they have
+              // taken over from the launch: a restoration settling afterwards
+              // must not reopen what they just put away.
+              onDrawerChanged: (_) => _startupDrawerSettled = true,
+              onEndDrawerChanged: _onEndDrawerChanged,
+              appBar: AppBar(
+                title: Text(
+                  ref.watch(selectedFileProgressTitleProvider),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                // AppBar buttons are excluded from keyboard focus traversal so
+                // that Tab keeps reaching the file browser drawer rather than
+                // walking along this row. They remain fully usable via mouse.
+                actions: [
+                  ExcludeFocus(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const UpdateBadge(),
+                        _buildBookmarkButton(),
+                        // In the narrow layout the right pane is the search
+                        // results drawer, which the search button opens; a
+                        // second button for the same drawer, labelled as showing
+                        // a column, would describe a layout that is not there.
+                        if (!isNarrow)
+                          IconButton(
+                            key: const Key('toggle_right_column_button'),
+                            icon: Icon(
+                              ref.watch(rightColumnVisibleProvider)
+                                  ? Icons.vertical_split
+                                  : Icons.view_sidebar,
+                            ),
+                            onPressed: () => ref
+                                .read(rightColumnVisibleProvider.notifier)
+                                .toggle(),
+                            tooltip: ref.watch(rightColumnVisibleProvider)
+                                ? AppLocalizations.of(
+                                    context,
+                                  )!.homeScreen_hideRightColumnTooltip
+                                : AppLocalizations.of(
+                                    context,
+                                  )!.homeScreen_showRightColumnTooltip,
                           ),
-                          onPressed: () => ref
-                              .read(rightColumnVisibleProvider.notifier)
-                              .toggle(),
-                          tooltip: ref.watch(rightColumnVisibleProvider)
-                              ? AppLocalizations.of(
-                                  context,
-                                )!.homeScreen_hideRightColumnTooltip
-                              : AppLocalizations.of(
-                                  context,
-                                )!.homeScreen_showRightColumnTooltip,
+                        IconButton(
+                          key: const Key('new_collection_button'),
+                          icon: const Icon(Icons.create_new_folder_outlined),
+                          onPressed: _showCreateCollectionDialog,
+                          tooltip: AppLocalizations.of(
+                            context,
+                          )!.fileBrowser_newCollection,
                         ),
-                      IconButton(
-                        key: const Key('new_collection_button'),
-                        icon: const Icon(Icons.create_new_folder_outlined),
-                        onPressed: _showCreateCollectionDialog,
-                        tooltip: AppLocalizations.of(
-                          context,
-                        )!.fileBrowser_newCollection,
+                        // Always present: a tablet without a keyboard has no
+                        // Ctrl/Cmd+F, so the shortcut cannot be the only way to
+                        // reach search.
+                        IconButton(
+                          key: const Key('search_button'),
+                          icon: const Icon(Icons.search),
+                          onPressed: _onSearchShortcut,
+                          tooltip: AppLocalizations.of(
+                            context,
+                          )!.homeScreen_searchTooltip,
+                        ),
+                        _buildDownloadButton(),
+                        IconButton(
+                          icon: const Icon(Icons.settings),
+                          onPressed: () => SettingsDialog.show(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              // One row in both layouts. With the file browser in the drawer
+              // the only thing the layout decides is whether the search results
+              // stand beside the text or come over it.
+              body: HoverPopupHost(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: FocusScope(
+                        node: _novelPaneFocus,
+                        child: const TextViewerPanel(key: Key('center_column')),
                       ),
-                      // Always present: a tablet without a keyboard has no
-                      // Ctrl/Cmd+F, so the shortcut cannot be the only way to
-                      // reach search.
-                      IconButton(
-                        key: const Key('search_button'),
-                        icon: const Icon(Icons.search),
-                        onPressed: _onSearchShortcut,
-                        tooltip: AppLocalizations.of(
-                          context,
-                        )!.homeScreen_searchTooltip,
-                      ),
-                      _buildDownloadButton(),
-                      IconButton(
-                        icon: const Icon(Icons.settings),
-                        onPressed: () => SettingsDialog.show(context),
+                    ),
+                    if (!isNarrow && ref.watch(rightColumnVisibleProvider)) ...[
+                      const VerticalDivider(width: 1),
+                      const SizedBox(
+                        width: kRightColumnWidth,
+                        child: SearchResultsPanel(key: Key('right_column')),
                       ),
                     ],
-                  ),
-                ),
-              ],
-            ),
-            // One row in both layouts. With the file browser in the drawer
-            // the only thing the layout decides is whether the search results
-            // stand beside the text or come over it.
-            body: HoverPopupHost(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: FocusScope(
-                      node: _novelPaneFocus,
-                      child: const TextViewerPanel(key: Key('center_column')),
-                    ),
-                  ),
-                  if (!isNarrow && ref.watch(rightColumnVisibleProvider)) ...[
-                    const VerticalDivider(width: 1),
-                    const SizedBox(
-                      width: kRightColumnWidth,
-                      child: SearchResultsPanel(key: Key('right_column')),
-                    ),
                   ],
-                ],
+                ),
               ),
             ),
           ),

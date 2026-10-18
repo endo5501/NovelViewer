@@ -70,6 +70,22 @@ final readingPositionForFileProvider = FutureProvider.autoDispose
       }
     });
 
+/// Bumped to make the viewer restore the saved position of the open file
+/// again, for when the saved position changes while the file stays selected
+/// (moving to another device's position inside the open episode). Each bump
+/// is one restoration request, consumed like the one a selection makes.
+class ReadingPositionRestoreRequest extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void request() => state = state + 1;
+}
+
+final readingPositionRestoreRequestProvider =
+    NotifierProvider<ReadingPositionRestoreRequest, int>(
+      ReadingPositionRestoreRequest.new,
+    );
+
 final readingPositionLifecycleProvider = Provider<void>((ref) {
   final observer = _PositionLifecycle(ref.read(readingPositionWriterProvider));
   WidgetsBinding.instance.addObserver(observer);
