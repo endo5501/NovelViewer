@@ -87,9 +87,9 @@ Windows・macOS・iPad のあいだで、小説ごとの読書進捗（最後に
 
 ```json
 {
-  "GOOGLE_OAUTH_DESKTOP_CLIENT_ID": "xxxx.apps.googleusercontent.com",
-  "GOOGLE_OAUTH_DESKTOP_CLIENT_SECRET": "GOCSPX-xxxx",
-  "GOOGLE_OAUTH_IOS_CLIENT_ID": "yyyy.apps.googleusercontent.com"
+  "GOOGLE_OAUTH_DESKTOP_CLIENT_ID": "（デスクトップ用のクライアント ID）",
+  "GOOGLE_OAUTH_DESKTOP_CLIENT_SECRET": "（デスクトップ用のクライアント シークレット）",
+  "GOOGLE_OAUTH_IOS_CLIENT_ID": "（iOS 用のクライアント ID）"
 }
 ```
 
