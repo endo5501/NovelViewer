@@ -17,9 +17,12 @@ bool isSamePosition(SyncProgressRecord a, SyncProgressRecord b) {
 }
 
 /// This device's record for one novel. [lastPushed] is what the device last
-/// published (or adopted from another device); while the position holds
-/// still its `read_at` carries over, so opening a novel does not make the
-/// device look like it read further (design D3).
+/// published (or adopted from another device). While the position stays
+/// within [samePositionTolerance] of it, [lastPushed] is published again as
+/// it is, `read_at` and offset alike: opening a novel must not make the device
+/// look like it read further (design D3), and keeping the offset as well
+/// means small advances add up against one anchor instead of each being
+/// measured from the last.
 SyncProgressRecord buildOwnRecord({
   required ReadingProgress local,
   required int episode,
@@ -40,7 +43,7 @@ SyncProgressRecord buildOwnRecord({
     novelId: current.novelId,
     episode: current.episode,
     fileName: current.fileName,
-    bodyOffset: current.bodyOffset,
+    bodyOffset: lastPushed.bodyOffset,
     bodyHash: current.bodyHash,
     readAt: lastPushed.readAt,
   );

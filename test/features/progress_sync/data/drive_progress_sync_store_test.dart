@@ -117,6 +117,28 @@ void main() {
       );
     });
 
+    test('leaves out the file of the device asking', () async {
+      final store = storeWith((request) async {
+        if (request.url.path == '/drive/v3/files') {
+          return _json({
+            'files': [
+              {'id': 'f-self', 'name': 'device-self.json'},
+              {'id': 'f-win', 'name': 'device-win.json'},
+            ],
+          });
+        }
+        return http.Response(encodeDeviceProgress(_device('win')), 200);
+      });
+
+      final devices = await store.fetchAll(exceptDeviceId: 'self');
+
+      expect(devices.map((d) => d.deviceId), ['win']);
+      expect(
+        requests.where((r) => r.url.pathSegments.last == 'f-self'),
+        isEmpty,
+      );
+    });
+
     test('follows the next page of the listing', () async {
       final store = storeWith((request) async {
         if (request.url.path == '/drive/v3/files') {

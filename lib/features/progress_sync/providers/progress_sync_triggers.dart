@@ -12,7 +12,9 @@ export '../data/progress_sync_runner.dart';
 /// back or is asked to exit (design D7). `inactive` is left alone: a desktop
 /// window enters it every time it loses focus.
 class ProgressSyncLifecycle extends WidgetsBindingObserver {
-  final ProgressSyncRunner _runner;
+  /// Looked up at each event rather than held, so a runner rebuilt after the
+  /// observer registered is the one driven.
+  final ProgressSyncRunner Function() _runner;
   final Duration _exitTimeout;
 
   ProgressSyncLifecycle(
@@ -24,10 +26,10 @@ class ProgressSyncLifecycle extends WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.resumed:
-        unawaited(_runner.pull());
+        unawaited(_runner().pull());
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
-        unawaited(_runner.push());
+        unawaited(_runner().push());
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
         break;
@@ -40,7 +42,7 @@ class ProgressSyncLifecycle extends WidgetsBindingObserver {
   @override
   Future<AppExitResponse> didRequestAppExit() async {
     try {
-      await _runner.push().timeout(_exitTimeout);
+      await _runner().push().timeout(_exitTimeout);
     } on TimeoutException {
       Logger('progress_sync').info('Exit did not wait for the progress push');
     }

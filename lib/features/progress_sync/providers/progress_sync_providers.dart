@@ -121,7 +121,9 @@ final progressSyncStartupProvider = FutureProvider<void>((ref) async {
 
 /// Pulls and pushes on the app's lifecycle for as long as it is read.
 final progressSyncLifecycleProvider = Provider<void>((ref) {
-  final observer = ProgressSyncLifecycle(ref.read(progressSyncRunnerProvider));
+  final observer = ProgressSyncLifecycle(
+    () => ref.read(progressSyncRunnerProvider),
+  );
   WidgetsBinding.instance.addObserver(observer);
   ref.onDispose(() => WidgetsBinding.instance.removeObserver(observer));
 });

@@ -57,26 +57,33 @@ class DriveProgressSyncStore implements ProgressSyncStore {
   static String fileNameFor(String deviceId) => '$_filePrefix$deviceId.json';
 
   @override
-  Future<List<DeviceProgress>> fetchAll() async {
-    final files = await _list("name contains '$_filePrefix'");
-    final devices = <DeviceProgress>[];
-    for (final file in files) {
-      final response = await _send(
-        () => http.Request(
-          'GET',
-          _api.replace(
-            path: '${_api.path}/${file.id}',
-            queryParameters: {'alt': 'media'},
-          ),
+  Future<List<DeviceProgress>> fetchAll({String? exceptDeviceId}) async {
+    final skip = exceptDeviceId == null ? null : fileNameFor(exceptDeviceId);
+    final files = [
+      for (final file in await _list("name contains '$_filePrefix'"))
+        if (file.name != skip) file,
+    ];
+    final devices = await Future.wait(files.map(_read));
+    return [for (final device in devices) ?device];
+  }
+
+  /// One device's file, or null when this build cannot read it.
+  Future<DeviceProgress?> _read(({String id, String name}) file) async {
+    final response = await _send(
+      () => http.Request(
+        'GET',
+        _api.replace(
+          path: '${_api.path}/${file.id}',
+          queryParameters: {'alt': 'media'},
         ),
-      );
-      try {
-        devices.add(decodeDeviceProgress(utf8.decode(response.bodyBytes)));
-      } on FormatException catch (e, st) {
-        _log.warning('Skipping unreadable progress file ${file.name}', e, st);
-      }
+      ),
+    );
+    try {
+      return decodeDeviceProgress(utf8.decode(response.bodyBytes));
+    } on FormatException catch (e, st) {
+      _log.warning('Skipping unreadable progress file ${file.name}', e, st);
+      return null;
     }
-    return devices;
   }
 
   @override

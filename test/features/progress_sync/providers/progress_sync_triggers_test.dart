@@ -150,9 +150,16 @@ void main() {
     setUp(() {
       runner = _RecordingRunner();
       lifecycle = ProgressSyncLifecycle(
-        runner,
+        () => runner,
         exitTimeout: const Duration(milliseconds: 50),
       );
+    });
+
+    test('drives the runner current at the time of the event', () {
+      final replaced = _RecordingRunner();
+      runner = replaced;
+      lifecycle.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      expect(replaced.calls, ['pull']);
     });
 
     test('pulls when the app comes back to the front', () {

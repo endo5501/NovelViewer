@@ -99,7 +99,7 @@ void main() {
       expect(record.bodyOffset, 1000);
     });
 
-    test('keeps the read_at but sends the new offset for a small drift', () {
+    test('holds the pushed position through a small drift', () {
       final record = buildOwnRecord(
         local: _local('003_t.txt', offset: 990, updatedAt: _t2),
         episode: 3,
@@ -107,7 +107,27 @@ void main() {
       );
 
       expect(record.readAt, _t0);
-      expect(record.bodyOffset, 990);
+      expect(record.bodyOffset, 1000);
+    });
+
+    test('small advances add up to a move', () {
+      // Each session reads a little under the tolerance; measured from the
+      // last push alone, none of them would ever count as reading on.
+      var pushed = _rec(3, offset: 0, readAt: _t0);
+      pushed = buildOwnRecord(
+        local: _local('003_t.txt', offset: 800, updatedAt: _t1),
+        episode: 3,
+        lastPushed: pushed,
+      );
+      expect(pushed.readAt, _t0);
+      pushed = buildOwnRecord(
+        local: _local('003_t.txt', offset: 1600, updatedAt: _t2),
+        episode: 3,
+        lastPushed: pushed,
+      );
+
+      expect(pushed.readAt, _t2);
+      expect(pushed.bodyOffset, 1600);
     });
 
     test('takes the local updated_at once the position moves', () {

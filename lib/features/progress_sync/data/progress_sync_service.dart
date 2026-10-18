@@ -106,41 +106,52 @@ class ProgressSyncService implements ProgressSyncRunner {
     if (!_isAvailable() || !_isSignedIn()) return Future.value();
     _pendingPush |= push;
     _pendingPull |= pull;
-    return _running ??= _drain().whenComplete(() => _running = null);
+    return _running ??= _drain();
   }
 
   Future<void> _drain() async {
     status.value = _status(running: true);
+    // The run's first failure: a later step succeeding must not hide it, or a
+    // push Drive keeps refusing would look synced after its pull.
+    String? runError;
+    var succeeded = false;
     try {
       while (_pendingPush || _pendingPull) {
         final doPush = _pendingPush;
         final doPull = _pendingPull;
         _pendingPush = false;
         _pendingPull = false;
-        if (doPush) await _guard('push', _push);
-        if (doPull) await _guard('pull', _pull);
+        for (final (what, run) in [
+          if (doPush) ('push', _push),
+          if (doPull) ('pull', _pull),
+        ]) {
+          try {
+            await run();
+            succeeded = true;
+          } catch (e, st) {
+            _log.warning('Progress sync $what failed', e, st);
+            runError ??= e.toString();
+          }
+        }
       }
     } finally {
-      status.value = _status(running: false);
+      // Cleared before anyone hears the run ended, so a request made in
+      // response starts a run of its own instead of joining this finished one.
+      _running = null;
+      final current = status.value;
+      status.value = SyncRunStatus(
+        lastSuccessAt: succeeded ? _now() : current.lastSuccessAt,
+        lastError: runError ?? (succeeded ? null : current.lastError),
+      );
     }
   }
 
-  Future<void> _guard(String what, Future<void> Function() run) async {
-    try {
-      await run();
-      status.value = SyncRunStatus(running: true, lastSuccessAt: _now());
-    } catch (e, st) {
-      _log.warning('Progress sync $what failed', e, st);
-      status.value = _status(lastError: e.toString());
-    }
-  }
-
-  SyncRunStatus _status({bool? running, String? lastError}) {
+  SyncRunStatus _status({required bool running}) {
     final current = status.value;
     return SyncRunStatus(
-      running: running ?? current.running,
+      running: running,
       lastSuccessAt: current.lastSuccessAt,
-      lastError: lastError ?? current.lastError,
+      lastError: current.lastError,
     );
   }
 
@@ -149,13 +160,16 @@ class ProgressSyncService implements ProgressSyncRunner {
     final local = await _loadLocalProgress();
     final syncable = await _syncableNovelIds();
     final lastPushed = await _repository.findAllOwn();
+    // Resolving an episode can mean finding the novel's folder on disk, so
+    // a file already pushed under the same name keeps the episode it had.
     final episodes = <String, int?>{
       for (final progress in local)
         if (syncable.contains(progress.novelId))
-          progress.novelId: await _episodeOf(
-            progress.novelId,
-            progress.fileName,
-          ),
+          progress.novelId: switch (lastPushed[progress.novelId]) {
+            final pushed? when pushed.fileName == progress.fileName =>
+              pushed.episode,
+            _ => await _episodeOf(progress.novelId, progress.fileName),
+          },
     };
     final records = buildOwnRecords(
       local: local,
@@ -180,10 +194,11 @@ class ProgressSyncService implements ProgressSyncRunner {
   }
 
   Future<void> _pull() async {
-    final devices = await _store.fetchAll();
+    final selfDeviceId = await _deviceId();
+    final devices = await _store.fetchAll(exceptDeviceId: selfDeviceId);
     if (!_isSignedIn()) return;
     await _repository.replaceRemote(
-      selfDeviceId: await _deviceId(),
+      selfDeviceId: selfDeviceId,
       devices: devices,
     );
     _pulled.add(null);

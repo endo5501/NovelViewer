@@ -321,7 +321,69 @@ void main() {
     expect((await repository.findAllOwn())['narou_a'], adopted);
   });
 
+  test('a request made as a run finishes still runs', () async {
+    var flushes = 0;
+    final sync = service(flush: () async => flushes++);
+    var requested = false;
+    sync.status.addListener(() {
+      if (!sync.status.value.running && !requested) {
+        requested = true;
+        unawaited(sync.push());
+      }
+    });
+
+    await sync.push();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(flushes, 2);
+  });
+
+  test('an episode is resolved again only when its file changed', () async {
+    final asked = <String>[];
+    final sync = ProgressSyncService(
+      isAvailable: () => true,
+      isSignedIn: () => true,
+      store: store,
+      repository: repository,
+      deviceId: () async => 'self',
+      deviceName: 'Mac',
+      flushPendingPositions: () async {},
+      loadLocalProgress: () async => local,
+      syncableNovelIds: () async => {'narou_a', 'narou_b'},
+      episodeOf: (_, fileName) async {
+        asked.add(fileName);
+        return int.tryParse(fileName.split('_')[0]);
+      },
+    );
+    local = [_local('narou_a', '003_t.txt'), _local('narou_b', '001_t.txt')];
+    await sync.push();
+    asked.clear();
+
+    local = [
+      _local('narou_a', '003_t.txt', offset: 50),
+      _local('narou_b', '002_t.txt'),
+    ];
+    await sync.push();
+
+    expect(asked, ['002_t.txt']);
+  });
+
+  test('a pull does not read back this device\'s own file', () async {
+    await service().pull();
+
+    expect(store.lastExceptDeviceId, 'self');
+  });
+
   group('status', () {
+    test('a failed push stays shown after a pull succeeds', () async {
+      store.failWritesWith = Exception('quota');
+      final sync = service();
+
+      await sync.syncNow();
+
+      expect(sync.status.value.lastError, contains('quota'));
+    });
+
     test('records when a sync last succeeded', () async {
       final sync = service();
       await sync.pull();

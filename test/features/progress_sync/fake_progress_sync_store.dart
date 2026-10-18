@@ -10,15 +10,25 @@ class FakeProgressSyncStore implements ProgressSyncStore {
   int writes = 0;
   Object? failWith;
 
+  /// Makes only writes throw it.
+  Object? failWritesWith;
+
+  /// The device id the last fetch was asked to leave out.
+  String? lastExceptDeviceId;
+
   /// Awaited before a fetch or a write returns, to hold a call in flight.
   Future<void> Function()? beforeFetchReturns;
   Future<void> Function()? beforeWriteReturns;
 
   @override
-  Future<List<DeviceProgress>> fetchAll() async {
+  Future<List<DeviceProgress>> fetchAll({String? exceptDeviceId}) async {
     fetches++;
+    lastExceptDeviceId = exceptDeviceId;
     if (failWith case final error?) throw error;
-    final result = files.values.toList();
+    final result = [
+      for (final MapEntry(:key, :value) in files.entries)
+        if (key != exceptDeviceId) value,
+    ];
     await beforeFetchReturns?.call();
     return result;
   }
@@ -27,6 +37,7 @@ class FakeProgressSyncStore implements ProgressSyncStore {
   Future<void> writeOwn(DeviceProgress own) async {
     writes++;
     if (failWith case final error?) throw error;
+    if (failWritesWith case final error?) throw error;
     await beforeWriteReturns?.call();
     files[own.deviceId] = own;
   }
