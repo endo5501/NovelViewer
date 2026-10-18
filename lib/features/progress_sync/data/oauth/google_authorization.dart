@@ -24,11 +24,15 @@ class PkcePair {
 
   factory PkcePair.generate([Random? random]) {
     final verifier = randomUrlSafeString(64, random);
-    final challenge = base64UrlEncode(
-      sha256.convert(ascii.encode(verifier)).bytes,
-    ).replaceAll('=', '');
-    return PkcePair._(verifier, challenge);
+    return PkcePair._(verifier, pkceChallengeOf(verifier));
   }
+}
+
+/// The S256 challenge for [verifier]: unpadded base64url of its SHA-256.
+String pkceChallengeOf(String verifier) {
+  return base64UrlEncode(
+    sha256.convert(ascii.encode(verifier)).bytes,
+  ).replaceAll('=', '');
 }
 
 /// A random string of [length] characters from the PKCE unreserved set, also
