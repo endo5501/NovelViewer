@@ -55,7 +55,7 @@ class NovelDatabaseSnapshotResolver {
 
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
-  static const _databaseVersion = 11;
+  static const _databaseVersion = 12;
 
   /// The current `novel_metadata.db` schema version. Exposed so test fixtures
   /// open in-memory databases at the same version the production schema targets.
@@ -146,6 +146,7 @@ class NovelDatabase {
     await _createReadingProgressTableV8(db);
     await _addReadingPositionColumns(db);
     await _createReferenceSourcesTable(db);
+    await _createProgressSyncTables(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -188,6 +189,46 @@ class NovelDatabase {
     if (oldVersion < 11) {
       await _createReferenceSourcesTable(db);
     }
+    if (oldVersion < 12) {
+      await _createProgressSyncTables(db);
+    }
+  }
+
+  /// v12: progress sync state (reading-progress-sync). Records received from
+  /// other devices (one row per device and novel, replaced wholesale on each
+  /// pull), the record this device last pushed (whose `read_at` carries over
+  /// while the position holds still), and the newest received `read_at` the
+  /// reader already answered a "move there?" prompt for.
+  static Future<void> _createProgressSyncTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE sync_remote_progress (
+        device_id TEXT NOT NULL,
+        novel_id TEXT NOT NULL,
+        device_name TEXT NOT NULL,
+        episode INTEGER NOT NULL,
+        file_name TEXT NOT NULL,
+        body_offset INTEGER NOT NULL,
+        body_hash TEXT,
+        read_at TEXT NOT NULL,
+        PRIMARY KEY (device_id, novel_id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE sync_own_progress (
+        novel_id TEXT NOT NULL PRIMARY KEY,
+        episode INTEGER NOT NULL,
+        file_name TEXT NOT NULL,
+        body_offset INTEGER NOT NULL,
+        body_hash TEXT,
+        read_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE sync_handled (
+        novel_id TEXT NOT NULL PRIMARY KEY,
+        handled_read_at TEXT NOT NULL
+      )
+    ''');
   }
 
   /// v11: which novels each novel draws on as reference sources for LLM

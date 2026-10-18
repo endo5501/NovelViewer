@@ -12,3 +12,9 @@ PRODUCT_BUNDLE_IDENTIFIER = com.endo5501.novelViewer
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 com.endo5501. All rights reserved.
+
+// Signing with the developer's own team, kept out of Git like
+// ios/Flutter/Local.xcconfig: DEVELOPMENT_TEAM and CODE_SIGN_IDENTITY.
+// The keychain entitlement that progress sync and the API key storage need
+// (keychain-access-groups) only builds with a development certificate.
+#include? "Local.xcconfig"

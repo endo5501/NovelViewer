@@ -681,5 +681,64 @@
       }
     }
   },
-  "referenceSources_listSeparator": "、"
+  "referenceSources_listSeparator": "、",
+  "syncPrompt_title": "他の端末で読んだ位置があります",
+  "syncPrompt_message": "{device} で {episode} 話を読んでいました（{readAt}）。その位置に移動しますか？",
+  "@syncPrompt_message": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      },
+      "episode": {
+        "type": "int"
+      },
+      "readAt": {
+        "type": "String"
+      }
+    }
+  },
+  "syncPrompt_move": "移動する",
+  "syncPrompt_stay": "このまま",
+  "syncSettings_tab": "同期",
+  "syncSettings_title": "読書進捗の同期",
+  "syncSettings_description": "Google ドライブを使って、読んでいる位置を他の端末と共有します。",
+  "syncSettings_signIn": "Google でログイン",
+  "syncSettings_signingIn": "ブラウザでログインを完了してください…",
+  "syncSettings_signedInAs": "{email} でログイン中",
+  "@syncSettings_signedInAs": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "syncSettings_syncNow": "今すぐ同期",
+  "syncSettings_syncing": "同期中…",
+  "syncSettings_lastSynced": "最後の同期: {time}",
+  "@syncSettings_lastSynced": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "syncSettings_neverSynced": "まだ同期していません",
+  "syncSettings_lastError": "前回の同期に失敗しました: {message}",
+  "@syncSettings_lastError": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "syncSettings_signOut": "ログアウト",
+  "syncSettings_needsReauth": "{email} のログインの有効期限が切れました。もう一度ログインしてください。",
+  "@syncSettings_needsReauth": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "syncSettings_signInAgain": "もう一度ログイン"
 }

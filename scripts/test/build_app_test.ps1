@@ -77,6 +77,26 @@ try {
   Check 'fails when the build fails' ($code -ne 0)
   [System.IO.File]::WriteAllText((Join-Path $bin 'fvm.bat'), "@echo off`r`necho %*> `"%FVM_ARGS%`"`r`n")
 
+  # --- Google OAuth client values for progress sync --------------------------
+  # NOVEL_VIEWER_OAUTH_CONFIG points the script at a file other than the
+  # default config\google_oauth.json, so a developer's real file does not
+  # affect the run. The script quotes the argument, so allow the quotes.
+  $oauthFile = Join-Path $work 'oauth.json'
+  [System.IO.File]::WriteAllText($oauthFile, "{}")
+  $oauthPattern = '"?--dart-define-from-file=' + [regex]::Escape($oauthFile) + '"?(\s|$)'
+  $env:NOVEL_VIEWER_OAUTH_CONFIG = $oauthFile
+  try {
+    $code = Invoke-BuildApp 'echo a1b2c3d' @('windows')
+    Check 'passes the OAuth config file when it exists' ((Get-Recorded) -match $oauthPattern)
+    $code = Invoke-BuildApp 'exit /b 128' @('windows')
+    Check 'passes the OAuth config file even when git cannot name a commit' ((Get-Recorded) -match $oauthPattern)
+    $env:NOVEL_VIEWER_OAUTH_CONFIG = (Join-Path $work 'missing.json')
+    $code = Invoke-BuildApp 'echo a1b2c3d' @('windows')
+    Check 'builds without the OAuth config file when it is absent' (($code -eq 0) -and -not ((Get-Recorded) -match 'dart-define-from-file'))
+  } finally {
+    Remove-Item Env:NOVEL_VIEWER_OAUTH_CONFIG -ErrorAction SilentlyContinue
+  }
+
   # --- usage -----------------------------------------------------------------
   $code = Invoke-BuildApp 'echo a1b2c3d' @()
   Check 'refuses to run without a platform' (($code -ne 0) -and ($null -eq (Get-Recorded)))

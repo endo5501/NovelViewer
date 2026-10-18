@@ -100,6 +100,8 @@ When the user navigates into a novel folder (i.e., `currentDirectoryProvider` tr
 
 The novel id used for the lookup SHALL be derived with `resolveNovelId` (nearest registered ancestor folder's leaf name = `folder_name`), so nested novels resolve to their registered leaf name rather than the first path segment. The auto-open SHALL NOT fire when no novel id can be resolved (library root, or a path with no registered ancestor folder).
 
+When progress sync is enabled and signed in, the system SHALL reconcile the novel's progress received from other devices (as defined by `reading-progress-sync`) on folder entry BEFORE selecting any file, so that the selection's own upsert cannot alter the comparison. If the novel has no local progress record and a received record resolves to an episode file in the current listing, that record's file, body offset, and body hash SHALL be written as the local progress and the auto-open SHALL then proceed with it. If the novel has local progress, the auto-open SHALL proceed with the local progress, and any confirmation offered by `reading-progress-sync` SHALL be shown only after that selection.
+
 #### Scenario: Entering a novel folder with stored progress restores the file
 - **WHEN** the user navigates from the library root into the folder for novel_id "narou_n1234ab"
 - **AND** `reading_progress` contains a row for "narou_n1234ab" with file_name "003_chapter3.txt"
@@ -119,7 +121,20 @@ The novel id used for the lookup SHALL be derived with `resolveNovelId` (nearest
 
 #### Scenario: Entering a novel folder with no stored progress
 - **WHEN** the user navigates into a novel folder that has no `reading_progress` row
+- **AND** no progress received from another device resolves to a file in the listing (or sync is disabled or signed out)
 - **THEN** `selectedFileProvider` SHALL remain unchanged (typically null) and no automatic selection SHALL occur
+
+#### Scenario: Entering a novel folder with only another device's progress
+- **WHEN** the user navigates into the folder for novel_id "narou_n1234ab" that has no `reading_progress` row
+- **AND** progress received from another device points to episode 5, and "005_chapter5.txt" (effective episode 5) is in the listing
+- **THEN** a `reading_progress` row for "narou_n1234ab" SHALL be written with file_name "005_chapter5.txt" and the received body offset and body hash
+- **AND** `selectedFileProvider` SHALL be set to "005_chapter5.txt" exactly once and the received position SHALL be restored
+
+#### Scenario: Local progress is opened before any confirmation
+- **WHEN** the user navigates into a novel folder that has a `reading_progress` row
+- **AND** a newer progress at a different position was received from another device
+- **THEN** the file from the local row SHALL be selected first
+- **AND** the comparison SHALL use the local progress as it was before that selection
 
 #### Scenario: Stored file is no longer present
 - **WHEN** the user navigates into the folder for novel_id "narou_n1234ab"

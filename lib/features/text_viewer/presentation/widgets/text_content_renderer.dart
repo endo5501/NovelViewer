@@ -1037,6 +1037,14 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
         ref.watch(bookmarkLineNumbersForFileProvider).value ?? [];
     final markedWords = ref.watch(markedWordsProvider);
 
+    ref.listen<int>(readingPositionRestoreRequestProvider, (_, _) {
+      final path = ref.read(selectedFileProvider)?.path;
+      if (path == null) return;
+      // Read the saved position afresh and restore it as if the file had
+      // just been selected.
+      ref.invalidate(readingPositionForFileProvider(path));
+      setState(() => _positionFile = null);
+    });
     if (_positionFile != selectedFile?.path ||
         _positionContent != widget.content) {
       _positionFile = selectedFile?.path;

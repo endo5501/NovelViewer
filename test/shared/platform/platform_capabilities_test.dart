@@ -152,6 +152,28 @@ void main() {
     });
   });
 
+  group('progress sync sign-in', () {
+    test('iOS signs in through the system authentication session', () {
+      const capabilities = PlatformCapabilities.forPlatform(
+        isIOS: true,
+        isMacOS: false,
+      );
+
+      expect(capabilities.progressSyncSignIn, ProgressSyncSignIn.ios);
+    });
+
+    test('desktop platforms sign in through the loopback flow', () {
+      for (final isMacOS in [true, false]) {
+        final capabilities = PlatformCapabilities.forPlatform(
+          isIOS: false,
+          isMacOS: isMacOS,
+        );
+
+        expect(capabilities.progressSyncSignIn, ProgressSyncSignIn.desktop);
+      }
+    });
+  });
+
   test('capabilities can be constructed feature by feature', () {
     const capabilities = PlatformCapabilities(
       piperTts: true,

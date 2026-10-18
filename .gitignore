@@ -49,3 +49,7 @@ coverage
 /*.sha256
 
 /.cc-rsg/
+
+# Google OAuth client values for progress sync (docs/progress-sync.md).
+# Copy config/google_oauth.example.json and fill in the real values.
+/config/google_oauth.json

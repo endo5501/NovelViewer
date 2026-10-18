@@ -97,17 +97,15 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  test('current schema version is 11', () {
-    expect(NovelDatabase.currentSchemaVersion, 11);
-  });
-
   test('v10 → v11 adds the reference-source table and keeps rows', () async {
     await _seedV10(p.join(tempDir.path, 'novel_metadata.db'));
 
     final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
     try {
       final db = await novelDatabase.database;
-      expect(await db.getVersion(), 11);
+      // The upgrade carries on to the current version; this test pins only
+      // what v11 added.
+      expect(await db.getVersion(), NovelDatabase.currentSchemaVersion);
 
       final tables = await db.rawQuery(
         "SELECT name FROM sqlite_master WHERE type='table' "

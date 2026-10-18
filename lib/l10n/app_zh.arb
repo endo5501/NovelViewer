@@ -491,5 +491,23 @@
       }
     }
   },
-  "referenceSources_listSeparator": "、"
+  "referenceSources_listSeparator": "、",
+  "syncPrompt_title": "其他设备上的阅读位置",
+  "syncPrompt_message": "您在 {device} 上读到第 {episode} 话（{readAt}）。要移动到该位置吗？",
+  "syncPrompt_move": "移动",
+  "syncPrompt_stay": "保持不变",
+  "syncSettings_tab": "同步",
+  "syncSettings_title": "阅读进度同步",
+  "syncSettings_description": "通过 Google 云端硬盘与其他设备共享阅读位置。",
+  "syncSettings_signIn": "使用 Google 登录",
+  "syncSettings_signingIn": "请在浏览器中完成登录…",
+  "syncSettings_signedInAs": "已登录：{email}",
+  "syncSettings_syncNow": "立即同步",
+  "syncSettings_syncing": "同步中…",
+  "syncSettings_lastSynced": "上次同步：{time}",
+  "syncSettings_neverSynced": "尚未同步",
+  "syncSettings_lastError": "上次同步失败：{message}",
+  "syncSettings_signOut": "退出登录",
+  "syncSettings_needsReauth": "{email} 的登录已失效，请重新登录。",
+  "syncSettings_signInAgain": "重新登录"
 }

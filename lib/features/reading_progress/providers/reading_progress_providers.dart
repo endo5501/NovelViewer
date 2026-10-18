@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
+import 'package:novel_viewer/features/progress_sync/providers/progress_sync_entry_providers.dart';
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
 import 'package:novel_viewer/features/reading_progress/domain/reading_progress.dart';
 import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
@@ -157,7 +158,7 @@ final readingProgressAutoOpenListenerProvider = Provider<void>((ref) {
     final novelId = resolveNovelId(libraryPath, next, registeredFolderNames);
     if (novelId == null) return;
 
-    final ReadingProgress? progress;
+    ReadingProgress? progress;
     try {
       progress = await ref
           .read(readingProgressRepositoryProvider)
@@ -166,7 +167,8 @@ final readingProgressAutoOpenListenerProvider = Provider<void>((ref) {
       _log.warning('Failed to read reading progress for $novelId', e, st);
       return;
     }
-    if (progress == null) return;
+    final syncEntry = ref.read(progressSyncEntryProvider);
+    if (progress == null && syncEntry == null) return;
 
     // The directory contents future may still be pending. Capture the target
     // path so that a later transition (e.g. user already moved on) aborts
@@ -185,27 +187,104 @@ final readingProgressAutoOpenListenerProvider = Provider<void>((ref) {
     }
     if (ref.read(currentDirectoryProvider) != targetDir) return;
 
-    FileEntry? match;
-    for (final entry in contents.files) {
-      // Match on file_name within the current directory listing rather than a
-      // persisted absolute path, so a moved/renamed novel folder still
-      // restores progress. `p.equals` compares the base names with the same
-      // platform semantics the old absolute-path match used — notably
-      // case-insensitive on Windows, where the FS is case-preserving but
-      // case-insensitive.
-      if (p.equals(entry.name, progress.fileName)) {
-        match = entry;
-        break;
-      }
+    // Progress from other devices is weighed before anything is selected:
+    // selecting touches the local row's updated_at, which the comparison
+    // reads (reading-progress-sync).
+    SyncPromptRequest? prompt;
+    if (syncEntry != null) {
+      (progress, prompt) = await _reconcileWithOtherDevices(
+        ref,
+        syncEntry,
+        novelId: novelId,
+        directory: targetDir,
+        local: progress,
+        contents: contents,
+      );
+      if (ref.read(currentDirectoryProvider) != targetDir) return;
     }
-    if (match == null) return;
 
-    // Don't trample a selection that already points at a file inside this
-    // novel folder — that's the spec's "belongs to this novel" carve-out for
-    // sibling code paths that set a selection just before the transition. A
-    // stale entry from a different novel falls through and is replaced.
-    final existing = ref.read(selectedFileProvider);
-    if (existing != null && p.isWithin(targetDir, existing.path)) return;
-    ref.read(selectedFileProvider.notifier).selectFile(match);
+    _selectSavedFile(ref, targetDir, progress, contents);
+    if (prompt != null) ref.read(syncPromptProvider.notifier).show(prompt);
   });
 });
+
+/// Applies what [ProgressSyncEntry.decide] concludes for the novel being
+/// entered, and returns the progress to open with plus any question to ask
+/// once it is open. A failure leaves the local progress as it was.
+Future<(ReadingProgress?, SyncPromptRequest?)> _reconcileWithOtherDevices(
+  Ref ref,
+  ProgressSyncEntry entry, {
+  required String novelId,
+  required String directory,
+  required ReadingProgress? local,
+  required DirectoryContents contents,
+}) async {
+  try {
+    final decision = await entry.decide(
+      novelId: novelId,
+      local: local,
+      folderFiles: [for (final file in contents.files) file.name],
+    );
+    switch (decision) {
+      case AutoApplySync(:final remote, :final fileName):
+        final adopted = await entry.adopt(
+          progress: ref.read(readingProgressRepositoryProvider),
+          remote: remote,
+          fileName: fileName,
+        );
+        return (adopted, null);
+      case PromptSync(:final remote, :final fileName):
+        return (
+          local,
+          SyncPromptRequest(
+            novelId: novelId,
+            directory: directory,
+            remote: remote,
+            fileName: fileName,
+          ),
+        );
+      case MarkHandledSync(:final readAt):
+        await entry.markHandled(novelId, readAt);
+      case NoSyncAction():
+        break;
+    }
+  } catch (e, st) {
+    Logger(
+      'progress_sync',
+    ).warning('Failed to weigh other devices\' progress for $novelId', e, st);
+  }
+  return (local, null);
+}
+
+/// Selects the file [progress] names in [contents], unless a file of this
+/// novel is already selected.
+void _selectSavedFile(
+  Ref ref,
+  String targetDir,
+  ReadingProgress? progress,
+  DirectoryContents contents,
+) {
+  if (progress == null) return;
+  FileEntry? match;
+  for (final entry in contents.files) {
+    // Match on file_name within the current directory listing rather than a
+    // persisted absolute path, so a moved/renamed novel folder still
+    // restores progress. `p.equals` compares the base names with the same
+    // platform semantics the old absolute-path match used — notably
+    // case-insensitive on Windows, where the FS is case-preserving but
+    // case-insensitive.
+    if (p.equals(entry.name, progress.fileName)) {
+      match = entry;
+      break;
+    }
+  }
+  if (match == null) return;
+
+  // Don't trample a selection that already points at a file inside this
+  // novel folder — that's the spec's "belongs to this novel" carve-out for
+  // sibling code paths that set a selection just before the transition. A
+  // stale entry from a different novel falls through and is replaced.
+  final existing = ref.read(selectedFileProvider);
+  if (existing != null && p.isWithin(targetDir, existing.path)) return;
+  ref.read(selectedFileProvider.notifier).selectFile(match);
+}

@@ -2043,6 +2043,114 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'、'**
   String get referenceSources_listSeparator;
+
+  /// No description provided for @syncPrompt_title.
+  ///
+  /// In ja, this message translates to:
+  /// **'他の端末で読んだ位置があります'**
+  String get syncPrompt_title;
+
+  /// No description provided for @syncPrompt_message.
+  ///
+  /// In ja, this message translates to:
+  /// **'{device} で {episode} 話を読んでいました（{readAt}）。その位置に移動しますか？'**
+  String syncPrompt_message(String device, int episode, String readAt);
+
+  /// No description provided for @syncPrompt_move.
+  ///
+  /// In ja, this message translates to:
+  /// **'移動する'**
+  String get syncPrompt_move;
+
+  /// No description provided for @syncPrompt_stay.
+  ///
+  /// In ja, this message translates to:
+  /// **'このまま'**
+  String get syncPrompt_stay;
+
+  /// No description provided for @syncSettings_tab.
+  ///
+  /// In ja, this message translates to:
+  /// **'同期'**
+  String get syncSettings_tab;
+
+  /// No description provided for @syncSettings_title.
+  ///
+  /// In ja, this message translates to:
+  /// **'読書進捗の同期'**
+  String get syncSettings_title;
+
+  /// No description provided for @syncSettings_description.
+  ///
+  /// In ja, this message translates to:
+  /// **'Google ドライブを使って、読んでいる位置を他の端末と共有します。'**
+  String get syncSettings_description;
+
+  /// No description provided for @syncSettings_signIn.
+  ///
+  /// In ja, this message translates to:
+  /// **'Google でログイン'**
+  String get syncSettings_signIn;
+
+  /// No description provided for @syncSettings_signingIn.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザでログインを完了してください…'**
+  String get syncSettings_signingIn;
+
+  /// No description provided for @syncSettings_signedInAs.
+  ///
+  /// In ja, this message translates to:
+  /// **'{email} でログイン中'**
+  String syncSettings_signedInAs(String email);
+
+  /// No description provided for @syncSettings_syncNow.
+  ///
+  /// In ja, this message translates to:
+  /// **'今すぐ同期'**
+  String get syncSettings_syncNow;
+
+  /// No description provided for @syncSettings_syncing.
+  ///
+  /// In ja, this message translates to:
+  /// **'同期中…'**
+  String get syncSettings_syncing;
+
+  /// No description provided for @syncSettings_lastSynced.
+  ///
+  /// In ja, this message translates to:
+  /// **'最後の同期: {time}'**
+  String syncSettings_lastSynced(String time);
+
+  /// No description provided for @syncSettings_neverSynced.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ同期していません'**
+  String get syncSettings_neverSynced;
+
+  /// No description provided for @syncSettings_lastError.
+  ///
+  /// In ja, this message translates to:
+  /// **'前回の同期に失敗しました: {message}'**
+  String syncSettings_lastError(String message);
+
+  /// No description provided for @syncSettings_signOut.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログアウト'**
+  String get syncSettings_signOut;
+
+  /// No description provided for @syncSettings_needsReauth.
+  ///
+  /// In ja, this message translates to:
+  /// **'{email} のログインの有効期限が切れました。もう一度ログインしてください。'**
+  String syncSettings_needsReauth(String email);
+
+  /// No description provided for @syncSettings_signInAgain.
+  ///
+  /// In ja, this message translates to:
+  /// **'もう一度ログイン'**
+  String get syncSettings_signInAgain;
 }
 
 class _AppLocalizationsDelegate

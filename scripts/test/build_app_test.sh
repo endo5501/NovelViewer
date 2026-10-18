@@ -88,6 +88,32 @@ else
   ng "warns that the build will report no commit"
 fi
 
+# --- Google OAuth client values for progress sync ----------------------------
+# NOVEL_VIEWER_OAUTH_CONFIG points the script at a file other than the default
+# config/google_oauth.json, so a developer's real file does not affect the run.
+printf '{}\n' >"$WORK/oauth.json"
+NOVEL_VIEWER_OAUTH_CONFIG="$WORK/oauth.json" run_with_git 'echo a1b2c3d' macos
+if grep -qx -- "--dart-define-from-file=$WORK/oauth.json" "$WORK/args" 2>/dev/null; then
+  ok "passes the OAuth config file when it exists"
+else
+  ng "passes the OAuth config file when it exists"
+fi
+
+NOVEL_VIEWER_OAUTH_CONFIG="$WORK/missing.json" run_with_git 'echo a1b2c3d' macos
+status=$?
+if [ "$status" -eq 0 ] && ! grep -q -- '--dart-define-from-file' "$WORK/args" 2>/dev/null; then
+  ok "builds without the OAuth config file when it is absent"
+else
+  ng "builds without the OAuth config file when it is absent (exit $status)"
+fi
+
+NOVEL_VIEWER_OAUTH_CONFIG="$WORK/oauth.json" run_with_git 'exit 128' macos
+if grep -qx -- "--dart-define-from-file=$WORK/oauth.json" "$WORK/args" 2>/dev/null; then
+  ok "passes the OAuth config file even when git cannot name a commit"
+else
+  ng "passes the OAuth config file even when git cannot name a commit"
+fi
+
 # --- usage ---------------------------------------------------------------------
 run_with_git 'echo a1b2c3d'
 status=$?

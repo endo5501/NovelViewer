@@ -1,0 +1,432 @@
+import 'dart:async';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:logging/logging.dart';
+import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
+import 'package:novel_viewer/features/progress_sync/data/progress_sync_repository.dart';
+import 'package:novel_viewer/features/progress_sync/data/progress_sync_service.dart';
+import 'package:novel_viewer/features/progress_sync/domain/device_progress.dart';
+import 'package:novel_viewer/features/progress_sync/domain/sync_progress_record.dart';
+import 'package:novel_viewer/features/reading_progress/domain/reading_progress.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import '../../../helpers/novel_metadata_db_fixture.dart';
+import '../fake_progress_sync_store.dart';
+
+final _t1 = DateTime.utc(2026, 10, 1);
+
+ReadingProgress _local(String novelId, String fileName, {int offset = 0}) {
+  return ReadingProgress(
+    novelId: novelId,
+    fileName: fileName,
+    updatedAt: _t1,
+    bodyOffset: offset,
+    bodyHash: 'h',
+  );
+}
+
+void main() {
+  late NovelDatabase novelDatabase;
+  late ProgressSyncRepository repository;
+  late FakeProgressSyncStore store;
+  late List<ReadingProgress> local;
+  late List<String> calls;
+  late bool available;
+  late bool signedIn;
+
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  setUp(() async {
+    novelDatabase = await seedNovelDatabaseFixture();
+    repository = ProgressSyncRepository(novelDatabase);
+    store = FakeProgressSyncStore();
+    local = [_local('narou_a', '003_t.txt')];
+    calls = [];
+    available = true;
+    signedIn = true;
+  });
+
+  tearDown(() async {
+    await novelDatabase.close();
+  });
+
+  ProgressSyncService service({Future<void> Function()? flush}) {
+    return ProgressSyncService(
+      isAvailable: () => available,
+      isSignedIn: () => signedIn,
+      store: store,
+      repository: repository,
+      deviceId: () async => 'self',
+      deviceName: 'Mac (desk)',
+      flushPendingPositions: () async {
+        calls.add('flush');
+        await flush?.call();
+      },
+      loadLocalProgress: () async {
+        calls.add('load');
+        return local;
+      },
+      syncableNovelIds: () async => {'narou_a', 'narou_b'},
+      episodeOf: (_, fileName) async => int.tryParse(fileName.split('_')[0]),
+      now: () => DateTime.utc(2026, 10, 18, 9),
+    );
+  }
+
+  group('refusal', () {
+    test('does nothing in a build without sync', () async {
+      available = false;
+      final sync = service();
+
+      await sync.push();
+      await sync.pull();
+      await sync.syncNow();
+
+      expect(store.fetches + store.writes, 0);
+      expect(calls, isEmpty);
+    });
+
+    test('does nothing while signed out', () async {
+      signedIn = false;
+      final sync = service();
+
+      await sync.push();
+      await sync.pull();
+
+      expect(store.fetches + store.writes, 0);
+    });
+  });
+
+  group('push', () {
+    test('flushes pending positions before reading the progress', () async {
+      await service().push();
+
+      expect(calls.take(2), ['flush', 'load']);
+    });
+
+    test('publishes this device\'s records and remembers them', () async {
+      await service().push();
+
+      final own = store.files['self']!;
+      expect(own.deviceName, 'Mac (desk)');
+      expect(own.records.single.novelId, 'narou_a');
+      expect(own.records.single.episode, 3);
+      expect((await repository.findAllOwn()).keys, ['narou_a']);
+    });
+
+    test('leaves out novels that are not syncable', () async {
+      local = [
+        _local('narou_a', '003_t.txt'),
+        _local('web_list', '0001_x.txt'),
+      ];
+
+      await service().push();
+
+      expect(store.files['self']!.records.map((r) => r.novelId), ['narou_a']);
+    });
+
+    test('does not upload what was already uploaded', () async {
+      final sync = service();
+      await sync.push();
+      await sync.push();
+
+      expect(store.writes, 1);
+    });
+
+    test('uploads again once the position moves', () async {
+      final sync = service();
+      await sync.push();
+      local = [_local('narou_a', '004_t.txt')];
+      await sync.push();
+
+      expect(store.writes, 2);
+      expect(store.files['self']!.records.single.episode, 4);
+    });
+
+    test('a failed push is rebuilt and sent on the next one', () async {
+      final sync = service();
+      store.failWith = Exception('offline');
+      await sync.push();
+      store.failWith = null;
+      await sync.push();
+
+      expect(store.files['self'], isNotNull);
+    });
+  });
+
+  group('pull', () {
+    test('keeps the other devices\' records', () async {
+      store.files['win'] = DeviceProgress(
+        deviceId: 'win',
+        deviceName: 'Windows',
+        records: [
+          SyncProgressRecord(
+            novelId: 'narou_a',
+            episode: 5,
+            fileName: '005_t.txt',
+            bodyOffset: 1,
+            bodyHash: 'h',
+            readAt: _t1,
+          ),
+        ],
+      );
+
+      await service().pull();
+
+      final remote = await repository.findRemoteByNovel('narou_a');
+      expect(remote.single.deviceId, 'win');
+    });
+
+    test('announces each finished pull', () async {
+      final sync = service();
+      final pulled = <void>[];
+      final sub = sync.pulled.listen(pulled.add);
+      addTearDown(sub.cancel);
+
+      await sync.pull();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(pulled, hasLength(1));
+    });
+  });
+
+  test('sync now pushes and then pulls', () async {
+    final sync = service();
+    await sync.syncNow();
+
+    expect(store.writes, 1);
+    expect(store.fetches, 1);
+    expect(store.files['self'], isNotNull);
+  });
+
+  group('serialization', () {
+    test('requests made while running collapse into one more run', () async {
+      final gate = Completer<void>();
+      var flushes = 0;
+      final sync = service(
+        flush: () async {
+          flushes++;
+          if (flushes == 1) await gate.future;
+        },
+      );
+
+      final first = sync.push();
+      await Future<void>.delayed(Duration.zero);
+      final queued = [sync.push(), sync.push(), sync.push()];
+      gate.complete();
+      await first;
+      await Future.wait(queued);
+
+      expect(flushes, 2);
+    });
+
+    test('a pull waits for a running push', () async {
+      final gate = Completer<void>();
+      final sync = service(flush: () => gate.future);
+
+      final push = sync.push();
+      await Future<void>.delayed(Duration.zero);
+      final pull = sync.pull();
+      await Future<void>.delayed(Duration.zero);
+      expect(store.fetches, 0);
+
+      gate.complete();
+      await Future.wait([push, pull]);
+      expect(store.fetches, 1);
+    });
+  });
+
+  group('signing out mid-run', () {
+    test('a pull that lands after sign-out stores nothing', () async {
+      store.files['win'] = DeviceProgress(
+        deviceId: 'win',
+        deviceName: 'Windows',
+        records: [
+          SyncProgressRecord(
+            novelId: 'narou_a',
+            episode: 5,
+            fileName: '005_t.txt',
+            bodyOffset: 1,
+            bodyHash: 'h',
+            readAt: _t1,
+          ),
+        ],
+      );
+      final gate = Completer<void>();
+      store.beforeFetchReturns = () => gate.future;
+      final sync = service();
+
+      final pull = sync.pull();
+      await Future<void>.delayed(Duration.zero);
+      signedIn = false;
+      gate.complete();
+      await pull;
+
+      expect(await repository.findRemoteByNovel('narou_a'), isEmpty);
+    });
+
+    test('a push that lands after sign-out records nothing', () async {
+      final gate = Completer<void>();
+      store.beforeWriteReturns = () => gate.future;
+      final sync = service();
+
+      final push = sync.push();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      signedIn = false;
+      gate.complete();
+      await push;
+
+      expect(await repository.findAllOwn(), isEmpty);
+    });
+
+    test('idle completes once the running sync has finished', () async {
+      final gate = Completer<void>();
+      final sync = service(flush: () => gate.future);
+
+      final push = sync.push();
+      await Future<void>.delayed(Duration.zero);
+      var idle = false;
+      unawaited(sync.idle.then((_) => idle = true));
+      await Future<void>.delayed(Duration.zero);
+      expect(idle, isFalse);
+
+      gate.complete();
+      await push;
+      await Future<void>.delayed(Duration.zero);
+      expect(idle, isTrue);
+    });
+  });
+
+  test('a push does not overwrite a record adopted meanwhile', () async {
+    final gate = Completer<void>();
+    store.beforeWriteReturns = () => gate.future;
+    final sync = service();
+    final adopted = SyncProgressRecord(
+      novelId: 'narou_a',
+      episode: 5,
+      fileName: '005_t.txt',
+      bodyOffset: 7,
+      bodyHash: 'h',
+      readAt: DateTime.utc(2026, 9, 9),
+    );
+
+    final push = sync.push();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await repository.upsertOwn(adopted);
+    gate.complete();
+    await push;
+
+    expect((await repository.findAllOwn())['narou_a'], adopted);
+  });
+
+  test('a request made as a run finishes still runs', () async {
+    var flushes = 0;
+    final sync = service(flush: () async => flushes++);
+    var requested = false;
+    sync.status.addListener(() {
+      if (!sync.status.value.running && !requested) {
+        requested = true;
+        unawaited(sync.push());
+      }
+    });
+
+    await sync.push();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(flushes, 2);
+  });
+
+  test('an episode is resolved again only when its file changed', () async {
+    final asked = <String>[];
+    final sync = ProgressSyncService(
+      isAvailable: () => true,
+      isSignedIn: () => true,
+      store: store,
+      repository: repository,
+      deviceId: () async => 'self',
+      deviceName: 'Mac',
+      flushPendingPositions: () async {},
+      loadLocalProgress: () async => local,
+      syncableNovelIds: () async => {'narou_a', 'narou_b'},
+      episodeOf: (_, fileName) async {
+        asked.add(fileName);
+        return int.tryParse(fileName.split('_')[0]);
+      },
+    );
+    local = [_local('narou_a', '003_t.txt'), _local('narou_b', '001_t.txt')];
+    await sync.push();
+    asked.clear();
+
+    local = [
+      _local('narou_a', '003_t.txt', offset: 50),
+      _local('narou_b', '002_t.txt'),
+    ];
+    await sync.push();
+
+    expect(asked, ['002_t.txt']);
+  });
+
+  test('a pull does not read back this device\'s own file', () async {
+    await service().pull();
+
+    expect(store.lastExceptDeviceId, 'self');
+  });
+
+  group('status', () {
+    test('a failed push stays shown after a pull succeeds', () async {
+      store.failWritesWith = Exception('quota');
+      final sync = service();
+
+      await sync.syncNow();
+
+      expect(sync.status.value.lastError, contains('quota'));
+    });
+
+    test('records when a sync last succeeded', () async {
+      final sync = service();
+      await sync.pull();
+
+      expect(sync.status.value.lastSuccessAt, DateTime.utc(2026, 10, 18, 9));
+      expect(sync.status.value.lastError, isNull);
+      expect(sync.status.value.running, isFalse);
+    });
+
+    test('a failure is logged and shown, and reading goes on', () async {
+      final records = <LogRecord>[];
+      final sub = Logger('progress_sync').onRecord.listen(records.add);
+      addTearDown(sub.cancel);
+      store.failWith = Exception('offline');
+      final sync = service();
+
+      await sync.pull();
+
+      expect(sync.status.value.lastError, contains('offline'));
+      expect(sync.status.value.lastSuccessAt, isNull);
+      expect(records.where((r) => r.level == Level.WARNING), isNotEmpty);
+    });
+
+    test('a later success clears the shown failure', () async {
+      final sync = service();
+      store.failWith = Exception('offline');
+      await sync.pull();
+      store.failWith = null;
+      await sync.pull();
+
+      expect(sync.status.value.lastError, isNull);
+    });
+
+    test('is running while a sync is in flight', () async {
+      final gate = Completer<void>();
+      final sync = service(flush: () => gate.future);
+
+      final push = sync.push();
+      await Future<void>.delayed(Duration.zero);
+      expect(sync.status.value.running, isTrue);
+      gate.complete();
+      await push;
+      expect(sync.status.value.running, isFalse);
+    });
+  });
+}

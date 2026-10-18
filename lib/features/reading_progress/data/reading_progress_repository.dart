@@ -64,6 +64,26 @@ class ReadingProgressRepository {
     );
   }
 
+  /// Makes [fileName] at [bodyOffset] the novel's progress outright, as
+  /// adopting another device's position does. Unlike [upsert] followed by
+  /// [savePosition], a null [bodyHash] really clears the position: the file
+  /// then opens at its start rather than wherever it was last left.
+  Future<void> adoptPosition({
+    required String novelId,
+    required String fileName,
+    required int bodyOffset,
+    required String? bodyHash,
+  }) async {
+    final db = await _novelDatabase.database;
+    await db.insert(_tableName, {
+      'novel_id': novelId,
+      'file_name': fileName,
+      'updated_at': DateTime.now().toIso8601String(),
+      'body_offset': bodyHash == null ? 0 : bodyOffset,
+      'body_hash': bodyHash,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
   /// Repoints [novelId]'s progress from the episode file [from] to [to], after
   /// a download renamed that file on disk.
   ///
