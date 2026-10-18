@@ -140,8 +140,8 @@
 ### D9. クライアント ID はビルド時に注入する。無ければ機能ごと隠す
 
 - `String.fromEnvironment` で `GOOGLE_OAUTH_DESKTOP_CLIENT_ID`、`GOOGLE_OAUTH_DESKTOP_CLIENT_SECRET`、`GOOGLE_OAUTH_IOS_CLIENT_ID` を読む。
-- 実行中のプラットフォームに必要な値がそろっているかを、同期が使えるかどうかの判定に使う（デスクトップは ID とシークレット、iOS は ID）。判定は上書きできる Riverpod の provider で公開する。プラットフォームの判定はこの provider の既定の実装の中だけで行う。
-- この判定は `platform-capabilities` の能力モデルには入れない。あれはプラットフォームだけから決まる純粋なモデルで、ビルドの設定で決まる値とは性質が違うからである。
+- 実行中のプラットフォームに必要な値がそろっているかを、同期が使えるかどうかの判定に使う（デスクトップは ID とシークレット、iOS は ID）。判定は上書きできる Riverpod の provider で公開する。
+- `Platform` を読むのは能力モデルの provider だけ、という既存の規則（`platform-capabilities`）を守るため、プラットフォームから決まる部分（iOS はシステムの認証セッション、それ以外はループバック）だけを能力モデルに `progressSyncSignIn` として加える。ビルドの設定で決まる「値がそろっているか」は能力モデルに入れず、その答えと注入された値とから同期の provider が判定する。
 - `scripts/build_app.sh` と `scripts/build_app.bat` は、`config/google_oauth.json` があれば `--dart-define-from-file=config/google_oauth.json` を付け足す。このファイルは `.gitignore` に入れ、`config/google_oauth.example.json` を見本として置く。
 - `.github/workflows/release.yml`（Windows のビルド）は、Secrets から `--dart-define` で渡す。Secret が無ければ空文字になり、同期は無効のままになる。
 - **全ビルドで同じ Google Cloud プロジェクトのクライアントを使う。** appDataFolder はプロジェクトごとに分かれているため、別プロジェクトのクライアントでビルドすると、同じアカウントでも記録が見えなくなる。`docs/progress-sync.md` に明記する。

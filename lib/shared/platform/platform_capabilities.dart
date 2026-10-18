@@ -15,6 +15,18 @@
 /// by [PlatformCapabilities.forPlatform], so it can be evaluated in a unit test
 /// for a platform the test is not running on. The single `Platform` read lives
 /// in the provider that wraps it.
+/// How the reader signs in to Google for progress sync.
+enum ProgressSyncSignIn {
+  /// The browser hands the result to a server listening on a loopback
+  /// address, with Google's desktop-app OAuth client.
+  desktop,
+
+  /// The system authentication session hands the result back, with Google's
+  /// iOS OAuth client. An iOS app cannot keep a loopback server listening
+  /// while the browser is in front.
+  ios,
+}
+
 class PlatformCapabilities {
   const PlatformCapabilities({
     required this.piperTts,
@@ -24,6 +36,7 @@ class PlatformCapabilities {
     required this.appUpdate,
     required this.llmSummary,
     required this.onDeviceLlm,
+    this.progressSyncSignIn = ProgressSyncSignIn.desktop,
   });
 
   /// The one mapping from a platform to the features it supports.
@@ -81,7 +94,10 @@ class PlatformCapabilities {
        ttsAudioExport = !isIOS,
        appUpdate = !isIOS,
        llmSummary = true,
-       onDeviceLlm = isIOS || isMacOS;
+       onDeviceLlm = isIOS || isMacOS,
+       progressSyncSignIn = isIOS
+           ? ProgressSyncSignIn.ios
+           : ProgressSyncSignIn.desktop;
 
   /// Speech synthesis, its settings, and the reading dictionary that feeds it:
   /// available wherever at least one engine is.
@@ -108,4 +124,9 @@ class PlatformCapabilities {
   /// Whether the platform could host an on-device model at all. Says nothing
   /// about whether this device can run it today.
   final bool onDeviceLlm;
+
+  /// How progress sync signs in here. Whether sync is offered at all also
+  /// depends on the OAuth client values the build carries, which is a
+  /// property of the build, not of the platform, and is decided elsewhere.
+  final ProgressSyncSignIn progressSyncSignIn;
 }

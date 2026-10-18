@@ -32,6 +32,7 @@ NovelViewer は Windows・macOS・iPad で使えるが、読書進捗は端末�
 - `reading-progress`: 小説フォルダに入ったときの自動オープンで、その端末に進捗がなくても他の端末から取得した進捗があれば、それを使うようにする。
 - `novel-metadata-db`: スキーマバージョン 12 への昇格（他の端末から取得した進捗を保存するテーブルの追加）。
 - `settings-dialog-composition`: 設定ダイアログに同期セクションを追加する。
+- `platform-capabilities`: 能力モデルに、進捗の同期でのログイン方法（iOS はシステムの認証セッション、それ以外はループバック）を加える。
 
 ## Impact
 
