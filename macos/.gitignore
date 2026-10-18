@@ -5,3 +5,6 @@
 # Xcode-related
 **/dgph
 **/xcuserdata/
+
+# The developer's signing team (see Runner/Configs/AppInfo.xcconfig)
+Runner/Configs/Local.xcconfig

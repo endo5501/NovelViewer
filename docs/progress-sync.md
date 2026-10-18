@@ -110,7 +110,28 @@ Windows・macOS・iPad のあいだで、小説ごとの読書進捗（最後に
 fvm flutter run -d macos --dart-define-from-file=config/google_oauth.json
 ```
 
-### 5. GitHub Actions のリリースビルドに渡す
+### 5. macOS 版を開発者証明書で署名する
+
+macOS 版はログイン情報をキーチェーンに保存します。キーチェーンを使う権限（`keychain-access-groups`）は開発者証明書で署名したアプリにしか付けられないため、macOS 版のビルドには署名の設定が必要です。設定が無いと「Runner has entitlements that require signing with a development certificate」でビルドが失敗します。
+
+1. `macos/Runner/Configs/Local.xcconfig`（Git の管理外）を作ります。Team ID は iPad 版の `ios/Flutter/Local.xcconfig` と同じものです。
+
+   ```
+   DEVELOPMENT_TEAM = XBPBC9HAGA
+   CODE_SIGN_IDENTITY = Apple Development
+   ```
+
+2. 初回だけ、この Mac を開発者アカウントに登録し、開発用プロファイルを作ります。
+
+   ```sh
+   cd macos
+   xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Debug \
+     -allowProvisioningUpdates -allowProvisioningDeviceRegistration build
+   ```
+
+   以後は `scripts/build_app.sh macos` や `flutter run -d macos` でそのままビルドできます。開発用の署名なので、登録した Mac でのみ起動します。
+
+### 6. GitHub Actions のリリースビルドに渡す
 
 リポジトリの Settings → Secrets and variables → Actions に、次の 2 つを登録します（リリースビルドは Windows 版のみなので、iOS 用は不要です）。
 

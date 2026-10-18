@@ -135,6 +135,7 @@
 - **iOS**: Google の「iOS」用クライアントを使う。`flutter_web_auth_2`（ASWebAuthenticationSession）で、リダイレクト先 `com.googleusercontent.apps.<id>:/oauthredirect` を受け取る。このセッションはコールバックを自分で受け取るため、Info.plist への URL スキームの登録は要らず、`app_links` のダウンロード用リンクの処理とも干渉しない。
 - リフレッシュトークンは `flutter_secure_storage` に保存する。アクセストークンはメモリにだけ置き、期限の 60 秒前か、401 が返ったときに更新する。更新で `invalid_grant` が返ったら「再ログインが必要」の状態にして、同期を止める。
 - macOS の Release 用 entitlements に `com.apple.security.network.server` を足す。足さないとループバックで待ち受けられない。
+- macOS では、`flutter_secure_storage` が使うデータ保護キーチェーンに `keychain-access-groups` の権限が要る（無いと `-34018` で保存に失敗する）。この権限は開発者証明書での署名でしか付けられないため、macOS 版は Git 管理外の `macos/Runner/Configs/Local.xcconfig` で Team ID と `Apple Development` を指定して署名する（iOS の `ios/Flutter/Local.xcconfig` と同じ方式）。旧式のキーチェーンを使う案は、未署名のアプリではビルドのたびにアクセス許可を求められるため採らなかった。
 - **他の案:** `google_sign_in` は Windows に対応していないため不採用。iOS でもループバックを使う方式は、iOS のアプリがバックグラウンドで待ち受けを続けられないため不採用。
 
 ### D9. クライアント ID はビルド時に注入する。無ければ機能ごと隠す

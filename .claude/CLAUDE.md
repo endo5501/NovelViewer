@@ -10,7 +10,7 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `scripts/build_lame_macos.sh` - LAMEビルド(mac)
  - `scripts/build_piper_ios.sh` - Piper(piper-plus + ONNX Runtime)のiOS向けxcframeworkビルド(mac)。`patches/piper-plus/` のパッチを当ててビルドする。成果物 `ios/Frameworks/piper_plus.xcframework` はGit管理外
  - `scripts/test/verify_piper_ios.sh` - Piper iOSビルド成果物の検証(mac)
- - `scripts/build_app.sh macos` - 本番ビルド(mac)。commit ハッシュを `--dart-define=BUILD_COMMIT` で注入し、障害レポートの app version に載せる。素の `fvm flutter build macos` でも動くが、レポートは `commit unknown` になる。`config/google_oauth.json`（Git 管理外）があれば `--dart-define-from-file` で渡し、読書進捗の同期を有効にする（無ければ同期なしのビルド。詳細は`docs/progress-sync.md`参照）
+ - `scripts/build_app.sh macos` - 本番ビルド(mac)。commit ハッシュを `--dart-define=BUILD_COMMIT` で注入し、障害レポートの app version に載せる。素の `fvm flutter build macos` でも動くが、レポートは `commit unknown` になる。`config/google_oauth.json`（Git 管理外）があれば `--dart-define-from-file` で渡し、読書進捗の同期を有効にする（無ければ同期なしのビルド。詳細は`docs/progress-sync.md`参照）。macOS版はキーチェーンの権限のため開発者証明書での署名が必要で、`macos/Runner/Configs/Local.xcconfig`（Git 管理外）に `DEVELOPMENT_TEAM` と `CODE_SIGN_IDENTITY = Apple Development` を書く（初回の Mac 登録手順は同ドキュメント参照）
  - `scripts/build_tts_windows.bat` - TTSエンジンビルド(windows)
  - `scripts/build_lame_windows.bat` - LAMEビルド(windows)
  - `scripts\build_app.bat windows` - 本番ビルド(windows)。commit ハッシュと OAuth 設定の注入は mac と同じ
