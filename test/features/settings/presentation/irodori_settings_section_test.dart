@@ -429,18 +429,74 @@ void main() {
     });
   });
 
+  group('IrodoriSettingsSection - the speech.cpp variant on iOS', () {
+    const iOS = PlatformCapabilities.forPlatform(isIOS: true, isMacOS: false);
+
+    testWidgets('names the one variant instead of offering a choice', (
+      tester,
+    ) async {
+      await selectIrodoriEngine(tester, capabilities: iOS);
+
+      expect(find.byKey(const Key('irodori_variant_dropdown')), findsNothing);
+      expect(find.text(IrodoriModelVariant.v41Mf.label), findsOneWidget);
+    });
+
+    testWidgets('shows no guidance or step controls', (tester) async {
+      final l10n = await selectIrodoriEngine(tester, capabilities: iOS);
+
+      expect(find.byType(Slider), findsNothing);
+      expect(
+        find.textContaining(l10n.settings_irodoriSpeakerGuidanceScale),
+        findsNothing,
+      );
+      expect(
+        find.textContaining(l10n.settings_irodoriCaptionGuidanceScale),
+        findsNothing,
+      );
+      expect(
+        find.textContaining(l10n.settings_irodoriNumInferenceSteps),
+        findsNothing,
+      );
+      expect(find.text(l10n.settings_irodoriVariantNoGuidance), findsOneWidget);
+    });
+
+    testWidgets('does not say captions are unsupported', (tester) async {
+      final l10n = await selectIrodoriEngine(tester, capabilities: iOS);
+
+      expect(find.text(l10n.settings_irodoriVariantNoCaption), findsNothing);
+    });
+
+    testWidgets('keeps the stored guidance values', (tester) async {
+      await prefs.setDouble('irodori_speaker_guidance_scale', 4.5);
+      await selectIrodoriEngine(tester, capabilities: iOS);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(SettingsDialog)),
+      );
+      expect(container.read(irodoriSpeakerGuidanceScaleProvider), 4.5);
+    });
+  });
+
   group('IrodoriSettingsSection - model variant', () {
-    testWidgets('defaults to v3 and offers both variants', (tester) async {
-      await selectIrodoriEngine(tester);
+    testWidgets('defaults to v3 and offers the audio.cpp variants', (
+      tester,
+    ) async {
+      await selectIrodoriEngine(
+        tester,
+        capabilities: const PlatformCapabilities.forPlatform(
+          isIOS: false,
+          isMacOS: true,
+        ),
+      );
 
       final dropdown = tester.widget<DropdownButton<IrodoriModelVariant>>(
         find.byKey(const Key('irodori_variant_dropdown')),
       );
       expect(dropdown.value, IrodoriModelVariant.v3);
-      expect(
-        dropdown.items!.map((i) => i.value).toList(),
-        IrodoriModelVariant.values,
-      );
+      expect(dropdown.items!.map((i) => i.value).toList(), [
+        IrodoriModelVariant.v3,
+        IrodoriModelVariant.v4,
+      ]);
     });
 
     testWidgets('v3 shows no caption warning and keeps the slider enabled', (
