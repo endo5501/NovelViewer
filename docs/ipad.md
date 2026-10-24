@@ -138,7 +138,7 @@ scripts/test/verify_speech_ios.sh    # 成果物の検証
 ```
 
 - 成果物（実機用と Simulator 用、約 8MB ずつ）は **Git で管理していません**。Apple の `Speech.framework` と取り違えないよう、上流の `libspeech` を `speech_cpp` という名前の framework にしています。
-- 同梱は Piper と同じく「Embed Native Frameworks」フェーズが行います。
+- 同梱は Piper と同じく「Embed Native Frameworks」フェーズが行います。このフェーズは `ios/Frameworks/` にあるものをすべて同梱するので、成果物を置いたままにすると、普段使いのビルド（`scripts/build_app.sh ios`）にも使われない framework（約 8MB）が入ります。計測が終わったら `rm -rf ios/Frameworks/speech_cpp.xcframework` で削除してください（xcframework を外したときの扱いは前節を参照）。
 
 **計測テスト:** `integration_test/speech_cpp_ios_test.dart` は、Irodori-TTS v4.1 Small MF を GPU で読み込み、参照音声つきで中程度の文（51字）・125字の文・中程度の文の10回連続を合成し、別スレッドからの中断も確かめます。各段階のメモリの余裕と所要時間を記録し、事前に決めた基準（完走、メモリの余裕 512 MiB 以上、125字の文の RTF 1.0 未満）で合否を判定します。モデルは固定したリビジョンから取得し、サイズと SHA-256 で照合します。
 

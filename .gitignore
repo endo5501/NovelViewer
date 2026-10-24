@@ -38,8 +38,9 @@ coverage
 /.claude/settings.local.json
 /third_party/lame_enc_ffi/build
 
-# iOS native frameworks are built locally by scripts/build_piper_ios.sh and are
-# not tracked (unlike macos/Frameworks/); the iOS app builds without them.
+# iOS native frameworks are built locally by scripts/build_piper_ios.sh and
+# scripts/build_speech_ios.sh and are not tracked (unlike macos/Frameworks/);
+# the iOS app builds without them.
 /ios/Frameworks/*.xcframework
 /benchmarks/
 

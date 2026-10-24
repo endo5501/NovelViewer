@@ -41,6 +41,7 @@ import 'package:http/http.dart' as http;
 import 'package:integration_test/integration_test.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/text_download/data/novel_library_service.dart';
+import 'package:novel_viewer/features/tts/data/model_download_utils.dart';
 import 'package:novel_viewer/features/tts/data/speech_cpp_native_bindings.dart';
 import 'package:novel_viewer/features/tts/data/wav_writer.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
@@ -184,6 +185,9 @@ void main() {
         await _ensureModel(modelPath, variant);
 
         sampleMemory('before_load');
+        // Written before the native load: jetsam killing the process while
+        // the model loads leaves no other record of the run.
+        persist();
         final loadWatch = Stopwatch()..start();
         await measured('load', () => worker.load(modelPath));
         loadWatch.stop();
@@ -255,23 +259,26 @@ void main() {
         // medium one takes, which lands inside the long one's synthesis.
         final mediumTime = sentences.firstWhere((s) => s.label == 'medium');
         final delay = mediumTime.elapsed ~/ 2;
-        final cancelWatch = Stopwatch()..start();
         Future<void>? cancelSent;
-        final cancelled = await measured(
-          'cancel',
-          () => worker.synthesize(
-            _sentences['long']!,
-            voice: 'ref',
-            onStarted: (address) => cancelSent = Future.delayed(
-              delay,
-              () => SpeechCppRequest.cancelAt(bindings, address),
+        final _Synthesized cancelled;
+        try {
+          cancelled = await measured(
+            'cancel',
+            () => worker.synthesize(
+              _sentences['long']!,
+              voice: 'ref',
+              onStarted: (address) => cancelSent = Future.delayed(
+                delay,
+                () => SpeechCppRequest.cancelAt(bindings, address),
+              ),
             ),
-          ),
-        );
-        cancelWatch.stop();
-        // The worker keeps the request alive until the cancel has been sent:
-        // cancelling a freed request would write to freed memory.
-        await cancelSent;
+          );
+        } finally {
+          // The worker keeps the request alive until the cancel has been
+          // sent, on every path out of here, failures included: cancelling a
+          // freed request would write to freed memory.
+          await cancelSent;
+        }
         await worker.releaseHeld();
         final after = await measured(
           'after_cancel',
@@ -280,7 +287,7 @@ void main() {
         cancel = SpeechCppCancelCheck(
           delay: delay,
           cancelled: cancelled.cancelled,
-          elapsed: cancelWatch.elapsed,
+          elapsed: cancelled.elapsed,
           nextSynthesisSucceeded: !after.cancelled && after.samples.isNotEmpty,
         );
         expect(
@@ -323,42 +330,35 @@ void main() {
 Future<void> _ensureModel(String path, SpeechCppVariant variant) async {
   final file = File(path);
   if (!matchesPinnedSize(file, variant.bytes)) {
-    final part = File('$path.part');
-    part.parent.createSync(recursive: true);
+    file.parent.createSync(recursive: true);
     final client = http.Client();
     try {
-      final response = await client.send(
-        http.Request('GET', variant.downloadUrl),
+      await downloadFile(
+        client,
+        variant.downloadUrl.toString(),
+        path,
+        variant.fileName,
+        null,
       );
-      if (response.statusCode != 200) {
-        throw HttpException(
-          'HTTP ${response.statusCode} for ${variant.downloadUrl}',
-        );
-      }
-      final sink = part.openWrite();
-      try {
-        await response.stream.pipe(sink);
-      } finally {
-        await sink.close();
-      }
     } finally {
       client.close();
     }
-    part.renameSync(path);
   }
   await verifyModelFile(file, bytes: variant.bytes, sha256: variant.sha256);
 }
 
 /// Bytes the process may still allocate before jetsam terminates it, from
 /// `os_proc_available_memory` (iOS 13+). Null where the symbol is absent.
-int? _availableMemory() {
+int? _availableMemory() => _osProcAvailableMemory?.call();
+
+// Looked up once: memory is read every _memoryPollInterval.
+final int Function()? _osProcAvailableMemory = () {
   final process = DynamicLibrary.process();
   if (!process.providesSymbol('os_proc_available_memory')) return null;
-  final fn = process.lookupFunction<Size Function(), int Function()>(
+  return process.lookupFunction<Size Function(), int Function()>(
     'os_proc_available_memory',
   );
-  return fn();
-}
+}();
 
 /// What one synthesis on the worker returned.
 class _Synthesized {
@@ -437,11 +437,17 @@ class _SpeechWorker {
     await _next();
   }
 
+  /// Frees the model and stops the worker. A worker that died or stopped
+  /// answering would otherwise hang the run here, in a finally, and hide the
+  /// failure being reported.
   Future<void> close() async {
-    _commands.send(['close']);
-    await _next();
-    await _replies.cancel();
-    _isolate.kill();
+    try {
+      _commands.send(['close']);
+      await _next().timeout(const Duration(seconds: 30));
+    } finally {
+      _isolate.kill(priority: Isolate.immediate);
+      await _replies.cancel();
+    }
   }
 }
 
