@@ -1,3 +1,5 @@
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
+
 /// Selectable Irodori-TTS model generation.
 ///
 /// v4 was once offered as a caption-less alternative: measured on the v4 Small
@@ -6,6 +8,11 @@
 /// together — 10 out of 10 runs. The cause was the duration predictor asking
 /// for more time than the text needs, and the engine's duration correction
 /// bounds the length instead, so both variants take captions now.
+///
+/// v4.1 Small MF runs on speech.cpp, the runtime Irodori-TTS has on iOS: on an
+/// iPad mini (A17 Pro, 8GB) its F16 model left at least 1,349 MiB of the app's
+/// memory free, where audio.cpp's v3 f16 did not fit (speech-cpp-ios-spike,
+/// 2026-10-24).
 ///
 /// See spec `irodori-model-variant` and `irodori-duration-correction`.
 enum IrodoriModelVariant {
@@ -17,6 +24,8 @@ enum IrodoriModelVariant {
     expectedFileSize: 1463787680,
     supportsCaption: true,
     needsDurationCorrection: false,
+    runtime: IrodoriRuntime.audioCpp,
+    acceptsGuidance: true,
   ),
   v4(
     storageKey: 'v4',
@@ -26,6 +35,25 @@ enum IrodoriModelVariant {
     expectedFileSize: 1762161536,
     supportsCaption: true,
     needsDurationCorrection: true,
+    runtime: IrodoriRuntime.audioCpp,
+    acceptsGuidance: true,
+  ),
+  v41Mf(
+    storageKey: 'v4.1-mf',
+    label: 'v4.1 Small MF',
+    modelDirName: 'Irodori-TTS-v4.1-Small-MF-GGUF',
+    // F16 rather than a smaller type: in the listening check on the iPad, Q8_0
+    // slurred some words and Q4_K broke up (speech-cpp-ios-spike).
+    ggufFileName: 'Irodori-TTS-866M-MF-v4.1-F16.gguf',
+    expectedFileSize: 1920321792,
+    supportsCaption: true,
+    needsDurationCorrection: false,
+    runtime: IrodoriRuntime.speechCpp,
+    acceptsGuidance: false,
+    sourceUrl:
+        'https://huggingface.co/sakasegawa/Irodori-TTS-v4.1-Small-MF-GGUF/'
+        'resolve/9db7da1bec3d1069ef8e29732e0497be60c7b047',
+    sha256: 'e237dc3eefe469b8bba87872beacf12fb7fe00dbdf85767edca8ec04ab910d13',
   );
 
   const IrodoriModelVariant({
@@ -36,7 +64,15 @@ enum IrodoriModelVariant {
     required this.expectedFileSize,
     required this.supportsCaption,
     required this.needsDurationCorrection,
+    required this.runtime,
+    required this.acceptsGuidance,
+    this.sourceUrl,
+    this.sha256,
   });
+
+  /// Where the audio.cpp GGUFs are mirrored, each under its [modelDirName].
+  static const _audioCppMirrorUrl =
+      'https://huggingface.co/endo5501/audio.cpp/resolve/main';
 
   /// Value persisted in SharedPreferences. Stable across releases.
   final String storageKey;
@@ -84,6 +120,29 @@ enum IrodoriModelVariant {
   /// only ~0.12 s inside what the character rule would allow, so applying a
   /// bound calibrated elsewhere could cut speech that is correct today.
   final bool needsDurationCorrection;
+
+  /// The native runtime this variant's GGUF is read by.
+  final IrodoriRuntime runtime;
+
+  /// Whether synthesis on this variant takes the speaker and caption guidance
+  /// scales and the step count.
+  ///
+  /// v4.1 Small MF does not: MeanFlow folded the guidance into its training,
+  /// and speech.cpp refuses those options for it.
+  final bool acceptsGuidance;
+
+  /// The pinned folder [ggufFileName] is fetched from, or null for the
+  /// audio.cpp mirror, where the file sits under its [modelDirName].
+  final String? sourceUrl;
+
+  /// SHA-256 of [ggufFileName], checked once a download completes. Null where
+  /// only the size is pinned.
+  final String? sha256;
+
+  /// The URL the GGUF is downloaded from.
+  String get downloadUrl => sourceUrl == null
+      ? '$_audioCppMirrorUrl/$relativeGgufPath'
+      : '$sourceUrl/$ggufFileName';
 
   /// POSIX-style path of the GGUF relative to the models root.
   String get relativeGgufPath => '$modelDirName/$ggufFileName';

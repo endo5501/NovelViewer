@@ -29,7 +29,7 @@
 
 ## 2. Irodori の variant
 
-- [ ] 2.1 `IrodoriModelVariant` を次のように変える。
+- [x] 2.1 `IrodoriModelVariant` を次のように変える。
   - `v4.1-mf` を追加する。
   - 欄を足す: `runtime`、`acceptsGuidance`、`downloadUrl`、`sha256`。
   - 既存の `v3` / `v4` の値は変えない。`downloadUrl` は今の `_baseUrl` から組み立てたものと同じにする。

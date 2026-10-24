@@ -228,6 +228,7 @@ void main() {
       expect(IrodoriModelDownloadService.defaultExpectedFileSizes, {
         IrodoriModelVariant.v3: 1463787680,
         IrodoriModelVariant.v4: 1762161536,
+        IrodoriModelVariant.v41Mf: 1920321792,
       });
     });
   });
