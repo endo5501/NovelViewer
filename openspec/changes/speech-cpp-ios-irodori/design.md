@@ -78,7 +78,7 @@
 - `TtsSession` は `IrodoriEngineConfig` から次のように渡す。
   - `runtime == speechCpp` のときは、`modelDir` に GGUF のパス（`p.join(modelDir, variant.ggufFileName)`）を入れて送る。speech.cpp はファイルを読み、audio.cpp はディレクトリを読むためである。
   - `IrodoriModelSpecInstaller.install` は audio.cpp のときだけ呼ぶ。speech.cpp の GGUF に audio.cpp の契約ファイルを置かない。
-- worker は `irodori` のとき、runtime に応じて `IrodoriTtsEngine` か `SpeechCppIrodoriEngine` を開く。2 つのエンジンが共有するのは、Dart の小さなインターフェース（上の 6 メンバー）だけにする。
+- worker は `irodori` のとき、runtime に応じて `IrodoriTtsEngine` か `SpeechCppIrodoriEngine` を開く。2 つのエンジンが共有するのは、Dart の小さなインターフェース `IrodoriSynthesisEngine`（`isLoaded`、`synthesize`、`abort`、`resetAbort`、`dispose`）だけにする。`loadModel` はインターフェースに入れない。実行系ごとに受け取るものが違うためである（audio.cpp はモデルのディレクトリとスレッド数、speech.cpp は GGUF のファイル）。worker は実行系の分岐の中で、それぞれのエンジンを読み込む。
 - `doSynthesize` の Irodori 分岐は、ガイダンスの値をインターフェースの名前付き引数で渡す。null 許容にはしない。今の呼び出し側の不変条件（必ず値を入れる）を崩さないためである。
 - `SpeechCppIrodoriEngine` は、ガイダンスの値を受け取っても speech.cpp に渡さない。
 
@@ -88,7 +88,7 @@
 - speechCpp のハンドルは、`calloc<Int32>` で確保した 1 ワードである。speech.cpp のライブラリは使わない。
   - `abort()` は 1 を書き、`free()` は worker が終わった後に `calloc.free` する。
   - ライブラリに依存しないので、framework が無いビルドでも確保できる。
-- `TtsSession` は、config の実行系から系統を選び、そのアドレスを `LoadModelMessage.abortHandleAddress` で送る。
+- `TtsSession` は、config の variant の実行系を `TtsIsolate.loadModel` に渡す。`TtsIsolate` は、エンジンの種類と実行系から `abortFamilyFor` で系統を選び、その系統のハンドルのアドレスを `LoadModelMessage.abortHandleAddress` で送る。
 - `SpeechCppIrodoriEngine` は、このアドレスを `Pointer<Int32>.fromAddress` で持つ。
   - `resetAbort()` は 0 を書く。
   - 合成の間は、バインディングに「停止を求めるか」の関数として `() => flag.value != 0` を渡す。
@@ -167,9 +167,10 @@
 ### D7. ダウンロード
 
 - `IrodoriModelDownloadService` は、`variant.downloadUrl` から取る。
-- 完了したら、サイズに加えて、`variant.sha256` がある variant ではハッシュも確かめる。
-  - ハッシュは `package:crypto` で、ファイルをストリームで読みながら計算する。依存に入っている。1.9 GB をメモリに載せないためである。
-  - 一致しなければ、ファイルを消して `IrodoriDownloadHashMismatchException` を投げる。
+- 転送は、GGUF の名前に `.unverified` を付けたファイルへ書く。完了したらサイズを確かめ、`variant.sha256` がある variant ではハッシュも確かめる。両方を通ったときだけ、GGUF の正式な名前に変える。
+  - 正式な名前であることが、検証を通った印になる。照合の途中でアプリが終了しても、`.unverified` のまま残るだけである。ダウンロード済みとは判定されず、次のダウンロードの前に消される。レビューで、正式な名前に変えてから照合すると、照合が中断されたファイルが永久にダウンロード済みと判定されてしまうと指摘され、この順序にした。
+  - ハッシュは `package:crypto` で、ファイルをストリームで読みながら計算する。1.9 GB をメモリに載せないためである。計算は `Isolate.run` で別の isolate に移す。計算に数十秒かかり、その間メインの isolate の UI が止まるためである。
+  - どちらかが一致しなければ、`.unverified` のファイルを消して例外を投げる（`IrodoriDownloadSizeMismatchException` か `IrodoriDownloadHashMismatchException`）。
 - `isModelDownloaded` は、これまでどおりサイズだけを確かめる。起動のたびに 1.9 GB を読ませないためである。
 - 保存先は、既存の models ディレクトリの下の `Irodori-TTS-v4.1-Small-MF-GGUF/` とする。「GGUF を 1 本だけ置く」既存の規則は、そのまま当てはまる。
 
