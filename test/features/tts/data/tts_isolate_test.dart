@@ -1,3 +1,4 @@
+import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -206,6 +207,64 @@ void main() {
 
       // Dispose should complete well within the 2 second timeout
       await ttsIsolate.dispose().timeout(const Duration(seconds: 3));
+    });
+  });
+
+  group('SpeechCppAbortHandle', () {
+    test('owns a flag that starts clear and that abort sets', () {
+      final handle = SpeechCppAbortHandle.allocate();
+      addTearDown(handle.free);
+      final flag = Pointer<Int32>.fromAddress(handle.address);
+
+      expect(handle.address, isNot(0));
+      expect(flag.value, 0);
+
+      handle.abort();
+
+      expect(flag.value, 1);
+    });
+  });
+
+  group('TtsIsolate - the speech.cpp abort handle', () {
+    test('is created at spawn without any native library', () async {
+      // The flag is plain memory: a build without speech_cpp still gets one,
+      // as nothing but the worker's callbacks ever read it.
+      final iso = TtsIsolate();
+      await iso.spawn();
+
+      expect(
+        iso.debugAbortHandleAddressFor(TtsAbortFamily.speechCpp),
+        isNotNull,
+      );
+
+      await iso.dispose();
+    });
+
+    test('keeps its address across model reloads', () async {
+      final iso = TtsIsolate();
+      await iso.spawn();
+      final before = iso.debugAbortHandleAddressFor(TtsAbortFamily.speechCpp);
+
+      iso.loadModel('/nonexistent/a', engineType: TtsEngineType.irodori);
+      iso.loadModel('/nonexistent/b', engineType: TtsEngineType.piper);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(iso.debugAbortHandleAddressFor(TtsAbortFamily.speechCpp), before);
+
+      await iso.dispose();
+    });
+
+    test('abort sets it', () async {
+      final iso = TtsIsolate();
+      await iso.spawn();
+      final flag = Pointer<Int32>.fromAddress(
+        iso.debugAbortHandleAddressFor(TtsAbortFamily.speechCpp)!,
+      );
+
+      iso.abort();
+
+      expect(flag.value, 1);
+      await iso.dispose();
     });
   });
 
