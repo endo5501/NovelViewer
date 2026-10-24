@@ -177,9 +177,9 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   }
 
   Future<void> _loadVoiceFiles() async {
-    final service = ref.read(voiceReferenceServiceProvider);
-    if (service == null) return;
-    final files = await service.listVoiceFiles();
+    // Only the files the engine in use reads: a segment set to one it cannot
+    // read is spoken without a reference, so offering it would mislead.
+    final files = await ref.refresh(voiceFilesProvider.future);
     if (mounted) {
       setState(() => _voiceFiles = files);
     }

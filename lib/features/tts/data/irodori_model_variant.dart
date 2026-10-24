@@ -1,5 +1,7 @@
 import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 
+import 'voice_reference_service.dart';
+
 /// Selectable Irodori-TTS model generation.
 ///
 /// v4 was once offered as a caption-less alternative: measured on the v4 Small
@@ -142,7 +144,7 @@ enum IrodoriModelVariant {
   /// The reference-voice extensions this variant's runtime reads, in lower
   /// case. speech.cpp reads WAVE files and nothing else.
   Set<String> get referenceExtensions => switch (runtime) {
-    IrodoriRuntime.audioCpp => const {'.wav', '.mp3'},
+    IrodoriRuntime.audioCpp => VoiceReferenceService.supportedExtensions,
     IrodoriRuntime.speechCpp => const {'.wav'},
   };
 

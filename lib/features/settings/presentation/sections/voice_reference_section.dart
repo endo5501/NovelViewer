@@ -28,11 +28,7 @@ class _VoiceReferenceSectionState extends ConsumerState<VoiceReferenceSection> {
   }
 
   Future<void> _loadVoiceFiles() async {
-    final service = ref.read(voiceReferenceServiceProvider);
-    if (service == null) return;
-    final files = await service.listVoiceFiles(
-      extensions: ref.read(acceptedReferenceExtensionsProvider),
-    );
+    final files = await ref.refresh(voiceFilesProvider.future);
     if (mounted) {
       setState(() {
         _voiceFiles = files;

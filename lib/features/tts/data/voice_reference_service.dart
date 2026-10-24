@@ -3,7 +3,10 @@ import 'package:path/path.dart' as p;
 
 class VoiceReferenceService {
   static const _voicesDirName = 'voices';
-  static const _supportedExtensions = {'.wav', '.mp3'};
+
+  /// The reference audio the voices folder holds, in lower case. An engine
+  /// may read only some of them (`TtsEngineConfig.acceptedReferenceExtensions`).
+  static const supportedExtensions = {'.wav', '.mp3'};
 
   final String libraryPath;
 
@@ -22,7 +25,7 @@ class VoiceReferenceService {
   /// [extensions] (lower case; `.wav` and `.mp3` when omitted). An engine
   /// passes the ones it reads; the other files are left where they are.
   Future<List<String>> listVoiceFiles({Set<String>? extensions}) async {
-    final accepted = extensions ?? _supportedExtensions;
+    final accepted = extensions ?? supportedExtensions;
     await ensureVoicesDir();
     final entities = await Directory(voicesDirPath).list().toList();
     final files = entities
@@ -78,7 +81,7 @@ class VoiceReferenceService {
 
   Future<String> _prepareDestination(String fileName) async {
     final ext = p.extension(fileName).toLowerCase();
-    if (!_supportedExtensions.contains(ext)) {
+    if (!supportedExtensions.contains(ext)) {
       throw ArgumentError(
         'Unsupported file type: $ext. Only .wav and .mp3 are supported.',
       );

@@ -9,6 +9,7 @@ import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 import 'package:novel_viewer/features/tts/data/voice_reference_service.dart';
+import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
 import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
 
@@ -42,22 +43,24 @@ final voiceFilePickerProvider = Provider<VoiceFilePicker>(
   },
 );
 
-/// The reference-voice extensions the engine in use reads, in lower case.
-///
-/// The same answer `TtsEngineConfig.acceptedReferenceExtensions` gives for a
-/// resolved config, for the voice selector, which lists only these.
+/// The reference-voice extensions the engine in use reads, in lower case, by
+/// the rule synthesis follows (`TtsEngineConfig.referenceExtensionsFor`), for
+/// the voice lists, which show only these.
 final acceptedReferenceExtensionsProvider = Provider<Set<String>>(
-  (ref) => switch (ref.watch(ttsEngineTypeProvider)) {
-    TtsEngineType.irodori =>
-      ref.watch(irodoriModelVariantProvider).referenceExtensions,
-    TtsEngineType.qwen3 || TtsEngineType.piper => const {'.wav', '.mp3'},
-  },
+  (ref) => TtsEngineConfig.referenceExtensionsFor(
+    ref.watch(ttsEngineTypeProvider),
+    irodoriVariant: ref.watch(irodoriModelVariantProvider),
+  ),
 );
 
+/// The reference voices the engine in use can read, for the voice lists of
+/// the settings and the edit dialog. Refresh it to rescan the folder.
 final voiceFilesProvider = FutureProvider<List<String>>((ref) async {
   final service = ref.watch(voiceReferenceServiceProvider);
   if (service == null) return [];
-  return service.listVoiceFiles();
+  return service.listVoiceFiles(
+    extensions: ref.watch(acceptedReferenceExtensionsProvider),
+  );
 });
 
 /// Generic base notifier that loads a [String] setting from [SettingsRepository]
