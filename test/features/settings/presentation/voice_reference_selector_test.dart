@@ -8,7 +8,10 @@ import 'package:novel_viewer/features/file_browser/providers/file_browser_provid
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:path/path.dart' as p;
+import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
+import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dart';
 
 import '../../../test_utils/flutter_secure_storage_mock.dart';
 
@@ -31,12 +34,19 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({
+    PlatformCapabilities? capabilities,
+    VoiceFilePicker? pickVoiceFiles,
+  }) {
     final libraryPath = p.join(tempDir.path, 'NovelViewer');
     return ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         libraryPathProvider.overrideWithValue(libraryPath),
+        if (capabilities != null)
+          platformCapabilitiesProvider.overrideWithValue(capabilities),
+        if (pickVoiceFiles != null)
+          voiceFilePickerProvider.overrideWithValue(pickVoiceFiles),
       ],
       child: const MaterialApp(
         locale: Locale('ja'),
@@ -49,7 +59,11 @@ void main() {
     );
   }
 
-  Future<void> navigateToTtsTab(WidgetTester tester) async {
+  Future<void> navigateToTtsTab(
+    WidgetTester tester, {
+    PlatformCapabilities? capabilities,
+    VoiceFilePicker? pickVoiceFiles,
+  }) async {
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -58,7 +72,12 @@ void main() {
     });
 
     await tester.runAsync(() async {
-      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpWidget(
+        buildTestWidget(
+          capabilities: capabilities,
+          pickVoiceFiles: pickVoiceFiles,
+        ),
+      );
       // Drive tab animation so VoiceReferenceSection mounts, then allow
       // real-time file-system I/O scheduled in its initState to settle.
       await tester.pumpAndSettle();
@@ -167,6 +186,132 @@ void main() {
       await navigateToTtsTab(tester);
 
       expect(find.text('なし（デフォルト音声）'), findsOneWidget);
+    });
+  });
+
+  group('On iOS with Irodori-TTS', () {
+    const iOS = PlatformCapabilities.forPlatform(isIOS: true, isMacOS: false);
+
+    Future<void> openOnIOS(
+      WidgetTester tester, {
+      VoiceFilePicker? pickVoiceFiles,
+    }) async {
+      await prefs.setString('tts_engine_type', 'irodori');
+      await navigateToTtsTab(
+        tester,
+        capabilities: iOS,
+        pickVoiceFiles: pickVoiceFiles,
+      );
+    }
+
+    testWidgets('offers no recording, folder or drop target', (tester) async {
+      await openOnIOS(tester);
+
+      expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+      expect(find.byIcon(Icons.mic), findsNothing);
+      expect(find.byTooltip('voicesフォルダを開く'), findsNothing);
+      expect(find.byType(DropTarget), findsNothing);
+    });
+
+    testWidgets('lists WAVE files only', (tester) async {
+      final voicesDir = Directory(p.join(tempDir.path, 'voices'))..createSync();
+      File(p.join(voicesDir.path, 'narrator.mp3')).writeAsStringSync('');
+      File(p.join(voicesDir.path, 'sample.wav')).writeAsStringSync('');
+
+      await openOnIOS(tester);
+      await scrollToVoiceReferenceSelector(tester);
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+
+      expect(find.text('sample.wav'), findsWidgets);
+      expect(find.text('narrator.mp3'), findsNothing);
+    });
+
+    testWidgets('picks WAVE files and adds them to the list', (tester) async {
+      final source = File(p.join(tempDir.path, 'picked.wav'))
+        ..writeAsStringSync('');
+      Set<String>? offered;
+
+      await openOnIOS(
+        tester,
+        pickVoiceFiles: ({required extensions}) async {
+          offered = extensions;
+          return [source.path];
+        },
+      );
+      await scrollToVoiceReferenceSelector(tester);
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const Key('voice_pick_files')));
+        await Future.delayed(const Duration(milliseconds: 300));
+      });
+      await tester.pumpAndSettle();
+
+      expect(offered, {'.wav'});
+      expect(
+        File(p.join(tempDir.path, 'voices', 'picked.wav')).existsSync(),
+        isTrue,
+      );
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      expect(find.text('picked.wav'), findsWidgets);
+    });
+
+    testWidgets('a picked file whose name exists is not overwritten', (
+      tester,
+    ) async {
+      final voicesDir = Directory(p.join(tempDir.path, 'voices'))..createSync();
+      final existing = File(p.join(voicesDir.path, 'same.wav'))
+        ..writeAsStringSync('original');
+      final source = File(p.join(tempDir.path, 'same.wav'))
+        ..writeAsStringSync('replacement');
+
+      await openOnIOS(
+        tester,
+        pickVoiceFiles: ({required extensions}) async => [source.path],
+      );
+      await scrollToVoiceReferenceSelector(tester);
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const Key('voice_pick_files')));
+        await Future.delayed(const Duration(milliseconds: 300));
+      });
+      await tester.pumpAndSettle();
+
+      expect(existing.readAsStringSync(), 'original');
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
+
+    testWidgets('cancelling the picker changes nothing', (tester) async {
+      await openOnIOS(
+        tester,
+        pickVoiceFiles: ({required extensions}) async => null,
+      );
+      await scrollToVoiceReferenceSelector(tester);
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const Key('voice_pick_files')));
+        await Future.delayed(const Duration(milliseconds: 300));
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsNothing);
+      expect(Directory(p.join(tempDir.path, 'voices')).listSync(), isEmpty);
+    });
+  });
+
+  group('On the desktop', () {
+    testWidgets('keeps recording, the folder and the drop target, and adds '
+        'picking', (tester) async {
+      await navigateToTtsTab(
+        tester,
+        capabilities: const PlatformCapabilities.forPlatform(
+          isIOS: false,
+          isMacOS: true,
+        ),
+      );
+
+      expect(find.byIcon(Icons.mic), findsOneWidget);
+      expect(find.byTooltip('voicesフォルダを開く'), findsOneWidget);
+      expect(find.byType(DropTarget), findsOneWidget);
+      expect(find.byKey(const Key('voice_pick_files')), findsOneWidget);
     });
   });
 
