@@ -32,13 +32,25 @@ abstract class TtsAbortHandle {
   void free();
 }
 
-/// Creates the per-engine-family abort handles for a session. Injectable for
-/// tests. Returns a handle keyed by the [TtsEngineType] that will consume it:
-/// [TtsEngineType.qwen3] for the qwen3_tts_ffi handle and
-/// [TtsEngineType.irodori] for the audiocpp_ffi handle. A family whose native
-/// library is unavailable is simply absent from the map (that engine then has
-/// no native abort). [TtsEngineType.piper] never has a handle.
-typedef TtsAbortHandleFactory = Map<TtsEngineType, TtsAbortHandle> Function();
+/// The native libraries that read an abort handle. One engine type can run on
+/// more than one of them: Irodori-TTS runs on audio.cpp on the desktop and on
+/// speech.cpp on iOS.
+enum TtsAbortFamily {
+  /// qwen3_tts_ffi, read by Qwen3-TTS.
+  qwen3,
+
+  /// audiocpp_ffi, read by Irodori-TTS on audio.cpp.
+  audioCpp,
+
+  /// speech.cpp, read by Irodori-TTS on speech.cpp.
+  speechCpp,
+}
+
+/// Creates the per-family abort handles for a session. Injectable for tests.
+/// Returns a handle keyed by the [TtsAbortFamily] that will read it. A family
+/// whose native library is unavailable is simply absent from the map (that
+/// engine then has no native abort). Piper never has a handle.
+typedef TtsAbortHandleFactory = Map<TtsAbortFamily, TtsAbortHandle> Function();
 
 /// FFI-backed abort handle. Parameterized over the owning library's abort /
 /// free functions so it is created — and later freed — by the SAME native DLL
@@ -95,8 +107,8 @@ TtsAbortHandle? _openNativeAbortHandle<B>({
 /// Allocates one abort handle per available engine family. Each handle is
 /// created — and will be freed — by the SAME DLL that dereferences it, so no
 /// handle is ever shared across DLLs.
-Map<TtsEngineType, TtsAbortHandle> _defaultAbortHandleFactory() {
-  final handles = <TtsEngineType, TtsAbortHandle>{};
+Map<TtsAbortFamily, TtsAbortHandle> _defaultAbortHandleFactory() {
+  final handles = <TtsAbortFamily, TtsAbortHandle>{};
 
   final qwen3 = _openNativeAbortHandle<TtsNativeBindings>(
     open: TtsNativeBindings.open,
@@ -104,7 +116,7 @@ Map<TtsEngineType, TtsAbortHandle> _defaultAbortHandleFactory() {
     abortOf: (b) => b.abort,
     freeOf: (b) => b.freeAbortHandle,
   );
-  if (qwen3 != null) handles[TtsEngineType.qwen3] = qwen3;
+  if (qwen3 != null) handles[TtsAbortFamily.qwen3] = qwen3;
 
   final audiocpp = _openNativeAbortHandle<AudiocppNativeBindings>(
     open: AudiocppNativeBindings.open,
@@ -112,7 +124,7 @@ Map<TtsEngineType, TtsAbortHandle> _defaultAbortHandleFactory() {
     abortOf: (b) => b.abort,
     freeOf: (b) => b.freeAbortHandle,
   );
-  if (audiocpp != null) handles[TtsEngineType.irodori] = audiocpp;
+  if (audiocpp != null) handles[TtsAbortFamily.audioCpp] = audiocpp;
 
   if (handles.isEmpty) {
     _log.warning('no TTS native library available; abort disabled');
@@ -257,16 +269,16 @@ class TtsIsolate {
   /// [WorkerDiedResponse] does not replay on the broadcast stream).
   bool get hasWorkerDied => _workerDeathSignaled;
 
-  /// Per-engine-family abort handles, keyed by the [TtsEngineType] that
-  /// consumes each (qwen3, irodori). Created once at [spawn] and freed only
-  /// after the worker Isolate has terminated, so each address is stable across
-  /// model reloads and [abort] never touches a freed synthesis context.
-  Map<TtsEngineType, TtsAbortHandle> _abortHandles = const {};
+  /// Per-family abort handles, keyed by the [TtsAbortFamily] that reads each.
+  /// Created once at [spawn] and freed only after the worker Isolate has
+  /// terminated, so each address is stable across model reloads and [abort]
+  /// never touches a freed synthesis context.
+  Map<TtsAbortFamily, TtsAbortHandle> _abortHandles = const {};
 
-  /// Native address of the abort handle for [engineType] (null when that
-  /// engine family has no native handle). Exposed for tests.
-  int? debugAbortHandleAddressFor(TtsEngineType engineType) =>
-      _abortHandles[engineType]?.address;
+  /// Native address of the abort handle for [family] (null when that family
+  /// has no native handle). Exposed for tests.
+  int? debugAbortHandleAddressFor(TtsAbortFamily family) =>
+      _abortHandles[family]?.address;
 
   /// Timeout for graceful shutdown before force-killing the isolate.
   static const _disposeTimeout = Duration(seconds: 2);
@@ -400,7 +412,15 @@ class TtsIsolate {
         durationCorrection: durationCorrection,
         // Send the handle allocated by THIS engine's DLL so the address is only
         // ever dereferenced by the library that created it (no cross-DLL wiring).
-        abortHandleAddress: _abortHandles[engineType]?.address ?? 0,
+        abortHandleAddress:
+            switch (engineType) {
+              TtsEngineType.qwen3 =>
+                _abortHandles[TtsAbortFamily.qwen3]?.address,
+              TtsEngineType.irodori =>
+                _abortHandles[TtsAbortFamily.audioCpp]?.address,
+              TtsEngineType.piper => null,
+            } ??
+            0,
       ),
     );
   }

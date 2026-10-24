@@ -92,7 +92,7 @@
 
 ## 5. 中断のハンドル
 
-- [ ] 5.1 `TtsAbortHandleFactory` のキーを、`TtsEngineType` からネイティブの系統（`qwen3` / `audioCpp` / `speechCpp`）に変える。挙動は変えない。
+- [x] 5.1 `TtsAbortHandleFactory` のキーを、`TtsEngineType` からネイティブの系統（`qwen3` / `audioCpp` / `speechCpp`）に変える。挙動は変えない。
   - 確認: 既存の `tts_isolate` と `tts_session` のテストを新しいキーに合わせても、すべて通る（リファクタリングとして独立したコミットにする）。
 - [ ] 5.2 speechCpp の中断ハンドルを追加する。
   - `calloc<Int32>` で確保する 1 ワードで、`abort()` は 1 を書き、worker が終わってから解放する。
