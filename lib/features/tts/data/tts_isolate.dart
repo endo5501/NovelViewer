@@ -3,6 +3,7 @@ import 'dart:ffi';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'package:ffi/ffi.dart';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 
@@ -79,6 +80,38 @@ class _NativeAbortHandle implements TtsAbortHandle {
   void free() => freeFn(_handle);
 }
 
+/// The abort handle of Irodori-TTS on speech.cpp: one 32-bit word this
+/// isolate allocates, which the worker's speech.cpp callbacks read at each
+/// sampler step and decoded window (`SpeechCppSynthesisRun`).
+///
+/// speech.cpp has no abort handle of its own, and cancelling a request from
+/// here would race the worker freeing it, so the flag is plain memory no
+/// library owns. That also makes it available in a build without speech_cpp.
+///
+/// `dart:ffi` has no atomics. Correctness rests on an aligned 32-bit store
+/// here and an aligned 32-bit load on the worker, which arm64 and x86-64 never
+/// tear; a store the worker sees late costs one more sampler step at most.
+/// As with the other handles, an abort that lands between the worker's reset
+/// and the next synthesis would be lost, which the controllers prevent by not
+/// sending another synthesis after stopping.
+class SpeechCppAbortHandle implements TtsAbortHandle {
+  SpeechCppAbortHandle._(this._flag);
+
+  factory SpeechCppAbortHandle.allocate() =>
+      SpeechCppAbortHandle._(calloc<Int32>());
+
+  final Pointer<Int32> _flag;
+
+  @override
+  int get address => _flag.address;
+
+  @override
+  void abort() => _flag.value = 1;
+
+  @override
+  void free() => calloc.free(_flag);
+}
+
 /// Opens a native library and allocates one abort handle from it, backed by
 /// that library's own abort/free functions. Returns null (never throws) when
 /// the DLL is unavailable or its native create returns nullptr, so a missing
@@ -126,8 +159,14 @@ Map<TtsAbortFamily, TtsAbortHandle> _defaultAbortHandleFactory() {
   );
   if (audiocpp != null) handles[TtsAbortFamily.audioCpp] = audiocpp;
 
-  if (handles.isEmpty) {
-    _log.warning('no TTS native library available; abort disabled');
+  handles[TtsAbortFamily.speechCpp] = SpeechCppAbortHandle.allocate();
+
+  if (!handles.containsKey(TtsAbortFamily.qwen3) &&
+      !handles.containsKey(TtsAbortFamily.audioCpp)) {
+    _log.warning(
+      'no qwen3 or audio.cpp library available; their abort is '
+      'disabled',
+    );
   }
   return handles;
 }
