@@ -26,8 +26,8 @@
 
 ## 6. ドキュメント
 
-- [ ] 6.1 README の iOS ビルド手順に、`scripts/build_speech_ios.sh` による framework のビルド（ビューアや Piper だけなら不要なこと、アプリ本体はまだ使わないこと）、`scripts/test/verify_speech_ios.sh`、計測テストの実行方法（量子化の選び方と Q4_K → Q8_0 → F16 の順、`flutter drive --profile` のコマンド、結果の出力先、実行前に `Documents/` と `Library/` をバックアップすること）を追記する。`ios-build-target` の MODIFIED のシナリオを満たしていることを読み合わせで確認する
-- [ ] 6.2 `.claude/CLAUDE.md` の開発コマンド一覧に `scripts/build_speech_ios.sh` と `scripts/test/verify_speech_ios.sh` を追加する
+- [x] 6.1 iOS のビルド手順（README から参照される `docs/ipad.md`）に、`scripts/build_speech_ios.sh` による framework のビルド（ビューアや Piper だけなら不要なこと、アプリ本体はまだ使わないこと）、`scripts/test/verify_speech_ios.sh`、計測テストの実行方法（量子化の選び方と Q4_K → Q8_0 → F16 の順、`flutter drive --profile` のコマンド、結果の出力先、実行前に `Documents/` と `Library/` をバックアップすること）を追記する。`ios-build-target` の MODIFIED のシナリオを満たしていることを読み合わせで確認する
+- [x] 6.2 `.claude/CLAUDE.md` の開発コマンド一覧に `scripts/build_speech_ios.sh` と `scripts/test/verify_speech_ios.sh` を追加する
 
 ## 7. 実機計測
 

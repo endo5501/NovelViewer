@@ -128,6 +128,43 @@ fvm flutter drive --profile --driver=test_driver/integration_test.dart \
 - 計測結果はホストの `build/integration_response_data.json` と、端末の `Documents/benchmarks/piper_ios_<日時>.json` に出力されます。
 - Simulator では実行後にアプリのデータが残らないので、毎回モデルを取得し直します。
 
+### 6. speech.cpp による Irodori-TTS の実機計測（アプリ本体は未使用）
+
+iPad で Irodori-TTS を動かせるかを、[speech.cpp](https://github.com/nyosegawa/speech.cpp)（`third_party/speech.cpp`）で計測するための手順です。アプリ本体はまだこのライブラリを使いません。ビューアや Piper だけなら、この手順は不要です。
+
+```bash
+scripts/build_speech_ios.sh          # ios/Frameworks/speech_cpp.xcframework を生成
+scripts/test/verify_speech_ios.sh    # 成果物の検証
+```
+
+- 成果物（実機用と Simulator 用、約 8MB ずつ）は **Git で管理していません**。Apple の `Speech.framework` と取り違えないよう、上流の `libspeech` を `speech_cpp` という名前の framework にしています。
+- 同梱は Piper と同じく「Embed Native Frameworks」フェーズが行います。
+
+**計測テスト:** `integration_test/speech_cpp_ios_test.dart` は、Irodori-TTS v4.1 Small MF を GPU で読み込み、参照音声つきで中程度の文（51字）・125字の文・中程度の文の10回連続を合成し、別スレッドからの中断も確かめます。各段階のメモリの余裕と所要時間を記録し、事前に決めた基準（完走、メモリの余裕 512 MiB 以上、125字の文の RTF 1.0 未満）で合否を判定します。モデルは固定したリビジョンから取得し、サイズと SHA-256 で照合します。
+
+**実行する前に、アプリのデータをバックアップしてください。** 実機テストのインストールでアプリのデータが消えたことがあります。Files アプリで見える `Documents/` に加えて、設定が入る `Library/` も Mac に取り出しておきます。
+
+```bash
+for d in Documents Library; do
+  xcrun devicectl device copy from --device <デバイス UDID> \
+    --domain-type appDataContainer --domain-identifier com.endo5501.novelViewer \
+    --source "$d" --destination ~/Backups/NovelViewer-iPad-$(date +%Y%m%d)/"$d"
+done
+```
+
+量子化は `--dart-define=SPEECH_CPP_VARIANT=` で1つずつ選び、`q4_k` → `q8_0` → `f16` の順に実行します。1回の実行で1つだけ計測するのは、ピークメモリがプロセスの中で前の計測に引きずられないようにするためです。小さいものから実行すれば、大きいものがメモリ不足で強制終了されても、それまでの結果は残ります。
+
+```bash
+fvm flutter drive --profile --driver=test_driver/integration_test.dart \
+  --target=integration_test/speech_cpp_ios_test.dart \
+  --dart-define=SPEECH_CPP_VARIANT=q4_k -d <デバイス ID>
+```
+
+- 実機の前提（Rosetta、ローカルネットワークの許可、profile ビルド）は Piper の合成テストと同じです。
+- 結果はホストの `build/integration_response_data.json` と、端末の `Documents/benchmarks/speech_cpp_ios_<量子化>_<日時>.json` に出力されます。参照音声と各文の音声も、同じ場所に WAV で保存されます。強制終了された場合も、端末のレポートには最後に終わった段階までが残ります。
+- モデル（Q4_K 約 0.9GB、Q8_0 約 1.2GB、F16 約 1.9GB）は `Documents/models/speech-cpp/` に置かれ、Files アプリから見えます。計測が終わって不要になったら削除してください。
+- Simulator では framework を開いてバージョンを読むだけで、モデルの取得と合成は行いません。Simulator の Metal では、モデルの読み込み中にプロセスが止められるためです。
+
 ## ライブラリの場所
 
 小説は端末内の `Documents/NovelViewer/` に保存され、Files アプリの「このiPad内 > NovelViewer」から参照・追加・削除できます。
