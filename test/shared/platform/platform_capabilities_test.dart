@@ -16,12 +16,16 @@ void main() {
       expect(capabilities.ttsAudioExport, isTrue);
       expect(capabilities.appUpdate, isTrue);
       expect(capabilities.llmSummary, isTrue);
+      expect(capabilities.voiceRecording, isTrue);
+      expect(capabilities.voiceFileDragDrop, isTrue);
+      expect(capabilities.voicesFolderReveal, isTrue);
+      expect(capabilities.irodoriRuntime, IrodoriRuntime.audioCpp);
     });
 
-    test('iOS supports speech with Piper only', () {
-      // Piper is the one engine built and verified for iOS (piper-ios-build).
-      // Qwen3-TTS and Irodori-TTS have no iOS library, and MP3 export needs a
-      // LAME build iOS does not have.
+    test('iOS supports speech with Piper and Irodori-TTS', () {
+      // Piper is built for iOS (piper-ios-build), and Irodori-TTS runs there
+      // on speech.cpp (speech-cpp-ios-build). Qwen3-TTS has no iOS library,
+      // and MP3 export needs a LAME build iOS does not have.
       const capabilities = PlatformCapabilities.forPlatform(
         isIOS: true,
         isMacOS: false,
@@ -30,10 +34,14 @@ void main() {
       expect(capabilities.textToSpeech, isTrue);
       expect(capabilities.piperTts, isTrue);
       expect(capabilities.qwen3Tts, isFalse);
-      expect(capabilities.irodoriTts, isFalse);
+      expect(capabilities.irodoriTts, isTrue);
+      expect(capabilities.irodoriRuntime, IrodoriRuntime.speechCpp);
       expect(capabilities.ttsAudioExport, isFalse);
       expect(capabilities.appUpdate, isFalse);
       expect(capabilities.llmSummary, isTrue);
+      expect(capabilities.voiceRecording, isFalse);
+      expect(capabilities.voiceFileDragDrop, isFalse);
+      expect(capabilities.voicesFolderReveal, isFalse);
     });
 
     test('text-to-speech follows the engines', () {
@@ -133,6 +141,10 @@ void main() {
       expect(asMacOS.ttsAudioExport, asWindows.ttsAudioExport);
       expect(asMacOS.appUpdate, asWindows.appUpdate);
       expect(asMacOS.llmSummary, asWindows.llmSummary);
+      expect(asMacOS.irodoriRuntime, asWindows.irodoriRuntime);
+      expect(asMacOS.voiceRecording, asWindows.voiceRecording);
+      expect(asMacOS.voiceFileDragDrop, asWindows.voiceFileDragDrop);
+      expect(asMacOS.voicesFolderReveal, asWindows.voicesFolderReveal);
       expect(asMacOS.onDeviceLlm, isNot(asWindows.onDeviceLlm));
     });
 
