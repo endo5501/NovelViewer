@@ -119,7 +119,7 @@
   - 確認: 単体テストで次を確かめる。
     - 無音が足りないときは不足分の 0 が入る
     - 足りているときは何も足さない
-- [ ] 6.3 `SpeechCppIrodoriEngine` を作る。
+- [x] 6.3 `SpeechCppIrodoriEngine` を作る。
   - 形は `loadModel`、`synthesize`、`abort`、`resetAbort`、`dispose`、`isLoaded` で、ネイティブの部分は注入できるようにする。
   - 確認: フェイクの speech.cpp を使い、`irodori-speech-cpp-engine` の次のシナリオのテストが通る。
     - 参照音声を一度だけ登録する
