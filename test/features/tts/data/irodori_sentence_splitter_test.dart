@@ -52,7 +52,7 @@ void main() {
 
     test('every comma it knows is a place to cut', () {
       for (final comma in ['、', '，', ',', '；', ';']) {
-        expect(splitAtCommas('あいう${comma}えおか。', maxLength: 5), [
+        expect(splitAtCommas('あいう$commaえおか。', maxLength: 5), [
           'あいう$comma',
           'えおか。',
         ], reason: comma);
