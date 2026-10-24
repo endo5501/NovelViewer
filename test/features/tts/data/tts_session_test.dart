@@ -10,6 +10,7 @@ import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_session.dart';
 import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 
 class _LoadModelCall {
   _LoadModelCall({
@@ -22,6 +23,7 @@ class _LoadModelCall {
     this.noiseW,
     this.embeddingCacheDir,
     this.durationCorrection = false,
+    this.irodoriRuntime = IrodoriRuntime.audioCpp,
   });
   final String modelDir;
   final TtsEngineType engineType;
@@ -32,6 +34,7 @@ class _LoadModelCall {
   final double? noiseW;
   final String? embeddingCacheDir;
   final bool durationCorrection;
+  final IrodoriRuntime irodoriRuntime;
 }
 
 /// Records the model directories the session asks for a contract copy in.
@@ -92,6 +95,7 @@ class _FakeTtsIsolate implements TtsIsolate {
     double? noiseW,
     String? embeddingCacheDir,
     bool durationCorrection = false,
+    IrodoriRuntime irodoriRuntime = IrodoriRuntime.audioCpp,
   }) {
     loadModelCalls.add(
       _LoadModelCall(
@@ -104,6 +108,7 @@ class _FakeTtsIsolate implements TtsIsolate {
         noiseW: noiseW,
         embeddingCacheDir: embeddingCacheDir,
         durationCorrection: durationCorrection,
+        irodoriRuntime: irodoriRuntime,
       ),
     );
     if (blockModelLoad) return;
@@ -285,6 +290,37 @@ void main() {
       expect(call.modelDir, '/i/m');
       await session.dispose();
     });
+
+    test(
+      'ensureModelLoaded names the runtime of the irodori variant',
+      () async {
+        for (final variant in IrodoriModelVariant.values) {
+          final isolate = _FakeTtsIsolate();
+          final session = TtsSession(
+            isolate: isolate,
+            irodoriSpecInstaller: _RecordingSpecInstaller(),
+          );
+
+          await session.ensureModelLoaded(
+            IrodoriEngineConfig(
+              modelDir: '/i/${variant.storageKey}',
+              sampleRate: 48000,
+              variant: variant,
+              speakerGuidanceScale: 5.0,
+              captionGuidanceScale: 3.0,
+              numInferenceSteps: 40,
+            ),
+          );
+
+          expect(
+            isolate.loadModelCalls.single.irodoriRuntime,
+            variant.runtime,
+            reason: 'variant ${variant.storageKey}',
+          );
+          await session.dispose();
+        }
+      },
+    );
 
     // The engine validates request options against the contract embedded in
     // the GGUF, which predates duration_correction. Writing the runtime's own

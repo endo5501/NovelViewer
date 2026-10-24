@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 
 /// Fake abort handle that records lifecycle calls, so the F111 handle behaviour
 /// can be verified without the native library.
@@ -207,6 +208,43 @@ void main() {
 
       // Dispose should complete well within the 2 second timeout
       await ttsIsolate.dispose().timeout(const Duration(seconds: 3));
+    });
+  });
+
+  group('abortFamilyFor', () {
+    test('names the library that reads the engine\'s abort handle', () {
+      expect(
+        abortFamilyFor(TtsEngineType.qwen3, IrodoriRuntime.audioCpp),
+        TtsAbortFamily.qwen3,
+      );
+      expect(
+        abortFamilyFor(TtsEngineType.irodori, IrodoriRuntime.audioCpp),
+        TtsAbortFamily.audioCpp,
+      );
+      expect(
+        abortFamilyFor(TtsEngineType.irodori, IrodoriRuntime.speechCpp),
+        TtsAbortFamily.speechCpp,
+      );
+      expect(
+        abortFamilyFor(TtsEngineType.piper, IrodoriRuntime.speechCpp),
+        isNull,
+      );
+    });
+  });
+
+  group('LoadModelMessage', () {
+    test('carries the Irodori runtime, audio.cpp by default', () {
+      expect(
+        LoadModelMessage(modelDir: '/m').irodoriRuntime,
+        IrodoriRuntime.audioCpp,
+      );
+      expect(
+        LoadModelMessage(
+          modelDir: '/m',
+          irodoriRuntime: IrodoriRuntime.speechCpp,
+        ).irodoriRuntime,
+        IrodoriRuntime.speechCpp,
+      );
     });
   });
 
