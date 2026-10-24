@@ -9,8 +9,9 @@
 // D6-D9.
 //
 // The model runs on a worker isolate: speech_synthesize() blocks its caller,
-// and this isolate has to stay free to read memory while it runs and to
-// cancel a request from another thread.
+// and this isolate has to stay free to read memory while it runs and to ask
+// for a stop from another thread, as the app does: by writing a flag the
+// worker's callbacks read, never by touching the request.
 //
 // Run with flutter drive (a device needs profile mode, see test_driver/):
 //   device:
@@ -255,7 +256,7 @@ void main() {
           persist();
         }
 
-        // Cancel the long sentence from this isolate, at half the time the
+        // Stop the long sentence from this isolate, at half the time the
         // medium one takes, which lands inside the long one's synthesis.
         final mediumTime = sentences.firstWhere((s) => s.label == 'medium');
         final delay = mediumTime.elapsed ~/ 2;
@@ -267,19 +268,15 @@ void main() {
             () => worker.synthesize(
               _sentences['long']!,
               voice: 'ref',
-              onStarted: (address) => cancelSent = Future.delayed(
-                delay,
-                () => SpeechCppRequest.cancelAt(bindings, address),
-              ),
+              onStarted: () =>
+                  cancelSent = Future.delayed(delay, worker.requestStop),
             ),
           );
         } finally {
-          // The worker keeps the request alive until the cancel has been
-          // sent, on every path out of here, failures included: cancelling a
-          // freed request would write to freed memory.
+          // A stop that lands after the next synthesis began would stop that
+          // one instead, so it is sent before going on.
           await cancelSent;
         }
-        await worker.releaseHeld();
         final after = await measured(
           'after_cancel',
           () => worker.synthesize(_sentences['medium']!, voice: 'ref'),
@@ -377,19 +374,44 @@ class _Synthesized {
 
 /// A worker isolate holding one model, answering one command at a time.
 class _SpeechWorker {
-  _SpeechWorker._(this._isolate, this._commands, this._replies);
+  _SpeechWorker._(
+    this._isolate,
+    this._commands,
+    this._replies,
+    this._stopFlag,
+    this._exited,
+  );
 
+  /// Spawns the worker with a stop flag this isolate owns. The flag outlives
+  /// every request, so writing it is safe at any time until [close] frees it
+  /// after the worker has exited.
   static Future<_SpeechWorker> spawn() async {
+    final stopFlag = calloc<Int32>();
     final replies = ReceivePort();
-    final isolate = await Isolate.spawn(_workerMain, replies.sendPort);
+    final exited = ReceivePort();
+    final isolate = await Isolate.spawn(_workerMain, [
+      replies.sendPort,
+      stopFlag.address,
+    ], onExit: exited.sendPort);
     final events = StreamIterator(replies);
     await events.moveNext();
-    return _SpeechWorker._(isolate, events.current as SendPort, events);
+    return _SpeechWorker._(
+      isolate,
+      events.current as SendPort,
+      events,
+      stopFlag,
+      exited,
+    );
   }
 
   final Isolate _isolate;
   final SendPort _commands;
   final StreamIterator<dynamic> _replies;
+  final Pointer<Int32> _stopFlag;
+  final ReceivePort _exited;
+
+  /// Asks the synthesis under way to stop, from this isolate.
+  void requestStop() => _stopFlag.value = 1;
 
   Future<Object?> _next() async {
     await _replies.moveNext();
@@ -408,19 +430,16 @@ class _SpeechWorker {
     await _next();
   }
 
-  /// Speaks [text]. [onStarted] receives the request's address once the
-  /// request exists, before the synthesis blocks the worker.
-  ///
-  /// With [onStarted], the worker keeps the request after the synthesis, so
-  /// that a cancel sent late still finds it, until [releaseHeld].
+  /// Speaks [text]. [onStarted] runs once the worker has cleared the stop flag
+  /// and is about to synthesize.
   Future<_Synthesized> synthesize(
     String text, {
     required String voice,
-    void Function(int address)? onStarted,
+    void Function()? onStarted,
   }) async {
-    _commands.send(['synthesize', text, voice, _seed, onStarted != null]);
-    final address = await _next() as int;
-    onStarted?.call(address);
+    _commands.send(['synthesize', text, voice, _seed]);
+    await _next();
+    onStarted?.call();
     final reply = await _next() as List<Object?>;
     return _Synthesized(
       samples: (reply[0] as TransferableTypedData)
@@ -432,11 +451,6 @@ class _SpeechWorker {
     );
   }
 
-  Future<void> releaseHeld() async {
-    _commands.send(['release']);
-    await _next();
-  }
-
   /// Frees the model and stops the worker. A worker that died or stopped
   /// answering would otherwise hang the run here, in a finally, and hide the
   /// failure being reported.
@@ -445,8 +459,13 @@ class _SpeechWorker {
       _commands.send(['close']);
       await _next().timeout(const Duration(seconds: 30));
     } finally {
+      final exited = _exited.first;
       _isolate.kill(priority: Isolate.immediate);
       await _replies.cancel();
+      // The worker reads the flag, so it is freed only once the worker is gone.
+      await exited.timeout(const Duration(seconds: 30), onTimeout: () => null);
+      calloc.free(_stopFlag);
+      _exited.close();
     }
   }
 }
@@ -456,12 +475,13 @@ class _WorkerError {
   final String message;
 }
 
-void _workerMain(SendPort replies) {
+void _workerMain(List<Object> args) {
+  final replies = args[0] as SendPort;
+  final stopFlag = Pointer<Int32>.fromAddress(args[1] as int);
   final commands = ReceivePort();
   replies.send(commands.sendPort);
   final bindings = SpeechCppNativeBindings.open();
   SpeechCppModel? model;
-  SpeechCppRequest? held;
 
   commands.listen((message) {
     final command = message as List<Object?>;
@@ -480,9 +500,12 @@ void _workerMain(SendPort replies) {
             ints: {'seed': command[3] as int},
           );
           try {
-            replies.send(request.address);
+            stopFlag.value = 0;
+            replies.send(null);
             final watch = Stopwatch()..start();
-            final outcome = request.synthesize();
+            final outcome = request.synthesize(
+              shouldStop: () => stopFlag.value != 0,
+            );
             watch.stop();
             final samples = switch (outcome) {
               SpeechCppAudio(:final samples) => samples,
@@ -495,19 +518,9 @@ void _workerMain(SendPort replies) {
               outcome is SpeechCppCancelled,
             ]);
           } finally {
-            if (command[4] as bool) {
-              held = request;
-            } else {
-              request.dispose();
-            }
+            request.dispose();
           }
-        case 'release':
-          held?.dispose();
-          held = null;
-          replies.send(null);
         case 'close':
-          held?.dispose();
-          held = null;
           model?.dispose();
           model = null;
           replies.send(null);
