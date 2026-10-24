@@ -165,6 +165,7 @@ class TtsSession {
             config.modelDir,
             engineType: TtsEngineType.irodori,
             durationCorrection: config.variant.needsDurationCorrection,
+            irodoriRuntime: config.variant.runtime,
           );
       }
       final success = await completer.future.timeout(

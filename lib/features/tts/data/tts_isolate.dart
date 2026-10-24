@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:logging/logging.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 import 'package:path/path.dart' as p;
 
 import 'audiocpp_native_bindings.dart';
@@ -46,6 +47,20 @@ enum TtsAbortFamily {
   /// speech.cpp, read by Irodori-TTS on speech.cpp.
   speechCpp,
 }
+
+/// The family whose abort handle [engineType] reads, given the platform's
+/// Irodori [runtime]; null for Piper, which has none.
+TtsAbortFamily? abortFamilyFor(
+  TtsEngineType engineType,
+  IrodoriRuntime runtime,
+) => switch (engineType) {
+  TtsEngineType.qwen3 => TtsAbortFamily.qwen3,
+  TtsEngineType.irodori => switch (runtime) {
+    IrodoriRuntime.audioCpp => TtsAbortFamily.audioCpp,
+    IrodoriRuntime.speechCpp => TtsAbortFamily.speechCpp,
+  },
+  TtsEngineType.piper => null,
+};
 
 /// Creates the per-family abort handles for a session. Injectable for tests.
 /// Returns a handle keyed by the [TtsAbortFamily] that will read it. A family
@@ -188,6 +203,7 @@ class LoadModelMessage extends TtsIsolateMessage {
     this.embeddingCacheDir,
     this.abortHandleAddress = 0,
     this.durationCorrection = false,
+    this.irodoriRuntime = IrodoriRuntime.audioCpp,
   });
   final String modelDir;
   final TtsEngineType engineType;
@@ -209,6 +225,9 @@ class LoadModelMessage extends TtsIsolateMessage {
   // engine to bound the generated length. A property of the model variant, so
   // it travels with the load rather than with each synthesis request.
   final bool durationCorrection;
+  // Irodori-specific: the native runtime the variant's GGUF is read by, which
+  // decides the engine the worker opens and the abort handle it is given.
+  final IrodoriRuntime irodoriRuntime;
 }
 
 class SynthesizeMessage extends TtsIsolateMessage {
@@ -436,7 +455,9 @@ class TtsIsolate {
     double? noiseW,
     String? embeddingCacheDir,
     bool durationCorrection = false,
+    IrodoriRuntime irodoriRuntime = IrodoriRuntime.audioCpp,
   }) {
+    final abortFamily = abortFamilyFor(engineType, irodoriRuntime);
     _sendPort?.send(
       LoadModelMessage(
         modelDir: modelDir,
@@ -449,17 +470,13 @@ class TtsIsolate {
         noiseW: noiseW,
         embeddingCacheDir: embeddingCacheDir,
         durationCorrection: durationCorrection,
-        // Send the handle allocated by THIS engine's DLL so the address is only
-        // ever dereferenced by the library that created it (no cross-DLL wiring).
-        abortHandleAddress:
-            switch (engineType) {
-              TtsEngineType.qwen3 =>
-                _abortHandles[TtsAbortFamily.qwen3]?.address,
-              TtsEngineType.irodori =>
-                _abortHandles[TtsAbortFamily.audioCpp]?.address,
-              TtsEngineType.piper => null,
-            } ??
-            0,
+        irodoriRuntime: irodoriRuntime,
+        // Send the handle of the library this engine runs on, so the address
+        // is only ever dereferenced by the code it was made for (no cross-DLL
+        // wiring).
+        abortHandleAddress: abortFamily == null
+            ? 0
+            : _abortHandles[abortFamily]?.address ?? 0,
       ),
     );
   }

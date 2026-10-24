@@ -101,7 +101,7 @@
     - spawn のときに確保される
     - アドレスが読み込み直しをまたいで変わらない
     - dispose の後に解放される
-- [ ] 5.3 `TtsSession` が、config の実行系から中断ハンドルの系統を選んで `LoadModelMessage` に渡すようにする。
+- [x] 5.3 `TtsSession` が、config の実行系から中断ハンドルの系統を選んで `LoadModelMessage` に渡すようにする。
   - 確認: speechCpp の variant で読み込むと、speechCpp のハンドルのアドレスが渡ることをテストで確かめる。
 
 ## 6. speech.cpp の Irodori エンジン
