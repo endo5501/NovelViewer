@@ -342,6 +342,7 @@ class TtsStreamingController {
           storedPath: dbRow?.refWavPath,
           fallbackPath: fallbackRefWavPath,
           resolver: resolveRefWavPath,
+          acceptedExtensions: config.acceptedReferenceExtensions,
         );
 
         // For Irodori, the segment's memo becomes the caption (design D8).

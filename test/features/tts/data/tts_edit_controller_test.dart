@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
@@ -46,10 +47,11 @@ IrodoriEngineConfig _irodoriConfig({
   double speakerGuidanceScale = 5.0,
   double captionGuidanceScale = 3.0,
   int numInferenceSteps = 40,
+  IrodoriModelVariant variant = IrodoriModelVariant.v3,
 }) => IrodoriEngineConfig(
   modelDir: modelDir,
   sampleRate: sampleRate,
-  variant: IrodoriModelVariant.v3,
+  variant: variant,
   refWavPath: refWavPath,
   speakerGuidanceScale: speakerGuidanceScale,
   captionGuidanceScale: captionGuidanceScale,
@@ -80,7 +82,7 @@ class FakeTtsIsolate implements TtsIsolate {
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
 
   @override
-  int? debugAbortHandleAddressFor(TtsEngineType engineType) => null;
+  int? debugAbortHandleAddressFor(TtsAbortFamily family) => null;
 
   @override
   Future<void> spawn() async {
@@ -99,6 +101,7 @@ class FakeTtsIsolate implements TtsIsolate {
     double? noiseW,
     String? embeddingCacheDir,
     bool durationCorrection = false,
+    IrodoriRuntime irodoriRuntime = IrodoriRuntime.audioCpp,
   }) {
     if (blockModelLoad) return;
     Future.microtask(() {
@@ -711,6 +714,43 @@ void main() {
         );
 
         expect(isolate.synthesizeRequests.single.$2, '/voices/Anna.mp3');
+      });
+
+      test('a reference the engine cannot read is spoken without one, in '
+          'single and bulk generation', () async {
+        final config = _irodoriConfig(
+          variant: IrodoriModelVariant.v41Mf,
+          refWavPath: '/voices/Global.wav',
+        );
+        final singleIsolate = FakeTtsIsolate();
+        final single = await loadedController(singleIsolate);
+        await single.updateSegmentRefWavPath(0, 'Anna.mp3');
+        await single.generateSegment(
+          segmentIndex: 0,
+          config: config,
+          resolveRefWavPath: resolve,
+        );
+
+        final bulkIsolate = FakeTtsIsolate();
+        final bulk = TtsEditController(
+          ttsIsolate: bulkIsolate,
+          audioPlayer: FakeAudioPlayer(),
+          repository: repository,
+          tempDirPath: tempDir.path,
+        );
+        await bulk.loadSegments(
+          text: '一つ目の文です。',
+          fileName: 'bulk-mf.txt',
+          sampleRate: 48000,
+        );
+        await bulk.updateSegmentRefWavPath(0, 'Anna.mp3');
+        await bulk.generateAllUngenerated(
+          config: config,
+          resolveRefWavPath: resolve,
+        );
+
+        expect(singleIsolate.synthesizeRequests.single.$2, isNull);
+        expect(bulkIsolate.synthesizeRequests.single.$2, isNull);
       });
 
       test('single and bulk generation pass the same reference path', () async {

@@ -9,6 +9,7 @@ void main() {
           storedPath: null,
           fallbackPath: '/voice/default.wav',
           resolver: null,
+          acceptedExtensions: null,
         ),
         '/voice/default.wav',
       );
@@ -20,6 +21,7 @@ void main() {
           storedPath: '',
           fallbackPath: '/voice/default.wav',
           resolver: null,
+          acceptedExtensions: null,
         ),
         isNull,
       );
@@ -31,6 +33,7 @@ void main() {
           storedPath: '/voice/custom.wav',
           fallbackPath: '/voice/default.wav',
           resolver: null,
+          acceptedExtensions: null,
         ),
         '/voice/custom.wav',
       );
@@ -42,6 +45,7 @@ void main() {
           storedPath: null,
           fallbackPath: null,
           resolver: null,
+          acceptedExtensions: null,
         ),
         isNull,
       );
@@ -54,6 +58,7 @@ void main() {
           storedPath: 'custom.wav',
           fallbackPath: '/voice/default.wav',
           resolver: resolver,
+          acceptedExtensions: null,
         ),
         '/voices/custom.wav',
       );
@@ -66,6 +71,7 @@ void main() {
           storedPath: null,
           fallbackPath: '/voice/default.wav',
           resolver: resolver,
+          acceptedExtensions: null,
         ),
         '/voice/default.wav',
       );
@@ -78,9 +84,63 @@ void main() {
           storedPath: '',
           fallbackPath: '/voice/default.wav',
           resolver: resolver,
+          acceptedExtensions: null,
         ),
         isNull,
       );
+    });
+    group('a stored file the engine cannot read is treated as none', () {
+      String resolver(String name) => '/voices/$name';
+
+      test('a segment\'s MP3 is dropped where only WAVE is accepted', () {
+        expect(
+          TtsRefWavResolver.resolve(
+            storedPath: 'narrator.mp3',
+            fallbackPath: '/voices/default.wav',
+            resolver: resolver,
+            acceptedExtensions: const {'.wav'},
+          ),
+          isNull,
+        );
+      });
+
+      test('the fallback is not used in its place', () {
+        // The segment chose a voice; replacing it with the global one would
+        // speak in a voice nobody picked for this segment.
+        expect(
+          TtsRefWavResolver.resolve(
+            storedPath: 'narrator.MP3',
+            fallbackPath: '/voices/default.wav',
+            resolver: resolver,
+            acceptedExtensions: const {'.wav'},
+          ),
+          isNull,
+        );
+      });
+
+      test('an accepted file is resolved as before', () {
+        expect(
+          TtsRefWavResolver.resolve(
+            storedPath: 'narrator.wav',
+            fallbackPath: null,
+            resolver: resolver,
+            acceptedExtensions: const {'.wav'},
+          ),
+          '/voices/narrator.wav',
+        );
+      });
+
+      test('a null set accepts every file', () {
+        expect(
+          TtsRefWavResolver.resolve(
+            storedPath: 'narrator.mp3',
+            fallbackPath: null,
+            resolver: resolver,
+            acceptedExtensions: null,
+          ),
+          '/voices/narrator.mp3',
+        );
+      });
     });
   });
 }

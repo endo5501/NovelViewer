@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 
 import 'audiocpp_native_bindings.dart';
+import 'irodori_synthesis_engine.dart';
 import 'tts_engine.dart';
 
 /// Dart wrapper around the `audiocpp_ffi` native library, exposing the
@@ -14,7 +15,7 @@ import 'tts_engine.dart';
 /// native context at load time, and never freed here. `abort()` /
 /// `resetAbort()` only ever touch the handle, so they remain safe to call
 /// after [dispose] releases the synthesis context.
-class IrodoriTtsEngine {
+class IrodoriTtsEngine implements IrodoriSynthesisEngine {
   IrodoriTtsEngine(this._bindings);
 
   factory IrodoriTtsEngine.open() =>
@@ -27,6 +28,7 @@ class IrodoriTtsEngine {
   /// independently of the context, so abort/reset never dereference [_ctx].
   Pointer<Void> _abortHandle = nullptr;
 
+  @override
   bool get isLoaded => _ctx != nullptr && _bindings.isLoaded(_ctx) != 0;
 
   /// Whether captioned synthesis on the loaded model asks the engine to bound
@@ -84,6 +86,7 @@ class IrodoriTtsEngine {
   /// rather than at the call sites because every caption reaches the native
   /// layer through this method, so a caller cannot send one and forget the
   /// correction.
+  @override
   TtsSynthesisResult synthesize(
     String text, {
     String? refWavPath,
@@ -173,6 +176,7 @@ class IrodoriTtsEngine {
   /// Thread-safe: can be called from any isolate. Operates on the abort
   /// handle, never on the synthesis context, so it is safe across context
   /// reloads and after [dispose].
+  @override
   void abort() {
     if (_abortHandle != nullptr) {
       _bindings.abort(_abortHandle);
@@ -180,12 +184,14 @@ class IrodoriTtsEngine {
   }
 
   /// Clear the abort flag so subsequent synthesis calls proceed normally.
+  @override
   void resetAbort() {
     if (_abortHandle != nullptr) {
       _bindings.resetAbort(_abortHandle);
     }
   }
 
+  @override
   void dispose() {
     if (_ctx != nullptr) {
       _bindings.free(_ctx);

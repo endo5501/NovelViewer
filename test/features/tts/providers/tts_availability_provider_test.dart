@@ -27,13 +27,14 @@ void main() {
       ]);
     });
 
-    test('iOS offers Piper only', () {
+    test('iOS offers Piper and Irodori-TTS', () {
       final container = _containerWith(
         const PlatformCapabilities.forPlatform(isIOS: true, isMacOS: false),
       );
 
       expect(container.read(supportedTtsEnginesProvider), [
         TtsEngineType.piper,
+        TtsEngineType.irodori,
       ]);
     });
 
@@ -72,6 +73,67 @@ void main() {
       );
 
       expect(container.read(ttsAudioExportSupportedProvider), isFalse);
+    });
+  });
+
+  group('irodoriRuntimeProvider', () {
+    test('is audio.cpp on a desktop platform', () {
+      final container = _containerWith(
+        const PlatformCapabilities.forPlatform(isIOS: false, isMacOS: true),
+      );
+
+      expect(container.read(irodoriRuntimeProvider), IrodoriRuntime.audioCpp);
+    });
+
+    test('is speech.cpp on iOS', () {
+      final container = _containerWith(
+        const PlatformCapabilities.forPlatform(isIOS: true, isMacOS: false),
+      );
+
+      expect(container.read(irodoriRuntimeProvider), IrodoriRuntime.speechCpp);
+    });
+  });
+
+  group('voice library feature providers', () {
+    test('are all available on a desktop platform', () {
+      final container = _containerWith(
+        const PlatformCapabilities.forPlatform(isIOS: false, isMacOS: false),
+      );
+
+      expect(container.read(voiceRecordingSupportedProvider), isTrue);
+      expect(container.read(voiceFileDragDropSupportedProvider), isTrue);
+      expect(container.read(voicesFolderRevealSupportedProvider), isTrue);
+    });
+
+    test('are all unavailable on iOS', () {
+      final container = _containerWith(
+        const PlatformCapabilities.forPlatform(isIOS: true, isMacOS: false),
+      );
+
+      expect(container.read(voiceRecordingSupportedProvider), isFalse);
+      expect(container.read(voiceFileDragDropSupportedProvider), isFalse);
+      expect(container.read(voicesFolderRevealSupportedProvider), isFalse);
+    });
+
+    test('each follows its own capability', () {
+      final container = _containerWith(
+        const PlatformCapabilities(
+          piperTts: true,
+          qwen3Tts: true,
+          irodoriTts: true,
+          ttsAudioExport: true,
+          appUpdate: true,
+          llmSummary: true,
+          onDeviceLlm: false,
+          voiceRecording: false,
+          voiceFileDragDrop: true,
+          voicesFolderReveal: false,
+        ),
+      );
+
+      expect(container.read(voiceRecordingSupportedProvider), isFalse);
+      expect(container.read(voiceFileDragDropSupportedProvider), isTrue);
+      expect(container.read(voicesFolderRevealSupportedProvider), isFalse);
     });
   });
 

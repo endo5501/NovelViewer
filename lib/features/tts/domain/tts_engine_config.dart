@@ -8,6 +8,8 @@ import 'package:path/path.dart' as p;
 
 import '../data/irodori_model_variant.dart';
 import '../data/tts_engine_type.dart';
+import '../data/voice_reference_service.dart';
+import 'tts_ref_wav_resolver.dart';
 import '../providers/tts_settings_providers.dart';
 
 /// Reads a provider's current value without subscribing.
@@ -101,6 +103,35 @@ sealed class TtsEngineConfig {
     Qwen3EngineConfig(:final refWavPath) => refWavPath,
     IrodoriEngineConfig(:final refWavPath) => refWavPath,
     PiperEngineConfig() => null,
+  };
+
+  /// The reference-voice extensions this engine reads, in lower case.
+  ///
+  /// A stored reference outside them is treated as none (see
+  /// [TtsRefWavResolver.resolve] and the global fallback below), matching the
+  /// voice selector, which lists only these. Piper takes no reference, so its
+  /// set is empty.
+  Set<String> get acceptedReferenceExtensions => switch (this) {
+    Qwen3EngineConfig() => referenceExtensionsFor(TtsEngineType.qwen3),
+    IrodoriEngineConfig(:final variant) => referenceExtensionsFor(
+      TtsEngineType.irodori,
+      irodoriVariant: variant,
+    ),
+    PiperEngineConfig() => referenceExtensionsFor(TtsEngineType.piper),
+  };
+
+  /// The reference-voice extensions [type] reads, with the Irodori
+  /// [irodoriVariant] in use: the one rule both synthesis and the voice
+  /// selector follow.
+  static Set<String> referenceExtensionsFor(
+    TtsEngineType type, {
+    IrodoriModelVariant? irodoriVariant,
+  }) => switch (type) {
+    TtsEngineType.qwen3 => VoiceReferenceService.supportedExtensions,
+    TtsEngineType.irodori =>
+      irodoriVariant?.referenceExtensions ??
+          VoiceReferenceService.supportedExtensions,
+    TtsEngineType.piper => const <String>{},
   };
 
   /// Irodori-only synthesis-time parameters (speaker/caption guidance scales
@@ -258,16 +289,25 @@ PiperEngineConfig _resolvePiper(ProviderReader read) {
 
 IrodoriEngineConfig _resolveIrodori(ProviderReader read) {
   final modelDir = read(irodoriModelDirProvider);
-  // Shared voice reference library — same provider/service as Qwen3 (D9).
+  final variant = read(irodoriModelVariantProvider);
+  // Shared voice reference library — same provider/service as Qwen3 (D9). A
+  // stored choice the variant cannot read (an MP3 on speech.cpp) is spoken
+  // without a reference, as the selector shows it as none; the stored value
+  // is kept for a platform that reads it.
   final refWavFileName = read(ttsRefWavPathProvider);
   final voiceService = read(voiceReferenceServiceProvider);
   final refWavPath = refWavFileName.isNotEmpty && voiceService != null
-      ? voiceService.resolveVoiceFilePath(refWavFileName)
+      ? TtsRefWavResolver.resolve(
+          storedPath: refWavFileName,
+          fallbackPath: null,
+          resolver: voiceService.resolveVoiceFilePath,
+          acceptedExtensions: variant.referenceExtensions,
+        )
       : null;
   return IrodoriEngineConfig(
     modelDir: modelDir,
     sampleRate: _irodoriSampleRate,
-    variant: read(irodoriModelVariantProvider),
+    variant: variant,
     refWavPath: refWavPath,
     speakerGuidanceScale: read(irodoriSpeakerGuidanceScaleProvider),
     captionGuidanceScale: read(irodoriCaptionGuidanceScaleProvider),

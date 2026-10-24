@@ -27,6 +27,22 @@ enum ProgressSyncSignIn {
   ios,
 }
 
+/// The native runtime Irodori-TTS runs on here.
+///
+/// Declared beside the capability model rather than with the Irodori variants
+/// so that this model, like [ProgressSyncSignIn], depends on nothing in the
+/// features. Each variant names the runtime it needs; the variants offered are
+/// those whose runtime matches the platform's.
+enum IrodoriRuntime {
+  /// audio.cpp, the desktop build. Its v3 f16 model exceeds the memory an iPad
+  /// grants an app.
+  audioCpp,
+
+  /// speech.cpp, the iOS build (speech-cpp-ios-build), whose v4.1 Small MF
+  /// model fits there.
+  speechCpp,
+}
+
 class PlatformCapabilities {
   const PlatformCapabilities({
     required this.piperTts,
@@ -37,18 +53,27 @@ class PlatformCapabilities {
     required this.llmSummary,
     required this.onDeviceLlm,
     this.progressSyncSignIn = ProgressSyncSignIn.desktop,
+    this.irodoriRuntime = IrodoriRuntime.audioCpp,
+    this.voiceRecording = true,
+    this.voiceFileDragDrop = true,
+    this.voicesFolderReveal = true,
   });
 
   /// The one mapping from a platform to the features it supports.
   ///
   /// Speech synthesis is answered per engine, because each runs on a native
-  /// library built per platform and they do not share an answer. Piper is the
-  /// one built and verified for iOS (piper-ios-build). Qwen3-TTS has no iOS
-  /// library, and Irodori-TTS's model exceeds the memory an iPad grants an
-  /// app, so both are withheld there — and with them the voice-reference UI
-  /// that only they use, which is what needs the microphone and the
-  /// drag-and-drop plugin iOS lacks. MP3 export is withheld too: its LAME
-  /// encoder has no iOS build. Whether the engine library is actually in a
+  /// library built per platform and they do not share an answer. Piper is
+  /// built and verified for iOS (piper-ios-build). Qwen3-TTS has no iOS
+  /// library, so it is withheld there. Irodori-TTS is offered everywhere, on a
+  /// runtime that differs by platform: audio.cpp's model exceeds the memory an
+  /// iPad grants an app, and speech.cpp's v4.1 Small MF fits
+  /// (speech-cpp-ios-build). MP3 export is withheld on iOS: its LAME encoder
+  /// has no iOS build.
+  ///
+  /// The voice-reference UI is shown on iOS for Irodori-TTS, but three of its
+  /// parts are not: recording, whose microphone path is verified on the
+  /// desktop only; dropping files, whose plugin has no iOS build; and opening
+  /// the voices folder, which iOS reaches through the Files app instead. Whether the engine library is actually in a
   /// given build is not answered here; a missing one is reported when it is
   /// first loaded.
   ///
@@ -90,7 +115,13 @@ class PlatformCapabilities {
     required bool isMacOS,
   }) : piperTts = true,
        qwen3Tts = !isIOS,
-       irodoriTts = !isIOS,
+       irodoriTts = true,
+       irodoriRuntime = isIOS
+           ? IrodoriRuntime.speechCpp
+           : IrodoriRuntime.audioCpp,
+       voiceRecording = !isIOS,
+       voiceFileDragDrop = !isIOS,
+       voicesFolderReveal = !isIOS,
        ttsAudioExport = !isIOS,
        appUpdate = !isIOS,
        llmSummary = true,
@@ -111,6 +142,19 @@ class PlatformCapabilities {
 
   /// Speech synthesis with the Irodori-TTS engine.
   final bool irodoriTts;
+
+  /// The runtime Irodori-TTS runs on here, which decides the model variants
+  /// that can be offered.
+  final IrodoriRuntime irodoriRuntime;
+
+  /// Recording a reference voice with the microphone.
+  final bool voiceRecording;
+
+  /// Adding reference voices by dropping files onto the selector.
+  final bool voiceFileDragDrop;
+
+  /// Opening the voices folder in the platform's file manager.
+  final bool voicesFolderReveal;
 
   /// Exporting synthesized audio to an MP3 file.
   final bool ttsAudioExport;

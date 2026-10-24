@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:logging/logging.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
+import 'package:path/path.dart' as p;
 
 import 'irodori_model_spec_installer.dart';
 import 'tts_engine_type.dart';
@@ -153,18 +155,30 @@ class TtsSession {
           // its own GGUF directory), matching
           // modelLoadKey = (type, modelDir, variant).
           //
-          // The engine validates request options against the contract embedded
+          // audio.cpp validates request options against the contract embedded
           // in the GGUF, which predates duration_correction. Writing the
           // runtime's own contract beside the model overrides it. Done on every
           // load so an older copy can never outlive an engine update.
-          await _irodoriSpecInstaller.install(config.modelDir);
+          // speech.cpp reads no such contract, and it loads a file where
+          // audio.cpp loads a directory.
+          final runtime = config.variant.runtime;
+          if (runtime == IrodoriRuntime.audioCpp) {
+            await _irodoriSpecInstaller.install(config.modelDir);
+          }
           // Duration correction is the exception to load-time minimalism: it is
           // calibrated per variant, so it travels with the load rather than
           // with each request.
           _isolate.loadModel(
-            config.modelDir,
+            switch (runtime) {
+              IrodoriRuntime.audioCpp => config.modelDir,
+              IrodoriRuntime.speechCpp => p.join(
+                config.modelDir,
+                config.variant.ggufFileName,
+              ),
+            },
             engineType: TtsEngineType.irodori,
             durationCorrection: config.variant.needsDurationCorrection,
+            irodoriRuntime: config.variant.runtime,
           );
       }
       final success = await completer.future.timeout(

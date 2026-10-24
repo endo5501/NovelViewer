@@ -1,6 +1,6 @@
 # iPad 版
 
-iPad 版は小説ビューア、LLM 要約、Piper による読み上げを提供します。配布経路は無く、各自でビルドして実機にインストールします。
+iPad 版は小説ビューア、LLM 要約、Piper と Irodori-TTS による読み上げを提供します。配布経路は無く、各自でビルドして実機にインストールします。
 
 - [提供する機能・しない機能](#提供する機能しない機能)
 - [LLM 要約](#llm-要約)
@@ -17,7 +17,9 @@ iPad 版は小説ビューア、LLM 要約、Piper による読み上げを提�
 
 | 機能 | iPad で提供しない理由 |
 | --- | --- |
-| 読み上げエンジン Qwen3-TTS / Irodori-TTS | iOS 向けのライブラリが無い（Irodori-TTS は、モデルが iPad でアプリが使えるメモリに収まらない）。読み上げは Piper だけを使い、エンジンの選択欄も表示しない。参照音声（声のクローン）と録音は、この 2 つのエンジン専用なので表示しない |
+| 読み上げエンジン Qwen3-TTS | iOS 向けのライブラリが無い。エンジンの選択欄には Piper と Irodori-TTS だけが出る |
+| Irodori-TTS の v3 / v4 とガイダンスの調整 | デスクトップの audio.cpp 版のモデルは、iPad でアプリが使えるメモリに収まらない。iPad では speech.cpp で動く v4.1 Small MF（F16）だけを使う。このモデルはガイダンスと推論ステップ数を自身で扱うので、調整用のスライダーは出ない |
+| 参照音声の録音・ドラッグ＆ドロップ・フォルダを開くボタン | マイクの経路は未確認で、ドロップのプラグインは iOS に無い。参照音声は、ファイルを選ぶボタンか Files アプリで追加する（[下記](#読み上げ)） |
 | MP3 書き出し | 書き出しに使う LAME の iOS 向けビルドが無い |
 | 画面ロック中の読み上げ | 未対応。アプリが前面にあるあいだだけ再生する |
 | アプリ内の更新確認 | 配布経路が無く、更新は下記の手順でビルドし直して入れ替える |
@@ -41,12 +43,18 @@ iPad 版は小説ビューア、LLM 要約、Piper による読み上げを提�
 
 ## 読み上げ
 
-読み上げは Piper エンジンで行います。使えるのは、生成・再生・一時停止・停止、編集ダイアログでの区間ごとの再生と再生成、生成した音声の削除、読み上げ辞書です。
+読み上げのエンジンは Piper と Irodori-TTS から選べます。使えるのは、生成・再生・一時停止・停止、編集ダイアログでの区間ごとの再生と再生成、生成した音声の削除、読み上げ辞書です。
 
-1. 設定 > 読み上げ で、Piper のモデルをダウンロードする（モデルと OpenJTalk 辞書。初回のみ）
+1. 設定 > 読み上げ で、エンジンを選んでモデルをダウンロードする（初回のみ）
+   - Piper: モデルと OpenJTalk 辞書
+   - Irodori-TTS: v4.1 Small MF（F16、約 1.9GB）。ダウンロードの後、サイズと SHA-256 で照合します
 2. 本文を開き、右下の読み上げボタンを押す
 
-読み上げのライブラリは別にビルドしてアプリに同梱します（[下記](#5-読み上げttsのネイティブライブラリ)）。同梱していないアプリで読み上げボタンを押すと、「`piper_plus.framework` がこのビルドに無い」ことと、ビルドの手順を示すエラーが出ます。
+**Irodori-TTS の参照音声（声のクローン）:** 参照音声の欄の「＋」ボタンでファイルを選ぶか、Files アプリで、ライブラリのフォルダ（`Documents/NovelViewer/`）と同じ階層にある `voices` フォルダに WAV を置き、更新ボタンを押します。iPad の Irodori-TTS が読めるのは WAV だけで、MP3 は一覧に出ません（フォルダからは消えません）。参照音声を選ばないと、声はモデルが選びます。区間ごとのメモは、声の説明（キャプション）として使われます。
+
+**Irodori-TTS の待ち時間:** 再生を始めるたびにモデルを読み込むので、最初の音が出るまで 10 秒ほどかかります。長い文は読点で区切って合成し、つなぎ目に短い間を入れます。
+
+読み上げのライブラリは別にビルドしてアプリに同梱します（[下記](#5-読み上げttsのネイティブライブラリ)）。同梱していないアプリで読み上げボタンを押すと、framework（`piper_plus.framework` または `speech_cpp.framework`）がこのビルドに無いことと、ビルドの手順を示すエラーが出ます。
 
 ## ビルドとインストール
 
@@ -97,7 +105,7 @@ iOS は Swift Package Manager 単独構成です（CocoaPods は使用しませ�
 
 ### 5. 読み上げ（TTS）のネイティブライブラリ
 
-読み上げを使うには、アプリをビルドする前に Piper エンジンのライブラリをビルドしておきます。読み上げを使わないなら、この手順は不要です。
+読み上げを使うには、アプリをビルドする前に Piper エンジンのライブラリをビルドしておきます。Irodori-TTS のライブラリは[次節](#6-speechcpp-による-irodori-tts)でビルドします。読み上げを使わないなら、この手順は不要です。
 
 ```bash
 scripts/build_piper_ios.sh           # ios/Frameworks/piper_plus.xcframework を生成（約 1 分）
@@ -126,7 +134,45 @@ fvm flutter drive --profile --driver=test_driver/integration_test.dart \
 - 実機で実行するには、Mac に Rosetta（`sudo softwareupdate --install-rosetta --agree-to-license`）と、ターミナルへのローカルネットワークの許可（システム設定 > プライバシーとセキュリティ > ローカルネットワーク）が必要です。Flutter が USB 接続に使う `iproxy` が Intel 用のバイナリのためです。
 - 実機では `flutter test` は使えません。debug ビルド（JIT）は、iPadOS 26 ではデバッガ無しだと起動直後に終了します。
 - 計測結果はホストの `build/integration_response_data.json` と、端末の `Documents/benchmarks/piper_ios_<日時>.json` に出力されます。
-- Simulator では実行後にアプリのデータが残らないので、毎回モデルを取得し直します。
+- **実機でも Simulator でも、`flutter drive` は実行が終わるとアプリを削除します。** アプリのデータ（取得したモデル、小説、設定）も一緒に消えるので、実機で実行する前に、次節の手順でアプリのデータを Mac にバックアップしてください。モデルは毎回取得し直しになります。一方、[ビルドとインストール](#ビルドとインストール)の `xcrun devicectl device install app` で release ビルドを入れたときは、今のアプリの上に入れ替わり、データはそのまま残ります。
+
+### 6. speech.cpp による Irodori-TTS
+
+iPad の Irodori-TTS は [speech.cpp](https://github.com/nyosegawa/speech.cpp)（`third_party/speech.cpp`）で動きます。Irodori-TTS を使うビルドでは、アプリをビルドする前にこのライブラリをビルドし、`ios/Frameworks/` に置いたままにしてください。ビューアや Piper だけなら、この手順は不要です。
+
+```bash
+scripts/build_speech_ios.sh          # ios/Frameworks/speech_cpp.xcframework を生成
+scripts/test/verify_speech_ios.sh    # 成果物の検証
+```
+
+- 成果物（実機用と Simulator 用、約 8MB ずつ）は **Git で管理していません**。Apple の `Speech.framework` と取り違えないよう、上流の `libspeech` を `speech_cpp` という名前の framework にしています。
+- 同梱は Piper と同じく「Embed Native Frameworks」フェーズが行います。Xcode の設定を変える必要はありません。
+
+**計測テスト:** 次の計測テストは、アプリに組み込む前に、メモリと速度が足りるかを確かめるために作ったものです。 `integration_test/speech_cpp_ios_test.dart` は、Irodori-TTS v4.1 Small MF を GPU で読み込み、参照音声つきで中程度の文（51字）・125字の文・中程度の文の10回連続を合成し、別スレッドからの中断も確かめます。各段階のメモリの余裕と所要時間を記録し、事前に決めた基準（完走、メモリの余裕 512 MiB 以上、125字の文の RTF 1.0 未満）で合否を判定します。モデルは固定したリビジョンから取得し、サイズと SHA-256 で照合します。
+
+**実行する前に、アプリのデータをバックアップしてください。** 実機テストのインストールでアプリのデータが消えたことがあります。Files アプリで見える `Documents/` に加えて、設定が入る `Library/` も Mac に取り出しておきます。
+
+```bash
+for d in Documents Library; do
+  xcrun devicectl device copy from --device <デバイス UDID> \
+    --domain-type appDataContainer --domain-identifier com.endo5501.novelViewer \
+    --source "$d" --destination ~/Backups/NovelViewer-iPad-$(date +%Y%m%d)/"$d"
+done
+```
+
+量子化は `--dart-define=SPEECH_CPP_VARIANT=` で1つずつ選び、`q4_k` → `q8_0` → `f16` の順に実行します。1回の実行で1つだけ計測するのは、ピークメモリがプロセスの中で前の計測に引きずられないようにするためです。小さいものから実行すれば、大きいものがメモリ不足で強制終了されても、それまでの結果は残ります。
+
+```bash
+fvm flutter drive --profile --driver=test_driver/integration_test.dart \
+  --target=integration_test/speech_cpp_ios_test.dart \
+  --dart-define=SPEECH_CPP_VARIANT=q4_k -d <デバイス ID>
+```
+
+- 実機の前提（Rosetta、ローカルネットワークの許可、profile ビルド）は Piper の合成テストと同じです。
+- 結果はホストの `build/integration_response_data.json` に出力されます。実行ごとに上書きされるので、量子化ごとに別名でコピーしてください。端末の `Documents/benchmarks/` にもレポートと、参照音声と各文の WAV が保存されます。ただし、実行が終わるとアプリと一緒に消えます。端末のファイルが残るのは、強制終了されてアプリが削除されなかった場合だけです。
+- モデル（Q4_K 約 0.9GB、Q8_0 約 1.2GB、F16 約 1.9GB）は、実行のたびに `Documents/models/speech-cpp/` へ取得されます。
+- 実行が終わったらアプリが消えているので、`scripts/build_app.sh ios` で作った release ビルドを `xcrun devicectl device install app` でインストールし直します。そのうえで、アプリを起動する前に、バックアップを `xcrun devicectl device copy to`（`--domain-type appDataContainer`）で `Documents/NovelViewer`・`Library/Application Support`・`Library/Preferences` に書き戻します。
+- Simulator では framework を開いてバージョンを読むだけで、モデルの取得と合成は行いません。Simulator の Metal では、モデルの読み込み中にプロセスが止められるためです。
 
 ## ライブラリの場所
 

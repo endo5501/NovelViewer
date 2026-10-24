@@ -1,9 +1,11 @@
+import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 
 /// Fake abort handle that records lifecycle calls, so the F111 handle behaviour
 /// can be verified without the native library.
@@ -33,13 +35,13 @@ class _FakeAbortHandleFactory {
 
   final List<_FakeAbortHandle> created = [];
 
-  Map<TtsEngineType, TtsAbortHandle> create() {
+  Map<TtsAbortFamily, TtsAbortHandle> create() {
     final qwen3 = _FakeAbortHandle(qwen3Address);
     final audiocpp = _FakeAbortHandle(audiocppAddress);
     created
       ..add(qwen3)
       ..add(audiocpp);
-    return {TtsEngineType.qwen3: qwen3, TtsEngineType.irodori: audiocpp};
+    return {TtsAbortFamily.qwen3: qwen3, TtsAbortFamily.audioCpp: audiocpp};
   }
 }
 
@@ -209,6 +211,119 @@ void main() {
     });
   });
 
+  group('copyAudioForTransfer', () {
+    test('copies only the audio a view covers, not its whole buffer', () {
+      final buffer = Float32List.fromList([9, 1, 2, 3, 9, 9, 9, 9]);
+      final view = buffer.buffer.asFloat32List(4, 3);
+
+      final copy = copyAudioForTransfer(view);
+
+      expect(copy, Float32List.fromList([1, 2, 3]));
+      expect(copy.buffer.lengthInBytes, 3 * 4);
+    });
+
+    test('copies a list that owns its buffer as it is', () {
+      final audio = Float32List.fromList([0.5, -0.5]);
+
+      expect(copyAudioForTransfer(audio), audio);
+    });
+  });
+
+  group('abortFamilyFor', () {
+    test('names the library that reads the engine\'s abort handle', () {
+      expect(
+        abortFamilyFor(TtsEngineType.qwen3, IrodoriRuntime.audioCpp),
+        TtsAbortFamily.qwen3,
+      );
+      expect(
+        abortFamilyFor(TtsEngineType.irodori, IrodoriRuntime.audioCpp),
+        TtsAbortFamily.audioCpp,
+      );
+      expect(
+        abortFamilyFor(TtsEngineType.irodori, IrodoriRuntime.speechCpp),
+        TtsAbortFamily.speechCpp,
+      );
+      expect(
+        abortFamilyFor(TtsEngineType.piper, IrodoriRuntime.speechCpp),
+        isNull,
+      );
+    });
+  });
+
+  group('LoadModelMessage', () {
+    test('carries the Irodori runtime, audio.cpp by default', () {
+      expect(
+        LoadModelMessage(modelDir: '/m').irodoriRuntime,
+        IrodoriRuntime.audioCpp,
+      );
+      expect(
+        LoadModelMessage(
+          modelDir: '/m',
+          irodoriRuntime: IrodoriRuntime.speechCpp,
+        ).irodoriRuntime,
+        IrodoriRuntime.speechCpp,
+      );
+    });
+  });
+
+  group('SpeechCppAbortHandle', () {
+    test('owns a flag that starts clear and that abort sets', () {
+      final handle = SpeechCppAbortHandle.allocate();
+      addTearDown(handle.free);
+      final flag = Pointer<Int32>.fromAddress(handle.address);
+
+      expect(handle.address, isNot(0));
+      expect(flag.value, 0);
+
+      handle.abort();
+
+      expect(flag.value, 1);
+    });
+  });
+
+  group('TtsIsolate - the speech.cpp abort handle', () {
+    test('is created at spawn without any native library', () async {
+      // The flag is plain memory: a build without speech_cpp still gets one,
+      // as nothing but the worker's callbacks ever read it.
+      final iso = TtsIsolate();
+      await iso.spawn();
+
+      expect(
+        iso.debugAbortHandleAddressFor(TtsAbortFamily.speechCpp),
+        isNotNull,
+      );
+
+      await iso.dispose();
+    });
+
+    test('keeps its address across model reloads', () async {
+      final iso = TtsIsolate();
+      await iso.spawn();
+      final before = iso.debugAbortHandleAddressFor(TtsAbortFamily.speechCpp);
+
+      iso.loadModel('/nonexistent/a', engineType: TtsEngineType.irodori);
+      iso.loadModel('/nonexistent/b', engineType: TtsEngineType.piper);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(iso.debugAbortHandleAddressFor(TtsAbortFamily.speechCpp), before);
+
+      await iso.dispose();
+    });
+
+    test('abort sets it', () async {
+      final iso = TtsIsolate();
+      await iso.spawn();
+      final flag = Pointer<Int32>.fromAddress(
+        iso.debugAbortHandleAddressFor(TtsAbortFamily.speechCpp)!,
+      );
+
+      iso.abort();
+
+      expect(flag.value, 1);
+      await iso.dispose();
+    });
+  });
+
   group('TtsIsolate - abort handle lifecycle (F111)', () {
     test(
       'spawn creates per-engine abort handles available before loadModel',
@@ -221,14 +336,17 @@ void main() {
         // One handle per engine family (qwen3 + audiocpp/irodori); piper has none.
         expect(factory.created, hasLength(2));
         expect(
-          iso.debugAbortHandleAddressFor(TtsEngineType.qwen3),
+          iso.debugAbortHandleAddressFor(TtsAbortFamily.qwen3),
           factory.qwen3Address,
         );
         expect(
-          iso.debugAbortHandleAddressFor(TtsEngineType.irodori),
+          iso.debugAbortHandleAddressFor(TtsAbortFamily.audioCpp),
           factory.audiocppAddress,
         );
-        expect(iso.debugAbortHandleAddressFor(TtsEngineType.piper), isNull);
+        expect(
+          iso.debugAbortHandleAddressFor(TtsAbortFamily.speechCpp),
+          isNull,
+        );
 
         await iso.dispose();
       },
@@ -239,7 +357,7 @@ void main() {
       final iso = TtsIsolate(abortHandleFactory: factory.create);
       await iso.spawn();
 
-      final addrBefore = iso.debugAbortHandleAddressFor(TtsEngineType.qwen3);
+      final addrBefore = iso.debugAbortHandleAddressFor(TtsAbortFamily.qwen3);
 
       // Reload / switch models several times. The worker will fail to load
       // (no native library in tests) but that is irrelevant: the abort target
@@ -249,7 +367,7 @@ void main() {
       iso.loadModel('/nonexistent/model-c');
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      final addrAfter = iso.debugAbortHandleAddressFor(TtsEngineType.qwen3);
+      final addrAfter = iso.debugAbortHandleAddressFor(TtsAbortFamily.qwen3);
 
       expect(addrBefore, isNotNull);
       expect(addrAfter, addrBefore, reason: 'handle address must be stable');
@@ -276,7 +394,7 @@ void main() {
         await iso.spawn();
 
         final addrBefore = iso.debugAbortHandleAddressFor(
-          TtsEngineType.irodori,
+          TtsAbortFamily.audioCpp,
         );
 
         // Switch between engines including the third (irodori) branch. The
@@ -291,7 +409,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 50));
 
         expect(
-          iso.debugAbortHandleAddressFor(TtsEngineType.irodori),
+          iso.debugAbortHandleAddressFor(TtsAbortFamily.audioCpp),
           addrBefore,
         );
         expect(

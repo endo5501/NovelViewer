@@ -1,0 +1,313 @@
+{
+  "speech_cpp_ios": {
+    "started_at": "2026-10-24T11:12:04.419361",
+    "os": "Version 26.6.2 (Build 23G90)",
+    "variant": "q4_k",
+    "model_file": "Irodori-TTS-866M-MF-v4.1-Q4_K.gguf",
+    "speech_version": "0.8.11",
+    "load_ms": 10612,
+    "reference": {
+      "label": "reference",
+      "characters": 29,
+      "synthesis_ms": 2825,
+      "audio_seconds": 5.28,
+      "rtf": 0.535200946969697,
+      "rms": 0.14590154320192003
+    },
+    "sentences": [
+      {
+        "label": "medium",
+        "characters": 51,
+        "synthesis_ms": 4481,
+        "audio_seconds": 11.24,
+        "rtf": 0.39866717081850533,
+        "rms": 0.1579955391122665
+      },
+      {
+        "label": "long",
+        "characters": 125,
+        "synthesis_ms": 10851,
+        "audio_seconds": 27.6,
+        "rtf": 0.393155036231884,
+        "rms": 0.15261922691359694
+      }
+    ],
+    "consecutive": [
+      {
+        "label": "medium",
+        "characters": 51,
+        "synthesis_ms": 4631,
+        "audio_seconds": 11.24,
+        "rtf": 0.41208131672597864,
+        "rms": 0.1579955391122665
+      },
+      {
+        "label": "medium",
+        "characters": 51,
+        "synthesis_ms": 4675,
+        "audio_seconds": 11.24,
+        "rtf": 0.4159537366548043,
+        "rms": 0.1579955391122665
+      },
+      {
+        "label": "medium",
+        "characters": 51,
+        "synthesis_ms": 4697,
+        "audio_seconds": 11.24,
+        "rtf": 0.4179655693950178,
+        "rms": 0.1579955391122665
+      },
+      {
+        "label": "medium",
+        "characters": 51,
+        "synthesis_ms": 4720,
+        "audio_seconds": 11.24,
+        "rtf": 0.4199567615658363,
+        "rms": 0.1579955391122665
+      },
+      {
+        "label": "medium",
+        "characters": 51,
+        "synthesis_ms": 5202,
+        "audio_seconds": 11.24,
+        "rtf": 0.4628513345195729,
+        "rms": 0.1579955391122665
+      },
+      {
+        "label": "medium",
+        "characters": 51,
+        "synthesis_ms": 6172,
+        "audio_seconds": 11.24,
+        "rtf": 0.549193772241993,
+        "rms": 0.1579955391122665
+      },
+      {
+        "label": "medium",
+        "characters": 51,
+        "synthesis_ms": 6081,
+        "audio_seconds": 11.24,
+        "rtf": 0.5410951067615658,
+        "rms": 0.1579955391122665
+      },
+      {
+        "label": "medium",
+        "characters": 51,
+        "synthesis_ms": 6013,
+        "audio_seconds": 11.24,
+        "rtf": 0.5349966192170819,
+        "rms": 0.1579955391122665
+      },
+      {
+        "label": "medium",
+        "characters": 51,
+        "synthesis_ms": 5966,
+        "audio_seconds": 11.24,
+        "rtf": 0.530867793594306,
+        "rms": 0.1579955391122665
+      },
+      {
+        "label": "medium",
+        "characters": 51,
+        "synthesis_ms": 5980,
+        "audio_seconds": 11.24,
+        "rtf": 0.5320964412811388,
+        "rms": 0.1579955391122665
+      }
+    ],
+    "cancel": {
+      "delay_ms": 2240,
+      "cancelled": true,
+      "elapsed_ms": 2734,
+      "next_synthesis_succeeded": true
+    },
+    "min_available_bytes": 2478258392,
+    "peak_rss_bytes": 1086439424,
+    "memory": [
+      {
+        "stage": "before_load",
+        "available_bytes": 3460873176,
+        "max_rss_bytes": 119422976
+      },
+      {
+        "stage": "load_least",
+        "available_bytes": 2510371104,
+        "max_rss_bytes": 1077067776
+      },
+      {
+        "stage": "after_load",
+        "available_bytes": 2510371104,
+        "max_rss_bytes": 1077067776
+      },
+      {
+        "stage": "reference_least",
+        "available_bytes": 2494544088,
+        "max_rss_bytes": 1085800448
+      },
+      {
+        "stage": "after_reference",
+        "available_bytes": 2501966064,
+        "max_rss_bytes": 1085800448
+      },
+      {
+        "stage": "add_voice_least",
+        "available_bytes": 2493135040,
+        "max_rss_bytes": 1085800448
+      },
+      {
+        "stage": "after_add_voice",
+        "available_bytes": 2493659328,
+        "max_rss_bytes": 1085800448
+      },
+      {
+        "stage": "medium_least",
+        "available_bytes": 2489137344,
+        "max_rss_bytes": 1085800448
+      },
+      {
+        "stage": "after_medium",
+        "available_bytes": 2496411888,
+        "max_rss_bytes": 1085800448
+      },
+      {
+        "stage": "long_least",
+        "available_bytes": 2483992792,
+        "max_rss_bytes": 1085800448
+      },
+      {
+        "stage": "after_long",
+        "available_bytes": 2483992792,
+        "max_rss_bytes": 1085800448
+      },
+      {
+        "stage": "consecutive_1_least",
+        "available_bytes": 2478258392,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "after_consecutive_1",
+        "available_bytes": 2482976984,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "consecutive_2_least",
+        "available_bytes": 2479667416,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "after_consecutive_2",
+        "available_bytes": 2491037912,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "consecutive_3_least",
+        "available_bytes": 2486728920,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "after_consecutive_3",
+        "available_bytes": 2489317592,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "consecutive_4_least",
+        "available_bytes": 2484467928,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "after_consecutive_4",
+        "available_bytes": 2487826648,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "consecutive_5_least",
+        "available_bytes": 2483288280,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "after_consecutive_5",
+        "available_bytes": 2487285976,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "consecutive_6_least",
+        "available_bytes": 2484795608,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "after_consecutive_6",
+        "available_bytes": 2488793304,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "consecutive_7_least",
+        "available_bytes": 2484287704,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "after_consecutive_7",
+        "available_bytes": 2487793880,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "consecutive_8_least",
+        "available_bytes": 2483239128,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "after_consecutive_8",
+        "available_bytes": 2487253208,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "consecutive_9_least",
+        "available_bytes": 2484779224,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "after_consecutive_9",
+        "available_bytes": 2488776920,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "consecutive_10_least",
+        "available_bytes": 2484271320,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "after_consecutive_10",
+        "available_bytes": 2487761112,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "cancel_least",
+        "available_bytes": 2483075288,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "after_cancel",
+        "available_bytes": 2483075288,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "after_cancel_least",
+        "available_bytes": 2483075288,
+        "max_rss_bytes": 1086439424
+      },
+      {
+        "stage": "after_after_cancel",
+        "available_bytes": 2487220440,
+        "max_rss_bytes": 1086439424
+      }
+    ],
+    "completed": true,
+    "verdict": {
+      "completed": true,
+      "memory_headroom": true,
+      "speed": true,
+      "passed": true,
+      "min_headroom_bytes_required": 536870912,
+      "max_long_rtf": 1.0
+    },
+    "failure": null
+  }
+}

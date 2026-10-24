@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:isolate';
 
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
@@ -43,8 +45,31 @@ class IrodoriDownloadSizeMismatchException implements Exception {
       '$expectedSize bytes but got $actualSize bytes';
 }
 
-/// Downloads the single GGUF for a selected [IrodoriModelVariant] from the
-/// endo5501 Hugging Face mirror.
+/// Thrown when a downloaded Irodori GGUF's SHA-256 does not match the hash
+/// pinned for its variant. Like a size mismatch, the file is deleted first.
+class IrodoriDownloadHashMismatchException implements Exception {
+  const IrodoriDownloadHashMismatchException(
+    this.relativePath,
+    this.expectedSha256,
+    this.actualSha256,
+  );
+
+  /// POSIX-style path of the GGUF relative to the models root.
+  final String relativePath;
+
+  final String expectedSha256;
+  final String actualSha256;
+
+  @override
+  String toString() =>
+      'IrodoriDownloadHashMismatchException: $relativePath expected SHA-256 '
+      '$expectedSha256 but got $actualSha256';
+}
+
+/// Downloads the single GGUF for a selected [IrodoriModelVariant] from its
+/// pinned source ([IrodoriModelVariant.downloadUrl]): the endo5501 mirror for
+/// the audio.cpp variants, a pinned revision of sakasegawa's repository for
+/// v4.1 Small MF.
 ///
 /// Each variant is one file. The GGUF embeds the model spec, model config and
 /// tokenizer, so no sibling directories are needed — unlike the legacy
@@ -55,16 +80,31 @@ class IrodoriDownloadSizeMismatchException implements Exception {
 class IrodoriModelDownloadService {
   final http.Client _client;
   final Map<IrodoriModelVariant, int> _expectedFileSizes;
+  final Map<IrodoriModelVariant, String> _expectedSha256s;
   bool _cancelled = false;
 
   IrodoriModelDownloadService({
     required http.Client client,
     Map<IrodoriModelVariant, int>? expectedFileSizes,
+    Map<IrodoriModelVariant, String>? expectedSha256s,
+    Future<String> Function(String path)? hashFile,
   }) : _client = client,
-       _expectedFileSizes = expectedFileSizes ?? defaultExpectedFileSizes;
+       _expectedFileSizes = expectedFileSizes ?? defaultExpectedFileSizes,
+       _expectedSha256s = expectedSha256s ?? defaultExpectedSha256s,
+       _hashFile = hashFile ?? _sha256OfFile;
 
-  static const _baseUrl =
-      'https://huggingface.co/endo5501/audio.cpp/resolve/main';
+  final Future<String> Function(String path) _hashFile;
+
+  /// SHA-256 of the file at [path], on an isolate of its own: hashing 1.9 GB
+  /// takes many seconds, which would freeze the UI on the main isolate.
+  static Future<String> _sha256OfFile(String path) => Isolate.run(
+    () async => (await sha256.bind(File(path).openRead()).first).toString(),
+  );
+
+  /// Suffix of a completed transfer that has not passed its checks yet. Only
+  /// a file that passed takes the GGUF's own name, so a check cut short (the
+  /// app killed while hashing) never leaves a file that reads as downloaded.
+  static const _unverifiedSuffix = '.unverified';
 
   /// Directories written by the pre-GGUF safetensors layout.
   ///
@@ -91,6 +131,13 @@ class IrodoriModelDownloadService {
   static final Map<IrodoriModelVariant, int> defaultExpectedFileSizes = {
     for (final variant in IrodoriModelVariant.values)
       variant: variant.expectedFileSize,
+  };
+
+  /// SHA-256 of each variant's GGUF where one is pinned. A variant absent here
+  /// is checked by its size alone.
+  static final Map<IrodoriModelVariant, String> defaultExpectedSha256s = {
+    for (final variant in IrodoriModelVariant.values)
+      if (variant.sha256 != null) variant: variant.sha256!,
   };
 
   /// Stops the current (or next) [downloadModel] transfer as soon as possible.
@@ -144,11 +191,12 @@ class IrodoriModelDownloadService {
       return;
     }
 
+    final stagedPath = '$localPath$_unverifiedSuffix';
     try {
       await downloadFile(
         _client,
-        '$_baseUrl/${variant.relativeGgufPath}',
-        localPath,
+        variant.downloadUrl,
+        stagedPath,
         fileName,
         onProgress,
         shouldCancel: () => _cancelled,
@@ -156,23 +204,38 @@ class IrodoriModelDownloadService {
     } on DownloadCancelledException {
       throw const IrodoriDownloadCancelledException();
     }
+    final staged = File(stagedPath);
 
     // A completed transfer must still match the pinned size — a truncated
     // write, or a proxy that served an HTML error page as 200, must not be
     // left in a state that reads as downloaded.
     final expectedSize = _expectedFileSizes[variant];
-    final actualSize = File(localPath).lengthSync();
+    final actualSize = staged.lengthSync();
     if (expectedSize == null || actualSize != expectedSize) {
-      final badFile = File(localPath);
-      if (badFile.existsSync()) {
-        badFile.deleteSync();
-      }
+      staged.deleteSync();
       throw IrodoriDownloadSizeMismatchException(
         variant.relativeGgufPath,
         expectedSize ?? -1,
         actualSize,
       );
     }
+
+    // Checked here, once, and not by isModelDownloaded: hashing 1.9 GB on
+    // every readiness check would stall the settings screen and each start of
+    // playback. The final name is what records that it passed.
+    final expectedSha256 = _expectedSha256s[variant];
+    if (expectedSha256 != null) {
+      final actualSha256 = await _hashFile(stagedPath);
+      if (actualSha256 != expectedSha256) {
+        staged.deleteSync();
+        throw IrodoriDownloadHashMismatchException(
+          variant.relativeGgufPath,
+          expectedSha256,
+          actualSha256,
+        );
+      }
+    }
+    await staged.rename(localPath);
   }
 
   /// Whether any pre-GGUF safetensors directory is still present.
@@ -210,7 +273,8 @@ class IrodoriModelDownloadService {
   }
 
   /// Files in [dir] that would stop the native loader: any `.gguf` other than
-  /// [keep], plus `.part` leftovers from an interrupted transfer.
+  /// [keep], plus `.part` and `.unverified` leftovers from an interrupted
+  /// transfer or check.
   ///
   /// `.part` files are matched explicitly — `downloadFile` writes to
   /// `<name>.gguf.part`, which does not end in `.gguf`, so a process killed
@@ -222,7 +286,9 @@ class IrodoriModelDownloadService {
         if (entity is File)
           if (p.basename(entity.path) != keep &&
               (entity.path.endsWith('.gguf') ||
-                  entity.path.endsWith('.gguf.part')))
+                  entity.path.endsWith('.gguf.part') ||
+                  entity.path.endsWith('.gguf$_unverifiedSuffix') ||
+                  entity.path.endsWith('.gguf$_unverifiedSuffix.part')))
             entity,
     ];
   }

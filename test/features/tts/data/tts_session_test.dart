@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
@@ -10,6 +11,7 @@ import 'package:novel_viewer/features/tts/data/tts_isolate.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_session.dart';
 import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 
 class _LoadModelCall {
   _LoadModelCall({
@@ -22,6 +24,7 @@ class _LoadModelCall {
     this.noiseW,
     this.embeddingCacheDir,
     this.durationCorrection = false,
+    this.irodoriRuntime = IrodoriRuntime.audioCpp,
   });
   final String modelDir;
   final TtsEngineType engineType;
@@ -32,6 +35,7 @@ class _LoadModelCall {
   final double? noiseW;
   final String? embeddingCacheDir;
   final bool durationCorrection;
+  final IrodoriRuntime irodoriRuntime;
 }
 
 /// Records the model directories the session asks for a contract copy in.
@@ -67,7 +71,7 @@ class _FakeTtsIsolate implements TtsIsolate {
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
 
   @override
-  int? debugAbortHandleAddressFor(TtsEngineType engineType) => null;
+  int? debugAbortHandleAddressFor(TtsAbortFamily family) => null;
 
   @override
   bool get hasWorkerDied => workerDied;
@@ -92,6 +96,7 @@ class _FakeTtsIsolate implements TtsIsolate {
     double? noiseW,
     String? embeddingCacheDir,
     bool durationCorrection = false,
+    IrodoriRuntime irodoriRuntime = IrodoriRuntime.audioCpp,
   }) {
     loadModelCalls.add(
       _LoadModelCall(
@@ -104,6 +109,7 @@ class _FakeTtsIsolate implements TtsIsolate {
         noiseW: noiseW,
         embeddingCacheDir: embeddingCacheDir,
         durationCorrection: durationCorrection,
+        irodoriRuntime: irodoriRuntime,
       ),
     );
     if (blockModelLoad) return;
@@ -283,6 +289,72 @@ void main() {
       final call = isolate.loadModelCalls.first;
       expect(call.engineType, TtsEngineType.irodori);
       expect(call.modelDir, '/i/m');
+      await session.dispose();
+    });
+
+    test(
+      'ensureModelLoaded names the runtime of the irodori variant',
+      () async {
+        for (final variant in IrodoriModelVariant.values) {
+          final isolate = _FakeTtsIsolate();
+          final session = TtsSession(
+            isolate: isolate,
+            irodoriSpecInstaller: _RecordingSpecInstaller(),
+          );
+
+          await session.ensureModelLoaded(
+            IrodoriEngineConfig(
+              modelDir: '/i/${variant.storageKey}',
+              sampleRate: 48000,
+              variant: variant,
+              speakerGuidanceScale: 5.0,
+              captionGuidanceScale: 3.0,
+              numInferenceSteps: 40,
+            ),
+          );
+
+          expect(
+            isolate.loadModelCalls.single.irodoriRuntime,
+            variant.runtime,
+            reason: 'variant ${variant.storageKey}',
+          );
+          await session.dispose();
+        }
+      },
+    );
+
+    test('a speech.cpp variant is loaded from its GGUF file', () async {
+      // speech.cpp reads a model file; audio.cpp reads a directory.
+      final isolate = _FakeTtsIsolate();
+      final session = TtsSession(
+        isolate: isolate,
+        irodoriSpecInstaller: _RecordingSpecInstaller(),
+      );
+
+      await session.ensureModelLoaded(_irodoriMf());
+
+      final call = isolate.loadModelCalls.single;
+      expect(call.engineType, TtsEngineType.irodori);
+      expect(call.irodoriRuntime, IrodoriRuntime.speechCpp);
+      expect(
+        call.modelDir,
+        p.join('/i/mf', IrodoriModelVariant.v41Mf.ggufFileName),
+      );
+      expect(call.durationCorrection, isFalse);
+      await session.dispose();
+    });
+
+    test('a speech.cpp variant gets no audio.cpp model contract', () async {
+      final installer = _RecordingSpecInstaller();
+      final isolate = _FakeTtsIsolate();
+      final session = TtsSession(
+        isolate: isolate,
+        irodoriSpecInstaller: installer,
+      );
+
+      await session.ensureModelLoaded(_irodoriMf());
+
+      expect(installer.installedIn, isEmpty);
       await session.dispose();
     });
 
@@ -960,6 +1032,15 @@ Qwen3EngineConfig _qwen3({String modelDir = '/q/m'}) => Qwen3EngineConfig(
   sampleRate: 24000,
   languageId: 2058,
   embeddingCacheDir: '/cache',
+);
+
+IrodoriEngineConfig _irodoriMf() => const IrodoriEngineConfig(
+  modelDir: '/i/mf',
+  sampleRate: 48000,
+  variant: IrodoriModelVariant.v41Mf,
+  speakerGuidanceScale: 5.0,
+  captionGuidanceScale: 3.0,
+  numInferenceSteps: 40,
 );
 
 IrodoriEngineConfig _irodori() => const IrodoriEngineConfig(

@@ -388,6 +388,12 @@ abstract class AppLocalizations {
   /// **'モデルバージョン'**
   String get settings_irodoriModelVariant;
 
+  /// No description provided for @settings_irodoriVariantNoGuidance.
+  ///
+  /// In ja, this message translates to:
+  /// **'このモデルはガイダンスと推論ステップ数を自身で扱うため、調整する項目はありません。'**
+  String get settings_irodoriVariantNoGuidance;
+
   /// No description provided for @settings_irodoriVariantNoCaption.
   ///
   /// In ja, this message translates to:
@@ -465,6 +471,12 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'ファイル名を変更'**
   String get settings_renameFileTooltip;
+
+  /// No description provided for @settings_addVoiceFilesTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'音声ファイルを追加'**
+  String get settings_addVoiceFilesTooltip;
 
   /// No description provided for @settings_recordVoiceTooltip.
   ///

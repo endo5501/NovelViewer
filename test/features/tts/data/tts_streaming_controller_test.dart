@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_database.dart';
 import 'package:novel_viewer/features/tts/data/tts_audio_repository.dart';
@@ -69,7 +70,7 @@ class _FakeTtsIsolate implements TtsIsolate {
   Stream<TtsIsolateResponse> get responses => _responseController.stream;
 
   @override
-  int? debugAbortHandleAddressFor(TtsEngineType engineType) => null;
+  int? debugAbortHandleAddressFor(TtsAbortFamily family) => null;
 
   @override
   Future<void> spawn() async {
@@ -88,6 +89,7 @@ class _FakeTtsIsolate implements TtsIsolate {
     double? noiseW,
     String? embeddingCacheDir,
     bool durationCorrection = false,
+    IrodoriRuntime irodoriRuntime = IrodoriRuntime.audioCpp,
   }) {
     loadModelCalls.add(
       _LoadModelCall(
@@ -391,10 +393,11 @@ IrodoriEngineConfig _irodoriConfig({
   double speakerGuidanceScale = 5.0,
   double captionGuidanceScale = 3.0,
   int numInferenceSteps = 40,
+  IrodoriModelVariant variant = IrodoriModelVariant.v3,
 }) => IrodoriEngineConfig(
   modelDir: modelDir,
   sampleRate: sampleRate,
-  variant: IrodoriModelVariant.v3,
+  variant: variant,
   refWavPath: refWavPath,
   speakerGuidanceScale: speakerGuidanceScale,
   captionGuidanceScale: captionGuidanceScale,
@@ -1388,6 +1391,48 @@ void main() {
         isolate.synthesizeRefWavPaths[1],
         '/full/path/to/voices/global_voice.wav',
       );
+    });
+
+    test('a segment\'s reference the engine cannot read is spoken without '
+        'one', () async {
+      const text = '文1。文2。';
+      final episodeId = await repository.createEpisode(
+        fileName: '0001_テスト.txt',
+        sampleRate: 48000,
+        status: TtsEpisodeStatus.partial,
+        textHash: _computeTextHash(text),
+      );
+      await repository.insertSegment(
+        episodeId: episodeId,
+        segmentIndex: 0,
+        text: '文1。',
+        textOffset: 0,
+        textLength: 3,
+        refWavPath: 'narrator.mp3',
+      );
+
+      final isolate = _FakeTtsIsolate();
+      final controller = TtsStreamingController(
+        read: container.read,
+        ttsIsolate: isolate,
+        audioPlayer: _AutoCompleteAudioPlayer(),
+        repository: repository,
+        tempDirPath: tempDir.path,
+        bufferDrainDelay: Duration.zero,
+      );
+
+      await controller.start(
+        modelsReady: true,
+        text: text,
+        fileName: '0001_テスト.txt',
+        config: _irodoriConfig(
+          variant: IrodoriModelVariant.v41Mf,
+          refWavPath: '/voices/global.wav',
+        ),
+        resolveRefWavPath: (fileName) => '/voices/$fileName',
+      );
+
+      expect(isolate.synthesizeRefWavPaths, [null, '/voices/global.wav']);
     });
 
     test(

@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -8,6 +9,7 @@ import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
 import 'package:novel_viewer/features/tts/data/voice_reference_service.dart';
+import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
 import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_model_download_providers.dart';
 
@@ -17,10 +19,69 @@ final voiceReferenceServiceProvider = Provider<VoiceReferenceService?>((ref) {
   return VoiceReferenceService(libraryPath: libraryPath);
 });
 
+/// Asks the reader for reference audio files to add.
+abstract interface class VoiceFilePicker {
+  /// Offers the [extensions] (lower case, with the dot) the engine in use
+  /// reads, and answers the picked paths, or null when the picker was closed
+  /// without a pick.
+  Future<List<String>?> pick({required Set<String> extensions});
+
+  /// Frees what [pick] answered once the files are copied. On iOS the picked
+  /// files arrive as copies in the app's temporary folder, which would
+  /// otherwise stay there.
+  Future<void> release();
+}
+
+/// The system file picker, overridable in tests.
+final voiceFilePickerProvider = Provider<VoiceFilePicker>(
+  (ref) => const _SystemVoiceFilePicker(),
+);
+
+class _SystemVoiceFilePicker implements VoiceFilePicker {
+  const _SystemVoiceFilePicker();
+
+  @override
+  Future<List<String>?> pick({required Set<String> extensions}) async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: [for (final e in extensions) e.substring(1)],
+      allowMultiple: true,
+    );
+    if (result == null) return null;
+    return [
+      for (final file in result.files)
+        if (file.path != null) file.path!,
+    ];
+  }
+
+  @override
+  Future<void> release() async {
+    try {
+      await FilePicker.clearTemporaryFiles();
+    } on UnimplementedError {
+      // The desktop pickers answer the files in place and keep no copies.
+    }
+  }
+}
+
+/// The reference-voice extensions the engine in use reads, in lower case, by
+/// the rule synthesis follows (`TtsEngineConfig.referenceExtensionsFor`), for
+/// the voice lists, which show only these.
+final acceptedReferenceExtensionsProvider = Provider<Set<String>>(
+  (ref) => TtsEngineConfig.referenceExtensionsFor(
+    ref.watch(ttsEngineTypeProvider),
+    irodoriVariant: ref.watch(irodoriModelVariantProvider),
+  ),
+);
+
+/// The reference voices the engine in use can read, for the voice lists of
+/// the settings and the edit dialog. Refresh it to rescan the folder.
 final voiceFilesProvider = FutureProvider<List<String>>((ref) async {
   final service = ref.watch(voiceReferenceServiceProvider);
   if (service == null) return [];
-  return service.listVoiceFiles();
+  return service.listVoiceFiles(
+    extensions: ref.watch(acceptedReferenceExtensionsProvider),
+  );
 });
 
 /// Generic base notifier that loads a [String] setting from [SettingsRepository]
@@ -224,15 +285,39 @@ class PiperNoiseWNotifier extends _SettingDoubleNotifier {
 
 // --- Irodori model variant ---
 
+/// The variants this platform can run, in the order the selector lists them:
+/// those whose runtime is the platform's Irodori runtime.
+final supportedIrodoriVariantsProvider = Provider<List<IrodoriModelVariant>>((
+  ref,
+) {
+  final runtime = ref.watch(irodoriRuntimeProvider);
+  return [
+    for (final variant in IrodoriModelVariant.values)
+      if (variant.runtime == runtime) variant,
+  ];
+});
+
 final irodoriModelVariantProvider =
     NotifierProvider<IrodoriModelVariantNotifier, IrodoriModelVariant>(
       IrodoriModelVariantNotifier.new,
     );
 
+/// The variant in use: the persisted choice when this platform runs it,
+/// otherwise the first variant it does run.
+///
+/// The persisted value is left alone, as [TtsEngineTypeNotifier] leaves the
+/// engine: a reader who restores a desktop backup on the iPad keeps their
+/// desktop choice there.
 class IrodoriModelVariantNotifier extends Notifier<IrodoriModelVariant> {
   @override
-  IrodoriModelVariant build() =>
-      ref.watch(settingsRepositoryProvider).getIrodoriModelVariant();
+  IrodoriModelVariant build() {
+    final persisted = ref
+        .watch(settingsRepositoryProvider)
+        .getIrodoriModelVariant();
+    final supported = ref.watch(supportedIrodoriVariantsProvider);
+    if (supported.isEmpty || supported.contains(persisted)) return persisted;
+    return supported.first;
+  }
 
   Future<void> setValue(IrodoriModelVariant value) async {
     await ref.read(settingsRepositoryProvider).setIrodoriModelVariant(value);

@@ -160,6 +160,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settings_irodoriModelVariant => '模型版本';
 
   @override
+  String get settings_irodoriVariantNoGuidance => '此模型自行处理引导和推理步数，因此没有需要调整的项目。';
+
+  @override
   String get settings_irodoriVariantNoCaption => '所选模型不支持字幕，因此片段备注不会应用于合成。';
 
   @override
@@ -197,6 +200,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settings_renameFileTooltip => '重命名文件';
+
+  @override
+  String get settings_addVoiceFilesTooltip => '添加音频文件';
 
   @override
   String get settings_recordVoiceTooltip => '录制语音';

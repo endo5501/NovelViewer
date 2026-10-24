@@ -5,7 +5,7 @@ Let users add reference voice files by dragging `.wav` / `.mp3` files from the p
 ## Requirements
 
 ### Requirement: Drag and drop voice file addition
-The system SHALL accept audio files dropped from the platform's native file manager onto the voice reference selector area in the TTS settings tab. The system SHALL copy dropped files to the `voices` directory. Only files with supported extensions (`.wav`, `.mp3`) SHALL be accepted. After a successful drop, the voice file list SHALL be refreshed automatically.
+Where the platform supports dropping voice files (`platform-capabilities`), the system SHALL accept audio files dropped from the platform's native file manager onto the voice reference selector area in the TTS settings tab. Where it does not, as on iOS, the selector SHALL NOT register a drop target. The system SHALL copy dropped files to the `voices` directory. Only files with supported extensions (`.wav`, `.mp3`) SHALL be accepted. After a successful drop, the voice file list SHALL be refreshed automatically.
 
 #### Scenario: Drop a supported audio file onto the selector
 - **WHEN** the user drags a `.wav` or `.mp3` file from the file manager and drops it onto the voice reference selector area
@@ -22,6 +22,10 @@ The system SHALL accept audio files dropped from the platform's native file mana
 #### Scenario: Drop a file with a name that already exists in voices directory
 - **WHEN** the user drops a file whose name already exists in the `voices` directory
 - **THEN** the system SHALL display an error message indicating the file already exists and SHALL NOT overwrite the existing file
+
+#### Scenario: No drop target on iOS
+- **WHEN** the voice reference section is shown on iOS
+- **THEN** the selector registers no drop target, and the section works without the drag-and-drop plugin
 
 ### Requirement: Drop zone visual feedback
 The system SHALL provide visual feedback when a file is being dragged over the voice reference selector area. The drop zone SHALL indicate that file drop is accepted by displaying a highlighted border and a guidance message.

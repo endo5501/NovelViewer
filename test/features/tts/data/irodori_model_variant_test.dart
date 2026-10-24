@@ -1,16 +1,73 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 
 void main() {
   group('IrodoriModelVariant', () {
-    test('exposes exactly the v3 and v4 variants', () {
+    test('exposes the v3, v4 and v4.1 MF variants', () {
       expect(IrodoriModelVariant.values, [
         IrodoriModelVariant.v3,
         IrodoriModelVariant.v4,
+        IrodoriModelVariant.v41Mf,
       ]);
     });
 
-    test('both variants support caption', () {
+    test('v3 and v4 run on audio.cpp, v4.1 MF on speech.cpp', () {
+      expect(IrodoriModelVariant.v3.runtime, IrodoriRuntime.audioCpp);
+      expect(IrodoriModelVariant.v4.runtime, IrodoriRuntime.audioCpp);
+      expect(IrodoriModelVariant.v41Mf.runtime, IrodoriRuntime.speechCpp);
+    });
+
+    test('only the audio.cpp variants accept the guidance settings', () {
+      // MeanFlow folded the guidance into its training, and speech.cpp
+      // refuses the guidance options on v4.1 Small MF.
+      expect(IrodoriModelVariant.v3.acceptsGuidance, isTrue);
+      expect(IrodoriModelVariant.v4.acceptsGuidance, isTrue);
+      expect(IrodoriModelVariant.v41Mf.acceptsGuidance, isFalse);
+    });
+
+    test('v4.1 MF takes a caption and needs no duration correction', () {
+      // speech.cpp passes the caption as `instructions` and ends the speech
+      // where it goes silent, so there is no surplus length to bound.
+      expect(IrodoriModelVariant.v41Mf.supportsCaption, isTrue);
+      expect(IrodoriModelVariant.v41Mf.needsDurationCorrection, isFalse);
+    });
+
+    test('v4.1 MF is pinned by revision, size and SHA-256', () {
+      const variant = IrodoriModelVariant.v41Mf;
+      expect(variant.storageKey, 'v4.1-mf');
+      expect(variant.modelDirName, 'Irodori-TTS-v4.1-Small-MF-GGUF');
+      expect(variant.ggufFileName, 'Irodori-TTS-866M-MF-v4.1-F16.gguf');
+      expect(variant.expectedFileSize, 1920321792);
+      expect(
+        variant.sha256,
+        'e237dc3eefe469b8bba87872beacf12fb7fe00dbdf85767edca8ec04ab910d13',
+      );
+      expect(
+        variant.downloadUrl,
+        'https://huggingface.co/sakasegawa/Irodori-TTS-v4.1-Small-MF-GGUF/'
+        'resolve/9db7da1bec3d1069ef8e29732e0497be60c7b047/'
+        'Irodori-TTS-866M-MF-v4.1-F16.gguf',
+      );
+    });
+
+    test('v3 and v4 keep their source and are checked by size only', () {
+      expect(
+        IrodoriModelVariant.v3.downloadUrl,
+        'https://huggingface.co/endo5501/audio.cpp/resolve/main/'
+        'Irodori-TTS-600M-v3-VoiceDesign-GGUF/'
+        'irodori-tts-600m-v3-voicedesign-f16.gguf',
+      );
+      expect(
+        IrodoriModelVariant.v4.downloadUrl,
+        'https://huggingface.co/endo5501/audio.cpp/resolve/main/'
+        'Irodori-TTS-v4-Small-GGUF/irodori-tts-v4-small-f16.gguf',
+      );
+      expect(IrodoriModelVariant.v3.sha256, isNull);
+      expect(IrodoriModelVariant.v4.sha256, isNull);
+    });
+
+    test('the audio.cpp variants support caption', () {
       // v4 used to be excluded: it adds a trailing phrase that is not in the
       // text when a reference voice and a caption are supplied together. The
       // engine's duration correction removes that, so the flag is kept for a
@@ -50,11 +107,11 @@ void main() {
       );
       for (final variant in IrodoriModelVariant.values) {
         expect(
-          variant.ggufFileName,
+          variant.ggufFileName.toLowerCase(),
           contains('f16'),
           reason: 'only f16 packages may be distributed',
         );
-        expect(variant.ggufFileName, isNot(contains('q8_0')));
+        expect(variant.ggufFileName.toLowerCase(), isNot(contains('q8_0')));
       }
     });
 

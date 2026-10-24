@@ -3,12 +3,16 @@ import 'dart:ffi';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'package:ffi/ffi.dart';
 import 'package:logging/logging.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 import 'package:path/path.dart' as p;
 
 import 'audiocpp_native_bindings.dart';
+import 'irodori_synthesis_engine.dart';
 import 'irodori_tts_engine.dart';
 import 'piper_tts_engine.dart';
+import 'speech_cpp_irodori_engine.dart';
 import 'tts_engine.dart';
 import 'tts_engine_type.dart';
 import 'tts_language.dart';
@@ -32,13 +36,52 @@ abstract class TtsAbortHandle {
   void free();
 }
 
-/// Creates the per-engine-family abort handles for a session. Injectable for
-/// tests. Returns a handle keyed by the [TtsEngineType] that will consume it:
-/// [TtsEngineType.qwen3] for the qwen3_tts_ffi handle and
-/// [TtsEngineType.irodori] for the audiocpp_ffi handle. A family whose native
-/// library is unavailable is simply absent from the map (that engine then has
-/// no native abort). [TtsEngineType.piper] never has a handle.
-typedef TtsAbortHandleFactory = Map<TtsEngineType, TtsAbortHandle> Function();
+/// The native libraries that read an abort handle. One engine type can run on
+/// more than one of them: Irodori-TTS runs on audio.cpp on the desktop and on
+/// speech.cpp on iOS.
+enum TtsAbortFamily {
+  /// qwen3_tts_ffi, read by Qwen3-TTS.
+  qwen3,
+
+  /// audiocpp_ffi, read by Irodori-TTS on audio.cpp.
+  audioCpp,
+
+  /// speech.cpp, read by Irodori-TTS on speech.cpp.
+  speechCpp,
+}
+
+/// An isolate-owned copy of [audio] holding exactly its samples, to send to
+/// the main isolate.
+///
+/// Routed through [TransferableTypedData] only to obtain that copy:
+/// materialize() runs on the sending side and copies the bytes out eagerly.
+/// The copy covers the view's own range, not its whole buffer: an engine may
+/// answer a view on a larger buffer, whose unused tail would otherwise reach
+/// playback as trailing samples.
+Float32List copyAudioForTransfer(Float32List audio) =>
+    TransferableTypedData.fromList([
+      audio.buffer.asByteData(audio.offsetInBytes, audio.lengthInBytes),
+    ]).materialize().asFloat32List();
+
+/// The family whose abort handle [engineType] reads, given the platform's
+/// Irodori [runtime]; null for Piper, which has none.
+TtsAbortFamily? abortFamilyFor(
+  TtsEngineType engineType,
+  IrodoriRuntime runtime,
+) => switch (engineType) {
+  TtsEngineType.qwen3 => TtsAbortFamily.qwen3,
+  TtsEngineType.irodori => switch (runtime) {
+    IrodoriRuntime.audioCpp => TtsAbortFamily.audioCpp,
+    IrodoriRuntime.speechCpp => TtsAbortFamily.speechCpp,
+  },
+  TtsEngineType.piper => null,
+};
+
+/// Creates the per-family abort handles for a session. Injectable for tests.
+/// Returns a handle keyed by the [TtsAbortFamily] that will read it. A family
+/// whose native library is unavailable is simply absent from the map (that
+/// engine then has no native abort). Piper never has a handle.
+typedef TtsAbortHandleFactory = Map<TtsAbortFamily, TtsAbortHandle> Function();
 
 /// FFI-backed abort handle. Parameterized over the owning library's abort /
 /// free functions so it is created — and later freed — by the SAME native DLL
@@ -65,6 +108,38 @@ class _NativeAbortHandle implements TtsAbortHandle {
 
   @override
   void free() => freeFn(_handle);
+}
+
+/// The abort handle of Irodori-TTS on speech.cpp: one 32-bit word this
+/// isolate allocates, which the worker's speech.cpp callbacks read at each
+/// sampler step and decoded window (`SpeechCppSynthesisRun`).
+///
+/// speech.cpp has no abort handle of its own, and cancelling a request from
+/// here would race the worker freeing it, so the flag is plain memory no
+/// library owns. That also makes it available in a build without speech_cpp.
+///
+/// `dart:ffi` has no atomics. Correctness rests on an aligned 32-bit store
+/// here and an aligned 32-bit load on the worker, which arm64 and x86-64 never
+/// tear; a store the worker sees late costs one more sampler step at most.
+/// As with the other handles, an abort that lands between the worker's reset
+/// and the next synthesis would be lost, which the controllers prevent by not
+/// sending another synthesis after stopping.
+class SpeechCppAbortHandle implements TtsAbortHandle {
+  SpeechCppAbortHandle._(this._flag);
+
+  factory SpeechCppAbortHandle.allocate() =>
+      SpeechCppAbortHandle._(calloc<Int32>());
+
+  final Pointer<Int32> _flag;
+
+  @override
+  int get address => _flag.address;
+
+  @override
+  void abort() => _flag.value = 1;
+
+  @override
+  void free() => calloc.free(_flag);
 }
 
 /// Opens a native library and allocates one abort handle from it, backed by
@@ -95,8 +170,8 @@ TtsAbortHandle? _openNativeAbortHandle<B>({
 /// Allocates one abort handle per available engine family. Each handle is
 /// created — and will be freed — by the SAME DLL that dereferences it, so no
 /// handle is ever shared across DLLs.
-Map<TtsEngineType, TtsAbortHandle> _defaultAbortHandleFactory() {
-  final handles = <TtsEngineType, TtsAbortHandle>{};
+Map<TtsAbortFamily, TtsAbortHandle> _defaultAbortHandleFactory() {
+  final handles = <TtsAbortFamily, TtsAbortHandle>{};
 
   final qwen3 = _openNativeAbortHandle<TtsNativeBindings>(
     open: TtsNativeBindings.open,
@@ -104,7 +179,7 @@ Map<TtsEngineType, TtsAbortHandle> _defaultAbortHandleFactory() {
     abortOf: (b) => b.abort,
     freeOf: (b) => b.freeAbortHandle,
   );
-  if (qwen3 != null) handles[TtsEngineType.qwen3] = qwen3;
+  if (qwen3 != null) handles[TtsAbortFamily.qwen3] = qwen3;
 
   final audiocpp = _openNativeAbortHandle<AudiocppNativeBindings>(
     open: AudiocppNativeBindings.open,
@@ -112,10 +187,16 @@ Map<TtsEngineType, TtsAbortHandle> _defaultAbortHandleFactory() {
     abortOf: (b) => b.abort,
     freeOf: (b) => b.freeAbortHandle,
   );
-  if (audiocpp != null) handles[TtsEngineType.irodori] = audiocpp;
+  if (audiocpp != null) handles[TtsAbortFamily.audioCpp] = audiocpp;
 
-  if (handles.isEmpty) {
-    _log.warning('no TTS native library available; abort disabled');
+  handles[TtsAbortFamily.speechCpp] = SpeechCppAbortHandle.allocate();
+
+  if (!handles.containsKey(TtsAbortFamily.qwen3) &&
+      !handles.containsKey(TtsAbortFamily.audioCpp)) {
+    _log.warning(
+      'no qwen3 or audio.cpp library available; their abort is '
+      'disabled',
+    );
   }
   return handles;
 }
@@ -137,6 +218,7 @@ class LoadModelMessage extends TtsIsolateMessage {
     this.embeddingCacheDir,
     this.abortHandleAddress = 0,
     this.durationCorrection = false,
+    this.irodoriRuntime = IrodoriRuntime.audioCpp,
   });
   final String modelDir;
   final TtsEngineType engineType;
@@ -158,6 +240,9 @@ class LoadModelMessage extends TtsIsolateMessage {
   // engine to bound the generated length. A property of the model variant, so
   // it travels with the load rather than with each synthesis request.
   final bool durationCorrection;
+  // Irodori-specific: the native runtime the variant's GGUF is read by, which
+  // decides the engine the worker opens and the abort handle it is given.
+  final IrodoriRuntime irodoriRuntime;
 }
 
 class SynthesizeMessage extends TtsIsolateMessage {
@@ -257,16 +342,16 @@ class TtsIsolate {
   /// [WorkerDiedResponse] does not replay on the broadcast stream).
   bool get hasWorkerDied => _workerDeathSignaled;
 
-  /// Per-engine-family abort handles, keyed by the [TtsEngineType] that
-  /// consumes each (qwen3, irodori). Created once at [spawn] and freed only
-  /// after the worker Isolate has terminated, so each address is stable across
-  /// model reloads and [abort] never touches a freed synthesis context.
-  Map<TtsEngineType, TtsAbortHandle> _abortHandles = const {};
+  /// Per-family abort handles, keyed by the [TtsAbortFamily] that reads each.
+  /// Created once at [spawn] and freed only after the worker Isolate has
+  /// terminated, so each address is stable across model reloads and [abort]
+  /// never touches a freed synthesis context.
+  Map<TtsAbortFamily, TtsAbortHandle> _abortHandles = const {};
 
-  /// Native address of the abort handle for [engineType] (null when that
-  /// engine family has no native handle). Exposed for tests.
-  int? debugAbortHandleAddressFor(TtsEngineType engineType) =>
-      _abortHandles[engineType]?.address;
+  /// Native address of the abort handle for [family] (null when that family
+  /// has no native handle). Exposed for tests.
+  int? debugAbortHandleAddressFor(TtsAbortFamily family) =>
+      _abortHandles[family]?.address;
 
   /// Timeout for graceful shutdown before force-killing the isolate.
   static const _disposeTimeout = Duration(seconds: 2);
@@ -385,7 +470,9 @@ class TtsIsolate {
     double? noiseW,
     String? embeddingCacheDir,
     bool durationCorrection = false,
+    IrodoriRuntime irodoriRuntime = IrodoriRuntime.audioCpp,
   }) {
+    final abortFamily = abortFamilyFor(engineType, irodoriRuntime);
     _sendPort?.send(
       LoadModelMessage(
         modelDir: modelDir,
@@ -398,9 +485,13 @@ class TtsIsolate {
         noiseW: noiseW,
         embeddingCacheDir: embeddingCacheDir,
         durationCorrection: durationCorrection,
-        // Send the handle allocated by THIS engine's DLL so the address is only
-        // ever dereferenced by the library that created it (no cross-DLL wiring).
-        abortHandleAddress: _abortHandles[engineType]?.address ?? 0,
+        irodoriRuntime: irodoriRuntime,
+        // Send the handle of the library this engine runs on, so the address
+        // is only ever dereferenced by the code it was made for (no cross-DLL
+        // wiring).
+        abortHandleAddress: abortFamily == null
+            ? 0
+            : _abortHandles[abortFamily]?.address ?? 0,
       ),
     );
   }
@@ -503,7 +594,7 @@ class TtsIsolate {
 
     TtsEngine? qwen3Engine;
     PiperTtsEngine? piperEngine;
-    IrodoriTtsEngine? irodoriEngine;
+    IrodoriSynthesisEngine? irodoriEngine;
     TtsEngineType? activeEngineType;
     String? embeddingCacheDir;
 
@@ -599,16 +690,28 @@ class TtsIsolate {
               piperEngine = next;
 
             case TtsEngineType.irodori:
-              final next = IrodoriTtsEngine.open();
-              next.loadModel(
-                message.modelDir,
-                nThreads: message.nThreads,
-                abortHandle: Pointer<Void>.fromAddress(
-                  message.abortHandleAddress,
-                ),
-                durationCorrection: message.durationCorrection,
-              );
-              irodoriEngine = next;
+              // The runtime comes with the variant, never from the platform:
+              // the variant's GGUF is what one of them can read.
+              switch (message.irodoriRuntime) {
+                case IrodoriRuntime.audioCpp:
+                  final next = IrodoriTtsEngine.open();
+                  next.loadModel(
+                    message.modelDir,
+                    nThreads: message.nThreads,
+                    abortHandle: Pointer<Void>.fromAddress(
+                      message.abortHandleAddress,
+                    ),
+                    durationCorrection: message.durationCorrection,
+                  );
+                  irodoriEngine = next;
+                case IrodoriRuntime.speechCpp:
+                  final next = SpeechCppIrodoriEngine.open();
+                  next.loadModel(
+                    message.modelDir,
+                    abortHandleAddress: message.abortHandleAddress,
+                  );
+                  irodoriEngine = next;
+              }
           }
 
           activeEngineType = message.engineType;
@@ -646,18 +749,9 @@ class TtsIsolate {
           irodoriEngine?.resetAbort();
           final result = doSynthesize(message);
 
-          // Materialize the audio into a fresh, isolate-owned buffer before
-          // sending. We route it through TransferableTypedData only to obtain
-          // that copy: materialize() runs here on the worker side and copies
-          // the bytes out eagerly, so this is a plain copy — NOT the zero-copy
-          // handoff TransferableTypedData enables when the receiver
-          // materializes. (Transfer semantics intentionally unchanged.)
-          final transferable = TransferableTypedData.fromList([
-            result.audio.buffer.asByteData(),
-          ]);
           mainSendPort.send(
             SynthesisResultResponse(
-              audio: transferable.materialize().asFloat32List(),
+              audio: copyAudioForTransfer(result.audio),
               sampleRate: result.sampleRate,
             ),
           );

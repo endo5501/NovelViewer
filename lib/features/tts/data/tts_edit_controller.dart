@@ -247,6 +247,7 @@ class TtsEditController {
       storedPath: _segments[segmentIndex].refWavPath,
       fallbackPath: config.synthesisFallbackRefWavPath,
       resolver: resolveRefWavPath,
+      acceptedExtensions: config.acceptedReferenceExtensions,
     );
     return _generateSegmentWithEntries(
       segmentIndex: segmentIndex,
@@ -399,6 +400,7 @@ class TtsEditController {
         storedPath: segment.refWavPath,
         fallbackPath: globalRefWavPath,
         resolver: resolveRefWavPath,
+        acceptedExtensions: config.acceptedReferenceExtensions,
       );
 
       final success = await _generateSegmentWithEntries(

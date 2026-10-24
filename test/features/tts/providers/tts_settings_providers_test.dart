@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -7,6 +10,7 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
+import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dart';
@@ -179,13 +183,20 @@ void main() {
     test(
       'an unsupported persisted engine resolves without being rewritten',
       () async {
-        await prefs.setString('tts_engine_type', 'irodori');
+        await prefs.setString('tts_engine_type', 'qwen3');
         final container = containerOn(isIOS: true);
 
         expect(container.read(ttsEngineTypeProvider), TtsEngineType.piper);
-        expect(prefs.getString('tts_engine_type'), 'irodori');
+        expect(prefs.getString('tts_engine_type'), 'qwen3');
       },
     );
+
+    test('Irodori-TTS persisted on iOS is used as is', () async {
+      await prefs.setString('tts_engine_type', 'irodori');
+      final container = containerOn(isIOS: true);
+
+      expect(container.read(ttsEngineTypeProvider), TtsEngineType.irodori);
+    });
 
     test('a supported persisted engine is used as is', () async {
       await prefs.setString('tts_engine_type', 'irodori');
@@ -379,6 +390,158 @@ void main() {
 
       expect(container.read(piperNoiseWProvider), 0.6);
       expect(prefs.getDouble('piper_noise_w'), 0.6);
+    });
+  });
+
+  group('reference voices the engine in use reads', () {
+    late Directory tempDir;
+
+    setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('reference_voices_');
+    });
+
+    tearDown(() => tempDir.deleteSync(recursive: true));
+
+    ProviderContainer containerOn({required bool isIOS}) {
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue(
+            p.join(tempDir.path, 'NovelViewer'),
+          ),
+          platformCapabilitiesProvider.overrideWithValue(
+            PlatformCapabilities.forPlatform(isIOS: isIOS, isMacOS: false),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('the selector and synthesis agree for every engine', () async {
+      for (final isIOS in [true, false]) {
+        for (final engine in TtsEngineType.values) {
+          await prefs.setString('tts_engine_type', engine.name);
+          final container = containerOn(isIOS: isIOS);
+          final inUse = container.read(ttsEngineTypeProvider);
+          final config = TtsEngineConfig.resolveFromReader(
+            container.read,
+            inUse,
+          );
+
+          expect(
+            container.read(acceptedReferenceExtensionsProvider),
+            config.acceptedReferenceExtensions,
+            reason: 'isIOS=$isIOS engine=${engine.name}',
+          );
+        }
+      }
+    });
+
+    test('the voice list holds only the files the engine reads', () async {
+      final voices = Directory(p.join(tempDir.path, 'voices'))
+        ..createSync(recursive: true);
+      File(p.join(voices.path, 'a.wav')).writeAsStringSync('');
+      File(p.join(voices.path, 'b.mp3')).writeAsStringSync('');
+      await prefs.setString('tts_engine_type', 'irodori');
+
+      final onIOS = containerOn(isIOS: true);
+      final onDesktop = containerOn(isIOS: false);
+
+      expect(await onIOS.read(voiceFilesProvider.future), ['a.wav']);
+      expect(await onDesktop.read(voiceFilesProvider.future), [
+        'a.wav',
+        'b.mp3',
+      ]);
+    });
+  });
+
+  group('Irodori variants follow the platform runtime', () {
+    ProviderContainer containerOn({required bool isIOS}) {
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          platformCapabilitiesProvider.overrideWithValue(
+            PlatformCapabilities.forPlatform(isIOS: isIOS, isMacOS: false),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('the desktop offers v3 and v4', () {
+      final container = containerOn(isIOS: false);
+
+      expect(container.read(supportedIrodoriVariantsProvider), [
+        IrodoriModelVariant.v3,
+        IrodoriModelVariant.v4,
+      ]);
+    });
+
+    test('iOS offers v4.1 MF only', () {
+      final container = containerOn(isIOS: true);
+
+      expect(container.read(supportedIrodoriVariantsProvider), [
+        IrodoriModelVariant.v41Mf,
+      ]);
+    });
+
+    test('the default is v3 on the desktop', () {
+      final container = containerOn(isIOS: false);
+
+      expect(
+        container.read(irodoriModelVariantProvider),
+        IrodoriModelVariant.v3,
+      );
+    });
+
+    test('the default is v4.1 MF on iOS', () {
+      final container = containerOn(isIOS: true);
+
+      expect(
+        container.read(irodoriModelVariantProvider),
+        IrodoriModelVariant.v41Mf,
+      );
+    });
+
+    test('a variant iOS cannot run resolves without being rewritten', () async {
+      await prefs.setString('irodori_model_variant', 'v3');
+      final container = containerOn(isIOS: true);
+
+      expect(
+        container.read(irodoriModelVariantProvider),
+        IrodoriModelVariant.v41Mf,
+      );
+      expect(prefs.getString('irodori_model_variant'), 'v3');
+    });
+
+    test('a persisted desktop choice is restored', () async {
+      await prefs.setString('irodori_model_variant', 'v4');
+      final container = containerOn(isIOS: false);
+
+      expect(
+        container.read(irodoriModelVariantProvider),
+        IrodoriModelVariant.v4,
+      );
+    });
+
+    test('the model directory follows the resolved variant on iOS', () {
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue('/home/user/NovelViewer'),
+          platformCapabilitiesProvider.overrideWithValue(
+            const PlatformCapabilities.forPlatform(isIOS: true, isMacOS: false),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(irodoriModelDirProvider),
+        p.join('/home/user', 'models', 'Irodori-TTS-v4.1-Small-MF-GGUF'),
+      );
     });
   });
 

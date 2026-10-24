@@ -66,7 +66,7 @@ void main() {
       .map((s) => s.value)
       .toList();
 
-  testWidgets('iOS shows the Piper settings without an engine selector', (
+  testWidgets('iOS offers Piper and Irodori-TTS, opening on Piper', (
     tester,
   ) async {
     await openTtsTab(
@@ -74,7 +74,10 @@ void main() {
       const PlatformCapabilities.forPlatform(isIOS: true, isMacOS: false),
     );
 
-    expect(find.byType(SegmentedButton<TtsEngineType>), findsNothing);
+    expect(offeredEngines(tester), [
+      TtsEngineType.piper,
+      TtsEngineType.irodori,
+    ]);
     expect(find.byType(PiperSettingsSection), findsOneWidget);
     expect(find.byType(VoiceReferenceSection), findsNothing);
   });
