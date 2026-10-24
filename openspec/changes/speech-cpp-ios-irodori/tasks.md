@@ -52,7 +52,7 @@
 
 ## 3. モデルのダウンロード
 
-- [ ] 3.1 `IrodoriModelDownloadService` を次のように変える。
+- [x] 3.1 `IrodoriModelDownloadService` を次のように変える。
   - `variant.downloadUrl` から取得する。
   - 完了したら、SHA-256 をストリームで検証する。
   - 一致しなければファイルを削除し、`IrodoriDownloadHashMismatchException` を投げる。

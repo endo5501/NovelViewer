@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
@@ -43,8 +44,31 @@ class IrodoriDownloadSizeMismatchException implements Exception {
       '$expectedSize bytes but got $actualSize bytes';
 }
 
-/// Downloads the single GGUF for a selected [IrodoriModelVariant] from the
-/// endo5501 Hugging Face mirror.
+/// Thrown when a downloaded Irodori GGUF's SHA-256 does not match the hash
+/// pinned for its variant. Like a size mismatch, the file is deleted first.
+class IrodoriDownloadHashMismatchException implements Exception {
+  const IrodoriDownloadHashMismatchException(
+    this.relativePath,
+    this.expectedSha256,
+    this.actualSha256,
+  );
+
+  /// POSIX-style path of the GGUF relative to the models root.
+  final String relativePath;
+
+  final String expectedSha256;
+  final String actualSha256;
+
+  @override
+  String toString() =>
+      'IrodoriDownloadHashMismatchException: $relativePath expected SHA-256 '
+      '$expectedSha256 but got $actualSha256';
+}
+
+/// Downloads the single GGUF for a selected [IrodoriModelVariant] from its
+/// pinned source ([IrodoriModelVariant.downloadUrl]): the endo5501 mirror for
+/// the audio.cpp variants, a pinned revision of sakasegawa's repository for
+/// v4.1 Small MF.
 ///
 /// Each variant is one file. The GGUF embeds the model spec, model config and
 /// tokenizer, so no sibling directories are needed — unlike the legacy
@@ -55,16 +79,16 @@ class IrodoriDownloadSizeMismatchException implements Exception {
 class IrodoriModelDownloadService {
   final http.Client _client;
   final Map<IrodoriModelVariant, int> _expectedFileSizes;
+  final Map<IrodoriModelVariant, String> _expectedSha256s;
   bool _cancelled = false;
 
   IrodoriModelDownloadService({
     required http.Client client,
     Map<IrodoriModelVariant, int>? expectedFileSizes,
+    Map<IrodoriModelVariant, String>? expectedSha256s,
   }) : _client = client,
-       _expectedFileSizes = expectedFileSizes ?? defaultExpectedFileSizes;
-
-  static const _baseUrl =
-      'https://huggingface.co/endo5501/audio.cpp/resolve/main';
+       _expectedFileSizes = expectedFileSizes ?? defaultExpectedFileSizes,
+       _expectedSha256s = expectedSha256s ?? defaultExpectedSha256s;
 
   /// Directories written by the pre-GGUF safetensors layout.
   ///
@@ -91,6 +115,13 @@ class IrodoriModelDownloadService {
   static final Map<IrodoriModelVariant, int> defaultExpectedFileSizes = {
     for (final variant in IrodoriModelVariant.values)
       variant: variant.expectedFileSize,
+  };
+
+  /// SHA-256 of each variant's GGUF where one is pinned. A variant absent here
+  /// is checked by its size alone.
+  static final Map<IrodoriModelVariant, String> defaultExpectedSha256s = {
+    for (final variant in IrodoriModelVariant.values)
+      if (variant.sha256 != null) variant: variant.sha256!,
   };
 
   /// Stops the current (or next) [downloadModel] transfer as soon as possible.
@@ -147,7 +178,7 @@ class IrodoriModelDownloadService {
     try {
       await downloadFile(
         _client,
-        '$_baseUrl/${variant.relativeGgufPath}',
+        variant.downloadUrl,
         localPath,
         fileName,
         onProgress,
@@ -172,6 +203,24 @@ class IrodoriModelDownloadService {
         expectedSize ?? -1,
         actualSize,
       );
+    }
+
+    // Checked here, once, and not by isModelDownloaded: hashing 1.9 GB on
+    // every readiness check would stall the settings screen and each start of
+    // playback.
+    final expectedSha256 = _expectedSha256s[variant];
+    if (expectedSha256 != null) {
+      final file = File(localPath);
+      final actualSha256 = (await sha256.bind(file.openRead()).first)
+          .toString();
+      if (actualSha256 != expectedSha256) {
+        file.deleteSync();
+        throw IrodoriDownloadHashMismatchException(
+          variant.relativeGgufPath,
+          expectedSha256,
+          actualSha256,
+        );
+      }
     }
   }
 
