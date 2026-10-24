@@ -245,6 +245,25 @@ void main() {
       expect(outcome, isA<SpeechCppCancelled>());
     });
 
+    test('a failed audio callback is an error, not a cancellation', () {
+      // The callback's exceptional return stops the request, which the
+      // library reports as cancelled; the error must not be lost there.
+      expect(
+        () => synthesisOutcome(
+          _cancelled,
+          samples: samples,
+          sampleRate: 48000,
+          errors: _errors(),
+          callbackError: StateError('out of memory'),
+        ),
+        throwsA(
+          isA<SpeechCppException>()
+              .having((e) => e.call, 'call', 'audio callback')
+              .having((e) => e.detail, 'detail', contains('out of memory')),
+        ),
+      );
+    });
+
     test('a failure throws', () {
       expect(
         () => synthesisOutcome(
