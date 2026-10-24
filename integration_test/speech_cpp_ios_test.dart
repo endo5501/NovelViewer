@@ -83,9 +83,9 @@ void main() {
       final bindings = SpeechCppNativeBindings.open();
       final speechVersion = bindings.version().toDartString();
       // ignore: avoid_print
-      print('speech.cpp $speechVersion');
+      print('speech.cpp $speechVersion at ${Platform.resolvedExecutable}');
       expect(speechVersion, isNotEmpty);
-      if (Platform.environment.containsKey('SIMULATOR_DEVICE_NAME')) {
+      if (isIosSimulatorExecutable(Platform.resolvedExecutable)) {
         // speech.cpp's Metal inference runs on devices only (D9).
         return;
       }

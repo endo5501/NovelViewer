@@ -95,6 +95,8 @@ spec「計測結果を事前に定めた基準で判定する」のとおり、�
 
 speech.cpp の Metal 推論は実機でしか動かないとされている（irodori-tts-iphone の README）。Simulator の Metal の制約に起因する失敗を、計測の結果と混同しないため、Simulator では framework を開いて `speech_version` を読むだけにする。モデルの取得（約 0.9〜1.9 GB）も行わない。
 
+実装中に、この判断を裏づける事象を確認した（2026-10-24、iOS 26.5 Simulator）。最初の実装は環境変数 `SIMULATOR_DEVICE_NAME` で Simulator を判定していたが、アプリのプロセスにはこの変数が渡されない。そのため Simulator でもモデルを読み込み、`speech_model_load` → `ggml_metal_buffer_set_tensor` → Simulator の Metal ドライバ（`MTLSimDevice newBufferWithLength`）の中の `_xpc_api_misuse` でプロセスが止められた。判定は、Simulator がアプリを置く `.../Library/Developer/CoreSimulator/Devices/` を実行ファイルのパス（`Platform.resolvedExecutable`）に含むかどうかで行う。
+
 ## Risks / Trade-offs
 
 - [mac と iPad でメモリの数え方が違う] → 判定は iPad 実機の `os_proc_available_memory`（強制終了までの余裕）で行い、mac の数値は見込みとしてだけ使う。

@@ -75,6 +75,16 @@ enum SpeechCppVariant {
   }
 }
 
+/// Whether the app at [executablePath] runs in the iOS Simulator.
+///
+/// The simulator gives the app process no SIMULATOR_* environment, but it
+/// installs every app under its device's CoreSimulator directory. Measured on
+/// iOS 26.5: loading a model there stops the process inside the simulator's
+/// Metal driver (`_xpc_api_misuse` in `newBufferWithLength`), so the
+/// simulator must be told apart before anything is loaded (design D9).
+bool isIosSimulatorExecutable(String executablePath) =>
+    executablePath.contains('/Library/Developer/CoreSimulator/Devices/');
+
 /// A model file that is not the pinned one.
 class ModelMismatchException implements Exception {
   const ModelMismatchException(this.message);
