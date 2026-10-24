@@ -5,8 +5,8 @@ import 'package:novel_viewer/features/tts/providers/irodori_model_download_provi
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
-/// Irodori-TTS (audio.cpp) settings: model download UI, guidance-scale
-/// sliders and inference-step count. Mirrors the structure of
+/// Irodori-TTS settings: model download UI, guidance-scale sliders and
+/// inference-step count, the last two only for a variant that takes them. Mirrors the structure of
 /// [PiperSettingsSection] (design D9). Owns no state itself — all state
 /// lives in the providers it watches, so the settings dialog shell stays
 /// free of Irodori-specific controllers.
@@ -32,6 +32,26 @@ class IrodoriSettingsSection extends ConsumerWidget {
   }
 }
 
+/// The guidance and step controls, or — for a variant that takes none, such
+/// as v4.1 Small MF — a note saying there is nothing to adjust. The stored
+/// values are left as they are, for a variant that takes them.
+class _IrodoriSynthesisParams extends ConsumerWidget {
+  const _IrodoriSynthesisParams();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final variant = ref.watch(irodoriModelVariantProvider);
+    if (variant.acceptsGuidance) return const _IrodoriGuidanceControls();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Text(
+        AppLocalizations.of(context)!.settings_irodoriVariantNoGuidance,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
+  }
+}
+
 /// v3 / v4 selection.
 ///
 /// Both variants take captions today. The notice below the dropdown is driven
@@ -47,6 +67,7 @@ class _IrodoriVariantSelector extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final variant = ref.watch(irodoriModelVariantProvider);
+    final variants = ref.watch(supportedIrodoriVariantsProvider);
     // Switching mid-transfer is guarded in the notifier too, but stopping it
     // here keeps the user from starting something the app then has to undo.
     final downloading =
@@ -60,23 +81,28 @@ class _IrodoriVariantSelector extends ConsumerWidget {
         children: [
           Text(l10n.settings_irodoriModelVariant),
           const SizedBox(height: 4),
-          DropdownButton<IrodoriModelVariant>(
-            key: const Key('irodori_variant_dropdown'),
-            value: variant,
-            isExpanded: true,
-            items: [
-              for (final v in IrodoriModelVariant.values)
-                DropdownMenuItem(value: v, child: Text(v.label)),
-            ],
-            onChanged: downloading
-                ? null
-                : (value) {
-                    if (value == null) return;
-                    ref
-                        .read(irodoriModelVariantProvider.notifier)
-                        .setValue(value);
-                  },
-          ),
+          // A selector with one entry offers no choice: where the platform
+          // runs a single variant (MF on iOS) its name is shown instead.
+          if (variants.length > 1)
+            DropdownButton<IrodoriModelVariant>(
+              key: const Key('irodori_variant_dropdown'),
+              value: variant,
+              isExpanded: true,
+              items: [
+                for (final v in variants)
+                  DropdownMenuItem(value: v, child: Text(v.label)),
+              ],
+              onChanged: downloading
+                  ? null
+                  : (value) {
+                      if (value == null) return;
+                      ref
+                          .read(irodoriModelVariantProvider.notifier)
+                          .setValue(value);
+                    },
+            )
+          else
+            Text(variant.label),
           if (!variant.supportsCaption) ...[
             const SizedBox(height: 8),
             Text(
@@ -230,8 +256,8 @@ class _IrodoriModelDownloadSection extends ConsumerWidget {
   }
 }
 
-class _IrodoriSynthesisParams extends ConsumerWidget {
-  const _IrodoriSynthesisParams();
+class _IrodoriGuidanceControls extends ConsumerWidget {
+  const _IrodoriGuidanceControls();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -144,7 +144,7 @@
 
 ## 7. 設定画面
 
-- [ ] 7.1 Irodori の設定画面を変える。
+- [x] 7.1 Irodori の設定画面を変える。
   - `acceptsGuidance` が false の variant では、ガイダンスと step 数の UI を出さない。
   - 選択肢が 1 つのときは、ドロップダウンの代わりに名前を表示する。
   - 文言は ja / en / zh で追加する。

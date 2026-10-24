@@ -64,6 +64,7 @@
   "settings_irodoriSpeakerGuidanceScale": "話者ガイダンス強度 (speaker_guidance_scale)",
   "settings_irodoriCaptionGuidanceScale": "キャプションガイダンス強度 (caption_guidance_scale)",
   "settings_irodoriModelVariant": "モデルバージョン",
+  "settings_irodoriVariantNoGuidance": "このモデルはガイダンスと推論ステップ数を自身で扱うため、調整する項目はありません。",
   "settings_irodoriVariantNoCaption": "選択中のモデルはキャプション非対応です。セグメントのメモは合成に反映されません。",
   "settings_irodoriLegacyAssetsFound": "旧形式のモデルデータが残っています",
   "settings_irodoriLegacyAssetsDelete": "削除して容量を解放",

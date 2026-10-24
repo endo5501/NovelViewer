@@ -57,6 +57,7 @@
   "settings_irodoriSpeakerGuidanceScale": "说话人引导强度 (speaker_guidance_scale)",
   "settings_irodoriCaptionGuidanceScale": "字幕引导强度 (caption_guidance_scale)",
   "settings_irodoriModelVariant": "模型版本",
+  "settings_irodoriVariantNoGuidance": "此模型自行处理引导和推理步数，因此没有需要调整的项目。",
   "settings_irodoriVariantNoCaption": "所选模型不支持字幕，因此片段备注不会应用于合成。",
   "settings_irodoriLegacyAssetsFound": "仍存在旧格式的模型数据",
   "settings_irodoriLegacyAssetsDelete": "删除以释放空间",

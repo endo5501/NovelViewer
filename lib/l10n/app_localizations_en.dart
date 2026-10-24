@@ -162,6 +162,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings_irodoriModelVariant => 'Model version';
 
   @override
+  String get settings_irodoriVariantNoGuidance =>
+      'This model handles guidance and the inference steps itself, so there is nothing to adjust.';
+
+  @override
   String get settings_irodoriVariantNoCaption =>
       'The selected model does not support captions, so segment memos are not applied during synthesis.';
 

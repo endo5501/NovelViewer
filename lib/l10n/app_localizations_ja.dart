@@ -161,6 +161,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settings_irodoriModelVariant => 'モデルバージョン';
 
   @override
+  String get settings_irodoriVariantNoGuidance =>
+      'このモデルはガイダンスと推論ステップ数を自身で扱うため、調整する項目はありません。';
+
+  @override
   String get settings_irodoriVariantNoCaption =>
       '選択中のモデルはキャプション非対応です。セグメントのメモは合成に反映されません。';
 

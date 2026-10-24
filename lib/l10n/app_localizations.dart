@@ -388,6 +388,12 @@ abstract class AppLocalizations {
   /// **'モデルバージョン'**
   String get settings_irodoriModelVariant;
 
+  /// No description provided for @settings_irodoriVariantNoGuidance.
+  ///
+  /// In ja, this message translates to:
+  /// **'このモデルはガイダンスと推論ステップ数を自身で扱うため、調整する項目はありません。'**
+  String get settings_irodoriVariantNoGuidance;
+
   /// No description provided for @settings_irodoriVariantNoCaption.
   ///
   /// In ja, this message translates to:
