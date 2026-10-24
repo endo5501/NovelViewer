@@ -179,13 +179,20 @@ void main() {
     test(
       'an unsupported persisted engine resolves without being rewritten',
       () async {
-        await prefs.setString('tts_engine_type', 'irodori');
+        await prefs.setString('tts_engine_type', 'qwen3');
         final container = containerOn(isIOS: true);
 
         expect(container.read(ttsEngineTypeProvider), TtsEngineType.piper);
-        expect(prefs.getString('tts_engine_type'), 'irodori');
+        expect(prefs.getString('tts_engine_type'), 'qwen3');
       },
     );
+
+    test('Irodori-TTS persisted on iOS is used as is', () async {
+      await prefs.setString('tts_engine_type', 'irodori');
+      final container = containerOn(isIOS: true);
+
+      expect(container.read(ttsEngineTypeProvider), TtsEngineType.irodori);
+    });
 
     test('a supported persisted engine is used as is', () async {
       await prefs.setString('tts_engine_type', 'irodori');
