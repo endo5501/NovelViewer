@@ -31,9 +31,9 @@
 
 ## 7. 実機計測
 
-- [ ] 7.1 実機で実行する前に、アプリのデータが消える恐れがあることをユーザーに伝え、`xcrun devicectl device copy from --device <UDID> --domain-type appDataContainer --domain-identifier com.endo5501.novelViewer --source Documents|Library --destination ~/Backups/NovelViewer-iPad-<日付>/…` で `Documents/` と `Library/` を Mac に取り出す。取り出したファイル数とサイズを報告し、ユーザーの了承を得てから 7.2 に進む
-- [ ] 7.2 iPad mini（A17 Pro）で Q4_K → Q8_0 → F16 の順に、`fvm flutter drive --profile --driver=test_driver/integration_test.dart --target=integration_test/speech_cpp_ios_test.dart --dart-define=SPEECH_CPP_VARIANT=<variant> -d <UDID>` を1つずつ実行する。強制終了された場合も、`devicectl device copy from` で `Documents/benchmarks/` のレポートを取り出す。各量子化のレポートが取得できたことを確認する
-- [ ] 7.3 実機を外す前に、アプリを起動して小説の一覧・読書位置・設定が残っていることをユーザーに確認してもらう。消えていた場合は 7.1 のバックアップから戻す手順を案内する
+- [x] 7.1 実機で実行する前に、アプリのデータが消える恐れがあることをユーザーに伝え、`xcrun devicectl device copy from --device <UDID> --domain-type appDataContainer --domain-identifier com.endo5501.novelViewer --source Documents|Library --destination ~/Backups/NovelViewer-iPad-<日付>/…` で `Documents/` と `Library/` を Mac に取り出す。取り出したファイル数とサイズを報告し、ユーザーの了承を得てから 7.2 に進む
+- [x] 7.2 iPad mini（A17 Pro）で Q4_K → Q8_0 → F16 の順に、`fvm flutter drive --profile --driver=test_driver/integration_test.dart --target=integration_test/speech_cpp_ios_test.dart --dart-define=SPEECH_CPP_VARIANT=<variant> -d <UDID>` を1つずつ実行する。強制終了された場合も、`devicectl device copy from` で `Documents/benchmarks/` のレポートを取り出す。各量子化のレポートが取得できたことを確認する
+- [x] 7.3 実機を外す前に、アプリを起動して小説の一覧・読書位置・設定が残っていることをユーザーに確認してもらう。消えていた場合は 7.1 のバックアップから戻す手順を案内する
 
 ## 8. 計測結果の評価と記録
 

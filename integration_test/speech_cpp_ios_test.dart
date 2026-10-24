@@ -23,7 +23,9 @@
 //
 // Result: build/integration_response_data.json on the host, and on the device
 // Documents/benchmarks/speech_cpp_ios_<variant>_<timestamp>.json with a WAV
-// of the reference voice and of each sentence beside it.
+// of the reference voice and of each sentence beside it. flutter drive
+// uninstalls the app when a run ends, so the device copy survives only a run
+// that jetsam killed; back up the app's data first (test_driver/).
 
 import 'dart:async';
 import 'dart:convert';

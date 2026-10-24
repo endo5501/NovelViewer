@@ -11,9 +11,9 @@
 // through the app's own providers) and downloaded there with the app's own
 // downloader when missing.
 //
-// Run with flutter drive. On a device it leaves the app, and with it the
-// downloaded model, installed; the simulator keeps no app data between runs,
-// so there the model is downloaded each time:
+// Run with flutter drive. Neither a device nor the simulator keeps the app's
+// data after a run (see test_driver/), so the model is downloaded each time,
+// and on a device the reader's own data goes too:
 //   simulator:
 //     fvm flutter drive --driver=test_driver/integration_test.dart \
 //       --target=integration_test/piper_ios_synthesis_test.dart -d <simulator>

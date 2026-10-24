@@ -126,7 +126,7 @@ fvm flutter drive --profile --driver=test_driver/integration_test.dart \
 - 実機で実行するには、Mac に Rosetta（`sudo softwareupdate --install-rosetta --agree-to-license`）と、ターミナルへのローカルネットワークの許可（システム設定 > プライバシーとセキュリティ > ローカルネットワーク）が必要です。Flutter が USB 接続に使う `iproxy` が Intel 用のバイナリのためです。
 - 実機では `flutter test` は使えません。debug ビルド（JIT）は、iPadOS 26 ではデバッガ無しだと起動直後に終了します。
 - 計測結果はホストの `build/integration_response_data.json` と、端末の `Documents/benchmarks/piper_ios_<日時>.json` に出力されます。
-- Simulator では実行後にアプリのデータが残らないので、毎回モデルを取得し直します。
+- **実機でも Simulator でも、`flutter drive` は実行が終わるとアプリを削除します。** アプリのデータ（取得したモデル、小説、設定）も一緒に消えるので、実機で実行する前に、次節の手順でアプリのデータを Mac にバックアップしてください。モデルは毎回取得し直しになります。
 
 ### 6. speech.cpp による Irodori-TTS の実機計測（アプリ本体は未使用）
 
@@ -161,8 +161,9 @@ fvm flutter drive --profile --driver=test_driver/integration_test.dart \
 ```
 
 - 実機の前提（Rosetta、ローカルネットワークの許可、profile ビルド）は Piper の合成テストと同じです。
-- 結果はホストの `build/integration_response_data.json` と、端末の `Documents/benchmarks/speech_cpp_ios_<量子化>_<日時>.json` に出力されます。参照音声と各文の音声も、同じ場所に WAV で保存されます。強制終了された場合も、端末のレポートには最後に終わった段階までが残ります。
-- モデル（Q4_K 約 0.9GB、Q8_0 約 1.2GB、F16 約 1.9GB）は `Documents/models/speech-cpp/` に置かれ、Files アプリから見えます。計測が終わって不要になったら削除してください。
+- 結果はホストの `build/integration_response_data.json` に出力されます。実行ごとに上書きされるので、量子化ごとに別名でコピーしてください。端末の `Documents/benchmarks/` にもレポートと、参照音声と各文の WAV が保存されます。ただし、実行が終わるとアプリと一緒に消えます。端末のファイルが残るのは、強制終了されてアプリが削除されなかった場合だけです。
+- モデル（Q4_K 約 0.9GB、Q8_0 約 1.2GB、F16 約 1.9GB）は、実行のたびに `Documents/models/speech-cpp/` へ取得されます。
+- 実行が終わったらアプリが消えているので、`scripts/build_app.sh ios` で作った release ビルドを `xcrun devicectl device install app` でインストールし直します。そのうえで、アプリを起動する前に、バックアップを `xcrun devicectl device copy to`（`--domain-type appDataContainer`）で `Documents/NovelViewer`・`Library/Application Support`・`Library/Preferences` に書き戻します。
 - Simulator では framework を開いてバージョンを読むだけで、モデルの取得と合成は行いません。Simulator の Metal では、モデルの読み込み中にプロセスが止められるためです。
 
 ## ライブラリの場所
