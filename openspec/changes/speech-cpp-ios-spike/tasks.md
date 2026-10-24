@@ -9,8 +9,8 @@
 
 ## 3. iOS ビルドスクリプト
 
-- [ ] 3.1 `scripts/build_speech_ios.sh` を作る（design D2〜D4）。`build/speech-ios/<sdk>` で `iphoneos` / `iphonesimulator` の arm64 向けに `speech` ターゲットだけを configure・ビルドし（`CMAKE_SYSTEM_NAME=iOS`、`CMAKE_OSX_DEPLOYMENT_TARGET=15.0`、`GGML_METAL=ON`、`GGML_METAL_EMBED_LIBRARY=ON`、`GGML_NATIVE=OFF`、`GGML_OPENMP=OFF`、`GGML_BLAS=OFF`）、`speech_cpp.framework` に包んで install name を書き換え、一時ディレクトリで作った xcframework を成功時だけ `ios/Frameworks/speech_cpp.xcframework` と置き換える。実行後に 2.1 の検証スクリプトが全項目合格し、`git -C third_party/speech.cpp status --porcelain` が空であることを確認する
-- [ ] 3.2 xcframework がある状態でスクリプトを再実行し、古いスライスが残らず検証スクリプトが再び全項目合格することを確認する。configure が失敗するようにした状態（例：存在しない SDK 名を渡す）で実行し、非ゼロで終了して既存の xcframework が変わらないことを確認する。`git check-ignore ios/Frameworks/speech_cpp.xcframework` で Git 管理外であることを確認してコミットする
+- [x] 3.1 `scripts/build_speech_ios.sh` を作る（design D2〜D4）。`build/speech-ios/<sdk>` で `iphoneos` / `iphonesimulator` の arm64 向けに `speech` ターゲットだけを configure・ビルドし（`CMAKE_SYSTEM_NAME=iOS`、`CMAKE_OSX_DEPLOYMENT_TARGET=15.0`、`GGML_METAL=ON`、`GGML_METAL_EMBED_LIBRARY=ON`、`GGML_NATIVE=OFF`、`GGML_OPENMP=OFF`、`GGML_BLAS=OFF`）、`speech_cpp.framework` に包んで install name を書き換え、一時ディレクトリで作った xcframework を成功時だけ `ios/Frameworks/speech_cpp.xcframework` と置き換える。実行後に 2.1 の検証スクリプトが全項目合格し、`git -C third_party/speech.cpp status --porcelain` が空であることを確認する
+- [x] 3.2 xcframework がある状態でスクリプトを再実行し、古いスライスが残らず検証スクリプトが再び全項目合格することを確認する。configure が失敗するようにした状態（例：存在しない SDK 名を渡す）で実行し、非ゼロで終了して既存の xcframework が変わらないことを確認する。`git check-ignore ios/Frameworks/speech_cpp.xcframework` で Git 管理外であることを確認してコミットする
 - [ ] 3.3 xcframework がある状態で `fvm flutter build ios --release` を実行し、`Runner.app/Frameworks/speech_cpp.framework/speech_cpp` が存在して `codesign --verify` が成功すること、`git status` で `ios/` 配下の tracked ファイルが変わっていないことを確認する
 
 ## 4. Dart FFI バインディング（テストファースト）
