@@ -59,6 +59,23 @@ void main() {
       expect(files, ['narrator.mp3', 'sample_a.wav', 'voice_b.wav']);
     });
 
+    test('lists only the extensions it is given', () async {
+      final voicesDir = Directory(service.voicesDirPath);
+      voicesDir.createSync();
+      File(p.join(voicesDir.path, 'sample_a.wav')).writeAsStringSync('');
+      File(p.join(voicesDir.path, 'narrator.mp3')).writeAsStringSync('');
+      File(p.join(voicesDir.path, 'voice_b.WAV')).writeAsStringSync('');
+
+      final files = await service.listVoiceFiles(extensions: {'.wav'});
+
+      expect(files, ['sample_a.wav', 'voice_b.WAV']);
+      expect(
+        File(p.join(voicesDir.path, 'narrator.mp3')).existsSync(),
+        isTrue,
+        reason: 'files left out of the list stay in the folder',
+      );
+    });
+
     test('returns empty list when voices directory is empty', () async {
       Directory(service.voicesDirPath).createSync();
 
