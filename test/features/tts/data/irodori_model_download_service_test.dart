@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -229,6 +230,120 @@ void main() {
         IrodoriModelVariant.v3: 1463787680,
         IrodoriModelVariant.v4: 1762161536,
         IrodoriModelVariant.v41Mf: 1920321792,
+      });
+    });
+  });
+
+  group('downloadModel - v4.1 MF pinned by revision and SHA-256', () {
+    String sha256Of(List<int> bytes) => sha256.convert(bytes).toString();
+
+    test('fetches the file at the pinned sakasegawa revision', () async {
+      final urls = <String>[];
+      final service = IrodoriModelDownloadService(
+        client: okClient(requestedUrls: urls),
+        expectedFileSizes: fakeManifest(),
+        expectedSha256s: {
+          IrodoriModelVariant.v41Mf: sha256Of(
+            payloadFor(IrodoriModelVariant.v41Mf),
+          ),
+        },
+      );
+
+      await service.downloadModel(
+        p.join(tempDir.path, 'models'),
+        IrodoriModelVariant.v41Mf,
+      );
+
+      expect(urls.single, IrodoriModelVariant.v41Mf.downloadUrl);
+      expect(
+        urls.single,
+        contains(
+          'sakasegawa/Irodori-TTS-v4.1-Small-MF-GGUF/resolve/'
+          '9db7da1bec3d1069ef8e29732e0497be60c7b047/',
+        ),
+      );
+    });
+
+    test('a matching hash completes and reads as downloaded', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final service = IrodoriModelDownloadService(
+        client: okClient(),
+        expectedFileSizes: fakeManifest(),
+        expectedSha256s: {
+          IrodoriModelVariant.v41Mf: sha256Of(
+            payloadFor(IrodoriModelVariant.v41Mf),
+          ),
+        },
+      );
+
+      await service.downloadModel(modelsDir, IrodoriModelVariant.v41Mf);
+
+      expect(
+        service.isModelDownloaded(modelsDir, IrodoriModelVariant.v41Mf),
+        isTrue,
+      );
+    });
+
+    test('a hash mismatch deletes the file and throws', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final service = IrodoriModelDownloadService(
+        client: okClient(),
+        expectedFileSizes: fakeManifest(),
+        expectedSha256s: {IrodoriModelVariant.v41Mf: '0' * 64},
+      );
+
+      await expectLater(
+        service.downloadModel(modelsDir, IrodoriModelVariant.v41Mf),
+        throwsA(isA<IrodoriDownloadHashMismatchException>()),
+      );
+      expect(
+        File(ggufPath(modelsDir, IrodoriModelVariant.v41Mf)).existsSync(),
+        isFalse,
+      );
+      expect(
+        service.isModelDownloaded(modelsDir, IrodoriModelVariant.v41Mf),
+        isFalse,
+      );
+    });
+
+    test('a size mismatch is still refused before the hash', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final service = IrodoriModelDownloadService(
+        client: okClient(),
+        expectedFileSizes: {...fakeManifest(), IrodoriModelVariant.v41Mf: 1},
+        expectedSha256s: {
+          IrodoriModelVariant.v41Mf: sha256Of(
+            payloadFor(IrodoriModelVariant.v41Mf),
+          ),
+        },
+      );
+
+      await expectLater(
+        service.downloadModel(modelsDir, IrodoriModelVariant.v41Mf),
+        throwsA(isA<IrodoriDownloadSizeMismatchException>()),
+      );
+    });
+
+    test('variants without a pinned hash are checked by size alone', () async {
+      final modelsDir = p.join(tempDir.path, 'models');
+      final service = IrodoriModelDownloadService(
+        client: okClient(),
+        expectedFileSizes: fakeManifest(),
+        expectedSha256s: const {},
+      );
+
+      await service.downloadModel(modelsDir, IrodoriModelVariant.v4);
+
+      expect(
+        service.isModelDownloaded(modelsDir, IrodoriModelVariant.v4),
+        isTrue,
+      );
+    });
+
+    test('pins the real hashes by default', () {
+      expect(IrodoriModelDownloadService.defaultExpectedSha256s, {
+        IrodoriModelVariant.v41Mf:
+            'e237dc3eefe469b8bba87872beacf12fb7fe00dbdf85767edca8ec04ab910d13',
       });
     });
   });
