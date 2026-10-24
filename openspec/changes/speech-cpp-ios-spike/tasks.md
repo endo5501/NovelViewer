@@ -1,11 +1,11 @@
 ## 1. 作業ブランチと submodule
 
-- [ ] 1.1 `main` から作業ブランチ `feat/speech-cpp-ios-spike` を作る。`git branch --show-current` で確認する
-- [ ] 1.2 `third_party/speech.cpp` に `https://github.com/nyosegawa/speech.cpp` を submodule として追加し、`d074e1b`（0.8.11）に固定する。`git submodule update --init --recursive` の後、`git -C third_party/speech.cpp rev-parse HEAD` が `d074e1b…`、`git -C third_party/speech.cpp/ggml rev-parse HEAD` が `cbdeccf…` であることを確認してコミットする
+- [x] 1.1 `main` から作業ブランチ `feat/speech-cpp-ios-spike` を作る。`git branch --show-current` で確認する
+- [x] 1.2 `third_party/speech.cpp` に `https://github.com/nyosegawa/speech.cpp` を submodule として追加し、`d074e1b`（0.8.11）に固定する。`git submodule update --init --recursive` の後、`git -C third_party/speech.cpp rev-parse HEAD` が `d074e1b…`、`git -C third_party/speech.cpp/ggml rev-parse HEAD` が `cbdeccf…` であることを確認してコミットする
 
 ## 2. 検証スクリプト（テストファースト）
 
-- [ ] 2.1 `scripts/test/verify_speech_ios.sh` を作る。spec「iOS 成果物の検証スクリプト」の項目（xcframework の存在、`ios-arm64` / `ios-arm64-simulator` の2スライスだけであること、arm64 の動的ライブラリ、Info.plist の `CFBundleExecutable` / `FMWK` / `MinimumOSVersion` とバイナリの minos の一致、minos が Runner の `IPHONEOS_DEPLOYMENT_TARGET` 以下、`/System/Library/` と `/usr/lib/` 以外への依存が無いこと、install name `@rpath/speech_cpp.framework/speech_cpp`、`speech_` 以外の公開シンボルが無いこと、design D5 の C API 関数がすべて公開されていること、`kernel void` の埋め込み）を項目別に報告し、不合格があれば非ゼロで終了する。xcframework が無い状態で実行し、ビルドスクリプトの実行を促して非ゼロで終了することを確認してコミットする
+- [x] 2.1 `scripts/test/verify_speech_ios.sh` を作る。spec「iOS 成果物の検証スクリプト」の項目（xcframework の存在、`ios-arm64` / `ios-arm64-simulator` の2スライスだけであること、arm64 の動的ライブラリ、Info.plist の `CFBundleExecutable` / `FMWK` / `MinimumOSVersion` とバイナリの minos の一致、minos が Runner の `IPHONEOS_DEPLOYMENT_TARGET` 以下、`/System/Library/` と `/usr/lib/` 以外への依存が無いこと、install name `@rpath/speech_cpp.framework/speech_cpp`、`speech_` 以外の公開シンボルが無いこと、design D5 の C API 関数がすべて公開されていること、`kernel void` の埋め込み）を項目別に報告し、不合格があれば非ゼロで終了する。xcframework が無い状態で実行し、ビルドスクリプトの実行を促して非ゼロで終了することを確認してコミットする
 
 ## 3. iOS ビルドスクリプト
 
