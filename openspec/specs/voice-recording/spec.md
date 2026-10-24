@@ -53,6 +53,8 @@ The system SHALL display real-time feedback during recording, including the elap
 ### Requirement: Recording dialog UI
 The system SHALL present the recording functionality in a dedicated dialog (`VoiceRecordingDialog`) opened from the voice reference selector in the settings screen. The dialog SHALL display a record button, and during recording, a stop button with elapsed time and audio level feedback.
 
+The button that opens the dialog SHALL be presented only where the platform supports voice recording (`platform-capabilities`). On iOS it SHALL NOT be presented, so no path reaches the microphone there.
+
 #### Scenario: Open recording dialog
 - **WHEN** the user presses the recording button in the voice reference selector section of the settings dialog
 - **THEN** the system opens the `VoiceRecordingDialog`
@@ -66,6 +68,10 @@ The system SHALL present the recording functionality in a dedicated dialog (`Voi
 - **WHEN** recording is in progress
 - **THEN** the dialog displays a stop button, elapsed time, and audio level indicator
 - **AND** the record button is replaced by the stop button
+
+#### Scenario: No recording button on iOS
+- **WHEN** the voice reference section is shown on iOS
+- **THEN** no button that opens the recording dialog is presented
 
 ### Requirement: Save recorded file with user-specified name
 After stopping a recording, the system SHALL prompt the user to enter a file name for the recorded audio. The system SHALL save the file to the `voices/` directory with a `.wav` extension. The system SHALL validate that no file with the same name already exists in the `voices/` directory.
