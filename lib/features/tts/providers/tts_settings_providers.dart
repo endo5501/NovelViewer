@@ -19,17 +19,29 @@ final voiceReferenceServiceProvider = Provider<VoiceReferenceService?>((ref) {
   return VoiceReferenceService(libraryPath: libraryPath);
 });
 
-/// Asks the reader for reference audio files to add, offering the
-/// [extensions] (lower case, with the dot) the engine in use reads. Answers
-/// the picked paths, or null when the picker was closed without a pick.
-typedef VoiceFilePicker =
-    Future<List<String>?> Function({required Set<String> extensions});
+/// Asks the reader for reference audio files to add.
+abstract interface class VoiceFilePicker {
+  /// Offers the [extensions] (lower case, with the dot) the engine in use
+  /// reads, and answers the picked paths, or null when the picker was closed
+  /// without a pick.
+  Future<List<String>?> pick({required Set<String> extensions});
 
-/// The system file picker, overridable in tests. On iOS the picked files
-/// arrive as copies in the app's temporary folder, which are then copied into
-/// the voices folder like any other added file.
+  /// Frees what [pick] answered once the files are copied. On iOS the picked
+  /// files arrive as copies in the app's temporary folder, which would
+  /// otherwise stay there.
+  Future<void> release();
+}
+
+/// The system file picker, overridable in tests.
 final voiceFilePickerProvider = Provider<VoiceFilePicker>(
-  (ref) => ({required extensions}) async {
+  (ref) => const _SystemVoiceFilePicker(),
+);
+
+class _SystemVoiceFilePicker implements VoiceFilePicker {
+  const _SystemVoiceFilePicker();
+
+  @override
+  Future<List<String>?> pick({required Set<String> extensions}) async {
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: [for (final e in extensions) e.substring(1)],
@@ -40,8 +52,17 @@ final voiceFilePickerProvider = Provider<VoiceFilePicker>(
       for (final file in result.files)
         if (file.path != null) file.path!,
     ];
-  },
-);
+  }
+
+  @override
+  Future<void> release() async {
+    try {
+      await FilePicker.clearTemporaryFiles();
+    } on UnimplementedError {
+      // The desktop pickers answer the files in place and keep no copies.
+    }
+  }
+}
 
 /// The reference-voice extensions the engine in use reads, in lower case, by
 /// the rule synthesis follows (`TtsEngineConfig.referenceExtensionsFor`), for

@@ -40,11 +40,16 @@ class _VoiceReferenceSectionState extends ConsumerState<VoiceReferenceSection> {
       _addVoiceFiles([for (final file in details.files) file.path]);
 
   Future<void> _pickVoiceFiles() async {
-    final paths = await ref.read(voiceFilePickerProvider)(
+    final picker = ref.read(voiceFilePickerProvider);
+    final paths = await picker.pick(
       extensions: ref.read(acceptedReferenceExtensionsProvider),
     );
     if (paths == null || paths.isEmpty) return;
-    await _addVoiceFiles(paths);
+    try {
+      await _addVoiceFiles(paths);
+    } finally {
+      await picker.release();
+    }
   }
 
   /// Copies [paths] into the voices folder, refreshes the list, and says why
