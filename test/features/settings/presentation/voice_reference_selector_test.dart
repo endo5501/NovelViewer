@@ -15,6 +15,25 @@ import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dar
 
 import '../../../test_utils/flutter_secure_storage_mock.dart';
 
+/// Answers each pick with [paths] and records when the picked copies are
+/// released.
+class _FakePicker implements VoiceFilePicker {
+  _FakePicker(this.paths, {this.onPick});
+
+  final List<String>? paths;
+  final void Function(Set<String> extensions)? onPick;
+  int releases = 0;
+
+  @override
+  Future<List<String>?> pick({required Set<String> extensions}) async {
+    onPick?.call(extensions);
+    return paths;
+  }
+
+  @override
+  Future<void> release() async => releases++;
+}
+
 void main() {
   late SharedPreferences prefs;
   late Directory tempDir;
@@ -234,10 +253,9 @@ void main() {
 
       await openOnIOS(
         tester,
-        pickVoiceFiles: ({required extensions}) async {
-          offered = extensions;
-          return [source.path];
-        },
+        pickVoiceFiles: _FakePicker([
+          source.path,
+        ], onPick: (extensions) => offered = extensions),
       );
       await scrollToVoiceReferenceSelector(tester);
       await tester.runAsync(() async {
@@ -265,10 +283,7 @@ void main() {
       final source = File(p.join(tempDir.path, 'same.wav'))
         ..writeAsStringSync('replacement');
 
-      await openOnIOS(
-        tester,
-        pickVoiceFiles: ({required extensions}) async => [source.path],
-      );
+      await openOnIOS(tester, pickVoiceFiles: _FakePicker([source.path]));
       await scrollToVoiceReferenceSelector(tester);
       await tester.runAsync(() async {
         await tester.tap(find.byKey(const Key('voice_pick_files')));
@@ -280,11 +295,28 @@ void main() {
       expect(find.byType(SnackBar), findsOneWidget);
     });
 
-    testWidgets('cancelling the picker changes nothing', (tester) async {
-      await openOnIOS(
-        tester,
-        pickVoiceFiles: ({required extensions}) async => null,
+    testWidgets('the picked copies are released once added', (tester) async {
+      final source = File(p.join(tempDir.path, 'picked.wav'))
+        ..writeAsStringSync('');
+      final picker = _FakePicker([source.path]);
+
+      await openOnIOS(tester, pickVoiceFiles: picker);
+      await scrollToVoiceReferenceSelector(tester);
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const Key('voice_pick_files')));
+        await Future.delayed(const Duration(milliseconds: 300));
+      });
+      await tester.pumpAndSettle();
+
+      expect(
+        File(p.join(tempDir.path, 'voices', 'picked.wav')).existsSync(),
+        isTrue,
       );
+      expect(picker.releases, 1);
+    });
+
+    testWidgets('cancelling the picker changes nothing', (tester) async {
+      await openOnIOS(tester, pickVoiceFiles: _FakePicker(null));
       await scrollToVoiceReferenceSelector(tester);
       await tester.runAsync(() async {
         await tester.tap(find.byKey(const Key('voice_pick_files')));
