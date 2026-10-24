@@ -15,7 +15,7 @@
 
 ## 4. Dart FFI バインディング（テストファースト）
 
-- [ ] 4.1 `test/features/tts/data/speech_cpp_native_bindings_test.dart` を作る。`piper_native_bindings_test.dart` に倣い、プラットフォーム名を受け取る純粋関数に対して、iOS のライブラリ名が `speech_cpp.framework/speech_cpp` であること、それ以外のプラットフォームは未対応のエラーになること、存在しない framework を開くと開こうとした名前と `scripts/build_speech_ios.sh` を含むエラーになることをテストする。あわせて、オプション名の解決（既知の名前は解決関数が返した識別子で設定され、未知の名前はその名前を含むエラーになり設定関数が呼ばれない）と、失敗の状態を状態名と詳細を含むエラーにし、`cancelled` を中断の結果として区別することを、ネイティブ関数を差し替えられる形でテストする。`fvm flutter test test/features/tts/data/speech_cpp_native_bindings_test.dart` で失敗を確認してコミットする
+- [x] 4.1 `test/features/tts/data/speech_cpp_native_bindings_test.dart` を作る。`piper_native_bindings_test.dart` に倣い、プラットフォーム名を受け取る純粋関数に対して、iOS のライブラリ名が `speech_cpp.framework/speech_cpp` であること、それ以外のプラットフォームは未対応のエラーになること、存在しない framework を開くと開こうとした名前と `scripts/build_speech_ios.sh` を含むエラーになることをテストする。あわせて、オプション名の解決（既知の名前は解決関数が返した識別子で設定され、未知の名前はその名前を含むエラーになり設定関数が呼ばれない）と、失敗の状態を状態名と詳細を含むエラーにし、`cancelled` を中断の結果として区別することを、ネイティブ関数を差し替えられる形でテストする。`fvm flutter test test/features/tts/data/speech_cpp_native_bindings_test.dart` で失敗を確認してコミットする
 - [ ] 4.2 `lib/features/tts/data/speech_cpp_native_bindings.dart` を design D5 のとおりに実装する（対象の C API、名前によるオプション指定、isolate ローカルのコールバックによるサンプルの連結、状態名と詳細を含むエラー、中断の区別）。4.1 のテストがすべて通ることを確認する。`speech.h` の宣言と FFI の型が一致することを、関数ごとにヘッダと読み合わせて確認する
 
 ## 5. 計測テスト
