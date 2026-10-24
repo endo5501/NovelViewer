@@ -32,6 +32,9 @@ void main() {
         test('settings_irodoriNumInferenceSteps is non-empty', () {
           expect(l10n.settings_irodoriNumInferenceSteps, isNotEmpty);
         });
+        test('settings_irodoriVariantNoGuidance is non-empty', () {
+          expect(l10n.settings_irodoriVariantNoGuidance, isNotEmpty);
+        });
       },
     );
   }
