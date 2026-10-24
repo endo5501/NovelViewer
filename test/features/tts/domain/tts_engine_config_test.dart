@@ -7,6 +7,8 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
+import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dart';
 
 void main() {
   group('Qwen3EngineConfig', () {
@@ -378,6 +380,67 @@ void main() {
       expect(irodori.speakerGuidanceScale, 4.5);
       expect(irodori.captionGuidanceScale, 2.5);
       expect(irodori.numInferenceSteps, 20);
+    });
+
+    group('a stored reference voice the engine cannot read', () {
+      ProviderContainer containerOn({required bool isIOS}) {
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            libraryPathProvider.overrideWithValue('/home/user/NovelViewer'),
+            platformCapabilitiesProvider.overrideWithValue(
+              PlatformCapabilities.forPlatform(isIOS: isIOS, isMacOS: false),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        return container;
+      }
+
+      IrodoriEngineConfig resolve(ProviderContainer container) =>
+          TtsEngineConfig.resolveFromReader(
+                container.read,
+                TtsEngineType.irodori,
+              )
+              as IrodoriEngineConfig;
+
+      test('an MP3 selection on iOS is treated as none', () async {
+        await prefs.setString('tts_ref_wav_path', 'narrator.mp3');
+        final config = resolve(containerOn(isIOS: true));
+
+        expect(config.refWavPath, isNull);
+        expect(prefs.getString('tts_ref_wav_path'), 'narrator.mp3');
+      });
+
+      test('a WAVE selection on iOS is used', () async {
+        await prefs.setString('tts_ref_wav_path', 'narrator.wav');
+        final config = resolve(containerOn(isIOS: true));
+
+        expect(
+          config.refWavPath,
+          p.join('/home/user', 'voices', 'narrator.wav'),
+        );
+      });
+
+      test('the same MP3 selection is used on the desktop', () async {
+        await prefs.setString('tts_ref_wav_path', 'narrator.mp3');
+        final config = resolve(containerOn(isIOS: false));
+
+        expect(
+          config.refWavPath,
+          p.join('/home/user', 'voices', 'narrator.mp3'),
+        );
+      });
+
+      test('each engine names the reference extensions it accepts', () async {
+        expect(resolve(containerOn(isIOS: true)).acceptedReferenceExtensions, {
+          '.wav',
+        });
+        expect(resolve(containerOn(isIOS: false)).acceptedReferenceExtensions, {
+          '.wav',
+          '.mp3',
+        });
+      });
     });
 
     test('Irodori refWavPath is null when no global ref wav is set', () async {
