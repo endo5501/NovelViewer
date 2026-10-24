@@ -167,7 +167,7 @@
 
 ## 8. ドキュメント
 
-- [ ] 8.1 `docs/ipad.md` を書き直す。
+- [x] 8.1 `docs/ipad.md` を書き直す。
   - 「提供する機能・しない機能」と「読み上げ」の節: Irodori（MF F16）が使えること、参照音声は Files アプリかファイル選択で WAV を追加すること、録音できないこと、再生のたびに読み込みを待つこと。
   - 第 5 節と第 6 節: speech.cpp の framework は、Irodori を含むアプリのビルドでは `ios/Frameworks/` に置いたままにする。ビルド前に取り除く手順は削除する。
   - `flutter drive` はアプリを消し、`devicectl device install app` は上書きでデータを残すこと。
