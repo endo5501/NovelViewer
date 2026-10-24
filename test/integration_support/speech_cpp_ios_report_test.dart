@@ -234,6 +234,29 @@ void main() {
     });
   });
 
+  group('isIosSimulatorExecutable', () {
+    test('an app installed in a CoreSimulator device is the simulator', () {
+      expect(
+        isIosSimulatorExecutable(
+          '/Users/someone/Library/Developer/CoreSimulator/Devices/'
+          '6D341082-C5A1-4618-B77A-E99096A16795/data/Containers/Bundle/'
+          'Application/748B7E2C-AABB-4ACD-B34A-48CBBC550B14/Runner.app/Runner',
+        ),
+        isTrue,
+      );
+    });
+
+    test('an app installed on a device is not', () {
+      expect(
+        isIosSimulatorExecutable(
+          '/private/var/containers/Bundle/Application/'
+          '748B7E2C-AABB-4ACD-B34A-48CBBC550B14/Runner.app/Runner',
+        ),
+        isFalse,
+      );
+    });
+  });
+
   group('SpeechCppIosReport', () {
     test('names the file by quantization and start time', () {
       expect(_report().fileName, 'speech_cpp_ios_q8_0_20261025_090507.json');
