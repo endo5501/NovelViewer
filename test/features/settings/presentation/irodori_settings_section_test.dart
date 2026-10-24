@@ -16,6 +16,8 @@ import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/providers/irodori_model_download_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
+import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dart';
 
 import '../../../test_utils/flutter_secure_storage_mock.dart';
 
@@ -45,10 +47,13 @@ void main() {
     http.Client? httpClient,
     Map<IrodoriModelVariant, int>? expectedFileSizes,
     IrodoriLegacyAssets? legacyAssets,
+    PlatformCapabilities? capabilities,
   }) {
     final libraryPath = p.join(tempDir.path, 'NovelViewer');
     return ProviderScope(
       overrides: [
+        if (capabilities != null)
+          platformCapabilitiesProvider.overrideWithValue(capabilities),
         sharedPreferencesProvider.overrideWithValue(prefs),
         libraryPathProvider.overrideWithValue(libraryPath),
         if (httpClient != null)
@@ -83,6 +88,7 @@ void main() {
     http.Client? httpClient,
     Map<IrodoriModelVariant, int>? expectedFileSizes,
     IrodoriLegacyAssets? legacyAssets,
+    PlatformCapabilities? capabilities,
   }) async {
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1.0;
@@ -96,6 +102,7 @@ void main() {
           httpClient: httpClient,
           expectedFileSizes: expectedFileSizes,
           legacyAssets: legacyAssets,
+          capabilities: capabilities,
         ),
       );
     });
@@ -117,12 +124,14 @@ void main() {
     http.Client? httpClient,
     Map<IrodoriModelVariant, int>? expectedFileSizes,
     IrodoriLegacyAssets? legacyAssets,
+    PlatformCapabilities? capabilities,
   }) async {
     final l10n = await openTtsTab(
       tester,
       httpClient: httpClient,
       expectedFileSizes: expectedFileSizes,
       legacyAssets: legacyAssets,
+      capabilities: capabilities,
     );
     await tester.tap(find.text('Irodori-TTS'));
     await tester.pumpAndSettle();
@@ -220,6 +229,45 @@ void main() {
       final l10n = await selectIrodoriEngine(tester);
 
       expect(find.text(l10n.settings_modelDataDownload), findsOneWidget);
+    });
+
+    testWidgets('iOS offers to download the v4.1 MF model', (tester) async {
+      final l10n = await selectIrodoriEngine(
+        tester,
+        capabilities: const PlatformCapabilities.forPlatform(
+          isIOS: true,
+          isMacOS: false,
+        ),
+      );
+
+      expect(find.text(l10n.settings_modelDataDownload), findsOneWidget);
+      expect(find.text(IrodoriModelVariant.v41Mf.label), findsOneWidget);
+    });
+
+    testWidgets('iOS reports the v4.1 MF model once it is present', (
+      tester,
+    ) async {
+      const variant = IrodoriModelVariant.v41Mf;
+      final variantDir = Directory(
+        p.join(tempDir.path, 'models', variant.modelDirName),
+      )..createSync(recursive: true);
+      File(
+        p.join(variantDir.path, variant.ggufFileName),
+      ).writeAsBytesSync(List.filled(5, 0));
+
+      final l10n = await selectIrodoriEngine(
+        tester,
+        expectedFileSizes: {for (final v in IrodoriModelVariant.values) v: 5},
+        capabilities: const PlatformCapabilities.forPlatform(
+          isIOS: true,
+          isMacOS: false,
+        ),
+      );
+
+      expect(
+        find.textContaining(l10n.settings_irodoriDownloaded),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows completed status when models already exist', (
