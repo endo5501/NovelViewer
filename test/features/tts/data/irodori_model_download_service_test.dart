@@ -340,6 +340,58 @@ void main() {
       );
     });
 
+    test('the file takes its final name only once its hash matched', () async {
+      // A check cut short (the app killed while hashing 1.9 GB) must not
+      // leave a file the size check alone would take as downloaded.
+      final modelsDir = p.join(tempDir.path, 'models');
+      final finalPath = ggufPath(modelsDir, IrodoriModelVariant.v41Mf);
+      bool? finalExistedWhileHashing;
+      final service = IrodoriModelDownloadService(
+        client: okClient(),
+        expectedFileSizes: fakeManifest(),
+        expectedSha256s: {
+          IrodoriModelVariant.v41Mf: sha256Of(
+            payloadFor(IrodoriModelVariant.v41Mf),
+          ),
+        },
+        hashFile: (path) async {
+          finalExistedWhileHashing = File(finalPath).existsSync();
+          return sha256Of(File(path).readAsBytesSync());
+        },
+      );
+
+      await service.downloadModel(modelsDir, IrodoriModelVariant.v41Mf);
+
+      expect(finalExistedWhileHashing, isFalse);
+      expect(File(finalPath).existsSync(), isTrue);
+    });
+
+    test(
+      'a file left unverified by an interrupted check is fetched again',
+      () async {
+        final modelsDir = p.join(tempDir.path, 'models');
+        const variant = IrodoriModelVariant.v41Mf;
+        final variantDir = Directory(p.join(modelsDir, variant.modelDirName))
+          ..createSync(recursive: true);
+        final stale = File(
+          p.join(variantDir.path, '${variant.ggufFileName}.unverified'),
+        )..writeAsBytesSync(payloadFor(variant));
+        final urls = <String>[];
+        final service = IrodoriModelDownloadService(
+          client: okClient(requestedUrls: urls),
+          expectedFileSizes: fakeManifest(),
+          expectedSha256s: {variant: sha256Of(payloadFor(variant))},
+        );
+
+        expect(service.isModelDownloaded(modelsDir, variant), isFalse);
+        await service.downloadModel(modelsDir, variant);
+
+        expect(urls, hasLength(1));
+        expect(stale.existsSync(), isFalse);
+        expect(service.isModelDownloaded(modelsDir, variant), isTrue);
+      },
+    );
+
     test('pins the real hashes by default', () {
       expect(IrodoriModelDownloadService.defaultExpectedSha256s, {
         IrodoriModelVariant.v41Mf:
