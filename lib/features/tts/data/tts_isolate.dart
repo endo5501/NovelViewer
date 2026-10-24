@@ -9,8 +9,10 @@ import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 import 'package:path/path.dart' as p;
 
 import 'audiocpp_native_bindings.dart';
+import 'irodori_synthesis_engine.dart';
 import 'irodori_tts_engine.dart';
 import 'piper_tts_engine.dart';
+import 'speech_cpp_irodori_engine.dart';
 import 'tts_engine.dart';
 import 'tts_engine_type.dart';
 import 'tts_language.dart';
@@ -579,7 +581,7 @@ class TtsIsolate {
 
     TtsEngine? qwen3Engine;
     PiperTtsEngine? piperEngine;
-    IrodoriTtsEngine? irodoriEngine;
+    IrodoriSynthesisEngine? irodoriEngine;
     TtsEngineType? activeEngineType;
     String? embeddingCacheDir;
 
@@ -675,16 +677,28 @@ class TtsIsolate {
               piperEngine = next;
 
             case TtsEngineType.irodori:
-              final next = IrodoriTtsEngine.open();
-              next.loadModel(
-                message.modelDir,
-                nThreads: message.nThreads,
-                abortHandle: Pointer<Void>.fromAddress(
-                  message.abortHandleAddress,
-                ),
-                durationCorrection: message.durationCorrection,
-              );
-              irodoriEngine = next;
+              // The runtime comes with the variant, never from the platform:
+              // the variant's GGUF is what one of them can read.
+              switch (message.irodoriRuntime) {
+                case IrodoriRuntime.audioCpp:
+                  final next = IrodoriTtsEngine.open();
+                  next.loadModel(
+                    message.modelDir,
+                    nThreads: message.nThreads,
+                    abortHandle: Pointer<Void>.fromAddress(
+                      message.abortHandleAddress,
+                    ),
+                    durationCorrection: message.durationCorrection,
+                  );
+                  irodoriEngine = next;
+                case IrodoriRuntime.speechCpp:
+                  final next = SpeechCppIrodoriEngine.open();
+                  next.loadModel(
+                    message.modelDir,
+                    abortHandleAddress: message.abortHandleAddress,
+                  );
+                  irodoriEngine = next;
+              }
           }
 
           activeEngineType = message.engineType;

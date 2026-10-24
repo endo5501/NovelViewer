@@ -134,7 +134,7 @@
     - 中断の後の合成
     - ガイダンスの値を使わない
     - 部分どうしで同じ seed
-- [ ] 6.4 worker を変える。
+- [x] 6.4 worker を変える。
   - `LoadModelMessage` に `irodoriRuntime` を足す。
   - worker は、実行系に応じて `IrodoriTtsEngine` か `SpeechCppIrodoriEngine` を開く。2 つのエンジンが共有するのは小さなインターフェースだけにする。
   - `TtsSession` は、speechCpp のとき GGUF のファイルパスを渡し、`IrodoriModelSpecInstaller` を呼ばない。

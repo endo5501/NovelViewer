@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'irodori_audio_join.dart';
 import 'irodori_sentence_splitter.dart';
+import 'irodori_synthesis_engine.dart';
 import 'speech_cpp_native_bindings.dart';
 import 'tts_engine.dart';
 
@@ -51,7 +52,7 @@ abstract interface class SpeechCppIrodoriModel {
 /// (`SpeechCppAbortHandle`), at each sampler step and decoded window. The
 /// flag belongs to the caller and outlives this engine, so [abort] and
 /// [resetAbort] stay safe after [dispose].
-class SpeechCppIrodoriEngine {
+class SpeechCppIrodoriEngine implements IrodoriSynthesisEngine {
   SpeechCppIrodoriEngine({
     required SpeechCppIrodoriModel Function(String ggufPath) loadModelAt,
     this.maxPieceLength = irodoriMaxPieceLength,
@@ -80,6 +81,7 @@ class SpeechCppIrodoriEngine {
   /// keeps a voice with the model it was added to.
   final _voices = <String, String>{};
 
+  @override
   bool get isLoaded => _model != null;
 
   /// Loads the GGUF at [ggufPath], replacing any model loaded before, and
@@ -94,6 +96,7 @@ class SpeechCppIrodoriEngine {
     }
   }
 
+  @override
   TtsSynthesisResult synthesize(
     String text, {
     String? refWavPath,
@@ -168,16 +171,19 @@ class SpeechCppIrodoriEngine {
 
   /// Sets the abort flag. The worker isolate rarely calls this itself; the
   /// main isolate writes the same flag through its handle.
+  @override
   void abort() {
     if (_abortFlag != nullptr) _abortFlag.value = 1;
   }
 
   /// Clears the abort flag so the next synthesis runs.
+  @override
   void resetAbort() {
     if (_abortFlag != nullptr) _abortFlag.value = 0;
   }
 
   /// Frees the model. The abort flag is the caller's and is left alone.
+  @override
   void dispose() {
     _model?.dispose();
     _model = null;
