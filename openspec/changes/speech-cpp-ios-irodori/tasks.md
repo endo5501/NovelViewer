@@ -12,13 +12,13 @@
 
 ## 1. プラットフォームの機能と Irodori の実行系
 
-- [ ] 1.1 `PlatformCapabilities` を次のように変える。
+- [x] 1.1 `PlatformCapabilities` を次のように変える。
   - `IrodoriRuntime`（`audioCpp` / `speechCpp`）を同じファイルに定義する。
   - `irodoriTts` は全プラットフォームで true にする。
   - `irodoriRuntime` を足す（iOS は speechCpp、それ以外は audioCpp）。
   - `voiceRecording`、`voiceFileDragDrop`、`voicesFolderReveal` を足す（iOS は false）。
   - 確認: `platform-capabilities` の各シナリオを単体テストで確かめ、`fvm flutter test test/shared/platform/` が通る。
-- [ ] 1.2 次の 4 つのプロバイダを追加する。
+- [x] 1.2 次の 4 つのプロバイダを追加する。
   - Irodori の実行系
   - 録音
   - ドラッグ＆ドロップ
