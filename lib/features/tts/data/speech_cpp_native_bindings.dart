@@ -46,10 +46,6 @@ typedef _HandleVoidDart = void Function(Pointer<Void>);
 typedef _HandleStringC = Int32 Function(Pointer<Void>, Pointer<Utf8>);
 typedef _HandleStringDart = int Function(Pointer<Void>, Pointer<Utf8>);
 
-// speech_status speech_load_params_set_threads(params, int threads)
-typedef _HandleIntC = Int32 Function(Pointer<Void>, Int32);
-typedef _HandleIntDart = int Function(Pointer<Void>, int);
-
 // speech_status speech_model_load(const char * path,
 //     const speech_load_params * params, speech_model ** model)
 typedef _ModelLoadC =
@@ -190,11 +186,6 @@ class SpeechCppNativeBindings {
   late final loadParamsSetDevice = _library
       .lookupFunction<_HandleStringC, _HandleStringDart>(
         'speech_load_params_set_device',
-      );
-
-  late final loadParamsSetThreads = _library
-      .lookupFunction<_HandleIntC, _HandleIntDart>(
-        'speech_load_params_set_threads',
       );
 
   late final modelLoad = _library.lookupFunction<_ModelLoadC, _ModelLoadDart>(
@@ -387,12 +378,25 @@ class SpeechCppCancelled extends SpeechCppSynthesis {
 
 /// Maps the status `speech_synthesize()` returned to its outcome, throwing on
 /// an error.
+///
+/// [callbackError] is what the audio callback threw, if anything. The
+/// callback stops the request by returning nonzero, which the library reports
+/// as [speechCancelled], so without it a failure would read as a cancellation.
 SpeechCppSynthesis synthesisOutcome(
   int status, {
   required Float32List samples,
   required int sampleRate,
   required SpeechCppErrors errors,
+  Object? callbackError,
 }) {
+  if (callbackError != null) {
+    throw SpeechCppException(
+      call: 'audio callback',
+      status: status,
+      statusName: null,
+      detail: '$callbackError',
+    );
+  }
   errors.check(status, 'speech_synthesize');
   if (status == speechCancelled) return const SpeechCppCancelled();
   return SpeechCppAudio(samples: samples, sampleRate: sampleRate);
@@ -419,9 +423,16 @@ class SampleCollector {
 // synthesis runs per isolate at a time, which makes one collector enough.
 final _collector = SampleCollector();
 
+Object? _callbackError;
+
 int _onAudio(Pointer<Float> samples, int count, Pointer<Void> userData) {
-  _collector.add(samples, count);
-  return 0;
+  try {
+    _collector.add(samples, count);
+    return 0;
+  } catch (error) {
+    _callbackError = error;
+    return 1;
+  }
 }
 
 final _onAudioPointer = Pointer.fromFunction<_AudioCallbackC>(_onAudio, 1);
@@ -553,13 +564,17 @@ class SpeechCppRequest {
   /// Speaks the request, blocking this isolate until it ends.
   SpeechCppSynthesis synthesize() {
     _collector.takeSamples();
+    _callbackError = null;
     final status = _bindings.synthesize(_request, _onAudioPointer, nullptr);
     final samples = _collector.takeSamples();
+    final callbackError = _callbackError;
+    _callbackError = null;
     return synthesisOutcome(
       status,
       samples: samples,
       sampleRate: _sampleRate,
       errors: SpeechCppErrors.of(_bindings),
+      callbackError: callbackError,
     );
   }
 

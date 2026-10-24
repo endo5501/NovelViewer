@@ -53,7 +53,7 @@ SDK ごとにビルドディレクトリを分けて2回ビルドし、それぞ
 
 `lib/features/tts/data/speech_cpp_native_bindings.dart` に置く。後続 change でアプリに統合するときに、そのまま使えるようにするためである。アプリ本体からはまだ参照しない。
 
-対象の関数：`speech_version`、`speech_status_name`、`speech_last_error`、`speech_load_params_*`（new / free / set_device / set_threads）、`speech_model_load` / `speech_model_free`、`speech_model_get_info` / `speech_model_info_free` / `speech_model_info_sample_rate`、`speech_voice_add`、`speech_option_from_name`、`speech_request_new` / `speech_request_free` / `speech_request_set_text` / `speech_request_set_string` / `speech_request_set_int`、`speech_request_cancel`、`speech_synthesize`。
+対象の関数：`speech_version`、`speech_status_name`、`speech_last_error`、`speech_load_params_*`（new / free / set_device）、`speech_model_load` / `speech_model_free`、`speech_model_get_info` / `speech_model_info_free` / `speech_model_info_sample_rate`、`speech_voice_add`、`speech_option_from_name`、`speech_request_new` / `speech_request_free` / `speech_request_set_text` / `speech_request_set_string` / `speech_request_set_int`、`speech_request_cancel`、`speech_synthesize`。
 
 - **オプションは名前で指定する。** `speech_option_from_name` で実行時に識別子を求める。`speech_option` の番号はヘッダの版（3.x）で増えており、Dart 側に数値を固定すると、submodule を更新したときに黙って別のオプションを設定してしまう。
 - **音声のコールバックは isolate ローカルにする。** `speech_synthesize` は、呼び出したスレッドの上で同期的に `on_audio` を呼ぶ。そのため `Pointer.fromFunction`（isolate ローカル）でサンプルを受け取り、`Float32List` に連結する。`NativeCallable.listener` は非同期に配送されるため、合成の終了とサンプルの到着の順序が保証されず、使わない。

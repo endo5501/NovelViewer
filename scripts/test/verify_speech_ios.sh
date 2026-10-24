@@ -21,7 +21,6 @@ C_API_SYMBOLS=(
   speech_load_params_free
   speech_load_params_new
   speech_load_params_set_device
-  speech_load_params_set_threads
   speech_model_free
   speech_model_get_info
   speech_model_info_free
