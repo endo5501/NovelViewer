@@ -224,15 +224,39 @@ class PiperNoiseWNotifier extends _SettingDoubleNotifier {
 
 // --- Irodori model variant ---
 
+/// The variants this platform can run, in the order the selector lists them:
+/// those whose runtime is the platform's Irodori runtime.
+final supportedIrodoriVariantsProvider = Provider<List<IrodoriModelVariant>>((
+  ref,
+) {
+  final runtime = ref.watch(irodoriRuntimeProvider);
+  return [
+    for (final variant in IrodoriModelVariant.values)
+      if (variant.runtime == runtime) variant,
+  ];
+});
+
 final irodoriModelVariantProvider =
     NotifierProvider<IrodoriModelVariantNotifier, IrodoriModelVariant>(
       IrodoriModelVariantNotifier.new,
     );
 
+/// The variant in use: the persisted choice when this platform runs it,
+/// otherwise the first variant it does run.
+///
+/// The persisted value is left alone, as [TtsEngineTypeNotifier] leaves the
+/// engine: a reader who restores a desktop backup on the iPad keeps their
+/// desktop choice there.
 class IrodoriModelVariantNotifier extends Notifier<IrodoriModelVariant> {
   @override
-  IrodoriModelVariant build() =>
-      ref.watch(settingsRepositoryProvider).getIrodoriModelVariant();
+  IrodoriModelVariant build() {
+    final persisted = ref
+        .watch(settingsRepositoryProvider)
+        .getIrodoriModelVariant();
+    final supported = ref.watch(supportedIrodoriVariantsProvider);
+    if (supported.isEmpty || supported.contains(persisted)) return persisted;
+    return supported.first;
+  }
 
   Future<void> setValue(IrodoriModelVariant value) async {
     await ref.read(settingsRepositoryProvider).setIrodoriModelVariant(value);

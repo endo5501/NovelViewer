@@ -34,7 +34,7 @@
   - 欄を足す: `runtime`、`acceptsGuidance`、`downloadUrl`、`sha256`。
   - 既存の `v3` / `v4` の値は変えない。`downloadUrl` は今の `_baseUrl` から組み立てたものと同じにする。
   - 確認: variant のテーブルの値（ファイル名、サイズ、SHA-256、caption、尺補正の要否、ガイダンス）を確かめる単体テストが通る。
-- [ ] 2.2 プラットフォームに応じて variant を扱うプロバイダを作る。
+- [x] 2.2 プラットフォームに応じて variant を扱うプロバイダを作る。
   - 選択肢のプロバイダを追加する。
   - `irodoriModelVariantProvider` は、保存値を書き換えずに解決する。
   - 確認: `irodori-model-variant` の次のシナリオのテストが通る。
