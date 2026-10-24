@@ -211,6 +211,24 @@ void main() {
     });
   });
 
+  group('copyAudioForTransfer', () {
+    test('copies only the audio a view covers, not its whole buffer', () {
+      final buffer = Float32List.fromList([9, 1, 2, 3, 9, 9, 9, 9]);
+      final view = buffer.buffer.asFloat32List(4, 3);
+
+      final copy = copyAudioForTransfer(view);
+
+      expect(copy, Float32List.fromList([1, 2, 3]));
+      expect(copy.buffer.lengthInBytes, 3 * 4);
+    });
+
+    test('copies a list that owns its buffer as it is', () {
+      final audio = Float32List.fromList([0.5, -0.5]);
+
+      expect(copyAudioForTransfer(audio), audio);
+    });
+  });
+
   group('abortFamilyFor', () {
     test('names the library that reads the engine\'s abort handle', () {
       expect(
