@@ -67,7 +67,7 @@
 
 ## 4. speech.cpp のバインディング
 
-- [ ] 4.1 バインディングを次のように変える。
+- [x] 4.1 バインディングを次のように変える。
   - `speech_request_set_progress` を追加する。
   - 合成に「停止を求めるか」の関数を渡せるようにする。進捗コールバックと音声コールバックは、どちらも `exceptionalReturn` を 1 にし、その関数が true なら 1 を返す。
   - `SpeechCppRequest.cancelAt` と `address` を削除する。

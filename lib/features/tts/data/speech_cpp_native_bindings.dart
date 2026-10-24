@@ -85,6 +85,24 @@ typedef _SetIntDart = int Function(Pointer<Void>, int, int);
 //     void * user_data)
 typedef _AudioCallbackC = Int32 Function(Pointer<Float>, Size, Pointer<Void>);
 
+// int (*speech_progress_callback)(double done, void * user_data)
+typedef _ProgressCallbackC = Int32 Function(Double, Pointer<Void>);
+
+// speech_status speech_request_set_progress(speech_request * request,
+//     speech_progress_callback on_progress, void * user_data)
+typedef _SetProgressC =
+    Int32 Function(
+      Pointer<Void>,
+      Pointer<NativeFunction<_ProgressCallbackC>>,
+      Pointer<Void>,
+    );
+typedef _SetProgressDart =
+    int Function(
+      Pointer<Void>,
+      Pointer<NativeFunction<_ProgressCallbackC>>,
+      Pointer<Void>,
+    );
+
 // speech_status speech_synthesize(speech_request * request,
 //     speech_audio_callback on_audio, void * user_data)
 typedef _SynthesizeC =
@@ -228,9 +246,10 @@ class SpeechCppNativeBindings {
     'speech_request_set_int',
   );
 
-  /// Any thread may call it while the request exists (speech.h).
-  late final requestCancel = _library
-      .lookupFunction<_HandleVoidC, _HandleVoidDart>('speech_request_cancel');
+  late final requestSetProgress = _library
+      .lookupFunction<_SetProgressC, _SetProgressDart>(
+        'speech_request_set_progress',
+      );
 
   /// Blocks the calling thread, which also receives the audio callback.
   late final synthesize = _library
@@ -371,7 +390,8 @@ class SpeechCppAudio extends SpeechCppSynthesis {
   final int sampleRate;
 }
 
-/// The request was stopped by `speech_request_cancel()`.
+/// The request was stopped because a stop was asked for
+/// ([SpeechCppSynthesisRun.shouldStop]).
 class SpeechCppCancelled extends SpeechCppSynthesis {
   const SpeechCppCancelled();
 }
@@ -418,24 +438,58 @@ class SampleCollector {
   }
 }
 
-// speech_synthesize() calls back synchronously on the thread that called it,
-// so an isolate-local callback sees every piece before the call returns. One
-// synthesis runs per isolate at a time, which makes one collector enough.
-final _collector = SampleCollector();
+/// What the callbacks of one synthesis share: the audio so far, whether to
+/// stop, and what a callback threw.
+///
+/// A stop is asked for through [shouldStop] rather than by cancelling the
+/// request from another isolate, so the request's pointer never leaves the
+/// isolate that frees it. The library calls the progress callback at each
+/// sampler step and the audio callback at each decoded window, so a stop
+/// takes effect within one of them.
+class SpeechCppSynthesisRun {
+  SpeechCppSynthesisRun({required this.shouldStop});
 
-Object? _callbackError;
+  final bool Function() shouldStop;
+  final collector = SampleCollector();
 
-int _onAudio(Pointer<Float> samples, int count, Pointer<Void> userData) {
-  try {
-    _collector.add(samples, count);
-    return 0;
-  } catch (error) {
-    _callbackError = error;
-    return 1;
+  /// What a callback threw. A nonzero return stops the request, which the
+  /// library reports as cancelled, so this is what tells a failure apart.
+  Object? callbackError;
+
+  int onProgress(double done) => _guard(() {});
+
+  int onAudio(Pointer<Float> samples, int count) =>
+      _guard(() => collector.add(samples, count));
+
+  int _guard(void Function() work) {
+    try {
+      if (shouldStop()) return 1;
+      work();
+      return 0;
+    } catch (error) {
+      callbackError = error;
+      return 1;
+    }
   }
 }
 
+// speech_synthesize() calls back synchronously on the thread that called it,
+// so an isolate-local run sees every callback before the call returns. One
+// synthesis runs per isolate at a time, which makes one run enough.
+SpeechCppSynthesisRun? _run;
+
+int _onAudio(Pointer<Float> samples, int count, Pointer<Void> userData) =>
+    _run!.onAudio(samples, count);
+
+int _onProgress(double done, Pointer<Void> userData) => _run!.onProgress(done);
+
+// The exceptional return stops the request: a Dart error in a callback must
+// not let the synthesis run on.
 final _onAudioPointer = Pointer.fromFunction<_AudioCallbackC>(_onAudio, 1);
+final _onProgressPointer = Pointer.fromFunction<_ProgressCallbackC>(
+  _onProgress,
+  1,
+);
 
 /// A loaded model. One request runs on it at a time.
 class SpeechCppModel {
@@ -554,27 +608,28 @@ class SpeechCppRequest {
   final Pointer<Void> _request;
   final int _sampleRate;
 
-  /// The request's address, for [cancelAt] from another isolate.
-  int get address => _request.address;
-
-  /// Cancels the request at [address], from any thread, while it exists.
-  static void cancelAt(SpeechCppNativeBindings bindings, int address) =>
-      bindings.requestCancel(Pointer<Void>.fromAddress(address));
-
-  /// Speaks the request, blocking this isolate until it ends.
-  SpeechCppSynthesis synthesize() {
-    _collector.takeSamples();
-    _callbackError = null;
-    final status = _bindings.synthesize(_request, _onAudioPointer, nullptr);
-    final samples = _collector.takeSamples();
-    final callbackError = _callbackError;
-    _callbackError = null;
+  /// Speaks the request, blocking this isolate until it ends, and stops it
+  /// once [shouldStop] answers true.
+  SpeechCppSynthesis synthesize({bool Function()? shouldStop}) {
+    final errors = SpeechCppErrors.of(_bindings);
+    final run = SpeechCppSynthesisRun(shouldStop: shouldStop ?? () => false);
+    errors.check(
+      _bindings.requestSetProgress(_request, _onProgressPointer, nullptr),
+      'speech_request_set_progress',
+    );
+    _run = run;
+    final int status;
+    try {
+      status = _bindings.synthesize(_request, _onAudioPointer, nullptr);
+    } finally {
+      _run = null;
+    }
     return synthesisOutcome(
       status,
-      samples: samples,
+      samples: run.collector.takeSamples(),
       sampleRate: _sampleRate,
-      errors: SpeechCppErrors.of(_bindings),
-      callbackError: callbackError,
+      errors: errors,
+      callbackError: run.callbackError,
     );
   }
 
