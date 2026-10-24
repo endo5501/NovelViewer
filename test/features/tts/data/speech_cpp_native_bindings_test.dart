@@ -377,6 +377,25 @@ void main() {
       expect(collector.takeSamples(), Float32List.fromList([0.5, -0.5, 0.25]));
     });
 
+    test('the samples own a buffer of exactly their size', () {
+      // The worker sends `audio.buffer` across isolates, so a view on a larger
+      // buffer would carry its unused tail as trailing silence.
+      final collector = SampleCollector();
+      final a = calloc<Float>(3);
+      addTearDown(() => calloc.free(a));
+      a[0] = 0.1;
+      a[1] = 0.2;
+      a[2] = 0.3;
+      collector.add(a, 3);
+      collector.add(a, 2);
+
+      final samples = collector.takeSamples();
+
+      expect(samples.length, 5);
+      expect(samples.offsetInBytes, 0);
+      expect(samples.buffer.lengthInBytes, 5 * 4);
+    });
+
     test('taking the samples starts a new synthesis empty', () {
       final collector = SampleCollector();
       final a = calloc<Float>(1);
