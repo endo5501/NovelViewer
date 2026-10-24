@@ -27,10 +27,10 @@ C_API_SYMBOLS=(
   speech_model_info_sample_rate
   speech_model_load
   speech_option_from_name
-  speech_request_cancel
   speech_request_free
   speech_request_new
   speech_request_set_int
+  speech_request_set_progress
   speech_request_set_string
   speech_request_set_text
   speech_status_name

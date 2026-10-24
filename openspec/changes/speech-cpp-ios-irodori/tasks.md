@@ -74,20 +74,20 @@
   - 確認: `speech_cpp_native_bindings_test.dart` に次のテストを足し、通る。
     - コールバックで停止を返すと、中断の結果になる
     - callbackError がある場合はエラーと区別される
-- [ ] 4.2 `scripts/test/verify_speech_ios.sh` の `C_API_SYMBOLS` を更新する。
+- [x] 4.2 `scripts/test/verify_speech_ios.sh` の `C_API_SYMBOLS` を更新する。
   - `speech_request_set_progress` を加える。
   - `speech_request_cancel` は、使わなくなるので外す。
   - 確認: 4.6 で作り直した xcframework に対してスクリプトが全件通る。
-- [ ] 4.3 スパイクの計測テスト（`integration_test/speech_cpp_ios_test.dart`）の中断を、別の isolate からフラグを立てる方式に書き換える。
+- [x] 4.3 スパイクの計測テスト（`integration_test/speech_cpp_ios_test.dart`）の中断を、別の isolate からフラグを立てる方式に書き換える。
   - 確認: `fvm flutter analyze` が通り、Simulator で既存のバージョン確認だけが通る（`flutter drive -d <simulator>`）。
   - 実機での実行は、データが消えるので見送る（design D3）。
-- [ ] 4.4 `scripts/build_speech_ios.sh` を変える。
+- [x] 4.4 `scripts/build_speech_ios.sh` を変える。
   - ヘッダの「アプリ本体はまだ使わない」を直す。
   - 処理の内容は変えない。
   - 確認: `bash -n` が通り、差分は説明の部分だけである。
-- [ ] 4.5 `.claude/CLAUDE.md` の開発コマンドの説明を、アプリが speech.cpp の framework を使う前提に直す。
+- [x] 4.5 `.claude/CLAUDE.md` の開発コマンドの説明を、アプリが speech.cpp の framework を使う前提に直す。
   - 確認: 差分を目で確かめる。
-- [ ] 4.6 `scripts/build_speech_ios.sh` で xcframework を作り直す。
+- [x] 4.6 `scripts/build_speech_ios.sh` で xcframework を作り直す。
   - 確認: `scripts/test/verify_speech_ios.sh` が全件通る。
 
 ## 5. 中断のハンドル

@@ -17,8 +17,10 @@ set -euo pipefail
 # The library is renamed from libspeech to speech_cpp so it cannot be confused
 # with Apple's Speech.framework (design D2).
 #
-# The output is not tracked by Git, and the app does not use it yet: it is for
-# the on-device measurement in integration_test/speech_cpp_ios_test.dart.
+# The output is not tracked by Git. Irodori-TTS runs on it in the iOS app, so
+# keep it in ios/Frameworks/ for an app build that offers Irodori-TTS; the
+# on-device measurement in integration_test/speech_cpp_ios_test.dart uses it
+# too.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
