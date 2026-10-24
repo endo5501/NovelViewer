@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
@@ -8,6 +10,7 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/data/tts_language.dart';
 import 'package:novel_viewer/features/tts/data/tts_model_size.dart';
+import 'package:novel_viewer/features/tts/domain/tts_engine_config.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dart';
@@ -387,6 +390,69 @@ void main() {
 
       expect(container.read(piperNoiseWProvider), 0.6);
       expect(prefs.getDouble('piper_noise_w'), 0.6);
+    });
+  });
+
+  group('reference voices the engine in use reads', () {
+    late Directory tempDir;
+
+    setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('reference_voices_');
+    });
+
+    tearDown(() => tempDir.deleteSync(recursive: true));
+
+    ProviderContainer containerOn({required bool isIOS}) {
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue(
+            p.join(tempDir.path, 'NovelViewer'),
+          ),
+          platformCapabilitiesProvider.overrideWithValue(
+            PlatformCapabilities.forPlatform(isIOS: isIOS, isMacOS: false),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('the selector and synthesis agree for every engine', () async {
+      for (final isIOS in [true, false]) {
+        for (final engine in TtsEngineType.values) {
+          await prefs.setString('tts_engine_type', engine.name);
+          final container = containerOn(isIOS: isIOS);
+          final inUse = container.read(ttsEngineTypeProvider);
+          final config = TtsEngineConfig.resolveFromReader(
+            container.read,
+            inUse,
+          );
+
+          expect(
+            container.read(acceptedReferenceExtensionsProvider),
+            config.acceptedReferenceExtensions,
+            reason: 'isIOS=$isIOS engine=${engine.name}',
+          );
+        }
+      }
+    });
+
+    test('the voice list holds only the files the engine reads', () async {
+      final voices = Directory(p.join(tempDir.path, 'voices'))
+        ..createSync(recursive: true);
+      File(p.join(voices.path, 'a.wav')).writeAsStringSync('');
+      File(p.join(voices.path, 'b.mp3')).writeAsStringSync('');
+      await prefs.setString('tts_engine_type', 'irodori');
+
+      final onIOS = containerOn(isIOS: true);
+      final onDesktop = containerOn(isIOS: false);
+
+      expect(await onIOS.read(voiceFilesProvider.future), ['a.wav']);
+      expect(await onDesktop.read(voiceFilesProvider.future), [
+        'a.wav',
+        'b.mp3',
+      ]);
     });
   });
 
