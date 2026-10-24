@@ -4,6 +4,7 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/tts/presentation/voice_recording_dialog.dart';
+import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:path/path.dart' as p;
@@ -29,7 +30,9 @@ class _VoiceReferenceSectionState extends ConsumerState<VoiceReferenceSection> {
   Future<void> _loadVoiceFiles() async {
     final service = ref.read(voiceReferenceServiceProvider);
     if (service == null) return;
-    final files = await service.listVoiceFiles();
+    final files = await service.listVoiceFiles(
+      extensions: ref.read(acceptedReferenceExtensionsProvider),
+    );
     if (mounted) {
       setState(() {
         _voiceFiles = files;
@@ -37,7 +40,20 @@ class _VoiceReferenceSectionState extends ConsumerState<VoiceReferenceSection> {
     }
   }
 
-  Future<void> _handleFileDrop(DropDoneDetails details) async {
+  Future<void> _handleFileDrop(DropDoneDetails details) =>
+      _addVoiceFiles([for (final file in details.files) file.path]);
+
+  Future<void> _pickVoiceFiles() async {
+    final paths = await ref.read(voiceFilePickerProvider)(
+      extensions: ref.read(acceptedReferenceExtensionsProvider),
+    );
+    if (paths == null || paths.isEmpty) return;
+    await _addVoiceFiles(paths);
+  }
+
+  /// Copies [paths] into the voices folder, refreshes the list, and says why
+  /// each file that could not be added was refused.
+  Future<void> _addVoiceFiles(List<String> paths) async {
     final service = ref.read(voiceReferenceServiceProvider);
     if (service == null) {
       if (mounted) {
@@ -54,9 +70,9 @@ class _VoiceReferenceSectionState extends ConsumerState<VoiceReferenceSection> {
 
     final l10n = AppLocalizations.of(context)!;
     final errors = <String>[];
-    for (final xFile in details.files) {
+    for (final path in paths) {
       try {
-        await service.addVoiceFile(xFile.path);
+        await service.addVoiceFile(path);
       } on ArgumentError catch (e) {
         errors.add('${e.message}');
       } on StateError catch (e) {
@@ -129,76 +145,85 @@ class _VoiceReferenceSectionState extends ConsumerState<VoiceReferenceSection> {
     final effectiveValue = _voiceFiles.contains(currentFileName)
         ? currentFileName
         : '';
+    final hasService = ref.watch(voiceReferenceServiceProvider) != null;
+    // iOS has no microphone path, drop plugin or file manager for these
+    // (platform-capabilities); the Files app and the picker take their place.
+    final recordingSupported = ref.watch(voiceRecordingSupportedProvider);
+    final folderRevealSupported = ref.watch(
+      voicesFolderRevealSupportedProvider,
+    );
+    final dropSupported = ref.watch(voiceFileDragDropSupportedProvider);
+    // A change of engine or variant changes the files the list may show.
+    ref.listen(
+      acceptedReferenceExtensionsProvider,
+      (_, _) => _loadVoiceFiles(),
+    );
 
-    return DropTarget(
-      onDragEntered: (_) => setState(() => _isDragging = true),
-      onDragExited: (_) => setState(() => _isDragging = false),
-      onDragDone: (details) async {
-        setState(() => _isDragging = false);
-        await _handleFileDrop(details);
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          border: _isDragging
-              ? Border.all(
-                  color: Theme.of(context).colorScheme.primary,
-                  width: 2,
-                )
-              : null,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        padding: _isDragging ? const EdgeInsets.all(8) : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    // ignore: deprecated_member_use
-                    value: effectiveValue,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.settings_referenceAudioLabel,
-                      hintText: hasFiles
-                          ? null
-                          : l10n.settings_voicesPlacementHint,
+    final content = Container(
+      decoration: BoxDecoration(
+        border: _isDragging
+            ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
+            : null,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: _isDragging ? const EdgeInsets.all(8) : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  // ignore: deprecated_member_use
+                  value: effectiveValue,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: l10n.settings_referenceAudioLabel,
+                    hintText: hasFiles
+                        ? null
+                        : l10n.settings_voicesPlacementHint,
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: '',
+                      child: Text(l10n.settings_referenceAudioNone),
                     ),
-                    items: [
-                      DropdownMenuItem(
-                        value: '',
-                        child: Text(l10n.settings_referenceAudioNone),
-                      ),
-                      ..._voiceFiles.map(
-                        (file) =>
-                            DropdownMenuItem(value: file, child: Text(file)),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      ref
-                          .read(ttsRefWavPathProvider.notifier)
-                          .setTtsRefWavPath(value ?? '');
-                    },
-                  ),
+                    ..._voiceFiles.map(
+                      (file) =>
+                          DropdownMenuItem(value: file, child: Text(file)),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    ref
+                        .read(ttsRefWavPathProvider.notifier)
+                        .setTtsRefWavPath(value ?? '');
+                  },
                 ),
-                if (effectiveValue.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.edit),
-                    tooltip: l10n.settings_renameFileTooltip,
-                    onPressed: () => _showRenameDialog(effectiveValue),
-                  ),
+              ),
+              if (effectiveValue.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  tooltip: l10n.settings_renameFileTooltip,
+                  onPressed: () => _showRenameDialog(effectiveValue),
+                ),
+              IconButton(
+                key: const Key('voice_pick_files'),
+                icon: const Icon(Icons.add),
+                tooltip: l10n.settings_addVoiceFilesTooltip,
+                onPressed: hasService ? _pickVoiceFiles : null,
+              ),
+              if (recordingSupported)
                 IconButton(
                   icon: const Icon(Icons.mic),
                   tooltip: l10n.settings_recordVoiceTooltip,
-                  onPressed: ref.read(voiceReferenceServiceProvider) != null
-                      ? _showRecordingDialog
-                      : null,
+                  onPressed: hasService ? _showRecordingDialog : null,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  tooltip: l10n.settings_refreshFileListTooltip,
-                  onPressed: _loadVoiceFiles,
-                ),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: l10n.settings_refreshFileListTooltip,
+                onPressed: _loadVoiceFiles,
+              ),
+              if (folderRevealSupported)
                 IconButton(
                   icon: const Icon(Icons.folder_open),
                   tooltip: l10n.settings_openVoicesFolderTooltip,
@@ -207,16 +232,25 @@ class _VoiceReferenceSectionState extends ConsumerState<VoiceReferenceSection> {
                     service?.openVoicesDirectory();
                   },
                 ),
-              ],
+            ],
+          ),
+          if (_isDragging)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(l10n.settings_dragAudioFilesHere),
             ),
-            if (_isDragging)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(l10n.settings_dragAudioFilesHere),
-              ),
-          ],
-        ),
+        ],
       ),
+    );
+    if (!dropSupported) return content;
+    return DropTarget(
+      onDragEntered: (_) => setState(() => _isDragging = true),
+      onDragExited: (_) => setState(() => _isDragging = false),
+      onDragDone: (details) async {
+        setState(() => _isDragging = false);
+        await _handleFileDrop(details);
+      },
+      child: content,
     );
   }
 }

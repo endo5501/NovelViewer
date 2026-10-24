@@ -207,6 +207,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settings_renameFileTooltip => 'ファイル名を変更';
 
   @override
+  String get settings_addVoiceFilesTooltip => '音声ファイルを追加';
+
+  @override
   String get settings_recordVoiceTooltip => '音声を録音';
 
   @override

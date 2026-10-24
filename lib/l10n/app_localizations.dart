@@ -472,6 +472,12 @@ abstract class AppLocalizations {
   /// **'ファイル名を変更'**
   String get settings_renameFileTooltip;
 
+  /// No description provided for @settings_addVoiceFilesTooltip.
+  ///
+  /// In ja, this message translates to:
+  /// **'音声ファイルを追加'**
+  String get settings_addVoiceFilesTooltip;
+
   /// No description provided for @settings_recordVoiceTooltip.
   ///
   /// In ja, this message translates to:

@@ -71,6 +71,7 @@
   "settings_voicesPlacementHint": "请将音频文件放入voices文件夹",
   "settings_referenceAudioNone": "无（默认语音）",
   "settings_renameFileTooltip": "重命名文件",
+  "settings_addVoiceFilesTooltip": "添加音频文件",
   "settings_recordVoiceTooltip": "录制语音",
   "settings_refreshFileListTooltip": "刷新文件列表",
   "settings_openVoicesFolderTooltip": "打开voices文件夹",

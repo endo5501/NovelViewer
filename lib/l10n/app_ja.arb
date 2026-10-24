@@ -78,6 +78,7 @@
   "settings_voicesPlacementHint": "voicesフォルダに音声ファイルを配置してください",
   "settings_referenceAudioNone": "なし（デフォルト音声）",
   "settings_renameFileTooltip": "ファイル名を変更",
+  "settings_addVoiceFilesTooltip": "音声ファイルを追加",
   "settings_recordVoiceTooltip": "音声を録音",
   "settings_refreshFileListTooltip": "ファイル一覧を更新",
   "settings_openVoicesFolderTooltip": "voicesフォルダを開く",

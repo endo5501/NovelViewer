@@ -210,6 +210,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings_renameFileTooltip => 'Rename file';
 
   @override
+  String get settings_addVoiceFilesTooltip => 'Add audio files';
+
+  @override
   String get settings_recordVoiceTooltip => 'Record voice';
 
   @override

@@ -71,6 +71,7 @@
   "settings_voicesPlacementHint": "Place audio files in the voices folder",
   "settings_referenceAudioNone": "None (default voice)",
   "settings_renameFileTooltip": "Rename file",
+  "settings_addVoiceFilesTooltip": "Add audio files",
   "settings_recordVoiceTooltip": "Record voice",
   "settings_refreshFileListTooltip": "Refresh file list",
   "settings_openVoicesFolderTooltip": "Open voices folder",

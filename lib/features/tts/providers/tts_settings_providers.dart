@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -16,6 +17,42 @@ final voiceReferenceServiceProvider = Provider<VoiceReferenceService?>((ref) {
   if (libraryPath == null) return null;
   return VoiceReferenceService(libraryPath: libraryPath);
 });
+
+/// Asks the reader for reference audio files to add, offering the
+/// [extensions] (lower case, with the dot) the engine in use reads. Answers
+/// the picked paths, or null when the picker was closed without a pick.
+typedef VoiceFilePicker =
+    Future<List<String>?> Function({required Set<String> extensions});
+
+/// The system file picker, overridable in tests. On iOS the picked files
+/// arrive as copies in the app's temporary folder, which are then copied into
+/// the voices folder like any other added file.
+final voiceFilePickerProvider = Provider<VoiceFilePicker>(
+  (ref) => ({required extensions}) async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: [for (final e in extensions) e.substring(1)],
+      allowMultiple: true,
+    );
+    if (result == null) return null;
+    return [
+      for (final file in result.files)
+        if (file.path != null) file.path!,
+    ];
+  },
+);
+
+/// The reference-voice extensions the engine in use reads, in lower case.
+///
+/// The same answer `TtsEngineConfig.acceptedReferenceExtensions` gives for a
+/// resolved config, for the voice selector, which lists only these.
+final acceptedReferenceExtensionsProvider = Provider<Set<String>>(
+  (ref) => switch (ref.watch(ttsEngineTypeProvider)) {
+    TtsEngineType.irodori =>
+      ref.watch(irodoriModelVariantProvider).referenceExtensions,
+    TtsEngineType.qwen3 || TtsEngineType.piper => const {'.wav', '.mp3'},
+  },
+);
 
 final voiceFilesProvider = FutureProvider<List<String>>((ref) async {
   final service = ref.watch(voiceReferenceServiceProvider);

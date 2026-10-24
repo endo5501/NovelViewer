@@ -202,6 +202,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settings_renameFileTooltip => '重命名文件';
 
   @override
+  String get settings_addVoiceFilesTooltip => '添加音频文件';
+
+  @override
   String get settings_recordVoiceTooltip => '录制语音';
 
   @override
