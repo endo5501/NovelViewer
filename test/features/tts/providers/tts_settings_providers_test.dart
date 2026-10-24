@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -386,6 +387,95 @@ void main() {
 
       expect(container.read(piperNoiseWProvider), 0.6);
       expect(prefs.getDouble('piper_noise_w'), 0.6);
+    });
+  });
+
+  group('Irodori variants follow the platform runtime', () {
+    ProviderContainer containerOn({required bool isIOS}) {
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          platformCapabilitiesProvider.overrideWithValue(
+            PlatformCapabilities.forPlatform(isIOS: isIOS, isMacOS: false),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('the desktop offers v3 and v4', () {
+      final container = containerOn(isIOS: false);
+
+      expect(container.read(supportedIrodoriVariantsProvider), [
+        IrodoriModelVariant.v3,
+        IrodoriModelVariant.v4,
+      ]);
+    });
+
+    test('iOS offers v4.1 MF only', () {
+      final container = containerOn(isIOS: true);
+
+      expect(container.read(supportedIrodoriVariantsProvider), [
+        IrodoriModelVariant.v41Mf,
+      ]);
+    });
+
+    test('the default is v3 on the desktop', () {
+      final container = containerOn(isIOS: false);
+
+      expect(
+        container.read(irodoriModelVariantProvider),
+        IrodoriModelVariant.v3,
+      );
+    });
+
+    test('the default is v4.1 MF on iOS', () {
+      final container = containerOn(isIOS: true);
+
+      expect(
+        container.read(irodoriModelVariantProvider),
+        IrodoriModelVariant.v41Mf,
+      );
+    });
+
+    test('a variant iOS cannot run resolves without being rewritten', () async {
+      await prefs.setString('irodori_model_variant', 'v3');
+      final container = containerOn(isIOS: true);
+
+      expect(
+        container.read(irodoriModelVariantProvider),
+        IrodoriModelVariant.v41Mf,
+      );
+      expect(prefs.getString('irodori_model_variant'), 'v3');
+    });
+
+    test('a persisted desktop choice is restored', () async {
+      await prefs.setString('irodori_model_variant', 'v4');
+      final container = containerOn(isIOS: false);
+
+      expect(
+        container.read(irodoriModelVariantProvider),
+        IrodoriModelVariant.v4,
+      );
+    });
+
+    test('the model directory follows the resolved variant on iOS', () {
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryPathProvider.overrideWithValue('/home/user/NovelViewer'),
+          platformCapabilitiesProvider.overrideWithValue(
+            const PlatformCapabilities.forPlatform(isIOS: true, isMacOS: false),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(irodoriModelDirProvider),
+        p.join('/home/user', 'models', 'Irodori-TTS-v4.1-Small-MF-GGUF'),
+      );
     });
   });
 
