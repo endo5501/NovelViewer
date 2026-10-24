@@ -462,9 +462,13 @@ class _SpeechWorker {
       final exited = _exited.first;
       _isolate.kill(priority: Isolate.immediate);
       await _replies.cancel();
-      // The worker reads the flag, so it is freed only once the worker is gone.
-      await exited.timeout(const Duration(seconds: 30), onTimeout: () => null);
-      calloc.free(_stopFlag);
+      // The worker reads the flag, so it is freed only once the worker is
+      // gone. A worker still inside native code after the timeout keeps it:
+      // a small leak in a test process beats a write into freed memory.
+      final gone = await exited
+          .then((_) => true)
+          .timeout(const Duration(seconds: 30), onTimeout: () => false);
+      if (gone) calloc.free(_stopFlag);
       _exited.close();
     }
   }
