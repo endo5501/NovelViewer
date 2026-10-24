@@ -176,7 +176,7 @@
 ## 9. 実機での確認
 
 - [x] 9.1 `scripts/build_app.sh ios --release` でビルドし、`Runner.app` に `speech_cpp.framework` と Piper の framework が入っていることを確かめる。
-- [ ] 9.2 ユーザーにインストールしてよいか確認してから、`xcrun devicectl device install app --device 00008130-000A0DD42181001C <Runner.app>` で上書きインストールする。
+- [x] 9.2 ユーザーにインストールしてよいか確認してから、`xcrun devicectl device install app --device 00008130-000A0DD42181001C <Runner.app>` で上書きインストールする。
   - バックアップは、2026-10-24 に取った `~/Backups/NovelViewer-iPad-20261024/` を使う（取り直さないことはユーザーが判断した）。
   - 確認: 起動してライブラリとモデルが残っていることを最初に確かめる。消えていたら作業を止めて、バックアップから戻す。
 - [ ] 9.3 iPad の設定で Irodori を選び、MF F16 をダウンロードする。
