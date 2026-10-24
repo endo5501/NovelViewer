@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 
 import '../data/irodori_model_variant.dart';
 import '../data/tts_engine_type.dart';
+import 'tts_ref_wav_resolver.dart';
 import '../providers/tts_settings_providers.dart';
 
 /// Reads a provider's current value without subscribing.
@@ -18,6 +19,7 @@ typedef ProviderReader = T Function<T>(ProviderListenable<T> provider);
 const int _qwen3SampleRate = 24000;
 const int _piperSampleRate = 22050;
 const int _irodoriSampleRate = 48000;
+const _wavAndMp3 = {'.wav', '.mp3'};
 
 /// Engine-specific configuration for TTS synthesis.
 ///
@@ -101,6 +103,18 @@ sealed class TtsEngineConfig {
     Qwen3EngineConfig(:final refWavPath) => refWavPath,
     IrodoriEngineConfig(:final refWavPath) => refWavPath,
     PiperEngineConfig() => null,
+  };
+
+  /// The reference-voice extensions this engine reads, in lower case.
+  ///
+  /// A stored reference outside them is treated as none (see
+  /// [TtsRefWavResolver.resolve] and the global fallback below), matching the
+  /// voice selector, which lists only these. Piper takes no reference, so its
+  /// set is empty.
+  Set<String> get acceptedReferenceExtensions => switch (this) {
+    Qwen3EngineConfig() => _wavAndMp3,
+    IrodoriEngineConfig(:final variant) => variant.referenceExtensions,
+    PiperEngineConfig() => const <String>{},
   };
 
   /// Irodori-only synthesis-time parameters (speaker/caption guidance scales
@@ -258,16 +272,24 @@ PiperEngineConfig _resolvePiper(ProviderReader read) {
 
 IrodoriEngineConfig _resolveIrodori(ProviderReader read) {
   final modelDir = read(irodoriModelDirProvider);
-  // Shared voice reference library — same provider/service as Qwen3 (D9).
+  final variant = read(irodoriModelVariantProvider);
+  // Shared voice reference library — same provider/service as Qwen3 (D9). A
+  // stored choice the variant cannot read (an MP3 on speech.cpp) is spoken
+  // without a reference, as the selector shows it as none; the stored value
+  // is kept for a platform that reads it.
   final refWavFileName = read(ttsRefWavPathProvider);
   final voiceService = read(voiceReferenceServiceProvider);
-  final refWavPath = refWavFileName.isNotEmpty && voiceService != null
+  final readable = variant.referenceExtensions.contains(
+    p.extension(refWavFileName).toLowerCase(),
+  );
+  final refWavPath =
+      refWavFileName.isNotEmpty && readable && voiceService != null
       ? voiceService.resolveVoiceFilePath(refWavFileName)
       : null;
   return IrodoriEngineConfig(
     modelDir: modelDir,
     sampleRate: _irodoriSampleRate,
-    variant: read(irodoriModelVariantProvider),
+    variant: variant,
     refWavPath: refWavPath,
     speakerGuidanceScale: read(irodoriSpeakerGuidanceScaleProvider),
     captionGuidanceScale: read(irodoriCaptionGuidanceScaleProvider),

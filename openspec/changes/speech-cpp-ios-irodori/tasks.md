@@ -43,11 +43,11 @@
     - iOS で動かせない保存値
     - 選択肢
     - 永続化
-- [ ] 2.3 `IrodoriEngineConfig` に、受け付ける参照音声の拡張子を持たせる（speechCpp は `{'.wav'}`）。保存値の拡張子が受け付けないものなら、`refWavPath` を null に解決する。
+- [x] 2.3 `IrodoriEngineConfig` に、受け付ける参照音声の拡張子を持たせる（speechCpp は `{'.wav'}`）。保存値の拡張子が受け付けないものなら、`refWavPath` を null に解決する。
   - 確認: `voice-reference-library` の次のシナリオが `tts_engine_config` のテストで通る。
     - 保存された MP3 を iOS で選んでいる場合
     - デスクトップでの同じ選択
-- [ ] 2.4 セグメントごとに保存した参照音声にも、2.3 と同じ判定を当てる。対象は、streaming controller と edit controller で `resolveRefWavPath` を呼ぶ手前である。
+- [x] 2.4 セグメントごとに保存した参照音声にも、2.3 と同じ判定を当てる。対象は、streaming controller と edit controller で `resolveRefWavPath` を呼ぶ手前である。
   - 確認: 「セグメントの MP3 参照音声を iOS で使う場合」のシナリオが、両 controller のテストで通る。
 
 ## 3. モデルのダウンロード

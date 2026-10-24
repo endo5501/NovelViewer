@@ -139,6 +139,13 @@ enum IrodoriModelVariant {
   /// only the size is pinned.
   final String? sha256;
 
+  /// The reference-voice extensions this variant's runtime reads, in lower
+  /// case. speech.cpp reads WAVE files and nothing else.
+  Set<String> get referenceExtensions => switch (runtime) {
+    IrodoriRuntime.audioCpp => const {'.wav', '.mp3'},
+    IrodoriRuntime.speechCpp => const {'.wav'},
+  };
+
   /// The URL the GGUF is downloaded from.
   String get downloadUrl => sourceUrl == null
       ? '$_audioCppMirrorUrl/$relativeGgufPath'
