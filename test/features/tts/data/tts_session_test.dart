@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:logging/logging.dart';
 import 'package:novel_viewer/features/tts/data/irodori_model_variant.dart';
 import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
@@ -321,6 +322,41 @@ void main() {
         }
       },
     );
+
+    test('a speech.cpp variant is loaded from its GGUF file', () async {
+      // speech.cpp reads a model file; audio.cpp reads a directory.
+      final isolate = _FakeTtsIsolate();
+      final session = TtsSession(
+        isolate: isolate,
+        irodoriSpecInstaller: _RecordingSpecInstaller(),
+      );
+
+      await session.ensureModelLoaded(_irodoriMf());
+
+      final call = isolate.loadModelCalls.single;
+      expect(call.engineType, TtsEngineType.irodori);
+      expect(call.irodoriRuntime, IrodoriRuntime.speechCpp);
+      expect(
+        call.modelDir,
+        p.join('/i/mf', IrodoriModelVariant.v41Mf.ggufFileName),
+      );
+      expect(call.durationCorrection, isFalse);
+      await session.dispose();
+    });
+
+    test('a speech.cpp variant gets no audio.cpp model contract', () async {
+      final installer = _RecordingSpecInstaller();
+      final isolate = _FakeTtsIsolate();
+      final session = TtsSession(
+        isolate: isolate,
+        irodoriSpecInstaller: installer,
+      );
+
+      await session.ensureModelLoaded(_irodoriMf());
+
+      expect(installer.installedIn, isEmpty);
+      await session.dispose();
+    });
 
     // The engine validates request options against the contract embedded in
     // the GGUF, which predates duration_correction. Writing the runtime's own
@@ -996,6 +1032,15 @@ Qwen3EngineConfig _qwen3({String modelDir = '/q/m'}) => Qwen3EngineConfig(
   sampleRate: 24000,
   languageId: 2058,
   embeddingCacheDir: '/cache',
+);
+
+IrodoriEngineConfig _irodoriMf() => const IrodoriEngineConfig(
+  modelDir: '/i/mf',
+  sampleRate: 48000,
+  variant: IrodoriModelVariant.v41Mf,
+  speakerGuidanceScale: 5.0,
+  captionGuidanceScale: 3.0,
+  numInferenceSteps: 40,
 );
 
 IrodoriEngineConfig _irodori() => const IrodoriEngineConfig(
