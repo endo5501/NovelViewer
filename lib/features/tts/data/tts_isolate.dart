@@ -50,6 +50,19 @@ enum TtsAbortFamily {
   speechCpp,
 }
 
+/// An isolate-owned copy of [audio] holding exactly its samples, to send to
+/// the main isolate.
+///
+/// Routed through [TransferableTypedData] only to obtain that copy:
+/// materialize() runs on the sending side and copies the bytes out eagerly.
+/// The copy covers the view's own range, not its whole buffer: an engine may
+/// answer a view on a larger buffer, whose unused tail would otherwise reach
+/// playback as trailing samples.
+Float32List copyAudioForTransfer(Float32List audio) =>
+    TransferableTypedData.fromList([
+      audio.buffer.asByteData(audio.offsetInBytes, audio.lengthInBytes),
+    ]).materialize().asFloat32List();
+
 /// The family whose abort handle [engineType] reads, given the platform's
 /// Irodori [runtime]; null for Piper, which has none.
 TtsAbortFamily? abortFamilyFor(
@@ -736,18 +749,9 @@ class TtsIsolate {
           irodoriEngine?.resetAbort();
           final result = doSynthesize(message);
 
-          // Materialize the audio into a fresh, isolate-owned buffer before
-          // sending. We route it through TransferableTypedData only to obtain
-          // that copy: materialize() runs here on the worker side and copies
-          // the bytes out eagerly, so this is a plain copy — NOT the zero-copy
-          // handoff TransferableTypedData enables when the receiver
-          // materializes. (Transfer semantics intentionally unchanged.)
-          final transferable = TransferableTypedData.fromList([
-            result.audio.buffer.asByteData(),
-          ]);
           mainSendPort.send(
             SynthesisResultResponse(
-              audio: transferable.materialize().asFloat32List(),
+              audio: copyAudioForTransfer(result.audio),
               sampleRate: result.sampleRate,
             ),
           );

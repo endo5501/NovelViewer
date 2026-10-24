@@ -432,15 +432,10 @@ class SampleCollector {
   }
 
   /// The samples so far, leaving the collector empty for the next synthesis.
-  ///
-  /// Copied into a list of their own: `takeBytes` may answer a view on a
-  /// larger buffer, and the TTS worker sends `audio.buffer` to the main
-  /// isolate, which would carry the unused tail as trailing silence.
+  /// They may be a view on a larger buffer.
   Float32List takeSamples() {
     final bytes = _builder.takeBytes();
-    return Float32List.fromList(
-      bytes.buffer.asFloat32List(bytes.offsetInBytes, bytes.length ~/ 4),
-    );
+    return bytes.buffer.asFloat32List(bytes.offsetInBytes, bytes.length ~/ 4);
   }
 }
 
