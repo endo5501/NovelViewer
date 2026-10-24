@@ -18,15 +18,16 @@ class VoiceReferenceService {
     }
   }
 
-  Future<List<String>> listVoiceFiles() async {
+  /// The reference files in the voices folder whose extension is one of
+  /// [extensions] (lower case; `.wav` and `.mp3` when omitted). An engine
+  /// passes the ones it reads; the other files are left where they are.
+  Future<List<String>> listVoiceFiles({Set<String>? extensions}) async {
+    final accepted = extensions ?? _supportedExtensions;
     await ensureVoicesDir();
     final entities = await Directory(voicesDirPath).list().toList();
     final files = entities
         .whereType<File>()
-        .where(
-          (f) =>
-              _supportedExtensions.contains(p.extension(f.path).toLowerCase()),
-        )
+        .where((f) => accepted.contains(p.extension(f.path).toLowerCase()))
         .map((f) => p.basename(f.path))
         .toList();
     files.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));

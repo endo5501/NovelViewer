@@ -162,7 +162,7 @@
     - `voice-file-drag-drop`: iOS ではドロップ先を登録しない
     - `voice-reference-library`: iOS ではフォルダのボタンが無い、ファイルを選んで追加・重複・キャンセル、speech.cpp では WAV だけを一覧に出す
     - デスクトップではこれまでどおり表示される
-- [ ] 7.3 `VoiceReferenceService.listVoiceFiles` が拡張子で絞れるようにする。引数を省略したときは、これまでどおり `.wav` と `.mp3` を対象にする。
+- [x] 7.3 `VoiceReferenceService.listVoiceFiles` が拡張子で絞れるようにする。引数を省略したときは、これまでどおり `.wav` と `.mp3` を対象にする。
   - 確認: `voice_reference_service` のテストで、絞り込みと既定値を確かめる。
 
 ## 8. ドキュメント
