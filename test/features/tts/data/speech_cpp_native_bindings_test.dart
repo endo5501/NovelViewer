@@ -277,6 +277,87 @@ void main() {
     });
   });
 
+  group('SpeechCppSynthesisRun', () {
+    late Pointer<Float> piece;
+
+    setUp(() {
+      piece = calloc<Float>(2);
+      piece[0] = 0.5;
+      piece[1] = -0.5;
+    });
+
+    tearDown(() => calloc.free(piece));
+
+    test('collects the audio while no stop is asked for', () {
+      final run = SpeechCppSynthesisRun(shouldStop: () => false);
+
+      expect(run.onProgress(0.5), 0);
+      expect(run.onAudio(piece, 2), 0);
+      expect(run.collector.takeSamples(), Float32List.fromList([0.5, -0.5]));
+      expect(run.callbackError, isNull);
+    });
+
+    test('asks the library to stop once a stop is asked for', () {
+      final run = SpeechCppSynthesisRun(shouldStop: () => true);
+
+      expect(run.onProgress(0.25), isNot(0));
+      expect(run.onAudio(piece, 2), isNot(0));
+      expect(run.collector.takeSamples(), isEmpty);
+      expect(run.callbackError, isNull);
+    });
+
+    test('checks for a stop at every progress report', () {
+      var asked = 0;
+      final run = SpeechCppSynthesisRun(
+        shouldStop: () {
+          asked++;
+          return false;
+        },
+      );
+
+      run.onProgress(0.25);
+      run.onProgress(0.5);
+      run.onProgress(0.75);
+
+      expect(asked, 3);
+    });
+
+    test('a stop it asked for reads as a cancellation', () {
+      final run = SpeechCppSynthesisRun(shouldStop: () => true);
+      run.onProgress(0.25);
+
+      expect(
+        synthesisOutcome(
+          _cancelled,
+          samples: run.collector.takeSamples(),
+          sampleRate: 48000,
+          errors: _errors(),
+          callbackError: run.callbackError,
+        ),
+        isA<SpeechCppCancelled>(),
+      );
+    });
+
+    test('a failing stop check stops the request as an error', () {
+      final run = SpeechCppSynthesisRun(
+        shouldStop: () => throw StateError('flag unreadable'),
+      );
+
+      expect(run.onProgress(0.25), isNot(0));
+      expect(run.callbackError, isA<StateError>());
+      expect(
+        () => synthesisOutcome(
+          _cancelled,
+          samples: run.collector.takeSamples(),
+          sampleRate: 48000,
+          errors: _errors(),
+          callbackError: run.callbackError,
+        ),
+        throwsA(isA<SpeechCppException>()),
+      );
+    });
+  });
+
   group('SampleCollector', () {
     test('joins the pieces in the order they arrive', () {
       final collector = SampleCollector();
