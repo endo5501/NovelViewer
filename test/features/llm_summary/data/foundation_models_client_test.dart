@@ -33,7 +33,13 @@ class _FakePlugin implements FoundationModelsLlm {
   final OnDeviceGenerationException? unconstrainedFailure;
 
   final List<
-    ({String prompt, String? field, int? maxTokens, OnDeviceSampling? sampling})
+    ({
+      String prompt,
+      String? field,
+      int? maxTokens,
+      OnDeviceSampling? sampling,
+      int? budget,
+    })
   >
   calls = [];
   OnDeviceModelAvailability availabilityAnswer =
@@ -55,6 +61,7 @@ class _FakePlugin implements FoundationModelsLlm {
       field: schemaFieldName,
       maxTokens: maxResponseTokens,
       sampling: sampling,
+      budget: responseBudget,
     ));
     if (schemaFieldName == null && unconstrainedFailure != null) {
       throw unconstrainedFailure!;
@@ -184,6 +191,114 @@ void main() {
         expect(answer, '{"facts": "- one"}');
       },
     );
+
+    test(
+      'holds a constrained request to its declared response budget',
+      () async {
+        // The plugin ends an answer that passes the budget rather than let it
+        // run to the cap. The budget is the one the pipeline sizes its asks
+        // by, so the two cannot disagree about what a correct answer is.
+        final plugin = _FakePlugin(answer: '{"facts": "- one"}');
+        final client = FoundationModelsClient(plugin: plugin);
+
+        await client.generate(
+          'p',
+          schema: const LlmResponseSchema.singleStringField('facts'),
+        );
+
+        expect(plugin.calls.single.budget, client.maxResponseSize);
+      },
+    );
+
+    test('names no budget when the caller supplied no schema', () async {
+      // Unconstrained text the caller asked for is not watched: there is no
+      // object to end it at, and nothing to say it has run away.
+      final plugin = _FakePlugin(answer: 'free text');
+
+      await FoundationModelsClient(plugin: plugin).generate('p');
+
+      expect(plugin.calls.single.budget, isNull);
+    });
+
+    test(
+      'answers a constrained answer that ran away with one unconstrained request',
+      () async {
+        // Measured on iPhone 16 (iOS 27.0.1): the constrained answer closed
+        // the object with 」} inside its own string and ran to the cap on four
+        // or five attempts out of five, while the same prompt unconstrained
+        // was answered correctly in about a second.
+        final plugin = _FakePlugin(
+          answer: '{"summary": "短い"}',
+          failure: const OnDeviceGenerationException(
+            OnDeviceGenerationFailure.runawayOutput,
+          ),
+          failWhenSchemaNamed: true,
+        );
+        final client = FoundationModelsClient(plugin: plugin);
+
+        final answer = await client.generate(
+          '要約して',
+          schema: const LlmResponseSchema.singleStringField('summary'),
+        );
+
+        expect(plugin.calls, hasLength(2));
+        expect(plugin.calls.last.field, isNull);
+        expect(plugin.calls.last.prompt, '要約して');
+        expect(plugin.calls.last.sampling, OnDeviceSampling.greedy);
+        expect(plugin.calls.last.budget, client.maxResponseSize);
+        expect(plugin.calls.last.maxTokens, plugin.calls.first.maxTokens);
+        expect(answer, '{"summary": "短い"}');
+      },
+    );
+
+    test('holds the unconstrained retry to the same budget', () async {
+      // Asked for, the plugin ends the unconstrained answer where its object
+      // closes, and ends one that passes the budget before that.
+      final plugin = _FakePlugin(
+        answer: '{"facts": "- one"}',
+        failure: const OnDeviceGenerationException(
+          OnDeviceGenerationFailure.guardrailViolation,
+        ),
+        failWhenSchemaNamed: true,
+      );
+      final client = FoundationModelsClient(plugin: plugin);
+
+      await client.generate(
+        'p',
+        schema: const LlmResponseSchema.singleStringField('facts'),
+      );
+
+      expect(plugin.calls.last.field, isNull);
+      expect(plugin.calls.last.budget, client.maxResponseSize);
+    });
+
+    test('reports an unconstrained answer that ran away as such', () async {
+      final plugin = _FakePlugin(
+        answer: 'unused',
+        failure: const OnDeviceGenerationException(
+          OnDeviceGenerationFailure.runawayOutput,
+        ),
+        failWhenSchemaNamed: true,
+        unconstrainedFailure: const OnDeviceGenerationException(
+          OnDeviceGenerationFailure.runawayOutput,
+        ),
+      );
+
+      await expectLater(
+        FoundationModelsClient(plugin: plugin).generate(
+          'p',
+          schema: const LlmResponseSchema.singleStringField('summary'),
+        ),
+        throwsA(
+          isA<LlmOnDeviceGenerationFailure>().having(
+            (f) => f.cause,
+            'cause',
+            OnDeviceGenerationFailure.runawayOutput,
+          ),
+        ),
+      );
+      expect(plugin.calls, hasLength(2));
+    });
 
     test('samples the unconstrained retry greedily', () async {
       // Without the schema the model repeats itself until the response cap
