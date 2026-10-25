@@ -6,6 +6,7 @@ import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_response_format_exception.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_pipeline.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
 
 class _FixedLlmClient extends LlmClient {
   _FixedLlmClient(this.response);
@@ -289,10 +290,10 @@ void main() {
       expect(calls, 2);
     });
 
-    test('a second unreadable answer keeps the first', () async {
-      // Two unreadable answers are equally bad, and one of them has to be
-      // shown. Keeping the first costs nothing and stops here rather than
-      // spending a third generation on the slowest provider.
+    test('two unreadable answers fail the analysis', () async {
+      // An answer that does not parse is not a summary, and saving it shows
+      // the reader whatever it holds as though it were one. Two of them say
+      // more about the model than a third request would change.
       var calls = 0;
       final pipeline = LlmSummaryPipeline(
         llmClient: _AlternatingLlmClient(() {
@@ -301,18 +302,22 @@ void main() {
         }),
       );
 
-      final summary = await pipeline.summarizeFromFacts(
-        word: 'エドナ',
-        perFileFacts: const ['- 礼儀作法の先生'],
+      await expectLater(
+        pipeline.summarizeFromFacts(
+          word: 'エドナ',
+          perFileFacts: const ['- 礼儀作法の先生'],
+        ),
+        throwsA(isA<LlmAnalysisUnreadableSummaryFailure>()),
       );
-
-      expect(summary, '一度目の素のテキスト');
       expect(calls, 2);
     });
 
-    test('a second request that throws keeps the first answer', () async {
-      // An answer in hand beats losing the run over the attempt to improve
-      // on it.
+    test('a second request that throws fails the analysis', () async {
+      // The first answer is not readable, and nothing else is in hand to
+      // show. What the second request failed with is kept for the log.
+      final records = <LogRecord>[];
+      final sub = Logger.root.onRecord.listen(records.add);
+      addTearDown(sub.cancel);
       var calls = 0;
       final pipeline = LlmSummaryPipeline(
         llmClient: _AlternatingLlmClient(() {
@@ -322,12 +327,46 @@ void main() {
         }),
       );
 
-      final summary = await pipeline.summarizeFromFacts(
-        word: 'エドナ',
-        perFileFacts: const ['- 礼儀作法の先生'],
+      await expectLater(
+        pipeline.summarizeFromFacts(
+          word: 'エドナ',
+          perFileFacts: const ['- 礼儀作法の先生'],
+        ),
+        throwsA(isA<LlmAnalysisUnreadableSummaryFailure>()),
+      );
+      expect(records.any((r) => '${r.error}'.contains('二度目は届かなかった')), isTrue);
+    });
+
+    test('a server-backed answer in prose fails the analysis', () async {
+      // The same rule for every provider: the pipeline does not need to know
+      // which one answered to decide what it may save.
+      final pipeline = LlmSummaryPipeline(
+        llmClient: _FixedLlmClient('エドナは礼儀作法の先生です。'),
       );
 
-      expect(summary, '素のテキスト');
+      await expectLater(
+        pipeline.summarizeFromFacts(
+          word: 'エドナ',
+          perFileFacts: const ['- 礼儀作法の先生'],
+        ),
+        throwsA(isA<LlmAnalysisUnreadableSummaryFailure>()),
+      );
+    });
+
+    test('an unreadable extraction still falls back to its raw text', () async {
+      // Stage 1 is read by the later stages rather than by the reader, and
+      // its fallback already keeps it out of the fact cache.
+      final pipeline = LlmSummaryPipeline(
+        llmClient: _FixedLlmClient('王国の王女である。'),
+      );
+
+      final result = await pipeline.extractFileFactsDetailed(
+        word: 'アリス',
+        contexts: ['アリスは王国の王女。'],
+      );
+
+      expect(result.facts, '王国の王女である。');
+      expect(result.isStructured, isFalse);
     });
   });
 

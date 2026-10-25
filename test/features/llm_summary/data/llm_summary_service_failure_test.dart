@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/llm_summary/data/llm_client.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_response_schema.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_repository.dart';
 import 'package:novel_viewer/features/llm_summary/data/llm_summary_service.dart';
+import 'package:novel_viewer/features/llm_summary/domain/llm_analysis_failure.dart';
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -342,6 +343,28 @@ void main() {
       expect(await repository.findSnapshotsForWord(word: 'アリス'), isEmpty);
       // 4 successes + 2 attempts for the failing file, and no final summary.
       expect(client.callCount, 6);
+    });
+
+    test('an unreadable final summary is not saved', () async {
+      // Measured on iPhone 16 (iOS 27.0.1), an unreadable answer saved as a
+      // summary is shown to the reader as though it were one.
+      await createEpisodes(2);
+
+      final client = _ScriptedLlmClient(
+        const {},
+        summary: '〈記憶人〉は人口が少ない。」} 支援者: Appleです。',
+      );
+
+      await expectLater(
+        () => makeService(client).generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 2,
+        ),
+        throwsA(isA<LlmAnalysisUnreadableSummaryFailure>()),
+      );
+
+      expect(await repository.findSnapshotsForWord(word: 'アリス'), isEmpty);
     });
 
     test(
