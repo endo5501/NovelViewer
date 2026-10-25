@@ -22,6 +22,7 @@
 - [x] 3.3 設定ダイアログの高さを、500 と画面に収まる高さの小さいほうにする。3.1 の設定タブの test と `settings_dialog` の既存 test が通ることを確かめる（3.1 で設定ダイアログの高さは落ちなかったため変更なし。タブ名の切れは `FittingTabBar` で直した）
 - [x] 3.4 幅が縮んだダイアログの中の `Row` など、3.1 で残った失敗を個別に直す。3.1 の test がすべて通ることを確かめる（タブ名の切れは `lib/shared/layout/fitting_tab_bar.dart` で直した。ラベルが収まらないときだけ横スクロールにする。キーボード表示中のはみ出しと長いエラーは、ダウンロードと更新進捗のダイアログを `scrollable: true` にして直した。TTS 編集は、ツールバーを `Wrap` に、行を幅 480 未満で 2 段にして直した）
 - [x] 3.5 TTS 操作バーを画面下の safe area の分だけ上げる（design D5）。3.1 の TtsControlsBar の test（5 状態）と、`test/features/text_viewer/` の既存 test が通ることを確かめる
+- [x] 3.8 コードレビューの指摘を受け、横書きの「次の話へ」の案内と縦書きのページ表示も safe area の分だけ上げる（design D5）。`test/phone_layout/reading_area_bottom_phone_test.dart` と `test/features/text_viewer/` の既存 test が通ることを確かめる
 - [x] 3.6 要約ポップアップの test 4 件を、別の change で扱う理由を書いて skip にする（design Non-Goals）。`fvm flutter test test/phone_layout` で skip 以外が通ることを確かめる
 - [x] 3.7 AppBar のタイトルが 3.1 の test で見えない場合だけ、「新しいコレクション」を「…」メニューに移す（design D4）。見えている場合は変更なしと記録する。3.1 の AppBar の test が通ることを確かめる（3.1 でタイトルは省略表示で見えていたため変更なし）
 

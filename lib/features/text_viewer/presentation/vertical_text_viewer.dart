@@ -736,7 +736,12 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
                     ),
                     if (totalPages > 1 || _boundaryPrompt.pending != null)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
+                        // Clear of the home indicator. The page above gives up
+                        // that height, so a display with a bottom inset fits a
+                        // little less text on each page.
+                        padding: EdgeInsets.only(
+                          bottom: 8 + MediaQuery.paddingOf(context).bottom,
+                        ),
                         child: Text(
                           _buildIndicatorText(
                             context,
