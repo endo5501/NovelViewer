@@ -39,8 +39,8 @@
 - [ ] 5.1 iPhone を無料プロビジョニングに登録し、release ビルドを `xcrun devicectl device install app` で入れる。起動、ライブラリの初期化、Files アプリからの見え方、回転させても縦向きのままであることを確かめる
 - [ ] 5.2 主要な画面とダイアログ（ホーム、両 drawer、設定の全タブ、ダウンロード、要約）を目視で確かめ、崩れがあれば 3 章の test に加えて直す
 - [ ] 5.3 iPad と iPhone の両方で同期し、確認の文言の端末名がそれぞれ `iPhone (…)` / `iPad (…)` になることを確かめる。`Platform.localHostname` の実際の値を design.md の Open Questions に記録する
-- [ ] 5.4 iPhone にデータがある場合は Documents をバックアップしてから、`integration_test/speech_cpp_ios_test.dart` を `flutter drive --profile` で実行し、Irodori-TTS F16 のメモリの余裕と RTF を記録する（`docs/ipad.md` の計測手順）。基準を満たさない場合は、iPhone での扱いを別の change として起こすことを記録する
-- [ ] 5.5 Piper の読み上げ、オンデバイス LLM（Apple Intelligence を有効にした状態）の要約、URL スキームからのダウンロードが iPhone で動くことを確かめる
+- [x] 5.4 iPhone にデータがある場合は Documents をバックアップしてから、`integration_test/speech_cpp_ios_test.dart` を `flutter drive --profile` で実行し、Irodori-TTS F16 のメモリの余裕と RTF を記録する（`docs/ipad.md` の計測手順）。基準を満たさない場合は、iPhone での扱いを別の change として起こすことを記録する（省略。利用者の判断。実際のアプリで Irodori-TTS が iPhone 16 で動くことを確認済み）
+- [x] 5.5 Piper の読み上げ、オンデバイス LLM（Apple Intelligence を有効にした状態）の要約、URL スキームからのダウンロードが iPhone で動くことを確かめる（Piper・Irodori-TTS はモデルを取得して動作を確認。URL スキームは利用者の判断で後回し。オンデバイス LLM は iOS 27.0（24A446）で要約が崩れる（「支援者: Appleです。」の繰り返し）。iPhone 対応とは関係のない iOS 27 の問題として別の change で扱う。macOS 27.0.1 では再現せず）
 
 ## 6. 最終確認
 
