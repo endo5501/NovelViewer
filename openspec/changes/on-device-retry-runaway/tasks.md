@@ -3,8 +3,8 @@
 ## 1. 実機計測テストで修正前の挙動を再現する
 
 - [x] 1.1 `integration_test/on_device_llm_runaway_test.dart` を追加する。design.md D7 の 1〜3 と 5（制約付きを5回、スキーマなし・greedy・打ち切りなし、スキーマなし・既定サンプリング・打ち切りなし、`FoundationModelsClient.generate`）を `MethodChannelFoundationModelsLlm` 経由で実行し、出力の先頭・長さ・所要時間・拒否の回数をログに残す。4（打ち切りあり）は 3.x で引数ができてから足す。`fvm flutter analyze` が通ることで確認する
-- [ ] 1.0 実機に初めて入れる前に、`scripts/install_ios.sh --backup --device <iPhone>` 相当の手順で iPhone のデータ（小説・参照音声・設定・DB）を `~/Backups/` に取り出し、バックアップのファイルがあることを確認する。実機に入れる前（1.2・3.4・6.1・6.2）には毎回、ユーザーに確認する
-- [ ] 1.2 iPhone 実機（iOS 27.0.1）で `fvm flutter drive --profile --driver=test_driver/integration_test.dart --target=integration_test/on_device_llm_runaway_test.dart -d <デバイス ID>` を実行する。スキーマなし・greedy で「支援者: Appleです。」の繰り返しが再現し、応答上限まで走ることをログで確かめ、結果（所要時間を含む）を design.md の Context に追記する。再現しない場合は先へ進まず、ユーザーと方針を相談する
+- [x] 1.0 実機に初めて入れる前に、`scripts/install_ios.sh --backup --device <iPhone>` 相当の手順で iPhone のデータ（小説・参照音声・設定・DB）を `~/Backups/` に取り出し、バックアップのファイルがあることを確認する。実機に入れる前（1.2・3.4・6.1・6.2）には毎回、ユーザーに確認する
+- [x] 1.2 iPhone 実機（iOS 27.0.1）で `fvm flutter drive --profile --driver=test_driver/integration_test.dart --target=integration_test/on_device_llm_runaway_test.dart -d <デバイス ID>` を実行する。スキーマなし・greedy で「支援者: Appleです。」の繰り返しが再現し、応答上限まで走ることをログで確かめ、結果（所要時間を含む）を design.md の Context に追記する。再現しない場合は先へ進まず、ユーザーと方針を相談する
 - [ ] 1.3 `docs/ios.md` に計測テストの目的と実行手順（Apple Intelligence が有効な実機が必要なこと）を追記し、手順どおりのコマンドで 1.2 が実行できることを確認する
 
 ## 2. 打ち切りの判定（Swift、Flutter ビルド外）
