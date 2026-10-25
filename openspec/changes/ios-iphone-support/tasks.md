@@ -43,8 +43,8 @@
 
 ## 6. 最終確認
 
-- [ ] 6.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 6.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 6.3 `fvm dart format lib test`でフォーマットを実行
-- [ ] 6.4 `fvm flutter analyze`でリントを実行
-- [ ] 6.5 `fvm flutter test`でテストを実行
+- [x] 6.1 code-reviewスキルを使用してコードレビューを実施（行の幅をまたぐときのフォーカス、本文下端の表示、FittingTabBar のテーマ、ツールバーの間隔を直した。起動時の channel 呼び出しの待ち時間・ホスト名の注入・未知の種別のログは軽微なので見送り）
+- [x] 6.2 codexスキルを使用して現在開発中のコードレビューを実施（行の幅をまたぐときのフォーカスの指摘を直した）
+- [x] 6.3 `fvm dart format lib test`でフォーマットを実行
+- [x] 6.4 `fvm flutter analyze`でリントを実行
+- [x] 6.5 `fvm flutter test`でテストを実行
