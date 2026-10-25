@@ -1,11 +1,11 @@
 ## Purpose
 
-Foundational Flutter project setup for desktop targets (macOS/Windows/Linux) and iPad (iOS): core dependencies (flutter_riverpod, file_picker), feature-first directory layout under `lib/features/`, and mirrored test infrastructure.
+Foundational Flutter project setup for desktop targets (macOS/Windows/Linux) and iOS (iPad / iPhone): core dependencies (flutter_riverpod, file_picker), feature-first directory layout under `lib/features/`, and mirrored test infrastructure.
 
 ## Requirements
 
 ### Requirement: Flutter project initialization
-The system SHALL be a Flutter project configured for desktop platforms (macOS, Windows, Linux) and for iPad (iOS), with Android retained for future use.
+The system SHALL be a Flutter project configured for desktop platforms (macOS, Windows, Linux) and for iOS on both iPad and iPhone, with Android retained for future use.
 
 #### Scenario: Project builds on macOS
 - **WHEN** the developer runs `flutter build macos`
@@ -21,6 +21,10 @@ The system SHALL be a Flutter project configured for desktop platforms (macOS, W
 
 #### Scenario: Project launches on an iPad
 - **WHEN** the application is installed on an iPad or iPad simulator and launched
+- **THEN** it starts, renders its Japanese UI, and initializes its library directory and database without crashing
+
+#### Scenario: Project launches on an iPhone
+- **WHEN** the application is installed on an iPhone or iPhone simulator and launched
 - **THEN** it starts, renders its Japanese UI, and initializes its library directory and database without crashing
 
 ### Requirement: Dependency management

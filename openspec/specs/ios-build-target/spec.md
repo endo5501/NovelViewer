@@ -1,15 +1,27 @@
 ## Purpose
 
-Defines the committed state of the `ios/` project so NovelViewer builds and runs as an iPad-only app: an iPad-exclusive device family with unrestricted orientations, a `Documents` library the reader can reach from the Files app, a declared local-network usage description so the reader can be asked for permission to reach a self-hosted LLM server, Swift Package Manager as the sole dependency integration (no CocoaPods on iOS, with macOS untouched), a signing identity kept out of the repository behind an untracked `Local.xcconfig`, Flutter's required project migrations tracked so a build never rewrites tracked files, native frameworks under `ios/Frameworks/` embedded and signed without a static list (and without breaking a build that has none), and documented build prerequisites and constraints.
+Defines the committed state of the `ios/` project so NovelViewer builds and runs on both iPad and iPhone: a device family covering both, with unrestricted orientations on iPad and portrait only on iPhone, a `Documents` library the reader can reach from the Files app, a declared local-network usage description so the reader can be asked for permission to reach a self-hosted LLM server, Swift Package Manager as the sole dependency integration (no CocoaPods on iOS, with macOS untouched), a signing identity kept out of the repository behind an untracked `Local.xcconfig`, Flutter's required project migrations tracked so a build never rewrites tracked files, native frameworks under `ios/Frameworks/` embedded and signed without a static list (and without breaking a build that has none), and documented build prerequisites and constraints.
 
 ## Requirements
 
-### Requirement: iPad-only device family
-The iOS build SHALL target iPad exclusively. `TARGETED_DEVICE_FAMILY` in `ios/Runner.xcodeproj/project.pbxproj` SHALL be `"2"` for every build configuration.
+### Requirement: iPhone and iPad device family
+The iOS build SHALL target both iPhone and iPad. `TARGETED_DEVICE_FAMILY` in `ios/Runner.xcodeproj/project.pbxproj` SHALL be `"1,2"` for every build configuration.
 
-#### Scenario: Device family is iPad only
+On iPhone the app SHALL run in portrait only. `UISupportedInterfaceOrientations` in `ios/Runner/Info.plist`, the list iOS applies to an iPhone, SHALL contain `UIInterfaceOrientationPortrait` and no other orientation. A landscape iPhone is 852pt wide but only about 393pt tall, so the width-based shell layout would put the wide layout, with its search column, into a screen too short for it; the reader uses the phone upright, so the app does not offer that layout there at all.
+
+On iPad the orientations SHALL remain unrestricted: `UISupportedInterfaceOrientations~ipad` SHALL list portrait, portrait-upside-down, landscape-left and landscape-right, so restricting the iPhone does not change how the app behaves on an iPad.
+
+#### Scenario: Device family is iPhone and iPad
 - **WHEN** `ios/Runner.xcodeproj/project.pbxproj` is inspected
-- **THEN** every `TARGETED_DEVICE_FAMILY` assignment is `"2"` and none is `"1"` or `"1,2"`
+- **THEN** every `TARGETED_DEVICE_FAMILY` assignment is `"1,2"`
+
+#### Scenario: iPhone is portrait only
+- **WHEN** `ios/Runner/Info.plist` is inspected
+- **THEN** `UISupportedInterfaceOrientations` lists `UIInterfaceOrientationPortrait` and no landscape or upside-down orientation
+
+#### Scenario: Rotating an iPhone keeps the app upright
+- **WHEN** the app is running on an iPhone and the phone is turned to landscape
+- **THEN** the app stays in portrait
 
 #### Scenario: iPad orientations remain unrestricted
 - **WHEN** `ios/Runner/Info.plist` is inspected
