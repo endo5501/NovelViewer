@@ -68,7 +68,8 @@ class FoundationModelsClient extends LlmClient {
   @override
   int get maxResponseSize => (maxResponseTokens * _charactersPerToken).floor();
 
-  /// Generates, giving up the schema constraint if that is what was refused.
+  /// Generates, giving up the schema constraint if that is what was refused
+  /// or what ran away.
   ///
   /// The constraint is the first choice, because an answer the model was made
   /// to shape parses without a fallback. It is not the only one. The safety
@@ -86,40 +87,81 @@ class FoundationModelsClient extends LlmClient {
   /// was turned down, so either way the same prompt without it is the request
   /// worth making.
   ///
-  /// Only a refusal is worth a second attempt. A prompt that overran the
-  /// window overruns it again without its schema, since dropping the schema
-  /// does not shorten the prompt, and the rest do not change between two
-  /// attempts a moment apart.
+  /// An answer that ran away under the constraint is the other reason to give
+  /// it up. Measured on iPhone 16 (iOS 27.0.1), the constrained answer wrote
+  /// the summary, closed the object with 」} inside its own still-open
+  /// string, and went on to the response cap on four or five attempts out of
+  /// five, about twenty seconds each, while the same prompt without the
+  /// schema was answered correctly in about a second. The plugin ends such an
+  /// answer as soon as its field passes [maxResponseSize] or holds a closing
+  /// brace, and the same prompt without the constraint is again the request
+  /// worth making.
+  ///
+  /// Every request with a schema, and the request that replaces it, is held
+  /// to [maxResponseSize]. That is what asks the plugin to watch the answer:
+  /// to end a constrained one that runs away, and to end an unconstrained one
+  /// where its object closes. A caller that asked for no schema is not held
+  /// to it, and has its text returned as the model wrote it.
+  ///
+  /// Only a refusal or a runaway is worth a second attempt. A prompt that
+  /// overran the window overruns it again without its schema, since dropping
+  /// the schema does not shorten the prompt, and the rest do not change
+  /// between two attempts a moment apart.
   ///
   /// The retry has its own fate, and it is that fate that is reported. A
   /// retry that is rate limited is reported as rate limiting, not as the
   /// refusal that provoked it, so a reader is not sent after the text when
-  /// the text was not the problem.
+  /// the text was not the problem. A retry that runs away too is reported as
+  /// having run away.
   ///
   /// A request that named no schema has no constraint left to give up, so it
   /// is reported as it stands rather than repeated identically.
   ///
-  /// The retried answer is shaped by the model rather than by a schema: it
-  /// arrives fenced, or with the named field holding a list where a string was
-  /// asked for. It is returned as it came, because the pipeline already reads
-  /// both forms from server-backed runtimes that ignore a requested format,
-  /// and reshaping it here would give that text two places to be understood.
+  /// The retried answer is shaped by the model rather than by a schema. The
+  /// plugin hands back only the object it contains, without the fence the
+  /// model opens around it; the object can still hold the named field as a
+  /// list where a string was asked for. It is returned as it came, because
+  /// the pipeline already reads that form from server-backed runtimes that
+  /// ignore a requested format, and reshaping it here would give that text
+  /// two places to be understood.
   @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
-    try {
-      return await _generate(prompt, fieldName: schema?.fieldName);
-    } on OnDeviceGenerationException catch (e) {
-      if (schema == null ||
-          e.reason != OnDeviceGenerationFailure.guardrailViolation) {
+    if (schema == null) {
+      try {
+        return await _generate(prompt, fieldName: null);
+      } on OnDeviceGenerationException catch (e) {
         throw _asAnalysisFailure(e);
       }
     }
     try {
-      return await _generate(prompt, fieldName: null, sampling: _retrySampling);
+      return await _generate(
+        prompt,
+        fieldName: schema.fieldName,
+        budget: maxResponseSize,
+      );
+    } on OnDeviceGenerationException catch (e) {
+      if (!_givesUpTheConstraint.contains(e.reason)) {
+        throw _asAnalysisFailure(e);
+      }
+    }
+    try {
+      return await _generate(
+        prompt,
+        fieldName: null,
+        sampling: _retrySampling,
+        budget: maxResponseSize,
+      );
     } on OnDeviceGenerationException catch (e) {
       throw _asAnalysisFailure(e);
     }
   }
+
+  /// The failures of a constrained request that the same prompt without the
+  /// constraint can answer: the constrained path refused, or run away.
+  static const _givesUpTheConstraint = {
+    OnDeviceGenerationFailure.guardrailViolation,
+    OnDeviceGenerationFailure.runawayOutput,
+  };
 
   /// How the retry picks its tokens.
   ///
@@ -137,11 +179,13 @@ class FoundationModelsClient extends LlmClient {
     String prompt, {
     required String? fieldName,
     OnDeviceSampling? sampling,
+    int? budget,
   }) => _plugin.generate(
     prompt: prompt,
     schemaFieldName: fieldName,
     maxResponseTokens: maxResponseTokens,
     sampling: sampling,
+    responseBudget: budget,
   );
 
   /// Names the cause in the application's own terms.

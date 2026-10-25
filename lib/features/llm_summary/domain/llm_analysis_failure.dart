@@ -76,7 +76,10 @@ class LlmOnDeviceGenerationFailure
   /// model does not accept the shape of, and a missing model all answer the
   /// same way to the same prompt. Rate limiting passes, a timeout can finish
   /// on a second attempt, and a truncated answer depends on how much the
-  /// model chose to say, so those are worth one more attempt.
+  /// model chose to say, so those are worth one more attempt. So is an answer
+  /// that ran away: the plugin reports it only from the unconstrained
+  /// request, and the identical request begins constrained again, where the
+  /// answer may well complete.
   ///
   /// An unrecognised cause keeps its retry. Nothing is known about whether
   /// it can change, and refusing a second attempt on a cause that may well

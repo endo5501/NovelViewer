@@ -27,8 +27,8 @@
 
 ## 5. クライアントの切り替え
 
-- [ ] 5.1 クライアントのテストを先に書く（`test/features/llm_summary/data/`）。制約付きの要求に応答予算（`maxResponseSize`）が渡されること。制約付きの `runawayOutput` は、拒否と同じくスキーマなし・greedy・打ち切りあり・同じ予算の要求を1回だけ出すこと。拒否のときのスキーマなしの要求にも、打ち切りと予算が付くこと。スキーマなしの要求の `runawayOutput` はそのまま報告されること。最大2回であること。`LlmOnDeviceGenerationFailure(runawayOutput).isWorthRetrying` が true であること。`fvm flutter test test/features/llm_summary` で失敗することを確認してコミットする
-- [ ] 5.2 `foundation_models_client.dart` と `llm_analysis_failure.dart` を実装し、ドキュメントコメントを新しい挙動と計測（iPhone 16 / iOS 27.0.1 で制約付きが5回とも暴走、スキーマなしは約1秒で正常）に合わせて書き直す。5.1 のテストが通ることを確認する
+- [x] 5.1 クライアントのテストを先に書く（`test/features/llm_summary/data/`）。制約付きの要求に応答予算（`maxResponseSize`）が渡されること。制約付きの `runawayOutput` は、拒否と同じくスキーマなし・greedy・打ち切りあり・同じ予算の要求を1回だけ出すこと。拒否のときのスキーマなしの要求にも、打ち切りと予算が付くこと。スキーマなしの要求の `runawayOutput` はそのまま報告されること。最大2回であること。`LlmOnDeviceGenerationFailure(runawayOutput).isWorthRetrying` が true であること。`fvm flutter test test/features/llm_summary` で失敗することを確認してコミットする
+- [x] 5.2 `foundation_models_client.dart` と `llm_analysis_failure.dart` を実装し、ドキュメントコメントを新しい挙動と計測（iPhone 16 / iOS 27.0.1 で制約付きが5回とも暴走、スキーマなしは約1秒で正常）に合わせて書き直す。5.1 のテストが通ることを確認する
 
 ## 6. 読めない最終要約を失敗にする（全プロバイダ）
 
