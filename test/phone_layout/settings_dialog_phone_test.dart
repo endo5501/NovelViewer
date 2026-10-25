@@ -182,9 +182,15 @@ void main() {
   /// Selects [label]'s tab, lets file I/O started by the tab's sections land,
   /// and scrolls the tab to its end so content further down is laid out.
   Future<void> selectTab(WidgetTester tester, String label) async {
-    await tester.tap(
-      find.descendant(of: find.byType(TabBar), matching: find.text(label)),
+    final tab = find.descendant(
+      of: find.byType(TabBar),
+      matching: find.text(label),
     );
+    // The tab bar scrolls on a phone, so a tab can start out of view, where a
+    // tap would land on the barrier and close the dialog.
+    await tester.ensureVisible(tab);
+    await tester.pumpAndSettle();
+    await tester.tap(tab);
     await tester.pumpAndSettle();
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 200)),
