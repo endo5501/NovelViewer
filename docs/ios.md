@@ -97,7 +97,15 @@ iPhone にも同じビルド（`build/ios/iphoneos/Runner.app`）をそのまま
 - 端末の 設定 > プライバシーとセキュリティ > デベロッパモード をオンにする（再起動を求められます）
 - 初回のインストールの後、設定 > 一般 > VPN とデバイス管理 で、自分の Apple ID の開発元を信頼する
 
-無料プロビジョニングで署名する端末が増えたときは、端末をつないだ状態で一度 `scripts/build_app.sh ios` をやり直し、その端末をプロビジョニングプロファイルに含めてください。
+新しい端末は、プロビジョニングプロファイルに登録されるまでインストールできません。登録されていない端末に入れると、`devicectl` が `This provisioning profile cannot be installed on this device.`（0xe8008012）で失敗します。`scripts/build_app.sh ios` は特定の端末を宛先にしないので、これだけでは新しい端末が登録されません。端末をつないだ状態で、その端末を宛先にして一度ビルドしてください。
+
+```bash
+xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
+  -destination 'id=<デバイスUDID>' \
+  -allowProvisioningUpdates -allowProvisioningDeviceRegistration build
+```
+
+これで端末がチームに登録され、プロファイルが作り直されます。そのあと `scripts/build_app.sh ios` でビルドし直してからインストールします。プロファイルに入っている端末は `security cms -D -i build/ios/iphoneos/Runner.app/embedded.mobileprovision` の `ProvisionedDevices` で確かめられます。
 
 ### 3. debug ビルドは実機のホーム画面から起動できない
 
