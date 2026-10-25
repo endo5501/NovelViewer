@@ -60,6 +60,9 @@ class RefreshProgressDialog extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return AlertDialog(
+      // A failed refresh can report a long message, which on a phone is taller
+      // than the dialog can grow.
+      scrollable: true,
       title: Text(l10n.fileBrowser_refreshProgressTitle(novelTitle)),
       content: _buildContent(context, downloadState),
       actions: [
