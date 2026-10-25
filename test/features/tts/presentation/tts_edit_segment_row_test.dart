@@ -495,35 +495,73 @@ void main() {
   });
 
   group('when the width crosses into the two-line layout', () {
-    bool hasFocus(WidgetTester tester, int fieldIndex) => tester
-        .widget<EditableText>(find.byType(EditableText).at(fieldIndex))
-        .focusNode
-        .hasFocus;
+    /// Mounts one row whose width is driven by [width]. The row widget is
+    /// built once and handed down as a child, so changing the width only lays
+    /// it out again, as resizing the dialog does; rebuilding the row would
+    /// instead reset its fields from the segment.
+    Future<void> pumpResizableRow(
+      WidgetTester tester,
+      ValueNotifier<double> width,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final row = TtsEditSegmentRow(
+        segment: buildSegment(),
+        isGenerating: false,
+        isPlaying: false,
+        isCursor: false,
+        voiceFiles: const [],
+        onTextEditComplete: (_) {},
+        onRefWavPathChanged: (_) {},
+        onMemoEditComplete: (_) {},
+        onPlay: () {},
+        onGenerate: () {},
+        onReset: () {},
+        onCursorRequested: () {},
+        onSkipToggled: () {},
+        enabled: true,
+        showReferenceAudio: true,
+      );
+      await tester.pumpWidget(
+        LocalizedMaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: ValueListenableBuilder<double>(
+                valueListenable: width,
+                builder: (context, value, child) =>
+                    SizedBox(width: value, child: child),
+                child: row,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    EditableText field(WidgetTester tester, int index) =>
+        tester.widget<EditableText>(find.byType(EditableText).at(index));
 
     for (final (name, fieldIndex) in const [('text', 0), ('memo', 1)]) {
       testWidgets('the $name field keeps its focus and its text', (
         tester,
       ) async {
-        await pumpRow(tester, rowWidth: 600);
-        await tester.tap(find.byType(TextField).at(fieldIndex));
-        await tester.pump();
+        final width = ValueNotifier<double>(600);
+        addTearDown(width.dispose);
+        await pumpResizableRow(tester, width);
         await tester.enterText(find.byType(TextField).at(fieldIndex), '入力中');
-        expect(hasFocus(tester, fieldIndex), isTrue);
+        expect(field(tester, fieldIndex).focusNode.hasFocus, isTrue);
 
-        await pumpRow(tester, rowWidth: 360);
+        width.value = 360;
+        await tester.pump();
 
-        expect(hasFocus(tester, fieldIndex), isTrue);
-        expect(
-          tester
-              .widget<EditableText>(find.byType(EditableText).at(fieldIndex))
-              .controller
-              .text,
-          '入力中',
-        );
+        expect(field(tester, fieldIndex).focusNode.hasFocus, isTrue);
+        expect(field(tester, fieldIndex).controller.text, '入力中');
 
-        await pumpRow(tester, rowWidth: 600);
+        width.value = 600;
+        await tester.pump();
 
-        expect(hasFocus(tester, fieldIndex), isTrue);
+        expect(field(tester, fieldIndex).focusNode.hasFocus, isTrue);
+        expect(field(tester, fieldIndex).controller.text, '入力中');
       });
     }
   });
