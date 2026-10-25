@@ -8,7 +8,7 @@ Web小説サイトから小説をダウンロードし、ローカルで閲覧�
 
 - macOS
 - Windows
-- iPad（TTS は非対応。詳細は [docs/ipad.md](docs/ipad.md)）
+- iPad / iPhone（iPhone は縦向きのみ。詳細は [docs/ios.md](docs/ios.md)）
 - Linux(未確認)
 
 ## 機能
@@ -25,7 +25,7 @@ Web小説サイトから小説をダウンロードし、ローカルで閲覧�
 
 ![編集画面](images/view2.png)
 
-表示幅が狭い画面（iPad の縦向き、800pt 未満に縮めたウィンドウ）でのレイアウトと、タッチでコンテキストメニューを開く方法は [docs/ipad.md](docs/ipad.md#狭い画面でのレイアウト) を参照してください。
+表示幅が狭い画面（iPhone、iPad の縦向き、800pt 未満に縮めたウィンドウ）でのレイアウトと、タッチでコンテキストメニューを開く方法は [docs/ios.md](docs/ios.md#狭い画面でのレイアウト) を参照してください。
 
 ## インストール（Windows）
 
@@ -72,7 +72,7 @@ ollama pull gemma4:e4b
 ```
 3. NovelVeiwerの設定画面にてLLMプロバイダを`Ollama`、エンドポイントURLに`http://localhost:11434`、モデル名にダウンロードしたモデル名(上記の場合、`gemma4:e4b`)を設定
 
-iPad から PC 上の Ollama に接続する場合は [docs/ipad.md](docs/ipad.md#llm-要約) を参照してください。
+iPad / iPhone から PC 上の Ollama に接続する場合は [docs/ios.md](docs/ios.md#llm-要約) を参照してください。
 
 ### LLM(オンデバイス)設定
 
@@ -96,7 +96,7 @@ open "novelviewer://download?url=https%3A%2F%2Fncode.syosetu.com%2Fn9669bk%2F"
 
 登録が効いているかの手動確認手順は [docs/verify-url-scheme.md](docs/verify-url-scheme.md) にあります。
 
-iPad では Safari の共有シートからこのスキームを呼び出せます。手順は [docs/ipad.md](docs/ipad.md#共有シートから登録する) を参照してください。
+iPad / iPhone では Safari の共有シートからこのスキームを呼び出せます。手順は [docs/ios.md](docs/ios.md#共有シートから登録する) を参照してください。
 
 ## トラブルシューティング
 
@@ -200,9 +200,9 @@ rm -rf build/macos/Build/Products/*/novel_viewer.app   # macOS: 旧 libpiper_tts
 
 ネイティブライブラリ名は `libpiper_plus.dylib` / `piper_plus.dll` に変わりました（旧 `libpiper_tts_ffi.dylib` / `piper_tts_ffi.dll` はビルドスクリプトが削除します）。
 
-#### iPad向けビルド
+#### iPad / iPhone向けビルド
 
-TTS は非対応。前提条件（Xcode の iOS platform component、署名設定など）とインストール手順は [docs/ipad.md](docs/ipad.md#ビルドとインストール) を参照してください。
+前提条件（Xcode の iOS platform component、署名設定など）とインストール手順は [docs/ios.md](docs/ios.md#ビルドとインストール) を参照してください。
 
 ```bash
 scripts/build_app.sh ios --release
