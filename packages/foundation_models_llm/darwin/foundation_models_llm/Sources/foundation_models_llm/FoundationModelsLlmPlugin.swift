@@ -133,6 +133,7 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
     let schemaFieldName = arguments["schemaFieldName"] as? String
     let maxResponseTokens = arguments["maxResponseTokens"] as? Int
     let sampling = arguments["sampling"] as? String
+    let responseBudget = arguments["responseBudget"] as? Int
 
     // `result` has to be called back on the platform thread, which is where
     // this hop lands.
@@ -142,8 +143,15 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
           prompt: prompt,
           schemaFieldName: schemaFieldName,
           maxResponseTokens: maxResponseTokens,
-          sampling: sampling)
+          sampling: sampling,
+          responseBudget: responseBudget)
         result(text)
+      } catch is RanAway {
+        result(
+          FlutterError(
+            code: "runawayOutput",
+            message: "The answer ran away and was ended before the response cap.",
+            details: nil))
       } catch {
         // The framework reports through different error types depending on
         // the system, and a catch naming only one reads every failure
@@ -162,17 +170,26 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
   /// Generates, constraining the answer to a one-field object when the caller
   /// named a field.
   ///
+  /// With a response budget the answer is watched as it arrives, and ended
+  /// by `AnswerCutoff`'s verdict rather than left to the model to stop:
+  /// measured on iPhone 16 (iOS 27.0.1), the constrained answer wrote `」}`
+  /// after the summary and went on inside the still-open string for twenty
+  /// seconds, to the response cap. Without one it is waited for whole.
+  ///
   /// The field name is only known at run time — the pipeline asks for `facts`
   /// in one stage and `summary` in the next — so the schema is built with the
   /// dynamic API rather than declared as a type. The result is handed back as
   /// the JSON the caller already knows how to read, which is why nothing here
-  /// reshapes it.
+  /// reshapes it. An unconstrained answer that was watched is handed back as
+  /// the object it contains, without the fence the model tends to open around
+  /// it; the object itself is left as the model wrote it.
   @available(iOS 26.0, macOS 26.0, *)
   private static func generate(
     prompt: String,
     schemaFieldName: String?,
     maxResponseTokens: Int?,
-    sampling: String?
+    sampling: String?,
+    responseBudget: Int?
   ) async throws -> String {
     // A session per request. The prompts a run issues do not depend on one
     // another, and the model's window is shared between prompt and response,
@@ -184,7 +201,21 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
       maximumResponseTokens: maxResponseTokens)
 
     guard let schemaFieldName else {
-      return try await session.respond(to: prompt, options: options).content
+      guard let responseBudget else {
+        return try await session.respond(to: prompt, options: options).content
+      }
+      var text = ""
+      for try await snapshot in session.streamResponse(to: prompt, options: options) {
+        text = snapshot.content
+        switch AnswerCutoff.unconstrained(text: text, budget: responseBudget) {
+        case .continuing: continue
+        case .complete(let object): return object
+        case .ranAway: throw RanAway()
+        }
+      }
+      // The model stopped within the budget before any object closed. What it
+      // wrote is all there is, so it is returned as it stands.
+      return text
     }
 
     let root = DynamicGenerationSchema(
@@ -195,10 +226,30 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
           schema: DynamicGenerationSchema(type: String.self))
       ])
     let schema = try GenerationSchema(root: root, dependencies: [])
-    let response = try await session.respond(
+    guard let responseBudget else {
+      let response = try await session.respond(
+        to: prompt, schema: schema, options: options)
+      return response.content.jsonString
+    }
+    var answer: GeneratedContent?
+    for try await snapshot in session.streamResponse(
       to: prompt, schema: schema, options: options)
-    return response.content.jsonString
+    {
+      let value =
+        (try? snapshot.rawContent.value(String.self, forProperty: schemaFieldName)) ?? ""
+      if AnswerCutoff.constrained(fieldValue: value, budget: responseBudget) == .ranAway {
+        throw RanAway()
+      }
+      answer = snapshot.rawContent
+    }
+    // An empty stream is not an answer the caller can read; the empty object
+    // reaches it as a response missing its field, which it already rejects.
+    return answer?.jsonString ?? "{}"
   }
+
+  /// Thrown when `AnswerCutoff` ends an answer as having run away, and
+  /// reported to Dart as `runawayOutput`.
+  private struct RanAway: Error {}
 
   /// The sampling mode Dart named, or nil to leave the framework its default.
   ///

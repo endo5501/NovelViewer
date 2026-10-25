@@ -23,7 +23,7 @@
 
 - [x] 4.1 Dart プラグインのテストを先に書く（`packages/foundation_models_llm/test/foundation_models_llm_generate_channel_test.dart`）。`generate` に応答予算と「スキーマなしの回答を打ち切る」指定を渡すとチャネルの引数に載ること、省略時は載らないこと、エラーコード `runawayOutput` が `OnDeviceGenerationFailure.runawayOutput` に読まれること。`cd packages/foundation_models_llm && fvm flutter test` で失敗することを確認してコミットする
 - [x] 4.2 `packages/foundation_models_llm/lib/src/` に引数と `OnDeviceGenerationFailure.runawayOutput` を追加し、4.1 のテストが通ることを確認する。ドキュメントコメントも更新する
-- [ ] 4.3 `FoundationModelsLlmPlugin.swift` で、予算が渡された呼び出しは `streamResponse` で受け、3.2 の判定で打ち切るようにする。制約付きは `runawayOutput` を返し、スキーマなしはオブジェクトか `runawayOutput` を返す。予算が渡されない呼び出しは従来どおり `respond` を使う。`scripts/build_app.sh macos` でビルドが通ること、macOS で計測テストが通ることで確認する
+- [x] 4.3 `FoundationModelsLlmPlugin.swift` で、予算が渡された呼び出しは `streamResponse` で受け、3.2 の判定で打ち切るようにする。制約付きは `runawayOutput` を返し、スキーマなしはオブジェクトか `runawayOutput` を返す。予算が渡されない呼び出しは従来どおり `respond` を使う。`scripts/build_app.sh macos` でビルドが通ること、macOS で計測テストが通ることで確認する
 
 ## 5. クライアントの切り替え
 

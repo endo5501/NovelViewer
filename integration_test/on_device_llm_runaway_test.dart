@@ -147,6 +147,50 @@ void main() {
           ),
         );
       }
+      // The constrained request held to the budget, as the client makes it
+      // (design D2): a runaway is ended and reported rather than run to the
+      // cap, so its time is what ending it costs.
+      for (var i = 1; i <= _constrainedRuns; i++) {
+        await measure(
+          'constrained_watched#$i',
+          () => plugin.generate(
+            prompt: prompt,
+            schemaFieldName: fieldName,
+            maxResponseTokens: FoundationModelsClient.maxResponseTokens,
+            responseBudget: _budget,
+          ),
+        );
+      }
+      // A budget no answer fits, so the cut-off itself is exercised on a
+      // model that does not run away: every request here should end as a
+      // runaway, quickly.
+      await measure(
+        'constrained_tiny_budget',
+        () => plugin.generate(
+          prompt: prompt,
+          schemaFieldName: fieldName,
+          maxResponseTokens: FoundationModelsClient.maxResponseTokens,
+          responseBudget: 20,
+        ),
+      );
+      await measure(
+        'unconstrained_tiny_budget',
+        () => plugin.generate(
+          prompt: prompt,
+          maxResponseTokens: FoundationModelsClient.maxResponseTokens,
+          sampling: OnDeviceSampling.greedy,
+          responseBudget: 20,
+        ),
+      );
+      await measure(
+        'unconstrained_watched',
+        () => plugin.generate(
+          prompt: prompt,
+          maxResponseTokens: FoundationModelsClient.maxResponseTokens,
+          sampling: OnDeviceSampling.greedy,
+          responseBudget: _budget,
+        ),
+      );
       await measure(
         'unconstrained_greedy',
         () => plugin.generate(
