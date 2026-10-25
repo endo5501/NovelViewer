@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/episode_navigation/providers/episode_navig
 import 'package:novel_viewer/features/file_browser/data/file_system_service.dart';
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
+import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/text_content_renderer.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -50,10 +51,11 @@ void main() {
 
   const visibleBottom = 852 - kPhoneBottomInset;
 
-  Future<void> pumpReadingArea(
+  Future<ProviderContainer> pumpReadingArea(
     WidgetTester tester,
-    TextDisplayMode mode,
-  ) async {
+    TextDisplayMode mode, {
+    String? content,
+  }) async {
     usePhoneDisplay(tester);
     final container = ProviderContainer(
       overrides: [
@@ -79,12 +81,13 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             appBar: AppBar(),
-            body: TextContentRenderer(content: longContent),
+            body: TextContentRenderer(content: content ?? longContent),
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
+    return container;
   }
 
   void expectAboveHomeIndicator(WidgetTester tester, Finder finder) {
@@ -124,6 +127,56 @@ void main() {
       await tester.pumpAndSettle();
 
       expectAboveHomeIndicator(tester, find.textContaining('003.txt'));
+    },
+  );
+
+  testWidgets(
+    'a vertical page fills every column of a paragraph but its last',
+    (tester) async {
+      // One paragraph several columns long. The page is paginated for a column
+      // height; if the page is then given less height than that, the run of
+      // characters wraps early and leaves short columns in the middle. Whether
+      // the shortfall shows depends on the slack the font size leaves, so a
+      // range of sizes is tried.
+      final paragraph = List.filled(30, 'あいうえおかきくけこ').join();
+      final container = await pumpReadingArea(
+        tester,
+        TextDisplayMode.vertical,
+        content: paragraph,
+      );
+
+      List<int> columnSizes() {
+        final counts = <double, int>{};
+        for (final element
+            in find
+                .descendant(
+                  of: find.byType(VerticalTextPage),
+                  matching: find.byType(Text),
+                )
+                .evaluate()) {
+          final box = element.renderObject! as RenderBox;
+          final x = box.localToGlobal(box.size.center(Offset.zero)).dx;
+          counts.update(x.roundToDouble(), (n) => n + 1, ifAbsent: () => 1);
+        }
+        // Right to left, as the columns are read.
+        return (counts.entries.toList()..sort((a, b) => b.key.compareTo(a.key)))
+            .map((e) => e.value)
+            .toList();
+      }
+
+      final broken = <String>[];
+      for (var size = 12.0; size <= 32; size++) {
+        container.read(fontSizeProvider.notifier).previewFontSize(size);
+        await tester.pumpAndSettle();
+        final sizes = columnSizes();
+        // Every column on the page but the last is full and so the same length.
+        if (sizes.length > 1 &&
+            sizes.take(sizes.length - 1).toSet().length > 1) {
+          broken.add('font size $size: $sizes');
+        }
+      }
+
+      expect(broken, isEmpty);
     },
   );
 }
