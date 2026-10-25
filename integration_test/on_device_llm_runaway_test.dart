@@ -1,15 +1,19 @@
-// On-device check of how the Apple model answers the final-summary prompt that
-// ran away on iPhone (iOS 27.0.1): refused under its schema, then retried
-// without it, the model closed its text with 」} and repeated
-// 「支援者: Appleです。」 to the response cap. The same prompt stopped on macOS
-// 27.0.1 and on iPadOS 26.6.2, so only a device carrying the iPhone's model
-// shows it. See openspec change on-device-retry-runaway, design D7.
+// On-device check of how the Apple model answers a final-summary prompt that
+// runs away on iPhone 16 (iOS 27.0.1): under its schema the model writes the
+// summary, closes it with 」} where the string's own quotation mark belonged,
+// and keeps writing inside the still-open string until the response cap. The
+// framework then closes the object, so the answer parses. The same prompt
+// does not run away on macOS 27.0.1 or iPadOS 26.6.2, so only a device
+// carrying the iPhone's model shows it. See openspec change
+// on-device-retry-runaway; the runs so far are in its measurements/.
 //
 // Each case goes through the package's method channel, as the app does, and
-// is measured separately: how often the constrained request is refused, what
-// the unconstrained request returns under greedy and under the default
-// sampling, and what the client the app uses finally returns. Nothing here is
-// judged against a threshold yet; the output is the record.
+// is measured separately: the constrained request, the unconstrained request
+// under greedy and under the default sampling, and what the client the app
+// uses finally returns. A constrained answer counts as having run away when
+// its field passes the client's response budget or contains a closing brace
+// (design D2). Nothing here is judged against a threshold; the output is the
+// record.
 //
 // Run with flutter drive. Needs Apple Intelligence enabled on the device. On a
 // device every run ends with the app uninstalled and its data gone (see
@@ -45,8 +49,9 @@ const _facts = '''
 -  〈記憶人〉は人口が少ない。
 -  〈記憶人〉は非生殖性の別種である。''';
 
-/// How many times the constrained request is made, to see how often it is
-/// refused. On macOS 27.0.1 it was refused on two attempts out of three.
+/// How many times the constrained request is made. On iPhone 16 (iOS 27.0.1)
+/// it ran away on four to five attempts out of five; on macOS 27.0.1 it was
+/// refused on about four out of five.
 const _constrainedRuns = 5;
 
 /// Characters of each answer's head and tail kept in the report. Enough to
@@ -132,40 +137,15 @@ void main() {
         report();
       }
 
-      // E0 is the prompt and schema as they stand; E1 to E3 each change one
-      // thing (design D1).
-      final withoutExample = prompt.substring(
-        0,
-        prompt.lastIndexOf('\n\nJSON形式で回答してください'),
-      );
-      final conditions = <String, Future<String> Function()>{
-        'E0': () => plugin.generate(
-          prompt: prompt,
-          schemaFieldName: fieldName,
-          maxResponseTokens: FoundationModelsClient.maxResponseTokens,
-        ),
-        'E1_no_example': () => plugin.generate(
-          prompt: withoutExample,
-          schemaFieldName: fieldName,
-          maxResponseTokens: FoundationModelsClient.maxResponseTokens,
-        ),
-        'E2_no_brace_pattern': () => plugin.generate(
-          prompt: prompt,
-          schemaFieldName: fieldName,
-          maxResponseTokens: FoundationModelsClient.maxResponseTokens,
-          experimentFieldPattern: r'[^}]*',
-        ),
-        'E3_schema_not_in_prompt': () => plugin.generate(
-          prompt: prompt,
-          schemaFieldName: fieldName,
-          maxResponseTokens: FoundationModelsClient.maxResponseTokens,
-          experimentIncludeSchemaInPrompt: false,
-        ),
-      };
-      for (final MapEntry(key: name, value: run) in conditions.entries) {
-        for (var i = 1; i <= _constrainedRuns; i++) {
-          await measure('$name#$i', run);
-        }
+      for (var i = 1; i <= _constrainedRuns; i++) {
+        await measure(
+          'constrained#$i',
+          () => plugin.generate(
+            prompt: prompt,
+            schemaFieldName: fieldName,
+            maxResponseTokens: FoundationModelsClient.maxResponseTokens,
+          ),
+        );
       }
       await measure(
         'unconstrained_greedy',

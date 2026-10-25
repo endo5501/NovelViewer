@@ -27,8 +27,6 @@ class _SilentPlugin implements FoundationModelsLlm {
     String? schemaFieldName,
     int? maxResponseTokens,
     OnDeviceSampling? sampling,
-    String? experimentFieldPattern,
-    bool? experimentIncludeSchemaInPrompt,
   }) async => throw UnimplementedError();
 }
 
@@ -50,8 +48,6 @@ class _Plugin implements FoundationModelsLlm {
     String? schemaFieldName,
     int? maxResponseTokens,
     OnDeviceSampling? sampling,
-    String? experimentFieldPattern,
-    bool? experimentIncludeSchemaInPrompt,
   }) async => throw UnimplementedError();
 }
 

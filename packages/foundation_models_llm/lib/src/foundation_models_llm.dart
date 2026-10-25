@@ -35,12 +35,6 @@ abstract class FoundationModelsLlm {
   /// model repeat itself until the response cap cuts the answer off. Left null
   /// the framework's own default stands.
   ///
-  /// [experimentFieldPattern] and [experimentIncludeSchemaInPrompt] exist only
-  /// for the measurement in openspec change on-device-retry-runaway (design
-  /// D1), and are removed once it has decided: a regular expression the schema
-  /// field's value must match, and whether the schema is described to the
-  /// model in the prompt.
-  ///
   /// Throws [OnDeviceGenerationException] for every failure, so a caller reads
   /// one exception type rather than a platform's.
   Future<String> generate({
@@ -48,8 +42,6 @@ abstract class FoundationModelsLlm {
     String? schemaFieldName,
     int? maxResponseTokens,
     OnDeviceSampling? sampling,
-    String? experimentFieldPattern,
-    bool? experimentIncludeSchemaInPrompt,
   });
 }
 
@@ -87,8 +79,6 @@ class MethodChannelFoundationModelsLlm implements FoundationModelsLlm {
     String? schemaFieldName,
     int? maxResponseTokens,
     OnDeviceSampling? sampling,
-    String? experimentFieldPattern,
-    bool? experimentIncludeSchemaInPrompt,
   }) async {
     try {
       final answer = await _channel.invokeMethod<String>('generate', {
@@ -96,8 +86,6 @@ class MethodChannelFoundationModelsLlm implements FoundationModelsLlm {
         'schemaFieldName': schemaFieldName,
         'maxResponseTokens': maxResponseTokens,
         'sampling': sampling?.wireName,
-        'experimentFieldPattern': ?experimentFieldPattern,
-        'experimentIncludeSchemaInPrompt': ?experimentIncludeSchemaInPrompt,
       });
       if (answer == null) {
         // A generate that answers nothing is a broken contract, not an empty
