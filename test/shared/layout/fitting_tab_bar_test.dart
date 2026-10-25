@@ -8,9 +8,11 @@ void main() {
   Future<TabBar> pumpTabBar(
     WidgetTester tester, {
     required double width,
+    ThemeData? theme,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
+        theme: theme,
         home: Scaffold(
           body: Center(
             child: SizedBox(
@@ -53,5 +55,42 @@ void main() {
     for (final label in labels) {
       expect(find.text(label), findsOneWidget);
     }
+  });
+
+  testWidgets('counts the label padding the theme gives the tabs', (
+    tester,
+  ) async {
+    // Wide enough for the labels with the default padding, too narrow once
+    // the theme pads every label by 48 on each side.
+    final plain = await pumpTabBar(tester, width: 760);
+    expect(plain.isScrollable, isFalse);
+
+    final padded = await pumpTabBar(
+      tester,
+      width: 760,
+      theme: ThemeData(
+        tabBarTheme: const TabBarThemeData(
+          labelPadding: EdgeInsets.symmetric(horizontal: 48),
+        ),
+      ),
+    );
+
+    expect(padded.isScrollable, isTrue);
+  });
+
+  testWidgets('counts a larger style for the unselected labels', (
+    tester,
+  ) async {
+    final tabBar = await pumpTabBar(
+      tester,
+      width: 760,
+      theme: ThemeData(
+        tabBarTheme: const TabBarThemeData(
+          unselectedLabelStyle: TextStyle(fontSize: 40),
+        ),
+      ),
+    );
+
+    expect(tabBar.isScrollable, isTrue);
   });
 }
