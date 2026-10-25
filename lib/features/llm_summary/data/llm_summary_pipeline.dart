@@ -448,35 +448,34 @@ class LlmSummaryPipeline {
   /// [first], or one more answer to [prompt] when [first] could not be read.
   ///
   /// This stage is the one whose value the reader sees: it is saved as the
-  /// word's summary with nothing downstream judging it, so an answer that fell
-  /// back to raw text is shown as though it were a summary. That fallback used
-  /// to mean the model had replied in prose, which reads acceptably. It now
-  /// also covers an answer the response cap cut off mid-object, which does
-  /// not, and which reaches here whenever a provider gives up a schema
-  /// constraint to get an answer at all.
+  /// word's summary with nothing downstream judging it. An answer that does
+  /// not parse is not used as a summary at all, so a second request is the
+  /// only way such a run can still produce one.
   ///
-  /// One further request, and the first answer kept whatever it returns. Two
-  /// unreadable answers are equally bad and one of them has to be shown, so
-  /// there is nothing to gain by spending a third generation choosing between
-  /// them — and this runs on the slowest provider there is.
-  ///
-  /// A second request that fails outright leaves the first answer standing. An
-  /// answer in hand beats losing the run over an attempt to improve on it.
+  /// One further request, and no more. Where it cannot be read either, or
+  /// fails outright, the run ends with [LlmAnalysisUnreadableSummaryFailure]
+  /// rather than show the reader an answer that is not a summary — what an
+  /// unreadable answer holds is whatever the model wrote, prose from a
+  /// server-backed model or text a model never stopped writing. Two
+  /// unreadable answers to the same prompt say more about the model than a
+  /// third would change, and this runs on the slowest provider there is.
   ///
   /// Only the final summary is treated this way. An unreadable extraction is
-  /// already marked unstructured, which keeps it out of the fact cache and
-  /// costs the reader nothing beyond a re-extraction.
+  /// already marked unstructured, which keeps it out of the fact cache, and
+  /// it is read by the later stages rather than by the reader.
   Future<_ParsedValue> _readableOr(_ParsedValue first, String prompt) async {
     if (first.isStructured) return first;
+    final _ParsedValue second;
     try {
-      final second = _parseSummaryResponse(
+      second = _parseSummaryResponse(
         await llmClient.generate(prompt, schema: summarySchema),
       );
-      return second.isStructured ? second : first;
     } catch (e, st) {
-      _log.warning('second summary attempt failed; keeping the first', e, st);
-      return first;
+      _log.warning('second summary attempt failed; no summary to save', e, st);
+      throw const LlmAnalysisUnreadableSummaryFailure();
     }
+    if (second.isStructured) return second;
+    throw const LlmAnalysisUnreadableSummaryFailure();
   }
 
   _ParsedValue _parseFactsResponse(String response) =>
@@ -492,14 +491,15 @@ class LlmSummaryPipeline {
     try {
       decoded = jsonDecode(normalized);
     } catch (e, st) {
-      // Decode failed: the model returned plain (non-JSON) text. Fall back to
-      // the raw text (existing behavior) so the user-visible feature keeps
-      // working, but log so prompt regressions become observable. Cap the
-      // prefix at 200 chars to bound log size.
+      // Decode failed: the model returned plain (non-JSON) text. Hand back
+      // the raw text marked unstructured: an extraction still uses it, while
+      // the final summary does not (see _readableOr). Log so prompt
+      // regressions become observable. Cap the prefix at 200 chars to bound
+      // log size.
       final length = normalized.length;
       final prefix = length <= 200 ? normalized : normalized.substring(0, 200);
       _log.warning(
-        'jsonDecode failed for $key; using raw text. length=$length prefix=$prefix',
+        'jsonDecode failed for $key; raw text. length=$length prefix=$prefix',
         e,
         st,
       );

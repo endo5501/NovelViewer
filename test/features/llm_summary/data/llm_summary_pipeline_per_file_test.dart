@@ -542,16 +542,14 @@ void main() {
       );
     });
 
-    test('falls back to raw text for a non-JSON summary response', () async {
+    test('does not use a non-JSON summary response as the summary', () async {
       final mock = _MockLlmClient(['プレーンテキストの要約']);
       final pipeline = LlmSummaryPipeline(llmClient: mock);
 
-      final summary = await pipeline.summarizeFromFacts(
-        word: 'テスト',
-        perFileFacts: ['- 王女'],
+      await expectLater(
+        pipeline.summarizeFromFacts(word: 'テスト', perFileFacts: ['- 王女']),
+        throwsA(isA<LlmAnalysisUnreadableSummaryFailure>()),
       );
-
-      expect(summary, 'プレーンテキストの要約');
     });
 
     test('strips a code fence from the summary response', () async {

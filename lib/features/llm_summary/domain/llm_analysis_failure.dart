@@ -56,6 +56,23 @@ class LlmAnalysisNoFactsFailure implements LlmAnalysisFailure {
       'LlmAnalysisNoFactsFailure: no facts were extracted for this word';
 }
 
+/// Raised when no answer to the final summary request could be read as a
+/// summary: two answers did not parse, or the first did not and the second
+/// request failed.
+///
+/// Its own type rather than [LlmResponseFormatException], which says an answer
+/// parsed into the wrong shape and is retried. This one is past retrying: the
+/// pipeline has already asked twice, and the reader is told the summary could
+/// not be read rather than shown an answer that is not one.
+class LlmAnalysisUnreadableSummaryFailure implements LlmAnalysisFailure {
+  const LlmAnalysisUnreadableSummaryFailure();
+
+  @override
+  String toString() =>
+      'LlmAnalysisUnreadableSummaryFailure: no final summary answer could be '
+      'read';
+}
+
 /// Raised when the on-device model produced no text.
 ///
 /// Named separately from a transport error so the reason survives to the

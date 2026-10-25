@@ -32,8 +32,8 @@
 
 ## 6. 読めない最終要約を失敗にする（全プロバイダ）
 
-- [ ] 6.1 パイプラインのテストを先に書く（`test/features/llm_summary/data/`）。2回とも読めない最終要約で `LlmAnalysisUnreadableSummaryFailure` が投げられ、3回目の要求がないこと。2回目の要求が失敗した場合も同じ失敗になること。2回目が読めればそれを使うこと。Stage 1 の生テキストへのフォールバックは従来どおりであること。サービスのテストで、この失敗のときにスナップショットが保存されないこと。既存のテスト「2回とも読めなければ1回目を残す」「2回目が失敗したら1回目を残す」は、新しい仕様に合わせて書き換える。`fvm flutter test test/features/llm_summary` で失敗することを確認してコミットする
-- [ ] 6.2 `llm_analysis_failure.dart` に `LlmAnalysisUnreadableSummaryFailure` を追加し、`llm_summary_pipeline.dart` の最終要約の処理を実装する（2回目の失敗はログに残す）。ドキュメントコメントを新しい挙動に合わせて書き直す。6.1 のテストが通ることを確認する
+- [x] 6.1 パイプラインのテストを先に書く（`test/features/llm_summary/data/`）。2回とも読めない最終要約で `LlmAnalysisUnreadableSummaryFailure` が投げられ、3回目の要求がないこと。2回目の要求が失敗した場合も同じ失敗になること。2回目が読めればそれを使うこと。Stage 1 の生テキストへのフォールバックは従来どおりであること。サービスのテストで、この失敗のときにスナップショットが保存されないこと。既存のテスト「2回とも読めなければ1回目を残す」「2回目が失敗したら1回目を残す」は、新しい仕様に合わせて書き換える。`fvm flutter test test/features/llm_summary` で失敗することを確認してコミットする
+- [x] 6.2 `llm_analysis_failure.dart` に `LlmAnalysisUnreadableSummaryFailure` を追加し、`llm_summary_pipeline.dart` の最終要約の処理を実装する（2回目の失敗はログに残す）。ドキュメントコメントを新しい挙動に合わせて書き直す。6.1 のテストが通ることを確認する
 - [ ] 6.3 presentation のテストを先に書き、その失敗のときに `llmAnalysis_unreadableSummary` の SnackBar が出ることを確かめて、失敗を確認する。`analysis_runner.dart` に分岐を加え、`lib/l10n/app_{ja,en,zh}.arb` に文言を追加して、`fvm flutter test test/features/llm_summary/presentation` が通ることを確認する
 
 ## 7. 統合確認
