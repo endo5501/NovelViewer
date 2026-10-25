@@ -42,6 +42,7 @@ class _IntelligenceOffPlugin implements FoundationModelsLlm {
     String? schemaFieldName,
     int? maxResponseTokens,
     OnDeviceSampling? sampling,
+    int? responseBudget,
   }) async => throw UnimplementedError();
 }
 

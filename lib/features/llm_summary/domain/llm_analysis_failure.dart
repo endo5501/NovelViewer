@@ -86,6 +86,7 @@ class LlmOnDeviceGenerationFailure
     OnDeviceGenerationFailure.rateLimited ||
     OnDeviceGenerationFailure.timeout ||
     OnDeviceGenerationFailure.decodingFailure ||
+    OnDeviceGenerationFailure.runawayOutput ||
     OnDeviceGenerationFailure.unknown => true,
     OnDeviceGenerationFailure.guardrailViolation ||
     OnDeviceGenerationFailure.contextWindowExceeded ||
