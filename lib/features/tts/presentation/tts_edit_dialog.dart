@@ -498,7 +498,10 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
   }
 
   Widget _buildToolbar(bool isGenerating, bool isPlaying) {
-    return Row(
+    // Wraps rather than overflowing where the buttons do not fit on one line,
+    // as on a phone.
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         TextButton.icon(
           onPressed: () {
