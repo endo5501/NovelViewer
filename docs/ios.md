@@ -62,11 +62,23 @@ iPhone では縦向きだけで動きます。端末を横に倒しても画面�
 ## ビルドとインストール
 
 ```bash
+scripts/install_ios.sh
+```
+
+つながっている iPad と iPhone のすべてに、1 回のビルドでまとめてインストールします。ケーブルでつないだ端末に加え、同じネットワーク上でペアリング済みの端末も対象です。Simulator は対象外です。
+
+- ビルドは `scripts/build_app.sh ios` で、macOS 版と同じく commit ハッシュと同期の設定を埋め込みます。
+- プロビジョニングプロファイルに入っていない端末があれば、先に[その端末を登録](#2-署名設定)してから、もう一度ビルドします。
+- release ビルドを上書きするので、アプリのデータは残ります。
+- `--backup` を付けると、インストールの前に、端末ごとに小説・設定・データベースを `~/Backups/NovelViewer-<端末名>-<日時>/` に取り出します。読み上げのモデルは数 GB あり、アプリで取得し直せるので除きます。バックアップに失敗した端末にはインストールしません。
+- `--device <端末名か UDID>` で対象を絞れます（複数回指定できます）。`--no-build` は、ビルド済みのアプリをそのまま入れます。
+
+1 台だけに手で入れる場合は次のとおりです。デバイスの UDID は `xcrun devicectl list devices` の Identifier 列で確認できます。
+
+```bash
 scripts/build_app.sh ios --release
 xcrun devicectl device install app --device <デバイスUDID> build/ios/iphoneos/Runner.app
 ```
-
-`build_app.sh` は macOS 版と同じく commit ハッシュを埋め込みます。デバイスの UDID は `xcrun devicectl list devices` の Identifier 列で確認できます。
 
 ビルドには以下の準備が必要です。
 
