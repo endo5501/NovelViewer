@@ -2,17 +2,17 @@
 
 ## 1. iOS プロジェクトを iPhone / iPad 両対応にする
 
-- [ ] 1.1 `test/platform/ios_project_config_test.dart` の `every build configuration targets iPad only` を「すべての構成が `"1,2"`」に書き換え、「iPhone 用の `UISupportedInterfaceOrientations` が portrait だけ」の test を加える。`iPad orientations stay unrestricted` は残す。`fvm flutter test test/platform/ios_project_config_test.dart` で新しい 2 件が失敗することを確かめてコミットする
-- [ ] 1.2 `ios/Runner.xcodeproj/project.pbxproj` の `TARGETED_DEVICE_FAMILY` 3 か所を `"1,2"` に、`ios/Runner/Info.plist` の `UISupportedInterfaceOrientations` を `UIInterfaceOrientationPortrait` だけにする（`~ipad` は変えない）。1.1 の test がすべて通ることを確かめる
-- [ ] 1.3 `scripts/build_app.sh ios` でビルドが通り、iPhone 17 の Simulator（393x852pt）で起動して、日本語の UI が出てライブラリが初期化されることを確かめる。回転させても縦向きのままであることも確かめる
+- [x] 1.1 `test/platform/ios_project_config_test.dart` の `every build configuration targets iPad only` を「すべての構成が `"1,2"`」に書き換え、「iPhone 用の `UISupportedInterfaceOrientations` が portrait だけ」の test を加える。`iPad orientations stay unrestricted` は残す。`fvm flutter test test/platform/ios_project_config_test.dart` で新しい 2 件が失敗することを確かめてコミットする
+- [x] 1.2 `ios/Runner.xcodeproj/project.pbxproj` の `TARGETED_DEVICE_FAMILY` 3 か所を `"1,2"` に、`ios/Runner/Info.plist` の `UISupportedInterfaceOrientations` を `UIInterfaceOrientationPortrait` だけにする（`~ipad` は変えない）。1.1 の test がすべて通ることを確かめる
+- [x] 1.3 `scripts/build_app.sh ios` でビルドが通り、iPhone 17 の Simulator（393x852pt）で起動して、日本語の UI が出てライブラリが初期化されることを確かめる。回転させても縦向きのままであることも確かめる（回転は headless の Simulator では操作できなかったため 5.1 の実機で確かめる。drawer のタブ「ブックマーク」が切れて表示されるのを確認、3 章で扱う）
 
 ## 2. 同期の端末名で iPhone と iPad を名乗り分ける
 
-- [ ] 2.1 `test/features/progress_sync/data/device_identity_test.dart` に、`platformLabelFor` が iOS の端末種別ごとに `iPhone` / `iPad` / `iOS`（不明）を返し、iOS 以外では種別を無視する test を加える。端末種別の文字列（`"phone"` / `"pad"` / 未知の値 / 例外）を enum に写す処理の test も加える。失敗を確かめてコミットする
-- [ ] 2.2 端末種別の enum と、文字列からの写像、`platformLabelFor` の引数の追加を実装し、2.1 の test を通す
-- [ ] 2.3 端末種別の provider を足し、`progress_sync_providers.dart` の端末名でそれを使う。provider を override すると端末名が `iPhone (…)` になる provider の test を先に書き、失敗を確かめてから実装して通す
-- [ ] 2.4 `ios/Runner/AppDelegate.swift` の `didInitializeImplicitFlutterEngine` で MethodChannel を登録し、`UIDevice.current.userInterfaceIdiom` を返す。`lib/main.dart` で iOS のときだけ起動時に一度読んで（失敗時は不明）、2.3 の provider を override する。iPhone と iPad の Simulator で、設定の同期タブまたはログから端末名がそれぞれ `iPhone` / `iPad` で始まることを確かめる
-- [ ] 2.5 `lib/features/progress_sync/data/device_identity.dart` の「iOS は iPad だけ」というコメントを改め、`fvm flutter analyze` が通ることを確かめる
+- [x] 2.1 `test/features/progress_sync/data/device_identity_test.dart` に、`platformLabelFor` が iOS の端末種別ごとに `iPhone` / `iPad` / `iOS`（不明）を返し、iOS 以外では種別を無視する test を加える。端末種別の文字列（`"phone"` / `"pad"` / 未知の値 / 例外）を enum に写す処理の test も加える。失敗を確かめてコミットする
+- [x] 2.2 端末種別の enum と、文字列からの写像、`platformLabelFor` の引数の追加を実装し、2.1 の test を通す
+- [x] 2.3 端末種別の provider を足し、`progress_sync_providers.dart` の端末名でそれを使う。provider を override すると端末名が `iPhone (…)` になる provider の test を先に書き、失敗を確かめてから実装して通す
+- [x] 2.4 `ios/Runner/AppDelegate.swift` の `didInitializeImplicitFlutterEngine` で MethodChannel を登録し、`UIDevice.current.userInterfaceIdiom` を返す。`lib/main.dart` で iOS のときだけ起動時に一度読んで（失敗時は不明）、2.3 の provider を override する。iPhone と iPad の Simulator で、設定の同期タブまたはログから端末名がそれぞれ `iPhone` / `iPad` で始まることを確かめる（`integration_test/ios_device_kind_test.dart` を iPhone 17 と iPad mini の Simulator で実行し、`phone` → `iPhone`、`pad` → `iPad` を確認）
+- [x] 2.5 `lib/features/progress_sync/data/device_identity.dart` の「iOS は iPad だけ」というコメントを改め、`fvm flutter analyze` が通ることを確かめる
 
 ## 3. iPhone の縦向きではみ出さないようにする
 
@@ -31,7 +31,7 @@
 
 ## 5. iPhone 16 の実機での確認
 
-- [ ] 5.1 iPhone を無料プロビジョニングに登録し、release ビルドを `xcrun devicectl device install app` で入れる。起動、ライブラリの初期化、Files アプリからの見え方、縦向き固定を確かめる
+- [ ] 5.1 iPhone を無料プロビジョニングに登録し、release ビルドを `xcrun devicectl device install app` で入れる。起動、ライブラリの初期化、Files アプリからの見え方、回転させても縦向きのままであることを確かめる
 - [ ] 5.2 主要な画面とダイアログ（ホーム、両 drawer、設定の全タブ、ダウンロード、要約）を目視で確かめ、崩れがあれば 3 章の test に加えて直す
 - [ ] 5.3 iPad と iPhone の両方で同期し、確認の文言の端末名がそれぞれ `iPhone (…)` / `iPad (…)` になることを確かめる。`Platform.localHostname` の実際の値を design.md の Open Questions に記録する
 - [ ] 5.4 iPhone にデータがある場合は Documents をバックアップしてから、`integration_test/speech_cpp_ios_test.dart` を `flutter drive --profile` で実行し、Irodori-TTS F16 のメモリの余裕と RTF を記録する（`docs/ipad.md` の計測手順）。基準を満たさない場合は、iPhone での扱いを別の change として起こすことを記録する

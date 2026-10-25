@@ -12,6 +12,7 @@ import 'package:novel_viewer/features/reading_progress/providers/reading_positio
 import 'package:novel_viewer/features/reading_progress/providers/reading_progress_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/shared/episode/episode_resolver.dart';
+import 'package:novel_viewer/shared/providers/device_platform_providers.dart';
 import 'package:novel_viewer/shared/utils/novel_id_resolver.dart';
 
 import '../data/device_identity.dart';
@@ -24,6 +25,17 @@ import 'progress_sync_entry_providers.dart';
 
 export 'progress_sync_account_providers.dart';
 import 'progress_sync_triggers.dart';
+
+/// The name this device gives itself in the records the others read.
+final progressSyncDeviceNameProvider = Provider<String>(
+  (ref) => buildDeviceName(
+    platformLabel: platformLabelFor(
+      ref.watch(operatingSystemProvider),
+      iosDeviceKind: ref.watch(iosDeviceKindProvider),
+    ),
+    hostName: _hostName(),
+  ),
+);
 
 final progressSyncServiceProvider = Provider<ProgressSyncService>((ref) {
   final auth = ref.watch(progressSyncAuthProvider);
@@ -39,10 +51,7 @@ final progressSyncServiceProvider = Provider<ProgressSyncService>((ref) {
     ),
     repository: ref.watch(progressSyncRepositoryProvider),
     deviceId: identity.deviceId,
-    deviceName: buildDeviceName(
-      platformLabel: platformLabelFor(Platform.operatingSystem),
-      hostName: _hostName(),
-    ),
+    deviceName: ref.watch(progressSyncDeviceNameProvider),
     flushPendingPositions: () =>
         ref.read(readingPositionWriterProvider).flush(),
     loadLocalProgress: () =>
