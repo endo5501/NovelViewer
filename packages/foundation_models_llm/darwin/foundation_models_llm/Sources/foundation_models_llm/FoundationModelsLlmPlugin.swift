@@ -133,6 +133,11 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
     let schemaFieldName = arguments["schemaFieldName"] as? String
     let maxResponseTokens = arguments["maxResponseTokens"] as? Int
     let sampling = arguments["sampling"] as? String
+    // Experiment only (openspec change on-device-retry-runaway, design D1):
+    // removed again once the measurement has decided.
+    let experimentFieldPattern = arguments["experimentFieldPattern"] as? String
+    let experimentIncludeSchemaInPrompt =
+      arguments["experimentIncludeSchemaInPrompt"] as? Bool
 
     // `result` has to be called back on the platform thread, which is where
     // this hop lands.
@@ -142,7 +147,9 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
           prompt: prompt,
           schemaFieldName: schemaFieldName,
           maxResponseTokens: maxResponseTokens,
-          sampling: sampling)
+          sampling: sampling,
+          experimentFieldPattern: experimentFieldPattern,
+          experimentIncludeSchemaInPrompt: experimentIncludeSchemaInPrompt)
         result(text)
       } catch {
         // The framework reports through different error types depending on
@@ -172,7 +179,9 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
     prompt: String,
     schemaFieldName: String?,
     maxResponseTokens: Int?,
-    sampling: String?
+    sampling: String?,
+    experimentFieldPattern: String?,
+    experimentIncludeSchemaInPrompt: Bool?
   ) async throws -> String {
     // A session per request. The prompts a run issues do not depend on one
     // another, and the model's window is shared between prompt and response,
@@ -187,16 +196,20 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
       return try await session.respond(to: prompt, options: options).content
     }
 
+    let guides: [GenerationGuide<String>] =
+      try experimentFieldPattern.map { [.pattern(try Regex($0))] } ?? []
     let root = DynamicGenerationSchema(
       name: "Answer",
       properties: [
         DynamicGenerationSchema.Property(
           name: schemaFieldName,
-          schema: DynamicGenerationSchema(type: String.self))
+          schema: DynamicGenerationSchema(type: String.self, guides: guides))
       ])
     let schema = try GenerationSchema(root: root, dependencies: [])
     let response = try await session.respond(
-      to: prompt, schema: schema, options: options)
+      to: prompt, schema: schema,
+      includeSchemaInPrompt: experimentIncludeSchemaInPrompt ?? true,
+      options: options)
     return response.content.jsonString
   }
 

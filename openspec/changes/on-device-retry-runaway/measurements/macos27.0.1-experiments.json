@@ -1,0 +1,159 @@
+{
+  "on_device_llm_runaway": {
+    "operatingSystemVersion": "Version 27.0.1 (Build 26A434)",
+    "cases": [
+      {
+        "label": "E0#1",
+        "elapsedMs": 1733,
+        "outcome": "failure",
+        "cause": "guardrailViolation"
+      },
+      {
+        "label": "E0#2",
+        "elapsedMs": 1148,
+        "outcome": "failure",
+        "cause": "guardrailViolation"
+      },
+      {
+        "label": "E0#3",
+        "elapsedMs": 1128,
+        "outcome": "text",
+        "length": 64,
+        "ranAway": false,
+        "head": "{\"summary\": \"〈記憶人〉はロンドンで生まれ、〈記憶人シィ〉という別種名を持ち、人口が少なく非生殖性の別種である。\"}"
+      },
+      {
+        "label": "E0#4",
+        "elapsedMs": 1034,
+        "outcome": "failure",
+        "cause": "guardrailViolation"
+      },
+      {
+        "label": "E0#5",
+        "elapsedMs": 1287,
+        "outcome": "failure",
+        "cause": "guardrailViolation"
+      },
+      {
+        "label": "E1_no_example#1",
+        "elapsedMs": 1318,
+        "outcome": "failure",
+        "cause": "guardrailViolation"
+      },
+      {
+        "label": "E1_no_example#2",
+        "elapsedMs": 1120,
+        "outcome": "failure",
+        "cause": "guardrailViolation"
+      },
+      {
+        "label": "E1_no_example#3",
+        "elapsedMs": 1213,
+        "outcome": "failure",
+        "cause": "guardrailViolation"
+      },
+      {
+        "label": "E1_no_example#4",
+        "elapsedMs": 1047,
+        "outcome": "failure",
+        "cause": "guardrailViolation"
+      },
+      {
+        "label": "E1_no_example#5",
+        "elapsedMs": 1200,
+        "outcome": "failure",
+        "cause": "guardrailViolation"
+      },
+      {
+        "label": "E2_no_brace_pattern#1",
+        "elapsedMs": 96,
+        "outcome": "failure",
+        "cause": "unsupportedRequest"
+      },
+      {
+        "label": "E2_no_brace_pattern#2",
+        "elapsedMs": 93,
+        "outcome": "failure",
+        "cause": "unsupportedRequest"
+      },
+      {
+        "label": "E2_no_brace_pattern#3",
+        "elapsedMs": 93,
+        "outcome": "failure",
+        "cause": "unsupportedRequest"
+      },
+      {
+        "label": "E2_no_brace_pattern#4",
+        "elapsedMs": 88,
+        "outcome": "failure",
+        "cause": "unsupportedRequest"
+      },
+      {
+        "label": "E2_no_brace_pattern#5",
+        "elapsedMs": 91,
+        "outcome": "failure",
+        "cause": "unsupportedRequest"
+      },
+      {
+        "label": "E3_schema_not_in_prompt#1",
+        "elapsedMs": 1125,
+        "outcome": "failure",
+        "cause": "guardrailViolation"
+      },
+      {
+        "label": "E3_schema_not_in_prompt#2",
+        "elapsedMs": 1194,
+        "outcome": "failure",
+        "cause": "guardrailViolation"
+      },
+      {
+        "label": "E3_schema_not_in_prompt#3",
+        "elapsedMs": 1278,
+        "outcome": "text",
+        "length": 58,
+        "ranAway": false,
+        "head": "{\"summary\": \"〈記憶人〉（別名：〈記憶人シィ〉）は、ロンドンで生まれた非生殖性の少数派の存在である。\"}"
+      },
+      {
+        "label": "E3_schema_not_in_prompt#4",
+        "elapsedMs": 1222,
+        "outcome": "text",
+        "length": 60,
+        "ranAway": false,
+        "head": "{\"summary\": \"〈記憶人〉（別名：〈記憶人シィ〉）はロンドンで生まれ、人口が少なく、非生殖性の別種である。\"}"
+      },
+      {
+        "label": "E3_schema_not_in_prompt#5",
+        "elapsedMs": 1224,
+        "outcome": "text",
+        "length": 59,
+        "ranAway": false,
+        "head": "{\"summary\": \"〈記憶人〉（別名：〈記憶人シィ〉）はロンドンで生まれ、人口が少なく非生殖性の別種である。\"}"
+      },
+      {
+        "label": "unconstrained_greedy",
+        "elapsedMs": 974,
+        "outcome": "text",
+        "length": 59,
+        "ranAway": false,
+        "head": "{\"summary\": \"〈記憶人〉（別名：〈記憶人シィ〉）はロンドンで生まれ、人口が少なく非生殖性の別種である。\"}"
+      },
+      {
+        "label": "unconstrained_default_sampling",
+        "elapsedMs": 989,
+        "outcome": "text",
+        "length": 56,
+        "ranAway": false,
+        "head": "{\"summary\": \"〈記憶人〉（別名：〈記憶人シィ〉）はロンドンで生まれた非生殖性の少数の別種である。\"}"
+      },
+      {
+        "label": "client",
+        "elapsedMs": 2057,
+        "outcome": "text",
+        "length": 59,
+        "ranAway": false,
+        "head": "{\"summary\": \"〈記憶人〉（別名：〈記憶人シィ〉）はロンドンで生まれ、人口が少なく非生殖性の別種である。\"}"
+      }
+    ]
+  }
+}

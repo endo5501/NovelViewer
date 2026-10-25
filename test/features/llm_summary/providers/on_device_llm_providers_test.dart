@@ -25,6 +25,8 @@ class _CountingPlugin implements FoundationModelsLlm {
     String? schemaFieldName,
     int? maxResponseTokens,
     OnDeviceSampling? sampling,
+    String? experimentFieldPattern,
+    bool? experimentIncludeSchemaInPrompt,
   }) async => throw UnimplementedError();
 }
 
@@ -273,5 +275,7 @@ class _AnswerHolder implements FoundationModelsLlm {
     String? schemaFieldName,
     int? maxResponseTokens,
     OnDeviceSampling? sampling,
+    String? experimentFieldPattern,
+    bool? experimentIncludeSchemaInPrompt,
   }) async => throw UnimplementedError();
 }

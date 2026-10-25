@@ -48,6 +48,8 @@ class _FakePlugin implements FoundationModelsLlm {
     String? schemaFieldName,
     int? maxResponseTokens,
     OnDeviceSampling? sampling,
+    String? experimentFieldPattern,
+    bool? experimentIncludeSchemaInPrompt,
   }) async {
     calls.add((
       prompt: prompt,

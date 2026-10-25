@@ -49,9 +49,29 @@ const _facts = '''
 /// refused. On macOS 27.0.1 it was refused on two attempts out of three.
 const _constrainedRuns = 5;
 
-/// Characters of each answer kept in the report. Enough to see whether it
-/// repeated itself without the report growing with the response cap.
-const _kept = 300;
+/// Characters of each answer's head and tail kept in the report. Enough to
+/// see how it ended without the report growing with the response cap.
+const _kept = 200;
+
+/// The field value's length past which an answer counts as having run away:
+/// the response budget the client declares (design D2).
+final _budget = FoundationModelsClient(
+  plugin: MethodChannelFoundationModelsLlm(),
+).maxResponseSize;
+
+/// The value of [fieldName] in a constrained answer, or null when the answer
+/// does not decode to an object carrying it as a string.
+String? _fieldValue(String answer, String fieldName) {
+  try {
+    final decoded = jsonDecode(answer);
+    if (decoded is Map && decoded[fieldName] is String) {
+      return decoded[fieldName] as String;
+    }
+  } on FormatException {
+    return null;
+  }
+  return null;
+}
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -88,10 +108,15 @@ void main() {
         Map<String, Object?> outcome;
         try {
           final text = await run();
+          final value = _fieldValue(text, fieldName);
           outcome = {
             'outcome': 'text',
             'length': text.length,
-            'text': text.length <= _kept ? text : text.substring(0, _kept),
+            if (value != null)
+              'ranAway': value.length > _budget || value.contains('}'),
+            'head': text.length <= _kept ? text : text.substring(0, _kept),
+            if (text.length > _kept)
+              'tail': text.substring(text.length - _kept),
           };
         } on OnDeviceGenerationException catch (e) {
           outcome = {'outcome': 'failure', 'cause': e.reason.name};
@@ -107,15 +132,40 @@ void main() {
         report();
       }
 
-      for (var i = 1; i <= _constrainedRuns; i++) {
-        await measure(
-          'constrained#$i',
-          () => plugin.generate(
-            prompt: prompt,
-            schemaFieldName: fieldName,
-            maxResponseTokens: FoundationModelsClient.maxResponseTokens,
-          ),
-        );
+      // E0 is the prompt and schema as they stand; E1 to E3 each change one
+      // thing (design D1).
+      final withoutExample = prompt.substring(
+        0,
+        prompt.lastIndexOf('\n\nJSON形式で回答してください'),
+      );
+      final conditions = <String, Future<String> Function()>{
+        'E0': () => plugin.generate(
+          prompt: prompt,
+          schemaFieldName: fieldName,
+          maxResponseTokens: FoundationModelsClient.maxResponseTokens,
+        ),
+        'E1_no_example': () => plugin.generate(
+          prompt: withoutExample,
+          schemaFieldName: fieldName,
+          maxResponseTokens: FoundationModelsClient.maxResponseTokens,
+        ),
+        'E2_no_brace_pattern': () => plugin.generate(
+          prompt: prompt,
+          schemaFieldName: fieldName,
+          maxResponseTokens: FoundationModelsClient.maxResponseTokens,
+          experimentFieldPattern: r'[^}]*',
+        ),
+        'E3_schema_not_in_prompt': () => plugin.generate(
+          prompt: prompt,
+          schemaFieldName: fieldName,
+          maxResponseTokens: FoundationModelsClient.maxResponseTokens,
+          experimentIncludeSchemaInPrompt: false,
+        ),
+      };
+      for (final MapEntry(key: name, value: run) in conditions.entries) {
+        for (var i = 1; i <= _constrainedRuns; i++) {
+          await measure('$name#$i', run);
+        }
       }
       await measure(
         'unconstrained_greedy',

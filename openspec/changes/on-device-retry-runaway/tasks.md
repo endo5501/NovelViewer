@@ -9,8 +9,8 @@
 
 ## 2. 暴走を元から断てるかの実験（design.md D1）
 
-- [ ] 2.1 プラグインに実験用の引数（`summary` フィールドの正規表現の制約、`includeSchemaInPrompt`）を一時的に加え、Dart の `FoundationModelsLlm.generate` から渡せるようにする。既存のチャネルテストが `cd packages/foundation_models_llm && fvm flutter test` で通ること、`scripts/build_app.sh macos` でビルドできることを確認する
-- [ ] 2.2 計測テストに E1（JSON の例示の行を外したプロンプト）・E2（`[^}]*` の制約）・E3（`includeSchemaInPrompt: false`）を各5回加える。各回答の判定（暴走 = 値が 1300 字を超えた、または `}` を含む）と、出力の先頭・末尾をレポートに残す。macOS で実行して結果を `measurements/macos27.0.1-experiments.json` に保存する
+- [x] 2.1 プラグインに実験用の引数（`summary` フィールドの正規表現の制約、`includeSchemaInPrompt`）を一時的に加え、Dart の `FoundationModelsLlm.generate` から渡せるようにする。既存のチャネルテストが `cd packages/foundation_models_llm && fvm flutter test` で通ること、`scripts/build_app.sh macos` でビルドできることを確認する
+- [x] 2.2 計測テストに E1（JSON の例示の行を外したプロンプト）・E2（`[^}]*` の制約）・E3（`includeSchemaInPrompt: false`）を各5回加える。各回答の判定（暴走 = 値が 1300 字を超えた、または `}` を含む）と、出力の先頭・末尾をレポートに残す。macOS で実行して結果を `measurements/macos27.0.1-experiments.json` に保存する
 - [ ] 2.3 iPhone のデータをバックアップし（実行前にユーザーに確認する）、iPhone で 2.2 を実行して結果を `measurements/iphone16-ios27.0.1-experiments.json` に保存する。release ビルドを入れ直してデータを書き戻し、ファイル数がバックアップと一致することを確認する。効いたものが2つ以上あれば、その組み合わせ（E4）も同じ手順で測る
 - [ ] 2.4 結果をユーザーに示し、採否を決める。採用したものは spec（`apple-on-device-llm`）と design.md に計測値つきで書き足し、tasks に実装のタスクを加える。採らなかった実験用の引数とテストの条件は削除する。`openspec validate on-device-retry-runaway --strict` が通ることで確認する
 
