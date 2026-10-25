@@ -13,7 +13,7 @@
 - [x] 2.3 端末種別の provider を足し、`progress_sync_providers.dart` の端末名でそれを使う。provider を override すると端末名が `iPhone (…)` になる provider の test を先に書き、失敗を確かめてから実装して通す
 - [x] 2.4 `ios/Runner/AppDelegate.swift` の `didInitializeImplicitFlutterEngine` で MethodChannel を登録し、`UIDevice.current.userInterfaceIdiom` を返す。`lib/main.dart` で iOS のときだけ起動時に一度読んで（失敗時は不明）、2.3 の provider を override する。iPhone と iPad の Simulator で、設定の同期タブまたはログから端末名がそれぞれ `iPhone` / `iPad` で始まることを確かめる（`integration_test/ios_device_kind_test.dart` を iPhone 17 と iPad mini の Simulator で実行し、`phone` → `iPhone`、`pad` → `iPad` を確認）
 - [x] 2.5 `lib/features/progress_sync/data/device_identity.dart` の「iOS は iPad だけ」というコメントを改め、`fvm flutter analyze` が通ることを確かめる
-- [ ] 2.6 ホスト名が空か `localhost` のときは端末名に付けない（design D6）。`device_identity_test.dart` に `localhost` の test を先に書いて失敗を確かめ、`buildDeviceName` を直して通す。iPhone と iPad の実機の確認画面で `(localhost)` が出ないことを確かめる
+- [x] 2.6 ホスト名が空か `localhost` のときは端末名に付けない（design D6）。`device_identity_test.dart` に `localhost` の test を先に書いて失敗を確かめ、`buildDeviceName` を直して通す。iPhone と iPad の実機の確認画面で `(localhost)` が出ないことを確かめる（iPad の確認画面で iPhone の記録が `iPhone` とだけ表示されることを実機で確認）
 
 ## 3. iPhone の縦向きではみ出さないようにする
 
@@ -36,9 +36,9 @@
 
 ## 5. iPhone 16 の実機での確認
 
-- [ ] 5.1 iPhone を無料プロビジョニングに登録し、release ビルドを `xcrun devicectl device install app` で入れる。起動、ライブラリの初期化、Files アプリからの見え方、回転させても縦向きのままであることを確かめる
-- [ ] 5.2 主要な画面とダイアログ（ホーム、両 drawer、設定の全タブ、ダウンロード、要約）を目視で確かめ、崩れがあれば 3 章の test に加えて直す
-- [ ] 5.3 iPad と iPhone の両方で同期し、確認の文言の端末名がそれぞれ `iPhone (…)` / `iPad (…)` になることを確かめる。`Platform.localHostname` の実際の値を design.md の Open Questions に記録する
+- [x] 5.1 iPhone を無料プロビジョニングに登録し、release ビルドを `xcrun devicectl device install app` で入れる。起動、ライブラリの初期化、Files アプリからの見え方、回転させても縦向きのままであることを確かめる（Apple Developer Program のチームで署名。端末をプロファイルに登録する手順は `docs/ios.md` に記載。回転しても縦向きのまま、Files アプリから見えることを確認）
+- [x] 5.2 主要な画面とダイアログ（ホーム、両 drawer、設定の全タブ、ダウンロード、要約）を目視で確かめ、崩れがあれば 3 章の test に加えて直す（縦書きで列の途中に短い列ができる不具合が見つかり、ページ割りが下の safe area を差し引くように直した（design D5）。ほかの崩れは無し）
+- [x] 5.3 iPad と iPhone の両方で同期し、確認の文言の端末名がそれぞれ `iPhone (…)` / `iPad (…)` になることを確かめる。`Platform.localHostname` の実際の値を design.md の Open Questions に記録する（`Platform.localHostname` は iPhone 16 / iOS 27 と iPad mini / iPadOS 26 のどちらでも `localhost`。D6 で端末名から外した）
 - [x] 5.4 iPhone にデータがある場合は Documents をバックアップしてから、`integration_test/speech_cpp_ios_test.dart` を `flutter drive --profile` で実行し、Irodori-TTS F16 のメモリの余裕と RTF を記録する（`docs/ipad.md` の計測手順）。基準を満たさない場合は、iPhone での扱いを別の change として起こすことを記録する（省略。利用者の判断。実際のアプリで Irodori-TTS が iPhone 16 で動くことを確認済み）
 - [x] 5.5 Piper の読み上げ、オンデバイス LLM（Apple Intelligence を有効にした状態）の要約、URL スキームからのダウンロードが iPhone で動くことを確かめる（Piper・Irodori-TTS はモデルを取得して動作を確認。URL スキームは利用者の判断で後回し。オンデバイス LLM は iOS 27.0（24A446）で要約が崩れる（「支援者: Appleです。」の繰り返し）。iPhone 対応とは関係のない iOS 27 の問題として別の change で扱う。macOS 27.0.1 では再現せず）
 
