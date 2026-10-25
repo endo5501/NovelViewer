@@ -79,11 +79,17 @@ AppDelegate.swift                               Dart (main.dart)
 - ページ割りは 1 列の文字数を、ページ表示の行に固定で取った高さを差し引いて計算している。ページ表示を上げた分は、ページ割りでも同じだけ差し引く。差し引かないと、計算した 1 列が描画される高さに収まらず、列の途中で折り返して短い列ができる（iPhone 16 の実機で見つかった。`reading_area_bottom_phone_test.dart` で文字サイズ 12〜32 を確かめる）。
 - 本文全体を `SafeArea` で包む案は採らない。横書きのスクロール位置と、縦書きでページ表示が無いとき（1 ページだけの話）の本文の領域まで変わり、影響の範囲が広がるため。
 
+### D6. 意味のないホスト名は端末名に付けない
+
+`buildDeviceName` は、ホスト名が空のときと同じく、`localhost` のときもプラットフォーム名だけを返す。判定は iOS に限らずホスト名の値で行う。どのプラットフォームでも `localhost` は端末を区別する役に立たず、OS で分岐させる理由がないため。
+
+- 同じ種類の iOS 端末を 2 台見分けるには、利用者が付けた端末名が要る。それには Apple の許可が必要な entitlement（`com.apple.developer.device-information.user-assigned-device-name`）を取る必要があるので、この change では扱わない。
+
 ## Risks / Trade-offs
 
 - [Irodori-TTS F16 が iPhone 16 のアプリのメモリ上限を超える] → `integration_test/speech_cpp_ios_test.dart` を iPhone 16 で `flutter drive --profile` で実行し、余裕を測る。足りなければ、iPhone での扱いを別の change で決める。この change では TTS の挙動は変えない。
 - [`flutter drive` は実行後にアプリとデータを削除する] → iPhone にデータがある状態で計測する前に、Documents をバックアップする（`docs/ipad.md` の手順）。初回のインストール前であれば不要。
-- [`Platform.localHostname` が iOS で意味のない値（`localhost` など）を返し、端末名が「iPhone (localhost)」になる] → 実機で値を確かめる。区別には種別のラベルで足りるので、この change ではホスト名の扱いを変えない（下記 Open Questions）。
+- [`Platform.localHostname` が iOS で意味のない値を返す] → 実機（iPhone 16 / iOS 27、iPad mini / iPadOS 26）で確かめたところ、どちらも `localhost` を返し、端末名は「iPhone (localhost)」「iPad (localhost)」になった。iOS 16 以降、利用者が付けた端末名は entitlement なしではアプリに渡されないため。ホスト名が空か `localhost` のときは付けないことにした（D6）。
 - [Simulator で test が通っても実機で崩れる（フォント、safe area の実寸）] → 最後に iPhone 16 の実機で、主要な画面とダイアログを目視で確認するタスクを置く。
 - [`ios_project_config_test.dart` の iPad 専用の test を書き換えるので、iPad の向きの保証が緩む] → `~ipad` が 4 方向であることを確かめる test は残す。
 
@@ -95,5 +101,4 @@ AppDelegate.swift                               Dart (main.dart)
 
 ## Open Questions
 
-- iOS の `Platform.localHostname` が返す値。実機で確かめる。意味のない値だった場合に端末名からホスト名を外すかどうかは、端末名の要件を変えることになるので、別の change で扱う。
 - ドキュメントのファイル名。`docs/ipad.md` は名前のまま中身を iOS（iPad / iPhone）向けに改めるか、`docs/ios.md` に改名するか。どちらも spec・設計・タスクの分け方には影響しない。リンク元の数を見て実装時に決める。

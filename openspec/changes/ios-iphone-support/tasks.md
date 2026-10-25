@@ -13,6 +13,7 @@
 - [x] 2.3 端末種別の provider を足し、`progress_sync_providers.dart` の端末名でそれを使う。provider を override すると端末名が `iPhone (…)` になる provider の test を先に書き、失敗を確かめてから実装して通す
 - [x] 2.4 `ios/Runner/AppDelegate.swift` の `didInitializeImplicitFlutterEngine` で MethodChannel を登録し、`UIDevice.current.userInterfaceIdiom` を返す。`lib/main.dart` で iOS のときだけ起動時に一度読んで（失敗時は不明）、2.3 の provider を override する。iPhone と iPad の Simulator で、設定の同期タブまたはログから端末名がそれぞれ `iPhone` / `iPad` で始まることを確かめる（`integration_test/ios_device_kind_test.dart` を iPhone 17 と iPad mini の Simulator で実行し、`phone` → `iPhone`、`pad` → `iPad` を確認）
 - [x] 2.5 `lib/features/progress_sync/data/device_identity.dart` の「iOS は iPad だけ」というコメントを改め、`fvm flutter analyze` が通ることを確かめる
+- [ ] 2.6 ホスト名が空か `localhost` のときは端末名に付けない（design D6）。`device_identity_test.dart` に `localhost` の test を先に書いて失敗を確かめ、`buildDeviceName` を直して通す。iPhone と iPad の実機の確認画面で `(localhost)` が出ないことを確かめる
 
 ## 3. iPhone の縦向きではみ出さないようにする
 
