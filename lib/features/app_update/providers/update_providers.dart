@@ -116,7 +116,7 @@ final updateAvailableProvider = Provider<UpdateAvailable?>((ref) {
 /// Whether the app can update itself on this platform.
 ///
 /// The update flow ends either in a Windows installer or in a release page
-/// listing desktop artifacts. iPad builds are installed through Xcode and
+/// listing desktop artifacts. iOS builds are installed through Xcode and
 /// carry no channel the app could offer an update through, so the check is
 /// not performed there at all — see [UpdateCheckService].
 final appUpdateSupportedProvider = Provider<bool>(

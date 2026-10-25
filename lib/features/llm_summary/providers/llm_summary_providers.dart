@@ -235,9 +235,9 @@ final llmSummaryServiceProvider = Provider.family<LlmSummaryService?, String>((
 /// its own sockets and never reaches the layer a transport policy is enforced
 /// in. Every platform therefore reports the feature as supported today.
 ///
-/// Two things about an iPad are worth knowing here even so, because neither is
+/// Two things about iOS are worth knowing here even so, because neither is
 /// a capability. The default endpoint names the machine the app runs on, which
-/// on a tablet is not where the server lives, so a reader has to point the
+/// on a tablet or a phone is not where the server lives, so a reader has to point the
 /// settings section at their own host. And reaching that host over the local
 /// network needs a usage description in the iOS project and the reader's
 /// permission, which they can refuse and later revoke; the attempt that raises

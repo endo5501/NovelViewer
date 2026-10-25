@@ -27,9 +27,9 @@
 
 ## 4. ドキュメントと spec の文言
 
-- [ ] 4.1 `docs/ipad.md` を iOS（iPad / iPhone）向けに改める。iPhone の縦向き固定、iPhone の登録とインストールの手順、端末名の表示を書き、ファイル名を改めるかどうかを決めてリンク元も直す。`grep -rn "ipad.md" README.md docs .claude/CLAUDE.md` でリンク切れがないことを確かめる
-- [ ] 4.2 `.claude/CLAUDE.md` の `scripts/build_app.sh ios` の説明（「ビルド(iPad。…」）を iPad / iPhone に改める
-- [ ] 4.3 `lib/shared/platform/platform_capabilities.dart` など、「iOS = iPad」を前提にしたコメントのうち、iPhone で事実と違うものを改める（iPad mini の計測値を述べる箇所はそのまま）。`grep -rn "iPad" lib` を見直して確かめる
+- [x] 4.1 `docs/ipad.md` を iOS（iPad / iPhone）向けに改める。iPhone の縦向き固定、iPhone の登録とインストールの手順、端末名の表示を書き、ファイル名を改めるかどうかを決めてリンク元も直す。`grep -rn "ipad.md" README.md docs .claude/CLAUDE.md` でリンク切れがないことを確かめる（`docs/ios.md` に改名し、README・`docs/verify-url-scheme.md`・`test_driver/integration_test.dart`・`.claude/CLAUDE.md` のリンクを直した。`docs/progress-sync.md` の対象端末にも iPhone を加えた）
+- [x] 4.2 `.claude/CLAUDE.md` の `scripts/build_app.sh ios` の説明（「ビルド(iPad。…」）を iPad / iPhone に改める
+- [x] 4.3 `lib/shared/platform/platform_capabilities.dart` など、「iOS = iPad」を前提にしたコメントのうち、iPhone で事実と違うものを改める（iPad mini の計測値を述べる箇所はそのまま）。`grep -rn "iPad" lib` を見直して確かめる（iPad mini の計測値を述べるコメントはそのまま）
 - [ ] 4.4 アーカイブの同期の際に、`openspec/specs/ios-build-target/spec.md` の Purpose の「iPad-only app」「iPad-exclusive device family」を、iPhone と iPad の両対応・iPhone は縦向きのみ、に改める。`openspec/specs/project-setup/spec.md` の Purpose の「iPad (iOS)」も「iOS (iPad / iPhone)」に改める。`openspec validate --specs --strict` が通ることを確かめる
 
 ## 5. iPhone 16 の実機での確認

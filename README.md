@@ -17,9 +17,9 @@ Web小説サイトから小説をダウンロードし、ローカルで閲覧�
 - **テキスト検索**: ライブラリ内の全テキストを横断検索
 - **ブックマーク**: ブックマークの登録・解除 
 - **LLM要約**: 指定した単語をネタばれあり/なしを指定して確認可能  
-(Ollama / OpenAI互換API / オンデバイス (Apple、macOS・iPad) に対応)
+(Ollama / OpenAI互換API / オンデバイス (Apple、macOS・iPad・iPhone) に対応)
 - **音声読み上げ**: 指定したリファレンス音声を使った読み上げ/読み上げテキストの編集
-- **URL スキームからの登録**: `novelviewer://download?url=...` を開くと、その URL 入りでダウンロードダイアログが開く(macOS / iPad)
+- **URL スキームからの登録**: `novelviewer://download?url=...` を開くと、その URL 入りでダウンロードダイアログが開く(macOS / iPad / iPhone)
 
 ![閲覧画面](images/view3.png)
 
@@ -76,7 +76,7 @@ iPad / iPhone から PC 上の Ollama に接続する場合は [docs/ios.md](doc
 
 ### LLM(オンデバイス)設定
 
-macOS / iPad では、Apple のオンデバイス AI モデルでも要約できます。サーバは不要で、本文は端末の外に送られません。
+macOS / iPad / iPhone では、Apple のオンデバイス AI モデルでも要約できます。サーバは不要で、本文は端末の外に送られません。
 
 1. Apple Intelligence に対応した端末で、システム設定から Apple Intelligence を有効にする
 2. NovelViewerの設定画面にてLLMプロバイダを`オンデバイス (Apple)`に設定
@@ -92,7 +92,7 @@ Apple Intelligence が無効な場合やモデルの準備中は、選択肢が�
 open "novelviewer://download?url=https%3A%2F%2Fncode.syosetu.com%2Fn9669bk%2F"
 ```
 
-対応は **macOS と iPad のみ**です。Windows と Linux にはスキームを登録していません。Windows はスキーム起動が既存プロセスとは別のプロセスを立ち上げるため、同じ SQLite ファイルを 2 つのプロセスが掴みます。単一インスタンス化を先に片付ける必要があり、別の変更として扱います。
+対応は **macOS と iOS（iPad / iPhone）のみ**です。Windows と Linux にはスキームを登録していません。Windows はスキーム起動が既存プロセスとは別のプロセスを立ち上げるため、同じ SQLite ファイルを 2 つのプロセスが掴みます。単一インスタンス化を先に片付ける必要があり、別の変更として扱います。
 
 登録が効いているかの手動確認手順は [docs/verify-url-scheme.md](docs/verify-url-scheme.md) にあります。
 
