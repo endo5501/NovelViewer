@@ -95,7 +95,7 @@ AppDelegate.swift                               Dart (main.dart)
 
 ## Migration Plan
 
-- データ形式の変更はない。iPad の端末名は今と同じ `iPad` なので、同期済みの記録との互換性も変わらない。
-- iPhone への初回インストールは、`docs/ipad.md` の手順（無料プロビジョニング、`xcrun devicectl device install app`）で iPhone を登録して行う。
+- データ形式の変更はない。iPad の端末名は「iPad (localhost)」から「iPad」に変わるが、端末名は確認の文言に使うだけで、記録は端末 ID で区別するので、同期済みの記録との互換性は変わらない。
+- iPhone への初回インストールは、`docs/ios.md` の手順で行う。新しい端末は、その端末を宛先に一度ビルドしてプロビジョニングプロファイルに登録してから、`xcrun devicectl device install app` で入れる。
 - 戻す場合は device family を `"2"` に戻すだけで、iPad 版はこれまでと同じになる。
 - iOS 向けのドキュメントは `docs/ipad.md` から `docs/ios.md` に改名し、リンク元（README、`docs/verify-url-scheme.md`、`test_driver/integration_test.dart`、`.claude/CLAUDE.md`）を直した。iPhone も対象になり、旧名では中身を表さないため。
