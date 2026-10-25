@@ -206,12 +206,16 @@ void main() {
           maxResponseTokens: FoundationModelsClient.maxResponseTokens,
         ),
       );
-      await measure(
-        'client',
-        () => FoundationModelsClient(
-          plugin: plugin,
-        ).generate(prompt, schema: LlmSummaryPipeline.summarySchema),
-      );
+      // The path the app takes: on a model that runs away, the constrained
+      // answer is ended at its brace and the prompt answered unconstrained.
+      for (var i = 1; i <= _constrainedRuns; i++) {
+        await measure(
+          'client#$i',
+          () => FoundationModelsClient(
+            plugin: plugin,
+          ).generate(prompt, schema: LlmSummaryPipeline.summarySchema),
+        );
+      }
 
       // Line by line: the device log truncates long lines.
       // ignore: avoid_print
