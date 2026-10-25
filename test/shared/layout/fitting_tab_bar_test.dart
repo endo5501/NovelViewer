@@ -31,6 +31,8 @@ void main() {
         ),
       ),
     );
+    // A theme change animates in; read the tab bar once it has.
+    await tester.pumpAndSettle();
     return tester.widget<TabBar>(find.byType(TabBar));
   }
 
