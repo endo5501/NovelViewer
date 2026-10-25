@@ -138,6 +138,25 @@ final class UnconstrainedCutoffTests: XCTestCase {
       .complete(#"{"facts": ["- a", "- b"]}"#))
   }
 
+  /// A combining mark straight after a quotation mark joins it into one
+  /// Swift Character. Scanning by Character would miss that the string
+  /// opened, and read the brace inside it as the object's end.
+  func testACombiningMarkAfterAQuotationMarkStillOpensTheString() {
+    let text = "{\"summary\": \"\u{0301}} の後\"} 続き"
+    XCTAssertEqual(
+      AnswerCutoff.unconstrained(text: text, budget: budget),
+      .complete("{\"summary\": \"\u{0301}} の後\"}"))
+  }
+
+  /// A top-level array is the value the model answered with. Taking only its
+  /// first element would drop the rest without anything saying so.
+  func testATopLevelArrayIsTakenWhole() {
+    let text = #"[{"facts": "first"}, {"facts": "second"}] 後"#
+    XCTAssertEqual(
+      AnswerCutoff.unconstrained(text: text, budget: budget),
+      .complete(#"[{"facts": "first"}, {"facts": "second"}]"#))
+  }
+
   func testAnObjectLeftOpenPastTheBudgetIsARunaway() {
     let text = #"{"summary": ""# + String(repeating: "支援者: Appleです。", count: 101)
     XCTAssertEqual(
