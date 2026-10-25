@@ -52,6 +52,15 @@ void main() {
     test('falls back to the platform alone without a host name', () {
       expect(buildDeviceName(platformLabel: 'iPad', hostName: ''), 'iPad');
     });
+
+    test('leaves out localhost, which names no device', () {
+      // What iOS reports: it keeps the name the reader gave the device from
+      // apps, so every iPhone and iPad is localhost.
+      expect(
+        buildDeviceName(platformLabel: 'iPhone', hostName: 'localhost'),
+        'iPhone',
+      );
+    });
   });
 
   group('platformLabelFor', () {
