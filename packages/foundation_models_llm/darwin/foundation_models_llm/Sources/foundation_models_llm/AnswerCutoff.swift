@@ -17,8 +17,8 @@ enum AnswerCutoff {
     /// Nothing has been decided yet.
     case continuing
 
-    /// An unconstrained answer's object closed; this is the object, without
-    /// anything the model wrote before or after it.
+    /// An unconstrained answer's top-level value closed; this is the value,
+    /// without anything the model wrote before or after it.
     case complete(String)
 
     /// The answer has stopped being the one asked for.
@@ -44,52 +44,58 @@ enum AnswerCutoff {
 
   /// The verdict on an unconstrained answer, from its text so far.
   ///
-  /// The answer is complete when its first top-level object closes, judged as
-  /// JSON reads it: braces inside a string, and a quotation mark escaped
-  /// inside one, neither open nor close anything. It has run away when the
-  /// text passes the budget before that, counted from the start of the answer
-  /// so that a preface — the fence the model opens, or anything longer — is
-  /// counted too, and the verdict on the whole text is the one a stream
-  /// reached on the way.
+  /// The answer is complete when its first top-level value closes — an
+  /// object, or an array, which is taken whole so that none of its elements
+  /// is dropped unnoticed — judged as JSON reads it: brackets inside a
+  /// string, and a quotation mark escaped inside one, neither open nor close
+  /// anything. It has run away when the text passes the budget before that,
+  /// counted from the start of the answer so that a preface — the fence the
+  /// model opens, or anything longer — is counted too, and the verdict on the
+  /// whole text is the one a stream reached on the way.
+  ///
+  /// Read by Unicode scalar rather than by Character. A combining mark after
+  /// a quotation mark joins it into one Character, which would hide that a
+  /// string had opened or closed.
   static func unconstrained(text: String, budget: Int) -> Verdict {
+    let scalars = text.unicodeScalars
     var length = 0
-    var objectStart: String.Index?
+    var valueStart: String.UnicodeScalarView.Index?
     var depth = 0
     var inString = false
     var escaped = false
 
-    var index = text.startIndex
-    while index < text.endIndex {
-      let character = text[index]
-      length += character.utf16.count
+    var index = scalars.startIndex
+    while index < scalars.endIndex {
+      let scalar = scalars[index]
+      length += scalar.utf16.count
       if length > budget {
         return .ranAway
       }
 
-      if let start = objectStart {
+      if let start = valueStart {
         if inString {
           if escaped {
             escaped = false
-          } else if character == "\\" {
+          } else if scalar == "\\" {
             escaped = true
-          } else if character == "\"" {
+          } else if scalar == "\"" {
             inString = false
           }
-        } else if character == "\"" {
+        } else if scalar == "\"" {
           inString = true
-        } else if character == "{" {
+        } else if scalar == "{" || scalar == "[" {
           depth += 1
-        } else if character == "}" {
+        } else if scalar == "}" || scalar == "]" {
           depth -= 1
           if depth == 0 {
-            return .complete(String(text[start...index]))
+            return .complete(String(scalars[start...index]))
           }
         }
-      } else if character == "{" {
-        objectStart = index
+      } else if scalar == "{" || scalar == "[" {
+        valueStart = index
         depth = 1
       }
-      index = text.index(after: index)
+      index = scalars.index(after: index)
     }
     return .continuing
   }

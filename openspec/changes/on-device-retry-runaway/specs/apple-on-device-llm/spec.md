@@ -39,7 +39,7 @@ Ending the generation SHALL stop the model's work on it, so that the time a runa
 
 Where the client asks for it, the on-device provider SHALL end an unconstrained generation itself rather than rely on the model to stop.
 
-The provider SHALL receive the unconstrained answer incrementally and SHALL end the generation as soon as the first top-level JSON object in it is complete. Completion SHALL be judged as JSON reads it: a brace inside a string, or an escaped quotation mark inside a string, does not open or close the object. The provider SHALL then return that object, from its opening brace to its closing brace, and nothing the model wrote before or after it. Measured on iPhone 16 running iOS 27.0.1 and on macOS 27.0.1, the unconstrained answer arrived inside a fenced code block, so returning the object alone keeps the fence from the caller.
+The provider SHALL receive the unconstrained answer incrementally and SHALL end the generation as soon as the first top-level JSON value in it — an object, or an array — is complete. An array SHALL be taken whole rather than as its first element, so that no element is dropped without anything saying so. Completion SHALL be judged as JSON reads it: a bracket inside a string, or an escaped quotation mark inside a string, does not open or close anything, and a quotation mark followed by a combining mark is still a quotation mark. The provider SHALL then return that value, from its opening bracket to its closing bracket, and nothing the model wrote before or after it. Measured on iPhone 16 running iOS 27.0.1 and on macOS 27.0.1, the unconstrained answer arrived inside a fenced code block, so returning the object alone keeps the fence from the caller.
 
 Where the answer grows longer than the response budget the client declared without such an object having completed, the provider SHALL end the generation and SHALL report a failure whose cause is that the answer ran away, distinct from every other cause. It SHALL NOT return the text.
 
@@ -55,6 +55,10 @@ The decision to end an answer this way SHALL be requested by the client as an ar
 #### Scenario: A brace inside a string does not end the answer
 - **WHEN** the unconstrained answer's string value contains `}` before the object's own closing brace
 - **THEN** the provider SHALL NOT end the generation at that `}`, and SHALL return the whole object
+
+#### Scenario: A top-level array is returned whole
+- **WHEN** the unconstrained answer is `[{"facts": "first"}, {"facts": "second"}]` followed by further text
+- **THEN** the provider SHALL return the whole array, not its first element
 
 #### Scenario: A fence around the object is dropped
 - **WHEN** the unconstrained answer opens a fenced code block before the object and closes it after
