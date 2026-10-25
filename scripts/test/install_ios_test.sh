@@ -39,7 +39,7 @@ OFFLINE=00008120-0000000000000001
 mkdir -p "$WORK/bin"
 
 # xcrun devicectl: answers the device list from $DEVICES_JSON, the apps on a
-# device from $INSTALLED_ON, and fails an install or copy on a device named in
+# device from $INSTALLED_ON, whether its Documents holds voices from $VOICES_ON, and fails an install or copy on a device named in
 # $FAIL_INSTALL_ON or $FAIL_COPY_ON.
 cat >"$WORK/bin/xcrun" <<'SH'
 #!/usr/bin/env bash
@@ -63,6 +63,14 @@ case "$1 $2" in
     case " ${FAIL_COPY_ON:-} " in *" $device "*) exit 1 ;; esac
     ;;
   "device info")
+    if [ "$3" = files ]; then
+      files='[{"relativePath": "NovelViewer"}, {"relativePath": "models"}]'
+      if grep -qx "$device" "$VOICES_ON" 2>/dev/null; then
+        files='[{"relativePath": "NovelViewer"}, {"relativePath": "voices"}, {"relativePath": "voices/narrator.wav"}]'
+      fi
+      printf '{"result": {"files": %s}}' "$files" >"$json_out"
+      exit 0
+    fi
     if grep -qx "$device" "$INSTALLED_ON" 2>/dev/null; then
       apps='[{"bundleIdentifier": "com.endo5501.novelViewer"}]'
     else
@@ -126,6 +134,7 @@ reset() {
   : >"$WORK/calls"
   printf '%s\n%s\n' "$IPAD" "$IPHONE" >"$WORK/profile"
   printf '%s\n%s\n' "$IPAD" "$IPHONE" >"$WORK/installed"
+  printf '%s\n' "$IPHONE" >"$WORK/voices"
   rm -rf "$WORK/backups"
   devices \
     "$(device "$IPAD" iPadmini7 physical paired booted localNetwork)" \
@@ -143,6 +152,7 @@ run() {
     DEVICES_JSON="$WORK/devices.json" \
     PROFILE_DEVICES="$WORK/profile" \
     INSTALLED_ON="$WORK/installed" \
+    VOICES_ON="$WORK/voices" \
     FAIL_INSTALL_ON="${FAIL_INSTALL_ON:-}" \
     FAIL_COPY_ON="${FAIL_COPY_ON:-}" \
     NOVEL_VIEWER_IOS_APP="$WORK/Runner.app" \
@@ -305,6 +315,20 @@ if [ -n "$last_copy" ] && [ -n "$install" ] && [ "$last_copy" -lt "$install" ]; 
   ok "--backup copies before it installs"
 else
   ng "--backup copies before it installs"
+fi
+
+reset
+run --backup
+if grep -q -- "device copy from --device $IPHONE .*--source Documents/voices " "$WORK/calls"; then
+  ok "--backup copies the reference voices from a device that has them"
+else
+  ng "--backup copies the reference voices from a device that has them"
+fi
+if [ "$(calls_matching "device copy from --device $IPAD .*--source Documents/voices ")" -eq 0 ] &&
+  installed_on "$IPAD" && [ "$status" -eq 0 ]; then
+  ok "--backup passes over voices a device does not have and still installs"
+else
+  ng "--backup passes over voices a device does not have and still installs"
 fi
 
 reset
