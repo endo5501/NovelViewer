@@ -3,9 +3,9 @@ import PackageDescription
 
 // The plugin's own package depends on FlutterFramework, which only exists
 // inside a Flutter build, so `swift test` cannot run there. The wire-code
-// mapping needs nothing from Flutter, so this package compiles that one
-// source file — symlinked, not copied, so there is one definition — and
-// tests it on its own:
+// mapping and the answer cut-off need nothing from Flutter, so this package
+// compiles those source files — symlinked, not copied, so there is one
+// definition of each — and tests them on their own:
 //
 //   swift test --package-path packages/foundation_models_llm/darwin/wire_code_tests
 let package = Package(
@@ -19,6 +19,11 @@ let package = Package(
         .testTarget(
             name: "GenerationFailureWireCodeTests",
             dependencies: ["GenerationFailureWireCode"]
+        ),
+        .target(name: "AnswerCutoff"),
+        .testTarget(
+            name: "AnswerCutoffTests",
+            dependencies: ["AnswerCutoff"]
         ),
     ]
 )
