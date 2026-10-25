@@ -493,4 +493,38 @@ void main() {
       expect(changes, isEmpty);
     });
   });
+
+  group('when the width crosses into the two-line layout', () {
+    bool hasFocus(WidgetTester tester, int fieldIndex) => tester
+        .widget<EditableText>(find.byType(EditableText).at(fieldIndex))
+        .focusNode
+        .hasFocus;
+
+    for (final (name, fieldIndex) in const [('text', 0), ('memo', 1)]) {
+      testWidgets('the $name field keeps its focus and its text', (
+        tester,
+      ) async {
+        await pumpRow(tester, rowWidth: 600);
+        await tester.tap(find.byType(TextField).at(fieldIndex));
+        await tester.pump();
+        await tester.enterText(find.byType(TextField).at(fieldIndex), '入力中');
+        expect(hasFocus(tester, fieldIndex), isTrue);
+
+        await pumpRow(tester, rowWidth: 360);
+
+        expect(hasFocus(tester, fieldIndex), isTrue);
+        expect(
+          tester
+              .widget<EditableText>(find.byType(EditableText).at(fieldIndex))
+              .controller
+              .text,
+          '入力中',
+        );
+
+        await pumpRow(tester, rowWidth: 600);
+
+        expect(hasFocus(tester, fieldIndex), isTrue);
+      });
+    }
+  });
 }
