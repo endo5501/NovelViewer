@@ -1,9 +1,9 @@
 /// Which optional features the running platform supports.
 ///
-/// The app targets desktop (macOS/Windows/Linux) and iPad. Everything the
-/// reader itself needs works on both; the features named here each depend on
-/// something a platform may not have, and would fail — or lead nowhere — if
-/// their controls were shown where it is missing.
+/// The app targets desktop (macOS/Windows/Linux) and iOS (iPad and iPhone).
+/// Everything the reader itself needs works on both; the features named here
+/// each depend on something a platform may not have, and would fail — or lead
+/// nowhere — if their controls were shown where it is missing.
 ///
 /// Features are named individually so that a call site reads as the reason it
 /// hides a surface. A bare `!Platform.isIOS` at the point of use says nothing

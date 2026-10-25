@@ -1,6 +1,8 @@
-# iPad 版
+# iOS 版（iPad / iPhone）
 
-iPad 版は小説ビューア、LLM 要約、Piper と Irodori-TTS による読み上げを提供します。配布経路は無く、各自でビルドして実機にインストールします。
+iOS 版は iPad と iPhone で動き、小説ビューア、LLM 要約、Piper と Irodori-TTS による読み上げを提供します。配布経路は無く、各自でビルドして実機にインストールします。
+
+iPhone では縦向きだけで動きます。端末を横に倒しても画面は回転しません。横向きの iPhone（幅 852pt・高さ約 393pt）では、幅の判定で検索結果を横に並べるレイアウトになりますが、その高さでは本文がほとんど残らないためです。iPad は 4 方向すべてに回転します。
 
 - [提供する機能・しない機能](#提供する機能しない機能)
 - [LLM 要約](#llm-要約)
@@ -9,16 +11,17 @@ iPad 版は小説ビューア、LLM 要約、Piper と Irodori-TTS による読�
 - [ライブラリの場所](#ライブラリの場所)
 - [共有シートから登録する](#共有シートから登録する)
 - [狭い画面でのレイアウト](#狭い画面でのレイアウト)
+- [読書進捗の同期での端末名](#読書進捗の同期での端末名)
 - [コンテキストメニューをタッチで開く](#コンテキストメニューをタッチで開く)
 
 ## 提供する機能・しない機能
 
 デスクトップ版にある次の機能は UI ごと表示されません。
 
-| 機能 | iPad で提供しない理由 |
+| 機能 | iOS で提供しない理由 |
 | --- | --- |
 | 読み上げエンジン Qwen3-TTS | iOS 向けのライブラリが無い。エンジンの選択欄には Piper と Irodori-TTS だけが出る |
-| Irodori-TTS の v3 / v4 とガイダンスの調整 | デスクトップの audio.cpp 版のモデルは、iPad でアプリが使えるメモリに収まらない。iPad では speech.cpp で動く v4.1 Small MF（F16）だけを使う。このモデルはガイダンスと推論ステップ数を自身で扱うので、調整用のスライダーは出ない |
+| Irodori-TTS の v3 / v4 とガイダンスの調整 | デスクトップの audio.cpp 版のモデルは、iOS でアプリが使えるメモリに収まらない。iOS では speech.cpp で動く v4.1 Small MF（F16）だけを使う。このモデルはガイダンスと推論ステップ数を自身で扱うので、調整用のスライダーは出ない |
 | 参照音声の録音・ドラッグ＆ドロップ・フォルダを開くボタン | マイクの経路は未確認で、ドロップのプラグインは iOS に無い。参照音声は、ファイルを選ぶボタンか Files アプリで追加する（[下記](#読み上げ)） |
 | MP3 書き出し | 書き出しに使う LAME の iOS 向けビルドが無い |
 | 画面ロック中の読み上げ | 未対応。アプリが前面にあるあいだだけ再生する |
@@ -33,11 +36,11 @@ iPad 版は小説ビューア、LLM 要約、Piper と Irodori-TTS による読�
 | プロバイダ | 接続先 |
 | --- | --- |
 | Ollama / OpenAI互換API | 同じネットワーク上の PC などで動かしている LLM サーバ |
-| オンデバイス (Apple) | iPad 内の Apple のオンデバイス AI モデル。サーバ不要で、本文は端末の外に送られない |
+| オンデバイス (Apple) | 端末内の Apple のオンデバイス AI モデル。サーバ不要で、本文は端末の外に送られない |
 
-**LLM サーバに接続する場合:** 既定のエンドポイント `http://localhost:11434` は iPad 自身を指すため、サーバを動かしている PC のアドレス（例: `http://192.168.1.100:11434`）に書き換えてください。初回接続時に「ローカルネットワーク上のデバイスの検出と接続」の許可を求められるので、許可してください。拒否した場合は iPad の設定アプリ > プライバシーとセキュリティ > ローカルネットワークから変更できます。Ollama は既定で PC 自身からの接続しか受け付けないため、PC 側で `OLLAMA_HOST=0.0.0.0` を設定して起動する必要があります。
+**LLM サーバに接続する場合:** 既定のエンドポイント `http://localhost:11434` は iPad / iPhone 自身を指すため、サーバを動かしている PC のアドレス（例: `http://192.168.1.100:11434`）に書き換えてください。初回接続時に「ローカルネットワーク上のデバイスの検出と接続」の許可を求められるので、許可してください。拒否した場合は端末の設定アプリ > プライバシーとセキュリティ > ローカルネットワークから変更できます。Ollama は既定で PC 自身からの接続しか受け付けないため、PC 側で `OLLAMA_HOST=0.0.0.0` を設定して起動する必要があります。
 
-**オンデバイスを使う場合:** Apple Intelligence に対応した iPad で、設定アプリから Apple Intelligence を有効にしてください。無効な場合やモデルの準備中は、選択肢が選べない状態で理由が表示されます。非対応の端末・OS では選択肢自体が表示されません。
+**オンデバイスを使う場合:** Apple Intelligence に対応した端末（iPhone 16 など）で、設定アプリから Apple Intelligence を有効にしてください。無効な場合やモデルの準備中は、選択肢が選べない状態で理由が表示されます。非対応の端末・OS では選択肢自体が表示されません。
 
 解析結果は小説フォルダ内のデータベースに保存され、左カラムの「解析履歴」タブから一覧できます。デスクトップで作成した解析結果も、小説フォルダごと持ち込めば同様に参照できます。本文中の解析済みの語にポインタを合わせてポップアップで内容を読む操作は、トラックパッド（Magic Keyboard など）を接続している場合に限られます。
 
@@ -50,7 +53,7 @@ iPad 版は小説ビューア、LLM 要約、Piper と Irodori-TTS による読�
    - Irodori-TTS: v4.1 Small MF（F16、約 1.9GB）。ダウンロードの後、サイズと SHA-256 で照合します
 2. 本文を開き、右下の読み上げボタンを押す
 
-**Irodori-TTS の参照音声（声のクローン）:** 参照音声の欄の「＋」ボタンでファイルを選ぶか、Files アプリで、ライブラリのフォルダ（`Documents/NovelViewer/`）と同じ階層にある `voices` フォルダに WAV を置き、更新ボタンを押します。iPad の Irodori-TTS が読めるのは WAV だけで、MP3 は一覧に出ません（フォルダからは消えません）。参照音声を選ばないと、声はモデルが選びます。区間ごとのメモは、声の説明（キャプション）として使われます。
+**Irodori-TTS の参照音声（声のクローン）:** 参照音声の欄の「＋」ボタンでファイルを選ぶか、Files アプリで、ライブラリのフォルダ（`Documents/NovelViewer/`）と同じ階層にある `voices` フォルダに WAV を置き、更新ボタンを押します。iOS の Irodori-TTS が読めるのは WAV だけで、MP3 は一覧に出ません（フォルダからは消えません）。参照音声を選ばないと、声はモデルが選びます。区間ごとのメモは、声の説明（キャプション）として使われます。
 
 **Irodori-TTS の待ち時間:** 再生を始めるたびにモデルを読み込むので、最初の音が出るまで 10 秒ほどかかります。長い文は読点で区切って合成し、つなぎ目に短い間を入れます。
 
@@ -59,11 +62,23 @@ iPad 版は小説ビューア、LLM 要約、Piper と Irodori-TTS による読�
 ## ビルドとインストール
 
 ```bash
+scripts/install_ios.sh
+```
+
+つながっている iPad と iPhone のすべてに、1 回のビルドでまとめてインストールします。ケーブルでつないだ端末に加え、同じネットワーク上でペアリング済みの端末も対象です。Simulator は対象外です。
+
+- ビルドは `scripts/build_app.sh ios` で、macOS 版と同じく commit ハッシュと同期の設定を埋め込みます。
+- プロビジョニングプロファイルに入っていない端末があれば、先に[その端末を登録](#2-署名設定)してから、もう一度ビルドします。
+- release ビルドを上書きするので、アプリのデータは残ります。
+- `--backup` を付けると、インストールの前に、端末ごとに小説・参照音声（`voices`。ある場合）・設定・データベースを `~/Backups/NovelViewer-<端末名>-<日時>/` に取り出します。読み上げのモデルは数 GB あり、アプリで取得し直せるので除きます。バックアップに失敗した端末にはインストールしません。
+- `--device <端末名か UDID>` で対象を絞れます（複数回指定できます）。`--no-build` は、ビルド済みのアプリをそのまま入れます。
+
+1 台だけに手で入れる場合は次のとおりです。デバイスの UDID は `xcrun devicectl list devices` の Identifier 列で確認できます。
+
+```bash
 scripts/build_app.sh ios --release
 xcrun devicectl device install app --device <デバイスUDID> build/ios/iphoneos/Runner.app
 ```
-
-`build_app.sh` は macOS 版と同じく commit ハッシュを埋め込みます。デバイスの UDID は `xcrun devicectl list devices` の Identifier 列で確認できます。
 
 ビルドには以下の準備が必要です。
 
@@ -87,6 +102,22 @@ DEVELOPMENT_TEAM = XXXXXXXXXX
 Team ID は Xcode > Settings > Accounts、または `security find-identity -v -p codesigning` で確認できます。このファイルが無い状態でもビルド構成は壊れず、署名時にのみ失敗します。
 
 無料プロビジョニング（Apple ID のみ、有料の Developer Program に未加入）でインストールしたアプリは **7 日で失効**します。失効後は Xcode から再インストールしてください。
+
+iPhone にも同じビルド（`build/ios/iphoneos/Runner.app`）をそのままインストールできます。初めて入れる端末では、次の準備が要ります。
+
+- 端末を Mac にケーブルでつなぎ、端末側で「このコンピュータを信頼」を選ぶ
+- 端末の 設定 > プライバシーとセキュリティ > デベロッパモード をオンにする（再起動を求められます）
+- 初回のインストールの後、設定 > 一般 > VPN とデバイス管理 で、自分の Apple ID の開発元を信頼する
+
+新しい端末は、プロビジョニングプロファイルに登録されるまでインストールできません。登録されていない端末に入れると、`devicectl` が `This provisioning profile cannot be installed on this device.`（0xe8008012）で失敗します。`scripts/build_app.sh ios` は特定の端末を宛先にしないので、これだけでは新しい端末が登録されません。端末をつないだ状態で、その端末を宛先にして一度ビルドしてください。
+
+```bash
+xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
+  -destination 'id=<デバイスUDID>' \
+  -allowProvisioningUpdates -allowProvisioningDeviceRegistration build
+```
+
+これで端末がチームに登録され、プロファイルが作り直されます。そのあと `scripts/build_app.sh ios` でビルドし直してからインストールします。プロファイルに入っている端末は `security cms -D -i build/ios/iphoneos/Runner.app/embedded.mobileprovision` の `ProvisionedDevices` で確かめられます。
 
 ### 3. debug ビルドは実機のホーム画面から起動できない
 
@@ -138,7 +169,7 @@ fvm flutter drive --profile --driver=test_driver/integration_test.dart \
 
 ### 6. speech.cpp による Irodori-TTS
 
-iPad の Irodori-TTS は [speech.cpp](https://github.com/nyosegawa/speech.cpp)（`third_party/speech.cpp`）で動きます。Irodori-TTS を使うビルドでは、アプリをビルドする前にこのライブラリをビルドし、`ios/Frameworks/` に置いたままにしてください。ビューアや Piper だけなら、この手順は不要です。
+iOS の Irodori-TTS は [speech.cpp](https://github.com/nyosegawa/speech.cpp)（`third_party/speech.cpp`）で動きます。Irodori-TTS を使うビルドでは、アプリをビルドする前にこのライブラリをビルドし、`ios/Frameworks/` に置いたままにしてください。ビューアや Piper だけなら、この手順は不要です。
 
 ```bash
 scripts/build_speech_ios.sh          # ios/Frameworks/speech_cpp.xcframework を生成
@@ -156,7 +187,7 @@ scripts/test/verify_speech_ios.sh    # 成果物の検証
 for d in Documents Library; do
   xcrun devicectl device copy from --device <デバイス UDID> \
     --domain-type appDataContainer --domain-identifier com.endo5501.novelViewer \
-    --source "$d" --destination ~/Backups/NovelViewer-iPad-$(date +%Y%m%d)/"$d"
+    --source "$d" --destination ~/Backups/NovelViewer-iOS-$(date +%Y%m%d)/"$d"
 done
 ```
 
@@ -176,7 +207,7 @@ fvm flutter drive --profile --driver=test_driver/integration_test.dart \
 
 ## ライブラリの場所
 
-小説は端末内の `Documents/NovelViewer/` に保存され、Files アプリの「このiPad内 > NovelViewer」から参照・追加・削除できます。
+小説は端末内の `Documents/NovelViewer/` に保存され、Files アプリの「このiPad内 > NovelViewer」（iPhone では「このiPhone内 > NovelViewer」）から参照・追加・削除できます。
 
 蔵書全体のメタデータ（`novel_metadata.db`）は Files アプリに露出しない `Library/Application Support/` に置かれます。一方、各小説フォルダの中にある `novel_data.db` / `episode_cache.db` / `tts_audio.db` は、小説フォルダごと持ち運ぶ設計のため Files アプリからも見えます。
 
@@ -200,7 +231,7 @@ Safari で小説の目次ページを開き、共有 → 作成したショー�
 
 ## 狭い画面でのレイアウト
 
-表示幅が 800pt 未満のときは、左カラム（ファイル・ブックマーク）と検索結果が画面内に並ばず、それぞれ Drawer として本文に重なる形で開きます。本文は画面幅いっぱいを使います。iPad mini の縦向き（744pt）が該当し、横向き（1133pt）は従来どおりの 3 カラムです。
+表示幅が 800pt 未満のときは、左カラム（ファイル・ブックマーク）と検索結果が画面内に並ばず、それぞれ Drawer として本文に重なる形で開きます。本文は画面幅いっぱいを使います。iPhone（縦向き 393pt）と iPad mini の縦向き（744pt）が該当し、iPad mini の横向き（1133pt）は従来どおりの 3 カラムです。
 
 デスクトップも同じ規則で動きます。既定 1280pt および保存サイズの復元（800pt 以上に補正）では 3 カラムのままですが、ウィンドウを 800pt 未満まで縮めると同じ Drawer 表示になります。この幅では 3 カラムだと本文が 248pt しか残らないため、意図した動作です。
 
@@ -210,6 +241,10 @@ Safari で小説の目次ページを開き、共有 → 作成したショー�
 | AppBar の 🔍 | 検索（キーボードがあれば ⌘F も同じ） |
 
 Drawer は **AppBar のボタンからのみ**開きます。画面端からのスワイプで開く動作は無効にしてあります——縦書き表示では画面端の水平スワイプがページ送りだからです。Drawer を閉じるには本文側をタップするか、ファイルを選んでください（選ぶと自動で閉じます）。
+
+## 読書進捗の同期での端末名
+
+読書進捗の同期では、ほかの端末の位置へ移動するかを尋ねるときに、記録元の端末名を表示します（[progress-sync.md](progress-sync.md)）。iOS の端末は、iPhone なら `iPhone`、iPad なら `iPad` と名乗ります。どちらも OS は同じ iOS なので、端末の種類はアプリの起動時に OS へ問い合わせて決めています。問い合わせに失敗したときは `iOS` と名乗ります。
 
 ## コンテキストメニューをタッチで開く
 

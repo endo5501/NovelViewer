@@ -44,7 +44,9 @@ class TextViewerPanel extends ConsumerWidget {
             if (ttsSupported)
               Positioned(
                 right: 8,
-                bottom: 8,
+                // Clear of the home indicator. Only the bar moves: insetting
+                // the text as well would change how it is paginated.
+                bottom: 8 + MediaQuery.paddingOf(context).bottom,
                 child: TtsControlsBar(content: content),
               ),
           ],

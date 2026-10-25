@@ -607,7 +607,8 @@ class _TextContentRendererState extends ConsumerState<TextContentRenderer> {
     return Positioned(
       left: 8,
       right: 8,
-      bottom: 8,
+      // Clear of the home indicator, like the TTS controls bar.
+      bottom: 8 + MediaQuery.paddingOf(context).bottom,
       child: IgnorePointer(
         child: Center(
           child: DecoratedBox(

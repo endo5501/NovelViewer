@@ -397,6 +397,7 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
   _HeavyPagination? _cachedHeavy;
   List<TextSegment>? _cachedHeavySegments;
   BoxConstraints? _cachedHeavyConstraints;
+  int? _cachedHeavyCharsPerColumn;
   TextStyle? _cachedHeavyStyle;
   double? _cachedHeavyColumnSpacing;
 
@@ -736,7 +737,12 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
                     ),
                     if (totalPages > 1 || _boundaryPrompt.pending != null)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
+                        // Clear of the home indicator. The page above gives up
+                        // that height, so a display with a bottom inset fits a
+                        // little less text on each page.
+                        padding: EdgeInsets.only(
+                          bottom: 8 + MediaQuery.paddingOf(context).bottom,
+                        ),
                         child: Text(
                           _buildIndicatorText(
                             context,
@@ -978,7 +984,14 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     // inside a SizedBox(width: fontSize) in VerticalTextPage.
     final charWidth = style.fontSize ?? _kDefaultFontSize;
     final availableWidth = constraints.maxWidth - _kHorizontalPadding;
-    final availableHeight = constraints.maxHeight - _kVerticalPadding;
+    // The page-number row sits above the home indicator, so the page gives up
+    // the bottom safe area as well (see the row's padding in build). Leaving
+    // it out pages each column for more height than the page has, and the
+    // run of characters then wraps early into short columns.
+    final availableHeight =
+        constraints.maxHeight -
+        _kVerticalPadding -
+        MediaQuery.paddingOf(context).bottom;
 
     final charsPerColumn = availableHeight > 0
         ? (availableHeight / charHeight).floor()
@@ -1084,6 +1097,7 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     if (cached != null &&
         identical(_cachedHeavySegments, widget.segments) &&
         _cachedHeavyConstraints == constraints &&
+        _cachedHeavyCharsPerColumn == charsPerColumn &&
         _cachedHeavyStyle == style &&
         _cachedHeavyColumnSpacing == widget.columnSpacing) {
       return cached;
@@ -1118,6 +1132,7 @@ class _VerticalTextViewerState extends ConsumerState<VerticalTextViewer>
     _cachedHeavy = heavy;
     _cachedHeavySegments = widget.segments;
     _cachedHeavyConstraints = constraints;
+    _cachedHeavyCharsPerColumn = charsPerColumn;
     _cachedHeavyStyle = style;
     _cachedHeavyColumnSpacing = widget.columnSpacing;
     return heavy;

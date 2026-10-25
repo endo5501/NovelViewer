@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Drift guard for the iOS build configuration.
 ///
-/// Almost everything that makes the app run on an iPad lives in Xcode
+/// Almost everything that makes the app run on an iPad and an iPhone lives in Xcode
 /// configuration rather than Dart, so it is invisible to the rest of the suite
 /// and easy to lose: `flutter build ios` rewrites parts of the project on its
 /// own, Xcode rewrites others whenever the project is opened, and a stray
@@ -120,7 +120,7 @@ void main() {
   });
 
   group('device family', () {
-    test('every build configuration targets iPad only', () {
+    test('every build configuration targets iPhone and iPad', () {
       final assignments = RegExp(
         r'TARGETED_DEVICE_FAMILY = "?([0-9,]+)"?;',
       ).allMatches(pbxproj).map((m) => m.group(1)).toList();
@@ -132,11 +132,29 @@ void main() {
       );
       expect(
         assignments,
-        everyElement('2'),
-        reason:
-            'iPhone is out of scope; "1" or "1,2" would ship an untested '
-            'phone layout',
+        everyElement('1,2'),
+        reason: 'one configuration left at "2" would ship an iPad-only build',
       );
+    });
+
+    test('iPhone runs in portrait only', () {
+      // The key without a suffix is the list iOS applies to an iPhone. A
+      // landscape phone is wide enough for the wide layout but too short for
+      // it, and the reader holds the phone upright.
+      final match = RegExp(
+        r'<key>UISupportedInterfaceOrientations</key>\s*<array>(.*?)</array>',
+        dotAll: true,
+      ).firstMatch(infoPlist);
+
+      expect(
+        match,
+        isNotNull,
+        reason: 'the iPhone orientation list must exist',
+      );
+      final orientations = RegExp(
+        r'<string>(.*?)</string>',
+      ).allMatches(match!.group(1)!).map((m) => m.group(1)).toList();
+      expect(orientations, ['UIInterfaceOrientationPortrait']);
     });
 
     test('iPad orientations stay unrestricted', () {

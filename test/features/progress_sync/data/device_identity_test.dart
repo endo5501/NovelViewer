@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/progress_sync/data/device_identity.dart';
+import 'package:novel_viewer/shared/platform/ios_device_kind.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -51,14 +52,42 @@ void main() {
     test('falls back to the platform alone without a host name', () {
       expect(buildDeviceName(platformLabel: 'iPad', hostName: ''), 'iPad');
     });
+
+    test('leaves out localhost, which names no device', () {
+      // What iOS reports: it keeps the name the reader gave the device from
+      // apps, so every iPhone and iPad is localhost.
+      expect(
+        buildDeviceName(platformLabel: 'iPhone', hostName: 'localhost'),
+        'iPhone',
+      );
+    });
   });
 
   group('platformLabelFor', () {
-    test('labels the platforms the app runs on', () {
-      expect(platformLabelFor('windows'), 'Windows');
-      expect(platformLabelFor('macos'), 'macOS');
-      expect(platformLabelFor('ios'), 'iPad');
-      expect(platformLabelFor('linux'), 'Linux');
+    test('labels the desktop platforms the app runs on', () {
+      for (final kind in IosDeviceKind.values) {
+        expect(platformLabelFor('windows', iosDeviceKind: kind), 'Windows');
+        expect(platformLabelFor('macos', iosDeviceKind: kind), 'macOS');
+        expect(platformLabelFor('linux', iosDeviceKind: kind), 'Linux');
+      }
+    });
+
+    test('labels an iPhone as an iPhone', () {
+      expect(
+        platformLabelFor('ios', iosDeviceKind: IosDeviceKind.phone),
+        'iPhone',
+      );
+    });
+
+    test('labels an iPad as an iPad', () {
+      expect(platformLabelFor('ios', iosDeviceKind: IosDeviceKind.pad), 'iPad');
+    });
+
+    test('labels an iOS device of unknown kind as iOS, not as either', () {
+      expect(
+        platformLabelFor('ios', iosDeviceKind: IosDeviceKind.unknown),
+        'iOS',
+      );
     });
   });
 }

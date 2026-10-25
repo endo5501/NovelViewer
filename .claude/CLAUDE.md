@@ -10,15 +10,17 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `scripts/build_lame_macos.sh` - LAMEビルド(mac)
  - `scripts/build_piper_ios.sh` - Piper(piper-plus + ONNX Runtime)のiOS向けxcframeworkビルド(mac)。`patches/piper-plus/` のパッチを当ててビルドする。成果物 `ios/Frameworks/piper_plus.xcframework` はGit管理外
  - `scripts/test/verify_piper_ios.sh` - Piper iOSビルド成果物の検証(mac)
- - `scripts/build_speech_ios.sh` - speech.cpp(iPad の Irodori-TTS の実行系)のiOS向けxcframeworkビルド(mac)。成果物 `ios/Frameworks/speech_cpp.xcframework` はGit管理外。Irodori-TTS を含む iPad ビルドでは置いたままにする。実機計測の手順は`docs/ipad.md`参照
+ - `scripts/build_speech_ios.sh` - speech.cpp(iOS の Irodori-TTS の実行系)のiOS向けxcframeworkビルド(mac)。成果物 `ios/Frameworks/speech_cpp.xcframework` はGit管理外。Irodori-TTS を含む iOS ビルドでは置いたままにする。実機計測の手順は`docs/ios.md`参照
  - `scripts/test/verify_speech_ios.sh` - speech.cpp iOSビルド成果物の検証(mac)
  - `scripts/build_app.sh macos` - 本番ビルド(mac)。commit ハッシュを `--dart-define=BUILD_COMMIT` で注入し、障害レポートの app version に載せる。素の `fvm flutter build macos` でも動くが、レポートは `commit unknown` になる。`config/google_oauth.json`（Git 管理外）があれば `--dart-define-from-file` で渡し、読書進捗の同期を有効にする（無ければ同期なしのビルド。詳細は`docs/progress-sync.md`参照）。macOS版はキーチェーンの権限のため開発者証明書での署名が必要で、`macos/Runner/Configs/Local.xcconfig`（Git 管理外）に `DEVELOPMENT_TEAM` と `CODE_SIGN_IDENTITY = Apple Development` を書く（初回の Mac 登録手順は同ドキュメント参照）
  - `scripts/build_tts_windows.bat` - TTSエンジンビルド(windows)
  - `scripts/build_lame_windows.bat` - LAMEビルド(windows)
  - `scripts\build_app.bat windows` - 本番ビルド(windows)。commit ハッシュと OAuth 設定の注入は mac と同じ
- - `scripts/build_app.sh ios` - ビルド(iPad。commit ハッシュの注入は mac と同じ。TTSはPiperとIrodori-TTS。読み上げを使う場合は先に `scripts/build_piper_ios.sh` と `scripts/build_speech_ios.sh` でライブラリをビルドする。Xcodeのplatform componentと`ios/Flutter/Local.xcconfig`のDEVELOPMENT_TEAMが必要。詳細は`docs/ipad.md`参照)
+ - `scripts/build_app.sh ios` - ビルド(iPad / iPhone。iPhone は縦向きのみ。commit ハッシュの注入は mac と同じ。TTSはPiperとIrodori-TTS。読み上げを使う場合は先に `scripts/build_piper_ios.sh` と `scripts/build_speech_ios.sh` でライブラリをビルドする。Xcodeのplatform componentと`ios/Flutter/Local.xcconfig`のDEVELOPMENT_TEAMが必要。詳細は`docs/ios.md`参照)
+ - `scripts/install_ios.sh` - つながっている iPad・iPhone すべてに release ビルドを1回のビルドでインストール(mac)。未登録の端末はプロファイルに登録してからビルドし直す。`--backup` でインストール前に端末ごとのデータ(小説・参照音声・設定・DB)を `~/Backups/` に取り出す(TTS モデルは除く)。`--device <名前|UDID>` で対象を絞る。詳細は`docs/ios.md`参照
  - `fvm flutter test` - テスト実行
  - `bash scripts/test/build_app_test.sh` - `build_app.sh` のテスト(スタブの fvm / git で実行し、実ビルドはしない)
+ - `bash scripts/test/install_ios_test.sh` - `install_ios.sh` のテスト(スタブの xcrun / security / xcodebuild / fvm で実行し、実機には触れない)
  - `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test/build_app_test.ps1` - `build_app.bat` のテスト(windows。同上)
  - `swift test --package-path packages/foundation_models_llm/darwin/wire_code_tests` - オンデバイスLLMプラグインのエラー写像テスト(mac。プラグイン本体はFlutterビルド外で走らないため写像だけを独立パッケージで実行)
  - `fvm dart format lib test` - フォーマット実行(`.` を指定すると third_party/piper-plus 同梱の Dart サンプルまで書き換えるため、lib/ と test/ に限定する)

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/shared/layout/fitting_tab_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/about_and_update_section.dart';
 import 'package:novel_viewer/features/settings/presentation/sections/general_settings_section.dart';
@@ -58,15 +59,15 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog>
         height: 500,
         child: Column(
           children: [
-            TabBar(
+            FittingTabBar(
               controller: _tabController,
-              tabs: [
-                Tab(text: l10n.settings_generalTabLabel),
+              labels: [
+                l10n.settings_generalTabLabel,
                 // Withheld where TTS cannot run: this tab reaches the native
                 // engine, the microphone, and a desktop-only drop target.
-                if (_ttsSupported) Tab(text: l10n.settings_ttsTabLabel),
-                if (_syncAvailable) Tab(text: l10n.syncSettings_tab),
-                Tab(text: l10n.settings_aboutUpdateTab),
+                if (_ttsSupported) l10n.settings_ttsTabLabel,
+                if (_syncAvailable) l10n.syncSettings_tab,
+                l10n.settings_aboutUpdateTab,
               ],
             ),
             Expanded(

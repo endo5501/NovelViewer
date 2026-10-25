@@ -273,6 +273,9 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     });
 
     return AlertDialog(
+      // On a phone with the keyboard up, the collection choice or an error
+      // message leaves the content taller than the room above the keyboard.
+      scrollable: true,
       title: Text(AppLocalizations.of(context)!.download_title),
       content: SizedBox(
         width: 450,

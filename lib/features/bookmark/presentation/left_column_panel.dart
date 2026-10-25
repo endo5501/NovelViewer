@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/shared/layout/fitting_tab_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/bookmark/presentation/bookmark_list_panel.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_history_panel.dart';
@@ -44,12 +45,12 @@ class _LeftColumnPanelState extends ConsumerState<LeftColumnPanel>
     final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
-        TabBar(
+        FittingTabBar(
           controller: _tabController,
-          tabs: [
-            Tab(text: l10n.leftColumn_filesTab),
-            Tab(text: l10n.leftColumn_bookmarksTab),
-            if (_hasHistoryTab) Tab(text: l10n.leftColumn_historyTab),
+          labels: [
+            l10n.leftColumn_filesTab,
+            l10n.leftColumn_bookmarksTab,
+            if (_hasHistoryTab) l10n.leftColumn_historyTab,
           ],
         ),
         Expanded(

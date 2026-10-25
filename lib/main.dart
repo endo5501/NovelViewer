@@ -24,6 +24,8 @@ import 'package:novel_viewer/features/novel_metadata_db/data/novel_data_migrator
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/window_state/window_state_bootstrap.dart';
+import 'package:novel_viewer/shared/platform/ios_device_kind.dart';
+import 'package:novel_viewer/shared/providers/device_platform_providers.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,6 +67,10 @@ void main() async {
   await novelDatabase.database;
 
   final packageInfo = await PackageInfo.fromPlatform();
+  // An iPhone and an iPad are both `ios` to `Platform`; the host says which.
+  final iosDeviceKind = Platform.isIOS
+      ? await readIosDeviceKind()
+      : IosDeviceKind.unknown;
 
   final container = ProviderContainer(
     overrides: [
@@ -75,6 +81,7 @@ void main() async {
       sharedPreferencesProvider.overrideWithValue(prefs),
       novelDatabaseProvider.overrideWithValue(novelDatabase),
       packageInfoProvider.overrideWithValue(packageInfo),
+      iosDeviceKindProvider.overrideWithValue(iosDeviceKind),
       // Only a running app has the platform channel this reads from.
       incomingLinkSourceProvider.overrideWithValue(
         IncomingLinkSource.appLinks(),

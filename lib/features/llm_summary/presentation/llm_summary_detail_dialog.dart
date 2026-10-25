@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:novel_viewer/shared/layout/fitting_tab_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
@@ -36,10 +37,10 @@ class LlmSummaryDetailDialog extends StatelessWidget {
           length: 2,
           child: Column(
             children: [
-              TabBar(
-                tabs: [
-                  Tab(text: l10n.historyDetail_factsTab),
-                  Tab(text: l10n.historyDetail_resultTab),
+              FittingTabBar(
+                labels: [
+                  l10n.historyDetail_factsTab,
+                  l10n.historyDetail_resultTab,
                 ],
               ),
               Expanded(

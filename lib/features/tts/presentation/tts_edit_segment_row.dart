@@ -6,6 +6,10 @@ import '../data/tts_edit_segment.dart';
 import 'dictionary_context_menu.dart';
 import 'tts_dictionary_dialog.dart';
 
+/// The narrowest row that holds everything on one line with room left for
+/// the text. Below it the row takes two lines.
+const double _kSingleLineRowMinWidth = 480;
+
 /// One segment of the TTS edit dialog: status, editable text, reference audio,
 /// memo, and the per-segment actions.
 ///
@@ -70,6 +74,14 @@ class TtsEditSegmentRow extends StatefulWidget {
 
 class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
   late TextEditingController _textController;
+
+  // The row lays its parts out on one line or two depending on its width, and
+  // switching rebuilds the tree around them. The keys carry each part's state
+  // across, so a field being typed in keeps its focus, selection and IME
+  // composition when the dialog is resized past the breakpoint.
+  final _textFieldKey = GlobalKey();
+  final _referenceAudioKey = GlobalKey();
+  final _memoFieldKey = GlobalKey();
   late TextEditingController _memoController;
 
   @override
@@ -147,195 +159,218 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
         ? refWavPath
         : '';
 
+    // Status icon. Doubles as the skip toggle: the row is already full
+    // (status, text, reference audio, memo, three buttons), and skip is
+    // a fourth state of what this icon already reports.
+    final statusIcon = Padding(
+      padding: const EdgeInsets.only(top: 12, right: 8),
+      child: Tooltip(
+        message: _buildStatusTooltip(),
+        child: InkWell(
+          onTap: widget.enabled ? widget.onSkipToggled : null,
+          customBorder: const CircleBorder(),
+          child: _buildStatusIcon(),
+        ),
+      ),
+    );
+    final textField = TextField(
+      key: _textFieldKey,
+      controller: _textController,
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        border: const OutlineInputBorder(),
+        hintText: widget.segment.originalText,
+      ),
+      maxLines: null,
+      style: const TextStyle(fontSize: 13),
+      onSubmitted: widget.onTextEditComplete,
+      onTapOutside: (_) {
+        widget.onTextEditComplete(_textController.text);
+      },
+      contextMenuBuilder: widget.dictRepository == null
+          ? null
+          : (menuContext, editableTextState) {
+              final value = editableTextState.textEditingValue;
+              final sel = value.selection;
+              final selectedText = sel.isValid && !sel.isCollapsed
+                  ? sel.textInside(value.text)
+                  : '';
+              return buildDictionaryContextMenu(
+                context,
+                editableTextState,
+                selectedText: selectedText,
+                onAddToDictionary: (selectedText) {
+                  TtsDictionaryDialog.show(
+                    context,
+                    repository: widget.dictRepository!,
+                    initialSurface: selectedText,
+                  );
+                },
+              );
+            },
+    );
+    final referenceAudio = widget.showReferenceAudio
+        ? DropdownButtonFormField<String?>(
+            key: _referenceAudioKey,
+            // ignore: deprecated_member_use
+            value: effectiveRefValue,
+            isDense: true,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              DropdownMenuItem<String?>(
+                value: null,
+                child: Text(
+                  AppLocalizations.of(context)!.ttsEdit_referenceSettingValue,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+              DropdownMenuItem<String?>(
+                value: '',
+                child: Text(
+                  AppLocalizations.of(context)!.ttsEdit_referenceNone,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+              ...widget.voiceFiles.map(
+                (file) => DropdownMenuItem<String?>(
+                  value: file,
+                  child: Text(
+                    file,
+                    style: const TextStyle(fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+            onChanged: widget.enabled
+                ? (value) => widget.onRefWavPathChanged(value)
+                : null,
+          )
+        : null;
+    // Memo field. Doubles as the Irodori caption, so it holds a short
+    // sentence rather than a keyword — it wraps to a second line instead
+    // of scrolling the text out of view.
+    final memoField = TextField(
+      key: _memoFieldKey,
+      controller: _memoController,
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        border: const OutlineInputBorder(),
+        hintText: AppLocalizations.of(context)!.ttsEdit_memoHint,
+      ),
+      // minLines is required for the field to grow from one line: with
+      // maxLines alone the height is pinned at two lines, which would
+      // make every row taller even when the memo is empty.
+      minLines: 1,
+      maxLines: 2,
+      // A multiline field otherwise defaults to TextInputAction.newline,
+      // which turns Enter into a line break and stops onSubmitted from
+      // firing. The memo is a one-line caption, so Enter must keep
+      // committing it the way it did before the field could wrap.
+      textInputAction: TextInputAction.done,
+      style: const TextStyle(fontSize: 12),
+      onSubmitted: (value) =>
+          widget.onMemoEditComplete(value.isEmpty ? null : value),
+      onTapOutside: (_) {
+        final value = _memoController.text;
+        widget.onMemoEditComplete(value.isEmpty ? null : value);
+      },
+    );
+    final buttons = <Widget>[
+      IconButton(
+        icon: Icon(
+          Icons.play_arrow,
+          size: 20,
+          color: widget.segment.hasAudio && !widget.segment.skip
+              ? null
+              : Colors.grey,
+        ),
+        tooltip: AppLocalizations.of(context)!.ttsEdit_playTooltip,
+        onPressed:
+            widget.segment.hasAudio && !widget.segment.skip && widget.enabled
+            ? widget.onPlay
+            : null,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      ),
+      IconButton(
+        icon: const Icon(Icons.refresh, size: 20),
+        tooltip: AppLocalizations.of(context)!.ttsEdit_regenerateTooltip,
+        // "Do not generate" and "generate now" cannot both hold: the user
+        // un-skips first, via the status icon.
+        onPressed: widget.enabled && !widget.segment.skip
+            ? widget.onGenerate
+            : null,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      ),
+      IconButton(
+        icon: const Icon(Icons.restart_alt, size: 20),
+        tooltip: AppLocalizations.of(context)!.ttsEdit_resetTooltip,
+        onPressed: widget.enabled ? widget.onReset : null,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      ),
+    ];
+
+    // The row holds the status, the text, the reference audio, the memo and
+    // three buttons on one line where it has the room. A phone does not: the
+    // fixed parts alone take its width and leave the text no room at all, so
+    // there the text gets a line of its own and the rest goes below it.
     final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Status icon. Doubles as the skip toggle: the row is already full
-          // (status, text, reference audio, memo, three buttons), and skip is
-          // a fourth state of what this icon already reports.
-          Padding(
-            padding: const EdgeInsets.only(top: 12, right: 8),
-            child: Tooltip(
-              message: _buildStatusTooltip(),
-              child: InkWell(
-                onTap: widget.enabled ? widget.onSkipToggled : null,
-                customBorder: const CircleBorder(),
-                child: _buildStatusIcon(),
-              ),
-            ),
-          ),
-          // Text field
-          Expanded(
-            flex: 5,
-            child: TextField(
-              controller: _textController,
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 10,
-                ),
-                border: const OutlineInputBorder(),
-                hintText: widget.segment.originalText,
-              ),
-              maxLines: null,
-              style: const TextStyle(fontSize: 13),
-              onSubmitted: widget.onTextEditComplete,
-              onTapOutside: (_) {
-                widget.onTextEditComplete(_textController.text);
-              },
-              contextMenuBuilder: widget.dictRepository == null
-                  ? null
-                  : (menuContext, editableTextState) {
-                      final value = editableTextState.textEditingValue;
-                      final sel = value.selection;
-                      final selectedText = sel.isValid && !sel.isCollapsed
-                          ? sel.textInside(value.text)
-                          : '';
-                      return buildDictionaryContextMenu(
-                        context,
-                        editableTextState,
-                        selectedText: selectedText,
-                        onAddToDictionary: (selectedText) {
-                          TtsDictionaryDialog.show(
-                            context,
-                            repository: widget.dictRepository!,
-                            initialSurface: selectedText,
-                          );
-                        },
-                      );
-                    },
-            ),
-          ),
-          if (widget.showReferenceAudio) ...[
-            const SizedBox(width: 8),
-            // Reference audio dropdown
-            SizedBox(
-              width: 120,
-              child: DropdownButtonFormField<String?>(
-                // ignore: deprecated_member_use
-                value: effectiveRefValue,
-                isDense: true,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 8,
-                  ),
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text(
-                      AppLocalizations.of(
-                        context,
-                      )!.ttsEdit_referenceSettingValue,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                  DropdownMenuItem<String?>(
-                    value: '',
-                    child: Text(
-                      AppLocalizations.of(context)!.ttsEdit_referenceNone,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                  ...widget.voiceFiles.map(
-                    (file) => DropdownMenuItem<String?>(
-                      value: file,
-                      child: Text(
-                        file,
-                        style: const TextStyle(fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth >= _kSingleLineRowMinWidth) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                statusIcon,
+                Expanded(flex: 5, child: textField),
+                if (referenceAudio != null) ...[
+                  const SizedBox(width: 8),
+                  SizedBox(width: 120, child: referenceAudio),
                 ],
-                onChanged: widget.enabled
-                    ? (value) => widget.onRefWavPathChanged(value)
-                    : null,
+                const SizedBox(width: 8),
+                Expanded(flex: 2, child: memoField),
+                const SizedBox(width: 4),
+                ...buttons,
+              ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  statusIcon,
+                  Expanded(child: textField),
+                ],
               ),
-            ),
-          ],
-          const SizedBox(width: 8),
-          // Memo field. Doubles as the Irodori caption, so it holds a short
-          // sentence rather than a keyword — it wraps to a second line instead
-          // of scrolling the text out of view.
-          Expanded(
-            flex: 2,
-            child: TextField(
-              controller: _memoController,
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 10,
-                ),
-                border: const OutlineInputBorder(),
-                hintText: AppLocalizations.of(context)!.ttsEdit_memoHint,
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (referenceAudio != null) ...[
+                    Expanded(child: referenceAudio),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(child: memoField),
+                  const SizedBox(width: 4),
+                  ...buttons,
+                ],
               ),
-              // minLines is required for the field to grow from one line: with
-              // maxLines alone the height is pinned at two lines, which would
-              // make every row taller even when the memo is empty.
-              minLines: 1,
-              maxLines: 2,
-              // A multiline field otherwise defaults to TextInputAction.newline,
-              // which turns Enter into a line break and stops onSubmitted from
-              // firing. The memo is a one-line caption, so Enter must keep
-              // committing it the way it did before the field could wrap.
-              textInputAction: TextInputAction.done,
-              style: const TextStyle(fontSize: 12),
-              onSubmitted: (value) =>
-                  widget.onMemoEditComplete(value.isEmpty ? null : value),
-              onTapOutside: (_) {
-                final value = _memoController.text;
-                widget.onMemoEditComplete(value.isEmpty ? null : value);
-              },
-            ),
-          ),
-          const SizedBox(width: 4),
-          // Action buttons
-          IconButton(
-            icon: Icon(
-              Icons.play_arrow,
-              size: 20,
-              color: widget.segment.hasAudio && !widget.segment.skip
-                  ? null
-                  : Colors.grey,
-            ),
-            tooltip: AppLocalizations.of(context)!.ttsEdit_playTooltip,
-            onPressed:
-                widget.segment.hasAudio &&
-                    !widget.segment.skip &&
-                    widget.enabled
-                ? widget.onPlay
-                : null,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh, size: 20),
-            tooltip: AppLocalizations.of(context)!.ttsEdit_regenerateTooltip,
-            // "Do not generate" and "generate now" cannot both hold: the user
-            // un-skips first, via the status icon.
-            onPressed: widget.enabled && !widget.segment.skip
-                ? widget.onGenerate
-                : null,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-          IconButton(
-            icon: const Icon(Icons.restart_alt, size: 20),
-            tooltip: AppLocalizations.of(context)!.ttsEdit_resetTooltip,
-            onPressed: widget.enabled ? widget.onReset : null,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
 
