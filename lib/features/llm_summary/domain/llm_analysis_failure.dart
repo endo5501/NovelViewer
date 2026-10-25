@@ -65,12 +65,20 @@ class LlmAnalysisNoFactsFailure implements LlmAnalysisFailure {
 /// pipeline has already asked twice, and the reader is told the summary could
 /// not be read rather than shown an answer that is not one.
 class LlmAnalysisUnreadableSummaryFailure implements LlmAnalysisFailure {
-  const LlmAnalysisUnreadableSummaryFailure();
+  const LlmAnalysisUnreadableSummaryFailure({this.cause});
+
+  /// What the second request failed with, where it failed rather than
+  /// answering unreadably. Kept so the reader is told what stopped it — rate
+  /// limiting or a model switched off asks something different of them than
+  /// an answer that would not parse does.
+  final Object? cause;
 
   @override
-  String toString() =>
-      'LlmAnalysisUnreadableSummaryFailure: no final summary answer could be '
-      'read';
+  String toString() => cause == null
+      ? 'LlmAnalysisUnreadableSummaryFailure: no final summary answer could be '
+            'read'
+      : 'LlmAnalysisUnreadableSummaryFailure: no final summary answer could be '
+            'read; the second request failed: $cause';
 }
 
 /// Raised when the on-device model produced no text.

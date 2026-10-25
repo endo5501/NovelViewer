@@ -126,21 +126,14 @@ class FoundationModelsClient extends LlmClient {
   /// two places to be understood.
   @override
   Future<String> generate(String prompt, {LlmResponseSchema? schema}) async {
-    if (schema == null) {
-      try {
-        return await _generate(prompt, fieldName: null);
-      } on OnDeviceGenerationException catch (e) {
-        throw _asAnalysisFailure(e);
-      }
-    }
     try {
       return await _generate(
         prompt,
-        fieldName: schema.fieldName,
-        budget: maxResponseSize,
+        fieldName: schema?.fieldName,
+        budget: schema == null ? null : maxResponseSize,
       );
     } on OnDeviceGenerationException catch (e) {
-      if (!_givesUpTheConstraint.contains(e.reason)) {
+      if (schema == null || !_givesUpTheConstraint.contains(e.reason)) {
         throw _asAnalysisFailure(e);
       }
     }

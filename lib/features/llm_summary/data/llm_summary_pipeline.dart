@@ -472,7 +472,7 @@ class LlmSummaryPipeline {
       );
     } catch (e, st) {
       _log.warning('second summary attempt failed; no summary to save', e, st);
-      throw const LlmAnalysisUnreadableSummaryFailure();
+      throw LlmAnalysisUnreadableSummaryFailure(cause: e);
     }
     if (second.isStructured) return second;
     throw const LlmAnalysisUnreadableSummaryFailure();
