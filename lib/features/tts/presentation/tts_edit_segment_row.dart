@@ -74,6 +74,14 @@ class TtsEditSegmentRow extends StatefulWidget {
 
 class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
   late TextEditingController _textController;
+
+  // The row lays its parts out on one line or two depending on its width, and
+  // switching rebuilds the tree around them. The keys carry each part's state
+  // across, so a field being typed in keeps its focus, selection and IME
+  // composition when the dialog is resized past the breakpoint.
+  final _textFieldKey = GlobalKey();
+  final _referenceAudioKey = GlobalKey();
+  final _memoFieldKey = GlobalKey();
   late TextEditingController _memoController;
 
   @override
@@ -166,6 +174,7 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
       ),
     );
     final textField = TextField(
+      key: _textFieldKey,
       controller: _textController,
       decoration: InputDecoration(
         isDense: true,
@@ -203,6 +212,7 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
     );
     final referenceAudio = widget.showReferenceAudio
         ? DropdownButtonFormField<String?>(
+            key: _referenceAudioKey,
             // ignore: deprecated_member_use
             value: effectiveRefValue,
             isDense: true,
@@ -247,6 +257,7 @@ class _TtsEditSegmentRowState extends State<TtsEditSegmentRow> {
     // sentence rather than a keyword — it wraps to a second line instead
     // of scrolling the text out of view.
     final memoField = TextField(
+      key: _memoFieldKey,
       controller: _memoController,
       decoration: InputDecoration(
         isDense: true,
