@@ -37,24 +37,33 @@ class FittingTabBar extends StatelessWidget {
     );
   }
 
-  /// The width of the widest tab, label and the padding a [TabBar] puts
-  /// around it by default. A fixed tab bar gives every tab the same share, so
-  /// the labels fit only when that share holds the widest of them.
+  /// The width of the widest tab, label and the padding the [TabBar] puts
+  /// around it. A fixed tab bar gives every tab the same share, so the labels
+  /// fit only when that share holds the widest of them. A label is measured in
+  /// both its selected and unselected style, since either can be the wider.
   double _widestTabWidth(BuildContext context) {
-    final style =
-        TabBarTheme.of(context).labelStyle ??
-        Theme.of(context).textTheme.titleSmall;
+    final tabBarTheme = TabBarTheme.of(context);
+    final defaultStyle = Theme.of(context).textTheme.titleSmall;
+    final styles = {
+      tabBarTheme.labelStyle ?? defaultStyle,
+      tabBarTheme.unselectedLabelStyle ??
+          tabBarTheme.labelStyle ??
+          defaultStyle,
+    };
+    final padding = (tabBarTheme.labelPadding ?? kTabLabelPadding).horizontal;
     final textScaler = MediaQuery.textScalerOf(context);
     var width = 0.0;
     for (final label in labels) {
-      final painter = TextPainter(
-        text: TextSpan(text: label, style: style),
-        textDirection: Directionality.of(context),
-        textScaler: textScaler,
-        maxLines: 1,
-      )..layout();
-      width = math.max(width, painter.width + kTabLabelPadding.horizontal);
-      painter.dispose();
+      for (final style in styles) {
+        final painter = TextPainter(
+          text: TextSpan(text: label, style: style),
+          textDirection: Directionality.of(context),
+          textScaler: textScaler,
+          maxLines: 1,
+        )..layout();
+        width = math.max(width, painter.width + padding);
+        painter.dispose();
+      }
     }
     return width;
   }
