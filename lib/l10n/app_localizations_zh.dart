@@ -754,6 +754,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String llmAnalysis_unreadableSummary(String word) {
+    return '分析已中止：无法读取「$word」的摘要，因此未保存摘要。重新运行即可再次尝试。';
+  }
+
+  @override
   String summaryCard_referenceSources(String names) {
     return '参考来源：$names';
   }

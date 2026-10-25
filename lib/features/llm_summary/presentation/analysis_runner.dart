@@ -435,7 +435,7 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       // The cause is appended to the headline on screen, so a typed failure
       // contributes only what the localized sentence does not already say:
       // the underlying error for a partial run, nothing at all for a run that
-      // found no facts. Spelling out the Dart class name there would tell the
+      // found no facts or whose summary could not be read. Spelling out the Dart class name there would tell the
       // reader nothing and read as a defect. The detail dialog still carries
       // the full picture through the diagnostics and the stack trace.
       final (headline, cause) = switch (e) {
@@ -445,6 +445,10 @@ class DefaultAnalysisRunner implements AnalysisRunner {
             firstError.toString(),
           ),
         LlmAnalysisNoFactsFailure() => (l10n.llmAnalysis_noFacts(word), null),
+        LlmAnalysisUnreadableSummaryFailure() => (
+          l10n.llmAnalysis_unreadableSummary(word),
+          null,
+        ),
         _ => (l10n.llmAnalysis_failed, e.toString()),
       };
       failure = FailureReport(

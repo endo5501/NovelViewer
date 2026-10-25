@@ -781,6 +781,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String llmAnalysis_unreadableSummary(String word) {
+    return 'Analysis stopped: the summary for \"$word\" could not be read, so no summary was saved. Run it again to try once more.';
+  }
+
+  @override
   String summaryCard_referenceSources(String names) {
     return 'Reference sources: $names';
   }
