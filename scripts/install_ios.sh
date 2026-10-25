@@ -13,8 +13,8 @@
 #
 # Installing a release build over the one on the device keeps the app's data.
 # --backup copies the reader's own data off each device first, into
-# ~/Backups/NovelViewer-<device>-<time>/: the novels, the settings and the
-# databases outside the novel folders. The speech models are left out; they are
+# ~/Backups/NovelViewer-<device>-<time>/: the novels, the reference voices,
+# the settings and the databases outside the novel folders. The speech models are left out; they are
 # gigabytes and the app downloads them again. A device whose backup fails is not
 # installed on.
 #
@@ -32,6 +32,10 @@ BACKUP_SOURCES=(
   "Library/Application Support"
   "Library/Preferences"
 )
+# Copied too where the device has it: the reference voices for Irodori-TTS,
+# which the reader adds and the app cannot fetch again. A device that never had
+# one has no such folder.
+OPTIONAL_DOCUMENTS=(voices)
 
 usage() {
   echo "usage: $0 [--backup] [--no-build] [--device <name|udid>]..." >&2
@@ -182,7 +186,21 @@ back_up() {
   local dest
   dest="$BACKUP_ROOT/NovelViewer-$name-$(date +%Y%m%d-%H%M%S)"
   echo "  backing up to $dest"
-  for source in "${BACKUP_SOURCES[@]}"; do
+  local sources=("${BACKUP_SOURCES[@]}")
+  xcrun devicectl device info files --device "$udid" \
+    --domain-type appDataContainer --domain-identifier "$BUNDLE_ID" \
+    --subdirectory Documents --json-output "$WORK/files.json" >/dev/null ||
+    return 1
+  for folder in "${OPTIONAL_DOCUMENTS[@]}"; do
+    if python3 -I -c '
+import json, sys
+files = json.load(open(sys.argv[1]))["result"]["files"]
+sys.exit(0 if any(f.get("relativePath") == sys.argv[2] for f in files) else 1)
+' "$WORK/files.json" "$folder"; then
+      sources+=("Documents/$folder")
+    fi
+  done
+  for source in "${sources[@]}"; do
     mkdir -p "$dest/$(dirname "$source")"
     xcrun devicectl device copy from --device "$udid" \
       --domain-type appDataContainer --domain-identifier "$BUNDLE_ID" \

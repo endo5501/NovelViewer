@@ -17,7 +17,7 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `scripts/build_lame_windows.bat` - LAMEビルド(windows)
  - `scripts\build_app.bat windows` - 本番ビルド(windows)。commit ハッシュと OAuth 設定の注入は mac と同じ
  - `scripts/build_app.sh ios` - ビルド(iPad / iPhone。iPhone は縦向きのみ。commit ハッシュの注入は mac と同じ。TTSはPiperとIrodori-TTS。読み上げを使う場合は先に `scripts/build_piper_ios.sh` と `scripts/build_speech_ios.sh` でライブラリをビルドする。Xcodeのplatform componentと`ios/Flutter/Local.xcconfig`のDEVELOPMENT_TEAMが必要。詳細は`docs/ios.md`参照)
- - `scripts/install_ios.sh` - つながっている iPad・iPhone すべてに release ビルドを1回のビルドでインストール(mac)。未登録の端末はプロファイルに登録してからビルドし直す。`--backup` でインストール前に端末ごとのデータを `~/Backups/` に取り出す(TTS モデルは除く)。`--device <名前|UDID>` で対象を絞る。詳細は`docs/ios.md`参照
+ - `scripts/install_ios.sh` - つながっている iPad・iPhone すべてに release ビルドを1回のビルドでインストール(mac)。未登録の端末はプロファイルに登録してからビルドし直す。`--backup` でインストール前に端末ごとのデータ(小説・参照音声・設定・DB)を `~/Backups/` に取り出す(TTS モデルは除く)。`--device <名前|UDID>` で対象を絞る。詳細は`docs/ios.md`参照
  - `fvm flutter test` - テスト実行
  - `bash scripts/test/build_app_test.sh` - `build_app.sh` のテスト(スタブの fvm / git で実行し、実ビルドはしない)
  - `bash scripts/test/install_ios_test.sh` - `install_ios.sh` のテスト(スタブの xcrun / security / xcodebuild / fvm で実行し、実機には触れない)
