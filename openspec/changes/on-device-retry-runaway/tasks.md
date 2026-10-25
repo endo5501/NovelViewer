@@ -5,7 +5,7 @@
 - [x] 1.0 実機に初めて入れる前に、`scripts/install_ios.sh --backup --device <iPhone>` 相当の手順で iPhone のデータ（小説・参照音声・設定・DB）を `~/Backups/` に取り出し、バックアップのファイルがあることを確認する。実機に入れる前には毎回、ユーザーに確認する
 - [x] 1.1 `integration_test/on_device_llm_runaway_test.dart` を追加し、制約付き ×5・スキーマなし（greedy / 既定サンプリング）・`FoundationModelsClient.generate` を `MethodChannelFoundationModelsLlm` 経由で実行して、出力・長さ・所要時間をレポートに残す。macOS で `fvm flutter drive ... -d macos` が通ることで確認する
 - [x] 1.2 iPhone 実機（iOS 27.0.1）で 1.1 を実行し、暴走を再現する。結果を `measurements/iphone16-ios27.0.1-before.json` に保存し、design.md の Context に記録する
-- [ ] 1.3 `docs/ios.md` に計測テストの目的と実行手順（Apple Intelligence が有効な実機が必要なこと、実行後にアプリとデータが消えるので、バックアップと書き戻しが必要なこと）を追記する。手順どおりのコマンドが macOS で実行できることを確認する
+- [x] 1.3 `docs/ios.md` に計測テストの目的と実行手順（Apple Intelligence が有効な実機が必要なこと、実行後にアプリとデータが消えるので、バックアップと書き戻しが必要なこと）を追記する。手順どおりのコマンドが macOS で実行できることを確認する
 
 ## 2. 暴走を元から断てるかの実験（design.md D1）
 
