@@ -12,13 +12,11 @@ import 'package:flutter/material.dart';
 /// bunch the tabs up at the start of a wide display, so the choice is made
 /// from the width the labels actually need.
 class FittingTabBar extends StatelessWidget {
-  const FittingTabBar({
-    super.key,
-    required this.controller,
-    required this.labels,
-  });
+  const FittingTabBar({super.key, this.controller, required this.labels});
 
-  final TabController controller;
+  /// The controller of the tabs, or null to use the enclosing
+  /// [DefaultTabController], as a [TabBar] does.
+  final TabController? controller;
   final List<String> labels;
 
   @override

@@ -501,6 +501,8 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
     // Wraps rather than overflowing where the buttons do not fit on one line,
     // as on a phone.
     return Wrap(
+      spacing: 8,
+      runSpacing: 4,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         TextButton.icon(
@@ -512,7 +514,6 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
           icon: const Icon(Icons.book_outlined, size: 18),
           label: Text(AppLocalizations.of(context)!.ttsEdit_dictionaryButton),
         ),
-        const SizedBox(width: 8),
         TextButton.icon(
           // Off while playing: a second run would fight the first over the
           // playhead, and whichever finished first would report playback over
@@ -527,7 +528,6 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
             icon: const Icon(Icons.stop, size: 18),
             label: Text(AppLocalizations.of(context)!.ttsEdit_stopButton),
           ),
-        const SizedBox(width: 8),
         if (isGenerating)
           TextButton.icon(
             onPressed: _cancelGeneration,
@@ -545,7 +545,6 @@ class _TtsEditDialogState extends ConsumerState<TtsEditDialog> {
               AppLocalizations.of(context)!.ttsEdit_generateAllButton,
             ),
           ),
-        const SizedBox(width: 8),
         TextButton.icon(
           // Off while playing: deleting the rows the playback loop is about to
           // read makes its next segment lookup throw.
