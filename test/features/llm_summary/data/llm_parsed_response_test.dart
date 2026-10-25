@@ -314,7 +314,8 @@ void main() {
 
     test('a second request that throws fails the analysis', () async {
       // The first answer is not readable, and nothing else is in hand to
-      // show. What the second request failed with is kept for the log.
+      // show. What the second request failed with is kept, so the reader is
+      // told it and the log records it.
       final records = <LogRecord>[];
       final sub = Logger.root.onRecord.listen(records.add);
       addTearDown(sub.cancel);
@@ -332,7 +333,13 @@ void main() {
           word: 'エドナ',
           perFileFacts: const ['- 礼儀作法の先生'],
         ),
-        throwsA(isA<LlmAnalysisUnreadableSummaryFailure>()),
+        throwsA(
+          isA<LlmAnalysisUnreadableSummaryFailure>().having(
+            (f) => f.cause,
+            'cause',
+            isA<StateError>(),
+          ),
+        ),
       );
       expect(records.any((r) => '${r.error}'.contains('二度目は届かなかった')), isTrue);
     });
