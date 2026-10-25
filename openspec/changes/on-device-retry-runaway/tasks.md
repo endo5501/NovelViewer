@@ -38,7 +38,7 @@
 
 ## 7. 統合確認
 
-- [ ] 7.1 計測テストに、修正後の経路（`FoundationModelsClient.generate` を5回）を加える。iPhone のデータをバックアップし（実行前にユーザーに確認する）、iPhone で実行して、5回とも `summary` を持つ JSON を返すこと、それぞれの所要時間が修正前（約20秒）より明らかに短いことを確かめる。結果を `measurements/iphone16-ios27.0.1-after.json` に保存し、design.md に記録したうえで、入れ直しと書き戻しを行う。時間が縮まない場合は、生成の `Task` を cancel するように 4.3 を直して、もう一度測る
+- [x] 7.1 計測テストに、修正後の経路（`FoundationModelsClient.generate` を5回）を加える。iPhone のデータをバックアップし（実行前にユーザーに確認する）、iPhone で実行して、5回とも `summary` を持つ JSON を返すこと、それぞれの所要時間が修正前（約20秒）より明らかに短いことを確かめる。結果を `measurements/iphone16-ios27.0.1-after.json` に保存し、design.md に記録したうえで、入れ直しと書き戻しを行う。時間が縮まない場合は、生成の `Task` を cancel するように 4.3 を直して、もう一度測る
 - [ ] 7.2 `scripts/install_ios.sh --device <iPhone>` で release ビルドを入れ（データは残る）、アプリで「記憶人シィー」と「キャロル」を再解析する。正しい要約が保存されることを確かめる。macOS と iPad mini（26.6.2）でも同じ単語を解析し、従来どおり要約できることを確かめる
 
 ## 8. 最終確認
