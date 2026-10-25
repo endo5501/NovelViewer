@@ -1,0 +1,158 @@
+{
+  "on_device_llm_runaway": {
+    "operatingSystemVersion": "Version 27.0.1 (Build 24A446)",
+    "cases": [
+      {
+        "label": "constrained#1",
+        "elapsedMs": 20081,
+        "outcome": "text",
+        "length": 1508,
+        "ranAway": true,
+        "head": "{\"summary\": \"〈記憶人〉は〈記憶人シィー〉という別種名を持ち、非生殖性の別種で、生まれがロンドンであり、人口が少ない。」} 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 ",
+        "tail": " 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル。 支援者: 基礎モデル\"}"
+      },
+      {
+        "label": "constrained#2",
+        "elapsedMs": 18026,
+        "outcome": "text",
+        "length": 1988,
+        "ranAway": true,
+        "head": "{\"summary\": \"〈記憶人〉は〈記憶人シィー〉という別種名を持つ非生殖性の別種で、人口が少なく、生まれがロンドンである。」} 支援者: Apple が生成しました。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: ",
+        "tail": "e。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者: Apple。 支援者\"}"
+      },
+      {
+        "label": "constrained#3",
+        "elapsedMs": 18707,
+        "outcome": "text",
+        "length": 1913,
+        "ranAway": true,
+        "head": "{\"summary\": \"〈記憶人〉は〈記憶人シィー〉という別種名を持ち、非生殖性の別種であり、生まれがロンドンであり、人口が少ない。」} 1文ごとに簡潔に説明しています。重複する情報は統合しています。この解説は、〈記憶人〉という用語に関するものです。また、この解説は、〈記憶人〉という用語に関するものです。この解説は、〈記憶人〉という用語に関するものです。この解説は、〈記憶人〉という用語に関するも",
+        "tail": "人〉という用語に関するものです。この解説は、〈記憶人〉という用語に関するものです。この解説は、〈記憶人〉という用語に関するものです。この解説は、〈記憶人〉という用語に関するものです。この解説は、〈記憶人〉という用語に関するものです。この解説は、〈記憶人〉という用語に関するものです。この解説は、〈記憶人〉という用語に関するものです。この解説は、〈記憶人〉という用語に関するものです。この解説は、〈\"}"
+      },
+      {
+        "label": "constrained#4",
+        "elapsedMs": 19724,
+        "outcome": "text",
+        "length": 2218,
+        "ranAway": true,
+        "head": "{\"summary\": \"〈記憶人〉は〈記憶人シィー〉という別種名を持つ非生殖性の別種で、人口が少なく、生まれがロンドンである。」} 2つ目の記述は重複しています。重複する情報は統合しました。 記憶人（きおくじん）です。」* 以下のタグを参考に、ご要望に応じて情報を追加・修正してください。 誤字脱字・誤訳・誤記などがありましたらお知らせください。 補足として、小説用語解説は専門知識に基づいた簡潔な",
+        "tail": "説の用語を解説するアシスタントです。 質問があれば、どうぞお知らせください。 ありがとうございました。 私は小説の用語を解説するアシスタントです。 質問があれば、どうぞお知らせください。 ありがとうございました。 私は小説の用語を解説するアシスタントです。 質問があれば、どうぞお知らせください。 ありがとうございました。 私は小説の用語を解説するアシスタントです。 質問があれば、どうぞお知らせ\"}"
+      },
+      {
+        "label": "constrained#5",
+        "elapsedMs": 20048,
+        "outcome": "text",
+        "length": 1987,
+        "ranAway": true,
+        "head": "{\"summary\": \"〈記憶人〉は〈記憶人シィー〉という別種名を持つ非生殖性の別種で、生まれがロンドンであり、人口が少ない。」} 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Ap",
+        "tail": "。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 支援者: Appleです。 \"}"
+      },
+      {
+        "label": "constrained_watched#1",
+        "elapsedMs": 1880,
+        "outcome": "text",
+        "length": 70,
+        "ranAway": false,
+        "head": "{\"summary\": \"〈記憶人〉は〈記憶人シィー〉という別種名を持ち、非生殖性の別種で、人口が少ない。また、生まれがロンドンである。\"}"
+      },
+      {
+        "label": "constrained_watched#2",
+        "elapsedMs": 2077,
+        "outcome": "failure",
+        "cause": "runawayOutput"
+      },
+      {
+        "label": "constrained_watched#3",
+        "elapsedMs": 1740,
+        "outcome": "failure",
+        "cause": "runawayOutput"
+      },
+      {
+        "label": "constrained_watched#4",
+        "elapsedMs": 2223,
+        "outcome": "failure",
+        "cause": "runawayOutput"
+      },
+      {
+        "label": "constrained_watched#5",
+        "elapsedMs": 1758,
+        "outcome": "failure",
+        "cause": "runawayOutput"
+      },
+      {
+        "label": "constrained_tiny_budget",
+        "elapsedMs": 1205,
+        "outcome": "failure",
+        "cause": "runawayOutput"
+      },
+      {
+        "label": "unconstrained_tiny_budget",
+        "elapsedMs": 363,
+        "outcome": "failure",
+        "cause": "runawayOutput"
+      },
+      {
+        "label": "unconstrained_watched",
+        "elapsedMs": 1095,
+        "outcome": "text",
+        "length": 71,
+        "ranAway": false,
+        "head": "{\n  \"summary\": \"〈記憶人〉は〈記憶人シィー〉という別種名を持ち、非生殖性の別種で、生まれがロンドンであり、人口が少ない。\"\n}"
+      },
+      {
+        "label": "unconstrained_greedy",
+        "elapsedMs": 1387,
+        "outcome": "text",
+        "length": 83,
+        "head": "```json\n{\n  \"summary\": \"〈記憶人〉は〈記憶人シィー〉という別種名を持ち、非生殖性の別種で、生まれがロンドンであり、人口が少ない。\"\n}\n```"
+      },
+      {
+        "label": "unconstrained_default_sampling",
+        "elapsedMs": 1290,
+        "outcome": "text",
+        "length": 85,
+        "head": "```json\n{\n  \"summary\": \"〈記憶人〉は非生殖性の別種であり、〈記憶人シィー〉という別種名を持つ。生まれはロンドンであり、人口は少ない。\"\n}\n```"
+      },
+      {
+        "label": "client#1",
+        "elapsedMs": 2722,
+        "outcome": "text",
+        "length": 71,
+        "ranAway": false,
+        "head": "{\n  \"summary\": \"〈記憶人〉は〈記憶人シィー〉という別種名を持ち、非生殖性の別種で、生まれがロンドンであり、人口が少ない。\"\n}"
+      },
+      {
+        "label": "client#2",
+        "elapsedMs": 3063,
+        "outcome": "text",
+        "length": 71,
+        "ranAway": false,
+        "head": "{\n  \"summary\": \"〈記憶人〉は〈記憶人シィー〉という別種名を持ち、非生殖性の別種で、生まれがロンドンであり、人口が少ない。\"\n}"
+      },
+      {
+        "label": "client#3",
+        "elapsedMs": 3347,
+        "outcome": "text",
+        "length": 71,
+        "ranAway": false,
+        "head": "{\n  \"summary\": \"〈記憶人〉は〈記憶人シィー〉という別種名を持ち、非生殖性の別種で、生まれがロンドンであり、人口が少ない。\"\n}"
+      },
+      {
+        "label": "client#4",
+        "elapsedMs": 3225,
+        "outcome": "text",
+        "length": 71,
+        "ranAway": false,
+        "head": "{\n  \"summary\": \"〈記憶人〉は〈記憶人シィー〉という別種名を持ち、非生殖性の別種で、生まれがロンドンであり、人口が少ない。\"\n}"
+      },
+      {
+        "label": "client#5",
+        "elapsedMs": 2211,
+        "outcome": "text",
+        "length": 76,
+        "ranAway": false,
+        "head": "{\"summary\": \"〈記憶人〉は非生殖性の別種で、〈記憶人シィー〉という別種名を持つ。また、〈記憶人〉は生まれがロンドンであり、人口が少ない。\"}"
+      }
+    ]
+  }
+}

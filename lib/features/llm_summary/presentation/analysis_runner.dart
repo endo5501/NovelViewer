@@ -435,9 +435,11 @@ class DefaultAnalysisRunner implements AnalysisRunner {
       // The cause is appended to the headline on screen, so a typed failure
       // contributes only what the localized sentence does not already say:
       // the underlying error for a partial run, nothing at all for a run that
-      // found no facts. Spelling out the Dart class name there would tell the
-      // reader nothing and read as a defect. The detail dialog still carries
-      // the full picture through the diagnostics and the stack trace.
+      // found no facts, and for a summary that could not be read only what
+      // stopped the second request, where one did. Spelling out the Dart
+      // class name there would tell the reader nothing and read as a defect.
+      // The detail dialog still carries the full picture through the
+      // diagnostics and the stack trace.
       final (headline, cause) = switch (e) {
         LlmAnalysisPartialFailure(:final failedFileCount, :final firstError) =>
           (
@@ -445,6 +447,10 @@ class DefaultAnalysisRunner implements AnalysisRunner {
             firstError.toString(),
           ),
         LlmAnalysisNoFactsFailure() => (l10n.llmAnalysis_noFacts(word), null),
+        LlmAnalysisUnreadableSummaryFailure(:final cause) => (
+          l10n.llmAnalysis_unreadableSummary(word),
+          cause?.toString(),
+        ),
         _ => (l10n.llmAnalysis_failed, e.toString()),
       };
       failure = FailureReport(

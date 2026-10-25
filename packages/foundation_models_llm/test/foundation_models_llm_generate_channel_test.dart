@@ -81,6 +81,33 @@ void main() {
       expect((calls.single.arguments as Map)['sampling'], isNull);
     });
 
+    test('sends the response budget the caller asked to be held to', () async {
+      // The budget is the ask: with it, the native side watches the answer
+      // as it arrives and ends one that runs away, and ends an unconstrained
+      // one where its object closes.
+      final calls = stub('{"summary": "短い"}');
+
+      await MethodChannelFoundationModelsLlm().generate(
+        prompt: 'anything',
+        schemaFieldName: 'summary',
+        responseBudget: 1300,
+      );
+
+      expect((calls.single.arguments as Map)['responseBudget'], 1300);
+    });
+
+    test('sends no response budget when the caller named none', () async {
+      // Absent, so a caller that did not ask has its answer left alone.
+      final calls = stub('free text');
+
+      await MethodChannelFoundationModelsLlm().generate(prompt: 'anything');
+
+      expect(
+        (calls.single.arguments as Map).containsKey('responseBudget'),
+        isFalse,
+      );
+    });
+
     test('returns what the native side generated, unchanged', () async {
       stub('{"facts": "- アリスは騎士である"}');
 
@@ -181,6 +208,16 @@ void main() {
       expect(
         await reasonFor(PlatformException(code: 'concurrentRequests')),
         OnDeviceGenerationFailure.rateLimited,
+      );
+    });
+
+    test('names an answer that ran away as its own reason', () async {
+      // Ended by the native side for passing its budget, or for a field the
+      // model closed with a brace while the string was still open. Reading
+      // it as unknown would lose that a fresh request can answer differently.
+      expect(
+        await reasonFor(PlatformException(code: 'runawayOutput')),
+        OnDeviceGenerationFailure.runawayOutput,
       );
     });
 

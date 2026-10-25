@@ -35,6 +35,15 @@ abstract class FoundationModelsLlm {
   /// model repeat itself until the response cap cuts the answer off. Left null
   /// the framework's own default stands.
   ///
+  /// [responseBudget] is the length, in characters, an answer produced as
+  /// instructed stays within. Given it, the native side watches the answer as
+  /// it arrives. A constrained answer whose field passes the budget, or holds
+  /// a closing brace, is ended and reported as
+  /// [OnDeviceGenerationFailure.runawayOutput]. An unconstrained answer is
+  /// ended where its first top-level object closes and returned as that
+  /// object alone; one that passes the budget first is reported the same
+  /// way. Left null, the answer is waited for whole and returned as it is.
+  ///
   /// Throws [OnDeviceGenerationException] for every failure, so a caller reads
   /// one exception type rather than a platform's.
   Future<String> generate({
@@ -42,6 +51,7 @@ abstract class FoundationModelsLlm {
     String? schemaFieldName,
     int? maxResponseTokens,
     OnDeviceSampling? sampling,
+    int? responseBudget,
   });
 }
 
@@ -79,6 +89,7 @@ class MethodChannelFoundationModelsLlm implements FoundationModelsLlm {
     String? schemaFieldName,
     int? maxResponseTokens,
     OnDeviceSampling? sampling,
+    int? responseBudget,
   }) async {
     try {
       final answer = await _channel.invokeMethod<String>('generate', {
@@ -86,6 +97,7 @@ class MethodChannelFoundationModelsLlm implements FoundationModelsLlm {
         'schemaFieldName': schemaFieldName,
         'maxResponseTokens': maxResponseTokens,
         'sampling': sampling?.wireName,
+        'responseBudget': ?responseBudget,
       });
       if (answer == null) {
         // A generate that answers nothing is a broken contract, not an empty

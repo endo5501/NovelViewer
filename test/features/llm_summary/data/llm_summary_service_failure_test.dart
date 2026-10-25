@@ -344,6 +344,28 @@ void main() {
       expect(client.callCount, 6);
     });
 
+    test('an unreadable final summary is not saved', () async {
+      // Measured on iPhone 16 (iOS 27.0.1), an unreadable answer saved as a
+      // summary is shown to the reader as though it were one.
+      await createEpisodes(2);
+
+      final client = _ScriptedLlmClient(
+        const {},
+        summary: '〈記憶人〉は人口が少ない。」} 支援者: Appleです。',
+      );
+
+      await expectLater(
+        () => makeService(client).generateSummary(
+          directoryPath: tempDir.path,
+          word: 'アリス',
+          coveredUpToEpisode: 2,
+        ),
+        throwsA(isA<LlmAnalysisUnreadableSummaryFailure>()),
+      );
+
+      expect(await repository.findSnapshotsForWord(word: 'アリス'), isEmpty);
+    });
+
     test(
       'a re-run after a partial failure only re-extracts the failed file',
       () async {

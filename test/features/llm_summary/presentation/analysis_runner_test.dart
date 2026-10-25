@@ -1075,6 +1075,37 @@ void main() {
       expect(body, contains('「アリス」'));
     });
 
+    testWidgets('an unreadable summary says so without its class name', (
+      tester,
+    ) async {
+      await runFailing(
+        tester,
+        error: const LlmAnalysisUnreadableSummaryFailure(),
+      );
+
+      final bar = tester.widget<SnackBar>(find.byType(SnackBar));
+      final body = (bar.content as Text).data!;
+
+      expect(body, contains('「アリス」'));
+      expect(body, contains('要約を読み取れなかった'));
+      expect(body, isNot(contains('LlmAnalysisUnreadableSummaryFailure')));
+    });
+
+    testWidgets('an unreadable summary shows what stopped the second request', (
+      tester,
+    ) async {
+      await runFailing(
+        tester,
+        error: const LlmAnalysisUnreadableSummaryFailure(cause: 'rate limited'),
+      );
+
+      final bar = tester.widget<SnackBar>(find.byType(SnackBar));
+      final body = (bar.content as Text).data!;
+
+      expect('rate limited'.allMatches(body).length, 1);
+      expect(body, contains('要約を読み取れなかった'));
+    });
+
     testWidgets('a partial failure shows the cause, not the wrapper', (
       tester,
     ) async {

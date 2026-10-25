@@ -21,6 +21,13 @@ void main() {
       expect(retries(OnDeviceGenerationFailure.unsupportedRequest), isFalse);
     });
 
+    test('an answer that ran away is retried', () {
+      // The plugin ends a runaway on the unconstrained request, and the
+      // identical request begins constrained again, where the answer may
+      // well complete.
+      expect(retries(OnDeviceGenerationFailure.runawayOutput), isTrue);
+    });
+
     test('the existing classification is unchanged', () {
       expect(retries(OnDeviceGenerationFailure.rateLimited), isTrue);
       expect(retries(OnDeviceGenerationFailure.decodingFailure), isTrue);

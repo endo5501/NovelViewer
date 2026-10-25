@@ -1450,6 +1450,12 @@ abstract class AppLocalizations {
   /// **'解析を中止しました: 「{word}」に関する情報を抽出できなかったため、要約は保存されていません。'**
   String llmAnalysis_noFacts(String word);
 
+  /// No description provided for @llmAnalysis_unreadableSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'解析を中止しました: 「{word}」の要約を読み取れなかったため、要約は保存されていません。再実行すると、もう一度要約を試みます。'**
+  String llmAnalysis_unreadableSummary(String word);
+
   /// No description provided for @summaryCard_referenceSources.
   ///
   /// In ja, this message translates to:

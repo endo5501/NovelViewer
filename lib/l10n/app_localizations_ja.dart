@@ -761,6 +761,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String llmAnalysis_unreadableSummary(String word) {
+    return '解析を中止しました: 「$word」の要約を読み取れなかったため、要約は保存されていません。再実行すると、もう一度要約を試みます。';
+  }
+
+  @override
   String summaryCard_referenceSources(String names) {
     return '参照元: $names';
   }

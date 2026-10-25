@@ -28,6 +28,14 @@ enum OnDeviceGenerationFailure {
   /// before it is closed, so a larger cap or a smaller prompt is the remedy.
   decodingFailure,
 
+  /// The answer stopped being the one asked for, and the native side ended
+  /// it rather than let it run to the response cap: its field passed the
+  /// response budget, or the model closed the object with a brace while the
+  /// field's string was still open. Seen on iPhone 16 (iOS 27.0.1), where the
+  /// constrained answer wrote `」}` after the summary and went on to the cap.
+  /// A fresh request can answer differently.
+  runawayOutput,
+
   /// The request did not complete in the time the framework allows it.
   /// Transient, like rate limiting: a second attempt can finish.
   timeout,
@@ -65,6 +73,7 @@ enum OnDeviceGenerationFailure {
     'assetsUnavailable' => OnDeviceGenerationFailure.assetsUnavailable,
     'decodingFailure' => OnDeviceGenerationFailure.decodingFailure,
     'timeout' => OnDeviceGenerationFailure.timeout,
+    'runawayOutput' => OnDeviceGenerationFailure.runawayOutput,
     // What the request asked for is not supported. The framework names the
     // capability, the transcript content and the generation guide
     // separately; they arrive here as one reason because the run answers

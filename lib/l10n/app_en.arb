@@ -292,6 +292,14 @@
       }
     }
   },
+  "llmAnalysis_unreadableSummary": "Analysis stopped: the summary for \"{word}\" could not be read, so no summary was saved. Run it again to try once more.",
+  "@llmAnalysis_unreadableSummary": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
   "summaryCard_referenceSources": "Reference sources: {names}",
   "@summaryCard_referenceSources": {
     "placeholders": {

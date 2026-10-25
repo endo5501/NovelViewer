@@ -482,6 +482,14 @@
       }
     }
   },
+  "llmAnalysis_unreadableSummary": "解析を中止しました: 「{word}」の要約を読み取れなかったため、要約は保存されていません。再実行すると、もう一度要約を試みます。",
+  "@llmAnalysis_unreadableSummary": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
   "summaryCard_referenceSources": "参照元: {names}",
   "@summaryCard_referenceSources": {
     "placeholders": {

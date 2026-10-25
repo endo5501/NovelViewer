@@ -42,6 +42,21 @@ iPhone では縦向きだけで動きます。端末を横に倒しても画面�
 
 **オンデバイスを使う場合:** Apple Intelligence に対応した端末（iPhone 16 など）で、設定アプリから Apple Intelligence を有効にしてください。無効な場合やモデルの準備中は、選択肢が選べない状態で理由が表示されます。非対応の端末・OS では選択肢自体が表示されません。
 
+**オンデバイスモデルの計測テスト:** iPhone 16（iOS 27.0.1）のモデルは、スキーマ制約付きで答えるとき、要約を書いたあと文字列を `」}` で閉じたつもりになり、そのまま応答上限まで書き続けることがあります（macOS 27.0.1 と iPadOS 26.6.2 では起きません）。`integration_test/on_device_llm_runaway_test.dart` は、この不具合が出た最終要約のプロンプトを、アプリと同じプラグイン経由で端末のモデルに渡します。そして、制約付き（5回）・スキーマなし（greedy / 既定のサンプリング）・アプリのクライアント経由のそれぞれについて、回答の先頭と末尾、長さ、暴走したかどうか、所要時間を記録します。Apple Intelligence が有効な端末が必要です。実機の前提（Rosetta、ローカルネットワークの許可、profile ビルド）は、Piper の合成テスト（[5. 読み上げ（TTS）のネイティブライブラリ](#5-読み上げttsのネイティブライブラリ)）と同じです。
+
+```bash
+# 実機（profile ビルドが必須）
+fvm flutter drive --profile --driver=test_driver/integration_test.dart \
+  --target=integration_test/on_device_llm_runaway_test.dart -d <デバイス ID>
+
+# macOS（比較用）
+fvm flutter drive --driver=test_driver/integration_test.dart \
+  --target=integration_test/on_device_llm_runaway_test.dart -d macos
+```
+
+- 結果はホストの `build/integration_response_data.json` に出力されます。実行ごとに上書きされるので、残す場合はコピーしてください。これまでの結果は `openspec/changes/on-device-retry-runaway/measurements/`（アーカイブ後は `openspec/changes/archive/` の下）にあります。
+- **実機では、実行が終わるとアプリとデータ（小説・設定・読み上げのモデル）が消えます。** 実行の前に、`scripts/install_ios.sh` の `--backup` と同じもの（`Documents/NovelViewer`・`Documents/voices`・`Library/Application Support`・`Library/Preferences`）を `xcrun devicectl device copy from` で取り出してください。実行のあとは、`scripts/build_app.sh ios` で作った release ビルドを `xcrun devicectl device install app` で入れ直し、アプリを起動する前に、同じ4か所を `xcrun devicectl device copy to` で書き戻します。読み上げのモデルはアプリで取得し直してください。
+
 解析結果は小説フォルダ内のデータベースに保存され、左カラムの「解析履歴」タブから一覧できます。デスクトップで作成した解析結果も、小説フォルダごと持ち込めば同様に参照できます。本文中の解析済みの語にポインタを合わせてポップアップで内容を読む操作は、トラックパッド（Magic Keyboard など）を接続している場合に限られます。
 
 ## 読み上げ

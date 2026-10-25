@@ -56,6 +56,31 @@ class LlmAnalysisNoFactsFailure implements LlmAnalysisFailure {
       'LlmAnalysisNoFactsFailure: no facts were extracted for this word';
 }
 
+/// Raised when no answer to the final summary request could be read as a
+/// summary: two answers did not parse, or the first did not and the second
+/// request failed.
+///
+/// Its own type rather than [LlmResponseFormatException], which says an answer
+/// parsed into the wrong shape and is retried. This one is past retrying: the
+/// pipeline has already asked twice, and the reader is told the summary could
+/// not be read rather than shown an answer that is not one.
+class LlmAnalysisUnreadableSummaryFailure implements LlmAnalysisFailure {
+  const LlmAnalysisUnreadableSummaryFailure({this.cause});
+
+  /// What the second request failed with, where it failed rather than
+  /// answering unreadably. Kept so the reader is told what stopped it — rate
+  /// limiting or a model switched off asks something different of them than
+  /// an answer that would not parse does.
+  final Object? cause;
+
+  @override
+  String toString() => cause == null
+      ? 'LlmAnalysisUnreadableSummaryFailure: no final summary answer could be '
+            'read'
+      : 'LlmAnalysisUnreadableSummaryFailure: no final summary answer could be '
+            'read; the second request failed: $cause';
+}
+
 /// Raised when the on-device model produced no text.
 ///
 /// Named separately from a transport error so the reason survives to the
@@ -76,7 +101,10 @@ class LlmOnDeviceGenerationFailure
   /// model does not accept the shape of, and a missing model all answer the
   /// same way to the same prompt. Rate limiting passes, a timeout can finish
   /// on a second attempt, and a truncated answer depends on how much the
-  /// model chose to say, so those are worth one more attempt.
+  /// model chose to say, so those are worth one more attempt. So is an answer
+  /// that ran away: the plugin reports it only from the unconstrained
+  /// request, and the identical request begins constrained again, where the
+  /// answer may well complete.
   ///
   /// An unrecognised cause keeps its retry. Nothing is known about whether
   /// it can change, and refusing a second attempt on a cause that may well
@@ -86,6 +114,7 @@ class LlmOnDeviceGenerationFailure
     OnDeviceGenerationFailure.rateLimited ||
     OnDeviceGenerationFailure.timeout ||
     OnDeviceGenerationFailure.decodingFailure ||
+    OnDeviceGenerationFailure.runawayOutput ||
     OnDeviceGenerationFailure.unknown => true,
     OnDeviceGenerationFailure.guardrailViolation ||
     OnDeviceGenerationFailure.contextWindowExceeded ||
