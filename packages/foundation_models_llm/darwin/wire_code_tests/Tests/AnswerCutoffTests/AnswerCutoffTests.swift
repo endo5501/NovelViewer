@@ -24,7 +24,7 @@ final class ConstrainedCutoffTests: XCTestCase {
   }
 
   func testAFieldPastTheBudgetIsARunaway() {
-    let value = String(repeating: "支援者: Appleです。", count: 100)
+    let value = String(repeating: "支援者: Appleです。", count: 101)
     XCTAssertGreaterThan(value.count, budget)
     XCTAssertEqual(
       AnswerCutoff.constrained(fieldValue: value, budget: budget), .ranAway)
@@ -139,13 +139,13 @@ final class UnconstrainedCutoffTests: XCTestCase {
   }
 
   func testAnObjectLeftOpenPastTheBudgetIsARunaway() {
-    let text = #"{"summary": ""# + String(repeating: "支援者: Appleです。", count: 100)
+    let text = #"{"summary": ""# + String(repeating: "支援者: Appleです。", count: 101)
     XCTAssertEqual(
       AnswerCutoff.unconstrained(text: text, budget: budget), .ranAway)
   }
 
   func testTextWithNoObjectPastTheBudgetIsARunaway() {
-    let text = String(repeating: "支援者: Appleです。", count: 100)
+    let text = String(repeating: "支援者: Appleです。", count: 101)
     XCTAssertEqual(
       AnswerCutoff.unconstrained(text: text, budget: budget), .ranAway)
   }

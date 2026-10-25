@@ -16,8 +16,8 @@
 
 ## 3. 打ち切りの判定（Swift、Flutter ビルド外）
 
-- [ ] 3.1 `packages/foundation_models_llm/darwin/wire_code_tests` に、打ち切り判定の新しいターゲットとテストターゲットを追加する（ソースはプラグイン側に置き、シンボリックリンクで参照する）。先にテストだけを書く。対象は、制約付き: 値に `}` が現れたら暴走、値が予算を超えたら暴走、予算内で `}` がなければ続行。スキーマなし: オブジェクトが閉じたら範囲つきで完成、文字列中の `}` と `\"` では閉じない、フェンスを除いた範囲を返す、閉じないまま予算を超えたら暴走、`{` がないまま予算を超えたら暴走。全文を少しずつ伸ばして与えても結果が同じであること、計測の実例（`measurements/` の5件）が `}` で暴走と判定されること。`swift test --package-path packages/foundation_models_llm/darwin/wire_code_tests` で失敗することを確認してコミットする
-- [ ] 3.2 判定の型を実装し、3.1 のテストが通ることを `swift test --package-path packages/foundation_models_llm/darwin/wire_code_tests` で確認する
+- [x] 3.1 `packages/foundation_models_llm/darwin/wire_code_tests` に、打ち切り判定の新しいターゲットとテストターゲットを追加する（ソースはプラグイン側に置き、シンボリックリンクで参照する）。先にテストだけを書く。対象は、制約付き: 値に `}` が現れたら暴走、値が予算を超えたら暴走、予算内で `}` がなければ続行。スキーマなし: オブジェクトが閉じたら範囲つきで完成、文字列中の `}` と `\"` では閉じない、フェンスを除いた範囲を返す、閉じないまま予算を超えたら暴走、`{` がないまま予算を超えたら暴走。全文を少しずつ伸ばして与えても結果が同じであること、計測の実例（`measurements/` の5件）が `}` で暴走と判定されること。`swift test --package-path packages/foundation_models_llm/darwin/wire_code_tests` で失敗することを確認してコミットする
+- [x] 3.2 判定の型を実装し、3.1 のテストが通ることを `swift test --package-path packages/foundation_models_llm/darwin/wire_code_tests` で確認する
 
 ## 4. プラグインの逐次受信と打ち切り
 
