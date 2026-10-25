@@ -24,11 +24,16 @@ class DeviceIdentity {
 
 /// The name another device shows when it asks whether to move to this
 /// device's position.
+///
+/// The host name is left out where it names no device: when there is none,
+/// and when it is `localhost`, which is all iOS reports — the name the reader
+/// gave the device is withheld from apps.
 String buildDeviceName({
   required String platformLabel,
   required String hostName,
 }) {
-  return hostName.isEmpty ? platformLabel : '$platformLabel ($hostName)';
+  final namesNoDevice = hostName.isEmpty || hostName == 'localhost';
+  return namesNoDevice ? platformLabel : '$platformLabel ($hostName)';
 }
 
 /// A reader-facing label for a `Platform.operatingSystem` value.
