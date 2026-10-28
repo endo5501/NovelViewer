@@ -2,8 +2,8 @@
 
 ## 1. 狭い幅の縦並びフォーム（TDD）
 
-- [ ] 1.1 `tts_dictionary_dialog_test.dart` に次のテストを追加する。(a) 393×852 で「読み」欄の上端が「表記」欄の下端以上にあり、両方の欄が hit-testable。(b) 393×852 で表記を入力し「読み上げしない」にチェックして追加すると、読みなしエントリが一覧に出る。(c) 800×600 で表記欄・読み欄・チェックボックス・追加ボタンの縦方向の中心がそろう。`fvm flutter test test/features/tts/presentation/tts_dictionary_dialog_test.dart` で (a) が失敗し、(b)(c) と既存テストが通ることを確かめてからコミットする
-- [ ] 1.2 `tts_dictionary_dialog.dart` の追加フォームを `LayoutBuilder` で切り替える。判定は `_kSingleLineFormMinWidth = 400` 以上（`>=`）なら従来の1行、未満なら表記・読み・チェックボックスと追加ボタンの3行。1.1 のテストを変えずに、同ファイルの全テストが通ることを確認する
+- [x] 1.1 `tts_dictionary_dialog_test.dart` に次のテストを追加する。(a) 393×852 で「読み」欄の上端が「表記」欄の下端以上にあり、両方の欄が hit-testable。(b) 393×852 で表記を入力し「読み上げしない」にチェックして追加すると、読みなしエントリが一覧に出る。(c) 800×600 で表記欄・読み欄・チェックボックス・追加ボタンの縦方向の中心がそろう。`fvm flutter test test/features/tts/presentation/tts_dictionary_dialog_test.dart` で (a) が失敗し、(b)(c) と既存テストが通ることを確かめてからコミットする
+- [x] 1.2 `tts_dictionary_dialog.dart` の追加フォームを `LayoutBuilder` で切り替える。判定は `_kSingleLineFormMinWidth = 400` 以上（`>=`）なら従来の1行、未満なら表記・読み・チェックボックスと追加ボタンの3行。1.1 のテストを変えずに、同ファイルの全テストが通ることを確認する
 
 ## 2. キーボード表示中のオーバーフロー対策（TDD）
 

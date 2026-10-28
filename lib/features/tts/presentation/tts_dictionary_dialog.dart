@@ -4,6 +4,12 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 
 import '../data/tts_dictionary_repository.dart';
 
+/// The narrowest add form that holds both fields, the "do not read aloud"
+/// checkbox and the add button on one line with room left to read the
+/// fields. The dialog is 480 wide on a desktop or an iPad, and at most about
+/// 300 on a phone held upright.
+const double _kSingleLineFormMinWidth = 400;
+
 class TtsDictionaryDialog extends ConsumerStatefulWidget {
   const TtsDictionaryDialog({
     super.key,
@@ -151,65 +157,81 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
   }
 
   Widget _buildAddRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _surfaceController,
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(
-                context,
-              )!.ttsDictionary_surfaceLabel,
-              hintText: AppLocalizations.of(context)!.ttsDictionary_surfaceHint,
-              isDense: true,
-              border: const OutlineInputBorder(),
-            ),
-            onSubmitted: (_) => _addEntry(),
+    final surfaceField = TextField(
+      controller: _surfaceController,
+      decoration: InputDecoration(
+        labelText: AppLocalizations.of(context)!.ttsDictionary_surfaceLabel,
+        hintText: AppLocalizations.of(context)!.ttsDictionary_surfaceHint,
+        isDense: true,
+        border: const OutlineInputBorder(),
+      ),
+      onSubmitted: (_) => _addEntry(),
+    );
+    final readingField = TextField(
+      controller: _readingController,
+      enabled: !_noReading,
+      decoration: InputDecoration(
+        labelText: AppLocalizations.of(context)!.ttsDictionary_readingLabel,
+        hintText: AppLocalizations.of(context)!.ttsDictionary_readingHint,
+        isDense: true,
+        border: const OutlineInputBorder(),
+      ),
+      onSubmitted: (_) => _addEntry(),
+    );
+    // Ticking this stores an empty reading, which the substitution treats
+    // as a deletion — for symbol runs like "――‐" that carry no sound.
+    final noReading = Tooltip(
+      message: AppLocalizations.of(context)!.ttsDictionary_noReadingLabel,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Checkbox(
+            value: _noReading,
+            onChanged: (value) => setState(() => _noReading = value ?? false),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: TextField(
-            controller: _readingController,
-            enabled: !_noReading,
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(
-                context,
-              )!.ttsDictionary_readingLabel,
-              hintText: AppLocalizations.of(context)!.ttsDictionary_readingHint,
-              isDense: true,
-              border: const OutlineInputBorder(),
-            ),
-            onSubmitted: (_) => _addEntry(),
+          Text(
+            AppLocalizations.of(context)!.ttsDictionary_noReadingLabel,
+            style: const TextStyle(fontSize: 12),
           ),
-        ),
-        const SizedBox(width: 8),
-        // Ticking this stores an empty reading, which the substitution treats
-        // as a deletion — for symbol runs like "――‐" that carry no sound.
-        Tooltip(
-          message: AppLocalizations.of(context)!.ttsDictionary_noReadingLabel,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+        ],
+      ),
+    );
+    final addButton = IconButton.filled(
+      onPressed: _addEntry,
+      icon: const Icon(Icons.add),
+      tooltip: AppLocalizations.of(context)!.ttsDictionary_addTooltip,
+    );
+
+    // The checkbox, its label and the button take about 200 of the form's
+    // width whatever it is. A phone's dialog is not much wider than that, so
+    // on one line the two fields shrank until nothing typed in them could be
+    // read; there each field gets a line of its own.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= _kSingleLineFormMinWidth) {
+          return Row(
             children: [
-              Checkbox(
-                value: _noReading,
-                onChanged: (value) =>
-                    setState(() => _noReading = value ?? false),
-              ),
-              Text(
-                AppLocalizations.of(context)!.ttsDictionary_noReadingLabel,
-                style: const TextStyle(fontSize: 12),
-              ),
+              Expanded(child: surfaceField),
+              const SizedBox(width: 8),
+              Expanded(child: readingField),
+              const SizedBox(width: 8),
+              noReading,
+              const SizedBox(width: 8),
+              addButton,
             ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        IconButton.filled(
-          onPressed: _addEntry,
-          icon: const Icon(Icons.add),
-          tooltip: AppLocalizations.of(context)!.ttsDictionary_addTooltip,
-        ),
-      ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            surfaceField,
+            const SizedBox(height: 8),
+            readingField,
+            const SizedBox(height: 8),
+            Row(children: [noReading, const Spacer(), addButton]),
+          ],
+        );
+      },
     );
   }
 
