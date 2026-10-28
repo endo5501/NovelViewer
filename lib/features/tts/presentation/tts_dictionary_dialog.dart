@@ -159,7 +159,9 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   ...header,
-                  Expanded(child: _buildEntryList()),
+                  Expanded(
+                    child: CustomScrollView(slivers: [_buildEntrySliver()]),
+                  ),
                 ],
               );
             }
@@ -174,19 +176,7 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
                     children: header,
                   ),
                 ),
-                if (_loading || _entries.isEmpty)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _buildEntryList(),
-                  )
-                else
-                  SliverList.separated(
-                    itemCount: _entries.length,
-                    separatorBuilder: (context, idx) =>
-                        const Divider(height: 1),
-                    itemBuilder: (context, index) =>
-                        _buildEntryTile(_entries[index]),
-                  ),
+                _buildEntrySliver(),
               ],
             );
           },
@@ -279,22 +269,25 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
     );
   }
 
-  Widget _buildEntryList() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_entries.isEmpty) {
-      return Center(
-        child: Text(
-          AppLocalizations.of(context)!.ttsDictionary_emptyMessage,
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.grey),
+  /// The entries, or the spinner or empty message in their place. A sliver so
+  /// that the stacked phone form can scroll along with it.
+  Widget _buildEntrySliver() {
+    if (_loading || _entries.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: _loading
+              ? const CircularProgressIndicator()
+              : Text(
+                  AppLocalizations.of(context)!.ttsDictionary_emptyMessage,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey),
+                ),
         ),
       );
     }
 
-    return ListView.separated(
+    return SliverList.separated(
       itemCount: _entries.length,
       separatorBuilder: (context, idx) => const Divider(height: 1),
       itemBuilder: (context, index) => _buildEntryTile(_entries[index]),

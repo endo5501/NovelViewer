@@ -7,7 +7,7 @@
 
 ## 2. キーボード表示中のオーバーフロー対策（TDD）
 
-- [x] 2.1 `FakeViewPadding(bottom: 300)` で viewInsets を与えるテストを追加する。393×852 と 375×667 の両方で、エントリなしとエントリ多数（例: 30件）のそれぞれについて `tester.takeException()` が null で、表記欄と読み欄に到達できる（必要なら `ensureVisible` 後に hit-testable）ことを確かめる。失敗を確認してコミットする
+- [x] 2.1 `FakeViewPadding(bottom: 336 × devicePixelRatio)` で viewInsets を与えるテストを追加する。393×852 と 375×667 の両方で、エントリなしとエントリ多数（例: 30件）のそれぞれについて `tester.takeException()` が null で、表記欄と読み欄に到達できる（必要なら `ensureVisible` 後に hit-testable）ことを確かめる。失敗を確認してコミットする
 - [x] 2.2 狭い幅の内容を `CustomScrollView` に置き換える。フォームとエラー文は `SliverToBoxAdapter`、エントリは `SliverList`、空の案内文は `SliverFillRemaining(hasScrollBody: false)` に入れる。広い幅は従来の `Column` と `Expanded` の一覧のままにする。2.1 と 1.1 のテストが通ることを確認する
 
 ## 3. ブレークポイントをまたぐ状態の引き継ぎ（TDD）
@@ -21,8 +21,8 @@
 
 ## 5. 最終確認
 
-- [ ] 5.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 5.3 `fvm dart format lib test`でフォーマットを実行
-- [ ] 5.4 `fvm flutter analyze`でリントを実行
-- [ ] 5.5 `fvm flutter test`でテストを実行
+- [x] 5.1 code-reviewスキルを使用してコードレビューを実施
+- [x] 5.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 5.3 `fvm dart format lib test`でフォーマットを実行
+- [x] 5.4 `fvm flutter analyze`でリントを実行
+- [x] 5.5 `fvm flutter test`でテストを実行

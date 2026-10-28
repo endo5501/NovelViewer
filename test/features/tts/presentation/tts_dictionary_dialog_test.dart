@@ -359,6 +359,28 @@ void main() {
       expect(editable(surfaceField()).focusNode.hasFocus, isTrue);
     });
 
+    testWidgets('widening past the breakpoint keeps the focus too', (
+      tester,
+    ) async {
+      await openAt(tester, phoneSize);
+      await tester.enterText(surfaceField(), '山田');
+      await tester.enterText(readingField(), 'やまだ');
+      await tester.pump();
+
+      // A device turned sideways, or a window resized wide again.
+      await tester.binding.setSurfaceSize(desktopSize);
+      await tester.pump();
+
+      final editable = tester.widget<EditableText>(
+        find.descendant(
+          of: readingField(),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(editable.controller.text, 'やまだ');
+      expect(editable.focusNode.hasFocus, isTrue);
+    });
+
     group('with the keyboard up', () {
       // The Japanese kana keyboard with its candidate bar, in logical pixels.
       const keyboardHeight = 336.0;
