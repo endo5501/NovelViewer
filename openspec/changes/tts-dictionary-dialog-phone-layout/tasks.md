@@ -7,8 +7,8 @@
 
 ## 2. キーボード表示中のオーバーフロー対策（TDD）
 
-- [ ] 2.1 `FakeViewPadding(bottom: 300)` で viewInsets を与えるテストを追加する。393×852 と 375×667 の両方で、エントリなしとエントリ多数（例: 30件）のそれぞれについて `tester.takeException()` が null で、表記欄と読み欄に到達できる（必要なら `ensureVisible` 後に hit-testable）ことを確かめる。失敗を確認してコミットする
-- [ ] 2.2 狭い幅の内容を `CustomScrollView` に置き換える。フォームとエラー文は `SliverToBoxAdapter`、エントリは `SliverList`、空の案内文は `SliverFillRemaining(hasScrollBody: false)` に入れる。広い幅は従来の `Column` と `Expanded` の一覧のままにする。2.1 と 1.1 のテストが通ることを確認する
+- [x] 2.1 `FakeViewPadding(bottom: 300)` で viewInsets を与えるテストを追加する。393×852 と 375×667 の両方で、エントリなしとエントリ多数（例: 30件）のそれぞれについて `tester.takeException()` が null で、表記欄と読み欄に到達できる（必要なら `ensureVisible` 後に hit-testable）ことを確かめる。失敗を確認してコミットする
+- [x] 2.2 狭い幅の内容を `CustomScrollView` に置き換える。フォームとエラー文は `SliverToBoxAdapter`、エントリは `SliverList`、空の案内文は `SliverFillRemaining(hasScrollBody: false)` に入れる。広い幅は従来の `Column` と `Expanded` の一覧のままにする。2.1 と 1.1 のテストが通ることを確認する
 
 ## 3. ブレークポイントをまたぐ状態の引き継ぎ（TDD）
 

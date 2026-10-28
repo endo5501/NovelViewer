@@ -127,24 +127,60 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
       content: SizedBox(
         width: 480,
         height: 480,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildAddRow(),
-            if (_addError != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  _addError!,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
-                    fontSize: 12,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final singleLine = constraints.maxWidth >= _kSingleLineFormMinWidth;
+            final header = [
+              _buildAddRow(singleLine: singleLine),
+              if (_addError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    _addError!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
-              ),
-            const SizedBox(height: 12),
-            Expanded(child: _buildEntryList()),
-          ],
+              const SizedBox(height: 12),
+            ];
+            if (singleLine) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ...header,
+                  Expanded(child: _buildEntryList()),
+                ],
+              );
+            }
+            // The stacked form is three lines tall, and with the keyboard up
+            // a small phone leaves the dialog less height than that and the
+            // list together, so there the form scrolls along with the list.
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: header,
+                  ),
+                ),
+                if (_loading || _entries.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _buildEntryList(),
+                  )
+                else
+                  SliverList.separated(
+                    itemCount: _entries.length,
+                    separatorBuilder: (context, idx) =>
+                        const Divider(height: 1),
+                    itemBuilder: (context, index) =>
+                        _buildEntryTile(_entries[index]),
+                  ),
+              ],
+            );
+          },
         ),
       ),
       actions: [
@@ -156,7 +192,7 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
     );
   }
 
-  Widget _buildAddRow() {
+  Widget _buildAddRow({required bool singleLine}) {
     final surfaceField = TextField(
       controller: _surfaceController,
       decoration: InputDecoration(
@@ -206,32 +242,28 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
     // width whatever it is. A phone's dialog is not much wider than that, so
     // on one line the two fields shrank until nothing typed in them could be
     // read; there each field gets a line of its own.
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth >= _kSingleLineFormMinWidth) {
-          return Row(
-            children: [
-              Expanded(child: surfaceField),
-              const SizedBox(width: 8),
-              Expanded(child: readingField),
-              const SizedBox(width: 8),
-              noReading,
-              const SizedBox(width: 8),
-              addButton,
-            ],
-          );
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            surfaceField,
-            const SizedBox(height: 8),
-            readingField,
-            const SizedBox(height: 8),
-            Row(children: [noReading, const Spacer(), addButton]),
-          ],
-        );
-      },
+    if (singleLine) {
+      return Row(
+        children: [
+          Expanded(child: surfaceField),
+          const SizedBox(width: 8),
+          Expanded(child: readingField),
+          const SizedBox(width: 8),
+          noReading,
+          const SizedBox(width: 8),
+          addButton,
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        surfaceField,
+        const SizedBox(height: 8),
+        readingField,
+        const SizedBox(height: 8),
+        Row(children: [noReading, const Spacer(), addButton]),
+      ],
     );
   }
 
@@ -253,32 +285,33 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
     return ListView.separated(
       itemCount: _entries.length,
       separatorBuilder: (context, idx) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final entry = _entries[index];
-        final isNoReading = entry.reading.isEmpty;
-        return ListTile(
-          dense: true,
-          title: Text(entry.surface),
-          // An empty subtitle would read as a broken row rather than a
-          // deliberate "not read aloud" entry.
-          subtitle: Text(
-            isNoReading
-                ? AppLocalizations.of(context)!.ttsDictionary_noReadingDisplay
-                : entry.reading,
-            style: isNoReading
-                ? TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: Theme.of(context).colorScheme.outline,
-                  )
-                : null,
-          ),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: AppLocalizations.of(context)!.ttsDictionary_deleteTooltip,
-            onPressed: () => _deleteEntry(entry.id),
-          ),
-        );
-      },
+      itemBuilder: (context, index) => _buildEntryTile(_entries[index]),
+    );
+  }
+
+  Widget _buildEntryTile(TtsDictionaryEntry entry) {
+    final isNoReading = entry.reading.isEmpty;
+    return ListTile(
+      dense: true,
+      title: Text(entry.surface),
+      // An empty subtitle would read as a broken row rather than a
+      // deliberate "not read aloud" entry.
+      subtitle: Text(
+        isNoReading
+            ? AppLocalizations.of(context)!.ttsDictionary_noReadingDisplay
+            : entry.reading,
+        style: isNoReading
+            ? TextStyle(
+                fontStyle: FontStyle.italic,
+                color: Theme.of(context).colorScheme.outline,
+              )
+            : null,
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.delete_outline),
+        tooltip: AppLocalizations.of(context)!.ttsDictionary_deleteTooltip,
+        onPressed: () => _deleteEntry(entry.id),
+      ),
     );
   }
 }
