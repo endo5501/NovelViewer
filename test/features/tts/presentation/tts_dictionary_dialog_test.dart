@@ -280,4 +280,63 @@ void main() {
       expect(find.text('えるりっく'), findsOneWidget);
     });
   });
+
+  group('TtsDictionaryDialog add form layout', () {
+    // A portrait iPhone 16, where the one-line form left each field ~30pt.
+    const phoneSize = Size(393, 852);
+    const desktopSize = Size(800, 600);
+
+    Finder surfaceField() => find.byType(TextField).first;
+    Finder readingField() => find.byType(TextField).at(1);
+
+    Future<void> openAt(WidgetTester tester, Size size) async {
+      await tester.binding.setSurfaceSize(size);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(buildTestApp(repositoryOverride: fakeRepository));
+      await openDialogAndWait(tester);
+    }
+
+    testWidgets('a phone stacks the reading field below the surface field', (
+      tester,
+    ) async {
+      await openAt(tester, phoneSize);
+
+      expect(
+        tester.getRect(readingField()).top,
+        greaterThanOrEqualTo(tester.getRect(surfaceField()).bottom),
+      );
+      expect(surfaceField().hitTestable(), findsOneWidget);
+      expect(readingField().hitTestable(), findsOneWidget);
+    });
+
+    testWidgets('a phone can add a no-reading entry', (tester) async {
+      await openAt(tester, phoneSize);
+
+      await tester.enterText(surfaceField(), '――‐');
+      await tester.pump();
+      await tester.tap(find.byType(Checkbox));
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.add));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(fakeRepository.entries, hasLength(1));
+      expect(fakeRepository.entries.first.reading, '');
+      expect(find.text('（読み上げなし）'), findsOneWidget);
+    });
+
+    testWidgets('a desktop keeps the whole form on one line', (tester) async {
+      await openAt(tester, desktopSize);
+
+      final centerY = tester.getCenter(surfaceField()).dy;
+      for (final finder in [
+        readingField(),
+        find.byType(Checkbox),
+        find.byIcon(Icons.add),
+      ]) {
+        expect(tester.getCenter(finder).dy, moreOrLessEquals(centerY));
+      }
+    });
+  });
 }
