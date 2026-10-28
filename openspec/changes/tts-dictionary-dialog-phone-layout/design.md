@@ -68,7 +68,7 @@
 
 - `tester.binding.setSurfaceSize(Size(393, 852))` で狭い幅を作り、「読み」欄の上端が「表記」欄の下端以上にあること、両方の欄が hit-testable であることを確認する。ピクセル幅は確認しない。テスト用フォントは実機と幅が違うため。
 - 800×600 で、4つの部品が同じ行に並ぶことを確認する（各部品の縦方向の中心がそろっている）。既存のテストは変更せずに通ること。
-- キーボード表示は `tester.view.viewInsets = FakeViewPadding(bottom: 336 × devicePixelRatio)`（日本語かなキーボードと変換候補バーの高さ。`addTearDown(tester.view.resetViewInsets)`）で再現する。393×852 と 375×667 の両方で、エントリなしとエントリ多数のそれぞれについて `tester.takeException()` が null であること、両方の入力欄に到達できることを確認する。
+- キーボード表示は `tester.view.viewInsets = FakeViewPadding(bottom: 336 × devicePixelRatio)`で再現する（336 は日本語かなキーボードと変換候補バーの高さ。後片付けは `addTearDown(tester.view.resetViewInsets)`）。393×852 と 375×667 の両方で、エントリなしとエントリ多数のそれぞれについて `tester.takeException()` が null であること、両方の入力欄に到達できることを確認する。
 - 入力後に surface size を 800×600 から 393×852 に変え、入力内容が残っていることを確認する。
 
 ## Risks / Trade-offs
