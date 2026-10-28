@@ -338,5 +338,51 @@ void main() {
         expect(tester.getCenter(finder).dy, moreOrLessEquals(centerY));
       }
     });
+
+    group('with the keyboard up', () {
+      // The Japanese kana keyboard with its candidate bar, in logical pixels.
+      const keyboardHeight = 336.0;
+
+      Future<void> openWithKeyboard(WidgetTester tester, Size size) async {
+        tester.view.viewInsets = FakeViewPadding(
+          bottom: keyboardHeight * tester.view.devicePixelRatio,
+        );
+        addTearDown(tester.view.resetViewInsets);
+        await openAt(tester, size);
+      }
+
+      Future<void> expectBothFieldsReachable(WidgetTester tester) async {
+        for (final field in [surfaceField(), readingField()]) {
+          await tester.ensureVisible(field);
+          await tester.pump();
+          expect(field.hitTestable(), findsOneWidget);
+        }
+      }
+
+      for (final (name, size) in [
+        ('an iPhone 16', phoneSize),
+        ('a small phone', const Size(375, 667)),
+      ]) {
+        testWidgets('$name with no entries does not overflow', (tester) async {
+          await openWithKeyboard(tester, size);
+
+          expect(tester.takeException(), isNull);
+          await expectBothFieldsReachable(tester);
+        });
+
+        testWidgets('$name with many entries does not overflow', (
+          tester,
+        ) async {
+          for (var i = 0; i < 30; i++) {
+            await fakeRepository.addEntry('表記$i', 'よみ$i');
+          }
+
+          await openWithKeyboard(tester, size);
+
+          expect(tester.takeException(), isNull);
+          await expectBothFieldsReachable(tester);
+        });
+      }
+    });
   });
 }
