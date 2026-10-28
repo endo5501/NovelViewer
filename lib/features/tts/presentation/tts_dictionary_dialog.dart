@@ -47,6 +47,15 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
   final _readingController = TextEditingController();
   String? _addError;
 
+  // The form lays its parts out on one line or three depending on its width,
+  // and switching rebuilds the tree around them. The keys carry each part's
+  // state across, so a field being typed in keeps its focus, selection and
+  // IME composition when a window is resized or a device turned past the
+  // breakpoint. The keyboard alone never crosses it: it changes the height.
+  final _surfaceFieldKey = GlobalKey();
+  final _readingFieldKey = GlobalKey();
+  final _noReadingKey = GlobalKey();
+
   /// When set, the entry being added has no reading: the surface is dropped
   /// from the synthesis text instead of being replaced.
   bool _noReading = false;
@@ -194,6 +203,7 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
 
   Widget _buildAddRow({required bool singleLine}) {
     final surfaceField = TextField(
+      key: _surfaceFieldKey,
       controller: _surfaceController,
       decoration: InputDecoration(
         labelText: AppLocalizations.of(context)!.ttsDictionary_surfaceLabel,
@@ -204,6 +214,7 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
       onSubmitted: (_) => _addEntry(),
     );
     final readingField = TextField(
+      key: _readingFieldKey,
       controller: _readingController,
       enabled: !_noReading,
       decoration: InputDecoration(
@@ -217,6 +228,7 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
     // Ticking this stores an empty reading, which the substitution treats
     // as a deletion — for symbol runs like "――‐" that carry no sound.
     final noReading = Tooltip(
+      key: _noReadingKey,
       message: AppLocalizations.of(context)!.ttsDictionary_noReadingLabel,
       child: Row(
         mainAxisSize: MainAxisSize.min,
