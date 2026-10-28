@@ -339,6 +339,26 @@ void main() {
       }
     });
 
+    testWidgets('crossing the breakpoint keeps what was typed and the focus', (
+      tester,
+    ) async {
+      await openAt(tester, desktopSize);
+      await tester.enterText(readingField(), 'やまだ');
+      await tester.enterText(surfaceField(), '山田');
+      await tester.pump();
+
+      // A window resized narrow, or a device turned upright.
+      await tester.binding.setSurfaceSize(phoneSize);
+      await tester.pump();
+
+      EditableText editable(Finder field) => tester.widget<EditableText>(
+        find.descendant(of: field, matching: find.byType(EditableText)),
+      );
+      expect(editable(surfaceField()).controller.text, '山田');
+      expect(editable(readingField()).controller.text, 'やまだ');
+      expect(editable(surfaceField()).focusNode.hasFocus, isTrue);
+    });
+
     group('with the keyboard up', () {
       // The Japanese kana keyboard with its candidate bar, in logical pixels.
       const keyboardHeight = 336.0;
