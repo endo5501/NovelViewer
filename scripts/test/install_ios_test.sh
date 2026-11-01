@@ -109,15 +109,17 @@ SH
 chmod +x "$WORK/bin/"*
 
 # device <udid> <name> <reality> <paired> <booted> <transport>: one entry in
-# the shape `devicectl list devices --json-output` writes.
+# the shape `devicectl list devices --json-output` writes. An empty <reality>
+# leaves the key out, as the devicectl of Xcode 27.1 does for a physical device.
 device() {
-  local transport=""
+  local transport="" reality=""
   [ -n "$6" ] && transport="\"transportType\": \"$6\","
+  [ -n "$3" ] && reality="\"reality\": \"$3\","
   cat <<JSON
 {"identifier": "x-$1",
  "connectionProperties": {$transport "pairingState": "$4"},
  "deviceProperties": {"name": "$2", "bootState": "$5"},
- "hardwareProperties": {"udid": "$1", "reality": "$3", "platform": "iOS"}}
+ "hardwareProperties": {"udid": "$1", $reality "platform": "iOS"}}
 JSON
 }
 
@@ -357,6 +359,26 @@ if [ "$status" -ne 0 ] && installed_on "$IPHONE" && grep -q iPadmini7 "$WORK/out
   ok "a failed install still installs on the rest, names the device and fails"
 else
   ng "a failed install still installs on the rest, names the device and fails"
+fi
+
+# --- a devicectl that leaves out a physical device's reality --------------------
+# Xcode 27.1's devicectl marks only simulators, as "simulated".
+reset
+devices \
+  "$(device "$IPAD" iPadmini7 "" paired booted localNetwork)" \
+  "$(device "$IPHONE" satorue_16 "" paired booted wired)" \
+  "$(device "$SIM" "iPhone 17" simulated paired booted "")"
+run
+if installed_on "$IPAD" && installed_on "$IPHONE"; then
+  ok "installs on devices with no reality given"
+else
+  ng "installs on devices with no reality given"
+  cat "$WORK/out"
+fi
+if ! installed_on "$SIM"; then
+  ok "still leaves the simulator alone when reality is left out"
+else
+  ng "still leaves the simulator alone when reality is left out"
 fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
