@@ -76,8 +76,10 @@ for d in devices:
     hw = d.get("hardwareProperties", {})
     conn = d.get("connectionProperties", {})
     props = d.get("deviceProperties", {})
+    # Older devicectl marks a device "physical"; the one in Xcode 27.1 leaves
+    # the key out and marks only simulators.
     if (
-        hw.get("reality") == "physical"
+        hw.get("reality") != "simulated"
         and hw.get("platform") == "iOS"
         and conn.get("pairingState") == "paired"
         and conn.get("transportType")
