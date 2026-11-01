@@ -424,6 +424,33 @@ void main() {
           expect(tester.takeException(), isNull);
           await expectBothFieldsReachable(tester);
         });
+
+        testWidgets('$name with many entries scrolls to the last one', (
+          tester,
+        ) async {
+          for (var i = 0; i < 30; i++) {
+            await fakeRepository.addEntry('表記$i', 'よみ$i');
+          }
+
+          await openWithKeyboard(tester, size);
+          // The list builds only the rows on screen, so the last one does not
+          // exist until the dialog has been scrolled down to it.
+          final last = find.text('表記29');
+          await tester.scrollUntilVisible(
+            last,
+            100,
+            scrollable: find
+                .descendant(
+                  of: find.byType(AlertDialog),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          );
+          // scrollUntilVisible ends on a jump it does not lay out.
+          await tester.pump();
+
+          expect(last.hitTestable(), findsOneWidget);
+        });
       }
     });
   });
