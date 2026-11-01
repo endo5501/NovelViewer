@@ -40,7 +40,9 @@ mkdir -p "$WORK/bin"
 
 # xcrun devicectl: answers the device list from $DEVICES_JSON, the apps on a
 # device from $INSTALLED_ON, whether its Documents holds voices from $VOICES_ON, and fails an install or copy on a device named in
-# $FAIL_INSTALL_ON or $FAIL_COPY_ON.
+# $FAIL_INSTALL_ON or $FAIL_COPY_ON. A device named in $LOCKED_ON answers the
+# apps query as a locked one does: an error in place of the result, with the
+# exit status in $LOCKED_STATUS.
 cat >"$WORK/bin/xcrun" <<'SH'
 #!/usr/bin/env bash
 echo "xcrun $*" >>"$CALLS"
@@ -71,6 +73,12 @@ case "$1 $2" in
       printf '{"result": {"files": %s}}' "$files" >"$json_out"
       exit 0
     fi
+    case " ${LOCKED_ON:-} " in
+      *" $device "*)
+        printf '{"error": {"userInfo": {"NSLocalizedDescription": "The device is locked."}}, "info": {"outcome": "failed"}}' >"$json_out"
+        exit "${LOCKED_STATUS:-1}"
+        ;;
+    esac
     if grep -qx "$device" "$INSTALLED_ON" 2>/dev/null; then
       apps='[{"bundleIdentifier": "com.endo5501.novelViewer"}]'
     else
@@ -109,15 +117,17 @@ SH
 chmod +x "$WORK/bin/"*
 
 # device <udid> <name> <reality> <paired> <booted> <transport>: one entry in
-# the shape `devicectl list devices --json-output` writes.
+# the shape `devicectl list devices --json-output` writes. An empty <reality>
+# leaves the key out, as the devicectl of Xcode 27.1 does for a physical device.
 device() {
-  local transport=""
+  local transport="" reality=""
   [ -n "$6" ] && transport="\"transportType\": \"$6\","
+  [ -n "$3" ] && reality="\"reality\": \"$3\","
   cat <<JSON
 {"identifier": "x-$1",
  "connectionProperties": {$transport "pairingState": "$4"},
  "deviceProperties": {"name": "$2", "bootState": "$5"},
- "hardwareProperties": {"udid": "$1", "reality": "$3", "platform": "iOS"}}
+ "hardwareProperties": {"udid": "$1", $reality "platform": "iOS"}}
 JSON
 }
 
@@ -141,7 +151,7 @@ reset() {
     "$(device "$IPHONE" satorue_16 physical paired booted wired)" \
     "$(device "$SIM" "iPhone 17" simulated paired booted "")" \
     "$(device "$OFFLINE" oldphone physical paired booted "")"
-  unset FAIL_INSTALL_ON FAIL_COPY_ON
+  unset FAIL_INSTALL_ON FAIL_COPY_ON LOCKED_ON LOCKED_STATUS
 }
 
 # run <args...>: runs install_ios.sh with the stubs, leaving its output in
@@ -155,6 +165,8 @@ run() {
     VOICES_ON="$WORK/voices" \
     FAIL_INSTALL_ON="${FAIL_INSTALL_ON:-}" \
     FAIL_COPY_ON="${FAIL_COPY_ON:-}" \
+    LOCKED_ON="${LOCKED_ON:-}" \
+    LOCKED_STATUS="${LOCKED_STATUS:-}" \
     NOVEL_VIEWER_IOS_APP="$WORK/Runner.app" \
     NOVEL_VIEWER_BACKUP_ROOT="$WORK/backups" \
     bash "$INSTALL_IOS" "$@" >"$WORK/out" 2>&1
@@ -349,6 +361,22 @@ else
   ng "a failed backup keeps that device from being installed on"
 fi
 
+# A locked device cannot say which apps it has. Taking that for "no app"
+# skipped the backup and installed over the reader's data.
+for locked_status in 1 0; do
+  reset
+  LOCKED_ON="$IPAD"
+  LOCKED_STATUS=$locked_status
+  run --backup
+  if [ "$status" -ne 0 ] && ! installed_on "$IPAD" && installed_on "$IPHONE" &&
+    grep -q iPadmini7 "$WORK/out"; then
+    ok "--backup does not install on a device it cannot query (exit $locked_status)"
+  else
+    ng "--backup does not install on a device it cannot query (exit $locked_status)"
+    cat "$WORK/out"
+  fi
+done
+
 # --- failures -----------------------------------------------------------------
 reset
 FAIL_INSTALL_ON="$IPAD"
@@ -357,6 +385,26 @@ if [ "$status" -ne 0 ] && installed_on "$IPHONE" && grep -q iPadmini7 "$WORK/out
   ok "a failed install still installs on the rest, names the device and fails"
 else
   ng "a failed install still installs on the rest, names the device and fails"
+fi
+
+# --- a devicectl that leaves out a physical device's reality --------------------
+# Xcode 27.1's devicectl marks only simulators, as "simulated".
+reset
+devices \
+  "$(device "$IPAD" iPadmini7 "" paired booted localNetwork)" \
+  "$(device "$IPHONE" satorue_16 "" paired booted wired)" \
+  "$(device "$SIM" "iPhone 17" simulated paired booted "")"
+run
+if installed_on "$IPAD" && installed_on "$IPHONE"; then
+  ok "installs on devices with no reality given"
+else
+  ng "installs on devices with no reality given"
+  cat "$WORK/out"
+fi
+if ! installed_on "$SIM"; then
+  ok "still leaves the simulator alone when reality is left out"
+else
+  ng "still leaves the simulator alone when reality is left out"
 fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

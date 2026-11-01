@@ -4,6 +4,12 @@ import 'package:novel_viewer/l10n/app_localizations.dart';
 
 import '../data/tts_dictionary_repository.dart';
 
+/// The narrowest add form that holds both fields, the "do not read aloud"
+/// checkbox and the add button on one line with room left to read the
+/// fields. The dialog is 480 wide on a desktop or an iPad, and at most about
+/// 300 on a phone held upright.
+const double _kSingleLineFormMinWidth = 400;
+
 class TtsDictionaryDialog extends ConsumerStatefulWidget {
   const TtsDictionaryDialog({
     super.key,
@@ -40,6 +46,15 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
   late final TextEditingController _surfaceController;
   final _readingController = TextEditingController();
   String? _addError;
+
+  // The form lays its parts out on one line or three depending on its width,
+  // and switching rebuilds the tree around them. The keys carry each part's
+  // state across, so a field being typed in keeps its focus, selection and
+  // IME composition when a window is resized or a device turned past the
+  // breakpoint. The keyboard alone never crosses it: it changes the height.
+  final _surfaceFieldKey = GlobalKey();
+  final _readingFieldKey = GlobalKey();
+  final _noReadingKey = GlobalKey();
 
   /// When set, the entry being added has no reading: the surface is dropped
   /// from the synthesis text instead of being replaced.
@@ -121,24 +136,50 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
       content: SizedBox(
         width: 480,
         height: 480,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildAddRow(),
-            if (_addError != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  _addError!,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
-                    fontSize: 12,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final singleLine = constraints.maxWidth >= _kSingleLineFormMinWidth;
+            final header = [
+              _buildAddRow(singleLine: singleLine),
+              if (_addError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    _addError!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
-              ),
-            const SizedBox(height: 12),
-            Expanded(child: _buildEntryList()),
-          ],
+              const SizedBox(height: 12),
+            ];
+            if (singleLine) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ...header,
+                  Expanded(
+                    child: CustomScrollView(slivers: [_buildEntrySliver()]),
+                  ),
+                ],
+              );
+            }
+            // The stacked form is three lines tall, and with the keyboard up
+            // a small phone leaves the dialog less height than that and the
+            // list together, so there the form scrolls along with the list.
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: header,
+                  ),
+                ),
+                _buildEntrySliver(),
+              ],
+            );
+          },
         ),
       ),
       actions: [
@@ -150,113 +191,132 @@ class _TtsDictionaryDialogState extends ConsumerState<TtsDictionaryDialog> {
     );
   }
 
-  Widget _buildAddRow() {
-    return Row(
+  Widget _buildAddRow({required bool singleLine}) {
+    final surfaceField = TextField(
+      key: _surfaceFieldKey,
+      controller: _surfaceController,
+      decoration: InputDecoration(
+        labelText: AppLocalizations.of(context)!.ttsDictionary_surfaceLabel,
+        hintText: AppLocalizations.of(context)!.ttsDictionary_surfaceHint,
+        isDense: true,
+        border: const OutlineInputBorder(),
+      ),
+      onSubmitted: (_) => _addEntry(),
+    );
+    final readingField = TextField(
+      key: _readingFieldKey,
+      controller: _readingController,
+      enabled: !_noReading,
+      decoration: InputDecoration(
+        labelText: AppLocalizations.of(context)!.ttsDictionary_readingLabel,
+        hintText: AppLocalizations.of(context)!.ttsDictionary_readingHint,
+        isDense: true,
+        border: const OutlineInputBorder(),
+      ),
+      onSubmitted: (_) => _addEntry(),
+    );
+    // Ticking this stores an empty reading, which the substitution treats
+    // as a deletion — for symbol runs like "――‐" that carry no sound.
+    final noReading = Tooltip(
+      key: _noReadingKey,
+      message: AppLocalizations.of(context)!.ttsDictionary_noReadingLabel,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Checkbox(
+            value: _noReading,
+            onChanged: (value) => setState(() => _noReading = value ?? false),
+          ),
+          Text(
+            AppLocalizations.of(context)!.ttsDictionary_noReadingLabel,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
+    );
+    final addButton = IconButton.filled(
+      onPressed: _addEntry,
+      icon: const Icon(Icons.add),
+      tooltip: AppLocalizations.of(context)!.ttsDictionary_addTooltip,
+    );
+
+    // The checkbox, its label and the button take about 200 of the form's
+    // width whatever it is. A phone's dialog is not much wider than that, so
+    // on one line the two fields shrank until nothing typed in them could be
+    // read; there each field gets a line of its own.
+    if (singleLine) {
+      return Row(
+        children: [
+          Expanded(child: surfaceField),
+          const SizedBox(width: 8),
+          Expanded(child: readingField),
+          const SizedBox(width: 8),
+          noReading,
+          const SizedBox(width: 8),
+          addButton,
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: TextField(
-            controller: _surfaceController,
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(
-                context,
-              )!.ttsDictionary_surfaceLabel,
-              hintText: AppLocalizations.of(context)!.ttsDictionary_surfaceHint,
-              isDense: true,
-              border: const OutlineInputBorder(),
-            ),
-            onSubmitted: (_) => _addEntry(),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: TextField(
-            controller: _readingController,
-            enabled: !_noReading,
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(
-                context,
-              )!.ttsDictionary_readingLabel,
-              hintText: AppLocalizations.of(context)!.ttsDictionary_readingHint,
-              isDense: true,
-              border: const OutlineInputBorder(),
-            ),
-            onSubmitted: (_) => _addEntry(),
-          ),
-        ),
-        const SizedBox(width: 8),
-        // Ticking this stores an empty reading, which the substitution treats
-        // as a deletion — for symbol runs like "――‐" that carry no sound.
-        Tooltip(
-          message: AppLocalizations.of(context)!.ttsDictionary_noReadingLabel,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Checkbox(
-                value: _noReading,
-                onChanged: (value) =>
-                    setState(() => _noReading = value ?? false),
-              ),
-              Text(
-                AppLocalizations.of(context)!.ttsDictionary_noReadingLabel,
-                style: const TextStyle(fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        IconButton.filled(
-          onPressed: _addEntry,
-          icon: const Icon(Icons.add),
-          tooltip: AppLocalizations.of(context)!.ttsDictionary_addTooltip,
-        ),
+        surfaceField,
+        const SizedBox(height: 8),
+        readingField,
+        const SizedBox(height: 8),
+        Row(children: [noReading, const Spacer(), addButton]),
       ],
     );
   }
 
-  Widget _buildEntryList() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_entries.isEmpty) {
-      return Center(
-        child: Text(
-          AppLocalizations.of(context)!.ttsDictionary_emptyMessage,
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.grey),
+  /// The entries, or the spinner or empty message in their place. A sliver so
+  /// that the stacked phone form can scroll along with it.
+  Widget _buildEntrySliver() {
+    if (_loading || _entries.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: _loading
+              ? const CircularProgressIndicator()
+              : Text(
+                  AppLocalizations.of(context)!.ttsDictionary_emptyMessage,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey),
+                ),
         ),
       );
     }
 
-    return ListView.separated(
+    return SliverList.separated(
       itemCount: _entries.length,
       separatorBuilder: (context, idx) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final entry = _entries[index];
-        final isNoReading = entry.reading.isEmpty;
-        return ListTile(
-          dense: true,
-          title: Text(entry.surface),
-          // An empty subtitle would read as a broken row rather than a
-          // deliberate "not read aloud" entry.
-          subtitle: Text(
-            isNoReading
-                ? AppLocalizations.of(context)!.ttsDictionary_noReadingDisplay
-                : entry.reading,
-            style: isNoReading
-                ? TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: Theme.of(context).colorScheme.outline,
-                  )
-                : null,
-          ),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: AppLocalizations.of(context)!.ttsDictionary_deleteTooltip,
-            onPressed: () => _deleteEntry(entry.id),
-          ),
-        );
-      },
+      itemBuilder: (context, index) => _buildEntryTile(_entries[index]),
+    );
+  }
+
+  Widget _buildEntryTile(TtsDictionaryEntry entry) {
+    final isNoReading = entry.reading.isEmpty;
+    return ListTile(
+      dense: true,
+      title: Text(entry.surface),
+      // An empty subtitle would read as a broken row rather than a
+      // deliberate "not read aloud" entry.
+      subtitle: Text(
+        isNoReading
+            ? AppLocalizations.of(context)!.ttsDictionary_noReadingDisplay
+            : entry.reading,
+        style: isNoReading
+            ? TextStyle(
+                fontStyle: FontStyle.italic,
+                color: Theme.of(context).colorScheme.outline,
+              )
+            : null,
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.delete_outline),
+        tooltip: AppLocalizations.of(context)!.ttsDictionary_deleteTooltip,
+        onPressed: () => _deleteEntry(entry.id),
+      ),
     );
   }
 }

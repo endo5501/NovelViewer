@@ -76,8 +76,10 @@ for d in devices:
     hw = d.get("hardwareProperties", {})
     conn = d.get("connectionProperties", {})
     props = d.get("deviceProperties", {})
+    # Older devicectl marks a device "physical"; the one in Xcode 27.1 leaves
+    # the key out and marks only simulators.
     if (
-        hw.get("reality") == "physical"
+        hw.get("reality") != "simulated"
         and hw.get("platform") == "iOS"
         and conn.get("pairingState") == "paired"
         and conn.get("transportType")
@@ -167,19 +169,32 @@ fi
 
 # --- backup and install -------------------------------------------------------
 
+# has_app <udid>: 0 when the app is on the device, 1 when it is not, and 2
+# when the device cannot say, as a locked one cannot. devicectl may report
+# that failure in the JSON alone, with a zero exit status.
 has_app() {
+  rm -f "$WORK/apps.json"
   xcrun devicectl device info apps --device "$1" --bundle-id "$BUNDLE_ID" \
-    --json-output "$WORK/apps.json" >/dev/null 2>&1 || return 1
+    --json-output "$WORK/apps.json" >/dev/null 2>&1 || return 2
   python3 -I -c '
 import json, sys
-apps = json.load(open(sys.argv[1]))["result"]["apps"]
+try:
+    apps = json.load(open(sys.argv[1]))["result"]["apps"]
+except (OSError, ValueError, KeyError, TypeError):
+    sys.exit(2)
 sys.exit(0 if apps else 1)
 ' "$WORK/apps.json"
 }
 
 back_up() {
-  local udid="$1" name="$2"
-  if ! has_app "$udid"; then
+  local udid="$1" name="$2" found=0
+  has_app "$udid" || found=$?
+  if [ "$found" -eq 2 ]; then
+    # Installing anyway would put the app over data that was never copied.
+    echo "  cannot tell whether $name has the app; is it locked?" >&2
+    return 1
+  fi
+  if [ "$found" -eq 1 ]; then
     echo "  no app on $name yet; nothing to back up"
     return 0
   fi
