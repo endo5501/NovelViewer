@@ -13,7 +13,7 @@ CI はこれからも `channel: stable` のまま固定しない。新しい sta
 ## What Changes
 
 - Material の UI は `package:material_ui/material_ui.dart` から import する。`package:flutter/material.dart` の import は、`lib/` で56件、`test/` で138件の計194ファイルにあり、すべて置き換える
-- `pubspec.yaml` の依存に `material_ui` を追加し、`environment.sdk` を material_ui が要求する Dart 3.13 以上に上げる
+- `pubspec.yaml` の依存に `material_ui` を追加する（`environment.sdk` の下限は据え置く。design D3 を参照）
 - ローカライズの delegate は `material_ui` / `cupertino_ui` が提供するものを使い、手書きのコードでは `flutter_localizations` の非推奨 delegate を使わない。gen-l10n の生成物は 3.50.1 でも旧 delegate を出力するので、analyze の対象から外す
 - 最新の stable で `flutter analyze` を実行したとき、info を含めて0件で終わる状態にする
 - CI の `channel: stable` は変えない（バージョンは固定しない）
@@ -33,7 +33,7 @@ CI はこれからも `channel: stable` のまま固定しない。新しい sta
 
 ## Impact
 
-- 依存：`material_ui` を追加する（`cupertino_ui` は推移的に入る）。Dart SDK の下限を上げる。開発環境と CI の Flutter は 3.50.1 以上になる
+- 依存：`material_ui` を追加する（`cupertino_ui` は推移的に入る）。開発環境と CI の Flutter は 3.50.1 以上になる
 - コード
   - `lib/` と `test/` で material.dart を import している194ファイル（import 行の置き換え）
   - 非推奨にならない delegate リストを新しく定義し、`lib/app.dart` とテスト103ファイルの `AppLocalizations.localizationsDelegates` を、そのリストに置き換える

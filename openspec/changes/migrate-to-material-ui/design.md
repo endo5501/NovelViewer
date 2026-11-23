@@ -46,8 +46,8 @@ gen-l10n のテンプレートは、3.50.1 タグでも master でも、`package
 
 ### D3. `pubspec.yaml`
 - `material_ui` を `dependencies` に加える
-- `cupertino_ui` は material_ui 経由で入る。ただし dart fix の結果、手書きコードが `package:cupertino_ui/...` を直接 import した場合は、`depend_on_referenced_packages` が fatal info として扱われるので、直接の依存に加える
-- `environment.sdk` を `^3.13.0` に上げる（material_ui の要求に揃える）
+- `cupertino_ui` は material_ui 経由で入る。ただし dart fix の結果、手書きコードが `package:cupertino_ui/...` を直接 import した場合は、`depend_on_referenced_packages` が fatal info として扱われるので、直接の依存に加える。実際に import したのは回帰テスト（`test/l10n/framework_localizations_test.dart`）だけだったので、`dev_dependencies` に加えた
+- `environment.sdk` の下限は `^3.10.8` のまま据え置く。実装の途中で `^3.13.0` に上げたところ、言語バージョンも上がり、移行と無関係な `prefer_initializing_formals` の info が63件出て、format でも131ファイルが書き換わった。pub が見るのは「実行している SDK が material_ui の要求（3.13 以上）を満たすか」だけで、プロジェクトの下限は関係しない。下限を上げるのは別の change で扱う
 - `flutter_localizations` は残す。生成ファイルがこれを import しており、material_ui も依存しているため
 
 ### D4. 型の不一致への対応
