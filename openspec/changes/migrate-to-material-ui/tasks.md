@@ -46,4 +46,4 @@
 - [x] 8.3 `fvm dart format lib test`でフォーマットを実行
 - [x] 8.4 `fvm flutter analyze`でリントを実行
 - [x] 8.5 `fvm flutter test`でテストを実行
-- [ ] 8.6 ブランチを push して PR を作り、GitHub Actions の Test ワークフローが緑になることを確かめる。macOS / iOS の開発機で `fvm flutter upgrade` が必要なことを PR 本文に書く
+- [x] 8.6 ブランチを push して PR を作り、GitHub Actions の Test ワークフローが緑になることを確かめる。macOS / iOS の開発機で `fvm flutter upgrade` が必要なことを PR 本文に書く
