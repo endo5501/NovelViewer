@@ -84,7 +84,7 @@ void main() {
     await novelDatabase.close();
   });
 
-  Future<void> pumpDialog(
+  Future<ProviderContainer> pumpDialog(
     WidgetTester tester, {
     NovelReferenceRepository? repo,
   }) async {
@@ -134,6 +134,7 @@ void main() {
       await tester.tap(find.text('open'));
     });
     await tester.pumpAndSettle();
+    return container;
   }
 
   Future<void> settle(WidgetTester tester) async {
@@ -248,7 +249,7 @@ void main() {
       tester,
     ) async {
       final slow = _SlowRepository(novelDatabase);
-      await pumpDialog(tester, repo: slow);
+      final container = await pumpDialog(tester, repo: slow);
 
       await tester.tap(find.text(l10n.common_saveButton));
       await tester.pump();
@@ -265,9 +266,17 @@ void main() {
       expect(find.text(l10n.referenceSources_saveFailed), findsNothing);
 
       // The save invalidates the relations, and the held provider reloads
-      // them from the database. Let that read answer on the real event loop
-      // so it does not end the test holding sqflite's lock-warning timer.
-      await settle(tester);
+      // them from the database. Wait until that read has answered on the real
+      // event loop, so the test does not end holding sqflite's lock-warning
+      // timer, however slow the machine is.
+      for (var i = 0; i < 200; i++) {
+        if (!container.read(novelReferenceRelationsProvider).isLoading) break;
+        await settle(tester);
+      }
+      expect(
+        container.read(novelReferenceRelationsProvider).isLoading,
+        isFalse,
+      );
     });
   });
 
