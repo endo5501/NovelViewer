@@ -10,6 +10,7 @@ import 'package:novel_viewer/features/file_browser/data/file_system_service.dart
 import 'package:novel_viewer/features/file_browser/domain/novel_folder_classifier.dart';
 import 'package:novel_viewer/features/file_browser/domain/move_destination.dart';
 import 'package:novel_viewer/features/file_browser/domain/reading_progress_badge.dart';
+import 'package:novel_viewer/features/novel_update_check/presentation/update_check_progress_dialog.dart';
 import 'package:novel_viewer/features/file_browser/domain/move_follow.dart';
 import 'package:novel_viewer/features/file_browser/presentation/move_destination_dialog.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -244,7 +245,9 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
     }
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Row(
+      // Wrap rather than Row: in a column narrower than every button needs,
+      // the last ones move to a second line instead of overflowing.
+      child: Wrap(
         children: [
           if (currentDir != null)
             IconButton(
@@ -274,6 +277,14 @@ class _FileBrowserPanelState extends ConsumerState<FileBrowserPanel> {
             icon: const Icon(Icons.download),
             onPressed: () => showDownloadDialog(context, ref),
             tooltip: AppLocalizations.of(context)!.fileBrowser_downloadTooltip,
+          ),
+          // Library-wide, whatever folder is open: it asks each site for its
+          // episode total only, and marks novels that grew on their badges.
+          IconButton(
+            key: const Key('file_browser_update_check_button'),
+            icon: const Icon(Icons.update),
+            onPressed: () => startNovelUpdateCheck(context, ref),
+            tooltip: AppLocalizations.of(context)!.updateCheck_title,
           ),
         ],
       ),

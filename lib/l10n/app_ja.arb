@@ -750,5 +750,25 @@
       }
     }
   },
-  "syncSettings_signInAgain": "もう一度ログイン"
+  "syncSettings_signInAgain": "もう一度ログイン",
+  "updateCheck_title": "新着チェック",
+  "updateCheck_newWorks": "新着のある作品: {count}作",
+  "@updateCheck_newWorks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "updateCheck_failedWorks": "確認できなかった作品: {count}作",
+  "@updateCheck_failedWorks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "updateCheck_noNewEpisodes": "新着はありません",
+  "updateCheck_cancelledMessage": "新着チェックを中断しました",
+  "updateCheck_newBadge": "新着"
 }

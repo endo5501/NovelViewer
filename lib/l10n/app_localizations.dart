@@ -2169,6 +2169,42 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'もう一度ログイン'**
   String get syncSettings_signInAgain;
+
+  /// No description provided for @updateCheck_title.
+  ///
+  /// In ja, this message translates to:
+  /// **'新着チェック'**
+  String get updateCheck_title;
+
+  /// No description provided for @updateCheck_newWorks.
+  ///
+  /// In ja, this message translates to:
+  /// **'新着のある作品: {count}作'**
+  String updateCheck_newWorks(int count);
+
+  /// No description provided for @updateCheck_failedWorks.
+  ///
+  /// In ja, this message translates to:
+  /// **'確認できなかった作品: {count}作'**
+  String updateCheck_failedWorks(int count);
+
+  /// No description provided for @updateCheck_noNewEpisodes.
+  ///
+  /// In ja, this message translates to:
+  /// **'新着はありません'**
+  String get updateCheck_noNewEpisodes;
+
+  /// No description provided for @updateCheck_cancelledMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'新着チェックを中断しました'**
+  String get updateCheck_cancelledMessage;
+
+  /// No description provided for @updateCheck_newBadge.
+  ///
+  /// In ja, this message translates to:
+  /// **'新着'**
+  String get updateCheck_newBadge;
 }
 
 class _AppLocalizationsDelegate

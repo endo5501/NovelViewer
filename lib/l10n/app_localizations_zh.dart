@@ -1152,4 +1152,26 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get syncSettings_signInAgain => '重新登录';
+
+  @override
+  String get updateCheck_title => '检查新章节';
+
+  @override
+  String updateCheck_newWorks(int count) {
+    return '有新章节的作品：$count部';
+  }
+
+  @override
+  String updateCheck_failedWorks(int count) {
+    return '无法检查的作品：$count部';
+  }
+
+  @override
+  String get updateCheck_noNewEpisodes => '没有新章节';
+
+  @override
+  String get updateCheck_cancelledMessage => '已中断检查新章节';
+
+  @override
+  String get updateCheck_newBadge => '新';
 }
