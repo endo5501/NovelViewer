@@ -17,8 +17,8 @@
 
 ## 4. なろう API クライアント
 
-- [ ] 4.1 テストを先に書く（1.1 のフィクスチャとモッククライアントを使う）: 一般と R18 でエンドポイントが分かれること。クエリが `out=json` / `of=n-ga` / `lim=500` / `ncode=a-b-c` になること。大文字の ncode を小文字の `novelId` に対応させること。100 作を超えるとチャンクに分かれること。応答に無い ncode、非 200、JSON 不正を、そのチャンクの失敗として返すこと。失敗を確かめる
-- [ ] 4.2 `lib/features/novel_update_check/data/narou_api_client.dart` を実装し、4.1 が通ることを確かめる
+- [x] 4.1 テストを先に書く（1.1 のフィクスチャとモッククライアントを使う）: 一般と R18 でエンドポイントが分かれること。クエリが `out=json` / `of=n-ga` / `lim=500` / `ncode=a-b-c` になること。大文字の ncode を小文字の `novelId` に対応させること。100 作を超えるとチャンクに分かれること。応答に無い ncode、非 200、JSON 不正を、そのチャンクの失敗として返すこと。失敗を確かめる
+- [x] 4.2 `lib/features/novel_update_check/data/narou_api_client.dart` を実装し、4.1 が通ることを確かめる
 
 ## 5. チェックの中核（NovelUpdateChecker）
 
