@@ -13,12 +13,12 @@
 ## 3. レビュー指摘への対応
 
 - [x] 3.1 走査と展開で読む entry がずれる件（`verify` なしの走査は先頭2バイトが NUL のヘッダで終わる）、必須ファイルの後ろで切れたアーカイブが成功する件、Windows の絶対パス（`C:/...`）が判定を通る件のテストを追加し、3件が失敗することを確認してコミットする
-- [ ] 3.2 走査を `verify: true, throwOnError: true` で行い、gzip を最後まで読み切る。`_escapesTarget` で Windows の絶対パスも外に出るものとして扱う。3.1 のテストを変えずに、`fvm flutter test test/features/tts/data/piper_model_download_service_test.dart` がすべて通ることを確認する
+- [x] 3.2 走査を `verify: true, throwOnError: true` で行い、gzip を最後まで読み切る。`_escapesTarget` で Windows の絶対パスも外に出るものとして扱う。3.1 のテストを変えずに、`fvm flutter test test/features/tts/data/piper_model_download_service_test.dart` がすべて通ることを確認する
 
 ## 4. 最終確認
 
-- [ ] 4.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 4.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 4.3 `fvm dart format lib test`でフォーマットを実行
-- [ ] 4.4 `fvm flutter analyze`でリントを実行
-- [ ] 4.5 `fvm flutter test`でテストを実行
+- [x] 4.1 code-reviewスキルを使用してコードレビューを実施
+- [x] 4.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 4.3 `fvm dart format lib test`でフォーマットを実行
+- [x] 4.4 `fvm flutter analyze`でリントを実行
+- [x] 4.5 `fvm flutter test`でテストを実行

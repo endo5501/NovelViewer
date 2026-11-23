@@ -186,9 +186,10 @@ class PiperModelDownloadService {
   /// one code path for every platform keeps that one exercised everywhere.
   /// The extractor skips an entry that would land outside [outputPath], and a
   /// link resolving there, without calling its callback for it. So the whole
-  /// archive is scanned first, and an escaping entry or any link (the release
-  /// holds none) fails the download instead of leaving a silently partial
-  /// dictionary. The extraction callback checks again what it is shown.
+  /// archive is scanned first, and an escaping entry, any link (the release
+  /// holds none) or a cut or damaged archive fails the download instead of
+  /// leaving a silently partial dictionary. The extraction callback checks
+  /// again what it is shown.
   static Future<void> _extract(String archivePath, String outputPath) {
     _scan(archivePath);
     return extractFileToDisk(archivePath, outputPath, callback: _rejectUnsafe);
@@ -196,15 +197,27 @@ class PiperModelDownloadService {
 
   /// Reads every entry header of the tar.gz at [archivePath], without
   /// keeping any content, and throws on the first one [_rejectUnsafe] refuses.
+  ///
+  /// Strictly, and to the end of the gzip: a lenient tar read stops at a
+  /// header that merely begins with NUL bytes, short of entries the extractor
+  /// goes on to write, and both it and the extractor pass over a cut or
+  /// damaged archive in silence.
   static void _scan(String archivePath) {
     final input = InputFileStream(archivePath);
     try {
+      final tar = const GZipDecoder().decodeLazy(input, verify: true);
       TarDecoder().decodeStream(
-        const GZipDecoder().decodeLazy(input),
+        tar,
+        verify: true,
+        throwOnError: true,
         storeData: false,
         keepEntries: false,
         callback: _rejectUnsafe,
       );
+      // The tar ends before the gzip does, whose check is at its very end.
+      while (!tar.isEOS) {
+        tar.readBytes(1 << 16);
+      }
     } finally {
       input.closeSync();
     }
@@ -226,11 +239,15 @@ class PiperModelDownloadService {
     }
   }
 
+  static final _windowsDrive = RegExp(r'^[A-Za-z]:');
+
   /// Whether a tar entry [name] points outside the directory it is extracted
-  /// into: an absolute path, or one that climbs out with `..`.
+  /// into: an absolute path, one with a Windows drive, or one that climbs
+  /// out with `..`.
   static bool _escapesTarget(String name) {
     final normalized = p.posix.normalize(name.replaceAll(r'\', '/'));
     return p.posix.isAbsolute(normalized) ||
+        _windowsDrive.hasMatch(normalized) ||
         normalized == '..' ||
         normalized.startsWith('../');
   }
