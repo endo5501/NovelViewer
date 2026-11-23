@@ -127,15 +127,17 @@ void main() {
     expect(requests, 0);
   });
 
-  test('is empty without reading the records in a build without sync',
-      () async {
-    await receive([_record('n1', readAt: DateTime.utc(2026, 11, 1))]);
-    final c = container(available: false);
+  test(
+    'is empty without reading the records in a build without sync',
+    () async {
+      await receive([_record('n1', readAt: DateTime.utc(2026, 11, 1))]);
+      final c = container(available: false);
 
-    expect(await c.read(remoteNovelCandidatesProvider.future), isEmpty);
-    expect(repository.remoteReads, 0);
-    expect(requests, 0);
-  });
+      expect(await c.read(remoteNovelCandidatesProvider.future), isEmpty);
+      expect(repository.remoteReads, 0);
+      expect(requests, 0);
+    },
+  );
 
   test('is empty without reading the records while signed out', () async {
     await receive([_record('n1', readAt: DateTime.utc(2026, 11, 1))]);

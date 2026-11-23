@@ -61,9 +61,10 @@ RemoteProgress _candidate(
 /// [count] candidates, `n0` read most recently.
 List<RemoteProgress> _candidates(int count) => [
   for (var i = 0; i < count; i++)
-    _candidate('n$i', readAt: DateTime.utc(2026, 11, 20).subtract(
-      Duration(hours: i),
-    )),
+    _candidate(
+      'n$i',
+      readAt: DateTime.utc(2026, 11, 20).subtract(Duration(hours: i)),
+    ),
 ];
 
 void main() {
@@ -163,9 +164,7 @@ void main() {
     expect(find.text('すべて表示（8）'), findsOneWidget);
 
     // Newest first, top to bottom.
-    final tops = [
-      for (var i = 0; i < 5; i++) tester.getTopLeft(row('n$i')).dy,
-    ];
+    final tops = [for (var i = 0; i < 5; i++) tester.getTopLeft(row('n$i')).dy];
     expect(tops, [...tops]..sort());
   });
 
@@ -173,6 +172,7 @@ void main() {
     await tester.pumpWidget(createApp(candidates: _candidates(8)));
     await openDialog(tester);
 
+    await tester.ensureVisible(showAll);
     await tester.tap(showAll);
     await tester.pumpAndSettle();
 
@@ -204,8 +204,11 @@ void main() {
     await tester.pumpWidget(
       createApp(
         candidates: [
-          _candidate('n1', readAt: DateTime(2026, 11, 22, 21, 10),
-              title: 'ある物語'),
+          _candidate(
+            'n1',
+            readAt: DateTime(2026, 11, 22, 21, 10),
+            title: 'ある物語',
+          ),
         ],
       ),
     );
@@ -216,10 +219,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.descendant(
-        of: row('n1'),
-        matching: find.textContaining('iPad'),
-      ),
+      find.descendant(of: row('n1'), matching: find.textContaining('iPad')),
       findsOneWidget,
     );
     expect(
@@ -297,6 +297,7 @@ void main() {
     usePhoneDisplay(tester);
     await tester.pumpWidget(createApp(candidates: _candidates(40)));
     await openDialog(tester);
+    await tester.ensureVisible(showAll);
     await tester.tap(showAll);
     await tester.pumpAndSettle();
 
@@ -306,7 +307,10 @@ void main() {
     expect(screen.contains(dialog.bottomRight - const Offset(1, 1)), isTrue);
     // The list scrolls inside its cap rather than pushing the field and the
     // start button away.
-    expect(tester.getSize(section).height, lessThan(kPhoneDisplaySize.height / 2));
+    expect(
+      tester.getSize(section).height,
+      lessThan(kPhoneDisplaySize.height / 2),
+    );
     expect(find.byType(TextField), findsWidgets);
     expect(
       find.widgetWithText(ElevatedButton, 'ダウンロード開始').hitTestable(),

@@ -8,13 +8,17 @@ void main() {
 
   group('a url of a supported site that leads to the folder passes', () {
     test('narou', () {
-      expect(matches('https://ncode.syosetu.com/n1234ab/', 'narou_n1234ab'),
-          isTrue);
+      expect(
+        matches('https://ncode.syosetu.com/n1234ab/', 'narou_n1234ab'),
+        isTrue,
+      );
     });
 
     test('narou R18', () {
-      expect(matches('https://novel18.syosetu.com/n1234ab/', 'narou_n1234ab'),
-          isTrue);
+      expect(
+        matches('https://novel18.syosetu.com/n1234ab/', 'narou_n1234ab'),
+        isTrue,
+      );
     });
 
     test('kakuyomu', () {
@@ -28,8 +32,10 @@ void main() {
     });
 
     test('hameln', () {
-      expect(matches('https://syosetu.org/novel/123456/', 'hameln_123456'),
-          isTrue);
+      expect(
+        matches('https://syosetu.org/novel/123456/', 'hameln_123456'),
+        isTrue,
+      );
     });
 
     test('aozora', () {
@@ -52,13 +58,17 @@ void main() {
 
   group('fails', () {
     test('a url of another novel', () {
-      expect(matches('https://ncode.syosetu.com/n9999zz/', 'narou_n1234ab'),
-          isFalse);
+      expect(
+        matches('https://ncode.syosetu.com/n9999zz/', 'narou_n1234ab'),
+        isFalse,
+      );
     });
 
     test('a url of another site with the same id', () {
-      expect(matches('https://syosetu.org/novel/123456/', 'kakuyomu_123456'),
-          isFalse);
+      expect(
+        matches('https://syosetu.org/novel/123456/', 'kakuyomu_123456'),
+        isFalse,
+      );
     });
 
     test('a generic web url', () {
@@ -66,8 +76,10 @@ void main() {
     });
 
     test('a url no site handles', () {
-      expect(matches('ftp://ncode.syosetu.com/n1234ab/', 'narou_n1234ab'),
-          isFalse);
+      expect(
+        matches('ftp://ncode.syosetu.com/n1234ab/', 'narou_n1234ab'),
+        isFalse,
+      );
     });
 
     test('a url the site cannot take an id from', () {

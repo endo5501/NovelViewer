@@ -219,9 +219,9 @@ void main() {
         ],
       );
 
-      final record = (await repository.findRemoteByNovel('narou_a'))
-          .single
-          .record;
+      final record = (await repository.findRemoteByNovel(
+        'narou_a',
+      )).single.record;
       expect(record.url, url);
       expect(record.title, 'ある物語');
     });
@@ -229,8 +229,10 @@ void main() {
     test('replaceOwn keeps them', () async {
       await repository.replaceOwn([_record('narou_a', url: url, title: 'A')]);
 
-      expect((await repository.findAllOwn())['narou_a'],
-          _record('narou_a', url: url, title: 'A'));
+      expect(
+        (await repository.findAllOwn())['narou_a'],
+        _record('narou_a', url: url, title: 'A'),
+      );
     });
 
     test('commitOwn writes them over a row pushed without them', () async {
@@ -242,15 +244,19 @@ void main() {
         expected: {'narou_a': before},
       );
 
-      expect((await repository.findAllOwn())['narou_a'],
-          _record('narou_a', url: url, title: 'A'));
+      expect(
+        (await repository.findAllOwn())['narou_a'],
+        _record('narou_a', url: url, title: 'A'),
+      );
     });
 
     test('upsertOwn keeps them', () async {
       await repository.upsertOwn(_record('narou_a', url: url, title: 'A'));
 
-      expect((await repository.findAllOwn())['narou_a'],
-          _record('narou_a', url: url, title: 'A'));
+      expect(
+        (await repository.findAllOwn())['narou_a'],
+        _record('narou_a', url: url, title: 'A'),
+      );
     });
 
     test('a record without them reads back as null', () async {
@@ -274,7 +280,10 @@ void main() {
           DeviceProgress(
             deviceId: 'win',
             deviceName: 'Windows',
-            records: [_record('narou_a'), _record('narou_b', url: 'u')],
+            records: [
+              _record('narou_a'),
+              _record('narou_b', url: 'u'),
+            ],
           ),
           DeviceProgress(
             deviceId: 'pad',
@@ -293,10 +302,7 @@ void main() {
       expect(padA.deviceName, 'iPad');
       expect(padA.record.episode, 7);
       expect(
-        all
-            .singleWhere((r) => r.record.novelId == 'narou_b')
-            .record
-            .url,
+        all.singleWhere((r) => r.record.novelId == 'narou_b').record.url,
         'u',
       );
     });

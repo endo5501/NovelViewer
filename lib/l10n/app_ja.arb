@@ -388,6 +388,29 @@
   "download_createCollectionTitle": "新規コレクションを作成",
   "download_createCollectionHint": "コレクション名",
   "download_createCollectionButton": "作成",
+  "download_remoteNovelsTitle": "他の端末で読んでいる小説",
+  "download_remoteNovelsShowAll": "すべて表示（{count}）",
+  "@download_remoteNovelsShowAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "download_remoteNovelRow": "{device} ・ {episode} 話 ・ {readAt}",
+  "@download_remoteNovelRow": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      },
+      "episode": {
+        "type": "int"
+      },
+      "readAt": {
+        "type": "String"
+      }
+    }
+  },
   "fileBrowser_newCollection": "新規コレクション",
   "ttsDictionary_title": "読み上げ辞書",
   "ttsDictionary_bothFieldsRequired": "表記と読みの両方を入力してください",

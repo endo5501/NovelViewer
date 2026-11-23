@@ -405,8 +405,7 @@ class DownloadService {
     return dir;
   }
 
-  String buildFolderName(NovelSite site, Uri url) =>
-      novelFolderName(site, url);
+  String buildFolderName(NovelSite site, Uri url) => novelFolderName(site, url);
 
   Future<void> saveEpisode({
     required Directory directory,

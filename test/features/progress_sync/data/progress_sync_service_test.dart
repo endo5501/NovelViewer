@@ -150,7 +150,10 @@ void main() {
 
     test('publishes each novel\'s url and title', () async {
       syncable = const {
-        'narou_a': SyncNovelInfo(url: 'https://ncode.syosetu.com/a/', title: 'A'),
+        'narou_a': SyncNovelInfo(
+          url: 'https://ncode.syosetu.com/a/',
+          title: 'A',
+        ),
       };
 
       await service().push();
@@ -158,8 +161,10 @@ void main() {
       final record = store.files['self']!.records.single;
       expect(record.url, 'https://ncode.syosetu.com/a/');
       expect(record.title, 'A');
-      expect((await repository.findAllOwn())['narou_a']!.url,
-          'https://ncode.syosetu.com/a/');
+      expect(
+        (await repository.findAllOwn())['narou_a']!.url,
+        'https://ncode.syosetu.com/a/',
+      );
     });
 
     test('a record pushed without a url is sent again with it, keeping its '
@@ -177,7 +182,10 @@ void main() {
         ),
       ]);
       syncable = const {
-        'narou_a': SyncNovelInfo(url: 'https://ncode.syosetu.com/a/', title: 'A'),
+        'narou_a': SyncNovelInfo(
+          url: 'https://ncode.syosetu.com/a/',
+          title: 'A',
+        ),
       };
 
       final sync = service();

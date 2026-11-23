@@ -92,20 +92,22 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  test('a fresh database has nullable url and title on both sync tables',
-      () async {
-    final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
-    try {
-      final db = await novelDatabase.database;
-      for (final table in ['sync_remote_progress', 'sync_own_progress']) {
-        final columns = await _columns(db, table);
-        expect(columns['url'], ('TEXT', 0), reason: table);
-        expect(columns['title'], ('TEXT', 0), reason: table);
+  test(
+    'a fresh database has nullable url and title on both sync tables',
+    () async {
+      final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
+      try {
+        final db = await novelDatabase.database;
+        for (final table in ['sync_remote_progress', 'sync_own_progress']) {
+          final columns = await _columns(db, table);
+          expect(columns['url'], ('TEXT', 0), reason: table);
+          expect(columns['title'], ('TEXT', 0), reason: table);
+        }
+      } finally {
+        await novelDatabase.close();
       }
-    } finally {
-      await novelDatabase.close();
-    }
-  });
+    },
+  );
 
   test('v13 → v14 adds the columns as NULL and keeps every row', () async {
     await _seedV13(p.join(tempDir.path, 'novel_metadata.db'));
