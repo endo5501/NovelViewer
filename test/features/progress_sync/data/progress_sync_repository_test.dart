@@ -13,6 +13,8 @@ SyncProgressRecord _record(
   int episode = 5,
   int offset = 10,
   String readAt = '2026-10-18T00:00:00.000Z',
+  String? url,
+  String? title,
 }) {
   return SyncProgressRecord(
     novelId: novelId,
@@ -21,6 +23,8 @@ SyncProgressRecord _record(
     bodyOffset: offset,
     bodyHash: 'h',
     readAt: DateTime.parse(readAt),
+    url: url,
+    title: title,
   );
 }
 
@@ -199,4 +203,102 @@ void main() {
       expect(await progress.findByNovelId('narou_a'), isNotNull);
     },
   );
+
+  group('url and title', () {
+    const url = 'https://ncode.syosetu.com/n1234ab/';
+
+    test('a received record keeps its url and title', () async {
+      await repository.replaceRemote(
+        selfDeviceId: 'self',
+        devices: [
+          DeviceProgress(
+            deviceId: 'pad',
+            deviceName: 'iPad',
+            records: [_record('narou_a', url: url, title: 'ある物語')],
+          ),
+        ],
+      );
+
+      final record = (await repository.findRemoteByNovel('narou_a'))
+          .single
+          .record;
+      expect(record.url, url);
+      expect(record.title, 'ある物語');
+    });
+
+    test('replaceOwn keeps them', () async {
+      await repository.replaceOwn([_record('narou_a', url: url, title: 'A')]);
+
+      expect((await repository.findAllOwn())['narou_a'],
+          _record('narou_a', url: url, title: 'A'));
+    });
+
+    test('commitOwn writes them over a row pushed without them', () async {
+      final before = _record('narou_a');
+      await repository.replaceOwn([before]);
+
+      await repository.commitOwn(
+        [_record('narou_a', url: url, title: 'A')],
+        expected: {'narou_a': before},
+      );
+
+      expect((await repository.findAllOwn())['narou_a'],
+          _record('narou_a', url: url, title: 'A'));
+    });
+
+    test('upsertOwn keeps them', () async {
+      await repository.upsertOwn(_record('narou_a', url: url, title: 'A'));
+
+      expect((await repository.findAllOwn())['narou_a'],
+          _record('narou_a', url: url, title: 'A'));
+    });
+
+    test('a record without them reads back as null', () async {
+      await repository.replaceOwn([_record('narou_a')]);
+
+      final own = (await repository.findAllOwn())['narou_a']!;
+      expect(own.url, isNull);
+      expect(own.title, isNull);
+    });
+  });
+
+  group('findAllRemote', () {
+    test('is empty before any pull', () async {
+      expect(await repository.findAllRemote(), isEmpty);
+    });
+
+    test('returns every received record of every device', () async {
+      await repository.replaceRemote(
+        selfDeviceId: 'self',
+        devices: [
+          DeviceProgress(
+            deviceId: 'win',
+            deviceName: 'Windows',
+            records: [_record('narou_a'), _record('narou_b', url: 'u')],
+          ),
+          DeviceProgress(
+            deviceId: 'pad',
+            deviceName: 'iPad',
+            records: [_record('narou_a', episode: 7)],
+          ),
+        ],
+      );
+
+      final all = await repository.findAllRemote();
+      expect(
+        {for (final r in all) (r.deviceId, r.record.novelId)},
+        {('win', 'narou_a'), ('win', 'narou_b'), ('pad', 'narou_a')},
+      );
+      final padA = all.singleWhere((r) => r.deviceId == 'pad');
+      expect(padA.deviceName, 'iPad');
+      expect(padA.record.episode, 7);
+      expect(
+        all
+            .singleWhere((r) => r.record.novelId == 'narou_b')
+            .record
+            .url,
+        'u',
+      );
+    });
+  });
 }

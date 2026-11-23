@@ -158,7 +158,7 @@ void main() {
     final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
     try {
       final db = await novelDatabase.database;
-      expect(await db.getVersion(), 13);
+      expect(await db.getVersion(), NovelDatabase.currentSchemaVersion);
 
       final novel = (await db.query('novels')).single;
       expect(novel['folder_name'], 'narou_n1');
