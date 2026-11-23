@@ -59,6 +59,9 @@ class FakeAudioRecorder implements AudioRecorder {
   Stream<RecordState> onStateChanged() => _stateController.stream;
 
   @override
+  Stream<RecordStop> onStopped() => const Stream.empty();
+
+  @override
   Future<void> dispose() async {
     await _amplitudeController.close();
     await _stateController.close();

@@ -184,34 +184,70 @@ class PiperModelDownloadService {
   ///
   /// In-process rather than through `tar`: iOS cannot start a process, and
   /// one code path for every platform keeps that one exercised everywhere.
-  /// The extractor skips an entry that would land outside [outputPath]; the
-  /// callback turns that, and any link (the release holds none), into a
-  /// failure instead of a silently partial dictionary.
+  /// The extractor skips an entry that would land outside [outputPath], and a
+  /// link resolving there, without calling its callback for it. So the whole
+  /// archive is scanned first, and an escaping entry, any link (the release
+  /// holds none) or a cut or damaged archive fails the download instead of
+  /// leaving a silently partial dictionary. The extraction callback checks
+  /// again what it is shown.
   static Future<void> _extract(String archivePath, String outputPath) {
-    return extractFileToDisk(
-      archivePath,
-      outputPath,
-      callback: (entry) {
-        if (entry.isSymbolicLink) {
-          throw Exception(
-            'Dictionary archive holds a link, which it should not: '
-            '${entry.name}',
-          );
-        }
-        if (_escapesTarget(entry.name)) {
-          throw Exception(
-            'Dictionary archive entry escapes its directory: ${entry.name}',
-          );
-        }
-      },
-    );
+    _scan(archivePath);
+    return extractFileToDisk(archivePath, outputPath, callback: _rejectUnsafe);
   }
 
+  /// Reads every entry header of the tar.gz at [archivePath], without
+  /// keeping any content, and throws on the first one [_rejectUnsafe] refuses.
+  ///
+  /// Strictly, and to the end of the gzip: a lenient tar read stops at a
+  /// header that merely begins with NUL bytes, short of entries the extractor
+  /// goes on to write, and both it and the extractor pass over a cut or
+  /// damaged archive in silence.
+  static void _scan(String archivePath) {
+    final input = InputFileStream(archivePath);
+    try {
+      final tar = const GZipDecoder().decodeLazy(input, verify: true);
+      TarDecoder().decodeStream(
+        tar,
+        verify: true,
+        throwOnError: true,
+        storeData: false,
+        keepEntries: false,
+        callback: _rejectUnsafe,
+      );
+      // The tar ends before the gzip does, whose check is at its very end.
+      while (!tar.isEOS) {
+        tar.readBytes(1 << 16);
+      }
+    } finally {
+      input.closeSync();
+    }
+  }
+
+  /// Throws for an entry the dictionary must not hold: a symbolic or hard
+  /// link, or a path that lands outside the directory it is extracted into.
+  static void _rejectUnsafe(ArchiveFile entry) {
+    if (entry.isSymbolicLink || entry.isHardLink) {
+      throw Exception(
+        'Dictionary archive holds a link, which it should not: '
+        '${entry.name}',
+      );
+    }
+    if (_escapesTarget(entry.name)) {
+      throw Exception(
+        'Dictionary archive entry escapes its directory: ${entry.name}',
+      );
+    }
+  }
+
+  static final _windowsDrive = RegExp(r'^[A-Za-z]:');
+
   /// Whether a tar entry [name] points outside the directory it is extracted
-  /// into: an absolute path, or one that climbs out with `..`.
+  /// into: an absolute path, one with a Windows drive, or one that climbs
+  /// out with `..`.
   static bool _escapesTarget(String name) {
     final normalized = p.posix.normalize(name.replaceAll(r'\', '/'));
     return p.posix.isAbsolute(normalized) ||
+        _windowsDrive.hasMatch(normalized) ||
         normalized == '..' ||
         normalized.startsWith('../');
   }
