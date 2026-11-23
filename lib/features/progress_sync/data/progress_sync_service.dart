@@ -173,7 +173,7 @@ class ProgressSyncService implements ProgressSyncRunner {
     };
     final records = buildOwnRecords(
       local: local,
-      syncableNovelIds: syncable,
+      syncableNovels: {for (final id in syncable) id: const SyncNovelInfo()},
       lastPushed: lastPushed,
       episodeOf: (novelId, _) => episodes[novelId],
     );

@@ -4,13 +4,13 @@
 
 ## 1. 記録への作品URLとタイトルの追加（domain）
 
-- [ ] 1.1 `SyncProgressRecord` に `url` と `title`（どちらも null 可）を加え、`==` と `hashCode` に含める。URLまたはタイトルだけが違う2つの記録が等しくないことを、単体テストで確かめる（design D2）
-- [ ] 1.2 `device_progress_codec.dart` の読み書きで `url` と `title` を扱う。次の4点を単体テストで確かめる（design D1）
+- [x] 1.1 `SyncProgressRecord` に `url` と `title`（どちらも null 可）を加え、`==` と `hashCode` に含める。URLまたはタイトルだけが違う2つの記録が等しくないことを、単体テストで確かめる（design D2）
+- [x] 1.2 `device_progress_codec.dart` の読み書きで `url` と `title` を扱う。次の4点を単体テストで確かめる（design D1）
   - 書き出しに両方の項目が入り、`format` は 1 のままである
   - 項目が無い記録と `null` の記録を読める
   - 項目が文字列でない記録は `FormatException` になる
   - 今の形式（URLが無い）のJSONをそのまま読める
-- [ ] 1.3 `buildOwnRecords` / `buildOwnRecord` に、小説ごとのURLとタイトルを渡して記録に付ける。次の2点を単体テストで確かめる（design D2・D3、仕様「更新後の最初の同期で送り直す」「タイトルを変えると送り直す」）
+- [x] 1.3 `buildOwnRecords` / `buildOwnRecord` に、小説ごとのURLとタイトルを渡して記録に付ける。次の2点を単体テストで確かめる（design D2・D3、仕様「更新後の最初の同期で送り直す」「タイトルを変えると送り直す」）
   - 位置が同じなら、URLやタイトルが変わっても `read_at` は前回の値のままである
   - その場合でも、組み立てた記録は前回送った記録と等しくない
 
