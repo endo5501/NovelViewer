@@ -196,9 +196,8 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
     // so carrying a transcript forward would spend that window on text
     // nothing later needs.
     let session = LanguageModelSession(model: model)
-    let options = GenerationOptions(
-      sampling: samplingMode(named: sampling),
-      maximumResponseTokens: maxResponseTokens)
+    let options = GenerationOptionsFactory.options(
+      sampling: sampling, maximumResponseTokens: maxResponseTokens)
 
     guard let schemaFieldName else {
       guard let responseBudget else {
@@ -250,19 +249,5 @@ public class FoundationModelsLlmPlugin: NSObject, FlutterPlugin {
   /// Thrown when `AnswerCutoff` ends an answer as having run away, and
   /// reported to Dart as `runawayOutput`.
   private struct RanAway: Error {}
-
-  /// The sampling mode Dart named, or nil to leave the framework its default.
-  ///
-  /// A name this version does not know is read as no name at all, for the same
-  /// reason Dart reads an availability answer it does not know as "unknown"
-  /// rather than throwing: a sampling mode is a preference, and failing a
-  /// generation over one would turn a preference into a requirement.
-  @available(iOS 26.0, macOS 26.0, *)
-  private static func samplingMode(named name: String?) -> GenerationOptions.SamplingMode? {
-    switch name {
-    case "greedy": return .greedy
-    default: return nil
-    }
-  }
 
 }

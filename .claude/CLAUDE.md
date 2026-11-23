@@ -22,7 +22,7 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `bash scripts/test/build_app_test.sh` - `build_app.sh` のテスト(スタブの fvm / git で実行し、実ビルドはしない)
  - `bash scripts/test/install_ios_test.sh` - `install_ios.sh` のテスト(スタブの xcrun / security / xcodebuild / fvm で実行し、実機には触れない)
  - `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test/build_app_test.ps1` - `build_app.bat` のテスト(windows。同上)
- - `swift test --package-path packages/foundation_models_llm/darwin/wire_code_tests` - オンデバイスLLMプラグインのエラー写像テスト(mac。プラグイン本体はFlutterビルド外で走らないため写像だけを独立パッケージで実行)
+ - `swift test --package-path packages/foundation_models_llm/darwin/wire_code_tests` - オンデバイスLLMプラグインのテスト(mac。エラー写像・回答の打ち切り・生成オプション。プラグイン本体はFlutterビルド外で走らないため、Flutterに依存しない部分だけを独立パッケージで実行。生成オプションのターゲットは警告をエラーとして扱い、非推奨APIの使用でビルドが失敗する)
  - `fvm dart format lib test` - フォーマット実行(`.` を指定すると third_party/piper-plus 同梱の Dart サンプルまで書き換えるため、lib/ と test/ に限定する)
  - `fvm flutter analyze` - リント実行
  - `fvm flutter pub get` - 依存パッケージ取得

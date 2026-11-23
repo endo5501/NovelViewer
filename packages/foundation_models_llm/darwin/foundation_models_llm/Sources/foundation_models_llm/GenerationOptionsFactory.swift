@@ -11,7 +11,7 @@ enum GenerationOptionsFactory {
   /// response cap it set, if any.
   static func options(sampling: String?, maximumResponseTokens: Int?) -> GenerationOptions {
     GenerationOptions(
-      sampling: samplingMode(named: sampling),
+      samplingMode: samplingMode(named: sampling),
       maximumResponseTokens: maximumResponseTokens)
   }
 
