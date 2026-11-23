@@ -1162,4 +1162,26 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get syncSettings_signInAgain => 'もう一度ログイン';
+
+  @override
+  String get updateCheck_title => '新着チェック';
+
+  @override
+  String updateCheck_newWorks(int count) {
+    return '新着のある作品: $count作';
+  }
+
+  @override
+  String updateCheck_failedWorks(int count) {
+    return '確認できなかった作品: $count作';
+  }
+
+  @override
+  String get updateCheck_noNewEpisodes => '新着はありません';
+
+  @override
+  String get updateCheck_cancelledMessage => '新着チェックを中断しました';
+
+  @override
+  String get updateCheck_newBadge => '新着';
 }

@@ -20,17 +20,30 @@ class ReadingProgressBadge {
   final int read;
   final int total;
 
-  const ReadingProgressBadge({required this.read, required this.total});
+  /// True when the last update check saw more episodes on the site than
+  /// `episode_count` (novel-update-check). Catching up by re-downloading
+  /// raises `episode_count` and so clears it.
+  final bool hasNewEpisodes;
 
-  /// Builds a badge from a novel's `episode_count` and its stored
-  /// `reading_progress.file_name` (null when unread).
+  const ReadingProgressBadge({
+    required this.read,
+    required this.total,
+    this.hasNewEpisodes = false,
+  });
+
+  /// Builds a badge from a novel's `episode_count`, its stored
+  /// `reading_progress.file_name` (null when unread), and the total the last
+  /// update check observed (null when never checked).
   factory ReadingProgressBadge.from({
     required int episodeCount,
     required String? fileName,
+    int? latestEpisodeCount,
   }) {
     return ReadingProgressBadge(
       read: fileName == null ? 0 : parseEpisodeNumber(fileName),
       total: episodeCount,
+      hasNewEpisodes:
+          latestEpisodeCount != null && latestEpisodeCount > episodeCount,
     );
   }
 

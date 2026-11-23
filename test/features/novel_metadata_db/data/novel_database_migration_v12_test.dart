@@ -120,17 +120,13 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  test('current schema version is 12', () {
-    expect(NovelDatabase.currentSchemaVersion, 12);
-  });
-
   test('v11 → v12 adds the sync tables and keeps rows', () async {
     await _seedV11(p.join(tempDir.path, 'novel_metadata.db'));
 
     final novelDatabase = NovelDatabase(dbDirPath: tempDir.path);
     try {
       final db = await novelDatabase.database;
-      expect(await db.getVersion(), 12);
+      expect(await db.getVersion(), NovelDatabase.currentSchemaVersion);
 
       for (final table in _syncTables) {
         final tables = await db.rawQuery(

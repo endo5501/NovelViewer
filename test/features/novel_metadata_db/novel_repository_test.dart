@@ -202,4 +202,80 @@ void main() {
       );
     });
   });
+
+  group('recordUpdateCheck', () {
+    test('a novel registered by download starts unchecked', () async {
+      await repository.upsert(createMetadata());
+
+      final novel = await repository.findByFolderName('narou_n1234ab');
+      expect(novel!.latestEpisodeCount, isNull);
+      expect(novel.updateCheckedAt, isNull);
+    });
+
+    test('stores the observed count and check time only', () async {
+      await repository.upsert(createMetadata(episodeCount: 120));
+      final before = await repository.findByFolderName('narou_n1234ab');
+
+      await repository.recordUpdateCheck(
+        'narou_n1234ab',
+        latestEpisodeCount: 125,
+        checkedAt: DateTime.utc(2026, 11, 23, 9),
+      );
+
+      final after = await repository.findByFolderName('narou_n1234ab');
+      expect(after!.latestEpisodeCount, 125);
+      expect(after.updateCheckedAt, DateTime.utc(2026, 11, 23, 9));
+      expect(after.title, before!.title);
+      expect(after.url, before.url);
+      expect(after.episodeCount, 120);
+      expect(after.downloadedAt, before.downloadedAt);
+      expect(after.updatedAt, before.updatedAt);
+    });
+
+    test('does not touch other novels', () async {
+      await repository.upsert(createMetadata());
+      await repository.upsert(
+        createMetadata(
+          novelId: 'n9999zz',
+          url: 'https://ncode.syosetu.com/n9999zz/',
+          folderName: 'narou_n9999zz',
+        ),
+      );
+
+      await repository.recordUpdateCheck(
+        'narou_n1234ab',
+        latestEpisodeCount: 11,
+        checkedAt: DateTime.utc(2026, 11, 23),
+      );
+
+      final other = await repository.findByFolderName('narou_n9999zz');
+      expect(other!.latestEpisodeCount, isNull);
+    });
+
+    test('re-downloading keeps the recorded result', () async {
+      await repository.upsert(createMetadata(episodeCount: 120));
+      await repository.recordUpdateCheck(
+        'narou_n1234ab',
+        latestEpisodeCount: 125,
+        checkedAt: DateTime.utc(2026, 11, 23),
+      );
+
+      await repository.upsert(createMetadata(episodeCount: 125));
+
+      final novel = await repository.findByFolderName('narou_n1234ab');
+      expect(novel!.episodeCount, 125);
+      expect(novel.latestEpisodeCount, 125);
+      expect(novel.updateCheckedAt, DateTime.utc(2026, 11, 23));
+    });
+
+    test('a novel deleted meanwhile is skipped without error', () async {
+      await repository.recordUpdateCheck(
+        'narou_missing',
+        latestEpisodeCount: 5,
+        checkedAt: DateTime.utc(2026, 11, 23),
+      );
+
+      expect(await repository.findAll(), isEmpty);
+    });
+  });
 }

@@ -9,6 +9,14 @@ class NovelMetadata {
   final DateTime downloadedAt;
   final DateTime? updatedAt;
 
+  /// Total episode count the site reported at the last successful update
+  /// check, or null when the novel has never been checked. Written only by
+  /// [NovelRepository.recordUpdateCheck], never by [toMap].
+  final int? latestEpisodeCount;
+
+  /// When [latestEpisodeCount] was observed.
+  final DateTime? updateCheckedAt;
+
   const NovelMetadata({
     this.id,
     required this.siteType,
@@ -19,6 +27,8 @@ class NovelMetadata {
     required this.episodeCount,
     required this.downloadedAt,
     this.updatedAt,
+    this.latestEpisodeCount,
+    this.updateCheckedAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -47,6 +57,10 @@ class NovelMetadata {
       downloadedAt: DateTime.parse(map['downloaded_at'] as String),
       updatedAt: map['updated_at'] != null
           ? DateTime.parse(map['updated_at'] as String)
+          : null,
+      latestEpisodeCount: map['latest_episode_count'] as int?,
+      updateCheckedAt: map['update_checked_at'] != null
+          ? DateTime.parse(map['update_checked_at'] as String)
           : null,
     );
   }

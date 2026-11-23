@@ -1187,4 +1187,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get syncSettings_signInAgain => 'Sign in again';
+
+  @override
+  String get updateCheck_title => 'Check for new episodes';
+
+  @override
+  String updateCheck_newWorks(int count) {
+    return 'Works with new episodes: $count';
+  }
+
+  @override
+  String updateCheck_failedWorks(int count) {
+    return 'Could not check: $count';
+  }
+
+  @override
+  String get updateCheck_noNewEpisodes => 'No new episodes';
+
+  @override
+  String get updateCheck_cancelledMessage =>
+      'Checking for new episodes was stopped';
+
+  @override
+  String get updateCheck_newBadge => 'New';
 }

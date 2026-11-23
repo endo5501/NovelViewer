@@ -74,6 +74,26 @@ class NovelRepository {
     }
   }
 
+  /// Records the result of an update check for [folderName]: the total
+  /// episode count the site reported and when. No other column changes. A
+  /// folder no longer registered (deleted while the check ran) is ignored.
+  Future<void> recordUpdateCheck(
+    String folderName, {
+    required int latestEpisodeCount,
+    required DateTime checkedAt,
+  }) async {
+    final db = await _novelDatabase.database;
+    await db.update(
+      'novels',
+      {
+        'latest_episode_count': latestEpisodeCount,
+        'update_checked_at': checkedAt.toIso8601String(),
+      },
+      where: 'folder_name = ?',
+      whereArgs: [folderName],
+    );
+  }
+
   Future<void> deleteByFolderName(
     String folderName, {
     DatabaseExecutor? txn,

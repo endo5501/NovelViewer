@@ -55,7 +55,7 @@ class NovelDatabaseSnapshotResolver {
 
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
-  static const _databaseVersion = 12;
+  static const _databaseVersion = 13;
 
   /// The current `novel_metadata.db` schema version. Exposed so test fixtures
   /// open in-memory databases at the same version the production schema targets.
@@ -147,6 +147,7 @@ class NovelDatabase {
     await _addReadingPositionColumns(db);
     await _createReferenceSourcesTable(db);
     await _createProgressSyncTables(db);
+    await _addUpdateCheckColumns(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -192,6 +193,21 @@ class NovelDatabase {
     if (oldVersion < 12) {
       await _createProgressSyncTables(db);
     }
+    if (oldVersion < 13) {
+      await _addUpdateCheckColumns(db);
+    }
+  }
+
+  /// v13: the result of the last update check (novel-update-check) — the
+  /// total episode count the site reported and when. Both stay NULL until a
+  /// check succeeds for the novel. "New episodes" is
+  /// `latest_episode_count > episode_count`, so a re-download that catches
+  /// `episode_count` up clears it without touching these columns.
+  static Future<void> _addUpdateCheckColumns(Database db) async {
+    await db.execute(
+      'ALTER TABLE novels ADD COLUMN latest_episode_count INTEGER',
+    );
+    await db.execute('ALTER TABLE novels ADD COLUMN update_checked_at TEXT');
   }
 
   /// v12: progress sync state (reading-progress-sync). Records received from

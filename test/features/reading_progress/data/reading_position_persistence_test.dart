@@ -54,6 +54,11 @@ void main() {
         '${dir.path}/novel_metadata.db',
         version: 9,
         onCreate: (db, _) async {
+          // Every real v9 file has the novels table (kept through v8 → v9);
+          // later upgrades alter it.
+          await db.execute(
+            'CREATE TABLE novels (id INTEGER PRIMARY KEY AUTOINCREMENT, site_type TEXT NOT NULL, novel_id TEXT NOT NULL, title TEXT NOT NULL, url TEXT NOT NULL, folder_name TEXT NOT NULL UNIQUE, episode_count INTEGER NOT NULL DEFAULT 0, downloaded_at TEXT NOT NULL, updated_at TEXT)',
+          );
           await db.execute(
             'CREATE TABLE reading_progress (novel_id TEXT NOT NULL PRIMARY KEY, file_name TEXT NOT NULL, updated_at TEXT NOT NULL)',
           );

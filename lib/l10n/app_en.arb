@@ -519,5 +519,11 @@
   "syncSettings_lastError": "The last sync failed: {message}",
   "syncSettings_signOut": "Sign out",
   "syncSettings_needsReauth": "The sign-in for {email} has expired. Please sign in again.",
-  "syncSettings_signInAgain": "Sign in again"
+  "syncSettings_signInAgain": "Sign in again",
+  "updateCheck_title": "Check for new episodes",
+  "updateCheck_newWorks": "Works with new episodes: {count}",
+  "updateCheck_failedWorks": "Could not check: {count}",
+  "updateCheck_noNewEpisodes": "No new episodes",
+  "updateCheck_cancelledMessage": "Checking for new episodes was stopped",
+  "updateCheck_newBadge": "New"
 }

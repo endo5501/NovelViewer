@@ -519,5 +519,11 @@
   "syncSettings_lastError": "上次同步失败：{message}",
   "syncSettings_signOut": "退出登录",
   "syncSettings_needsReauth": "{email} 的登录已失效，请重新登录。",
-  "syncSettings_signInAgain": "重新登录"
+  "syncSettings_signInAgain": "重新登录",
+  "updateCheck_title": "检查新章节",
+  "updateCheck_newWorks": "有新章节的作品：{count}部",
+  "updateCheck_failedWorks": "无法检查的作品：{count}部",
+  "updateCheck_noNewEpisodes": "没有新章节",
+  "updateCheck_cancelledMessage": "已中断检查新章节",
+  "updateCheck_newBadge": "新"
 }
