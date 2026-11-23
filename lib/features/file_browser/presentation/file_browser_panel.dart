@@ -911,7 +911,36 @@ class _ReadingProgressBar extends StatelessWidget {
           '${badge.read} / ${badge.total}',
           style: theme.textTheme.bodySmall,
         ),
+        if (badge.hasNewEpisodes) ...[
+          const SizedBox(width: 6),
+          const _NewEpisodesMark(),
+        ],
       ],
+    );
+  }
+}
+
+/// The small "new episodes" chip next to a novel's `read / total`, shown when
+/// the last update check saw more episodes than were downloaded. Only that
+/// there is something new — never how many.
+class _NewEpisodesMark extends StatelessWidget {
+  const _NewEpisodesMark();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: colors.tertiaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        AppLocalizations.of(context)!.updateCheck_newBadge,
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: colors.onTertiaryContainer),
+      ),
     );
   }
 }

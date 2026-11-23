@@ -42,8 +42,8 @@
 
 ## 7. バッジの新着の印
 
-- [ ] 7.1 テストを先に書く: `ReadingProgressBadge.from` が `latestEpisodeCount` > `episodeCount` のときだけ `hasNewEpisodes` を立てること（null / 同数 / 少ない場合は立てない）。`readingProgressBadgesProvider` がそれを反映すること。ウィジェットで、新着ありの小説タイルに印が出て、`read / total` の表示が変わらないこと。整理フォルダには出ないこと。`allNovelsProvider` を invalidate すると印が出たり消えたりすること。失敗を確かめる
-- [ ] 7.2 `ReadingProgressBadge`、プロバイダ、`_ReadingProgressBar` を実装し、7.1 と既存の `test/features/file_browser` が通ることを確かめる
+- [x] 7.1 テストを先に書く: `ReadingProgressBadge.from` が `latestEpisodeCount` > `episodeCount` のときだけ `hasNewEpisodes` を立てること（null / 同数 / 少ない場合は立てない）。`readingProgressBadgesProvider` がそれを反映すること。ウィジェットで、新着ありの小説タイルに印が出て、`read / total` の表示が変わらないこと。整理フォルダには出ないこと。`allNovelsProvider` を invalidate すると印が出たり消えたりすること。失敗を確かめる
+- [x] 7.2 `ReadingProgressBadge`、プロバイダ、`_ReadingProgressBar` を実装し、7.1 と既存の `test/features/file_browser` が通ることを確かめる
 
 ## 8. 結合確認
 

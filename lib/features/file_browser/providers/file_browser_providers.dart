@@ -166,6 +166,7 @@ final readingProgressBadgesProvider =
           novel.folderName: ReadingProgressBadge.from(
             episodeCount: novel.episodeCount,
             fileName: fileNameByFolderName[novel.folderName],
+            latestEpisodeCount: novel.latestEpisodeCount,
           ),
       };
     });
