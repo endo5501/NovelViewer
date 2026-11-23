@@ -2,7 +2,7 @@
 
 ## 1. なろう API の事前確認
 
-- [ ] 1.1 実際の `https://api.syosetu.com/novelapi/api/?out=json&of=n-ga&lim=500&ncode=<既知のncode2つ>` と `novel18api` に1回ずつ問い合わせる。応答の形（先頭の `allcount`、`ncode` が大文字であること、`general_all_no`）が design.md の Decisions 4 と一致するかを確かめ、食い違いがあれば design.md を直す。確認に使った応答の一部をテスト用のフィクスチャとして `test/` に保存する
+- [x] 1.1 実際の `https://api.syosetu.com/novelapi/api/?out=json&of=n-ga&lim=500&ncode=<既知のncode2つ>` と `novel18api` に1回ずつ問い合わせる。応答の形（先頭の `allcount`、`ncode` が大文字であること、`general_all_no`）が design.md の Decisions 4 と一致するかを確かめ、食い違いがあれば design.md を直す。確認に使った応答の一部をテスト用のフィクスチャとして `test/` に保存する
 
 ## 2. メタデータDB: v13 と更新チェックの結果
 
