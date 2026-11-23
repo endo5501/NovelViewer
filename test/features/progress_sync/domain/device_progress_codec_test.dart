@@ -103,4 +103,85 @@ void main() {
       throwsA(isA<FormatException>()),
     );
   });
+
+  group('url and title', () {
+    final withUrl = DeviceProgress(
+      deviceId: 'd',
+      deviceName: 'Mac',
+      records: [
+        SyncProgressRecord(
+          novelId: 'narou_n1234ab',
+          episode: 5,
+          fileName: '005_t.txt',
+          bodyOffset: 10,
+          bodyHash: 'h',
+          readAt: DateTime.utc(2026, 11, 1),
+          url: 'https://ncode.syosetu.com/n1234ab/',
+          title: 'ある物語',
+        ),
+      ],
+    );
+
+    test('are written into the record and keep format 1', () {
+      final json =
+          jsonDecode(encodeDeviceProgress(withUrl)) as Map<String, dynamic>;
+
+      expect(json['format'], 1);
+      final novel = (json['novels'] as Map)['narou_n1234ab'] as Map;
+      expect(novel['url'], 'https://ncode.syosetu.com/n1234ab/');
+      expect(novel['title'], 'ある物語');
+    });
+
+    test('round-trip through the JSON', () {
+      final decoded = decodeDeviceProgress(encodeDeviceProgress(withUrl));
+
+      expect(decoded.records, withUrl.records);
+    });
+
+    test('a record written without them reads as null', () {
+      // The shape a build before url/title writes.
+      const source =
+          '{"format":1,"device_id":"d","device_name":"Win","novels":'
+          '{"narou_a":{"episode":2,"file_name":"002_t.txt","body_offset":5,'
+          '"body_hash":null,"read_at":"2026-10-18T00:00:00.000Z"}}}';
+
+      final record = decodeDeviceProgress(source).records.single;
+
+      expect(record.episode, 2);
+      expect(record.url, isNull);
+      expect(record.title, isNull);
+    });
+
+    test('explicit nulls read as null', () {
+      final json = jsonDecode(encodeDeviceProgress(withUrl)) as Map;
+      final novel = (json['novels'] as Map)['narou_n1234ab'] as Map;
+      novel['url'] = null;
+      novel['title'] = null;
+
+      final record = decodeDeviceProgress(jsonEncode(json)).records.single;
+
+      expect(record.url, isNull);
+      expect(record.title, isNull);
+    });
+
+    test('a url that is not a string is refused', () {
+      final json = jsonDecode(encodeDeviceProgress(withUrl)) as Map;
+      ((json['novels'] as Map)['narou_n1234ab'] as Map)['url'] = 12;
+
+      expect(
+        () => decodeDeviceProgress(jsonEncode(json)),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('a title that is not a string is refused', () {
+      final json = jsonDecode(encodeDeviceProgress(withUrl)) as Map;
+      ((json['novels'] as Map)['narou_n1234ab'] as Map)['title'] = ['x'];
+
+      expect(
+        () => decodeDeviceProgress(jsonEncode(json)),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
 }

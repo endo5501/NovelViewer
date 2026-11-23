@@ -163,7 +163,7 @@ void main() {
           _local('0001_x.txt', novelId: 'web_list'),
           _local('001_t.txt', novelId: 'narou_gone'),
         ],
-        syncableNovelIds: {'narou_a'},
+        syncableNovels: const {'narou_a': SyncNovelInfo()},
         lastPushed: const {},
         episodeOf: (novelId, fileName) => int.parse(fileName.split('_')[0]),
       );
@@ -174,7 +174,7 @@ void main() {
     test('leaves out a novel whose episode cannot be resolved', () {
       final records = buildOwnRecords(
         local: [_local('a.txt')],
-        syncableNovelIds: {'narou_a'},
+        syncableNovels: const {'narou_a': SyncNovelInfo()},
         lastPushed: const {},
         episodeOf: (_, _) => null,
       );
@@ -188,7 +188,10 @@ void main() {
           _local('003_t.txt', novelId: 'narou_a', updatedAt: _t2),
           _local('007_t.txt', novelId: 'narou_b', updatedAt: _t2),
         ],
-        syncableNovelIds: {'narou_a', 'narou_b'},
+        syncableNovels: const {
+          'narou_a': SyncNovelInfo(),
+          'narou_b': SyncNovelInfo(),
+        },
         lastPushed: {
           'narou_a': _rec(3, readAt: _t0),
           'narou_b': _rec(6, novelId: 'narou_b', readAt: _t0),
@@ -200,6 +203,82 @@ void main() {
         {for (final r in records) r.novelId: r.readAt},
         {'narou_a': _t0, 'narou_b': _t2},
       );
+    });
+  });
+
+  group('url and title', () {
+    const url = 'https://ncode.syosetu.com/n1234ab/';
+
+    test('buildOwnRecord attaches the url and title it is given', () {
+      final record = buildOwnRecord(
+        local: _local('003_t.txt'),
+        episode: 3,
+        lastPushed: null,
+        url: url,
+        title: 'ある物語',
+      );
+
+      expect(record.url, url);
+      expect(record.title, 'ある物語');
+    });
+
+    test('a record pushed without a url keeps its read_at once it has one '
+        'but is no longer the same record', () {
+      final pushed = _rec(3, offset: 1000, readAt: _t0, fileName: '003_t.txt');
+      final record = buildOwnRecord(
+        local: _local('003_t.txt', offset: 1000, updatedAt: _t2),
+        episode: 3,
+        lastPushed: pushed,
+        url: url,
+        title: 'ある物語',
+      );
+
+      expect(record.readAt, _t0);
+      expect(record.bodyOffset, 1000);
+      expect(record, isNot(pushed));
+    });
+
+    test('a retitled novel keeps its read_at but is no longer the same '
+        'record', () {
+      final pushed = buildOwnRecord(
+        local: _local('003_t.txt', offset: 1000, updatedAt: _t0),
+        episode: 3,
+        lastPushed: null,
+        url: url,
+        title: '旧題',
+      );
+      final record = buildOwnRecord(
+        local: _local('003_t.txt', offset: 1000, updatedAt: _t2),
+        episode: 3,
+        lastPushed: pushed,
+        url: url,
+        title: '新題',
+      );
+
+      expect(record.readAt, _t0);
+      expect(record.title, '新題');
+      expect(record, isNot(pushed));
+    });
+
+    test('buildOwnRecords takes each novel\'s url and title', () {
+      final records = buildOwnRecords(
+        local: [
+          _local('003_t.txt', novelId: 'narou_a'),
+          _local('001_t.txt', novelId: 'narou_b'),
+        ],
+        syncableNovels: const {
+          'narou_a': SyncNovelInfo(url: url, title: 'A'),
+          'narou_b': SyncNovelInfo(),
+        },
+        lastPushed: const {},
+        episodeOf: (_, fileName) => int.parse(fileName.split('_')[0]),
+      );
+
+      final byId = {for (final r in records) r.novelId: r};
+      expect(byId['narou_a']!.url, url);
+      expect(byId['narou_a']!.title, 'A');
+      expect(byId['narou_b']!.url, isNull);
+      expect(byId['narou_b']!.title, isNull);
     });
   });
 
