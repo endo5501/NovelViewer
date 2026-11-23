@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.da
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/features/progress_sync/data/progress_sync_repository.dart';
 import 'package:novel_viewer/features/progress_sync/domain/device_progress.dart';
+import 'package:novel_viewer/features/progress_sync/domain/device_progress_codec.dart';
 import 'package:novel_viewer/features/progress_sync/domain/sync_progress_record.dart';
 import 'package:novel_viewer/features/progress_sync/providers/progress_sync_entry_providers.dart';
 import 'package:novel_viewer/features/reading_progress/data/reading_progress_repository.dart';
@@ -133,6 +134,23 @@ void main() {
     expect(own.readAt, readAt, reason: 'adopting must keep the origin time');
     expect(own.fileName, '005_t.txt');
     expect(c.read(syncPromptProvider), isNull);
+  });
+
+  test('opens a record from a build before url and title', () async {
+    // The file such a build publishes: no url, no title.
+    final old = decodeDeviceProgress(
+      '{"format":1,"device_id":"win","device_name":"Windows (desk)",'
+      '"novels":{"narou_a":{"episode":5,"file_name":"05_t.txt",'
+      '"body_offset":1234,"body_hash":"hash",'
+      '"read_at":"2026-10-01T00:00:00.000Z"}}}',
+    );
+    await sync.replaceRemote(selfDeviceId: 'self', devices: [old]);
+    final c = container();
+
+    await enterNovel(c);
+
+    expect(c.read(selectedFileProvider)?.name, '005_t.txt');
+    expect((await progress.findByNovelId('narou_a'))!.bodyOffset, 1234);
   });
 
   test('opens at the start when the received record has no hash', () async {
