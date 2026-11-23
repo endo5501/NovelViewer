@@ -44,6 +44,8 @@
 
 ### 3. 壊れたアーカイブは走査で失敗してよい
 
+走査は `verify: true, throwOnError: true` で行い、tar の終端の後ろも gzip を最後まで読み切る。`verify` なしの `TarDecoder` は先頭2バイトが NUL のヘッダを終端とみなすが、`extractFileToDisk` は `verify: true` で 512 バイト全体を見る。そのため緩い走査では、展開が処理する entry を見落とすことがある。また、`extractFileToDisk` は既定ではデータの壊れを黙って飛ばすので、必須ファイルの後ろで切れたアーカイブも成功してしまう。厳密に走査すれば、この2つの抜けがなくなる。
+
 走査の段階で gzip や tar の解凍が失敗した場合も、例外をそのまま上に投げる。既存の後始末（staging ディレクトリの削除）で `open_jtalk_dic/` もアーカイブも残らないので、「壊れたアーカイブでは辞書もアーカイブも残らない」というシナリオはそのまま満たされる。
 
 ### 4. `FakeAudioRecorder.onStopped()` は空のストリームを返す

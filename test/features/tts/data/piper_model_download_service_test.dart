@@ -337,6 +337,53 @@ void main() {
       expect(filesUnderTemp(), isEmpty);
     });
 
+    test('fails on a Windows absolute entry (C:/escaped.txt)', () async {
+      // Absolute on Windows, where the extractor would skip it unreported.
+      final service = serving(
+        tarGz({...completeDictionary, 'C:/escaped.txt': 'outside'}),
+      );
+
+      await expectLater(service.downloadDictionary(dicDir), throwsException);
+
+      expect(Directory(dicDir).existsSync(), isFalse);
+    });
+
+    test('fails on an escaping entry whose name field is empty', () async {
+      // A ustar header whose name is all in its prefix field begins with NUL
+      // bytes, which a lenient reader takes for the end of the archive. The
+      // extractor reads on, and skips the escaping entry unreported.
+      final archive = Archive();
+      for (final e in completeDictionary.entries) {
+        archive.add(ArchiveFile.string(e.key, e.value));
+      }
+      archive.add(ArchiveFile.string('open_jtalk_dic_utf_8-1.11/zz', 'x'));
+      final tar = TarEncoder().encodeBytes(archive);
+      final header = _headerOffset(tar, 'open_jtalk_dic_utf_8-1.11/zz');
+      tar.fillRange(header, header + 100, 0);
+      tar.setRange(header + 345, header + 355, '../escaped'.codeUnits);
+      _rewriteChecksum(tar, header);
+      final service = serving(const GZipEncoder().encodeBytes(tar));
+
+      await expectLater(service.downloadDictionary(dicDir), throwsException);
+
+      expect(Directory(dicDir).existsSync(), isFalse);
+    });
+
+    test('fails on an archive cut short after the required files', () async {
+      // The cut lands in the entry after them; a lenient reader stops there
+      // quietly, and every required file would be in place.
+      final whole = tarGz({
+        ...completeDictionary,
+        'open_jtalk_dic_utf_8-1.11/README': 'x' * 3000,
+      });
+      final service = serving(whole.sublist(0, whole.length - 16));
+
+      await expectLater(service.downloadDictionary(dicDir), throwsA(anything));
+
+      expect(Directory(dicDir).existsSync(), isFalse);
+      expect(filesUnderTemp(), isEmpty);
+    });
+
     test('fails when a required dictionary file is missing', () async {
       // What a tar cut short looks like once the decoder stops at a damaged
       // header: the earlier entries, and nothing to say the rest is gone.
@@ -359,4 +406,29 @@ void main() {
       expect(filesUnderTemp(), isEmpty);
     });
   });
+}
+
+/// Where the 512-byte header of the entry named [name] starts in [tar].
+int _headerOffset(List<int> tar, String name) {
+  final bytes = name.codeUnits;
+  for (var at = 0; at + 512 <= tar.length; at += 512) {
+    var match = true;
+    for (var i = 0; i < bytes.length && match; i++) {
+      match = tar[at + i] == bytes[i];
+    }
+    if (match && tar[at + bytes.length] == 0) return at;
+  }
+  throw StateError('No header for $name');
+}
+
+/// Recomputes the checksum of the tar header at [at], as tar does: the sum
+/// of its bytes with the checksum field taken as spaces.
+void _rewriteChecksum(List<int> tar, int at) {
+  tar.fillRange(at + 148, at + 156, 0x20);
+  var sum = 0;
+  for (var i = at; i < at + 512; i++) {
+    sum += tar[i];
+  }
+  final digits = sum.toRadixString(8).padLeft(6, '0').codeUnits;
+  tar.setRange(at + 148, at + 156, [...digits, 0, 0x20]);
 }
