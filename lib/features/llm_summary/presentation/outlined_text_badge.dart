@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Small outlined pill badge rendered in the theme's disabled color, used for
 /// compact status labels such as "未追跡" (untracked) in the history list and

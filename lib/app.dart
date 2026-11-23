@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/providers/on_device_llm_providers.dart';
 import 'package:novel_viewer/features/progress_sync/providers/progress_sync_config_providers.dart';
@@ -9,6 +9,7 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 import 'package:novel_viewer/features/tts/providers/vacuum_lifecycle_provider.dart';
 import 'package:novel_viewer/home_screen.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 class NovelViewerApp extends ConsumerWidget {
   const NovelViewerApp({super.key});
@@ -43,7 +44,7 @@ class NovelViewerApp extends ConsumerWidget {
     return MaterialApp(
       title: 'NovelViewer',
       locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),

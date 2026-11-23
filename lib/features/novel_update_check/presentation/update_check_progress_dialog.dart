@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/novel_update_check/providers/novel_update_check_providers.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_char_map.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder.dart';
 

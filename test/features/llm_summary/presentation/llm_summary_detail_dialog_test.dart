@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/data/fact_cache_repository.dart';
@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/llm_summary/presentation/llm_summary_detai
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_detail_provider.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 FactCacheEntry _fact(
   String file,
@@ -49,7 +50,7 @@ Widget _harness({
     ],
     child: const MaterialApp(
       locale: Locale('ja'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: LlmSummaryDetailDialog(folderPath: 'novel_a', word: 'アリス'),

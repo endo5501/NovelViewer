@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:novel_viewer/features/file_browser/domain/move_destination.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 

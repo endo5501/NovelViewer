@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/progress_sync/presentation/sync_prompt_hos
 import 'package:novel_viewer/features/progress_sync/providers/progress_sync_entry_providers.dart';
 import 'package:novel_viewer/features/progress_sync/providers/progress_sync_prompt_actions.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 import 'package:novel_viewer/shared/failure/failure_detail_dialog.dart';
 import 'package:novel_viewer/shared/failure/failure_report.dart';
 
@@ -123,7 +124,7 @@ void main() {
       usePhoneDisplay(tester);
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('ja'),
           home: Scaffold(

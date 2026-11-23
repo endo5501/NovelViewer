@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/novel_metadata_db/data/novel_database.dart';
@@ -11,6 +11,7 @@ import 'package:novel_viewer/features/novel_reference/domain/reference_graph.dar
 import 'package:novel_viewer/features/novel_reference/presentation/reference_sources_dialog.dart';
 import 'package:novel_viewer/features/novel_reference/providers/novel_reference_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../../helpers/novel_metadata_db_fixture.dart';
@@ -83,7 +84,7 @@ void main() {
     await novelDatabase.close();
   });
 
-  Future<void> pumpDialog(
+  Future<ProviderContainer> pumpDialog(
     WidgetTester tester, {
     NovelReferenceRepository? repo,
   }) async {
@@ -111,7 +112,7 @@ void main() {
           container: container,
           child: MaterialApp(
             locale: const Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Builder(
@@ -133,6 +134,7 @@ void main() {
       await tester.tap(find.text('open'));
     });
     await tester.pumpAndSettle();
+    return container;
   }
 
   Future<void> settle(WidgetTester tester) async {
@@ -247,7 +249,7 @@ void main() {
       tester,
     ) async {
       final slow = _SlowRepository(novelDatabase);
-      await pumpDialog(tester, repo: slow);
+      final container = await pumpDialog(tester, repo: slow);
 
       await tester.tap(find.text(l10n.common_saveButton));
       await tester.pump();
@@ -262,6 +264,19 @@ void main() {
 
       expect(find.byType(ReferenceSourcesDialog), findsNothing);
       expect(find.text(l10n.referenceSources_saveFailed), findsNothing);
+
+      // The save invalidates the relations, and the held provider reloads
+      // them from the database. Wait until that read has answered on the real
+      // event loop, so the test does not end holding sqflite's lock-warning
+      // timer, however slow the machine is.
+      for (var i = 0; i < 200; i++) {
+        if (!container.read(novelReferenceRelationsProvider).isLoading) break;
+        await settle(tester);
+      }
+      expect(
+        container.read(novelReferenceRelationsProvider).isLoading,
+        isFalse,
+      );
     });
   });
 
@@ -277,7 +292,7 @@ void main() {
           ],
           child: const MaterialApp(
             locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ReferenceSourcesDialog(folderName: 'part3', title: '第3部'),

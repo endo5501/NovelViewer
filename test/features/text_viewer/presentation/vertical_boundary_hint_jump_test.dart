@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +9,7 @@ import 'package:novel_viewer/features/reading_context/providers/reading_context_
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 /// A search result or a bookmark reaches the viewer as a target line number,
 /// which jumps the page without going through `_changePage`. That path has to
@@ -37,7 +38,7 @@ Widget _wrap({required List<TextSegment> segments, int? targetLineNumber}) {
     ],
     child: MaterialApp(
       locale: const Locale('ja'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Center(
         child: ConstrainedBox(
