@@ -448,7 +448,11 @@ class DownloadService {
       cancelToken: cancelToken,
     );
     final index = site.parseIndex(site.decodeBody(response), normalizedUrl);
-    if (index.episodes.isNotEmpty) return index.episodes.length;
+    // Deduplicated by URL, as the download does before it records
+    // `episode_count`, so the two totals stay comparable.
+    if (index.episodes.isNotEmpty) {
+      return index.episodes.map((e) => e.url.toString()).toSet().length;
+    }
     if (index.bodyContent != null) return 1;
     throw EmptyIndexException(normalizedUrl);
   }

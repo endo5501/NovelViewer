@@ -111,8 +111,14 @@ class NovelUpdateChecker {
       done++;
     }
 
+    var hadRequest = false;
     for (final (group, isR18) in [(narouGeneral, false), (narouR18, true)]) {
       if (group.isEmpty) continue;
+      if (hadRequest) {
+        await Future<void>.delayed(requestDelay);
+        cancelToken?.throwIfCancelled();
+      }
+      hadRequest = true;
       final byNcode = {for (final n in group) n.novelId.toLowerCase(): n};
       await for (final chunk in narouApi.fetchEpisodeCounts(
         byNcode.keys.toList(),
@@ -129,11 +135,10 @@ class NovelUpdateChecker {
       }
     }
 
-    var first = narouGeneral.isEmpty && narouR18.isEmpty;
     for (final novel in indexed) {
       cancelToken?.throwIfCancelled();
-      if (!first) await Future<void>.delayed(requestDelay);
-      first = false;
+      if (hadRequest) await Future<void>.delayed(requestDelay);
+      hadRequest = true;
       final latest = await _countFromIndex(novel, cancelToken);
       cancelToken?.throwIfCancelled();
       await record(novel, latest);

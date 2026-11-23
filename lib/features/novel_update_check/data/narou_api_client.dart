@@ -24,6 +24,9 @@ class NarouApiClient {
   /// the hyphen-joined `ncode` parameter well inside URL length limits.
   static const chunkSize = 100;
 
+  /// The API answers an empty User-Agent with HTTP 403, so one is always sent.
+  static const _userAgent = 'NovelViewer';
+
   final http.Client _client;
   final Duration requestDelay;
   final Duration requestTimeout;
@@ -76,7 +79,9 @@ class NarouApiClient {
       'ncode': chunk.join('-'),
     });
     try {
-      final response = await _client.get(url).timeout(requestTimeout);
+      final response = await _client
+          .get(url, headers: const {'User-Agent': _userAgent})
+          .timeout(requestTimeout);
       if (response.statusCode != 200) {
         _log.warning('Narou API returned HTTP ${response.statusCode}');
         return const {};

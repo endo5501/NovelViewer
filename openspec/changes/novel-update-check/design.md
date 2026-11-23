@@ -68,7 +68,7 @@
 
 ### 3. 目次の取得は `DownloadService` に public の `fetchEpisodeCount` を足して再利用する
 
-`Future<int> fetchEpisodeCount({required NovelSite site, required Uri url, CancellationToken? cancelToken})` を追加する。処理は `normalizeUrl` → `_fetchPageResponse` → `decodeBody` → `parseIndex` の順で、最初のページだけを読む。呼び出し側が必要なのは総話数だけなので、`NovelIndex` は返さない。総話数は、`episodes` が空で `bodyContent` があれば 1（短編）、そうでなければ `episodes.length` とする。目次が空で本文も無い場合は `EmptyIndexException` を投げ、その作品は失敗として数える。
+`Future<int> fetchEpisodeCount({required NovelSite site, required Uri url, CancellationToken? cancelToken})` を追加する。処理は `normalizeUrl` → `_fetchPageResponse` → `decodeBody` → `parseIndex` の順で、最初のページだけを読む。呼び出し側が必要なのは総話数だけなので、`NovelIndex` は返さない。総話数は、`episodes` が空で `bodyContent` があれば 1（短編）、そうでなければ URL で重複を除いた話数とする。ダウンロードも重複を除いてから `episode_count` を記録するので、同じ数え方にしないと、目次に同じ話が2回載っている作品で印が消えなくなる。目次が空で本文も無い場合は `EmptyIndexException` を投げ、その作品は失敗として数える。
 
 `downloadNovel` が行う `cancelToken?.onCancel(_client.close)` は、`fetchEpisodeCount` を呼ぶ側（Checker）が1度だけ登録する。`DownloadService` はチェック1回につき1インスタンスを factory から作る。
 
@@ -80,7 +80,8 @@
 
 - エンドポイント: 一般は `https://api.syosetu.com/novelapi/api/`、R18 は `https://api.syosetu.com/novel18api/api/`。作品の URL のホストが `novel18.syosetu.com` なら R18 側を使う。
 - クエリ: `out=json`、`of=n-ga`（ncode と総話数）、`lim=500`、`ncode=<ncode>-<ncode>-...`。
-- 1回の問い合わせは最大 100 作に区切る（URL 長の上限に余裕を持たせるため）。チャンクの間には、ダウンロード時と同じ待ち時間を空ける。
+- 1回の問い合わせは最大 100 作に区切る（URL 長の上限に余裕を持たせるため）。チャンクの間には、ダウンロード時と同じ待ち時間を空ける。一般向けAPI、R18向けAPI、目次ページと続くリクエストの間にも、同じ待ち時間を空ける。
+- User-Agent が空だと、API は HTTP 403（「ユーザーエージェントが不正です」）を返す。そのため `User-Agent: NovelViewer` を必ず送る（2026-11-23 に受け付けられることを確認済み）。
 - 応答は JSON 配列で、先頭が `{allcount}`、続く要素が `{ncode, general_all_no}`。ncode は大文字で返るので、小文字に揃えて `NovelMetadata.novelId` と突き合わせる。
 - 応答に含まれない ncode と、問い合わせ自体の失敗（非 200、JSON 不正、タイムアウト）は、そのチャンク内で失敗として扱う。
 - 2026-11-23 に実際の API で次のことを確かめた（フィクスチャは `test/fixtures/narou_api/`）。
@@ -95,7 +96,9 @@
 
 ### 5. 進捗ダイアログは既存の更新ダイアログと同じ形にする
 
-`barrierDismissible: false` のモーダルにする。実行中は `n / N` とキャンセルボタンを出す。終了時は要約（新着あり X 作 / 確認できなかった Y 作、または「新着はありません」）と閉じるボタンを出す。キャンセル時はキャンセルの文言と閉じるボタンを出す。ボタンは `Icons.update`（仮）をツールバーのダウンロードボタンの隣に置き、`Key('file_browser_update_check_button')` を付ける。
+`barrierDismissible: false` のモーダルにする。実行中は `n / N` とキャンセルボタンを出す。終了時は要約（新着あり X 作 / 確認できなかった Y 作、または「新着はありません」）と閉じるボタンを出す。キャンセル時はキャンセルの文言と閉じるボタンを出す。小説一覧の読み込みに失敗するなど、作品ごとの失敗として扱えない例外は `error` 状態にし、エラーの文言と閉じるボタンを出す。応答が届いた後でもキャンセルが押されていれば、その応答は記録せずにキャンセルとして終える（実際のクライアントで、close によってリクエストが中断されたときと同じ結果にするため）。
+
+ツールバーは `Row` から `Wrap` に変える。ボタンが4つになると、狭い列（ウィジェットテストの幅 200px など）ではあふれるため、入りきらないボタンは次の行に回す。実機のドロワーの幅では1行に収まる。ボタンは `Icons.update`（仮）をツールバーのダウンロードボタンの隣に置き、`Key('file_browser_update_check_button')` を付ける。
 
 ### 6. ダウンロードとの排他は一方向だけにする
 
