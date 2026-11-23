@@ -176,7 +176,9 @@ void main() {
 
     await c.read(novelUpdateCheckProvider.notifier).start();
 
-    expect(c.read(novelUpdateCheckProvider).status, UpdateCheckStatus.error);
+    final state = c.read(novelUpdateCheckProvider);
+    expect(state.status, UpdateCheckStatus.error);
+    expect(state.errorMessage, contains('db'));
     expect(log, isEmpty);
   });
 
@@ -192,5 +194,33 @@ void main() {
     await notifier.start();
 
     expect(log, hasLength(2));
+  });
+
+  test('disposing the scope mid-check does not throw afterwards', () async {
+    await repository.upsert(_narou('n1111aa'));
+    final gate = Completer<void>();
+    final c = ProviderContainer(
+      overrides: [
+        novelDatabaseProvider.overrideWithValue(novelDatabase),
+        updateCheckClientFactoryProvider.overrideWithValue(
+          () => _api([], gate: gate),
+        ),
+        novelUpdateCheckerFactoryProvider.overrideWithValue(
+          (client) => NovelUpdateChecker(
+            repository: repository,
+            downloadService: DownloadService(client: client),
+            narouApi: NarouApiClient(client: client),
+            requestDelay: Duration.zero,
+          ),
+        ),
+      ],
+    );
+
+    final run = c.read(novelUpdateCheckProvider.notifier).start();
+    await pumpEventQueue();
+    c.dispose();
+    gate.complete();
+
+    await expectLater(run, completes);
   });
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -32,8 +33,11 @@ MockClient _echoingApi(
   });
 }
 
-NarouApiClient _client(http.Client http) =>
-    NarouApiClient(client: http, requestDelay: Duration.zero);
+NarouApiClient _client(http.Client http) => NarouApiClient(
+  client: http,
+  requestDelay: Duration.zero,
+  retryBaseDelay: Duration.zero,
+);
 
 Future<Map<String, int?>> _collect(Stream<Map<String, int?>> chunks) async {
   final all = <String, int?>{};
@@ -233,5 +237,52 @@ void main() {
 
     expect(agents.single, isNotNull);
     expect(agents.single, isNotEmpty);
+  });
+
+  test(
+    'a transient 503 or timeout is retried before the chunk fails',
+    () async {
+      for (final first in <Future<http.Response> Function()>[
+        () async => http.Response('busy', 503),
+        () async => throw TimeoutException('slow'),
+      ]) {
+        var calls = 0;
+        final api = _client(
+          MockClient((request) async {
+            calls++;
+            if (calls == 1) return first();
+            return http.Response(
+              '[{"allcount":1},{"ncode":"N1111AA","general_all_no":4}]',
+              200,
+              headers: _json,
+            );
+          }),
+        );
+
+        final counts = await _collect(
+          api.fetchEpisodeCounts(['n1111aa'], isR18: false),
+        );
+
+        expect(counts, {'n1111aa': 4});
+        expect(calls, 2);
+      }
+    },
+  );
+
+  test('a 404 is not retried', () async {
+    var calls = 0;
+    final api = _client(
+      MockClient((_) async {
+        calls++;
+        return http.Response('gone', 404);
+      }),
+    );
+
+    final counts = await _collect(
+      api.fetchEpisodeCounts(['n1111aa'], isR18: false),
+    );
+
+    expect(counts, {'n1111aa': null});
+    expect(calls, 1);
   });
 }

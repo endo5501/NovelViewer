@@ -371,4 +371,26 @@ void main() {
       }
     },
   );
+
+  test('ncodes differing only in case are each recorded', () async {
+    final novels = await register([
+      _novel('narou', 'n1234ab', 'https://ncode.syosetu.com/n1234ab/'),
+      _novel('narou', 'n1234AB', 'https://ncode.syosetu.com/n1234AB/'),
+    ]);
+    final progress = <(int, int)>[];
+
+    final summary = await checker(
+      _web([], narouCounts: {'n1234ab': 12}),
+    ).run(novels, onProgress: (done, total) => progress.add((done, total)));
+
+    expect(summary.checked, 2);
+    expect(progress.last, (2, 2));
+    for (final folder in ['narou_n1234ab', 'narou_n1234AB']) {
+      expect(
+        (await repository.findByFolderName(folder))!.latestEpisodeCount,
+        12,
+        reason: folder,
+      );
+    }
+  });
 }
