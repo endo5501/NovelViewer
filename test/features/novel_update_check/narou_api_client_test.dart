@@ -219,4 +219,19 @@ void main() {
     expect(log, hasLength(1));
     expect(received, hasLength(1));
   });
+
+  test('requests carry a User-Agent (the API refuses an empty one)', () async {
+    final agents = <String?>[];
+    final api = _client(
+      MockClient((request) async {
+        agents.add(request.headers['User-Agent']);
+        return http.Response('[{"allcount":0}]', 200, headers: _json);
+      }),
+    );
+
+    await _collect(api.fetchEpisodeCounts(['n1111aa'], isR18: false));
+
+    expect(agents.single, isNotNull);
+    expect(agents.single, isNotEmpty);
+  });
 }

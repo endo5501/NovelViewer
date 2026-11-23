@@ -333,4 +333,42 @@ void main() {
     expect(summary.withNewEpisodes, 0);
     expect(summary.failed, 0);
   });
+
+  test(
+    'consecutive requests are spaced, across APIs and index pages',
+    () async {
+      final novels = await register([
+        _novel('narou', 'n1111aa', 'https://ncode.syosetu.com/n1111aa/'),
+        _novel('narou', 'n2222bb', 'https://novel18.syosetu.com/n2222bb/'),
+        _novel('kakuyomu', '1', 'https://kakuyomu.jp/works/1'),
+      ]);
+      final times = <DateTime>[];
+      final web = _web(
+        [],
+        narouCounts: {'n1111aa': 1, 'n2222bb': 1},
+        kakuyomuCounts: {'1': 1},
+      );
+      final client = MockClient((request) async {
+        times.add(DateTime.now());
+        return web.send(request).then(http.Response.fromStream);
+      });
+      const delay = Duration(milliseconds: 80);
+
+      await NovelUpdateChecker(
+        repository: repository,
+        downloadService: DownloadService(client: client),
+        narouApi: NarouApiClient(client: client, requestDelay: delay),
+        requestDelay: delay,
+      ).run(novels);
+
+      expect(times, hasLength(3));
+      for (var i = 1; i < times.length; i++) {
+        expect(
+          times[i].difference(times[i - 1]),
+          greaterThanOrEqualTo(delay),
+          reason: 'request $i',
+        );
+      }
+    },
+  );
 }

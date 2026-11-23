@@ -154,4 +154,18 @@ void main() {
     );
     expect(log, isEmpty);
   });
+
+  test('an episode listed twice counts once, as a download would', () async {
+    final html = fixture('hameln_index_valid.html').replaceFirst(
+      '</ul>',
+      '<li class="episode-list__item"><a href="./2.html">dup</a></li></ul>',
+    );
+    final s = service([], {
+      '/novel/000000': [FakeRoute('', body: html, headers: _html)],
+    });
+
+    final count = await s.fetchEpisodeCount(site: HamelnSite(), url: hamelnUrl);
+
+    expect(count, 4);
+  });
 }
