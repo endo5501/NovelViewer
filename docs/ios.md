@@ -95,7 +95,7 @@ scripts/build_app.sh ios --release
 xcrun devicectl device install app --device <デバイスUDID> build/ios/iphoneos/Runner.app
 ```
 
-ビルドには以下の準備が必要です。
+ビルドには以下の準備が必要です。Xcode は 27 以降を使ってください（オンデバイス LLM プラグインが Xcode 27 の SDK にしかない `GenerationOptions(samplingMode:...)` を使うため、Xcode 26 ではコンパイルエラーになります。実行時は iOS 26 でも動きます）。
 
 ### 1. Xcode の iOS platform component
 

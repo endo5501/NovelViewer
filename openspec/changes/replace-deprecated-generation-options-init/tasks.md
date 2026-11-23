@@ -15,14 +15,14 @@
 
 ## 3. 統合確認
 
-- [ ] 3.1 `scripts/build_app.sh macos` でビルドし、ログに `FoundationModelsLlmPlugin.swift` の `deprecated` 警告が出ないことを確かめる
-- [ ] 3.2 `scripts/build_app.sh ios` でビルドし、同じ警告が出ないことを確かめる(iOS のビルド環境が無ければ、そのことを記録して省く)
+- [x] 3.1 `scripts/build_app.sh macos` でビルドし、ログに `FoundationModelsLlmPlugin.swift` の `deprecated` 警告が出ないことを確かめる
+- [x] 3.2 `scripts/build_app.sh ios` でビルドし、同じ警告が出ないことを確かめる(iOS のビルド環境が無ければ、そのことを記録して省く)
 - [ ] 3.3 macOS 版のアプリでオンデバイス LLM の要約を1回実行し、以前と同じように結果が返ることを確かめる
 
 ## 4. 最終確認
 
-- [ ] 4.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 4.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 4.3 `fvm dart format lib test`でフォーマットを実行
-- [ ] 4.4 `fvm flutter analyze`でリントを実行
-- [ ] 4.5 `fvm flutter test`でテストを実行
+- [x] 4.1 code-reviewスキルを使用してコードレビューを実施
+- [x] 4.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 4.3 `fvm dart format lib test`でフォーマットを実行
+- [x] 4.4 `fvm flutter analyze`でリントを実行
+- [x] 4.5 `fvm flutter test`でテストを実行
