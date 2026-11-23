@@ -40,7 +40,7 @@ class ProgressSyncService implements ProgressSyncRunner {
   final String _deviceName;
   final Future<void> Function() _flushPendingPositions;
   final Future<List<ReadingProgress>> Function() _loadLocalProgress;
-  final Future<Set<String>> Function() _syncableNovelIds;
+  final Future<Map<String, SyncNovelInfo>> Function() _syncableNovels;
   final Future<int?> Function(String novelId, String fileName) _episodeOf;
   final DateTime Function() _now;
 
@@ -62,7 +62,7 @@ class ProgressSyncService implements ProgressSyncRunner {
     required String deviceName,
     required Future<void> Function() flushPendingPositions,
     required Future<List<ReadingProgress>> Function() loadLocalProgress,
-    required Future<Set<String>> Function() syncableNovelIds,
+    required Future<Map<String, SyncNovelInfo>> Function() syncableNovels,
     required Future<int?> Function(String novelId, String fileName) episodeOf,
     DateTime Function()? now,
   }) : _isAvailable = isAvailable,
@@ -73,7 +73,7 @@ class ProgressSyncService implements ProgressSyncRunner {
        _deviceName = deviceName,
        _flushPendingPositions = flushPendingPositions,
        _loadLocalProgress = loadLocalProgress,
-       _syncableNovelIds = syncableNovelIds,
+       _syncableNovels = syncableNovels,
        _episodeOf = episodeOf,
        _now = now ?? DateTime.now;
 
@@ -158,13 +158,13 @@ class ProgressSyncService implements ProgressSyncRunner {
   Future<void> _push() async {
     await _flushPendingPositions();
     final local = await _loadLocalProgress();
-    final syncable = await _syncableNovelIds();
+    final syncable = await _syncableNovels();
     final lastPushed = await _repository.findAllOwn();
     // Resolving an episode can mean finding the novel's folder on disk, so
     // a file already pushed under the same name keeps the episode it had.
     final episodes = <String, int?>{
       for (final progress in local)
-        if (syncable.contains(progress.novelId))
+        if (syncable.containsKey(progress.novelId))
           progress.novelId: switch (lastPushed[progress.novelId]) {
             final pushed? when pushed.fileName == progress.fileName =>
               pushed.episode,
@@ -173,7 +173,7 @@ class ProgressSyncService implements ProgressSyncRunner {
     };
     final records = buildOwnRecords(
       local: local,
-      syncableNovels: {for (final id in syncable) id: const SyncNovelInfo()},
+      syncableNovels: syncable,
       lastPushed: lastPushed,
       episodeOf: (novelId, _) => episodes[novelId],
     );

@@ -118,10 +118,17 @@ final progressSyncEntryProvider = Provider<ProgressSyncEntry?>((ref) {
 /// The novels sync covers: every registered novel except generic-web
 /// collections (reading-progress-sync).
 Future<Set<String>> loadSyncableNovelIds(Ref ref) async {
+  return (await loadSyncableNovels(ref)).keys.toSet();
+}
+
+/// The novels sync covers, each with the work URL and title its records
+/// carry (design D3).
+Future<Map<String, SyncNovelInfo>> loadSyncableNovels(Ref ref) async {
   final novels = await ref.read(allNovelsProvider.future);
   return {
     for (final novel in novels)
-      if (novel.siteType != GenericWebSite.siteTypeId) novel.folderName,
+      if (novel.siteType != GenericWebSite.siteTypeId)
+        novel.folderName: SyncNovelInfo(url: novel.url, title: novel.title),
   };
 }
 
