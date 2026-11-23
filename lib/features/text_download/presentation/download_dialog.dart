@@ -10,6 +10,7 @@ import 'package:novel_viewer/features/text_download/data/sites/generic_web_site.
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:novel_viewer/features/text_download/domain/download_request.dart';
 import 'package:novel_viewer/features/text_download/providers/download_request_providers.dart';
+import 'package:novel_viewer/features/text_download/presentation/remote_novel_list.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
@@ -254,6 +255,14 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
     });
   }
 
+  /// Takes the URL of a novel another device read. Like a request from
+  /// outside the app, it only fills the field.
+  void _selectRemoteNovel(String url) {
+    if (!_acceptsInput(ref.read(downloadProvider).status)) return;
+    _urlController.text = url;
+    _validateUrl(url);
+  }
+
   @override
   Widget build(BuildContext context) {
     final downloadState = ref.watch(downloadProvider);
@@ -300,6 +309,10 @@ class _DownloadDialogState extends ConsumerState<DownloadDialog> {
             else
               _buildDestinationSelector(downloadState),
             const SizedBox(height: 16),
+            RemoteNovelList(
+              enabled: _acceptsInput(downloadState.status),
+              onSelected: _selectRemoteNovel,
+            ),
             if (_ignoredIncomingRequest) ...[
               _buildIgnoredRequestNotice(),
               const SizedBox(height: 16),

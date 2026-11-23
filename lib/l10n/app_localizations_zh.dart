@@ -632,6 +632,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get download_createCollectionButton => '创建';
 
   @override
+  String get download_remoteNovelsTitle => '在其他设备上阅读的小说';
+
+  @override
+  String download_remoteNovelsShowAll(int count) {
+    return '显示全部（$count）';
+  }
+
+  @override
+  String download_remoteNovelRow(String device, int episode, String readAt) {
+    return '$device · 第 $episode 话 · $readAt';
+  }
+
+  @override
   String get fileBrowser_newCollection => '新建合集';
 
   @override

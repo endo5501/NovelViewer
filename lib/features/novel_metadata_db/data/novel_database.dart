@@ -55,7 +55,7 @@ class NovelDatabaseSnapshotResolver {
 
 class NovelDatabase {
   static const _databaseName = 'novel_metadata.db';
-  static const _databaseVersion = 13;
+  static const _databaseVersion = 14;
 
   /// The current `novel_metadata.db` schema version. Exposed so test fixtures
   /// open in-memory databases at the same version the production schema targets.
@@ -148,6 +148,7 @@ class NovelDatabase {
     await _createReferenceSourcesTable(db);
     await _createProgressSyncTables(db);
     await _addUpdateCheckColumns(db);
+    await _addSyncNovelInfoColumns(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -195,6 +196,20 @@ class NovelDatabase {
     }
     if (oldVersion < 13) {
       await _addUpdateCheckColumns(db);
+    }
+    if (oldVersion < 14) {
+      await _addSyncNovelInfoColumns(db);
+    }
+  }
+
+  /// v14: the work URL and title that travel with each sync record
+  /// (remote-novel-download), so a device can offer to download a novel it
+  /// does not have. NULL for records from builds before them; an own row
+  /// left NULL makes the next push differ and publish them.
+  static Future<void> _addSyncNovelInfoColumns(Database db) async {
+    for (final table in ['sync_remote_progress', 'sync_own_progress']) {
+      await db.execute('ALTER TABLE $table ADD COLUMN url TEXT');
+      await db.execute('ALTER TABLE $table ADD COLUMN title TEXT');
     }
   }
 

@@ -56,7 +56,7 @@ final progressSyncServiceProvider = Provider<ProgressSyncService>((ref) {
         ref.read(readingPositionWriterProvider).flush(),
     loadLocalProgress: () =>
         ref.read(readingProgressRepositoryProvider).findAll(),
-    syncableNovelIds: () => loadSyncableNovelIds(ref),
+    syncableNovels: () => loadSyncableNovels(ref),
     episodeOf: (novelId, fileName) async {
       final prefix = extractNumericPrefix(fileName);
       if (prefix != null) return prefix;

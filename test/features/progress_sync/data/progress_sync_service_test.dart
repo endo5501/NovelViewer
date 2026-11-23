@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/progress_sync/data/progress_sync_repositor
 import 'package:novel_viewer/features/progress_sync/data/progress_sync_service.dart';
 import 'package:novel_viewer/features/progress_sync/domain/device_progress.dart';
 import 'package:novel_viewer/features/progress_sync/domain/sync_progress_record.dart';
+import 'package:novel_viewer/features/progress_sync/domain/sync_rules.dart';
 import 'package:novel_viewer/features/reading_progress/domain/reading_progress.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -33,6 +34,7 @@ void main() {
   late List<String> calls;
   late bool available;
   late bool signedIn;
+  late Map<String, SyncNovelInfo> syncable;
 
   setUpAll(() {
     sqfliteFfiInit();
@@ -47,6 +49,7 @@ void main() {
     calls = [];
     available = true;
     signedIn = true;
+    syncable = const {'narou_a': SyncNovelInfo(), 'narou_b': SyncNovelInfo()};
   });
 
   tearDown(() async {
@@ -69,7 +72,7 @@ void main() {
         calls.add('load');
         return local;
       },
-      syncableNovelIds: () async => {'narou_a', 'narou_b'},
+      syncableNovels: () async => syncable,
       episodeOf: (_, fileName) async => int.tryParse(fileName.split('_')[0]),
       now: () => DateTime.utc(2026, 10, 18, 9),
     );
@@ -143,6 +146,59 @@ void main() {
 
       expect(store.writes, 2);
       expect(store.files['self']!.records.single.episode, 4);
+    });
+
+    test('publishes each novel\'s url and title', () async {
+      syncable = const {
+        'narou_a': SyncNovelInfo(
+          url: 'https://ncode.syosetu.com/a/',
+          title: 'A',
+        ),
+      };
+
+      await service().push();
+
+      final record = store.files['self']!.records.single;
+      expect(record.url, 'https://ncode.syosetu.com/a/');
+      expect(record.title, 'A');
+      expect(
+        (await repository.findAllOwn())['narou_a']!.url,
+        'https://ncode.syosetu.com/a/',
+      );
+    });
+
+    test('a record pushed without a url is sent again with it, keeping its '
+        'read_at', () async {
+      // What a build before url/title left behind for an unmoved position.
+      final earlier = DateTime.utc(2026, 9, 1);
+      await repository.replaceOwn([
+        SyncProgressRecord(
+          novelId: 'narou_a',
+          episode: 3,
+          fileName: '003_t.txt',
+          bodyOffset: 0,
+          bodyHash: 'h',
+          readAt: earlier,
+        ),
+      ]);
+      syncable = const {
+        'narou_a': SyncNovelInfo(
+          url: 'https://ncode.syosetu.com/a/',
+          title: 'A',
+        ),
+      };
+
+      final sync = service();
+      await sync.push();
+
+      expect(store.writes, 1);
+      final record = store.files['self']!.records.single;
+      expect(record.url, 'https://ncode.syosetu.com/a/');
+      expect(record.title, 'A');
+      expect(record.readAt, earlier);
+
+      await sync.push();
+      expect(store.writes, 1);
     });
 
     test('a failed push is rebuilt and sent on the next one', () async {
@@ -349,7 +405,7 @@ void main() {
       deviceName: 'Mac',
       flushPendingPositions: () async {},
       loadLocalProgress: () async => local,
-      syncableNovelIds: () async => {'narou_a', 'narou_b'},
+      syncableNovels: () async => syncable,
       episodeOf: (_, fileName) async {
         asked.add(fileName);
         return int.tryParse(fileName.split('_')[0]);

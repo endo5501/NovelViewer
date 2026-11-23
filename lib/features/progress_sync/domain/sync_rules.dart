@@ -16,17 +16,30 @@ bool isSamePosition(SyncProgressRecord a, SyncProgressRecord b) {
       (a.bodyOffset - b.bodyOffset).abs() < samePositionTolerance;
 }
 
+/// What this device publishes about a novel besides its position: the work
+/// URL and title from its registration (design D3).
+class SyncNovelInfo {
+  final String? url;
+  final String? title;
+
+  const SyncNovelInfo({this.url, this.title});
+}
+
 /// This device's record for one novel. [lastPushed] is what the device last
 /// published (or adopted from another device). While the position stays
 /// within [samePositionTolerance] of it, [lastPushed] is published again as
 /// it is, `read_at` and offset alike: opening a novel must not make the device
 /// look like it read further (design D3), and keeping the offset as well
 /// means small advances add up against one anchor instead of each being
-/// measured from the last.
+/// measured from the last. [url] and [title] never move `read_at`, but a
+/// change to either still makes the record differ from [lastPushed], so it is
+/// published again (design D2).
 SyncProgressRecord buildOwnRecord({
   required ReadingProgress local,
   required int episode,
   required SyncProgressRecord? lastPushed,
+  String? url,
+  String? title,
 }) {
   final current = SyncProgressRecord(
     novelId: local.novelId,
@@ -35,6 +48,8 @@ SyncProgressRecord buildOwnRecord({
     bodyOffset: local.bodyOffset,
     bodyHash: local.bodyHash,
     readAt: local.updatedAt.toUtc(),
+    url: url,
+    title: title,
   );
   if (lastPushed == null || !isSamePosition(current, lastPushed)) {
     return current;
@@ -46,26 +61,30 @@ SyncProgressRecord buildOwnRecord({
     bodyOffset: lastPushed.bodyOffset,
     bodyHash: current.bodyHash,
     readAt: lastPushed.readAt,
+    url: url,
+    title: title,
   );
 }
 
-/// The records this device publishes: one per novel in [syncableNovelIds]
+/// The records this device publishes: one per novel in [syncableNovels]
 /// (registered novels other than generic-web collections) whose episode
-/// [episodeOf] can name.
+/// [episodeOf] can name, carrying that novel's [SyncNovelInfo].
 List<SyncProgressRecord> buildOwnRecords({
   required List<ReadingProgress> local,
-  required Set<String> syncableNovelIds,
+  required Map<String, SyncNovelInfo> syncableNovels,
   required Map<String, SyncProgressRecord> lastPushed,
   required int? Function(String novelId, String fileName) episodeOf,
 }) {
   return [
     for (final progress in local)
-      if (syncableNovelIds.contains(progress.novelId))
+      if (syncableNovels[progress.novelId] case final info?)
         if (episodeOf(progress.novelId, progress.fileName) case final episode?)
           buildOwnRecord(
             local: progress,
             episode: episode,
             lastPushed: lastPushed[progress.novelId],
+            url: info.url,
+            title: info.title,
           ),
   ];
 }

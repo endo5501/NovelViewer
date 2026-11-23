@@ -653,6 +653,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get download_createCollectionButton => 'Create';
 
   @override
+  String get download_remoteNovelsTitle => 'Novels read on other devices';
+
+  @override
+  String download_remoteNovelsShowAll(int count) {
+    return 'Show all ($count)';
+  }
+
+  @override
+  String download_remoteNovelRow(String device, int episode, String readAt) {
+    return '$device · Episode $episode · $readAt';
+  }
+
+  @override
   String get fileBrowser_newCollection => 'New collection';
 
   @override

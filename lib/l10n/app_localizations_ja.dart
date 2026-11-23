@@ -639,6 +639,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get download_createCollectionButton => '作成';
 
   @override
+  String get download_remoteNovelsTitle => '他の端末で読んでいる小説';
+
+  @override
+  String download_remoteNovelsShowAll(int count) {
+    return 'すべて表示（$count）';
+  }
+
+  @override
+  String download_remoteNovelRow(String device, int episode, String readAt) {
+    return '$device ・ $episode 話 ・ $readAt';
+  }
+
+  @override
   String get fileBrowser_newCollection => '新規コレクション';
 
   @override

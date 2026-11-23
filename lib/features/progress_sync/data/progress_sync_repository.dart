@@ -4,7 +4,8 @@ import '../../novel_metadata_db/data/novel_database.dart';
 import '../domain/device_progress.dart';
 import '../domain/sync_progress_record.dart';
 
-/// The progress-sync tables of `novel_metadata.db` (schema v12).
+/// The progress-sync tables of `novel_metadata.db` (schema v12, url and
+/// title since v14).
 class ProgressSyncRepository {
   static const _remoteTable = 'sync_remote_progress';
   static const _ownTable = 'sync_own_progress';
@@ -45,14 +46,22 @@ class ProgressSyncRepository {
       where: 'novel_id = ?',
       whereArgs: [novelId],
     );
-    return [
-      for (final row in rows)
-        RemoteProgress(
-          deviceId: row['device_id'] as String,
-          deviceName: row['device_name'] as String,
-          record: _rowToRecord(row),
-        ),
-    ];
+    return rows.map(_rowToRemote).toList();
+  }
+
+  /// Every record received on the last pull, of every device and novel.
+  Future<List<RemoteProgress>> findAllRemote() async {
+    final db = await _novelDatabase.database;
+    final rows = await db.query(_remoteTable);
+    return rows.map(_rowToRemote).toList();
+  }
+
+  static RemoteProgress _rowToRemote(Map<String, Object?> row) {
+    return RemoteProgress(
+      deviceId: row['device_id'] as String,
+      deviceName: row['device_name'] as String,
+      record: _rowToRecord(row),
+    );
   }
 
   /// Replaces the set this device last pushed with [records].
@@ -164,6 +173,8 @@ class ProgressSyncRepository {
       'body_offset': record.bodyOffset,
       'body_hash': record.bodyHash,
       'read_at': record.readAt.toUtc().toIso8601String(),
+      'url': record.url,
+      'title': record.title,
     };
   }
 
@@ -175,6 +186,8 @@ class ProgressSyncRepository {
       bodyOffset: row['body_offset'] as int,
       bodyHash: row['body_hash'] as String?,
       readAt: DateTime.parse(row['read_at'] as String),
+      url: row['url'] as String?,
+      title: row['title'] as String?,
     );
   }
 }

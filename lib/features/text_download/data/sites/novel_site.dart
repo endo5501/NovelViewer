@@ -101,3 +101,30 @@ class NovelSiteRegistry {
     return null;
   }
 }
+
+/// The library folder a novel downloaded from [normalizedUrl] lives in:
+/// `<siteType>_<novel id>`. The single rule for the download and for checking
+/// a URL against a folder.
+String novelFolderName(NovelSite site, Uri normalizedUrl) {
+  return '${site.siteType}_${site.extractNovelId(normalizedUrl)}';
+}
+
+/// Whether downloading [url] would produce the novel in [folderName]: a site
+/// other than generic web handles it and its folder name is [folderName].
+/// A URL from a synced record is used as-is for the download, so one that
+/// leads anywhere else is refused (remote-novel-download).
+bool urlPointsToNovelFolder(
+  String url,
+  String folderName, {
+  NovelSiteRegistry? registry,
+}) {
+  final uri = Uri.tryParse(url);
+  if (uri == null) return false;
+  final site = (registry ?? NovelSiteRegistry()).findSite(uri);
+  if (site == null || site is GenericWebSite) return false;
+  try {
+    return novelFolderName(site, site.normalizeUrl(uri)) == folderName;
+  } on ArgumentError {
+    return false;
+  }
+}

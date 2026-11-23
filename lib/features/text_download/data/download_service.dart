@@ -405,10 +405,7 @@ class DownloadService {
     return dir;
   }
 
-  String buildFolderName(NovelSite site, Uri url) {
-    final novelId = site.extractNovelId(url);
-    return '${site.siteType}_$novelId';
-  }
+  String buildFolderName(NovelSite site, Uri url) => novelFolderName(site, url);
 
   Future<void> saveEpisode({
     required Directory directory,

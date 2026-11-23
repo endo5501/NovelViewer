@@ -20,6 +20,8 @@ String encodeDeviceProgress(DeviceProgress device) {
           'body_offset': record.bodyOffset,
           'body_hash': record.bodyHash,
           'read_at': record.readAt.toUtc().toIso8601String(),
+          'url': ?record.url,
+          'title': ?record.title,
         },
     },
   });
@@ -57,5 +59,8 @@ SyncProgressRecord _decodeRecord(String novelId, Map<String, dynamic> map) {
     bodyOffset: map['body_offset'] as int,
     bodyHash: map['body_hash'] as String?,
     readAt: DateTime.parse(map['read_at'] as String),
+    // Optional: builds before url/title wrote neither (format stays 1).
+    url: map['url'] as String?,
+    title: map['title'] as String?,
   );
 }

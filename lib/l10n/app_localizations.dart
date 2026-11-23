@@ -1234,6 +1234,24 @@ abstract class AppLocalizations {
   /// **'作成'**
   String get download_createCollectionButton;
 
+  /// No description provided for @download_remoteNovelsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'他の端末で読んでいる小説'**
+  String get download_remoteNovelsTitle;
+
+  /// No description provided for @download_remoteNovelsShowAll.
+  ///
+  /// In ja, this message translates to:
+  /// **'すべて表示（{count}）'**
+  String download_remoteNovelsShowAll(int count);
+
+  /// No description provided for @download_remoteNovelRow.
+  ///
+  /// In ja, this message translates to:
+  /// **'{device} ・ {episode} 話 ・ {readAt}'**
+  String download_remoteNovelRow(String device, int episode, String readAt);
+
   /// No description provided for @fileBrowser_newCollection.
   ///
   /// In ja, this message translates to:
