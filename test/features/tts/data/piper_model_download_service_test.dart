@@ -318,6 +318,25 @@ void main() {
       expect(filesUnderTemp(), isEmpty);
     });
 
+    test('fails on a hard link entry', () async {
+      // The release holds none either; the extractor would skip one leading
+      // outside without telling us.
+      final service = serving(
+        tarGz(
+          completeDictionary,
+          extra: [
+            ArchiveFile.symlink('open_jtalk_dic_utf_8-1.11/hard', '../../x')
+              ..isHardLink = true,
+          ],
+        ),
+      );
+
+      await expectLater(service.downloadDictionary(dicDir), throwsException);
+
+      expect(Directory(dicDir).existsSync(), isFalse);
+      expect(filesUnderTemp(), isEmpty);
+    });
+
     test('fails when a required dictionary file is missing', () async {
       // What a tar cut short looks like once the decoder stops at a damaged
       // header: the earlier entries, and nothing to say the rest is gone.
