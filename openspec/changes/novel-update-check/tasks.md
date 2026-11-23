@@ -6,9 +6,9 @@
 
 ## 2. メタデータDB: v13 と更新チェックの結果
 
-- [ ] 2.1 テストを先に書く: 新規作成の v13 スキーマに `latest_episode_count` / `update_checked_at` があること。v12 の DB を昇格すると列が NULL で追加され、`user_version` が 13 になり、他のテーブルの行が保持されること。昇格後と新規作成で `novels` の列定義が一致すること。`fvm flutter test test/features/novel_metadata_db` で失敗を確かめる
-- [ ] 2.2 テストを先に書く: `NovelRepository.recordUpdateCheck` が2つの列だけを更新すること。`upsert` による再ダウンロードで結果が消えないこと。`NovelMetadata.fromMap` が新しい列を読むこと。失敗を確かめる
-- [ ] 2.3 `NovelDatabase` を v13 にする（`createCurrentSchema` に列を追加し、`_onUpgrade` に v12→v13 を追加）。`NovelMetadata` と `NovelRepository.recordUpdateCheck` を実装し、2.1 と 2.2 のテストが通ることを確かめる
+- [x] 2.1 テストを先に書く: 新規作成の v13 スキーマに `latest_episode_count` / `update_checked_at` があること。v12 の DB を昇格すると列が NULL で追加され、`user_version` が 13 になり、他のテーブルの行が保持されること。昇格後と新規作成で `novels` の列定義が一致すること。`fvm flutter test test/features/novel_metadata_db` で失敗を確かめる
+- [x] 2.2 テストを先に書く: `NovelRepository.recordUpdateCheck` が2つの列だけを更新すること。`upsert` による再ダウンロードで結果が消えないこと。`NovelMetadata.fromMap` が新しい列を読むこと。失敗を確かめる
+- [x] 2.3 `NovelDatabase` を v13 にする（`createCurrentSchema` に列を追加し、`_onUpgrade` に v12→v13 を追加）。`NovelMetadata` と `NovelRepository.recordUpdateCheck` を実装し、2.1 と 2.2 のテストが通ることを確かめる
 
 ## 3. 目次1ページの取得（DownloadService.fetchIndex）
 
