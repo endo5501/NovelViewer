@@ -57,7 +57,7 @@
         |
         +-- narou:   NarouApiClient.fetchEpisodeCounts(ncodes, isR18)   (チャンク単位)
         |
-        +-- kakuyomu / hameln: DownloadService.fetchIndex(site, url)    (作品ごと, 間隔あり)
+        +-- kakuyomu / hameln: DownloadService.fetchEpisodeCount(site, url)    (作品ごと, 間隔あり)
         |
         +-- 1作の結果が出るたびに recordUpdateCheck() を呼び、進捗を通知
         v
@@ -66,11 +66,11 @@
 
 `NovelUpdateChecker` は、`NovelRepository`、`DownloadService`、`NarouApiClient` の3つを受け取る。待ち時間も注入できるようにする（テストで実時間を待たないため）。Notifier はこれを呼び、終了時に `allNovelsProvider` を invalidate する。
 
-### 3. 目次の取得は `DownloadService` に public の `fetchIndex` を足して再利用する
+### 3. 目次の取得は `DownloadService` に public の `fetchEpisodeCount` を足して再利用する
 
-`Future<NovelIndex> fetchIndex({required NovelSite site, required Uri url, CancellationToken? cancelToken})` を追加する。処理は `normalizeUrl` → `_fetchPageResponse` → `decodeBody` → `parseIndex` の順で、最初のページだけを返す。総話数は、`episodes` が空で `bodyContent` があれば 1（短編）、そうでなければ `episodes.length` とする。目次が空で本文も無い場合は `EmptyIndexException` を投げ、その作品は失敗として数える。
+`Future<int> fetchEpisodeCount({required NovelSite site, required Uri url, CancellationToken? cancelToken})` を追加する。処理は `normalizeUrl` → `_fetchPageResponse` → `decodeBody` → `parseIndex` の順で、最初のページだけを読む。呼び出し側が必要なのは総話数だけなので、`NovelIndex` は返さない。総話数は、`episodes` が空で `bodyContent` があれば 1（短編）、そうでなければ `episodes.length` とする。目次が空で本文も無い場合は `EmptyIndexException` を投げ、その作品は失敗として数える。
 
-`downloadNovel` が行う `cancelToken?.onCancel(_client.close)` は、`fetchIndex` を呼ぶ側（Checker）が1度だけ登録する。`DownloadService` はチェック1回につき1インスタンスを factory から作る。
+`downloadNovel` が行う `cancelToken?.onCancel(_client.close)` は、`fetchEpisodeCount` を呼ぶ側（Checker）が1度だけ登録する。`DownloadService` はチェック1回につき1インスタンスを factory から作る。
 
 **代替案**: Checker が独自に `http.Client` で取得する。ヘッダ、再試行、タイムアウトの処理が二重になり、ハーメルンの R18 用の Cookie などのサイト別ヘッダが漏れやすいので採らない。
 

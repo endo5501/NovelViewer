@@ -10,10 +10,10 @@
 - [x] 2.2 テストを先に書く: `NovelRepository.recordUpdateCheck` が2つの列だけを更新すること。`upsert` による再ダウンロードで結果が消えないこと。`NovelMetadata.fromMap` が新しい列を読むこと。失敗を確かめる
 - [x] 2.3 `NovelDatabase` を v13 にする（`createCurrentSchema` に列を追加し、`_onUpgrade` に v12→v13 を追加）。`NovelMetadata` と `NovelRepository.recordUpdateCheck` を実装し、2.1 と 2.2 のテストが通ることを確かめる
 
-## 3. 目次1ページの取得（DownloadService.fetchIndex）
+## 3. 目次1ページの取得（DownloadService.fetchEpisodeCount）
 
-- [ ] 3.1 テストを先に書く（`http` のモッククライアントを使う）: カクヨムとハーメルンの目次の HTML から `fetchIndex` が全話を返すこと。短編（本文のみ）を総話数 1 と数えるヘルパーの振る舞い。目次が空で本文も無ければ `EmptyIndexException` を投げること。5xx は再試行され、4xx はすぐ失敗すること。リクエストが目次の1回だけであること。失敗を確かめる
-- [ ] 3.2 `DownloadService.fetchIndex` と総話数を数えるヘルパーを実装し、3.1 と既存の `test/features/text_download` が通ることを確かめる
+- [ ] 3.1 テストを先に書く（`http` のモッククライアントを使う）: カクヨムとハーメルンの目次の HTML から `fetchEpisodeCount` が全話の数を返すこと。短編（本文のみ）を総話数 1 と数えること。目次が空で本文も無ければ `EmptyIndexException` を投げること。5xx は再試行され、4xx はすぐ失敗すること。リクエストが目次の1回だけであること。失敗を確かめる
+- [ ] 3.2 `DownloadService.fetchEpisodeCount` を実装し、3.1 と既存の `test/features/text_download` が通ることを確かめる
 
 ## 4. なろう API クライアント
 
@@ -22,7 +22,7 @@
 
 ## 5. チェックの中核（NovelUpdateChecker）
 
-- [ ] 5.1 テストを先に書く（リポジトリ、`fetchIndex`、API クライアントは差し替え、待ち時間は 0）:
+- [ ] 5.1 テストを先に書く（リポジトリ、`fetchEpisodeCount`、API クライアントは差し替え、待ち時間は 0）:
   - 対象が narou / kakuyomu / hameln だけで、web と aozora にはリクエストしないこと
   - 1作の結果が出るたびに `recordUpdateCheck` を呼び、進捗 `n / N` を通知すること
   - 失敗した作品の結果は書き換えず、残りを続けること
