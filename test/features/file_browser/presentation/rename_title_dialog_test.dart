@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/presentation/rename_title_dialog.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 void main() {
   group('RenameTitleDialog', () {
@@ -11,7 +12,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           locale: Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: RenameTitleDialog(currentTitle: 'テスト小説')),
         ),
@@ -28,7 +29,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           locale: Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: RenameTitleDialog(currentTitle: 'テスト小説')),
         ),
@@ -47,7 +48,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           locale: Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: RenameTitleDialog(currentTitle: 'テスト小説')),
         ),
@@ -70,7 +71,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           locale: Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: RenameTitleDialog(currentTitle: 'テスト小説')),
         ),
@@ -92,7 +93,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(
@@ -131,7 +132,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(
@@ -165,7 +166,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(

@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/settings/data/font_family.dart';
 import 'package:novel_viewer/features/settings/presentation/settings_dialog.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -24,7 +25,7 @@ void main() {
       ],
       child: const MaterialApp(
         locale: Locale('ja'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: SettingsDialog()),
       ),

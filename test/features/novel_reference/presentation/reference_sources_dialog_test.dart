@@ -11,6 +11,7 @@ import 'package:novel_viewer/features/novel_reference/domain/reference_graph.dar
 import 'package:novel_viewer/features/novel_reference/presentation/reference_sources_dialog.dart';
 import 'package:novel_viewer/features/novel_reference/providers/novel_reference_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../../helpers/novel_metadata_db_fixture.dart';
@@ -111,7 +112,7 @@ void main() {
           container: container,
           child: MaterialApp(
             locale: const Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: Builder(
@@ -277,7 +278,7 @@ void main() {
           ],
           child: const MaterialApp(
             locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ReferenceSourcesDialog(folderName: 'part3', title: '第3部'),

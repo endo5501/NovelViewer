@@ -15,6 +15,7 @@ import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 /// A pointer that does not hover never leaves the popup's `MouseRegion`, so
 /// the popup a finger opens has no way out. These tests cover the way out:
@@ -87,7 +88,7 @@ void main() {
         container: container,
         child: MaterialApp(
           locale: const Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: HoverPopupHost(

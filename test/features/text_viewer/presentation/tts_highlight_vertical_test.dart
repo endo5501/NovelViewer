@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 void main() {
   group('VerticalTextPage - TTS highlight', () {
@@ -12,7 +13,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           locale: Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
@@ -48,7 +49,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           locale: Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
@@ -82,7 +83,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           locale: Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
@@ -128,7 +129,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: ThemeData(brightness: Brightness.dark),
           home: const Scaffold(

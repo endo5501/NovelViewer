@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 void main() {
   group('VerticalTextViewer - TTS auto page', () {
@@ -12,7 +13,7 @@ void main() {
         const ProviderScope(
           child: MaterialApp(
             locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SizedBox(
@@ -45,7 +46,7 @@ void main() {
         ProviderScope(
           child: MaterialApp(
             locale: const Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SizedBox(
@@ -70,7 +71,7 @@ void main() {
         ProviderScope(
           child: MaterialApp(
             locale: const Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SizedBox(

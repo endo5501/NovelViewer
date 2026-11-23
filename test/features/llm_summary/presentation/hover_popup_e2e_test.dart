@@ -15,6 +15,7 @@ import 'package:novel_viewer/features/llm_summary/presentation/hover_popup_widge
 import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 void main() {
   testWidgets(
@@ -43,7 +44,7 @@ void main() {
           ],
           child: const MaterialApp(
             locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Material(
               child: HoverPopupWidget(

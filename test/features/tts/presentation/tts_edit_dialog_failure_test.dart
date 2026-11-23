@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/app_update/providers/update_providers.dart
 import 'package:novel_viewer/features/file_browser/providers/file_browser_providers.dart';
 import 'package:novel_viewer/features/tts/presentation/tts_edit_dialog.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 import 'package:novel_viewer/shared/failure/failure_detail_dialog.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -48,7 +49,7 @@ void main() {
           libraryPathProvider.overrideWithValue('/library'),
         ],
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('ja'),
           home: Scaffold(

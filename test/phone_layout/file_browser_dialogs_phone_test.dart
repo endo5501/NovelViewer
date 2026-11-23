@@ -20,6 +20,7 @@ import 'package:novel_viewer/features/reading_progress/providers/reading_progres
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/phone_display.dart';
@@ -201,7 +202,7 @@ void main() {
         ],
         child: const MaterialApp(
           locale: Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: SafeArea(child: FileBrowserPanel())),
         ),

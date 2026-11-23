@@ -7,6 +7,7 @@ import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata
 import 'package:novel_viewer/features/text_download/presentation/download_dialog.dart';
 import 'package:novel_viewer/features/text_download/providers/text_download_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 NovelMetadata _meta({
   required String siteType,
@@ -47,7 +48,7 @@ void main() {
       ],
       child: MaterialApp(
         locale: const Locale('ja'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
@@ -72,7 +73,7 @@ void main() {
       ],
       child: MaterialApp(
         locale: const Locale('ja'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
@@ -252,7 +253,7 @@ void main() {
             ],
             child: MaterialApp(
               locale: const Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Builder(
                 builder: (context) => Scaffold(

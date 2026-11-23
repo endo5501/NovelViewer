@@ -6,6 +6,7 @@ import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/data/viewer_selection.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 Widget _buildTestWidget({
   required List<TextSegment> segments,
@@ -20,7 +21,7 @@ Widget _buildTestWidget({
 }) {
   return MaterialApp(
     locale: const Locale('ja'),
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     theme: theme,
     home: Scaffold(

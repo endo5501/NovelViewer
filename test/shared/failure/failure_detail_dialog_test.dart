@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 import 'package:novel_viewer/shared/failure/failure_detail_dialog.dart';
 import 'package:novel_viewer/shared/failure/failure_report.dart';
 
@@ -23,7 +24,7 @@ void main() {
   Future<void> pumpDialog(WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('ja'),
         home: Scaffold(

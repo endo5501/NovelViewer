@@ -15,6 +15,7 @@ import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata
 import 'package:novel_viewer/features/settings/data/text_display_mode.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 class _MockDisplayMode extends DisplayModeNotifier {
   _MockDisplayMode(this._initial);
@@ -116,7 +117,7 @@ Widget _wrap(ProviderContainer container, Widget child) {
     container: container,
     child: MaterialApp(
       locale: const Locale('ja'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(body: child),
     ),

@@ -16,6 +16,7 @@ import 'package:novel_viewer/features/tts/data/tts_engine_type.dart';
 import 'package:novel_viewer/features/tts/providers/irodori_model_download_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dart';
 
@@ -74,7 +75,7 @@ void main() {
       ],
       child: const MaterialApp(
         locale: Locale('ja'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: SizedBox(width: 800, height: 600, child: SettingsDialog()),

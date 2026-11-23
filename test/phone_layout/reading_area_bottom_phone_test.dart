@@ -10,6 +10,7 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/text_content_renderer.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/phone_display.dart';
@@ -77,7 +78,7 @@ void main() {
         container: container,
         child: MaterialApp(
           locale: const Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             appBar: AppBar(),

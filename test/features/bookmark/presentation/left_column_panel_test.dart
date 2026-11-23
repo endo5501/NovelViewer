@@ -9,6 +9,7 @@ import 'package:novel_viewer/features/llm_summary/providers/llm_summary_provider
 import 'package:novel_viewer/features/novel_metadata_db/domain/novel_metadata.dart';
 import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
   final String? _initialValue;
@@ -45,7 +46,7 @@ void main() {
           overrides: [libraryPathProvider.overrideWithValue('/library')],
           child: const MaterialApp(
             locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: LeftColumnPanel()),
           ),
@@ -76,7 +77,7 @@ void main() {
           ],
           child: const MaterialApp(
             locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: LeftColumnPanel()),
           ),
@@ -98,7 +99,7 @@ void main() {
           overrides: [libraryPathProvider.overrideWithValue('/library')],
           child: const MaterialApp(
             locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: LeftColumnPanel()),
           ),
@@ -126,7 +127,7 @@ void main() {
           ],
           child: const MaterialApp(
             locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: LeftColumnPanel()),
           ),
@@ -149,7 +150,7 @@ void main() {
           overrides: [libraryPathProvider.overrideWithValue('/library')],
           child: const MaterialApp(
             locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: LeftColumnPanel()),
           ),
@@ -179,7 +180,7 @@ void main() {
           ],
           child: const MaterialApp(
             locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: LeftColumnPanel()),
           ),

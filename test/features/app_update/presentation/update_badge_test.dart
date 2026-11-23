@@ -11,6 +11,7 @@ import 'package:novel_viewer/features/app_update/presentation/update_badge.dart'
 import 'package:novel_viewer/features/app_update/providers/update_providers.dart';
 import 'package:novel_viewer/features/settings/providers/settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 import 'package:novel_viewer/shared/platform/platform_capabilities.dart';
 import 'package:novel_viewer/shared/providers/platform_capabilities_provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -26,7 +27,7 @@ void main() {
       overrides: [updateAvailableProvider.overrideWithValue(available)],
       child: MaterialApp(
         locale: const Locale('ja'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(appBar: AppBar(actions: const [UpdateBadge()])),
       ),
@@ -100,7 +101,7 @@ void main() {
           container: container,
           child: MaterialApp(
             locale: const Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(appBar: AppBar(actions: const [UpdateBadge()])),
           ),

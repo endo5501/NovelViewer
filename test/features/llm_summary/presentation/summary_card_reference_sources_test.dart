@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/llm_summary/providers/hover_popup_cache_pr
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_detail_provider.dart';
 import 'package:novel_viewer/features/llm_summary/providers/llm_summary_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 const _part1 = SnapshotReferenceSource(folderName: 'narou_p1', title: '第1部');
 const _wiki = SnapshotReferenceSource(
@@ -44,7 +45,7 @@ Widget _popup(
   ],
   child: MaterialApp(
     locale: locale,
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: const Material(
       child: Align(
@@ -134,7 +135,7 @@ void main() {
     ],
     child: const MaterialApp(
       locale: Locale('ja'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: LlmSummaryDetailDialog(folderPath: 'novel_a', word: 'アリス'),

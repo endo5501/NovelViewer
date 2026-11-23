@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/file_browser/domain/move_destination.dart';
 import 'package:novel_viewer/features/file_browser/presentation/move_destination_dialog.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 void main() {
   const destinations = [
@@ -16,7 +17,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('ja'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
@@ -56,7 +57,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('ja'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(

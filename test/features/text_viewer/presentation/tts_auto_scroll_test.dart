@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/text_viewer/providers/text_viewer_provider
 import 'package:novel_viewer/features/tts/providers/tts_playback_providers.dart';
 import 'package:novel_viewer/features/tts/providers/tts_settings_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -33,7 +34,7 @@ void main() {
           ],
           child: const MaterialApp(
             locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SizedBox(height: 400, child: TextViewerPanel()),

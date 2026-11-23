@@ -13,6 +13,7 @@ import 'package:novel_viewer/features/tts/data/tts_dictionary_database.dart';
 import 'package:novel_viewer/shared/database/per_folder_db_registry.dart';
 import 'package:novel_viewer/shared/database/per_folder_db_registry_provider.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 import 'package:path/path.dart' as p;
 
 class _TestCurrentDirectoryNotifier extends CurrentDirectoryNotifier {
@@ -131,7 +132,7 @@ Widget _panel({
     ],
     child: const MaterialApp(
       locale: Locale('ja'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(body: FileBrowserPanel()),
     ),

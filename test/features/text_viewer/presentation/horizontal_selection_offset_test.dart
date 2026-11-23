@@ -8,6 +8,7 @@ import 'package:novel_viewer/features/settings/providers/settings_providers.dart
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/text_content_renderer.dart';
 import 'package:novel_viewer/features/text_viewer/providers/text_viewer_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 /// Horizontal mode must report the selection start in PLAIN-TEXT coordinates
 /// (ruby replaced by its base text), not in `SelectableText.rich` display
@@ -32,7 +33,7 @@ void main() {
         overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
         child: MaterialApp(
           locale: const Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(

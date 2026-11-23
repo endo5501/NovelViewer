@@ -16,6 +16,7 @@ import 'package:novel_viewer/features/llm_summary/providers/hover_popup_provider
 import 'package:novel_viewer/features/text_search/data/text_search_service.dart';
 import 'package:novel_viewer/features/text_search/providers/text_search_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Throws if the dropdown ever reaches for a folder search while building
@@ -89,7 +90,7 @@ ProviderScope _scopedWith({
     ],
     child: MaterialApp(
       locale: const Locale('ja'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Material(child: child),
     ),
@@ -333,7 +334,7 @@ void main() {
             container: container,
             child: const MaterialApp(
               locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Material(
                 child: HoverPopupWidget(
@@ -414,7 +415,7 @@ void main() {
           container: container,
           child: const MaterialApp(
             locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Material(
               child: HoverPopupWidget(
@@ -475,7 +476,7 @@ void main() {
           container: container,
           child: const MaterialApp(
             locale: Locale('ja'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Material(
               child: HoverPopupWidget(
@@ -684,7 +685,7 @@ void main() {
           ],
           child: MaterialApp(
             locale: locale,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Material(
               child: Align(

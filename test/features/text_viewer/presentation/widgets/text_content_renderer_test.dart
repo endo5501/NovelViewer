@@ -16,6 +16,7 @@ import 'package:novel_viewer/features/text_viewer/presentation/ruby_text_builder
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_viewer.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/widgets/text_content_renderer.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 void main() {
   group('computeLineStartOffsets', () {
@@ -309,7 +310,7 @@ void main() {
         ],
         child: MaterialApp(
           locale: const Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
@@ -371,7 +372,7 @@ void main() {
             ],
             child: const MaterialApp(
               locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: SizedBox(
@@ -432,7 +433,7 @@ void main() {
             ],
             child: const MaterialApp(
               locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: SizedBox(
@@ -515,7 +516,7 @@ void main() {
             ],
             child: const MaterialApp(
               locale: Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: SizedBox(
@@ -567,7 +568,7 @@ void main() {
             ],
             child: MaterialApp(
               locale: const Locale('ja'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: SizedBox(

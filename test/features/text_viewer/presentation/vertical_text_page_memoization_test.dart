@@ -5,6 +5,7 @@ import 'package:novel_viewer/features/text_viewer/data/text_segment.dart';
 import 'package:novel_viewer/features/text_viewer/data/vertical_marked_ranges.dart';
 import 'package:novel_viewer/features/text_viewer/presentation/vertical_text_page.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 const _segments = [PlainTextSegment('アリスが歩く。ボブが走る。')];
 const _marked = {'アリス': MarkStyle.solid, 'ボブ': MarkStyle.solid};
@@ -19,7 +20,7 @@ Widget _wrap({
 }) {
   return MaterialApp(
     locale: const Locale('ja'),
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: SizedBox(

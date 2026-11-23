@@ -12,6 +12,7 @@ import 'package:novel_viewer/features/novel_metadata_db/providers/novel_metadata
 import 'package:novel_viewer/features/novel_reference/domain/reference_graph.dart';
 import 'package:novel_viewer/features/novel_reference/providers/novel_reference_providers.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 
 class _Dir extends CurrentDirectoryNotifier {
   @override
@@ -69,7 +70,7 @@ void main() {
         ],
         child: const MaterialApp(
           locale: Locale('ja'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: FileBrowserPanel()),
         ),

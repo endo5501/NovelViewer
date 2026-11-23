@@ -11,6 +11,11 @@ analyzer:
     - macos/**
     - linux/**
     - third_party/**
+    # gen-l10n output. As of Flutter 3.50 its template still emits the
+    # deprecated flutter_localizations delegates, and hand edits are lost on
+    # regeneration. The app uses lib/l10n/app_localization_delegates.dart
+    # instead. Exclude only generated files here, never hand-written code.
+    - lib/l10n/app_localizations*.dart
 
 linter:
   rules:

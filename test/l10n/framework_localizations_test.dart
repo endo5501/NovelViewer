@@ -1,6 +1,7 @@
 import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoLocalizations;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:novel_viewer/l10n/app_localization_delegates.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 
 /// Framework widgets (dialog buttons, text selection menus) read their
@@ -23,7 +24,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: Locale(tag),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
