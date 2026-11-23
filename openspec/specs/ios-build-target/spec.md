@@ -1,6 +1,6 @@
 ## Purpose
 
-Defines the committed state of the `ios/` project so NovelViewer builds and runs on both iPad and iPhone: a device family covering both, with unrestricted orientations on iPad and portrait only on iPhone, a `Documents` library the reader can reach from the Files app, a declared local-network usage description so the reader can be asked for permission to reach a self-hosted LLM server, Swift Package Manager as the sole dependency integration (no CocoaPods on iOS, with macOS untouched), a signing identity kept out of the repository behind an untracked `Local.xcconfig`, Flutter's required project migrations tracked so a build never rewrites tracked files, native frameworks under `ios/Frameworks/` embedded and signed without a static list (and without breaking a build that has none), and documented build prerequisites and constraints.
+Defines the committed state of the `ios/` project so NovelViewer builds and runs on both iPad and iPhone: a device family covering both, with unrestricted orientations on iPad and portrait only on iPhone, a `Documents` library the reader can reach from the Files app, a declared local-network usage description so the reader can be asked for permission to reach a self-hosted LLM server, Swift Package Manager as the sole dependency integration (no CocoaPods on iOS; the macOS integration is specified by `macos-build-target`), a signing identity kept out of the repository behind an untracked `Local.xcconfig`, Flutter's required project migrations tracked so a build never rewrites tracked files, native frameworks under `ios/Frameworks/` embedded and signed without a static list (and without breaking a build that has none), and documented build prerequisites and constraints.
 
 ## Requirements
 
@@ -51,8 +51,8 @@ Without it the failure is silent and misleading: the settings section is present
 - **WHEN** `ios/Runner/Info.plist` is inspected
 - **THEN** it declares no App Transport Security exception, since the HTTP client in use is not subject to that policy
 
-### Requirement: Swift Package Manager is the only dependency integration on iOS
-Every plugin the project depends on resolves as a Swift Package for iOS, so the iOS target SHALL NOT carry a CocoaPods integration. `ios/Podfile` SHALL NOT exist, and neither `ios/Flutter/Debug.xcconfig` nor `ios/Flutter/Release.xcconfig` SHALL include a `Pods-Runner` xcconfig. The macOS target's CocoaPods integration is out of scope and SHALL remain unchanged.
+### Requirement: iOS integrates dependencies through Swift Package Manager alone
+Every plugin the project depends on resolves as a Swift Package for iOS, so the iOS target SHALL NOT carry a CocoaPods integration. `ios/Podfile` SHALL NOT exist, and neither `ios/Flutter/Debug.xcconfig` nor `ios/Flutter/Release.xcconfig` SHALL include a `Pods-Runner` xcconfig. The macOS target's dependency integration is specified by the `macos-build-target` capability.
 
 #### Scenario: No Podfile on iOS
 - **WHEN** the `ios/` directory is inspected
@@ -69,10 +69,6 @@ Every plugin the project depends on resolves as a Swift Package for iOS, so the 
 #### Scenario: The two pin files agree
 - **WHEN** the two tracked `Package.resolved` files are compared
 - **THEN** their contents are identical, so the resolved plugin versions do not depend on which container the project is opened through
-
-#### Scenario: macOS keeps CocoaPods
-- **WHEN** the `macos/` directory is inspected
-- **THEN** `macos/Podfile` and `macos/Podfile.lock` are still present and unchanged
 
 ### Requirement: Signing identity is kept out of the repository
 The developer's `DEVELOPMENT_TEAM` SHALL NOT be committed. The iOS xcconfigs SHALL optionally include an untracked `ios/Flutter/Local.xcconfig` that supplies it, and the build configuration SHALL remain valid when that file is absent.

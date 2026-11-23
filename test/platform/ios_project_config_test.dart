@@ -332,9 +332,7 @@ void main() {
         expect(
           File(path).existsSync(),
           isTrue,
-          reason:
-              'Package.resolved pins the plugin dependencies, the way '
-              'macos/Podfile.lock does for CocoaPods',
+          reason: 'Package.resolved pins the plugin dependencies',
         );
         final tracked = git(['ls-files', '--error-unmatch', path]);
         if (tracked == null) continue;
@@ -358,12 +356,6 @@ void main() {
             'would pin different plugin versions depending on how the '
             'project is opened',
       );
-    });
-
-    test('macOS keeps its CocoaPods integration', () {
-      // Dropping CocoaPods was an iOS-only decision. macOS is untouched.
-      expect(File('macos/Podfile').existsSync(), isTrue);
-      expect(File('macos/Podfile.lock').existsSync(), isTrue);
     });
   });
 

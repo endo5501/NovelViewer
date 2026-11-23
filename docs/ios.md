@@ -147,7 +147,7 @@ IDEs with Flutter plugins or from Xcode.
 
 ### 4. 依存の管理方式
 
-iOS は Swift Package Manager 単独構成です（CocoaPods は使用しません）。`ios/Podfile` は存在せず、依存のピンは 2 つの `xcshareddata/swiftpm/Package.resolved` が保持します。macOS は従来どおり CocoaPods です。
+iOS は Swift Package Manager 単独構成です（CocoaPods は使用しません）。`ios/Podfile` は存在せず、依存のピンは 2 つの `xcshareddata/swiftpm/Package.resolved` が保持します。macOS も同じく Swift Package Manager 単独構成で、`macos/Podfile` はありません。
 
 ### 5. 読み上げ（TTS）のネイティブライブラリ
 
