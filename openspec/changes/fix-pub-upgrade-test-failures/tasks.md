@@ -2,7 +2,7 @@
 
 ## 1. record 7.2.0 への追従
 
-- [ ] 1.1 `test/features/tts/data/voice_recording_service_test.dart` の `FakeAudioRecorder` に `onStopped()`（`Stream<RecordStop>.empty()` を返す）を追加し、`fvm flutter test test/features/tts/data/voice_recording_service_test.dart` が通り、`fvm flutter analyze` のエラーが0件になることを確認する
+- [x] 1.1 `test/features/tts/data/voice_recording_service_test.dart` の `FakeAudioRecorder` に `onStopped()`（`Stream<RecordStop>.empty()` を返す）を追加し、`fvm flutter test test/features/tts/data/voice_recording_service_test.dart` が通り、`fvm flutter analyze` のエラーが0件になることを確認する
 
 ## 2. 辞書アーカイブの展開前検査
 
