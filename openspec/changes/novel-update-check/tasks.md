@@ -35,8 +35,8 @@
 
 ## 6. 状態管理と進捗ダイアログ
 
-- [ ] 6.1 テストを先に書く: `NovelUpdateCheckNotifier` が idle → checking(n, N) → completed(summary) / cancelled と遷移すること。終了時（キャンセルを含む）に `allNovelsProvider` が invalidate されること。実行中にもう一度開始しても二重に走らないこと。失敗を確かめる
-- [ ] 6.2 Notifier を実装し、6.1 が通ることを確かめる
+- [x] 6.1 テストを先に書く: `NovelUpdateCheckNotifier` が idle → checking(n, N) → completed(summary) / cancelled と遷移すること。終了時（キャンセルを含む）に `allNovelsProvider` が invalidate されること。実行中にもう一度開始しても二重に走らないこと。失敗を確かめる
+- [x] 6.2 Notifier を実装し、6.1 が通ることを確かめる
 - [ ] 6.3 ウィジェットテストを先に書く: ツールバーに `file_browser_update_check_button` があり、押すとモーダルの進捗ダイアログが開くこと。ダウンロード中に押すと既存のダウンロード中の警告が SnackBar に出て、チェックが始まらないこと。ツールチップが「新着チェック」であること。実行中は `n / N` とキャンセルボタンが出ること。完了時は要約（新着あり X / 確認できなかった Y、または新着なし）が出ること。キャンセル時はキャンセルの文言が出ること。閉じられること。失敗を確かめる
 - [ ] 6.4 ボタンと `UpdateCheckProgressDialog` を実装し、ja / en / zh の `.arb` に新規文字列を追加する。6.3 が通り、`fvm flutter gen-l10n` で未翻訳の警告が出ないことを確かめる
 

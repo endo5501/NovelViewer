@@ -119,6 +119,9 @@ class NovelUpdateChecker {
         isR18: isR18,
         cancelToken: cancelToken,
       )) {
+        // A cancel that arrived while the request was in flight wins over its
+        // answer, as it does when closing the client aborts the request.
+        cancelToken?.throwIfCancelled();
         for (final MapEntry(key: ncode, value: latest) in chunk.entries) {
           await record(byNcode[ncode]!, latest);
         }
@@ -131,7 +134,9 @@ class NovelUpdateChecker {
       cancelToken?.throwIfCancelled();
       if (!first) await Future<void>.delayed(requestDelay);
       first = false;
-      await record(novel, await _countFromIndex(novel, cancelToken));
+      final latest = await _countFromIndex(novel, cancelToken);
+      cancelToken?.throwIfCancelled();
+      await record(novel, latest);
       onProgress?.call(done, targets.length);
     }
 
