@@ -11,6 +11,8 @@ import 'helpers/download_test_helpers.dart';
 /// `DownloadService.fetchEpisodeCount` reads only the first index page and
 /// reports how many episodes it lists — the update check's view of "how many
 /// episodes the site has now" for Kakuyomu and Hameln.
+const _html = {'content-type': 'text/html; charset=utf-8'};
+
 void main() {
   String fixture(String name) =>
       File('test/fixtures/text_download/$name').readAsStringSync();
@@ -30,7 +32,11 @@ void main() {
     final log = <String>[];
     final s = service(log, {
       '/works/12345': [
-        FakeRoute('', body: fixture('kakuyomu_index_valid.html')),
+        FakeRoute(
+          '',
+          body: fixture('kakuyomu_index_valid.html'),
+          headers: _html,
+        ),
       ],
     });
 
@@ -47,7 +53,7 @@ void main() {
     final log = <String>[];
     final s = service(log, {
       '/novel/000000': [
-        FakeRoute('', body: fixture('hameln_index_valid.html')),
+        FakeRoute('', body: fixture('hameln_index_valid.html'), headers: _html),
       ],
     });
 
@@ -60,7 +66,11 @@ void main() {
   test('a short story with only a body counts as one episode', () async {
     final s = service([], {
       '/novel/000000': [
-        FakeRoute('', body: fixture('hameln_index_short_story.html')),
+        FakeRoute(
+          '',
+          body: fixture('hameln_index_short_story.html'),
+          headers: _html,
+        ),
       ],
     });
 
@@ -72,7 +82,11 @@ void main() {
   test('an index with neither episodes nor body is an error', () async {
     final s = service([], {
       '/novel/000000': [
-        FakeRoute('', body: fixture('hameln_index_drifted.html')),
+        FakeRoute(
+          '',
+          body: fixture('hameln_index_drifted.html'),
+          headers: _html,
+        ),
       ],
     });
 
@@ -87,7 +101,11 @@ void main() {
     final s = service(log, {
       '/works/12345': [
         const FakeRoute('', statusCode: 503),
-        FakeRoute('', body: fixture('kakuyomu_index_valid.html')),
+        FakeRoute(
+          '',
+          body: fixture('kakuyomu_index_valid.html'),
+          headers: _html,
+        ),
       ],
     });
 
@@ -117,7 +135,11 @@ void main() {
     final log = <String>[];
     final s = service(log, {
       '/works/12345': [
-        FakeRoute('', body: fixture('kakuyomu_index_valid.html')),
+        FakeRoute(
+          '',
+          body: fixture('kakuyomu_index_valid.html'),
+          headers: _html,
+        ),
       ],
     });
     final token = CancellationToken()..cancel();

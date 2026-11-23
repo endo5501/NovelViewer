@@ -427,6 +427,32 @@ class DownloadService {
     return updatedAt != cachedLastModified;
   }
 
+  /// Reads only the first index page of [url] and returns how many episodes
+  /// it lists — the update check's view of the site's current total. A page
+  /// with no episode list but a body (a short story) counts as 1. A page with
+  /// neither is markup drift and throws [EmptyIndexException]. No episode body
+  /// is fetched and nothing is written to disk.
+  ///
+  /// Only meaningful for sites whose index lists every episode on one page
+  /// (Kakuyomu, Hameln); Narou paginates and is counted through its API.
+  Future<int> fetchEpisodeCount({
+    required NovelSite site,
+    required Uri url,
+    CancellationToken? cancelToken,
+  }) async {
+    cancelToken?.throwIfCancelled();
+    final normalizedUrl = site.normalizeUrl(url);
+    final response = await _fetchPageResponse(
+      normalizedUrl,
+      site: site,
+      cancelToken: cancelToken,
+    );
+    final index = site.parseIndex(site.decodeBody(response), normalizedUrl);
+    if (index.episodes.isNotEmpty) return index.episodes.length;
+    if (index.bodyContent != null) return 1;
+    throw EmptyIndexException(normalizedUrl);
+  }
+
   Future<DownloadResult> downloadNovel({
     required NovelSite site,
     required Uri url,

@@ -12,8 +12,8 @@
 
 ## 3. 目次1ページの取得（DownloadService.fetchEpisodeCount）
 
-- [ ] 3.1 テストを先に書く（`http` のモッククライアントを使う）: カクヨムとハーメルンの目次の HTML から `fetchEpisodeCount` が全話の数を返すこと。短編（本文のみ）を総話数 1 と数えること。目次が空で本文も無ければ `EmptyIndexException` を投げること。5xx は再試行され、4xx はすぐ失敗すること。リクエストが目次の1回だけであること。失敗を確かめる
-- [ ] 3.2 `DownloadService.fetchEpisodeCount` を実装し、3.1 と既存の `test/features/text_download` が通ることを確かめる
+- [x] 3.1 テストを先に書く（`http` のモッククライアントを使う）: カクヨムとハーメルンの目次の HTML から `fetchEpisodeCount` が全話の数を返すこと。短編（本文のみ）を総話数 1 と数えること。目次が空で本文も無ければ `EmptyIndexException` を投げること。5xx は再試行され、4xx はすぐ失敗すること。リクエストが目次の1回だけであること。失敗を確かめる
+- [x] 3.2 `DownloadService.fetchEpisodeCount` を実装し、3.1 と既存の `test/features/text_download` が通ることを確かめる
 
 ## 4. なろう API クライアント
 
