@@ -108,7 +108,9 @@ class UpdateCheckProgressDialog extends ConsumerWidget {
         return Text(l10n.updateCheck_cancelledMessage);
       case UpdateCheckStatus.error:
         return Text(
-          l10n.common_errorPrefix(l10n.common_unknownError),
+          l10n.common_errorPrefix(
+            state.errorMessage ?? l10n.common_unknownError,
+          ),
           style: const TextStyle(color: Colors.red),
         );
     }

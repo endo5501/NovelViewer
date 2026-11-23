@@ -21,11 +21,15 @@ class UpdateCheckState {
   /// Set once [status] is [UpdateCheckStatus.completed].
   final UpdateCheckSummary? summary;
 
+  /// What went wrong, once [status] is [UpdateCheckStatus.error].
+  final String? errorMessage;
+
   const UpdateCheckState({
     this.status = UpdateCheckStatus.idle,
     this.done = 0,
     this.total = 0,
     this.summary,
+    this.errorMessage,
   });
 }
 
@@ -68,14 +72,17 @@ class NovelUpdateCheckNotifier extends Notifier<UpdateCheckState> {
 
     final client = ref.read(updateCheckClientFactoryProvider)();
     token.onCancel(client.close);
+    UpdateCheckState next;
     try {
       final novels = await ref.read(allNovelsProvider.future);
+      if (!ref.mounted) return;
       final summary = await ref
           .read(novelUpdateCheckerFactoryProvider)(client)
           .run(
             novels,
             cancelToken: token,
             onProgress: (done, total) {
+              if (!ref.mounted) return;
               state = UpdateCheckState(
                 status: UpdateCheckStatus.checking,
                 done: done,
@@ -83,26 +90,34 @@ class NovelUpdateCheckNotifier extends Notifier<UpdateCheckState> {
               );
             },
           );
-      state = UpdateCheckState(
+      next = UpdateCheckState(
         status: UpdateCheckStatus.completed,
-        done: state.total,
-        total: state.total,
         summary: summary,
       );
     } on CancelledException {
-      state = UpdateCheckState(
-        status: UpdateCheckStatus.cancelled,
-        done: state.done,
-        total: state.total,
-      );
+      next = const UpdateCheckState(status: UpdateCheckStatus.cancelled);
     } catch (e, st) {
       _log.warning('Update check failed', e, st);
-      state = const UpdateCheckState(status: UpdateCheckStatus.error);
+      next = UpdateCheckState(
+        status: UpdateCheckStatus.error,
+        errorMessage: e.toString(),
+      );
     } finally {
       _cancelToken = null;
       client.close();
-      ref.invalidate(allNovelsProvider);
     }
+    // The scope may have gone away (app closing) while the check ran.
+    if (!ref.mounted) return;
+    state = UpdateCheckState(
+      status: next.status,
+      done: next.status == UpdateCheckStatus.completed
+          ? state.total
+          : state.done,
+      total: state.total,
+      summary: next.summary,
+      errorMessage: next.errorMessage,
+    );
+    ref.invalidate(allNovelsProvider);
   }
 
   /// Asks the running check to stop before its next request.

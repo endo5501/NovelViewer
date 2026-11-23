@@ -119,7 +119,12 @@ class NovelUpdateChecker {
         cancelToken?.throwIfCancelled();
       }
       hadRequest = true;
-      final byNcode = {for (final n in group) n.novelId.toLowerCase(): n};
+      // Several rows can share an ncode once case is ignored (a URL pasted
+      // in upper case); each is recorded and counted.
+      final byNcode = <String, List<NovelMetadata>>{};
+      for (final n in group) {
+        byNcode.putIfAbsent(n.novelId.toLowerCase(), () => []).add(n);
+      }
       await for (final chunk in narouApi.fetchEpisodeCounts(
         byNcode.keys.toList(),
         isR18: isR18,
@@ -129,7 +134,9 @@ class NovelUpdateChecker {
         // answer, as it does when closing the client aborts the request.
         cancelToken?.throwIfCancelled();
         for (final MapEntry(key: ncode, value: latest) in chunk.entries) {
-          await record(byNcode[ncode]!, latest);
+          for (final novel in byNcode[ncode]!) {
+            await record(novel, latest);
+          }
         }
         onProgress?.call(done, targets.length);
       }

@@ -31,10 +31,18 @@ class NarouApiClient {
   final Duration requestDelay;
   final Duration requestTimeout;
 
+  /// Retries of a transient failure (HTTP 5xx, timeout) before a chunk fails,
+  /// with an exponential backoff from [retryBaseDelay] — as index pages are
+  /// fetched for downloads.
+  final int maxRetries;
+  final Duration retryBaseDelay;
+
   NarouApiClient({
     required http.Client client,
     this.requestDelay = const Duration(milliseconds: 700),
     this.requestTimeout = const Duration(seconds: 30),
+    this.maxRetries = 2,
+    this.retryBaseDelay = const Duration(milliseconds: 500),
   }) : _client = client;
 
   /// Emits one map per chunk of [ncodes] (lower-case, as stored in
@@ -79,19 +87,41 @@ class NarouApiClient {
       'ncode': chunk.join('-'),
     });
     try {
-      final response = await _client
-          .get(url, headers: const {'User-Agent': _userAgent})
-          .timeout(requestTimeout);
+      final response = await _getWithRetry(url, cancelToken);
       if (response.statusCode != 200) {
         _log.warning('Narou API returned HTTP ${response.statusCode}');
         return const {};
       }
       return _parse(utf8.decode(response.bodyBytes), chunk.toSet());
+    } on CancelledException {
+      rethrow;
     } catch (e, st) {
       // A cancellation closes the client; report it as such, not as a failure.
       cancelToken?.throwIfCancelled();
       _log.warning('Narou API request failed', e, st);
       return const {};
+    }
+  }
+
+  /// GETs [url], retrying HTTP 5xx and timeouts up to [maxRetries] times.
+  /// Any other status is returned as is for the caller to judge.
+  Future<http.Response> _getWithRetry(
+    Uri url,
+    CancellationToken? cancelToken,
+  ) async {
+    for (var attempt = 0; ; attempt++) {
+      cancelToken?.throwIfCancelled();
+      final bool retryable;
+      try {
+        final response = await _client
+            .get(url, headers: const {'User-Agent': _userAgent})
+            .timeout(requestTimeout);
+        retryable = response.statusCode >= 500 && response.statusCode <= 599;
+        if (!retryable || attempt >= maxRetries) return response;
+      } on TimeoutException {
+        if (attempt >= maxRetries) rethrow;
+      }
+      await Future<void>.delayed(retryBaseDelay * (1 << attempt));
     }
   }
 
