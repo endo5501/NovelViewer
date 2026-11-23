@@ -22,7 +22,7 @@
 
 ## 5. チェックの中核（NovelUpdateChecker）
 
-- [ ] 5.1 テストを先に書く（リポジトリ、`fetchEpisodeCount`、API クライアントは差し替え、待ち時間は 0）:
+- [x] 5.1 テストを先に書く（リポジトリ、`fetchEpisodeCount`、API クライアントは差し替え、待ち時間は 0）:
   - 対象が narou / kakuyomu / hameln だけで、web と aozora にはリクエストしないこと
   - 1作の結果が出るたびに `recordUpdateCheck` を呼び、進捗 `n / N` を通知すること
   - 失敗した作品の結果は書き換えず、残りを続けること
@@ -31,7 +31,7 @@
   - 小説フォルダとエピソードキャッシュに触れないこと（ファイル操作の API を渡さない構成で確かめる）
 
   失敗を確かめる
-- [ ] 5.2 `lib/features/novel_update_check/data/novel_update_checker.dart` を実装し、5.1 が通ることを確かめる
+- [x] 5.2 `lib/features/novel_update_check/data/novel_update_checker.dart` を実装し、5.1 が通ることを確かめる
 
 ## 6. 状態管理と進捗ダイアログ
 
