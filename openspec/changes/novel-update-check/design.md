@@ -110,7 +110,7 @@
 
 ### 7. バッジの判定
 
-`ReadingProgressBadge` に `hasNewEpisodes`（bool）を足す。`ReadingProgressBadge.from` に `latestEpisodeCount` を渡し、Decisions 1 の判定式で決める。`_ReadingProgressBar` の `read / total` の横に、小さな「NEW」チップを出す。`readingProgressBadgesProvider` は `allNovelsProvider` を watch しているので、チェックの終了時と更新の完了時に `allNovelsProvider` を invalidate すれば印が追随する。キャンセルや途中終了でも、閉じる前に invalidate する。
+`ReadingProgressBadge` に `hasNewEpisodes`（bool）を足す。`ReadingProgressBadge.from` に `latestEpisodeCount` を渡し、Decisions 1 の判定式で決める。`_ReadingProgressBar` の `read / total` の横に、小さな印（`updateCheck_newBadge`: ja「新着」/ en「New」/ zh「新」）のチップを出す。`readingProgressBadgesProvider` は `allNovelsProvider` を watch しているので、チェックの終了時と更新の完了時に `allNovelsProvider` を invalidate すれば印が追随する。キャンセルや途中終了でも、閉じる前に invalidate する。
 
 ## Risks / Trade-offs
 
@@ -127,4 +127,4 @@
 
 ## Open Questions
 
-- ボタンのアイコン（`Icons.update` / `Icons.notifications` など）とバッジの印の見た目は、実装時に画面で確かめて決める。
+- 解決済み（2026-11-23）: ボタンのアイコンは `Icons.update`、バッジの印は `tertiaryContainer` 色の小さなチップとし、macOS・iPad・iPhone の実機で確認した。

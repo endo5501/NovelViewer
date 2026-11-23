@@ -62,10 +62,12 @@ MockClient _web(
   Map<String, int> narouCounts = const {},
   Map<String, int> kakuyomuCounts = const {},
   Set<String> failing = const {},
+  void Function()? onRequest,
 }) {
   return MockClient((request) async {
     final url = request.url;
     log.add(url);
+    onRequest?.call();
     if (failing.any(url.toString().contains)) {
       return http.Response('not found', 404);
     }
@@ -343,24 +345,22 @@ void main() {
         _novel('kakuyomu', '1', 'https://kakuyomu.jp/works/1'),
       ]);
       final times = <DateTime>[];
-      final web = _web(
+      final client = _web(
         [],
         narouCounts: {'n1111aa': 1, 'n2222bb': 1},
         kakuyomuCounts: {'1': 1},
+        onRequest: () => times.add(DateTime.now()),
       );
-      final client = MockClient((request) async {
-        times.add(DateTime.now());
-        return web.send(request).then(http.Response.fromStream);
-      });
       const delay = Duration(milliseconds: 80);
 
-      await NovelUpdateChecker(
+      final summary = await NovelUpdateChecker(
         repository: repository,
         downloadService: DownloadService(client: client),
         narouApi: NarouApiClient(client: client, requestDelay: delay),
         requestDelay: delay,
       ).run(novels);
 
+      expect(summary.checked, 3);
       expect(times, hasLength(3));
       for (var i = 1; i < times.length; i++) {
         expect(

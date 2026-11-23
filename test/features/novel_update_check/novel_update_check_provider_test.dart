@@ -29,12 +29,18 @@ NovelMetadata _narou(String ncode, {int episodeCount = 10}) => NovelMetadata(
 );
 
 /// The Narou API reporting [total] episodes for every asked work. Each
-/// response waits for [gate] when given, so a test can look at the state
-/// while a check is in flight.
-MockClient _api(List<Uri> log, {int total = 12, Completer<void>? gate}) {
+/// response waits for [gate] when given (only for requests [gated] accepts,
+/// all by default), so a test can look at the state while a check is in
+/// flight.
+MockClient _api(
+  List<Uri> log, {
+  int total = 12,
+  Completer<void>? gate,
+  bool Function(Uri url)? gated,
+}) {
   return MockClient((request) async {
     log.add(request.url);
-    if (gate != null) await gate.future;
+    if (gate != null && (gated?.call(request.url) ?? true)) await gate.future;
     final asked = request.url.queryParameters['ncode']!.split('-');
     final items = [
       '{"allcount":${asked.length}}',
@@ -222,5 +228,49 @@ void main() {
     gate.complete();
 
     await expectLater(run, completes);
+  });
+
+  test('works checked before a cancel reach the novel list', () async {
+    await repository.upsert(_narou('n1111aa', episodeCount: 10));
+    await repository.upsert(
+      NovelMetadata(
+        siteType: 'narou',
+        novelId: 'n2222bb',
+        title: 'n2222bb',
+        url: 'https://novel18.syosetu.com/n2222bb/',
+        folderName: 'narou_n2222bb',
+        episodeCount: 10,
+        downloadedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
+    // The general API answers at once; the R18 one waits until cancelled.
+    final r18Gate = Completer<void>();
+    final client = _api(
+      [],
+      total: 12,
+      gate: r18Gate,
+      gated: (url) => url.path.contains('novel18'),
+    );
+    final c = container(client);
+    c.listen(allNovelsProvider, (_, _) {});
+    await c.read(allNovelsProvider.future);
+    final notifier = c.read(novelUpdateCheckProvider.notifier);
+    c.listen(novelUpdateCheckProvider, (_, next) {
+      if (next.status == UpdateCheckStatus.checking && next.done == 1) {
+        notifier.cancel();
+        if (!r18Gate.isCompleted) r18Gate.complete();
+      }
+    });
+
+    await notifier.start();
+
+    expect(
+      c.read(novelUpdateCheckProvider).status,
+      UpdateCheckStatus.cancelled,
+    );
+    final novels = await c.read(allNovelsProvider.future);
+    final byFolder = {for (final n in novels) n.folderName: n};
+    expect(byFolder['narou_n1111aa']!.latestEpisodeCount, 12);
+    expect(byFolder['narou_n2222bb']!.latestEpisodeCount, isNull);
   });
 }
