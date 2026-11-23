@@ -16,8 +16,8 @@
 
 ## 2. データベース v14 とリポジトリ
 
-- [ ] 2.1 `NovelDatabase` を v14 にし、`sync_remote_progress` と `sync_own_progress` に `url TEXT` と `title TEXT` を加える移行を書く。既存の行が残って両列が NULL になることと、新規作成でも列があることを、移行テスト（`novel_database_migration_v14_test.dart`。v13 のテストに倣う）で確かめる（design D4）
-- [ ] 2.2 `ProgressSyncRepository` の行の読み書き（`_recordToRow` / `_rowToRecord`）で `url` と `title` を扱い、受け取った記録を全件返す問い合わせを加える。`replaceRemote` / `replaceOwn` / `commitOwn` / `upsertOwn` でURLとタイトルが保存されて読み戻せることと、全件の問い合わせが全端末の記録を返すことを、リポジトリのテストで確かめる
+- [x] 2.1 `NovelDatabase` を v14 にし、`sync_remote_progress` と `sync_own_progress` に `url TEXT` と `title TEXT` を加える移行を書く。既存の行が残って両列が NULL になることと、新規作成でも列があることを、移行テスト（`novel_database_migration_v14_test.dart`。v13 のテストに倣う）で確かめる（design D4）
+- [x] 2.2 `ProgressSyncRepository` の行の読み書き（`_recordToRow` / `_rowToRecord`）で `url` と `title` を扱い、受け取った記録を全件返す問い合わせを加える。`replaceRemote` / `replaceOwn` / `commitOwn` / `upsertOwn` でURLとタイトルが保存されて読み戻せることと、全件の問い合わせが全端末の記録を返すことを、リポジトリのテストで確かめる
 
 ## 3. 送信へのURLとタイトルの付与（service）
 
