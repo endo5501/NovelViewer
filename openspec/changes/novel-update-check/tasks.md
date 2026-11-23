@@ -53,7 +53,7 @@
 ## 9. 最終確認
 
 - [ ] 9.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 9.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 9.2 codexスキルを使用して現在開発中のコードレビューを実施
 - [ ] 9.3 `fvm dart format lib test`でフォーマットを実行
 - [ ] 9.4 `fvm flutter analyze`でリントを実行
 - [ ] 9.5 `fvm flutter test`でテストを実行
