@@ -184,27 +184,46 @@ class PiperModelDownloadService {
   ///
   /// In-process rather than through `tar`: iOS cannot start a process, and
   /// one code path for every platform keeps that one exercised everywhere.
-  /// The extractor skips an entry that would land outside [outputPath]; the
-  /// callback turns that, and any link (the release holds none), into a
-  /// failure instead of a silently partial dictionary.
+  /// The extractor skips an entry that would land outside [outputPath], and a
+  /// link resolving there, without calling its callback for it. So the whole
+  /// archive is scanned first, and an escaping entry or any link (the release
+  /// holds none) fails the download instead of leaving a silently partial
+  /// dictionary. The extraction callback checks again what it is shown.
   static Future<void> _extract(String archivePath, String outputPath) {
-    return extractFileToDisk(
-      archivePath,
-      outputPath,
-      callback: (entry) {
-        if (entry.isSymbolicLink) {
-          throw Exception(
-            'Dictionary archive holds a link, which it should not: '
-            '${entry.name}',
-          );
-        }
-        if (_escapesTarget(entry.name)) {
-          throw Exception(
-            'Dictionary archive entry escapes its directory: ${entry.name}',
-          );
-        }
-      },
-    );
+    _scan(archivePath);
+    return extractFileToDisk(archivePath, outputPath, callback: _rejectUnsafe);
+  }
+
+  /// Reads every entry header of the tar.gz at [archivePath], without
+  /// keeping any content, and throws on the first one [_rejectUnsafe] refuses.
+  static void _scan(String archivePath) {
+    final input = InputFileStream(archivePath);
+    try {
+      TarDecoder().decodeStream(
+        const GZipDecoder().decodeLazy(input),
+        storeData: false,
+        keepEntries: false,
+        callback: _rejectUnsafe,
+      );
+    } finally {
+      input.closeSync();
+    }
+  }
+
+  /// Throws for an entry the dictionary must not hold: a symbolic or hard
+  /// link, or a path that lands outside the directory it is extracted into.
+  static void _rejectUnsafe(ArchiveFile entry) {
+    if (entry.isSymbolicLink || entry.isHardLink) {
+      throw Exception(
+        'Dictionary archive holds a link, which it should not: '
+        '${entry.name}',
+      );
+    }
+    if (_escapesTarget(entry.name)) {
+      throw Exception(
+        'Dictionary archive entry escapes its directory: ${entry.name}',
+      );
+    }
   }
 
   /// Whether a tar entry [name] points outside the directory it is extracted
