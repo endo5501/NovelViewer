@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,31 @@ import 'package:novel_viewer/features/episode_cache/domain/episode_cache.dart';
 import 'package:novel_viewer/features/text_download/data/download_service.dart';
 import 'package:novel_viewer/features/text_download/data/sites/novel_site.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+/// Runs [body] and counts the timers it starts for [requestDelay], firing each
+/// one at once. The polite delay between requests is the only timer of that
+/// length on the download path (retry backoff, request timeout and sqflite's
+/// lock warning use other durations), so the count is how many delays were
+/// applied, independent of how fast the machine does the I/O around them.
+Future<int> _countRequestDelays(
+  Duration requestDelay,
+  Future<void> Function() body,
+) async {
+  var count = 0;
+  await runZoned(
+    body,
+    zoneSpecification: ZoneSpecification(
+      createTimer: (self, parent, zone, duration, callback) {
+        if (duration == requestDelay) {
+          count++;
+          return parent.createTimer(zone, Duration.zero, callback);
+        }
+        return parent.createTimer(zone, duration, callback);
+      },
+    ),
+  );
+  return count;
+}
 
 class _FakeSite extends NovelSite {
   final List<Episode>? customEpisodes;
@@ -570,33 +596,35 @@ void main() {
         File('${novelDir.path}/$fileName').writeAsStringSync('cached content');
       }
 
+      final getRequests = <String>[];
       final mockClient = MockClient((request) async {
         if (request.method == 'GET') {
+          getRequests.add(request.url.toString());
           return http.Response('index html', 200);
         }
         return http.Response('', 200);
       });
 
-      // Use a long delay to make the test timing-sensitive
+      const requestDelay = Duration(seconds: 2);
       final service = DownloadService(
         client: mockClient,
-        requestDelay: const Duration(seconds: 2),
+        requestDelay: requestDelay,
       );
 
-      final stopwatch = Stopwatch()..start();
-
-      await service.downloadNovel(
-        site: _FakeSite(),
-        url: Uri.parse('https://example.com/index'),
-        outputPath: tempDir.path,
-        episodeCacheRepository: cacheRepo,
+      final delays = await _countRequestDelays(
+        requestDelay,
+        () => service.downloadNovel(
+          site: _FakeSite(),
+          url: Uri.parse('https://example.com/index'),
+          outputPath: tempDir.path,
+          episodeCacheRepository: cacheRepo,
+        ),
       );
 
-      stopwatch.stop();
-
-      // All 3 episodes are skipped, so no delay should be applied
-      // If delays were applied, it would take at least 4 seconds (2s * 2 delays)
-      expect(stopwatch.elapsedMilliseconds, lessThan(2000));
+      // All 3 episodes are skipped: only the index is fetched, and no delay is
+      // applied.
+      expect(getRequests, ['https://example.com/index']);
+      expect(delays, 0);
     });
 
     test('applies delay only before actual downloads', () async {
@@ -614,8 +642,10 @@ void main() {
       final fileName = formatEpisodeFileName(2, '第二話', 3);
       File('${novelDir.path}/$fileName').writeAsStringSync('cached content');
 
+      final getRequests = <String>[];
       final mockClient = MockClient((request) async {
         if (request.method == 'GET') {
+          getRequests.add(request.url.toString());
           if (request.url.toString() == 'https://example.com/index') {
             return http.Response('index html', 200);
           }
@@ -624,27 +654,31 @@ void main() {
         return http.Response('', 200);
       });
 
-      // Use a long delay
+      const requestDelay = Duration(seconds: 2);
       final service = DownloadService(
         client: mockClient,
-        requestDelay: const Duration(seconds: 2),
+        requestDelay: requestDelay,
       );
 
-      final stopwatch = Stopwatch()..start();
-
-      await service.downloadNovel(
-        site: _FakeSite(),
-        url: Uri.parse('https://example.com/index'),
-        outputPath: tempDir.path,
-        episodeCacheRepository: cacheRepo,
+      final delays = await _countRequestDelays(
+        requestDelay,
+        () => service.downloadNovel(
+          site: _FakeSite(),
+          url: Uri.parse('https://example.com/index'),
+          outputPath: tempDir.path,
+          episodeCacheRepository: cacheRepo,
+        ),
       );
 
-      stopwatch.stop();
-
-      // 1 delay between ep1 download and ep3 download (~2s)
-      // NOT 2 delays (~4s) - the skip doesn't add a delay
-      expect(stopwatch.elapsedMilliseconds, greaterThan(1500));
-      expect(stopwatch.elapsedMilliseconds, lessThan(4000));
+      // Episode 2 is skipped without a request, and exactly 1 delay is applied
+      // (between the episode 1 and episode 3 downloads), not 2: the skip does
+      // not add a delay.
+      expect(getRequests, [
+        'https://example.com/index',
+        'https://example.com/1',
+        'https://example.com/3',
+      ]);
+      expect(delays, 1);
     });
   });
 
