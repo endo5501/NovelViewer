@@ -258,6 +258,33 @@ void main() {
     );
   });
 
+  testWidgets('a row with an empty title shows the url', (tester) async {
+    final untitled = RemoteProgress(
+      deviceId: 'pad',
+      deviceName: 'iPad',
+      record: SyncProgressRecord(
+        novelId: 'narou_n1',
+        episode: 1,
+        fileName: '1.txt',
+        bodyOffset: 0,
+        bodyHash: null,
+        readAt: DateTime.utc(2026, 11, 1),
+        url: 'https://ncode.syosetu.com/n1/',
+        title: '',
+      ),
+    );
+    await tester.pumpWidget(createApp(candidates: [untitled]));
+    await openDialog(tester);
+
+    expect(
+      find.descendant(
+        of: row('n1'),
+        matching: find.text('https://ncode.syosetu.com/n1/'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('choosing a row fills the url without downloading', (
     tester,
   ) async {
