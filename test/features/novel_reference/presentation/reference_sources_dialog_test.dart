@@ -263,6 +263,11 @@ void main() {
 
       expect(find.byType(ReferenceSourcesDialog), findsNothing);
       expect(find.text(l10n.referenceSources_saveFailed), findsNothing);
+
+      // The save invalidates the relations, and the held provider reloads
+      // them from the database. Let that read answer on the real event loop
+      // so it does not end the test holding sqflite's lock-warning timer.
+      await settle(tester);
     });
   });
 
