@@ -23,6 +23,7 @@
 - [x] 4.1 非生成ファイル（例：`lib/l10n/app_localization_delegates.dart`）に、`AppLocalizations.delegate` と material_ui の `GlobalMaterialLocalizations.delegates` を合わせた delegate リストを定義する（design D2）。完了条件：2.1 のテストの参照先をこのリストに変え、テストが通る
 - [x] 4.2 `lib/app.dart` と、テスト103ファイルにある `AppLocalizations.localizationsDelegates` の参照を、4.1 のリストに置き換える。完了条件：`grep -rn "AppLocalizations.localizationsDelegates" lib test` の結果が、生成ファイル `lib/l10n/app_localizations.dart` の中だけになる
 - [x] 4.3 `analysis_options.yaml` の `analyzer: exclude` に `lib/l10n/app_localizations*.dart` を加え、生成物を除外する理由をコメントで残す。完了条件：`fvm flutter analyze` に l10n 起因の issue がなく、除外対象が生成ファイルだけである
+- [x] 4.4 （レビューの指摘で追加）生成ファイル以外で `AppLocalizations.localizationsDelegates` が使われたら失敗するガードテスト `test/l10n/delegate_usage_guard_test.dart` を追加する。生成ファイルを analyze の対象から外したため、旧リストへの後戻りを止めるものが他にないため。完了条件：`lib/app.dart` を旧リストに戻すと失敗し、元に戻すと通る
 
 ## 5. 型の不一致と analyze ゼロ
 
@@ -35,14 +36,14 @@
 
 ## 7. ドキュメントとコミット
 
-- [x] 7.1 `.claude/CLAUDE.md` の開発コマンドに注記を加える。内容は「Flutter は stable に追随する（CI も同じ）。CI で analyze が落ちたら `fvm install stable` でローカルを更新して再現する」の2点。完了条件：差分をレビューで確認する
-- [ ] 7.2 変更を英語のコミットメッセージでコミットする。依存と import の移行、l10n、修正、ドキュメントで分ける。完了条件：`git log` で確認できる
+- [x] 7.1 `.claude/CLAUDE.md` の開発コマンドに注記を加える。内容は「Flutter は stable に追随する（CI も同じ）。CI で analyze が落ちたら `fvm flutter upgrade` でローカルを更新して再現する」の2点。完了条件：差分をレビューで確認する
+- [x] 7.2 変更を英語のコミットメッセージでコミットする。依存と import の移行、l10n、修正、ドキュメントで分ける。完了条件：`git log` で確認できる
 
 ## 8. 最終確認
 
-- [ ] 8.1 code-reviewスキルを使用してコードレビューを実施
-- [ ] 8.2 codexスキルを使用して現在開発中のコードレビューを実施
-- [ ] 8.3 `fvm dart format lib test`でフォーマットを実行
-- [ ] 8.4 `fvm flutter analyze`でリントを実行
-- [ ] 8.5 `fvm flutter test`でテストを実行
-- [ ] 8.6 ブランチを push して PR を作り、GitHub Actions の Test ワークフローが緑になることを確かめる。macOS / iOS の開発機で `fvm install stable` が必要なことを PR 本文に書く
+- [x] 8.1 code-reviewスキルを使用してコードレビューを実施
+- [x] 8.2 codexスキルを使用して現在開発中のコードレビューを実施
+- [x] 8.3 `fvm dart format lib test`でフォーマットを実行
+- [x] 8.4 `fvm flutter analyze`でリントを実行
+- [x] 8.5 `fvm flutter test`でテストを実行
+- [ ] 8.6 ブランチを push して PR を作り、GitHub Actions の Test ワークフローが緑になることを確かめる。macOS / iOS の開発機で `fvm flutter upgrade` が必要なことを PR 本文に書く
