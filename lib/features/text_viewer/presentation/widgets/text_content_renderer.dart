@@ -5,7 +5,7 @@ import 'package:novel_viewer/features/reading_progress/data/reading_position_wri
 import 'package:novel_viewer/features/reading_progress/providers/reading_position_providers.dart';
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

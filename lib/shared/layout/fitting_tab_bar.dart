@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A [TabBar] of text labels that spreads its tabs over the width it is given,
 /// as a plain [TabBar] does, until the labels no longer fit; then it scrolls

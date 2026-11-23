@@ -7,7 +7,7 @@
 /// dropdown is tracked as follow-up work in the change's tasks.md.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';

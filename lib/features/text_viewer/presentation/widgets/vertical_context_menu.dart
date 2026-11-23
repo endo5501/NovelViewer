@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:novel_viewer/features/llm_summary/presentation/analysis_runner.dart';
 
 /// Actions surfaced in the vertical-mode selection context menu. The vertical

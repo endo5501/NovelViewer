@@ -1,5 +1,5 @@
-import 'package:flutter/cupertino.dart' show CupertinoLocalizations;
-import 'package:flutter/material.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoLocalizations;
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
 

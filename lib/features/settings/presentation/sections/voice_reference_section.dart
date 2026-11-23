@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:desktop_drop/desktop_drop.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/tts/presentation/voice_recording_dialog.dart';
 import 'package:novel_viewer/features/tts/providers/tts_availability_provider.dart';

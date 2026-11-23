@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/app_update/domain/distribution_type.dart';
 import 'package:novel_viewer/features/app_update/domain/update_check_service.dart';

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_config_normalization.dart';

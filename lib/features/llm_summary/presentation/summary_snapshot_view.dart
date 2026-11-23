@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:novel_viewer/features/llm_summary/domain/llm_summary_result.dart';
 import 'package:novel_viewer/features/novel_reference/presentation/reference_source_titles.dart';
 import 'package:novel_viewer/l10n/app_localizations.dart';
