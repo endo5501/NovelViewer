@@ -25,6 +25,28 @@ void main() {
     pbxproj = read('macos/Runner.xcodeproj/project.pbxproj');
   });
 
+  /// The body of the Runner app target. Checking the whole project file is
+  /// not enough: a reference that moved to RunnerTests, or a definition left
+  /// behind after the target stopped using it, would still match.
+  String runnerTarget() {
+    final match = RegExp(
+      r'/\* Runner \*/ = \{\s*isa = PBXNativeTarget;(.*?)\n\t\t\};',
+      dotAll: true,
+    ).firstMatch(pbxproj);
+    expect(match, isNotNull, reason: 'the Runner target must exist');
+    return match!.group(1)!;
+  }
+
+  /// The entries of the Runner target's buildPhases list.
+  String runnerBuildPhases() {
+    final match = RegExp(
+      r'buildPhases = \((.*?)\);',
+      dotAll: true,
+    ).firstMatch(runnerTarget());
+    expect(match, isNotNull, reason: 'Runner must list its build phases');
+    return match!.group(1)!;
+  }
+
   group('Swift Package Manager is the only integration', () {
     test('no Podfile remains', () {
       expect(
@@ -58,26 +80,49 @@ void main() {
     });
 
     test('the Xcode project carries no CocoaPods residue', () {
+      // Pods_Runner also covers Pods_RunnerTests.
       expect(pbxproj, isNot(contains('Pods_Runner')));
-      expect(pbxproj, isNot(contains('Pods_RunnerTests')));
       expect(pbxproj, isNot(contains('Pods-Runner')));
+      expect(pbxproj, isNot(contains('PODS_ROOT')));
       expect(pbxproj, isNot(contains('[CP]')));
     });
 
-    test('plugins still resolve through the generated Swift Package', () {
+    test('Runner still links the generated Swift Package', () {
       expect(
-        pbxproj,
-        contains('FlutterGeneratedPluginSwiftPackage in Frameworks'),
+        runnerTarget(),
+        contains('/* FlutterGeneratedPluginSwiftPackage */'),
+        reason: 'Runner must depend on the package product',
+      );
+
+      final frameworksId = RegExp(
+        r'([0-9A-F]{24}) /\* Frameworks \*/',
+      ).firstMatch(runnerBuildPhases())?.group(1);
+      expect(frameworksId, isNotNull, reason: 'Runner has a Frameworks phase');
+      final frameworks = RegExp(
+        '$frameworksId /\\* Frameworks \\*/ = \\{(.*?)\\n\\t\\t\\};',
+        dotAll: true,
+      ).firstMatch(pbxproj);
+      expect(frameworks, isNotNull);
+      expect(
+        frameworks!.group(1),
+        contains('/* FlutterGeneratedPluginSwiftPackage in Frameworks */'),
+        reason: 'the plugins are linked through this phase',
       );
     });
   });
 
   group('native-library embedding survives without CocoaPods', () {
-    test('the Embed Native Libraries phase is still in the project', () {
-      // The definition, and the entry in a target's buildPhases list that runs it.
-      expect(pbxproj, contains('/* Embed Native Libraries */ = {'));
-      expect(pbxproj, contains('/* Embed Native Libraries */,'));
-      expect(pbxproj, contains(r'\"${SRCROOT}\"/Frameworks/*.dylib'));
+    test('the Embed Native Libraries phase still copies the dylibs', () {
+      final phase = RegExp(
+        r'/\* Embed Native Libraries \*/ = \{(.*?)\n\t\t\};',
+        dotAll: true,
+      ).firstMatch(pbxproj);
+      expect(phase, isNotNull, reason: 'the embed phase must exist');
+      expect(phase!.group(1), contains(r'\"${SRCROOT}\"/Frameworks/*.dylib'));
+    });
+
+    test('the Embed Native Libraries phase runs in the Runner target', () {
+      expect(runnerBuildPhases(), contains('/* Embed Native Libraries */'));
     });
   });
 }

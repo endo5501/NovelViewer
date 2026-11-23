@@ -18,7 +18,8 @@ macOS のビルドのたびに Flutter が「全プラグインが Swift Package
 - `macos-build-target`: macOS プロジェクトの依存統合を SwiftPM 単独とし、CocoaPods 統合を持たないことを規定する
 
 ### Modified Capabilities
-- `ios-build-target`: 「Swift Package Manager is the only dependency integration on iOS」から macOS を対象外として CocoaPods 維持を求める文と「macOS keeps CocoaPods」シナリオを外す
+- `ios-build-target`: 「Swift Package Manager is the only dependency integration on iOS」を削除し、「macOS keeps CocoaPods」シナリオを除いた同じ内容を新しい要件名で追加し直す（MODIFIED ではシナリオを削除できないため）
+- `macos-native-library-embedding`: 同梱フェーズが CocoaPods に依存せず Runner ターゲットに保持されることを追加する
 
 ## Impact
 

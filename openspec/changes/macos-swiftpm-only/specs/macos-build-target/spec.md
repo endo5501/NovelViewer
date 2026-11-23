@@ -1,6 +1,6 @@
 ## Purpose
 
-Defines how the committed `macos/` project integrates its dependencies: every plugin resolves through Swift Package Manager, and the project carries no CocoaPods integration, while the native-library embedding keeps working without it.
+Defines how the committed `macos/` project integrates its dependencies: every plugin resolves through Swift Package Manager, and the project carries no CocoaPods integration, so that a build needs no CocoaPods step.
 
 ## ADDED Requirements
 
@@ -25,19 +25,8 @@ Every plugin the project depends on resolves as a Swift Package for macOS, so th
 
 #### Scenario: Plugins still resolve through Swift Package Manager
 - **WHEN** `macos/Runner.xcodeproj/project.pbxproj` is inspected
-- **THEN** the Runner target links `FlutterGeneratedPluginSwiftPackage`
+- **THEN** the Runner target depends on the `FlutterGeneratedPluginSwiftPackage` product and links it in its Frameworks phase
 
 #### Scenario: Building does not run CocoaPods
 - **WHEN** the macOS app is built with `scripts/build_app.sh macos`
 - **THEN** the build does not run `pod install` and does not warn that the project still has a CocoaPods integration
-
-### Requirement: Native-library embedding survives without CocoaPods
-The Runner target's "Embed Native Libraries" build phase, which was originally added by the Podfile's `post_install` hook, SHALL remain in `macos/Runner.xcodeproj/project.pbxproj` as a committed build phase so that `macos/Frameworks/*.dylib` keep being embedded and signed with no CocoaPods step.
-
-#### Scenario: Phase is still in the project
-- **WHEN** `macos/Runner.xcodeproj/project.pbxproj` is inspected
-- **THEN** the Runner target lists an "Embed Native Libraries" shell script phase that copies `macos/Frameworks/*.dylib`
-
-#### Scenario: Built app still contains the dylibs
-- **WHEN** the macOS app is built after the migration and `scripts/test/verify_macos_bundle.sh` is run
-- **THEN** the verification passes
