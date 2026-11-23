@@ -77,6 +77,9 @@ class _RemoteNovelListState extends ConsumerState<RemoteNovelList> {
             onPressed: () => setState(() => _showAll = true),
             child: Text(l10n.download_remoteNovelsShowAll(candidates.length)),
           ),
+        // The dialog spaces its sections 16 apart; only a list that shows
+        // takes its share of that.
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -96,7 +99,11 @@ class _RemoteNovelListState extends ConsumerState<RemoteNovelList> {
       contentPadding: EdgeInsets.zero,
       enabled: widget.enabled,
       title: Text(
-        record.title ?? url,
+        // Some site parsers store '' when a title is missing.
+        switch (record.title) {
+          final title? when title.isNotEmpty => title,
+          _ => url,
+        },
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
