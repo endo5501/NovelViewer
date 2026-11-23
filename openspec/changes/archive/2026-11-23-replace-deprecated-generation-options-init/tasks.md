@@ -17,7 +17,7 @@
 
 - [x] 3.1 `scripts/build_app.sh macos` でビルドし、ログに `FoundationModelsLlmPlugin.swift` の `deprecated` 警告が出ないことを確かめる
 - [x] 3.2 `scripts/build_app.sh ios` でビルドし、同じ警告が出ないことを確かめる(iOS のビルド環境が無ければ、そのことを記録して省く)
-- [ ] 3.3 macOS 版のアプリでオンデバイス LLM の要約を1回実行し、以前と同じように結果が返ることを確かめる
+- [x] 3.3 macOS 版のアプリでオンデバイス LLM の要約を1回実行し、以前と同じように結果が返ることを確かめる
 
 ## 4. 最終確認
 
