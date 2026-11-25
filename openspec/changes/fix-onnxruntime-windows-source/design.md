@@ -60,7 +60,17 @@ nupkg には win-x86 / win-arm64 の `onnxruntime.dll` も入っている。`pip
 スクリプトの引数で次を差し替えられるようにする。テストは偽 nupkg と偽サブモジュールで走り、ネットワークには出ない。
 - `-PackageSource`: URL またはローカルパス
 - `-PiperDir`
-- `-HashTable`: テスト用の版とハッシュ。JSON 文字列で渡す。
+- `-HashFile`: テスト用の版→ハッシュを書いた JSON ファイルのパス。
+
+### D6: 既存の zip は中身を確かめてから使い、別の版の展開物は消す
+既存の `onnxruntime.zip` を再利用するのは、zip として読めて、その版の `onnxruntime-win-x64-<ver>/` に必要な4ファイル（`include/onnxruntime_cxx_api.h`、`lib/onnxruntime.lib`、`lib/onnxruntime.dll`、`LICENSE`）が入っている場合だけとする。それ以外の zip は消して作り直す。
+- これを入れた理由（code-review と Codex の指摘）:
+  - CMake の GitHub ダウンロードが失敗すると、空や HTML の zip が残ることがある。存在するだけで再利用すると、CMake の展開失敗が直らない。
+  - 版を上げたあとの古い zip には、CMake が探す新しい版のディレクトリが無い。
+- 同時に、`build/onnxruntime/` 配下の別の版の展開ディレクトリ（`onnxruntime-win-*`）も削除する。残っていると次の2つが古い版を拾う。
+  - `build_piper_windows.bat` の `dir /s /b`（最後の一致を採る）が、古い `onnxruntime.dll` を拾う
+  - `release.yml` の `Select-Object -First 1` が、古い `LICENSE` を拾う
+- 既存の zip のハッシュは照合しない。ローカルのキャッシュであり、CI は毎回まっさらな状態から作るため。
 
 ## Risks / Trade-offs
 
@@ -76,5 +86,5 @@ nupkg には win-x86 / win-arm64 の `onnxruntime.dll` も入っている。`pip
 
 ## Migration Plan
 
-- 既存の作業ツリーで旧 zip が残っている場合は、それがそのまま使われる。中身は同じ版なので問題ない。
+- 既存の作業ツリーに旧 GitHub 版の zip（1.20.0）が残っている場合、中身が D6 の条件を満たすのでそのまま使われる。DLL・lib・LICENSE は NuGet 版と同一である。
 - 戻すときは、`.bat` からスクリプトの呼び出しを外せば元の挙動（GitHub から取得）に戻る。

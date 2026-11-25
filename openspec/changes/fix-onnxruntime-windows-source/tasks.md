@@ -17,7 +17,7 @@
 
 ## 2. 取得スクリプトの実装
 
-- [x] 2.1 `scripts/fetch_onnxruntime_windows.ps1` を design.md D2〜D5 のとおり実装する。
+- [x] 2.1 `scripts/fetch_onnxruntime_windows.ps1` を design.md D2〜D6 のとおり実装する。
   - 版の読み取り、版→SHA256 の表、zip が既にあれば何もしない処理
   - 一時ディレクトリでのエントリ抽出
   - `cmake -E tar --format=zip` での zip 作成
