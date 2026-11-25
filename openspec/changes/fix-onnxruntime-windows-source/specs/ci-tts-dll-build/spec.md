@@ -10,7 +10,9 @@
 - 照合: 取得したパッケージの SHA256 を、版ごとに固定した値と照合しなければならない（MUST）。
 - 置き方: win-x64 のヘッダー・`onnxruntime.lib`・`onnxruntime.dll`・`LICENSE` を `onnxruntime-win-x64-<版>/{include,lib,LICENSE}` のレイアウトにまとめる。これを zip にし、`third_party/piper-plus/build/onnxruntime/onnxruntime.zip` として置かなければならない（MUST）。
 
-この zip が既に存在する場合は、取得を省略しなければならない（MUST）。
+取得を省略してよいのは、この zip が既に存在し、かつ zip として読めて、その版の `onnxruntime-win-x64-<版>/` の必要なファイルを含む場合だけでなければならない（MUST）。
+それ以外の場合（空ファイル、壊れた zip、別の版の zip）は、作り直さなければならない（MUST）。
+`third_party/piper-plus/build/onnxruntime/` 配下に別の版の展開ディレクトリが残っている場合は、それを削除しなければならない（MUST）。
 x64 以外のアーキテクチャの DLL を `third_party/piper-plus/build` 配下に置いてはならない（MUST NOT）。
 
 #### Scenario: NuGet から取得して既存レイアウトで置く
@@ -30,9 +32,13 @@ x64 以外のアーキテクチャの DLL を `third_party/piper-plus/build` 配
 - **WHEN** piper-plus の `ONNXRUNTIME_VERSION` に対応する SHA256 が登録されていない
 - **THEN** ビルドステップはエラー終了し、ハッシュの追加が必要であることを示す
 
-#### Scenario: zip が既にあれば取得しない
-- **WHEN** `third_party/piper-plus/build/onnxruntime/onnxruntime.zip` が既に存在する
+#### Scenario: その版の zip が既にあれば取得しない
+- **WHEN** `third_party/piper-plus/build/onnxruntime/onnxruntime.zip` が既に存在し、その版の必要なファイルを含む
 - **THEN** パッケージの取得を行わずに次の処理へ進む
+
+#### Scenario: 使えない zip は作り直す
+- **WHEN** 既存の `onnxruntime.zip` が空、zip として読めない、または別の版のものである
+- **THEN** パッケージから zip を作り直し、別の版の展開ディレクトリは削除される
 
 ### Requirement: Piper TTS DLL ビルドスクリプトは途中の失敗で止まる
 

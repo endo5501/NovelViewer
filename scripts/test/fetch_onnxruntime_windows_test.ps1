@@ -60,6 +60,25 @@ function New-FakePiper([string]$dir, [string]$versionLine) {
   [System.IO.File]::WriteAllText((Join-Path $cmakeDir 'find_onnxruntime_windows.cmake'), $body)
 }
 
+# A zip already laid out as onnxruntime-win-x64-<version>/... .
+function New-LayoutZip([string]$path, [string]$version, [string]$dllContent) {
+  New-Item -ItemType Directory -Path (Split-Path -Parent $path) -Force | Out-Null
+  $root = "onnxruntime-win-x64-$version"
+  $entries = [ordered]@{
+    "$root/include/onnxruntime_cxx_api.h" = '// cxx api'
+    "$root/lib/onnxruntime.lib"           = 'lib'
+    "$root/lib/onnxruntime.dll"           = $dllContent
+    "$root/LICENSE"                       = 'license'
+  }
+  $zip = [System.IO.Compression.ZipFile]::Open($path, 'Create')
+  try {
+    foreach ($name in $entries.Keys) {
+      $w = New-Object System.IO.StreamWriter($zip.CreateEntry($name).Open())
+      try { $w.Write($entries[$name]) } finally { $w.Dispose() }
+    }
+  } finally { $zip.Dispose() }
+}
+
 function New-HashFile([string]$path, [hashtable]$table) {
   [System.IO.File]::WriteAllText($path, ($table | ConvertTo-Json))
 }
@@ -82,7 +101,7 @@ function Invoke-Fetch([string]$piperDir, [string]$source, [string]$hashFile) {
 # Reads the produced onnxruntime.zip into a name -> content map.
 function Read-Zip([string]$path) {
   $map = @{}
-  $zip = [System.IO.Compression.ZipFile]::OpenRead($path)
+  try { $zip = [System.IO.Compression.ZipFile]::OpenRead($path) } catch { return $map }
   try {
     foreach ($e in $zip.Entries) {
       if ($e.FullName.EndsWith('/')) { continue }
@@ -165,25 +184,57 @@ try {
   Check 'fails when piper-plus names no version' ($code -ne 0)
   Check 'writes no zip when piper-plus names no version' (-not (Test-Path -LiteralPath (Join-Path $piper 'build\onnxruntime\onnxruntime.zip')))
 
-  # --- an existing zip is used as is ----------------------------------------
+  # --- an existing zip with the layout for the version is used as is --------
   $piper = Join-Path $work 'piper-f'
   New-FakePiper $piper 'set(ONNXRUNTIME_VERSION "9.8.7")'
   $existing = Join-Path $piper 'build\onnxruntime\onnxruntime.zip'
-  New-Item -ItemType Directory -Path (Split-Path -Parent $existing) -Force | Out-Null
-  [System.IO.File]::WriteAllText($existing, 'already here')
+  New-LayoutZip $existing '9.8.7' 'dll from the existing zip'
+  $before = Get-Sha256 $existing
   $hashFile = Join-Path $work 'hashes-f.json'
   New-HashFile $hashFile @{ '9.8.7' = $hash }
   $code = Invoke-Fetch $piper (Join-Path $work 'missing.nupkg') $hashFile
-  Check 'skips fetching when the zip already exists' ($code -eq 0)
-  Check 'leaves the existing zip untouched' ([System.IO.File]::ReadAllText($existing) -eq 'already here')
+  Check 'skips fetching when a zip for the version already exists' ($code -eq 0)
+  Check 'leaves the existing zip untouched' ((Get-Sha256 $existing) -eq $before)
+
+  # --- an existing zip that is not a usable archive is rebuilt --------------
+  # e.g. what a failed GitHub download by an earlier cmake run left behind.
+  $piper = Join-Path $work 'piper-g'
+  New-FakePiper $piper 'set(ONNXRUNTIME_VERSION "9.8.7")'
+  $existing = Join-Path $piper 'build\onnxruntime\onnxruntime.zip'
+  New-Item -ItemType Directory -Path (Split-Path -Parent $existing) -Force | Out-Null
+  [System.IO.File]::WriteAllBytes($existing, [byte[]]@())
+  $code = Invoke-Fetch $piper $nupkg (Join-Path $work 'hashes-f.json')
+  $entries = if (Test-Path -LiteralPath $existing) { Read-Zip $existing } else { @{} }
+  Check 'rebuilds a zip that is not a usable archive' (
+    ($code -eq 0) -and ($entries['onnxruntime-win-x64-9.8.7/lib/onnxruntime.dll'] -eq 'dll win-x64'))
+
+  # --- an existing zip for another version is rebuilt -----------------------
+  # The old extracted directory goes too, so no stale onnxruntime.dll or
+  # LICENSE is left for build_piper_windows.bat or release.yml to pick up.
+  $piper = Join-Path $work 'piper-h'
+  New-FakePiper $piper 'set(ONNXRUNTIME_VERSION "9.8.7")'
+  $existing = Join-Path $piper 'build\onnxruntime\onnxruntime.zip'
+  New-LayoutZip $existing '1.2.3' 'dll for 1.2.3'
+  $staleDir = Join-Path $piper 'build\onnxruntime\onnxruntime-win-x64-1.2.3\lib'
+  New-Item -ItemType Directory -Path $staleDir -Force | Out-Null
+  [System.IO.File]::WriteAllText((Join-Path $staleDir 'onnxruntime.dll'), 'dll for 1.2.3')
+  $code = Invoke-Fetch $piper $nupkg (Join-Path $work 'hashes-f.json')
+  $entries = if (Test-Path -LiteralPath $existing) { Read-Zip $existing } else { @{} }
+  Check 'rebuilds a zip made for another version' (
+    ($code -eq 0) -and ($entries['onnxruntime-win-x64-9.8.7/lib/onnxruntime.dll'] -eq 'dll win-x64'))
+  Check 'removes the directory extracted for another version' (
+    -not (Test-Path -LiteralPath (Join-Path $piper 'build\onnxruntime\onnxruntime-win-x64-1.2.3')))
 
   # --- build_piper_windows.bat stops when the fetch fails -------------------
   # Stubs first on PATH: `powershell` fails as the fetch would, `cmake`
-  # records that it ran.
+  # records that it ran. The powershell stub is an exe: a .bat stub would
+  # take over the calling batch (no `call`) and end it with its own exit,
+  # so the script's error check would never be exercised.
   $bin = Join-Path $work 'bin'
   New-Item -ItemType Directory -Path $bin | Out-Null
   $cmakeLog = Join-Path $work 'cmake.log'
-  [System.IO.File]::WriteAllText((Join-Path $bin 'powershell.bat'), "@echo off`r`nexit /b 1`r`n")
+  Add-Type -OutputType ConsoleApplication -OutputAssembly (Join-Path $bin 'powershell.exe') `
+    -TypeDefinition 'public static class Stub { public static int Main() { return 1; } }'
   [System.IO.File]::WriteAllText((Join-Path $bin 'cmake.bat'), "@echo off`r`necho %*>> `"$cmakeLog`"`r`n")
   $savedPath = $env:PATH
   $env:PATH = "$bin;$savedPath"

@@ -43,17 +43,58 @@ function Stop-Fetch([string]$message) {
   exit 1
 }
 
-$zipPath = Join-Path $PiperDir 'build\onnxruntime\onnxruntime.zip'
-if (Test-Path -LiteralPath $zipPath) {
-  Write-Host "ONNX Runtime zip already present: $zipPath"
-  exit 0
-}
-
 $cmakeFile = Join-Path $PiperDir 'cmake\find_onnxruntime_windows.cmake'
 if (!(Test-Path -LiteralPath $cmakeFile)) { Stop-Fetch "not found: $cmakeFile" }
 $match = [regex]::Match([System.IO.File]::ReadAllText($cmakeFile), 'set\(\s*ONNXRUNTIME_VERSION\s+"([^"]+)"\s*\)')
 if (!$match.Success) { Stop-Fetch "no ONNXRUNTIME_VERSION in $cmakeFile" }
 $version = $match.Groups[1].Value
+$rootName = "onnxruntime-win-x64-$version"
+$requiredFiles = @('include\onnxruntime_cxx_api.h', 'lib\onnxruntime.lib', 'lib\onnxruntime.dll', 'LICENSE')
+
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+# True when $path is a readable zip holding the files cmake uses for this
+# version. A failed GitHub download by an earlier cmake run can leave an empty
+# or HTML onnxruntime.zip, and a zip made for another version lacks the
+# directory cmake now expects; neither may be reused.
+function Test-LayoutZip([string]$path) {
+  try { $zip = [System.IO.Compression.ZipFile]::OpenRead($path) } catch { return $false }
+  try {
+    $names = @{}
+    foreach ($e in $zip.Entries) { $names[$e.FullName.Replace('\', '/')] = $true }
+    foreach ($f in $requiredFiles) {
+      if (!$names.ContainsKey("$rootName/" + $f.Replace('\', '/'))) { return $false }
+    }
+    return $true
+  } finally {
+    $zip.Dispose()
+  }
+}
+
+$ortDir = Join-Path $PiperDir 'build\onnxruntime'
+$zipPath = Join-Path $ortDir 'onnxruntime.zip'
+
+# Directories extracted for other versions would leave a second
+# onnxruntime.dll for build_piper_windows.bat's recursive search, and a second
+# LICENSE for release.yml, to pick up.
+if (Test-Path -LiteralPath $ortDir) {
+  Get-ChildItem -LiteralPath $ortDir -Directory -Filter 'onnxruntime-win-*' |
+    Where-Object { $_.Name -ne $rootName } |
+    ForEach-Object {
+      Write-Host "Removing ONNX Runtime extracted for another version: $($_.FullName)"
+      Remove-Item -LiteralPath $_.FullName -Recurse -Force
+    }
+}
+
+if (Test-Path -LiteralPath $zipPath) {
+  if (Test-LayoutZip $zipPath) {
+    Write-Host "ONNX Runtime $version zip already present: $zipPath"
+    exit 0
+  }
+  Write-Host "Rebuilding unusable ONNX Runtime zip: $zipPath"
+  Remove-Item -LiteralPath $zipPath -Force
+}
 
 $hashes = @{}
 if ($HashFile) {
@@ -67,9 +108,6 @@ if (!$hashes.ContainsKey($version)) {
     "microsoft.ml.onnxruntime.$version.nupkg to `$KnownHashes in scripts\fetch_onnxruntime_windows.ps1")
 }
 $expected = $hashes[$version].ToLower()
-
-Add-Type -AssemblyName System.IO.Compression
-Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 # Everything is staged outside the piper-plus tree: the package also carries
 # x86 / arm64 onnxruntime.dll, and build_piper_windows.bat picks the DLL with a
@@ -93,7 +131,6 @@ try {
     Stop-Fetch "SHA256 mismatch for ONNX Runtime $version package: expected $expected, got $actual"
   }
 
-  $rootName = "onnxruntime-win-x64-$version"
   $stage = Join-Path $work 'stage'
   $root = Join-Path $stage $rootName
   $map = [ordered]@{
@@ -125,7 +162,7 @@ try {
     $zip.Dispose()
   }
 
-  foreach ($required in @('include\onnxruntime_cxx_api.h', 'lib\onnxruntime.lib', 'lib\onnxruntime.dll', 'LICENSE')) {
+  foreach ($required in $requiredFiles) {
     if (!(Test-Path -LiteralPath (Join-Path $root $required))) {
       Stop-Fetch "ONNX Runtime $version package has no $required"
     }
