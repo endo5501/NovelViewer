@@ -14,6 +14,7 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `scripts/test/verify_speech_ios.sh` - speech.cpp iOSビルド成果物の検証(mac)
  - `scripts/build_app.sh macos` - 本番ビルド(mac)。commit ハッシュを `--dart-define=BUILD_COMMIT` で注入し、障害レポートの app version に載せる。素の `fvm flutter build macos` でも動くが、レポートは `commit unknown` になる。`config/google_oauth.json`（Git 管理外）があれば `--dart-define-from-file` で渡し、読書進捗の同期を有効にする（無ければ同期なしのビルド。詳細は`docs/progress-sync.md`参照）。iOS / macOS のビルドには Xcode 27 以降が必要（オンデバイスLLMプラグインが Xcode 27 の SDK にしかない API を使うため）。macOS版はキーチェーンの権限のため開発者証明書での署名が必要で、`macos/Runner/Configs/Local.xcconfig`（Git 管理外）に `DEVELOPMENT_TEAM` と `CODE_SIGN_IDENTITY = Apple Development` を書く（初回の Mac 登録手順は同ドキュメント参照）
  - `scripts/build_tts_windows.bat` - TTSエンジンビルド(windows)
+ - `scripts/build_piper_windows.bat` - Piperビルド(windows)。ONNX Runtime は GitHub Releases（microsoft/onnxruntime は非公開化）ではなく、先に `scripts/fetch_onnxruntime_windows.ps1` が NuGet の `Microsoft.ML.OnnxRuntime` から取得する。版は piper-plus の `cmake/find_onnxruntime_windows.cmake` に従い、nupkg の SHA256 をスクリプト内の表と照合する。結果は `third_party/piper-plus/build/onnxruntime/onnxruntime.zip` として旧 GitHub 版と同じレイアウトで置かれ、CMake はダウンロードせずにそれを展開する。サブモジュールの更新で ORT の版が変わったら、表に新しい版のハッシュを足す
  - `scripts/build_lame_windows.bat` - LAMEビルド(windows)
  - `scripts\build_app.bat windows` - 本番ビルド(windows)。commit ハッシュと OAuth 設定の注入は mac と同じ
  - `scripts/build_app.sh ios` - ビルド(iPad / iPhone。iPhone は縦向きのみ。commit ハッシュの注入は mac と同じ。TTSはPiperとIrodori-TTS。読み上げを使う場合は先に `scripts/build_piper_ios.sh` と `scripts/build_speech_ios.sh` でライブラリをビルドする。Xcodeのplatform componentと`ios/Flutter/Local.xcconfig`のDEVELOPMENT_TEAMが必要。詳細は`docs/ios.md`参照)
@@ -23,6 +24,7 @@ NovelViewerはWeb小説サイト（なろう、カクヨム）から小説をダ
  - `bash scripts/test/build_app_test.sh` - `build_app.sh` のテスト(スタブの fvm / git で実行し、実ビルドはしない)
  - `bash scripts/test/install_ios_test.sh` - `install_ios.sh` のテスト(スタブの xcrun / security / xcodebuild / fvm で実行し、実機には触れない)
  - `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test/build_app_test.ps1` - `build_app.bat` のテスト(windows。同上)
+ - `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test/fetch_onnxruntime_windows_test.ps1` - `fetch_onnxruntime_windows.ps1` と `build_piper_windows.bat` の失敗時停止のテスト(windows。偽 nupkg で実行し、ダウンロードはしない)
  - `swift test --package-path packages/foundation_models_llm/darwin/wire_code_tests` - オンデバイスLLMプラグインのテスト(mac。エラー写像・回答の打ち切り・生成オプション。プラグイン本体はFlutterビルド外で走らないため、Flutterに依存しない部分だけを独立パッケージで実行。警告をエラーとして扱うのは生成オプションのターゲット`GenerationOptionsFactory`だけで、そのファイルで非推奨APIを使うとビルドが失敗する。プラグイン本体`FoundationModelsLlmPlugin.swift`はここではビルドされないため対象外)
  - `fvm dart format lib test` - フォーマット実行(`.` を指定すると third_party/piper-plus 同梱の Dart サンプルまで書き換えるため、lib/ と test/ に限定する)
  - `fvm flutter analyze` - リント実行
