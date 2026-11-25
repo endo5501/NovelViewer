@@ -5,13 +5,31 @@ set SCRIPT_DIR=%~dp0
 set PROJECT_ROOT=%SCRIPT_DIR%..
 set PIPER_DIR=%PROJECT_ROOT%\third_party\piper-plus
 
+echo === Preparing ONNX Runtime from NuGet ===
+REM piper-plus's cmake downloads ONNX Runtime from GitHub Releases, which is no
+REM longer reachable. With build\onnxruntime\onnxruntime.zip in place it skips
+REM the download and extracts that zip instead.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%fetch_onnxruntime_windows.ps1"
+if errorlevel 1 (
+    echo ERROR: failed to prepare ONNX Runtime
+    exit /b 1
+)
+
 echo === Building piper_plus shared library (upstream C API, CPU only) ===
 if not exist "%PIPER_DIR%\build" mkdir "%PIPER_DIR%\build"
 cmake -S "%PIPER_DIR%" -B "%PIPER_DIR%\build" ^
     -DCMAKE_BUILD_TYPE=Release ^
     -DPIPER_PLUS_BUILD_SHARED=ON ^
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+if errorlevel 1 (
+    echo ERROR: cmake configure failed
+    exit /b 1
+)
 cmake --build "%PIPER_DIR%\build" --config Release --target piper_plus
+if errorlevel 1 (
+    echo ERROR: cmake build failed
+    exit /b 1
+)
 
 echo === Copying DLLs to build output ===
 set DLL_SRC=%PIPER_DIR%\build\Release\piper_plus.dll

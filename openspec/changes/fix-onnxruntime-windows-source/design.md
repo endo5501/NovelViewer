@@ -65,7 +65,12 @@ nupkg には win-x86 / win-arm64 の `onnxruntime.dll` も入っている。`pip
 ## Risks / Trade-offs
 
 - [nuget.org からも消える、または中身が変わる] → SHA256 照合で失敗に気づける。そのときは別の入手経路を検討する。
-- [NuGet 版と GitHub 版のバイナリが違う] → サイズは一致している。実装時に `onnxruntime.dll` の SHA256 を旧 GitHub 版と比べ、結果を記録する。
+- [NuGet 版と GitHub 版のバイナリが違う] → 実装時に確認した（1.20.0）。
+  - nupkg の SHA256: `36dbafacb1bc532e92d02371bd70582a61105872561fc9982314854d1c7ebf72`
+  - win-x64 `onnxruntime.dll`: `52f8ebe8f08f369a44fed6d1cb680c7c89169795e1c2949ee25b88b538ef0948`
+  - `onnxruntime.lib`: `99775efef44710c4fb19e644143491e1ead6a3245f0b6d9065814025d3da891e`
+  - `LICENSE`: `c250d6278f0b47a6439fb7592b08b58a55eb9f535aa49a1db63211c3f982b674`
+  - DLL・lib・LICENSE の3つとも、旧 GitHub 版とバイト単位で一致した。
 - [ローカルに旧 GitHub 版の zip が残っていると検証が偽の成功になる] → 実ビルドでの確認は `third_party/piper-plus/build` を消してから行う。
 - [108 MB のダウンロードで CI が遅くなる] → GitHub 版の zip を取っていたのと同程度なので許容する。
 
