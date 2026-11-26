@@ -42,7 +42,7 @@
 ## 4. 結合確認とリリース
 
 - [x] 4.1 Windows でアプリを起動し、Piper 音声で1文を合成する。確認: 音が出る。
-- [ ] 4.2 main に push したあと `scripts/release.ps1 2.5.1` でリリースする。
+- [x] 4.2 main に push したあと `scripts/release.ps1 2.5.1` でリリースする。
   - 確認:
     - Release Windows Build が成功する
     - v2.5.1 の Release に setup.exe・zip・sha256 が揃う

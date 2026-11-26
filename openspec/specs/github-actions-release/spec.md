@@ -71,7 +71,7 @@ GitHub Actionsワークフローは、`v*` パターンに一致するタグがp
 
 ### Requirement: Piper関連ライセンスファイルをリリースに含める
 
-piper-plus（MIT）のライセンスファイルを `PIPER_LICENSE_MIT.txt` として、onnxruntime（MIT）のライセンスファイルを `ONNXRUNTIME_LICENSE_MIT.txt` として、リリースビルド出力ディレクトリにコピーしなければならない（MUST）。
+piper-plus（MIT）のライセンスファイルを `PIPER_LICENSE_MIT.txt` として、onnxruntime（MIT）のライセンスファイルを `ONNXRUNTIME_LICENSE_MIT.txt` として、リリースビルド出力ディレクトリにコピーしなければならない（MUST）。onnxruntime のライセンスファイルは、ビルドに使った NuGet パッケージ `Microsoft.ML.OnnxRuntime` に同梱の `LICENSE` でなければならない（MUST）。
 
 #### Scenario: piper-plusライセンスがコピーされる
 - **WHEN** ライセンスコピーステップが実行される
@@ -79,7 +79,7 @@ piper-plus（MIT）のライセンスファイルを `PIPER_LICENSE_MIT.txt` と
 
 #### Scenario: onnxruntimeライセンスがコピーされる
 - **WHEN** ライセンスコピーステップが実行される
-- **THEN** `build/windows/x64/runner/Release/ONNXRUNTIME_LICENSE_MIT.txt` が存在し、内容はonnxruntimeダウンロード先のLICENSEファイルと同一である
+- **THEN** `build/windows/x64/runner/Release/ONNXRUNTIME_LICENSE_MIT.txt` が存在し、内容はビルドに使った NuGet パッケージ `Microsoft.ML.OnnxRuntime` に同梱の `LICENSE` と同一である
 
 ### Requirement: Inno Setup を CI ランナーに導入する
 リリースワークフローは Inno Setup 6 をランナー (`windows-latest`) に導入しなければならない（SHALL）。導入方法は `choco install innosetup -y` を使用しなければならない（SHALL）。
